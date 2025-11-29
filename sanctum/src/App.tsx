@@ -171,7 +171,7 @@ function App() {
 
       const dateISO = selectedDate.toISOString();
 
-      const transactionId = await invoke<string>("add_transaction", {
+      await invoke<string>("add_transaction", {
         amount: amountInCents,
         category: category.trim(),
         description: description.trim(),
