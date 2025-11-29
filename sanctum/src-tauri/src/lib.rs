@@ -1,4 +1,5 @@
 // Módulos
+pub mod commands;
 pub mod db;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -11,7 +12,14 @@ fn greet(name: &str) -> String {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .manage(commands::DbState::new())
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            commands::init_db,
+            commands::is_db_initialized,
+            commands::close_db,
+            commands::get_db_path
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

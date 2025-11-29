@@ -1,6 +1,6 @@
-use rusqlite::{params, Connection};
+use rusqlite::Connection;
 use std::path::PathBuf;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 use thiserror::Error;
 
 /// Errores personalizados para operaciones de base de datos
@@ -29,13 +29,6 @@ pub struct Database {
 
 impl Database {
     /// Inicializa la base de datos con encriptación SQLCipher
-    ///
-    /// # Argumentos
-    /// * `app_handle` - Handle de la aplicación Tauri para obtener rutas
-    /// * `password` - Contraseña para encriptar/desencriptar la base de datos
-    ///
-    /// # Retorna
-    /// * `Result<Database, DbError>` - Instancia de Database o error
     pub fn init(app_handle: &AppHandle, password: &str) -> Result<Self, DbError> {
         // Obtener el directorio de datos de la aplicación
         let app_data_dir = app_handle
@@ -54,14 +47,19 @@ impl Database {
         // Abrir conexión a la base de datos
         let conn = Connection::open(&db_path)?;
 
-        // CRÍTICO: Establecer la contraseña ANTES de cualquier otra operación
-        // FORMA SEGURA: Usar pragma_update maneja el escapado de caracteres por ti
+        // --- ZONA DE SEGURIDAD Y CONFIGURACIÓN ---
+
+        // 1. Establecer la contraseña (Encriptación)
+        // Usamos pragma_update para evitar SQL Injection de forma segura
         conn.pragma_update(None, "key", password)
             .map_err(|_| DbError::InvalidPassword)?;
 
-        // Activar modo WAL (Write-Ahead Logging) para mejor rendimiento
-        conn.execute("PRAGMA journal_mode=WAL;", [])
-            .map_err(|e| DbError::Sqlite(e))?;
+        // 2. Activar modo WAL (Rendimiento)
+        // Usamos pragma_update porque WAL retorna string "wal" y execute fallaría
+        conn.pragma_update(None, "journal_mode", "WAL")
+            .map_err(DbError::Sqlite)?;
+
+        // -----------------------------------------
 
         // Crear instancia de Database
         let db = Database { conn };
@@ -86,13 +84,12 @@ impl Database {
             [],
         )?;
 
-        // Crear índice en la fecha para consultas más rápidas
+        // Crear índices para búsquedas rápidas
         self.conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date)",
             [],
         )?;
 
-        // Crear índice en la categoría
         self.conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category)",
             [],
@@ -101,19 +98,22 @@ impl Database {
         Ok(())
     }
 
-    /// Obtiene una referencia a la conexión de la base de datos
     pub fn connection(&self) -> &Connection {
         &self.conn
     }
 
     /// Verifica que la base de datos esté correctamente configurada y accesible
     pub fn health_check(&self) -> Result<(), DbError> {
-        // Intentar una consulta simple para verificar que la DB está operativa
-        self.conn.execute("SELECT 1", [])?;
+        // CORRECCIÓN CRÍTICA:
+        // Usamos query_row en lugar de execute.
+        // `execute` espera 0 filas afectadas. `SELECT 1` devuelve una fila.
+        // `query_row` consume esa fila y retorna Ok, evitando el error.
+        self.conn
+            .query_row("SELECT 1", [], |_| Ok(()))
+            .map_err(DbError::Sqlite)?;
         Ok(())
     }
 
-    /// Obtiene la ruta del archivo de base de datos
     pub fn get_db_path(app_handle: &AppHandle) -> Result<PathBuf, DbError> {
         let app_data_dir = app_handle
             .path()
