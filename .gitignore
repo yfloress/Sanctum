@@ -27,6 +27,7 @@ src-tauri/gen/
 
 # --- Deno / Node / Web ---
 node_modules/
+sanctum/node_modules/
 npm-debug.log
 yarn-error.log
 pnpm-debug.log
