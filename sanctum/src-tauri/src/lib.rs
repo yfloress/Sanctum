@@ -1,6 +1,7 @@
 // Módulos
 pub mod commands;
 pub mod db;
+pub mod models;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -18,7 +19,8 @@ pub fn run() {
             commands::init_db,
             commands::is_db_initialized,
             commands::close_db,
-            commands::get_db_path
+            commands::get_db_path,
+            commands::add_transaction
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,4 +1,5 @@
-use rusqlite::Connection;
+use crate::models::Transaction;
+use rusqlite::{params, Connection};
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 use thiserror::Error;
@@ -20,6 +21,9 @@ pub enum DbError {
 
     #[error("Error al crear el directorio de datos")]
     DirectoryCreation,
+
+    #[error("Tipo de transacción inválido")]
+    InvalidTransactionType,
 }
 
 /// Struct principal que envuelve la conexión a la base de datos
@@ -72,17 +76,66 @@ impl Database {
 
     /// Ejecuta las migraciones necesarias para crear las tablas
     fn run_migrations(&self) -> Result<(), DbError> {
-        // Crear tabla de transacciones si no existe
-        self.conn.execute(
-            "CREATE TABLE IF NOT EXISTS transactions (
-                id TEXT PRIMARY KEY NOT NULL,
-                amount INTEGER NOT NULL,
-                category TEXT NOT NULL,
-                description TEXT NOT NULL,
-                date TEXT NOT NULL
-            )",
-            [],
-        )?;
+        // Verificar si la tabla existe y tiene la columna 'type'
+        let table_exists: bool = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='transactions'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(0)
+            > 0;
+
+        if table_exists {
+            // Verificar si la columna 'type' existe
+            let has_type_column: bool = self
+                .conn
+                .query_row(
+                    "SELECT COUNT(*) FROM pragma_table_info('transactions') WHERE name='type'",
+                    [],
+                    |row| row.get::<_, i32>(0),
+                )
+                .unwrap_or(0)
+                > 0;
+
+            if !has_type_column {
+                // Migrar tabla antigua a nueva estructura
+                self.conn
+                    .execute("ALTER TABLE transactions RENAME TO transactions_old", [])?;
+                self.conn.execute(
+                    "CREATE TABLE transactions (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        amount INTEGER NOT NULL,
+                        category TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        date TEXT NOT NULL,
+                        type TEXT NOT NULL
+                    )",
+                    [],
+                )?;
+                // Copiar datos existentes (asumiendo 'expense' como default)
+                self.conn.execute(
+                    "INSERT INTO transactions (id, amount, category, description, date, type)
+                     SELECT id, amount, category, description, date, 'expense' FROM transactions_old",
+                    [],
+                )?;
+                self.conn.execute("DROP TABLE transactions_old", [])?;
+            }
+        } else {
+            // Crear tabla nueva con la columna 'type'
+            self.conn.execute(
+                "CREATE TABLE transactions (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    amount INTEGER NOT NULL,
+                    category TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    date TEXT NOT NULL,
+                    type TEXT NOT NULL
+                )",
+                [],
+            )?;
+        }
 
         // Crear índices para búsquedas rápidas
         self.conn.execute(
@@ -92,6 +145,11 @@ impl Database {
 
         self.conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category)",
+            [],
+        )?;
+
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type)",
             [],
         )?;
 
@@ -111,6 +169,29 @@ impl Database {
         self.conn
             .query_row("SELECT 1", [], |_| Ok(()))
             .map_err(DbError::Sqlite)?;
+        Ok(())
+    }
+
+    /// Crea una nueva transacción en la base de datos
+    pub fn create_transaction(&self, transaction: &Transaction) -> Result<(), DbError> {
+        // Validar tipo de transacción
+        if !transaction.validate_type() {
+            return Err(DbError::InvalidTransactionType);
+        }
+
+        self.conn.execute(
+            "INSERT INTO transactions (id, amount, category, description, date, type)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![
+                &transaction.id,
+                &transaction.amount,
+                &transaction.category,
+                &transaction.description,
+                &transaction.date,
+                &transaction.transaction_type,
+            ],
+        )?;
+
         Ok(())
     }
 

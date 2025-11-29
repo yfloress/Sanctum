@@ -1,6 +1,8 @@
 use crate::db::Database;
+use crate::models::Transaction;
 use std::sync::Mutex;
 use tauri::{AppHandle, State};
+use uuid::Uuid;
 
 /// Estado global para mantener la conexión a la base de datos
 ///
@@ -128,6 +130,62 @@ pub fn get_db_path(app_handle: AppHandle) -> Result<String, String> {
         .map_err(|e| format!("Error al obtener la ruta: {}", e))?;
 
     Ok(path.to_string_lossy().to_string())
+}
+
+/// Comando para agregar una transacción
+#[tauri::command]
+pub fn add_transaction(
+    state: State<DbState>,
+    amount: i64,
+    category: String,
+    description: String,
+    date: String,
+    is_expense: bool,
+) -> Result<String, String> {
+    // Validar que haya una conexión activa
+    let db_lock = state
+        .db
+        .lock()
+        .map_err(|e| format!("Error al obtener el lock del estado: {}", e))?;
+
+    let db = db_lock
+        .as_ref()
+        .ok_or_else(|| "No hay conexión a la base de datos. Inicializa primero.".to_string())?;
+
+    // Validar campos
+    if category.trim().is_empty() {
+        return Err("La categoría no puede estar vacía".to_string());
+    }
+
+    if description.trim().is_empty() {
+        return Err("La descripción no puede estar vacía".to_string());
+    }
+
+    if amount <= 0 {
+        return Err("El monto debe ser mayor a cero".to_string());
+    }
+
+    // Generar UUID
+    let id = Uuid::new_v4().to_string();
+
+    // Determinar tipo de transacción
+    let transaction_type = if is_expense { "expense" } else { "income" };
+
+    // Crear transacción
+    let transaction = Transaction::new(
+        id.clone(),
+        amount,
+        category,
+        description,
+        date,
+        transaction_type.to_string(),
+    );
+
+    // Guardar en la base de datos
+    db.create_transaction(&transaction)
+        .map_err(|e| format!("Error al crear transacción: {}", e))?;
+
+    Ok(id)
 }
 
 #[cfg(test)]
