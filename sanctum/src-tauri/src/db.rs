@@ -203,6 +203,30 @@ impl Database {
 
         Ok(app_data_dir.join("sanctum.db"))
     }
+
+    /// Obtiene todas las transacciones ordenadas por fecha descendente
+    pub fn get_transactions(&self) -> Result<Vec<Transaction>, DbError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, amount, category, description, date, type
+             FROM transactions
+             ORDER BY date DESC, id DESC",
+        )?;
+
+        let transactions = stmt
+            .query_map([], |row| {
+                Ok(Transaction {
+                    id: row.get(0)?,
+                    amount: row.get(1)?,
+                    category: row.get(2)?,
+                    description: row.get(3)?,
+                    date: row.get(4)?,
+                    transaction_type: row.get(5)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(transactions)
+    }
 }
 
 #[cfg(test)]

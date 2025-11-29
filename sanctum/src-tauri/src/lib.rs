@@ -20,7 +20,8 @@ pub fn run() {
             commands::is_db_initialized,
             commands::close_db,
             commands::get_db_path,
-            commands::add_transaction
+            commands::add_transaction,
+            commands::get_transactions
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

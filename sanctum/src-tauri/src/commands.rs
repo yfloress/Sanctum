@@ -157,10 +157,6 @@ pub fn add_transaction(
         return Err("La categoría no puede estar vacía".to_string());
     }
 
-    if description.trim().is_empty() {
-        return Err("La descripción no puede estar vacía".to_string());
-    }
-
     if amount <= 0 {
         return Err("El monto debe ser mayor a cero".to_string());
     }
@@ -186,6 +182,25 @@ pub fn add_transaction(
         .map_err(|e| format!("Error al crear transacción: {}", e))?;
 
     Ok(id)
+}
+
+/// Comando para obtener todas las transacciones
+#[tauri::command]
+pub fn get_transactions(state: State<DbState>) -> Result<Vec<Transaction>, String> {
+    let db_lock = state
+        .db
+        .lock()
+        .map_err(|e| format!("Error al obtener el lock del estado: {}", e))?;
+
+    let db = db_lock
+        .as_ref()
+        .ok_or_else(|| "No hay conexión a la base de datos. Inicializa primero.".to_string())?;
+
+    let transactions = db
+        .get_transactions()
+        .map_err(|e| format!("Error al obtener transacciones: {}", e))?;
+
+    Ok(transactions)
 }
 
 #[cfg(test)]

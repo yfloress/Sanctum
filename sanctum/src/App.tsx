@@ -2,6 +2,15 @@ import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 
+interface Transaction {
+  id: string;
+  amount: number;
+  category: string;
+  description: string;
+  date: string;
+  type: string;
+}
+
 const EXPENSE_CATEGORIES = [
   "Alimentación",
   "Transporte",
@@ -38,6 +47,7 @@ function App() {
   const [date, setDate] = useState<string>(
     new Date().toISOString().split("T")[0],
   );
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   // Verificar el estado de la BD al cargar
   useEffect(() => {
@@ -53,6 +63,7 @@ function App() {
 
       if (initialized) {
         await loadDbPath();
+        await loadTransactions();
       }
     } catch (err) {
       setError(`Error al verificar estado: ${err}`);
@@ -67,6 +78,15 @@ function App() {
       setDbPath(path);
     } catch (err) {
       console.error("Error al obtener ruta:", err);
+    }
+  }
+
+  async function loadTransactions() {
+    try {
+      const txs = await invoke<Transaction[]>("get_transactions");
+      setTransactions(txs);
+    } catch (err) {
+      console.error("Error al cargar transacciones:", err);
     }
   }
 
@@ -92,6 +112,7 @@ function App() {
       setIsInitialized(true);
       setPassword("");
       await loadDbPath();
+      await loadTransactions();
     } catch (err) {
       setError(`Error: ${err}`);
     } finally {
@@ -130,11 +151,6 @@ function App() {
       return;
     }
 
-    if (!description.trim()) {
-      setError("La descripción no puede estar vacía");
-      return;
-    }
-
     if (!category.trim()) {
       setError("La categoría no puede estar vacía");
       return;
@@ -143,7 +159,17 @@ function App() {
     try {
       setIsLoading(true);
       const amountInCents = Math.round(parseFloat(amount) * 100);
-      const dateISO = new Date(date).toISOString();
+
+      // Combinar fecha seleccionada con hora actual para mantener orden cronológico
+      const now = new Date();
+      const selectedDate = new Date(date);
+      // Ajustar zona horaria para que la fecha seleccionada sea correcta localmente
+      selectedDate.setMinutes(
+        selectedDate.getMinutes() + selectedDate.getTimezoneOffset(),
+      );
+      selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds());
+
+      const dateISO = selectedDate.toISOString();
 
       const transactionId = await invoke<string>("add_transaction", {
         amount: amountInCents,
@@ -160,8 +186,11 @@ function App() {
       // Limpiar formulario
       setAmount("");
       setDescription("");
-      setCategory("");
+      setCategory(isExpense ? EXPENSE_CATEGORIES[0] : INCOME_CATEGORIES[0]);
       setDate(new Date().toISOString().split("T")[0]);
+
+      // Recargar transacciones
+      await loadTransactions();
     } catch (err) {
       setError(`Error al crear transacción: ${err}`);
     } finally {
@@ -231,101 +260,155 @@ function App() {
             <p className="vault-subtitle">Tu información está accesible</p>
           </div>
 
-          <div className="vault-info">
-            <div className="info-section">
-              <h3>Nueva Transacción</h3>
-              <form
-                onSubmit={handleAddTransaction}
-                className="transaction-form"
-              >
-                <div className="form-row">
+          <div className="vault-content-grid">
+            <div className="vault-column-left">
+              <div className="info-section">
+                <h3>Nueva Transacción</h3>
+                <form
+                  onSubmit={handleAddTransaction}
+                  className="transaction-form"
+                >
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="amount">Monto ($)</label>
+                      <input
+                        id="amount"
+                        type="number"
+                        step="0.01"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        placeholder="0.00"
+                        disabled={isLoading}
+                      />
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="date">Fecha</label>
+                      <input
+                        id="date"
+                        type="date"
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                        disabled={isLoading}
+                      />
+                    </div>
+                  </div>
+
                   <div className="form-group">
-                    <label htmlFor="amount">Monto ($)</label>
+                    <label htmlFor="category">Categoría</label>
+                    <select
+                      id="category"
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      disabled={isLoading}
+                    >
+                      {(isExpense ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).map(
+                        (cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="description">Descripción</label>
                     <input
-                      id="amount"
-                      type="number"
-                      step="0.01"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      placeholder="0.00"
+                      id="description"
+                      type="text"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Describe la transacción"
                       disabled={isLoading}
                     />
                   </div>
 
                   <div className="form-group">
-                    <label htmlFor="date">Fecha</label>
-                    <input
-                      id="date"
-                      type="date"
-                      value={date}
-                      onChange={(e) => setDate(e.target.value)}
-                      disabled={isLoading}
-                    />
+                    <label className="switch-label">
+                      <input
+                        type="checkbox"
+                        checked={isExpense}
+                        onChange={(e) => handleExpenseToggle(e.target.checked)}
+                        disabled={isLoading}
+                      />
+                      <span className="switch-text">
+                        {isExpense ? "Gasto" : "Ingreso"}
+                      </span>
+                    </label>
                   </div>
-                </div>
 
-                <div className="form-group">
-                  <label htmlFor="category">Categoría</label>
-                  <select
-                    id="category"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
+                  <button
+                    type="submit"
+                    className="btn-primary"
                     disabled={isLoading}
                   >
-                    {(isExpense ? EXPENSE_CATEGORIES : INCOME_CATEGORIES).map(
-                      (cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ),
-                    )}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="description">Descripción</label>
-                  <input
-                    id="description"
-                    type="text"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Describe la transacción"
-                    disabled={isLoading}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="switch-label">
-                    <input
-                      type="checkbox"
-                      checked={isExpense}
-                      onChange={(e) => handleExpenseToggle(e.target.checked)}
-                      disabled={isLoading}
-                    />
-                    <span className="switch-text">
-                      {isExpense ? "Gasto" : "Ingreso"}
-                    </span>
-                  </label>
-                </div>
-
-                <button
-                  type="submit"
-                  className="btn-primary"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Guardando..." : "Guardar Transacción"}
-                </button>
-              </form>
+                    {isLoading ? "Guardando..." : "Guardar Transacción"}
+                  </button>
+                </form>
+              </div>
             </div>
 
-            <div className="info-section">
-              <h3>Estado de la Conexión</h3>
-              <div className="status-badge active">Activa</div>
-            </div>
+            <div className="vault-column-right">
+              <div className="info-section">
+                <h3>Historial de Movimientos</h3>
+                {transactions.length === 0 ? (
+                  <p
+                    style={{
+                      color: "var(--text-muted)",
+                      textAlign: "center",
+                      padding: "2rem 0",
+                    }}
+                  >
+                    No hay transacciones registradas
+                  </p>
+                ) : (
+                  <div className="transactions-list">
+                    {[...transactions].map((tx) => {
+                      const isIncome = tx.type === "income";
+                      const amountFormatted = (tx.amount / 100).toFixed(2);
+                      const dateFormatted = new Date(
+                        tx.date,
+                      ).toLocaleDateString("es-ES", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      });
 
-            <div className="info-section">
-              <h3>Ubicación de la Base de Datos</h3>
-              <code className="db-path">{dbPath || "Cargando..."}</code>
+                      return (
+                        <div key={tx.id} className="transaction-item">
+                          <div className="transaction-info">
+                            <div className="transaction-category">
+                              {tx.category}
+                            </div>
+                            <div className="transaction-description">
+                              {tx.description}
+                            </div>
+                            <div className="transaction-date">
+                              {dateFormatted}
+                            </div>
+                          </div>
+                          <div
+                            className={`transaction-amount ${isIncome ? "income" : "expense"}`}
+                          >
+                            {isIncome ? "+" : "-"}${amountFormatted}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="info-section">
+                <h3>Estado de la Conexión</h3>
+                <div className="status-badge active">Activa</div>
+              </div>
+
+              <div className="info-section">
+                <h3>Ubicación de la Base de Datos</h3>
+                <code className="db-path">{dbPath || "Cargando..."}</code>
+              </div>
             </div>
           </div>
 

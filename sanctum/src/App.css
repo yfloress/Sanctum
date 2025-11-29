@@ -114,7 +114,7 @@ body {
 }
 
 .vault-card.open {
-    max-width: 700px;
+    max-width: 1200px;
 }
 
 @keyframes slideIn {
@@ -361,19 +361,28 @@ button:active:not(:disabled) {
     border-color: var(--accent-primary);
 }
 
+.vault-content-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin: 2rem 0;
+}
+
+.vault-column-left,
+.vault-column-right {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
 .vault-info {
     margin: 2rem 0;
 }
 
 .info-section {
-    margin-bottom: 1.5rem;
-    padding-bottom: 1.5rem;
-    border-bottom: 1px solid rgba(139, 92, 246, 0.2);
-}
-
-.info-section:last-child {
-    border-bottom: none;
+    margin-bottom: 0;
     padding-bottom: 0;
+    border-bottom: none;
 }
 
 .info-section h3 {
@@ -534,6 +543,97 @@ button:active:not(:disabled) {
     font-size: 0.95rem;
 }
 
+.transactions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+.transactions-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.transactions-list::-webkit-scrollbar-track {
+    background: rgba(13, 13, 20, 0.4);
+    border-radius: 3px;
+}
+
+.transactions-list::-webkit-scrollbar-thumb {
+    background: var(--accent-primary);
+    border-radius: 3px;
+}
+
+.transactions-list::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-hover);
+}
+
+.transaction-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: rgba(13, 13, 20, 0.6);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.transaction-item:hover {
+    background: rgba(13, 13, 20, 0.8);
+    border-color: var(--accent-primary);
+    transform: translateX(4px);
+}
+
+.transaction-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.transaction-category {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+.transaction-description {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.transaction-date {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+.transaction-amount {
+    font-size: 1.25rem;
+    font-weight: 700;
+    font-family: "Courier New", monospace;
+    white-space: nowrap;
+    margin-left: 1rem;
+}
+
+.transaction-amount.income {
+    color: var(--success);
+}
+
+.transaction-amount.expense {
+    color: var(--error);
+}
+
+@media (max-width: 1024px) {
+    .vault-content-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+}
+
 @media (max-width: 640px) {
     .form-row {
         grid-template-columns: 1fr;
@@ -556,5 +656,16 @@ button:active:not(:disabled) {
 
     .transaction-form {
         gap: 1rem;
+    }
+
+    .transaction-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .transaction-amount {
+        margin-left: 0;
+        font-size: 1.5rem;
     }
 }
