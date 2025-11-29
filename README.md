@@ -99,5 +99,5 @@ See the [LICENSE](LICENSE) file for more info.
 
 ---
 <div align="center">
-  <sub>Built with ❤️ and 🦀 by [Tu Nombre]</sub>
+  <sub>Built with ❤️ and 🦀</sub>
 </div>
