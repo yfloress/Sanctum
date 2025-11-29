@@ -66,7 +66,7 @@ This project uses **Nix** to guarantee a reproducible environment without pollut
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/tu-usuario/sanctum.git](https://github.com/tu-usuario/sanctum.git)
+    git clone https://codeberg.org/Kyronix/Sanctum
     cd sanctum
     ```
 
