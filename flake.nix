@@ -62,8 +62,6 @@
             echo "   Runtime:    $(deno --version)"
             echo "   Tauri CLI:  $(cargo tauri --version)"
             echo "   Security:   cargo-audit $(cargo audit --version 2>/dev/null | head -n1)"
-            echo ""
-            echo "   💡 Ejecuta 'cargo audit' para auditar dependencias Rust"
           '';
         };
       }
