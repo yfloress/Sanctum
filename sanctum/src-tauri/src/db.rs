@@ -1,5 +1,6 @@
 use crate::models::{BalanceSummary, Transaction};
 use rusqlite::{Connection, Error as RusqliteError, ErrorCode, params};
+use secrecy::{ExposeSecret, SecretString};
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 use thiserror::Error;
@@ -7,22 +8,22 @@ use thiserror::Error;
 /// Errores personalizados para operaciones de base de datos
 #[derive(Error, Debug)]
 pub enum DbError {
-    #[error("Error de SQLite: {0}")]
+    #[error("Database error")]
     Sqlite(#[from] rusqlite::Error),
 
-    #[error("Error al obtener el directorio de datos de la aplicación")]
+    #[error("Could not access application data directory")]
     AppDataDir,
 
-    #[error("Error de I/O: {0}")]
+    #[error("I/O error")]
     Io(#[from] std::io::Error),
 
-    #[error("La contraseña de la base de datos es inválida")]
+    #[error("Could not open vault")]
     InvalidPassword,
 
-    #[error("Error al crear el directorio de datos")]
+    #[error("Could not create data directory")]
     DirectoryCreation,
 
-    #[error("Tipo de transacción inválido")]
+    #[error("Invalid transaction type")]
     InvalidTransactionType,
 }
 
@@ -34,9 +35,10 @@ pub struct Database {
 
 impl Database {
     /// Inicializa la base de datos con encriptación SQLCipher
+    /// Usa SecretString para manejar la contraseña de forma segura
     pub fn init(
         app_handle: &AppHandle,
-        password: &str,
+        password: &SecretString,
         db_path: Option<PathBuf>,
     ) -> Result<Self, DbError> {
         // Resolver la ruta objetivo
@@ -60,7 +62,8 @@ impl Database {
         // --- ZONA DE SEGURIDAD Y CONFIGURACIÓN ---
         // 1. Establecer la contraseña (Encriptación)
         // Usamos pragma_update para evitar SQL Injection de forma segura
-        conn.pragma_update(None, "key", password)
+        // ExposeSecret permite acceder al valor interno de forma controlada
+        conn.pragma_update(None, "key", password.expose_secret())
             .map_err(|_| DbError::InvalidPassword)?;
 
         // 1.0 Endurecer la configuración de SQLCipher una vez aplicada la clave
@@ -141,7 +144,7 @@ impl Database {
                         {
                             DbError::InvalidPassword
                         }
-                        other => DbError::Sqlite(other),
+                        _ => DbError::InvalidPassword,
                     })?;
                 Ok(())
             }
@@ -153,7 +156,7 @@ impl Database {
             {
                 Err(DbError::InvalidPassword)
             }
-            Err(other) => Err(DbError::Sqlite(other)),
+            Err(_) => Err(DbError::InvalidPassword),
         }
     }
 
@@ -253,16 +256,8 @@ impl Database {
         Ok(())
     }
 
-    pub fn connection(&self) -> &Connection {
-        &self.conn
-    }
-
     /// Verifica que la base de datos esté correctamente configurada y accesible
     pub fn health_check(&self) -> Result<(), DbError> {
-        // CORRECCIÓN CRÍTICA:
-        // Usamos query_row en lugar de execute.
-        // `execute` espera 0 filas afectadas. `SELECT 1` devuelve una fila.
-        // `query_row` consume esa fila y retorna Ok, evitando el error.
         self.conn
             .query_row("SELECT 1", [], |_| Ok(()))
             .map_err(DbError::Sqlite)?;
@@ -292,10 +287,6 @@ impl Database {
         Ok(())
     }
 
-    pub fn get_db_path(app_handle: &AppHandle) -> Result<PathBuf, DbError> {
-        Self::default_db_path(app_handle)
-    }
-
     /// Obtiene todas las transacciones ordenadas por fecha descendente
     pub fn get_transactions(&self) -> Result<Vec<Transaction>, DbError> {
         let mut stmt = self.conn.prepare(
@@ -320,23 +311,17 @@ impl Database {
         Ok(transactions)
     }
 
-    /// Obtiene el resumen de balance (ingresos, gastos y total)
+    /// Obtiene el resumen de balance (ingresos, gastos y total) en una sola query optimizada
     pub fn get_balance_summary(&self) -> Result<BalanceSummary, DbError> {
-        let total_income: i64 = self
+        let (total_income, total_expense): (i64, i64) = self
             .conn
             .query_row(
-                "SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE type = 'income'",
+                "SELECT
+                    COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0),
+                    COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0)
+                 FROM transactions",
                 [],
-                |row| row.get(0),
-            )
-            .map_err(DbError::Sqlite)?;
-
-        let total_expense: i64 = self
-            .conn
-            .query_row(
-                "SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE type = 'expense'",
-                [],
-                |row| row.get(0),
+                |row| Ok((row.get(0)?, row.get(1)?)),
             )
             .map_err(DbError::Sqlite)?;
 
@@ -357,9 +342,24 @@ mod tests {
     #[test]
     fn test_db_error_display() {
         let error = DbError::InvalidPassword;
+        // Mensaje genérico que no revela información sensible
+        assert_eq!(error.to_string(), "Could not open vault");
+    }
+
+    #[test]
+    fn test_db_error_generic_messages() {
+        // Verificar que los mensajes de error no revelan detalles internos
         assert_eq!(
-            error.to_string(),
-            "La contraseña de la base de datos es inválida"
+            DbError::AppDataDir.to_string(),
+            "Could not access application data directory"
+        );
+        assert_eq!(
+            DbError::DirectoryCreation.to_string(),
+            "Could not create data directory"
+        );
+        assert_eq!(
+            DbError::InvalidTransactionType.to_string(),
+            "Invalid transaction type"
         );
     }
 }
