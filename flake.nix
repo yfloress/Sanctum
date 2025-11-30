@@ -22,7 +22,6 @@
           gdk-pixbuf
           glib
           dbus
-          openssl_3
           librsvg
           libsoup_3
         ];
