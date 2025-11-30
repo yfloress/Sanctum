@@ -1,5 +1,6 @@
+use crate::crypto;
 use crate::db::Database;
-use crate::models::{BalanceSummary, Transaction};
+use crate::models::{BalanceSummary, CryptoAsset, CryptoHolding, Transaction};
 use secrecy::SecretString; // QUITADO: ExposeSecret (ya no se usa aquí)
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -417,6 +418,96 @@ pub fn delete_transaction(state: State<DbState>, id: String) -> Result<(), Strin
     }
 
     db.delete_transaction(trimmed_id)
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+/// Command to fetch cryptocurrency prices from CoinGecko
+#[tauri::command]
+pub async fn get_crypto_prices(coins: Vec<String>) -> Result<Vec<CryptoAsset>, String> {
+    crypto::fetch_crypto_prices(coins).await
+}
+
+/// Command to add a crypto holding to the portfolio
+#[tauri::command]
+pub fn add_crypto_holding(
+    state: State<DbState>,
+    coin_id: String,
+    symbol: String,
+    amount: f64,
+    purchase_price: f64,
+    purchase_date: String,
+) -> Result<String, String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+
+    let db = db_lock
+        .as_ref()
+        .ok_or_else(|| "No vault is currently open".to_string())?;
+
+    // Validate inputs
+    if coin_id.trim().is_empty() {
+        return Err("Coin ID cannot be empty".to_string());
+    }
+
+    if symbol.trim().is_empty() {
+        return Err("Symbol cannot be empty".to_string());
+    }
+
+    if amount <= 0.0 {
+        return Err("Amount must be greater than zero".to_string());
+    }
+
+    if purchase_price < 0.0 {
+        return Err("Purchase price cannot be negative".to_string());
+    }
+
+    let id = Uuid::new_v4().to_string();
+
+    let holding = CryptoHolding::new(
+        id.clone(),
+        coin_id.trim().to_lowercase(),
+        symbol.trim().to_uppercase(),
+        amount,
+        purchase_price,
+        purchase_date,
+    );
+
+    db.create_crypto_holding(&holding)
+        .map_err(|e| e.to_string())?;
+
+    Ok(id)
+}
+
+/// Command to get all crypto holdings
+#[tauri::command]
+pub fn get_crypto_holdings(state: State<DbState>) -> Result<Vec<CryptoHolding>, String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+
+    let db = db_lock
+        .as_ref()
+        .ok_or_else(|| "No vault is currently open".to_string())?;
+
+    let holdings = db.get_crypto_holdings().map_err(|e| e.to_string())?;
+
+    Ok(holdings)
+}
+
+/// Command to delete a crypto holding
+#[tauri::command]
+pub fn delete_crypto_holding(state: State<DbState>, id: String) -> Result<(), String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+
+    let db = db_lock
+        .as_ref()
+        .ok_or_else(|| "No vault is currently open".to_string())?;
+
+    let trimmed_id = id.trim();
+    if trimmed_id.is_empty() {
+        return Err("Holding ID cannot be empty".to_string());
+    }
+
+    db.delete_crypto_holding(trimmed_id)
         .map_err(|e| e.to_string())?;
 
     Ok(())

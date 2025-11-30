@@ -1,5 +1,6 @@
 // Módulos
 pub mod commands;
+pub mod crypto;
 pub mod db;
 pub mod models;
 
@@ -24,7 +25,11 @@ pub fn run() {
             commands::add_transaction,
             commands::get_transactions,
             commands::get_balance,
-            commands::delete_transaction
+            commands::delete_transaction,
+            commands::get_crypto_prices,
+            commands::add_crypto_holding,
+            commands::get_crypto_holdings,
+            commands::delete_crypto_holding
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

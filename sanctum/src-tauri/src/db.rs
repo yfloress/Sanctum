@@ -1,4 +1,4 @@
-use crate::models::{BalanceSummary, Transaction};
+use crate::models::{BalanceSummary, CryptoHolding, Transaction};
 use rusqlite::{Connection, Error as RusqliteError, ErrorCode, params};
 use secrecy::{ExposeSecret, SecretString};
 use std::path::PathBuf;
@@ -253,6 +253,25 @@ impl Database {
             [],
         )?;
 
+        // Create crypto_holdings table
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS crypto_holdings (
+                id TEXT PRIMARY KEY NOT NULL,
+                coin_id TEXT NOT NULL,
+                symbol TEXT NOT NULL,
+                amount REAL NOT NULL,
+                purchase_price REAL NOT NULL,
+                purchase_date TEXT NOT NULL
+            )",
+            [],
+        )?;
+
+        // Create index for crypto holdings
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_crypto_holdings_coin_id ON crypto_holdings(coin_id)",
+            [],
+        )?;
+
         Ok(())
     }
 
@@ -317,6 +336,63 @@ impl Database {
             .execute("DELETE FROM transactions WHERE id = ?1", params![id])?;
         Ok(())
     }
+
+    // ==================== Crypto Holdings CRUD ====================
+
+    /// Creates a new crypto holding in the database
+    pub fn create_crypto_holding(&self, holding: &CryptoHolding) -> Result<(), DbError> {
+        if !holding.validate() {
+            return Err(DbError::InvalidTransactionType);
+        }
+
+        self.conn.execute(
+            "INSERT INTO crypto_holdings (id, coin_id, symbol, amount, purchase_price, purchase_date)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![
+                &holding.id,
+                &holding.coin_id,
+                &holding.symbol,
+                &holding.amount,
+                &holding.purchase_price,
+                &holding.purchase_date,
+            ],
+        )?;
+
+        Ok(())
+    }
+
+    /// Gets all crypto holdings ordered by coin_id
+    pub fn get_crypto_holdings(&self) -> Result<Vec<CryptoHolding>, DbError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, coin_id, symbol, amount, purchase_price, purchase_date
+             FROM crypto_holdings
+             ORDER BY coin_id ASC, purchase_date DESC",
+        )?;
+
+        let holdings = stmt
+            .query_map([], |row| {
+                Ok(CryptoHolding {
+                    id: row.get(0)?,
+                    coin_id: row.get(1)?,
+                    symbol: row.get(2)?,
+                    amount: row.get(3)?,
+                    purchase_price: row.get(4)?,
+                    purchase_date: row.get(5)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(holdings)
+    }
+
+    /// Deletes a crypto holding by its ID
+    pub fn delete_crypto_holding(&self, id: &str) -> Result<(), DbError> {
+        self.conn
+            .execute("DELETE FROM crypto_holdings WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
+    // ==================== Balance Summary ====================
 
     /// Gets the balance summary (income, expenses and total) in a single optimized query
     pub fn get_balance_summary(&self) -> Result<BalanceSummary, DbError> {

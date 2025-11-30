@@ -1267,6 +1267,590 @@ button:active:not(:disabled) {
     }
 }
 
+/* ==================== Crypto Page ==================== */
+
+.crypto-page {
+    padding: 0;
+}
+
+.crypto-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.crypto-header .page-title {
+    margin: 0;
+}
+
+.crypto-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.crypto-count {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: rgba(127, 138, 255, 0.1);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-family: "Courier New", monospace;
+}
+
+.btn-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: rgba(127, 138, 255, 0.12);
+    border: 1px solid rgba(127, 138, 255, 0.25);
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    min-width: unset;
+}
+
+.btn-icon:hover:not(:disabled) {
+    background: rgba(127, 138, 255, 0.25);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+.btn-icon:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-icon::before {
+    display: none;
+}
+
+.crypto-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.25rem;
+}
+
+.crypto-card {
+    background: linear-gradient(
+        145deg,
+        rgba(17, 24, 43, 0.9),
+        rgba(13, 13, 20, 0.95)
+    );
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 12px;
+    padding: 1.25rem;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.crypto-remove {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    min-width: unset;
+}
+
+.crypto-remove::before {
+    display: none;
+}
+
+.crypto-card:hover .crypto-remove {
+    opacity: 1;
+}
+
+.crypto-remove:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--error);
+}
+
+.crypto-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        var(--accent-primary),
+        transparent
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.crypto-card:hover {
+    border-color: rgba(139, 92, 246, 0.5);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(127, 138, 255, 0.15);
+}
+
+.crypto-card:hover::before {
+    opacity: 1;
+}
+
+.crypto-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.crypto-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.crypto-symbol {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.crypto-name {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.crypto-change {
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 0.35rem 0.65rem;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.crypto-change.positive {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--success);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.crypto-change.negative {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--error);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.crypto-price {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: "Courier New", monospace;
+    margin-bottom: 0.75rem;
+}
+
+.crypto-updated {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.crypto-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    gap: 1rem;
+}
+
+.crypto-loading p {
+    color: var(--text-secondary);
+}
+
+.crypto-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    gap: 1rem;
+    background: rgba(13, 13, 20, 0.4);
+    border: 1px dashed rgba(139, 92, 246, 0.3);
+    border-radius: 12px;
+}
+
+.crypto-empty-icon {
+    font-size: 3rem;
+    opacity: 0.5;
+}
+
+.crypto-empty p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+}
+
+.crypto-empty .btn-secondary {
+    margin-top: 0.5rem;
+}
+
+.crypto-error {
+    margin-bottom: 1.5rem;
+}
+
+.crypto-disclaimer {
+    margin-top: 2rem;
+    padding: 1rem;
+    background: rgba(127, 138, 255, 0.08);
+    border: 1px solid rgba(127, 138, 255, 0.15);
+    border-radius: 8px;
+}
+
+.crypto-disclaimer p {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Crypto Modal */
+.crypto-modal {
+    max-width: 480px;
+}
+
+.crypto-modal .modal-body {
+    margin-bottom: 1rem;
+}
+
+.crypto-suggestions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 280px;
+    overflow-y: auto;
+    margin-top: 1rem;
+    padding-right: 0.5rem;
+}
+
+.crypto-suggestions::-webkit-scrollbar {
+    width: 4px;
+}
+
+.crypto-suggestions::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.crypto-suggestions::-webkit-scrollbar-thumb {
+    background: rgba(127, 138, 255, 0.3);
+    border-radius: 2px;
+}
+
+.crypto-suggestion {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: rgba(127, 138, 255, 0.08);
+    border: 1px solid rgba(127, 138, 255, 0.15);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+}
+
+.crypto-suggestion::before {
+    display: none;
+}
+
+.crypto-suggestion:hover {
+    background: rgba(127, 138, 255, 0.18);
+    border-color: var(--accent-primary);
+    transform: translateX(4px);
+}
+
+.crypto-suggestion.custom {
+    border-style: dashed;
+    background: rgba(16, 185, 129, 0.08);
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.crypto-suggestion.custom:hover {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: var(--success);
+}
+
+.suggestion-symbol {
+    font-weight: 700;
+    color: var(--accent-primary);
+    font-size: 0.9rem;
+    min-width: 50px;
+}
+
+.crypto-suggestion.custom .suggestion-symbol {
+    color: var(--success);
+    font-size: 1.1rem;
+    min-width: 30px;
+}
+
+.suggestion-name {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.suggestions-empty {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 1rem;
+}
+
+@media (max-width: 640px) {
+    .crypto-header {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .crypto-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .crypto-price {
+        font-size: 1.5rem;
+    }
+
+    .crypto-remove {
+        opacity: 1;
+    }
+
+    .crypto-modal {
+        width: 95%;
+        max-width: none;
+    }
+}
+
+/* ==================== Portfolio Section ==================== */
+
+.portfolio-section {
+    margin-bottom: 2rem;
+}
+
+.watchlist-section {
+    margin-bottom: 1.5rem;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.section-header .section-title {
+    margin: 0;
+}
+
+.portfolio-total {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.15rem;
+}
+
+.portfolio-total-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.portfolio-total-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: "Courier New", monospace;
+}
+
+.portfolio-total-pnl {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.portfolio-total-pnl.positive {
+    color: var(--success);
+}
+
+.portfolio-total-pnl.negative {
+    color: var(--error);
+}
+
+.portfolio-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2rem;
+    gap: 1rem;
+    background: rgba(13, 13, 20, 0.4);
+    border: 1px dashed rgba(139, 92, 246, 0.3);
+    border-radius: 12px;
+}
+
+.portfolio-empty-icon {
+    font-size: 2.5rem;
+    opacity: 0.5;
+}
+
+.portfolio-empty p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+
+.portfolio-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1rem;
+}
+
+.portfolio-card {
+    background: linear-gradient(
+        145deg,
+        rgba(17, 24, 43, 0.95),
+        rgba(13, 13, 20, 0.98)
+    );
+    border: 1px solid rgba(127, 138, 255, 0.25);
+    border-radius: 12px;
+    padding: 1.25rem;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.portfolio-card:hover {
+    border-color: rgba(127, 138, 255, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(127, 138, 255, 0.12);
+}
+
+.portfolio-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.portfolio-symbol {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+}
+
+.portfolio-pnl {
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+}
+
+.portfolio-pnl.positive {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--success);
+}
+
+.portfolio-pnl.negative {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--error);
+}
+
+.portfolio-amount {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.portfolio-value {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: "Courier New", monospace;
+    margin-bottom: 0.75rem;
+}
+
+.portfolio-details {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(127, 138, 255, 0.1);
+}
+
+.portfolio-details .positive {
+    color: var(--success);
+}
+
+.portfolio-details .negative {
+    color: var(--error);
+}
+
+.crypto-suggestions.compact {
+    max-height: 180px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 0.5rem;
+}
+
+.crypto-suggestions.compact .crypto-suggestion {
+    padding: 0.5rem 0.75rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+}
+
+.crypto-suggestion.selected {
+    background: rgba(127, 138, 255, 0.25);
+    border-color: var(--accent-primary);
+}
+
+@media (max-width: 640px) {
+    .portfolio-total {
+        align-items: flex-start;
+    }
+
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .portfolio-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .crypto-suggestions.compact {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 /* ==================== Modal Overlay & Delete Confirmation ==================== */
 
 .modal-overlay {
