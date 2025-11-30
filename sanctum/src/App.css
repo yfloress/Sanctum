@@ -1,22 +1,25 @@
 :root {
-    --bg-primary: #0a0a0f;
-    --bg-secondary: #13131a;
-    --bg-card: #1a1a24;
-    --accent-primary: #8b5cf6;
-    --accent-secondary: #a78bfa;
-    --accent-hover: #7c3aed;
-    --accent-glow: rgba(139, 92, 246, 0.4);
-    --purple-dark: #6d28d9;
-    --purple-light: #c084fc;
-    --success: #10b981;
+    --bg-primary: #090d16;
+    --bg-secondary: #101528;
+    --bg-card: #11182b;
+    --accent-primary: #7f8aff;
+    --accent-secondary: #c5d0ff;
+    --accent-hover: #6f79ff;
+    --accent-glow: rgba(127, 138, 255, 0.28);
+    --cta-secondary: #19c3d8;
+    --purple-dark: #5f6dff;
+    --purple-light: #d6ddff;
+    --purple-muted: #4a4e7a;
+    --success: #15c39a;
     --error: #ef4444;
-    --text-primary: #e5e7eb;
-    --text-secondary: #9ca3af;
-    --text-muted: #6b7280;
-    --border: #2d2d3a;
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.6);
-    --shadow-purple: 0 8px 32px rgba(139, 92, 246, 0.3);
+    --text-primary: #e8ecf6;
+    --text-secondary: #c1c7d7;
+    --text-muted: #8c93a8;
+    --border: #1b2033;
+    --border-subtle: rgba(139, 92, 246, 0.08);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 18px 50px rgba(6, 9, 20, 0.55);
+    --shadow-purple: 0 8px 32px rgba(127, 138, 255, 0.2);
 }
 
 * {
@@ -90,6 +93,140 @@ body {
     backdrop-filter: blur(20px);
 }
 
+.login-message {
+    position: fixed;
+    top: 2rem;
+    left: 0;
+    right: 0;
+    margin: 0 auto;
+    max-width: 400px;
+    width: 90%;
+    z-index: 100;
+}
+
+.vault-card.login-card {
+    max-width: 800px;
+    padding: 0;
+    overflow: hidden;
+}
+
+.login-layout {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    min-height: 480px;
+}
+
+.login-branding {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2.5rem;
+    background: linear-gradient(
+        135deg,
+        rgba(139, 92, 246, 0.15) 0%,
+        rgba(109, 40, 217, 0.1) 100%
+    );
+    border-right: 1px solid rgba(139, 92, 246, 0.15);
+    text-align: center;
+}
+
+.login-branding .vault-icon {
+    margin-bottom: 1.5rem;
+}
+
+.login-branding h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.login-branding .vault-subtitle {
+    margin-bottom: 1.5rem;
+}
+
+.vault-tagline {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    max-width: 200px;
+    line-height: 1.5;
+}
+
+.login-form-section {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 3rem;
+}
+
+.login-form-section .vault-form {
+    margin-bottom: 0;
+}
+
+.password-group input {
+    font-size: 1.1rem;
+    padding: 1.2rem 1.25rem;
+}
+
+.password-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-input-wrapper input {
+    flex: 1;
+    padding-right: 3rem;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 0.75rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0.5rem;
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+    width: auto;
+}
+
+.password-toggle:hover:not(:disabled) {
+    opacity: 1;
+}
+
+.password-toggle:disabled {
+    cursor: not-allowed;
+    opacity: 0.3;
+}
+
+.path-details {
+    margin-top: 1.5rem;
+    border-top: 1px solid rgba(139, 92, 246, 0.1);
+    padding-top: 1rem;
+}
+
+.path-details summary {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+    padding: 0.5rem 0;
+    transition: color 0.2s ease;
+}
+
+.path-details summary:hover {
+    color: var(--accent-secondary);
+}
+
+.path-details[open] summary {
+    margin-bottom: 1rem;
+}
+
+.path-details .path-group {
+    margin-bottom: 0;
+}
+
 .vault-card::before {
     content: "";
     position: absolute;
@@ -118,6 +255,7 @@ body {
 
 .vault-card.open {
     max-width: 1200px;
+    padding: 3rem;
 }
 
 @keyframes slideIn {
@@ -222,6 +360,30 @@ body {
     font-family: inherit;
 }
 
+.path-group input {
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+    border: 1px solid var(--border-subtle);
+    background: rgba(13, 13, 20, 0.3);
+    color: var(--text-muted);
+}
+
+.path-group input:focus {
+    border-color: rgba(139, 92, 246, 0.3);
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.08);
+}
+
+.path-group label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.path-group .input-hint {
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
 .form-group select {
     cursor: pointer;
     appearance: none;
@@ -323,14 +485,27 @@ button:hover::before {
 }
 
 .btn-secondary {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-    color: white;
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    background: transparent;
+    color: var(--accent-secondary);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    box-shadow: none;
 }
 
 .btn-secondary:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
+    background: rgba(139, 92, 246, 0.1);
+    border-color: var(--accent-primary);
+}
+
+.btn-close {
+    background: linear-gradient(135deg, var(--purple-muted) 0%, #3d3f5c 100%);
+    color: var(--text-secondary);
+    box-shadow: 0 4px 12px rgba(74, 78, 122, 0.3);
+}
+
+.btn-close:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(74, 78, 122, 0.4);
 }
 
 button:disabled {
@@ -430,6 +605,12 @@ button:active:not(:disabled) {
     color: var(--text-secondary);
     word-break: break-all;
     font-family: "Courier New", monospace;
+}
+
+.empty-state {
+    color: var(--text-muted);
+    text-align: center;
+    padding: 2rem 0;
 }
 
 .security-features {
@@ -648,6 +829,31 @@ button:active:not(:disabled) {
     }
 }
 
+@media (max-width: 860px) {
+    .vault-card.login-card {
+        max-width: 500px;
+    }
+
+    .login-layout {
+        grid-template-columns: 1fr;
+        min-height: auto;
+    }
+
+    .login-branding {
+        padding: 2.5rem 2rem 2rem;
+        border-right: none;
+        border-bottom: 1px solid rgba(139, 92, 246, 0.15);
+    }
+
+    .login-branding .vault-tagline {
+        display: none;
+    }
+
+    .login-form-section {
+        padding: 2rem;
+    }
+}
+
 @media (max-width: 640px) {
     .form-row {
         grid-template-columns: 1fr;
@@ -658,6 +864,10 @@ button:active:not(:disabled) {
 
     .vault-card {
         padding: 2rem 1.5rem;
+    }
+
+    .vault-card.login-card {
+        padding: 0;
     }
 
     .vault-header h1 {
