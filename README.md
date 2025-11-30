@@ -97,6 +97,7 @@ This project uses **Nix** to guarantee a reproducible environment without pollut
 This project is open-source and available under the **GNU General Public License v3.0**. 
 See the [LICENSE](LICENSE) file for more info.
 
+
 ---
 <div align="center">
   <sub>Built with ❤️ and 🦀</sub>
