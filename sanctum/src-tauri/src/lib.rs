@@ -7,12 +7,6 @@ pub mod security_log;
 
 use security_log::init_security_logger;
 
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Initialize security logger before anything else
@@ -22,7 +16,6 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .manage(commands::DbState::new())
         .invoke_handler(tauri::generate_handler![
-            greet,
             // Database Management
             commands::create_db,
             commands::open_db,
