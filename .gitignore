@@ -52,3 +52,5 @@ wallet.dat
 # --- Nix ---
 result
 .direnv/
+
+ARCHITECT.md
