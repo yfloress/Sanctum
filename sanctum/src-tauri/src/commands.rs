@@ -1,5 +1,5 @@
 use crate::db::Database;
-use crate::models::Transaction;
+use crate::models::{BalanceSummary, Transaction};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::fs;
@@ -394,6 +394,25 @@ pub fn get_transactions(state: State<DbState>) -> Result<Vec<Transaction>, Strin
         .map_err(|e| format!("Error al obtener transacciones: {}", e))?;
 
     Ok(transactions)
+}
+
+/// Comando para obtener el resumen de balance
+#[tauri::command]
+pub fn get_balance(state: State<DbState>) -> Result<BalanceSummary, String> {
+    let db_lock = state
+        .db
+        .lock()
+        .map_err(|e| format!("Error getting state lock: {}", e))?;
+
+    let db = db_lock
+        .as_ref()
+        .ok_or_else(|| "No database connection. Initialize first.".to_string())?;
+
+    let balance = db
+        .get_balance_summary()
+        .map_err(|e| format!("Error getting balance: {}", e))?;
+
+    Ok(balance)
 }
 
 #[cfg(test)]

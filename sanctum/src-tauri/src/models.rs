@@ -12,6 +12,14 @@ pub struct Transaction {
     pub transaction_type: String, // "income" o "expense"
 }
 
+/// Resumen de balance financiero
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BalanceSummary {
+    pub total_balance: i64,
+    pub total_income: i64,
+    pub total_expense: i64,
+}
+
 impl Transaction {
     /// Crea una nueva transacción
     pub fn new(

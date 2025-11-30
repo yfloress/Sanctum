@@ -1,4 +1,4 @@
-use crate::models::Transaction;
+use crate::models::{BalanceSummary, Transaction};
 use rusqlite::{Connection, Error as RusqliteError, ErrorCode, params};
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
@@ -318,6 +318,35 @@ impl Database {
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(transactions)
+    }
+
+    /// Obtiene el resumen de balance (ingresos, gastos y total)
+    pub fn get_balance_summary(&self) -> Result<BalanceSummary, DbError> {
+        let total_income: i64 = self
+            .conn
+            .query_row(
+                "SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE type = 'income'",
+                [],
+                |row| row.get(0),
+            )
+            .map_err(DbError::Sqlite)?;
+
+        let total_expense: i64 = self
+            .conn
+            .query_row(
+                "SELECT COALESCE(SUM(amount), 0) FROM transactions WHERE type = 'expense'",
+                [],
+                |row| row.get(0),
+            )
+            .map_err(DbError::Sqlite)?;
+
+        let total_balance = total_income - total_expense;
+
+        Ok(BalanceSummary {
+            total_balance,
+            total_income,
+            total_expense,
+        })
     }
 }
 

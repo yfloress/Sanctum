@@ -20,6 +20,7 @@
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
     --shadow-lg: 0 18px 50px rgba(6, 9, 20, 0.55);
     --shadow-purple: 0 8px 32px rgba(127, 138, 255, 0.2);
+    --sidebar-width: 240px;
 }
 
 * {
@@ -51,6 +52,287 @@ body {
     background: linear-gradient(135deg, #0a0a0f 0%, #1a0f2e 50%, #0a0a0f 100%);
     position: relative;
     overflow: hidden;
+}
+
+/* ===== APP LAYOUT (Vault Open) ===== */
+.app-layout {
+    display: flex;
+    min-height: 100vh;
+    background: var(--bg-primary);
+}
+
+.sidebar {
+    width: var(--sidebar-width);
+    background: linear-gradient(180deg, #12111a 0%, #1a1525 100%);
+    border-right: 1px solid rgba(139, 92, 246, 0.15);
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem 1rem;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 50;
+}
+
+.sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 1rem;
+    margin-bottom: 2rem;
+}
+
+.logo-icon {
+    font-size: 1.75rem;
+}
+
+.logo-text {
+    font-size: 1.4rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #e5e7eb 0%, #a78bfa 50%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    border-radius: 12px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+    width: 100%;
+}
+
+.nav-item:hover {
+    background: rgba(139, 92, 246, 0.1);
+    color: var(--text-primary);
+}
+
+.nav-item.active {
+    background: linear-gradient(
+        135deg,
+        rgba(139, 92, 246, 0.2) 0%,
+        rgba(109, 40, 217, 0.15) 100%
+    );
+    color: var(--accent-secondary);
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
+}
+
+.nav-item.active .nav-icon {
+    filter: drop-shadow(0 0 8px var(--accent-glow));
+}
+
+.nav-icon {
+    font-size: 1.25rem;
+}
+
+.nav-label {
+    font-family: inherit;
+}
+
+.sidebar-footer {
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(139, 92, 246, 0.1);
+}
+
+.lock-btn {
+    color: var(--text-muted);
+}
+
+.lock-btn:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--error);
+}
+
+.content-area {
+    flex: 1;
+    margin-left: var(--sidebar-width);
+    padding: 2rem 3rem;
+    overflow-y: auto;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0a0a0f 0%, #110a1a 50%, #0a0a0f 100%);
+}
+
+/* ===== DASHBOARD ===== */
+.dashboard {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.page-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 2rem;
+}
+
+.section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--accent-secondary);
+    margin-bottom: 1.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.85rem;
+}
+
+.balance-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+}
+
+.balance-card {
+    background: linear-gradient(135deg, #1a1a24 0%, #1f1535 100%);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 20px;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    transition: all 0.3s ease;
+}
+
+.balance-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-purple);
+}
+
+.balance-card.total {
+    border-color: rgba(139, 92, 246, 0.4);
+    background: linear-gradient(135deg, #1f1a2e 0%, #251a40 100%);
+}
+
+.balance-card.income {
+    border-color: rgba(21, 195, 154, 0.3);
+}
+
+.balance-card.income .balance-value {
+    color: var(--success);
+}
+
+.balance-card.expense {
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.balance-card.expense .balance-value {
+    color: var(--error);
+}
+
+.balance-label {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.balance-value {
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: "Courier New", monospace;
+}
+
+.recent-transactions {
+    background: linear-gradient(135deg, #1a1a24 0%, #1f1535 100%);
+    border: 1px solid rgba(139, 92, 246, 0.15);
+    border-radius: 20px;
+    padding: 1.5rem;
+}
+
+/* ===== TRANSACTIONS PAGE ===== */
+.transactions-page {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.transactions-layout {
+    display: grid;
+    grid-template-columns: 400px 1fr;
+    gap: 2rem;
+}
+
+.transaction-form-section,
+.transaction-history-section {
+    background: linear-gradient(135deg, #1a1a24 0%, #1f1535 100%);
+    border: 1px solid rgba(139, 92, 246, 0.15);
+    border-radius: 20px;
+    padding: 1.5rem;
+}
+
+.transaction-history-section {
+    max-height: calc(100vh - 180px);
+    overflow-y: auto;
+}
+
+.transaction-history-section::-webkit-scrollbar {
+    width: 6px;
+}
+
+.transaction-history-section::-webkit-scrollbar-track {
+    background: rgba(13, 13, 20, 0.4);
+    border-radius: 3px;
+}
+
+.transaction-history-section::-webkit-scrollbar-thumb {
+    background: var(--accent-primary);
+    border-radius: 3px;
+}
+
+@media (max-width: 1024px) {
+    .balance-cards {
+        grid-template-columns: 1fr;
+    }
+
+    .transactions-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        width: 70px;
+        padding: 1rem 0.5rem;
+    }
+
+    .logo-text,
+    .nav-label {
+        display: none;
+    }
+
+    .sidebar-logo {
+        justify-content: center;
+        padding: 0.5rem;
+    }
+
+    .nav-item {
+        justify-content: center;
+        padding: 0.875rem;
+    }
+
+    .content-area {
+        margin-left: 70px;
+        padding: 1.5rem;
+    }
 }
 
 .vault-container::before {

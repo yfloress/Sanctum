@@ -11,6 +11,12 @@ interface Transaction {
   type: string;
 }
 
+interface BalanceSummary {
+  total_balance: number;
+  total_income: number;
+  total_expense: number;
+}
+
 const EXPENSE_CATEGORIES = [
   "Food",
   "Transport",
@@ -37,7 +43,6 @@ function App() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-  const [dbPath, setDbPath] = useState("");
   const [dbPathInput, setDbPathInput] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [loadingAction, setLoadingAction] = useState<"open" | "create" | null>(
@@ -52,6 +57,14 @@ function App() {
     () => new Date().toISOString().split("T")[0],
   );
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [activeTab, setActiveTab] = useState<"dashboard" | "transactions">(
+    "dashboard",
+  );
+  const [balance, setBalance] = useState<BalanceSummary>({
+    total_balance: 0,
+    total_income: 0,
+    total_expense: 0,
+  });
 
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -89,7 +102,6 @@ function App() {
   const loadDbPath = useCallback(async () => {
     try {
       const path = await invoke<string>("get_db_path");
-      setDbPath(path);
       setDbPathInput(path);
     } catch (err) {
       console.error("Error getting path:", err);
@@ -105,6 +117,15 @@ function App() {
     }
   }, []);
 
+  const loadBalance = useCallback(async () => {
+    try {
+      const bal = await invoke<BalanceSummary>("get_balance");
+      setBalance(bal);
+    } catch (err) {
+      console.error("Error loading balance:", err);
+    }
+  }, []);
+
   const checkDatabaseStatus = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -114,6 +135,7 @@ function App() {
       await loadDbPath();
       if (initialized) {
         await loadTransactions();
+        await loadBalance();
       }
     } catch (err) {
       setError(`Error checking status: ${err}`);
@@ -151,7 +173,7 @@ function App() {
         setIsLoading(true);
         setLoadingAction(action);
         const command = action === "create" ? "create_db" : "open_db";
-        const result = await invoke<string>(command, {
+        await invoke<string>(command, {
           password: trimmedPassword,
           path: targetPath,
         });
@@ -159,6 +181,7 @@ function App() {
         setPassword("");
         await loadDbPath();
         await loadTransactions();
+        await loadBalance();
       } catch (err) {
         setTemporaryError(`Error: ${err}`);
       } finally {
@@ -172,6 +195,7 @@ function App() {
       clearMessages,
       loadDbPath,
       loadTransactions,
+      loadBalance,
       setTemporaryError,
       setTemporarySuccess,
     ],
@@ -246,6 +270,7 @@ function App() {
         setDate(new Date().toISOString().split("T")[0]);
 
         await loadTransactions();
+        await loadBalance();
       } catch (err) {
         setTemporaryError(`Error creating transaction: ${err}`);
       } finally {
@@ -260,6 +285,7 @@ function App() {
       isExpense,
       clearMessages,
       loadTransactions,
+      loadBalance,
       setTemporaryError,
       setTemporarySuccess,
     ],
@@ -383,108 +409,81 @@ function App() {
   }
 
   return (
-    <div className="vault-container">
-      <div className="vault-card open">
-        <div className="vault-header">
-          <div className="vault-icon unlocked">🔓</div>
-          <h1>Vault Unlocked</h1>
-          <p className="vault-subtitle">Your data is accessible</p>
+    <div className="app-layout">
+      <aside className="sidebar">
+        <div className="sidebar-logo">
+          <span className="logo-icon">🔓</span>
+          <span className="logo-text">Sanctum</span>
         </div>
 
-        <div className="vault-content-grid">
-          <div className="vault-column-left">
-            <div className="info-section">
-              <h3>New Transaction</h3>
-              <form
-                onSubmit={handleAddTransaction}
-                className="transaction-form"
-              >
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="amount">Amount ($)</label>
-                    <input
-                      id="amount"
-                      type="number"
-                      step="0.01"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      placeholder="0.00"
-                      disabled={isLoading}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="date">Date</label>
-                    <input
-                      id="date"
-                      type="date"
-                      value={date}
-                      onChange={(e) => setDate(e.target.value)}
-                      disabled={isLoading}
-                    />
-                  </div>
-                </div>
+        <nav className="sidebar-nav">
+          <button
+            className={`nav-item ${activeTab === "dashboard" ? "active" : ""}`}
+            onClick={() => setActiveTab("dashboard")}
+          >
+            <span className="nav-icon">📊</span>
+            <span className="nav-label">Dashboard</span>
+          </button>
+          <button
+            className={`nav-item ${activeTab === "transactions" ? "active" : ""}`}
+            onClick={() => setActiveTab("transactions")}
+          >
+            <span className="nav-icon">💸</span>
+            <span className="nav-label">Transactions</span>
+          </button>
+        </nav>
 
-                <div className="form-group">
-                  <label htmlFor="category">Category</label>
-                  <select
-                    id="category"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    disabled={isLoading}
-                  >
-                    {categories.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+        <div className="sidebar-footer">
+          <button
+            onClick={handleCloseVault}
+            className="nav-item lock-btn"
+            disabled={isLoading}
+          >
+            <span className="nav-icon">🔒</span>
+            <span className="nav-label">
+              {isLoading ? "Locking..." : "Lock Vault"}
+            </span>
+          </button>
+        </div>
+      </aside>
 
-                <div className="form-group">
-                  <label htmlFor="description">Description</label>
-                  <input
-                    id="description"
-                    type="text"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Describe the transaction"
-                    disabled={isLoading}
-                  />
-                </div>
+      <main className="content-area">
+        {error && <div className="message error">{error}</div>}
+        {successMessage && (
+          <div className="message success">{successMessage}</div>
+        )}
 
-                <div className="form-group">
-                  <label className="switch-label">
-                    <input
-                      type="checkbox"
-                      checked={isExpense}
-                      onChange={(e) => handleExpenseToggle(e.target.checked)}
-                      disabled={isLoading}
-                    />
-                    <span className="switch-text">
-                      {isExpense ? "Expense" : "Income"}
-                    </span>
-                  </label>
-                </div>
-
-                <button
-                  type="submit"
-                  className="btn-primary"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Saving..." : "Save Transaction"}
-                </button>
-              </form>
+        {activeTab === "dashboard" && (
+          <div className="dashboard">
+            <h1 className="page-title">Dashboard</h1>
+            <div className="balance-cards">
+              <div className="balance-card total">
+                <span className="balance-label">Total Balance</span>
+                <span className="balance-value">
+                  ${formatAmount(balance.total_balance)}
+                </span>
+              </div>
+              <div className="balance-card income">
+                <span className="balance-label">Total Income</span>
+                <span className="balance-value">
+                  +${formatAmount(balance.total_income)}
+                </span>
+              </div>
+              <div className="balance-card expense">
+                <span className="balance-label">Total Expenses</span>
+                <span className="balance-value">
+                  -${formatAmount(balance.total_expense)}
+                </span>
+              </div>
             </div>
-          </div>
 
-          <div className="vault-column-right">
-            <div className="info-section">
-              <h3>Transaction History</h3>
+            <div className="recent-transactions">
+              <h2 className="section-title">Recent Transactions</h2>
               {transactions.length === 0 ? (
                 <p className="empty-state">No transactions recorded</p>
               ) : (
                 <div className="transactions-list">
-                  {transactions.map((tx) => (
+                  {transactions.slice(0, 5).map((tx) => (
                     <div key={tx.id} className="transaction-item">
                       <div className="transaction-info">
                         <div className="transaction-category">
@@ -508,36 +507,131 @@ function App() {
                 </div>
               )}
             </div>
-
-            <div className="info-section">
-              <h3>Connection Status</h3>
-              <div className="status-badge active">Active</div>
-            </div>
-
-            <div className="info-section">
-              <h3>Database Location</h3>
-              <code className="db-path">{dbPath || "Loading..."}</code>
-            </div>
           </div>
-        </div>
-
-        {error && <div className="message error">{error}</div>}
-        {successMessage && (
-          <div className="message success">{successMessage}</div>
         )}
 
-        <button
-          onClick={handleCloseVault}
-          className="btn-close"
-          disabled={isLoading}
-        >
-          {isLoading ? "Locking..." : "Lock Vault"}
-        </button>
+        {activeTab === "transactions" && (
+          <div className="transactions-page">
+            <h1 className="page-title">Transactions</h1>
 
-        <div className="vault-footer">
-          <p>Remember to lock the vault when you're done</p>
-        </div>
-      </div>
+            <div className="transactions-layout">
+              <div className="transaction-form-section">
+                <h2 className="section-title">New Transaction</h2>
+                <form
+                  onSubmit={handleAddTransaction}
+                  className="transaction-form"
+                >
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="amount">Amount ($)</label>
+                      <input
+                        id="amount"
+                        type="number"
+                        step="0.01"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        placeholder="0.00"
+                        disabled={isLoading}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="date">Date</label>
+                      <input
+                        id="date"
+                        type="date"
+                        value={date}
+                        onChange={(e) => setDate(e.target.value)}
+                        disabled={isLoading}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="category">Category</label>
+                    <select
+                      id="category"
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      disabled={isLoading}
+                    >
+                      {categories.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="description">Description</label>
+                    <input
+                      id="description"
+                      type="text"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Describe the transaction"
+                      disabled={isLoading}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="switch-label">
+                      <input
+                        type="checkbox"
+                        checked={isExpense}
+                        onChange={(e) => handleExpenseToggle(e.target.checked)}
+                        disabled={isLoading}
+                      />
+                      <span className="switch-text">
+                        {isExpense ? "Expense" : "Income"}
+                      </span>
+                    </label>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Saving..." : "Save Transaction"}
+                  </button>
+                </form>
+              </div>
+
+              <div className="transaction-history-section">
+                <h2 className="section-title">History</h2>
+                {transactions.length === 0 ? (
+                  <p className="empty-state">No transactions recorded</p>
+                ) : (
+                  <div className="transactions-list">
+                    {transactions.map((tx) => (
+                      <div key={tx.id} className="transaction-item">
+                        <div className="transaction-info">
+                          <div className="transaction-category">
+                            {tx.category}
+                          </div>
+                          <div className="transaction-description">
+                            {tx.description}
+                          </div>
+                          <div className="transaction-date">
+                            {formatDate(tx.date)}
+                          </div>
+                        </div>
+                        <div
+                          className={`transaction-amount ${tx.type === "income" ? "income" : "expense"}`}
+                        >
+                          {tx.type === "income" ? "+" : "-"}$
+                          {formatAmount(tx.amount)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
     </div>
   );
 }
