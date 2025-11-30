@@ -1,7 +1,10 @@
 use crate::crypto;
 use crate::db::Database;
-use crate::models::{BalanceSummary, CryptoAsset, CryptoHolding, Transaction};
-use secrecy::SecretString; // QUITADO: ExposeSecret (ya no se usa aquí)
+use crate::models::{
+    AggregatedAsset, BalanceSummary, CryptoAsset, CryptoHolding, CryptoTransaction, CryptoWallet,
+    Transaction,
+};
+use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -181,6 +184,8 @@ fn get_rate_limit_key(db_path: &PathBuf) -> String {
     format!("vault:{}", db_path.to_string_lossy())
 }
 
+// ==================== Database Management Commands ====================
+
 /// Comando para verificar si la base de datos está inicializada
 #[tauri::command]
 pub fn is_db_initialized(state: State<DbState>) -> Result<bool, String> {
@@ -332,6 +337,8 @@ pub fn get_db_path(app_handle: AppHandle, state: State<DbState>) -> Result<Strin
         .to_string())
 }
 
+// ==================== Financial Transaction Commands ====================
+
 /// Comando para agregar una transacción
 #[tauri::command]
 pub fn add_transaction(
@@ -423,13 +430,17 @@ pub fn delete_transaction(state: State<DbState>, id: String) -> Result<(), Strin
     Ok(())
 }
 
+// ==================== Crypto Price Commands ====================
+
 /// Command to fetch cryptocurrency prices from CoinGecko
 #[tauri::command]
 pub async fn get_crypto_prices(coins: Vec<String>) -> Result<Vec<CryptoAsset>, String> {
     crypto::fetch_crypto_prices(coins).await
 }
 
-/// Command to add a crypto holding to the portfolio
+// ==================== Legacy Crypto Holdings Commands (backwards compatibility) ====================
+
+/// Command to add a crypto holding to the portfolio (LEGACY)
 #[tauri::command]
 pub fn add_crypto_holding(
     state: State<DbState>,
@@ -479,7 +490,7 @@ pub fn add_crypto_holding(
     Ok(id)
 }
 
-/// Command to get all crypto holdings
+/// Command to get all crypto holdings (LEGACY)
 #[tauri::command]
 pub fn get_crypto_holdings(state: State<DbState>) -> Result<Vec<CryptoHolding>, String> {
     let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
@@ -493,7 +504,7 @@ pub fn get_crypto_holdings(state: State<DbState>) -> Result<Vec<CryptoHolding>, 
     Ok(holdings)
 }
 
-/// Command to delete a crypto holding
+/// Command to delete a crypto holding (LEGACY)
 #[tauri::command]
 pub fn delete_crypto_holding(state: State<DbState>, id: String) -> Result<(), String> {
     let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
@@ -513,10 +524,458 @@ pub fn delete_crypto_holding(state: State<DbState>, id: String) -> Result<(), St
     Ok(())
 }
 
+// ==================== Crypto Wallet Commands ====================
+
+/// Command to create a new crypto wallet
+#[tauri::command]
+pub fn add_wallet(
+    state: State<DbState>,
+    name: String,
+    category: String,
+    icon: Option<String>,
+) -> Result<String, String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+
+    let db = db_lock
+        .as_ref()
+        .ok_or_else(|| "No vault is currently open".to_string())?;
+
+    // Validate inputs
+    if name.trim().is_empty() {
+        return Err("Wallet name cannot be empty".to_string());
+    }
+
+    // Validate category
+    let valid_categories = ["exchange", "wallet_single", "wallet_multi"];
+    if !valid_categories.contains(&category.as_str()) {
+        return Err(format!(
+            "Invalid category. Must be one of: {}",
+            valid_categories.join(", ")
+        ));
+    }
+
+    let id = Uuid::new_v4().to_string();
+
+    let wallet = CryptoWallet::new(id.clone(), name.trim().to_string(), category, icon);
+
+    db.create_wallet(&wallet).map_err(|e| e.to_string())?;
+
+    Ok(id)
+}
+
+/// Command to get all wallets
+#[tauri::command]
+pub fn get_wallets(state: State<DbState>) -> Result<Vec<CryptoWallet>, String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+
+    let db = db_lock
+        .as_ref()
+        .ok_or_else(|| "No vault is currently open".to_string())?;
+
+    let wallets = db.get_wallets().map_err(|e| e.to_string())?;
+
+    Ok(wallets)
+}
+
+/// Command to get a single wallet by ID
+#[tauri::command]
+pub fn get_wallet(state: State<DbState>, id: String) -> Result<Option<CryptoWallet>, String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+
+    let db = db_lock
+        .as_ref()
+        .ok_or_else(|| "No vault is currently open".to_string())?;
+
+    let wallet = db.get_wallet(&id).map_err(|e| e.to_string())?;
+
+    Ok(wallet)
+}
+
+/// Command to update a wallet
+#[tauri::command]
+pub fn update_wallet(
+    state: State<DbState>,
+    id: String,
+    name: String,
+    category: String,
+    icon: Option<String>,
+) -> Result<(), String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+
+    let db = db_lock
+        .as_ref()
+        .ok_or_else(|| "No vault is currently open".to_string())?;
+
+    if name.trim().is_empty() {
+        return Err("Wallet name cannot be empty".to_string());
+    }
+
+    let valid_categories = ["exchange", "wallet_single", "wallet_multi"];
+    if !valid_categories.contains(&category.as_str()) {
+        return Err(format!(
+            "Invalid category. Must be one of: {}",
+            valid_categories.join(", ")
+        ));
+    }
+
+    let wallet = CryptoWallet::new(id, name.trim().to_string(), category, icon);
+
+    db.update_wallet(&wallet).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+/// Command to delete a wallet and all its transactions
+#[tauri::command]
+pub fn delete_wallet(state: State<DbState>, id: String) -> Result<(), String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+
+    let db = db_lock
+        .as_ref()
+        .ok_or_else(|| "No vault is currently open".to_string())?;
+
+    let trimmed_id = id.trim();
+    if trimmed_id.is_empty() {
+        return Err("Wallet ID cannot be empty".to_string());
+    }
+
+    db.delete_wallet(trimmed_id).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+// ==================== Crypto Transaction Commands ====================
+
+/// Command to add a crypto transaction
+#[tauri::command]
+pub fn add_crypto_transaction(
+    state: State<DbState>,
+    wallet_id: String,
+    coin_id: String,
+    symbol: String,
+    transaction_type: String,
+    amount: f64,
+    price_per_coin: Option<f64>,
+    fee: Option<f64>,
+    date: String,
+    notes: Option<String>,
+) -> Result<String, String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+
+    let db = db_lock
+        .as_ref()
+        .ok_or_else(|| "No vault is currently open".to_string())?;
+
+    // Validate inputs
+    if wallet_id.trim().is_empty() {
+        return Err("Wallet ID cannot be empty".to_string());
+    }
+
+    if coin_id.trim().is_empty() {
+        return Err("Coin ID cannot be empty".to_string());
+    }
+
+    if symbol.trim().is_empty() {
+        return Err("Symbol cannot be empty".to_string());
+    }
+
+    if amount <= 0.0 {
+        return Err("Amount must be greater than zero".to_string());
+    }
+
+    let valid_types = ["buy", "sell", "transfer_in", "transfer_out", "swap"];
+    if !valid_types.contains(&transaction_type.as_str()) {
+        return Err(format!(
+            "Invalid transaction type. Must be one of: {}",
+            valid_types.join(", ")
+        ));
+    }
+
+    let id = Uuid::new_v4().to_string();
+
+    let transaction = CryptoTransaction::new(
+        id.clone(),
+        wallet_id.trim().to_string(),
+        coin_id.trim().to_lowercase(),
+        symbol.trim().to_uppercase(),
+        transaction_type,
+        amount,
+        price_per_coin,
+        fee,
+        date,
+        notes,
+    );
+
+    db.create_crypto_transaction(&transaction)
+        .map_err(|e| e.to_string())?;
+
+    Ok(id)
+}
+
+/// Command to add a swap transaction (creates two linked transactions)
+#[tauri::command]
+pub fn add_swap_transaction(
+    state: State<DbState>,
+    wallet_id: String,
+    from_coin_id: String,
+    from_symbol: String,
+    from_amount: f64,
+    to_coin_id: String,
+    to_symbol: String,
+    to_amount: f64,
+    fee: Option<f64>,
+    fee_coin_id: Option<String>,
+    fee_amount: Option<f64>,
+    date: String,
+    notes: Option<String>,
+) -> Result<(String, String), String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+
+    let db = db_lock
+        .as_ref()
+        .ok_or_else(|| "No vault is currently open".to_string())?;
+
+    // Validate inputs
+    if wallet_id.trim().is_empty() {
+        return Err("Wallet ID cannot be empty".to_string());
+    }
+
+    if from_coin_id.trim().is_empty() || to_coin_id.trim().is_empty() {
+        return Err("Coin IDs cannot be empty".to_string());
+    }
+
+    if from_amount <= 0.0 || to_amount <= 0.0 {
+        return Err("Amounts must be greater than zero".to_string());
+    }
+
+    let from_tx_id = Uuid::new_v4().to_string();
+    let to_tx_id = Uuid::new_v4().to_string();
+
+    // Create the "from" transaction (swap out)
+    let mut from_tx = CryptoTransaction::new(
+        from_tx_id.clone(),
+        wallet_id.trim().to_string(),
+        from_coin_id.trim().to_lowercase(),
+        from_symbol.trim().to_uppercase(),
+        "swap".to_string(),
+        from_amount,
+        None, // Price will be calculated from the swap ratio
+        fee,
+        date.clone(),
+        notes.clone(),
+    );
+    from_tx.related_tx_id = Some(to_tx_id.clone());
+    from_tx.fee_coin_id = fee_coin_id.clone();
+    from_tx.fee_amount = fee_amount;
+
+    // Create the "to" transaction (swap in - treated as transfer_in)
+    let mut to_tx = CryptoTransaction::new(
+        to_tx_id.clone(),
+        wallet_id.trim().to_string(),
+        to_coin_id.trim().to_lowercase(),
+        to_symbol.trim().to_uppercase(),
+        "transfer_in".to_string(), // Swap in is treated as an inflow
+        to_amount,
+        None,
+        None, // Fee only on the "from" side
+        date,
+        notes,
+    );
+    to_tx.related_tx_id = Some(from_tx_id.clone());
+
+    // Create both transactions
+    db.create_crypto_transaction(&from_tx)
+        .map_err(|e| e.to_string())?;
+    db.create_crypto_transaction(&to_tx)
+        .map_err(|e| e.to_string())?;
+
+    Ok((from_tx_id, to_tx_id))
+}
+
+/// Command to add a transfer between wallets (creates two linked transactions)
+#[tauri::command]
+pub fn add_transfer_transaction(
+    state: State<DbState>,
+    from_wallet_id: String,
+    to_wallet_id: String,
+    coin_id: String,
+    symbol: String,
+    amount: f64,
+    fee: Option<f64>,
+    date: String,
+    notes: Option<String>,
+) -> Result<(String, String), String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+
+    let db = db_lock
+        .as_ref()
+        .ok_or_else(|| "No vault is currently open".to_string())?;
+
+    // Validate inputs
+    if from_wallet_id.trim().is_empty() || to_wallet_id.trim().is_empty() {
+        return Err("Wallet IDs cannot be empty".to_string());
+    }
+
+    if coin_id.trim().is_empty() {
+        return Err("Coin ID cannot be empty".to_string());
+    }
+
+    if amount <= 0.0 {
+        return Err("Amount must be greater than zero".to_string());
+    }
+
+    let from_tx_id = Uuid::new_v4().to_string();
+    let to_tx_id = Uuid::new_v4().to_string();
+
+    // Amount received after fee
+    let amount_after_fee = amount - fee.unwrap_or(0.0);
+    if amount_after_fee <= 0.0 {
+        return Err("Fee cannot be greater than or equal to the amount".to_string());
+    }
+
+    // Create the "from" transaction (transfer out)
+    let mut from_tx = CryptoTransaction::new(
+        from_tx_id.clone(),
+        from_wallet_id.trim().to_string(),
+        coin_id.trim().to_lowercase(),
+        symbol.trim().to_uppercase(),
+        "transfer_out".to_string(),
+        amount,
+        None,
+        fee,
+        date.clone(),
+        notes.clone(),
+    );
+    from_tx.related_tx_id = Some(to_tx_id.clone());
+
+    // Create the "to" transaction (transfer in)
+    let mut to_tx = CryptoTransaction::new(
+        to_tx_id.clone(),
+        to_wallet_id.trim().to_string(),
+        coin_id.trim().to_lowercase(),
+        symbol.trim().to_uppercase(),
+        "transfer_in".to_string(),
+        amount_after_fee, // Amount received is after network fee
+        None,
+        None,
+        date,
+        notes,
+    );
+    to_tx.related_tx_id = Some(from_tx_id.clone());
+
+    // Create both transactions
+    db.create_crypto_transaction(&from_tx)
+        .map_err(|e| e.to_string())?;
+    db.create_crypto_transaction(&to_tx)
+        .map_err(|e| e.to_string())?;
+
+    Ok((from_tx_id, to_tx_id))
+}
+
+/// Command to get all transactions for a specific wallet
+#[tauri::command]
+pub fn get_wallet_transactions(
+    state: State<DbState>,
+    wallet_id: String,
+) -> Result<Vec<CryptoTransaction>, String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+
+    let db = db_lock
+        .as_ref()
+        .ok_or_else(|| "No vault is currently open".to_string())?;
+
+    let transactions = db
+        .get_wallet_transactions(&wallet_id)
+        .map_err(|e| e.to_string())?;
+
+    Ok(transactions)
+}
+
+/// Command to get all crypto transactions across all wallets
+#[tauri::command]
+pub fn get_all_crypto_transactions(
+    state: State<DbState>,
+) -> Result<Vec<CryptoTransaction>, String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+
+    let db = db_lock
+        .as_ref()
+        .ok_or_else(|| "No vault is currently open".to_string())?;
+
+    let transactions = db
+        .get_all_crypto_transactions()
+        .map_err(|e| e.to_string())?;
+
+    Ok(transactions)
+}
+
+/// Command to delete a crypto transaction
+#[tauri::command]
+pub fn delete_crypto_transaction(state: State<DbState>, id: String) -> Result<(), String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+
+    let db = db_lock
+        .as_ref()
+        .ok_or_else(|| "No vault is currently open".to_string())?;
+
+    let trimmed_id = id.trim();
+    if trimmed_id.is_empty() {
+        return Err("Transaction ID cannot be empty".to_string());
+    }
+
+    // Check if this transaction has a related transaction (swap/transfer)
+    if let Ok(Some(tx)) = db.get_crypto_transaction(trimmed_id) {
+        if let Some(related_id) = tx.related_tx_id {
+            // Delete the related transaction too
+            let _ = db.delete_crypto_transaction(&related_id);
+        }
+    }
+
+    db.delete_crypto_transaction(trimmed_id)
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+// ==================== Portfolio Aggregation Commands ====================
+
+/// Command to get aggregated portfolio across all wallets (for Overview tab)
+#[tauri::command]
+pub fn get_aggregated_portfolio(state: State<DbState>) -> Result<Vec<AggregatedAsset>, String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+
+    let db = db_lock
+        .as_ref()
+        .ok_or_else(|| "No vault is currently open".to_string())?;
+
+    let portfolio = db.get_aggregated_portfolio().map_err(|e| e.to_string())?;
+
+    Ok(portfolio)
+}
+
+/// Command to get aggregated holdings for a specific wallet
+#[tauri::command]
+pub fn get_wallet_holdings(
+    state: State<DbState>,
+    wallet_id: String,
+) -> Result<Vec<AggregatedAsset>, String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+
+    let db = db_lock
+        .as_ref()
+        .ok_or_else(|| "No vault is currently open".to_string())?;
+
+    let holdings = db
+        .get_wallet_aggregated_holdings(&wallet_id)
+        .map_err(|e| e.to_string())?;
+
+    Ok(holdings)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use secrecy::ExposeSecret; // AGREGADO: Se mueve aquí porque solo se usa en tests
+    use secrecy::ExposeSecret;
 
     #[test]
     fn test_db_state_default() {

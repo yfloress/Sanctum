@@ -1,6 +1,10 @@
-use crate::models::{BalanceSummary, CryptoHolding, Transaction};
+use crate::models::{
+    AggregatedAsset, BalanceSummary, CryptoHolding, CryptoTransaction, CryptoTransactionType,
+    CryptoWallet, Transaction,
+};
 use rusqlite::{Connection, Error as RusqliteError, ErrorCode, params};
 use secrecy::{ExposeSecret, SecretString};
+use std::collections::HashMap;
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 use thiserror::Error;
@@ -25,6 +29,12 @@ pub enum DbError {
 
     #[error("Invalid transaction type")]
     InvalidTransactionType,
+
+    #[error("Wallet not found")]
+    WalletNotFound,
+
+    #[error("Invalid wallet category")]
+    InvalidWalletCategory,
 }
 
 /// Struct principal que envuelve la conexión a la base de datos
@@ -176,6 +186,7 @@ impl Database {
 
     /// Ejecuta las migraciones necesarias para crear las tablas
     fn run_migrations(&self) -> Result<(), DbError> {
+        // ==================== Financial Transactions Table ====================
         // Verificar si la tabla existe y tiene la columna 'type'
         let table_exists: bool = self
             .conn
@@ -253,24 +264,152 @@ impl Database {
             [],
         )?;
 
-        // Create crypto_holdings table
-        self.conn.execute(
-            "CREATE TABLE IF NOT EXISTS crypto_holdings (
-                id TEXT PRIMARY KEY NOT NULL,
-                coin_id TEXT NOT NULL,
-                symbol TEXT NOT NULL,
-                amount REAL NOT NULL,
-                purchase_price REAL NOT NULL,
-                purchase_date TEXT NOT NULL
-            )",
-            [],
-        )?;
+        // ==================== Crypto Ledger System Migration ====================
+        self.migrate_crypto_ledger()?;
 
-        // Create index for crypto holdings
-        self.conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_crypto_holdings_coin_id ON crypto_holdings(coin_id)",
-            [],
-        )?;
+        Ok(())
+    }
+
+    /// Migrates from old crypto_holdings to new ledger system
+    fn migrate_crypto_ledger(&self) -> Result<(), DbError> {
+        // Check if old crypto_holdings table exists
+        let old_table_exists: bool = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='crypto_holdings'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(0)
+            > 0;
+
+        // Check if new tables exist
+        let wallets_exist: bool = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='crypto_wallets'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(0)
+            > 0;
+
+        // Create new tables if they don't exist
+        if !wallets_exist {
+            // Create crypto_wallets table
+            self.conn.execute(
+                "CREATE TABLE crypto_wallets (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    name TEXT NOT NULL,
+                    category TEXT NOT NULL,
+                    icon TEXT
+                )",
+                [],
+            )?;
+
+            // Create crypto_transactions table
+            self.conn.execute(
+                "CREATE TABLE crypto_transactions (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    wallet_id TEXT NOT NULL,
+                    coin_id TEXT NOT NULL,
+                    symbol TEXT NOT NULL,
+                    type TEXT NOT NULL,
+                    amount REAL NOT NULL,
+                    price_per_coin REAL,
+                    fee REAL,
+                    fee_coin_id TEXT,
+                    fee_amount REAL,
+                    date TEXT NOT NULL,
+                    notes TEXT,
+                    related_tx_id TEXT,
+                    FOREIGN KEY (wallet_id) REFERENCES crypto_wallets(id) ON DELETE CASCADE
+                )",
+                [],
+            )?;
+
+            // Create indexes for crypto tables
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_crypto_wallets_category ON crypto_wallets(category)",
+                [],
+            )?;
+
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_crypto_tx_wallet ON crypto_transactions(wallet_id)",
+                [],
+            )?;
+
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_crypto_tx_coin ON crypto_transactions(coin_id)",
+                [],
+            )?;
+
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_crypto_tx_date ON crypto_transactions(date)",
+                [],
+            )?;
+
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_crypto_tx_type ON crypto_transactions(type)",
+                [],
+            )?;
+        }
+
+        // Migrate old data if exists
+        if old_table_exists && wallets_exist {
+            // Check if we have already migrated (by checking for legacy wallet)
+            let legacy_wallet_exists: bool = self
+                .conn
+                .query_row(
+                    "SELECT COUNT(*) FROM crypto_wallets WHERE id = 'legacy_portfolio'",
+                    [],
+                    |row| row.get::<_, i32>(0),
+                )
+                .unwrap_or(0)
+                > 0;
+
+            if !legacy_wallet_exists {
+                // Check if there are holdings to migrate
+                let holdings_count: i32 = self
+                    .conn
+                    .query_row("SELECT COUNT(*) FROM crypto_holdings", [], |row| row.get(0))
+                    .unwrap_or(0);
+
+                if holdings_count > 0 {
+                    // Create a legacy wallet for migrated holdings
+                    self.conn.execute(
+                        "INSERT INTO crypto_wallets (id, name, category, icon) VALUES (?1, ?2, ?3, ?4)",
+                        params!["legacy_portfolio", "Legacy Portfolio", "wallet_multi", "📦"],
+                    )?;
+
+                    // Migrate holdings as buy transactions
+                    self.conn.execute(
+                        "INSERT INTO crypto_transactions (id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, date, notes)
+                         SELECT
+                            'migrated_' || id,
+                            'legacy_portfolio',
+                            coin_id,
+                            symbol,
+                            'buy',
+                            amount,
+                            purchase_price,
+                            NULL,
+                            purchase_date,
+                            'Migrated from legacy holdings'
+                         FROM crypto_holdings",
+                        [],
+                    )?;
+                }
+
+                // Rename old table as backup
+                self.conn.execute(
+                    "ALTER TABLE crypto_holdings RENAME TO crypto_holdings_backup",
+                    [],
+                )?;
+            }
+        } else if !old_table_exists && !wallets_exist {
+            // Fresh install - tables already created above
+        }
 
         Ok(())
     }
@@ -282,6 +421,8 @@ impl Database {
             .map_err(DbError::Sqlite)?;
         Ok(())
     }
+
+    // ==================== Financial Transactions CRUD ====================
 
     /// Crea una nueva transacción en la base de datos
     pub fn create_transaction(&self, transaction: &Transaction) -> Result<(), DbError> {
@@ -337,37 +478,81 @@ impl Database {
         Ok(())
     }
 
-    // ==================== Crypto Holdings CRUD ====================
+    // ==================== Legacy Crypto Holdings CRUD (for backwards compatibility) ====================
 
-    /// Creates a new crypto holding in the database
+    /// Creates a new crypto holding in the database (LEGACY)
     pub fn create_crypto_holding(&self, holding: &CryptoHolding) -> Result<(), DbError> {
         if !holding.validate() {
             return Err(DbError::InvalidTransactionType);
         }
 
-        self.conn.execute(
-            "INSERT INTO crypto_holdings (id, coin_id, symbol, amount, purchase_price, purchase_date)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-            params![
-                &holding.id,
-                &holding.coin_id,
-                &holding.symbol,
-                &holding.amount,
-                &holding.purchase_price,
-                &holding.purchase_date,
-            ],
-        )?;
+        // Check if legacy backup table exists, if not check for original
+        let backup_exists: bool = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='crypto_holdings_backup'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(0)
+            > 0;
+
+        if backup_exists {
+            // Insert into backup table for legacy support
+            self.conn.execute(
+                "INSERT INTO crypto_holdings_backup (id, coin_id, symbol, amount, purchase_price, purchase_date)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                params![
+                    &holding.id,
+                    &holding.coin_id,
+                    &holding.symbol,
+                    &holding.amount,
+                    &holding.purchase_price,
+                    &holding.purchase_date,
+                ],
+            )?;
+        }
 
         Ok(())
     }
 
-    /// Gets all crypto holdings ordered by coin_id
+    /// Gets all crypto holdings ordered by coin_id (LEGACY)
     pub fn get_crypto_holdings(&self) -> Result<Vec<CryptoHolding>, DbError> {
-        let mut stmt = self.conn.prepare(
+        // Try backup table first, then original
+        let table_name = if self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='crypto_holdings_backup'",
+                [],
+                |row| row.get::<_, i32>(0),
+            )
+            .unwrap_or(0)
+            > 0
+        {
+            "crypto_holdings_backup"
+        } else if self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='crypto_holdings'",
+                [],
+                |row| row.get::<_, i32>(0),
+            )
+            .unwrap_or(0)
+            > 0
+        {
+            "crypto_holdings"
+        } else {
+            return Ok(Vec::new());
+        };
+
+        let query = format!(
             "SELECT id, coin_id, symbol, amount, purchase_price, purchase_date
-             FROM crypto_holdings
+             FROM {}
              ORDER BY coin_id ASC, purchase_date DESC",
-        )?;
+            table_name
+        );
+
+        let mut stmt = self.conn.prepare(&query)?;
 
         let holdings = stmt
             .query_map([], |row| {
@@ -385,11 +570,398 @@ impl Database {
         Ok(holdings)
     }
 
-    /// Deletes a crypto holding by its ID
+    /// Deletes a crypto holding by its ID (LEGACY)
     pub fn delete_crypto_holding(&self, id: &str) -> Result<(), DbError> {
-        self.conn
-            .execute("DELETE FROM crypto_holdings WHERE id = ?1", params![id])?;
+        // Try backup table first
+        let backup_exists: bool = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='crypto_holdings_backup'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(0)
+            > 0;
+
+        if backup_exists {
+            self.conn.execute(
+                "DELETE FROM crypto_holdings_backup WHERE id = ?1",
+                params![id],
+            )?;
+        } else {
+            self.conn
+                .execute("DELETE FROM crypto_holdings WHERE id = ?1", params![id])?;
+        }
         Ok(())
+    }
+
+    // ==================== Crypto Wallets CRUD ====================
+
+    /// Creates a new crypto wallet
+    pub fn create_wallet(&self, wallet: &CryptoWallet) -> Result<(), DbError> {
+        if !wallet.validate() {
+            return Err(DbError::InvalidWalletCategory);
+        }
+
+        self.conn.execute(
+            "INSERT INTO crypto_wallets (id, name, category, icon) VALUES (?1, ?2, ?3, ?4)",
+            params![&wallet.id, &wallet.name, &wallet.category, &wallet.icon],
+        )?;
+
+        Ok(())
+    }
+
+    /// Gets all wallets
+    pub fn get_wallets(&self) -> Result<Vec<CryptoWallet>, DbError> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT id, name, category, icon FROM crypto_wallets ORDER BY name ASC")?;
+
+        let wallets = stmt
+            .query_map([], |row| {
+                Ok(CryptoWallet {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    category: row.get(2)?,
+                    icon: row.get(3)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(wallets)
+    }
+
+    /// Gets a single wallet by ID
+    pub fn get_wallet(&self, id: &str) -> Result<Option<CryptoWallet>, DbError> {
+        let result = self.conn.query_row(
+            "SELECT id, name, category, icon FROM crypto_wallets WHERE id = ?1",
+            params![id],
+            |row| {
+                Ok(CryptoWallet {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    category: row.get(2)?,
+                    icon: row.get(3)?,
+                })
+            },
+        );
+
+        match result {
+            Ok(wallet) => Ok(Some(wallet)),
+            Err(RusqliteError::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(DbError::Sqlite(e)),
+        }
+    }
+
+    /// Updates a wallet
+    pub fn update_wallet(&self, wallet: &CryptoWallet) -> Result<(), DbError> {
+        if !wallet.validate() {
+            return Err(DbError::InvalidWalletCategory);
+        }
+
+        let rows = self.conn.execute(
+            "UPDATE crypto_wallets SET name = ?2, category = ?3, icon = ?4 WHERE id = ?1",
+            params![&wallet.id, &wallet.name, &wallet.category, &wallet.icon],
+        )?;
+
+        if rows == 0 {
+            return Err(DbError::WalletNotFound);
+        }
+
+        Ok(())
+    }
+
+    /// Deletes a wallet and all its transactions
+    pub fn delete_wallet(&self, id: &str) -> Result<(), DbError> {
+        // Delete transactions first (or rely on CASCADE if supported)
+        self.conn.execute(
+            "DELETE FROM crypto_transactions WHERE wallet_id = ?1",
+            params![id],
+        )?;
+
+        let rows = self
+            .conn
+            .execute("DELETE FROM crypto_wallets WHERE id = ?1", params![id])?;
+
+        if rows == 0 {
+            return Err(DbError::WalletNotFound);
+        }
+
+        Ok(())
+    }
+
+    // ==================== Crypto Transactions CRUD ====================
+
+    /// Creates a new crypto transaction
+    pub fn create_crypto_transaction(&self, tx: &CryptoTransaction) -> Result<(), DbError> {
+        if !tx.validate() {
+            return Err(DbError::InvalidTransactionType);
+        }
+
+        // Verify wallet exists
+        let wallet_exists: bool = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM crypto_wallets WHERE id = ?1",
+                params![&tx.wallet_id],
+                |row| row.get(0),
+            )
+            .unwrap_or(0)
+            > 0;
+
+        if !wallet_exists {
+            return Err(DbError::WalletNotFound);
+        }
+
+        self.conn.execute(
+            "INSERT INTO crypto_transactions
+             (id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, fee_coin_id, fee_amount, date, notes, related_tx_id)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+            params![
+                &tx.id,
+                &tx.wallet_id,
+                &tx.coin_id,
+                &tx.symbol,
+                &tx.transaction_type,
+                &tx.amount,
+                &tx.price_per_coin,
+                &tx.fee,
+                &tx.fee_coin_id,
+                &tx.fee_amount,
+                &tx.date,
+                &tx.notes,
+                &tx.related_tx_id,
+            ],
+        )?;
+
+        Ok(())
+    }
+
+    /// Gets all transactions for a specific wallet
+    pub fn get_wallet_transactions(
+        &self,
+        wallet_id: &str,
+    ) -> Result<Vec<CryptoTransaction>, DbError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, fee_coin_id, fee_amount, date, notes, related_tx_id
+             FROM crypto_transactions
+             WHERE wallet_id = ?1
+             ORDER BY date DESC, id DESC",
+        )?;
+
+        let transactions = stmt
+            .query_map(params![wallet_id], |row| {
+                Ok(CryptoTransaction {
+                    id: row.get(0)?,
+                    wallet_id: row.get(1)?,
+                    coin_id: row.get(2)?,
+                    symbol: row.get(3)?,
+                    transaction_type: row.get(4)?,
+                    amount: row.get(5)?,
+                    price_per_coin: row.get(6)?,
+                    fee: row.get(7)?,
+                    fee_coin_id: row.get(8)?,
+                    fee_amount: row.get(9)?,
+                    date: row.get(10)?,
+                    notes: row.get(11)?,
+                    related_tx_id: row.get(12)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(transactions)
+    }
+
+    /// Gets all crypto transactions across all wallets
+    pub fn get_all_crypto_transactions(&self) -> Result<Vec<CryptoTransaction>, DbError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, fee_coin_id, fee_amount, date, notes, related_tx_id
+             FROM crypto_transactions
+             ORDER BY date DESC, id DESC",
+        )?;
+
+        let transactions = stmt
+            .query_map([], |row| {
+                Ok(CryptoTransaction {
+                    id: row.get(0)?,
+                    wallet_id: row.get(1)?,
+                    coin_id: row.get(2)?,
+                    symbol: row.get(3)?,
+                    transaction_type: row.get(4)?,
+                    amount: row.get(5)?,
+                    price_per_coin: row.get(6)?,
+                    fee: row.get(7)?,
+                    fee_coin_id: row.get(8)?,
+                    fee_amount: row.get(9)?,
+                    date: row.get(10)?,
+                    notes: row.get(11)?,
+                    related_tx_id: row.get(12)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(transactions)
+    }
+
+    /// Deletes a crypto transaction by ID
+    pub fn delete_crypto_transaction(&self, id: &str) -> Result<(), DbError> {
+        self.conn
+            .execute("DELETE FROM crypto_transactions WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
+    /// Gets a crypto transaction by ID
+    pub fn get_crypto_transaction(&self, id: &str) -> Result<Option<CryptoTransaction>, DbError> {
+        let result = self.conn.query_row(
+            "SELECT id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, fee_coin_id, fee_amount, date, notes, related_tx_id
+             FROM crypto_transactions WHERE id = ?1",
+            params![id],
+            |row| {
+                Ok(CryptoTransaction {
+                    id: row.get(0)?,
+                    wallet_id: row.get(1)?,
+                    coin_id: row.get(2)?,
+                    symbol: row.get(3)?,
+                    transaction_type: row.get(4)?,
+                    amount: row.get(5)?,
+                    price_per_coin: row.get(6)?,
+                    fee: row.get(7)?,
+                    fee_coin_id: row.get(8)?,
+                    fee_amount: row.get(9)?,
+                    date: row.get(10)?,
+                    notes: row.get(11)?,
+                    related_tx_id: row.get(12)?,
+                })
+            },
+        );
+
+        match result {
+            Ok(tx) => Ok(Some(tx)),
+            Err(RusqliteError::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(DbError::Sqlite(e)),
+        }
+    }
+
+    // ==================== Portfolio Aggregation ====================
+
+    /// Calculates aggregated portfolio from all transactions across all wallets
+    /// This is the CRITICAL function that computes total holdings per coin
+    pub fn get_aggregated_portfolio(&self) -> Result<Vec<AggregatedAsset>, DbError> {
+        let transactions = self.get_all_crypto_transactions()?;
+
+        // Group transactions by coin_id and calculate totals
+        let mut assets: HashMap<String, AggregatedAsset> = HashMap::new();
+
+        for tx in transactions {
+            let tx_type = match CryptoTransactionType::from_str(&tx.transaction_type) {
+                Some(t) => t,
+                None => continue, // Skip invalid transaction types
+            };
+
+            let entry = assets
+                .entry(tx.coin_id.clone())
+                .or_insert_with(|| AggregatedAsset::new(tx.coin_id.clone(), tx.symbol.clone()));
+
+            match tx_type {
+                CryptoTransactionType::Buy | CryptoTransactionType::TransferIn => {
+                    // Add to holdings
+                    entry.total_amount += tx.amount;
+
+                    // For buys, add to cost basis (transfers don't have a price)
+                    if tx_type == CryptoTransactionType::Buy {
+                        let cost = tx.amount * tx.price_per_coin.unwrap_or(0.0);
+                        let fee = tx.fee.unwrap_or(0.0);
+                        entry.total_cost_basis += cost + fee;
+                    }
+                }
+                CryptoTransactionType::Sell | CryptoTransactionType::TransferOut => {
+                    // Subtract from holdings
+                    entry.total_amount -= tx.amount;
+
+                    // For sells, reduce cost basis proportionally
+                    if tx_type == CryptoTransactionType::Sell && entry.total_amount > 0.0 {
+                        let old_amount = entry.total_amount + tx.amount;
+                        if old_amount > 0.0 {
+                            let ratio = tx.amount / old_amount;
+                            entry.total_cost_basis *= 1.0 - ratio;
+                        }
+                    }
+                }
+                CryptoTransactionType::Swap => {
+                    // Swaps are handled by related transactions
+                    // The swap itself is treated as a sell of one coin
+                    entry.total_amount -= tx.amount;
+                    if entry.total_amount > 0.0 {
+                        let old_amount = entry.total_amount + tx.amount;
+                        if old_amount > 0.0 {
+                            let ratio = tx.amount / old_amount;
+                            entry.total_cost_basis *= 1.0 - ratio;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Calculate average buy prices and filter out zero/negative balances
+        let result: Vec<AggregatedAsset> = assets
+            .into_values()
+            .filter_map(|mut asset| {
+                if asset.total_amount > 0.0001 {
+                    // Small threshold to handle floating point errors
+                    asset.calculate_avg_price();
+                    Some(asset)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        Ok(result)
+    }
+
+    /// Gets aggregated holdings for a specific wallet
+    pub fn get_wallet_aggregated_holdings(
+        &self,
+        wallet_id: &str,
+    ) -> Result<Vec<AggregatedAsset>, DbError> {
+        let transactions = self.get_wallet_transactions(wallet_id)?;
+
+        let mut assets: HashMap<String, AggregatedAsset> = HashMap::new();
+
+        for tx in transactions {
+            let tx_type = match CryptoTransactionType::from_str(&tx.transaction_type) {
+                Some(t) => t,
+                None => continue,
+            };
+
+            let entry = assets
+                .entry(tx.coin_id.clone())
+                .or_insert_with(|| AggregatedAsset::new(tx.coin_id.clone(), tx.symbol.clone()));
+
+            if tx_type.is_inflow() {
+                entry.total_amount += tx.amount;
+                if tx_type == CryptoTransactionType::Buy {
+                    let cost = tx.amount * tx.price_per_coin.unwrap_or(0.0);
+                    entry.total_cost_basis += cost + tx.fee.unwrap_or(0.0);
+                }
+            } else if tx_type.is_outflow() || tx_type == CryptoTransactionType::Swap {
+                entry.total_amount -= tx.amount;
+            }
+        }
+
+        let result: Vec<AggregatedAsset> = assets
+            .into_values()
+            .filter_map(|mut asset| {
+                if asset.total_amount > 0.0001 {
+                    asset.calculate_avg_price();
+                    Some(asset)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        Ok(result)
     }
 
     // ==================== Balance Summary ====================
@@ -443,6 +1015,11 @@ mod tests {
         assert_eq!(
             DbError::InvalidTransactionType.to_string(),
             "Invalid transaction type"
+        );
+        assert_eq!(DbError::WalletNotFound.to_string(), "Wallet not found");
+        assert_eq!(
+            DbError::InvalidWalletCategory.to_string(),
+            "Invalid wallet category"
         );
     }
 }

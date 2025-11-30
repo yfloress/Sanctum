@@ -27,6 +27,8 @@ const CHART_COLORS = [
   "#f97316", // orange
 ];
 
+// ==================== Interfaces ====================
+
 interface Transaction {
   id: string;
   amount: number;
@@ -51,6 +53,7 @@ interface CryptoAsset {
   last_updated: string;
 }
 
+// Legacy interface - kept for backwards compatibility
 interface CryptoHolding {
   id: string;
   coin_id: string;
@@ -60,35 +63,84 @@ interface CryptoHolding {
   purchase_date: string;
 }
 
-interface PortfolioItem {
-  holding: CryptoHolding;
-  currentPrice: number;
-  currentValue: number;
-  pnl: number;
-  pnlPercentage: number;
+// New Ledger System interfaces
+interface CryptoWallet {
+  id: string;
+  name: string;
+  category: string; // "exchange" | "wallet_single" | "wallet_multi"
+  icon: string | null;
 }
 
-// Maximum number of tracked coins (security: prevent memory bloat)
+interface CryptoTransaction {
+  id: string;
+  wallet_id: string;
+  coin_id: string;
+  symbol: string;
+  type: string; // "buy" | "sell" | "transfer_in" | "transfer_out" | "swap"
+  amount: number;
+  price_per_coin: number | null;
+  fee: number | null;
+  fee_coin_id: string | null;
+  fee_amount: number | null;
+  date: string;
+  notes: string | null;
+  related_tx_id: string | null;
+}
+
+interface AggregatedAsset {
+  coin_id: string;
+  symbol: string;
+  total_amount: number;
+  total_cost_basis: number;
+  avg_buy_price: number;
+  current_price: number;
+  current_value: number;
+  unrealized_pnl: number;
+  unrealized_pnl_percentage: number;
+}
+
+// ==================== Constants ====================
+
 const MAX_TRACKED_COINS = 20;
 
-// Popular cryptocurrencies for suggestions (privacy coins prioritized)
 const POPULAR_CRYPTOS = [
+  // Top Tier
   { id: "bitcoin", symbol: "BTC", name: "Bitcoin" },
-  { id: "litecoin", symbol: "LTC", name: "Litecoin" },
+  { id: "ethereum", symbol: "ETH", name: "Ethereum" },
+  // Stablecoins (MUST HAVE)
+  { id: "tether", symbol: "USDT", name: "Tether" },
+  { id: "usd-coin", symbol: "USDC", name: "USD Coin" },
+  { id: "dai", symbol: "DAI", name: "Dai" },
+  // Privacy Coins
   { id: "monero", symbol: "XMR", name: "Monero" },
   { id: "zcash", symbol: "ZEC", name: "Zcash" },
   { id: "dash", symbol: "DASH", name: "Dash" },
+  // Major Altcoins
+  { id: "litecoin", symbol: "LTC", name: "Litecoin" },
+  { id: "ripple", symbol: "XRP", name: "XRP" },
+  { id: "binancecoin", symbol: "BNB", name: "BNB" },
+  { id: "solana", symbol: "SOL", name: "Solana" },
+  { id: "cardano", symbol: "ADA", name: "Cardano" },
+  { id: "dogecoin", symbol: "DOGE", name: "Dogecoin" },
+  { id: "polkadot", symbol: "DOT", name: "Polkadot" },
+  { id: "avalanche-2", symbol: "AVAX", name: "Avalanche" },
+  { id: "chainlink", symbol: "LINK", name: "Chainlink" },
+  { id: "matic-network", symbol: "MATIC", name: "Polygon" },
+  { id: "tron", symbol: "TRX", name: "TRON" },
+  { id: "uniswap", symbol: "UNI", name: "Uniswap" },
+  { id: "cosmos", symbol: "ATOM", name: "Cosmos" },
+  { id: "stellar", symbol: "XLM", name: "Stellar" },
+  { id: "near", symbol: "NEAR", name: "NEAR Protocol" },
+  { id: "algorand", symbol: "ALGO", name: "Algorand" },
+  // Additional Privacy/Security
   { id: "decred", symbol: "DCR", name: "Decred" },
   { id: "horizen", symbol: "ZEN", name: "Horizen" },
   { id: "secret", symbol: "SCRT", name: "Secret" },
   { id: "oasis-network", symbol: "ROSE", name: "Oasis Network" },
-  { id: "matic-network", symbol: "MATIC", name: "Polygon" },
-  { id: "ethereum", symbol: "ETH", name: "Ethereum" },
-  { id: "solana", symbol: "SOL", name: "Solana" },
 ];
 
-// Default cryptocurrencies to track
-const DEFAULT_TRACKED_COINS = ["bitcoin", "litecoin", "monero", "zcash"];
+// Default coins to show prices (BTC, XMR, LTC)
+const DEFAULT_TRACKED_COINS = ["bitcoin", "monero", "litecoin"];
 
 const EXPENSE_CATEGORIES = [
   "Food",
@@ -110,7 +162,37 @@ const INCOME_CATEGORIES = [
   "Other",
 ] as const;
 
+const WALLET_CATEGORIES = [
+  { value: "exchange", label: "Exchange", icon: "🏦" },
+  { value: "wallet_single", label: "Single-Coin Wallet", icon: "💳" },
+  { value: "wallet_multi", label: "Multi-Coin Wallet", icon: "👛" },
+];
+
+const WALLET_ICONS = [
+  "🏦",
+  "💳",
+  "👛",
+  "🔒",
+  "💎",
+  "🌐",
+  "📱",
+  "💻",
+  "🔑",
+  "⚡",
+];
+
+const TRANSACTION_TYPES = [
+  { value: "buy", label: "Buy", icon: "📥" },
+  { value: "sell", label: "Sell", icon: "📤" },
+  { value: "transfer_in", label: "Transfer In", icon: "⬇️" },
+  { value: "transfer_out", label: "Transfer Out", icon: "⬆️" },
+  { value: "swap", label: "Swap", icon: "🔄" },
+];
+
+// ==================== Main App Component ====================
+
 function App() {
+  // Auth state
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [password, setPassword] = useState("");
@@ -122,6 +204,7 @@ function App() {
     null,
   );
 
+  // Financial transaction state
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<string>(EXPENSE_CATEGORIES[0]);
@@ -142,7 +225,7 @@ function App() {
     null,
   );
 
-  // Crypto state
+  // Crypto state - prices and watchlist
   const [cryptoAssets, setCryptoAssets] = useState<CryptoAsset[]>([]);
   const [cryptoLoading, setCryptoLoading] = useState(false);
   const [cryptoError, setCryptoError] = useState("");
@@ -152,7 +235,73 @@ function App() {
   const [showAddCrypto, setShowAddCrypto] = useState(false);
   const [cryptoSearchQuery, setCryptoSearchQuery] = useState("");
 
-  // Portfolio state
+  // Crypto Ledger state - wallets and transactions
+  const [cryptoSubTab, setCryptoSubTab] = useState<"overview" | "wallets">(
+    "overview",
+  );
+  const [wallets, setWallets] = useState<CryptoWallet[]>([]);
+  const [aggregatedPortfolio, setAggregatedPortfolio] = useState<
+    AggregatedAsset[]
+  >([]);
+  const [selectedWallet, setSelectedWallet] = useState<CryptoWallet | null>(
+    null,
+  );
+  const [walletTransactions, setWalletTransactions] = useState<
+    CryptoTransaction[]
+  >([]);
+  const [walletHoldings, setWalletHoldings] = useState<AggregatedAsset[]>([]);
+
+  // Modal states for crypto
+  const [showAddWallet, setShowAddWallet] = useState(false);
+  const [showAddTransaction, setShowAddTransaction] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [showSwapModal, setShowSwapModal] = useState(false);
+  const [walletToDelete, setWalletToDelete] = useState<string | null>(null);
+  const [cryptoTxToDelete, setCryptoTxToDelete] = useState<string | null>(null);
+
+  // Wallet form state
+  const [walletName, setWalletName] = useState("");
+  const [walletCategory, setWalletCategory] = useState("exchange");
+  const [walletIcon, setWalletIcon] = useState("🏦");
+
+  // Transaction form state
+  const [txWalletId, setTxWalletId] = useState("");
+  const [txCoinId, setTxCoinId] = useState("");
+  const [txSymbol, setTxSymbol] = useState("");
+  const [txType, setTxType] = useState("buy");
+  const [txAmount, setTxAmount] = useState("");
+  const [txPrice, setTxPrice] = useState("");
+  const [txFee, setTxFee] = useState("");
+  const [txDate, setTxDate] = useState(
+    () => new Date().toISOString().split("T")[0],
+  );
+  const [txNotes, setTxNotes] = useState("");
+
+  // Transfer form state
+  const [transferFromWallet, setTransferFromWallet] = useState("");
+  const [transferToWallet, setTransferToWallet] = useState("");
+  const [transferCoinId, setTransferCoinId] = useState("");
+  const [transferSymbol, setTransferSymbol] = useState("");
+  const [transferAmount, setTransferAmount] = useState("");
+  const [transferFee, setTransferFee] = useState("");
+  const [transferDate, setTransferDate] = useState(
+    () => new Date().toISOString().split("T")[0],
+  );
+
+  // Swap form state
+  const [swapWalletId, setSwapWalletId] = useState("");
+  const [swapFromCoinId, setSwapFromCoinId] = useState("");
+  const [swapFromSymbol, setSwapFromSymbol] = useState("");
+  const [swapFromAmount, setSwapFromAmount] = useState("");
+  const [swapToCoinId, setSwapToCoinId] = useState("");
+  const [swapToSymbol, setSwapToSymbol] = useState("");
+  const [swapToAmount, setSwapToAmount] = useState("");
+  const [swapFee, setSwapFee] = useState("");
+  const [swapDate, setSwapDate] = useState(
+    () => new Date().toISOString().split("T")[0],
+  );
+
+  // Legacy portfolio state (for backwards compatibility during migration)
   const [holdings, setHoldings] = useState<CryptoHolding[]>([]);
   const [showAddHolding, setShowAddHolding] = useState(false);
   const [holdingCoinId, setHoldingCoinId] = useState("");
@@ -164,7 +313,8 @@ function App() {
   );
   const [holdingToDelete, setHoldingToDelete] = useState<string | null>(null);
 
-  // Analytics data: expenses grouped by category for pie chart
+  // ==================== Memoized Values ====================
+
   const expensesByCategory = useMemo(() => {
     const expenses = transactions.filter((tx) => tx.type === "expense");
     const grouped = expenses.reduce(
@@ -180,52 +330,73 @@ function App() {
       .sort((a, b) => b.value - a.value);
   }, [transactions]);
 
-  // Portfolio calculations: combine holdings with current prices
-  const portfolio = useMemo((): PortfolioItem[] => {
-    return holdings.map((holding) => {
-      const asset = cryptoAssets.find((a) => a.id === holding.coin_id);
-      const currentPrice = asset?.current_price ?? 0;
-      const currentValue = holding.amount * currentPrice;
-      const costBasis = holding.amount * holding.purchase_price;
-      const pnl = currentValue - costBasis;
-      const pnlPercentage = costBasis > 0 ? (pnl / costBasis) * 100 : 0;
+  // Aggregated portfolio with prices
+  const enrichedPortfolio = useMemo((): AggregatedAsset[] => {
+    return aggregatedPortfolio.map((asset) => {
+      const priceData = cryptoAssets.find((a) => a.id === asset.coin_id);
+      const currentPrice = priceData?.current_price ?? 0;
+      const currentValue = asset.total_amount * currentPrice;
+      const unrealizedPnl = currentValue - asset.total_cost_basis;
+      const unrealizedPnlPercentage =
+        asset.total_cost_basis > 0
+          ? (unrealizedPnl / asset.total_cost_basis) * 100
+          : 0;
 
       return {
-        holding,
-        currentPrice,
-        currentValue,
-        pnl,
-        pnlPercentage,
+        ...asset,
+        current_price: currentPrice,
+        current_value: currentValue,
+        unrealized_pnl: unrealizedPnl,
+        unrealized_pnl_percentage: unrealizedPnlPercentage,
       };
     });
-  }, [holdings, cryptoAssets]);
+  }, [aggregatedPortfolio, cryptoAssets]);
 
-  // Total portfolio value
+  // Portfolio totals from aggregated data
   const portfolioTotals = useMemo(() => {
-    const totalValue = portfolio.reduce(
-      (sum, item) => sum + item.currentValue,
+    const totalValue = enrichedPortfolio.reduce(
+      (sum, item) => sum + item.current_value,
       0,
     );
-    const totalCost = portfolio.reduce(
-      (sum, item) => sum + item.holding.amount * item.holding.purchase_price,
+    const totalCost = enrichedPortfolio.reduce(
+      (sum, item) => sum + item.total_cost_basis,
       0,
     );
     const totalPnl = totalValue - totalCost;
     const totalPnlPercentage = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
 
     return { totalValue, totalCost, totalPnl, totalPnlPercentage };
-  }, [portfolio]);
+  }, [enrichedPortfolio]);
 
-  // Analytics data: balance evolution over time for area chart
+  // Wallet holdings with prices
+  const enrichedWalletHoldings = useMemo((): AggregatedAsset[] => {
+    return walletHoldings.map((asset) => {
+      const priceData = cryptoAssets.find((a) => a.id === asset.coin_id);
+      const currentPrice = priceData?.current_price ?? 0;
+      const currentValue = asset.total_amount * currentPrice;
+      const unrealizedPnl = currentValue - asset.total_cost_basis;
+      const unrealizedPnlPercentage =
+        asset.total_cost_basis > 0
+          ? (unrealizedPnl / asset.total_cost_basis) * 100
+          : 0;
+
+      return {
+        ...asset,
+        current_price: currentPrice,
+        current_value: currentValue,
+        unrealized_pnl: unrealizedPnl,
+        unrealized_pnl_percentage: unrealizedPnlPercentage,
+      };
+    });
+  }, [walletHoldings, cryptoAssets]);
+
   const balanceEvolution = useMemo(() => {
     if (transactions.length === 0) return [];
 
-    // Sort by date ascending
     const sorted = [...transactions].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
     );
 
-    // Group by date and calculate daily balance
     const dailyData: Record<string, { income: number; expense: number }> = {};
 
     sorted.forEach((tx) => {
@@ -245,7 +416,6 @@ function App() {
       }
     });
 
-    // Calculate cumulative balance
     let cumulative = 0;
     return Object.entries(dailyData).map(([date, data]) => {
       cumulative += (data.income - data.expense) / 100;
@@ -258,8 +428,30 @@ function App() {
     });
   }, [transactions]);
 
+  const categories = useMemo(
+    () => (isExpense ? EXPENSE_CATEGORIES : INCOME_CATEGORIES),
+    [isExpense],
+  );
+
+  const filteredSuggestions = useMemo(() => {
+    const query = cryptoSearchQuery.toLowerCase().trim();
+    if (!query)
+      return POPULAR_CRYPTOS.filter((c) => !trackedCoins.includes(c.id));
+    return POPULAR_CRYPTOS.filter(
+      (c) =>
+        !trackedCoins.includes(c.id) &&
+        (c.id.includes(query) ||
+          c.symbol.toLowerCase().includes(query) ||
+          c.name.toLowerCase().includes(query)),
+    );
+  }, [cryptoSearchQuery, trackedCoins]);
+
+  // ==================== Refs for timeouts ====================
+
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ==================== Helper Functions ====================
 
   const setTemporaryError = useCallback((message: string, duration = 5000) => {
     if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
@@ -279,17 +471,58 @@ function App() {
     [],
   );
 
-  useEffect(() => {
-    return () => {
-      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
-      if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
-    };
+  const clearMessages = useCallback(() => {
+    setError("");
+    setSuccessMessage("");
   }, []);
 
-  const categories = useMemo(
-    () => (isExpense ? EXPENSE_CATEGORIES : INCOME_CATEGORIES),
-    [isExpense],
+  const formatAmount = useCallback(
+    (cents: number) => (cents / 100).toFixed(2),
+    [],
   );
+
+  const formatDate = useCallback((isoDate: string) => {
+    return new Date(isoDate).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  }, []);
+
+  const formatCryptoAmount = useCallback((amount: number, decimals = 8) => {
+    if (amount >= 1) {
+      return amount.toLocaleString(undefined, { maximumFractionDigits: 4 });
+    }
+    return amount.toLocaleString(undefined, {
+      maximumFractionDigits: decimals,
+    });
+  }, []);
+
+  const formatUSD = useCallback((value: number) => {
+    return value.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }, []);
+
+  const isValidCoinId = useCallback((coinId: string): boolean => {
+    if (!coinId || coinId.length > 64) return false;
+    if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/.test(coinId)) return false;
+    if (coinId.includes("--")) return false;
+    return true;
+  }, []);
+
+  const getTransactionTypeLabel = useCallback((type: string) => {
+    const found = TRANSACTION_TYPES.find((t) => t.value === type);
+    return found ? `${found.icon} ${found.label}` : type;
+  }, []);
+
+  const getWalletCategoryLabel = useCallback((category: string) => {
+    const found = WALLET_CATEGORIES.find((c) => c.value === category);
+    return found ? found.label : category;
+  }, []);
+
+  // ==================== Data Loading Functions ====================
 
   const loadDbPath = useCallback(async () => {
     try {
@@ -318,10 +551,44 @@ function App() {
     }
   }, []);
 
+  const loadWallets = useCallback(async () => {
+    try {
+      const data = await invoke<CryptoWallet[]>("get_wallets");
+      setWallets(data);
+    } catch (err) {
+      console.error("Error loading wallets:", err);
+    }
+  }, []);
+
+  const loadAggregatedPortfolio = useCallback(async () => {
+    try {
+      const data = await invoke<AggregatedAsset[]>("get_aggregated_portfolio");
+      setAggregatedPortfolio(data);
+    } catch (err) {
+      console.error("Error loading aggregated portfolio:", err);
+    }
+  }, []);
+
+  const loadWalletDetails = useCallback(async (walletId: string) => {
+    try {
+      const [txs, holdings] = await Promise.all([
+        invoke<CryptoTransaction[]>("get_wallet_transactions", { walletId }),
+        invoke<AggregatedAsset[]>("get_wallet_holdings", { walletId }),
+      ]);
+      setWalletTransactions(txs);
+      setWalletHoldings(holdings);
+    } catch (err) {
+      console.error("Error loading wallet details:", err);
+    }
+  }, []);
+
   const loadCryptoPrices = useCallback(async () => {
-    // Combine tracked coins and coins from holdings
+    // Combine tracked coins, holdings coins, and aggregated portfolio coins
     const holdingCoinIds = holdings.map((h) => h.coin_id);
-    const allCoins = [...new Set([...trackedCoins, ...holdingCoinIds])];
+    const portfolioCoinIds = aggregatedPortfolio.map((a) => a.coin_id);
+    const allCoins = [
+      ...new Set([...trackedCoins, ...holdingCoinIds, ...portfolioCoinIds]),
+    ];
 
     if (allCoins.length === 0) {
       setCryptoAssets([]);
@@ -340,8 +607,9 @@ function App() {
     } finally {
       setCryptoLoading(false);
     }
-  }, [trackedCoins, holdings]);
+  }, [trackedCoins, holdings, aggregatedPortfolio]);
 
+  // Legacy holdings loader
   const loadHoldings = useCallback(async () => {
     try {
       const data = await invoke<CryptoHolding[]>("get_crypto_holdings");
@@ -351,19 +619,12 @@ function App() {
     }
   }, []);
 
-  // Validates coin ID format (mirrors backend validation)
-  const isValidCoinId = useCallback((coinId: string): boolean => {
-    if (!coinId || coinId.length > 64) return false;
-    if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/.test(coinId)) return false;
-    if (coinId.includes("--")) return false;
-    return true;
-  }, []);
+  // ==================== Crypto Watchlist Functions ====================
 
   const addTrackedCoin = useCallback(
     (coinId: string) => {
       const normalized = coinId.toLowerCase().trim();
 
-      // Validation checks
       if (!normalized || trackedCoins.includes(normalized)) return;
 
       if (trackedCoins.length >= MAX_TRACKED_COINS) {
@@ -388,18 +649,359 @@ function App() {
     setCryptoAssets((prev) => prev.filter((asset) => asset.id !== coinId));
   }, []);
 
-  const filteredSuggestions = useMemo(() => {
-    const query = cryptoSearchQuery.toLowerCase().trim();
-    if (!query)
-      return POPULAR_CRYPTOS.filter((c) => !trackedCoins.includes(c.id));
-    return POPULAR_CRYPTOS.filter(
-      (c) =>
-        !trackedCoins.includes(c.id) &&
-        (c.id.includes(query) ||
-          c.symbol.toLowerCase().includes(query) ||
-          c.name.toLowerCase().includes(query)),
-    );
-  }, [cryptoSearchQuery, trackedCoins]);
+  // ==================== Wallet Management Functions ====================
+
+  const handleAddWallet = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+
+      if (!walletName.trim()) {
+        setCryptoError("Wallet name cannot be empty");
+        return;
+      }
+
+      try {
+        setCryptoLoading(true);
+        setCryptoError("");
+        await invoke("add_wallet", {
+          name: walletName.trim(),
+          category: walletCategory,
+          icon: walletIcon,
+        });
+
+        setWalletName("");
+        setWalletCategory("exchange");
+        setWalletIcon("🏦");
+        setShowAddWallet(false);
+
+        await loadWallets();
+        setTemporarySuccess("Wallet created successfully");
+      } catch (err) {
+        setCryptoError(String(err));
+      } finally {
+        setCryptoLoading(false);
+      }
+    },
+    [walletName, walletCategory, walletIcon, loadWallets, setTemporarySuccess],
+  );
+
+  const confirmDeleteWallet = useCallback(async () => {
+    if (!walletToDelete) return;
+
+    try {
+      setCryptoLoading(true);
+      await invoke("delete_wallet", { id: walletToDelete });
+      await loadWallets();
+      await loadAggregatedPortfolio();
+      if (selectedWallet?.id === walletToDelete) {
+        setSelectedWallet(null);
+        setWalletTransactions([]);
+        setWalletHoldings([]);
+      }
+      setTemporarySuccess("Wallet deleted successfully");
+    } catch (err) {
+      setCryptoError(String(err));
+    } finally {
+      setCryptoLoading(false);
+      setWalletToDelete(null);
+    }
+  }, [
+    walletToDelete,
+    loadWallets,
+    loadAggregatedPortfolio,
+    selectedWallet,
+    setTemporarySuccess,
+  ]);
+
+  const selectWallet = useCallback(
+    async (wallet: CryptoWallet) => {
+      setSelectedWallet(wallet);
+      await loadWalletDetails(wallet.id);
+    },
+    [loadWalletDetails],
+  );
+
+  // ==================== Crypto Transaction Functions ====================
+
+  const resetTransactionForm = useCallback(() => {
+    setTxWalletId("");
+    setTxCoinId("");
+    setTxSymbol("");
+    setTxType("buy");
+    setTxAmount("");
+    setTxPrice("");
+    setTxFee("");
+    setTxDate(new Date().toISOString().split("T")[0]);
+    setTxNotes("");
+  }, []);
+
+  const handleAddCryptoTransaction = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+
+      const parsedAmount = parseFloat(txAmount);
+      const parsedPrice = txPrice ? parseFloat(txPrice) : null;
+      const parsedFee = txFee ? parseFloat(txFee) : null;
+
+      if (!txWalletId) {
+        setCryptoError("Please select a wallet");
+        return;
+      }
+      if (!txCoinId.trim()) {
+        setCryptoError("Please select a coin");
+        return;
+      }
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        setCryptoError("Amount must be greater than zero");
+        return;
+      }
+
+      try {
+        setCryptoLoading(true);
+        setCryptoError("");
+        await invoke("add_crypto_transaction", {
+          walletId: txWalletId,
+          coinId: txCoinId.trim().toLowerCase(),
+          symbol: txSymbol.trim().toUpperCase(),
+          transactionType: txType,
+          amount: parsedAmount,
+          pricePerCoin: parsedPrice,
+          fee: parsedFee,
+          date: txDate,
+          notes: txNotes.trim() || null,
+        });
+
+        resetTransactionForm();
+        setShowAddTransaction(false);
+
+        await loadAggregatedPortfolio();
+        if (selectedWallet) {
+          await loadWalletDetails(selectedWallet.id);
+        }
+        await loadCryptoPrices();
+        setTemporarySuccess("Transaction added successfully");
+      } catch (err) {
+        setCryptoError(String(err));
+      } finally {
+        setCryptoLoading(false);
+      }
+    },
+    [
+      txWalletId,
+      txCoinId,
+      txSymbol,
+      txType,
+      txAmount,
+      txPrice,
+      txFee,
+      txDate,
+      txNotes,
+      resetTransactionForm,
+      loadAggregatedPortfolio,
+      selectedWallet,
+      loadWalletDetails,
+      loadCryptoPrices,
+      setTemporarySuccess,
+    ],
+  );
+
+  const resetTransferForm = useCallback(() => {
+    setTransferFromWallet("");
+    setTransferToWallet("");
+    setTransferCoinId("");
+    setTransferSymbol("");
+    setTransferAmount("");
+    setTransferFee("");
+    setTransferDate(new Date().toISOString().split("T")[0]);
+  }, []);
+
+  const handleAddTransfer = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+
+      const parsedAmount = parseFloat(transferAmount);
+      const parsedFee = transferFee ? parseFloat(transferFee) : null;
+
+      if (!transferFromWallet || !transferToWallet) {
+        setCryptoError("Please select both wallets");
+        return;
+      }
+      if (transferFromWallet === transferToWallet) {
+        setCryptoError("Cannot transfer to the same wallet");
+        return;
+      }
+      if (!transferCoinId.trim()) {
+        setCryptoError("Please select a coin");
+        return;
+      }
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        setCryptoError("Amount must be greater than zero");
+        return;
+      }
+
+      try {
+        setCryptoLoading(true);
+        setCryptoError("");
+        await invoke("add_transfer_transaction", {
+          fromWalletId: transferFromWallet,
+          toWalletId: transferToWallet,
+          coinId: transferCoinId.trim().toLowerCase(),
+          symbol: transferSymbol.trim().toUpperCase(),
+          amount: parsedAmount,
+          fee: parsedFee,
+          date: transferDate,
+          notes: null,
+        });
+
+        resetTransferForm();
+        setShowTransferModal(false);
+
+        await loadAggregatedPortfolio();
+        if (selectedWallet) {
+          await loadWalletDetails(selectedWallet.id);
+        }
+        setTemporarySuccess("Transfer recorded successfully");
+      } catch (err) {
+        setCryptoError(String(err));
+      } finally {
+        setCryptoLoading(false);
+      }
+    },
+    [
+      transferFromWallet,
+      transferToWallet,
+      transferCoinId,
+      transferSymbol,
+      transferAmount,
+      transferFee,
+      transferDate,
+      resetTransferForm,
+      loadAggregatedPortfolio,
+      selectedWallet,
+      loadWalletDetails,
+      setTemporarySuccess,
+    ],
+  );
+
+  const resetSwapForm = useCallback(() => {
+    setSwapWalletId("");
+    setSwapFromCoinId("");
+    setSwapFromSymbol("");
+    setSwapFromAmount("");
+    setSwapToCoinId("");
+    setSwapToSymbol("");
+    setSwapToAmount("");
+    setSwapFee("");
+    setSwapDate(new Date().toISOString().split("T")[0]);
+  }, []);
+
+  const handleAddSwap = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+
+      const parsedFromAmount = parseFloat(swapFromAmount);
+      const parsedToAmount = parseFloat(swapToAmount);
+      const parsedFee = swapFee ? parseFloat(swapFee) : null;
+
+      if (!swapWalletId) {
+        setCryptoError("Please select a wallet");
+        return;
+      }
+      if (!swapFromCoinId.trim() || !swapToCoinId.trim()) {
+        setCryptoError("Please select both coins");
+        return;
+      }
+      if (swapFromCoinId === swapToCoinId) {
+        setCryptoError("Cannot swap the same coin");
+        return;
+      }
+      if (isNaN(parsedFromAmount) || parsedFromAmount <= 0) {
+        setCryptoError("From amount must be greater than zero");
+        return;
+      }
+      if (isNaN(parsedToAmount) || parsedToAmount <= 0) {
+        setCryptoError("To amount must be greater than zero");
+        return;
+      }
+
+      try {
+        setCryptoLoading(true);
+        setCryptoError("");
+        await invoke("add_swap_transaction", {
+          walletId: swapWalletId,
+          fromCoinId: swapFromCoinId.trim().toLowerCase(),
+          fromSymbol: swapFromSymbol.trim().toUpperCase(),
+          fromAmount: parsedFromAmount,
+          toCoinId: swapToCoinId.trim().toLowerCase(),
+          toSymbol: swapToSymbol.trim().toUpperCase(),
+          toAmount: parsedToAmount,
+          fee: parsedFee,
+          feeCoinId: null,
+          feeAmount: null,
+          date: swapDate,
+          notes: null,
+        });
+
+        resetSwapForm();
+        setShowSwapModal(false);
+
+        await loadAggregatedPortfolio();
+        if (selectedWallet) {
+          await loadWalletDetails(selectedWallet.id);
+        }
+        await loadCryptoPrices();
+        setTemporarySuccess("Swap recorded successfully");
+      } catch (err) {
+        setCryptoError(String(err));
+      } finally {
+        setCryptoLoading(false);
+      }
+    },
+    [
+      swapWalletId,
+      swapFromCoinId,
+      swapFromSymbol,
+      swapFromAmount,
+      swapToCoinId,
+      swapToSymbol,
+      swapToAmount,
+      swapFee,
+      swapDate,
+      resetSwapForm,
+      loadAggregatedPortfolio,
+      selectedWallet,
+      loadWalletDetails,
+      loadCryptoPrices,
+      setTemporarySuccess,
+    ],
+  );
+
+  const confirmDeleteCryptoTx = useCallback(async () => {
+    if (!cryptoTxToDelete) return;
+
+    try {
+      setCryptoLoading(true);
+      await invoke("delete_crypto_transaction", { id: cryptoTxToDelete });
+      await loadAggregatedPortfolio();
+      if (selectedWallet) {
+        await loadWalletDetails(selectedWallet.id);
+      }
+      setTemporarySuccess("Transaction deleted successfully");
+    } catch (err) {
+      setCryptoError(String(err));
+    } finally {
+      setCryptoLoading(false);
+      setCryptoTxToDelete(null);
+    }
+  }, [
+    cryptoTxToDelete,
+    loadAggregatedPortfolio,
+    selectedWallet,
+    loadWalletDetails,
+    setTemporarySuccess,
+  ]);
+
+  // ==================== Legacy Holdings Functions ====================
 
   const addHolding = useCallback(
     async (e: React.FormEvent) => {
@@ -431,7 +1033,6 @@ function App() {
           purchaseDate: holdingDate,
         });
 
-        // Reset form
         setHoldingCoinId("");
         setHoldingSymbol("");
         setHoldingAmount("");
@@ -477,7 +1078,6 @@ function App() {
     (coin: { id: string; symbol: string }) => {
       setHoldingCoinId(coin.id);
       setHoldingSymbol(coin.symbol);
-      // Try to get current price
       const asset = cryptoAssets.find((a) => a.id === coin.id);
       if (asset) {
         setHoldingPrice(asset.current_price.toString());
@@ -485,6 +1085,20 @@ function App() {
     },
     [cryptoAssets],
   );
+
+  const selectCoinForTransaction = useCallback(
+    (coin: { id: string; symbol: string }) => {
+      setTxCoinId(coin.id);
+      setTxSymbol(coin.symbol);
+      const asset = cryptoAssets.find((a) => a.id === coin.id);
+      if (asset && (txType === "buy" || txType === "sell")) {
+        setTxPrice(asset.current_price.toString());
+      }
+    },
+    [cryptoAssets, txType],
+  );
+
+  // ==================== Auth and DB Functions ====================
 
   const checkDatabaseStatus = useCallback(async () => {
     try {
@@ -495,6 +1109,8 @@ function App() {
       await loadDbPath();
       if (initialized) {
         await loadHoldings();
+        await loadWallets();
+        await loadAggregatedPortfolio();
         await loadTransactions();
         await loadBalance();
       }
@@ -503,16 +1119,14 @@ function App() {
     } finally {
       setIsLoading(false);
     }
-  }, [loadDbPath, loadTransactions]);
-
-  useEffect(() => {
-    checkDatabaseStatus();
-  }, [checkDatabaseStatus]);
-
-  const clearMessages = useCallback(() => {
-    setError("");
-    setSuccessMessage("");
-  }, []);
+  }, [
+    loadDbPath,
+    loadTransactions,
+    loadBalance,
+    loadHoldings,
+    loadWallets,
+    loadAggregatedPortfolio,
+  ]);
 
   const handleVaultAction = useCallback(
     async (action: "open" | "create") => {
@@ -543,6 +1157,9 @@ function App() {
         await loadDbPath();
         await loadTransactions();
         await loadBalance();
+        await loadHoldings();
+        await loadWallets();
+        await loadAggregatedPortfolio();
       } catch (err) {
         setTemporaryError(`Error: ${err}`);
       } finally {
@@ -557,8 +1174,10 @@ function App() {
       loadDbPath,
       loadTransactions,
       loadBalance,
+      loadHoldings,
+      loadWallets,
+      loadAggregatedPortfolio,
       setTemporaryError,
-      setTemporarySuccess,
     ],
   );
 
@@ -570,6 +1189,10 @@ function App() {
       setTemporarySuccess(result);
       setIsInitialized(false);
       setTransactions([]);
+      setWallets([]);
+      setAggregatedPortfolio([]);
+      setHoldings([]);
+      setSelectedWallet(null);
       await loadDbPath();
     } catch (err) {
       setTemporaryError(`Error: ${err}`);
@@ -577,6 +1200,8 @@ function App() {
       setIsLoading(false);
     }
   }, [clearMessages, loadDbPath, setTemporaryError, setTemporarySuccess]);
+
+  // ==================== Financial Transaction Functions ====================
 
   const handleExpenseToggle = useCallback((checked: boolean) => {
     setIsExpense(checked);
@@ -685,18 +1310,20 @@ function App() {
     ],
   );
 
-  const formatAmount = useCallback(
-    (cents: number) => (cents / 100).toFixed(2),
-    [],
-  );
+  // ==================== Effects ====================
 
-  const formatDate = useCallback((isoDate: string) => {
-    return new Date(isoDate).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+  useEffect(() => {
+    checkDatabaseStatus();
+  }, [checkDatabaseStatus]);
+
+  useEffect(() => {
+    return () => {
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+      if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
+    };
   }, []);
+
+  // ==================== Render ====================
 
   if (isLoading && !isInitialized) {
     return (
@@ -866,6 +1493,7 @@ function App() {
           <div className="message success">{successMessage}</div>
         )}
 
+        {/* ==================== Dashboard Tab ==================== */}
         {activeTab === "dashboard" && (
           <div className="dashboard">
             <h1 className="page-title">Dashboard</h1>
@@ -933,6 +1561,7 @@ function App() {
           </div>
         )}
 
+        {/* ==================== Transactions Tab ==================== */}
         {activeTab === "transactions" && (
           <div className="transactions-page">
             <h1 className="page-title">Transactions</h1>
@@ -1065,6 +1694,7 @@ function App() {
           </div>
         )}
 
+        {/* ==================== Analytics Tab ==================== */}
         {activeTab === "analytics" && (
           <div className="analytics-page">
             <h1 className="page-title">Analytics</h1>
@@ -1075,7 +1705,6 @@ function App() {
               </p>
             ) : (
               <div className="analytics-grid">
-                {/* Expenses by Category - Pie Chart */}
                 <div className="chart-card">
                   <h2 className="section-title">Expenses by Category</h2>
                   {expensesByCategory.length === 0 ? (
@@ -1136,7 +1765,6 @@ function App() {
                   )}
                 </div>
 
-                {/* Balance Evolution - Area Chart */}
                 <div className="chart-card">
                   <h2 className="section-title">Balance Evolution</h2>
                   <div className="chart-container">
@@ -1210,26 +1838,12 @@ function App() {
           </div>
         )}
 
+        {/* ==================== Crypto Tab ==================== */}
         {activeTab === "crypto" && (
           <div className="crypto-page">
             <div className="crypto-header">
               <h1 className="page-title">Cryptocurrency</h1>
               <div className="crypto-actions">
-                <button
-                  className="btn-icon"
-                  onClick={() => setShowAddHolding(true)}
-                  title="Add to portfolio"
-                >
-                  💼
-                </button>
-                <button
-                  className="btn-icon"
-                  onClick={() => setShowAddCrypto(true)}
-                  disabled={trackedCoins.length >= MAX_TRACKED_COINS}
-                  title="Track new coin"
-                >
-                  +
-                </button>
                 <button
                   className="btn-icon"
                   onClick={loadCryptoPrices}
@@ -1245,172 +1859,394 @@ function App() {
               <div className="message error crypto-error">{cryptoError}</div>
             )}
 
-            {/* Portfolio Section */}
-            <div className="portfolio-section">
-              <div className="section-header">
-                <h2 className="section-title">My Portfolio</h2>
-                <div className="portfolio-total">
-                  <span className="portfolio-total-label">Total Value</span>
-                  <span className="portfolio-total-value">
-                    $
-                    {portfolioTotals.totalValue.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </span>
-                  <span
-                    className={`portfolio-total-pnl ${portfolioTotals.totalPnl >= 0 ? "positive" : "negative"}`}
-                  >
-                    {portfolioTotals.totalPnl >= 0 ? "+" : ""}$
-                    {portfolioTotals.totalPnl.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}{" "}
-                    ({portfolioTotals.totalPnlPercentage >= 0 ? "+" : ""}
-                    {portfolioTotals.totalPnlPercentage.toFixed(2)}%)
-                  </span>
-                </div>
-              </div>
-
-              {holdings.length === 0 ? (
-                <div className="portfolio-empty">
-                  <span className="portfolio-empty-icon">💼</span>
-                  <p>No holdings yet</p>
-                  <button
-                    className="btn-secondary"
-                    onClick={() => setShowAddHolding(true)}
-                  >
-                    + Add First Holding
-                  </button>
-                </div>
-              ) : (
-                <div className="portfolio-grid">
-                  {portfolio.map((item) => (
-                    <div key={item.holding.id} className="portfolio-card">
-                      <button
-                        className="crypto-remove"
-                        onClick={() => setHoldingToDelete(item.holding.id)}
-                        title="Remove holding"
-                      >
-                        ×
-                      </button>
-                      <div className="portfolio-card-header">
-                        <span className="portfolio-symbol">
-                          {item.holding.symbol}
-                        </span>
-                        <span
-                          className={`portfolio-pnl ${item.pnl >= 0 ? "positive" : "negative"}`}
-                        >
-                          {item.pnl >= 0 ? "▲" : "▼"}{" "}
-                          {Math.abs(item.pnlPercentage).toFixed(2)}%
-                        </span>
-                      </div>
-                      <div className="portfolio-amount">
-                        {item.holding.amount.toLocaleString(undefined, {
-                          maximumFractionDigits: 8,
-                        })}{" "}
-                        {item.holding.symbol}
-                      </div>
-                      <div className="portfolio-value">
-                        $
-                        {item.currentValue.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </div>
-                      <div className="portfolio-details">
-                        <span>
-                          Avg: $
-                          {item.holding.purchase_price.toLocaleString(
-                            undefined,
-                            { maximumFractionDigits: 6 },
-                          )}
-                        </span>
-                        <span
-                          className={item.pnl >= 0 ? "positive" : "negative"}
-                        >
-                          {item.pnl >= 0 ? "+" : ""}$
-                          {item.pnl.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+            {/* Sub-tabs for Overview and Wallets */}
+            <div className="crypto-subtabs">
+              <button
+                className={`crypto-subtab ${cryptoSubTab === "overview" ? "active" : ""}`}
+                onClick={() => {
+                  setCryptoSubTab("overview");
+                  setSelectedWallet(null);
+                }}
+              >
+                📊 Overview
+              </button>
+              <button
+                className={`crypto-subtab ${cryptoSubTab === "wallets" ? "active" : ""}`}
+                onClick={() => setCryptoSubTab("wallets")}
+              >
+                👛 Wallets
+              </button>
             </div>
 
-            {/* Watchlist Section */}
-            <div className="watchlist-section">
-              <div className="section-header">
-                <h2 className="section-title">Watchlist</h2>
-                <span className="crypto-count">
-                  {trackedCoins.length}/{MAX_TRACKED_COINS}
-                </span>
-              </div>
+            {/* ==================== Overview Sub-Tab ==================== */}
+            {cryptoSubTab === "overview" && (
+              <>
+                {/* Portfolio Summary */}
+                <div className="portfolio-section">
+                  <div className="section-header">
+                    <h2 className="section-title">Total Portfolio</h2>
+                    <div className="portfolio-total">
+                      <span className="portfolio-total-label">Total Value</span>
+                      <span className="portfolio-total-value">
+                        ${formatUSD(portfolioTotals.totalValue)}
+                      </span>
+                      <span
+                        className={`portfolio-total-pnl ${portfolioTotals.totalPnl >= 0 ? "positive" : "negative"}`}
+                      >
+                        {portfolioTotals.totalPnl >= 0 ? "+" : ""}$
+                        {formatUSD(portfolioTotals.totalPnl)} (
+                        {portfolioTotals.totalPnlPercentage >= 0 ? "+" : ""}
+                        {portfolioTotals.totalPnlPercentage.toFixed(2)}%)
+                      </span>
+                    </div>
+                  </div>
 
-              {cryptoLoading && cryptoAssets.length === 0 ? (
-                <div className="crypto-loading">
-                  <div className="loader" />
-                  <p>Loading prices...</p>
+                  {enrichedPortfolio.length === 0 ? (
+                    <div className="portfolio-empty">
+                      <span className="portfolio-empty-icon">💼</span>
+                      <p>
+                        No holdings yet. Add a wallet and start tracking your
+                        portfolio!
+                      </p>
+                      <button
+                        className="btn-secondary"
+                        onClick={() => setCryptoSubTab("wallets")}
+                      >
+                        Go to Wallets
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="portfolio-grid">
+                      {enrichedPortfolio.map((asset) => (
+                        <div key={asset.coin_id} className="portfolio-card">
+                          <div className="portfolio-card-header">
+                            <span className="portfolio-symbol">
+                              {asset.symbol}
+                            </span>
+                            <span
+                              className={`portfolio-pnl ${asset.unrealized_pnl >= 0 ? "positive" : "negative"}`}
+                            >
+                              {asset.unrealized_pnl >= 0 ? "▲" : "▼"}{" "}
+                              {Math.abs(
+                                asset.unrealized_pnl_percentage,
+                              ).toFixed(2)}
+                              %
+                            </span>
+                          </div>
+                          <div className="portfolio-amount">
+                            {formatCryptoAmount(asset.total_amount)}{" "}
+                            {asset.symbol}
+                          </div>
+                          <div className="portfolio-value">
+                            ${formatUSD(asset.current_value)}
+                          </div>
+                          <div className="portfolio-details">
+                            <span>
+                              Avg: ${formatCryptoAmount(asset.avg_buy_price, 6)}
+                            </span>
+                            <span
+                              className={
+                                asset.unrealized_pnl >= 0
+                                  ? "positive"
+                                  : "negative"
+                              }
+                            >
+                              {asset.unrealized_pnl >= 0 ? "+" : ""}$
+                              {formatUSD(asset.unrealized_pnl)}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              ) : cryptoAssets.length === 0 ? (
-                <div className="crypto-empty">
-                  <span className="crypto-empty-icon">📊</span>
-                  <p>Click refresh to load prices</p>
-                  <button className="btn-secondary" onClick={loadCryptoPrices}>
-                    ↻ Load Prices
+
+                {/* Watchlist Section */}
+                <div className="watchlist-section">
+                  <div className="section-header">
+                    <h2 className="section-title">Watchlist</h2>
+                    <div className="crypto-actions">
+                      <span className="crypto-count">
+                        {trackedCoins.length}/{MAX_TRACKED_COINS}
+                      </span>
+                      <button
+                        className="btn-icon"
+                        onClick={() => setShowAddCrypto(true)}
+                        disabled={trackedCoins.length >= MAX_TRACKED_COINS}
+                        title="Track new coin"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {cryptoLoading && cryptoAssets.length === 0 ? (
+                    <div className="crypto-loading">
+                      <div className="loader" />
+                      <p>Loading prices...</p>
+                    </div>
+                  ) : cryptoAssets.length === 0 ? (
+                    <div className="crypto-empty">
+                      <span className="crypto-empty-icon">📊</span>
+                      <p>Click refresh to load prices</p>
+                      <button
+                        className="btn-secondary"
+                        onClick={loadCryptoPrices}
+                      >
+                        ↻ Load Prices
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="crypto-grid">
+                      {cryptoAssets
+                        .filter((asset) => trackedCoins.includes(asset.id))
+                        .map((asset) => (
+                          <div key={asset.id} className="crypto-card">
+                            <button
+                              className="crypto-remove"
+                              onClick={() => removeTrackedCoin(asset.id)}
+                              title="Remove from watchlist"
+                            >
+                              ×
+                            </button>
+                            <div className="crypto-card-header">
+                              <div className="crypto-info">
+                                <span className="crypto-symbol">
+                                  {asset.symbol}
+                                </span>
+                                <span className="crypto-name">
+                                  {asset.name}
+                                </span>
+                              </div>
+                              <div
+                                className={`crypto-change ${asset.price_change_percentage_24h >= 0 ? "positive" : "negative"}`}
+                              >
+                                {asset.price_change_percentage_24h >= 0
+                                  ? "▲"
+                                  : "▼"}{" "}
+                                {Math.abs(
+                                  asset.price_change_percentage_24h,
+                                ).toFixed(2)}
+                                %
+                              </div>
+                            </div>
+                            <div className="crypto-price">
+                              $
+                              {asset.current_price.toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits:
+                                  asset.current_price < 1 ? 6 : 2,
+                              })}
+                            </div>
+                            <div className="crypto-updated">
+                              Updated:{" "}
+                              {new Date(
+                                asset.last_updated,
+                              ).toLocaleTimeString()}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* ==================== Wallets Sub-Tab ==================== */}
+            {cryptoSubTab === "wallets" && !selectedWallet && (
+              <>
+                <div className="section-header">
+                  <h2 className="section-title">My Wallets</h2>
+                  <button
+                    className="btn-primary"
+                    onClick={() => setShowAddWallet(true)}
+                  >
+                    + Add Wallet
                   </button>
                 </div>
-              ) : (
-                <div className="crypto-grid">
-                  {cryptoAssets
-                    .filter((asset) => trackedCoins.includes(asset.id))
-                    .map((asset) => (
-                      <div key={asset.id} className="crypto-card">
+
+                {wallets.length === 0 ? (
+                  <div className="portfolio-empty">
+                    <span className="portfolio-empty-icon">👛</span>
+                    <p>
+                      No wallets yet. Create your first wallet to start
+                      tracking!
+                    </p>
+                    <button
+                      className="btn-secondary"
+                      onClick={() => setShowAddWallet(true)}
+                    >
+                      + Create Wallet
+                    </button>
+                  </div>
+                ) : (
+                  <div className="wallets-grid">
+                    {wallets.map((wallet) => (
+                      <div
+                        key={wallet.id}
+                        className="wallet-card"
+                        onClick={() => selectWallet(wallet)}
+                      >
                         <button
                           className="crypto-remove"
-                          onClick={() => removeTrackedCoin(asset.id)}
-                          title="Remove from watchlist"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setWalletToDelete(wallet.id);
+                          }}
+                          title="Delete wallet"
                         >
                           ×
                         </button>
-                        <div className="crypto-card-header">
-                          <div className="crypto-info">
-                            <span className="crypto-symbol">
-                              {asset.symbol}
-                            </span>
-                            <span className="crypto-name">{asset.name}</span>
-                          </div>
-                          <div
-                            className={`crypto-change ${asset.price_change_percentage_24h >= 0 ? "positive" : "negative"}`}
-                          >
-                            {asset.price_change_percentage_24h >= 0 ? "▲" : "▼"}{" "}
-                            {Math.abs(
-                              asset.price_change_percentage_24h,
-                            ).toFixed(2)}
-                            %
-                          </div>
-                        </div>
-                        <div className="crypto-price">
-                          $
-                          {asset.current_price.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits:
-                              asset.current_price < 1 ? 6 : 2,
-                          })}
-                        </div>
-                        <div className="crypto-updated">
-                          Updated:{" "}
-                          {new Date(asset.last_updated).toLocaleTimeString()}
+                        <div className="wallet-icon">{wallet.icon || "👛"}</div>
+                        <div className="wallet-name">{wallet.name}</div>
+                        <div className="wallet-category">
+                          {getWalletCategoryLabel(wallet.category)}
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ==================== Wallet Detail View ==================== */}
+            {cryptoSubTab === "wallets" && selectedWallet && (
+              <>
+                <div className="wallet-detail-header">
+                  <button
+                    className="btn-back"
+                    onClick={() => setSelectedWallet(null)}
+                  >
+                    ← Back to Wallets
+                  </button>
+                  <div className="wallet-detail-info">
+                    <span className="wallet-detail-icon">
+                      {selectedWallet.icon || "👛"}
+                    </span>
+                    <h2>{selectedWallet.name}</h2>
+                    <span className="wallet-detail-category">
+                      {getWalletCategoryLabel(selectedWallet.category)}
+                    </span>
+                  </div>
+                  <div className="wallet-detail-actions">
+                    <button
+                      className="btn-primary"
+                      onClick={() => {
+                        setTxWalletId(selectedWallet.id);
+                        setShowAddTransaction(true);
+                      }}
+                    >
+                      + Add Transaction
+                    </button>
+                    <button
+                      className="btn-secondary"
+                      onClick={() => {
+                        setTransferFromWallet(selectedWallet.id);
+                        setShowTransferModal(true);
+                      }}
+                    >
+                      ↔ Transfer
+                    </button>
+                    <button
+                      className="btn-secondary"
+                      onClick={() => {
+                        setSwapWalletId(selectedWallet.id);
+                        setShowSwapModal(true);
+                      }}
+                    >
+                      🔄 Swap
+                    </button>
+                  </div>
                 </div>
-              )}
-            </div>
+
+                {/* Wallet Holdings */}
+                <div className="wallet-holdings">
+                  <h3 className="section-title">Holdings</h3>
+                  {enrichedWalletHoldings.length === 0 ? (
+                    <p className="empty-state">
+                      No holdings in this wallet yet
+                    </p>
+                  ) : (
+                    <div className="portfolio-grid">
+                      {enrichedWalletHoldings.map((asset) => (
+                        <div key={asset.coin_id} className="portfolio-card">
+                          <div className="portfolio-card-header">
+                            <span className="portfolio-symbol">
+                              {asset.symbol}
+                            </span>
+                            <span
+                              className={`portfolio-pnl ${asset.unrealized_pnl >= 0 ? "positive" : "negative"}`}
+                            >
+                              {asset.unrealized_pnl >= 0 ? "▲" : "▼"}{" "}
+                              {Math.abs(
+                                asset.unrealized_pnl_percentage,
+                              ).toFixed(2)}
+                              %
+                            </span>
+                          </div>
+                          <div className="portfolio-amount">
+                            {formatCryptoAmount(asset.total_amount)}{" "}
+                            {asset.symbol}
+                          </div>
+                          <div className="portfolio-value">
+                            ${formatUSD(asset.current_value)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Wallet Transactions */}
+                <div className="wallet-transactions">
+                  <h3 className="section-title">Transaction History</h3>
+                  {walletTransactions.length === 0 ? (
+                    <p className="empty-state">No transactions recorded</p>
+                  ) : (
+                    <div className="transactions-list">
+                      {walletTransactions.map((tx) => (
+                        <div
+                          key={tx.id}
+                          className="transaction-item crypto-tx-item"
+                        >
+                          <div className="transaction-info">
+                            <div className="transaction-category">
+                              {getTransactionTypeLabel(tx.type)} {tx.symbol}
+                            </div>
+                            <div className="transaction-description">
+                              {formatCryptoAmount(tx.amount)} {tx.symbol}
+                              {tx.price_per_coin &&
+                                ` @ $${formatCryptoAmount(tx.price_per_coin, 6)}`}
+                            </div>
+                            <div className="transaction-date">
+                              {formatDate(tx.date)}
+                            </div>
+                          </div>
+                          <div className="transaction-actions">
+                            <div
+                              className={`transaction-amount ${tx.type === "buy" || tx.type === "transfer_in" ? "income" : "expense"}`}
+                            >
+                              {tx.type === "buy" || tx.type === "transfer_in"
+                                ? "+"
+                                : "-"}
+                              {formatCryptoAmount(tx.amount)} {tx.symbol}
+                            </div>
+                            <button
+                              className="btn-delete"
+                              onClick={() => setCryptoTxToDelete(tx.id)}
+                              disabled={cryptoLoading}
+                              aria-label="Delete transaction"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
 
             <div className="crypto-disclaimer">
               <p>
@@ -1421,7 +2257,581 @@ function App() {
           </div>
         )}
 
-        {/* Add Holding Modal */}
+        {/* ==================== Modals ==================== */}
+
+        {/* Add Wallet Modal */}
+        {showAddWallet && (
+          <div
+            className="modal-overlay"
+            onClick={() => setShowAddWallet(false)}
+          >
+            <div
+              className="modal-card crypto-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-header">
+                <span className="modal-icon">👛</span>
+                <h2>Create Wallet</h2>
+              </div>
+              <form onSubmit={handleAddWallet}>
+                <div className="modal-body">
+                  <div className="form-group">
+                    <label htmlFor="wallet-name">Wallet Name</label>
+                    <input
+                      id="wallet-name"
+                      type="text"
+                      value={walletName}
+                      onChange={(e) => setWalletName(e.target.value)}
+                      placeholder="e.g. Binance, Ledger, Metamask..."
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="wallet-category">Category</label>
+                    <select
+                      id="wallet-category"
+                      value={walletCategory}
+                      onChange={(e) => setWalletCategory(e.target.value)}
+                    >
+                      {WALLET_CATEGORIES.map((cat) => (
+                        <option key={cat.value} value={cat.value}>
+                          {cat.icon} {cat.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Icon</label>
+                    <div className="icon-picker">
+                      {WALLET_ICONS.map((icon) => (
+                        <button
+                          key={icon}
+                          type="button"
+                          className={`icon-option ${walletIcon === icon ? "selected" : ""}`}
+                          onClick={() => setWalletIcon(icon)}
+                        >
+                          {icon}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-actions">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setShowAddWallet(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    disabled={cryptoLoading}
+                  >
+                    {cryptoLoading ? "Creating..." : "Create Wallet"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Add Transaction Modal */}
+        {showAddTransaction && (
+          <div
+            className="modal-overlay"
+            onClick={() => setShowAddTransaction(false)}
+          >
+            <div
+              className="modal-card crypto-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-header">
+                <span className="modal-icon">📝</span>
+                <h2>Add Transaction</h2>
+              </div>
+              <form onSubmit={handleAddCryptoTransaction}>
+                <div className="modal-body">
+                  <div className="form-group">
+                    <label htmlFor="tx-wallet">Wallet</label>
+                    <select
+                      id="tx-wallet"
+                      value={txWalletId}
+                      onChange={(e) => setTxWalletId(e.target.value)}
+                      required
+                    >
+                      <option value="">Select wallet...</option>
+                      {wallets.map((w) => (
+                        <option key={w.id} value={w.id}>
+                          {w.icon} {w.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="tx-type">Type</label>
+                    <select
+                      id="tx-type"
+                      value={txType}
+                      onChange={(e) => setTxType(e.target.value)}
+                    >
+                      {TRANSACTION_TYPES.filter((t) => t.value !== "swap").map(
+                        (t) => (
+                          <option key={t.value} value={t.value}>
+                            {t.icon} {t.label}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Coin</label>
+                    <div className="crypto-suggestions compact">
+                      {POPULAR_CRYPTOS.map((coin) => (
+                        <button
+                          key={coin.id}
+                          type="button"
+                          className={`crypto-suggestion ${txCoinId === coin.id ? "selected" : ""}`}
+                          onClick={() => selectCoinForTransaction(coin)}
+                        >
+                          <span className="suggestion-symbol">
+                            {coin.symbol}
+                          </span>
+                          <span className="suggestion-name">{coin.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {txCoinId && (
+                    <>
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label htmlFor="tx-amount">Amount</label>
+                          <input
+                            id="tx-amount"
+                            type="number"
+                            step="any"
+                            value={txAmount}
+                            onChange={(e) => setTxAmount(e.target.value)}
+                            placeholder="0.00"
+                            required
+                          />
+                        </div>
+                        {(txType === "buy" || txType === "sell") && (
+                          <div className="form-group">
+                            <label htmlFor="tx-price">Price per coin ($)</label>
+                            <input
+                              id="tx-price"
+                              type="number"
+                              step="any"
+                              value={txPrice}
+                              onChange={(e) => setTxPrice(e.target.value)}
+                              placeholder="0.00"
+                            />
+                          </div>
+                        )}
+                      </div>
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label htmlFor="tx-fee">Fee ($)</label>
+                          <input
+                            id="tx-fee"
+                            type="number"
+                            step="any"
+                            value={txFee}
+                            onChange={(e) => setTxFee(e.target.value)}
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label htmlFor="tx-date">Date</label>
+                          <input
+                            id="tx-date"
+                            type="date"
+                            value={txDate}
+                            onChange={(e) => setTxDate(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="tx-notes">Notes</label>
+                        <input
+                          id="tx-notes"
+                          type="text"
+                          value={txNotes}
+                          onChange={(e) => setTxNotes(e.target.value)}
+                          placeholder="Optional notes..."
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div className="modal-actions">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => {
+                      setShowAddTransaction(false);
+                      resetTransactionForm();
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    disabled={!txCoinId || cryptoLoading}
+                  >
+                    {cryptoLoading ? "Adding..." : "Add Transaction"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Transfer Modal */}
+        {showTransferModal && (
+          <div
+            className="modal-overlay"
+            onClick={() => setShowTransferModal(false)}
+          >
+            <div
+              className="modal-card crypto-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-header">
+                <span className="modal-icon">↔️</span>
+                <h2>Transfer Between Wallets</h2>
+              </div>
+              <form onSubmit={handleAddTransfer}>
+                <div className="modal-body">
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="transfer-from">From Wallet</label>
+                      <select
+                        id="transfer-from"
+                        value={transferFromWallet}
+                        onChange={(e) => setTransferFromWallet(e.target.value)}
+                        required
+                      >
+                        <option value="">Select...</option>
+                        {wallets.map((w) => (
+                          <option key={w.id} value={w.id}>
+                            {w.icon} {w.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="transfer-to">To Wallet</label>
+                      <select
+                        id="transfer-to"
+                        value={transferToWallet}
+                        onChange={(e) => setTransferToWallet(e.target.value)}
+                        required
+                      >
+                        <option value="">Select...</option>
+                        {wallets
+                          .filter((w) => w.id !== transferFromWallet)
+                          .map((w) => (
+                            <option key={w.id} value={w.id}>
+                              {w.icon} {w.name}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Coin</label>
+                    <div className="crypto-suggestions compact">
+                      {POPULAR_CRYPTOS.map((coin) => (
+                        <button
+                          key={coin.id}
+                          type="button"
+                          className={`crypto-suggestion ${transferCoinId === coin.id ? "selected" : ""}`}
+                          onClick={() => {
+                            setTransferCoinId(coin.id);
+                            setTransferSymbol(coin.symbol);
+                          }}
+                        >
+                          <span className="suggestion-symbol">
+                            {coin.symbol}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="transfer-amount">Amount</label>
+                      <input
+                        id="transfer-amount"
+                        type="number"
+                        step="any"
+                        value={transferAmount}
+                        onChange={(e) => setTransferAmount(e.target.value)}
+                        placeholder="0.00"
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="transfer-fee">Network Fee</label>
+                      <input
+                        id="transfer-fee"
+                        type="number"
+                        step="any"
+                        value={transferFee}
+                        onChange={(e) => setTransferFee(e.target.value)}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="transfer-date">Date</label>
+                    <input
+                      id="transfer-date"
+                      type="date"
+                      value={transferDate}
+                      onChange={(e) => setTransferDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="modal-actions">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => {
+                      setShowTransferModal(false);
+                      resetTransferForm();
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    disabled={!transferCoinId || cryptoLoading}
+                  >
+                    {cryptoLoading ? "Transferring..." : "Record Transfer"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Swap Modal */}
+        {showSwapModal && (
+          <div
+            className="modal-overlay"
+            onClick={() => setShowSwapModal(false)}
+          >
+            <div
+              className="modal-card crypto-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-header">
+                <span className="modal-icon">🔄</span>
+                <h2>Record Swap</h2>
+              </div>
+              <form onSubmit={handleAddSwap}>
+                <div className="modal-body">
+                  <div className="form-group">
+                    <label htmlFor="swap-wallet">Wallet</label>
+                    <select
+                      id="swap-wallet"
+                      value={swapWalletId}
+                      onChange={(e) => setSwapWalletId(e.target.value)}
+                      required
+                    >
+                      <option value="">Select wallet...</option>
+                      {wallets.map((w) => (
+                        <option key={w.id} value={w.id}>
+                          {w.icon} {w.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="swap-section">
+                    <h4>From (Sell)</h4>
+                    <div className="crypto-suggestions compact">
+                      {POPULAR_CRYPTOS.map((coin) => (
+                        <button
+                          key={coin.id}
+                          type="button"
+                          className={`crypto-suggestion ${swapFromCoinId === coin.id ? "selected" : ""}`}
+                          onClick={() => {
+                            setSwapFromCoinId(coin.id);
+                            setSwapFromSymbol(coin.symbol);
+                          }}
+                        >
+                          <span className="suggestion-symbol">
+                            {coin.symbol}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      type="number"
+                      step="any"
+                      value={swapFromAmount}
+                      onChange={(e) => setSwapFromAmount(e.target.value)}
+                      placeholder="Amount to swap"
+                      required
+                    />
+                  </div>
+                  <div className="swap-arrow">⬇️</div>
+                  <div className="swap-section">
+                    <h4>To (Receive)</h4>
+                    <div className="crypto-suggestions compact">
+                      {POPULAR_CRYPTOS.filter(
+                        (c) => c.id !== swapFromCoinId,
+                      ).map((coin) => (
+                        <button
+                          key={coin.id}
+                          type="button"
+                          className={`crypto-suggestion ${swapToCoinId === coin.id ? "selected" : ""}`}
+                          onClick={() => {
+                            setSwapToCoinId(coin.id);
+                            setSwapToSymbol(coin.symbol);
+                          }}
+                        >
+                          <span className="suggestion-symbol">
+                            {coin.symbol}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      type="number"
+                      step="any"
+                      value={swapToAmount}
+                      onChange={(e) => setSwapToAmount(e.target.value)}
+                      placeholder="Amount received"
+                      required
+                    />
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label htmlFor="swap-fee">Fee ($)</label>
+                      <input
+                        id="swap-fee"
+                        type="number"
+                        step="any"
+                        value={swapFee}
+                        onChange={(e) => setSwapFee(e.target.value)}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="swap-date">Date</label>
+                      <input
+                        id="swap-date"
+                        type="date"
+                        value={swapDate}
+                        onChange={(e) => setSwapDate(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-actions">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => {
+                      setShowSwapModal(false);
+                      resetSwapForm();
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    disabled={!swapFromCoinId || !swapToCoinId || cryptoLoading}
+                  >
+                    {cryptoLoading ? "Recording..." : "Record Swap"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Add to Watchlist Modal */}
+        {showAddCrypto && (
+          <div
+            className="modal-overlay"
+            onClick={() => setShowAddCrypto(false)}
+          >
+            <div
+              className="modal-card crypto-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-header">
+                <span className="modal-icon">₿</span>
+                <h2>Add to Watchlist</h2>
+              </div>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label htmlFor="crypto-search">Search or enter coin ID</label>
+                  <input
+                    id="crypto-search"
+                    type="text"
+                    value={cryptoSearchQuery}
+                    onChange={(e) => setCryptoSearchQuery(e.target.value)}
+                    placeholder="e.g. bitcoin, eth, solana..."
+                    autoFocus
+                  />
+                </div>
+                <div className="crypto-suggestions">
+                  {filteredSuggestions.length > 0 ? (
+                    filteredSuggestions.map((coin) => (
+                      <button
+                        key={coin.id}
+                        className="crypto-suggestion"
+                        onClick={() => addTrackedCoin(coin.id)}
+                      >
+                        <span className="suggestion-symbol">{coin.symbol}</span>
+                        <span className="suggestion-name">{coin.name}</span>
+                      </button>
+                    ))
+                  ) : cryptoSearchQuery.trim() ? (
+                    <button
+                      className="crypto-suggestion custom"
+                      onClick={() => addTrackedCoin(cryptoSearchQuery)}
+                    >
+                      <span className="suggestion-symbol">+</span>
+                      <span className="suggestion-name">
+                        Add "{cryptoSearchQuery}" as custom coin
+                      </span>
+                    </button>
+                  ) : (
+                    <p className="suggestions-empty">
+                      All popular coins are already tracked
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    setShowAddCrypto(false);
+                    setCryptoSearchQuery("");
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Legacy Add Holding Modal */}
         {showAddHolding && (
           <div
             className="modal-overlay"
@@ -1433,7 +2843,7 @@ function App() {
             >
               <div className="modal-header">
                 <span className="modal-icon">💼</span>
-                <h2>Add to Portfolio</h2>
+                <h2>Add to Portfolio (Legacy)</h2>
               </div>
               <form onSubmit={addHolding}>
                 <div className="modal-body">
@@ -1455,7 +2865,6 @@ function App() {
                       ))}
                     </div>
                   </div>
-
                   {holdingCoinId && (
                     <>
                       <div className="form-row">
@@ -1525,7 +2934,90 @@ function App() {
           </div>
         )}
 
-        {/* Delete Holding Confirmation Modal */}
+        {/* Delete Wallet Confirmation Modal */}
+        {walletToDelete !== null && (
+          <div
+            className="modal-overlay"
+            onClick={() => setWalletToDelete(null)}
+          >
+            <div
+              className="modal-card delete-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-header">
+                <span className="modal-icon">⚠️</span>
+                <h2>Delete Wallet</h2>
+              </div>
+              <div className="modal-body">
+                <p>Are you sure you want to delete this wallet?</p>
+                <p className="modal-warning">
+                  All transactions in this wallet will be deleted. This action
+                  cannot be undone.
+                </p>
+              </div>
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setWalletToDelete(null)}
+                  disabled={cryptoLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn-danger"
+                  onClick={confirmDeleteWallet}
+                  disabled={cryptoLoading}
+                >
+                  {cryptoLoading ? "Deleting..." : "Delete Wallet"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Crypto Transaction Confirmation Modal */}
+        {cryptoTxToDelete !== null && (
+          <div
+            className="modal-overlay"
+            onClick={() => setCryptoTxToDelete(null)}
+          >
+            <div
+              className="modal-card delete-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-header">
+                <span className="modal-icon">⚠️</span>
+                <h2>Delete Transaction</h2>
+              </div>
+              <div className="modal-body">
+                <p>Are you sure you want to delete this transaction?</p>
+                <p className="modal-warning">This action cannot be undone.</p>
+              </div>
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setCryptoTxToDelete(null)}
+                  disabled={cryptoLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn-danger"
+                  onClick={confirmDeleteCryptoTx}
+                  disabled={cryptoLoading}
+                >
+                  {cryptoLoading ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Legacy Holding Confirmation Modal */}
         {holdingToDelete !== null && (
           <div
             className="modal-overlay"
@@ -1565,114 +3057,43 @@ function App() {
           </div>
         )}
 
-        {/* Add Crypto Modal */}
-        {showAddCrypto && (
-          <div
-            className="modal-overlay"
-            onClick={() => setShowAddCrypto(false)}
-          >
+        {/* Delete Financial Transaction Confirmation Modal */}
+        {transactionToDelete !== null && (
+          <div className="modal-overlay" onClick={cancelDelete}>
             <div
-              className="modal-card crypto-modal"
+              className="modal-card delete-modal"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="modal-header">
-                <span className="modal-icon">₿</span>
-                <h2>Add Cryptocurrency</h2>
+                <span className="modal-icon">⚠️</span>
+                <h2>Confirm Deletion</h2>
               </div>
               <div className="modal-body">
-                <div className="form-group">
-                  <label htmlFor="crypto-search">Search or enter coin ID</label>
-                  <input
-                    id="crypto-search"
-                    type="text"
-                    value={cryptoSearchQuery}
-                    onChange={(e) => setCryptoSearchQuery(e.target.value)}
-                    placeholder="e.g. bitcoin, eth, solana..."
-                    autoFocus
-                  />
-                </div>
-                <div className="crypto-suggestions">
-                  {filteredSuggestions.length > 0 ? (
-                    filteredSuggestions.map((coin) => (
-                      <button
-                        key={coin.id}
-                        className="crypto-suggestion"
-                        onClick={() => addTrackedCoin(coin.id)}
-                      >
-                        <span className="suggestion-symbol">{coin.symbol}</span>
-                        <span className="suggestion-name">{coin.name}</span>
-                      </button>
-                    ))
-                  ) : cryptoSearchQuery.trim() ? (
-                    <button
-                      className="crypto-suggestion custom"
-                      onClick={() => addTrackedCoin(cryptoSearchQuery)}
-                    >
-                      <span className="suggestion-symbol">+</span>
-                      <span className="suggestion-name">
-                        Add "{cryptoSearchQuery}" as custom coin
-                      </span>
-                    </button>
-                  ) : (
-                    <p className="suggestions-empty">
-                      All popular coins are already tracked
-                    </p>
-                  )}
-                </div>
+                <p>Are you sure you want to delete this transaction?</p>
+                <p className="modal-warning">This action cannot be undone.</p>
               </div>
               <div className="modal-actions">
                 <button
                   type="button"
                   className="btn-secondary"
-                  onClick={() => {
-                    setShowAddCrypto(false);
-                    setCryptoSearchQuery("");
-                  }}
+                  onClick={cancelDelete}
+                  disabled={isLoading}
                 >
-                  Close
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn-danger"
+                  onClick={confirmDelete}
+                  disabled={isLoading}
+                >
+                  {isLoading ? "Deleting..." : "Delete"}
                 </button>
               </div>
             </div>
           </div>
         )}
       </main>
-
-      {/* Delete Confirmation Modal */}
-      {transactionToDelete !== null && (
-        <div className="modal-overlay" onClick={cancelDelete}>
-          <div
-            className="modal-card delete-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="modal-header">
-              <span className="modal-icon">⚠️</span>
-              <h2>Confirm Deletion</h2>
-            </div>
-            <div className="modal-body">
-              <p>Are you sure you want to delete this transaction?</p>
-              <p className="modal-warning">This action cannot be undone.</p>
-            </div>
-            <div className="modal-actions">
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={cancelDelete}
-                disabled={isLoading}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="btn-danger"
-                onClick={confirmDelete}
-                disabled={isLoading}
-              >
-                {isLoading ? "Deleting..." : "Delete"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
