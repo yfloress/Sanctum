@@ -1143,6 +1143,130 @@ button:active:not(:disabled) {
     stroke: var(--error);
 }
 
+/* ==================== Analytics Page ==================== */
+
+.analytics-page {
+    padding: 0;
+}
+
+.analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.chart-card {
+    background: rgba(13, 13, 20, 0.6);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.chart-card:hover {
+    border-color: rgba(139, 92, 246, 0.4);
+    box-shadow: 0 8px 32px rgba(127, 138, 255, 0.1);
+}
+
+.chart-container {
+    margin-top: 1rem;
+}
+
+.chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(139, 92, 246, 0.15);
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    padding: 0.35rem 0.75rem;
+    background: rgba(127, 138, 255, 0.08);
+    border-radius: 6px;
+    border: 1px solid rgba(139, 92, 246, 0.15);
+}
+
+.legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.legend-label {
+    color: var(--text-secondary);
+}
+
+.legend-value {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-family: "Courier New", monospace;
+}
+
+/* Recharts custom styles */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+    stroke: #374151;
+}
+
+.recharts-tooltip-wrapper {
+    outline: none;
+}
+
+.recharts-default-tooltip {
+    background-color: #111827 !important;
+    border: 1px solid #7f8aff !important;
+    border-radius: 8px !important;
+}
+
+.recharts-tooltip-label {
+    color: #c1c7d7 !important;
+    margin-bottom: 0.5rem;
+}
+
+.recharts-tooltip-item {
+    color: #e8ecf6 !important;
+}
+
+.recharts-pie-sector {
+    stroke: none;
+    outline: none;
+}
+
+.recharts-sector:focus,
+.recharts-pie-sector:focus {
+    outline: none;
+}
+
+@media (max-width: 900px) {
+    .analytics-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .chart-card {
+        padding: 1rem;
+    }
+
+    .legend-item {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+
+    .analytics-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+}
+
 /* ==================== Modal Overlay & Delete Confirmation ==================== */
 
 .modal-overlay {
