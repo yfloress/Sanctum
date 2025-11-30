@@ -311,7 +311,14 @@ impl Database {
         Ok(transactions)
     }
 
-    /// Obtiene el resumen de balance (ingresos, gastos y total) en una sola query optimizada
+    /// Deletes a transaction by its ID
+    pub fn delete_transaction(&self, id: &str) -> Result<(), DbError> {
+        self.conn
+            .execute("DELETE FROM transactions WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
+    /// Gets the balance summary (income, expenses and total) in a single optimized query
     pub fn get_balance_summary(&self) -> Result<BalanceSummary, DbError> {
         let (total_income, total_expense): (i64, i64) = self
             .conn

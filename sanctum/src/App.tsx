@@ -65,6 +65,9 @@ function App() {
     total_income: 0,
     total_expense: 0,
   });
+  const [transactionToDelete, setTransactionToDelete] = useState<string | null>(
+    null,
+  );
 
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -220,6 +223,39 @@ function App() {
   const handleExpenseToggle = useCallback((checked: boolean) => {
     setIsExpense(checked);
     setCategory(checked ? EXPENSE_CATEGORIES[0] : INCOME_CATEGORIES[0]);
+  }, []);
+
+  const handleDeleteTransaction = useCallback((id: string) => {
+    setTransactionToDelete(id);
+  }, []);
+
+  const confirmDelete = useCallback(async () => {
+    if (!transactionToDelete) return;
+
+    try {
+      setIsLoading(true);
+      clearMessages();
+      await invoke("delete_transaction", { id: transactionToDelete });
+      setTemporarySuccess("Transaction deleted successfully");
+      await loadTransactions();
+      await loadBalance();
+    } catch (err) {
+      setTemporaryError(`Error deleting transaction: ${err}`);
+    } finally {
+      setIsLoading(false);
+      setTransactionToDelete(null);
+    }
+  }, [
+    transactionToDelete,
+    clearMessages,
+    loadTransactions,
+    loadBalance,
+    setTemporaryError,
+    setTemporarySuccess,
+  ]);
+
+  const cancelDelete = useCallback(() => {
+    setTransactionToDelete(null);
   }, []);
 
   const handleAddTransaction = useCallback(
@@ -496,11 +532,21 @@ function App() {
                           {formatDate(tx.date)}
                         </div>
                       </div>
-                      <div
-                        className={`transaction-amount ${tx.type === "income" ? "income" : "expense"}`}
-                      >
-                        {tx.type === "income" ? "+" : "-"}$
-                        {formatAmount(tx.amount)}
+                      <div className="transaction-actions">
+                        <div
+                          className={`transaction-amount ${tx.type === "income" ? "income" : "expense"}`}
+                        >
+                          {tx.type === "income" ? "+" : "-"}$
+                          {formatAmount(tx.amount)}
+                        </div>
+                        <button
+                          className="btn-delete"
+                          onClick={() => handleDeleteTransaction(tx.id)}
+                          disabled={isLoading}
+                          aria-label="Delete transaction"
+                        >
+                          🗑️
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -617,11 +663,21 @@ function App() {
                             {formatDate(tx.date)}
                           </div>
                         </div>
-                        <div
-                          className={`transaction-amount ${tx.type === "income" ? "income" : "expense"}`}
-                        >
-                          {tx.type === "income" ? "+" : "-"}$
-                          {formatAmount(tx.amount)}
+                        <div className="transaction-actions">
+                          <div
+                            className={`transaction-amount ${tx.type === "income" ? "income" : "expense"}`}
+                          >
+                            {tx.type === "income" ? "+" : "-"}$
+                            {formatAmount(tx.amount)}
+                          </div>
+                          <button
+                            className="btn-delete"
+                            onClick={() => handleDeleteTransaction(tx.id)}
+                            disabled={isLoading}
+                            aria-label="Delete transaction"
+                          >
+                            🗑️
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -632,6 +688,43 @@ function App() {
           </div>
         )}
       </main>
+
+      {/* Delete Confirmation Modal */}
+      {transactionToDelete !== null && (
+        <div className="modal-overlay" onClick={cancelDelete}>
+          <div
+            className="modal-card delete-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <span className="modal-icon">⚠️</span>
+              <h2>Confirm Deletion</h2>
+            </div>
+            <div className="modal-body">
+              <p>Are you sure you want to delete this transaction?</p>
+              <p className="modal-warning">This action cannot be undone.</p>
+            </div>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={cancelDelete}
+                disabled={isLoading}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-danger"
+                onClick={confirmDelete}
+                disabled={isLoading}
+              >
+                {isLoading ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -402,6 +402,26 @@ pub fn get_balance(state: State<DbState>) -> Result<BalanceSummary, String> {
     Ok(balance)
 }
 
+/// Comando para eliminar una transacción
+#[tauri::command]
+pub fn delete_transaction(state: State<DbState>, id: String) -> Result<(), String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+
+    let db = db_lock
+        .as_ref()
+        .ok_or_else(|| "No vault is currently open".to_string())?;
+
+    let trimmed_id = id.trim();
+    if trimmed_id.is_empty() {
+        return Err("Transaction ID cannot be empty".to_string());
+    }
+
+    db.delete_transaction(trimmed_id)
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
