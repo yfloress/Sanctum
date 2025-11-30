@@ -19,6 +19,66 @@ const MAX_FAILED_ATTEMPTS: u32 = 5;
 const LOCKOUT_DURATION_SECS: u64 = 300; // 5 minutos
 const ATTEMPT_RESET_SECS: u64 = 60; // Reset contador después de 1 minuto sin intentos
 
+// ==================== Security: Field Length Limits ====================
+const MAX_CATEGORY_LENGTH: usize = 64;
+const MAX_DESCRIPTION_LENGTH: usize = 512;
+const MAX_NOTES_LENGTH: usize = 1024;
+const MAX_WALLET_NAME_LENGTH: usize = 128;
+const MAX_SYMBOL_LENGTH: usize = 16;
+const MAX_COIN_ID_LENGTH: usize = 64;
+const MAX_ICON_LENGTH: usize = 32;
+
+/// Validates and truncates a string field to a maximum length
+fn validate_field_length(
+    value: &str,
+    max_length: usize,
+    field_name: &str,
+) -> Result<String, String> {
+    let trimmed = value.trim();
+    if trimmed.len() > max_length {
+        return Err(format!(
+            "{} exceeds maximum length of {} characters",
+            field_name, max_length
+        ));
+    }
+    Ok(trimmed.to_string())
+}
+
+/// Sanitizes a string by removing potentially dangerous characters
+fn sanitize_string(input: &str) -> String {
+    input
+        .chars()
+        .filter(|c| {
+            c.is_alphanumeric()
+                || c.is_whitespace()
+                || matches!(
+                    *c,
+                    '-' | '_'
+                        | '.'
+                        | ','
+                        | ':'
+                        | ';'
+                        | '!'
+                        | '?'
+                        | '('
+                        | ')'
+                        | '@'
+                        | '#'
+                        | '$'
+                        | '%'
+                        | '&'
+                        | '+'
+                        | '='
+                        | '/'
+                        | '\''
+                        | '"'
+                )
+        })
+        .collect::<String>()
+        .trim()
+        .to_string()
+}
+
 /// Estado de rate limiting para una IP/sesión
 #[derive(Debug, Clone)]
 struct RateLimitState {
@@ -355,10 +415,16 @@ pub fn add_transaction(
         .as_ref()
         .ok_or_else(|| "No vault is currently open".to_string())?;
 
-    // Validar campos
-    if category.trim().is_empty() {
+    // Validar y sanitizar campos
+    let category = validate_field_length(&category, MAX_CATEGORY_LENGTH, "Category")?;
+    let category = sanitize_string(&category);
+
+    if category.is_empty() {
         return Err("Category cannot be empty".to_string());
     }
+
+    let description = validate_field_length(&description, MAX_DESCRIPTION_LENGTH, "Description")?;
+    let description = sanitize_string(&description);
 
     if amount <= 0 {
         return Err("Amount must be greater than zero".to_string());
@@ -456,12 +522,14 @@ pub fn add_crypto_holding(
         .as_ref()
         .ok_or_else(|| "No vault is currently open".to_string())?;
 
-    // Validate inputs
-    if coin_id.trim().is_empty() {
+    // Validate and sanitize inputs
+    let coin_id = validate_field_length(&coin_id, MAX_COIN_ID_LENGTH, "Coin ID")?;
+    if coin_id.is_empty() {
         return Err("Coin ID cannot be empty".to_string());
     }
 
-    if symbol.trim().is_empty() {
+    let symbol = validate_field_length(&symbol, MAX_SYMBOL_LENGTH, "Symbol")?;
+    if symbol.is_empty() {
         return Err("Symbol cannot be empty".to_string());
     }
 
@@ -477,8 +545,8 @@ pub fn add_crypto_holding(
 
     let holding = CryptoHolding::new(
         id.clone(),
-        coin_id.trim().to_lowercase(),
-        symbol.trim().to_uppercase(),
+        coin_id.to_lowercase(),
+        symbol.to_uppercase(),
         amount,
         purchase_price,
         purchase_date,
@@ -540,8 +608,11 @@ pub fn add_wallet(
         .as_ref()
         .ok_or_else(|| "No vault is currently open".to_string())?;
 
-    // Validate inputs
-    if name.trim().is_empty() {
+    // Validate and sanitize inputs
+    let name = validate_field_length(&name, MAX_WALLET_NAME_LENGTH, "Wallet name")?;
+    let name = sanitize_string(&name);
+
+    if name.is_empty() {
         return Err("Wallet name cannot be empty".to_string());
     }
 
@@ -554,9 +625,15 @@ pub fn add_wallet(
         ));
     }
 
+    // Validate icon if provided
+    let icon = match icon {
+        Some(i) => Some(validate_field_length(&i, MAX_ICON_LENGTH, "Icon")?),
+        None => None,
+    };
+
     let id = Uuid::new_v4().to_string();
 
-    let wallet = CryptoWallet::new(id.clone(), name.trim().to_string(), category, icon);
+    let wallet = CryptoWallet::new(id.clone(), name, category, icon);
 
     db.create_wallet(&wallet).map_err(|e| e.to_string())?;
 
@@ -606,7 +683,11 @@ pub fn update_wallet(
         .as_ref()
         .ok_or_else(|| "No vault is currently open".to_string())?;
 
-    if name.trim().is_empty() {
+    // Validate and sanitize inputs
+    let name = validate_field_length(&name, MAX_WALLET_NAME_LENGTH, "Wallet name")?;
+    let name = sanitize_string(&name);
+
+    if name.is_empty() {
         return Err("Wallet name cannot be empty".to_string());
     }
 
@@ -618,7 +699,13 @@ pub fn update_wallet(
         ));
     }
 
-    let wallet = CryptoWallet::new(id, name.trim().to_string(), category, icon);
+    // Validate icon if provided
+    let icon = match icon {
+        Some(i) => Some(validate_field_length(&i, MAX_ICON_LENGTH, "Icon")?),
+        None => None,
+    };
+
+    let wallet = CryptoWallet::new(id, name, category, icon);
 
     db.update_wallet(&wallet).map_err(|e| e.to_string())?;
 
@@ -666,18 +753,29 @@ pub fn add_crypto_transaction(
         .as_ref()
         .ok_or_else(|| "No vault is currently open".to_string())?;
 
-    // Validate inputs
+    // Validate and sanitize inputs
     if wallet_id.trim().is_empty() {
         return Err("Wallet ID cannot be empty".to_string());
     }
 
-    if coin_id.trim().is_empty() {
+    let coin_id = validate_field_length(&coin_id, MAX_COIN_ID_LENGTH, "Coin ID")?;
+    if coin_id.is_empty() {
         return Err("Coin ID cannot be empty".to_string());
     }
 
-    if symbol.trim().is_empty() {
+    let symbol = validate_field_length(&symbol, MAX_SYMBOL_LENGTH, "Symbol")?;
+    if symbol.is_empty() {
         return Err("Symbol cannot be empty".to_string());
     }
+
+    // Validate and sanitize notes if provided
+    let notes = match notes {
+        Some(n) => {
+            let validated = validate_field_length(&n, MAX_NOTES_LENGTH, "Notes")?;
+            Some(sanitize_string(&validated))
+        }
+        None => None,
+    };
 
     if amount <= 0.0 {
         return Err("Amount must be greater than zero".to_string());
@@ -696,8 +794,8 @@ pub fn add_crypto_transaction(
     let transaction = CryptoTransaction::new(
         id.clone(),
         wallet_id.trim().to_string(),
-        coin_id.trim().to_lowercase(),
-        symbol.trim().to_uppercase(),
+        coin_id.to_lowercase(),
+        symbol.to_uppercase(),
         transaction_type,
         amount,
         price_per_coin,
@@ -735,14 +833,28 @@ pub fn add_swap_transaction(
         .as_ref()
         .ok_or_else(|| "No vault is currently open".to_string())?;
 
-    // Validate inputs
+    // Validate and sanitize inputs
     if wallet_id.trim().is_empty() {
         return Err("Wallet ID cannot be empty".to_string());
     }
 
-    if from_coin_id.trim().is_empty() || to_coin_id.trim().is_empty() {
+    let from_coin_id = validate_field_length(&from_coin_id, MAX_COIN_ID_LENGTH, "From Coin ID")?;
+    let to_coin_id = validate_field_length(&to_coin_id, MAX_COIN_ID_LENGTH, "To Coin ID")?;
+    let from_symbol = validate_field_length(&from_symbol, MAX_SYMBOL_LENGTH, "From Symbol")?;
+    let to_symbol = validate_field_length(&to_symbol, MAX_SYMBOL_LENGTH, "To Symbol")?;
+
+    if from_coin_id.is_empty() || to_coin_id.is_empty() {
         return Err("Coin IDs cannot be empty".to_string());
     }
+
+    // Validate and sanitize notes if provided
+    let notes = match notes {
+        Some(n) => {
+            let validated = validate_field_length(&n, MAX_NOTES_LENGTH, "Notes")?;
+            Some(sanitize_string(&validated))
+        }
+        None => None,
+    };
 
     if from_amount <= 0.0 || to_amount <= 0.0 {
         return Err("Amounts must be greater than zero".to_string());
@@ -755,8 +867,8 @@ pub fn add_swap_transaction(
     let mut from_tx = CryptoTransaction::new(
         from_tx_id.clone(),
         wallet_id.trim().to_string(),
-        from_coin_id.trim().to_lowercase(),
-        from_symbol.trim().to_uppercase(),
+        from_coin_id.to_lowercase(),
+        from_symbol.to_uppercase(),
         "swap".to_string(),
         from_amount,
         None, // Price will be calculated from the swap ratio
@@ -772,8 +884,8 @@ pub fn add_swap_transaction(
     let mut to_tx = CryptoTransaction::new(
         to_tx_id.clone(),
         wallet_id.trim().to_string(),
-        to_coin_id.trim().to_lowercase(),
-        to_symbol.trim().to_uppercase(),
+        to_coin_id.to_lowercase(),
+        to_symbol.to_uppercase(),
         "transfer_in".to_string(), // Swap in is treated as an inflow
         to_amount,
         None,
@@ -811,14 +923,29 @@ pub fn add_transfer_transaction(
         .as_ref()
         .ok_or_else(|| "No vault is currently open".to_string())?;
 
-    // Validate inputs
+    // Validate and sanitize inputs
     if from_wallet_id.trim().is_empty() || to_wallet_id.trim().is_empty() {
         return Err("Wallet IDs cannot be empty".to_string());
     }
 
-    if coin_id.trim().is_empty() {
+    let coin_id = validate_field_length(&coin_id, MAX_COIN_ID_LENGTH, "Coin ID")?;
+    if coin_id.is_empty() {
         return Err("Coin ID cannot be empty".to_string());
     }
+
+    let symbol = validate_field_length(&symbol, MAX_SYMBOL_LENGTH, "Symbol")?;
+    if symbol.is_empty() {
+        return Err("Symbol cannot be empty".to_string());
+    }
+
+    // Validate and sanitize notes if provided
+    let notes = match notes {
+        Some(n) => {
+            let validated = validate_field_length(&n, MAX_NOTES_LENGTH, "Notes")?;
+            Some(sanitize_string(&validated))
+        }
+        None => None,
+    };
 
     if amount <= 0.0 {
         return Err("Amount must be greater than zero".to_string());
@@ -837,8 +964,8 @@ pub fn add_transfer_transaction(
     let mut from_tx = CryptoTransaction::new(
         from_tx_id.clone(),
         from_wallet_id.trim().to_string(),
-        coin_id.trim().to_lowercase(),
-        symbol.trim().to_uppercase(),
+        coin_id.to_lowercase(),
+        symbol.to_uppercase(),
         "transfer_out".to_string(),
         amount,
         None,
@@ -852,8 +979,8 @@ pub fn add_transfer_transaction(
     let mut to_tx = CryptoTransaction::new(
         to_tx_id.clone(),
         to_wallet_id.trim().to_string(),
-        coin_id.trim().to_lowercase(),
-        symbol.trim().to_uppercase(),
+        coin_id.to_lowercase(),
+        symbol.to_uppercase(),
         "transfer_in".to_string(),
         amount_after_fee, // Amount received is after network fee
         None,

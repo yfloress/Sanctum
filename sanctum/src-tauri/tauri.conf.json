@@ -12,13 +12,13 @@
   "app": {
     "windows": [
       {
-        "title": "sanctum",
+        "title": "Sanctum",
         "width": 800,
         "height": 600
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.coingecko.com; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'"
     }
   },
   "bundle": {
