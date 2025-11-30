@@ -189,6 +189,16 @@ const TRANSACTION_TYPES = [
   { value: "swap", label: "Swap", icon: "🔄" },
 ];
 
+// ==================== Helper Functions ====================
+
+/** Obtiene la fecha local en formato YYYY-MM-DD sin problemas de timezone */
+function getLocalDateString(date: Date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 // ==================== Main App Component ====================
 
 function App() {
@@ -209,9 +219,7 @@ function App() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<string>(EXPENSE_CATEGORIES[0]);
   const [isExpense, setIsExpense] = useState(true);
-  const [date, setDate] = useState(
-    () => new Date().toISOString().split("T")[0],
-  );
+  const [date, setDate] = useState(() => getLocalDateString());
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [activeTab, setActiveTab] = useState<
     "dashboard" | "transactions" | "analytics" | "crypto"
@@ -272,9 +280,7 @@ function App() {
   const [txAmount, setTxAmount] = useState("");
   const [txPrice, setTxPrice] = useState("");
   const [txFee, setTxFee] = useState("");
-  const [txDate, setTxDate] = useState(
-    () => new Date().toISOString().split("T")[0],
-  );
+  const [txDate, setTxDate] = useState(() => getLocalDateString());
   const [txNotes, setTxNotes] = useState("");
 
   // Transfer form state
@@ -284,9 +290,7 @@ function App() {
   const [transferSymbol, setTransferSymbol] = useState("");
   const [transferAmount, setTransferAmount] = useState("");
   const [transferFee, setTransferFee] = useState("");
-  const [transferDate, setTransferDate] = useState(
-    () => new Date().toISOString().split("T")[0],
-  );
+  const [transferDate, setTransferDate] = useState(() => getLocalDateString());
 
   // Swap form state
   const [swapWalletId, setSwapWalletId] = useState("");
@@ -297,9 +301,7 @@ function App() {
   const [swapToSymbol, setSwapToSymbol] = useState("");
   const [swapToAmount, setSwapToAmount] = useState("");
   const [swapFee, setSwapFee] = useState("");
-  const [swapDate, setSwapDate] = useState(
-    () => new Date().toISOString().split("T")[0],
-  );
+  const [swapDate, setSwapDate] = useState(() => getLocalDateString());
 
   // Legacy portfolio state (for backwards compatibility during migration)
   const [holdings, setHoldings] = useState<CryptoHolding[]>([]);
@@ -308,9 +310,7 @@ function App() {
   const [holdingSymbol, setHoldingSymbol] = useState("");
   const [holdingAmount, setHoldingAmount] = useState("");
   const [holdingPrice, setHoldingPrice] = useState("");
-  const [holdingDate, setHoldingDate] = useState(
-    () => new Date().toISOString().split("T")[0],
-  );
+  const [holdingDate, setHoldingDate] = useState(() => getLocalDateString());
   const [holdingToDelete, setHoldingToDelete] = useState<string | null>(null);
 
   // ==================== Memoized Values ====================
@@ -400,10 +400,22 @@ function App() {
     const dailyData: Record<string, { income: number; expense: number }> = {};
 
     sorted.forEach((tx) => {
-      const dateKey = new Date(tx.date).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      });
+      const [, month, day] = tx.date.split("T")[0].split("-");
+      const months = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+      const dateKey = `${months[parseInt(month) - 1]} ${parseInt(day)}`;
 
       if (!dailyData[dateKey]) {
         dailyData[dateKey] = { income: 0, expense: 0 };
@@ -482,11 +494,22 @@ function App() {
   );
 
   const formatDate = useCallback((isoDate: string) => {
-    return new Date(isoDate).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    const [year, month, day] = isoDate.split("T")[0].split("-");
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    return `${months[parseInt(month) - 1]} ${parseInt(day)}, ${year}`;
   }, []);
 
   const formatCryptoAmount = useCallback((amount: number, decimals = 8) => {
@@ -731,7 +754,7 @@ function App() {
     setTxAmount("");
     setTxPrice("");
     setTxFee("");
-    setTxDate(new Date().toISOString().split("T")[0]);
+    setTxDate(getLocalDateString());
     setTxNotes("");
   }, []);
 
@@ -812,7 +835,7 @@ function App() {
     setTransferSymbol("");
     setTransferAmount("");
     setTransferFee("");
-    setTransferDate(new Date().toISOString().split("T")[0]);
+    setTransferDate(getLocalDateString());
   }, []);
 
   const handleAddTransfer = useCallback(
@@ -892,7 +915,7 @@ function App() {
     setSwapToSymbol("");
     setSwapToAmount("");
     setSwapFee("");
-    setSwapDate(new Date().toISOString().split("T")[0]);
+    setSwapDate(getLocalDateString());
   }, []);
 
   const handleAddSwap = useCallback(
@@ -1037,7 +1060,7 @@ function App() {
         setHoldingSymbol("");
         setHoldingAmount("");
         setHoldingPrice("");
-        setHoldingDate(new Date().toISOString().split("T")[0]);
+        setHoldingDate(getLocalDateString());
         setShowAddHolding(false);
 
         await loadHoldings();
@@ -1260,22 +1283,13 @@ function App() {
         setIsLoading(true);
         const amountInCents = Math.round(parsedAmount * 100);
 
-        const now = new Date();
-        const selectedDate = new Date(date);
-        selectedDate.setMinutes(
-          selectedDate.getMinutes() + selectedDate.getTimezoneOffset(),
-        );
-        selectedDate.setHours(
-          now.getHours(),
-          now.getMinutes(),
-          now.getSeconds(),
-        );
-
+        // El input type="date" ya devuelve formato YYYY-MM-DD (ISO)
+        // Lo pasamos directamente al backend que lo acepta como fallback
         await invoke<string>("add_transaction", {
           amount: amountInCents,
           category: category.trim(),
           description: description.trim(),
-          date: selectedDate.toISOString(),
+          date: date, // YYYY-MM-DD directamente del input
           isExpense,
         });
 
@@ -1286,7 +1300,7 @@ function App() {
         setAmount("");
         setDescription("");
         setCategory(isExpense ? EXPENSE_CATEGORIES[0] : INCOME_CATEGORIES[0]);
-        setDate(new Date().toISOString().split("T")[0]);
+        setDate(getLocalDateString());
 
         await loadTransactions();
         await loadBalance();

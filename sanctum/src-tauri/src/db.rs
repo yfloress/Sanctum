@@ -35,6 +35,9 @@ pub enum DbError {
 
     #[error("Invalid wallet category")]
     InvalidWalletCategory,
+
+    #[error("Wallet has existing transactions")]
+    WalletNotEmpty,
 }
 
 /// Struct principal que envuelve la conexión a la base de datos
@@ -68,6 +71,10 @@ impl Database {
 
         // Abrir conexión a la base de datos
         let conn = Connection::open(&db_path)?;
+
+        // Enforce foreign key constraints for the connection
+        conn.pragma_update(None, "foreign_keys", true)
+            .map_err(DbError::Sqlite)?;
 
         // --- ZONA DE SEGURIDAD Y CONFIGURACIÓN ---
         // 1. Establecer la contraseña (Encriptación)
@@ -452,7 +459,7 @@ impl Database {
         let mut stmt = self.conn.prepare(
             "SELECT id, amount, category, description, date, type
              FROM transactions
-             ORDER BY date DESC, id DESC",
+             ORDER BY date DESC, rowid DESC",
         )?;
 
         let transactions = stmt
@@ -673,6 +680,20 @@ impl Database {
 
     /// Deletes a wallet and all its transactions
     pub fn delete_wallet(&self, id: &str) -> Result<(), DbError> {
+        // Block deletion if wallet has existing transactions
+        let tx_count: i64 = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM crypto_transactions WHERE wallet_id = ?1",
+                params![id],
+                |row| row.get(0),
+            )
+            .unwrap_or(0);
+
+        if tx_count > 0 {
+            return Err(DbError::WalletNotEmpty);
+        }
+
         // Delete transactions first (or rely on CASCADE if supported)
         self.conn.execute(
             "DELETE FROM crypto_transactions WHERE wallet_id = ?1",
@@ -746,7 +767,7 @@ impl Database {
             "SELECT id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, fee_coin_id, fee_amount, date, notes, related_tx_id
              FROM crypto_transactions
              WHERE wallet_id = ?1
-             ORDER BY date DESC, id DESC",
+             ORDER BY date DESC, rowid DESC",
         )?;
 
         let transactions = stmt
@@ -777,7 +798,7 @@ impl Database {
         let mut stmt = self.conn.prepare(
             "SELECT id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, fee_coin_id, fee_amount, date, notes, related_tx_id
              FROM crypto_transactions
-             ORDER BY date DESC, id DESC",
+             ORDER BY date DESC, rowid DESC",
         )?;
 
         let transactions = stmt
@@ -1020,6 +1041,10 @@ mod tests {
         assert_eq!(
             DbError::InvalidWalletCategory.to_string(),
             "Invalid wallet category"
+        );
+        assert_eq!(
+            DbError::WalletNotEmpty.to_string(),
+            "Wallet has existing transactions"
         );
     }
 }

@@ -11,6 +11,7 @@
 
 use crate::models::CryptoAsset;
 use crate::security_log::{SecurityEvent, log_rate_limit, log_security_event};
+use futures::TryStreamExt;
 use reqwest::Client;
 use serde::Deserialize;
 use std::collections::HashSet;
@@ -54,6 +55,11 @@ struct CoinGeckoMarketData {
 
 /// Validates a coin ID to prevent injection or malformed inputs
 fn validate_coin_id(coin_id: &str) -> Result<String, String> {
+    // Reject any whitespace/control characters outright (prevents hidden newlines/tabs)
+    if coin_id.chars().any(|c| c.is_whitespace() || c.is_control()) {
+        return Err("Coin ID contains invalid characters".to_string());
+    }
+
     let trimmed = coin_id.trim().to_lowercase();
 
     if trimmed.is_empty() {
@@ -254,18 +260,25 @@ pub async fn fetch_crypto_prices(coin_ids: Vec<String>) -> Result<Vec<CryptoAsse
         }
     }
 
-    // Download body with size limit
-    let bytes = response
-        .bytes()
-        .await
-        .map_err(|_| "Failed to download response".to_string())?;
+    // Download body with size limit (streaming to avoid loading unbounded data)
+    let mut downloaded: usize = 0;
+    let mut body: Vec<u8> = Vec::new();
+    let mut stream = response.bytes_stream();
 
-    if bytes.len() > MAX_RESPONSE_SIZE {
-        return Err("Response too large".to_string());
+    while let Some(chunk) = stream
+        .try_next()
+        .await
+        .map_err(|_| "Failed to download response".to_string())?
+    {
+        downloaded += chunk.len();
+        if downloaded > MAX_RESPONSE_SIZE {
+            return Err("Response too large".to_string());
+        }
+        body.extend_from_slice(&chunk);
     }
 
     // Parse response
-    let market_data: Vec<CoinGeckoMarketData> = serde_json::from_slice(&bytes)
+    let market_data: Vec<CoinGeckoMarketData> = serde_json::from_slice(&body)
         .map_err(|_| "Failed to parse cryptocurrency data".to_string())?;
 
     // Limit number of results (defense in depth)

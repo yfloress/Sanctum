@@ -27,7 +27,8 @@ uuid = { version = "1.10", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "1.0"
 secrecy = "0.10"
-reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+reqwest = { version = "0.12", features = ["json", "rustls-tls", "stream"] }
+futures = "0.3"
 
 # Security logging and auditing
 log = "0.4"

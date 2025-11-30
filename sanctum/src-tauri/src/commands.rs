@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::{self, Permissions};
 use std::os::unix::fs::PermissionsExt;
-use std::path::PathBuf;
+use std::path::{Component, Path, PathBuf};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager, State};
@@ -252,15 +252,21 @@ fn validate_password_strict(password: String) -> Result<SecretString, String> {
 /// Valida que una fecha esté en formato ISO-8601 (YYYY-MM-DD)
 fn validate_date(date: &str) -> Result<String, String> {
     let trimmed = date.trim();
-
     if trimmed.is_empty() {
         return Err("Date cannot be empty".to_string());
     }
 
-    // Validar formato y que sea una fecha válida
-    NaiveDate::parse_from_str(trimmed, "%Y-%m-%d")
-        .map(|_| trimmed.to_string())
-        .map_err(|_| "Invalid date format. Use YYYY-MM-DD".to_string())
+    // Intento 1: Formato DD-MM-YYYY (Preferido por el usuario)
+    if let Ok(parsed) = NaiveDate::parse_from_str(trimmed, "%d-%m-%Y") {
+        return Ok(parsed.format("%Y-%m-%d").to_string()); // NORMALIZAR A ISO
+    }
+
+    // Intento 2: Formato ISO (Estándar DB y fallback)
+    if let Ok(parsed) = NaiveDate::parse_from_str(trimmed, "%Y-%m-%d") {
+        return Ok(parsed.format("%Y-%m-%d").to_string());
+    }
+
+    Err("Invalid date format. Use DD-MM-YYYY or YYYY-MM-DD".to_string())
 }
 
 fn ensure_no_connection(state: &State<DbState>) -> Result<(), String> {
@@ -321,9 +327,77 @@ fn config_path(app_handle: &AppHandle) -> Result<PathBuf, String> {
     Ok(dir.join("config.json"))
 }
 
+/// Canonicalizes a path when possible without failing hard on non-existent files
+fn canonicalize_lossy(path: &Path) -> PathBuf {
+    if let Ok(canon) = path.canonicalize() {
+        return canon;
+    }
+
+    if let Some(parent) = path.parent() {
+        if let Ok(parent_canon) = parent.canonicalize() {
+            if let Some(name) = path.file_name() {
+                return parent_canon.join(name);
+            }
+        }
+    }
+
+    path.to_path_buf()
+}
+
+/// Sanitizes the requested vault path to ensure it stays inside the app data directory
+fn sanitize_db_path(app_handle: &AppHandle, raw: &str) -> Result<PathBuf, String> {
+    let app_data_dir = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|_| "Could not access application data directory".to_string())?;
+
+    // Ensure the base directory exists so canonicalization behaves deterministically
+    fs::create_dir_all(&app_data_dir)
+        .map_err(|_| "Could not access application data directory".to_string())?;
+
+    let base = app_data_dir.canonicalize().unwrap_or(app_data_dir.clone());
+
+    let raw_trimmed = raw.trim();
+    if raw_trimmed.is_empty() {
+        return Err("Vault path cannot be empty".to_string());
+    }
+
+    let candidate = PathBuf::from(raw_trimmed);
+
+    // If an absolute path is provided, ensure it resides within app_data_dir
+    let relative = if candidate.is_absolute() {
+        candidate
+            .strip_prefix(&base)
+            .map_err(|_| "Vault path must stay inside the app data directory".to_string())?
+            .to_path_buf()
+    } else {
+        candidate
+    };
+
+    // Normalize the path while preventing traversal outside of base
+    let mut normalized = base.clone();
+    for comp in relative.components() {
+        match comp {
+            Component::Prefix(_) | Component::RootDir => {
+                return Err("Vault path must stay inside the app data directory".to_string());
+            }
+            Component::ParentDir => {
+                if !normalized.pop() || !normalized.starts_with(&base) {
+                    return Err("Vault path must stay inside the app data directory".to_string());
+                }
+            }
+            Component::CurDir => {}
+            Component::Normal(c) => normalized.push(c),
+        }
+    }
+
+    Ok(normalized)
+}
+
 /// Genera una clave única para rate limiting basada en la ruta de la bóveda
 fn get_rate_limit_key(db_path: &PathBuf) -> String {
-    format!("vault:{}", db_path.to_string_lossy())
+    let canonical = canonicalize_lossy(db_path);
+    format!("vault:{}", canonical.to_string_lossy())
 }
 
 // ==================== Database Management Commands ====================
@@ -346,7 +420,7 @@ pub fn create_db(
     let password = validate_password_strict(password)?;
     ensure_no_connection(&state)?;
 
-    let db_path = if let Some(p) = path {
+    let db_path_raw = if let Some(p) = path {
         let trimmed = p.trim();
         if trimmed.is_empty() {
             Database::default_db_path(&app_handle).map_err(|e| e.to_string())?
@@ -356,6 +430,8 @@ pub fn create_db(
     } else {
         Database::default_db_path(&app_handle).map_err(|e| e.to_string())?
     };
+
+    let db_path = sanitize_db_path(&app_handle, db_path_raw.to_string_lossy().as_ref())?;
 
     if db_path.exists() {
         return Err("A vault already exists at this location. Use unlock instead.".to_string());
@@ -389,29 +465,26 @@ pub fn open_db(
     let password = validate_password_basic(password)?;
     ensure_no_connection(&state)?;
 
-    // Resolver la ruta
-    let db_path = if let Some(p) = path {
+    // Resolver la ruta y validarla contra app_data_dir
+    let raw_path = if let Some(p) = path {
         let trimmed = p.trim();
         if trimmed.is_empty() {
             None
         } else {
-            Some(PathBuf::from(trimmed))
+            Some(trimmed.to_string())
         }
     } else {
         None
     }
-    .or_else(|| {
-        load_config(&app_handle)
-            .ok()
-            .and_then(|c| c.last_db_path.map(PathBuf::from))
-    })
-    .unwrap_or_else(|| PathBuf::from(""));
+    .or_else(|| load_config(&app_handle).ok().and_then(|c| c.last_db_path));
 
-    let db_path = if db_path.as_os_str().is_empty() {
-        Database::default_db_path(&app_handle).map_err(|e| e.to_string())?
+    let db_path_raw = if let Some(p) = raw_path {
+        PathBuf::from(p)
     } else {
-        db_path
+        Database::default_db_path(&app_handle).map_err(|e| e.to_string())?
     };
+
+    let db_path = sanitize_db_path(&app_handle, db_path_raw.to_string_lossy().as_ref())?;
 
     if !db_path.exists() {
         return Err("No vault found at the specified location".to_string());
@@ -1309,19 +1382,25 @@ mod tests {
 
     #[test]
     fn test_validate_date_valid() {
+        // Formato ISO (fallback)
         assert!(validate_date("2024-01-15").is_ok());
         assert!(validate_date("2023-12-31").is_ok());
         assert_eq!(validate_date("  2024-01-15  ").unwrap(), "2024-01-15");
+        // Formato DD-MM-YYYY (preferido por el usuario)
+        assert_eq!(validate_date("15-01-2024").unwrap(), "2024-01-15");
+        assert_eq!(validate_date("31-12-2023").unwrap(), "2023-12-31");
+        assert_eq!(validate_date("01-06-2025").unwrap(), "2025-06-01");
     }
 
     #[test]
     fn test_validate_date_invalid() {
         assert!(validate_date("").is_err());
-        assert!(validate_date("2024/01/15").is_err());
-        assert!(validate_date("15-01-2024").is_err());
+        assert!(validate_date("2024/01/15").is_err()); // Formato con barras no soportado
         assert!(validate_date("2024-13-01").is_err()); // Invalid month
         assert!(validate_date("2024-02-30").is_err()); // Invalid day
+        assert!(validate_date("30-02-2024").is_err()); // Invalid day in DD-MM-YYYY
         assert!(validate_date("not-a-date").is_err());
+        assert!(validate_date("15-13-2024").is_err()); // Invalid month in DD-MM-YYYY
     }
 
     #[test]
