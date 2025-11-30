@@ -37,6 +37,7 @@ Inicializa la conexión a la base de datos SQLCipher con una contraseña.
 
 #### Parámetros
 - `password: string` - Contraseña para encriptar/desencriptar la base de datos
+  (usa la ruta por defecto y la guarda como última ruta usada)
 
 #### Retorna
 - `Promise<string>` - Mensaje de éxito
@@ -65,9 +66,41 @@ async function initializeDatabase() {
 
 #### Validaciones
 - Contraseña no puede estar vacía
+- Contraseña mínima de 8 caracteres
+- Valida la clave con `cipher_integrity_check` para detectar contraseñas incorrectas
 - No permite múltiples inicializaciones simultáneas
 - Ejecuta health check automático después de conectar
 - Activa WAL mode y ejecuta migraciones
+
+---
+
+### 1.1 `create_db` - Crear Nueva Bóveda
+
+Crea una base de datos nueva en la ruta indicada (o la ruta por defecto si no se indica).
+
+#### Parámetros
+- `password: string` - Contraseña maestra
+- `path?: string` - Ruta completa del archivo `.db` (opcional)
+
+#### Notas
+- Falla si ya existe un archivo en la ruta indicada (usa `open_db` en ese caso).
+- Guarda la ruta como la última utilizada.
+
+---
+
+### 1.2 `open_db` - Abrir Bóveda Existente
+
+Abre una base de datos ya creada.
+
+#### Parámetros
+- `password: string` - Contraseña maestra
+- `path?: string` - Ruta completa (opcional). Si no se pasa:
+  - Usa la última ruta guardada (config.json)
+  - Si no hay última ruta, usa la ruta por defecto
+
+#### Notas
+- Valida la clave con `cipher_integrity_check` para detectar contraseñas incorrectas.
+- Guarda la ruta como la última utilizada.
 
 ---
 
@@ -132,10 +165,10 @@ El destructor de `Connection` se encarga automáticamente de liberar recursos cu
 
 ### 4. `get_db_path` - Obtener Ruta de la BD
 
-Obtiene la ruta completa del archivo de base de datos en el sistema.
+Obtiene la ruta activa si hay conexión. Si no, retorna la última ruta usada o la ruta por defecto.
 
 #### Retorna
-- `Promise<string>` - Ruta absoluta del archivo `sanctum.db`
+- `Promise<string>` - Ruta absoluta
 
 #### Ejemplo TypeScript/JavaScript
 

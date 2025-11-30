@@ -16,8 +16,9 @@ La interfaz de Sanctum proporciona una experiencia de usuario intuitiva para ges
 **Elementos de la Interfaz:**
 - Icono de candado cerrado animado
 - Título "Sanctum"
+- Campo de ruta de bóveda (opcional) para crear/abrir en una ubicación específica
 - Campo de contraseña maestra
-- Botón "Abrir Bóveda"
+- Botón "Abrir Bóveda" y botón "Crear nueva"
 - Mensajes de error/éxito
 - Información de seguridad AES-256
 
@@ -65,7 +66,7 @@ La interfaz de Sanctum proporciona una experiencia de usuario intuitiva para ges
 ### Uso Recurrente
 
 1. Al abrir la aplicación, se verifica si hay una conexión activa
-2. Si no hay conexión: solicita contraseña
+2. Si no hay conexión: solicita contraseña y permite escoger ruta (recuerda la última usada)
 3. Si hay conexión: muestra directamente la pantalla de bóveda abierta
 
 ### Cerrar Sesión

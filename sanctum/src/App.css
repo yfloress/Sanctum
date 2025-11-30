@@ -296,6 +296,17 @@ button:hover::before {
     height: 300px;
 }
 
+.button-row {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.button-row .btn-primary,
+.button-row .btn-secondary {
+    flex: 1;
+}
+
 .btn-primary {
     background: linear-gradient(
         135deg,

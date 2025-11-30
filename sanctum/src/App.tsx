@@ -37,7 +37,11 @@ function App() {
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [dbPath, setDbPath] = useState<string>("");
+  const [dbPathInput, setDbPathInput] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string>("");
+  const [loadingAction, setLoadingAction] = useState<"open" | "create" | null>(
+    null,
+  );
 
   // Estados del formulario de transacciones
   const [amount, setAmount] = useState<string>("");
@@ -61,8 +65,9 @@ function App() {
       const initialized = await invoke<boolean>("is_db_initialized");
       setIsInitialized(initialized);
 
+      await loadDbPath();
+
       if (initialized) {
-        await loadDbPath();
         await loadTransactions();
       }
     } catch (err) {
@@ -76,6 +81,7 @@ function App() {
     try {
       const path = await invoke<string>("get_db_path");
       setDbPath(path);
+      setDbPathInput(path);
     } catch (err) {
       console.error("Error al obtener ruta:", err);
     }
@@ -92,6 +98,15 @@ function App() {
 
   async function handleInitializeVault(e: React.FormEvent) {
     e.preventDefault();
+    // Preservamos para compatibilidad, pero el flujo principal usa handleVaultAction
+    return handleVaultAction("open");
+  }
+
+  async function handleVaultAction(
+    action: "open" | "create",
+    e?: React.FormEvent | React.MouseEvent,
+  ) {
+    e?.preventDefault();
     setError("");
     setSuccessMessage("");
 
@@ -105,9 +120,15 @@ function App() {
       return;
     }
 
+    const targetPath = dbPathInput.trim() ? dbPathInput.trim() : null;
+
     try {
       setIsLoading(true);
-      const result = await invoke<string>("init_db", { password });
+      setLoadingAction(action);
+      const result = await invoke<string>(
+        action === "create" ? "create_db" : "open_db",
+        { password, path: targetPath },
+      );
       setSuccessMessage(result);
       setIsInitialized(true);
       setPassword("");
@@ -117,6 +138,7 @@ function App() {
       setError(`Error: ${err}`);
     } finally {
       setIsLoading(false);
+      setLoadingAction(null);
     }
   }
 
@@ -128,6 +150,7 @@ function App() {
       setSuccessMessage(result);
       setIsInitialized(false);
       setDbPath("");
+      await loadDbPath();
     } catch (err) {
       setError(`Error: ${err}`);
     } finally {
@@ -222,6 +245,21 @@ function App() {
 
           <form onSubmit={handleInitializeVault} className="vault-form">
             <div className="form-group">
+              <label htmlFor="db-path">Ruta de la Bóveda (opcional)</label>
+              <input
+                id="db-path"
+                type="text"
+                value={dbPathInput}
+                onChange={(e) => setDbPathInput(e.target.value)}
+                placeholder="Ej: /home/usuario/sanctum.db (vacío = ruta por defecto)"
+                disabled={isLoading}
+              />
+              <span className="input-hint">
+                Se recuerda la última ruta abierta automáticamente
+              </span>
+            </div>
+
+            <div className="form-group">
               <label htmlFor="password">Contraseña Maestra</label>
               <input
                 id="password"
@@ -240,9 +278,27 @@ function App() {
               <div className="message success">{successMessage}</div>
             )}
 
-            <button type="submit" className="btn-primary" disabled={isLoading}>
-              {isLoading ? "Abriendo bóveda..." : "Abrir Bóveda"}
-            </button>
+            <div className="button-row">
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={isLoading}
+              >
+                {isLoading && loadingAction === "open"
+                  ? "Abriendo bóveda..."
+                  : "Abrir Bóveda"}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={(e) => handleVaultAction("create", e)}
+                disabled={isLoading}
+              >
+                {isLoading && loadingAction === "create"
+                  ? "Creando bóveda..."
+                  : "Crear nueva"}
+              </button>
+            </div>
           </form>
 
           <div className="vault-footer">
