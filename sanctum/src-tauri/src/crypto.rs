@@ -10,6 +10,7 @@
 //! - No sensitive data exposure in errors
 
 use crate::models::CryptoAsset;
+use crate::security_log::{SecurityEvent, log_rate_limit, log_security_event};
 use reqwest::Client;
 use serde::Deserialize;
 use std::collections::HashSet;
@@ -137,6 +138,8 @@ fn check_rate_limit() -> Result<(), String> {
 
     if last_request > 0 && now < last_request + MIN_REQUEST_INTERVAL_MS {
         let wait_time = (last_request + MIN_REQUEST_INTERVAL_MS - now) / 1000 + 1;
+        // Log rate limit event
+        log_rate_limit("coingecko_api", wait_time);
         return Err(format!(
             "Please wait {} seconds before making another request",
             wait_time
@@ -214,6 +217,12 @@ pub async fn fetch_crypto_prices(coin_ids: Vec<String>) -> Result<Vec<CryptoAsse
         COINGECKO_API_BASE, ids_param
     );
 
+    // Log API request
+    log_security_event(
+        SecurityEvent::ExternalApiRequest,
+        Some(&format!("coins={}", validated_ids.len())),
+    );
+
     // Create secure HTTP client
     let client = create_secure_client()?;
 
@@ -227,6 +236,9 @@ pub async fn fetch_crypto_prices(coin_ids: Vec<String>) -> Result<Vec<CryptoAsse
     // Check HTTP status
     let status = response.status();
     if !status.is_success() {
+        if status.as_u16() == 429 {
+            log_security_event(SecurityEvent::ExternalApiRateLimited, Some("coingecko"));
+        }
         return Err(match status.as_u16() {
             429 => "Rate limit exceeded. Please try again later.".to_string(),
             404 => "Cryptocurrency data not found.".to_string(),

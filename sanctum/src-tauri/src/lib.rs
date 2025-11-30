@@ -3,6 +3,9 @@ pub mod commands;
 pub mod crypto;
 pub mod db;
 pub mod models;
+pub mod security_log;
+
+use security_log::init_security_logger;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -12,6 +15,9 @@ fn greet(name: &str) -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Initialize security logger before anything else
+    init_security_logger();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(commands::DbState::new())

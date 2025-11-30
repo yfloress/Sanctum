@@ -4,10 +4,13 @@ use crate::models::{
     AggregatedAsset, BalanceSummary, CryptoAsset, CryptoHolding, CryptoTransaction, CryptoWallet,
     Transaction,
 };
+use crate::security_log::{SecurityEvent, log_auth_failure, log_security_event};
+use chrono::NaiveDate;
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fs;
+use std::fs::{self, Permissions};
+use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -117,13 +120,17 @@ impl DbState {
         Self::default()
     }
 
+    /// Returns true if the database is initialized, false otherwise (including on lock errors)
     pub fn is_initialized(&self) -> bool {
-        self.db.lock().unwrap().is_some()
+        self.db.lock().map(|guard| guard.is_some()).unwrap_or(false)
     }
 
     /// Verifica si el rate limit permite un intento
     fn check_rate_limit(&self, key: &str) -> Result<(), String> {
-        let mut rate_limit = self.rate_limit.lock().unwrap();
+        let mut rate_limit = self
+            .rate_limit
+            .lock()
+            .map_err(|_| "Internal error: rate limit lock poisoned".to_string())?;
         let state = rate_limit.entry(key.to_string()).or_default();
 
         // Verificar si está bloqueado
@@ -151,21 +158,29 @@ impl DbState {
 
     /// Registra un intento fallido
     fn record_failed_attempt(&self, key: &str) {
-        let mut rate_limit = self.rate_limit.lock().unwrap();
-        let state = rate_limit.entry(key.to_string()).or_default();
+        if let Ok(mut rate_limit) = self.rate_limit.lock() {
+            let state = rate_limit.entry(key.to_string()).or_default();
 
-        state.failed_attempts += 1;
-        state.last_attempt = Instant::now();
+            state.failed_attempts += 1;
+            state.last_attempt = Instant::now();
 
-        if state.failed_attempts >= MAX_FAILED_ATTEMPTS {
-            state.locked_until = Some(Instant::now() + Duration::from_secs(LOCKOUT_DURATION_SECS));
+            let locked = state.failed_attempts >= MAX_FAILED_ATTEMPTS;
+            if locked {
+                state.locked_until =
+                    Some(Instant::now() + Duration::from_secs(LOCKOUT_DURATION_SECS));
+            }
+
+            // Log the authentication failure
+            log_auth_failure(state.failed_attempts, locked);
         }
+        // Si el lock falla, simplemente ignoramos (fail-open para rate limiting)
     }
 
     /// Resetea el contador de intentos fallidos tras éxito
     fn reset_rate_limit(&self, key: &str) {
-        let mut rate_limit = self.rate_limit.lock().unwrap();
-        rate_limit.remove(key);
+        if let Ok(mut rate_limit) = self.rate_limit.lock() {
+            rate_limit.remove(key);
+        }
     }
 }
 
@@ -174,8 +189,31 @@ struct AppConfig {
     last_db_path: Option<String>,
 }
 
-/// Valida la contraseña y retorna un SecretString para manejo seguro
-fn validate_password(password: String) -> Result<SecretString, String> {
+/// Valida la contraseña básica para abrir una bóveda existente
+/// Solo verifica que no esté vacía y no exceda el límite
+fn validate_password_basic(password: String) -> Result<SecretString, String> {
+    let trimmed = password.trim();
+
+    if trimmed.is_empty() {
+        return Err("Password cannot be empty".to_string());
+    }
+
+    if trimmed.len() > 128 {
+        return Err("Password cannot exceed 128 characters".to_string());
+    }
+
+    // Crear SecretString que limpiará la memoria automáticamente
+    Ok(SecretString::from(trimmed.to_string()))
+}
+
+/// Valida la contraseña con requisitos estrictos para crear una nueva bóveda
+/// Requisitos:
+/// - Mínimo 8 caracteres
+/// - Máximo 128 caracteres
+/// - Al menos una letra mayúscula
+/// - Al menos una letra minúscula
+/// - Al menos un número
+fn validate_password_strict(password: String) -> Result<SecretString, String> {
     let trimmed = password.trim();
 
     if trimmed.is_empty() {
@@ -186,8 +224,43 @@ fn validate_password(password: String) -> Result<SecretString, String> {
         return Err("Password must be at least 8 characters".to_string());
     }
 
+    if trimmed.len() > 128 {
+        return Err("Password cannot exceed 128 characters".to_string());
+    }
+
+    // Verificar complejidad de contraseña
+    let has_uppercase = trimmed.chars().any(|c| c.is_ascii_uppercase());
+    let has_lowercase = trimmed.chars().any(|c| c.is_ascii_lowercase());
+    let has_digit = trimmed.chars().any(|c| c.is_ascii_digit());
+
+    if !has_uppercase {
+        return Err("Password must contain at least one uppercase letter".to_string());
+    }
+
+    if !has_lowercase {
+        return Err("Password must contain at least one lowercase letter".to_string());
+    }
+
+    if !has_digit {
+        return Err("Password must contain at least one number".to_string());
+    }
+
     // Crear SecretString que limpiará la memoria automáticamente
     Ok(SecretString::from(trimmed.to_string()))
+}
+
+/// Valida que una fecha esté en formato ISO-8601 (YYYY-MM-DD)
+fn validate_date(date: &str) -> Result<String, String> {
+    let trimmed = date.trim();
+
+    if trimmed.is_empty() {
+        return Err("Date cannot be empty".to_string());
+    }
+
+    // Validar formato y que sea una fecha válida
+    NaiveDate::parse_from_str(trimmed, "%Y-%m-%d")
+        .map(|_| trimmed.to_string())
+        .map_err(|_| "Invalid date format. Use YYYY-MM-DD".to_string())
 }
 
 fn ensure_no_connection(state: &State<DbState>) -> Result<(), String> {
@@ -227,7 +300,16 @@ fn save_config(app_handle: &AppHandle, config: &AppConfig) -> Result<(), String>
     let data = serde_json::to_string_pretty(config)
         .map_err(|_| "Could not serialize configuration".to_string())?;
 
-    fs::write(&path, data).map_err(|_| "Could not save configuration".to_string())
+    fs::write(&path, &data).map_err(|_| "Could not save configuration".to_string())?;
+
+    // Set restrictive permissions (owner read/write only - 0600)
+    #[cfg(unix)]
+    {
+        fs::set_permissions(&path, Permissions::from_mode(0o600))
+            .map_err(|_| "Could not set configuration file permissions".to_string())?;
+    }
+
+    Ok(())
 }
 
 fn config_path(app_handle: &AppHandle) -> Result<PathBuf, String> {
@@ -260,7 +342,8 @@ pub fn create_db(
     app_handle: AppHandle,
     state: State<DbState>,
 ) -> Result<String, String> {
-    let password = validate_password(password)?;
+    // Usar validación estricta para crear nueva bóveda
+    let password = validate_password_strict(password)?;
     ensure_no_connection(&state)?;
 
     let db_path = if let Some(p) = path {
@@ -288,6 +371,9 @@ pub fn create_db(
 
     persist_last_db_path(&app_handle, &db_path)?;
 
+    // Log vault creation
+    log_security_event(SecurityEvent::VaultCreated, None);
+
     Ok("Vault created successfully".to_string())
 }
 
@@ -299,7 +385,8 @@ pub fn open_db(
     app_handle: AppHandle,
     state: State<DbState>,
 ) -> Result<String, String> {
-    let password = validate_password(password)?;
+    // Usar validación básica para abrir bóveda existente (compatibilidad con contraseñas antiguas)
+    let password = validate_password_basic(password)?;
     ensure_no_connection(&state)?;
 
     // Resolver la ruta
@@ -344,6 +431,7 @@ pub fn open_db(
         Err(e) => {
             // Fallo - registrar intento fallido
             state.record_failed_attempt(&rate_limit_key);
+            log_security_event(SecurityEvent::VaultOpenFailed, None);
             return Err(e.to_string());
         }
     };
@@ -354,6 +442,9 @@ pub fn open_db(
     *db_lock = Some(database);
 
     persist_last_db_path(&app_handle, &db_path)?;
+
+    // Log successful vault open
+    log_security_event(SecurityEvent::VaultOpened, None);
 
     Ok("Vault unlocked successfully".to_string())
 }
@@ -369,6 +460,9 @@ pub fn close_db(state: State<DbState>) -> Result<String, String> {
 
     // Eliminar la conexión (Drop se encarga de cerrarla)
     *db_lock = None;
+
+    // Log vault close
+    log_security_event(SecurityEvent::VaultClosed, None);
 
     Ok("Vault locked successfully".to_string())
 }
@@ -426,6 +520,9 @@ pub fn add_transaction(
     let description = validate_field_length(&description, MAX_DESCRIPTION_LENGTH, "Description")?;
     let description = sanitize_string(&description);
 
+    // Validar formato de fecha
+    let date = validate_date(&date)?;
+
     if amount <= 0 {
         return Err("Amount must be greater than zero".to_string());
     }
@@ -444,6 +541,12 @@ pub fn add_transaction(
 
     db.create_transaction(&transaction)
         .map_err(|e| e.to_string())?;
+
+    // Log transaction creation
+    log_security_event(
+        SecurityEvent::TransactionCreated,
+        Some(if is_expense { "expense" } else { "income" }),
+    );
 
     Ok(id)
 }
@@ -493,6 +596,9 @@ pub fn delete_transaction(state: State<DbState>, id: String) -> Result<(), Strin
     db.delete_transaction(trimmed_id)
         .map_err(|e| e.to_string())?;
 
+    // Log transaction deletion
+    log_security_event(SecurityEvent::TransactionDeleted, None);
+
     Ok(())
 }
 
@@ -540,6 +646,9 @@ pub fn add_crypto_holding(
     if purchase_price < 0.0 {
         return Err("Purchase price cannot be negative".to_string());
     }
+
+    // Validar formato de fecha
+    let purchase_date = validate_date(&purchase_date)?;
 
     let id = Uuid::new_v4().to_string();
 
@@ -632,6 +741,9 @@ pub fn add_wallet(
     };
 
     let id = Uuid::new_v4().to_string();
+
+    // Log wallet creation before moving category
+    log_security_event(SecurityEvent::WalletCreated, Some(&category));
 
     let wallet = CryptoWallet::new(id.clone(), name, category, icon);
 
@@ -728,6 +840,9 @@ pub fn delete_wallet(state: State<DbState>, id: String) -> Result<(), String> {
 
     db.delete_wallet(trimmed_id).map_err(|e| e.to_string())?;
 
+    // Log wallet deletion
+    log_security_event(SecurityEvent::WalletDeleted, None);
+
     Ok(())
 }
 
@@ -788,6 +903,15 @@ pub fn add_crypto_transaction(
             valid_types.join(", ")
         ));
     }
+
+    // Validar formato de fecha
+    let date = validate_date(&date)?;
+
+    // Log crypto transaction creation before moving transaction_type
+    log_security_event(
+        SecurityEvent::CryptoTransactionCreated,
+        Some(&transaction_type),
+    );
 
     let id = Uuid::new_v4().to_string();
 
@@ -859,6 +983,9 @@ pub fn add_swap_transaction(
     if from_amount <= 0.0 || to_amount <= 0.0 {
         return Err("Amounts must be greater than zero".to_string());
     }
+
+    // Validar formato de fecha
+    let date = validate_date(&date)?;
 
     let from_tx_id = Uuid::new_v4().to_string();
     let to_tx_id = Uuid::new_v4().to_string();
@@ -950,6 +1077,9 @@ pub fn add_transfer_transaction(
     if amount <= 0.0 {
         return Err("Amount must be greater than zero".to_string());
     }
+
+    // Validar formato de fecha
+    let date = validate_date(&date)?;
 
     let from_tx_id = Uuid::new_v4().to_string();
     let to_tx_id = Uuid::new_v4().to_string();
@@ -1117,15 +1247,36 @@ mod tests {
     }
 
     #[test]
-    fn test_validate_password_empty() {
-        let result = validate_password("".to_string());
+    fn test_validate_password_basic_empty() {
+        let result = validate_password_basic("".to_string());
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Password cannot be empty");
     }
 
     #[test]
-    fn test_validate_password_too_short() {
-        let result = validate_password("1234567".to_string());
+    fn test_validate_password_basic_valid() {
+        // Contraseña simple debe funcionar para abrir bóvedas antiguas
+        let result = validate_password_basic("simple".to_string());
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().expose_secret(), "simple");
+    }
+
+    #[test]
+    fn test_validate_password_basic_too_long() {
+        let long_pass = "a".repeat(129);
+        assert!(validate_password_basic(long_pass).is_err());
+    }
+
+    #[test]
+    fn test_validate_password_strict_empty() {
+        let result = validate_password_strict("".to_string());
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Password cannot be empty");
+    }
+
+    #[test]
+    fn test_validate_password_strict_too_short() {
+        let result = validate_password_strict("1234567".to_string());
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err(),
@@ -1134,11 +1285,43 @@ mod tests {
     }
 
     #[test]
-    fn test_validate_password_valid() {
-        let result = validate_password("12345678".to_string());
+    fn test_validate_password_strict_valid() {
+        let result = validate_password_strict("Password1".to_string());
         assert!(result.is_ok());
         // Verificar que el SecretString contiene el valor correcto
-        assert_eq!(result.unwrap().expose_secret(), "12345678");
+        assert_eq!(result.unwrap().expose_secret(), "Password1");
+    }
+
+    #[test]
+    fn test_validate_password_strict_complexity() {
+        // Missing uppercase
+        assert!(validate_password_strict("password1".to_string()).is_err());
+        // Missing lowercase
+        assert!(validate_password_strict("PASSWORD1".to_string()).is_err());
+        // Missing digit
+        assert!(validate_password_strict("Password".to_string()).is_err());
+        // Valid password
+        assert!(validate_password_strict("Password1".to_string()).is_ok());
+        // Too long
+        let long_pass = "A".repeat(129) + "a1";
+        assert!(validate_password_strict(long_pass).is_err());
+    }
+
+    #[test]
+    fn test_validate_date_valid() {
+        assert!(validate_date("2024-01-15").is_ok());
+        assert!(validate_date("2023-12-31").is_ok());
+        assert_eq!(validate_date("  2024-01-15  ").unwrap(), "2024-01-15");
+    }
+
+    #[test]
+    fn test_validate_date_invalid() {
+        assert!(validate_date("").is_err());
+        assert!(validate_date("2024/01/15").is_err());
+        assert!(validate_date("15-01-2024").is_err());
+        assert!(validate_date("2024-13-01").is_err()); // Invalid month
+        assert!(validate_date("2024-02-30").is_err()); // Invalid day
+        assert!(validate_date("not-a-date").is_err());
     }
 
     #[test]
