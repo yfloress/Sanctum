@@ -2,28 +2,32 @@
  * App Component
  *
  * Main application entry point.
- * Uses Zustand stores for state management (no prop drilling).
+ * Uses Zustand stores exclusively for state management.
  *
  * ARCHITECTURE:
- * - Auth state: managed by useAuth hook (controls vault open/close)
- * - Financial data: managed by useFinancialStore (Zustand)
- * - Crypto data: managed by useCryptoStore (Zustand)
+ * - Auth state: useAuthStore (vault open/close, session)
+ * - Financial data: useFinancialStore (transactions, balance)
+ * - Crypto data: useCryptoStore (wallets, portfolio, prices)
  *
  * SECURITY:
  * - All sensitive data lives only in RAM (no localStorage)
- * - Stores are cleared when vault is closed (kill switch in useAuth)
+ * - Stores are cleared when vault is closed (kill switch in authStore)
  */
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 
-// Hooks
-import { useAuth } from "./hooks/useAuth";
-
 // Stores
-import { useFinancialStore } from "./stores/financialStore";
-import { useCryptoStore } from "./stores/cryptoStore";
+import {
+  useAuthStore,
+  useIsInitialized,
+  useAuthLoading,
+  useAuthError,
+  useAuthSuccess,
+  useFinancialStore,
+  useCryptoStore,
+} from "./stores";
 
 // Components
 import { Sidebar } from "./components/layout/Sidebar";
@@ -43,23 +47,19 @@ import type { TabType } from "./types";
 const SESSION_WARNING_THRESHOLD = 120;
 
 function App() {
-  // ==================== Local UI State ====================
-  const [activeTab, setActiveTab] = useState<TabType>("dashboard");
-  const [sessionRemaining, setSessionRemaining] = useState<number | null>(null);
-  const [showSessionWarning, setShowSessionWarning] = useState(false);
-  const sessionCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
-    null,
-  );
-  const prevInitializedRef = useRef<boolean | null>(null);
+  // ==================== Auth Store ====================
+  const isInitialized = useIsInitialized();
+  const authLoading = useAuthLoading();
+  const authError = useAuthError();
+  const authSuccess = useAuthSuccess();
+  const checkStatus = useAuthStore((state) => state.checkStatus);
+  const logout = useAuthStore((state) => state.logout);
+  const setAuthError = useAuthStore((state) => state.setError);
 
-  // ==================== Auth Hook ====================
-  const auth = useAuth({});
-
-  // ==================== Store Actions ====================
-  // Financial store
-  const loadFinancialData = useFinancialStore((state) => state.loadData);
+  // ==================== Financial Store ====================
   const financialError = useFinancialStore((state) => state.error);
   const financialSuccess = useFinancialStore((state) => state.successMessage);
+  const financialLoading = useFinancialStore((state) => state.isLoading);
   const transactionToDelete = useFinancialStore(
     (state) => state.transactionToDelete,
   );
@@ -69,59 +69,39 @@ function App() {
   const cancelDeleteTransaction = useFinancialStore(
     (state) => state.cancelDelete,
   );
-  const financialLoading = useFinancialStore((state) => state.isLoading);
 
-  // Crypto store
-  const loadCryptoData = useCryptoStore((state) => state.loadAll);
-  const fetchPrices = useCryptoStore((state) => state.fetchPrices);
-  const cryptoPrices = useCryptoStore((state) => state.prices);
-  const cryptoLoading = useCryptoStore((state) => state.isLoading);
+  // ==================== Crypto Store ====================
   const cryptoError = useCryptoStore((state) => state.error);
   const cryptoSuccess = useCryptoStore((state) => state.successMessage);
+  const cryptoLoading = useCryptoStore((state) => state.isLoading);
+  const cryptoPrices = useCryptoStore((state) => state.prices);
+  const fetchPrices = useCryptoStore((state) => state.fetchPrices);
 
-  // ==================== Data Loading Effect ====================
+  // ==================== Local UI State ====================
+  const [activeTab, setActiveTab] = useState<TabType>("dashboard");
+  const [sessionRemaining, setSessionRemaining] = useState<number | null>(null);
+  const [showSessionWarning, setShowSessionWarning] = useState(false);
+  const sessionCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null,
+  );
+
+  // ==================== Check Auth Status on Mount ====================
   useEffect(() => {
-    const wasInitialized = prevInitializedRef.current;
-    const isInitialized = auth.isInitialized;
+    checkStatus();
+  }, [checkStatus]);
 
-    prevInitializedRef.current = isInitialized;
-
-    // First render - if already initialized, load data
-    if (wasInitialized === null && isInitialized) {
-      const loadInitialData = async () => {
-        try {
-          await Promise.all([loadFinancialData(), loadCryptoData()]);
-        } catch (err) {
-          console.error("Error loading initial data:", err);
-        }
-      };
-      loadInitialData();
-      return;
-    }
-
-    // Vault just opened
-    if (!wasInitialized && isInitialized) {
-      const loadData = async () => {
-        try {
-          await Promise.all([loadFinancialData(), loadCryptoData()]);
-        } catch (err) {
-          console.error("Error loading data:", err);
-        }
-      };
-      loadData();
-    }
-
-    // Vault just closed - stores are already cleared by useAuth kill switch
-    if (wasInitialized && !isInitialized) {
+  // ==================== Reset UI State on Logout ====================
+  useEffect(() => {
+    if (!isInitialized) {
+      setActiveTab("dashboard");
       setSessionRemaining(null);
       setShowSessionWarning(false);
-      setActiveTab("dashboard");
     }
-  }, [auth.isInitialized, loadFinancialData, loadCryptoData]);
+  }, [isInitialized]);
 
   // ==================== Session Monitoring ====================
   useEffect(() => {
-    if (!auth.isInitialized) {
+    if (!isInitialized) {
       if (sessionCheckIntervalRef.current) {
         clearInterval(sessionCheckIntervalRef.current);
         sessionCheckIntervalRef.current = null;
@@ -141,8 +121,8 @@ function App() {
         }
 
         if (remaining <= 0) {
-          auth.setTemporaryError("Session expired due to inactivity");
-          await auth.handleCloseVault();
+          setAuthError("Session expired due to inactivity");
+          await logout();
         }
       } catch (err) {
         const errorStr = String(err);
@@ -150,8 +130,8 @@ function App() {
           errorStr.includes("Session expired") ||
           errorStr.includes("inactivity")
         ) {
-          auth.setTemporaryError("Session expired due to inactivity");
-          await auth.handleCloseVault();
+          setAuthError("Session expired due to inactivity");
+          await logout();
         }
       }
     };
@@ -165,20 +145,9 @@ function App() {
         sessionCheckIntervalRef.current = null;
       }
     };
-  }, [auth.isInitialized, auth.handleCloseVault, auth.setTemporaryError]);
+  }, [isInitialized, logout, setAuthError]);
 
   // ==================== Handlers ====================
-  const handleVaultAction = useCallback(
-    async (action: "open" | "create") => {
-      await auth.handleVaultAction(action);
-    },
-    [auth],
-  );
-
-  const handleCloseVault = useCallback(async () => {
-    await auth.handleCloseVault();
-  }, [auth]);
-
   const handleCryptoTabClick = useCallback(() => {
     if (cryptoPrices.length === 0 && !cryptoLoading) {
       fetchPrices();
@@ -186,13 +155,12 @@ function App() {
   }, [cryptoPrices.length, cryptoLoading, fetchPrices]);
 
   // ==================== Computed Values ====================
-  const isLoading = auth.isLoading || financialLoading || cryptoLoading;
-  const errorMessage = auth.error || financialError || cryptoError;
-  const successMessage =
-    auth.successMessage || financialSuccess || cryptoSuccess;
+  const isLoading = authLoading || financialLoading || cryptoLoading;
+  const errorMessage = authError || financialError || cryptoError;
+  const successMessage = authSuccess || financialSuccess || cryptoSuccess;
 
   // ==================== Render: Loading State ====================
-  if (auth.isLoading && !auth.isInitialized) {
+  if (authLoading && !isInitialized) {
     return (
       <div className="vault-container">
         <div className="vault-card">
@@ -204,21 +172,8 @@ function App() {
   }
 
   // ==================== Render: Login Screen ====================
-  if (!auth.isInitialized) {
-    return (
-      <LoginScreen
-        password={auth.password}
-        setPassword={auth.setPassword}
-        showPassword={auth.showPassword}
-        setShowPassword={auth.setShowPassword}
-        dbPathInput={auth.dbPathInput}
-        setDbPathInput={auth.setDbPathInput}
-        isLoading={auth.isLoading}
-        loadingAction={auth.loadingAction}
-        error={auth.error}
-        onVaultAction={handleVaultAction}
-      />
-    );
+  if (!isInitialized) {
+    return <LoginScreen />;
   }
 
   // ==================== Render: Main Application ====================
@@ -227,7 +182,7 @@ function App() {
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        onLockVault={handleCloseVault}
+        onLockVault={logout}
         isLoading={isLoading}
         onCryptoTabClick={handleCryptoTabClick}
       />

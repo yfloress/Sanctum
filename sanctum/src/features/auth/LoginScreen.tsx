@@ -1,28 +1,48 @@
-interface LoginScreenProps {
-  password: string;
-  setPassword: (value: string) => void;
-  showPassword: boolean;
-  setShowPassword: (value: boolean) => void;
-  dbPathInput: string;
-  setDbPathInput: (value: string) => void;
-  isLoading: boolean;
-  loadingAction: "open" | "create" | null;
-  error: string;
-  onVaultAction: (action: "open" | "create") => void;
-}
+/**
+ * Login Screen Component
+ *
+ * Handles vault authentication (open/create).
+ * Consumes state directly from Zustand authStore - no props needed.
+ *
+ * SECURITY: Password is stored in local component state only,
+ * never in Zustand store. It's cleared after login attempt.
+ */
 
-export function LoginScreen({
-  password,
-  setPassword,
-  showPassword,
-  setShowPassword,
-  dbPathInput,
-  setDbPathInput,
-  isLoading,
-  loadingAction,
-  error,
-  onVaultAction,
-}: LoginScreenProps) {
+import { useState } from "react";
+import {
+  useAuthStore,
+  useAuthLoading,
+  useAuthError,
+  useDbPath,
+  useLoadingAction,
+} from "../../stores";
+
+export function LoginScreen() {
+  // Local state for password (NEVER stored in Zustand for security)
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Store state (read-only selectors)
+  const isLoading = useAuthLoading();
+  const error = useAuthError();
+  const dbPath = useDbPath();
+  const loadingAction = useLoadingAction();
+
+  // Store actions
+  const login = useAuthStore((state) => state.login);
+  const setDbPath = useAuthStore((state) => state.setDbPath);
+  const clearMessages = useAuthStore((state) => state.clearMessages);
+
+  // Handle vault action (open or create)
+  const handleVaultAction = async (action: "open" | "create") => {
+    clearMessages();
+    const success = await login(action, password, dbPath);
+    if (success) {
+      // Clear password from local state after successful login
+      setPassword("");
+    }
+  };
+
   return (
     <div className="vault-container">
       {error && <div className="message error login-message">{error}</div>}
@@ -41,7 +61,7 @@ export function LoginScreen({
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                onVaultAction("open");
+                handleVaultAction("open");
               }}
               className="vault-form"
             >
@@ -83,7 +103,7 @@ export function LoginScreen({
                 <button
                   type="button"
                   className="btn-secondary"
-                  onClick={() => onVaultAction("create")}
+                  onClick={() => handleVaultAction("create")}
                   disabled={isLoading}
                 >
                   {isLoading && loadingAction === "create" ? "..." : "Create"}
@@ -97,8 +117,8 @@ export function LoginScreen({
                   <input
                     id="db-path"
                     type="text"
-                    value={dbPathInput}
-                    onChange={(e) => setDbPathInput(e.target.value)}
+                    value={dbPath}
+                    onChange={(e) => setDbPath(e.target.value)}
                     placeholder="Custom path (empty = default)"
                     disabled={isLoading}
                   />

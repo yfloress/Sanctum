@@ -5,6 +5,18 @@
  * Import stores from here for cleaner imports throughout the app.
  */
 
+// Auth Store
+export {
+  useAuthStore,
+  useIsInitialized,
+  useAuthLoading,
+  useAuthError,
+  useAuthSuccess,
+  useDbPath,
+  useLoadingAction,
+  type AuthStore,
+} from "./authStore";
+
 // Financial Store
 export {
   useFinancialStore,
