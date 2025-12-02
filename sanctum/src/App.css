@@ -832,6 +832,12 @@ button:active:not(:disabled) {
     border-color: var(--accent-primary);
 }
 
+.message.warning {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fcd34d;
+    border-color: #f59e0b;
+}
+
 .vault-content-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;

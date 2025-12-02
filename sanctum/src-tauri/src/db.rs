@@ -2,6 +2,7 @@ use crate::models::{
     AggregatedAsset, BalanceSummary, CryptoHolding, CryptoTransaction, CryptoTransactionType,
     CryptoWallet, Transaction,
 };
+use chrono::{DateTime, Duration, Utc};
 use rusqlite::{Connection, Error as RusqliteError, ErrorCode, params};
 use secrecy::{ExposeSecret, SecretString};
 use std::collections::HashMap;
@@ -38,7 +39,30 @@ pub enum DbError {
 
     #[error("Wallet has existing transactions")]
     WalletNotEmpty,
+
+    #[error("Session expired due to inactivity")]
+    SessionExpired,
+
+    #[error("Too many failed attempts")]
+    RateLimited,
 }
+
+// ==================== Security Constants ====================
+
+/// Maximum failed authentication attempts before lockout
+pub const MAX_FAILED_ATTEMPTS: u32 = 5;
+
+/// Lockout duration in seconds after max failed attempts (5 minutes)
+pub const LOCKOUT_DURATION_SECS: i64 = 300;
+
+/// Time window to reset failed attempts counter (60 seconds)
+pub const ATTEMPT_RESET_SECS: i64 = 60;
+
+/// Session timeout duration in seconds (15 minutes of inactivity)
+pub const SESSION_TIMEOUT_SECS: i64 = 900;
+
+/// KDF iterations for PBKDF2-HMAC-SHA512 (OWASP 2024 recommendation)
+pub const KDF_ITERATIONS: i64 = 600_000;
 
 /// Struct principal que envuelve la conexión a la base de datos
 pub struct Database {
@@ -124,8 +148,8 @@ impl Database {
             conn.pragma_update(None, "cipher_kdf_algorithm", "PBKDF2_HMAC_SHA512")
                 .map_err(DbError::Sqlite)?;
 
-            // Fortalecer parámetros de derivación y layout
-            conn.pragma_update(None, "kdf_iter", 256_000i64)
+            // Fortalecer parámetros de derivación y layout (OWASP 2024: 600,000 para PBKDF2-SHA512)
+            conn.pragma_update(None, "kdf_iter", KDF_ITERATIONS)
                 .map_err(DbError::Sqlite)?;
             conn.pragma_update(None, "cipher_page_size", 4096i64)
                 .map_err(DbError::Sqlite)?;
@@ -274,7 +298,232 @@ impl Database {
         // ==================== Crypto Ledger System Migration ====================
         self.migrate_crypto_ledger()?;
 
+        // ==================== Security Tables ====================
+        self.create_security_tables()?;
+
         Ok(())
+    }
+
+    /// Creates security-related tables for rate limiting and session management
+    fn create_security_tables(&self) -> Result<(), DbError> {
+        // Rate limiting table - persists failed authentication attempts
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS auth_attempts (
+                vault_path TEXT PRIMARY KEY NOT NULL,
+                failed_count INTEGER NOT NULL DEFAULT 0,
+                locked_until TEXT,
+                last_attempt TEXT NOT NULL
+            )",
+            [],
+        )?;
+
+        // Session tracking table
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS session_info (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                last_activity TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )",
+            [],
+        )?;
+
+        // Initialize session on vault open
+        let now = Utc::now().to_rfc3339();
+        self.conn.execute(
+            "INSERT OR REPLACE INTO session_info (id, last_activity, created_at) VALUES (1, ?1, ?1)",
+            params![&now],
+        )?;
+
+        Ok(())
+    }
+
+    // ==================== Rate Limiting Functions ====================
+
+    /// Records a failed authentication attempt for a vault path
+    pub fn record_failed_attempt(
+        conn: &Connection,
+        vault_path: &str,
+    ) -> Result<(u32, bool), DbError> {
+        let now = Utc::now();
+        let now_str = now.to_rfc3339();
+
+        // Get current state
+        let current: Option<(i32, Option<String>, String)> = conn
+            .query_row(
+                "SELECT failed_count, locked_until, last_attempt FROM auth_attempts WHERE vault_path = ?1",
+                params![vault_path],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .ok();
+
+        let (mut failed_count, locked_until, last_attempt) =
+            current.unwrap_or((0, None, now_str.clone()));
+
+        // Check if we should reset the counter (enough time has passed)
+        if let Ok(last) = DateTime::parse_from_rfc3339(&last_attempt) {
+            if now.signed_duration_since(last.with_timezone(&Utc))
+                > Duration::seconds(ATTEMPT_RESET_SECS)
+            {
+                failed_count = 0;
+            }
+        }
+
+        // Check if currently locked
+        if let Some(ref locked_str) = locked_until {
+            if let Ok(locked) = DateTime::parse_from_rfc3339(locked_str) {
+                if now < locked.with_timezone(&Utc) {
+                    // Still locked, reject the attempt
+                    return Err(DbError::RateLimited);
+                }
+                // Lock expired, reset
+                failed_count = 0;
+            }
+        }
+
+        // Increment counter
+        failed_count += 1;
+        let is_locked = failed_count >= MAX_FAILED_ATTEMPTS as i32;
+
+        let new_locked_until = if is_locked {
+            Some((now + Duration::seconds(LOCKOUT_DURATION_SECS)).to_rfc3339())
+        } else {
+            None
+        };
+
+        // Upsert the record
+        conn.execute(
+            "INSERT INTO auth_attempts (vault_path, failed_count, locked_until, last_attempt)
+             VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(vault_path) DO UPDATE SET
+                failed_count = ?2,
+                locked_until = ?3,
+                last_attempt = ?4",
+            params![vault_path, failed_count, &new_locked_until, &now_str],
+        )?;
+
+        Ok((failed_count as u32, is_locked))
+    }
+
+    /// Checks if a vault path is currently rate limited
+    pub fn check_rate_limit(conn: &Connection, vault_path: &str) -> Result<(), DbError> {
+        let result: Option<(i32, Option<String>, String)> = conn
+            .query_row(
+                "SELECT failed_count, locked_until, last_attempt FROM auth_attempts WHERE vault_path = ?1",
+                params![vault_path],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .ok();
+
+        if let Some((failed_count, locked_until, last_attempt)) = result {
+            let now = Utc::now();
+
+            // Check if locked
+            if let Some(locked_str) = locked_until {
+                if let Ok(locked) = DateTime::parse_from_rfc3339(&locked_str) {
+                    if now < locked.with_timezone(&Utc) {
+                        return Err(DbError::RateLimited);
+                    }
+                }
+            }
+
+            // Check if we should still count previous attempts
+            if let Ok(last) = DateTime::parse_from_rfc3339(&last_attempt) {
+                if now.signed_duration_since(last.with_timezone(&Utc))
+                    <= Duration::seconds(ATTEMPT_RESET_SECS)
+                {
+                    if failed_count >= MAX_FAILED_ATTEMPTS as i32 {
+                        return Err(DbError::RateLimited);
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Resets rate limit after successful authentication
+    pub fn reset_rate_limit(conn: &Connection, vault_path: &str) -> Result<(), DbError> {
+        conn.execute(
+            "DELETE FROM auth_attempts WHERE vault_path = ?1",
+            params![vault_path],
+        )?;
+        Ok(())
+    }
+
+    /// Gets remaining lockout time in seconds (0 if not locked)
+    pub fn get_lockout_remaining(conn: &Connection, vault_path: &str) -> Result<u64, DbError> {
+        let locked_until: Option<String> = conn
+            .query_row(
+                "SELECT locked_until FROM auth_attempts WHERE vault_path = ?1",
+                params![vault_path],
+                |row| row.get(0),
+            )
+            .ok()
+            .flatten();
+
+        if let Some(locked_str) = locked_until {
+            if let Ok(locked) = DateTime::parse_from_rfc3339(&locked_str) {
+                let now = Utc::now();
+                if now < locked.with_timezone(&Utc) {
+                    return Ok((locked.with_timezone(&Utc) - now).num_seconds() as u64);
+                }
+            }
+        }
+
+        Ok(0)
+    }
+
+    // ==================== Session Management Functions ====================
+
+    /// Updates the last activity timestamp
+    pub fn touch_session(&self) -> Result<(), DbError> {
+        let now = Utc::now().to_rfc3339();
+        self.conn.execute(
+            "UPDATE session_info SET last_activity = ?1 WHERE id = 1",
+            params![&now],
+        )?;
+        Ok(())
+    }
+
+    /// Checks if the session has expired due to inactivity
+    pub fn check_session_timeout(&self) -> Result<(), DbError> {
+        let last_activity: String = self.conn.query_row(
+            "SELECT last_activity FROM session_info WHERE id = 1",
+            [],
+            |row| row.get(0),
+        )?;
+
+        if let Ok(last) = DateTime::parse_from_rfc3339(&last_activity) {
+            let now = Utc::now();
+            if now.signed_duration_since(last.with_timezone(&Utc))
+                > Duration::seconds(SESSION_TIMEOUT_SECS)
+            {
+                return Err(DbError::SessionExpired);
+            }
+        }
+
+        // Update last activity on successful check
+        self.touch_session()?;
+        Ok(())
+    }
+
+    /// Gets seconds until session expires (for UI display)
+    pub fn get_session_remaining(&self) -> Result<i64, DbError> {
+        let last_activity: String = self.conn.query_row(
+            "SELECT last_activity FROM session_info WHERE id = 1",
+            [],
+            |row| row.get(0),
+        )?;
+
+        if let Ok(last) = DateTime::parse_from_rfc3339(&last_activity) {
+            let now = Utc::now();
+            let elapsed = now
+                .signed_duration_since(last.with_timezone(&Utc))
+                .num_seconds();
+            return Ok((SESSION_TIMEOUT_SECS - elapsed).max(0));
+        }
+
+        Ok(SESSION_TIMEOUT_SECS)
     }
 
     /// Migrates from old crypto_holdings to new ledger system
@@ -358,6 +607,12 @@ impl Database {
 
             self.conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_crypto_tx_type ON crypto_transactions(type)",
+                [],
+            )?;
+
+            // Index for related_tx_id lookups (used in swap/transfer deletions)
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_crypto_tx_related ON crypto_transactions(related_tx_id)",
                 [],
             )?;
         }
@@ -1040,5 +1295,10 @@ mod tests {
             DbError::WalletNotEmpty.to_string(),
             "Wallet has existing transactions"
         );
+        assert_eq!(
+            DbError::SessionExpired.to_string(),
+            "Session expired due to inactivity"
+        );
+        assert_eq!(DbError::RateLimited.to_string(), "Too many failed attempts");
     }
 }

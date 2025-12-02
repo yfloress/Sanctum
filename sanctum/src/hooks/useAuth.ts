@@ -32,10 +32,11 @@ interface UseAuthReturn {
 interface UseAuthOptions {
   onVaultOpen?: () => Promise<void>;
   onVaultClose?: () => void;
+  onSessionExpired?: () => void;
 }
 
 export function useAuth(options: UseAuthOptions = {}): UseAuthReturn {
-  const { onVaultOpen, onVaultClose } = options;
+  const { onVaultOpen, onVaultClose, onSessionExpired } = options;
 
   // Auth state
   const [isInitialized, setIsInitialized] = useState(false);
@@ -166,6 +167,17 @@ export function useAuth(options: UseAuthOptions = {}): UseAuthReturn {
       }
       await loadDbPath();
     } catch (err) {
+      // Check if this is a session expiry error
+      const errorStr = String(err);
+      if (
+        errorStr.includes("Session expired") ||
+        errorStr.includes("inactivity")
+      ) {
+        setIsInitialized(false);
+        if (onSessionExpired) {
+          onSessionExpired();
+        }
+      }
       setTemporaryError(`Error: ${err}`);
     } finally {
       setIsLoading(false);
@@ -176,6 +188,7 @@ export function useAuth(options: UseAuthOptions = {}): UseAuthReturn {
     setTemporaryError,
     setTemporarySuccess,
     onVaultClose,
+    onSessionExpired,
   ]);
 
   // Cleanup timeouts on unmount

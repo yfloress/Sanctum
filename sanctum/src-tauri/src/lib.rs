@@ -49,6 +49,8 @@ pub fn run() {
             // Portfolio Aggregation
             commands::get_aggregated_portfolio,
             commands::get_wallet_holdings,
+            // Session Management
+            commands::get_session_remaining,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

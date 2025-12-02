@@ -1,26 +1,21 @@
 use crate::crypto;
-use crate::db::Database;
+use crate::db::{Database, DbError};
 use crate::models::{
     AggregatedAsset, BalanceSummary, CryptoAsset, CryptoHolding, CryptoTransaction, CryptoWallet,
     Transaction,
 };
 use crate::security_log::{SecurityEvent, log_auth_failure, log_security_event};
 use chrono::NaiveDate;
+use rusqlite::Connection;
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::fs::{self, Permissions};
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Component, Path, PathBuf};
 use std::sync::Mutex;
-use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager, State};
 use uuid::Uuid;
-
-/// Configuración de rate limiting
-const MAX_FAILED_ATTEMPTS: u32 = 5;
-const LOCKOUT_DURATION_SECS: u64 = 300; // 5 minutos
-const ATTEMPT_RESET_SECS: u64 = 60; // Reset contador después de 1 minuto sin intentos
 
 // ==================== Security: Field Length Limits ====================
 const MAX_CATEGORY_LENGTH: usize = 64;
@@ -30,6 +25,8 @@ const MAX_WALLET_NAME_LENGTH: usize = 128;
 const MAX_SYMBOL_LENGTH: usize = 16;
 const MAX_COIN_ID_LENGTH: usize = 64;
 const MAX_ICON_LENGTH: usize = 32;
+const MAX_PASSWORD_LENGTH: usize = 128;
+const MIN_PASSWORD_LENGTH: usize = 8;
 
 /// Validates and truncates a string field to a maximum length
 fn validate_field_length(
@@ -82,35 +79,15 @@ fn sanitize_string(input: &str) -> String {
         .to_string()
 }
 
-/// Estado de rate limiting para una IP/sesión
-#[derive(Debug, Clone)]
-struct RateLimitState {
-    failed_attempts: u32,
-    last_attempt: Instant,
-    locked_until: Option<Instant>,
-}
-
-impl Default for RateLimitState {
-    fn default() -> Self {
-        Self {
-            failed_attempts: 0,
-            last_attempt: Instant::now(),
-            locked_until: None,
-        }
-    }
-}
-
 /// Estado global para mantener la conexión a la base de datos
 pub struct DbState {
     pub db: Mutex<Option<Database>>,
-    rate_limit: Mutex<HashMap<String, RateLimitState>>,
 }
 
 impl Default for DbState {
     fn default() -> Self {
         Self {
             db: Mutex::new(None),
-            rate_limit: Mutex::new(HashMap::new()),
         }
     }
 }
@@ -125,63 +102,106 @@ impl DbState {
         self.db.lock().map(|guard| guard.is_some()).unwrap_or(false)
     }
 
-    /// Verifica si el rate limit permite un intento
-    fn check_rate_limit(&self, key: &str) -> Result<(), String> {
-        let mut rate_limit = self
-            .rate_limit
-            .lock()
-            .map_err(|_| "Internal error: rate limit lock poisoned".to_string())?;
-        let state = rate_limit.entry(key.to_string()).or_default();
-
-        // Verificar si está bloqueado
-        if let Some(locked_until) = state.locked_until {
-            if Instant::now() < locked_until {
-                let remaining = locked_until.duration_since(Instant::now()).as_secs();
-                return Err(format!(
-                    "Too many failed attempts. Try again in {} seconds",
-                    remaining
-                ));
-            } else {
-                // El bloqueo expiró, resetear
-                state.locked_until = None;
-                state.failed_attempts = 0;
-            }
+    /// Checks session timeout and updates last activity
+    pub fn check_session(&self) -> Result<(), String> {
+        let db_lock = self.db.lock().map_err(|_| "Internal error".to_string())?;
+        if let Some(db) = db_lock.as_ref() {
+            db.check_session_timeout().map_err(|e| match e {
+                DbError::SessionExpired => {
+                    "Session expired due to inactivity. Please unlock the vault again.".to_string()
+                }
+                _ => e.to_string(),
+            })?;
         }
-
-        // Reset de intentos si pasó suficiente tiempo
-        if state.last_attempt.elapsed() > Duration::from_secs(ATTEMPT_RESET_SECS) {
-            state.failed_attempts = 0;
-        }
-
         Ok(())
     }
+}
 
-    /// Registra un intento fallido
-    fn record_failed_attempt(&self, key: &str) {
-        if let Ok(mut rate_limit) = self.rate_limit.lock() {
-            let state = rate_limit.entry(key.to_string()).or_default();
-
-            state.failed_attempts += 1;
-            state.last_attempt = Instant::now();
-
-            let locked = state.failed_attempts >= MAX_FAILED_ATTEMPTS;
-            if locked {
-                state.locked_until =
-                    Some(Instant::now() + Duration::from_secs(LOCKOUT_DURATION_SECS));
-            }
-
-            // Log the authentication failure
-            log_auth_failure(state.failed_attempts, locked);
-        }
-        // Si el lock falla, simplemente ignoramos (fail-open para rate limiting)
+/// Checks persistent rate limit using a temporary connection
+fn check_persistent_rate_limit(db_path: &Path) -> Result<(), String> {
+    if !db_path.exists() {
+        return Ok(());
     }
 
-    /// Resetea el contador de intentos fallidos tras éxito
-    fn reset_rate_limit(&self, key: &str) {
-        if let Ok(mut rate_limit) = self.rate_limit.lock() {
-            rate_limit.remove(key);
+    // Try to open without encryption to check rate limit table
+    // This uses a separate unencrypted DB for rate limiting
+    let rate_limit_path = db_path.with_extension("ratelimit");
+
+    if let Ok(conn) = Connection::open(&rate_limit_path) {
+        // Create table if not exists
+        let _ = conn.execute(
+            "CREATE TABLE IF NOT EXISTS auth_attempts (
+                vault_path TEXT PRIMARY KEY NOT NULL,
+                failed_count INTEGER NOT NULL DEFAULT 0,
+                locked_until TEXT,
+                last_attempt TEXT NOT NULL
+            )",
+            [],
+        );
+
+        let vault_key = db_path.to_string_lossy().to_string();
+        if let Err(DbError::RateLimited) = Database::check_rate_limit(&conn, &vault_key) {
+            let remaining = Database::get_lockout_remaining(&conn, &vault_key).unwrap_or(0);
+            return Err(format!(
+                "Too many failed attempts. Try again in {} seconds",
+                remaining
+            ));
         }
     }
+
+    Ok(())
+}
+
+/// Records a failed attempt in persistent storage
+fn record_persistent_failed_attempt(db_path: &Path) {
+    let rate_limit_path = db_path.with_extension("ratelimit");
+
+    if let Ok(conn) = Connection::open(&rate_limit_path) {
+        let _ = conn.execute(
+            "CREATE TABLE IF NOT EXISTS auth_attempts (
+                vault_path TEXT PRIMARY KEY NOT NULL,
+                failed_count INTEGER NOT NULL DEFAULT 0,
+                locked_until TEXT,
+                last_attempt TEXT NOT NULL
+            )",
+            [],
+        );
+
+        let vault_key = db_path.to_string_lossy().to_string();
+        if let Ok((attempts, locked)) = Database::record_failed_attempt(&conn, &vault_key) {
+            log_auth_failure(attempts, locked);
+        }
+    }
+}
+
+/// Resets persistent rate limit after successful auth
+fn reset_persistent_rate_limit(db_path: &Path) {
+    let rate_limit_path = db_path.with_extension("ratelimit");
+
+    if let Ok(conn) = Connection::open(&rate_limit_path) {
+        let vault_key = db_path.to_string_lossy().to_string();
+        let _ = Database::reset_rate_limit(&conn, &vault_key);
+    }
+}
+
+/// Validates a UUID string format
+fn validate_uuid(id: &str) -> Result<String, String> {
+    let trimmed = id.trim();
+    if trimmed.is_empty() {
+        return Err("ID cannot be empty".to_string());
+    }
+
+    // Check if it's a valid UUID or a legacy ID format
+    if Uuid::parse_str(trimmed).is_ok() {
+        return Ok(trimmed.to_string());
+    }
+
+    // Allow legacy IDs that start with "migrated_" or "legacy_"
+    if trimmed.starts_with("migrated_") || trimmed.starts_with("legacy_") {
+        return Ok(trimmed.to_string());
+    }
+
+    Err("Invalid ID format".to_string())
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -198,8 +218,11 @@ fn validate_password_basic(password: String) -> Result<SecretString, String> {
         return Err("Password cannot be empty".to_string());
     }
 
-    if trimmed.len() > 128 {
-        return Err("Password cannot exceed 128 characters".to_string());
+    if trimmed.len() > MAX_PASSWORD_LENGTH {
+        return Err(format!(
+            "Password cannot exceed {} characters",
+            MAX_PASSWORD_LENGTH
+        ));
     }
 
     // Crear SecretString que limpiará la memoria automáticamente
@@ -213,6 +236,7 @@ fn validate_password_basic(password: String) -> Result<SecretString, String> {
 /// - Al menos una letra mayúscula
 /// - Al menos una letra minúscula
 /// - Al menos un número
+/// - Al menos un carácter especial
 fn validate_password_strict(password: String) -> Result<SecretString, String> {
     let trimmed = password.trim();
 
@@ -220,18 +244,59 @@ fn validate_password_strict(password: String) -> Result<SecretString, String> {
         return Err("Password cannot be empty".to_string());
     }
 
-    if trimmed.len() < 8 {
-        return Err("Password must be at least 8 characters".to_string());
+    if trimmed.len() < MIN_PASSWORD_LENGTH {
+        return Err(format!(
+            "Password must be at least {} characters",
+            MIN_PASSWORD_LENGTH
+        ));
     }
 
-    if trimmed.len() > 128 {
-        return Err("Password cannot exceed 128 characters".to_string());
+    if trimmed.len() > MAX_PASSWORD_LENGTH {
+        return Err(format!(
+            "Password cannot exceed {} characters",
+            MAX_PASSWORD_LENGTH
+        ));
     }
 
     // Verificar complejidad de contraseña
     let has_uppercase = trimmed.chars().any(|c| c.is_ascii_uppercase());
     let has_lowercase = trimmed.chars().any(|c| c.is_ascii_lowercase());
     let has_digit = trimmed.chars().any(|c| c.is_ascii_digit());
+    let has_special = trimmed.chars().any(|c| {
+        matches!(
+            c,
+            '!' | '@'
+                | '#'
+                | '$'
+                | '%'
+                | '^'
+                | '&'
+                | '*'
+                | '('
+                | ')'
+                | '-'
+                | '_'
+                | '='
+                | '+'
+                | '['
+                | ']'
+                | '{'
+                | '}'
+                | '|'
+                | ';'
+                | ':'
+                | '\''
+                | '"'
+                | ','
+                | '.'
+                | '<'
+                | '>'
+                | '?'
+                | '/'
+                | '`'
+                | '~'
+        )
+    });
 
     if !has_uppercase {
         return Err("Password must contain at least one uppercase letter".to_string());
@@ -243,6 +308,12 @@ fn validate_password_strict(password: String) -> Result<SecretString, String> {
 
     if !has_digit {
         return Err("Password must contain at least one number".to_string());
+    }
+
+    if !has_special {
+        return Err(
+            "Password must contain at least one special character (!@#$%^&*...)".to_string(),
+        );
     }
 
     // Crear SecretString que limpiará la memoria automáticamente
@@ -277,6 +348,25 @@ fn ensure_no_connection(state: &State<DbState>) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+/// Helper to get database with session check
+fn get_db_with_session_check<'a>(
+    db_lock: &'a std::sync::MutexGuard<'_, Option<Database>>,
+) -> Result<&'a Database, String> {
+    let db = db_lock
+        .as_ref()
+        .ok_or_else(|| "No vault is currently open".to_string())?;
+
+    // Check session timeout
+    db.check_session_timeout().map_err(|e| match e {
+        DbError::SessionExpired => {
+            "Session expired due to inactivity. Please unlock the vault again.".to_string()
+        }
+        _ => e.to_string(),
+    })?;
+
+    Ok(db)
 }
 
 fn persist_last_db_path(app_handle: &AppHandle, path: &PathBuf) -> Result<(), String> {
@@ -325,23 +415,6 @@ fn config_path(app_handle: &AppHandle) -> Result<PathBuf, String> {
         .map_err(|_| "Could not access application data directory".to_string())?;
 
     Ok(dir.join("config.json"))
-}
-
-/// Canonicalizes a path when possible without failing hard on non-existent files
-fn canonicalize_lossy(path: &Path) -> PathBuf {
-    if let Ok(canon) = path.canonicalize() {
-        return canon;
-    }
-
-    if let Some(parent) = path.parent() {
-        if let Ok(parent_canon) = parent.canonicalize() {
-            if let Some(name) = path.file_name() {
-                return parent_canon.join(name);
-            }
-        }
-    }
-
-    path.to_path_buf()
 }
 
 /// Sanitizes the requested vault path to ensure it stays inside the app data directory
@@ -395,10 +468,6 @@ fn sanitize_db_path(app_handle: &AppHandle, raw: &str) -> Result<PathBuf, String
 }
 
 /// Genera una clave única para rate limiting basada en la ruta de la bóveda
-fn get_rate_limit_key(db_path: &PathBuf) -> String {
-    let canonical = canonicalize_lossy(db_path);
-    format!("vault:{}", canonical.to_string_lossy())
-}
 
 // ==================== Database Management Commands ====================
 
@@ -447,6 +516,9 @@ pub fn create_db(
 
     persist_last_db_path(&app_handle, &db_path)?;
 
+    // Reset any rate limiting for this path
+    reset_persistent_rate_limit(&db_path);
+
     // Log vault creation
     log_security_event(SecurityEvent::VaultCreated, None);
 
@@ -490,20 +562,19 @@ pub fn open_db(
         return Err("No vault found at the specified location".to_string());
     }
 
-    // Rate limiting check
-    let rate_limit_key = get_rate_limit_key(&db_path);
-    state.check_rate_limit(&rate_limit_key)?;
+    // Persistent rate limiting check
+    check_persistent_rate_limit(&db_path)?;
 
     // Intentar abrir la base de datos
     let database = match Database::init(&app_handle, &password, Some(db_path.clone())) {
         Ok(db) => {
             // Éxito - resetear rate limit
-            state.reset_rate_limit(&rate_limit_key);
+            reset_persistent_rate_limit(&db_path);
             db
         }
         Err(e) => {
-            // Fallo - registrar intento fallido
-            state.record_failed_attempt(&rate_limit_key);
+            // Fallo - registrar intento fallido persistente
+            record_persistent_failed_attempt(&db_path);
             log_security_event(SecurityEvent::VaultOpenFailed, None);
             return Err(e.to_string());
         }
@@ -577,10 +648,7 @@ pub fn add_transaction(
     is_expense: bool,
 ) -> Result<String, String> {
     let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
-
-    let db = db_lock
-        .as_ref()
-        .ok_or_else(|| "No vault is currently open".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
 
     // Validar y sanitizar campos
     let category = validate_field_length(&category, MAX_CATEGORY_LENGTH, "Category")?;
@@ -628,10 +696,7 @@ pub fn add_transaction(
 #[tauri::command]
 pub fn get_transactions(state: State<DbState>) -> Result<Vec<Transaction>, String> {
     let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
-
-    let db = db_lock
-        .as_ref()
-        .ok_or_else(|| "No vault is currently open".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
 
     let transactions = db.get_transactions().map_err(|e| e.to_string())?;
 
@@ -642,10 +707,7 @@ pub fn get_transactions(state: State<DbState>) -> Result<Vec<Transaction>, Strin
 #[tauri::command]
 pub fn get_balance(state: State<DbState>) -> Result<BalanceSummary, String> {
     let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
-
-    let db = db_lock
-        .as_ref()
-        .ok_or_else(|| "No vault is currently open".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
 
     let balance = db.get_balance_summary().map_err(|e| e.to_string())?;
 
@@ -656,17 +718,12 @@ pub fn get_balance(state: State<DbState>) -> Result<BalanceSummary, String> {
 #[tauri::command]
 pub fn delete_transaction(state: State<DbState>, id: String) -> Result<(), String> {
     let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
 
-    let db = db_lock
-        .as_ref()
-        .ok_or_else(|| "No vault is currently open".to_string())?;
+    // Validate ID format
+    let validated_id = validate_uuid(&id)?;
 
-    let trimmed_id = id.trim();
-    if trimmed_id.is_empty() {
-        return Err("Transaction ID cannot be empty".to_string());
-    }
-
-    db.delete_transaction(trimmed_id)
+    db.delete_transaction(&validated_id)
         .map_err(|e| e.to_string())?;
 
     // Log transaction deletion
@@ -696,10 +753,7 @@ pub fn add_crypto_holding(
     purchase_date: String,
 ) -> Result<String, String> {
     let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
-
-    let db = db_lock
-        .as_ref()
-        .ok_or_else(|| "No vault is currently open".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
 
     // Validate and sanitize inputs
     let coin_id = validate_field_length(&coin_id, MAX_COIN_ID_LENGTH, "Coin ID")?;
@@ -744,10 +798,7 @@ pub fn add_crypto_holding(
 #[tauri::command]
 pub fn get_crypto_holdings(state: State<DbState>) -> Result<Vec<CryptoHolding>, String> {
     let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
-
-    let db = db_lock
-        .as_ref()
-        .ok_or_else(|| "No vault is currently open".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
 
     let holdings = db.get_crypto_holdings().map_err(|e| e.to_string())?;
 
@@ -758,17 +809,12 @@ pub fn get_crypto_holdings(state: State<DbState>) -> Result<Vec<CryptoHolding>, 
 #[tauri::command]
 pub fn delete_crypto_holding(state: State<DbState>, id: String) -> Result<(), String> {
     let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
 
-    let db = db_lock
-        .as_ref()
-        .ok_or_else(|| "No vault is currently open".to_string())?;
+    // Validate ID format
+    let validated_id = validate_uuid(&id)?;
 
-    let trimmed_id = id.trim();
-    if trimmed_id.is_empty() {
-        return Err("Holding ID cannot be empty".to_string());
-    }
-
-    db.delete_crypto_holding(trimmed_id)
+    db.delete_crypto_holding(&validated_id)
         .map_err(|e| e.to_string())?;
 
     Ok(())
@@ -785,10 +831,7 @@ pub fn add_wallet(
     icon: Option<String>,
 ) -> Result<String, String> {
     let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
-
-    let db = db_lock
-        .as_ref()
-        .ok_or_else(|| "No vault is currently open".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
 
     // Validate and sanitize inputs
     let name = validate_field_length(&name, MAX_WALLET_NAME_LENGTH, "Wallet name")?;
@@ -829,10 +872,7 @@ pub fn add_wallet(
 #[tauri::command]
 pub fn get_wallets(state: State<DbState>) -> Result<Vec<CryptoWallet>, String> {
     let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
-
-    let db = db_lock
-        .as_ref()
-        .ok_or_else(|| "No vault is currently open".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
 
     let wallets = db.get_wallets().map_err(|e| e.to_string())?;
 
@@ -843,12 +883,12 @@ pub fn get_wallets(state: State<DbState>) -> Result<Vec<CryptoWallet>, String> {
 #[tauri::command]
 pub fn get_wallet(state: State<DbState>, id: String) -> Result<Option<CryptoWallet>, String> {
     let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
 
-    let db = db_lock
-        .as_ref()
-        .ok_or_else(|| "No vault is currently open".to_string())?;
+    // Validate ID format
+    let validated_id = validate_uuid(&id)?;
 
-    let wallet = db.get_wallet(&id).map_err(|e| e.to_string())?;
+    let wallet = db.get_wallet(&validated_id).map_err(|e| e.to_string())?;
 
     Ok(wallet)
 }
@@ -863,10 +903,10 @@ pub fn update_wallet(
     icon: Option<String>,
 ) -> Result<(), String> {
     let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
 
-    let db = db_lock
-        .as_ref()
-        .ok_or_else(|| "No vault is currently open".to_string())?;
+    // Validate ID format
+    let validated_id = validate_uuid(&id)?;
 
     // Validate and sanitize inputs
     let name = validate_field_length(&name, MAX_WALLET_NAME_LENGTH, "Wallet name")?;
@@ -890,7 +930,7 @@ pub fn update_wallet(
         None => None,
     };
 
-    let wallet = CryptoWallet::new(id, name, category, icon);
+    let wallet = CryptoWallet::new(validated_id, name, category, icon);
 
     db.update_wallet(&wallet).map_err(|e| e.to_string())?;
 
@@ -901,17 +941,12 @@ pub fn update_wallet(
 #[tauri::command]
 pub fn delete_wallet(state: State<DbState>, id: String) -> Result<(), String> {
     let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
 
-    let db = db_lock
-        .as_ref()
-        .ok_or_else(|| "No vault is currently open".to_string())?;
+    // Validate ID format
+    let validated_id = validate_uuid(&id)?;
 
-    let trimmed_id = id.trim();
-    if trimmed_id.is_empty() {
-        return Err("Wallet ID cannot be empty".to_string());
-    }
-
-    db.delete_wallet(trimmed_id).map_err(|e| e.to_string())?;
+    db.delete_wallet(&validated_id).map_err(|e| e.to_string())?;
 
     // Log wallet deletion
     log_security_event(SecurityEvent::WalletDeleted, None);
@@ -936,10 +971,7 @@ pub fn add_crypto_transaction(
     notes: Option<String>,
 ) -> Result<String, String> {
     let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
-
-    let db = db_lock
-        .as_ref()
-        .ok_or_else(|| "No vault is currently open".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
 
     // Validate and sanitize inputs
     if wallet_id.trim().is_empty() {
@@ -1025,10 +1057,7 @@ pub fn add_swap_transaction(
     notes: Option<String>,
 ) -> Result<(String, String), String> {
     let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
-
-    let db = db_lock
-        .as_ref()
-        .ok_or_else(|| "No vault is currently open".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
 
     // Validate and sanitize inputs
     if wallet_id.trim().is_empty() {
@@ -1118,10 +1147,7 @@ pub fn add_transfer_transaction(
     notes: Option<String>,
 ) -> Result<(String, String), String> {
     let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
-
-    let db = db_lock
-        .as_ref()
-        .ok_or_else(|| "No vault is currently open".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
 
     // Validate and sanitize inputs
     if from_wallet_id.trim().is_empty() || to_wallet_id.trim().is_empty() {
@@ -1209,13 +1235,13 @@ pub fn get_wallet_transactions(
     wallet_id: String,
 ) -> Result<Vec<CryptoTransaction>, String> {
     let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
 
-    let db = db_lock
-        .as_ref()
-        .ok_or_else(|| "No vault is currently open".to_string())?;
+    // Validate ID format
+    let validated_id = validate_uuid(&wallet_id)?;
 
     let transactions = db
-        .get_wallet_transactions(&wallet_id)
+        .get_wallet_transactions(&validated_id)
         .map_err(|e| e.to_string())?;
 
     Ok(transactions)
@@ -1227,10 +1253,7 @@ pub fn get_all_crypto_transactions(
     state: State<DbState>,
 ) -> Result<Vec<CryptoTransaction>, String> {
     let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
-
-    let db = db_lock
-        .as_ref()
-        .ok_or_else(|| "No vault is currently open".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
 
     let transactions = db
         .get_all_crypto_transactions()
@@ -1243,25 +1266,20 @@ pub fn get_all_crypto_transactions(
 #[tauri::command]
 pub fn delete_crypto_transaction(state: State<DbState>, id: String) -> Result<(), String> {
     let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
 
-    let db = db_lock
-        .as_ref()
-        .ok_or_else(|| "No vault is currently open".to_string())?;
-
-    let trimmed_id = id.trim();
-    if trimmed_id.is_empty() {
-        return Err("Transaction ID cannot be empty".to_string());
-    }
+    // Validate ID format
+    let validated_id = validate_uuid(&id)?;
 
     // Check if this transaction has a related transaction (swap/transfer)
-    if let Ok(Some(tx)) = db.get_crypto_transaction(trimmed_id) {
+    if let Ok(Some(tx)) = db.get_crypto_transaction(&validated_id) {
         if let Some(related_id) = tx.related_tx_id {
             // Delete the related transaction too
             let _ = db.delete_crypto_transaction(&related_id);
         }
     }
 
-    db.delete_crypto_transaction(trimmed_id)
+    db.delete_crypto_transaction(&validated_id)
         .map_err(|e| e.to_string())?;
 
     Ok(())
@@ -1273,10 +1291,7 @@ pub fn delete_crypto_transaction(state: State<DbState>, id: String) -> Result<()
 #[tauri::command]
 pub fn get_aggregated_portfolio(state: State<DbState>) -> Result<Vec<AggregatedAsset>, String> {
     let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
-
-    let db = db_lock
-        .as_ref()
-        .ok_or_else(|| "No vault is currently open".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
 
     let portfolio = db.get_aggregated_portfolio().map_err(|e| e.to_string())?;
 
@@ -1290,16 +1305,28 @@ pub fn get_wallet_holdings(
     wallet_id: String,
 ) -> Result<Vec<AggregatedAsset>, String> {
     let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
+
+    // Validate ID format
+    let validated_id = validate_uuid(&wallet_id)?;
+
+    let holdings = db
+        .get_wallet_aggregated_holdings(&validated_id)
+        .map_err(|e| e.to_string())?;
+
+    Ok(holdings)
+}
+
+/// Command to get remaining session time in seconds
+#[tauri::command]
+pub fn get_session_remaining(state: State<DbState>) -> Result<i64, String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
 
     let db = db_lock
         .as_ref()
         .ok_or_else(|| "No vault is currently open".to_string())?;
 
-    let holdings = db
-        .get_wallet_aggregated_holdings(&wallet_id)
-        .map_err(|e| e.to_string())?;
-
-    Ok(holdings)
+    db.get_session_remaining().map_err(|e| e.to_string())
 }
 
 #[cfg(test)]
@@ -1317,6 +1344,20 @@ mod tests {
     fn test_db_state_new() {
         let state = DbState::new();
         assert!(!state.is_initialized());
+    }
+
+    #[test]
+    fn test_validate_uuid_valid() {
+        assert!(validate_uuid("550e8400-e29b-41d4-a716-446655440000").is_ok());
+        assert!(validate_uuid("migrated_test").is_ok());
+        assert!(validate_uuid("legacy_portfolio").is_ok());
+    }
+
+    #[test]
+    fn test_validate_uuid_invalid() {
+        assert!(validate_uuid("").is_err());
+        assert!(validate_uuid("   ").is_err());
+        assert!(validate_uuid("not-a-uuid").is_err());
     }
 
     #[test]
@@ -1359,24 +1400,29 @@ mod tests {
 
     #[test]
     fn test_validate_password_strict_valid() {
-        let result = validate_password_strict("Password1".to_string());
+        // Password with all requirements: uppercase, lowercase, digit, special char
+        let result = validate_password_strict("Password1!".to_string());
         assert!(result.is_ok());
         // Verificar que el SecretString contiene el valor correcto
-        assert_eq!(result.unwrap().expose_secret(), "Password1");
+        assert_eq!(result.unwrap().expose_secret(), "Password1!");
     }
 
     #[test]
     fn test_validate_password_strict_complexity() {
         // Missing uppercase
-        assert!(validate_password_strict("password1".to_string()).is_err());
+        assert!(validate_password_strict("password1!".to_string()).is_err());
         // Missing lowercase
-        assert!(validate_password_strict("PASSWORD1".to_string()).is_err());
+        assert!(validate_password_strict("PASSWORD1!".to_string()).is_err());
         // Missing digit
-        assert!(validate_password_strict("Password".to_string()).is_err());
-        // Valid password
-        assert!(validate_password_strict("Password1".to_string()).is_ok());
+        assert!(validate_password_strict("Password!".to_string()).is_err());
+        // Missing special character
+        assert!(validate_password_strict("Password1".to_string()).is_err());
+        // Valid password with all requirements
+        assert!(validate_password_strict("Password1!".to_string()).is_ok());
+        assert!(validate_password_strict("MyP@ssw0rd".to_string()).is_ok());
+        assert!(validate_password_strict("Test#123abc".to_string()).is_ok());
         // Too long
-        let long_pass = "A".repeat(129) + "a1";
+        let long_pass = "A".repeat(129) + "a1!";
         assert!(validate_password_strict(long_pass).is_err());
     }
 
@@ -1401,12 +1447,5 @@ mod tests {
         assert!(validate_date("30-02-2024").is_err()); // Invalid day in DD-MM-YYYY
         assert!(validate_date("not-a-date").is_err());
         assert!(validate_date("15-13-2024").is_err()); // Invalid month in DD-MM-YYYY
-    }
-
-    #[test]
-    fn test_rate_limit_state_default() {
-        let state = RateLimitState::default();
-        assert_eq!(state.failed_attempts, 0);
-        assert!(state.locked_until.is_none());
     }
 }

@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 
 // Hooks
@@ -20,9 +21,19 @@ import { CryptoView } from "./features/crypto/CryptoView";
 // Types
 import type { TabType } from "./types";
 
+// Session timeout warning threshold (2 minutes before expiry)
+const SESSION_WARNING_THRESHOLD = 120;
+
 function App() {
   // Tab state
   const [activeTab, setActiveTab] = useState<TabType>("dashboard");
+
+  // Session timeout state
+  const [sessionRemaining, setSessionRemaining] = useState<number | null>(null);
+  const [showSessionWarning, setShowSessionWarning] = useState(false);
+  const sessionCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null,
+  );
 
   // Track previous initialization state to detect changes
   const prevInitializedRef = useRef<boolean | null>(null);
@@ -90,10 +101,68 @@ function App() {
     if (wasInitialized && !isInitialized) {
       transactions.resetState();
       crypto.resetState();
+      setSessionRemaining(null);
+      setShowSessionWarning(false);
     }
     // Only depend on isInitialized to prevent loops
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.isInitialized]);
+
+  // Session timeout monitoring
+  useEffect(() => {
+    if (!auth.isInitialized) {
+      // Clear interval when vault is closed
+      if (sessionCheckIntervalRef.current) {
+        clearInterval(sessionCheckIntervalRef.current);
+        sessionCheckIntervalRef.current = null;
+      }
+      return;
+    }
+
+    // Check session status periodically
+    const checkSession = async () => {
+      try {
+        const remaining = await invoke<number>("get_session_remaining");
+        setSessionRemaining(remaining);
+
+        // Show warning when close to expiry
+        if (remaining <= SESSION_WARNING_THRESHOLD && remaining > 0) {
+          setShowSessionWarning(true);
+        } else {
+          setShowSessionWarning(false);
+        }
+
+        // Auto-lock if session expired
+        if (remaining <= 0) {
+          auth.setTemporaryError("Session expired due to inactivity");
+          await auth.handleCloseVault();
+        }
+      } catch (err) {
+        // If we get a session expired error, close the vault
+        const errorStr = String(err);
+        if (
+          errorStr.includes("Session expired") ||
+          errorStr.includes("inactivity")
+        ) {
+          auth.setTemporaryError("Session expired due to inactivity");
+          await auth.handleCloseVault();
+        }
+      }
+    };
+
+    // Initial check
+    checkSession();
+
+    // Set up interval (check every 30 seconds)
+    sessionCheckIntervalRef.current = setInterval(checkSession, 30000);
+
+    return () => {
+      if (sessionCheckIntervalRef.current) {
+        clearInterval(sessionCheckIntervalRef.current);
+        sessionCheckIntervalRef.current = null;
+      }
+    };
+  }, [auth.isInitialized, auth.handleCloseVault, auth.setTemporaryError]);
 
   // Handle vault action
   const handleVaultAction = useCallback(
@@ -163,6 +232,14 @@ function App() {
       />
 
       <main className="content-area">
+        {/* Session Warning */}
+        {showSessionWarning && sessionRemaining !== null && (
+          <div className="message warning">
+            ⚠️ Session expires in {Math.ceil(sessionRemaining / 60)} minute(s).
+            Activity will extend your session.
+          </div>
+        )}
+
         {/* Global Messages */}
         {auth.error && <div className="message error">{auth.error}</div>}
         {auth.successMessage && (
