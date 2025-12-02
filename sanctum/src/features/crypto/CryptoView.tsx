@@ -24,7 +24,6 @@ import { useCryptoStore } from "../../stores/cryptoStore";
 export function CryptoView() {
   // ==================== Store State ====================
   const isLoading = useCryptoStore((state) => state.isLoading);
-  const error = useCryptoStore((state) => state.error);
   const subTab = useCryptoStore((state) => state.subTab);
   const prices = useCryptoStore((state) => state.prices);
   const watchlist = useCryptoStore((state) => state.watchlist);
@@ -193,8 +192,6 @@ export function CryptoView() {
           </button>
         </div>
       </div>
-
-      {error && <div className="message error crypto-error">{error}</div>}
 
       {/* Sub-tabs for Overview and Wallets */}
       <div className="crypto-subtabs">

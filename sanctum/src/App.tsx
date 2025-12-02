@@ -34,6 +34,10 @@ import {
 // Components
 import { Sidebar } from "./components/layout/Sidebar";
 import { DeleteConfirmModal } from "./components/modals/DeleteConfirmModal";
+import { ToastStack } from "./components/ui/Toast";
+
+// Toast Store
+import { useToast } from "./stores/toastStore";
 
 // Features
 import { LoginScreen } from "./features/auth/LoginScreen";
@@ -58,6 +62,7 @@ function App() {
   const checkStatus = useAuthStore((state) => state.checkStatus);
   const logout = useAuthStore((state) => state.logout);
   const setAuthError = useAuthStore((state) => state.setError);
+  const clearAuthMessages = useAuthStore((state) => state.clearMessages);
 
   // ==================== Financial Store ====================
   const financialError = useFinancialStore((state) => state.error);
@@ -72,6 +77,9 @@ function App() {
   const cancelDeleteTransaction = useFinancialStore(
     (state) => state.cancelDelete,
   );
+  const clearFinancialMessages = useFinancialStore(
+    (state) => state.clearMessages,
+  );
 
   // ==================== Crypto Store ====================
   const cryptoError = useCryptoStore((state) => state.error);
@@ -79,11 +87,18 @@ function App() {
   const cryptoLoading = useCryptoStore((state) => state.isLoading);
   const cryptoPrices = useCryptoStore((state) => state.prices);
   const fetchPrices = useCryptoStore((state) => state.fetchPrices);
+  const clearCryptoMessages = useCryptoStore((state) => state.clearMessages);
 
   // ==================== Habit Store ====================
   const habitError = useHabitStore((state) => state.error);
   const habitSuccess = useHabitStore((state) => state.successMessage);
   const habitLoading = useHabitStore((state) => state.isLoading);
+  const clearHabitMessages = useHabitStore((state) => state.clearMessages);
+
+  // ==================== Toast System ====================
+  const toasts = useToast((state) => state.toasts);
+  const removeToast = useToast((state) => state.removeToast);
+  const toast = useToast();
 
   // ==================== Local UI State ====================
   const [activeTab, setActiveTab] = useState<TabType>("dashboard");
@@ -92,6 +107,55 @@ function App() {
   const sessionCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
     null,
   );
+
+  // ==================== Convert Store Messages to Toasts ====================
+  useEffect(() => {
+    if (authError) {
+      toast.error(authError);
+      clearAuthMessages();
+    }
+    if (authSuccess) {
+      toast.success(authSuccess);
+      clearAuthMessages();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authError, authSuccess]);
+
+  useEffect(() => {
+    if (financialError) {
+      toast.error(financialError);
+      clearFinancialMessages();
+    }
+    if (financialSuccess) {
+      toast.success(financialSuccess);
+      clearFinancialMessages();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [financialError, financialSuccess]);
+
+  useEffect(() => {
+    if (cryptoError) {
+      toast.error(cryptoError);
+      clearCryptoMessages();
+    }
+    if (cryptoSuccess) {
+      toast.success(cryptoSuccess);
+      clearCryptoMessages();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cryptoError, cryptoSuccess]);
+
+  useEffect(() => {
+    if (habitError) {
+      toast.error(habitError);
+      clearHabitMessages();
+    }
+    if (habitSuccess) {
+      toast.success(habitSuccess);
+      clearHabitMessages();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [habitError, habitSuccess]);
 
   // ==================== Check Auth Status on Mount ====================
   useEffect(() => {
@@ -129,7 +193,7 @@ function App() {
         }
 
         if (remaining <= 0) {
-          setAuthError("Session expired due to inactivity");
+          toast.warning("Session expired due to inactivity");
           await logout();
         }
       } catch (err) {
@@ -138,7 +202,7 @@ function App() {
           errorStr.includes("Session expired") ||
           errorStr.includes("inactivity")
         ) {
-          setAuthError("Session expired due to inactivity");
+          toast.warning("Session expired due to inactivity");
           await logout();
         }
       }
@@ -153,7 +217,16 @@ function App() {
         sessionCheckIntervalRef.current = null;
       }
     };
-  }, [isInitialized, logout, setAuthError]);
+  }, [isInitialized, logout, setAuthError, toast]);
+
+  // ==================== Session Warning Toast ====================
+  useEffect(() => {
+    if (showSessionWarning && sessionRemaining !== null) {
+      toast.warning(
+        `Session expires in ${Math.ceil(sessionRemaining / 60)} minute(s). Activity will extend your session.`,
+      );
+    }
+  }, [showSessionWarning]);
 
   // ==================== Handlers ====================
   const handleCryptoTabClick = useCallback(() => {
@@ -165,30 +238,37 @@ function App() {
   // ==================== Computed Values ====================
   const isLoading =
     authLoading || financialLoading || cryptoLoading || habitLoading;
-  const errorMessage = authError || financialError || cryptoError || habitError;
-  const successMessage =
-    authSuccess || financialSuccess || cryptoSuccess || habitSuccess;
 
   // ==================== Render: Loading State ====================
   if (authLoading && !isInitialized) {
     return (
-      <div className="vault-container">
-        <div className="vault-card">
-          <div className="loader" />
-          <p>Checking vault status...</p>
+      <>
+        <ToastStack toasts={toasts} onRemove={removeToast} />
+        <div className="vault-container">
+          <div className="vault-card">
+            <div className="loader" />
+            <p>Checking vault status...</p>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   // ==================== Render: Login Screen ====================
   if (!isInitialized) {
-    return <LoginScreen />;
+    return (
+      <>
+        <ToastStack toasts={toasts} onRemove={removeToast} />
+        <LoginScreen />
+      </>
+    );
   }
 
   // ==================== Render: Main Application ====================
   return (
     <div className="app-layout">
+      <ToastStack toasts={toasts} onRemove={removeToast} />
+
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -198,20 +278,6 @@ function App() {
       />
 
       <main className="content-area">
-        {/* Session Warning */}
-        {showSessionWarning && sessionRemaining !== null && (
-          <div className="message warning">
-            ⚠️ Session expires in {Math.ceil(sessionRemaining / 60)} minute(s).
-            Activity will extend your session.
-          </div>
-        )}
-
-        {/* Global Messages */}
-        {errorMessage && <div className="message error">{errorMessage}</div>}
-        {successMessage && (
-          <div className="message success">{successMessage}</div>
-        )}
-
         {/* ==================== Dashboard Tab ==================== */}
         {activeTab === "dashboard" && <Dashboard />}
 

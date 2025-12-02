@@ -12,7 +12,6 @@ import { useState } from "react";
 import {
   useAuthStore,
   useAuthLoading,
-  useAuthError,
   useDbPath,
   useLoadingAction,
 } from "../../stores";
@@ -24,7 +23,6 @@ export function LoginScreen() {
 
   // Store state (read-only selectors)
   const isLoading = useAuthLoading();
-  const error = useAuthError();
   const dbPath = useDbPath();
   const loadingAction = useLoadingAction();
 
@@ -45,7 +43,6 @@ export function LoginScreen() {
 
   return (
     <div className="vault-container">
-      {error && <div className="message error login-message">{error}</div>}
       <div className="vault-card login-card">
         <div className="login-layout">
           <div className="login-branding">
