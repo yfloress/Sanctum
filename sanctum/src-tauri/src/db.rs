@@ -694,12 +694,6 @@ impl Database {
             return Err(DbError::WalletNotEmpty);
         }
 
-        // Delete transactions first (or rely on CASCADE if supported)
-        self.conn.execute(
-            "DELETE FROM crypto_transactions WHERE wallet_id = ?1",
-            params![id],
-        )?;
-
         let rows = self
             .conn
             .execute("DELETE FROM crypto_wallets WHERE id = ?1", params![id])?;

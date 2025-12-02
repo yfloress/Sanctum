@@ -1940,6 +1940,10 @@ button:active:not(:disabled) {
     box-shadow: 0 12px 40px rgba(127, 138, 255, 0.15);
 }
 
+.wallet-card:hover .crypto-remove {
+    opacity: 1;
+}
+
 .wallet-icon {
     font-size: 2.5rem;
     margin-bottom: 0.75rem;
