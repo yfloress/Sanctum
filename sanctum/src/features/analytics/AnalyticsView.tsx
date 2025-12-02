@@ -1,3 +1,10 @@
+/**
+ * Analytics View Component
+ *
+ * Displays financial analytics charts (expenses by category, balance evolution).
+ * Consumes state directly from Zustand stores - no props needed.
+ */
+
 import {
   AreaChart,
   Area,
@@ -11,23 +18,24 @@ import {
   Cell,
 } from "recharts";
 import { CHART_COLORS } from "../../types";
+import { useTransactions, useFinancialStore } from "../../stores";
 
-interface AnalyticsViewProps {
-  expensesByCategory: { name: string; value: number }[];
-  balanceEvolution: {
-    date: string;
-    balance: number;
-    income: number;
-    expense: number;
-  }[];
-  hasTransactions: boolean;
-}
+export function AnalyticsView() {
+  // Consume state directly from store
+  const transactions = useTransactions();
 
-export function AnalyticsView({
-  expensesByCategory,
-  balanceEvolution,
-  hasTransactions,
-}: AnalyticsViewProps) {
+  // Get computed values from store
+  const getExpensesByCategory = useFinancialStore(
+    (state) => state.getExpensesByCategory,
+  );
+  const getBalanceEvolution = useFinancialStore(
+    (state) => state.getBalanceEvolution,
+  );
+
+  const expensesByCategory = getExpensesByCategory();
+  const balanceEvolution = getBalanceEvolution();
+  const hasTransactions = transactions.length > 0;
+
   if (!hasTransactions) {
     return (
       <div className="analytics-page">
@@ -44,6 +52,7 @@ export function AnalyticsView({
       <h1 className="page-title">Analytics</h1>
 
       <div className="analytics-grid">
+        {/* Expenses by Category Chart */}
         <div className="chart-card">
           <h2 className="section-title">Expenses by Category</h2>
           {expensesByCategory.length === 0 ? (
@@ -104,6 +113,7 @@ export function AnalyticsView({
           )}
         </div>
 
+        {/* Balance Evolution Chart */}
         <div className="chart-card">
           <h2 className="section-title">Balance Evolution</h2>
           <div className="chart-container">
@@ -117,16 +127,8 @@ export function AnalyticsView({
                     x2="0"
                     y2="1"
                   >
-                    <stop
-                      offset="5%"
-                      stopColor="#7f8aff"
-                      stopOpacity={0.4}
-                    />
-                    <stop
-                      offset="95%"
-                      stopColor="#7f8aff"
-                      stopOpacity={0}
-                    />
+                    <stop offset="5%" stopColor="#7f8aff" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#7f8aff" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid

@@ -1,52 +1,54 @@
-import type { Transaction } from "../../types";
+/**
+ * Transactions View Component
+ *
+ * Displays transaction form and history list.
+ * Consumes state directly from Zustand stores - no props needed.
+ */
+
+import type { FormEvent } from "react";
+import {
+  useTransactions,
+  useTransactionForm,
+  useFinancialStore,
+  useFinancialLoading,
+} from "../../stores";
 import { formatAmount, formatDate } from "../../utils";
 
-interface TransactionsViewProps {
-  // Form state
-  amount: string;
-  setAmount: (value: string) => void;
-  description: string;
-  setDescription: (value: string) => void;
-  category: string;
-  setCategory: (value: string) => void;
-  date: string;
-  setDate: (value: string) => void;
-  isExpense: boolean;
-  categories: readonly string[];
-  onExpenseToggle: (checked: boolean) => void;
-  onAddTransaction: (e: React.FormEvent) => void;
+export function TransactionsView() {
+  // Consume state directly from store (optimized selectors)
+  const transactions = useTransactions();
+  const form = useTransactionForm();
+  const isLoading = useFinancialLoading();
 
-  // List state
-  transactions: Transaction[];
-  onDeleteTransaction: (id: string) => void;
-  isLoading: boolean;
-}
+  // Get actions from store
+  const setFormField = useFinancialStore((state) => state.setFormField);
+  const toggleExpenseType = useFinancialStore(
+    (state) => state.toggleExpenseType,
+  );
+  const addTransaction = useFinancialStore((state) => state.addTransaction);
+  const setTransactionToDelete = useFinancialStore(
+    (state) => state.setTransactionToDelete,
+  );
+  const getCategories = useFinancialStore((state) => state.getCategories);
 
-export function TransactionsView({
-  amount,
-  setAmount,
-  description,
-  setDescription,
-  category,
-  setCategory,
-  date,
-  setDate,
-  isExpense,
-  categories,
-  onExpenseToggle,
-  onAddTransaction,
-  transactions,
-  onDeleteTransaction,
-  isLoading,
-}: TransactionsViewProps) {
+  // Get categories based on current expense type
+  const categories = getCategories();
+
+  // Handle form submission
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    await addTransaction(form);
+  };
+
   return (
     <div className="transactions-page">
       <h1 className="page-title">Transactions</h1>
 
       <div className="transactions-layout">
+        {/* Transaction Form */}
         <div className="transaction-form-section">
           <h2 className="section-title">New Transaction</h2>
-          <form onSubmit={onAddTransaction} className="transaction-form">
+          <form onSubmit={handleSubmit} className="transaction-form">
             <div className="form-row">
               <div className="form-group">
                 <label htmlFor="amount">Amount ($)</label>
@@ -54,8 +56,8 @@ export function TransactionsView({
                   id="amount"
                   type="number"
                   step="0.01"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  value={form.amount}
+                  onChange={(e) => setFormField("amount", e.target.value)}
                   placeholder="0.00"
                   disabled={isLoading}
                 />
@@ -65,8 +67,8 @@ export function TransactionsView({
                 <input
                   id="date"
                   type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  value={form.date}
+                  onChange={(e) => setFormField("date", e.target.value)}
                   disabled={isLoading}
                 />
               </div>
@@ -76,8 +78,8 @@ export function TransactionsView({
               <label htmlFor="category">Category</label>
               <select
                 id="category"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
+                value={form.category}
+                onChange={(e) => setFormField("category", e.target.value)}
                 disabled={isLoading}
               >
                 {categories.map((cat) => (
@@ -93,8 +95,8 @@ export function TransactionsView({
               <input
                 id="description"
                 type="text"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                value={form.description}
+                onChange={(e) => setFormField("description", e.target.value)}
                 placeholder="Describe the transaction"
                 disabled={isLoading}
               />
@@ -104,12 +106,12 @@ export function TransactionsView({
               <label className="switch-label">
                 <input
                   type="checkbox"
-                  checked={isExpense}
-                  onChange={(e) => onExpenseToggle(e.target.checked)}
+                  checked={form.isExpense}
+                  onChange={(e) => toggleExpenseType(e.target.checked)}
                   disabled={isLoading}
                 />
                 <span className="switch-text">
-                  {isExpense ? "Expense" : "Income"}
+                  {form.isExpense ? "Expense" : "Income"}
                 </span>
               </label>
             </div>
@@ -120,6 +122,7 @@ export function TransactionsView({
           </form>
         </div>
 
+        {/* Transaction History */}
         <div className="transaction-history-section">
           <h2 className="section-title">History</h2>
           {transactions.length === 0 ? (
@@ -133,17 +136,20 @@ export function TransactionsView({
                     <div className="transaction-description">
                       {tx.description}
                     </div>
-                    <div className="transaction-date">{formatDate(tx.date)}</div>
+                    <div className="transaction-date">
+                      {formatDate(tx.date)}
+                    </div>
                   </div>
                   <div className="transaction-actions">
                     <div
                       className={`transaction-amount ${tx.type === "income" ? "income" : "expense"}`}
                     >
-                      {tx.type === "income" ? "+" : "-"}${formatAmount(tx.amount)}
+                      {tx.type === "income" ? "+" : "-"}$
+                      {formatAmount(tx.amount)}
                     </div>
                     <button
                       className="btn-delete"
-                      onClick={() => onDeleteTransaction(tx.id)}
+                      onClick={() => setTransactionToDelete(tx.id)}
                       disabled={isLoading}
                       aria-label="Delete transaction"
                     >

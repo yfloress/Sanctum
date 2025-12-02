@@ -1,4 +1,11 @@
-import type { UseCryptoReturn } from "../../hooks/useCrypto";
+/**
+ * Crypto View Component
+ *
+ * Displays cryptocurrency portfolio, wallets, and watchlist.
+ * Consumes state directly from Zustand stores - no props needed.
+ */
+
+import type { FormEvent } from "react";
 import type {
   AggregatedAsset,
   CryptoWallet,
@@ -12,142 +19,129 @@ import {
   MAX_TRACKED_COINS,
 } from "../../types";
 import { formatUSD, formatCryptoAmount, formatDate } from "../../utils";
+import { useCryptoStore } from "../../stores/cryptoStore";
 
-interface CryptoViewProps {
-  crypto: UseCryptoReturn;
-}
+export function CryptoView() {
+  // ==================== Store State ====================
+  const isLoading = useCryptoStore((state) => state.isLoading);
+  const error = useCryptoStore((state) => state.error);
+  const subTab = useCryptoStore((state) => state.subTab);
+  const prices = useCryptoStore((state) => state.prices);
+  const watchlist = useCryptoStore((state) => state.watchlist);
+  const searchQuery = useCryptoStore((state) => state.searchQuery);
+  const wallets = useCryptoStore((state) => state.wallets);
+  const selectedWallet = useCryptoStore((state) => state.selectedWallet);
+  const walletTransactions = useCryptoStore(
+    (state) => state.walletTransactions,
+  );
 
-export function CryptoView({ crypto }: CryptoViewProps) {
-  const {
-    // General
-    cryptoLoading,
-    cryptoError,
-    cryptoSubTab,
-    setCryptoSubTab,
+  // Modal states
+  const showAddCrypto = useCryptoStore((state) => state.showAddCrypto);
+  const showAddWallet = useCryptoStore((state) => state.showAddWallet);
+  const showAddTransaction = useCryptoStore(
+    (state) => state.showAddTransaction,
+  );
+  const showTransferModal = useCryptoStore((state) => state.showTransferModal);
+  const showSwapModal = useCryptoStore((state) => state.showSwapModal);
+  const showAddHolding = useCryptoStore((state) => state.showAddHolding);
+  const walletToDelete = useCryptoStore((state) => state.walletToDelete);
+  const transactionToDelete = useCryptoStore(
+    (state) => state.transactionToDelete,
+  );
+  const holdingToDelete = useCryptoStore((state) => state.holdingToDelete);
 
-    // Prices & Watchlist
-    cryptoAssets,
-    trackedCoins,
-    showAddCrypto,
-    cryptoSearchQuery,
-    setShowAddCrypto,
-    setCryptoSearchQuery,
-    filteredSuggestions,
-    loadCryptoPrices,
-    addTrackedCoin,
-    removeTrackedCoin,
+  // Form states
+  const walletForm = useCryptoStore((state) => state.walletForm);
+  const transactionForm = useCryptoStore((state) => state.transactionForm);
+  const transferForm = useCryptoStore((state) => state.transferForm);
+  const swapForm = useCryptoStore((state) => state.swapForm);
+  const holdingForm = useCryptoStore((state) => state.holdingForm);
 
-    // Wallets
-    wallets,
-    selectedWallet,
-    showAddWallet,
-    walletToDelete,
-    setShowAddWallet,
-    setWalletToDelete,
-    setSelectedWallet,
-    selectWallet,
-    handleAddWallet,
-    confirmDeleteWallet,
+  // ==================== Store Actions ====================
+  const setSubTab = useCryptoStore((state) => state.setSubTab);
+  const setSearchQuery = useCryptoStore((state) => state.setSearchQuery);
+  const fetchPrices = useCryptoStore((state) => state.fetchPrices);
+  const addToWatchlist = useCryptoStore((state) => state.addToWatchlist);
+  const removeFromWatchlist = useCryptoStore(
+    (state) => state.removeFromWatchlist,
+  );
+  const selectWallet = useCryptoStore((state) => state.selectWallet);
+  const addWallet = useCryptoStore((state) => state.addWallet);
+  const deleteWallet = useCryptoStore((state) => state.deleteWallet);
+  const addTransaction = useCryptoStore((state) => state.addTransaction);
+  const addTransfer = useCryptoStore((state) => state.addTransfer);
+  const addSwap = useCryptoStore((state) => state.addSwap);
+  const deleteTransaction = useCryptoStore((state) => state.deleteTransaction);
+  const addHolding = useCryptoStore((state) => state.addHolding);
+  const deleteHolding = useCryptoStore((state) => state.deleteHolding);
 
-    // Wallet Form
-    walletName,
-    walletCategory,
-    walletIcon,
-    setWalletName,
-    setWalletCategory,
-    setWalletIcon,
+  // Modal controls
+  const setShowAddCrypto = useCryptoStore((state) => state.setShowAddCrypto);
+  const setShowAddWallet = useCryptoStore((state) => state.setShowAddWallet);
+  const setShowAddTransaction = useCryptoStore(
+    (state) => state.setShowAddTransaction,
+  );
+  const setShowTransferModal = useCryptoStore(
+    (state) => state.setShowTransferModal,
+  );
+  const setShowSwapModal = useCryptoStore((state) => state.setShowSwapModal);
+  const setShowAddHolding = useCryptoStore((state) => state.setShowAddHolding);
+  const setWalletToDelete = useCryptoStore((state) => state.setWalletToDelete);
+  const setTransactionToDelete = useCryptoStore(
+    (state) => state.setTransactionToDelete,
+  );
+  const setHoldingToDelete = useCryptoStore(
+    (state) => state.setHoldingToDelete,
+  );
 
-    // Portfolio
-    enrichedPortfolio,
-    enrichedWalletHoldings,
-    portfolioTotals,
-    walletTransactions,
+  // Form field setters
+  const setWalletFormField = useCryptoStore(
+    (state) => state.setWalletFormField,
+  );
+  const setTransactionFormField = useCryptoStore(
+    (state) => state.setTransactionFormField,
+  );
+  const setTransferFormField = useCryptoStore(
+    (state) => state.setTransferFormField,
+  );
+  const setSwapFormField = useCryptoStore((state) => state.setSwapFormField);
+  const setHoldingFormField = useCryptoStore(
+    (state) => state.setHoldingFormField,
+  );
+  const resetTransactionForm = useCryptoStore(
+    (state) => state.resetTransactionForm,
+  );
+  const resetTransferForm = useCryptoStore((state) => state.resetTransferForm);
+  const resetSwapForm = useCryptoStore((state) => state.resetSwapForm);
+  const resetHoldingForm = useCryptoStore((state) => state.resetHoldingForm);
+  const selectCoinForTransaction = useCryptoStore(
+    (state) => state.selectCoinForTransaction,
+  );
+  const selectCoinForHolding = useCryptoStore(
+    (state) => state.selectCoinForHolding,
+  );
 
-    // Transaction Modal
-    showAddTransaction,
-    setShowAddTransaction,
-    txWalletId,
-    txCoinId,
-    txSymbol: _txSymbol,
-    txType,
-    txAmount,
-    txPrice,
-    txFee,
-    txDate,
-    txNotes,
-    setTxWalletId,
-    setTxType,
-    setTxAmount,
-    setTxPrice,
-    setTxFee,
-    setTxDate,
-    setTxNotes,
-    cryptoTxToDelete,
-    setCryptoTxToDelete,
-    handleAddCryptoTransaction,
-    confirmDeleteCryptoTx,
-    resetTransactionForm,
-    selectCoinForTransaction,
+  // Computed getters
+  const getFilteredSuggestions = useCryptoStore(
+    (state) => state.getFilteredSuggestions,
+  );
+  const getEnrichedPortfolio = useCryptoStore(
+    (state) => state.getEnrichedPortfolio,
+  );
+  const getEnrichedWalletHoldings = useCryptoStore(
+    (state) => state.getEnrichedWalletHoldings,
+  );
+  const getPortfolioTotals = useCryptoStore(
+    (state) => state.getPortfolioTotals,
+  );
 
-    // Transfer Modal
-    showTransferModal,
-    setShowTransferModal,
-    transferFromWallet,
-    transferToWallet,
-    transferCoinId,
-    transferAmount,
-    transferFee,
-    transferDate,
-    setTransferFromWallet,
-    setTransferToWallet,
-    setTransferCoinId,
-    setTransferSymbol,
-    setTransferAmount,
-    setTransferFee,
-    setTransferDate,
-    handleAddTransfer,
-    resetTransferForm,
+  // ==================== Computed Values ====================
+  const filteredSuggestions = getFilteredSuggestions();
+  const enrichedPortfolio = getEnrichedPortfolio();
+  const enrichedWalletHoldings = getEnrichedWalletHoldings();
+  const portfolioTotals = getPortfolioTotals();
 
-    // Swap Modal
-    showSwapModal,
-    setShowSwapModal,
-    swapWalletId,
-    swapFromCoinId,
-    swapFromAmount,
-    swapToCoinId,
-    swapToAmount,
-    swapFee,
-    swapDate,
-    setSwapWalletId,
-    setSwapFromCoinId,
-    setSwapFromSymbol,
-    setSwapFromAmount,
-    setSwapToCoinId,
-    setSwapToSymbol,
-    setSwapToAmount,
-    setSwapFee,
-    setSwapDate,
-    handleAddSwap,
-    resetSwapForm,
-
-    // Legacy Holdings
-    showAddHolding,
-    setShowAddHolding,
-    holdingCoinId,
-    holdingAmount,
-    holdingPrice,
-    holdingDate,
-    holdingToDelete,
-    setHoldingCoinId,
-    setHoldingAmount,
-    setHoldingPrice,
-    setHoldingDate,
-    setHoldingToDelete,
-    addHolding,
-    confirmDeleteHolding,
-    selectCoinForHolding,
-  } = crypto;
-
+  // ==================== Helpers ====================
   const getTransactionTypeLabel = (type: string) => {
     const found = TRANSACTION_TYPES.find((t) => t.value === type);
     return found ? `${found.icon} ${found.label}` : type;
@@ -158,6 +152,32 @@ export function CryptoView({ crypto }: CryptoViewProps) {
     return found ? found.label : category;
   };
 
+  // ==================== Form Handlers ====================
+  const handleAddWallet = async (e: FormEvent) => {
+    e.preventDefault();
+    await addWallet();
+  };
+
+  const handleAddTransaction = async (e: FormEvent) => {
+    e.preventDefault();
+    await addTransaction();
+  };
+
+  const handleAddTransfer = async (e: FormEvent) => {
+    e.preventDefault();
+    await addTransfer();
+  };
+
+  const handleAddSwap = async (e: FormEvent) => {
+    e.preventDefault();
+    await addSwap();
+  };
+
+  const handleAddHolding = async (e: FormEvent) => {
+    e.preventDefault();
+    await addHolding();
+  };
+
   return (
     <div className="crypto-page">
       <div className="crypto-header">
@@ -165,40 +185,38 @@ export function CryptoView({ crypto }: CryptoViewProps) {
         <div className="crypto-actions">
           <button
             className="btn-icon"
-            onClick={loadCryptoPrices}
-            disabled={cryptoLoading}
+            onClick={fetchPrices}
+            disabled={isLoading}
             title="Refresh prices"
           >
-            {cryptoLoading ? "⏳" : "↻"}
+            {isLoading ? "⏳" : "↻"}
           </button>
         </div>
       </div>
 
-      {cryptoError && (
-        <div className="message error crypto-error">{cryptoError}</div>
-      )}
+      {error && <div className="message error crypto-error">{error}</div>}
 
       {/* Sub-tabs for Overview and Wallets */}
       <div className="crypto-subtabs">
         <button
-          className={`crypto-subtab ${cryptoSubTab === "overview" ? "active" : ""}`}
+          className={`crypto-subtab ${subTab === "overview" ? "active" : ""}`}
           onClick={() => {
-            setCryptoSubTab("overview");
-            setSelectedWallet(null);
+            setSubTab("overview");
+            selectWallet(null);
           }}
         >
           📊 Overview
         </button>
         <button
-          className={`crypto-subtab ${cryptoSubTab === "wallets" ? "active" : ""}`}
-          onClick={() => setCryptoSubTab("wallets")}
+          className={`crypto-subtab ${subTab === "wallets" ? "active" : ""}`}
+          onClick={() => setSubTab("wallets")}
         >
           👛 Wallets
         </button>
       </div>
 
       {/* ==================== Overview Sub-Tab ==================== */}
-      {cryptoSubTab === "overview" && (
+      {subTab === "overview" && (
         <>
           {/* Portfolio Summary */}
           <div className="portfolio-section">
@@ -229,7 +247,7 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                 </p>
                 <button
                   className="btn-secondary"
-                  onClick={() => setCryptoSubTab("wallets")}
+                  onClick={() => setSubTab("wallets")}
                 >
                   Go to Wallets
                 </button>
@@ -278,12 +296,12 @@ export function CryptoView({ crypto }: CryptoViewProps) {
               <h2 className="section-title">Watchlist</h2>
               <div className="crypto-actions">
                 <span className="crypto-count">
-                  {trackedCoins.length}/{MAX_TRACKED_COINS}
+                  {watchlist.length}/{MAX_TRACKED_COINS}
                 </span>
                 <button
                   className="btn-icon"
                   onClick={() => setShowAddCrypto(true)}
-                  disabled={trackedCoins.length >= MAX_TRACKED_COINS}
+                  disabled={watchlist.length >= MAX_TRACKED_COINS}
                   title="Track new coin"
                 >
                   +
@@ -291,28 +309,28 @@ export function CryptoView({ crypto }: CryptoViewProps) {
               </div>
             </div>
 
-            {cryptoLoading && cryptoAssets.length === 0 ? (
+            {isLoading && prices.length === 0 ? (
               <div className="crypto-loading">
                 <div className="loader" />
                 <p>Loading prices...</p>
               </div>
-            ) : cryptoAssets.length === 0 ? (
+            ) : prices.length === 0 ? (
               <div className="crypto-empty">
                 <span className="crypto-empty-icon">📊</span>
                 <p>Click refresh to load prices</p>
-                <button className="btn-secondary" onClick={loadCryptoPrices}>
+                <button className="btn-secondary" onClick={fetchPrices}>
                   ↻ Load Prices
                 </button>
               </div>
             ) : (
               <div className="crypto-grid">
-                {cryptoAssets
-                  .filter((asset) => trackedCoins.includes(asset.id))
-                  .map((asset: (typeof cryptoAssets)[number]) => (
+                {prices
+                  .filter((asset) => watchlist.includes(asset.id))
+                  .map((asset) => (
                     <div key={asset.id} className="crypto-card">
                       <button
                         className="crypto-remove"
-                        onClick={() => removeTrackedCoin(asset.id)}
+                        onClick={() => removeFromWatchlist(asset.id)}
                         title="Remove from watchlist"
                       >
                         ×
@@ -353,7 +371,7 @@ export function CryptoView({ crypto }: CryptoViewProps) {
       )}
 
       {/* ==================== Wallets Sub-Tab ==================== */}
-      {cryptoSubTab === "wallets" && !selectedWallet && (
+      {subTab === "wallets" && !selectedWallet && (
         <>
           <div className="section-header">
             <h2 className="section-title">My Wallets</h2>
@@ -407,13 +425,10 @@ export function CryptoView({ crypto }: CryptoViewProps) {
       )}
 
       {/* ==================== Wallet Detail View ==================== */}
-      {cryptoSubTab === "wallets" && selectedWallet && (
+      {subTab === "wallets" && selectedWallet && (
         <>
           <div className="wallet-detail-header">
-            <button
-              className="btn-back"
-              onClick={() => setSelectedWallet(null)}
-            >
+            <button className="btn-back" onClick={() => selectWallet(null)}>
               ← Back to Wallets
             </button>
             <div className="wallet-detail-info">
@@ -429,7 +444,7 @@ export function CryptoView({ crypto }: CryptoViewProps) {
               <button
                 className="btn-primary"
                 onClick={() => {
-                  setTxWalletId(selectedWallet.id);
+                  setTransactionFormField("walletId", selectedWallet.id);
                   setShowAddTransaction(true);
                 }}
               >
@@ -438,7 +453,7 @@ export function CryptoView({ crypto }: CryptoViewProps) {
               <button
                 className="btn-secondary"
                 onClick={() => {
-                  setTransferFromWallet(selectedWallet.id);
+                  setTransferFormField("fromWalletId", selectedWallet.id);
                   setShowTransferModal(true);
                 }}
               >
@@ -447,7 +462,7 @@ export function CryptoView({ crypto }: CryptoViewProps) {
               <button
                 className="btn-secondary"
                 onClick={() => {
-                  setSwapWalletId(selectedWallet.id);
+                  setSwapFormField("walletId", selectedWallet.id);
                   setShowSwapModal(true);
                 }}
               >
@@ -519,8 +534,8 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                       </div>
                       <button
                         className="btn-delete"
-                        onClick={() => setCryptoTxToDelete(tx.id)}
-                        disabled={cryptoLoading}
+                        onClick={() => setTransactionToDelete(tx.id)}
+                        disabled={isLoading}
                         aria-label="Delete transaction"
                       >
                         🗑️
@@ -561,8 +576,8 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                   <input
                     id="wallet-name"
                     type="text"
-                    value={walletName}
-                    onChange={(e) => setWalletName(e.target.value)}
+                    value={walletForm.name}
+                    onChange={(e) => setWalletFormField("name", e.target.value)}
                     placeholder="e.g. Binance, Ledger, Metamask..."
                     required
                   />
@@ -571,8 +586,10 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                   <label htmlFor="wallet-category">Category</label>
                   <select
                     id="wallet-category"
-                    value={walletCategory}
-                    onChange={(e) => setWalletCategory(e.target.value)}
+                    value={walletForm.category}
+                    onChange={(e) =>
+                      setWalletFormField("category", e.target.value)
+                    }
                   >
                     {WALLET_CATEGORIES.map((cat) => (
                       <option key={cat.value} value={cat.value}>
@@ -588,8 +605,8 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                       <button
                         key={icon}
                         type="button"
-                        className={`icon-option ${walletIcon === icon ? "selected" : ""}`}
-                        onClick={() => setWalletIcon(icon)}
+                        className={`icon-option ${walletForm.icon === icon ? "selected" : ""}`}
+                        onClick={() => setWalletFormField("icon", icon)}
                       >
                         {icon}
                       </button>
@@ -608,9 +625,9 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                 <button
                   type="submit"
                   className="btn-primary"
-                  disabled={cryptoLoading}
+                  disabled={isLoading}
                 >
-                  {cryptoLoading ? "Creating..." : "Create Wallet"}
+                  {isLoading ? "Creating..." : "Create Wallet"}
                 </button>
               </div>
             </form>
@@ -632,14 +649,16 @@ export function CryptoView({ crypto }: CryptoViewProps) {
               <span className="modal-icon">📝</span>
               <h2>Add Transaction</h2>
             </div>
-            <form onSubmit={handleAddCryptoTransaction}>
+            <form onSubmit={handleAddTransaction}>
               <div className="modal-body">
                 <div className="form-group">
                   <label htmlFor="tx-wallet">Wallet</label>
                   <select
                     id="tx-wallet"
-                    value={txWalletId}
-                    onChange={(e) => setTxWalletId(e.target.value)}
+                    value={transactionForm.walletId}
+                    onChange={(e) =>
+                      setTransactionFormField("walletId", e.target.value)
+                    }
                     required
                   >
                     <option value="">Select wallet...</option>
@@ -654,8 +673,10 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                   <label htmlFor="tx-type">Type</label>
                   <select
                     id="tx-type"
-                    value={txType}
-                    onChange={(e) => setTxType(e.target.value)}
+                    value={transactionForm.type}
+                    onChange={(e) =>
+                      setTransactionFormField("type", e.target.value)
+                    }
                   >
                     {TRANSACTION_TYPES.filter((t) => t.value !== "swap").map(
                       (t) => (
@@ -673,7 +694,7 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                       <button
                         key={coin.id}
                         type="button"
-                        className={`crypto-suggestion ${txCoinId === coin.id ? "selected" : ""}`}
+                        className={`crypto-suggestion ${transactionForm.coinId === coin.id ? "selected" : ""}`}
                         onClick={() => selectCoinForTransaction(coin)}
                       >
                         <span className="suggestion-symbol">{coin.symbol}</span>
@@ -682,7 +703,7 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                     ))}
                   </div>
                 </div>
-                {txCoinId && (
+                {transactionForm.coinId && (
                   <>
                     <div className="form-row">
                       <div className="form-group">
@@ -691,21 +712,26 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                           id="tx-amount"
                           type="number"
                           step="any"
-                          value={txAmount}
-                          onChange={(e) => setTxAmount(e.target.value)}
+                          value={transactionForm.amount}
+                          onChange={(e) =>
+                            setTransactionFormField("amount", e.target.value)
+                          }
                           placeholder="0.00"
                           required
                         />
                       </div>
-                      {(txType === "buy" || txType === "sell") && (
+                      {(transactionForm.type === "buy" ||
+                        transactionForm.type === "sell") && (
                         <div className="form-group">
                           <label htmlFor="tx-price">Price per coin ($)</label>
                           <input
                             id="tx-price"
                             type="number"
                             step="any"
-                            value={txPrice}
-                            onChange={(e) => setTxPrice(e.target.value)}
+                            value={transactionForm.price}
+                            onChange={(e) =>
+                              setTransactionFormField("price", e.target.value)
+                            }
                             placeholder="0.00"
                           />
                         </div>
@@ -718,8 +744,10 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                           id="tx-fee"
                           type="number"
                           step="any"
-                          value={txFee}
-                          onChange={(e) => setTxFee(e.target.value)}
+                          value={transactionForm.fee}
+                          onChange={(e) =>
+                            setTransactionFormField("fee", e.target.value)
+                          }
                           placeholder="0.00"
                         />
                       </div>
@@ -728,8 +756,10 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                         <input
                           id="tx-date"
                           type="date"
-                          value={txDate}
-                          onChange={(e) => setTxDate(e.target.value)}
+                          value={transactionForm.date}
+                          onChange={(e) =>
+                            setTransactionFormField("date", e.target.value)
+                          }
                         />
                       </div>
                     </div>
@@ -738,8 +768,10 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                       <input
                         id="tx-notes"
                         type="text"
-                        value={txNotes}
-                        onChange={(e) => setTxNotes(e.target.value)}
+                        value={transactionForm.notes}
+                        onChange={(e) =>
+                          setTransactionFormField("notes", e.target.value)
+                        }
                         placeholder="Optional notes..."
                       />
                     </div>
@@ -760,9 +792,9 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                 <button
                   type="submit"
                   className="btn-primary"
-                  disabled={!txCoinId || cryptoLoading}
+                  disabled={!transactionForm.coinId || isLoading}
                 >
-                  {cryptoLoading ? "Adding..." : "Add Transaction"}
+                  {isLoading ? "Adding..." : "Add Transaction"}
                 </button>
               </div>
             </form>
@@ -791,8 +823,10 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                     <label htmlFor="transfer-from">From Wallet</label>
                     <select
                       id="transfer-from"
-                      value={transferFromWallet}
-                      onChange={(e) => setTransferFromWallet(e.target.value)}
+                      value={transferForm.fromWalletId}
+                      onChange={(e) =>
+                        setTransferFormField("fromWalletId", e.target.value)
+                      }
                       required
                     >
                       <option value="">Select...</option>
@@ -807,14 +841,17 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                     <label htmlFor="transfer-to">To Wallet</label>
                     <select
                       id="transfer-to"
-                      value={transferToWallet}
-                      onChange={(e) => setTransferToWallet(e.target.value)}
+                      value={transferForm.toWalletId}
+                      onChange={(e) =>
+                        setTransferFormField("toWalletId", e.target.value)
+                      }
                       required
                     >
                       <option value="">Select...</option>
                       {wallets
                         .filter(
-                          (w: CryptoWallet) => w.id !== transferFromWallet,
+                          (w: CryptoWallet) =>
+                            w.id !== transferForm.fromWalletId,
                         )
                         .map((w: CryptoWallet) => (
                           <option key={w.id} value={w.id}>
@@ -831,10 +868,10 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                       <button
                         key={coin.id}
                         type="button"
-                        className={`crypto-suggestion ${transferCoinId === coin.id ? "selected" : ""}`}
+                        className={`crypto-suggestion ${transferForm.coinId === coin.id ? "selected" : ""}`}
                         onClick={() => {
-                          setTransferCoinId(coin.id);
-                          setTransferSymbol(coin.symbol);
+                          setTransferFormField("coinId", coin.id);
+                          setTransferFormField("symbol", coin.symbol);
                         }}
                       >
                         <span className="suggestion-symbol">{coin.symbol}</span>
@@ -849,8 +886,10 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                       id="transfer-amount"
                       type="number"
                       step="any"
-                      value={transferAmount}
-                      onChange={(e) => setTransferAmount(e.target.value)}
+                      value={transferForm.amount}
+                      onChange={(e) =>
+                        setTransferFormField("amount", e.target.value)
+                      }
                       placeholder="0.00"
                       required
                     />
@@ -861,8 +900,10 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                       id="transfer-fee"
                       type="number"
                       step="any"
-                      value={transferFee}
-                      onChange={(e) => setTransferFee(e.target.value)}
+                      value={transferForm.fee}
+                      onChange={(e) =>
+                        setTransferFormField("fee", e.target.value)
+                      }
                       placeholder="0.00"
                     />
                   </div>
@@ -872,8 +913,10 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                   <input
                     id="transfer-date"
                     type="date"
-                    value={transferDate}
-                    onChange={(e) => setTransferDate(e.target.value)}
+                    value={transferForm.date}
+                    onChange={(e) =>
+                      setTransferFormField("date", e.target.value)
+                    }
                   />
                 </div>
               </div>
@@ -891,9 +934,9 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                 <button
                   type="submit"
                   className="btn-primary"
-                  disabled={!transferCoinId || cryptoLoading}
+                  disabled={!transferForm.coinId || isLoading}
                 >
-                  {cryptoLoading ? "Transferring..." : "Record Transfer"}
+                  {isLoading ? "Transferring..." : "Record Transfer"}
                 </button>
               </div>
             </form>
@@ -918,8 +961,10 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                   <label htmlFor="swap-wallet">Wallet</label>
                   <select
                     id="swap-wallet"
-                    value={swapWalletId}
-                    onChange={(e) => setSwapWalletId(e.target.value)}
+                    value={swapForm.walletId}
+                    onChange={(e) =>
+                      setSwapFormField("walletId", e.target.value)
+                    }
                     required
                   >
                     <option value="">Select wallet...</option>
@@ -937,10 +982,10 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                       <button
                         key={coin.id}
                         type="button"
-                        className={`crypto-suggestion ${swapFromCoinId === coin.id ? "selected" : ""}`}
+                        className={`crypto-suggestion ${swapForm.fromCoinId === coin.id ? "selected" : ""}`}
                         onClick={() => {
-                          setSwapFromCoinId(coin.id);
-                          setSwapFromSymbol(coin.symbol);
+                          setSwapFormField("fromCoinId", coin.id);
+                          setSwapFormField("fromSymbol", coin.symbol);
                         }}
                       >
                         <span className="suggestion-symbol">{coin.symbol}</span>
@@ -950,8 +995,10 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                   <input
                     type="number"
                     step="any"
-                    value={swapFromAmount}
-                    onChange={(e) => setSwapFromAmount(e.target.value)}
+                    value={swapForm.fromAmount}
+                    onChange={(e) =>
+                      setSwapFormField("fromAmount", e.target.value)
+                    }
                     placeholder="Amount to swap"
                     required
                   />
@@ -960,29 +1007,29 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                 <div className="swap-section">
                   <h4>To (Receive)</h4>
                   <div className="crypto-suggestions compact">
-                    {POPULAR_CRYPTOS.filter((c) => c.id !== swapFromCoinId).map(
-                      (coin) => (
-                        <button
-                          key={coin.id}
-                          type="button"
-                          className={`crypto-suggestion ${swapToCoinId === coin.id ? "selected" : ""}`}
-                          onClick={() => {
-                            setSwapToCoinId(coin.id);
-                            setSwapToSymbol(coin.symbol);
-                          }}
-                        >
-                          <span className="suggestion-symbol">
-                            {coin.symbol}
-                          </span>
-                        </button>
-                      ),
-                    )}
+                    {POPULAR_CRYPTOS.filter(
+                      (c) => c.id !== swapForm.fromCoinId,
+                    ).map((coin) => (
+                      <button
+                        key={coin.id}
+                        type="button"
+                        className={`crypto-suggestion ${swapForm.toCoinId === coin.id ? "selected" : ""}`}
+                        onClick={() => {
+                          setSwapFormField("toCoinId", coin.id);
+                          setSwapFormField("toSymbol", coin.symbol);
+                        }}
+                      >
+                        <span className="suggestion-symbol">{coin.symbol}</span>
+                      </button>
+                    ))}
                   </div>
                   <input
                     type="number"
                     step="any"
-                    value={swapToAmount}
-                    onChange={(e) => setSwapToAmount(e.target.value)}
+                    value={swapForm.toAmount}
+                    onChange={(e) =>
+                      setSwapFormField("toAmount", e.target.value)
+                    }
                     placeholder="Amount received"
                     required
                   />
@@ -994,8 +1041,8 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                       id="swap-fee"
                       type="number"
                       step="any"
-                      value={swapFee}
-                      onChange={(e) => setSwapFee(e.target.value)}
+                      value={swapForm.fee}
+                      onChange={(e) => setSwapFormField("fee", e.target.value)}
                       placeholder="0.00"
                     />
                   </div>
@@ -1004,8 +1051,8 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                     <input
                       id="swap-date"
                       type="date"
-                      value={swapDate}
-                      onChange={(e) => setSwapDate(e.target.value)}
+                      value={swapForm.date}
+                      onChange={(e) => setSwapFormField("date", e.target.value)}
                     />
                   </div>
                 </div>
@@ -1024,9 +1071,11 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                 <button
                   type="submit"
                   className="btn-primary"
-                  disabled={!swapFromCoinId || !swapToCoinId || cryptoLoading}
+                  disabled={
+                    !swapForm.fromCoinId || !swapForm.toCoinId || isLoading
+                  }
                 >
-                  {cryptoLoading ? "Recording..." : "Record Swap"}
+                  {isLoading ? "Recording..." : "Record Swap"}
                 </button>
               </div>
             </form>
@@ -1051,34 +1100,32 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                 <input
                   id="crypto-search"
                   type="text"
-                  value={cryptoSearchQuery}
-                  onChange={(e) => setCryptoSearchQuery(e.target.value)}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="e.g. bitcoin, eth, solana..."
                   autoFocus
                 />
               </div>
               <div className="crypto-suggestions">
                 {filteredSuggestions.length > 0 ? (
-                  filteredSuggestions.map(
-                    (coin: (typeof filteredSuggestions)[number]) => (
-                      <button
-                        key={coin.id}
-                        className="crypto-suggestion"
-                        onClick={() => addTrackedCoin(coin.id)}
-                      >
-                        <span className="suggestion-symbol">{coin.symbol}</span>
-                        <span className="suggestion-name">{coin.name}</span>
-                      </button>
-                    ),
-                  )
-                ) : cryptoSearchQuery.trim() ? (
+                  filteredSuggestions.map((coin) => (
+                    <button
+                      key={coin.id}
+                      className="crypto-suggestion"
+                      onClick={() => addToWatchlist(coin.id)}
+                    >
+                      <span className="suggestion-symbol">{coin.symbol}</span>
+                      <span className="suggestion-name">{coin.name}</span>
+                    </button>
+                  ))
+                ) : searchQuery.trim() ? (
                   <button
                     className="crypto-suggestion custom"
-                    onClick={() => addTrackedCoin(cryptoSearchQuery)}
+                    onClick={() => addToWatchlist(searchQuery)}
                   >
                     <span className="suggestion-symbol">+</span>
                     <span className="suggestion-name">
-                      Add "{cryptoSearchQuery}" as custom coin
+                      Add "{searchQuery}" as custom coin
                     </span>
                   </button>
                 ) : (
@@ -1094,7 +1141,7 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                 className="btn-secondary"
                 onClick={() => {
                   setShowAddCrypto(false);
-                  setCryptoSearchQuery("");
+                  setSearchQuery("");
                 }}
               >
                 Close
@@ -1127,17 +1174,17 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                 type="button"
                 className="btn-secondary"
                 onClick={() => setWalletToDelete(null)}
-                disabled={cryptoLoading}
+                disabled={isLoading}
               >
                 Cancel
               </button>
               <button
                 type="button"
                 className="btn-danger"
-                onClick={confirmDeleteWallet}
-                disabled={cryptoLoading}
+                onClick={deleteWallet}
+                disabled={isLoading}
               >
-                {cryptoLoading ? "Deleting..." : "Delete Wallet"}
+                {isLoading ? "Deleting..." : "Delete Wallet"}
               </button>
             </div>
           </div>
@@ -1145,10 +1192,10 @@ export function CryptoView({ crypto }: CryptoViewProps) {
       )}
 
       {/* Delete Crypto Transaction Confirmation Modal */}
-      {cryptoTxToDelete !== null && (
+      {transactionToDelete !== null && (
         <div
           className="modal-overlay"
-          onClick={() => setCryptoTxToDelete(null)}
+          onClick={() => setTransactionToDelete(null)}
         >
           <div
             className="modal-card delete-modal"
@@ -1166,18 +1213,18 @@ export function CryptoView({ crypto }: CryptoViewProps) {
               <button
                 type="button"
                 className="btn-secondary"
-                onClick={() => setCryptoTxToDelete(null)}
-                disabled={cryptoLoading}
+                onClick={() => setTransactionToDelete(null)}
+                disabled={isLoading}
               >
                 Cancel
               </button>
               <button
                 type="button"
                 className="btn-danger"
-                onClick={confirmDeleteCryptoTx}
-                disabled={cryptoLoading}
+                onClick={deleteTransaction}
+                disabled={isLoading}
               >
-                {cryptoLoading ? "Deleting..." : "Delete"}
+                {isLoading ? "Deleting..." : "Delete"}
               </button>
             </div>
           </div>
@@ -1195,7 +1242,7 @@ export function CryptoView({ crypto }: CryptoViewProps) {
               <span className="modal-icon">💼</span>
               <h2>Add to Portfolio (Legacy)</h2>
             </div>
-            <form onSubmit={addHolding}>
+            <form onSubmit={handleAddHolding}>
               <div className="modal-body">
                 <div className="form-group">
                   <label>Select Coin</label>
@@ -1204,7 +1251,7 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                       <button
                         key={coin.id}
                         type="button"
-                        className={`crypto-suggestion ${holdingCoinId === coin.id ? "selected" : ""}`}
+                        className={`crypto-suggestion ${holdingForm.coinId === coin.id ? "selected" : ""}`}
                         onClick={() => selectCoinForHolding(coin)}
                       >
                         <span className="suggestion-symbol">{coin.symbol}</span>
@@ -1213,7 +1260,7 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                     ))}
                   </div>
                 </div>
-                {holdingCoinId && (
+                {holdingForm.coinId && (
                   <>
                     <div className="form-row">
                       <div className="form-group">
@@ -1222,8 +1269,10 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                           id="holding-amount"
                           type="number"
                           step="any"
-                          value={holdingAmount}
-                          onChange={(e) => setHoldingAmount(e.target.value)}
+                          value={holdingForm.amount}
+                          onChange={(e) =>
+                            setHoldingFormField("amount", e.target.value)
+                          }
                           placeholder="0.00"
                           required
                         />
@@ -1236,8 +1285,10 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                           id="holding-price"
                           type="number"
                           step="any"
-                          value={holdingPrice}
-                          onChange={(e) => setHoldingPrice(e.target.value)}
+                          value={holdingForm.price}
+                          onChange={(e) =>
+                            setHoldingFormField("price", e.target.value)
+                          }
                           placeholder="0.00"
                           required
                         />
@@ -1248,8 +1299,10 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                       <input
                         id="holding-date"
                         type="date"
-                        value={holdingDate}
-                        onChange={(e) => setHoldingDate(e.target.value)}
+                        value={holdingForm.date}
+                        onChange={(e) =>
+                          setHoldingFormField("date", e.target.value)
+                        }
                       />
                     </div>
                   </>
@@ -1261,9 +1314,7 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                   className="btn-secondary"
                   onClick={() => {
                     setShowAddHolding(false);
-                    setHoldingCoinId("");
-                    setHoldingAmount("");
-                    setHoldingPrice("");
+                    resetHoldingForm();
                   }}
                 >
                   Cancel
@@ -1271,9 +1322,9 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                 <button
                   type="submit"
                   className="btn-primary"
-                  disabled={!holdingCoinId || cryptoLoading}
+                  disabled={!holdingForm.coinId || isLoading}
                 >
-                  {cryptoLoading ? "Adding..." : "Add Holding"}
+                  {isLoading ? "Adding..." : "Add Holding"}
                 </button>
               </div>
             </form>
@@ -1301,17 +1352,17 @@ export function CryptoView({ crypto }: CryptoViewProps) {
                 type="button"
                 className="btn-secondary"
                 onClick={() => setHoldingToDelete(null)}
-                disabled={cryptoLoading}
+                disabled={isLoading}
               >
                 Cancel
               </button>
               <button
                 type="button"
                 className="btn-danger"
-                onClick={confirmDeleteHolding}
-                disabled={cryptoLoading}
+                onClick={deleteHolding}
+                disabled={isLoading}
               >
-                {cryptoLoading ? "Removing..." : "Remove"}
+                {isLoading ? "Removing..." : "Remove"}
               </button>
             </div>
           </div>

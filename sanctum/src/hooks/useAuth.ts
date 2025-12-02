@@ -1,5 +1,16 @@
+/**
+ * Authentication Hook
+ *
+ * Handles vault authentication (open/create/close) and session management.
+ *
+ * SECURITY: On vault close, this hook triggers the RAM kill switch
+ * by calling reset() on all Zustand stores to clear sensitive data.
+ */
+
 import { useState, useCallback, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useFinancialStore } from "../stores/financialStore";
+import { useCryptoStore } from "../stores/cryptoStore";
 
 interface UseAuthReturn {
   // State
@@ -54,7 +65,24 @@ export function useAuth(options: UseAuthOptions = {}): UseAuthReturn {
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Helper Functions
+  // ==================== Security: RAM Kill Switch ====================
+
+  /**
+   * Clears all sensitive data from RAM by resetting all Zustand stores.
+   * This is called when the vault is closed or session expires.
+   */
+  const clearAllStores = useCallback(() => {
+    // Reset financial store (transactions, balance)
+    useFinancialStore.getState().reset();
+
+    // Reset crypto store (wallets, portfolio, prices)
+    useCryptoStore.getState().reset();
+
+    console.log("[Security] All stores cleared from RAM");
+  }, []);
+
+  // ==================== Helper Functions ====================
+
   const setTemporaryError = useCallback((message: string, duration = 5000) => {
     if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
     setError(message);
@@ -78,7 +106,8 @@ export function useAuth(options: UseAuthOptions = {}): UseAuthReturn {
     setSuccessMessage("");
   }, []);
 
-  // Load DB Path
+  // ==================== Database Path ====================
+
   const loadDbPath = useCallback(async () => {
     try {
       const path = await invoke<string>("get_db_path");
@@ -88,7 +117,8 @@ export function useAuth(options: UseAuthOptions = {}): UseAuthReturn {
     }
   }, []);
 
-  // Check Database Status
+  // ==================== Database Status ====================
+
   const checkDatabaseStatus = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -106,7 +136,8 @@ export function useAuth(options: UseAuthOptions = {}): UseAuthReturn {
     }
   }, [loadDbPath, onVaultOpen]);
 
-  // Handle Vault Action (Open/Create)
+  // ==================== Vault Actions ====================
+
   const handleVaultAction = useCallback(
     async (action: "open" | "create") => {
       clearMessages();
@@ -154,17 +185,24 @@ export function useAuth(options: UseAuthOptions = {}): UseAuthReturn {
     ],
   );
 
-  // Handle Close Vault
   const handleCloseVault = useCallback(async () => {
     try {
       setIsLoading(true);
       clearMessages();
+
+      // Close vault in backend
       const result = await invoke<string>("close_db");
       setTemporarySuccess(result);
+
+      // SECURITY: Clear all sensitive data from RAM
+      clearAllStores();
+
       setIsInitialized(false);
+
       if (onVaultClose) {
         onVaultClose();
       }
+
       await loadDbPath();
     } catch (err) {
       // Check if this is a session expiry error
@@ -173,6 +211,9 @@ export function useAuth(options: UseAuthOptions = {}): UseAuthReturn {
         errorStr.includes("Session expired") ||
         errorStr.includes("inactivity")
       ) {
+        // SECURITY: Clear all sensitive data from RAM even on error
+        clearAllStores();
+
         setIsInitialized(false);
         if (onSessionExpired) {
           onSessionExpired();
@@ -184,12 +225,15 @@ export function useAuth(options: UseAuthOptions = {}): UseAuthReturn {
     }
   }, [
     clearMessages,
+    clearAllStores,
     loadDbPath,
     setTemporaryError,
     setTemporarySuccess,
     onVaultClose,
     onSessionExpired,
   ]);
+
+  // ==================== Effects ====================
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -203,6 +247,8 @@ export function useAuth(options: UseAuthOptions = {}): UseAuthReturn {
   useEffect(() => {
     checkDatabaseStatus();
   }, [checkDatabaseStatus]);
+
+  // ==================== Return ====================
 
   return {
     // State

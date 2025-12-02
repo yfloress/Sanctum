@@ -1,22 +1,34 @@
-import type { Transaction, BalanceSummary } from "../../types";
+/**
+ * Dashboard Component
+ *
+ * Displays the main financial overview with balance cards and recent transactions.
+ * Consumes state directly from Zustand stores - no props needed.
+ */
+
+import {
+  useTransactions,
+  useBalance,
+  useFinancialStore,
+  useFinancialLoading,
+} from "../../stores";
 import { formatAmount, formatDate } from "../../utils";
 
-interface DashboardProps {
-  balance: BalanceSummary;
-  transactions: Transaction[];
-  onDeleteTransaction: (id: string) => void;
-  isLoading: boolean;
-}
+export function Dashboard() {
+  // Consume state directly from store (optimized selectors)
+  const transactions = useTransactions();
+  const balance = useBalance();
+  const isLoading = useFinancialLoading();
 
-export function Dashboard({
-  balance,
-  transactions,
-  onDeleteTransaction,
-  isLoading,
-}: DashboardProps) {
+  // Get action from store
+  const setTransactionToDelete = useFinancialStore(
+    (state) => state.setTransactionToDelete,
+  );
+
   return (
     <div className="dashboard">
       <h1 className="page-title">Dashboard</h1>
+
+      {/* Balance Cards */}
       <div className="balance-cards">
         <div className="balance-card total">
           <span className="balance-label">Total Balance</span>
@@ -38,6 +50,7 @@ export function Dashboard({
         </div>
       </div>
 
+      {/* Recent Transactions */}
       <div className="recent-transactions">
         <h2 className="section-title">Recent Transactions</h2>
         {transactions.length === 0 ? (
@@ -61,7 +74,7 @@ export function Dashboard({
                   </div>
                   <button
                     className="btn-delete"
-                    onClick={() => onDeleteTransaction(tx.id)}
+                    onClick={() => setTransactionToDelete(tx.id)}
                     disabled={isLoading}
                     aria-label="Delete transaction"
                   >

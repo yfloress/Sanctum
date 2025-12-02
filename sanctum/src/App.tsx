@@ -1,11 +1,29 @@
+/**
+ * App Component
+ *
+ * Main application entry point.
+ * Uses Zustand stores for state management (no prop drilling).
+ *
+ * ARCHITECTURE:
+ * - Auth state: managed by useAuth hook (controls vault open/close)
+ * - Financial data: managed by useFinancialStore (Zustand)
+ * - Crypto data: managed by useCryptoStore (Zustand)
+ *
+ * SECURITY:
+ * - All sensitive data lives only in RAM (no localStorage)
+ * - Stores are cleared when vault is closed (kill switch in useAuth)
+ */
+
 import { useState, useCallback, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 
 // Hooks
 import { useAuth } from "./hooks/useAuth";
-import { useTransactions } from "./hooks/useTransactions";
-import { useCrypto } from "./hooks/useCrypto";
+
+// Stores
+import { useFinancialStore } from "./stores/financialStore";
+import { useCryptoStore } from "./stores/cryptoStore";
 
 // Components
 import { Sidebar } from "./components/layout/Sidebar";
@@ -25,71 +43,67 @@ import type { TabType } from "./types";
 const SESSION_WARNING_THRESHOLD = 120;
 
 function App() {
-  // Tab state
+  // ==================== Local UI State ====================
   const [activeTab, setActiveTab] = useState<TabType>("dashboard");
-
-  // Session timeout state
   const [sessionRemaining, setSessionRemaining] = useState<number | null>(null);
   const [showSessionWarning, setShowSessionWarning] = useState(false);
   const sessionCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
     null,
   );
-
-  // Track previous initialization state to detect changes
   const prevInitializedRef = useRef<boolean | null>(null);
 
-  // Initialize auth hook (no callbacks - we'll handle data loading via effects)
+  // ==================== Auth Hook ====================
   const auth = useAuth({});
 
-  // Initialize transactions hook
-  const transactions = useTransactions({
-    onSuccess: (message) => auth.setTemporarySuccess(message),
-    onError: (message) => auth.setTemporaryError(message),
-    clearMessages: () => auth.clearMessages(),
-  });
+  // ==================== Store Actions ====================
+  // Financial store
+  const loadFinancialData = useFinancialStore((state) => state.loadData);
+  const financialError = useFinancialStore((state) => state.error);
+  const financialSuccess = useFinancialStore((state) => state.successMessage);
+  const transactionToDelete = useFinancialStore(
+    (state) => state.transactionToDelete,
+  );
+  const confirmDeleteTransaction = useFinancialStore(
+    (state) => state.confirmDelete,
+  );
+  const cancelDeleteTransaction = useFinancialStore(
+    (state) => state.cancelDelete,
+  );
+  const financialLoading = useFinancialStore((state) => state.isLoading);
 
-  // Initialize crypto hook
-  const crypto = useCrypto({
-    onSuccess: (message) => auth.setTemporarySuccess(message),
-  });
+  // Crypto store
+  const loadCryptoData = useCryptoStore((state) => state.loadAll);
+  const fetchPrices = useCryptoStore((state) => state.fetchPrices);
+  const cryptoPrices = useCryptoStore((state) => state.prices);
+  const cryptoLoading = useCryptoStore((state) => state.isLoading);
+  const cryptoError = useCryptoStore((state) => state.error);
+  const cryptoSuccess = useCryptoStore((state) => state.successMessage);
 
-  // Effect to load data when vault becomes initialized
+  // ==================== Data Loading Effect ====================
   useEffect(() => {
     const wasInitialized = prevInitializedRef.current;
     const isInitialized = auth.isInitialized;
 
-    // Update ref for next render
     prevInitializedRef.current = isInitialized;
 
-    // Skip on first render (wasInitialized is null)
-    if (wasInitialized === null) {
-      // First render - if already initialized, load data
-      if (isInitialized) {
-        const loadInitialData = async () => {
-          try {
-            await transactions.loadTransactions();
-            await transactions.loadBalance();
-            await crypto.loadHoldings();
-            await crypto.loadWallets();
-            await crypto.loadAggregatedPortfolio();
-          } catch (err) {
-            console.error("Error loading initial data:", err);
-          }
-        };
-        loadInitialData();
-      }
+    // First render - if already initialized, load data
+    if (wasInitialized === null && isInitialized) {
+      const loadInitialData = async () => {
+        try {
+          await Promise.all([loadFinancialData(), loadCryptoData()]);
+        } catch (err) {
+          console.error("Error loading initial data:", err);
+        }
+      };
+      loadInitialData();
       return;
     }
 
-    // Vault just opened (was false, now true)
+    // Vault just opened
     if (!wasInitialized && isInitialized) {
       const loadData = async () => {
         try {
-          await transactions.loadTransactions();
-          await transactions.loadBalance();
-          await crypto.loadHoldings();
-          await crypto.loadWallets();
-          await crypto.loadAggregatedPortfolio();
+          await Promise.all([loadFinancialData(), loadCryptoData()]);
         } catch (err) {
           console.error("Error loading data:", err);
         }
@@ -97,21 +111,17 @@ function App() {
       loadData();
     }
 
-    // Vault just closed (was true, now false)
+    // Vault just closed - stores are already cleared by useAuth kill switch
     if (wasInitialized && !isInitialized) {
-      transactions.resetState();
-      crypto.resetState();
       setSessionRemaining(null);
       setShowSessionWarning(false);
+      setActiveTab("dashboard");
     }
-    // Only depend on isInitialized to prevent loops
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth.isInitialized]);
+  }, [auth.isInitialized, loadFinancialData, loadCryptoData]);
 
-  // Session timeout monitoring
+  // ==================== Session Monitoring ====================
   useEffect(() => {
     if (!auth.isInitialized) {
-      // Clear interval when vault is closed
       if (sessionCheckIntervalRef.current) {
         clearInterval(sessionCheckIntervalRef.current);
         sessionCheckIntervalRef.current = null;
@@ -119,26 +129,22 @@ function App() {
       return;
     }
 
-    // Check session status periodically
     const checkSession = async () => {
       try {
         const remaining = await invoke<number>("get_session_remaining");
         setSessionRemaining(remaining);
 
-        // Show warning when close to expiry
         if (remaining <= SESSION_WARNING_THRESHOLD && remaining > 0) {
           setShowSessionWarning(true);
         } else {
           setShowSessionWarning(false);
         }
 
-        // Auto-lock if session expired
         if (remaining <= 0) {
           auth.setTemporaryError("Session expired due to inactivity");
           await auth.handleCloseVault();
         }
       } catch (err) {
-        // If we get a session expired error, close the vault
         const errorStr = String(err);
         if (
           errorStr.includes("Session expired") ||
@@ -150,10 +156,7 @@ function App() {
       }
     };
 
-    // Initial check
     checkSession();
-
-    // Set up interval (check every 30 seconds)
     sessionCheckIntervalRef.current = setInterval(checkSession, 30000);
 
     return () => {
@@ -164,31 +167,29 @@ function App() {
     };
   }, [auth.isInitialized, auth.handleCloseVault, auth.setTemporaryError]);
 
-  // Handle vault action
+  // ==================== Handlers ====================
   const handleVaultAction = useCallback(
     async (action: "open" | "create") => {
       await auth.handleVaultAction(action);
-      // Data will be loaded via the effect when isInitialized becomes true
     },
     [auth],
   );
 
-  // Handle close vault
   const handleCloseVault = useCallback(async () => {
     await auth.handleCloseVault();
-    // State will be reset via the effect when isInitialized becomes false
   }, [auth]);
 
-  // Handle crypto tab click - load prices if needed
   const handleCryptoTabClick = useCallback(() => {
-    if (crypto.cryptoAssets.length === 0 && !crypto.cryptoLoading) {
-      crypto.loadCryptoPrices();
+    if (cryptoPrices.length === 0 && !cryptoLoading) {
+      fetchPrices();
     }
-  }, [
-    crypto.cryptoAssets.length,
-    crypto.cryptoLoading,
-    crypto.loadCryptoPrices,
-  ]);
+  }, [cryptoPrices.length, cryptoLoading, fetchPrices]);
+
+  // ==================== Computed Values ====================
+  const isLoading = auth.isLoading || financialLoading || cryptoLoading;
+  const errorMessage = auth.error || financialError || cryptoError;
+  const successMessage =
+    auth.successMessage || financialSuccess || cryptoSuccess;
 
   // ==================== Render: Loading State ====================
   if (auth.isLoading && !auth.isInitialized) {
@@ -227,7 +228,7 @@ function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onLockVault={handleCloseVault}
-        isLoading={auth.isLoading}
+        isLoading={isLoading}
         onCryptoTabClick={handleCryptoTabClick}
       />
 
@@ -241,60 +242,29 @@ function App() {
         )}
 
         {/* Global Messages */}
-        {auth.error && <div className="message error">{auth.error}</div>}
-        {auth.successMessage && (
-          <div className="message success">{auth.successMessage}</div>
+        {errorMessage && <div className="message error">{errorMessage}</div>}
+        {successMessage && (
+          <div className="message success">{successMessage}</div>
         )}
 
         {/* ==================== Dashboard Tab ==================== */}
-        {activeTab === "dashboard" && (
-          <Dashboard
-            balance={transactions.balance}
-            transactions={transactions.transactions}
-            onDeleteTransaction={transactions.handleDeleteTransaction}
-            isLoading={auth.isLoading}
-          />
-        )}
+        {activeTab === "dashboard" && <Dashboard />}
 
         {/* ==================== Transactions Tab ==================== */}
-        {activeTab === "transactions" && (
-          <TransactionsView
-            amount={transactions.amount}
-            setAmount={transactions.setAmount}
-            description={transactions.description}
-            setDescription={transactions.setDescription}
-            category={transactions.category}
-            setCategory={transactions.setCategory}
-            date={transactions.date}
-            setDate={transactions.setDate}
-            isExpense={transactions.isExpense}
-            categories={transactions.categories}
-            onExpenseToggle={transactions.handleExpenseToggle}
-            onAddTransaction={transactions.handleAddTransaction}
-            transactions={transactions.transactions}
-            onDeleteTransaction={transactions.handleDeleteTransaction}
-            isLoading={auth.isLoading}
-          />
-        )}
+        {activeTab === "transactions" && <TransactionsView />}
 
         {/* ==================== Analytics Tab ==================== */}
-        {activeTab === "analytics" && (
-          <AnalyticsView
-            expensesByCategory={transactions.expensesByCategory}
-            balanceEvolution={transactions.balanceEvolution}
-            hasTransactions={transactions.transactions.length > 0}
-          />
-        )}
+        {activeTab === "analytics" && <AnalyticsView />}
 
         {/* ==================== Crypto Tab ==================== */}
-        {activeTab === "crypto" && <CryptoView crypto={crypto} />}
+        {activeTab === "crypto" && <CryptoView />}
 
         {/* ==================== Delete Transaction Modal ==================== */}
         <DeleteConfirmModal
-          isOpen={transactions.transactionToDelete !== null}
-          onClose={transactions.cancelDelete}
-          onConfirm={transactions.confirmDelete}
-          isLoading={auth.isLoading}
+          isOpen={transactionToDelete !== null}
+          onClose={cancelDeleteTransaction}
+          onConfirm={confirmDeleteTransaction}
+          isLoading={financialLoading}
           title="Confirm Deletion"
           message="Are you sure you want to delete this transaction?"
         />
