@@ -54,6 +54,13 @@ export function Sidebar({
           <span className="nav-icon">₿</span>
           <span className="nav-label">Crypto</span>
         </button>
+        <button
+          className={`nav-item ${activeTab === "habits" ? "active" : ""}`}
+          onClick={() => setActiveTab("habits")}
+        >
+          <span className="nav-icon">🎯</span>
+          <span className="nav-label">Habits</span>
+        </button>
       </nav>
 
       <div className="sidebar-footer">

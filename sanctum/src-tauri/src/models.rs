@@ -329,3 +329,61 @@ impl Transaction {
         matches!(self.transaction_type.as_str(), "income" | "expense")
     }
 }
+
+// ==================== Habits System ====================
+
+/// Represents a habit to track
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Habit {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub color: String,      // Hex color code (e.g., "#8b5cf6")
+    pub created_at: String, // ISO-8601 datetime
+    pub archived: bool,     // Soft delete flag
+}
+
+impl Habit {
+    pub fn new(
+        id: String,
+        name: String,
+        description: Option<String>,
+        color: String,
+        created_at: String,
+    ) -> Self {
+        Self {
+            id,
+            name,
+            description,
+            color,
+            created_at,
+            archived: false,
+        }
+    }
+
+    pub fn validate(&self) -> bool {
+        !self.name.trim().is_empty() && self.color.starts_with('#') && self.color.len() == 7
+    }
+}
+
+/// Represents a single habit completion log
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HabitLog {
+    pub id: String,
+    pub habit_id: String,
+    pub completed_date: String, // ISO-8601 date (YYYY-MM-DD)
+}
+
+impl HabitLog {
+    pub fn new(id: String, habit_id: String, completed_date: String) -> Self {
+        Self {
+            id,
+            habit_id,
+            completed_date,
+        }
+    }
+
+    pub fn validate(&self) -> bool {
+        !self.habit_id.is_empty() && !self.completed_date.is_empty()
+    }
+}

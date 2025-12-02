@@ -2365,3 +2365,610 @@ button:active:not(:disabled) {
         font-size: 1.5rem;
     }
 }
+
+/* ===== HABITS MODULE - CYBERPUNK/NEON THEME ===== */
+
+.habits-page {
+    padding: 0;
+}
+
+.habits-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+}
+
+.habits-title-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.habits-title-section .page-title {
+    margin-bottom: 0;
+}
+
+.habits-subtitle {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.add-habit-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+}
+
+.add-habit-btn span {
+    font-size: 1.25rem;
+    font-weight: 300;
+}
+
+/* ===== Month Navigation ===== */
+
+.habits-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem 1.25rem;
+    background: var(--bg-card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+}
+
+.month-selector {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.nav-arrow {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 1.125rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.nav-arrow:hover {
+    background: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.current-month {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    min-width: 180px;
+    text-align: center;
+}
+
+.nav-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.today-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+.month-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-width: 200px;
+}
+
+.progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.progress-value {
+    color: var(--accent-primary);
+    font-weight: 600;
+}
+
+.progress-bar {
+    height: 6px;
+    background: var(--bg-secondary);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        var(--accent-primary),
+        var(--cta-secondary)
+    );
+    border-radius: 3px;
+    transition: width 0.3s ease;
+    box-shadow: 0 0 8px var(--accent-glow);
+}
+
+.progress-detail {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-align: right;
+}
+
+/* ===== Habits Grid Container ===== */
+
+.habits-grid-container {
+    background: var(--bg-card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+
+/* ===== Grid Header (Days) ===== */
+
+.habits-grid-header {
+    display: flex;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.habit-info-header {
+    min-width: 200px;
+    max-width: 200px;
+    padding: 0.75rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-right: 1px solid var(--border);
+}
+
+.days-header {
+    display: flex;
+    flex: 1;
+    overflow-x: auto;
+}
+
+.day-header {
+    min-width: 28px;
+    max-width: 28px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.day-header.today {
+    color: var(--accent-primary);
+    font-weight: 700;
+    position: relative;
+}
+
+.day-header.today::after {
+    content: "";
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    background: var(--accent-primary);
+    border-radius: 50%;
+    box-shadow: 0 0 6px var(--accent-primary);
+}
+
+/* ===== Grid Body ===== */
+
+.habits-grid-body {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.habits-grid-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.habits-grid-body::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+}
+
+.habits-grid-body::-webkit-scrollbar-thumb {
+    background: var(--purple-muted);
+    border-radius: 3px;
+}
+
+/* ===== Habit Row ===== */
+
+.habit-row {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    transition: background-color 0.15s ease;
+}
+
+.habit-row:last-child {
+    border-bottom: none;
+}
+
+.habit-row.hovered {
+    background: rgba(139, 92, 246, 0.05);
+}
+
+.habit-row .habit-info {
+    min-width: 200px;
+    max-width: 200px;
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-right: 1px solid var(--border);
+    position: relative;
+}
+
+.habit-color-indicator {
+    width: 4px;
+    height: 32px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    box-shadow: 0 0 8px currentColor;
+}
+
+.habit-details {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+.habit-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.habit-stats {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.7rem;
+}
+
+.habit-rate {
+    color: var(--text-muted);
+}
+
+.habit-streak {
+    color: #f59e0b;
+    font-weight: 600;
+}
+
+.habit-actions {
+    display: flex;
+    gap: 0.25rem;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.habit-row.hovered .habit-actions {
+    opacity: 1;
+}
+
+.habit-action-btn {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 0;
+    transition: all 0.15s ease;
+}
+
+.habit-action-btn:hover {
+    background: var(--bg-secondary);
+}
+
+.habit-action-btn.delete:hover {
+    background: rgba(239, 68, 68, 0.2);
+}
+
+/* ===== Habit Days Grid ===== */
+
+.habit-days {
+    display: flex;
+    flex: 1;
+    padding: 0.5rem 0;
+    overflow-x: auto;
+}
+
+/* ===== Habit Cell (The Magic) ===== */
+
+.habit-cell {
+    min-width: 24px;
+    max-width: 24px;
+    height: 24px;
+    margin: 0 2px;
+    border-radius: 4px;
+    background: var(--bg-secondary);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+}
+
+.habit-cell:hover:not(.future) {
+    border-color: var(--accent-primary);
+    transform: scale(1.1);
+}
+
+.habit-cell:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.habit-cell.today {
+    border-color: var(--accent-primary);
+}
+
+.habit-cell.today::before {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    border: 1px dashed var(--accent-primary);
+    border-radius: 6px;
+    opacity: 0.5;
+}
+
+.habit-cell.future {
+    opacity: 0.3;
+    cursor: not-allowed;
+    background: var(--bg-primary);
+}
+
+.habit-cell.completed {
+    border-color: transparent;
+    animation: cellGlow 0.3s ease;
+}
+
+@keyframes cellGlow {
+    0% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+    50% {
+        transform: scale(1.15);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* ===== Loading & Empty States ===== */
+
+.habits-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    color: var(--text-muted);
+    gap: 1rem;
+}
+
+.habits-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    text-align: center;
+    background: var(--bg-card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+}
+
+.habits-empty .empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.habits-empty h3 {
+    font-size: 1.25rem;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.habits-empty p {
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+}
+
+/* ===== Chart Section ===== */
+
+.habits-chart-section {
+    background: var(--bg-card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    padding: 1.25rem;
+}
+
+.habits-chart-section .section-title {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+}
+
+.habits-chart {
+    height: 200px;
+}
+
+/* ===== Add/Edit Habit Modal ===== */
+
+.habit-modal {
+    max-width: 420px;
+}
+
+.habit-modal .modal-body {
+    padding: 1.5rem;
+}
+
+.habit-modal .form-group {
+    margin-bottom: 1.25rem;
+}
+
+.habit-modal .form-group:last-child {
+    margin-bottom: 0;
+}
+
+/* ===== Color Picker ===== */
+
+.color-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+}
+
+.color-option {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+}
+
+.color-option:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 12px currentColor;
+}
+
+.color-option.selected {
+    border-color: white;
+    box-shadow: 0 0 16px currentColor;
+}
+
+.color-option.selected::after {
+    content: "✓";
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.875rem;
+    font-weight: bold;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* ===== Habits Responsive ===== */
+
+@media (max-width: 900px) {
+    .habits-nav {
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .month-progress {
+        min-width: 100%;
+        order: 3;
+    }
+
+    .habit-info-header,
+    .habit-row .habit-info {
+        min-width: 160px;
+        max-width: 160px;
+    }
+}
+
+@media (max-width: 640px) {
+    .habits-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .add-habit-btn {
+        justify-content: center;
+    }
+
+    .habits-nav {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .month-selector {
+        justify-content: center;
+    }
+
+    .nav-actions {
+        justify-content: center;
+    }
+
+    .month-progress {
+        order: 0;
+    }
+
+    .habit-info-header,
+    .habit-row .habit-info {
+        min-width: 120px;
+        max-width: 120px;
+        padding: 0.5rem;
+    }
+
+    .habit-name {
+        font-size: 0.75rem;
+    }
+
+    .habit-cell {
+        min-width: 20px;
+        max-width: 20px;
+        height: 20px;
+    }
+
+    .day-header {
+        min-width: 24px;
+        max-width: 24px;
+        font-size: 0.625rem;
+    }
+
+    .habit-actions {
+        opacity: 1;
+    }
+
+    .habits-grid-body {
+        max-height: 300px;
+    }
+}

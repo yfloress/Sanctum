@@ -44,3 +44,20 @@ export {
   useCryptoSubTab,
   type CryptoStore,
 } from "./cryptoStore";
+
+// Habit Store
+export {
+  useHabitStore,
+  useHabits,
+  useHabitLogs,
+  useCurrentMonth,
+  useHabitLoading,
+  useHabitError,
+  useHabitSuccess,
+  useHabitForm,
+  useShowAddModal,
+  useHabitToEdit,
+  useHabitToDelete,
+  useHabitStats,
+  type HabitStore,
+} from "./habitStore";

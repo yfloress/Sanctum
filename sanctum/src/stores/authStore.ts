@@ -11,6 +11,7 @@ import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import { useFinancialStore } from "./financialStore";
 import { useCryptoStore } from "./cryptoStore";
+import { useHabitStore } from "./habitStore";
 
 // ==================== Types ====================
 
@@ -34,7 +35,7 @@ interface AuthActions {
   login: (
     action: "open" | "create",
     password: string,
-    customPath?: string
+    customPath?: string,
   ) => Promise<boolean>;
   logout: () => Promise<void>;
 
@@ -102,7 +103,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   login: async (
     action: "open" | "create",
     password: string,
-    customPath?: string
+    customPath?: string,
   ) => {
     const trimmedPassword = password.trim();
 
@@ -232,6 +233,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
     // Reset crypto store (wallets, portfolio, prices)
     useCryptoStore.getState().reset();
+
+    // Reset habit store (habits, logs, streaks)
+    useHabitStore.getState().reset();
 
     console.log("[Security] All stores cleared from RAM");
   },

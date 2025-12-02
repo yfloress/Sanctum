@@ -8,6 +8,7 @@
  * - Auth state: useAuthStore (vault open/close, session)
  * - Financial data: useFinancialStore (transactions, balance)
  * - Crypto data: useCryptoStore (wallets, portfolio, prices)
+ * - Habits data: useHabitStore (habits, logs, streaks)
  *
  * SECURITY:
  * - All sensitive data lives only in RAM (no localStorage)
@@ -27,6 +28,7 @@ import {
   useAuthSuccess,
   useFinancialStore,
   useCryptoStore,
+  useHabitStore,
 } from "./stores";
 
 // Components
@@ -39,6 +41,7 @@ import { Dashboard } from "./features/dashboard/Dashboard";
 import { TransactionsView } from "./features/transactions/TransactionsView";
 import { AnalyticsView } from "./features/analytics/AnalyticsView";
 import { CryptoView } from "./features/crypto/CryptoView";
+import { HabitsView } from "./features/habits/HabitsView";
 
 // Types
 import type { TabType } from "./types";
@@ -76,6 +79,11 @@ function App() {
   const cryptoLoading = useCryptoStore((state) => state.isLoading);
   const cryptoPrices = useCryptoStore((state) => state.prices);
   const fetchPrices = useCryptoStore((state) => state.fetchPrices);
+
+  // ==================== Habit Store ====================
+  const habitError = useHabitStore((state) => state.error);
+  const habitSuccess = useHabitStore((state) => state.successMessage);
+  const habitLoading = useHabitStore((state) => state.isLoading);
 
   // ==================== Local UI State ====================
   const [activeTab, setActiveTab] = useState<TabType>("dashboard");
@@ -155,9 +163,11 @@ function App() {
   }, [cryptoPrices.length, cryptoLoading, fetchPrices]);
 
   // ==================== Computed Values ====================
-  const isLoading = authLoading || financialLoading || cryptoLoading;
-  const errorMessage = authError || financialError || cryptoError;
-  const successMessage = authSuccess || financialSuccess || cryptoSuccess;
+  const isLoading =
+    authLoading || financialLoading || cryptoLoading || habitLoading;
+  const errorMessage = authError || financialError || cryptoError || habitError;
+  const successMessage =
+    authSuccess || financialSuccess || cryptoSuccess || habitSuccess;
 
   // ==================== Render: Loading State ====================
   if (authLoading && !isInitialized) {
@@ -213,6 +223,9 @@ function App() {
 
         {/* ==================== Crypto Tab ==================== */}
         {activeTab === "crypto" && <CryptoView />}
+
+        {/* ==================== Habits Tab ==================== */}
+        {activeTab === "habits" && <HabitsView />}
 
         {/* ==================== Delete Transaction Modal ==================== */}
         <DeleteConfirmModal

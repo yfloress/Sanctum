@@ -2,7 +2,7 @@ use crate::crypto;
 use crate::db::{Database, DbError};
 use crate::models::{
     AggregatedAsset, BalanceSummary, CryptoAsset, CryptoHolding, CryptoTransaction, CryptoWallet,
-    Transaction,
+    Habit, HabitLog, Transaction,
 };
 use crate::security_log::{SecurityEvent, log_auth_failure, log_security_event};
 use chrono::NaiveDate;
@@ -26,6 +26,8 @@ const MAX_SYMBOL_LENGTH: usize = 16;
 const MAX_ICON_LENGTH: usize = 32;
 const MAX_PASSWORD_LENGTH: usize = 128;
 const MIN_PASSWORD_LENGTH: usize = 8;
+const MAX_HABIT_NAME_LENGTH: usize = 128;
+const MAX_HABIT_DESCRIPTION_LENGTH: usize = 512;
 
 /// Validates and truncates a string field to a maximum length
 fn validate_field_length(
@@ -1356,6 +1358,238 @@ pub fn get_session_remaining(state: State<DbState>) -> Result<i64, String> {
         .ok_or_else(|| "No vault is currently open".to_string())?;
 
     db.get_session_remaining().map_err(|e| e.to_string())
+}
+
+// ==================== Habits Commands ====================
+
+/// Validates a hex color code
+fn validate_color(color: &str) -> Result<String, String> {
+    let trimmed = color.trim();
+
+    if trimmed.is_empty() {
+        return Err("Color cannot be empty".to_string());
+    }
+
+    if trimmed.len() != 7 {
+        return Err("Color must be in #RRGGBB format".to_string());
+    }
+
+    if !trimmed.starts_with('#') {
+        return Err("Color must start with #".to_string());
+    }
+
+    // Validate hex characters
+    if !trimmed[1..].chars().all(|c| c.is_ascii_hexdigit()) {
+        return Err("Color must contain valid hex characters".to_string());
+    }
+
+    Ok(trimmed.to_lowercase())
+}
+
+/// Command to create a new habit
+#[tauri::command]
+pub fn create_habit(
+    state: State<DbState>,
+    name: String,
+    description: Option<String>,
+    color: String,
+) -> Result<String, String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
+
+    // Validate and sanitize name
+    let name = validate_field_length(&name, MAX_HABIT_NAME_LENGTH, "Habit name")?;
+    let name = sanitize_string(&name);
+
+    if name.is_empty() {
+        return Err("Habit name cannot be empty".to_string());
+    }
+
+    // Validate and sanitize description if provided
+    let description = match description {
+        Some(d) => {
+            let validated = validate_field_length(&d, MAX_HABIT_DESCRIPTION_LENGTH, "Description")?;
+            let sanitized = sanitize_string(&validated);
+            if sanitized.is_empty() {
+                None
+            } else {
+                Some(sanitized)
+            }
+        }
+        None => None,
+    };
+
+    // Validate color
+    let color = validate_color(&color)?;
+
+    let id = Uuid::new_v4().to_string();
+    let created_at = chrono::Utc::now().to_rfc3339();
+
+    let habit = Habit::new(id.clone(), name, description, color, created_at);
+
+    db.create_habit(&habit).map_err(|e| e.to_string())?;
+
+    Ok(id)
+}
+
+/// Command to get all active habits
+#[tauri::command]
+pub fn get_habits(state: State<DbState>) -> Result<Vec<Habit>, String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
+
+    let habits = db.get_habits().map_err(|e| e.to_string())?;
+
+    Ok(habits)
+}
+
+/// Command to update an existing habit
+#[tauri::command]
+pub fn update_habit(
+    state: State<DbState>,
+    id: String,
+    name: String,
+    description: Option<String>,
+    color: String,
+) -> Result<(), String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
+
+    // Validate ID
+    let validated_id = validate_uuid(&id)?;
+
+    // Validate and sanitize name
+    let name = validate_field_length(&name, MAX_HABIT_NAME_LENGTH, "Habit name")?;
+    let name = sanitize_string(&name);
+
+    if name.is_empty() {
+        return Err("Habit name cannot be empty".to_string());
+    }
+
+    // Validate and sanitize description
+    let description = match description {
+        Some(d) => {
+            let validated = validate_field_length(&d, MAX_HABIT_DESCRIPTION_LENGTH, "Description")?;
+            let sanitized = sanitize_string(&validated);
+            if sanitized.is_empty() {
+                None
+            } else {
+                Some(sanitized)
+            }
+        }
+        None => None,
+    };
+
+    // Validate color
+    let color = validate_color(&color)?;
+
+    // Get existing habit to preserve created_at
+    let existing = db
+        .get_habit(&validated_id)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "Habit not found".to_string())?;
+
+    let habit = Habit {
+        id: validated_id,
+        name,
+        description,
+        color,
+        created_at: existing.created_at,
+        archived: existing.archived,
+    };
+
+    db.update_habit(&habit).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+/// Command to archive a habit (soft delete)
+#[tauri::command]
+pub fn archive_habit(state: State<DbState>, id: String) -> Result<(), String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
+
+    let validated_id = validate_uuid(&id)?;
+
+    db.archive_habit(&validated_id).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+/// Command to permanently delete a habit
+#[tauri::command]
+pub fn delete_habit(state: State<DbState>, id: String) -> Result<(), String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
+
+    let validated_id = validate_uuid(&id)?;
+
+    db.delete_habit(&validated_id).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+/// Command to toggle habit completion for a date
+/// Returns { created: bool, log_id: Option<String> }
+#[tauri::command]
+pub fn toggle_habit_completion(
+    state: State<DbState>,
+    habit_id: String,
+    date: String,
+) -> Result<(bool, Option<String>), String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
+
+    // Validate habit ID
+    let validated_habit_id = validate_uuid(&habit_id)?;
+
+    // Validate date format (YYYY-MM-DD)
+    let validated_date = validate_date(&date)?;
+
+    let result = db
+        .toggle_habit_log(&validated_habit_id, &validated_date)
+        .map_err(|e| e.to_string())?;
+
+    Ok(result)
+}
+
+/// Command to get habit logs for a date range
+#[tauri::command]
+pub fn get_habit_logs(
+    state: State<DbState>,
+    start_date: String,
+    end_date: String,
+) -> Result<Vec<HabitLog>, String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
+
+    // Validate date formats
+    let start = validate_date(&start_date)?;
+    let end = validate_date(&end_date)?;
+
+    let logs = db.get_habit_logs(&start, &end).map_err(|e| e.to_string())?;
+
+    Ok(logs)
+}
+
+/// Command to get habit completion statistics for a date range
+#[tauri::command]
+pub fn get_habit_stats(
+    state: State<DbState>,
+    start_date: String,
+    end_date: String,
+) -> Result<Vec<(String, i32)>, String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
+
+    let start = validate_date(&start_date)?;
+    let end = validate_date(&end_date)?;
+
+    let stats = db
+        .get_habit_stats(&start, &end)
+        .map_err(|e| e.to_string())?;
+
+    Ok(stats)
 }
 
 #[cfg(test)]

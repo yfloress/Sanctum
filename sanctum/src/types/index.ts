@@ -72,9 +72,34 @@ export interface AggregatedAsset {
   unrealized_pnl_percentage: number;
 }
 
+// ==================== Habits Types ====================
+
+export interface Habit {
+  id: string;
+  name: string;
+  description: string | null;
+  color: string;
+  created_at: string;
+  archived: boolean;
+}
+
+export interface HabitLog {
+  id: string;
+  habit_id: string;
+  completed_date: string; // YYYY-MM-DD format
+}
+
+// For O(1) lookup in the grid
+export type HabitLogSet = Set<string>; // Format: "habitId:YYYY-MM-DD"
+
 // ==================== UI/App Types ====================
 
-export type TabType = "dashboard" | "transactions" | "analytics" | "crypto";
+export type TabType =
+  | "dashboard"
+  | "transactions"
+  | "analytics"
+  | "crypto"
+  | "habits";
 
 export type CryptoSubTab = "overview" | "wallets";
 
@@ -180,3 +205,22 @@ export const CHART_COLORS = [
   "#84cc16", // lime
   "#f97316", // orange
 ] as const;
+
+// ==================== Habits Constants ====================
+
+export const HABIT_COLORS = [
+  "#8b5cf6", // violet
+  "#10b981", // emerald
+  "#f59e0b", // amber
+  "#ef4444", // red
+  "#06b6d4", // cyan
+  "#ec4899", // pink
+  "#6366f1", // indigo
+  "#84cc16", // lime
+  "#f97316", // orange
+  "#14b8a6", // teal
+  "#a855f7", // purple
+  "#22c55e", // green
+] as const;
+
+export const DEFAULT_HABIT_COLOR = "#8b5cf6";

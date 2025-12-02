@@ -51,6 +51,15 @@ pub fn run() {
             commands::get_wallet_holdings,
             // Session Management
             commands::get_session_remaining,
+            // Habits
+            commands::create_habit,
+            commands::get_habits,
+            commands::update_habit,
+            commands::archive_habit,
+            commands::delete_habit,
+            commands::toggle_habit_completion,
+            commands::get_habit_logs,
+            commands::get_habit_stats,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
