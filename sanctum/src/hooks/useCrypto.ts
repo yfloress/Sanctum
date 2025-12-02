@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
+import type { FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type {
   CryptoAsset,
@@ -159,14 +160,14 @@ export interface UseCryptoReturn {
   removeTrackedCoin: (coinId: string) => void;
 
   // Actions - Wallets
-  handleAddWallet: (e: React.FormEvent) => Promise<void>;
+  handleAddWallet: (e: FormEvent) => Promise<void>;
   confirmDeleteWallet: () => Promise<void>;
   selectWallet: (wallet: CryptoWallet) => Promise<void>;
 
   // Actions - Transactions
-  handleAddCryptoTransaction: (e: React.FormEvent) => Promise<void>;
-  handleAddTransfer: (e: React.FormEvent) => Promise<void>;
-  handleAddSwap: (e: React.FormEvent) => Promise<void>;
+  handleAddCryptoTransaction: (e: FormEvent) => Promise<void>;
+  handleAddTransfer: (e: FormEvent) => Promise<void>;
+  handleAddSwap: (e: FormEvent) => Promise<void>;
   confirmDeleteCryptoTx: () => Promise<void>;
   resetTransactionForm: () => void;
   resetTransferForm: () => void;
@@ -174,7 +175,7 @@ export interface UseCryptoReturn {
   selectCoinForTransaction: (coin: { id: string; symbol: string }) => void;
 
   // Actions - Legacy Holdings
-  addHolding: (e: React.FormEvent) => Promise<void>;
+  addHolding: (e: FormEvent) => Promise<void>;
   confirmDeleteHolding: () => Promise<void>;
   selectCoinForHolding: (coin: { id: string; symbol: string }) => void;
 
@@ -296,12 +297,12 @@ export function useCrypto(options: UseCryptoOptions = {}): UseCryptoReturn {
   );
 
   const portfolioTotals = useMemo(() => {
-    const totalValue = enrichedPortfolio.reduce(
-      (sum, item) => sum + item.current_value,
+    const totalValue = enrichedPortfolio.reduce<number>(
+      (sum: number, item: AggregatedAsset) => sum + item.current_value,
       0,
     );
-    const totalCost = enrichedPortfolio.reduce(
-      (sum, item) => sum + item.total_cost_basis,
+    const totalCost = enrichedPortfolio.reduce<number>(
+      (sum: number, item: AggregatedAsset) => sum + item.total_cost_basis,
       0,
     );
     const totalPnl = totalValue - totalCost;
@@ -313,8 +314,10 @@ export function useCrypto(options: UseCryptoOptions = {}): UseCryptoReturn {
   // ==================== Data Loading Functions ====================
 
   const loadCryptoPrices = useCallback(async () => {
-    const holdingCoinIds = holdings.map((h) => h.coin_id);
-    const portfolioCoinIds = aggregatedPortfolio.map((a) => a.coin_id);
+    const holdingCoinIds = holdings.map((h: CryptoHolding) => h.coin_id);
+    const portfolioCoinIds = aggregatedPortfolio.map(
+      (a: AggregatedAsset) => a.coin_id,
+    );
     const allCoins = [
       ...new Set([...trackedCoins, ...holdingCoinIds, ...portfolioCoinIds]),
     ];
@@ -326,10 +329,22 @@ export function useCrypto(options: UseCryptoOptions = {}): UseCryptoReturn {
     try {
       setCryptoLoading(true);
       setCryptoError("");
-      const assets = await invoke<CryptoAsset[]>("get_crypto_prices", {
-        coins: allCoins,
-      });
-      setCryptoAssets(assets);
+      const CHUNK_SIZE = 50;
+      const results: CryptoAsset[] = [];
+
+      for (let i = 0; i < allCoins.length; i += CHUNK_SIZE) {
+        const chunk = allCoins.slice(i, i + CHUNK_SIZE);
+        if (i > 0) {
+          // Avoid tripping API client rate limit
+          await new Promise((resolve) => setTimeout(resolve, 1600));
+        }
+        const assets = await invoke<CryptoAsset[]>("get_crypto_prices", {
+          coins: chunk,
+        });
+        results.push(...assets);
+      }
+
+      setCryptoAssets(results);
     } catch (err) {
       setCryptoError(String(err));
       console.error("Error loading crypto prices:", err);
@@ -396,7 +411,7 @@ export function useCrypto(options: UseCryptoOptions = {}): UseCryptoReturn {
         return;
       }
 
-      setTrackedCoins((prev) => [...prev, normalized]);
+      setTrackedCoins((prev: string[]) => [...prev, normalized]);
       setShowAddCrypto(false);
       setCryptoSearchQuery("");
     },
@@ -404,8 +419,10 @@ export function useCrypto(options: UseCryptoOptions = {}): UseCryptoReturn {
   );
 
   const removeTrackedCoin = useCallback((coinId: string) => {
-    setTrackedCoins((prev) => prev.filter((id) => id !== coinId));
-    setCryptoAssets((prev) => prev.filter((asset) => asset.id !== coinId));
+    setTrackedCoins((prev: string[]) => prev.filter((id) => id !== coinId));
+    setCryptoAssets((prev: CryptoAsset[]) =>
+      prev.filter((asset) => asset.id !== coinId),
+    );
   }, []);
 
   // ==================== Form Reset Functions ====================
@@ -447,7 +464,7 @@ export function useCrypto(options: UseCryptoOptions = {}): UseCryptoReturn {
   // ==================== Wallet Management Functions ====================
 
   const handleAddWallet = useCallback(
-    async (e: React.FormEvent) => {
+    async (e: FormEvent) => {
       e.preventDefault();
 
       if (!walletName.trim()) {
@@ -522,7 +539,7 @@ export function useCrypto(options: UseCryptoOptions = {}): UseCryptoReturn {
     (coin: { id: string; symbol: string }) => {
       setTxCoinId(coin.id);
       setTxSymbol(coin.symbol);
-      const asset = cryptoAssets.find((a) => a.id === coin.id);
+      const asset = cryptoAssets.find((a: CryptoAsset) => a.id === coin.id);
       if (asset && (txType === "buy" || txType === "sell")) {
         setTxPrice(asset.current_price.toString());
       }
@@ -531,7 +548,7 @@ export function useCrypto(options: UseCryptoOptions = {}): UseCryptoReturn {
   );
 
   const handleAddCryptoTransaction = useCallback(
-    async (e: React.FormEvent) => {
+    async (e: FormEvent) => {
       e.preventDefault();
 
       const parsedAmount = parseFloat(txAmount);
@@ -601,7 +618,7 @@ export function useCrypto(options: UseCryptoOptions = {}): UseCryptoReturn {
   );
 
   const handleAddTransfer = useCallback(
-    async (e: React.FormEvent) => {
+    async (e: FormEvent) => {
       e.preventDefault();
 
       const parsedAmount = parseFloat(transferAmount);
@@ -669,7 +686,7 @@ export function useCrypto(options: UseCryptoOptions = {}): UseCryptoReturn {
   );
 
   const handleAddSwap = useCallback(
-    async (e: React.FormEvent) => {
+    async (e: FormEvent) => {
       e.preventDefault();
 
       const parsedFromAmount = parseFloat(swapFromAmount);
@@ -780,7 +797,7 @@ export function useCrypto(options: UseCryptoOptions = {}): UseCryptoReturn {
     (coin: { id: string; symbol: string }) => {
       setHoldingCoinId(coin.id);
       setHoldingSymbol(coin.symbol);
-      const asset = cryptoAssets.find((a) => a.id === coin.id);
+      const asset = cryptoAssets.find((a: CryptoAsset) => a.id === coin.id);
       if (asset) {
         setHoldingPrice(asset.current_price.toString());
       }
@@ -789,7 +806,7 @@ export function useCrypto(options: UseCryptoOptions = {}): UseCryptoReturn {
   );
 
   const addHolding = useCallback(
-    async (e: React.FormEvent) => {
+    async (e: FormEvent) => {
       e.preventDefault();
       const parsedAmount = parseFloat(holdingAmount);
       const parsedPrice = parseFloat(holdingPrice);

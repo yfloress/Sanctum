@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
+import type { FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { Transaction, BalanceSummary } from "../types";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../types";
@@ -35,7 +36,7 @@ interface UseTransactionsReturn {
   // Actions
   loadTransactions: () => Promise<void>;
   loadBalance: () => Promise<void>;
-  handleAddTransaction: (e: React.FormEvent) => Promise<void>;
+  handleAddTransaction: (e: FormEvent) => Promise<void>;
   handleDeleteTransaction: (id: string) => void;
   confirmDelete: () => Promise<void>;
   cancelDelete: () => void;
@@ -81,9 +82,11 @@ export function useTransactions(
 
   // Computed: Expenses grouped by category for pie chart
   const expensesByCategory = useMemo(() => {
-    const expenses = transactions.filter((tx) => tx.type === "expense");
+    const expenses = transactions.filter(
+      (tx: Transaction) => tx.type === "expense",
+    );
     const grouped = expenses.reduce(
-      (acc, tx) => {
+      (acc: Record<string, number>, tx: Transaction) => {
         acc[tx.category] = (acc[tx.category] || 0) + tx.amount;
         return acc;
       },
@@ -91,7 +94,7 @@ export function useTransactions(
     );
 
     return Object.entries(grouped)
-      .map(([name, value]) => ({ name, value: value / 100 }))
+      .map(([name, value]) => ({ name, value: (value as number) / 100 }))
       .sort((a, b) => b.value - a.value);
   }, [transactions]);
 
@@ -174,7 +177,7 @@ export function useTransactions(
 
   // Handle add transaction
   const handleAddTransaction = useCallback(
-    async (e: React.FormEvent) => {
+    async (e: FormEvent) => {
       e.preventDefault();
       clearMessages?.();
 

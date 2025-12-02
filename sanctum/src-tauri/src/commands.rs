@@ -23,7 +23,6 @@ const MAX_DESCRIPTION_LENGTH: usize = 512;
 const MAX_NOTES_LENGTH: usize = 1024;
 const MAX_WALLET_NAME_LENGTH: usize = 128;
 const MAX_SYMBOL_LENGTH: usize = 16;
-const MAX_COIN_ID_LENGTH: usize = 64;
 const MAX_ICON_LENGTH: usize = 32;
 const MAX_PASSWORD_LENGTH: usize = 128;
 const MIN_PASSWORD_LENGTH: usize = 8;
@@ -77,6 +76,53 @@ fn sanitize_string(input: &str) -> String {
         .collect::<String>()
         .trim()
         .to_string()
+}
+
+/// Validates a CoinGecko coin ID using the crypto module constraints
+fn validate_coin_id_str(coin_id: &str) -> Result<String, String> {
+    crate::crypto::validate_coin_id(coin_id)
+}
+
+/// Validates a ticker/symbol (alphanumeric only)
+fn validate_symbol(symbol: &str) -> Result<String, String> {
+    let trimmed = symbol.trim();
+    if trimmed.is_empty() {
+        return Err("Symbol cannot be empty".to_string());
+    }
+    if trimmed.len() > MAX_SYMBOL_LENGTH {
+        return Err(format!(
+            "Symbol exceeds maximum length of {} characters",
+            MAX_SYMBOL_LENGTH
+        ));
+    }
+    if !trimmed.chars().all(|c| c.is_ascii_alphanumeric()) {
+        return Err("Symbol must be alphanumeric".to_string());
+    }
+    Ok(trimmed.to_uppercase())
+}
+
+/// Validates that a floating point value is finite and positive
+fn validate_positive_amount(value: f64, field: &str) -> Result<f64, String> {
+    if !value.is_finite() {
+        return Err(format!("{} must be a finite number", field));
+    }
+    if value <= 0.0 {
+        return Err(format!("{} must be greater than zero", field));
+    }
+    Ok(value)
+}
+
+/// Validates that an optional floating point value is finite and non-negative
+fn validate_non_negative(value: Option<f64>, field: &str) -> Result<Option<f64>, String> {
+    if let Some(v) = value {
+        if !v.is_finite() {
+            return Err(format!("{} must be a finite number", field));
+        }
+        if v < 0.0 {
+            return Err(format!("{} cannot be negative", field));
+        }
+    }
+    Ok(value)
 }
 
 /// Estado global para mantener la conexión a la base de datos
@@ -756,23 +802,10 @@ pub fn add_crypto_holding(
     let db = get_db_with_session_check(&db_lock)?;
 
     // Validate and sanitize inputs
-    let coin_id = validate_field_length(&coin_id, MAX_COIN_ID_LENGTH, "Coin ID")?;
-    if coin_id.is_empty() {
-        return Err("Coin ID cannot be empty".to_string());
-    }
-
-    let symbol = validate_field_length(&symbol, MAX_SYMBOL_LENGTH, "Symbol")?;
-    if symbol.is_empty() {
-        return Err("Symbol cannot be empty".to_string());
-    }
-
-    if amount <= 0.0 {
-        return Err("Amount must be greater than zero".to_string());
-    }
-
-    if purchase_price < 0.0 {
-        return Err("Purchase price cannot be negative".to_string());
-    }
+    let coin_id = validate_coin_id_str(&coin_id)?;
+    let symbol = validate_symbol(&symbol)?;
+    validate_positive_amount(amount, "Amount")?;
+    validate_non_negative(Some(purchase_price), "Purchase price")?;
 
     // Validar formato de fecha
     let purchase_date = validate_date(&purchase_date)?;
@@ -978,15 +1011,8 @@ pub fn add_crypto_transaction(
         return Err("Wallet ID cannot be empty".to_string());
     }
 
-    let coin_id = validate_field_length(&coin_id, MAX_COIN_ID_LENGTH, "Coin ID")?;
-    if coin_id.is_empty() {
-        return Err("Coin ID cannot be empty".to_string());
-    }
-
-    let symbol = validate_field_length(&symbol, MAX_SYMBOL_LENGTH, "Symbol")?;
-    if symbol.is_empty() {
-        return Err("Symbol cannot be empty".to_string());
-    }
+    let coin_id = validate_coin_id_str(&coin_id)?;
+    let symbol = validate_symbol(&symbol)?;
 
     // Validate and sanitize notes if provided
     let notes = match notes {
@@ -1008,6 +1034,11 @@ pub fn add_crypto_transaction(
             valid_types.join(", ")
         ));
     }
+
+    // Validate numeric fields
+    validate_positive_amount(amount, "Amount")?;
+    let price_per_coin = validate_non_negative(price_per_coin, "Price per coin")?;
+    let fee = validate_non_negative(fee, "Fee")?;
 
     // Validar formato de fecha
     let date = validate_date(&date)?;
@@ -1064,14 +1095,10 @@ pub fn add_swap_transaction(
         return Err("Wallet ID cannot be empty".to_string());
     }
 
-    let from_coin_id = validate_field_length(&from_coin_id, MAX_COIN_ID_LENGTH, "From Coin ID")?;
-    let to_coin_id = validate_field_length(&to_coin_id, MAX_COIN_ID_LENGTH, "To Coin ID")?;
-    let from_symbol = validate_field_length(&from_symbol, MAX_SYMBOL_LENGTH, "From Symbol")?;
-    let to_symbol = validate_field_length(&to_symbol, MAX_SYMBOL_LENGTH, "To Symbol")?;
-
-    if from_coin_id.is_empty() || to_coin_id.is_empty() {
-        return Err("Coin IDs cannot be empty".to_string());
-    }
+    let from_coin_id = validate_coin_id_str(&from_coin_id)?;
+    let to_coin_id = validate_coin_id_str(&to_coin_id)?;
+    let from_symbol = validate_symbol(&from_symbol)?;
+    let to_symbol = validate_symbol(&to_symbol)?;
 
     // Validate and sanitize notes if provided
     let notes = match notes {
@@ -1082,8 +1109,18 @@ pub fn add_swap_transaction(
         None => None,
     };
 
-    if from_amount <= 0.0 || to_amount <= 0.0 {
-        return Err("Amounts must be greater than zero".to_string());
+    validate_positive_amount(from_amount, "From amount")?;
+    validate_positive_amount(to_amount, "To amount")?;
+
+    let fee = validate_non_negative(fee, "Fee")?;
+    let fee_amount = validate_non_negative(fee_amount, "Fee amount")?;
+
+    if let Some(ref coin) = fee_coin_id {
+        let _ = validate_coin_id_str(coin)?;
+    }
+
+    if fee_amount.is_some() && fee_coin_id.is_none() {
+        return Err("Fee coin ID is required when fee amount is provided".to_string());
     }
 
     // Validar formato de fecha
@@ -1154,15 +1191,8 @@ pub fn add_transfer_transaction(
         return Err("Wallet IDs cannot be empty".to_string());
     }
 
-    let coin_id = validate_field_length(&coin_id, MAX_COIN_ID_LENGTH, "Coin ID")?;
-    if coin_id.is_empty() {
-        return Err("Coin ID cannot be empty".to_string());
-    }
-
-    let symbol = validate_field_length(&symbol, MAX_SYMBOL_LENGTH, "Symbol")?;
-    if symbol.is_empty() {
-        return Err("Symbol cannot be empty".to_string());
-    }
+    let coin_id = validate_coin_id_str(&coin_id)?;
+    let symbol = validate_symbol(&symbol)?;
 
     // Validate and sanitize notes if provided
     let notes = match notes {
@@ -1173,9 +1203,8 @@ pub fn add_transfer_transaction(
         None => None,
     };
 
-    if amount <= 0.0 {
-        return Err("Amount must be greater than zero".to_string());
-    }
+    validate_positive_amount(amount, "Amount")?;
+    let fee = validate_non_negative(fee, "Fee")?;
 
     // Validar formato de fecha
     let date = validate_date(&date)?;

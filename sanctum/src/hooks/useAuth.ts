@@ -116,7 +116,7 @@ export function useAuth(options: UseAuthOptions = {}): UseAuthReturn {
         setTemporaryError("Password cannot be empty");
         return;
       }
-      if (trimmedPassword.length < 8) {
+      if (action === "create" && trimmedPassword.length < 8) {
         setTemporaryError("Password must be at least 8 characters");
         return;
       }

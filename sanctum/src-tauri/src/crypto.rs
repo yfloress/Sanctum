@@ -54,7 +54,7 @@ struct CoinGeckoMarketData {
 }
 
 /// Validates a coin ID to prevent injection or malformed inputs
-fn validate_coin_id(coin_id: &str) -> Result<String, String> {
+pub fn validate_coin_id(coin_id: &str) -> Result<String, String> {
     // Reject any whitespace/control characters outright (prevents hidden newlines/tabs)
     if coin_id.chars().any(|c| c.is_whitespace() || c.is_control()) {
         return Err("Coin ID contains invalid characters".to_string());
