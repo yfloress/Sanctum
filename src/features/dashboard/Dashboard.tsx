@@ -5,6 +5,7 @@
  * Consumes state directly from Zustand stores - no props needed.
  */
 
+import { useMemo } from "react";
 import {
   useBalance,
   useFinancialLoading,
@@ -22,6 +23,12 @@ export function Dashboard() {
   // Get action from store
   const setTransactionToDelete = useFinancialStore(
     (state) => state.setTransactionToDelete,
+  );
+
+  // Memoize recent transactions to avoid recalculation on every render
+  const recentTransactions = useMemo(
+    () => transactions.slice(0, 5),
+    [transactions],
   );
 
   return (
@@ -53,45 +60,41 @@ export function Dashboard() {
       {/* Recent Transactions */}
       <div className="recent-transactions">
         <h2 className="section-title">Recent Transactions</h2>
-        {transactions.length === 0
-          ? <p className="empty-state">No transactions recorded</p>
-          : (
-            <div className="transactions-list">
-              {transactions.slice(0, 5).map((tx) => (
-                <div key={tx.id} className="transaction-item">
-                  <div className="transaction-info">
-                    <div className="transaction-category">{tx.category}</div>
-                    <div className="transaction-description">
-                      {tx.description}
-                    </div>
-                    <div className="transaction-date">
-                      {formatDate(tx.date)}
-                    </div>
+        {recentTransactions.length === 0 ? (
+          <p className="empty-state">No transactions recorded</p>
+        ) : (
+          <div className="transactions-list">
+            {recentTransactions.map((tx) => (
+              <div key={tx.id} className="transaction-item">
+                <div className="transaction-info">
+                  <div className="transaction-category">{tx.category}</div>
+                  <div className="transaction-description">
+                    {tx.description}
                   </div>
-                  <div className="transaction-actions">
-                    <div
-                      className={`transaction-amount ${
-                        tx.type === "income" ? "income" : "expense"
-                      }`}
-                    >
-                      {tx.type === "income" ? "+" : "-"}${formatAmount(
-                        tx.amount,
-                      )}
-                    </div>
-                    <button type="button"
-                      className="btn-delete"
-                      onClick={() =>
-                        setTransactionToDelete(tx.id)}
-                      disabled={isLoading}
-                      aria-label="Delete transaction"
-                    >
-                      🗑️
-                    </button>
-                  </div>
+                  <div className="transaction-date">{formatDate(tx.date)}</div>
                 </div>
-              ))}
-            </div>
-          )}
+                <div className="transaction-actions">
+                  <div
+                    className={`transaction-amount ${
+                      tx.type === "income" ? "income" : "expense"
+                    }`}
+                  >
+                    {tx.type === "income" ? "+" : "-"}${formatAmount(tx.amount)}
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-delete"
+                    onClick={() => setTransactionToDelete(tx.id)}
+                    disabled={isLoading}
+                    aria-label="Delete transaction"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -36,21 +36,16 @@ pub fn run() {
             // Crypto Wallets
             commands::add_wallet,
             commands::get_wallets,
-            commands::get_wallet,
-            commands::update_wallet,
             commands::delete_wallet,
             // Crypto Transactions
             commands::add_crypto_transaction,
             commands::add_swap_transaction,
             commands::add_transfer_transaction,
             commands::get_wallet_transactions,
-            commands::get_all_crypto_transactions,
             commands::delete_crypto_transaction,
             // Portfolio Aggregation
             commands::get_aggregated_portfolio,
             commands::get_wallet_holdings,
-            // Session Management
-            commands::get_session_remaining,
             // Habits
             commands::create_habit,
             commands::get_habits,
@@ -59,7 +54,6 @@ pub fn run() {
             commands::delete_habit,
             commands::toggle_habit_completion,
             commands::get_habit_logs,
-            commands::get_habit_stats,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

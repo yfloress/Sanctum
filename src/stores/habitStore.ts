@@ -66,8 +66,8 @@ interface HabitActions {
   archiveHabit: (id: string) => Promise<boolean>;
   deleteHabit: (id: string) => Promise<boolean>;
 
-  // Log Operations (Optimistic UI)
-  toggleLog: (habitId: string, date: string) => void; // Synchronous for instant UI
+  // Habit Logs
+  toggleLog: (habitId: string, date: string) => void;
   isCompleted: (habitId: string, date: string) => boolean;
 
   // Navigation
@@ -82,6 +82,8 @@ interface HabitActions {
     value: HabitFormData[K],
   ) => void;
   resetForm: () => void;
+
+  // Modal/Edit State
   setShowAddModal: (show: boolean) => void;
   setHabitToEdit: (habit: Habit | null) => void;
   setHabitToDelete: (habit: Habit | null) => void;
@@ -94,12 +96,6 @@ interface HabitActions {
   setError: (error: string | null) => void;
   setSuccess: (message: string | null) => void;
   clearMessages: () => void;
-
-  // Cached Stats Getters (O(1) lookups)
-  getCompletionRate: (habitId: string) => number;
-  getTotalCompletionsForMonth: () => number;
-  getCompletionsPerDay: () => Map<string, number>;
-  getCurrentStreak: (habitId: string) => number;
 
   // Security: RAM Clear
   reset: () => void;
@@ -192,8 +188,8 @@ const calculateStats = (
   const month = currentMonth.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const today = new Date();
-  const isCurrentMonth = today.getFullYear() === year &&
-    today.getMonth() === month;
+  const isCurrentMonth =
+    today.getFullYear() === year && today.getMonth() === month;
   const maxDays = isCurrentMonth ? today.getDate() : daysInMonth;
 
   // Calculate completion rates for all habits
@@ -201,9 +197,9 @@ const calculateStats = (
   habits.forEach((habit) => {
     let completions = 0;
     for (let day = 1; day <= maxDays; day++) {
-      const date = `${year}-${String(month + 1).padStart(2, "0")}-${
-        String(day).padStart(2, "0")
-      }`;
+      const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(
+        day,
+      ).padStart(2, "0")}`;
       if (logs.has(createLogKey(habit.id, date))) {
         completions++;
       }
@@ -574,24 +570,6 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
   setSuccess: (message: string | null) => set({ successMessage: message }),
 
   clearMessages: () => set({ error: null, successMessage: null }),
-
-  // ==================== Cached Stats Getters (O(1) lookups) ====================
-
-  getCompletionRate: (habitId: string) => {
-    return get().stats.completionRates.get(habitId) || 0;
-  },
-
-  getTotalCompletionsForMonth: () => {
-    return get().stats.totalCompletions;
-  },
-
-  getCompletionsPerDay: () => {
-    return get().stats.completionsPerDay;
-  },
-
-  getCurrentStreak: (habitId: string) => {
-    return get().stats.streaks.get(habitId) || 0;
-  },
 
   // ==================== Security: RAM Clear ====================
 

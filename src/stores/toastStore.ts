@@ -11,7 +11,6 @@ interface ToastStore {
   toasts: ToastItem[];
   addToast: (message: string, type: ToastType) => void;
   removeToast: (id: string) => void;
-  clearAll: () => void;
   // Convenience methods
   success: (message: string) => void;
   error: (message: string) => void;
@@ -44,10 +43,6 @@ export const useToast = create<ToastStore>((set) => ({
     set((state) => ({
       toasts: state.toasts.filter((t) => t.id !== id),
     }));
-  },
-
-  clearAll: () => {
-    set({ toasts: [] });
   },
 
   // Convenience methods

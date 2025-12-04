@@ -912,64 +912,6 @@ pub fn get_wallets(state: State<DbState>) -> Result<Vec<CryptoWallet>, String> {
     Ok(wallets)
 }
 
-/// Command to get a single wallet by ID
-#[tauri::command]
-pub fn get_wallet(state: State<DbState>, id: String) -> Result<Option<CryptoWallet>, String> {
-    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
-    let db = get_db_with_session_check(&db_lock)?;
-
-    // Validate ID format
-    let validated_id = validate_uuid(&id)?;
-
-    let wallet = db.get_wallet(&validated_id).map_err(|e| e.to_string())?;
-
-    Ok(wallet)
-}
-
-/// Command to update a wallet
-#[tauri::command]
-pub fn update_wallet(
-    state: State<DbState>,
-    id: String,
-    name: String,
-    category: String,
-    icon: Option<String>,
-) -> Result<(), String> {
-    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
-    let db = get_db_with_session_check(&db_lock)?;
-
-    // Validate ID format
-    let validated_id = validate_uuid(&id)?;
-
-    // Validate and sanitize inputs
-    let name = validate_field_length(&name, MAX_WALLET_NAME_LENGTH, "Wallet name")?;
-    let name = sanitize_string(&name);
-
-    if name.is_empty() {
-        return Err("Wallet name cannot be empty".to_string());
-    }
-
-    let valid_categories = ["exchange", "wallet_single", "wallet_multi"];
-    if !valid_categories.contains(&category.as_str()) {
-        return Err(format!(
-            "Invalid category. Must be one of: {}",
-            valid_categories.join(", ")
-        ));
-    }
-
-    // Validate icon if provided
-    let icon = match icon {
-        Some(i) => Some(validate_field_length(&i, MAX_ICON_LENGTH, "Icon")?),
-        None => None,
-    };
-
-    let wallet = CryptoWallet::new(validated_id, name, category, icon);
-
-    db.update_wallet(&wallet).map_err(|e| e.to_string())?;
-
-    Ok(())
-}
-
 /// Command to delete a wallet and all its transactions
 #[tauri::command]
 pub fn delete_wallet(state: State<DbState>, id: String) -> Result<(), String> {
@@ -1335,21 +1277,6 @@ pub fn get_wallet_transactions(
     Ok(transactions)
 }
 
-/// Command to get all crypto transactions across all wallets
-#[tauri::command]
-pub fn get_all_crypto_transactions(
-    state: State<DbState>,
-) -> Result<Vec<CryptoTransaction>, String> {
-    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
-    let db = get_db_with_session_check(&db_lock)?;
-
-    let transactions = db
-        .get_all_crypto_transactions()
-        .map_err(|e| e.to_string())?;
-
-    Ok(transactions)
-}
-
 /// Command to delete a crypto transaction
 #[tauri::command]
 pub fn delete_crypto_transaction(state: State<DbState>, id: String) -> Result<(), String> {
@@ -1403,18 +1330,6 @@ pub fn get_wallet_holdings(
         .map_err(|e| e.to_string())?;
 
     Ok(holdings)
-}
-
-/// Command to get remaining session time in seconds
-#[tauri::command]
-pub fn get_session_remaining(state: State<DbState>) -> Result<i64, String> {
-    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
-
-    let db = db_lock
-        .as_ref()
-        .ok_or_else(|| "No vault is currently open".to_string())?;
-
-    db.get_session_remaining().map_err(|e| e.to_string())
 }
 
 // ==================== Habits Commands ====================
@@ -1627,26 +1542,6 @@ pub fn get_habit_logs(
     let logs = db.get_habit_logs(&start, &end).map_err(|e| e.to_string())?;
 
     Ok(logs)
-}
-
-/// Command to get habit completion statistics for a date range
-#[tauri::command]
-pub fn get_habit_stats(
-    state: State<DbState>,
-    start_date: String,
-    end_date: String,
-) -> Result<Vec<(String, i32)>, String> {
-    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
-    let db = get_db_with_session_check(&db_lock)?;
-
-    let start = validate_date(&start_date)?;
-    let end = validate_date(&end_date)?;
-
-    let stats = db
-        .get_habit_stats(&start, &end)
-        .map_err(|e| e.to_string())?;
-
-    Ok(stats)
 }
 
 #[cfg(test)]
