@@ -246,6 +246,20 @@ function TransactionList() {
 }
 ```
 
+> **IMPORTANT: Computed Getters Pattern**
+>
+> When using computed getter functions from the store, **never call them inside
+> the selector**. This causes infinite re-render loops.
+>
+> ```typescript
+> // WRONG: Calling getter inside selector
+> const data = useStore((state) => state.getComputedData());
+>
+> // CORRECT: Get the function, then call it outside
+> const getComputedData = useStore((state) => state.getComputedData);
+> const data = getComputedData();
+> ```
+
 ### Command Pattern (Tauri IPC)
 
 Each backend operation is exposed as a discrete command. The frontend doesn't
