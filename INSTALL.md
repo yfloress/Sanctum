@@ -113,7 +113,7 @@ Una vez instaladas las dependencias:
 ```bash
 # Clonar el repositorio
 git clone https://codeberg.org/Kyronix/Sanctum.git
-cd Sanctum/sanctum
+cd Sanctum
 
 # Modo desarrollo (con hot-reload)
 cargo tauri dev
@@ -185,7 +185,6 @@ Si prefieres un entorno reproducible, el proyecto incluye un `flake.nix` para Li
 # Requiere Nix con flakes habilitado
 cd Sanctum
 nix develop
-cd sanctum
 cargo tauri dev
 ```
 

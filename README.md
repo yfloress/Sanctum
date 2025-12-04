@@ -72,7 +72,7 @@ This project uses **Nix Flakes** to guarantee a reproducible environment without
 1.  **Clone the repository:**
     ```bash
     git clone [https://codeberg.org/Kyronix/Sanctum](https://codeberg.org/Kyronix/Sanctum)
-    cd sanctum
+    cd Sanctum
     ```
 
 2.  **Activate the Environment:**

@@ -27,13 +27,18 @@ src-tauri/gen/
 
 # --- Deno / Node / Web ---
 node_modules/
-sanctum/node_modules/
 npm-debug.log
 yarn-error.log
 pnpm-debug.log
 .DS_Store
 dist/
 build/
+logs
+*.log
+yarn-debug.log*
+lerna-debug.log*
+dist-ssr
+*.local
 
 # --- Database & Security (CRÍTICO) ---
 *.db
@@ -48,6 +53,7 @@ wallet.dat
 .vscode/
 .idea/
 *.swp
+.zed
 
 # --- Nix ---
 result
