@@ -1,18 +1,18 @@
 {
   "version": "5",
   "specifiers": {
-    "npm:@tauri-apps/api@2": "2.9.0",
-    "npm:@tauri-apps/cli@2": "2.9.4",
-    "npm:@tauri-apps/plugin-opener@2": "2.5.2",
-    "npm:@types/react-dom@^19.1.6": "19.2.3_@types+react@19.2.7",
-    "npm:@types/react@^19.1.8": "19.2.7",
-    "npm:@vitejs/plugin-react@^4.6.0": "4.7.0_vite@7.2.4__picomatch@4.0.3_@babel+core@7.28.5",
-    "npm:react-dom@^19.1.0": "19.2.0_react@19.2.0",
-    "npm:react@^19.1.0": "19.2.0",
-    "npm:recharts@^3.5.1": "3.5.1_react@19.2.0_react-dom@19.2.0__react@19.2.0_react-is@19.2.0_react-redux@9.2.0__@types+react@19.2.7__react@19.2.0_@types+react@19.2.7",
+    "npm:@tauri-apps/api@^2.9.1": "2.9.1",
+    "npm:@tauri-apps/cli@^2.9.5": "2.9.5",
+    "npm:@tauri-apps/plugin-opener@^2.5.2": "2.5.2",
+    "npm:@types/react-dom@^19.2.3": "19.2.3_@types+react@19.2.7",
+    "npm:@types/react@^19.2.7": "19.2.7",
+    "npm:@vitejs/plugin-react@^4.7.0": "4.7.0_vite@7.2.6__picomatch@4.0.3_@babel+core@7.28.5",
+    "npm:react-dom@^19.2.1": "19.2.1_react@19.2.1",
+    "npm:react@^19.2.1": "19.2.1",
+    "npm:recharts@^3.5.1": "3.5.1_react@19.2.1_react-dom@19.2.1__react@19.2.1_react-is@19.2.0_react-redux@9.2.0__@types+react@19.2.7__react@19.2.1_@types+react@19.2.7",
     "npm:typescript@~5.8.3": "5.8.3",
-    "npm:vite@^7.0.4": "7.2.4_picomatch@4.0.3",
-    "npm:zustand@^5.0.9": "5.0.9_@types+react@19.2.7_react@19.2.0"
+    "npm:vite@^7.2.6": "7.2.6_picomatch@4.0.3",
+    "npm:zustand@^5.0.9": "5.0.9_@types+react@19.2.7_react@19.2.1"
   },
   "npm": {
     "@babel/code-frame@7.27.1": {
@@ -309,21 +309,21 @@
         "@jridgewell/sourcemap-codec"
       ]
     },
-    "@reduxjs/toolkit@2.11.0_react@19.2.0_react-redux@9.2.0__@types+react@19.2.7__react@19.2.0_@types+react@19.2.7_redux@5.0.1": {
+    "@reduxjs/toolkit@2.11.0_react@19.2.1_react-redux@9.2.0__@types+react@19.2.7__react@19.2.1_@types+react@19.2.7_redux@5.0.1": {
       "integrity": "sha512-hBjYg0aaRL1O2Z0IqWhnTLytnjDIxekmRxm1snsHjHaKVmIF1HiImWqsq+PuEbn6zdMlkIj9WofK1vR8jjx+Xw==",
       "dependencies": [
         "@standard-schema/spec",
         "@standard-schema/utils",
         "immer@11.0.1",
         "react",
-        "react-redux@9.2.0_@types+react@19.2.7_react@19.2.0_redux@5.0.1",
+        "react-redux@9.2.0_@types+react@19.2.7_react@19.2.1_redux@5.0.1",
         "redux",
         "redux-thunk",
         "reselect"
       ],
       "optionalPeers": [
         "react",
-        "react-redux@9.2.0_@types+react@19.2.7_react@19.2.0_redux@5.0.1"
+        "react-redux@9.2.0_@types+react@19.2.7_react@19.2.1_redux@5.0.1"
       ]
     },
     "@rolldown/pluginutils@1.0.0-beta.27": {
@@ -445,66 +445,66 @@
     "@standard-schema/utils@0.3.0": {
       "integrity": "sha512-e7Mew686owMaPJVNNLs55PUvgz371nKgwsc4vxE49zsODpJEnxgxRo2y/OKrqueavXgZNMDVj3DdHFlaSAeU8g=="
     },
-    "@tauri-apps/api@2.9.0": {
-      "integrity": "sha512-qD5tMjh7utwBk9/5PrTA/aGr3i5QaJ/Mlt7p8NilQ45WgbifUNPyKWsA63iQ8YfQq6R8ajMapU+/Q8nMcPRLNw=="
+    "@tauri-apps/api@2.9.1": {
+      "integrity": "sha512-IGlhP6EivjXHepbBic618GOmiWe4URJiIeZFlB7x3czM0yDHHYviH1Xvoiv4FefdkQtn6v7TuwWCRfOGdnVUGw=="
     },
-    "@tauri-apps/cli-darwin-arm64@2.9.4": {
-      "integrity": "sha512-9rHkMVtbMhe0AliVbrGpzMahOBg3rwV46JYRELxR9SN6iu1dvPOaMaiC4cP6M/aD1424ziXnnMdYU06RAH8oIw==",
+    "@tauri-apps/cli-darwin-arm64@2.9.5": {
+      "integrity": "sha512-P5XDyCwq3VbWGAplyfP/bgmuUITVDcypxgZUyX45SM7HbU1Nrkk0cNK1HCOkuNBAVVbWen2GUNWah/AiupHHXg==",
       "os": ["darwin"],
       "cpu": ["arm64"]
     },
-    "@tauri-apps/cli-darwin-x64@2.9.4": {
-      "integrity": "sha512-VT9ymNuT06f5TLjCZW2hfSxbVtZDhORk7CDUDYiq5TiSYQdxkl8MVBy0CCFFcOk4QAkUmqmVUA9r3YZ/N/vPRQ==",
+    "@tauri-apps/cli-darwin-x64@2.9.5": {
+      "integrity": "sha512-JC9UfQ2ZKavx60dnNxsWztRF3oUH3dgPwN1WJ3/5RUy2aNwD/vXqvJAfNFZ4GWeQpoQ+PqJxduev0U4OMQonnA==",
       "os": ["darwin"],
       "cpu": ["x64"]
     },
-    "@tauri-apps/cli-linux-arm-gnueabihf@2.9.4": {
-      "integrity": "sha512-tTWkEPig+2z3Rk0zqZYfjUYcgD+aSm72wdrIhdYobxbQZOBw0zfn50YtWv+av7bm0SHvv75f0l7JuwgZM1HFow==",
+    "@tauri-apps/cli-linux-arm-gnueabihf@2.9.5": {
+      "integrity": "sha512-iCQm2Uvx8AheghfG/QUv1y8Ga9yquJt6xJwH1uF0x5KfmJmwBi8pHBvB924dDi59PS84qTdIBeJejQT00QX3Iw==",
       "os": ["linux"],
       "cpu": ["arm"]
     },
-    "@tauri-apps/cli-linux-arm64-gnu@2.9.4": {
-      "integrity": "sha512-ql6vJ611qoqRYHxkKPnb2vHa27U+YRKRmIpLMMBeZnfFtZ938eao7402AQCH1mO2+/8ioUhbpy9R/ZcLTXVmkg==",
+    "@tauri-apps/cli-linux-arm64-gnu@2.9.5": {
+      "integrity": "sha512-b6AW8Gr5nQOQIYH0TsUev7rEThGHIvsx192eElOmOz/dh33J4pninHK32laMj2hzHMJ27qmDq5vANL+wrFo9sg==",
       "os": ["linux"],
       "cpu": ["arm64"]
     },
-    "@tauri-apps/cli-linux-arm64-musl@2.9.4": {
-      "integrity": "sha512-vg7yNn7ICTi6hRrcA/6ff2UpZQP7un3xe3SEld5QM0prgridbKAiXGaCKr3BnUBx/rGXegQlD/wiLcWdiiraSw==",
+    "@tauri-apps/cli-linux-arm64-musl@2.9.5": {
+      "integrity": "sha512-/gRBMnphS9E8riZ0LIbBhZ9Oy16A2rx/g3DGR0DcDBvUtkLfbL0lMu4s+sY85nkn9An15+cZ1ZK6d7AIqWahLA==",
       "os": ["linux"],
       "cpu": ["arm64"]
     },
-    "@tauri-apps/cli-linux-riscv64-gnu@2.9.4": {
-      "integrity": "sha512-l8L+3VxNk6yv5T/Z/gv5ysngmIpsai40B9p6NQQyqYqxImqYX37pqREoEBl1YwG7szGnDibpWhidPrWKR59OJA==",
+    "@tauri-apps/cli-linux-riscv64-gnu@2.9.5": {
+      "integrity": "sha512-NOzjPF9YIBodjdkFcJmqINT0k3YDoR5ANM/jg6Z6s3Zmk8ScN6inI60jTxcfgfWyITiKsPy7GJyYou3Cm2XNzw==",
       "os": ["linux"],
       "cpu": ["riscv64"]
     },
-    "@tauri-apps/cli-linux-x64-gnu@2.9.4": {
-      "integrity": "sha512-PepPhCXc/xVvE3foykNho46OmCyx47E/aG676vKTVp+mqin5d+IBqDL6wDKiGNT5OTTxKEyNlCQ81Xs2BQhhqA==",
+    "@tauri-apps/cli-linux-x64-gnu@2.9.5": {
+      "integrity": "sha512-SfGbwgvTphM5y+J91NyU/psleMUlyyPkZyDCFg8WU1HX8DpKUT3Vwhb/W1xpUBGb56tJgGCO46FCVkr8w4Areg==",
       "os": ["linux"],
       "cpu": ["x64"]
     },
-    "@tauri-apps/cli-linux-x64-musl@2.9.4": {
-      "integrity": "sha512-zcd1QVffh5tZs1u1SCKUV/V7RRynebgYUNWHuV0FsIF1MjnULUChEXhAhug7usCDq4GZReMJOoXa6rukEozWIw==",
+    "@tauri-apps/cli-linux-x64-musl@2.9.5": {
+      "integrity": "sha512-ZfeoiASAOGDzyvN+TDAg8A1pCeS082h4uc0vZKvtWUN+9QBIMfz0yJwltAv+SN/afap6NS6DVkbPV3UVuI9V5A==",
       "os": ["linux"],
       "cpu": ["x64"]
     },
-    "@tauri-apps/cli-win32-arm64-msvc@2.9.4": {
-      "integrity": "sha512-/7ZhnP6PY04bEob23q8MH/EoDISdmR1wuNm0k9d5HV7TDMd2GGCDa8dPXA4vJuglJKXIfXqxFmZ4L+J+MO42+w==",
+    "@tauri-apps/cli-win32-arm64-msvc@2.9.5": {
+      "integrity": "sha512-ulg7irow+ekjaK4inFHVq7m1KQebDSYNb17DFKV+h+x7qnLZymz2gHK7df2u4YyEjqvzwRd3AJpU3HNxRurSFQ==",
       "os": ["win32"],
       "cpu": ["arm64"]
     },
-    "@tauri-apps/cli-win32-ia32-msvc@2.9.4": {
-      "integrity": "sha512-1LmAfaC4Cq+3O1Ir1ksdhczhdtFSTIV51tbAGtbV/mr348O+M52A/xwCCXQank0OcdBxy5BctqkMtuZnQvA8uQ==",
+    "@tauri-apps/cli-win32-ia32-msvc@2.9.5": {
+      "integrity": "sha512-6lF0k/Qduhn1Z3IOXlp2ts8jNOMIX4cK4Fbk3axGeX7LMcVVbOSEAFwbTqS8BKZDFac0WRS8N1C96+Ms5LOS1Q==",
       "os": ["win32"],
       "cpu": ["ia32"]
     },
-    "@tauri-apps/cli-win32-x64-msvc@2.9.4": {
-      "integrity": "sha512-EdYd4c9wGvtPB95kqtEyY+bUR+k4kRw3IA30mAQ1jPH6z57AftT8q84qwv0RDp6kkEqOBKxeInKfqi4BESYuqg==",
+    "@tauri-apps/cli-win32-x64-msvc@2.9.5": {
+      "integrity": "sha512-Vg50U74x1A4b2iBVtDcAVPbI1XVuzSmwlduuBM1VewxtRaVj5GDzWnYtBcnuIk+VGzNApRDfDhraAXGaW2a/Gw==",
       "os": ["win32"],
       "cpu": ["x64"]
     },
-    "@tauri-apps/cli@2.9.4": {
-      "integrity": "sha512-pvylWC9QckrOS9ATWXIXcgu7g2hKK5xTL5ZQyZU/U0n9l88SEFGcWgLQNa8WZmd+wWIOWhkxOFcOl3i6ubDNNw==",
+    "@tauri-apps/cli@2.9.5": {
+      "integrity": "sha512-z88tX6O6kwTgMjYozhNGbehzQyBazgXejyH784CwSfBOWm06xFcogd0PY/jhcPsqzJF9kLRIkmlQy+cqdrioOQ==",
       "optionalDependencies": [
         "@tauri-apps/cli-darwin-arm64",
         "@tauri-apps/cli-darwin-x64",
@@ -609,7 +609,7 @@
     "@types/use-sync-external-store@0.0.6": {
       "integrity": "sha512-zFDAD+tlpf2r4asuHEj0XH6pY6i0g5NeAHPn+15wk3BV6JA69eERFXC1gyGThDkVa1zCyKr5jox1+2LbV/AMLg=="
     },
-    "@vitejs/plugin-react@4.7.0_vite@7.2.4__picomatch@4.0.3_@babel+core@7.28.5": {
+    "@vitejs/plugin-react@4.7.0_vite@7.2.6__picomatch@4.0.3_@babel+core@7.28.5": {
       "integrity": "sha512-gUu9hwfWvvEDBBmgtAowQCojwZmJ5mcLn3aufeCsitijs3+f2NsrPtlAWIR6OPiqljl96GVCUbLe0HyqIpVaoA==",
       "dependencies": [
         "@babel/core",
@@ -621,12 +621,12 @@
         "vite"
       ]
     },
-    "baseline-browser-mapping@2.8.32": {
-      "integrity": "sha512-OPz5aBThlyLFgxyhdwf/s2+8ab3OvT7AdTNvKHBwpXomIYeXqpUUuT8LrdtxZSsWJ4R4CU1un4XGh5Ez3nlTpw==",
+    "baseline-browser-mapping@2.9.0": {
+      "integrity": "sha512-Mh++g+2LPfzZToywfE1BUzvZbfOY52Nil0rn9H1CPC5DJ7fX+Vir7nToBeoiSbB1zTNeGYbELEvJESujgGrzXw==",
       "bin": true
     },
-    "browserslist@4.28.0": {
-      "integrity": "sha512-tbydkR/CxfMwelN0vwdP/pLkDwyAASZ+VfWm4EOwlB6SWhx1sYnWLqo8N5j0rAzPfzfRaxt0mM/4wPU/Su84RQ==",
+    "browserslist@4.28.1": {
+      "integrity": "sha512-ZC5Bd0LgJXgwGqUknZY/vkUQ04r8NXnJZ3yYi4vDmSiZmC/pdSN0NbNRPxZpbtO4uAfDUAFffO8IZoM3Gj8IkA==",
       "dependencies": [
         "baseline-browser-mapping",
         "caniuse-lite",
@@ -636,8 +636,8 @@
       ],
       "bin": true
     },
-    "caniuse-lite@1.0.30001757": {
-      "integrity": "sha512-r0nnL/I28Zi/yjk1el6ilj27tKcdjLsNqAOZr0yVjWPrSQyHgKI2INaEWw21bAQSv2LXRt1XuCS/GomNpWOxsQ=="
+    "caniuse-lite@1.0.30001759": {
+      "integrity": "sha512-Pzfx9fOKoKvevQf8oCXoyNRQ5QyxJj+3O0Rqx2V5oxT61KGx8+n6hV/IUyJeifUci2clnmmKVpvtiqRzgiWjSw=="
     },
     "clsx@2.1.1": {
       "integrity": "sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA=="
@@ -712,8 +712,8 @@
     "decimal.js-light@2.5.1": {
       "integrity": "sha512-qIMFpTMZmny+MMIitAB6D7iVPEorVw6YQRWkvarTkT4tBeSLLiHzcwj6q0MmYSFCiVpiqPJTJEYIrpcPzVEIvg=="
     },
-    "electron-to-chromium@1.5.262": {
-      "integrity": "sha512-NlAsMteRHek05jRUxUR0a5jpjYq9ykk6+kO0yRaMi5moe7u0fVIOeQ3Y30A8dIiWFBNUoQGi1ljb1i5VtS9WQQ=="
+    "electron-to-chromium@1.5.264": {
+      "integrity": "sha512-1tEf0nLgltC3iy9wtlYDlQDc5Rg9lEKVjEmIHJ21rI9OcqkvD45K1oyNIRA4rR1z3LgJ7KeGzEBojVcV6m4qjA=="
     },
     "es-toolkit@1.42.0": {
       "integrity": "sha512-SLHIyY7VfDJBM8clz4+T2oquwTQxEzu263AyhVK4jREOAwJ+8eebaa4wM3nlvnAqhDrMm2EsA6hWHaQsMPQ1nA=="
@@ -824,8 +824,8 @@
         "source-map-js"
       ]
     },
-    "react-dom@19.2.0_react@19.2.0": {
-      "integrity": "sha512-UlbRu4cAiGaIewkPyiRGJk0imDN2T3JjieT6spoL2UeSf5od4n5LB/mQ4ejmxhCFT1tYe8IvaFulzynWovsEFQ==",
+    "react-dom@19.2.1_react@19.2.1": {
+      "integrity": "sha512-ibrK8llX2a4eOskq1mXKu/TGZj9qzomO+sNfO98M6d9zIPOEhlBkMkBUBLd1vgS0gQsLDBzA+8jJBVXDnfHmJg==",
       "dependencies": [
         "react",
         "scheduler"
@@ -834,7 +834,7 @@
     "react-is@19.2.0": {
       "integrity": "sha512-x3Ax3kNSMIIkyVYhWPyO09bu0uttcAIoecO/um/rKGQ4EltYWVYtyiGkS/3xMynrbVQdS69Jhlv8FXUEZehlzA=="
     },
-    "react-redux@9.2.0_@types+react@19.2.7_react@19.2.0": {
+    "react-redux@9.2.0_@types+react@19.2.7_react@19.2.1": {
       "integrity": "sha512-ROY9fvHhwOD9ySfrF0wmvu//bKCQ6AeZZq1nJNtbDC+kk5DuSuNX/n6YWYF/SYy7bSba4D4FSz8DJeKY/S/r+g==",
       "dependencies": [
         "@types/react",
@@ -846,7 +846,7 @@
         "@types/react"
       ]
     },
-    "react-redux@9.2.0_@types+react@19.2.7_react@19.2.0_redux@5.0.1": {
+    "react-redux@9.2.0_@types+react@19.2.7_react@19.2.1_redux@5.0.1": {
       "integrity": "sha512-ROY9fvHhwOD9ySfrF0wmvu//bKCQ6AeZZq1nJNtbDC+kk5DuSuNX/n6YWYF/SYy7bSba4D4FSz8DJeKY/S/r+g==",
       "dependencies": [
         "@types/react",
@@ -863,10 +863,10 @@
     "react-refresh@0.17.0": {
       "integrity": "sha512-z6F7K9bV85EfseRCp2bzrpyQ0Gkw1uLoCel9XBVWPg/TjRj94SkJzUTGfOa4bs7iJvBWtQG0Wq7wnI0syw3EBQ=="
     },
-    "react@19.2.0": {
-      "integrity": "sha512-tmbWg6W31tQLeB5cdIBOicJDJRR2KzXsV7uSK9iNfLWQ5bIZfxuPEHp7M8wiHyHnn0DD1i7w3Zmin0FtkrwoCQ=="
+    "react@19.2.1": {
+      "integrity": "sha512-DGrYcCWK7tvYMnWh79yrPHt+vdx9tY+1gPZa7nJQtO/p8bLTDaHp4dzwEhQB7pZ4Xe3ok4XKuEPrVuc+wlpkmw=="
     },
-    "recharts@3.5.1_react@19.2.0_react-dom@19.2.0__react@19.2.0_react-is@19.2.0_react-redux@9.2.0__@types+react@19.2.7__react@19.2.0_@types+react@19.2.7": {
+    "recharts@3.5.1_react@19.2.1_react-dom@19.2.1__react@19.2.1_react-is@19.2.0_react-redux@9.2.0__@types+react@19.2.7__react@19.2.1_@types+react@19.2.7": {
       "integrity": "sha512-+v+HJojK7gnEgG6h+b2u7k8HH7FhyFUzAc4+cPrsjL4Otdgqr/ecXzAnHciqlzV1ko064eNcsdzrYOM78kankA==",
       "dependencies": [
         "@reduxjs/toolkit",
@@ -878,7 +878,7 @@
         "react",
         "react-dom",
         "react-is",
-        "react-redux@9.2.0_@types+react@19.2.7_react@19.2.0",
+        "react-redux@9.2.0_@types+react@19.2.7_react@19.2.1",
         "reselect",
         "tiny-invariant",
         "use-sync-external-store",
@@ -953,8 +953,8 @@
       "integrity": "sha512-p1diW6TqL9L07nNxvRMM7hMMw4c5XOo/1ibL4aAIGmSAt9slTE1Xgw5KWuof2uTOvCg9BY7ZRi+GaF+7sfgPeQ==",
       "bin": true
     },
-    "update-browserslist-db@1.1.4_browserslist@4.28.0": {
-      "integrity": "sha512-q0SPT4xyU84saUX+tomz1WLkxUbuaJnR1xWt17M7fJtEJigJeWUNGUqrauFXsHnqev9y9JTRGwk13tFBuKby4A==",
+    "update-browserslist-db@1.2.1_browserslist@4.28.1": {
+      "integrity": "sha512-R9NcHbbZ45RoWfTdhn1J9SS7zxNvlddv4YRrHTUaFdtjbmfncfedB45EC9IaqJQ97iAR1GZgOfyRQO+ExIF6EQ==",
       "dependencies": [
         "browserslist",
         "escalade",
@@ -962,7 +962,7 @@
       ],
       "bin": true
     },
-    "use-sync-external-store@1.6.0_react@19.2.0": {
+    "use-sync-external-store@1.6.0_react@19.2.1": {
       "integrity": "sha512-Pp6GSwGP/NrPIrxVFAIkOQeyw8lFenOHijQWkUTrDvrF4ALqylP2C/KCkeS9dpUM3KvYRQhna5vt7IL95+ZQ9w==",
       "dependencies": [
         "react"
@@ -987,8 +987,8 @@
         "d3-timer"
       ]
     },
-    "vite@7.2.4_picomatch@4.0.3": {
-      "integrity": "sha512-NL8jTlbo0Tn4dUEXEsUg8KeyG/Lkmc4Fnzb8JXN/Ykm9G4HNImjtABMJgkQoVjOBN/j2WAwDTRytdqJbZsah7w==",
+    "vite@7.2.6_picomatch@4.0.3": {
+      "integrity": "sha512-tI2l/nFHC5rLh7+5+o7QjKjSR04ivXDF4jcgV0f/bTQ+OJiITy5S6gaynVsEM+7RqzufMnVbIon6Sr5x1SDYaQ==",
       "dependencies": [
         "esbuild",
         "fdir",
@@ -1005,7 +1005,7 @@
     "yallist@3.1.1": {
       "integrity": "sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g=="
     },
-    "zustand@5.0.9_@types+react@19.2.7_react@19.2.0": {
+    "zustand@5.0.9_@types+react@19.2.7_react@19.2.1": {
       "integrity": "sha512-ALBtUj0AfjJt3uNRQoL1tL2tMvj6Gp/6e39dnfT6uzpelGru8v1tPOGBzayOWbPJvujM8JojDk3E1LxeFisBNg==",
       "dependencies": [
         "@types/react",
@@ -1020,17 +1020,17 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
-        "npm:@tauri-apps/api@2",
-        "npm:@tauri-apps/cli@2",
-        "npm:@tauri-apps/plugin-opener@2",
-        "npm:@types/react-dom@^19.1.6",
-        "npm:@types/react@^19.1.8",
-        "npm:@vitejs/plugin-react@^4.6.0",
-        "npm:react-dom@^19.1.0",
-        "npm:react@^19.1.0",
+        "npm:@tauri-apps/api@^2.9.1",
+        "npm:@tauri-apps/cli@^2.9.5",
+        "npm:@tauri-apps/plugin-opener@^2.5.2",
+        "npm:@types/react-dom@^19.2.3",
+        "npm:@types/react@^19.2.7",
+        "npm:@vitejs/plugin-react@^4.7.0",
+        "npm:react-dom@^19.2.1",
+        "npm:react@^19.2.1",
         "npm:recharts@^3.5.1",
         "npm:typescript@~5.8.3",
-        "npm:vite@^7.0.4",
+        "npm:vite@^7.2.6",
         "npm:zustand@^5.0.9"
       ]
     }
