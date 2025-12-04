@@ -8,8 +8,8 @@
 
 | Dependencia | Versión Mínima | Propósito |
 |:------------|:---------------|:----------|
-| Rust | 1.70+ | Core del backend |
-| Deno | 1.40+ | Build del frontend |
+| Rust | 1.85+ | Core del backend (edition 2024) |
+| Deno | 2.x | Build del frontend |
 | Tauri CLI | 2.x | Compilación y empaquetado |
 
 ---
@@ -140,9 +140,9 @@ Los binarios compilados se encuentran en `src-tauri/target/release/bundle/`:
 Antes de compilar, verifica que todo esté correctamente instalado:
 
 ```bash
-rustc --version       # Debe mostrar 1.70+
+rustc --version       # Debe mostrar 1.85+
 cargo --version       # Debe coincidir con rustc
-deno --version        # Debe mostrar 1.40+
+deno --version        # Debe mostrar 2.x
 cargo tauri --version # Debe mostrar 2.x
 ```
 
