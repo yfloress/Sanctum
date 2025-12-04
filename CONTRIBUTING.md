@@ -170,6 +170,42 @@ fn add_transaction(amount: i64, category: &str) -> Result<(), DbError> {
 - Generic errors to user, detailed in internal logs
 - `PRAGMA foreign_keys = ON` always active
 
+### Tauri Window Management
+
+**Cardinal Rule:** The main window starts hidden and is shown only after React hydrates.
+
+This prevents the "white flash" on startup. The pattern is implemented in:
+
+1. `tauri.conf.json`: Window configured with `"visible": false`
+2. `main.tsx`: Calls `getCurrentWindow().show()` via `onReady` callback
+3. `App.tsx`: Triggers `onReady` in `useLayoutEffect` after first render
+
+```typescript
+// main.tsx
+import { getCurrentWindow } from "@tauri-apps/api/window";
+
+const showWindow = () => {
+  getCurrentWindow().show().catch(console.error);
+};
+
+// App.tsx
+useLayoutEffect(() => {
+  if (onReady) {
+    onReady();
+  }
+}, [onReady]);
+```
+
+**Required permission** in `src-tauri/capabilities/default.json`:
+```json
+"permissions": ["core:default", "core:window:allow-show", "opener:default"]
+```
+
+**Do NOT:**
+- Set `"visible": true` in `tauri.conf.json`
+- Call `show()` before React has mounted
+- Block the main thread with synchronous operations during startup
+
 ---
 
 ## 5. Design Patterns Used

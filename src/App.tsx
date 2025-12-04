@@ -15,7 +15,13 @@
  * - Stores are cleared when vault is closed (kill switch in authStore)
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useLayoutEffect,
+} from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 
@@ -53,7 +59,11 @@ import type { TabType } from "./types";
 // Session timeout warning threshold (2 minutes before expiry)
 const SESSION_WARNING_THRESHOLD = 120;
 
-function App() {
+interface AppProps {
+  onReady?: () => void;
+}
+
+function App({ onReady }: AppProps) {
   // ==================== Auth Store ====================
   const isInitialized = useIsInitialized();
   const authLoading = useAuthLoading();
@@ -161,6 +171,14 @@ function App() {
   useEffect(() => {
     checkStatus();
   }, [checkStatus]);
+
+  // ==================== Show Window When Ready ====================
+  useLayoutEffect(() => {
+    // Call onReady after first paint to show the window
+    if (onReady) {
+      onReady();
+    }
+  }, [onReady]);
 
   // ==================== Reset UI State on Logout ====================
   useEffect(() => {

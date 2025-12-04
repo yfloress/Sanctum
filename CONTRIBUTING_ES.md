@@ -170,6 +170,42 @@ fn add_transaction(amount: i64, category: &str) -> Result<(), DbError> {
 - Errores genericos al usuario, detallados en logs internos
 - `PRAGMA foreign_keys = ON` siempre activo
 
+### Gestion de Ventana Tauri
+
+**Regla Cardinal:** La ventana principal inicia oculta y se muestra solo despues de que React hidrate.
+
+Esto previene el "flash blanco" al iniciar. El patron esta implementado en:
+
+1. `tauri.conf.json`: Ventana configurada con `"visible": false`
+2. `main.tsx`: Llama `getCurrentWindow().show()` via callback `onReady`
+3. `App.tsx`: Dispara `onReady` en `useLayoutEffect` despues del primer render
+
+```typescript
+// main.tsx
+import { getCurrentWindow } from "@tauri-apps/api/window";
+
+const showWindow = () => {
+  getCurrentWindow().show().catch(console.error);
+};
+
+// App.tsx
+useLayoutEffect(() => {
+  if (onReady) {
+    onReady();
+  }
+}, [onReady]);
+```
+
+**Permiso requerido** en `src-tauri/capabilities/default.json`:
+```json
+"permissions": ["core:default", "core:window:allow-show", "opener:default"]
+```
+
+**NO hacer:**
+- Configurar `"visible": true` en `tauri.conf.json`
+- Llamar `show()` antes de que React haya montado
+- Bloquear el hilo principal con operaciones sincronas durante el arranque
+
 ---
 
 ## 5. Patrones de Diseno Utilizados
