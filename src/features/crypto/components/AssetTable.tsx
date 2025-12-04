@@ -11,19 +11,20 @@ import { useCryptoStore } from "../../../stores/cryptoStore.ts";
 
 export function AssetTable() {
   // ==================== Store State ====================
-  const enrichedPortfolio = useCryptoStore((state) =>
-    state.getEnrichedPortfolio()
+  const getEnrichedPortfolio = useCryptoStore(
+    (state) => state.getEnrichedPortfolio,
   );
   const setSubTab = useCryptoStore((state) => state.setSubTab);
+
+  // ==================== Computed Values ====================
+  const enrichedPortfolio = getEnrichedPortfolio();
 
   // ==================== Render ====================
   if (enrichedPortfolio.length === 0) {
     return (
       <div className="portfolio-empty">
         <span className="portfolio-empty-icon">💼</span>
-        <p>
-          No holdings yet. Add a wallet and start tracking your portfolio!
-        </p>
+        <p>No holdings yet. Add a wallet and start tracking your portfolio!</p>
         <button
           type="button"
           className="btn-secondary"
