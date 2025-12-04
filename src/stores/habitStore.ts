@@ -13,7 +13,7 @@
 
 import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
-import type { Habit, HabitLog } from "../types";
+import type { Habit, HabitLog } from "../types/index.ts";
 
 // ==================== Types ====================
 
@@ -192,8 +192,8 @@ const calculateStats = (
   const month = currentMonth.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const today = new Date();
-  const isCurrentMonth =
-    today.getFullYear() === year && today.getMonth() === month;
+  const isCurrentMonth = today.getFullYear() === year &&
+    today.getMonth() === month;
   const maxDays = isCurrentMonth ? today.getDate() : daysInMonth;
 
   // Calculate completion rates for all habits
@@ -201,7 +201,9 @@ const calculateStats = (
   habits.forEach((habit) => {
     let completions = 0;
     for (let day = 1; day <= maxDays; day++) {
-      const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const date = `${year}-${String(month + 1).padStart(2, "0")}-${
+        String(day).padStart(2, "0")
+      }`;
       if (logs.has(createLogKey(habit.id, date))) {
         completions++;
       }

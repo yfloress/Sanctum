@@ -8,18 +8,22 @@
 import type { FormEvent } from "react";
 import type {
   AggregatedAsset,
-  CryptoWallet,
   CryptoTransaction,
-} from "../../types";
+  CryptoWallet,
+} from "../../types/index.ts";
 import {
+  MAX_TRACKED_COINS,
   POPULAR_CRYPTOS,
+  TRANSACTION_TYPES,
   WALLET_CATEGORIES,
   WALLET_ICONS,
-  TRANSACTION_TYPES,
-  MAX_TRACKED_COINS,
-} from "../../types";
-import { formatUSD, formatCryptoAmount, formatDate } from "../../utils";
-import { useCryptoStore } from "../../stores/cryptoStore";
+} from "../../types/index.ts";
+import {
+  formatCryptoAmount,
+  formatDate,
+  formatUSD,
+} from "../../utils/index.ts";
+import { useCryptoStore } from "../../stores/cryptoStore.ts";
 
 export function CryptoView() {
   // ==================== Store State ====================
@@ -183,6 +187,7 @@ export function CryptoView() {
         <h1 className="page-title">Cryptocurrency</h1>
         <div className="crypto-actions">
           <button
+            type="button"
             className="btn-icon"
             onClick={fetchPrices}
             disabled={isLoading}
@@ -196,6 +201,7 @@ export function CryptoView() {
       {/* Sub-tabs for Overview and Wallets */}
       <div className="crypto-subtabs">
         <button
+          type="button"
           className={`crypto-subtab ${subTab === "overview" ? "active" : ""}`}
           onClick={() => {
             setSubTab("overview");
@@ -205,6 +211,7 @@ export function CryptoView() {
           📊 Overview
         </button>
         <button
+          type="button"
           className={`crypto-subtab ${subTab === "wallets" ? "active" : ""}`}
           onClick={() => setSubTab("wallets")}
         >
@@ -225,7 +232,9 @@ export function CryptoView() {
                   ${formatUSD(portfolioTotals.totalValue)}
                 </span>
                 <span
-                  className={`portfolio-total-pnl ${portfolioTotals.totalPnl >= 0 ? "positive" : "negative"}`}
+                  className={`portfolio-total-pnl ${
+                    portfolioTotals.totalPnl >= 0 ? "positive" : "negative"
+                  }`}
                 >
                   {portfolioTotals.totalPnl >= 0 ? "+" : ""}$
                   {formatUSD(portfolioTotals.totalPnl)} (
@@ -243,6 +252,7 @@ export function CryptoView() {
                   portfolio!
                 </p>
                 <button
+                  type="button"
                   className="btn-secondary"
                   onClick={() => setSubTab("wallets")}
                 >
@@ -256,7 +266,9 @@ export function CryptoView() {
                     <div className="portfolio-card-header">
                       <span className="portfolio-symbol">{asset.symbol}</span>
                       <span
-                        className={`portfolio-pnl ${asset.unrealized_pnl >= 0 ? "positive" : "negative"}`}
+                        className={`portfolio-pnl ${
+                          asset.unrealized_pnl >= 0 ? "positive" : "negative"
+                        }`}
                       >
                         {asset.unrealized_pnl >= 0 ? "▲" : "▼"}{" "}
                         {Math.abs(asset.unrealized_pnl_percentage).toFixed(2)}%
@@ -296,6 +308,7 @@ export function CryptoView() {
                   {watchlist.length}/{MAX_TRACKED_COINS}
                 </span>
                 <button
+                  type="button"
                   className="btn-icon"
                   onClick={() => setShowAddCrypto(true)}
                   disabled={watchlist.length >= MAX_TRACKED_COINS}
@@ -315,7 +328,11 @@ export function CryptoView() {
               <div className="crypto-empty">
                 <span className="crypto-empty-icon">📊</span>
                 <p>Click refresh to load prices</p>
-                <button className="btn-secondary" onClick={fetchPrices}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={fetchPrices}
+                >
                   ↻ Load Prices
                 </button>
               </div>
@@ -326,6 +343,7 @@ export function CryptoView() {
                   .map((asset) => (
                     <div key={asset.id} className="crypto-card">
                       <button
+                        type="button"
                         className="crypto-remove"
                         onClick={() => removeFromWatchlist(asset.id)}
                         title="Remove from watchlist"
@@ -338,7 +356,11 @@ export function CryptoView() {
                           <span className="crypto-name">{asset.name}</span>
                         </div>
                         <div
-                          className={`crypto-change ${asset.price_change_percentage_24h >= 0 ? "positive" : "negative"}`}
+                          className={`crypto-change ${
+                            asset.price_change_percentage_24h >= 0
+                              ? "positive"
+                              : "negative"
+                          }`}
                         >
                           {asset.price_change_percentage_24h >= 0 ? "▲" : "▼"}{" "}
                           {Math.abs(asset.price_change_percentage_24h).toFixed(
@@ -373,6 +395,7 @@ export function CryptoView() {
           <div className="section-header">
             <h2 className="section-title">My Wallets</h2>
             <button
+              type="button"
               className="btn-primary"
               onClick={() => setShowAddWallet(true)}
             >
@@ -385,6 +408,7 @@ export function CryptoView() {
               <span className="portfolio-empty-icon">👛</span>
               <p>No wallets yet. Create your first wallet to start tracking!</p>
               <button
+                type="button"
                 className="btn-secondary"
                 onClick={() => setShowAddWallet(true)}
               >
@@ -400,6 +424,7 @@ export function CryptoView() {
                   onClick={() => selectWallet(wallet)}
                 >
                   <button
+                    type="button"
                     className="crypto-remove"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -425,7 +450,11 @@ export function CryptoView() {
       {subTab === "wallets" && selectedWallet && (
         <>
           <div className="wallet-detail-header">
-            <button className="btn-back" onClick={() => selectWallet(null)}>
+            <button
+              type="button"
+              className="btn-back"
+              onClick={() => selectWallet(null)}
+            >
               ← Back to Wallets
             </button>
             <div className="wallet-detail-info">
@@ -439,6 +468,7 @@ export function CryptoView() {
             </div>
             <div className="wallet-detail-actions">
               <button
+                type="button"
                 className="btn-primary"
                 onClick={() => {
                   setTransactionFormField("walletId", selectedWallet.id);
@@ -448,6 +478,7 @@ export function CryptoView() {
                 + Add Transaction
               </button>
               <button
+                type="button"
                 className="btn-secondary"
                 onClick={() => {
                   setTransferFormField("fromWalletId", selectedWallet.id);
@@ -457,6 +488,7 @@ export function CryptoView() {
                 ↔ Transfer
               </button>
               <button
+                type="button"
                 className="btn-secondary"
                 onClick={() => {
                   setSwapFormField("walletId", selectedWallet.id);
@@ -480,7 +512,9 @@ export function CryptoView() {
                     <div className="portfolio-card-header">
                       <span className="portfolio-symbol">{asset.symbol}</span>
                       <span
-                        className={`portfolio-pnl ${asset.unrealized_pnl >= 0 ? "positive" : "negative"}`}
+                        className={`portfolio-pnl ${
+                          asset.unrealized_pnl >= 0 ? "positive" : "negative"
+                        }`}
                       >
                         {asset.unrealized_pnl >= 0 ? "▲" : "▼"}{" "}
                         {Math.abs(asset.unrealized_pnl_percentage).toFixed(2)}%
@@ -522,7 +556,11 @@ export function CryptoView() {
                     </div>
                     <div className="transaction-actions">
                       <div
-                        className={`transaction-amount ${tx.type === "buy" || tx.type === "transfer_in" ? "income" : "expense"}`}
+                        className={`transaction-amount ${
+                          tx.type === "buy" || tx.type === "transfer_in"
+                            ? "income"
+                            : "expense"
+                        }`}
                       >
                         {tx.type === "buy" || tx.type === "transfer_in"
                           ? "+"
@@ -530,6 +568,7 @@ export function CryptoView() {
                         {formatCryptoAmount(tx.amount)} {tx.symbol}
                       </div>
                       <button
+                        type="button"
                         className="btn-delete"
                         onClick={() => setTransactionToDelete(tx.id)}
                         disabled={isLoading}
@@ -602,7 +641,9 @@ export function CryptoView() {
                       <button
                         key={icon}
                         type="button"
-                        className={`icon-option ${walletForm.icon === icon ? "selected" : ""}`}
+                        className={`icon-option ${
+                          walletForm.icon === icon ? "selected" : ""
+                        }`}
                         onClick={() => setWalletFormField("icon", icon)}
                       >
                         {icon}
@@ -691,7 +732,9 @@ export function CryptoView() {
                       <button
                         key={coin.id}
                         type="button"
-                        className={`crypto-suggestion ${transactionForm.coinId === coin.id ? "selected" : ""}`}
+                        className={`crypto-suggestion ${
+                          transactionForm.coinId === coin.id ? "selected" : ""
+                        }`}
                         onClick={() => selectCoinForTransaction(coin)}
                       >
                         <span className="suggestion-symbol">{coin.symbol}</span>
@@ -865,7 +908,9 @@ export function CryptoView() {
                       <button
                         key={coin.id}
                         type="button"
-                        className={`crypto-suggestion ${transferForm.coinId === coin.id ? "selected" : ""}`}
+                        className={`crypto-suggestion ${
+                          transferForm.coinId === coin.id ? "selected" : ""
+                        }`}
                         onClick={() => {
                           setTransferFormField("coinId", coin.id);
                           setTransferFormField("symbol", coin.symbol);
@@ -979,7 +1024,9 @@ export function CryptoView() {
                       <button
                         key={coin.id}
                         type="button"
-                        className={`crypto-suggestion ${swapForm.fromCoinId === coin.id ? "selected" : ""}`}
+                        className={`crypto-suggestion ${
+                          swapForm.fromCoinId === coin.id ? "selected" : ""
+                        }`}
                         onClick={() => {
                           setSwapFormField("fromCoinId", coin.id);
                           setSwapFormField("fromSymbol", coin.symbol);
@@ -1010,7 +1057,9 @@ export function CryptoView() {
                       <button
                         key={coin.id}
                         type="button"
-                        className={`crypto-suggestion ${swapForm.toCoinId === coin.id ? "selected" : ""}`}
+                        className={`crypto-suggestion ${
+                          swapForm.toCoinId === coin.id ? "selected" : ""
+                        }`}
                         onClick={() => {
                           setSwapFormField("toCoinId", coin.id);
                           setSwapFormField("toSymbol", coin.symbol);
@@ -1107,6 +1156,7 @@ export function CryptoView() {
                 {filteredSuggestions.length > 0 ? (
                   filteredSuggestions.map((coin) => (
                     <button
+                      type="button"
                       key={coin.id}
                       className="crypto-suggestion"
                       onClick={() => addToWatchlist(coin.id)}
@@ -1117,6 +1167,7 @@ export function CryptoView() {
                   ))
                 ) : searchQuery.trim() ? (
                   <button
+                    type="button"
                     className="crypto-suggestion custom"
                     onClick={() => addToWatchlist(searchQuery)}
                   >
@@ -1248,7 +1299,9 @@ export function CryptoView() {
                       <button
                         key={coin.id}
                         type="button"
-                        className={`crypto-suggestion ${holdingForm.coinId === coin.id ? "selected" : ""}`}
+                        className={`crypto-suggestion ${
+                          holdingForm.coinId === coin.id ? "selected" : ""
+                        }`}
                         onClick={() => selectCoinForHolding(coin)}
                       >
                         <span className="suggestion-symbol">{coin.symbol}</span>

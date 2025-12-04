@@ -6,19 +6,19 @@
  */
 
 import {
-  AreaChart,
   Area,
+  AreaChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
 } from "recharts";
-import { CHART_COLORS } from "../../types";
-import { useTransactions, useFinancialStore } from "../../stores";
+import { CHART_COLORS } from "../../types/index.ts";
+import { useFinancialStore, useTransactions } from "../../stores/index.ts";
 
 export function AnalyticsView() {
   // Consume state directly from store
@@ -55,62 +55,62 @@ export function AnalyticsView() {
         {/* Expenses by Category Chart */}
         <div className="chart-card">
           <h2 className="section-title">Expenses by Category</h2>
-          {expensesByCategory.length === 0 ? (
-            <p className="empty-state">No expenses recorded</p>
-          ) : (
-            <div className="chart-container">
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={expensesByCategory}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={3}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {expensesByCategory.map((_, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={CHART_COLORS[index % CHART_COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#111827",
-                      border: "1px solid #8b5cf6",
-                      borderRadius: "8px",
-                      color: "#e8ecf6",
-                    }}
-                    formatter={(value: number) => [
-                      `$${value.toFixed(2)}`,
-                      "Amount",
-                    ]}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="chart-legend">
-                {expensesByCategory.map((entry, index) => (
-                  <div key={entry.name} className="legend-item">
-                    <span
-                      className="legend-color"
-                      style={{
-                        backgroundColor:
-                          CHART_COLORS[index % CHART_COLORS.length],
+          {expensesByCategory.length === 0
+            ? <p className="empty-state">No expenses recorded</p>
+            : (
+              <div className="chart-container">
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={expensesByCategory}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={3}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      {expensesByCategory.map((_, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={CHART_COLORS[index % CHART_COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#111827",
+                        border: "1px solid #8b5cf6",
+                        borderRadius: "8px",
+                        color: "#e8ecf6",
                       }}
+                      formatter={(value: number) => [
+                        `$${value.toFixed(2)}`,
+                        "Amount",
+                      ]}
                     />
-                    <span className="legend-label">{entry.name}</span>
-                    <span className="legend-value">
-                      ${entry.value.toFixed(2)}
-                    </span>
-                  </div>
-                ))}
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="chart-legend">
+                  {expensesByCategory.map((entry, index) => (
+                    <div key={entry.name} className="legend-item">
+                      <span
+                        className="legend-color"
+                        style={{
+                          backgroundColor:
+                            CHART_COLORS[index % CHART_COLORS.length],
+                        }}
+                      />
+                      <span className="legend-label">{entry.name}</span>
+                      <span className="legend-value">
+                        ${entry.value.toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
 
         {/* Balance Evolution Chart */}

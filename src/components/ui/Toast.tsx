@@ -60,7 +60,7 @@ export const Toast: React.FC<ToastProps> = ({
       <div className={`toast toast-${type}`}>
         <span className="toast-icon">{icons[type]}</span>
         <span className="toast-message">{message}</span>
-        <button className="toast-close" onClick={handleClose}>
+        <button type="button" className="toast-close" onClick={handleClose}>
           ×
         </button>
       </div>

@@ -4,7 +4,8 @@
 >
 > **[Leer en Espanol](CONTRIBUTING_ES.md)**
 
-This document establishes engineering rules to keep the code clean, predictable, and extensible. It's not bureaucracy, it's architecture.
+This document establishes engineering rules to keep the code clean, predictable,
+and extensible. It's not bureaucracy, it's architecture.
 
 ---
 
@@ -15,14 +16,14 @@ See detailed instructions in **[INSTALL.md](INSTALL.md)**.
 
 ### Command Cheatsheet
 
-| Action | Command |
-|:-------|:--------|
+| Action                | Command                         |
+| :-------------------- | :------------------------------ |
 | **Start Environment** | `nix develop` (or manual setup) |
-| **Run App (Dev)** | `cargo tauri dev` |
-| **Linting (Rust)** | `cargo clippy` |
-| **Linting (TS)** | `deno task check` |
-| **Format Code** | `cargo fmt && deno fmt` |
-| **Build Release** | `cargo tauri build` |
+| **Run App (Dev)**     | `cargo tauri dev`               |
+| **Linting (Rust)**    | `cargo clippy`                  |
+| **Linting (TS)**      | `deno task check`               |
+| **Format Code**       | `cargo fmt && deno fmt`         |
+| **Build Release**     | `cargo tauri build`             |
 
 ---
 
@@ -30,9 +31,12 @@ See detailed instructions in **[INSTALL.md](INSTALL.md)**.
 
 Any code change must respect these three pillars:
 
-1. **Local-First:** The app must be 100% functional without internet. Data lives on the user's device.
-2. **Privacy by Design:** No telemetry, no analytics, no "ping" to external servers (except CoinGecko on explicit user demand).
-3. **Zero Hidden Dependencies:** Do not use libraries that require proprietary servers (e.g., Firebase).
+1. **Local-First:** The app must be 100% functional without internet. Data lives
+   on the user's device.
+2. **Privacy by Design:** No telemetry, no analytics, no "ping" to external
+   servers (except CoinGecko on explicit user demand).
+3. **Zero Hidden Dependencies:** Do not use libraries that require proprietary
+   servers (e.g., Firebase).
 
 ---
 
@@ -74,12 +78,12 @@ Sanctum follows a layered architecture with strict separation of concerns:
 
 ### MVC Mapping
 
-| Layer | Location | Responsibility |
-|:------|:---------|:---------------|
-| Model | `src-tauri/src/db.rs` | Persistence, SQL queries, migrations |
+| Layer      | Location                    | Responsibility                         |
+| :--------- | :-------------------------- | :------------------------------------- |
+| Model      | `src-tauri/src/db.rs`       | Persistence, SQL queries, migrations   |
 | Controller | `src-tauri/src/commands.rs` | Validation, sanitization, coordination |
-| ViewModel | `src/stores/*.ts` | State, business logic, IPC calls |
-| View | `src/features/**/*.tsx` | Rendering, UI events |
+| ViewModel  | `src/stores/*.ts`           | State, business logic, IPC calls       |
+| View       | `src/features/**/*.tsx`     | Rendering, UI events                   |
 
 ---
 
@@ -93,26 +97,29 @@ Sanctum follows a layered architecture with strict separation of concerns:
 // WRONG: Logic in component
 function TransactionsView() {
   const [transactions, setTransactions] = useState([]);
-  
+
   useEffect(() => {
-    invoke("get_transactions").then(setTransactions);  // NO
+    invoke("get_transactions").then(setTransactions); // NO
   }, []);
-  
+
   const handleDelete = async (id: string) => {
-    await invoke("delete_transaction", { id });        // NO
-    setTransactions(prev => prev.filter(t => t.id !== id));
+    await invoke("delete_transaction", { id }); // NO
+    setTransactions((prev) => prev.filter((t) => t.id !== id));
   };
 }
 
 // CORRECT: Component consumes the Store
 function TransactionsView() {
-  const transactions = useTransactions();              // Read only
-  const { deleteTransaction } = useFinancialStore();   // Actions only
-  
+  const transactions = useTransactions(); // Read only
+  const { deleteTransaction } = useFinancialStore(); // Actions only
+
   return (
     <ul>
-      {transactions.map(t => (
-        <li key={t.id} onClick={() => deleteTransaction(t.id)}>
+      {transactions.map((t) => (
+        <li
+          key={t.id}
+          onClick={() => deleteTransaction(t.id)}
+        >
           {t.description}
         </li>
       ))}
@@ -130,7 +137,8 @@ function TransactionsView() {
 
 ### Backend (Rust)
 
-**Cardinal Rule:** The database is the single source of truth. Never cache derived state.
+**Cardinal Rule:** The database is the single source of truth. Never cache
+derived state.
 
 ```rust
 // WRONG: Storing derived state
@@ -172,7 +180,8 @@ fn add_transaction(amount: i64, category: &str) -> Result<(), DbError> {
 
 ### Tauri Window Management
 
-**Cardinal Rule:** The main window starts hidden and is shown only after React hydrates.
+**Cardinal Rule:** The main window starts hidden and is shown only after React
+hydrates.
 
 This prevents the "white flash" on startup. The pattern is implemented in:
 
@@ -197,11 +206,13 @@ useLayoutEffect(() => {
 ```
 
 **Required permission** in `src-tauri/capabilities/default.json`:
+
 ```json
 "permissions": ["core:default", "core:window:allow-show", "opener:default"]
 ```
 
 **Do NOT:**
+
 - Set `"visible": true` in `tauri.conf.json`
 - Call `show()` before React has mounted
 - Block the main thread with synchronous operations during startup
@@ -212,7 +223,8 @@ useLayoutEffect(() => {
 
 ### Observer Pattern (Zustand)
 
-Stores implement the Observer pattern. Components subscribe to state slices and React re-renders automatically when they change.
+Stores implement the Observer pattern. Components subscribe to state slices and
+React re-renders automatically when they change.
 
 ```typescript
 // The store is the Subject
@@ -234,7 +246,8 @@ function TransactionList() {
 
 ### Command Pattern (Tauri IPC)
 
-Each backend operation is exposed as a discrete command. The frontend doesn't know the implementation, only the contract.
+Each backend operation is exposed as a discrete command. The frontend doesn't
+know the implementation, only the contract.
 
 ```rust
 // Backend: Define the command
@@ -300,18 +313,19 @@ src-tauri/src/
 
 ### Where each thing goes
 
-| You need... | Location |
-|:------------|:---------|
-| New screen/section | `src/features/new-feature/` |
-| Shared global state | `src/stores/newStore.ts` |
-| Reusable component | `src/components/category/` |
-| Type/Interface | `src/types/index.ts` |
-| Pure helper function | `src/utils/index.ts` |
-| New SQL table | `src-tauri/src/db.rs` (migration) |
-| New IPC endpoint | `src-tauri/src/commands.rs` |
-| Data struct | `src-tauri/src/models.rs` |
+| You need...          | Location                          |
+| :------------------- | :-------------------------------- |
+| New screen/section   | `src/features/new-feature/`       |
+| Shared global state  | `src/stores/newStore.ts`          |
+| Reusable component   | `src/components/category/`        |
+| Type/Interface       | `src/types/index.ts`              |
+| Pure helper function | `src/utils/index.ts`              |
+| New SQL table        | `src-tauri/src/db.rs` (migration) |
+| New IPC endpoint     | `src-tauri/src/commands.rs`       |
+| Data struct          | `src-tauri/src/models.rs`         |
 
-> **Note:** The project does NOT use a `hooks/` folder. All state logic is in Zustand stores.
+> **Note:** The project does NOT use a `hooks/` folder. All state logic is in
+> Zustand stores.
 
 ---
 
@@ -429,16 +443,16 @@ interface GoalState {
   isLoading: boolean;
   error: string | null;
   successMessage: string | null;
-  
+
   loadGoals: () => Promise<void>;
   addGoal: (name: string, targetAmount: number) => Promise<boolean>;
   // ... other actions ...
-  
+
   // Messages
   setError: (error: string | null) => void;
   setSuccess: (message: string | null) => void;
   clearMessages: () => void;
-  
+
   // Security: RAM Clear
   reset: () => void;
 }
@@ -448,7 +462,7 @@ export const useGoalStore = create<GoalState>((set, get) => ({
   isLoading: false,
   error: null,
   successMessage: null,
-  
+
   loadGoals: async () => {
     set({ isLoading: true });
     try {
@@ -460,7 +474,7 @@ export const useGoalStore = create<GoalState>((set, get) => ({
       set({ isLoading: false });
     }
   },
-  
+
   addGoal: async (name, targetAmount) => {
     set({ isLoading: true, error: null });
     try {
@@ -475,18 +489,19 @@ export const useGoalStore = create<GoalState>((set, get) => ({
       set({ isLoading: false });
     }
   },
-  
+
   setError: (error) => set({ error }),
   setSuccess: (message) => set({ successMessage: message }),
   clearMessages: () => set({ error: null, successMessage: null }),
-  
+
   // IMPORTANT: Clear sensitive data from RAM when vault closes
-  reset: () => set({ 
-    goals: [], 
-    isLoading: false, 
-    error: null,
-    successMessage: null 
-  }),
+  reset: () =>
+    set({
+      goals: [],
+      isLoading: false,
+      error: null,
+      successMessage: null,
+    }),
 }));
 
 // Optimized selectors (avoid unnecessary re-renders)
@@ -502,32 +517,30 @@ Create `src/features/goals/GoalsView.tsx`:
 
 ```typescript
 import { useEffect } from "react";
-import { useGoals, useGoalLoading, useGoalStore } from "../../stores/goalStore";
+import { useGoalLoading, useGoals, useGoalStore } from "../../stores/goalStore";
 
 export function GoalsView() {
   // Specific selectors (optimize re-renders)
   const goals = useGoals();
   const isLoading = useGoalLoading();
-  
+
   // Store actions
   const loadGoals = useGoalStore((s) => s.loadGoals);
   const addGoal = useGoalStore((s) => s.addGoal);
-  
+
   useEffect(() => {
     loadGoals();
   }, [loadGoals]);
-  
+
   if (isLoading) {
     return <div className="loader">Loading goals...</div>;
   }
-  
+
   return (
     <div className="goals-view">
       <h1>Financial Goals</h1>
       <div className="goals-grid">
-        {goals.map(goal => (
-          <GoalCard key={goal.id} goal={goal} />
-        ))}
+        {goals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}
       </div>
     </div>
   );
@@ -539,10 +552,10 @@ export function GoalsView() {
 1. Add the tab in `src/App.tsx`:
    - Import `GoalsView` from `./features/goals/GoalsView`
    - Add the case in the conditional tab render
-   
+
 2. Add the item in `src/components/layout/Sidebar.tsx`:
    - Add the button with the corresponding icon and label
-   
+
 3. Add the store to the kill switch in `src/stores/authStore.ts`:
    ```typescript
    // In _clearAllStores:
@@ -552,9 +565,9 @@ export function GoalsView() {
 4. Export the store in `src/stores/index.ts`:
    ```typescript
    export {
-     useGoalStore,
-     useGoals,
      useGoalLoading,
+     useGoals,
+     useGoalStore,
      // ...
    } from "./goalStore";
    ```
@@ -571,6 +584,7 @@ export function GoalsView() {
 Before submitting a PR, verify:
 
 **Backend (Rust):**
+
 - [ ] `cargo clippy` passes without warnings
 - [ ] `cargo test` passes (if there are tests)
 - [ ] Sensitive data uses `SecretString`
@@ -578,6 +592,7 @@ Before submitting a PR, verify:
 - [ ] New commands are registered in `lib.rs`
 
 **Frontend (TypeScript):**
+
 - [ ] `deno task check` passes (TypeScript)
 - [ ] No `console.log` in final code (except in development)
 - [ ] New stores have `reset()` method for the kill switch
@@ -585,9 +600,11 @@ Before submitting a PR, verify:
 - [ ] Specific selectors to avoid re-renders
 
 **General:**
+
 - [ ] No hardcoded secrets
 - [ ] Documentation in `ARCHITECT.md` is updated if structure changes
-- [ ] Types synchronized between Rust (`models.rs`) and TypeScript (`types/index.ts`)
+- [ ] Types synchronized between Rust (`models.rs`) and TypeScript
+      (`types/index.ts`)
 
 ---
 
@@ -604,10 +621,12 @@ refactor(stores): migrate from hooks to Zustand
 docs(contributing): add development workflow
 ```
 
-Valid types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`, `security`
+Valid types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`,
+`security`
 
 ---
 
 ## 10. Contact
 
-If you have questions about the architecture before starting to code, open an Issue with the `question` tag. It's better to ask than to rewrite.
+If you have questions about the architecture before starting to code, open an
+Issue with the `question` tag. It's better to ask than to rewrite.

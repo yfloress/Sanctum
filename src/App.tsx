@@ -16,45 +16,45 @@
  */
 
 import {
-  useState,
-  useEffect,
-  useRef,
   useCallback,
+  useEffect,
   useLayoutEffect,
+  useRef,
+  useState,
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 
 // Stores
 import {
-  useAuthStore,
-  useIsInitialized,
-  useAuthLoading,
   useAuthError,
+  useAuthLoading,
+  useAuthStore,
   useAuthSuccess,
-  useFinancialStore,
   useCryptoStore,
+  useFinancialStore,
   useHabitStore,
-} from "./stores";
+  useIsInitialized,
+} from "./stores/index.ts";
 
 // Components
-import { Sidebar } from "./components/layout/Sidebar";
-import { DeleteConfirmModal } from "./components/modals/DeleteConfirmModal";
-import { ToastStack } from "./components/ui/Toast";
+import { Sidebar } from "./components/layout/Sidebar.tsx";
+import { DeleteConfirmModal } from "./components/modals/DeleteConfirmModal.tsx";
+import { ToastStack } from "./components/ui/Toast.tsx";
 
 // Toast Store
-import { useToast } from "./stores/toastStore";
+import { useToast } from "./stores/toastStore.ts";
 
 // Features
-import { LoginScreen } from "./features/auth/LoginScreen";
-import { Dashboard } from "./features/dashboard/Dashboard";
-import { TransactionsView } from "./features/transactions/TransactionsView";
-import { AnalyticsView } from "./features/analytics/AnalyticsView";
-import { CryptoView } from "./features/crypto/CryptoView";
-import { HabitsView } from "./features/habits/HabitsView";
+import { LoginScreen } from "./features/auth/LoginScreen.tsx";
+import { Dashboard } from "./features/dashboard/Dashboard.tsx";
+import { TransactionsView } from "./features/transactions/TransactionsView.tsx";
+import { AnalyticsView } from "./features/analytics/AnalyticsView.tsx";
+import { CryptoView } from "./features/crypto/CryptoView.tsx";
+import { HabitsView } from "./features/habits/HabitsView.tsx";
 
 // Types
-import type { TabType } from "./types";
+import type { TabType } from "./types/index.ts";
 
 // Session timeout warning threshold (2 minutes before expiry)
 const SESSION_WARNING_THRESHOLD = 120;
@@ -71,7 +71,6 @@ function App({ onReady }: AppProps) {
   const authSuccess = useAuthSuccess();
   const checkStatus = useAuthStore((state) => state.checkStatus);
   const logout = useAuthStore((state) => state.logout);
-  const setAuthError = useAuthStore((state) => state.setError);
   const clearAuthMessages = useAuthStore((state) => state.clearMessages);
 
   // ==================== Financial Store ====================
@@ -235,13 +234,15 @@ function App({ onReady }: AppProps) {
         sessionCheckIntervalRef.current = null;
       }
     };
-  }, [isInitialized, logout, setAuthError, toast]);
+  }, [isInitialized, logout, toast]);
 
   // ==================== Session Warning Toast ====================
   useEffect(() => {
     if (showSessionWarning && sessionRemaining !== null) {
       toast.warning(
-        `Session expires in ${Math.ceil(sessionRemaining / 60)} minute(s). Activity will extend your session.`,
+        `Session expires in ${Math.ceil(
+          sessionRemaining / 60,
+        )} minute(s). Activity will extend your session.`,
       );
     }
   }, [showSessionWarning]);

@@ -6,12 +6,12 @@
  */
 
 import {
-  useTransactions,
   useBalance,
-  useFinancialStore,
   useFinancialLoading,
-} from "../../stores";
-import { formatAmount, formatDate } from "../../utils";
+  useFinancialStore,
+  useTransactions,
+} from "../../stores/index.ts";
+import { formatAmount, formatDate } from "../../utils/index.ts";
 
 export function Dashboard() {
   // Consume state directly from store (optimized selectors)
@@ -53,38 +53,45 @@ export function Dashboard() {
       {/* Recent Transactions */}
       <div className="recent-transactions">
         <h2 className="section-title">Recent Transactions</h2>
-        {transactions.length === 0 ? (
-          <p className="empty-state">No transactions recorded</p>
-        ) : (
-          <div className="transactions-list">
-            {transactions.slice(0, 5).map((tx) => (
-              <div key={tx.id} className="transaction-item">
-                <div className="transaction-info">
-                  <div className="transaction-category">{tx.category}</div>
-                  <div className="transaction-description">
-                    {tx.description}
+        {transactions.length === 0
+          ? <p className="empty-state">No transactions recorded</p>
+          : (
+            <div className="transactions-list">
+              {transactions.slice(0, 5).map((tx) => (
+                <div key={tx.id} className="transaction-item">
+                  <div className="transaction-info">
+                    <div className="transaction-category">{tx.category}</div>
+                    <div className="transaction-description">
+                      {tx.description}
+                    </div>
+                    <div className="transaction-date">
+                      {formatDate(tx.date)}
+                    </div>
                   </div>
-                  <div className="transaction-date">{formatDate(tx.date)}</div>
-                </div>
-                <div className="transaction-actions">
-                  <div
-                    className={`transaction-amount ${tx.type === "income" ? "income" : "expense"}`}
-                  >
-                    {tx.type === "income" ? "+" : "-"}${formatAmount(tx.amount)}
+                  <div className="transaction-actions">
+                    <div
+                      className={`transaction-amount ${
+                        tx.type === "income" ? "income" : "expense"
+                      }`}
+                    >
+                      {tx.type === "income" ? "+" : "-"}${formatAmount(
+                        tx.amount,
+                      )}
+                    </div>
+                    <button type="button"
+                      className="btn-delete"
+                      onClick={() =>
+                        setTransactionToDelete(tx.id)}
+                      disabled={isLoading}
+                      aria-label="Delete transaction"
+                    >
+                      🗑️
+                    </button>
                   </div>
-                  <button
-                    className="btn-delete"
-                    onClick={() => setTransactionToDelete(tx.id)}
-                    disabled={isLoading}
-                    aria-label="Delete transaction"
-                  >
-                    🗑️
-                  </button>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
       </div>
     </div>
   );

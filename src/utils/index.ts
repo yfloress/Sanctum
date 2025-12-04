@@ -1,4 +1,4 @@
-import type { AggregatedAsset, CryptoAsset } from "../types";
+import type { AggregatedAsset, CryptoAsset } from "../types/index.ts";
 
 // ==================== Date Utilities ====================
 
@@ -77,10 +77,9 @@ export function enrichAssetsWithPrices(
     const currentPrice = priceData?.current_price ?? 0;
     const currentValue = asset.total_amount * currentPrice;
     const unrealizedPnl = currentValue - asset.total_cost_basis;
-    const unrealizedPnlPercentage =
-      asset.total_cost_basis > 0
-        ? (unrealizedPnl / asset.total_cost_basis) * 100
-        : 0;
+    const unrealizedPnlPercentage = asset.total_cost_basis > 0
+      ? (unrealizedPnl / asset.total_cost_basis) * 100
+      : 0;
 
     return {
       ...asset,

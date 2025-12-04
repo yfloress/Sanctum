@@ -82,10 +82,10 @@ pub fn validate_coin_id(coin_id: &str) -> Result<String, String> {
     }
 
     // Additional check: must start and end with alphanumeric
-    if let (Some(first), Some(last)) = (trimmed.chars().next(), trimmed.chars().last()) {
-        if !first.is_ascii_alphanumeric() || !last.is_ascii_alphanumeric() {
-            return Err("Coin ID must start and end with alphanumeric characters".to_string());
-        }
+    if let (Some(first), Some(last)) = (trimmed.chars().next(), trimmed.chars().last())
+        && (!first.is_ascii_alphanumeric() || !last.is_ascii_alphanumeric())
+    {
+        return Err("Coin ID must start and end with alphanumeric characters".to_string());
     }
 
     // Prevent consecutive hyphens
@@ -237,7 +237,7 @@ pub async fn fetch_crypto_prices(coin_ids: Vec<String>) -> Result<Vec<CryptoAsse
         .get(&url)
         .send()
         .await
-        .map_err(|e| handle_request_error(e))?;
+        .map_err(handle_request_error)?;
 
     // Check HTTP status
     let status = response.status();
@@ -254,10 +254,10 @@ pub async fn fetch_crypto_prices(coin_ids: Vec<String>) -> Result<Vec<CryptoAsse
     }
 
     // Check content length before downloading
-    if let Some(content_length) = response.content_length() {
-        if content_length as usize > MAX_RESPONSE_SIZE {
-            return Err("Response too large".to_string());
-        }
+    if let Some(content_length) = response.content_length()
+        && content_length as usize > MAX_RESPONSE_SIZE
+    {
+        return Err("Response too large".to_string());
     }
 
     // Download body with size limit (streaming to avoid loading unbounded data)

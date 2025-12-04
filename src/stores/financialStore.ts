@@ -10,9 +10,9 @@
 
 import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
-import type { Transaction, BalanceSummary } from "../types";
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../types";
-import { getLocalDateString } from "../utils";
+import type { BalanceSummary, Transaction } from "../types/index.ts";
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../types/index.ts";
+import { getLocalDateString } from "../utils/index.ts";
 
 // ==================== Types ====================
 
@@ -63,7 +63,7 @@ interface FinancialActions {
   // Form Management
   setFormField: <K extends keyof TransactionFormData>(
     field: K,
-    value: TransactionFormData[K]
+    value: TransactionFormData[K],
   ) => void;
   resetForm: () => void;
   toggleExpenseType: (isExpense: boolean) => void;
@@ -192,7 +192,9 @@ export const useFinancialStore = create<FinancialStore>((set, get) => ({
       // Reset form and show success
       get().resetForm();
       set({
-        successMessage: `${data.isExpense ? "Expense" : "Income"} added successfully`,
+        successMessage: `${
+          data.isExpense ? "Expense" : "Income"
+        } added successfully`,
       });
 
       // Auto-clear success message
@@ -305,7 +307,7 @@ export const useFinancialStore = create<FinancialStore>((set, get) => ({
         acc[tx.category] = (acc[tx.category] || 0) + tx.amount;
         return acc;
       },
-      {} as Record<string, number>
+      {} as Record<string, number>,
     );
 
     const result = Object.entries(grouped)
@@ -331,7 +333,7 @@ export const useFinancialStore = create<FinancialStore>((set, get) => ({
     }
 
     const sorted = [...state.transactions].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
     );
 
     const dailyData: Record<string, { income: number; expense: number }> = {};

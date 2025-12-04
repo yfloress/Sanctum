@@ -13,29 +13,29 @@
  * - Callbacks are memoized with useCallback
  */
 
-import { useEffect, useMemo, useCallback, useState, memo } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
-  AreaChart,
   Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
 } from "recharts";
 import {
-  useHabitStore,
-  useHabits,
   useCurrentMonth,
-  useHabitLoading,
-  useShowAddModal,
-  useHabitToEdit,
-  useHabitToDelete,
   useHabitForm,
+  useHabitLoading,
+  useHabits,
   useHabitStats,
-} from "../../stores";
-import { HABIT_COLORS } from "../../types";
-import { DeleteConfirmModal } from "../../components/modals/DeleteConfirmModal";
+  useHabitStore,
+  useHabitToDelete,
+  useHabitToEdit,
+  useShowAddModal,
+} from "../../stores/index.ts";
+import { HABIT_COLORS } from "../../types/index.ts";
+import { DeleteConfirmModal } from "../../components/modals/DeleteConfirmModal.tsx";
 
 // ==================== Helper Functions ====================
 
@@ -44,7 +44,10 @@ const getDaysInMonth = (year: number, month: number): number => {
 };
 
 const formatDateToISO = (year: number, month: number, day: number): string => {
-  return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(
+    2,
+    "0",
+  )}`;
 };
 
 const getMonthName = (date: Date): string => {
@@ -99,7 +102,9 @@ const HabitCell = memo(function HabitCell({
 
   return (
     <div
-      className={`habit-cell ${isCompleted ? "completed" : ""} ${isFuture ? "future" : ""} ${isTodayCell ? "today" : ""}`}
+      className={`habit-cell ${isCompleted ? "completed" : ""} ${
+        isFuture ? "future" : ""
+      } ${isTodayCell ? "today" : ""}`}
       style={
         isCompleted
           ? {
@@ -178,6 +183,7 @@ const HabitRow = memo(function HabitRow({
         </div>
         <div className="habit-actions">
           <button
+            type="button"
             className="habit-action-btn edit"
             onClick={onEdit}
             title="Edit habit"
@@ -185,6 +191,7 @@ const HabitRow = memo(function HabitRow({
             ✏️
           </button>
           <button
+            type="button"
             className="habit-action-btn delete"
             onClick={onDelete}
             title="Delete habit"
@@ -292,7 +299,9 @@ const AddHabitModal = memo(function AddHabitModal({
                   <button
                     key={color}
                     type="button"
-                    className={`color-option ${form.color === color ? "selected" : ""}`}
+                    className={`color-option ${
+                      form.color === color ? "selected" : ""
+                    }`}
                     style={{ backgroundColor: color }}
                     onClick={() => setFormField("color", color)}
                     aria-label={`Select color ${color}`}
@@ -434,6 +443,7 @@ export const HabitsView = () => {
         </div>
 
         <button
+          type="button"
           className="btn-primary add-habit-btn"
           onClick={() => setShowAddModal(true)}
         >
@@ -445,6 +455,7 @@ export const HabitsView = () => {
       <div className="habits-nav">
         <div className="month-selector">
           <button
+            type="button"
             className="nav-arrow"
             onClick={goToPreviousMonth}
             aria-label="Previous month"
@@ -453,6 +464,7 @@ export const HabitsView = () => {
           </button>
           <h2 className="current-month">{monthName}</h2>
           <button
+            type="button"
             className="nav-arrow"
             onClick={goToNextMonth}
             aria-label="Next month"
@@ -463,7 +475,11 @@ export const HabitsView = () => {
 
         <div className="nav-actions">
           {!isCurrentMonthView && (
-            <button className="btn-secondary today-btn" onClick={goToToday}>
+            <button
+              type="button"
+              className="btn-secondary today-btn"
+              onClick={goToToday}
+            >
               Today
             </button>
           )}
@@ -500,7 +516,11 @@ export const HabitsView = () => {
           <div className="empty-icon">🌱</div>
           <h3>No habits yet</h3>
           <p>Start building your atomic habits today!</p>
-          <button className="btn-primary" onClick={() => setShowAddModal(true)}>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => setShowAddModal(true)}
+          >
             Create Your First Habit
           </button>
         </div>

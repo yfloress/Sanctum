@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 /// Represents a cryptocurrency asset with market data
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -68,13 +69,17 @@ impl WalletCategory {
             WalletCategory::WalletMulti => "wallet_multi",
         }
     }
+}
 
-    pub fn from_str(s: &str) -> Option<Self> {
+impl FromStr for WalletCategory {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "exchange" => Some(WalletCategory::Exchange),
-            "wallet_single" => Some(WalletCategory::WalletSingle),
-            "wallet_multi" => Some(WalletCategory::WalletMulti),
-            _ => None,
+            "exchange" => Ok(WalletCategory::Exchange),
+            "wallet_single" => Ok(WalletCategory::WalletSingle),
+            "wallet_multi" => Ok(WalletCategory::WalletMulti),
+            _ => Err(()),
         }
     }
 }
@@ -99,7 +104,7 @@ impl CryptoWallet {
     }
 
     pub fn validate(&self) -> bool {
-        !self.name.trim().is_empty() && WalletCategory::from_str(&self.category).is_some()
+        !self.name.trim().is_empty() && self.category.parse::<WalletCategory>().is_ok()
     }
 }
 
@@ -125,17 +130,6 @@ impl CryptoTransactionType {
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
-        match s {
-            "buy" => Some(CryptoTransactionType::Buy),
-            "sell" => Some(CryptoTransactionType::Sell),
-            "transfer_in" => Some(CryptoTransactionType::TransferIn),
-            "transfer_out" => Some(CryptoTransactionType::TransferOut),
-            "swap" => Some(CryptoTransactionType::Swap),
-            _ => None,
-        }
-    }
-
     /// Returns true if this transaction type adds to the balance
     pub fn is_inflow(&self) -> bool {
         matches!(
@@ -150,6 +144,21 @@ impl CryptoTransactionType {
             self,
             CryptoTransactionType::Sell | CryptoTransactionType::TransferOut
         )
+    }
+}
+
+impl FromStr for CryptoTransactionType {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "buy" => Ok(CryptoTransactionType::Buy),
+            "sell" => Ok(CryptoTransactionType::Sell),
+            "transfer_in" => Ok(CryptoTransactionType::TransferIn),
+            "transfer_out" => Ok(CryptoTransactionType::TransferOut),
+            "swap" => Ok(CryptoTransactionType::Swap),
+            _ => Err(()),
+        }
     }
 }
 
@@ -208,11 +217,14 @@ impl CryptoTransaction {
             && !self.coin_id.is_empty()
             && !self.symbol.is_empty()
             && self.amount > 0.0
-            && CryptoTransactionType::from_str(&self.transaction_type).is_some()
+            && self
+                .transaction_type
+                .parse::<CryptoTransactionType>()
+                .is_ok()
     }
 
     pub fn get_type(&self) -> Option<CryptoTransactionType> {
-        CryptoTransactionType::from_str(&self.transaction_type)
+        self.transaction_type.parse::<CryptoTransactionType>().ok()
     }
 
     /// Returns the cost basis for this transaction (amount * price + fees)

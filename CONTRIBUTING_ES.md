@@ -4,7 +4,8 @@
 >
 > **[Read in English](CONTRIBUTING.md)**
 
-Este documento establece las reglas de ingenieria para mantener el codigo limpio, predecible y extensible. No es burocracia, es arquitectura.
+Este documento establece las reglas de ingenieria para mantener el codigo
+limpio, predecible y extensible. No es burocracia, es arquitectura.
 
 ---
 
@@ -15,14 +16,14 @@ Consulta las instrucciones detalladas en **[INSTALL.md](INSTALL.md)**.
 
 ### Cheatsheet de Comandos
 
-| Accion | Comando |
-|:-------|:--------|
-| **Iniciar Entorno** | `nix develop` (o configurar manual) |
-| **Correr App (Dev)** | `cargo tauri dev` |
-| **Linting (Rust)** | `cargo clippy` |
-| **Linting (TS)** | `deno task check` |
-| **Formatear Codigo** | `cargo fmt && deno fmt` |
-| **Compilar Release** | `cargo tauri build` |
+| Accion               | Comando                             |
+| :------------------- | :---------------------------------- |
+| **Iniciar Entorno**  | `nix develop` (o configurar manual) |
+| **Correr App (Dev)** | `cargo tauri dev`                   |
+| **Linting (Rust)**   | `cargo clippy`                      |
+| **Linting (TS)**     | `deno task check`                   |
+| **Formatear Codigo** | `cargo fmt && deno fmt`             |
+| **Compilar Release** | `cargo tauri build`                 |
 
 ---
 
@@ -30,15 +31,19 @@ Consulta las instrucciones detalladas en **[INSTALL.md](INSTALL.md)**.
 
 Cualquier cambio de codigo debe respetar estos tres pilares:
 
-1. **Local-First:** La app debe ser 100% funcional sin internet. Los datos viven en el dispositivo del usuario.
-2. **Privacidad por Diseno:** No hay telemetria, ni analiticas, ni "ping" a servidores externos (excepto CoinGecko bajo demanda explicita del usuario).
-3. **Cero Dependencias Ocultas:** No usar librerias que requieran servidores propietarios (ej: Firebase).
+1. **Local-First:** La app debe ser 100% funcional sin internet. Los datos viven
+   en el dispositivo del usuario.
+2. **Privacidad por Diseno:** No hay telemetria, ni analiticas, ni "ping" a
+   servidores externos (excepto CoinGecko bajo demanda explicita del usuario).
+3. **Cero Dependencias Ocultas:** No usar librerias que requieran servidores
+   propietarios (ej: Firebase).
 
 ---
 
 ## 3. Arquitectura del Proyecto
 
-Sanctum sigue una arquitectura en capas con separación estricta de responsabilidades:
+Sanctum sigue una arquitectura en capas con separación estricta de
+responsabilidades:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -69,17 +74,18 @@ Sanctum sigue una arquitectura en capas con separación estricta de responsabili
 2. **db.rs**: Capa de acceso a datos. CRUD, migraciones, queries.
 3. **commands.rs**: Validación de entrada, sanitización, orquestación.
 4. **Tauri IPC**: Puente entre Rust y JavaScript via `invoke()`.
-5. **Zustand Stores**: Estado global del frontend. Contiene toda la lógica de negocio.
+5. **Zustand Stores**: Estado global del frontend. Contiene toda la lógica de
+   negocio.
 6. **React Components**: Renderizado puro. Sin lógica, solo presentación.
 
 ### Mapeo a MVC
 
-| Capa | Ubicación | Responsabilidad |
-|:-----|:----------|:----------------|
-| Model | `src-tauri/src/db.rs` | Persistencia, queries SQL, migraciones |
-| Controller | `src-tauri/src/commands.rs` | Validación, sanitización, coordinación |
-| ViewModel | `src/stores/*.ts` | Estado, lógica de negocio, llamadas IPC |
-| View | `src/features/**/*.tsx` | Renderizado, eventos UI |
+| Capa       | Ubicación                   | Responsabilidad                         |
+| :--------- | :-------------------------- | :-------------------------------------- |
+| Model      | `src-tauri/src/db.rs`       | Persistencia, queries SQL, migraciones  |
+| Controller | `src-tauri/src/commands.rs` | Validación, sanitización, coordinación  |
+| ViewModel  | `src/stores/*.ts`           | Estado, lógica de negocio, llamadas IPC |
+| View       | `src/features/**/*.tsx`     | Renderizado, eventos UI                 |
 
 ---
 
@@ -87,32 +93,36 @@ Sanctum sigue una arquitectura en capas con separación estricta de responsabili
 
 ### Frontend (TypeScript/React)
 
-**Regla Cardinal:** La logica de negocio va en los Stores, NO en los componentes.
+**Regla Cardinal:** La logica de negocio va en los Stores, NO en los
+componentes.
 
 ```typescript
 // INCORRECTO: Logica en el componente
 function TransactionsView() {
   const [transactions, setTransactions] = useState([]);
-  
+
   useEffect(() => {
-    invoke("get_transactions").then(setTransactions);  // NO
+    invoke("get_transactions").then(setTransactions); // NO
   }, []);
-  
+
   const handleDelete = async (id: string) => {
-    await invoke("delete_transaction", { id });        // NO
-    setTransactions(prev => prev.filter(t => t.id !== id));
+    await invoke("delete_transaction", { id }); // NO
+    setTransactions((prev) => prev.filter((t) => t.id !== id));
   };
 }
 
 // CORRECTO: Componente consume el Store
 function TransactionsView() {
-  const transactions = useTransactions();              // Solo lee
-  const { deleteTransaction } = useFinancialStore();   // Solo acciones
-  
+  const transactions = useTransactions(); // Solo lee
+  const { deleteTransaction } = useFinancialStore(); // Solo acciones
+
   return (
     <ul>
-      {transactions.map(t => (
-        <li key={t.id} onClick={() => deleteTransaction(t.id)}>
+      {transactions.map((t) => (
+        <li
+          key={t.id}
+          onClick={() => deleteTransaction(t.id)}
+        >
           {t.description}
         </li>
       ))}
@@ -126,11 +136,13 @@ function TransactionsView() {
 - Usar selectores especificos para evitar re-renders innecesarios
 - No usar `persist` middleware en Zustand (datos sensibles)
 - Llamadas a `invoke()` solo dentro de los Stores
-- Componentes en `features/` son vistas completas, en `components/` son reutilizables
+- Componentes en `features/` son vistas completas, en `components/` son
+  reutilizables
 
 ### Backend (Rust)
 
-**Regla Cardinal:** La base de datos es la unica fuente de verdad. Nunca cachear estado derivado.
+**Regla Cardinal:** La base de datos es la unica fuente de verdad. Nunca cachear
+estado derivado.
 
 ```rust
 // INCORRECTO: Guardar estado derivado
@@ -172,7 +184,8 @@ fn add_transaction(amount: i64, category: &str) -> Result<(), DbError> {
 
 ### Gestion de Ventana Tauri
 
-**Regla Cardinal:** La ventana principal inicia oculta y se muestra solo despues de que React hidrate.
+**Regla Cardinal:** La ventana principal inicia oculta y se muestra solo despues
+de que React hidrate.
 
 Esto previene el "flash blanco" al iniciar. El patron esta implementado en:
 
@@ -197,11 +210,13 @@ useLayoutEffect(() => {
 ```
 
 **Permiso requerido** en `src-tauri/capabilities/default.json`:
+
 ```json
 "permissions": ["core:default", "core:window:allow-show", "opener:default"]
 ```
 
 **NO hacer:**
+
 - Configurar `"visible": true` en `tauri.conf.json`
 - Llamar `show()` antes de que React haya montado
 - Bloquear el hilo principal con operaciones sincronas durante el arranque
@@ -212,7 +227,8 @@ useLayoutEffect(() => {
 
 ### Observer Pattern (Zustand)
 
-Los Stores implementan el patron Observer. Los componentes se suscriben a slices del estado y React re-renderiza automaticamente cuando cambian.
+Los Stores implementan el patron Observer. Los componentes se suscriben a slices
+del estado y React re-renderiza automaticamente cuando cambian.
 
 ```typescript
 // El store es el Subject
@@ -234,7 +250,8 @@ function TransactionList() {
 
 ### Command Pattern (Tauri IPC)
 
-Cada operacion del backend se expone como un comando discreto. El frontend no conoce la implementacion, solo el contrato.
+Cada operacion del backend se expone como un comando discreto. El frontend no
+conoce la implementacion, solo el contrato.
 
 ```rust
 // Backend: Define el comando
@@ -300,18 +317,19 @@ src-tauri/src/
 
 ### Donde va cada cosa
 
-| Necesitas... | Ubicacion |
-|:-------------|:----------|
-| Nueva pantalla/seccion | `src/features/nueva-feature/` |
-| Estado global compartido | `src/stores/nuevoStore.ts` |
-| Componente reutilizable | `src/components/categoria/` |
-| Tipo/Interface | `src/types/index.ts` |
-| Funcion helper pura | `src/utils/index.ts` |
-| Nueva tabla SQL | `src-tauri/src/db.rs` (migracion) |
-| Nuevo endpoint IPC | `src-tauri/src/commands.rs` |
-| Struct de datos | `src-tauri/src/models.rs` |
+| Necesitas...             | Ubicacion                         |
+| :----------------------- | :-------------------------------- |
+| Nueva pantalla/seccion   | `src/features/nueva-feature/`     |
+| Estado global compartido | `src/stores/nuevoStore.ts`        |
+| Componente reutilizable  | `src/components/categoria/`       |
+| Tipo/Interface           | `src/types/index.ts`              |
+| Funcion helper pura      | `src/utils/index.ts`              |
+| Nueva tabla SQL          | `src-tauri/src/db.rs` (migracion) |
+| Nuevo endpoint IPC       | `src-tauri/src/commands.rs`       |
+| Struct de datos          | `src-tauri/src/models.rs`         |
 
-> **Nota:** El proyecto NO usa una carpeta `hooks/`. Toda la logica de estado esta en los Zustand stores.
+> **Nota:** El proyecto NO usa una carpeta `hooks/`. Toda la logica de estado
+> esta en los Zustand stores.
 
 ---
 
@@ -429,16 +447,16 @@ interface GoalState {
   isLoading: boolean;
   error: string | null;
   successMessage: string | null;
-  
+
   loadGoals: () => Promise<void>;
   addGoal: (name: string, targetAmount: number) => Promise<boolean>;
   // ... otras acciones ...
-  
+
   // Mensajes
   setError: (error: string | null) => void;
   setSuccess: (message: string | null) => void;
   clearMessages: () => void;
-  
+
   // Seguridad: Limpieza de RAM
   reset: () => void;
 }
@@ -448,7 +466,7 @@ export const useGoalStore = create<GoalState>((set, get) => ({
   isLoading: false,
   error: null,
   successMessage: null,
-  
+
   loadGoals: async () => {
     set({ isLoading: true });
     try {
@@ -460,7 +478,7 @@ export const useGoalStore = create<GoalState>((set, get) => ({
       set({ isLoading: false });
     }
   },
-  
+
   addGoal: async (name, targetAmount) => {
     set({ isLoading: true, error: null });
     try {
@@ -475,18 +493,19 @@ export const useGoalStore = create<GoalState>((set, get) => ({
       set({ isLoading: false });
     }
   },
-  
+
   setError: (error) => set({ error }),
   setSuccess: (message) => set({ successMessage: message }),
   clearMessages: () => set({ error: null, successMessage: null }),
-  
+
   // IMPORTANTE: Limpiar datos sensibles de RAM al cerrar vault
-  reset: () => set({ 
-    goals: [], 
-    isLoading: false, 
-    error: null,
-    successMessage: null 
-  }),
+  reset: () =>
+    set({
+      goals: [],
+      isLoading: false,
+      error: null,
+      successMessage: null,
+    }),
 }));
 
 // Selectores optimizados (evitan re-renders innecesarios)
@@ -502,32 +521,30 @@ Crea `src/features/goals/GoalsView.tsx`:
 
 ```typescript
 import { useEffect } from "react";
-import { useGoals, useGoalLoading, useGoalStore } from "../../stores/goalStore";
+import { useGoalLoading, useGoals, useGoalStore } from "../../stores/goalStore";
 
 export function GoalsView() {
   // Selectores especificos (optimiza re-renders)
   const goals = useGoals();
   const isLoading = useGoalLoading();
-  
+
   // Acciones del store
   const loadGoals = useGoalStore((s) => s.loadGoals);
   const addGoal = useGoalStore((s) => s.addGoal);
-  
+
   useEffect(() => {
     loadGoals();
   }, [loadGoals]);
-  
+
   if (isLoading) {
     return <div className="loader">Loading goals...</div>;
   }
-  
+
   return (
     <div className="goals-view">
       <h1>Financial Goals</h1>
       <div className="goals-grid">
-        {goals.map(goal => (
-          <GoalCard key={goal.id} goal={goal} />
-        ))}
+        {goals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}
       </div>
     </div>
   );
@@ -539,10 +556,10 @@ export function GoalsView() {
 1. Agrega el tab en `src/App.tsx`:
    - Importa `GoalsView` desde `./features/goals/GoalsView`
    - Agrega el case en el render condicional de tabs
-   
+
 2. Agrega el item en `src/components/layout/Sidebar.tsx`:
    - Agrega el boton con el icono y label correspondiente
-   
+
 3. Agrega el store al kill switch en `src/stores/authStore.ts`:
    ```typescript
    // En _clearAllStores:
@@ -552,9 +569,9 @@ export function GoalsView() {
 4. Exporta el store en `src/stores/index.ts`:
    ```typescript
    export {
-     useGoalStore,
-     useGoals,
      useGoalLoading,
+     useGoals,
+     useGoalStore,
      // ...
    } from "./goalStore";
    ```
@@ -571,6 +588,7 @@ export function GoalsView() {
 Antes de enviar un PR, verifica:
 
 **Backend (Rust):**
+
 - [ ] `cargo clippy` pasa sin warnings
 - [ ] `cargo test` pasa (si hay tests)
 - [ ] Datos sensibles usan `SecretString`
@@ -578,6 +596,7 @@ Antes de enviar un PR, verifica:
 - [ ] Nuevos comandos estan registrados en `lib.rs`
 
 **Frontend (TypeScript):**
+
 - [ ] `deno task check` pasa (TypeScript)
 - [ ] No hay `console.log` en el codigo final (excepto en desarrollo)
 - [ ] Nuevos stores tienen metodo `reset()` para el kill switch
@@ -585,9 +604,12 @@ Antes de enviar un PR, verifica:
 - [ ] Selectores especificos para evitar re-renders
 
 **General:**
+
 - [ ] No hay secrets hardcodeados
-- [ ] La documentacion en `ARCHITECT.md` esta actualizada si cambia la estructura
-- [ ] Tipos sincronizados entre Rust (`models.rs`) y TypeScript (`types/index.ts`)
+- [ ] La documentacion en `ARCHITECT.md` esta actualizada si cambia la
+      estructura
+- [ ] Tipos sincronizados entre Rust (`models.rs`) y TypeScript
+      (`types/index.ts`)
 
 ---
 
@@ -604,10 +626,12 @@ refactor(stores): migrate from hooks to Zustand
 docs(contributing): add development workflow
 ```
 
-Tipos validos: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`, `security`
+Tipos validos: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`,
+`security`
 
 ---
 
 ## 10. Contacto
 
-Si tienes dudas sobre la arquitectura antes de empezar a codificar, abre un Issue con el tag `question`. Es mejor preguntar que reescribir.
+Si tienes dudas sobre la arquitectura antes de empezar a codificar, abre un
+Issue con el tag `question`. Es mejor preguntar que reescribir.

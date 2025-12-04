@@ -6,11 +6,11 @@
 
 ## Requisitos Previos
 
-| Dependencia | Versión Mínima | Propósito |
-|:------------|:---------------|:----------|
-| Rust | 1.85+ | Core del backend (edition 2024) |
-| Deno | 2.x | Build del frontend |
-| Tauri CLI | 2.x | Compilación y empaquetado |
+| Dependencia | Versión Mínima | Propósito                       |
+| :---------- | :------------- | :------------------------------ |
+| Rust        | 1.85+          | Core del backend (edition 2024) |
+| Deno        | 2.x            | Build del frontend              |
+| Tauri CLI   | 2.x            | Compilación y empaquetado       |
 
 ---
 
@@ -84,7 +84,10 @@ cargo install tauri-cli
 
 macOS incluye WebKit de forma nativa, por lo que requiere menos dependencias.
 
-**Nota:** `xcode-select --install` instala solo las Command Line Tools (~1.5GB), no el IDE completo de Xcode (~12GB). Estas herramientas incluyen el compilador C/C++ (clang) y el linker, necesarios para compilar dependencias nativas de Rust como SQLCipher.
+**Nota:** `xcode-select --install` instala solo las Command Line Tools (~1.5GB),
+no el IDE completo de Xcode (~12GB). Estas herramientas incluyen el compilador
+C/C++ (clang) y el linker, necesarios para compilar dependencias nativas de Rust
+como SQLCipher.
 
 ```bash
 # 1. Xcode Command Line Tools (obligatorio)
@@ -128,10 +131,10 @@ cargo tauri build
 
 Los binarios compilados se encuentran en `src-tauri/target/release/bundle/`:
 
-| Sistema | Formatos Generados |
-|:--------|:-------------------|
-| Linux | `.deb`, `.AppImage`, `.rpm` |
-| macOS | `.app`, `.dmg` |
+| Sistema | Formatos Generados          |
+| :------ | :-------------------------- |
+| Linux   | `.deb`, `.AppImage`, `.rpm` |
+| macOS   | `.app`, `.dmg`              |
 
 ---
 
@@ -159,7 +162,8 @@ sudo apt install libwebkit2gtk-4.1-dev  # Ubuntu/Debian
 
 ### Error: WebKit no encontrado en Linux
 
-Algunas distribuciones empaquetan WebKit 4.0 en lugar de 4.1. Tauri v2 requiere la versión 4.1.
+Algunas distribuciones empaquetan WebKit 4.0 en lugar de 4.1. Tauri v2 requiere
+la versión 4.1.
 
 ```bash
 # Verificar versión disponible
@@ -179,7 +183,8 @@ cargo tauri build --no-bundle
 
 ## Entorno Alternativo: Nix
 
-Si prefieres un entorno reproducible, el proyecto incluye un `flake.nix` para Linux:
+Si prefieres un entorno reproducible, el proyecto incluye un `flake.nix` para
+Linux:
 
 ```bash
 # Requiere Nix con flakes habilitado

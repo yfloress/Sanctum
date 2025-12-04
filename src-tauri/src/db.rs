@@ -85,10 +85,10 @@ impl Database {
         };
 
         // Crear el directorio si no existe
-        if let Some(parent) = db_path.parent() {
-            if !parent.exists() {
-                std::fs::create_dir_all(parent).map_err(|_| DbError::DirectoryCreation)?;
-            }
+        if let Some(parent) = db_path.parent()
+            && !parent.exists()
+        {
+            std::fs::create_dir_all(parent).map_err(|_| DbError::DirectoryCreation)?;
         }
 
         let is_new_db = !db_path.exists();
@@ -415,24 +415,23 @@ impl Database {
             current.unwrap_or((0, None, now_str.clone()));
 
         // Check if we should reset the counter (enough time has passed)
-        if let Ok(last) = DateTime::parse_from_rfc3339(&last_attempt) {
-            if now.signed_duration_since(last.with_timezone(&Utc))
+        if let Ok(last) = DateTime::parse_from_rfc3339(&last_attempt)
+            && now.signed_duration_since(last.with_timezone(&Utc))
                 > Duration::seconds(ATTEMPT_RESET_SECS)
-            {
-                failed_count = 0;
-            }
+        {
+            failed_count = 0;
         }
 
         // Check if currently locked
-        if let Some(ref locked_str) = locked_until {
-            if let Ok(locked) = DateTime::parse_from_rfc3339(locked_str) {
-                if now < locked.with_timezone(&Utc) {
-                    // Still locked, reject the attempt
-                    return Err(DbError::RateLimited);
-                }
-                // Lock expired, reset
-                failed_count = 0;
+        if let Some(ref locked_str) = locked_until
+            && let Ok(locked) = DateTime::parse_from_rfc3339(locked_str)
+        {
+            if now < locked.with_timezone(&Utc) {
+                // Still locked, reject the attempt
+                return Err(DbError::RateLimited);
             }
+            // Lock expired, reset
+            failed_count = 0;
         }
 
         // Increment counter
@@ -473,23 +472,20 @@ impl Database {
             let now = Utc::now();
 
             // Check if locked
-            if let Some(locked_str) = locked_until {
-                if let Ok(locked) = DateTime::parse_from_rfc3339(&locked_str) {
-                    if now < locked.with_timezone(&Utc) {
-                        return Err(DbError::RateLimited);
-                    }
-                }
+            if let Some(locked_str) = locked_until
+                && let Ok(locked) = DateTime::parse_from_rfc3339(&locked_str)
+                && now < locked.with_timezone(&Utc)
+            {
+                return Err(DbError::RateLimited);
             }
 
             // Check if we should still count previous attempts
-            if let Ok(last) = DateTime::parse_from_rfc3339(&last_attempt) {
-                if now.signed_duration_since(last.with_timezone(&Utc))
+            if let Ok(last) = DateTime::parse_from_rfc3339(&last_attempt)
+                && now.signed_duration_since(last.with_timezone(&Utc))
                     <= Duration::seconds(ATTEMPT_RESET_SECS)
-                {
-                    if failed_count >= MAX_FAILED_ATTEMPTS as i32 {
-                        return Err(DbError::RateLimited);
-                    }
-                }
+                && failed_count >= MAX_FAILED_ATTEMPTS as i32
+            {
+                return Err(DbError::RateLimited);
             }
         }
 
@@ -516,12 +512,12 @@ impl Database {
             .ok()
             .flatten();
 
-        if let Some(locked_str) = locked_until {
-            if let Ok(locked) = DateTime::parse_from_rfc3339(&locked_str) {
-                let now = Utc::now();
-                if now < locked.with_timezone(&Utc) {
-                    return Ok((locked.with_timezone(&Utc) - now).num_seconds() as u64);
-                }
+        if let Some(locked_str) = locked_until
+            && let Ok(locked) = DateTime::parse_from_rfc3339(&locked_str)
+        {
+            let now = Utc::now();
+            if now < locked.with_timezone(&Utc) {
+                return Ok((locked.with_timezone(&Utc) - now).num_seconds() as u64);
             }
         }
 
@@ -1231,35 +1227,34 @@ impl Database {
             }
 
             // Handle swap pairs to carry over cost basis to the acquired asset
-            if let Some(rel_id) = &tx.related_tx_id {
-                if let Some(counter) = tx_map.get(rel_id) {
-                    let is_swap_pair = (tx.transaction_type == "swap"
-                        && counter.transaction_type == "transfer_in")
-                        || (tx.transaction_type == "transfer_in"
-                            && counter.transaction_type == "swap");
+            if let Some(rel_id) = &tx.related_tx_id
+                && let Some(counter) = tx_map.get(rel_id)
+            {
+                let is_swap_pair = (tx.transaction_type == "swap"
+                    && counter.transaction_type == "transfer_in")
+                    || (tx.transaction_type == "transfer_in" && counter.transaction_type == "swap");
 
-                    if is_swap_pair {
-                        if processed.contains(rel_id) || processed.contains(&tx.id) {
-                            continue;
-                        }
-
-                        processed.insert(tx.id.clone());
-                        processed.insert(rel_id.clone());
-
-                        // Determine which side is the source (swap out) and target (swap in)
-                        if tx.transaction_type == "swap" {
-                            Self::apply_swap_pair(&mut assets, &tx, counter);
-                        } else {
-                            Self::apply_swap_pair(&mut assets, counter, &tx);
-                        }
+                if is_swap_pair {
+                    if processed.contains(rel_id) || processed.contains(&tx.id) {
                         continue;
                     }
+
+                    processed.insert(tx.id.clone());
+                    processed.insert(rel_id.clone());
+
+                    // Determine which side is the source (swap out) and target (swap in)
+                    if tx.transaction_type == "swap" {
+                        Self::apply_swap_pair(&mut assets, &tx, counter);
+                    } else {
+                        Self::apply_swap_pair(&mut assets, counter, &tx);
+                    }
+                    continue;
                 }
             }
 
-            let tx_type = match CryptoTransactionType::from_str(&tx.transaction_type) {
-                Some(t) => t,
-                None => continue, // Skip invalid transaction types
+            let tx_type = match tx.transaction_type.parse::<CryptoTransactionType>() {
+                Ok(t) => t,
+                Err(_) => continue, // Skip invalid transaction types
             };
 
             let entry = assets
@@ -1334,47 +1329,46 @@ impl Database {
                 continue;
             }
 
-            if let Some(rel_id) = &tx.related_tx_id {
-                if let Some(counter) = tx_map.get(rel_id) {
-                    let is_swap_pair = (tx.transaction_type == "swap"
-                        && counter.transaction_type == "transfer_in")
-                        || (tx.transaction_type == "transfer_in"
-                            && counter.transaction_type == "swap");
+            if let Some(rel_id) = &tx.related_tx_id
+                && let Some(counter) = tx_map.get(rel_id)
+            {
+                let is_swap_pair = (tx.transaction_type == "swap"
+                    && counter.transaction_type == "transfer_in")
+                    || (tx.transaction_type == "transfer_in" && counter.transaction_type == "swap");
 
-                    if is_swap_pair {
-                        if processed.contains(rel_id) || processed.contains(&tx.id) {
-                            continue;
-                        }
-
-                        processed.insert(tx.id.clone());
-                        processed.insert(rel_id.clone());
-
-                        if tx.transaction_type == "swap" {
-                            Self::apply_swap_pair(&mut assets, &tx, counter);
-                        } else {
-                            Self::apply_swap_pair(&mut assets, counter, &tx);
-                        }
+                if is_swap_pair {
+                    if processed.contains(rel_id) || processed.contains(&tx.id) {
                         continue;
                     }
+
+                    processed.insert(tx.id.clone());
+                    processed.insert(rel_id.clone());
+
+                    if tx.transaction_type == "swap" {
+                        Self::apply_swap_pair(&mut assets, &tx, counter);
+                    } else {
+                        Self::apply_swap_pair(&mut assets, counter, &tx);
+                    }
+                    continue;
                 }
             }
 
-            let tx_type = match CryptoTransactionType::from_str(&tx.transaction_type) {
-                Some(t) => t,
-                None => continue,
+            let tx_type = match tx.transaction_type.parse::<CryptoTransactionType>() {
+                Ok(t) => t,
+                Err(_) => continue,
             };
 
             let entry = assets
                 .entry(tx.coin_id.clone())
                 .or_insert_with(|| AggregatedAsset::new(tx.coin_id.clone(), tx.symbol.clone()));
 
-            if tx_type == CryptoTransactionType::Buy {
+            if matches!(tx_type, CryptoTransactionType::Buy) {
                 entry.total_amount += tx.amount;
                 let cost = tx.amount * tx.price_per_coin.unwrap_or(0.0);
                 entry.total_cost_basis += cost + tx.fee.unwrap_or(0.0);
-            } else if tx_type == CryptoTransactionType::TransferIn {
+            } else if matches!(tx_type, CryptoTransactionType::TransferIn) {
                 entry.total_amount += tx.amount;
-            } else if tx_type.is_outflow() || tx_type == CryptoTransactionType::Swap {
+            } else if tx_type.is_outflow() || matches!(tx_type, CryptoTransactionType::Swap) {
                 let prev_amount = entry.total_amount;
                 entry.total_amount -= tx.amount;
                 if entry.total_amount < 0.0 {

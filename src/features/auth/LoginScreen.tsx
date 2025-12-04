@@ -10,11 +10,11 @@
 
 import { useState } from "react";
 import {
-  useAuthStore,
   useAuthLoading,
+  useAuthStore,
   useDbPath,
   useLoadingAction,
-} from "../../stores";
+} from "../../stores/index.ts";
 
 export function LoginScreen() {
   // Local state for password (NEVER stored in Zustand for security)

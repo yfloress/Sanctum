@@ -9,9 +9,9 @@
 
 import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
-import { useFinancialStore } from "./financialStore";
-import { useCryptoStore } from "./cryptoStore";
-import { useHabitStore } from "./habitStore";
+import { useFinancialStore } from "./financialStore.ts";
+import { useCryptoStore } from "./cryptoStore.ts";
+import { useHabitStore } from "./habitStore.ts";
 
 // ==================== Types ====================
 
@@ -145,10 +145,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       }
 
       set({
-        successMessage:
-          action === "create"
-            ? "Vault created successfully"
-            : "Vault unlocked successfully",
+        successMessage: action === "create"
+          ? "Vault created successfully"
+          : "Vault unlocked successfully",
       });
 
       // Auto-clear success message

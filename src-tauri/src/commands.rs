@@ -417,7 +417,7 @@ fn get_db_with_session_check<'a>(
     Ok(db)
 }
 
-fn persist_last_db_path(app_handle: &AppHandle, path: &PathBuf) -> Result<(), String> {
+fn persist_last_db_path(app_handle: &AppHandle, path: &Path) -> Result<(), String> {
     let mut config = load_config(app_handle)?;
     config.last_db_path = Some(path.to_string_lossy().to_string());
     save_config(app_handle, &config)
@@ -514,8 +514,6 @@ fn sanitize_db_path(app_handle: &AppHandle, raw: &str) -> Result<PathBuf, String
 
     Ok(normalized)
 }
-
-/// Genera una clave única para rate limiting basada en la ruta de la bóveda
 
 // ==================== Database Management Commands ====================
 
@@ -671,10 +669,10 @@ pub fn get_db_path(app_handle: AppHandle, state: State<DbState>) -> Result<Strin
     }
 
     // Si no hay conexión, devolvemos la última ruta usada o la ruta por defecto
-    if let Ok(config) = load_config(&app_handle) {
-        if let Some(last) = config.last_db_path {
-            return Ok(last);
-        }
+    if let Ok(config) = load_config(&app_handle)
+        && let Some(last) = config.last_db_path
+    {
+        return Ok(last);
     }
 
     Ok(Database::default_db_path(&app_handle)
@@ -991,20 +989,71 @@ pub fn delete_wallet(state: State<DbState>, id: String) -> Result<(), String> {
 
 // ==================== Crypto Transaction Commands ====================
 
+/// Parameters for adding a crypto transaction
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AddCryptoTransactionParams {
+    pub wallet_id: String,
+    pub coin_id: String,
+    pub symbol: String,
+    pub transaction_type: String,
+    pub amount: f64,
+    pub price_per_coin: Option<f64>,
+    pub fee: Option<f64>,
+    pub date: String,
+    pub notes: Option<String>,
+}
+
+/// Parameters for adding a swap transaction
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AddSwapTransactionParams {
+    pub wallet_id: String,
+    pub from_coin_id: String,
+    pub from_symbol: String,
+    pub from_amount: f64,
+    pub to_coin_id: String,
+    pub to_symbol: String,
+    pub to_amount: f64,
+    pub fee: Option<f64>,
+    pub fee_coin_id: Option<String>,
+    pub fee_amount: Option<f64>,
+    pub date: String,
+    pub notes: Option<String>,
+}
+
+/// Parameters for adding a transfer transaction
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AddTransferTransactionParams {
+    pub from_wallet_id: String,
+    pub to_wallet_id: String,
+    pub coin_id: String,
+    pub symbol: String,
+    pub amount: f64,
+    pub fee: Option<f64>,
+    pub date: String,
+    pub notes: Option<String>,
+}
+
 /// Command to add a crypto transaction
 #[tauri::command]
 pub fn add_crypto_transaction(
     state: State<DbState>,
-    wallet_id: String,
-    coin_id: String,
-    symbol: String,
-    transaction_type: String,
-    amount: f64,
-    price_per_coin: Option<f64>,
-    fee: Option<f64>,
-    date: String,
-    notes: Option<String>,
+    params: AddCryptoTransactionParams,
 ) -> Result<String, String> {
+    let AddCryptoTransactionParams {
+        wallet_id,
+        coin_id,
+        symbol,
+        transaction_type,
+        amount,
+        price_per_coin,
+        fee,
+        date,
+        notes,
+    } = params;
+
     let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
     let db = get_db_with_session_check(&db_lock)?;
 
@@ -1076,19 +1125,23 @@ pub fn add_crypto_transaction(
 #[tauri::command]
 pub fn add_swap_transaction(
     state: State<DbState>,
-    wallet_id: String,
-    from_coin_id: String,
-    from_symbol: String,
-    from_amount: f64,
-    to_coin_id: String,
-    to_symbol: String,
-    to_amount: f64,
-    fee: Option<f64>,
-    fee_coin_id: Option<String>,
-    fee_amount: Option<f64>,
-    date: String,
-    notes: Option<String>,
+    params: AddSwapTransactionParams,
 ) -> Result<(String, String), String> {
+    let AddSwapTransactionParams {
+        wallet_id,
+        from_coin_id,
+        from_symbol,
+        from_amount,
+        to_coin_id,
+        to_symbol,
+        to_amount,
+        fee,
+        fee_coin_id,
+        fee_amount,
+        date,
+        notes,
+    } = params;
+
     let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
     let db = get_db_with_session_check(&db_lock)?;
 
@@ -1176,15 +1229,19 @@ pub fn add_swap_transaction(
 #[tauri::command]
 pub fn add_transfer_transaction(
     state: State<DbState>,
-    from_wallet_id: String,
-    to_wallet_id: String,
-    coin_id: String,
-    symbol: String,
-    amount: f64,
-    fee: Option<f64>,
-    date: String,
-    notes: Option<String>,
+    params: AddTransferTransactionParams,
 ) -> Result<(String, String), String> {
+    let AddTransferTransactionParams {
+        from_wallet_id,
+        to_wallet_id,
+        coin_id,
+        symbol,
+        amount,
+        fee,
+        date,
+        notes,
+    } = params;
+
     let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
     let db = get_db_with_session_check(&db_lock)?;
 
@@ -1303,11 +1360,11 @@ pub fn delete_crypto_transaction(state: State<DbState>, id: String) -> Result<()
     let validated_id = validate_uuid(&id)?;
 
     // Check if this transaction has a related transaction (swap/transfer)
-    if let Ok(Some(tx)) = db.get_crypto_transaction(&validated_id) {
-        if let Some(related_id) = tx.related_tx_id {
-            // Delete the related transaction too
-            let _ = db.delete_crypto_transaction(&related_id);
-        }
+    if let Ok(Some(tx)) = db.get_crypto_transaction(&validated_id)
+        && let Some(related_id) = tx.related_tx_id
+    {
+        // Delete the related transaction too
+        let _ = db.delete_crypto_transaction(&related_id);
     }
 
     db.delete_crypto_transaction(&validated_id)

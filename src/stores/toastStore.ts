@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { ToastType } from "../components/ui/Toast";
+import { ToastType } from "../components/ui/Toast.tsx";
 
 export interface ToastItem {
   id: string;
@@ -20,7 +20,8 @@ interface ToastStore {
 }
 
 // Generate unique ID
-const generateId = () => `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+const generateId = () =>
+  `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 export const useToast = create<ToastStore>((set) => ({
   toasts: [],

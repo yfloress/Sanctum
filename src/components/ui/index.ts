@@ -1,2 +1,2 @@
-export { Toast, ToastStack } from "./Toast";
-export type { ToastProps, ToastType, ToastItem } from "./Toast";
+export { Toast, ToastStack } from "./Toast.tsx";
+export type { ToastItem, ToastProps, ToastType } from "./Toast.tsx";

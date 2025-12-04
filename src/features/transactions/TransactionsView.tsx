@@ -7,12 +7,12 @@
 
 import type { FormEvent } from "react";
 import {
-  useTransactions,
-  useTransactionForm,
-  useFinancialStore,
   useFinancialLoading,
-} from "../../stores";
-import { formatAmount, formatDate } from "../../utils";
+  useFinancialStore,
+  useTransactionForm,
+  useTransactions,
+} from "../../stores/index.ts";
+import { formatAmount, formatDate } from "../../utils/index.ts";
 
 export function TransactionsView() {
   // Consume state directly from store (optimized selectors)
@@ -125,41 +125,44 @@ export function TransactionsView() {
         {/* Transaction History */}
         <div className="transaction-history-section">
           <h2 className="section-title">History</h2>
-          {transactions.length === 0 ? (
-            <p className="empty-state">No transactions recorded</p>
-          ) : (
-            <div className="transactions-list">
-              {transactions.map((tx) => (
-                <div key={tx.id} className="transaction-item">
-                  <div className="transaction-info">
-                    <div className="transaction-category">{tx.category}</div>
-                    <div className="transaction-description">
-                      {tx.description}
+          {transactions.length === 0
+            ? <p className="empty-state">No transactions recorded</p>
+            : (
+              <div className="transactions-list">
+                {transactions.map((tx) => (
+                  <div key={tx.id} className="transaction-item">
+                    <div className="transaction-info">
+                      <div className="transaction-category">{tx.category}</div>
+                      <div className="transaction-description">
+                        {tx.description}
+                      </div>
+                      <div className="transaction-date">
+                        {formatDate(tx.date)}
+                      </div>
                     </div>
-                    <div className="transaction-date">
-                      {formatDate(tx.date)}
+                    <div className="transaction-actions">
+                      <div
+                        className={`transaction-amount ${
+                          tx.type === "income" ? "income" : "expense"
+                        }`}
+                      >
+                        {tx.type === "income" ? "+" : "-"}$
+                        {formatAmount(tx.amount)}
+                      </div>
+                      <button type="button"
+                        className="btn-delete"
+                        onClick={() =>
+                          setTransactionToDelete(tx.id)}
+                        disabled={isLoading}
+                        aria-label="Delete transaction"
+                      >
+                        🗑️
+                      </button>
                     </div>
                   </div>
-                  <div className="transaction-actions">
-                    <div
-                      className={`transaction-amount ${tx.type === "income" ? "income" : "expense"}`}
-                    >
-                      {tx.type === "income" ? "+" : "-"}$
-                      {formatAmount(tx.amount)}
-                    </div>
-                    <button
-                      className="btn-delete"
-                      onClick={() => setTransactionToDelete(tx.id)}
-                      disabled={isLoading}
-                      aria-label="Delete transaction"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
         </div>
       </div>
     </div>

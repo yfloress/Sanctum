@@ -79,7 +79,11 @@
 
 /* Toast Types */
 .toast-success {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(6, 78, 59, 0.3) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(16, 185, 129, 0.2) 0%,
+    rgba(6, 78, 59, 0.3) 100%
+  );
   border-color: rgba(16, 185, 129, 0.3);
   color: #6ee7b7;
 }
@@ -91,7 +95,11 @@
 }
 
 .toast-error {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(127, 29, 29, 0.3) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(239, 68, 68, 0.2) 0%,
+    rgba(127, 29, 29, 0.3) 100%
+  );
   border-color: rgba(239, 68, 68, 0.3);
   color: #fca5a5;
 }
@@ -103,7 +111,11 @@
 }
 
 .toast-warning {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(146, 64, 14, 0.3) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(245, 158, 11, 0.2) 0%,
+    rgba(146, 64, 14, 0.3) 100%
+  );
   border-color: rgba(245, 158, 11, 0.3);
   color: #fcd34d;
 }
@@ -115,7 +127,11 @@
 }
 
 .toast-info {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(76, 29, 149, 0.3) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(139, 92, 246, 0.2) 0%,
+    rgba(76, 29, 149, 0.3) 100%
+  );
   border-color: rgba(139, 92, 246, 0.3);
   color: #c4b5fd;
 }
@@ -151,27 +167,19 @@
 
 /* Glow effect for cyberpunk aesthetic */
 .toast-success {
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    0 0 20px rgba(16, 185, 129, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(16, 185, 129, 0.15);
 }
 
 .toast-error {
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    0 0 20px rgba(239, 68, 68, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(239, 68, 68, 0.15);
 }
 
 .toast-warning {
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    0 0 20px rgba(245, 158, 11, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(245, 158, 11, 0.15);
 }
 
 .toast-info {
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    0 0 20px rgba(139, 92, 246, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(139, 92, 246, 0.15);
 }
 
 /* Progress bar (optional) */

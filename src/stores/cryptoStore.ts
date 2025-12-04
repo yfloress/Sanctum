@@ -11,19 +11,23 @@
 import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import type {
+  AggregatedAsset,
   CryptoAsset,
   CryptoHolding,
-  CryptoWallet,
-  CryptoTransaction,
-  AggregatedAsset,
   CryptoSubTab,
-} from "../types";
+  CryptoTransaction,
+  CryptoWallet,
+} from "../types/index.ts";
 import {
   DEFAULT_TRACKED_COINS,
   MAX_TRACKED_COINS,
   POPULAR_CRYPTOS,
-} from "../types";
-import { getLocalDateString, enrichAssetsWithPrices, isValidCoinId } from "../utils";
+} from "../types/index.ts";
+import {
+  enrichAssetsWithPrices,
+  getLocalDateString,
+  isValidCoinId,
+} from "../utils/index.ts";
 
 // ==================== Types ====================
 
@@ -164,23 +168,23 @@ interface CryptoActions {
   // Form Management
   setWalletFormField: <K extends keyof WalletFormData>(
     field: K,
-    value: WalletFormData[K]
+    value: WalletFormData[K],
   ) => void;
   setTransactionFormField: <K extends keyof TransactionFormData>(
     field: K,
-    value: TransactionFormData[K]
+    value: TransactionFormData[K],
   ) => void;
   setTransferFormField: <K extends keyof TransferFormData>(
     field: K,
-    value: TransferFormData[K]
+    value: TransferFormData[K],
   ) => void;
   setSwapFormField: <K extends keyof SwapFormData>(
     field: K,
-    value: SwapFormData[K]
+    value: SwapFormData[K],
   ) => void;
   setHoldingFormField: <K extends keyof HoldingFormData>(
     field: K,
-    value: HoldingFormData[K]
+    value: HoldingFormData[K],
   ) => void;
   resetWalletForm: () => void;
   resetTransactionForm: () => void;
@@ -193,7 +197,11 @@ interface CryptoActions {
   selectCoinForHolding: (coin: { id: string; symbol: string }) => void;
 
   // Computed Getters
-  getFilteredSuggestions: () => Array<{ id: string; symbol: string; name: string }>;
+  getFilteredSuggestions: () => Array<{
+    id: string;
+    symbol: string;
+    name: string;
+  }>;
   getEnrichedPortfolio: () => AggregatedAsset[];
   getEnrichedWalletHoldings: () => AggregatedAsset[];
   getPortfolioTotals: () => {
@@ -371,7 +379,9 @@ export const useCryptoStore = create<CryptoStore>((set, get) => ({
 
   loadPortfolio: async () => {
     try {
-      const portfolio = await invoke<AggregatedAsset[]>("get_aggregated_portfolio");
+      const portfolio = await invoke<AggregatedAsset[]>(
+        "get_aggregated_portfolio",
+      );
       set({ portfolio });
     } catch (err) {
       console.error("Error loading portfolio:", err);
@@ -460,7 +470,10 @@ export const useCryptoStore = create<CryptoStore>((set, get) => ({
       });
 
       get().resetWalletForm();
-      set({ showAddWallet: false, successMessage: "Wallet created successfully" });
+      set({
+        showAddWallet: false,
+        successMessage: "Wallet created successfully",
+      });
 
       await get().loadWallets();
 
@@ -485,7 +498,11 @@ export const useCryptoStore = create<CryptoStore>((set, get) => ({
 
       // Clear selection if deleted wallet was selected
       if (state.selectedWallet?.id === state.walletToDelete) {
-        set({ selectedWallet: null, walletTransactions: [], walletHoldings: [] });
+        set({
+          selectedWallet: null,
+          walletTransactions: [],
+          walletHoldings: [],
+        });
       }
 
       set({
@@ -548,15 +565,17 @@ export const useCryptoStore = create<CryptoStore>((set, get) => ({
 
     try {
       await invoke("add_crypto_transaction", {
-        walletId: form.walletId,
-        coinId: form.coinId.toLowerCase(),
-        symbol: form.symbol.toUpperCase(),
-        transactionType: form.type,
-        amount: parsedAmount,
-        pricePerCoin: parsedPrice > 0 ? parsedPrice : null,
-        fee: parsedFee > 0 ? parsedFee : null,
-        date: form.date,
-        notes: form.notes.trim() || null,
+        params: {
+          walletId: form.walletId,
+          coinId: form.coinId.toLowerCase(),
+          symbol: form.symbol.toUpperCase(),
+          transactionType: form.type,
+          amount: parsedAmount,
+          pricePerCoin: parsedPrice > 0 ? parsedPrice : null,
+          fee: parsedFee > 0 ? parsedFee : null,
+          date: form.date,
+          notes: form.notes.trim() || null,
+        },
       });
 
       get().resetTransactionForm();
@@ -568,7 +587,9 @@ export const useCryptoStore = create<CryptoStore>((set, get) => ({
       // Reload data
       await Promise.all([
         get().loadPortfolio(),
-        state.selectedWallet ? get().loadWalletDetails(state.selectedWallet.id) : Promise.resolve(),
+        state.selectedWallet
+          ? get().loadWalletDetails(state.selectedWallet.id)
+          : Promise.resolve(),
       ]);
 
       setTimeout(() => set({ successMessage: null }), 3000);
@@ -610,14 +631,16 @@ export const useCryptoStore = create<CryptoStore>((set, get) => ({
 
     try {
       await invoke("add_transfer_transaction", {
-        fromWalletId: form.fromWalletId,
-        toWalletId: form.toWalletId,
-        coinId: form.coinId.toLowerCase(),
-        symbol: form.symbol.toUpperCase(),
-        amount: parsedAmount,
-        fee: parsedFee > 0 ? parsedFee : null,
-        date: form.date,
-        notes: null,
+        params: {
+          fromWalletId: form.fromWalletId,
+          toWalletId: form.toWalletId,
+          coinId: form.coinId.toLowerCase(),
+          symbol: form.symbol.toUpperCase(),
+          amount: parsedAmount,
+          fee: parsedFee > 0 ? parsedFee : null,
+          date: form.date,
+          notes: null,
+        },
       });
 
       get().resetTransferForm();
@@ -629,7 +652,9 @@ export const useCryptoStore = create<CryptoStore>((set, get) => ({
       // Reload data
       await Promise.all([
         get().loadPortfolio(),
-        state.selectedWallet ? get().loadWalletDetails(state.selectedWallet.id) : Promise.resolve(),
+        state.selectedWallet
+          ? get().loadWalletDetails(state.selectedWallet.id)
+          : Promise.resolve(),
       ]);
 
       setTimeout(() => set({ successMessage: null }), 3000);
@@ -680,18 +705,20 @@ export const useCryptoStore = create<CryptoStore>((set, get) => ({
 
     try {
       await invoke("add_swap_transaction", {
-        walletId: form.walletId,
-        fromCoinId: form.fromCoinId.toLowerCase(),
-        fromSymbol: form.fromSymbol.toUpperCase(),
-        fromAmount: parsedFromAmount,
-        toCoinId: form.toCoinId.toLowerCase(),
-        toSymbol: form.toSymbol.toUpperCase(),
-        toAmount: parsedToAmount,
-        fee: parsedFee > 0 ? parsedFee : null,
-        feeCoinId: null,
-        feeAmount: null,
-        date: form.date,
-        notes: null,
+        params: {
+          walletId: form.walletId,
+          fromCoinId: form.fromCoinId.toLowerCase(),
+          fromSymbol: form.fromSymbol.toUpperCase(),
+          fromAmount: parsedFromAmount,
+          toCoinId: form.toCoinId.toLowerCase(),
+          toSymbol: form.toSymbol.toUpperCase(),
+          toAmount: parsedToAmount,
+          fee: parsedFee > 0 ? parsedFee : null,
+          feeCoinId: null,
+          feeAmount: null,
+          date: form.date,
+          notes: null,
+        },
       });
 
       get().resetSwapForm();
@@ -703,7 +730,9 @@ export const useCryptoStore = create<CryptoStore>((set, get) => ({
       // Reload data
       await Promise.all([
         get().loadPortfolio(),
-        state.selectedWallet ? get().loadWalletDetails(state.selectedWallet.id) : Promise.resolve(),
+        state.selectedWallet
+          ? get().loadWalletDetails(state.selectedWallet.id)
+          : Promise.resolve(),
       ]);
 
       setTimeout(() => set({ successMessage: null }), 3000);
@@ -723,7 +752,9 @@ export const useCryptoStore = create<CryptoStore>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      await invoke("delete_crypto_transaction", { id: state.transactionToDelete });
+      await invoke("delete_crypto_transaction", {
+        id: state.transactionToDelete,
+      });
 
       set({
         transactionToDelete: null,
@@ -733,7 +764,9 @@ export const useCryptoStore = create<CryptoStore>((set, get) => ({
       // Reload data
       await Promise.all([
         get().loadPortfolio(),
-        state.selectedWallet ? get().loadWalletDetails(state.selectedWallet.id) : Promise.resolve(),
+        state.selectedWallet
+          ? get().loadWalletDetails(state.selectedWallet.id)
+          : Promise.resolve(),
       ]);
 
       setTimeout(() => set({ successMessage: null }), 3000);
@@ -746,7 +779,8 @@ export const useCryptoStore = create<CryptoStore>((set, get) => ({
     }
   },
 
-  setTransactionToDelete: (id: string | null) => set({ transactionToDelete: id }),
+  setTransactionToDelete: (id: string | null) =>
+    set({ transactionToDelete: id }),
 
   // ==================== Legacy Holdings ====================
 
@@ -869,7 +903,10 @@ export const useCryptoStore = create<CryptoStore>((set, get) => ({
 
   resetTransactionForm: () =>
     set({
-      transactionForm: { ...initialTransactionForm, date: getLocalDateString() },
+      transactionForm: {
+        ...initialTransactionForm,
+        date: getLocalDateString(),
+      },
     }),
 
   resetTransferForm: () =>
@@ -936,7 +973,7 @@ export const useCryptoStore = create<CryptoStore>((set, get) => ({
         !state.watchlist.includes(c.id) &&
         (c.id.includes(query) ||
           c.symbol.toLowerCase().includes(query) ||
-          c.name.toLowerCase().includes(query))
+          c.name.toLowerCase().includes(query)),
     );
   },
 
@@ -955,11 +992,11 @@ export const useCryptoStore = create<CryptoStore>((set, get) => ({
 
     const totalValue = enrichedPortfolio.reduce(
       (sum, item) => sum + item.current_value,
-      0
+      0,
     );
     const totalCost = enrichedPortfolio.reduce(
       (sum, item) => sum + item.total_cost_basis,
-      0
+      0,
     );
     const totalPnl = totalValue - totalCost;
     const totalPnlPercentage = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
@@ -994,9 +1031,12 @@ export const useCryptoStore = create<CryptoStore>((set, get) => ({
 export const useCryptoPrices = () => useCryptoStore((state) => state.prices);
 export const useWatchlist = () => useCryptoStore((state) => state.watchlist);
 export const useWallets = () => useCryptoStore((state) => state.wallets);
-export const useSelectedWallet = () => useCryptoStore((state) => state.selectedWallet);
+export const useSelectedWallet = () =>
+  useCryptoStore((state) => state.selectedWallet);
 export const usePortfolio = () => useCryptoStore((state) => state.portfolio);
-export const useCryptoLoading = () => useCryptoStore((state) => state.isLoading);
+export const useCryptoLoading = () =>
+  useCryptoStore((state) => state.isLoading);
 export const useCryptoError = () => useCryptoStore((state) => state.error);
-export const useCryptoSuccess = () => useCryptoStore((state) => state.successMessage);
+export const useCryptoSuccess = () =>
+  useCryptoStore((state) => state.successMessage);
 export const useCryptoSubTab = () => useCryptoStore((state) => state.subTab);
