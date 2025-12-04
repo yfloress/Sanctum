@@ -134,6 +134,8 @@ function TransactionsView() {
 - Do not use `persist` middleware in Zustand (sensitive data)
 - `invoke()` calls only inside Stores
 - Components in `features/` are complete views, in `components/` are reusable
+- For large views, extract sub-components into `features/<name>/components/`
+- Extract modals into `features/<name>/modals/` for better organization
 
 ### Backend (Rust)
 
@@ -280,7 +282,26 @@ src/
 │   ├── auth/           #   LoginScreen.tsx
 │   ├── dashboard/      #   Dashboard.tsx
 │   ├── transactions/   #   TransactionsView.tsx
-│   ├── crypto/         #   CryptoView.tsx
+│   ├── crypto/         #   Main crypto feature (see expanded structure below)
+│   │   ├── CryptoView.tsx      # Layout orchestrator (~100 lines)
+│   │   ├── components/         # UI sub-components
+│   │   │   ├── index.ts        #   Barrel export
+│   │   │   ├── AssetTable.tsx  #   Portfolio grid
+│   │   │   ├── CryptoHeader.tsx
+│   │   │   ├── PortfolioSummary.tsx
+│   │   │   ├── SubTabs.tsx
+│   │   │   ├── WalletDetail.tsx
+│   │   │   ├── WalletList.tsx
+│   │   │   └── Watchlist.tsx
+│   │   └── modals/             # Modal components
+│   │       ├── index.ts        #   Barrel export
+│   │       ├── AddWalletModal.tsx
+│   │       ├── AddTransactionModal.tsx
+│   │       ├── TransferModal.tsx
+│   │       ├── SwapModal.tsx
+│   │       ├── AddCryptoModal.tsx
+│   │       ├── DeleteConfirmModal.tsx
+│   │       └── LegacyHoldingModals.tsx
 │   └── habits/         #   HabitsView.tsx
 │
 ├── stores/             # Global state (Zustand)
@@ -313,19 +334,44 @@ src-tauri/src/
 
 ### Where each thing goes
 
-| You need...          | Location                          |
-| :------------------- | :-------------------------------- |
-| New screen/section   | `src/features/new-feature/`       |
-| Shared global state  | `src/stores/newStore.ts`          |
-| Reusable component   | `src/components/category/`        |
-| Type/Interface       | `src/types/index.ts`              |
-| Pure helper function | `src/utils/index.ts`              |
-| New SQL table        | `src-tauri/src/db.rs` (migration) |
-| New IPC endpoint     | `src-tauri/src/commands.rs`       |
-| Data struct          | `src-tauri/src/models.rs`         |
+| You need...                    | Location                                    |
+| :----------------------------- | :------------------------------------------ |
+| New screen/section             | `src/features/new-feature/`                 |
+| Feature-specific sub-component | `src/features/<feature>/components/`        |
+| Feature-specific modal         | `src/features/<feature>/modals/`            |
+| Shared global state            | `src/stores/newStore.ts`                    |
+| Reusable component (app-wide)  | `src/components/category/`                  |
+| Type/Interface                 | `src/types/index.ts`                        |
+| Pure helper function           | `src/utils/index.ts`                        |
+| New SQL table                  | `src-tauri/src/db.rs` (migration)           |
+| New IPC endpoint               | `src-tauri/src/commands.rs`                 |
+| Data struct                    | `src-tauri/src/models.rs`                   |
 
 > **Note:** The project does NOT use a `hooks/` folder. All state logic is in
 > Zustand stores.
+
+### Component Extraction Pattern
+
+When a view file exceeds ~300 lines, extract sub-components following this pattern:
+
+```
+features/your-feature/
+├── YourFeatureView.tsx     # Layout orchestrator (imports children)
+├── components/
+│   ├── index.ts            # Barrel export: export { A } from "./A.tsx"
+│   ├── Header.tsx          # Each connects to store directly
+│   └── DataTable.tsx
+└── modals/
+    ├── index.ts            # Barrel export
+    ├── AddItemModal.tsx    # Self-managing: returns null if !showModal
+    └── DeleteConfirmModal.tsx
+```
+
+**Key principles:**
+- Parent view is a pure layout orchestrator (<100-200 lines)
+- Child components connect directly to Zustand (no prop drilling)
+- Modals can be "self-managing" (check visibility internally) or conditionally rendered
+- Use barrel files (`index.ts`) for clean imports
 
 ---
 

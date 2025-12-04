@@ -138,6 +138,8 @@ function TransactionsView() {
 - Llamadas a `invoke()` solo dentro de los Stores
 - Componentes en `features/` son vistas completas, en `components/` son
   reutilizables
+- Para vistas grandes, extraer sub-componentes a `features/<nombre>/components/`
+- Extraer modales a `features/<nombre>/modals/` para mejor organizacion
 
 ### Backend (Rust)
 
@@ -284,7 +286,26 @@ src/
 │   ├── auth/           #   LoginScreen.tsx
 │   ├── dashboard/      #   Dashboard.tsx
 │   ├── transactions/   #   TransactionsView.tsx
-│   ├── crypto/         #   CryptoView.tsx
+│   ├── crypto/         #   Feature principal de crypto (ver estructura expandida)
+│   │   ├── CryptoView.tsx      # Orquestador de layout (~100 lineas)
+│   │   ├── components/         # Sub-componentes de UI
+│   │   │   ├── index.ts        #   Barrel export
+│   │   │   ├── AssetTable.tsx  #   Grid de portafolio
+│   │   │   ├── CryptoHeader.tsx
+│   │   │   ├── PortfolioSummary.tsx
+│   │   │   ├── SubTabs.tsx
+│   │   │   ├── WalletDetail.tsx
+│   │   │   ├── WalletList.tsx
+│   │   │   └── Watchlist.tsx
+│   │   └── modals/             # Componentes modales
+│   │       ├── index.ts        #   Barrel export
+│   │       ├── AddWalletModal.tsx
+│   │       ├── AddTransactionModal.tsx
+│   │       ├── TransferModal.tsx
+│   │       ├── SwapModal.tsx
+│   │       ├── AddCryptoModal.tsx
+│   │       ├── DeleteConfirmModal.tsx
+│   │       └── LegacyHoldingModals.tsx
 │   └── habits/         #   HabitsView.tsx
 │
 ├── stores/             # Estado global (Zustand)
@@ -317,19 +338,44 @@ src-tauri/src/
 
 ### Donde va cada cosa
 
-| Necesitas...             | Ubicacion                         |
-| :----------------------- | :-------------------------------- |
-| Nueva pantalla/seccion   | `src/features/nueva-feature/`     |
-| Estado global compartido | `src/stores/nuevoStore.ts`        |
-| Componente reutilizable  | `src/components/categoria/`       |
-| Tipo/Interface           | `src/types/index.ts`              |
-| Funcion helper pura      | `src/utils/index.ts`              |
-| Nueva tabla SQL          | `src-tauri/src/db.rs` (migracion) |
-| Nuevo endpoint IPC       | `src-tauri/src/commands.rs`       |
-| Struct de datos          | `src-tauri/src/models.rs`         |
+| Necesitas...                         | Ubicacion                                   |
+| :----------------------------------- | :------------------------------------------ |
+| Nueva pantalla/seccion               | `src/features/nueva-feature/`               |
+| Sub-componente especifico de feature | `src/features/<feature>/components/`        |
+| Modal especifico de feature          | `src/features/<feature>/modals/`            |
+| Estado global compartido             | `src/stores/nuevoStore.ts`                  |
+| Componente reutilizable (app-wide)   | `src/components/categoria/`                 |
+| Tipo/Interface                       | `src/types/index.ts`                        |
+| Funcion helper pura                  | `src/utils/index.ts`                        |
+| Nueva tabla SQL                      | `src-tauri/src/db.rs` (migracion)           |
+| Nuevo endpoint IPC                   | `src-tauri/src/commands.rs`                 |
+| Struct de datos                      | `src-tauri/src/models.rs`                   |
 
 > **Nota:** El proyecto NO usa una carpeta `hooks/`. Toda la logica de estado
 > esta en los Zustand stores.
+
+### Patron de Extraccion de Componentes
+
+Cuando un archivo de vista excede ~300 lineas, extraer sub-componentes siguiendo este patron:
+
+```
+features/tu-feature/
+├── TuFeatureView.tsx       # Orquestador de layout (importa hijos)
+├── components/
+│   ├── index.ts            # Barrel export: export { A } from "./A.tsx"
+│   ├── Header.tsx          # Cada uno se conecta al store directamente
+│   └── DataTable.tsx
+└── modals/
+    ├── index.ts            # Barrel export
+    ├── AddItemModal.tsx    # Auto-gestionado: retorna null si !showModal
+    └── DeleteConfirmModal.tsx
+```
+
+**Principios clave:**
+- La vista padre es un orquestador de layout puro (<100-200 lineas)
+- Los componentes hijos se conectan directamente a Zustand (sin prop drilling)
+- Los modales pueden ser "auto-gestionados" (verifican visibilidad internamente) o renderizados condicionalmente
+- Usar barrel files (`index.ts`) para imports limpios
 
 ---
 
