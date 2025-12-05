@@ -17,6 +17,7 @@ import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import type { BalanceSummary, Transaction } from "../types/index.ts";
 import { handleSessionError } from "./sessionManager.ts";
+import { useAccountStore } from "./accountStore.ts";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../types/index.ts";
 import { getLocalDateString } from "../utils/index.ts";
 
@@ -321,15 +322,31 @@ export const useFinancialStore = create<FinancialStore>((set, get) => ({
   getExpensesByCategory: () => {
     const state = get();
 
-    // Return cached if available
-    if (state._expensesByCategoryCache) {
+    // Get account data for currency conversion
+    const { accounts, convertToUSD } = useAccountStore.getState();
+
+    // Check if we have multi-currency accounts (disable cache if so, rate may change)
+    const hasMultipleCurrencies = accounts.some(
+      (acc) => acc.currency !== "USD",
+    );
+
+    // Return cached if available and no multi-currency (rate won't affect result)
+    if (state._expensesByCategoryCache && !hasMultipleCurrencies) {
       return state._expensesByCategoryCache;
     }
+
+    const getAccountCurrency = (accountId: string): string => {
+      const account = accounts.find((acc) => acc.id === accountId);
+      return account?.currency || "USD";
+    };
 
     const expenses = state.transactions.filter((tx) => tx.type === "expense");
     const grouped = expenses.reduce(
       (acc: Record<string, number>, tx: Transaction) => {
-        acc[tx.category] = (acc[tx.category] || 0) + tx.amount;
+        // Convert amount to USD for consistent aggregation
+        const currency = getAccountCurrency(tx.account_id);
+        const amountInUSD = convertToUSD(tx.amount, currency);
+        acc[tx.category] = (acc[tx.category] || 0) + amountInUSD;
         return acc;
       },
       {} as Record<string, number>,
@@ -339,8 +356,10 @@ export const useFinancialStore = create<FinancialStore>((set, get) => ({
       .map(([name, value]) => ({ name, value: (value as number) / 100 }))
       .sort((a, b) => b.value - a.value);
 
-    // Cache the result
-    set({ _expensesByCategoryCache: result });
+    // Only cache if single currency (no rate dependency)
+    if (!hasMultipleCurrencies) {
+      set({ _expensesByCategoryCache: result });
+    }
 
     return result;
   },
@@ -348,14 +367,27 @@ export const useFinancialStore = create<FinancialStore>((set, get) => ({
   getBalanceEvolution: () => {
     const state = get();
 
-    // Return cached if available
-    if (state._balanceEvolutionCache) {
+    // Get account data for currency conversion
+    const { accounts, convertToUSD } = useAccountStore.getState();
+
+    // Check if we have multi-currency accounts (disable cache if so, rate may change)
+    const hasMultipleCurrencies = accounts.some(
+      (acc) => acc.currency !== "USD",
+    );
+
+    // Return cached if available and no multi-currency (rate won't affect result)
+    if (state._balanceEvolutionCache && !hasMultipleCurrencies) {
       return state._balanceEvolutionCache;
     }
 
     if (state.transactions.length === 0) {
       return [];
     }
+
+    const getAccountCurrency = (accountId: string): string => {
+      const account = accounts.find((acc) => acc.id === accountId);
+      return account?.currency || "USD";
+    };
 
     const sorted = [...state.transactions].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
@@ -385,10 +417,14 @@ export const useFinancialStore = create<FinancialStore>((set, get) => ({
         dailyData[dateKey] = { income: 0, expense: 0 };
       }
 
+      // Convert amount to USD for consistent aggregation
+      const currency = getAccountCurrency(tx.account_id);
+      const amountInUSD = convertToUSD(tx.amount, currency);
+
       if (tx.type === "income") {
-        dailyData[dateKey].income += tx.amount;
+        dailyData[dateKey].income += amountInUSD;
       } else {
-        dailyData[dateKey].expense += tx.amount;
+        dailyData[dateKey].expense += amountInUSD;
       }
     });
 
@@ -403,8 +439,10 @@ export const useFinancialStore = create<FinancialStore>((set, get) => ({
       };
     });
 
-    // Cache the result
-    set({ _balanceEvolutionCache: result });
+    // Only cache if single currency (no rate dependency)
+    if (!hasMultipleCurrencies) {
+      set({ _balanceEvolutionCache: result });
+    }
 
     return result;
   },

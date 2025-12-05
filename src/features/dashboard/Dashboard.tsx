@@ -8,7 +8,6 @@
 
 import { useMemo } from "react";
 import {
-  useBalance,
   useFinancialLoading,
   useFinancialStore,
   useTransactions,
@@ -18,13 +17,13 @@ import {
   useAccountBalances,
   useAccountStore,
 } from "../../stores/accountStore.ts";
-import { formatAmount, formatDate } from "../../utils/index.ts";
+import { formatAmount, formatCurrency, formatDate } from "../../utils/index.ts";
+import type { CurrencyCode } from "../../utils/index.ts";
 import { ACCOUNT_TYPES } from "../../types/index.ts";
 
 export function Dashboard() {
   // ==================== Financial Store ====================
   const transactions = useTransactions();
-  const balance = useBalance();
   const isLoading = useFinancialLoading();
   const setTransactionToDelete = useFinancialStore(
     (state) => state.setTransactionToDelete,
@@ -36,9 +35,15 @@ export function Dashboard() {
   const getTotalNetWorthUSD = useAccountStore(
     (state) => state.getTotalNetWorthUSD,
   );
+  const getTotalIncomeUSD = useAccountStore((state) => state.getTotalIncomeUSD);
+  const getTotalExpensesUSD = useAccountStore(
+    (state) => state.getTotalExpensesUSD,
+  );
 
   // ==================== Computed ====================
   const netWorth = getTotalNetWorthUSD();
+  const totalIncomeUSD = getTotalIncomeUSD();
+  const totalExpensesUSD = getTotalExpensesUSD();
   const activeAccounts = accounts.filter((acc) => !acc.is_archived);
 
   // Memoize recent transactions to avoid recalculation on every render
@@ -64,6 +69,12 @@ export function Dashboard() {
     return account?.name || "Unknown";
   };
 
+  // Get account currency by ID
+  const getAccountCurrency = (accountId: string): CurrencyCode => {
+    const account = accounts.find((acc) => acc.id === accountId);
+    return (account?.currency as CurrencyCode) || "USD";
+  };
+
   return (
     <div className="dashboard">
       <h1 className="page-title">Dashboard</h1>
@@ -85,24 +96,24 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Balance Cards */}
+      {/* Balance Cards - All values in USD */}
       <div className="balance-cards">
         <div className="balance-card total">
-          <span className="balance-label">Total Balance</span>
+          <span className="balance-label">Total Balance (USD)</span>
           <span className="balance-value">
-            ${formatAmount(balance.total_balance)}
+            ${formatAmount(netWorth, "USD")}
           </span>
         </div>
         <div className="balance-card income">
-          <span className="balance-label">Total Income</span>
+          <span className="balance-label">Total Income (USD)</span>
           <span className="balance-value">
-            +${formatAmount(balance.total_income)}
+            +${formatAmount(totalIncomeUSD, "USD")}
           </span>
         </div>
         <div className="balance-card expense">
-          <span className="balance-label">Total Expenses</span>
+          <span className="balance-label">Total Expenses (USD)</span>
           <span className="balance-value">
-            -${formatAmount(balance.total_expense)}
+            -${formatAmount(totalExpensesUSD, "USD")}
           </span>
         </div>
       </div>
@@ -134,8 +145,14 @@ export function Dashboard() {
                   <div
                     className={`account-balance-amount ${currentBalance >= 0 ? "positive" : "negative"}`}
                   >
-                    {currentBalance < 0 ? "-" : ""}$
-                    {formatAmount(Math.abs(currentBalance))}
+                    {currentBalance < 0 ? "-" : ""}
+                    {formatCurrency(
+                      Math.abs(currentBalance),
+                      account.currency as CurrencyCode,
+                    )}
+                  </div>
+                  <div className="account-balance-currency">
+                    {account.currency}
                   </div>
                 </div>
               );
@@ -187,7 +204,10 @@ export function Dashboard() {
                       : tx.type === "transfer"
                         ? "↔️ "
                         : "-"}
-                    ${formatAmount(tx.amount)}
+                    {formatCurrency(
+                      tx.amount,
+                      tx.account_id ? getAccountCurrency(tx.account_id) : "USD",
+                    )}
                   </div>
                   <button
                     type="button"
