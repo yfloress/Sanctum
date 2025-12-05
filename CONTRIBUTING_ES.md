@@ -186,29 +186,46 @@ fn add_transaction(amount: i64, category: &str) -> Result<(), DbError> {
 
 ### Gestion de Ventana Tauri
 
-**Regla Cardinal:** La ventana principal inicia oculta y se muestra solo despues
-de que React hidrate.
+**Regla Cardinal:** La ventana principal inicia oculta pero muestra un splash
+screen inmediatamente mientras React carga.
 
-Esto previene el "flash blanco" al iniciar. El patron esta implementado en:
+Esto evita que el usuario espere con una ventana invisible. El patron es:
 
 1. `tauri.conf.json`: Ventana configurada con `"visible": false`
-2. `main.tsx`: Llama `getCurrentWindow().show()` via callback `onReady`
-3. `App.tsx`: Dispara `onReady` en `useLayoutEffect` despues del primer render
+2. `src/index.html`: Contiene splash screen HTML/CSS (carga antes que JS)
+3. `src-tauri/src/lib.rs`: Muestra ventana tras 100ms via hook `.setup()`
+4. `src/main.tsx`: Oculta splash screen cuando React esta listo
+
+```rust
+// lib.rs - Mostrar ventana inmediatamente con splash screen
+.setup(|app| {
+    let window = app.get_webview_window("main").expect("main window not found");
+    
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(100));
+        if let Err(e) = window.show() {
+            eprintln!("Failed to show window: {}", e);
+        }
+    });
+    
+    Ok(())
+})
+```
 
 ```typescript
-// main.tsx
-import { getCurrentWindow } from "@tauri-apps/api/window";
-
-const showWindow = () => {
-  getCurrentWindow().show().catch(console.error);
+// main.tsx - Ocultar splash cuando React esta listo
+const hideSplashScreen = () => {
+  const splash = document.getElementById("splash-screen");
+  if (splash) {
+    splash.classList.add("hidden");
+    setTimeout(() => splash.remove(), 300);
+  }
 };
 
-// App.tsx
-useLayoutEffect(() => {
-  if (onReady) {
-    onReady();
-  }
-}, [onReady]);
+const onReady = () => {
+  getCurrentWindow().show().catch(console.error);
+  hideSplashScreen();
+};
 ```
 
 **Permiso requerido** en `src-tauri/capabilities/default.json`:
@@ -220,7 +237,7 @@ useLayoutEffect(() => {
 **NO hacer:**
 
 - Configurar `"visible": true` en `tauri.conf.json`
-- Llamar `show()` antes de que React haya montado
+- Eliminar el splash screen HTML de `index.html`
 - Bloquear el hilo principal con operaciones sincronas durante el arranque
 
 ---
