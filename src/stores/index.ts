@@ -15,6 +15,7 @@ export {
   useDbPath,
   useIsInitialized,
   useLoadingAction,
+  useVaultExists,
 } from "./authStore.ts";
 
 // Financial Store

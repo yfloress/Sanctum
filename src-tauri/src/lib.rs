@@ -45,6 +45,7 @@ pub fn run() {
             commands::close_db,
             commands::get_db_path,
             commands::get_session_remaining,
+            commands::check_vault_exists,
             // FIAT Accounts
             commands::create_account,
             commands::get_accounts,

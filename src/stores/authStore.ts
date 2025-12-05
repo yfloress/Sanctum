@@ -22,6 +22,9 @@ interface AuthState {
   isLoading: boolean;
   loadingAction: "open" | "create" | "check" | null;
 
+  // Vault Existence (for login screen logic)
+  vaultExists: boolean | null; // null = not checked yet
+
   // UI State
   error: string | null;
   successMessage: string | null;
@@ -33,9 +36,11 @@ interface AuthState {
 interface AuthActions {
   // Core Actions
   checkStatus: () => Promise<void>;
+  checkVaultExists: () => Promise<void>;
   login: (
     action: "open" | "create",
     password: string,
+    confirmPassword?: string,
     customPath?: string,
   ) => Promise<boolean>;
   logout: () => Promise<void>;
@@ -60,6 +65,7 @@ const initialState: AuthState = {
   isInitialized: false,
   isLoading: true, // Start loading (checking status)
   loadingAction: "check",
+  vaultExists: null,
   error: null,
   successMessage: null,
   dbPath: "",
@@ -72,10 +78,23 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
   // ==================== Core Actions ====================
 
+  checkVaultExists: async () => {
+    try {
+      const exists = await invoke<boolean>("check_vault_exists");
+      set({ vaultExists: exists });
+    } catch (err) {
+      // If check fails, assume no vault exists (safer for new users)
+      set({ vaultExists: false });
+    }
+  },
+
   checkStatus: async () => {
     set({ isLoading: true, loadingAction: "check", error: null });
 
     try {
+      // Check vault existence first
+      await get().checkVaultExists();
+
       const [isInitialized, dbPath] = await Promise.all([
         invoke<boolean>("is_db_initialized"),
         invoke<string>("get_db_path"),
@@ -104,6 +123,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   login: async (
     action: "open" | "create",
     password: string,
+    confirmPassword?: string,
     customPath?: string,
   ) => {
     const trimmedPassword = password.trim();
@@ -114,9 +134,20 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       return false;
     }
 
-    if (action === "create" && trimmedPassword.length < 8) {
-      set({ error: "Password must be at least 8 characters" });
-      return false;
+    if (action === "create") {
+      if (trimmedPassword.length < 8) {
+        set({ error: "Password must be at least 8 characters" });
+        return false;
+      }
+
+      // Confirm password validation for create mode
+      if (
+        confirmPassword !== undefined &&
+        trimmedPassword !== confirmPassword.trim()
+      ) {
+        set({ error: "Passwords do not match" });
+        return false;
+      }
     }
 
     set({ isLoading: true, loadingAction: action, error: null });
@@ -130,9 +161,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         path: targetPath,
       });
 
-      // Update path after successful login
+      // Update path and vault existence after successful login
       const dbPath = await invoke<string>("get_db_path");
-      set({ isInitialized: true, dbPath });
+      set({ isInitialized: true, dbPath, vaultExists: true });
 
       // Load all data after successful login
       try {
@@ -252,3 +283,4 @@ export const useAuthSuccess = () =>
 export const useDbPath = () => useAuthStore((state) => state.dbPath);
 export const useLoadingAction = () =>
   useAuthStore((state) => state.loadingAction);
+export const useVaultExists = () => useAuthStore((state) => state.vaultExists);
