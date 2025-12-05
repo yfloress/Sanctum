@@ -12,6 +12,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useFinancialStore } from "./financialStore.ts";
 import { useCryptoStore } from "./cryptoStore.ts";
 import { useHabitStore } from "./habitStore.ts";
+import { useAccountStore } from "./accountStore.ts";
 
 // ==================== Types ====================
 
@@ -135,6 +136,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
       // Load all data after successful login
       try {
+        // Load accounts first (needed for transactions)
+        await useAccountStore.getState().loadAll();
+
         await Promise.all([
           useFinancialStore.getState().loadData(),
           useCryptoStore.getState().loadAll(),
@@ -145,9 +149,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       }
 
       set({
-        successMessage: action === "create"
-          ? "Vault created successfully"
-          : "Vault unlocked successfully",
+        successMessage:
+          action === "create"
+            ? "Vault created successfully"
+            : "Vault unlocked successfully",
       });
 
       // Auto-clear success message
@@ -172,6 +177,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
       // SECURITY: Clear all sensitive data from RAM
       get()._clearAllStores();
+      useAccountStore.getState().reset();
 
       set({
         isInitialized: false,
@@ -227,16 +233,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   // ==================== Security: RAM Clear ====================
 
   _clearAllStores: () => {
-    // Reset financial store (transactions, balance)
+    // Reset all stores - RAM kill switch
     useFinancialStore.getState().reset();
-
-    // Reset crypto store (wallets, portfolio, prices)
     useCryptoStore.getState().reset();
-
-    // Reset habit store (habits, logs, streaks)
     useHabitStore.getState().reset();
-
-    console.log("[Security] All stores cleared from RAM");
+    useAccountStore.getState().reset();
   },
 }));
 

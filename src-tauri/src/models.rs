@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use std::str::FromStr;
 
 /// Represents a cryptocurrency asset with market data
@@ -294,18 +295,157 @@ pub struct WalletSummary {
     pub assets_count: usize,
 }
 
+// ==================== FIAT Accounts System ====================
+
+/// Account types for FIAT money management
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum AccountType {
+    Bank,
+    Cash,
+    Savings,
+    CreditCard,
+    Other,
+}
+
+impl AccountType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            AccountType::Bank => "bank",
+            AccountType::Cash => "cash",
+            AccountType::Savings => "savings",
+            AccountType::CreditCard => "credit_card",
+            AccountType::Other => "other",
+        }
+    }
+}
+
+impl FromStr for AccountType {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "bank" => Ok(AccountType::Bank),
+            "cash" => Ok(AccountType::Cash),
+            "savings" => Ok(AccountType::Savings),
+            "credit_card" => Ok(AccountType::CreditCard),
+            "other" => Ok(AccountType::Other),
+            _ => Err(()),
+        }
+    }
+}
+
+impl fmt::Display for AccountType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+/// Represents a FIAT money account (bank, cash, etc.)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Account {
+    pub id: String,
+    pub name: String,
+    #[serde(rename = "type")]
+    pub account_type: String, // "bank", "cash", "savings", "credit_card", "other"
+    pub currency: String,     // ISO 4217: "USD", "EUR", "CLP", etc.
+    pub initial_balance: i64, // In cents
+    pub color: String,        // Hex color for UI
+    pub icon: Option<String>, // Optional emoji/icon
+    pub is_archived: bool,    // Soft delete flag
+    pub created_at: String,   // ISO 8601
+}
+
+impl Account {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        id: String,
+        name: String,
+        account_type: String,
+        currency: String,
+        initial_balance: i64,
+        color: String,
+        icon: Option<String>,
+        created_at: String,
+    ) -> Self {
+        Self {
+            id,
+            name,
+            account_type,
+            currency,
+            initial_balance,
+            color,
+            icon,
+            is_archived: false,
+            created_at,
+        }
+    }
+
+    pub fn validate(&self) -> bool {
+        !self.name.trim().is_empty()
+            && self.account_type.parse::<AccountType>().is_ok()
+            && !self.currency.trim().is_empty()
+            && self.color.starts_with('#')
+            && self.color.len() == 7
+    }
+
+    pub fn get_type(&self) -> Option<AccountType> {
+        self.account_type.parse::<AccountType>().ok()
+    }
+}
+
+/// Transaction type for financial transactions
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum FinancialTransactionType {
+    Income,
+    Expense,
+    Transfer,
+}
+
+impl FinancialTransactionType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            FinancialTransactionType::Income => "income",
+            FinancialTransactionType::Expense => "expense",
+            FinancialTransactionType::Transfer => "transfer",
+        }
+    }
+}
+
+impl FromStr for FinancialTransactionType {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "income" => Ok(FinancialTransactionType::Income),
+            "expense" => Ok(FinancialTransactionType::Expense),
+            "transfer" => Ok(FinancialTransactionType::Transfer),
+            _ => Err(()),
+        }
+    }
+}
+
+impl fmt::Display for FinancialTransactionType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
 // ==================== Financial Transactions ====================
 
 /// Representa una transacción financiera
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Transaction {
     pub id: String,
-    pub amount: i64, // Centavos: $10.00 = 1000
+    pub account_id: String, // Required: which account this belongs to
+    pub amount: i64,        // In cents: $10.00 = 1000
     pub category: String,
     pub description: String,
     pub date: String, // ISO 8601
     #[serde(rename = "type")]
-    pub transaction_type: String, // "income" o "expense"
+    pub transaction_type: String, // "income", "expense", or "transfer"
+    pub transfer_account_id: Option<String>, // Only for transfers: destination account
 }
 
 /// Resumen de balance financiero
@@ -316,29 +456,70 @@ pub struct BalanceSummary {
     pub total_expense: i64,
 }
 
+/// Account balance summary (calculated, not stored)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccountBalance {
+    pub account_id: String,
+    pub account_name: String,
+    pub current_balance: i64, // initial_balance + incomes - expenses
+    pub total_income: i64,
+    pub total_expense: i64,
+}
+
 impl Transaction {
     /// Crea una nueva transacción
     pub fn new(
         id: String,
+        account_id: String,
         amount: i64,
         category: String,
         description: String,
         date: String,
         transaction_type: String,
+        transfer_account_id: Option<String>,
     ) -> Self {
         Self {
             id,
+            account_id,
             amount,
             category,
             description,
             date,
             transaction_type,
+            transfer_account_id,
         }
     }
 
     /// Valida que el tipo de transacción sea válido
     pub fn validate_type(&self) -> bool {
-        matches!(self.transaction_type.as_str(), "income" | "expense")
+        self.transaction_type
+            .parse::<FinancialTransactionType>()
+            .is_ok()
+    }
+
+    /// Valida que la transacción sea coherente
+    pub fn validate(&self) -> bool {
+        if !self.validate_type() {
+            return false;
+        }
+
+        // Transfers must have a destination account
+        if self.transaction_type == "transfer" && self.transfer_account_id.is_none() {
+            return false;
+        }
+
+        // Non-transfers should not have a destination account
+        if self.transaction_type != "transfer" && self.transfer_account_id.is_some() {
+            return false;
+        }
+
+        self.amount > 0 && !self.account_id.is_empty()
+    }
+
+    pub fn get_type(&self) -> Option<FinancialTransactionType> {
+        self.transaction_type
+            .parse::<FinancialTransactionType>()
+            .ok()
     }
 }
 

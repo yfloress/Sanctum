@@ -5,6 +5,7 @@ pub mod db;
 pub mod models;
 pub mod security_log;
 
+use log::error;
 use security_log::init_security_logger;
 use std::time::Duration;
 use tauri::Manager;
@@ -30,7 +31,7 @@ pub fn run() {
                 std::thread::sleep(Duration::from_millis(100));
 
                 if let Err(e) = window.show() {
-                    eprintln!("Failed to show window: {}", e);
+                    error!("Failed to show window: {}", e);
                 }
             });
 
@@ -43,6 +44,14 @@ pub fn run() {
             commands::is_db_initialized,
             commands::close_db,
             commands::get_db_path,
+            commands::get_session_remaining,
+            // FIAT Accounts
+            commands::create_account,
+            commands::get_accounts,
+            commands::get_account_balances,
+            commands::update_account,
+            commands::archive_account,
+            commands::transfer_funds,
             // Financial Transactions
             commands::add_transaction,
             commands::get_transactions,

@@ -1,7 +1,8 @@
 use crate::models::{
-    AggregatedAsset, BalanceSummary, CryptoHolding, CryptoTransaction, CryptoTransactionType,
-    CryptoWallet, Habit, HabitLog, Transaction,
+    Account, AccountBalance, AggregatedAsset, BalanceSummary, CryptoHolding, CryptoTransaction,
+    CryptoTransactionType, CryptoWallet, Habit, HabitLog, Transaction,
 };
+use crate::security_log::{SecurityEvent, log_security_event};
 use chrono::{DateTime, Duration, Utc};
 use rusqlite::{Connection, Error as RusqliteError, ErrorCode, params};
 use secrecy::{ExposeSecret, SecretString};
@@ -45,6 +46,18 @@ pub enum DbError {
 
     #[error("Too many failed attempts")]
     RateLimited,
+
+    #[error("Account not found")]
+    AccountNotFound,
+
+    #[error("Account has existing transactions")]
+    AccountNotEmpty,
+
+    #[error("Invalid account type")]
+    InvalidAccountType,
+
+    #[error("Cannot transfer to the same account")]
+    SameAccountTransfer,
 }
 
 // ==================== Security Constants ====================
@@ -131,73 +144,95 @@ impl Database {
         // Ejecutar migraciones
         db.run_migrations()?;
 
+        // Verificar y mostrar configuración de seguridad
+        db.verify_encryption_settings()?;
+
         Ok(db)
     }
 
     /// Ajusta PRAGMAs defensivos de SQLCipher para la conexión
+    /// IMPORTANTE: Los parámetros de algoritmo deben aplicarse ANTES de intentar desencriptar
+    /// tanto para DBs nuevas como existentes, ya que definen cómo interpretar la clave.
     fn apply_sqlcipher_hardening(conn: &Connection, is_new_db: bool) -> Result<(), DbError> {
         // Asegurar limpieza de buffers sensibles
         conn.pragma_update(None, "cipher_memory_security", true)
             .map_err(DbError::Sqlite)?;
 
-        // Solo para bases nuevas configuramos parámetros que afectan el layout en disco
-        if is_new_db {
-            // Forzar algoritmos fuertes (defaults de SQLCipher 4, explícitos para evitar degradación)
-            conn.pragma_update(None, "cipher_hmac_algorithm", "HMAC_SHA512")
-                .map_err(DbError::Sqlite)?;
-            conn.pragma_update(None, "cipher_kdf_algorithm", "PBKDF2_HMAC_SHA512")
-                .map_err(DbError::Sqlite)?;
+        // Algoritmos de cifrado - SIEMPRE deben coincidir con los usados al crear la DB
+        // Estos parámetros afectan cómo se deriva la clave y se verifica el HMAC
+        conn.pragma_update(None, "cipher_hmac_algorithm", "HMAC_SHA512")
+            .map_err(DbError::Sqlite)?;
+        conn.pragma_update(None, "cipher_kdf_algorithm", "PBKDF2_HMAC_SHA512")
+            .map_err(DbError::Sqlite)?;
+        conn.pragma_update(None, "kdf_iter", KDF_ITERATIONS)
+            .map_err(DbError::Sqlite)?;
+        conn.pragma_update(None, "cipher_page_size", 4096i64)
+            .map_err(DbError::Sqlite)?;
 
-            // Fortalecer parámetros de derivación y layout (OWASP 2024: 600,000 para PBKDF2-SHA512)
-            conn.pragma_update(None, "kdf_iter", KDF_ITERATIONS)
-                .map_err(DbError::Sqlite)?;
-            conn.pragma_update(None, "cipher_page_size", 4096i64)
-                .map_err(DbError::Sqlite)?;
+        // Log solo en creación de nueva DB
+        if is_new_db {
+            log_security_event(SecurityEvent::VaultCreated, Some("SQLCipher hardened"));
         }
 
         Ok(())
     }
 
-    /// Valida que la clave sea correcta ejecutando cipher_integrity_check
-    fn verify_key(conn: &Connection) -> Result<(), DbError> {
-        let result = conn.pragma_query_value(None, "cipher_integrity_check", |row| {
-            row.get::<_, String>(0)
-        });
+    /// Verifica los parámetros de cifrado actuales de SQLCipher
+    /// Solo disponible en builds de debug para auditoría
+    #[cfg(debug_assertions)]
+    pub fn verify_encryption_settings(&self) -> Result<(), DbError> {
+        use log::debug;
 
-        match result {
-            Ok(value) => {
-                if value.to_lowercase() != "ok" {
-                    Err(DbError::InvalidPassword)
-                } else {
-                    Ok(())
+        let cipher = self
+            .conn
+            .pragma_query_value(None, "cipher", |row| row.get::<_, String>(0))
+            .unwrap_or_else(|_| "unknown".to_string());
+        let kdf = self
+            .conn
+            .pragma_query_value(None, "cipher_kdf_algorithm", |row| row.get::<_, String>(0))
+            .unwrap_or_else(|_| "unknown".to_string());
+        let iterations = self
+            .conn
+            .pragma_query_value(None, "kdf_iter", |row| row.get::<_, i64>(0))
+            .unwrap_or(0);
+
+        debug!(
+            "[CRYPTO] cipher={} kdf={} iterations={}",
+            cipher, kdf, iterations
+        );
+
+        Ok(())
+    }
+
+    /// No-op en release builds
+    #[cfg(not(debug_assertions))]
+    pub fn verify_encryption_settings(&self) -> Result<(), DbError> {
+        Ok(())
+    }
+
+    /// Valida que la clave sea correcta intentando leer de la base de datos
+    fn verify_key(conn: &Connection) -> Result<(), DbError> {
+        // Si la clave es incorrecta, SQLCipher retornará "file is not a database"
+        match conn.query_row("SELECT count(*) FROM sqlite_master", [], |row| {
+            row.get::<_, i32>(0)
+        }) {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                // Cualquier error al leer sqlite_master indica clave incorrecta o DB corrupta
+                match e {
+                    RusqliteError::SqliteFailure(ref code, _) => {
+                        if matches!(
+                            code.code,
+                            ErrorCode::NotADatabase | ErrorCode::DatabaseCorrupt
+                        ) {
+                            Err(DbError::InvalidPassword)
+                        } else {
+                            Err(DbError::InvalidPassword)
+                        }
+                    }
+                    _ => Err(DbError::InvalidPassword),
                 }
             }
-            // Algunos builds retornan QueryReturnedNoRows aunque la clave sea correcta.
-            // En ese caso, hacemos una consulta segura a sqlite_master para validar acceso.
-            Err(RusqliteError::QueryReturnedNoRows) => {
-                conn.query_row("SELECT count(*) FROM sqlite_master", [], |_| Ok(()))
-                    .map_err(|e| match e {
-                        RusqliteError::SqliteFailure(ref code, _)
-                            if matches!(
-                                code.code,
-                                ErrorCode::NotADatabase | ErrorCode::DatabaseCorrupt
-                            ) =>
-                        {
-                            DbError::InvalidPassword
-                        }
-                        _ => DbError::InvalidPassword,
-                    })?;
-                Ok(())
-            }
-            Err(RusqliteError::SqliteFailure(ref code, _))
-                if matches!(
-                    code.code,
-                    ErrorCode::NotADatabase | ErrorCode::DatabaseCorrupt
-                ) =>
-            {
-                Err(DbError::InvalidPassword)
-            }
-            Err(_) => Err(DbError::InvalidPassword),
         }
     }
 
@@ -217,69 +252,68 @@ impl Database {
 
     /// Ejecuta las migraciones necesarias para crear las tablas
     fn run_migrations(&self) -> Result<(), DbError> {
-        // ==================== Financial Transactions Table ====================
-        // Verificar si la tabla existe y tiene la columna 'type'
-        let table_exists: bool = self
+        // ==================== FIAT Accounts Table ====================
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS accounts (
+                id TEXT PRIMARY KEY NOT NULL,
+                name TEXT NOT NULL,
+                type TEXT NOT NULL DEFAULT 'bank',
+                currency TEXT NOT NULL DEFAULT 'USD',
+                initial_balance INTEGER NOT NULL DEFAULT 0,
+                color TEXT NOT NULL DEFAULT '#8b5cf6',
+                icon TEXT,
+                is_archived INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL
+            )",
+            [],
+        )?;
+
+        // Índices para cuentas
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_accounts_archived ON accounts(is_archived)",
+            [],
+        )?;
+
+        // ==================== Financial Transactions Table (v2 with accounts) ====================
+        // Check if we need to migrate from old schema
+        let has_account_id: bool = self
             .conn
             .query_row(
-                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='transactions'",
+                "SELECT COUNT(*) FROM pragma_table_info('transactions') WHERE name='account_id'",
                 [],
-                |row| row.get(0),
+                |row| row.get::<_, i32>(0),
             )
             .unwrap_or(0)
             > 0;
 
-        if table_exists {
-            // Verificar si la columna 'type' existe
-            let has_type_column: bool = self
-                .conn
-                .query_row(
-                    "SELECT COUNT(*) FROM pragma_table_info('transactions') WHERE name='type'",
-                    [],
-                    |row| row.get::<_, i32>(0),
-                )
-                .unwrap_or(0)
-                > 0;
-
-            if !has_type_column {
-                // Migrar tabla antigua a nueva estructura
-                self.conn
-                    .execute("ALTER TABLE transactions RENAME TO transactions_old", [])?;
-                self.conn.execute(
-                    "CREATE TABLE transactions (
-                        id TEXT PRIMARY KEY NOT NULL,
-                        amount INTEGER NOT NULL,
-                        category TEXT NOT NULL,
-                        description TEXT NOT NULL,
-                        date TEXT NOT NULL,
-                        type TEXT NOT NULL
-                    )",
-                    [],
-                )?;
-                // Copiar datos existentes (asumiendo 'expense' como default)
-                self.conn.execute(
-                    "INSERT INTO transactions (id, amount, category, description, date, type)
-                     SELECT id, amount, category, description, date, 'expense' FROM transactions_old",
-                    [],
-                )?;
-                self.conn.execute("DROP TABLE transactions_old", [])?;
-            }
-        } else {
-            // Crear tabla nueva con la columna 'type'
-            self.conn.execute(
-                "CREATE TABLE transactions (
-                    id TEXT PRIMARY KEY NOT NULL,
-                    amount INTEGER NOT NULL,
-                    category TEXT NOT NULL,
-                    description TEXT NOT NULL,
-                    date TEXT NOT NULL,
-                    type TEXT NOT NULL
-                )",
-                [],
-            )?;
+        if !has_account_id {
+            // Drop old transactions table (fresh start as per requirements)
+            self.conn.execute("DROP TABLE IF EXISTS transactions", [])?;
         }
 
-        // Crear índices para búsquedas rápidas
+        // Create new transactions table with account support
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS transactions (
+                id TEXT PRIMARY KEY NOT NULL,
+                account_id TEXT NOT NULL,
+                amount INTEGER NOT NULL,
+                category TEXT NOT NULL,
+                description TEXT NOT NULL,
+                date TEXT NOT NULL,
+                type TEXT NOT NULL,
+                transfer_account_id TEXT,
+                FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE RESTRICT,
+                FOREIGN KEY (transfer_account_id) REFERENCES accounts(id) ON DELETE RESTRICT
+            )",
+            [],
+        )?;
+
+        // Índices para transacciones
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_transactions_account ON transactions(account_id)",
+            [],
+        )?;
+
         self.conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date)",
             [],
@@ -737,33 +771,292 @@ impl Database {
 
     // ==================== Financial Transactions CRUD ====================
 
-    /// Crea una nueva transacción en la base de datos
-    pub fn create_transaction(&self, transaction: &Transaction) -> Result<(), DbError> {
-        // Validar tipo de transacción
-        if !transaction.validate_type() {
-            return Err(DbError::InvalidTransactionType);
+    // ==================== FIAT Accounts CRUD ====================
+
+    /// Creates a new account
+    pub fn create_account(&self, account: &Account) -> Result<(), DbError> {
+        if !account.validate() {
+            return Err(DbError::InvalidAccountType);
         }
 
         self.conn.execute(
-            "INSERT INTO transactions (id, amount, category, description, date, type)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            "INSERT INTO accounts (id, name, type, currency, initial_balance, color, icon, is_archived, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
             params![
-                &transaction.id,
-                &transaction.amount,
-                &transaction.category,
-                &transaction.description,
-                &transaction.date,
-                &transaction.transaction_type,
+                &account.id,
+                &account.name,
+                &account.account_type,
+                &account.currency,
+                &account.initial_balance,
+                &account.color,
+                &account.icon,
+                account.is_archived,
+                &account.created_at,
             ],
         )?;
 
         Ok(())
     }
 
+    /// Gets all non-archived accounts
+    pub fn get_accounts(&self) -> Result<Vec<Account>, DbError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, name, type, currency, initial_balance, color, icon, is_archived, created_at
+             FROM accounts
+             WHERE is_archived = 0
+             ORDER BY created_at ASC",
+        )?;
+
+        let accounts = stmt
+            .query_map([], |row| {
+                Ok(Account {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    account_type: row.get(2)?,
+                    currency: row.get(3)?,
+                    initial_balance: row.get(4)?,
+                    color: row.get(5)?,
+                    icon: row.get(6)?,
+                    is_archived: row.get(7)?,
+                    created_at: row.get(8)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(accounts)
+    }
+
+    /// Gets a single account by ID
+    pub fn get_account(&self, id: &str) -> Result<Account, DbError> {
+        self.conn
+            .query_row(
+                "SELECT id, name, type, currency, initial_balance, color, icon, is_archived, created_at
+                 FROM accounts WHERE id = ?1",
+                params![id],
+                |row| {
+                    Ok(Account {
+                        id: row.get(0)?,
+                        name: row.get(1)?,
+                        account_type: row.get(2)?,
+                        currency: row.get(3)?,
+                        initial_balance: row.get(4)?,
+                        color: row.get(5)?,
+                        icon: row.get(6)?,
+                        is_archived: row.get(7)?,
+                        created_at: row.get(8)?,
+                    })
+                },
+            )
+            .map_err(|e| match e {
+                RusqliteError::QueryReturnedNoRows => DbError::AccountNotFound,
+                _ => DbError::Sqlite(e),
+            })
+    }
+
+    /// Updates an account
+    pub fn update_account(&self, account: &Account) -> Result<(), DbError> {
+        if !account.validate() {
+            return Err(DbError::InvalidAccountType);
+        }
+
+        let rows = self.conn.execute(
+            "UPDATE accounts SET name = ?1, type = ?2, currency = ?3, initial_balance = ?4, color = ?5, icon = ?6
+             WHERE id = ?7 AND is_archived = 0",
+            params![
+                &account.name,
+                &account.account_type,
+                &account.currency,
+                &account.initial_balance,
+                &account.color,
+                &account.icon,
+                &account.id,
+            ],
+        )?;
+
+        if rows == 0 {
+            return Err(DbError::AccountNotFound);
+        }
+
+        Ok(())
+    }
+
+    /// Archives an account (soft delete) - only if it has no transactions
+    pub fn archive_account(&self, id: &str) -> Result<(), DbError> {
+        // Check if account has transactions
+        let tx_count: i32 = self.conn.query_row(
+            "SELECT COUNT(*) FROM transactions WHERE account_id = ?1 OR transfer_account_id = ?1",
+            params![id],
+            |row| row.get(0),
+        )?;
+
+        if tx_count > 0 {
+            return Err(DbError::AccountNotEmpty);
+        }
+
+        let rows = self.conn.execute(
+            "UPDATE accounts SET is_archived = 1 WHERE id = ?1",
+            params![id],
+        )?;
+
+        if rows == 0 {
+            return Err(DbError::AccountNotFound);
+        }
+
+        Ok(())
+    }
+
+    /// Gets the calculated balance for an account
+    pub fn get_account_balance(&self, account_id: &str) -> Result<AccountBalance, DbError> {
+        // First get the account to verify it exists and get initial balance
+        let account = self.get_account(account_id)?;
+
+        // Calculate income (money coming IN to this account)
+        let total_income: i64 = self
+            .conn
+            .query_row(
+                "SELECT COALESCE(SUM(amount), 0) FROM transactions
+                 WHERE account_id = ?1 AND type = 'income'",
+                params![account_id],
+                |row| row.get(0),
+            )
+            .unwrap_or(0);
+
+        // Add transfers IN (where this account is the destination)
+        let transfers_in: i64 = self
+            .conn
+            .query_row(
+                "SELECT COALESCE(SUM(amount), 0) FROM transactions
+                 WHERE transfer_account_id = ?1 AND type = 'transfer'",
+                params![account_id],
+                |row| row.get(0),
+            )
+            .unwrap_or(0);
+
+        // Calculate expenses (money going OUT of this account)
+        let total_expense: i64 = self
+            .conn
+            .query_row(
+                "SELECT COALESCE(SUM(amount), 0) FROM transactions
+                 WHERE account_id = ?1 AND type = 'expense'",
+                params![account_id],
+                |row| row.get(0),
+            )
+            .unwrap_or(0);
+
+        // Add transfers OUT (where this account is the source)
+        let transfers_out: i64 = self
+            .conn
+            .query_row(
+                "SELECT COALESCE(SUM(amount), 0) FROM transactions
+                 WHERE account_id = ?1 AND type = 'transfer'",
+                params![account_id],
+                |row| row.get(0),
+            )
+            .unwrap_or(0);
+
+        let current_balance =
+            account.initial_balance + total_income + transfers_in - total_expense - transfers_out;
+
+        Ok(AccountBalance {
+            account_id: account_id.to_string(),
+            account_name: account.name,
+            current_balance,
+            total_income: total_income + transfers_in,
+            total_expense: total_expense + transfers_out,
+        })
+    }
+
+    /// Gets balances for all non-archived accounts
+    pub fn get_all_account_balances(&self) -> Result<Vec<AccountBalance>, DbError> {
+        let accounts = self.get_accounts()?;
+        let mut balances = Vec::with_capacity(accounts.len());
+
+        for account in accounts {
+            let balance = self.get_account_balance(&account.id)?;
+            balances.push(balance);
+        }
+
+        Ok(balances)
+    }
+
+    // ==================== Financial Transactions CRUD ====================
+
+    /// Crea una nueva transacción en la base de datos
+    pub fn create_transaction(&self, transaction: &Transaction) -> Result<(), DbError> {
+        // Validar transacción
+        if !transaction.validate() {
+            return Err(DbError::InvalidTransactionType);
+        }
+
+        // Verify account exists
+        self.get_account(&transaction.account_id)?;
+
+        // For transfers, verify destination account exists and is different
+        if let Some(ref transfer_id) = transaction.transfer_account_id {
+            if transfer_id == &transaction.account_id {
+                return Err(DbError::SameAccountTransfer);
+            }
+            self.get_account(transfer_id)?;
+        }
+
+        self.conn.execute(
+            "INSERT INTO transactions (id, account_id, amount, category, description, date, type, transfer_account_id)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            params![
+                &transaction.id,
+                &transaction.account_id,
+                &transaction.amount,
+                &transaction.category,
+                &transaction.description,
+                &transaction.date,
+                &transaction.transaction_type,
+                &transaction.transfer_account_id,
+            ],
+        )?;
+
+        Ok(())
+    }
+
+    /// Creates a transfer between two accounts (atomic operation)
+    pub fn create_transfer(
+        &self,
+        from_account_id: &str,
+        to_account_id: &str,
+        amount: i64,
+        description: &str,
+        date: &str,
+    ) -> Result<String, DbError> {
+        if from_account_id == to_account_id {
+            return Err(DbError::SameAccountTransfer);
+        }
+
+        // Verify both accounts exist
+        self.get_account(from_account_id)?;
+        self.get_account(to_account_id)?;
+
+        let tx_id = uuid::Uuid::new_v4().to_string();
+
+        // Create a single transfer transaction (from source to destination)
+        self.conn.execute(
+            "INSERT INTO transactions (id, account_id, amount, category, description, date, type, transfer_account_id)
+             VALUES (?1, ?2, ?3, 'Transfer', ?4, ?5, 'transfer', ?6)",
+            params![
+                &tx_id,
+                from_account_id,
+                amount,
+                description,
+                date,
+                to_account_id,
+            ],
+        )?;
+
+        Ok(tx_id)
+    }
+
     /// Obtiene todas las transacciones ordenadas por fecha descendente
     pub fn get_transactions(&self) -> Result<Vec<Transaction>, DbError> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, amount, category, description, date, type
+            "SELECT id, account_id, amount, category, description, date, type, transfer_account_id
              FROM transactions
              ORDER BY date DESC, rowid DESC",
         )?;
@@ -772,11 +1065,43 @@ impl Database {
             .query_map([], |row| {
                 Ok(Transaction {
                     id: row.get(0)?,
-                    amount: row.get(1)?,
-                    category: row.get(2)?,
-                    description: row.get(3)?,
-                    date: row.get(4)?,
-                    transaction_type: row.get(5)?,
+                    account_id: row.get(1)?,
+                    amount: row.get(2)?,
+                    category: row.get(3)?,
+                    description: row.get(4)?,
+                    date: row.get(5)?,
+                    transaction_type: row.get(6)?,
+                    transfer_account_id: row.get(7)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(transactions)
+    }
+
+    /// Gets transactions for a specific account
+    pub fn get_transactions_by_account(
+        &self,
+        account_id: &str,
+    ) -> Result<Vec<Transaction>, DbError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, account_id, amount, category, description, date, type, transfer_account_id
+             FROM transactions
+             WHERE account_id = ?1 OR transfer_account_id = ?1
+             ORDER BY date DESC, rowid DESC",
+        )?;
+
+        let transactions = stmt
+            .query_map(params![account_id], |row| {
+                Ok(Transaction {
+                    id: row.get(0)?,
+                    account_id: row.get(1)?,
+                    amount: row.get(2)?,
+                    category: row.get(3)?,
+                    description: row.get(4)?,
+                    date: row.get(5)?,
+                    transaction_type: row.get(6)?,
+                    transfer_account_id: row.get(7)?,
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;
@@ -1399,8 +1724,19 @@ impl Database {
 
     // ==================== Balance Summary ====================
 
-    /// Gets the balance summary (income, expenses and total) in a single optimized query
+    /// Gets the balance summary (income, expenses and total) including account initial balances
     pub fn get_balance_summary(&self) -> Result<BalanceSummary, DbError> {
+        // Get sum of all initial balances from non-archived accounts
+        let initial_balances: i64 = self
+            .conn
+            .query_row(
+                "SELECT COALESCE(SUM(initial_balance), 0) FROM accounts WHERE is_archived = 0",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap_or(0);
+
+        // Get income and expenses from transactions
         let (total_income, total_expense): (i64, i64) = self
             .conn
             .query_row(
@@ -1413,7 +1749,9 @@ impl Database {
             )
             .map_err(DbError::Sqlite)?;
 
-        let total_balance = total_income - total_expense;
+        // Total balance = initial balances + income - expenses
+        // Note: transfers are zero-sum and don't affect total balance
+        let total_balance = initial_balances + total_income - total_expense;
 
         Ok(BalanceSummary {
             total_balance,

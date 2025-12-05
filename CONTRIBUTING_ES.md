@@ -1,714 +1,216 @@
 # CONTRIBUTING.md
 
-> Guia tecnica para contribuidores de Sanctum.
+> Guía técnica para contribuidores de Sanctum.
 >
 > **[Read in English](CONTRIBUTING.md)**
 
-Este documento establece las reglas de ingenieria para mantener el codigo
-limpio, predecible y extensible. No es burocracia, es arquitectura.
+---
+
+## 1. Inicio Rápido
+
+```bash
+# Entrar al entorno de desarrollo
+nix develop  # o direnv allow
+
+# Ejecutar en desarrollo
+cargo tauri dev
+
+# Linting
+cargo clippy && deno task check
+
+# Formatear
+cargo fmt && deno fmt
+
+# Build de producción
+cargo tauri build
+```
 
 ---
 
-## 1. Inicio Rapido
+## 2. Filosofía del Proyecto
 
-Antes de contribuir, asegurate de tener el entorno de desarrollo configurado.
-Consulta las instrucciones detalladas en **[INSTALL.md](INSTALL.md)**.
-
-### Cheatsheet de Comandos
-
-| Accion               | Comando                             |
-| :------------------- | :---------------------------------- |
-| **Iniciar Entorno**  | `nix develop` (o configurar manual) |
-| **Correr App (Dev)** | `cargo tauri dev`                   |
-| **Linting (Rust)**   | `cargo clippy`                      |
-| **Linting (TS)**     | `deno task check`                   |
-| **Formatear Codigo** | `cargo fmt && deno fmt`             |
-| **Compilar Release** | `cargo tauri build`                 |
+1. **Local-First:** 100% funcional sin internet. Los datos viven en el dispositivo.
+2. **Privacidad por Diseño:** Sin telemetría ni servidores externos (excepto CoinGecko bajo demanda).
+3. **Cero Dependencias Ocultas:** Sin librerías que requieran servidores propietarios.
 
 ---
 
-## 2. Filosofia del Proyecto (Requisitos No Funcionales)
-
-Cualquier cambio de codigo debe respetar estos tres pilares:
-
-1. **Local-First:** La app debe ser 100% funcional sin internet. Los datos viven
-   en el dispositivo del usuario.
-2. **Privacidad por Diseno:** No hay telemetria, ni analiticas, ni "ping" a
-   servidores externos (excepto CoinGecko bajo demanda explicita del usuario).
-3. **Cero Dependencias Ocultas:** No usar librerias que requieran servidores
-   propietarios (ej: Firebase).
-
----
-
-## 3. Arquitectura del Proyecto
-
-Sanctum sigue una arquitectura en capas con separación estricta de
-responsabilidades:
+## 3. Arquitectura
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        FRONTEND (React)                         │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────────────┐  │
-│  │  Components │◄───│   Stores    │◄───│  Tauri IPC Bridge   │  │
-│  │  (View)     │    │  (Zustand)  │    │  invoke()           │  │
-│  └─────────────┘    └─────────────┘    └──────────┬──────────┘  │
-└──────────────────────────────────────────────────│──────────────┘
-                                                   │
-┌──────────────────────────────────────────────────│──────────────┐
-│                        BACKEND (Rust)            │              │
-│  ┌─────────────┐    ┌─────────────┐    ┌────────▼──────────┐   │
-│  │   db.rs     │◄───│  commands.rs│◄───│  #[tauri::command] │   │
-│  │  (Model)    │    │ (Controller)│    │  (Entry Points)    │   │
-│  └──────┬──────┘    └─────────────┘    └───────────────────┘   │
-│         │                                                       │
-│  ┌──────▼──────┐                                                │
-│  │   SQLite    │                                                │
-│  │  (SQLCipher)│                                                │
-│  └─────────────┘                                                │
-└─────────────────────────────────────────────────────────────────┘
+│  Components (View) ◄── Stores (Zustand) ◄── Tauri IPC Bridge    │
+└──────────────────────────────────────────────────────────────────┘
+                                   │
+┌──────────────────────────────────│───────────────────────────────┐
+│                        BACKEND (Rust)                            │
+│  db.rs (Model) ◄── commands.rs (Controller) ◄── #[tauri::command]│
+│       │                                                          │
+│  SQLite + SQLCipher (Encrypted)                                  │
+└──────────────────────────────────────────────────────────────────┘
 ```
-
-### Flujo de Datos
-
-1. **SQLite (SQLCipher)**: Almacenamiento encriptado. Única fuente de verdad.
-2. **db.rs**: Capa de acceso a datos. CRUD, migraciones, queries.
-3. **commands.rs**: Validación de entrada, sanitización, orquestación.
-4. **Tauri IPC**: Puente entre Rust y JavaScript via `invoke()`.
-5. **Zustand Stores**: Estado global del frontend. Contiene toda la lógica de
-   negocio.
-6. **React Components**: Renderizado puro. Sin lógica, solo presentación.
 
 ### Mapeo a MVC
 
-| Capa       | Ubicación                   | Responsabilidad                         |
-| :--------- | :-------------------------- | :-------------------------------------- |
-| Model      | `src-tauri/src/db.rs`       | Persistencia, queries SQL, migraciones  |
-| Controller | `src-tauri/src/commands.rs` | Validación, sanitización, coordinación  |
-| ViewModel  | `src/stores/*.ts`           | Estado, lógica de negocio, llamadas IPC |
-| View       | `src/features/**/*.tsx`     | Renderizado, eventos UI                 |
+| Capa       | Ubicación             | Responsabilidad                        |
+| :--------- | :-------------------- | :------------------------------------- |
+| Model      | `src-tauri/src/db.rs` | Persistencia, SQL, migraciones         |
+| Controller | `commands.rs`         | Validación, sanitización, coordinación |
+| ViewModel  | `src/stores/*.ts`     | Estado, lógica de negocio, IPC         |
+| View       | `src/features/**`     | Renderizado puro, eventos UI           |
 
 ---
 
-## 4. Estandares de Codigo
+## 4. Estructura de Directorios
 
-### Frontend (TypeScript/React)
+```
+src/
+├── features/           # Vistas por funcionalidad
+│   ├── accounts/       #   Cuentas FIAT
+│   ├── analytics/      #   Reportes y gráficos
+│   ├── auth/           #   Login, creación de vault
+│   ├── crypto/         #   Portfolio crypto, wallets
+│   ├── dashboard/      #   Vista principal
+│   ├── habits/         #   Tracker de hábitos
+│   └── transactions/   #   Transacciones FIAT
+│
+├── stores/             # Estado global (Zustand)
+│   ├── accountStore.ts #   Cuentas FIAT y balances
+│   ├── authStore.ts    #   Autenticación, vault, kill switch
+│   ├── cryptoStore.ts  #   Wallets, portfolio, precios
+│   ├── financialStore.ts   # Transacciones FIAT
+│   ├── habitStore.ts   #   Hábitos y logs
+│   └── toastStore.ts   #   Notificaciones UI
+│
+├── components/         # Componentes reutilizables
+├── types/              # Interfaces TypeScript
+└── utils/              # Funciones puras
 
-**Regla Cardinal:** La logica de negocio va en los Stores, NO en los
-componentes.
+src-tauri/src/
+├── lib.rs              # Entry point, registro de comandos
+├── commands.rs         # Comandos IPC (validación)
+├── db.rs               # Acceso a datos, migraciones, SQLCipher
+├── models.rs           # Structs de dominio
+├── crypto.rs           # Cliente HTTP para CoinGecko
+└── security_log.rs     # Logging de seguridad
+```
+
+---
+
+## 5. Estándares de Código
+
+### Frontend
+
+**Regla Cardinal:** La lógica de negocio va en los Stores, NO en los componentes.
 
 ```typescript
-// INCORRECTO: Logica en el componente
+//  CORRECTO
+function TransactionsView() {
+  const transactions = useTransactions(); // Solo lee del store
+  const { deleteTransaction } = useFinancialStore();
+  // Componente solo renderiza
+}
+
+// ❌ INCORRECTO
 function TransactionsView() {
   const [transactions, setTransactions] = useState([]);
-
   useEffect(() => {
     invoke("get_transactions").then(setTransactions); // NO
   }, []);
-
-  const handleDelete = async (id: string) => {
-    await invoke("delete_transaction", { id }); // NO
-    setTransactions((prev) => prev.filter((t) => t.id !== id));
-  };
-}
-
-// CORRECTO: Componente consume el Store
-function TransactionsView() {
-  const transactions = useTransactions(); // Solo lee
-  const { deleteTransaction } = useFinancialStore(); // Solo acciones
-
-  return (
-    <ul>
-      {transactions.map((t) => (
-        <li
-          key={t.id}
-          onClick={() => deleteTransaction(t.id)}
-        >
-          {t.description}
-        </li>
-      ))}
-    </ul>
-  );
 }
 ```
 
-**Otras reglas:**
+**Reglas:**
+- Usar selectores específicos para evitar re-renders
+- NO usar `persist` middleware (datos sensibles)
+- Llamadas a `invoke()` solo dentro de Stores
+- Cada store debe tener método `reset()` para el kill switch
 
-- Usar selectores especificos para evitar re-renders innecesarios
-- No usar `persist` middleware en Zustand (datos sensibles)
-- Llamadas a `invoke()` solo dentro de los Stores
-- Componentes en `features/` son vistas completas, en `components/` son
-  reutilizables
-- Para vistas grandes, extraer sub-componentes a `features/<nombre>/components/`
-- Extraer modales a `features/<nombre>/modals/` para mejor organizacion
+### Backend
 
-### Backend (Rust)
-
-**Regla Cardinal:** La base de datos es la unica fuente de verdad. Nunca cachear
-estado derivado.
+**Regla Cardinal:** La DB es la única fuente de verdad. Nunca cachear estado.
 
 ```rust
-// INCORRECTO: Guardar estado derivado
-struct AppState {
-    balance: i64,  // NO - se desincroniza
-}
-
-// CORRECTO: Calcular siempre desde la DB
-pub fn get_balance(conn: &Connection) -> Result<BalanceSummary, DbError> {
-    // Siempre consulta la DB
-}
-```
-
-**Seguridad obligatoria:**
-
-```rust
-// Contrasenas: SIEMPRE SecretString
-use secrecy::{SecretString, ExposeSecret};
-
+// Contraseñas: SIEMPRE SecretString
 fn open_db(password: SecretString) -> Result<(), DbError> {
-    let key = password.expose_secret();  // Solo en punto de uso
-    // ...
+    let key = password.expose_secret();
 }
 
 // Entrada del usuario: SIEMPRE validar
 fn add_transaction(amount: i64, category: &str) -> Result<(), DbError> {
     validate_amount(amount)?;
-    let safe_category = sanitize_string(category, MAX_CATEGORY_LENGTH)?;
-    // ...
+    let safe = sanitize_string(category, MAX_LENGTH)?;
 }
 ```
 
-**Otras reglas:**
-
-- Prepared statements para todas las queries (anti SQL injection)
-- Validacion en `commands.rs`, persistencia en `db.rs`
-- Errores genericos al usuario, detallados en logs internos
-- `PRAGMA foreign_keys = ON` siempre activo
-
-### Gestion de Ventana Tauri
-
-**Regla Cardinal:** La ventana principal inicia oculta pero muestra un splash
-screen inmediatamente mientras React carga.
-
-Esto evita que el usuario espere con una ventana invisible. El patron es:
-
-1. `tauri.conf.json`: Ventana configurada con `"visible": false`
-2. `src/index.html`: Contiene splash screen HTML/CSS (carga antes que JS)
-3. `src-tauri/src/lib.rs`: Muestra ventana tras 100ms via hook `.setup()`
-4. `src/main.tsx`: Oculta splash screen cuando React esta listo
-
-```rust
-// lib.rs - Mostrar ventana inmediatamente con splash screen
-.setup(|app| {
-    let window = app.get_webview_window("main").expect("main window not found");
-    
-    std::thread::spawn(move || {
-        std::thread::sleep(Duration::from_millis(100));
-        if let Err(e) = window.show() {
-            eprintln!("Failed to show window: {}", e);
-        }
-    });
-    
-    Ok(())
-})
-```
-
-```typescript
-// main.tsx - Ocultar splash cuando React esta listo
-const hideSplashScreen = () => {
-  const splash = document.getElementById("splash-screen");
-  if (splash) {
-    splash.classList.add("hidden");
-    setTimeout(() => splash.remove(), 300);
-  }
-};
-
-const onReady = () => {
-  getCurrentWindow().show().catch(console.error);
-  hideSplashScreen();
-};
-```
-
-**Permiso requerido** en `src-tauri/capabilities/default.json`:
-
-```json
-"permissions": ["core:default", "core:window:allow-show", "opener:default"]
-```
-
-**NO hacer:**
-
-- Configurar `"visible": true` en `tauri.conf.json`
-- Eliminar el splash screen HTML de `index.html`
-- Bloquear el hilo principal con operaciones sincronas durante el arranque
+**Reglas:**
+- Prepared statements para todas las queries
+- Validación en `commands.rs`, persistencia en `db.rs`
+- Errores genéricos al usuario, detallados en logs internos
 
 ---
 
-## 5. Patrones de Diseno Utilizados
+## 6. Seguridad SQLCipher
 
-### Observer Pattern (Zustand)
+La base de datos usa SQLCipher con parámetros endurecidos:
 
-Los Stores implementan el patron Observer. Los componentes se suscriben a slices
-del estado y React re-renderiza automaticamente cuando cambian.
+- **Cipher:** AES-256-CBC
+- **KDF:** PBKDF2-HMAC-SHA512 con 600,000 iteraciones
+- **HMAC:** HMAC-SHA512
+- **Memory Security:** Habilitado
 
-```typescript
-// El store es el Subject
-const useFinancialStore = create<FinancialState>((set, get) => ({
-  transactions: [],
-  addTransaction: async (data) => {
-    await invoke("add_transaction", data);
-    set({ transactions: await invoke("get_transactions") });
-  },
-}));
-
-// Los componentes son Observers
-function TransactionList() {
-  // Se suscribe solo a `transactions`
-  const transactions = useFinancialStore(state => state.transactions);
-  return <>{transactions.map(...)}</>;
-}
-```
-
-> **IMPORTANTE: Patron de Computed Getters**
->
-> Cuando uses funciones getter computadas del store, **nunca las llames dentro
-> del selector**. Esto causa loops infinitos de re-render.
->
-> ```typescript
-> // INCORRECTO: Llamar getter dentro del selector
-> const data = useStore((state) => state.getComputedData());
->
-> // CORRECTO: Obtener la funcion, luego llamarla afuera
-> const getComputedData = useStore((state) => state.getComputedData);
-> const data = getComputedData();
-> ```
-
-### Command Pattern (Tauri IPC)
-
-Cada operacion del backend se expone como un comando discreto. El frontend no
-conoce la implementacion, solo el contrato.
-
-```rust
-// Backend: Define el comando
-#[tauri::command]
-pub fn add_transaction(amount: i64, category: String) -> Result<String, String> {
-    // Implementacion encapsulada
-}
-
-// Frontend: Invoca el comando
-await invoke("add_transaction", { amount: 1000, category: "Food" });
-```
-
-### Repository Pattern (db.rs)
-
-`db.rs` actua como repositorio. Abstrae SQLite detras de funciones de dominio.
-
-```rust
-// El resto del codigo no sabe que usamos SQL
-pub fn get_transactions(conn: &Connection) -> Result<Vec<Transaction>, DbError>;
-pub fn add_wallet(conn: &Connection, wallet: &CryptoWallet) -> Result<(), DbError>;
-```
+**IMPORTANTE:** Los parámetros de cifrado deben aplicarse en CADA apertura de la DB,
+no solo en la creación. Ver `apply_sqlcipher_hardening()` en `db.rs`.
 
 ---
 
-## 6. Estructura de Directorios
+## 7. Agregar Nueva Feature
 
-```
-src/
-├── features/           # Vistas por funcionalidad (una carpeta = una seccion de la app)
-│   ├── auth/           #   LoginScreen.tsx
-│   ├── dashboard/      #   Dashboard.tsx
-│   ├── transactions/   #   TransactionsView.tsx
-│   ├── crypto/         #   Feature principal de crypto (ver estructura expandida)
-│   │   ├── CryptoView.tsx      # Orquestador de layout (~100 lineas)
-│   │   ├── components/         # Sub-componentes de UI
-│   │   │   ├── index.ts        #   Barrel export
-│   │   │   ├── AssetTable.tsx  #   Grid de portafolio
-│   │   │   ├── CryptoHeader.tsx
-│   │   │   ├── PortfolioSummary.tsx
-│   │   │   ├── SubTabs.tsx
-│   │   │   ├── WalletDetail.tsx
-│   │   │   ├── WalletList.tsx
-│   │   │   └── Watchlist.tsx
-│   │   └── modals/             # Componentes modales
-│   │       ├── index.ts        #   Barrel export
-│   │       ├── AddWalletModal.tsx
-│   │       ├── AddTransactionModal.tsx
-│   │       ├── TransferModal.tsx
-│   │       ├── SwapModal.tsx
-│   │       ├── AddCryptoModal.tsx
-│   │       ├── DeleteConfirmModal.tsx
-│   │       └── LegacyHoldingModals.tsx
-│   └── habits/         #   HabitsView.tsx
-│
-├── stores/             # Estado global (Zustand)
-│   ├── authStore.ts    #   Autenticacion, vault, kill switch
-│   ├── financialStore.ts   # Transacciones FIAT
-│   ├── cryptoStore.ts  #   Wallets, portfolio, precios
-│   ├── habitStore.ts   #   Habitos y logs
-│   └── index.ts        #   Re-exportaciones
-│
-├── components/         # Componentes reutilizables (sin logica de negocio)
-│   ├── layout/         #   Sidebar, Header
-│   ├── modals/         #   DeleteConfirmModal
-│   └── ui/             #   Toast, Button, Input
-│
-├── types/              # Interfaces TypeScript
-│   └── index.ts        #   Transaction, CryptoWallet, etc.
-│
-└── utils/              # Funciones puras (sin side effects)
-    └── index.ts        #   formatAmount, formatDate, etc.
-
-src-tauri/src/
-├── lib.rs              # Entry point, registro de comandos
-├── main.rs             # Bootstrap de Tauri
-├── commands.rs         # Comandos IPC (validacion, orquestacion)
-├── db.rs               # Acceso a datos, migraciones, SQLCipher
-├── models.rs           # Structs y Enums de dominio
-├── crypto.rs           # Cliente HTTP para CoinGecko
-└── security_log.rs     # Logging de eventos de seguridad
-```
-
-### Donde va cada cosa
-
-| Necesitas...                         | Ubicacion                                   |
-| :----------------------------------- | :------------------------------------------ |
-| Nueva pantalla/seccion               | `src/features/nueva-feature/`               |
-| Sub-componente especifico de feature | `src/features/<feature>/components/`        |
-| Modal especifico de feature          | `src/features/<feature>/modals/`            |
-| Estado global compartido             | `src/stores/nuevoStore.ts`                  |
-| Componente reutilizable (app-wide)   | `src/components/categoria/`                 |
-| Tipo/Interface                       | `src/types/index.ts`                        |
-| Funcion helper pura                  | `src/utils/index.ts`                        |
-| Nueva tabla SQL                      | `src-tauri/src/db.rs` (migracion)           |
-| Nuevo endpoint IPC                   | `src-tauri/src/commands.rs`                 |
-| Struct de datos                      | `src-tauri/src/models.rs`                   |
-
-> **Nota:** El proyecto NO usa una carpeta `hooks/`. Toda la logica de estado
-> esta en los Zustand stores.
-
-### Patron de Extraccion de Componentes
-
-Cuando un archivo de vista excede ~300 lineas, extraer sub-componentes siguiendo este patron:
-
-```
-features/tu-feature/
-├── TuFeatureView.tsx       # Orquestador de layout (importa hijos)
-├── components/
-│   ├── index.ts            # Barrel export: export { A } from "./A.tsx"
-│   ├── Header.tsx          # Cada uno se conecta al store directamente
-│   └── DataTable.tsx
-└── modals/
-    ├── index.ts            # Barrel export
-    ├── AddItemModal.tsx    # Auto-gestionado: retorna null si !showModal
-    └── DeleteConfirmModal.tsx
-```
-
-**Principios clave:**
-- La vista padre es un orquestador de layout puro (<100-200 lineas)
-- Los componentes hijos se conectan directamente a Zustand (sin prop drilling)
-- Los modales pueden ser "auto-gestionados" (verifican visibilidad internamente) o renderizados condicionalmente
-- Usar barrel files (`index.ts`) para imports limpios
+1. **Backend - Migración:** `db.rs` → `run_migrations()`
+2. **Backend - Modelo:** `models.rs` → struct con Serialize/Deserialize
+3. **Backend - Comando:** `commands.rs` → validación + llamada a db
+4. **Backend - Registro:** `lib.rs` → agregar a `invoke_handler!`
+5. **Frontend - Tipos:** `types/index.ts` → interface TypeScript
+6. **Frontend - Store:** `stores/` → nuevo store con `reset()`
+7. **Frontend - Vista:** `features/` → componente que consume store
+8. **Integración:** Agregar al Sidebar, App.tsx, y kill switch en authStore
 
 ---
 
-## 7. Flujo de Trabajo para Nuevas Features
+## 8. Checklist de PR
 
-Para agregar una nueva funcionalidad (ejemplo: modulo de Metas Financieras):
-
-### Paso 1: Backend - Modelo de Datos
-
-Edita `src-tauri/src/db.rs`:
-
-```rust
-// 1. Agrega la migracion
-fn run_migrations(conn: &Connection) -> Result<(), DbError> {
-    // ... migraciones existentes ...
-    
-    // Nueva migracion
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS goals (
-            id TEXT PRIMARY KEY NOT NULL,
-            name TEXT NOT NULL,
-            target_amount INTEGER NOT NULL,
-            current_amount INTEGER NOT NULL DEFAULT 0,
-            deadline TEXT,
-            created_at TEXT NOT NULL
-        )",
-        [],
-    )?;
-    
-    Ok(())
-}
-
-// 2. Agrega funciones CRUD
-pub fn add_goal(conn: &Connection, goal: &Goal) -> Result<(), DbError> { ... }
-pub fn get_goals(conn: &Connection) -> Result<Vec<Goal>, DbError> { ... }
-pub fn update_goal(conn: &Connection, id: &str, amount: i64) -> Result<(), DbError> { ... }
-pub fn delete_goal(conn: &Connection, id: &str) -> Result<(), DbError> { ... }
-```
-
-### Paso 2: Backend - Modelo de Dominio
-
-Edita `src-tauri/src/models.rs`:
-
-```rust
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Goal {
-    pub id: String,
-    pub name: String,
-    pub target_amount: i64,
-    pub current_amount: i64,
-    pub deadline: Option<String>,
-    pub created_at: String,
-}
-```
-
-### Paso 3: Backend - Comandos IPC
-
-Edita `src-tauri/src/commands.rs`:
-
-```rust
-#[tauri::command]
-pub fn add_goal(name: String, target_amount: i64, deadline: Option<String>) -> Result<String, String> {
-    // Validacion
-    let name = sanitize_string(&name, MAX_NAME_LENGTH)?;
-    validate_amount(target_amount)?;
-    
-    // Persistencia
-    let goal = Goal { id: uuid(), name, target_amount, ... };
-    db::add_goal(&get_connection()?, &goal)?;
-    
-    Ok(goal.id)
-}
-
-// ... otros comandos ...
-```
-
-Registra en `src-tauri/src/lib.rs`:
-
-```rust
-.invoke_handler(tauri::generate_handler![
-    // ... comandos existentes ...
-    commands::add_goal,
-    commands::get_goals,
-    commands::update_goal,
-    commands::delete_goal,
-])
-```
-
-### Paso 4: Frontend - Tipos
-
-Edita `src/types/index.ts`:
-
-```typescript
-export interface Goal {
-  id: string;
-  name: string;
-  target_amount: number;
-  current_amount: number;
-  deadline: string | null;
-  created_at: string;
-}
-```
-
-### Paso 5: Frontend - Store
-
-Crea `src/stores/goalStore.ts`:
-
-```typescript
-import { create } from "zustand";
-import { invoke } from "@tauri-apps/api/core";
-import type { Goal } from "../types";
-
-interface GoalState {
-  goals: Goal[];
-  isLoading: boolean;
-  error: string | null;
-  successMessage: string | null;
-
-  loadGoals: () => Promise<void>;
-  addGoal: (name: string, targetAmount: number) => Promise<boolean>;
-  // ... otras acciones ...
-
-  // Mensajes
-  setError: (error: string | null) => void;
-  setSuccess: (message: string | null) => void;
-  clearMessages: () => void;
-
-  // Seguridad: Limpieza de RAM
-  reset: () => void;
-}
-
-export const useGoalStore = create<GoalState>((set, get) => ({
-  goals: [],
-  isLoading: false,
-  error: null,
-  successMessage: null,
-
-  loadGoals: async () => {
-    set({ isLoading: true });
-    try {
-      const goals = await invoke<Goal[]>("get_goals");
-      set({ goals, error: null });
-    } catch (e) {
-      set({ error: String(e) });
-    } finally {
-      set({ isLoading: false });
-    }
-  },
-
-  addGoal: async (name, targetAmount) => {
-    set({ isLoading: true, error: null });
-    try {
-      await invoke("add_goal", { name, targetAmount });
-      await get().loadGoals();
-      set({ successMessage: "Goal created successfully" });
-      return true;
-    } catch (e) {
-      set({ error: String(e) });
-      return false;
-    } finally {
-      set({ isLoading: false });
-    }
-  },
-
-  setError: (error) => set({ error }),
-  setSuccess: (message) => set({ successMessage: message }),
-  clearMessages: () => set({ error: null, successMessage: null }),
-
-  // IMPORTANTE: Limpiar datos sensibles de RAM al cerrar vault
-  reset: () =>
-    set({
-      goals: [],
-      isLoading: false,
-      error: null,
-      successMessage: null,
-    }),
-}));
-
-// Selectores optimizados (evitan re-renders innecesarios)
-export const useGoals = () => useGoalStore((s) => s.goals);
-export const useGoalLoading = () => useGoalStore((s) => s.isLoading);
-export const useGoalError = () => useGoalStore((s) => s.error);
-export const useGoalSuccess = () => useGoalStore((s) => s.successMessage);
-```
-
-### Paso 6: Frontend - Vista
-
-Crea `src/features/goals/GoalsView.tsx`:
-
-```typescript
-import { useEffect } from "react";
-import { useGoalLoading, useGoals, useGoalStore } from "../../stores/goalStore";
-
-export function GoalsView() {
-  // Selectores especificos (optimiza re-renders)
-  const goals = useGoals();
-  const isLoading = useGoalLoading();
-
-  // Acciones del store
-  const loadGoals = useGoalStore((s) => s.loadGoals);
-  const addGoal = useGoalStore((s) => s.addGoal);
-
-  useEffect(() => {
-    loadGoals();
-  }, [loadGoals]);
-
-  if (isLoading) {
-    return <div className="loader">Loading goals...</div>;
-  }
-
-  return (
-    <div className="goals-view">
-      <h1>Financial Goals</h1>
-      <div className="goals-grid">
-        {goals.map((goal) => <GoalCard key={goal.id} goal={goal} />)}
-      </div>
-    </div>
-  );
-}
-```
-
-### Paso 7: Integracion
-
-1. Agrega el tab en `src/App.tsx`:
-   - Importa `GoalsView` desde `./features/goals/GoalsView`
-   - Agrega el case en el render condicional de tabs
-
-2. Agrega el item en `src/components/layout/Sidebar.tsx`:
-   - Agrega el boton con el icono y label correspondiente
-
-3. Agrega el store al kill switch en `src/stores/authStore.ts`:
-   ```typescript
-   // En _clearAllStores:
-   useGoalStore.getState().reset();
-   ```
-
-4. Exporta el store en `src/stores/index.ts`:
-   ```typescript
-   export {
-     useGoalLoading,
-     useGoals,
-     useGoalStore,
-     // ...
-   } from "./goalStore";
-   ```
-
-5. Agrega el tipo de tab en `src/types/index.ts`:
-   ```typescript
-   export type TabType = "dashboard" | "transactions" | ... | "goals";
-   ```
-
----
-
-## 8. Checklist de Pull Request
-
-Antes de enviar un PR, verifica:
-
-**Backend (Rust):**
-
-- [ ] `cargo clippy` pasa sin warnings
-- [ ] `cargo test` pasa (si hay tests)
+**Backend:**
+- [ ] `cargo clippy` sin warnings
 - [ ] Datos sensibles usan `SecretString`
-- [ ] Nuevos comandos tienen validacion de entrada en `commands.rs`
-- [ ] Nuevos comandos estan registrados en `lib.rs`
+- [ ] Comandos validados en `commands.rs`
+- [ ] Comandos registrados en `lib.rs`
 
-**Frontend (TypeScript):**
-
-- [ ] `deno task check` pasa (TypeScript)
-- [ ] No hay `console.log` en el codigo final (excepto en desarrollo)
-- [ ] Nuevos stores tienen metodo `reset()` para el kill switch
+**Frontend:**
+- [ ] `deno task check` pasa
+- [ ] Sin `console.log` (solo `console.error` para errores)
+- [ ] Store tiene `reset()` para kill switch
 - [ ] Store exportado en `stores/index.ts`
-- [ ] Selectores especificos para evitar re-renders
 
 **General:**
-
-- [ ] No hay secrets hardcodeados
-- [ ] La documentacion en `ARCHITECT.md` esta actualizada si cambia la
-      estructura
-- [ ] Tipos sincronizados entre Rust (`models.rs`) y TypeScript
-      (`types/index.ts`)
+- [ ] Sin secrets hardcodeados
+- [ ] Tipos sincronizados entre Rust y TypeScript
 
 ---
 
-## 9. Convenciones de Commits
+## 9. Commits
 
 Seguimos Conventional Commits:
 
 ```
-<type>(<scope>): <description>
-
 feat(crypto): add swap transaction support
 fix(auth): handle rate limit edge case
 refactor(stores): migrate from hooks to Zustand
-docs(contributing): add development workflow
+docs: update contributing guide
 ```
-
-Tipos validos: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`,
-`security`
 
 ---
 
 ## 10. Contacto
 
-Si tienes dudas sobre la arquitectura antes de empezar a codificar, abre un
-Issue con el tag `question`. Es mejor preguntar que reescribir.
+Dudas antes de codificar → abre un Issue con tag `question`.

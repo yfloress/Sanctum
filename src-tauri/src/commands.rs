@@ -1,8 +1,8 @@
 use crate::crypto;
 use crate::db::{Database, DbError};
 use crate::models::{
-    AggregatedAsset, BalanceSummary, CryptoAsset, CryptoHolding, CryptoTransaction, CryptoWallet,
-    Habit, HabitLog, Transaction,
+    Account, AccountBalance, AggregatedAsset, BalanceSummary, CryptoAsset, CryptoHolding,
+    CryptoTransaction, CryptoWallet, Habit, HabitLog, Transaction,
 };
 use crate::security_log::{SecurityEvent, log_auth_failure, log_security_event};
 use chrono::NaiveDate;
@@ -28,6 +28,8 @@ const MAX_PASSWORD_LENGTH: usize = 128;
 const MIN_PASSWORD_LENGTH: usize = 8;
 const MAX_HABIT_NAME_LENGTH: usize = 128;
 const MAX_HABIT_DESCRIPTION_LENGTH: usize = 512;
+const MAX_ACCOUNT_NAME_LENGTH: usize = 64;
+const MAX_CURRENCY_LENGTH: usize = 8;
 
 /// Validates and truncates a string field to a maximum length
 fn validate_field_length(
@@ -657,6 +659,15 @@ pub fn close_db(state: State<DbState>) -> Result<String, String> {
     Ok("Vault locked successfully".to_string())
 }
 
+/// Command to get remaining session time in seconds
+#[tauri::command]
+pub fn get_session_remaining(state: State<DbState>) -> Result<i64, String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = db_lock.as_ref().ok_or("No vault is currently open")?;
+
+    db.get_session_remaining().map_err(|e| e.to_string())
+}
+
 /// Comando para obtener la ruta de la base de datos
 #[tauri::command]
 pub fn get_db_path(app_handle: AppHandle, state: State<DbState>) -> Result<String, String> {
@@ -681,12 +692,203 @@ pub fn get_db_path(app_handle: AppHandle, state: State<DbState>) -> Result<Strin
         .to_string())
 }
 
+// ==================== FIAT Account Commands ====================
+
+/// Command to create a new account
+#[tauri::command]
+pub fn create_account(
+    state: State<DbState>,
+    name: String,
+    account_type: String,
+    currency: String,
+    initial_balance: i64,
+    color: String,
+    icon: Option<String>,
+) -> Result<String, String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
+
+    // Validate and sanitize fields
+    let name = validate_field_length(&name, MAX_ACCOUNT_NAME_LENGTH, "Account name")?;
+    let name = sanitize_string(&name);
+
+    if name.is_empty() {
+        return Err("Account name cannot be empty".to_string());
+    }
+
+    let currency = validate_field_length(&currency, MAX_CURRENCY_LENGTH, "Currency")?;
+    let currency = sanitize_string(&currency).to_uppercase();
+
+    if currency.is_empty() {
+        return Err("Currency cannot be empty".to_string());
+    }
+
+    // Validate color format
+    let color = validate_color(&color)?;
+
+    // Validate icon if provided
+    let icon = if let Some(i) = icon {
+        let i = validate_field_length(&i, MAX_ICON_LENGTH, "Icon")?;
+        if i.is_empty() { None } else { Some(i) }
+    } else {
+        None
+    };
+
+    let id = Uuid::new_v4().to_string();
+    let created_at = chrono::Utc::now().to_rfc3339();
+
+    let account = Account::new(
+        id.clone(),
+        name,
+        account_type,
+        currency,
+        initial_balance,
+        color,
+        icon,
+        created_at,
+    );
+
+    db.create_account(&account).map_err(|e| e.to_string())?;
+
+    log_security_event(SecurityEvent::TransactionCreated, Some("account_created"));
+
+    Ok(id)
+}
+
+/// Command to get all accounts
+#[tauri::command]
+pub fn get_accounts(state: State<DbState>) -> Result<Vec<Account>, String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
+
+    db.get_accounts().map_err(|e| e.to_string())
+}
+
+/// Command to get all account balances
+#[tauri::command]
+pub fn get_account_balances(state: State<DbState>) -> Result<Vec<AccountBalance>, String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
+
+    db.get_all_account_balances().map_err(|e| e.to_string())
+}
+
+/// Command to update an account
+#[tauri::command]
+pub fn update_account(
+    state: State<DbState>,
+    id: String,
+    name: String,
+    account_type: String,
+    currency: String,
+    initial_balance: i64,
+    color: String,
+    icon: Option<String>,
+) -> Result<(), String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
+
+    let validated_id = validate_uuid(&id)?;
+
+    let name = validate_field_length(&name, MAX_ACCOUNT_NAME_LENGTH, "Account name")?;
+    let name = sanitize_string(&name);
+
+    if name.is_empty() {
+        return Err("Account name cannot be empty".to_string());
+    }
+
+    let currency = validate_field_length(&currency, MAX_CURRENCY_LENGTH, "Currency")?;
+    let currency = sanitize_string(&currency).to_uppercase();
+
+    let color = validate_color(&color)?;
+
+    let icon = if let Some(i) = icon {
+        let i = validate_field_length(&i, MAX_ICON_LENGTH, "Icon")?;
+        if i.is_empty() { None } else { Some(i) }
+    } else {
+        None
+    };
+
+    // Get existing account to preserve created_at
+    let existing = db.get_account(&validated_id).map_err(|e| e.to_string())?;
+
+    let account = Account {
+        id: validated_id,
+        name,
+        account_type,
+        currency,
+        initial_balance,
+        color,
+        icon,
+        is_archived: existing.is_archived,
+        created_at: existing.created_at,
+    };
+
+    db.update_account(&account).map_err(|e| e.to_string())
+}
+
+/// Command to archive an account (soft delete)
+#[tauri::command]
+pub fn archive_account(state: State<DbState>, id: String) -> Result<(), String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
+
+    let validated_id = validate_uuid(&id)?;
+
+    db.archive_account(&validated_id).map_err(|e| match e {
+        DbError::AccountNotEmpty => {
+            "Cannot archive account with existing transactions. Delete or transfer transactions first.".to_string()
+        }
+        DbError::AccountNotFound => "Account not found".to_string(),
+        _ => e.to_string(),
+    })
+}
+
+/// Command to transfer funds between accounts
+#[tauri::command]
+pub fn transfer_funds(
+    state: State<DbState>,
+    from_account_id: String,
+    to_account_id: String,
+    amount: i64,
+    description: String,
+    date: String,
+) -> Result<String, String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
+
+    let from_id = validate_uuid(&from_account_id)?;
+    let to_id = validate_uuid(&to_account_id)?;
+
+    if amount <= 0 {
+        return Err("Transfer amount must be greater than zero".to_string());
+    }
+
+    let description = validate_field_length(&description, MAX_DESCRIPTION_LENGTH, "Description")?;
+    let description = sanitize_string(&description);
+
+    let date = validate_date(&date)?;
+
+    let tx_id = db
+        .create_transfer(&from_id, &to_id, amount, &description, &date)
+        .map_err(|e| match e {
+            DbError::SameAccountTransfer => "Cannot transfer to the same account".to_string(),
+            DbError::AccountNotFound => "One or both accounts not found".to_string(),
+            _ => e.to_string(),
+        })?;
+
+    log_security_event(SecurityEvent::TransactionCreated, Some("transfer"));
+
+    Ok(tx_id)
+}
+
 // ==================== Financial Transaction Commands ====================
 
 /// Comando para agregar una transacción
 #[tauri::command]
 pub fn add_transaction(
     state: State<DbState>,
+    account_id: String,
     amount: i64,
     category: String,
     description: String,
@@ -695,6 +897,9 @@ pub fn add_transaction(
 ) -> Result<String, String> {
     let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
     let db = get_db_with_session_check(&db_lock)?;
+
+    // Validate account_id
+    let account_id = validate_uuid(&account_id)?;
 
     // Validar y sanitizar campos
     let category = validate_field_length(&category, MAX_CATEGORY_LENGTH, "Category")?;
@@ -719,11 +924,13 @@ pub fn add_transaction(
 
     let transaction = Transaction::new(
         id.clone(),
+        account_id,
         amount,
         category,
         description,
         date,
         transaction_type.to_string(),
+        None, // No transfer_account_id for regular transactions
     );
 
     db.create_transaction(&transaction)

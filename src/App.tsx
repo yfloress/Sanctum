@@ -35,6 +35,7 @@ import {
   useFinancialStore,
   useHabitStore,
   useIsInitialized,
+  useAccountStore,
 } from "./stores/index.ts";
 
 // Components
@@ -48,6 +49,7 @@ import { useToast } from "./stores/toastStore.ts";
 // Features
 import { LoginScreen } from "./features/auth/LoginScreen.tsx";
 import { Dashboard } from "./features/dashboard/Dashboard.tsx";
+import { AccountsView } from "./features/accounts/AccountsView.tsx";
 import { TransactionsView } from "./features/transactions/TransactionsView.tsx";
 import { AnalyticsView } from "./features/analytics/AnalyticsView.tsx";
 import { CryptoView } from "./features/crypto/CryptoView.tsx";
@@ -103,6 +105,12 @@ function App({ onReady }: AppProps) {
   const habitSuccess = useHabitStore((state) => state.successMessage);
   const habitLoading = useHabitStore((state) => state.isLoading);
   const clearHabitMessages = useHabitStore((state) => state.clearMessages);
+
+  // ==================== Account Store ====================
+  const accountError = useAccountStore((state) => state.error);
+  const accountSuccess = useAccountStore((state) => state.successMessage);
+  const accountLoading = useAccountStore((state) => state.isLoading);
+  const clearAccountMessages = useAccountStore((state) => state.clearMessages);
 
   // ==================== Toast System ====================
   const toasts = useToast((state) => state.toasts);
@@ -165,6 +173,18 @@ function App({ onReady }: AppProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [habitError, habitSuccess]);
+
+  useEffect(() => {
+    if (accountError) {
+      toast.error(accountError);
+      clearAccountMessages();
+    }
+    if (accountSuccess) {
+      toast.success(accountSuccess);
+      clearAccountMessages();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountError, accountSuccess]);
 
   // ==================== Check Auth Status on Mount ====================
   useEffect(() => {
@@ -256,7 +276,11 @@ function App({ onReady }: AppProps) {
 
   // ==================== Computed Values ====================
   const isLoading =
-    authLoading || financialLoading || cryptoLoading || habitLoading;
+    authLoading ||
+    financialLoading ||
+    cryptoLoading ||
+    habitLoading ||
+    accountLoading;
 
   // ==================== Render: Loading State ====================
   if (authLoading && !isInitialized) {
@@ -299,6 +323,9 @@ function App({ onReady }: AppProps) {
       <main className="content-area">
         {/* ==================== Dashboard Tab ==================== */}
         {activeTab === "dashboard" && <Dashboard />}
+
+        {/* ==================== Accounts Tab ==================== */}
+        {activeTab === "accounts" && <AccountsView />}
 
         {/* ==================== Transactions Tab ==================== */}
         {activeTab === "transactions" && <TransactionsView />}

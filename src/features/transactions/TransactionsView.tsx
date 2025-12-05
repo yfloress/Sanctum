@@ -5,22 +5,22 @@
  * Consumes state directly from Zustand stores - no props needed.
  */
 
-import type { FormEvent } from "react";
+import { useEffect, type FormEvent } from "react";
 import {
   useFinancialLoading,
   useFinancialStore,
   useTransactionForm,
   useTransactions,
 } from "../../stores/index.ts";
+import { useAccounts, useAccountStore } from "../../stores/accountStore.ts";
 import { formatAmount, formatDate } from "../../utils/index.ts";
 
 export function TransactionsView() {
-  // Consume state directly from store (optimized selectors)
+  // ==================== Financial Store ====================
   const transactions = useTransactions();
   const form = useTransactionForm();
   const isLoading = useFinancialLoading();
 
-  // Get actions from store
   const setFormField = useFinancialStore((state) => state.setFormField);
   const toggleExpenseType = useFinancialStore(
     (state) => state.toggleExpenseType,
@@ -30,14 +30,47 @@ export function TransactionsView() {
     (state) => state.setTransactionToDelete,
   );
   const getCategories = useFinancialStore((state) => state.getCategories);
+  const setDefaultAccount = useFinancialStore(
+    (state) => state.setDefaultAccount,
+  );
+
+  // ==================== Account Store ====================
+  const accounts = useAccounts();
+  const loadBalances = useAccountStore((state) => state.loadBalances);
+
+  // Get only active accounts
+  const activeAccounts = accounts.filter((acc) => !acc.is_archived);
 
   // Get categories based on current expense type
   const categories = getCategories();
 
+  // Set default account if none selected and accounts are available
+  useEffect(() => {
+    if (!form.accountId && activeAccounts.length > 0) {
+      setDefaultAccount(activeAccounts[0].id);
+    }
+  }, [form.accountId, activeAccounts, setDefaultAccount]);
+
+  // Helper to get account name by ID
+  const getAccountName = (accountId: string) => {
+    const account = accounts.find((acc) => acc.id === accountId);
+    return account?.name || "Unknown";
+  };
+
+  // Helper to get account color by ID
+  const getAccountColor = (accountId: string) => {
+    const account = accounts.find((acc) => acc.id === accountId);
+    return account?.color || "#8b5cf6";
+  };
+
   // Handle form submission
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    await addTransaction(form);
+    const success = await addTransaction(form);
+    if (success) {
+      // Reload account balances after adding transaction
+      await loadBalances();
+    }
   };
 
   return (
@@ -49,6 +82,32 @@ export function TransactionsView() {
         <div className="transaction-form-section">
           <h2 className="section-title">New Transaction</h2>
           <form onSubmit={handleSubmit} className="transaction-form">
+            {/* Account Selector */}
+            <div className="form-group">
+              <label htmlFor="account">Account</label>
+              {activeAccounts.length === 0 ? (
+                <div className="account-warning">
+                  <span>⚠️ No accounts available.</span>
+                  <span className="hint">
+                    Create an account first in the Accounts tab.
+                  </span>
+                </div>
+              ) : (
+                <select
+                  id="account"
+                  value={form.accountId}
+                  onChange={(e) => setFormField("accountId", e.target.value)}
+                  disabled={isLoading}
+                >
+                  {activeAccounts.map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.icon || "💰"} {acc.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
             <div className="form-row">
               <div className="form-group">
                 <label htmlFor="amount">Amount ($)</label>
@@ -116,7 +175,11 @@ export function TransactionsView() {
               </label>
             </div>
 
-            <button type="submit" className="btn-primary" disabled={isLoading}>
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={isLoading || activeAccounts.length === 0}
+            >
               {isLoading ? "Saving..." : "Save Transaction"}
             </button>
           </form>
@@ -125,44 +188,64 @@ export function TransactionsView() {
         {/* Transaction History */}
         <div className="transaction-history-section">
           <h2 className="section-title">History</h2>
-          {transactions.length === 0
-            ? <p className="empty-state">No transactions recorded</p>
-            : (
-              <div className="transactions-list">
-                {transactions.map((tx) => (
-                  <div key={tx.id} className="transaction-item">
-                    <div className="transaction-info">
+          {transactions.length === 0 ? (
+            <p className="empty-state">No transactions recorded</p>
+          ) : (
+            <div className="transactions-list">
+              {transactions.map((tx) => (
+                <div key={tx.id} className="transaction-item">
+                  <div className="transaction-info">
+                    <div className="transaction-header-row">
                       <div className="transaction-category">{tx.category}</div>
-                      <div className="transaction-description">
-                        {tx.description}
-                      </div>
-                      <div className="transaction-date">
-                        {formatDate(tx.date)}
-                      </div>
+                      {tx.account_id && (
+                        <div
+                          className="transaction-account-badge"
+                          style={{
+                            backgroundColor: getAccountColor(tx.account_id),
+                          }}
+                        >
+                          {getAccountName(tx.account_id)}
+                        </div>
+                      )}
                     </div>
-                    <div className="transaction-actions">
-                      <div
-                        className={`transaction-amount ${
-                          tx.type === "income" ? "income" : "expense"
-                        }`}
-                      >
-                        {tx.type === "income" ? "+" : "-"}$
-                        {formatAmount(tx.amount)}
-                      </div>
-                      <button type="button"
-                        className="btn-delete"
-                        onClick={() =>
-                          setTransactionToDelete(tx.id)}
-                        disabled={isLoading}
-                        aria-label="Delete transaction"
-                      >
-                        🗑️
-                      </button>
+                    <div className="transaction-description">
+                      {tx.description}
+                    </div>
+                    <div className="transaction-date">
+                      {formatDate(tx.date)}
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                  <div className="transaction-actions">
+                    <div
+                      className={`transaction-amount ${
+                        tx.type === "income"
+                          ? "income"
+                          : tx.type === "transfer"
+                            ? "transfer"
+                            : "expense"
+                      }`}
+                    >
+                      {tx.type === "income"
+                        ? "+"
+                        : tx.type === "transfer"
+                          ? "↔️ "
+                          : "-"}
+                      ${formatAmount(tx.amount)}
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-delete"
+                      onClick={() => setTransactionToDelete(tx.id)}
+                      disabled={isLoading}
+                      aria-label="Delete transaction"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

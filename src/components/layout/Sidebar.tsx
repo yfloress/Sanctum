@@ -23,28 +23,40 @@ export function Sidebar({
       </div>
 
       <nav className="sidebar-nav">
-        <button type="button"
+        <button
+          type="button"
           className={`nav-item ${activeTab === "dashboard" ? "active" : ""}`}
           onClick={() => setActiveTab("dashboard")}
         >
           <span className="nav-icon">📊</span>
           <span className="nav-label">Dashboard</span>
         </button>
-        <button type="button"
+        <button
+          type="button"
+          className={`nav-item ${activeTab === "accounts" ? "active" : ""}`}
+          onClick={() => setActiveTab("accounts")}
+        >
+          <span className="nav-icon">🏦</span>
+          <span className="nav-label">Accounts</span>
+        </button>
+        <button
+          type="button"
           className={`nav-item ${activeTab === "transactions" ? "active" : ""}`}
           onClick={() => setActiveTab("transactions")}
         >
           <span className="nav-icon">💸</span>
           <span className="nav-label">Transactions</span>
         </button>
-        <button type="button"
+        <button
+          type="button"
           className={`nav-item ${activeTab === "analytics" ? "active" : ""}`}
           onClick={() => setActiveTab("analytics")}
         >
           <span className="nav-icon">📈</span>
           <span className="nav-label">Analytics</span>
         </button>
-        <button type="button"
+        <button
+          type="button"
           className={`nav-item ${activeTab === "crypto" ? "active" : ""}`}
           onClick={() => {
             setActiveTab("crypto");
@@ -54,7 +66,8 @@ export function Sidebar({
           <span className="nav-icon">₿</span>
           <span className="nav-label">Crypto</span>
         </button>
-        <button type="button"
+        <button
+          type="button"
           className={`nav-item ${activeTab === "habits" ? "active" : ""}`}
           onClick={() => setActiveTab("habits")}
         >
@@ -64,7 +77,8 @@ export function Sidebar({
       </nav>
 
       <div className="sidebar-footer">
-        <button type="button"
+        <button
+          type="button"
           onClick={onLockVault}
           className="nav-item lock-btn"
           disabled={isLoading}

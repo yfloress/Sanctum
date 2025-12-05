@@ -4,6 +4,11 @@
  * SECURITY: This store lives in RAM only. NO persistence middleware.
  * The real persistence is handled by Rust (SQLCipher encrypted database).
  *
+ * COHERENCE PRINCIPLE:
+ * - Each transaction MUST belong to an account
+ * - Balance = Sum of (Account Initial Balances) + Income - Expenses
+ * - Transfers are handled by accountStore
+ *
  * KILL SWITCH: The reset() action clears all data from memory when
  * the user locks the vault.
  */
@@ -17,6 +22,7 @@ import { getLocalDateString } from "../utils/index.ts";
 // ==================== Types ====================
 
 interface TransactionFormData {
+  accountId: string; // Required: which account this transaction belongs to
   amount: string;
   description: string;
   category: string;
@@ -66,6 +72,7 @@ interface FinancialActions {
     value: TransactionFormData[K],
   ) => void;
   resetForm: () => void;
+  setDefaultAccount: (accountId: string) => void;
   toggleExpenseType: (isExpense: boolean) => void;
 
   // Messages
@@ -92,6 +99,7 @@ export type FinancialStore = FinancialState & FinancialActions;
 // ==================== Initial State ====================
 
 const initialFormState: TransactionFormData = {
+  accountId: "", // Will be set when accounts are loaded
   amount: "",
   description: "",
   category: EXPENSE_CATEGORIES[0],
@@ -164,6 +172,10 @@ export const useFinancialStore = create<FinancialStore>((set, get) => ({
     const parsedAmount = parseFloat(data.amount);
 
     // Validation
+    if (!data.accountId) {
+      set({ error: "Please select an account" });
+      return false;
+    }
     if (!data.amount || parsedAmount <= 0) {
       set({ error: "Amount must be greater than zero" });
       return false;
@@ -179,6 +191,7 @@ export const useFinancialStore = create<FinancialStore>((set, get) => ({
       const amountInCents = Math.round(parsedAmount * 100);
 
       await invoke<string>("add_transaction", {
+        accountId: data.accountId,
         amount: amountInCents,
         category: data.category.trim(),
         description: data.description.trim(),
@@ -262,15 +275,22 @@ export const useFinancialStore = create<FinancialStore>((set, get) => ({
   },
 
   resetForm: () => {
-    const isExpense = get().form.isExpense;
+    const { isExpense, accountId } = get().form;
     set({
       form: {
         ...initialFormState,
+        accountId, // Preserve selected account
         isExpense,
         category: isExpense ? EXPENSE_CATEGORIES[0] : INCOME_CATEGORIES[0],
         date: getLocalDateString(),
       },
     });
+  },
+
+  setDefaultAccount: (accountId: string) => {
+    set((state) => ({
+      form: { ...state.form, accountId },
+    }));
   },
 
   toggleExpenseType: (isExpense: boolean) => {

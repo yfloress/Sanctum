@@ -1,12 +1,34 @@
 // ==================== Financial Types ====================
 
+export interface Account {
+  id: string;
+  name: string;
+  type: string; // "bank", "cash", "savings", "credit_card", "other"
+  currency: string;
+  initial_balance: number; // In cents
+  color: string;
+  icon: string | null;
+  is_archived: boolean;
+  created_at: string;
+}
+
+export interface AccountBalance {
+  account_id: string;
+  account_name: string;
+  current_balance: number; // In cents
+  total_income: number;
+  total_expense: number;
+}
+
 export interface Transaction {
   id: string;
+  account_id: string; // Required: which account this belongs to
   amount: number;
   category: string;
   description: string;
   date: string;
-  type: string;
+  type: string; // "income", "expense", or "transfer"
+  transfer_account_id: string | null; // Only for transfers
 }
 
 export interface BalanceSummary {
@@ -96,6 +118,7 @@ export type HabitLogSet = Set<string>; // Format: "habitId:YYYY-MM-DD"
 
 export type TabType =
   | "dashboard"
+  | "accounts"
   | "transactions"
   | "analytics"
   | "crypto"
@@ -166,6 +189,29 @@ export const INCOME_CATEGORIES = [
   "Gifts",
   "Other",
 ] as const;
+
+export const ACCOUNT_TYPES = [
+  { value: "bank", label: "Bank Account", icon: "🏦" },
+  { value: "cash", label: "Cash", icon: "💵" },
+  { value: "savings", label: "Savings", icon: "🐷" },
+  { value: "credit_card", label: "Credit Card", icon: "💳" },
+  { value: "other", label: "Other", icon: "💰" },
+] as const;
+
+export const ACCOUNT_COLORS = [
+  "#8b5cf6", // violet
+  "#10b981", // emerald
+  "#f59e0b", // amber
+  "#ef4444", // red
+  "#06b6d4", // cyan
+  "#ec4899", // pink
+  "#6366f1", // indigo
+  "#84cc16", // lime
+  "#f97316", // orange
+  "#14b8a6", // teal
+] as const;
+
+export const DEFAULT_CURRENCY = "USD";
 
 export const WALLET_CATEGORIES = [
   { value: "exchange", label: "Exchange", icon: "🏦" },
