@@ -37,6 +37,11 @@ cargo tauri build
 
 ## 3. Arquitectura
 
+### Sistema de Monedas
+- **Moneda base:** USD (todos los cálculos de patrimonio)
+- **Soportadas:** USD, CLP (Peso Chileno)
+- **Tasa de cambio:** Obtenida de CoinGecko, cacheada en SQLCipher para uso offline
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        FRONTEND (React)                         │
@@ -92,7 +97,7 @@ src-tauri/src/
 ├── commands.rs         # Comandos IPC (validación)
 ├── db.rs               # Acceso a datos, migraciones, SQLCipher
 ├── models.rs           # Structs de dominio
-├── crypto.rs           # Cliente HTTP para CoinGecko
+├── crypto.rs           # Cliente HTTP para CoinGecko + tasas de cambio
 └── security_log.rs     # Logging de seguridad
 ```
 
