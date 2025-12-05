@@ -16,6 +16,7 @@
 import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import type { BalanceSummary, Transaction } from "../types/index.ts";
+import { handleSessionError } from "./sessionManager.ts";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../types/index.ts";
 import { getLocalDateString } from "../utils/index.ts";
 
@@ -151,6 +152,7 @@ export const useFinancialStore = create<FinancialStore>((set, get) => ({
         _balanceEvolutionCache: null,
       });
     } catch (err) {
+      if (handleSessionError(err)) return;
       console.error("Error loading transactions:", err);
       throw err;
     }
@@ -161,6 +163,7 @@ export const useFinancialStore = create<FinancialStore>((set, get) => ({
       const balance = await invoke<BalanceSummary>("get_balance");
       set({ balance });
     } catch (err) {
+      if (handleSessionError(err)) return;
       console.error("Error loading balance:", err);
       throw err;
     }
@@ -217,6 +220,7 @@ export const useFinancialStore = create<FinancialStore>((set, get) => ({
 
       return true;
     } catch (err) {
+      if (handleSessionError(err)) return false;
       set({ error: `Error creating transaction: ${err}` });
       return false;
     } finally {
@@ -240,6 +244,7 @@ export const useFinancialStore = create<FinancialStore>((set, get) => ({
 
       return true;
     } catch (err) {
+      if (handleSessionError(err)) return false;
       set({ error: `Error deleting transaction: ${err}` });
       return false;
     } finally {

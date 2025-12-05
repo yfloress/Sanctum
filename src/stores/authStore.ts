@@ -13,6 +13,10 @@ import { useFinancialStore } from "./financialStore.ts";
 import { useCryptoStore } from "./cryptoStore.ts";
 import { useHabitStore } from "./habitStore.ts";
 import { useAccountStore } from "./accountStore.ts";
+import {
+  isSessionExpiredError,
+  resetSessionExpiredFlag,
+} from "./sessionManager.ts";
 
 // ==================== Types ====================
 
@@ -215,6 +219,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         successMessage: result,
       });
 
+      // Reset session expired flag in session manager
+      resetSessionExpiredFlag();
+
       // Auto-clear success message
       setTimeout(() => {
         set({ successMessage: null });
@@ -231,12 +238,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       const errorStr = String(err);
 
       // Handle session expiry
-      if (
-        errorStr.includes("Session expired") ||
-        errorStr.includes("inactivity")
-      ) {
+      if (isSessionExpiredError(errorStr)) {
         // SECURITY: Clear stores even on error
         get()._clearAllStores();
+        resetSessionExpiredFlag();
         set({
           isInitialized: false,
           error: "Session expired due to inactivity",

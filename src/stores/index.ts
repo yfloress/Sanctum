@@ -85,3 +85,12 @@ export {
 
 // Toast Store
 export { type ToastItem, useToast } from "./toastStore.ts";
+
+// Session Manager (for handling session expiry)
+export {
+  handleSessionError,
+  isSessionExpiredError,
+  resetSessionExpiredFlag,
+  setGlobalLogoutHandler,
+  clearGlobalLogoutHandler,
+} from "./sessionManager.ts";

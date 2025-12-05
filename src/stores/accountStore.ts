@@ -15,6 +15,7 @@
 
 import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
+import { handleSessionError } from "./sessionManager.ts";
 
 // ==================== Types ====================
 
@@ -182,6 +183,7 @@ export const useAccountStore = create<AccountStore>((set, get) => ({
       const accounts = await invoke<Account[]>("get_accounts");
       set({ accounts });
     } catch (err) {
+      if (handleSessionError(err)) return;
       console.error("Error loading accounts:", err);
       throw err;
     }
@@ -192,6 +194,7 @@ export const useAccountStore = create<AccountStore>((set, get) => ({
       const balances = await invoke<AccountBalance[]>("get_account_balances");
       set({ balances });
     } catch (err) {
+      if (handleSessionError(err)) return;
       console.error("Error loading account balances:", err);
       throw err;
     }
@@ -223,6 +226,7 @@ export const useAccountStore = create<AccountStore>((set, get) => ({
         get().fetchExchangeRate();
       }
     } catch (err) {
+      if (handleSessionError(err)) return;
       set({ error: `Error loading accounts: ${err}` });
     } finally {
       set({ isLoading: false });
@@ -316,6 +320,7 @@ export const useAccountStore = create<AccountStore>((set, get) => ({
 
       return true;
     } catch (err) {
+      if (handleSessionError(err)) return false;
       set({ error: `Error creating account: ${err}` });
       return false;
     } finally {
@@ -356,6 +361,7 @@ export const useAccountStore = create<AccountStore>((set, get) => ({
 
       return true;
     } catch (err) {
+      if (handleSessionError(err)) return false;
       set({ error: `Error updating account: ${err}` });
       return false;
     } finally {
@@ -375,6 +381,7 @@ export const useAccountStore = create<AccountStore>((set, get) => ({
 
       return true;
     } catch (err) {
+      if (handleSessionError(err)) return false;
       set({ error: `${err}` });
       return false;
     } finally {
@@ -421,6 +428,7 @@ export const useAccountStore = create<AccountStore>((set, get) => ({
 
       return true;
     } catch (err) {
+      if (handleSessionError(err)) return false;
       set({ error: `Error transferring funds: ${err}` });
       return false;
     } finally {

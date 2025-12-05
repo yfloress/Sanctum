@@ -14,6 +14,7 @@
 import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import type { Habit, HabitLog } from "../types/index.ts";
+import { handleSessionError } from "./sessionManager.ts";
 
 // ==================== Types ====================
 
@@ -256,6 +257,7 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
       const stats = calculateStats(habits, logs, logsRaw, currentMonth);
       set({ habits, stats });
     } catch (err) {
+      if (handleSessionError(err)) return;
       console.error("Error loading habits:", err);
       throw err;
     }
@@ -281,6 +283,7 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
 
       set({ logs, logsRaw, stats });
     } catch (err) {
+      if (handleSessionError(err)) return;
       console.error("Error loading habit logs:", err);
       throw err;
     }
@@ -334,6 +337,7 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
 
       return true;
     } catch (err) {
+      if (handleSessionError(err)) return false;
       set({ error: `Error creating habit: ${err}` });
       return false;
     } finally {
@@ -369,6 +373,7 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
 
       return true;
     } catch (err) {
+      if (handleSessionError(err)) return false;
       set({ error: `Error updating habit: ${err}` });
       return false;
     } finally {
@@ -388,6 +393,7 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
 
       return true;
     } catch (err) {
+      if (handleSessionError(err)) return false;
       set({ error: `Error archiving habit: ${err}` });
       return false;
     } finally {
@@ -414,6 +420,7 @@ export const useHabitStore = create<HabitStore>((set, get) => ({
 
       return true;
     } catch (err) {
+      if (handleSessionError(err)) return false;
       set({ error: `Error deleting habit: ${err}` });
       return false;
     } finally {

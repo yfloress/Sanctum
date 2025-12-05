@@ -25,6 +25,12 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 
+// Session Manager (must be imported before stores to avoid circular deps)
+import {
+  setGlobalLogoutHandler,
+  clearGlobalLogoutHandler,
+} from "./stores/sessionManager.ts";
+
 // Stores
 import {
   useAuthError,
@@ -190,6 +196,21 @@ function App({ onReady }: AppProps) {
   useEffect(() => {
     checkStatus();
   }, [checkStatus]);
+
+  // ==================== Setup Session Manager Logout Handler ====================
+  useEffect(() => {
+    // Set up the global logout handler for session expiry detection
+    const handleSessionExpiry = async () => {
+      toast.warning("Session expired due to inactivity");
+      await logout();
+    };
+
+    setGlobalLogoutHandler(handleSessionExpiry);
+
+    return () => {
+      clearGlobalLogoutHandler();
+    };
+  }, [logout, toast]);
 
   // ==================== Show Window When Ready ====================
   useLayoutEffect(() => {

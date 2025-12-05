@@ -28,6 +28,7 @@ import {
   getLocalDateString,
   isValidCoinId,
 } from "../utils/index.ts";
+import { handleSessionError } from "./sessionManager.ts";
 
 // ==================== Types ====================
 
@@ -404,6 +405,7 @@ export const useCryptoStore = create<CryptoStore>((set, get) => ({
       const wallets = await invoke<CryptoWallet[]>("get_wallets");
       set({ wallets });
     } catch (err) {
+      if (handleSessionError(err)) return;
       console.error("Error loading wallets:", err);
       throw err;
     }
@@ -416,6 +418,7 @@ export const useCryptoStore = create<CryptoStore>((set, get) => ({
       );
       set({ portfolio });
     } catch (err) {
+      if (handleSessionError(err)) return;
       console.error("Error loading portfolio:", err);
       throw err;
     }
@@ -429,6 +432,7 @@ export const useCryptoStore = create<CryptoStore>((set, get) => ({
       ]);
       set({ walletTransactions, walletHoldings });
     } catch (err) {
+      if (handleSessionError(err)) return;
       console.error("Error loading wallet details:", err);
     }
   },
@@ -438,6 +442,7 @@ export const useCryptoStore = create<CryptoStore>((set, get) => ({
       const holdings = await invoke<CryptoHolding[]>("get_crypto_holdings");
       set({ holdings });
     } catch (err) {
+      if (handleSessionError(err)) return;
       console.error("Error loading holdings:", err);
       throw err;
     }
@@ -512,6 +517,7 @@ export const useCryptoStore = create<CryptoStore>((set, get) => ({
       setTimeout(() => set({ successMessage: null }), 3000);
       return true;
     } catch (err) {
+      if (handleSessionError(err)) return false;
       set({ error: String(err) });
       return false;
     } finally {
