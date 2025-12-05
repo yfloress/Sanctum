@@ -53,6 +53,17 @@ struct CoinGeckoMarketData {
     last_updated: Option<String>,
 }
 
+/// Internal struct for simple price response (used for CLP/USD rate)
+#[derive(Debug, Deserialize)]
+struct SimplePriceResponse {
+    tether: Option<TetherPrice>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TetherPrice {
+    clp: Option<f64>,
+}
+
 /// Validates a coin ID to prevent injection or malformed inputs
 pub fn validate_coin_id(coin_id: &str) -> Result<String, String> {
     // Reject any whitespace/control characters outright (prevents hidden newlines/tabs)
@@ -304,6 +315,61 @@ pub async fn fetch_crypto_prices(coin_ids: Vec<String>) -> Result<Vec<CryptoAsse
         .collect();
 
     Ok(assets)
+}
+
+/// Fetches the current CLP to USD exchange rate using CoinGecko
+/// Returns how many CLP equals 1 USD (e.g., ~950 CLP = 1 USD)
+///
+/// We use USDT/CLP as proxy since CoinGecko provides this pair.
+/// The rate returned is CLP per 1 USD.
+pub async fn fetch_clp_usd_rate() -> Result<f64, String> {
+    // Check rate limit before proceeding
+    check_rate_limit()?;
+
+    // Use simple/price endpoint to get USDT price in CLP
+    // USDT ≈ 1 USD, so this gives us CLP/USD rate
+    let url = format!(
+        "{}/simple/price?ids=tether&vs_currencies=clp",
+        COINGECKO_API_BASE
+    );
+
+    log_security_event(SecurityEvent::ExternalApiRequest, Some("clp_usd_rate"));
+
+    let client = create_secure_client()?;
+
+    let response = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(handle_request_error)?;
+
+    let status = response.status();
+    if !status.is_success() {
+        if status.as_u16() == 429 {
+            log_security_event(SecurityEvent::ExternalApiRateLimited, Some("coingecko"));
+        }
+        return Err("Failed to fetch exchange rate".to_string());
+    }
+
+    let body = response
+        .bytes()
+        .await
+        .map_err(|_| "Failed to read response")?;
+
+    let price_data: SimplePriceResponse =
+        serde_json::from_slice(&body).map_err(|_| "Failed to parse exchange rate data")?;
+
+    let rate = price_data
+        .tether
+        .and_then(|t| t.clp)
+        .ok_or("CLP rate not available")?;
+
+    // Validate the rate is reasonable (between 500 and 2000 CLP per USD)
+    if rate < 100.0 || rate > 5000.0 {
+        return Err("Exchange rate out of expected range".to_string());
+    }
+
+    Ok(rate)
 }
 
 /// Handles request errors without exposing sensitive information

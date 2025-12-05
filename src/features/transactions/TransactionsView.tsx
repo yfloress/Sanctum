@@ -13,7 +13,8 @@ import {
   useTransactions,
 } from "../../stores/index.ts";
 import { useAccounts, useAccountStore } from "../../stores/accountStore.ts";
-import { formatAmount, formatDate } from "../../utils/index.ts";
+import { formatCurrency, formatDate } from "../../utils/index.ts";
+import type { CurrencyCode } from "../../utils/index.ts";
 
 export function TransactionsView() {
   // ==================== Financial Store ====================
@@ -61,6 +62,12 @@ export function TransactionsView() {
   const getAccountColor = (accountId: string) => {
     const account = accounts.find((acc) => acc.id === accountId);
     return account?.color || "#8b5cf6";
+  };
+
+  // Helper to get account currency by ID
+  const getAccountCurrency = (accountId: string): CurrencyCode => {
+    const account = accounts.find((acc) => acc.id === accountId);
+    return (account?.currency as CurrencyCode) || "USD";
   };
 
   // Handle form submission
@@ -230,7 +237,12 @@ export function TransactionsView() {
                         : tx.type === "transfer"
                           ? "↔️ "
                           : "-"}
-                      ${formatAmount(tx.amount)}
+                      {formatCurrency(
+                        tx.amount,
+                        tx.account_id
+                          ? getAccountCurrency(tx.account_id)
+                          : "USD",
+                      )}
                     </div>
                     <button
                       type="button"

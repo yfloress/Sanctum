@@ -320,6 +320,16 @@ export const useCryptoStore = create<CryptoStore>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       await Promise.all([loadWallets(), loadPortfolio(), loadHoldings()]);
+
+      // Try to load cached prices first for immediate display
+      try {
+        const cachedPrices = await invoke<CryptoAsset[]>("load_crypto_prices");
+        if (cachedPrices && cachedPrices.length > 0) {
+          set({ prices: cachedPrices });
+        }
+      } catch {
+        // Ignore cache errors
+      }
     } catch (err) {
       set({ error: `Error loading crypto data: ${err}` });
     } finally {
@@ -359,9 +369,31 @@ export const useCryptoStore = create<CryptoStore>((set, get) => ({
       }
 
       set({ prices: results });
+
+      // Save prices to cache for offline use
+      if (results.length > 0) {
+        try {
+          await invoke("save_crypto_prices", { prices: results });
+        } catch {
+          // Ignore cache save errors
+        }
+      }
     } catch (err) {
       set({ error: String(err) });
       console.error("Error loading crypto prices:", err);
+
+      // If API fails and we have no prices, try loading from cache
+      if (state.prices.length === 0) {
+        try {
+          const cachedPrices =
+            await invoke<CryptoAsset[]>("load_crypto_prices");
+          if (cachedPrices && cachedPrices.length > 0) {
+            set({ prices: cachedPrices });
+          }
+        } catch {
+          // Ignore cache errors
+        }
+      }
     } finally {
       set({ isLoading: false });
     }

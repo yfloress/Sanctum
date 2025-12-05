@@ -17,6 +17,7 @@ import {
   ACCOUNT_COLORS,
 } from "../../stores/accountStore.ts";
 import { formatAmount } from "../../utils/index.ts";
+import { SUPPORTED_CURRENCIES } from "../../types/index.ts";
 
 type ModalType = "none" | "account" | "transfer";
 
@@ -37,7 +38,7 @@ export function AccountsView() {
     archiveAccount,
     setAccountToEdit,
     transfer,
-    getTotalNetWorth,
+    getTotalNetWorthUSD,
   } = useAccountStore();
 
   // ==================== Local State ====================
@@ -53,7 +54,7 @@ export function AccountsView() {
   // ==================== Computed ====================
   const activeAccounts = accounts.filter((acc) => !acc.is_archived);
   const archivedAccounts = accounts.filter((acc) => acc.is_archived);
-  const netWorth = getTotalNetWorth();
+  const netWorth = getTotalNetWorthUSD();
 
   // ==================== Helpers ====================
   const getBalanceForAccount = (accountId: string) => {
@@ -71,7 +72,7 @@ export function AccountsView() {
     setModalType("account");
   };
 
-  const openEditModal = (account: typeof accounts[0]) => {
+  const openEditModal = (account: (typeof accounts)[0]) => {
     setAccountToEdit(account);
     setModalType("account");
   };
@@ -116,7 +117,7 @@ export function AccountsView() {
       transferForm.toAccountId,
       parseFloat(transferForm.amount) || 0,
       transferForm.description,
-      transferForm.date
+      transferForm.date,
     );
 
     if (success) {
@@ -135,9 +136,11 @@ export function AccountsView() {
         <div className="accounts-title-section">
           <h1 className="page-title">Accounts</h1>
           <div className="net-worth-badge">
-            <span className="net-worth-label">Net Worth</span>
-            <span className={`net-worth-value ${netWorth >= 0 ? "positive" : "negative"}`}>
-              ${formatAmount(netWorth)}
+            <span className="net-worth-label">Net Worth (USD)</span>
+            <span
+              className={`net-worth-value ${netWorth >= 0 ? "positive" : "negative"}`}
+            >
+              ${formatAmount(netWorth, "USD")}
             </span>
           </div>
         </div>
@@ -147,7 +150,11 @@ export function AccountsView() {
             className="btn-secondary"
             onClick={openTransferModal}
             disabled={isLoading || activeAccounts.length < 2}
-            title={activeAccounts.length < 2 ? "Need at least 2 accounts" : "Transfer between accounts"}
+            title={
+              activeAccounts.length < 2
+                ? "Need at least 2 accounts"
+                : "Transfer between accounts"
+            }
           >
             <span>↔️</span> Transfer
           </button>
@@ -170,7 +177,11 @@ export function AccountsView() {
             <span className="empty-icon">🏦</span>
             <h3>No accounts yet</h3>
             <p>Create your first account to start tracking your finances.</p>
-            <button type="button" className="btn-primary" onClick={openCreateModal}>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={openCreateModal}
+            >
               Create Account
             </button>
           </div>
@@ -187,7 +198,10 @@ export function AccountsView() {
                   style={{ borderLeftColor: account.color }}
                 >
                   <div className="account-card-header">
-                    <div className="account-icon" style={{ backgroundColor: account.color }}>
+                    <div
+                      className="account-icon"
+                      style={{ backgroundColor: account.color }}
+                    >
                       {account.icon || typeInfo.icon}
                     </div>
                     <div className="account-info">
@@ -215,8 +229,14 @@ export function AccountsView() {
                   </div>
                   <div className="account-balance">
                     <span className="balance-label">Current Balance</span>
-                    <span className={`balance-amount ${currentBalance >= 0 ? "positive" : "negative"}`}>
-                      {currentBalance < 0 ? "-" : ""}${formatAmount(Math.abs(currentBalance))}
+                    <span
+                      className={`balance-amount ${currentBalance >= 0 ? "positive" : "negative"}`}
+                    >
+                      {currentBalance < 0 ? "-" : ""}$
+                      {formatAmount(
+                        Math.abs(currentBalance),
+                        account.currency as "USD" | "CLP",
+                      )}
                     </span>
                   </div>
                   <div className="account-currency">{account.currency}</div>
@@ -243,17 +263,28 @@ export function AccountsView() {
                   style={{ borderLeftColor: account.color }}
                 >
                   <div className="account-card-header">
-                    <div className="account-icon" style={{ backgroundColor: account.color, opacity: 0.5 }}>
+                    <div
+                      className="account-icon"
+                      style={{ backgroundColor: account.color, opacity: 0.5 }}
+                    >
                       {account.icon || typeInfo.icon}
                     </div>
                     <div className="account-info">
                       <h3 className="account-name">{account.name}</h3>
-                      <span className="account-type">{typeInfo.label} (Archived)</span>
+                      <span className="account-type">
+                        {typeInfo.label} (Archived)
+                      </span>
                     </div>
                   </div>
                   <div className="account-balance">
                     <span className="balance-label">Final Balance</span>
-                    <span className="balance-amount">${formatAmount(currentBalance)}</span>
+                    <span className="balance-amount">
+                      $
+                      {formatAmount(
+                        currentBalance,
+                        account.currency as "USD" | "CLP",
+                      )}
+                    </span>
                   </div>
                 </div>
               );
@@ -265,7 +296,10 @@ export function AccountsView() {
       {/* Account Modal (Create/Edit) */}
       {modalType === "account" && (
         <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-card account-modal" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="modal-card account-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="modal-header">
               <span className="modal-icon">🏦</span>
               <h2>{accountToEdit ? "Edit Account" : "New Account"}</h2>
@@ -293,7 +327,9 @@ export function AccountsView() {
                       value={form.type}
                       onChange={(e) => {
                         setFormField("type", e.target.value);
-                        const typeInfo = ACCOUNT_TYPES.find((t) => t.value === e.target.value);
+                        const typeInfo = ACCOUNT_TYPES.find(
+                          (t) => t.value === e.target.value,
+                        );
                         if (typeInfo) {
                           setFormField("icon", typeInfo.icon);
                         }
@@ -316,10 +352,11 @@ export function AccountsView() {
                       onChange={(e) => setFormField("currency", e.target.value)}
                       disabled={isLoading}
                     >
-                      <option value="USD">USD ($)</option>
-                      <option value="EUR">EUR (€)</option>
-                      <option value="GBP">GBP (£)</option>
-                      <option value="MXN">MXN ($)</option>
+                      {SUPPORTED_CURRENCIES.map((curr) => (
+                        <option key={curr.code} value={curr.code}>
+                          {curr.code} ({curr.symbol})
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -333,7 +370,9 @@ export function AccountsView() {
                     type="number"
                     step="0.01"
                     value={form.initial_balance}
-                    onChange={(e) => setFormField("initial_balance", e.target.value)}
+                    onChange={(e) =>
+                      setFormField("initial_balance", e.target.value)
+                    }
                     placeholder="0.00"
                     disabled={isLoading}
                   />
@@ -366,8 +405,16 @@ export function AccountsView() {
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn-primary" disabled={isLoading}>
-                  {isLoading ? "Saving..." : accountToEdit ? "Update" : "Create"}
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={isLoading}
+                >
+                  {isLoading
+                    ? "Saving..."
+                    : accountToEdit
+                      ? "Update"
+                      : "Create"}
                 </button>
               </div>
             </form>
@@ -378,7 +425,10 @@ export function AccountsView() {
       {/* Transfer Modal */}
       {modalType === "transfer" && (
         <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-card transfer-modal" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="modal-card transfer-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="modal-header">
               <span className="modal-icon">↔️</span>
               <h2>Transfer Funds</h2>
@@ -391,13 +441,21 @@ export function AccountsView() {
                     id="from-account"
                     value={transferForm.fromAccountId}
                     onChange={(e) =>
-                      setTransferForm({ ...transferForm, fromAccountId: e.target.value })
+                      setTransferForm({
+                        ...transferForm,
+                        fromAccountId: e.target.value,
+                      })
                     }
                     disabled={isLoading}
                   >
                     {activeAccounts.map((acc) => (
                       <option key={acc.id} value={acc.id}>
-                        {acc.name} (${formatAmount(getBalanceForAccount(acc.id))})
+                        {acc.name} ({acc.currency} $
+                        {formatAmount(
+                          getBalanceForAccount(acc.id),
+                          acc.currency as "USD" | "CLP",
+                        )}
+                        )
                       </option>
                     ))}
                   </select>
@@ -411,7 +469,10 @@ export function AccountsView() {
                     id="to-account"
                     value={transferForm.toAccountId}
                     onChange={(e) =>
-                      setTransferForm({ ...transferForm, toAccountId: e.target.value })
+                      setTransferForm({
+                        ...transferForm,
+                        toAccountId: e.target.value,
+                      })
                     }
                     disabled={isLoading}
                   >
@@ -419,7 +480,12 @@ export function AccountsView() {
                       .filter((acc) => acc.id !== transferForm.fromAccountId)
                       .map((acc) => (
                         <option key={acc.id} value={acc.id}>
-                          {acc.name} (${formatAmount(getBalanceForAccount(acc.id))})
+                          {acc.name} ({acc.currency} $
+                          {formatAmount(
+                            getBalanceForAccount(acc.id),
+                            acc.currency as "USD" | "CLP",
+                          )}
+                          )
                         </option>
                       ))}
                   </select>
@@ -435,7 +501,10 @@ export function AccountsView() {
                       min="0.01"
                       value={transferForm.amount}
                       onChange={(e) =>
-                        setTransferForm({ ...transferForm, amount: e.target.value })
+                        setTransferForm({
+                          ...transferForm,
+                          amount: e.target.value,
+                        })
                       }
                       placeholder="0.00"
                       disabled={isLoading}
@@ -450,7 +519,10 @@ export function AccountsView() {
                       type="date"
                       value={transferForm.date}
                       onChange={(e) =>
-                        setTransferForm({ ...transferForm, date: e.target.value })
+                        setTransferForm({
+                          ...transferForm,
+                          date: e.target.value,
+                        })
                       }
                       disabled={isLoading}
                     />
@@ -458,13 +530,18 @@ export function AccountsView() {
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="transfer-description">Description (optional)</label>
+                  <label htmlFor="transfer-description">
+                    Description (optional)
+                  </label>
                   <input
                     id="transfer-description"
                     type="text"
                     value={transferForm.description}
                     onChange={(e) =>
-                      setTransferForm({ ...transferForm, description: e.target.value })
+                      setTransferForm({
+                        ...transferForm,
+                        description: e.target.value,
+                      })
                     }
                     placeholder="e.g., Monthly savings transfer"
                     disabled={isLoading}
@@ -481,7 +558,11 @@ export function AccountsView() {
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn-primary" disabled={isLoading}>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  disabled={isLoading}
+                >
                   {isLoading ? "Transferring..." : "Transfer"}
                 </button>
               </div>

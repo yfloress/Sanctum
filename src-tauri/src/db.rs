@@ -338,6 +338,9 @@ impl Database {
         // ==================== Security Tables ====================
         self.create_security_tables()?;
 
+        // ==================== Price Cache Tables ====================
+        self.create_price_cache_tables()?;
+
         Ok(())
     }
 
@@ -424,6 +427,121 @@ impl Database {
         )?;
 
         Ok(())
+    }
+
+    /// Creates price cache tables for offline support
+    fn create_price_cache_tables(&self) -> Result<(), DbError> {
+        // Exchange rates cache (CLP/USD, etc.)
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS exchange_rate_cache (
+                currency_pair TEXT PRIMARY KEY NOT NULL,
+                rate REAL NOT NULL,
+                updated_at TEXT NOT NULL
+            )",
+            [],
+        )?;
+
+        // Crypto prices cache
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS crypto_price_cache (
+                coin_id TEXT PRIMARY KEY NOT NULL,
+                symbol TEXT NOT NULL,
+                name TEXT NOT NULL,
+                price_usd REAL NOT NULL,
+                price_change_24h REAL NOT NULL,
+                updated_at TEXT NOT NULL
+            )",
+            [],
+        )?;
+
+        Ok(())
+    }
+
+    // ==================== Price Cache Functions ====================
+
+    /// Saves an exchange rate to cache (e.g., CLP_USD)
+    pub fn save_exchange_rate(&self, pair: &str, rate: f64) -> Result<(), DbError> {
+        let now = Utc::now().to_rfc3339();
+        self.conn.execute(
+            "INSERT OR REPLACE INTO exchange_rate_cache (currency_pair, rate, updated_at)
+             VALUES (?1, ?2, ?3)",
+            params![pair, rate, now],
+        )?;
+        Ok(())
+    }
+
+    /// Loads a cached exchange rate
+    pub fn load_exchange_rate(&self, pair: &str) -> Result<Option<(f64, String)>, DbError> {
+        let result = self.conn.query_row(
+            "SELECT rate, updated_at FROM exchange_rate_cache WHERE currency_pair = ?1",
+            params![pair],
+            |row| Ok((row.get::<_, f64>(0)?, row.get::<_, String>(1)?)),
+        );
+
+        match result {
+            Ok((rate, updated_at)) => Ok(Some((rate, updated_at))),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(DbError::Sqlite(e)),
+        }
+    }
+
+    /// Saves a crypto price to cache
+    pub fn save_crypto_price(
+        &self,
+        coin_id: &str,
+        symbol: &str,
+        name: &str,
+        price_usd: f64,
+        price_change_24h: f64,
+    ) -> Result<(), DbError> {
+        let now = Utc::now().to_rfc3339();
+        self.conn.execute(
+            "INSERT OR REPLACE INTO crypto_price_cache
+             (coin_id, symbol, name, price_usd, price_change_24h, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![coin_id, symbol, name, price_usd, price_change_24h, now],
+        )?;
+        Ok(())
+    }
+
+    /// Loads all cached crypto prices
+    pub fn load_crypto_prices(
+        &self,
+    ) -> Result<Vec<(String, String, String, f64, f64, String)>, DbError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT coin_id, symbol, name, price_usd, price_change_24h, updated_at
+             FROM crypto_price_cache",
+        )?;
+
+        let prices = stmt.query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, f64>(3)?,
+                row.get::<_, f64>(4)?,
+                row.get::<_, String>(5)?,
+            ))
+        })?;
+
+        prices
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(DbError::Sqlite)
+    }
+
+    /// Loads a specific cached crypto price
+    pub fn load_crypto_price(&self, coin_id: &str) -> Result<Option<(f64, String)>, DbError> {
+        let result = self.conn.query_row(
+            "SELECT price_usd, updated_at FROM crypto_price_cache WHERE coin_id = ?1",
+            params![coin_id],
+            |row| Ok((row.get::<_, f64>(0)?, row.get::<_, String>(1)?)),
+        );
+
+        match result {
+            Ok((price, updated_at)) => Ok(Some((price, updated_at))),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(DbError::Sqlite(e)),
+        }
     }
 
     // ==================== Rate Limiting Functions ====================

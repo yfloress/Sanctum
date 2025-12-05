@@ -211,6 +211,11 @@ export const ACCOUNT_COLORS = [
   "#14b8a6", // teal
 ] as const;
 
+export const SUPPORTED_CURRENCIES = [
+  { code: "USD", symbol: "$", name: "US Dollar" },
+  { code: "CLP", symbol: "$", name: "Chilean Peso" },
+] as const;
+
 export const DEFAULT_CURRENCY = "USD";
 
 export const WALLET_CATEGORIES = [

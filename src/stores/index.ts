@@ -79,6 +79,8 @@ export {
   useAccountStore,
   useAccountSuccess,
   useAccountToEdit,
+  useClpUsdRate,
+  useRateLoading,
 } from "./accountStore.ts";
 
 // Toast Store

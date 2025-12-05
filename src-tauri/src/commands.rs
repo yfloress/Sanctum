@@ -1012,6 +1012,79 @@ pub async fn get_crypto_prices(coins: Vec<String>) -> Result<Vec<CryptoAsset>, S
     crypto::fetch_crypto_prices(coins).await
 }
 
+/// Command to fetch CLP to USD exchange rate
+/// Returns how many CLP equals 1 USD (e.g., ~950)
+#[tauri::command]
+pub async fn get_clp_usd_rate() -> Result<f64, String> {
+    crypto::fetch_clp_usd_rate().await
+}
+
+/// Command to save exchange rate to cache (for offline support)
+#[tauri::command]
+pub fn save_exchange_rate(state: State<DbState>, pair: String, rate: f64) -> Result<(), String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
+
+    db.save_exchange_rate(&pair, rate)
+        .map_err(|e| e.to_string())
+}
+
+/// Command to load cached exchange rate (for offline support)
+/// Returns (rate, updated_at) or null if not cached
+#[tauri::command]
+pub fn load_exchange_rate(
+    state: State<DbState>,
+    pair: String,
+) -> Result<Option<(f64, String)>, String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
+
+    db.load_exchange_rate(&pair).map_err(|e| e.to_string())
+}
+
+/// Command to save crypto prices to cache (for offline support)
+#[tauri::command]
+pub fn save_crypto_prices(state: State<DbState>, prices: Vec<CryptoAsset>) -> Result<(), String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
+
+    for price in prices {
+        db.save_crypto_price(
+            &price.id,
+            &price.symbol,
+            &price.name,
+            price.current_price,
+            price.price_change_percentage_24h,
+        )
+        .map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+/// Command to load cached crypto prices (for offline support)
+#[tauri::command]
+pub fn load_crypto_prices(state: State<DbState>) -> Result<Vec<CryptoAsset>, String> {
+    let db_lock = state.db.lock().map_err(|_| "Internal error".to_string())?;
+    let db = get_db_with_session_check(&db_lock)?;
+
+    let cached = db.load_crypto_prices().map_err(|e| e.to_string())?;
+
+    let assets: Vec<CryptoAsset> = cached
+        .into_iter()
+        .map(|(id, symbol, name, price, change, updated)| CryptoAsset {
+            id,
+            symbol,
+            name,
+            current_price: price,
+            price_change_percentage_24h: change,
+            last_updated: updated,
+        })
+        .collect();
+
+    Ok(assets)
+}
+
 // ==================== Legacy Crypto Holdings Commands (backwards compatibility) ====================
 
 /// Command to add a crypto holding to the portfolio (LEGACY)

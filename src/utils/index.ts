@@ -32,14 +32,40 @@ export function formatDate(isoDate: string): string {
 
 // ==================== Currency Formatters ====================
 
-/** Formatea centavos a dólares con 2 decimales */
-export function formatAmount(cents: number): string {
-  return (cents / 100).toFixed(2);
+/** Configuración de monedas soportadas (solo USD + CLP) */
+export const CURRENCIES = {
+  USD: { symbol: "$", decimals: 2, locale: "en-US" },
+  CLP: { symbol: "$", decimals: 0, locale: "es-CL" },
+} as const;
+
+export type CurrencyCode = keyof typeof CURRENCIES;
+
+/** Formatea centavos a la moneda especificada */
+export function formatAmount(
+  cents: number,
+  currency: CurrencyCode = "USD",
+): string {
+  const config = CURRENCIES[currency] || CURRENCIES.USD;
+  const value = cents / 100;
+
+  return value.toLocaleString(config.locale, {
+    minimumFractionDigits: config.decimals,
+    maximumFractionDigits: config.decimals,
+  });
+}
+
+/** Formatea un valor con símbolo de moneda */
+export function formatCurrency(
+  cents: number,
+  currency: CurrencyCode = "USD",
+): string {
+  const config = CURRENCIES[currency] || CURRENCIES.USD;
+  return `${config.symbol}${formatAmount(cents, currency)}`;
 }
 
 /** Formatea un valor en USD con separadores de miles */
 export function formatUSD(value: number): string {
-  return value.toLocaleString(undefined, {
+  return value.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -77,9 +103,10 @@ export function enrichAssetsWithPrices(
     const currentPrice = priceData?.current_price ?? 0;
     const currentValue = asset.total_amount * currentPrice;
     const unrealizedPnl = currentValue - asset.total_cost_basis;
-    const unrealizedPnlPercentage = asset.total_cost_basis > 0
-      ? (unrealizedPnl / asset.total_cost_basis) * 100
-      : 0;
+    const unrealizedPnlPercentage =
+      asset.total_cost_basis > 0
+        ? (unrealizedPnl / asset.total_cost_basis) * 100
+        : 0;
 
     return {
       ...asset,

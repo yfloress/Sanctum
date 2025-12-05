@@ -6,10 +6,11 @@
  * SECURITY: This store lives in RAM only. NO persistence middleware.
  * The real persistence is handled by Rust (SQLCipher encrypted database).
  *
- * COHERENCE PRINCIPLE:
- * - Each transaction MUST belong to an account
- * - Balance = Initial Balance + Income - Expenses
- * - Transfers are atomic operations between accounts
+ * CURRENCY HANDLING:
+ * - Accounts can be in USD or CLP
+ * - Net worth is always calculated in USD (base currency)
+ * - CLP accounts are converted using CoinGecko exchange rate
+ * - Exchange rate is fetched on demand and cached
  */
 
 import { create } from "zustand";
@@ -21,7 +22,7 @@ export interface Account {
   id: string;
   name: string;
   type: string; // "bank", "cash", "savings", "credit_card", "other"
-  currency: string;
+  currency: string; // "USD" | "CLP"
   initial_balance: number; // In cents
   color: string;
   icon: string | null;
@@ -32,7 +33,7 @@ export interface Account {
 export interface AccountBalance {
   account_id: string;
   account_name: string;
-  current_balance: number; // In cents
+  current_balance: number; // In cents (in account's currency)
   total_income: number;
   total_expense: number;
 }
@@ -51,6 +52,11 @@ interface AccountState {
   accounts: Account[];
   balances: AccountBalance[];
 
+  // Exchange Rate State
+  clpToUsdRate: number | null; // How many CLP per 1 USD (e.g., ~950)
+  rateLastUpdated: number | null; // Timestamp
+  rateLoading: boolean;
+
   // UI State
   isLoading: boolean;
   error: string | null;
@@ -66,6 +72,9 @@ interface AccountActions {
   loadAccounts: () => Promise<void>;
   loadBalances: () => Promise<void>;
   loadAll: () => Promise<void>;
+
+  // Exchange Rate
+  fetchExchangeRate: () => Promise<void>;
 
   // CRUD Operations
   createAccount: (data: AccountFormData) => Promise<boolean>;
@@ -90,10 +99,13 @@ interface AccountActions {
   setAccountToEdit: (account: Account | null) => void;
   populateFormFromAccount: (account: Account) => void;
 
-  // Computed Getters
-  getTotalNetWorth: () => number;
+  // Computed Getters (all return values in USD cents)
+  getTotalNetWorthUSD: () => number;
+  getTotalIncomeUSD: () => number;
+  getTotalExpensesUSD: () => number;
   getAccountById: (id: string) => Account | undefined;
   getAccountBalance: (id: string) => AccountBalance | undefined;
+  convertToUSD: (amountCents: number, currency: string) => number;
 
   // Messages
   setError: (error: string | null) => void;
@@ -131,6 +143,9 @@ export const ACCOUNT_COLORS = [
 
 export const DEFAULT_CURRENCY = "USD";
 
+// Rate cache duration: 5 minutes
+const RATE_CACHE_DURATION_MS = 5 * 60 * 1000;
+
 // ==================== Initial State ====================
 
 const initialFormState: AccountFormData = {
@@ -145,6 +160,9 @@ const initialFormState: AccountFormData = {
 const initialState: AccountState = {
   accounts: [],
   balances: [],
+  clpToUsdRate: null,
+  rateLastUpdated: null,
+  rateLoading: false,
   isLoading: false,
   error: null,
   successMessage: null,
@@ -183,10 +201,85 @@ export const useAccountStore = create<AccountStore>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       await Promise.all([get().loadAccounts(), get().loadBalances()]);
+
+      // Fetch exchange rate if we have any CLP accounts
+      const { accounts } = get();
+      const hasClpAccounts = accounts.some((acc) => acc.currency === "CLP");
+      if (hasClpAccounts) {
+        // First try to load cached rate for immediate display
+        try {
+          const cached = await invoke<[number, string] | null>(
+            "load_exchange_rate",
+            { pair: "CLP_USD" },
+          );
+          if (cached) {
+            set({ clpToUsdRate: cached[0] });
+          }
+        } catch {
+          // Ignore cache errors
+        }
+
+        // Then fetch fresh rate in background
+        get().fetchExchangeRate();
+      }
     } catch (err) {
       set({ error: `Error loading accounts: ${err}` });
     } finally {
       set({ isLoading: false });
+    }
+  },
+
+  // ==================== Exchange Rate ====================
+
+  fetchExchangeRate: async () => {
+    const { rateLastUpdated, rateLoading, clpToUsdRate } = get();
+
+    // Check cache validity
+    if (
+      rateLastUpdated &&
+      Date.now() - rateLastUpdated < RATE_CACHE_DURATION_MS
+    ) {
+      return; // Use cached rate
+    }
+
+    // Prevent concurrent fetches
+    if (rateLoading) return;
+
+    set({ rateLoading: true });
+
+    try {
+      // Try to fetch fresh rate from API
+      const rate = await invoke<number>("get_clp_usd_rate");
+      set({
+        clpToUsdRate: rate,
+        rateLastUpdated: Date.now(),
+      });
+
+      // Save to persistent cache for offline use
+      try {
+        await invoke("save_exchange_rate", { pair: "CLP_USD", rate });
+      } catch {
+        // Ignore cache save errors
+      }
+    } catch (err) {
+      console.error("Error fetching CLP/USD rate:", err);
+
+      // If we don't have a rate yet, try to load from persistent cache
+      if (!clpToUsdRate) {
+        try {
+          const cached = await invoke<[number, string] | null>(
+            "load_exchange_rate",
+            { pair: "CLP_USD" },
+          );
+          if (cached) {
+            set({ clpToUsdRate: cached[0] });
+          }
+        } catch {
+          // Ignore cache load errors
+        }
+      }
+    } finally {
+      set({ rateLoading: false });
     }
   },
 
@@ -255,7 +348,10 @@ export const useAccountStore = create<AccountStore>((set, get) => ({
 
       await get().loadAll();
       get().resetForm();
-      set({ accountToEdit: null, successMessage: "Account updated successfully" });
+      set({
+        accountToEdit: null,
+        successMessage: "Account updated successfully",
+      });
       setTimeout(() => set({ successMessage: null }), 3000);
 
       return true;
@@ -366,11 +462,80 @@ export const useAccountStore = create<AccountStore>((set, get) => ({
     });
   },
 
-  // ==================== Computed Getters ====================
+  // ==================== Currency Conversion ====================
 
-  getTotalNetWorth: () => {
-    const { balances } = get();
-    return balances.reduce((total, bal) => total + bal.current_balance, 0);
+  /**
+   * Converts an amount from any supported currency to USD cents
+   * @param amountCents - Amount in the original currency's cents
+   * @param currency - Currency code ("USD" or "CLP")
+   * @returns Amount in USD cents
+   */
+  convertToUSD: (amountCents: number, currency: string) => {
+    if (currency === "USD") {
+      return amountCents;
+    }
+
+    if (currency === "CLP") {
+      const { clpToUsdRate } = get();
+      if (!clpToUsdRate) {
+        // Fallback rate if API hasn't been called yet (~950 CLP = 1 USD)
+        return Math.round(amountCents / 950);
+      }
+      // Convert: CLP cents -> USD cents
+      // amountCents is in CLP, divide by rate to get USD
+      return Math.round(amountCents / clpToUsdRate);
+    }
+
+    // Unknown currency, return as-is
+    return amountCents;
+  },
+
+  // ==================== Computed Getters (All in USD) ====================
+
+  /**
+   * Calculates total net worth across all accounts in USD
+   * CLP accounts are converted using current exchange rate
+   */
+  getTotalNetWorthUSD: () => {
+    const { accounts, balances, convertToUSD } = get();
+
+    return balances.reduce((total, bal) => {
+      const account = accounts.find((acc) => acc.id === bal.account_id);
+      if (!account || account.is_archived) return total;
+
+      const balanceUSD = convertToUSD(bal.current_balance, account.currency);
+      return total + balanceUSD;
+    }, 0);
+  },
+
+  /**
+   * Calculates total income across all accounts in USD
+   */
+  getTotalIncomeUSD: () => {
+    const { accounts, balances, convertToUSD } = get();
+
+    return balances.reduce((total, bal) => {
+      const account = accounts.find((acc) => acc.id === bal.account_id);
+      if (!account || account.is_archived) return total;
+
+      const incomeUSD = convertToUSD(bal.total_income, account.currency);
+      return total + incomeUSD;
+    }, 0);
+  },
+
+  /**
+   * Calculates total expenses across all accounts in USD
+   */
+  getTotalExpensesUSD: () => {
+    const { accounts, balances, convertToUSD } = get();
+
+    return balances.reduce((total, bal) => {
+      const account = accounts.find((acc) => acc.id === bal.account_id);
+      if (!account || account.is_archived) return total;
+
+      const expenseUSD = convertToUSD(bal.total_expense, account.currency);
+      return total + expenseUSD;
+    }, 0);
   },
 
   getAccountById: (id: string) => {
@@ -409,3 +574,7 @@ export const useAccountSuccess = () =>
 export const useAccountForm = () => useAccountStore((state) => state.form);
 export const useAccountToEdit = () =>
   useAccountStore((state) => state.accountToEdit);
+export const useClpUsdRate = () =>
+  useAccountStore((state) => state.clpToUsdRate);
+export const useRateLoading = () =>
+  useAccountStore((state) => state.rateLoading);

@@ -58,8 +58,13 @@ pub fn run() {
             commands::get_transactions,
             commands::get_balance,
             commands::delete_transaction,
-            // Crypto Prices
+            // Crypto Prices & Exchange Rates
             commands::get_crypto_prices,
+            commands::get_clp_usd_rate,
+            commands::save_exchange_rate,
+            commands::load_exchange_rate,
+            commands::save_crypto_prices,
+            commands::load_crypto_prices,
             // Legacy Crypto Holdings (backwards compatibility)
             commands::add_crypto_holding,
             commands::get_crypto_holdings,

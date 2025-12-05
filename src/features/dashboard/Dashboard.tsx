@@ -33,10 +33,12 @@ export function Dashboard() {
   // ==================== Account Store ====================
   const accounts = useAccounts();
   const balances = useAccountBalances();
-  const getTotalNetWorth = useAccountStore((state) => state.getTotalNetWorth);
+  const getTotalNetWorthUSD = useAccountStore(
+    (state) => state.getTotalNetWorthUSD,
+  );
 
   // ==================== Computed ====================
-  const netWorth = getTotalNetWorth();
+  const netWorth = getTotalNetWorthUSD();
   const activeAccounts = accounts.filter((acc) => !acc.is_archived);
 
   // Memoize recent transactions to avoid recalculation on every render
@@ -75,7 +77,7 @@ export function Dashboard() {
         <div
           className={`net-worth-amount ${netWorth >= 0 ? "positive" : "negative"}`}
         >
-          {netWorth < 0 ? "-" : ""}${formatAmount(Math.abs(netWorth))}
+          {netWorth < 0 ? "-" : ""}${formatAmount(Math.abs(netWorth), "USD")}
         </div>
         <div className="net-worth-subtitle">
           Across {activeAccounts.length} active account
