@@ -365,7 +365,7 @@ pub async fn fetch_clp_usd_rate() -> Result<f64, String> {
         .ok_or("CLP rate not available")?;
 
     // Validate the rate is reasonable (between 500 and 2000 CLP per USD)
-    if rate < 100.0 || rate > 5000.0 {
+    if !(100.0..=5000.0).contains(&rate) {
         return Err("Exchange rate out of expected range".to_string());
     }
 

@@ -673,14 +673,13 @@ pub fn get_session_remaining(state: State<DbState>) -> Result<i64, String> {
 #[tauri::command]
 pub fn check_vault_exists(app_handle: AppHandle) -> Result<bool, String> {
     // Check if custom path was used previously
-    if let Ok(config) = load_config(&app_handle) {
-        if let Some(last_path) = config.last_db_path {
+    if let Ok(config) = load_config(&app_handle)
+        && let Some(last_path) = config.last_db_path {
             let path = PathBuf::from(&last_path);
             if path.exists() {
                 return Ok(true);
             }
         }
-    }
 
     // Check default path
     let default_path = Database::default_db_path(&app_handle).map_err(|e| e.to_string())?;
