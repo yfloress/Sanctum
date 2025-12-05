@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Sanctum</title>
+        <style>
+            /* Critical CSS - loads before JavaScript */
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            html,
+            body {
+                height: 100%;
+                overflow: hidden;
+            }
+
+            body {
+                background: linear-gradient(
+                    135deg,
+                    #0f0f1a 0%,
+                    #1a1a2e 50%,
+                    #16213e 100%
+                );
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                    Oxygen, Ubuntu, sans-serif;
+            }
+
+            /* Splash screen - visible immediately */
+            #splash-screen {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                background: linear-gradient(
+                    135deg,
+                    #0f0f1a 0%,
+                    #1a1a2e 50%,
+                    #16213e 100%
+                );
+                color: #e0e0e0;
+                z-index: 9999;
+                transition:
+                    opacity 0.4s ease-out,
+                    transform 0.4s ease-out;
+            }
+
+            #splash-screen.hidden {
+                opacity: 0;
+                transform: scale(1.05);
+                pointer-events: none;
+            }
+
+            /* Vault icon container */
+            .vault-icon {
+                position: relative;
+                width: 80px;
+                height: 80px;
+                margin-bottom: 2rem;
+            }
+
+            /* Outer vault ring */
+            .vault-ring {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                border: 3px solid rgba(124, 58, 237, 0.3);
+                border-radius: 50%;
+                animation: pulse-ring 2s ease-in-out infinite;
+            }
+
+            .vault-ring::before {
+                content: "";
+                position: absolute;
+                top: -3px;
+                left: -3px;
+                right: -3px;
+                bottom: -3px;
+                border: 3px solid transparent;
+                border-top-color: #7c3aed;
+                border-radius: 50%;
+                animation: rotate-ring 1.5s linear infinite;
+            }
+
+            /* Inner vault door */
+            .vault-door {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 44px;
+                height: 44px;
+                background: linear-gradient(145deg, #252540, #1a1a30);
+                border-radius: 8px;
+                border: 2px solid rgba(124, 58, 237, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow:
+                    0 4px 15px rgba(0, 0, 0, 0.3),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            }
+
+            /* Lock mechanism */
+            .vault-lock {
+                width: 16px;
+                height: 20px;
+                position: relative;
+            }
+
+            .lock-shackle {
+                width: 12px;
+                height: 10px;
+                border: 2.5px solid #7c3aed;
+                border-bottom: none;
+                border-radius: 6px 6px 0 0;
+                position: absolute;
+                top: 0;
+                left: 50%;
+                transform: translateX(-50%);
+                animation: unlock 2s ease-in-out infinite;
+            }
+
+            .lock-body {
+                width: 16px;
+                height: 12px;
+                background: linear-gradient(180deg, #7c3aed, #6d28d9);
+                border-radius: 3px;
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                box-shadow: 0 2px 4px rgba(124, 58, 237, 0.3);
+            }
+
+            .lock-body::after {
+                content: "";
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 4px;
+                height: 4px;
+                background: #1a1a2e;
+                border-radius: 50%;
+            }
+
+            /* Logo text */
+            .splash-logo {
+                font-size: 1.75rem;
+                font-weight: 600;
+                background: linear-gradient(
+                    135deg,
+                    #a78bfa 0%,
+                    #7c3aed 50%,
+                    #6d28d9 100%
+                );
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+                letter-spacing: 0.3em;
+                margin-bottom: 1rem;
+                text-shadow: 0 0 30px rgba(124, 58, 237, 0.3);
+            }
+
+            /* Status text with typing dots */
+            .splash-text {
+                font-size: 0.85rem;
+                color: rgba(224, 224, 224, 0.6);
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .typing-dots {
+                display: flex;
+                gap: 3px;
+            }
+
+            .typing-dots span {
+                width: 4px;
+                height: 4px;
+                background: rgba(124, 58, 237, 0.7);
+                border-radius: 50%;
+                animation: typing 1.4s ease-in-out infinite;
+            }
+
+            .typing-dots span:nth-child(2) {
+                animation-delay: 0.2s;
+            }
+
+            .typing-dots span:nth-child(3) {
+                animation-delay: 0.4s;
+            }
+
+            /* Animations */
+            @keyframes rotate-ring {
+                from {
+                    transform: rotate(0deg);
+                }
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+
+            @keyframes pulse-ring {
+                0%,
+                100% {
+                    opacity: 0.3;
+                    transform: scale(1);
+                }
+                50% {
+                    opacity: 0.6;
+                    transform: scale(1.05);
+                }
+            }
+
+            @keyframes unlock {
+                0%,
+                100% {
+                    transform: translateX(-50%) translateY(0);
+                }
+                50% {
+                    transform: translateX(-50%) translateY(-3px);
+                }
+            }
+
+            @keyframes typing {
+                0%,
+                100% {
+                    opacity: 0.3;
+                    transform: translateY(0);
+                }
+                50% {
+                    opacity: 1;
+                    transform: translateY(-3px);
+                }
+            }
+
+            /* Root container */
+            #root {
+                height: 100%;
+            }
+        </style>
+    </head>
+
+    <body>
+        <!-- Splash screen appears INSTANTLY before any JavaScript loads -->
+        <div id="splash-screen">
+            <div class="vault-icon">
+                <div class="vault-ring"></div>
+                <div class="vault-door">
+                    <div class="vault-lock">
+                        <div class="lock-shackle"></div>
+                        <div class="lock-body"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="splash-logo">SANCTUM</div>
+            <p class="splash-text">
+                Initializing vault
+                <span class="typing-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </span>
+            </p>
+        </div>
+
+        <!-- React will mount here and hide the splash screen -->
+        <div id="root"></div>
+
+        <script type="module" src="/main.tsx"></script>
+    </body>
+</html>

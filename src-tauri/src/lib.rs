@@ -6,6 +6,8 @@ pub mod models;
 pub mod security_log;
 
 use security_log::init_security_logger;
+use std::time::Duration;
+use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -15,6 +17,25 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(commands::DbState::new())
+        .setup(|app| {
+            // Get the main window
+            let window = app
+                .get_webview_window("main")
+                .expect("main window not found");
+
+            // Show window immediately with a small delay to allow WebView to initialize
+            // This prevents the user from waiting with an invisible window
+            std::thread::spawn(move || {
+                // Minimal delay to let WebView render the HTML splash screen
+                std::thread::sleep(Duration::from_millis(100));
+
+                if let Err(e) = window.show() {
+                    eprintln!("Failed to show window: {}", e);
+                }
+            });
+
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             // Database Management
             commands::create_db,
