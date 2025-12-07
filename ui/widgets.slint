@@ -1,0 +1,190 @@
+// ==================== Sanctum Widgets ====================
+// Noir Minimalist - Clean, luxury-inspired components
+
+import { Palette } from "globals.slint";
+
+// ==================== UnderlineInput ====================
+// Minimalist input with only a bottom line, no box
+
+export component UnderlineInput inherits Rectangle {
+    in property <string> placeholder: "";
+    in-out property <string> text: "";
+    in property <bool> is-password: false;
+    in property <bool> enabled: true;
+
+    callback accepted(string);
+    callback edited(string);
+
+    height: 48px;
+    background: transparent;
+
+    VerticalLayout {
+        spacing: 0px;
+
+        // Input area
+        Rectangle {
+            height: 36px;
+
+            HorizontalLayout {
+                // Placeholder (shown when empty and not focused)
+                if root.text == "" && !input.has-focus: Text {
+                    text: root.placeholder;
+                    color: Palette.text-muted;
+                    font-size: 16px;
+                    font-weight: 300;
+                    vertical-alignment: center;
+                    letter-spacing: 1px;
+                }
+
+                input := TextInput {
+                    text <=> root.text;
+                    input-type: root.is-password ? InputType.password : InputType.text;
+                    enabled: root.enabled;
+                    color: Palette.text-primary;
+                    font-size: 16px;
+                    font-weight: 400;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                    letter-spacing: 0.5px;
+
+                    accepted => {
+                        root.accepted(root.text);
+                    }
+
+                    edited => {
+                        root.edited(root.text);
+                    }
+                }
+            }
+        }
+
+        // Underline
+        Rectangle {
+            height: input.has-focus ? 2px : 1px;
+            background: input.has-focus ? Palette.border-light : Palette.border;
+
+            animate height {
+                duration: 150ms;
+                easing: ease-out;
+            }
+            animate background {
+                duration: 150ms;
+                easing: ease-out;
+            }
+        }
+    }
+
+    // Click to focus
+    TouchArea {
+        clicked => {
+            input.focus();
+        }
+    }
+}
+
+// ==================== TextButton ====================
+// Minimalist text-only button with opacity hover effect
+
+export component TextButton inherits Rectangle {
+    in property <string> text: "BUTTON";
+    in property <bool> enabled: true;
+    in property <bool> uppercase: true;
+
+    callback clicked();
+
+    height: 48px;
+    background: transparent;
+
+    label := Text {
+        text: root.uppercase ? root.text : root.text;
+        color: Palette.text-primary;
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 3px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        opacity: !root.enabled ? 0.3 : touch.has-hover ? 0.7 : 1.0;
+
+        animate opacity {
+            duration: 150ms;
+            easing: ease-out;
+        }
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? pointer : default;
+
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+// ==================== BorderButton ====================
+// Text button with fine border
+
+export component BorderButton inherits Rectangle {
+    in property <string> text: "BUTTON";
+    in property <bool> enabled: true;
+
+    callback clicked();
+
+    height: 48px;
+    min-width: 160px;
+    background: transparent;
+    border-width: 1px;
+    border-color: touch.has-hover ? Palette.text-primary : Palette.border;
+    border-radius: Palette.radius-sm;
+
+    animate border-color {
+        duration: 150ms;
+        easing: ease-out;
+    }
+
+    Text {
+        text: root.text;
+        color: Palette.text-primary;
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 2.5px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        opacity: !root.enabled ? 0.3 : 1.0;
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? pointer : default;
+
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+// ==================== Divider ====================
+// Simple horizontal line
+
+export component Divider inherits Rectangle {
+    height: 1px;
+    background: Palette.border;
+    horizontal-stretch: 1;
+}
+
+// ==================== SanctumCard ====================
+// Minimal card container
+
+export component SanctumCard inherits Rectangle {
+    in property <length> card-padding: 48px;
+
+    background: Palette.surface;
+    border-radius: Palette.radius-md;
+    border-width: 1px;
+    border-color: Palette.border;
+
+    VerticalLayout {
+        padding: root.card-padding;
+        @children
+    }
+}

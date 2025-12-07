@@ -110,6 +110,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
+    // Callback: lock_vault
+    // Closes the current vault connection
+    // Returns empty string on success, error message on failure
+    {
+        let controller_clone = controller.clone();
+        auth_adapter.on_lock_vault(move || {
+            log::info!("lock_vault called");
+
+            match controller_clone.close_db() {
+                Ok(msg) => {
+                    log::info!("Vault locked successfully: {}", msg);
+                    SharedString::from("")
+                }
+                Err(e) => {
+                    let error_msg = e.to_string();
+                    log::error!("Failed to lock vault: {}", error_msg);
+                    SharedString::from(error_msg)
+                }
+            }
+        });
+    }
+
     // ==================== Application Startup ====================
 
     println!("Sanctum Core Initialized.");

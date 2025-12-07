@@ -1,0 +1,86 @@
+// ==================== Sanctum Design System - Globals ====================
+// Noir Minimalist - Luxury-inspired, terminal elegance
+
+// ==================== Color Palette ====================
+// Near-black foundation with elegant whites and grays
+
+export global Palette {
+    // Core backgrounds
+    out property <color> background: #0a0a0a;      // Near-black - App background
+    out property <color> surface: #111111;         // Slightly lighter - Cards
+    out property <color> surface-hover: #1a1a1a;   // Hover state
+
+    // Accent colors
+    out property <color> accent: #ffffff;          // Pure white - Primary accent
+    out property <color> accent-muted: #ffffff20;  // Transparent white
+    out property <color> accent-hover: #ffffffcc;  // Slightly transparent white
+
+    // Semantic colors
+    out property <color> success: #22c55e;         // Green
+    out property <color> danger: #ef4444;          // Red
+    out property <color> warning: #f59e0b;         // Amber
+
+    // Text colors
+    out property <color> text-primary: #ffffff;    // Pure white - Titles
+    out property <color> text-secondary: #a3a3a3;  // Gray - Body text
+    out property <color> text-muted: #525252;      // Dark gray - Hints
+    out property <color> text-subtle: #2a2a2a;     // Very dark - Footer
+
+    // Border colors
+    out property <color> border: #333333;          // Dark border
+    out property <color> border-light: #ffffff;    // White border/lines
+    out property <color> border-focus: #ffffff;    // Focus state
+
+    // Spacing scale
+    out property <length> spacing-xs: 4px;
+    out property <length> spacing-sm: 8px;
+    out property <length> spacing-md: 16px;
+    out property <length> spacing-lg: 24px;
+    out property <length> spacing-xl: 32px;
+    out property <length> spacing-2xl: 48px;
+
+    // Border radius
+    out property <length> radius-sm: 2px;
+    out property <length> radius-md: 4px;
+    out property <length> radius-lg: 6px;
+
+    // Typography
+    out property <length> font-size-xs: 10px;
+    out property <length> font-size-sm: 12px;
+    out property <length> font-size-md: 14px;
+    out property <length> font-size-lg: 18px;
+    out property <length> font-size-xl: 24px;
+    out property <length> font-size-2xl: 32px;
+    out property <length> font-size-3xl: 48px;
+}
+
+// ==================== Authentication Adapter ====================
+// Bridge between Slint UI and Rust backend
+
+export global AuthAdapter {
+    // Check if vault exists on disk
+    pure callback check-vault-exists() -> bool;
+
+    // Create new vault - returns "" on success, error message on failure
+    callback create-vault(string) -> string;
+
+    // Unlock vault - returns "" on success, error message on failure
+    callback unlock-vault(string) -> string;
+
+    // Lock vault - returns "" on success, error message on failure
+    callback lock-vault() -> string;
+}
+
+// ==================== Application State ====================
+// Global state management
+
+export global AppState {
+    // Authentication state
+    in-out property <bool> is-logged-in: false;
+
+    // Current view
+    in-out property <string> current-page: "login";
+
+    // Loading state
+    in-out property <bool> is-loading: false;
+}

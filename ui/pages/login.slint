@@ -1,0 +1,208 @@
+// ==================== Login Page ====================
+// Noir Minimalist - Elegant, luxury-inspired authentication
+
+import { Palette, AuthAdapter, AppState } from "../globals.slint";
+import { UnderlineInput, TextButton } from "../widgets.slint";
+
+export component LoginPage inherits Rectangle {
+    background: Palette.background;
+
+    // Internal state
+    in-out property <string> password-text: "";
+    in-out property <string> error-message: "";
+    in-out property <bool> vault-exists: false;
+    in-out property <bool> is-loading: false;
+
+    // Check vault status on init
+    init => {
+        vault-exists = AuthAdapter.check-vault-exists();
+    }
+
+    // Full screen centered layout
+    VerticalLayout {
+        alignment: center;
+        spacing: 0px;
+
+        // Top spacer
+        Rectangle {
+            vertical-stretch: 1;
+        }
+
+        // Main content
+        HorizontalLayout {
+            alignment: center;
+
+            Rectangle {
+                width: 320px;
+
+                VerticalLayout {
+                    spacing: 0px;
+                    alignment: center;
+
+                    // Title
+                    Text {
+                        text: "SANCTUM";
+                        color: Palette.text-primary;
+                        font-size: 42px;
+                        font-weight: 300;
+                        letter-spacing: 12px;
+                        horizontal-alignment: center;
+                    }
+
+                    // Spacer
+                    Rectangle {
+                        height: 16px;
+                    }
+
+                    // Subtitle
+                    Text {
+                        text: "Personal Financial Fortress";
+                        color: Palette.text-muted;
+                        font-size: 13px;
+                        font-weight: 300;
+                        font-italic: true;
+                        letter-spacing: 1px;
+                        horizontal-alignment: center;
+                    }
+
+                    // Spacer
+                    Rectangle {
+                        height: 64px;
+                    }
+
+                    // Error message (if any)
+                    if error-message != "": Rectangle {
+                        height: 32px;
+
+                        Text {
+                            text: error-message;
+                            color: Palette.danger;
+                            font-size: 12px;
+                            font-weight: 400;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    // Spacer after error
+                    if error-message != "": Rectangle {
+                        height: 16px;
+                    }
+
+                    // Password input
+                    UnderlineInput {
+                        placeholder: vault-exists ? "password" : "create password";
+                        text <=> password-text;
+                        is-password: true;
+                        enabled: !is-loading;
+                        horizontal-stretch: 1;
+
+                        accepted(text) => {
+                            if (password-text != "") {
+                                if (vault-exists) {
+                                    root.handle-unlock();
+                                } else {
+                                    root.handle-create();
+                                }
+                            }
+                        }
+                    }
+
+                    // Spacer
+                    Rectangle {
+                        height: 12px;
+                    }
+
+                    // Password hint for new vault
+                    if !vault-exists: Text {
+                        text: password-text.character-count < 8 ? "minimum 8 characters" : "";
+                        color: Palette.text-muted;
+                        font-size: 11px;
+                        font-weight: 300;
+                        horizontal-alignment: left;
+                        opacity: password-text.character-count > 0 && password-text.character-count < 8 ? 1.0 : 0.0;
+
+                        animate opacity { duration: 150ms; }
+                    }
+
+                    // Spacer
+                    Rectangle {
+                        height: 48px;
+                    }
+
+                    // Action button
+                    TextButton {
+                        text: vault-exists ? (is-loading ? "UNLOCKING..." : "UNLOCK VAULT") : (is-loading ? "CREATING..." : "CREATE VAULT");
+                        enabled: password-text != "" && (!vault-exists ? password-text.character-count >= 8 : true) && !is-loading;
+
+                        clicked => {
+                            if (vault-exists) {
+                                root.handle-unlock();
+                            } else {
+                                root.handle-create();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Bottom spacer
+        Rectangle {
+            vertical-stretch: 1;
+        }
+
+        // Footer
+        Rectangle {
+            height: 60px;
+
+            Text {
+                text: "AES-256 encrypted";
+                color: Palette.text-subtle;
+                font-size: 10px;
+                font-weight: 400;
+                letter-spacing: 2px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+
+    // Handler: Create new vault
+    function handle-create() {
+        error-message = "";
+
+        if (password-text == "") {
+            error-message = "Password required";
+            return;
+        }
+        if (password-text.character-count < 8) {
+            error-message = "Password too short";
+            return;
+        }
+        is-loading = true;
+        error-message = AuthAdapter.create-vault(password-text);
+
+        if (error-message == "") {
+            AppState.is-logged-in = true;
+        }
+        is-loading = false;
+    }
+
+    // Handler: Unlock existing vault
+    function handle-unlock() {
+        error-message = "";
+
+        if (password-text == "") {
+            error-message = "Password required";
+            return;
+        }
+        is-loading = true;
+        error-message = AuthAdapter.unlock-vault(password-text);
+
+        if (error-message == "") {
+            AppState.is-logged-in = true;
+        }
+        is-loading = false;
+    }
+}
