@@ -47,11 +47,9 @@
           curl
           wget
           pkg-config
-          openssl_3
+          # openssl_3
           sqlite
-          # Security auditing tools
           cargo-audit
-          # Slint tooling for editors
           slint-lsp
         ];
       in
