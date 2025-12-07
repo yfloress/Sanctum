@@ -6,6 +6,7 @@ use directories::ProjectDirs;
 use log::error;
 use sanctum::controller::AppController;
 use sanctum::security_log::init_security_logger;
+use slint::SharedString;
 use std::sync::Arc;
 
 slint::include_modules!();
@@ -45,32 +46,71 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create the Slint UI
     let ui = AppWindow::new()?;
 
-    // Store a weak reference to the UI for callbacks
-    let _ui_weak = ui.as_weak();
-    let _controller_clone = controller.clone();
+    // ==================== AuthAdapter Callbacks ====================
 
-    // Example: Check if a vault exists on startup
-    let vault_exists = controller.check_vault_exists();
-    log::info!("Vault exists: {}", vault_exists);
+    // Get handle to the AuthAdapter global
+    let auth_adapter = ui.global::<AuthAdapter>();
 
-    // The controller is now available for the UI to use
-    // You can set up callbacks here to connect Slint UI events to controller methods
-    //
-    // Example pattern for connecting UI callbacks:
-    //
-    // ui.on_create_vault(move |password| {
-    //     let controller = controller_clone.clone();
-    //     let ui = ui_weak.unwrap();
-    //
-    //     match controller.create_db(password.to_string(), None) {
-    //         Ok(msg) => {
-    //             // Update UI on success
-    //         }
-    //         Err(e) => {
-    //             // Show error in UI
-    //         }
-    //     }
-    // });
+    // Callback: check_vault_exists
+    // Returns true if a vault file exists on disk
+    {
+        let controller_clone = controller.clone();
+        auth_adapter.on_check_vault_exists(move || {
+            let exists = controller_clone.check_vault_exists();
+            log::info!("check_vault_exists called, result: {}", exists);
+            exists
+        });
+    }
+
+    // Callback: create_vault
+    // Attempts to create a new vault with the given password
+    // Returns empty string on success, error message on failure
+    {
+        let controller_clone = controller.clone();
+        auth_adapter.on_create_vault(move |password: SharedString| {
+            log::info!("create_vault called");
+
+            let password_str = password.to_string();
+
+            match controller_clone.create_db(password_str, None) {
+                Ok(msg) => {
+                    log::info!("Vault created successfully: {}", msg);
+                    SharedString::from("")
+                }
+                Err(e) => {
+                    let error_msg = e.to_string();
+                    log::error!("Failed to create vault: {}", error_msg);
+                    SharedString::from(error_msg)
+                }
+            }
+        });
+    }
+
+    // Callback: unlock_vault
+    // Attempts to unlock an existing vault with the given password
+    // Returns empty string on success, error message on failure
+    {
+        let controller_clone = controller.clone();
+        auth_adapter.on_unlock_vault(move |password: SharedString| {
+            log::info!("unlock_vault called");
+
+            let password_str = password.to_string();
+
+            match controller_clone.open_db(password_str, None) {
+                Ok(msg) => {
+                    log::info!("Vault unlocked successfully: {}", msg);
+                    SharedString::from("")
+                }
+                Err(e) => {
+                    let error_msg = e.to_string();
+                    log::error!("Failed to unlock vault: {}", error_msg);
+                    SharedString::from(error_msg)
+                }
+            }
+        });
+    }
+
+    // ==================== Application Startup ====================
 
     println!("Sanctum Core Initialized.");
     println!("Data directory: {}", controller.get_db_path().unwrap_or_default());
@@ -80,6 +120,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Cleanup: Close the vault if open
     let _ = controller.close_db();
+
+    log::info!("Sanctum shutting down gracefully");
 
     Ok(())
 }

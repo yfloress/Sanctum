@@ -1,22 +1,207 @@
-import { Button, VerticalBox } from "std-widgets.slint";
+import { Button, VerticalBox, LineEdit, HorizontalBox } from "std-widgets.slint";
+
+// ==================== Authentication Adapter ====================
+// Bridge between Slint UI and Rust backend for authentication operations
+
+export global AuthAdapter {
+    // Returns true if a vault exists on disk
+    pure callback check-vault-exists() -> bool;
+
+    // Attempts to create a new vault. Returns empty string "" on success, or error message on failure.
+    callback create-vault(string) -> string;
+
+    // Attempts to unlock an existing vault. Returns empty string "" on success, or error message on failure.
+    callback unlock-vault(string) -> string;
+}
+
+// ==================== Main Application Window ====================
 
 export component AppWindow inherits Window {
     title: "Sanctum Secure Vault";
-    min-width: 400px;
-    min-height: 300px;
-    background: #1a1b26; // Tu color dark theme
+    min-width: 500px;
+    min-height: 400px;
+    background: #1a1b26;
+
+    // Internal state
+    in-out property <string> status-message: "Checking vault...";
+    in-out property <string> error-message: "";
+    in-out property <bool> vault-exists: false;
+    in-out property <bool> is-unlocked: false;
+    in-out property <string> password-text: "";
+
+    // Check vault on init
+    init => {
+        vault-exists = AuthAdapter.check-vault-exists();
+        if (vault-exists) {
+            status-message = "Vault found. Enter password to unlock.";
+        } else {
+            status-message = "No vault found. Create a new one.";
+        }
+    }
 
     VerticalBox {
+        alignment: center;
+        padding: 40px;
+        spacing: 20px;
+
+        // Title
         Text {
-            text: "System Status: SECURE";
-            color: #10b981; // Green
-            font-size: 24px;
+            text: "🔐 Sanctum";
+            color: #c0caf5;
+            font-size: 32px;
+            font-weight: 700;
             horizontal-alignment: center;
         }
-        
+
+        // Subtitle
         Text {
-            text: "Backend: Rust + SQLCipher";
-            color: white;
+            text: "Secure Personal Finance Manager";
+            color: #565f89;
+            font-size: 14px;
+            horizontal-alignment: center;
+        }
+
+        // Spacer
+        Rectangle {
+            height: 20px;
+        }
+
+        // Status indicator
+        HorizontalBox {
+            alignment: center;
+            spacing: 8px;
+
+            Rectangle {
+                width: 12px;
+                height: 12px;
+                border-radius: 6px;
+                background: is-unlocked ? #10b981 : (vault-exists ? #f59e0b : #6366f1);
+            }
+
+            Text {
+                text: status-message;
+                color: #a9b1d6;
+                font-size: 14px;
+                vertical-alignment: center;
+            }
+        }
+
+        // Error message (if any)
+        if error-message != "" : Rectangle {
+            background: #7f1d1d40;
+            border-radius: 8px;
+            height: 50px;
+
+            Text {
+                text: root.error-message;
+                color: #fca5a5;
+                font-size: 13px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                wrap: word-wrap;
+            }
+        }
+
+        // Spacer
+        Rectangle {
+            height: 10px;
+        }
+
+        // Password input
+        LineEdit {
+            placeholder-text: vault-exists ? "Enter your password" : "Create a strong password";
+            input-type: password;
+            horizontal-stretch: 1;
+            edited(text) => {
+                root.password-text = text;
+            }
+        }
+
+        // Action buttons
+        HorizontalBox {
+            alignment: center;
+            spacing: 12px;
+
+            // Create Vault button (only shown when no vault exists)
+            if !vault-exists : Button {
+                text: "Create Vault";
+                primary: true;
+                enabled: !is-unlocked;
+
+                clicked => {
+                    root.error-message = "";
+
+                    if (root.password-text == "") {
+                        root.error-message = "Password cannot be empty";
+                    } else {
+                        root.status-message = "Creating vault...";
+                        root.error-message = AuthAdapter.create-vault(root.password-text);
+
+                        if (root.error-message == "") {
+                            root.is-unlocked = true;
+                            root.vault-exists = true;
+                            root.status-message = "Vault created and unlocked!";
+                        } else {
+                            root.status-message = "Failed to create vault";
+                        }
+                    }
+                }
+            }
+
+            // Unlock Vault button (only shown when vault exists and is locked)
+            if vault-exists && !is-unlocked : Button {
+                text: "Unlock Vault";
+                primary: true;
+
+                clicked => {
+                    root.error-message = "";
+
+                    if (root.password-text == "") {
+                        root.error-message = "Password cannot be empty";
+                    } else {
+                        root.status-message = "Unlocking vault...";
+                        root.error-message = AuthAdapter.unlock-vault(root.password-text);
+
+                        if (root.error-message == "") {
+                            root.is-unlocked = true;
+                            root.status-message = "Vault unlocked successfully!";
+                        } else {
+                            root.status-message = "Failed to unlock vault";
+                        }
+                    }
+                }
+            }
+
+            // Lock Vault button (only shown when vault is unlocked)
+            if is-unlocked : Button {
+                text: "Lock Vault";
+
+                clicked => {
+                    root.is-unlocked = false;
+                    root.status-message = "Vault locked. Enter password to unlock.";
+                    root.password-text = "";
+                    root.error-message = "";
+                }
+            }
+        }
+
+        // Spacer
+        Rectangle {
+            vertical-stretch: 1;
+        }
+
+        // Footer info
+        Text {
+            text: is-unlocked ? "✓ Vault is open and ready" : "🔒 Vault is locked";
+            color: is-unlocked ? #10b981 : #565f89;
+            font-size: 12px;
+            horizontal-alignment: center;
+        }
+
+        Text {
+            text: "Powered by Rust + SQLCipher + Slint";
+            color: #3b4261;
+            font-size: 11px;
             horizontal-alignment: center;
         }
     }
