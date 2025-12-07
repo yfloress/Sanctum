@@ -33,7 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_security_logger();
 
     // Initialize environment logger for general logging
-    env_logger::init();
+    // env_logger::init();
 
     // Get the application data directory using the directories crate
     let app_data_dir = get_app_data_dir();

@@ -47,7 +47,6 @@
           curl
           wget
           pkg-config
-          # openssl_3
           sqlite
           cargo-audit
           slint-lsp
@@ -55,7 +54,7 @@
       in
       {
         devShells.default = pkgs.mkShell {
-          buildInputs = packages ++ [
+          buildInputs = packages ++ libraries ++ [
             (pkgs.rust-bin.stable.latest.default.override {
               extensions = [
                 "rust-src"
@@ -65,8 +64,9 @@
           ];
 
           shellHook = ''
+            export LIBRARY_PATH=${pkgs.lib.makeLibraryPath libraries}:$LIBRARY_PATH
             export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath libraries}:$LD_LIBRARY_PATH
-            export PKG_CONFIG_PATH=${pkgs.openssl_3.dev}/lib/pkgconfig:$PKG_CONFIG_PATH
+            export PKG_CONFIG_PATH=${pkgs.openssl_3.dev}/lib/pkgconfig:${pkgs.fontconfig.dev}/lib/pkgconfig:${pkgs.freetype.dev}/lib/pkgconfig:$PKG_CONFIG_PATH
 
             echo "> SANCTUM DEV SHELL ACTIVE"
             echo "   Compiler:  Rust $(rustc --version)"
