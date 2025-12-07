@@ -1,5 +1,5 @@
 {
-  description = "Sanctum Dev Shell - Rust + Deno + Tauri v2";
+  description = "Sanctum Dev Shell - Rust + Slint (Rust-only UI)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -23,30 +23,36 @@
         };
 
         libraries = with pkgs; [
-          webkitgtk_4_1
-          gtk3
-          cairo
-          gdk-pixbuf
-          glib
-          dbus
-          librsvg
-          libsoup_3
+          libGL
+          wayland
+          libxkbcommon
+          fontconfig
+          freetype
+          harfbuzz
+          # X11 support (uncomment if running on Xorg)
+          # xorg.libX11
+          # xorg.libXcursor
+          # xorg.libXi
+          # xorg.libXrandr
+          # xorg.libXrender
+          # xorg.libXfixes
+          # xorg.libxcb
+          # xorg.xcbutil
+          # xorg.xcbutilkeysyms
+          # xorg.xcbutilwm
+          # xorg.xcbutilimage
         ];
 
         packages = with pkgs; [
           curl
           wget
           pkg-config
-          dbus
           openssl_3
-          glib
-          gtk3
-          libsoup_3
-          webkitgtk_4_1
-          librsvg
-          deno
+          sqlite
           # Security auditing tools
           cargo-audit
+          # Slint tooling for editors
+          slint-lsp
         ];
       in
       {
@@ -58,20 +64,16 @@
                 "rust-analyzer"
               ];
             })
-            pkgs.cargo-tauri
           ];
 
           shellHook = ''
             export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath libraries}:$LD_LIBRARY_PATH
-            export XDG_DATA_DIRS=${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}:${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}:$XDG_DATA_DIRS
-
             export PKG_CONFIG_PATH=${pkgs.openssl_3.dev}/lib/pkgconfig:$PKG_CONFIG_PATH
 
-            echo "🛡️ SANCTUM DEV SHELL ACTIVO"
-            echo "   Compilador: Rust $(rustc --version)"
-            echo "   Runtime:    $(deno --version)"
-            echo "   Tauri CLI:  $(cargo tauri --version)"
-            echo "   Security:   cargo-audit $(cargo audit --version 2>/dev/null | head -n1)"
+            echo "> SANCTUM DEV SHELL ACTIVE"
+            echo "   Compiler:  Rust $(rustc --version)"
+            echo "   Slint LSP: $(slint-lsp --version 2>/dev/null | head -n1)"
+            echo "   Security:  cargo-audit $(cargo audit --version 2>/dev/null | head -n1)"
           '';
         };
       }
