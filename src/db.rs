@@ -8,7 +8,6 @@ use rusqlite::{Connection, Error as RusqliteError, ErrorCode, params};
 use secrecy::{ExposeSecret, SecretString};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
-use tauri::{AppHandle, Manager};
 use thiserror::Error;
 
 /// Errores personalizados para operaciones de base de datos
@@ -86,22 +85,16 @@ pub struct Database {
 impl Database {
     /// Inicializa la base de datos con encriptación SQLCipher
     /// Usa SecretString para manejar la contraseña de forma segura
-    pub fn init(
-        app_handle: &AppHandle,
-        password: &SecretString,
-        db_path: Option<PathBuf>,
-    ) -> Result<Self, DbError> {
-        // Resolver la ruta objetivo
-        let db_path = match db_path {
-            Some(path) => path,
-            None => Self::default_db_path(app_handle)?,
-        };
-
+    ///
+    /// # Arguments
+    /// * `db_path` - Ruta obligatoria al archivo de base de datos
+    /// * `password` - Contraseña para encriptar/desencriptar la base de datos
+    pub fn init(db_path: PathBuf, password: &SecretString) -> Result<Self, DbError> {
         // Crear el directorio si no existe
-        if let Some(parent) = db_path.parent()
-            && !parent.exists()
-        {
-            std::fs::create_dir_all(parent).map_err(|_| DbError::DirectoryCreation)?;
+        if let Some(parent) = db_path.parent() {
+            if !parent.exists() {
+                std::fs::create_dir_all(parent).map_err(|_| DbError::DirectoryCreation)?;
+            }
         }
 
         let is_new_db = !db_path.exists();
@@ -234,15 +227,6 @@ impl Database {
                 }
             }
         }
-    }
-
-    /// Ruta por defecto en el directorio de datos de la aplicación
-    pub fn default_db_path(app_handle: &AppHandle) -> Result<PathBuf, DbError> {
-        let app_data_dir = app_handle
-            .path()
-            .app_data_dir()
-            .map_err(|_| DbError::AppDataDir)?;
-        Ok(app_data_dir.join("sanctum.db"))
     }
 
     /// Ruta actual de la conexión
@@ -567,23 +551,24 @@ impl Database {
             current.unwrap_or((0, None, now_str.clone()));
 
         // Check if we should reset the counter (enough time has passed)
-        if let Ok(last) = DateTime::parse_from_rfc3339(&last_attempt)
-            && now.signed_duration_since(last.with_timezone(&Utc))
+        if let Ok(last) = DateTime::parse_from_rfc3339(&last_attempt) {
+            if now.signed_duration_since(last.with_timezone(&Utc))
                 > Duration::seconds(ATTEMPT_RESET_SECS)
-        {
-            failed_count = 0;
+            {
+                failed_count = 0;
+            }
         }
 
         // Check if currently locked
-        if let Some(ref locked_str) = locked_until
-            && let Ok(locked) = DateTime::parse_from_rfc3339(locked_str)
-        {
-            if now < locked.with_timezone(&Utc) {
-                // Still locked, reject the attempt
-                return Err(DbError::RateLimited);
+        if let Some(ref locked_str) = locked_until {
+            if let Ok(locked) = DateTime::parse_from_rfc3339(locked_str) {
+                if now < locked.with_timezone(&Utc) {
+                    // Still locked, reject the attempt
+                    return Err(DbError::RateLimited);
+                }
+                // Lock expired, reset
+                failed_count = 0;
             }
-            // Lock expired, reset
-            failed_count = 0;
         }
 
         // Increment counter
@@ -624,20 +609,22 @@ impl Database {
             let now = Utc::now();
 
             // Check if locked
-            if let Some(locked_str) = locked_until
-                && let Ok(locked) = DateTime::parse_from_rfc3339(&locked_str)
-                && now < locked.with_timezone(&Utc)
-            {
-                return Err(DbError::RateLimited);
+            if let Some(locked_str) = locked_until {
+                if let Ok(locked) = DateTime::parse_from_rfc3339(&locked_str) {
+                    if now < locked.with_timezone(&Utc) {
+                        return Err(DbError::RateLimited);
+                    }
+                }
             }
 
             // Check if we should still count previous attempts
-            if let Ok(last) = DateTime::parse_from_rfc3339(&last_attempt)
-                && now.signed_duration_since(last.with_timezone(&Utc))
+            if let Ok(last) = DateTime::parse_from_rfc3339(&last_attempt) {
+                if now.signed_duration_since(last.with_timezone(&Utc))
                     <= Duration::seconds(ATTEMPT_RESET_SECS)
-                && failed_count >= MAX_FAILED_ATTEMPTS as i32
-            {
-                return Err(DbError::RateLimited);
+                    && failed_count >= MAX_FAILED_ATTEMPTS as i32
+                {
+                    return Err(DbError::RateLimited);
+                }
             }
         }
 
@@ -664,12 +651,12 @@ impl Database {
             .ok()
             .flatten();
 
-        if let Some(locked_str) = locked_until
-            && let Ok(locked) = DateTime::parse_from_rfc3339(&locked_str)
-        {
-            let now = Utc::now();
-            if now < locked.with_timezone(&Utc) {
-                return Ok((locked.with_timezone(&Utc) - now).num_seconds() as u64);
+        if let Some(locked_str) = locked_until {
+            if let Ok(locked) = DateTime::parse_from_rfc3339(&locked_str) {
+                let now = Utc::now();
+                if now < locked.with_timezone(&Utc) {
+                    return Ok((locked.with_timezone(&Utc) - now).num_seconds() as u64);
+                }
             }
         }
 
@@ -872,8 +859,6 @@ impl Database {
                     [],
                 )?;
             }
-        } else if !old_table_exists && !wallets_exist {
-            // Fresh install - tables already created above
         }
 
         Ok(())
@@ -886,8 +871,6 @@ impl Database {
             .map_err(DbError::Sqlite)?;
         Ok(())
     }
-
-    // ==================== Financial Transactions CRUD ====================
 
     // ==================== FIAT Accounts CRUD ====================
 
@@ -1670,28 +1653,28 @@ impl Database {
             }
 
             // Handle swap pairs to carry over cost basis to the acquired asset
-            if let Some(rel_id) = &tx.related_tx_id
-                && let Some(counter) = tx_map.get(rel_id)
-            {
-                let is_swap_pair = (tx.transaction_type == "swap"
-                    && counter.transaction_type == "transfer_in")
-                    || (tx.transaction_type == "transfer_in" && counter.transaction_type == "swap");
+            if let Some(rel_id) = &tx.related_tx_id {
+                if let Some(counter) = tx_map.get(rel_id) {
+                    let is_swap_pair = (tx.transaction_type == "swap"
+                        && counter.transaction_type == "transfer_in")
+                        || (tx.transaction_type == "transfer_in" && counter.transaction_type == "swap");
 
-                if is_swap_pair {
-                    if processed.contains(rel_id) || processed.contains(&tx.id) {
+                    if is_swap_pair {
+                        if processed.contains(rel_id) || processed.contains(&tx.id) {
+                            continue;
+                        }
+
+                        processed.insert(tx.id.clone());
+                        processed.insert(rel_id.clone());
+
+                        // Determine which side is the source (swap out) and target (swap in)
+                        if tx.transaction_type == "swap" {
+                            Self::apply_swap_pair(&mut assets, &tx, counter);
+                        } else {
+                            Self::apply_swap_pair(&mut assets, counter, &tx);
+                        }
                         continue;
                     }
-
-                    processed.insert(tx.id.clone());
-                    processed.insert(rel_id.clone());
-
-                    // Determine which side is the source (swap out) and target (swap in)
-                    if tx.transaction_type == "swap" {
-                        Self::apply_swap_pair(&mut assets, &tx, counter);
-                    } else {
-                        Self::apply_swap_pair(&mut assets, counter, &tx);
-                    }
-                    continue;
                 }
             }
 
@@ -1736,7 +1719,6 @@ impl Database {
             .into_values()
             .filter_map(|mut asset| {
                 if asset.total_amount > 0.0001 {
-                    // Small threshold to handle floating point errors
                     asset.calculate_avg_price();
                     Some(asset)
                 } else {
@@ -1772,27 +1754,27 @@ impl Database {
                 continue;
             }
 
-            if let Some(rel_id) = &tx.related_tx_id
-                && let Some(counter) = tx_map.get(rel_id)
-            {
-                let is_swap_pair = (tx.transaction_type == "swap"
-                    && counter.transaction_type == "transfer_in")
-                    || (tx.transaction_type == "transfer_in" && counter.transaction_type == "swap");
+            if let Some(rel_id) = &tx.related_tx_id {
+                if let Some(counter) = tx_map.get(rel_id) {
+                    let is_swap_pair = (tx.transaction_type == "swap"
+                        && counter.transaction_type == "transfer_in")
+                        || (tx.transaction_type == "transfer_in" && counter.transaction_type == "swap");
 
-                if is_swap_pair {
-                    if processed.contains(rel_id) || processed.contains(&tx.id) {
+                    if is_swap_pair {
+                        if processed.contains(rel_id) || processed.contains(&tx.id) {
+                            continue;
+                        }
+
+                        processed.insert(tx.id.clone());
+                        processed.insert(rel_id.clone());
+
+                        if tx.transaction_type == "swap" {
+                            Self::apply_swap_pair(&mut assets, &tx, counter);
+                        } else {
+                            Self::apply_swap_pair(&mut assets, counter, &tx);
+                        }
                         continue;
                     }
-
-                    processed.insert(tx.id.clone());
-                    processed.insert(rel_id.clone());
-
-                    if tx.transaction_type == "swap" {
-                        Self::apply_swap_pair(&mut assets, &tx, counter);
-                    } else {
-                        Self::apply_swap_pair(&mut assets, counter, &tx);
-                    }
-                    continue;
                 }
             }
 
@@ -1868,7 +1850,6 @@ impl Database {
             .map_err(DbError::Sqlite)?;
 
         // Total balance = initial balances + income - expenses
-        // Note: transfers are zero-sum and don't affect total balance
         let total_balance = initial_balances + total_income - total_expense;
 
         Ok(BalanceSummary {
@@ -1965,7 +1946,6 @@ impl Database {
 
     /// Permanently deletes a habit and all its logs
     pub fn delete_habit(&self, id: &str) -> Result<(), DbError> {
-        // Logs are deleted via CASCADE
         self.conn
             .execute("DELETE FROM habits WHERE id = ?1", params![id])?;
         Ok(())
@@ -2028,37 +2008,7 @@ impl Database {
         Ok(logs)
     }
 
-    /// Gets habit logs for a specific habit within a date range
-    pub fn get_habit_logs_for_habit(
-        &self,
-        habit_id: &str,
-        start_date: &str,
-        end_date: &str,
-    ) -> Result<Vec<HabitLog>, DbError> {
-        let mut stmt = self.conn.prepare(
-            "SELECT id, habit_id, completed_date
-             FROM habit_logs
-             WHERE habit_id = ?1 AND completed_date >= ?2 AND completed_date <= ?3
-             ORDER BY completed_date ASC",
-        )?;
-
-        let logs = stmt
-            .query_map(params![habit_id, start_date, end_date], |row| {
-                Ok(HabitLog {
-                    id: row.get(0)?,
-                    habit_id: row.get(1)?,
-                    completed_date: row.get(2)?,
-                })
-            })?
-            .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(logs)
-    }
-
     /// Toggles a habit completion for a specific date
-    /// Returns (created: bool, log_id: Option<String>)
-    /// - created=true means a new log was created, log_id contains the new ID
-    /// - created=false means an existing log was deleted, log_id is None
     pub fn toggle_habit_log(
         &self,
         habit_id: &str,
@@ -2074,28 +2024,6 @@ impl Database {
             Ok((true, Some(id)))
         }
     }
-
-    /// Gets completion statistics for habits in a date range
-    pub fn get_habit_stats(
-        &self,
-        start_date: &str,
-        end_date: &str,
-    ) -> Result<Vec<(String, i32)>, DbError> {
-        let mut stmt = self.conn.prepare(
-            "SELECT habit_id, COUNT(*) as completions
-             FROM habit_logs
-             WHERE completed_date >= ?1 AND completed_date <= ?2
-             GROUP BY habit_id",
-        )?;
-
-        let stats = stmt
-            .query_map(params![start_date, end_date], |row| {
-                Ok((row.get::<_, String>(0)?, row.get::<_, i32>(1)?))
-            })?
-            .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(stats)
-    }
 }
 
 #[cfg(test)]
@@ -2105,13 +2033,11 @@ mod tests {
     #[test]
     fn test_db_error_display() {
         let error = DbError::InvalidPassword;
-        // Mensaje genérico que no revela información sensible
         assert_eq!(error.to_string(), "Could not open vault");
     }
 
     #[test]
     fn test_db_error_generic_messages() {
-        // Verificar que los mensajes de error no revelan detalles internos
         assert_eq!(
             DbError::AppDataDir.to_string(),
             "Could not access application data directory"
@@ -2120,23 +2046,8 @@ mod tests {
             DbError::DirectoryCreation.to_string(),
             "Could not create data directory"
         );
-        assert_eq!(
-            DbError::InvalidTransactionType.to_string(),
-            "Invalid transaction type"
-        );
         assert_eq!(DbError::WalletNotFound.to_string(), "Wallet not found");
-        assert_eq!(
-            DbError::InvalidWalletCategory.to_string(),
-            "Invalid wallet category"
-        );
-        assert_eq!(
-            DbError::WalletNotEmpty.to_string(),
-            "Wallet has existing transactions"
-        );
-        assert_eq!(
-            DbError::SessionExpired.to_string(),
-            "Session expired due to inactivity"
-        );
+        assert_eq!(DbError::SessionExpired.to_string(), "Session expired due to inactivity");
         assert_eq!(DbError::RateLimited.to_string(), "Too many failed attempts");
     }
 }

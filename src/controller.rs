@@ -1,0 +1,1390 @@
+//! Application Controller for Sanctum
+//!
+//! This module provides a pure Rust API that can be consumed by any UI framework (Slint, etc.)
+//! All Tauri-specific code has been removed.
+
+use crate::crypto;
+use crate::db::{Database, DbError};
+use crate::models::{
+    Account, AccountBalance, AggregatedAsset, BalanceSummary, CryptoAsset, CryptoHolding,
+    CryptoTransaction, CryptoWallet, Habit, HabitLog, Transaction,
+};
+use crate::security_log::{SecurityEvent, log_auth_failure, log_security_event};
+use chrono::NaiveDate;
+use rusqlite::Connection;
+use secrecy::SecretString;
+use serde::{Deserialize, Serialize};
+use std::fs::{self, Permissions};
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+use std::path::{Component, Path, PathBuf};
+use std::sync::Mutex;
+use thiserror::Error;
+use uuid::Uuid;
+
+// ==================== Error Types ====================
+
+/// Errors that can occur in the controller layer
+#[derive(Error, Debug)]
+pub enum ControllerError {
+    #[error("Database error: {0}")]
+    Database(#[from] DbError),
+
+    #[error("Validation error: {0}")]
+    Validation(String),
+
+    #[error("Internal error")]
+    Internal,
+
+    #[error("No vault is currently open")]
+    NoVaultOpen,
+
+    #[error("A vault is already open. Close it first.")]
+    VaultAlreadyOpen,
+
+    #[error("Session expired due to inactivity. Please unlock the vault again.")]
+    SessionExpired,
+
+    #[error("Too many failed attempts. Try again in {0} seconds")]
+    RateLimited(u64),
+
+    #[error("Vault already exists at this location. Use unlock instead.")]
+    VaultExists,
+
+    #[error("No vault found at the specified location")]
+    VaultNotFound,
+
+    #[error("Configuration error: {0}")]
+    Config(String),
+
+    #[error("API error: {0}")]
+    Api(String),
+}
+
+impl From<String> for ControllerError {
+    fn from(s: String) -> Self {
+        ControllerError::Validation(s)
+    }
+}
+
+// ==================== Security: Field Length Limits ====================
+const MAX_CATEGORY_LENGTH: usize = 64;
+const MAX_DESCRIPTION_LENGTH: usize = 512;
+const MAX_NOTES_LENGTH: usize = 1024;
+const MAX_WALLET_NAME_LENGTH: usize = 128;
+const MAX_SYMBOL_LENGTH: usize = 16;
+const MAX_ICON_LENGTH: usize = 32;
+const MAX_PASSWORD_LENGTH: usize = 128;
+const MIN_PASSWORD_LENGTH: usize = 8;
+const MAX_HABIT_NAME_LENGTH: usize = 128;
+const MAX_HABIT_DESCRIPTION_LENGTH: usize = 512;
+const MAX_ACCOUNT_NAME_LENGTH: usize = 64;
+const MAX_CURRENCY_LENGTH: usize = 8;
+
+// ==================== Helper Functions ====================
+
+/// Validates and truncates a string field to a maximum length
+fn validate_field_length(
+    value: &str,
+    max_length: usize,
+    field_name: &str,
+) -> Result<String, ControllerError> {
+    let trimmed = value.trim();
+    if trimmed.len() > max_length {
+        return Err(ControllerError::Validation(format!(
+            "{} exceeds maximum length of {} characters",
+            field_name, max_length
+        )));
+    }
+    Ok(trimmed.to_string())
+}
+
+/// Sanitizes a string by removing potentially dangerous characters
+fn sanitize_string(input: &str) -> String {
+    input
+        .chars()
+        .filter(|c| {
+            c.is_alphanumeric()
+                || c.is_whitespace()
+                || matches!(
+                    *c,
+                    '-' | '_'
+                        | '.'
+                        | ','
+                        | ':'
+                        | ';'
+                        | '!'
+                        | '?'
+                        | '('
+                        | ')'
+                        | '@'
+                        | '#'
+                        | '$'
+                        | '%'
+                        | '&'
+                        | '+'
+                        | '='
+                        | '/'
+                        | '\''
+                        | '"'
+                )
+        })
+        .collect::<String>()
+        .trim()
+        .to_string()
+}
+
+/// Validates a CoinGecko coin ID using the crypto module constraints
+fn validate_coin_id_str(coin_id: &str) -> Result<String, ControllerError> {
+    crate::crypto::validate_coin_id(coin_id).map_err(ControllerError::Validation)
+}
+
+/// Validates a ticker/symbol (alphanumeric only)
+fn validate_symbol(symbol: &str) -> Result<String, ControllerError> {
+    let trimmed = symbol.trim();
+    if trimmed.is_empty() {
+        return Err(ControllerError::Validation("Symbol cannot be empty".to_string()));
+    }
+    if trimmed.len() > MAX_SYMBOL_LENGTH {
+        return Err(ControllerError::Validation(format!(
+            "Symbol exceeds maximum length of {} characters",
+            MAX_SYMBOL_LENGTH
+        )));
+    }
+    if !trimmed.chars().all(|c| c.is_ascii_alphanumeric()) {
+        return Err(ControllerError::Validation("Symbol must be alphanumeric".to_string()));
+    }
+    Ok(trimmed.to_uppercase())
+}
+
+/// Validates that a floating point value is finite and positive
+fn validate_positive_amount(value: f64, field: &str) -> Result<f64, ControllerError> {
+    if !value.is_finite() {
+        return Err(ControllerError::Validation(format!("{} must be a finite number", field)));
+    }
+    if value <= 0.0 {
+        return Err(ControllerError::Validation(format!("{} must be greater than zero", field)));
+    }
+    Ok(value)
+}
+
+/// Validates that an optional floating point value is finite and non-negative
+fn validate_non_negative(value: Option<f64>, field: &str) -> Result<Option<f64>, ControllerError> {
+    if let Some(v) = value {
+        if !v.is_finite() {
+            return Err(ControllerError::Validation(format!("{} must be a finite number", field)));
+        }
+        if v < 0.0 {
+            return Err(ControllerError::Validation(format!("{} cannot be negative", field)));
+        }
+    }
+    Ok(value)
+}
+
+/// Validates a UUID string format
+fn validate_uuid(id: &str) -> Result<String, ControllerError> {
+    let trimmed = id.trim();
+    if trimmed.is_empty() {
+        return Err(ControllerError::Validation("ID cannot be empty".to_string()));
+    }
+
+    // Check if it's a valid UUID or a legacy ID format
+    if Uuid::parse_str(trimmed).is_ok() {
+        return Ok(trimmed.to_string());
+    }
+
+    // Allow legacy IDs that start with "migrated_" or "legacy_"
+    if trimmed.starts_with("migrated_") || trimmed.starts_with("legacy_") {
+        return Ok(trimmed.to_string());
+    }
+
+    Err(ControllerError::Validation("Invalid ID format".to_string()))
+}
+
+/// Valida la contraseña básica para abrir una bóveda existente
+/// Solo verifica que no esté vacía y no exceda el límite
+fn validate_password_basic(password: String) -> Result<SecretString, ControllerError> {
+    let trimmed = password.trim();
+
+    if trimmed.is_empty() {
+        return Err(ControllerError::Validation("Password cannot be empty".to_string()));
+    }
+
+    if trimmed.len() > MAX_PASSWORD_LENGTH {
+        return Err(ControllerError::Validation(format!(
+            "Password cannot exceed {} characters",
+            MAX_PASSWORD_LENGTH
+        )));
+    }
+
+    // Crear SecretString que limpiará la memoria automáticamente
+    Ok(SecretString::from(trimmed.to_string()))
+}
+
+/// Valida la contraseña con requisitos estrictos para crear una nueva bóveda
+fn validate_password_strict(password: String) -> Result<SecretString, ControllerError> {
+    let trimmed = password.trim();
+
+    if trimmed.is_empty() {
+        return Err(ControllerError::Validation("Password cannot be empty".to_string()));
+    }
+
+    if trimmed.len() < MIN_PASSWORD_LENGTH {
+        return Err(ControllerError::Validation(format!(
+            "Password must be at least {} characters",
+            MIN_PASSWORD_LENGTH
+        )));
+    }
+
+    if trimmed.len() > MAX_PASSWORD_LENGTH {
+        return Err(ControllerError::Validation(format!(
+            "Password cannot exceed {} characters",
+            MAX_PASSWORD_LENGTH
+        )));
+    }
+
+    // Verificar complejidad de contraseña
+    let has_uppercase = trimmed.chars().any(|c| c.is_ascii_uppercase());
+    let has_lowercase = trimmed.chars().any(|c| c.is_ascii_lowercase());
+    let has_digit = trimmed.chars().any(|c| c.is_ascii_digit());
+    let has_special = trimmed.chars().any(|c| {
+        matches!(
+            c,
+            '!' | '@'
+                | '#'
+                | '$'
+                | '%'
+                | '^'
+                | '&'
+                | '*'
+                | '('
+                | ')'
+                | '-'
+                | '_'
+                | '='
+                | '+'
+                | '['
+                | ']'
+                | '{'
+                | '}'
+                | '|'
+                | ';'
+                | ':'
+                | '\''
+                | '"'
+                | ','
+                | '.'
+                | '<'
+                | '>'
+                | '?'
+                | '/'
+                | '`'
+                | '~'
+        )
+    });
+
+    if !has_uppercase {
+        return Err(ControllerError::Validation(
+            "Password must contain at least one uppercase letter".to_string(),
+        ));
+    }
+
+    if !has_lowercase {
+        return Err(ControllerError::Validation(
+            "Password must contain at least one lowercase letter".to_string(),
+        ));
+    }
+
+    if !has_digit {
+        return Err(ControllerError::Validation(
+            "Password must contain at least one number".to_string(),
+        ));
+    }
+
+    if !has_special {
+        return Err(ControllerError::Validation(
+            "Password must contain at least one special character (!@#$%^&*...)".to_string(),
+        ));
+    }
+
+    Ok(SecretString::from(trimmed.to_string()))
+}
+
+/// Valida que una fecha esté en formato ISO-8601 (YYYY-MM-DD)
+fn validate_date(date: &str) -> Result<String, ControllerError> {
+    let trimmed = date.trim();
+    if trimmed.is_empty() {
+        return Err(ControllerError::Validation("Date cannot be empty".to_string()));
+    }
+
+    // Intento 1: Formato DD-MM-YYYY (Preferido por el usuario)
+    if let Ok(parsed) = NaiveDate::parse_from_str(trimmed, "%d-%m-%Y") {
+        return Ok(parsed.format("%Y-%m-%d").to_string()); // NORMALIZAR A ISO
+    }
+
+    // Intento 2: Formato ISO (Estándar DB y fallback)
+    if let Ok(parsed) = NaiveDate::parse_from_str(trimmed, "%Y-%m-%d") {
+        return Ok(parsed.format("%Y-%m-%d").to_string());
+    }
+
+    Err(ControllerError::Validation(
+        "Invalid date format. Use DD-MM-YYYY or YYYY-MM-DD".to_string(),
+    ))
+}
+
+/// Validates a hex color code
+fn validate_color(color: &str) -> Result<String, ControllerError> {
+    let trimmed = color.trim();
+
+    if trimmed.is_empty() {
+        return Err(ControllerError::Validation("Color cannot be empty".to_string()));
+    }
+
+    if trimmed.len() != 7 {
+        return Err(ControllerError::Validation("Color must be in #RRGGBB format".to_string()));
+    }
+
+    if !trimmed.starts_with('#') {
+        return Err(ControllerError::Validation("Color must start with #".to_string()));
+    }
+
+    // Validate hex characters
+    if !trimmed[1..].chars().all(|c| c.is_ascii_hexdigit()) {
+        return Err(ControllerError::Validation(
+            "Color must contain valid hex characters".to_string(),
+        ));
+    }
+
+    Ok(trimmed.to_lowercase())
+}
+
+// ==================== Configuration ====================
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+struct AppConfig {
+    last_db_path: Option<String>,
+}
+
+// ==================== Main Controller ====================
+
+/// Main application controller that manages database connections and business logic
+pub struct AppController {
+    db: Mutex<Option<Database>>,
+    app_data_dir: PathBuf,
+}
+
+impl AppController {
+    /// Creates a new AppController with the specified application data directory
+    ///
+    /// # Arguments
+    /// * `app_data_dir` - Directory where the application stores its data (vaults, config, etc.)
+    pub fn new(app_data_dir: PathBuf) -> Self {
+        // Ensure the directory exists
+        if !app_data_dir.exists() {
+            let _ = fs::create_dir_all(&app_data_dir);
+        }
+
+        Self {
+            db: Mutex::new(None),
+            app_data_dir,
+        }
+    }
+
+    /// Returns the default database path
+    pub fn default_db_path(&self) -> PathBuf {
+        self.app_data_dir.join("sanctum.db")
+    }
+
+    /// Returns the config file path
+    fn config_path(&self) -> PathBuf {
+        self.app_data_dir.join("config.json")
+    }
+
+    /// Loads the application configuration
+    fn load_config(&self) -> Result<AppConfig, ControllerError> {
+        let path = self.config_path();
+        if !path.exists() {
+            return Ok(AppConfig::default());
+        }
+
+        let data = fs::read_to_string(&path)
+            .map_err(|_| ControllerError::Config("Could not read configuration".to_string()))?;
+
+        serde_json::from_str(&data)
+            .map_err(|_| ControllerError::Config("Could not parse configuration".to_string()))
+    }
+
+    /// Saves the application configuration
+    fn save_config(&self, config: &AppConfig) -> Result<(), ControllerError> {
+        let path = self.config_path();
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)
+                .map_err(|_| ControllerError::Config("Could not create configuration directory".to_string()))?;
+        }
+
+        let data = serde_json::to_string_pretty(config)
+            .map_err(|_| ControllerError::Config("Could not serialize configuration".to_string()))?;
+
+        fs::write(&path, &data)
+            .map_err(|_| ControllerError::Config("Could not save configuration".to_string()))?;
+
+        // Set restrictive permissions (owner read/write only - 0600)
+        #[cfg(unix)]
+        {
+            fs::set_permissions(&path, Permissions::from_mode(0o600))
+                .map_err(|_| ControllerError::Config("Could not set configuration file permissions".to_string()))?;
+        }
+
+        Ok(())
+    }
+
+    /// Persists the last used database path
+    fn persist_last_db_path(&self, path: &Path) -> Result<(), ControllerError> {
+        let mut config = self.load_config()?;
+        config.last_db_path = Some(path.to_string_lossy().to_string());
+        self.save_config(&config)
+    }
+
+    /// Sanitizes the requested vault path to ensure it stays inside the app data directory
+    fn sanitize_db_path(&self, raw: &str) -> Result<PathBuf, ControllerError> {
+        // Ensure the base directory exists so canonicalization behaves deterministically
+        fs::create_dir_all(&self.app_data_dir)
+            .map_err(|_| ControllerError::Config("Could not access application data directory".to_string()))?;
+
+        let base = self.app_data_dir.canonicalize().unwrap_or(self.app_data_dir.clone());
+
+        let raw_trimmed = raw.trim();
+        if raw_trimmed.is_empty() {
+            return Err(ControllerError::Validation("Vault path cannot be empty".to_string()));
+        }
+
+        let candidate = PathBuf::from(raw_trimmed);
+
+        // If an absolute path is provided, ensure it resides within app_data_dir
+        let relative = if candidate.is_absolute() {
+            candidate
+                .strip_prefix(&base)
+                .map_err(|_| ControllerError::Validation(
+                    "Vault path must stay inside the app data directory".to_string(),
+                ))?
+                .to_path_buf()
+        } else {
+            candidate
+        };
+
+        // Normalize the path while preventing traversal outside of base
+        let mut normalized = base.clone();
+        for comp in relative.components() {
+            match comp {
+                Component::Prefix(_) | Component::RootDir => {
+                    return Err(ControllerError::Validation(
+                        "Vault path must stay inside the app data directory".to_string(),
+                    ));
+                }
+                Component::ParentDir => {
+                    if !normalized.pop() || !normalized.starts_with(&base) {
+                        return Err(ControllerError::Validation(
+                            "Vault path must stay inside the app data directory".to_string(),
+                        ));
+                    }
+                }
+                Component::CurDir => {}
+                Component::Normal(c) => normalized.push(c),
+            }
+        }
+
+        Ok(normalized)
+    }
+
+    /// Checks persistent rate limit using a temporary connection
+    fn check_persistent_rate_limit(&self, db_path: &Path) -> Result<(), ControllerError> {
+        if !db_path.exists() {
+            return Ok(());
+        }
+
+        // Try to open without encryption to check rate limit table
+        // This uses a separate unencrypted DB for rate limiting
+        let rate_limit_path = db_path.with_extension("ratelimit");
+
+        if let Ok(conn) = Connection::open(&rate_limit_path) {
+            // Create table if not exists
+            let _ = conn.execute(
+                "CREATE TABLE IF NOT EXISTS auth_attempts (
+                    vault_path TEXT PRIMARY KEY NOT NULL,
+                    failed_count INTEGER NOT NULL DEFAULT 0,
+                    locked_until TEXT,
+                    last_attempt TEXT NOT NULL
+                )",
+                [],
+            );
+
+            let vault_key = db_path.to_string_lossy().to_string();
+            if let Err(DbError::RateLimited) = Database::check_rate_limit(&conn, &vault_key) {
+                let remaining = Database::get_lockout_remaining(&conn, &vault_key).unwrap_or(0);
+                return Err(ControllerError::RateLimited(remaining));
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Records a failed attempt in persistent storage
+    fn record_persistent_failed_attempt(&self, db_path: &Path) {
+        let rate_limit_path = db_path.with_extension("ratelimit");
+
+        if let Ok(conn) = Connection::open(&rate_limit_path) {
+            let _ = conn.execute(
+                "CREATE TABLE IF NOT EXISTS auth_attempts (
+                    vault_path TEXT PRIMARY KEY NOT NULL,
+                    failed_count INTEGER NOT NULL DEFAULT 0,
+                    locked_until TEXT,
+                    last_attempt TEXT NOT NULL
+                )",
+                [],
+            );
+
+            let vault_key = db_path.to_string_lossy().to_string();
+            if let Ok((attempts, locked)) = Database::record_failed_attempt(&conn, &vault_key) {
+                log_auth_failure(attempts, locked);
+            }
+        }
+    }
+
+    /// Resets persistent rate limit after successful auth
+    fn reset_persistent_rate_limit(&self, db_path: &Path) {
+        let rate_limit_path = db_path.with_extension("ratelimit");
+
+        if let Ok(conn) = Connection::open(&rate_limit_path) {
+            let vault_key = db_path.to_string_lossy().to_string();
+            let _ = Database::reset_rate_limit(&conn, &vault_key);
+        }
+    }
+
+    /// Helper to ensure no connection is currently open
+    fn ensure_no_connection(&self) -> Result<(), ControllerError> {
+        let db_lock = self.db.lock().map_err(|_| ControllerError::Internal)?;
+
+        if db_lock.is_some() {
+            return Err(ControllerError::VaultAlreadyOpen);
+        }
+
+        Ok(())
+    }
+
+    /// Helper to get database with session check
+    fn with_db<T, F>(&self, f: F) -> Result<T, ControllerError>
+    where
+        F: FnOnce(&Database) -> Result<T, ControllerError>,
+    {
+        let db_lock = self.db.lock().map_err(|_| ControllerError::Internal)?;
+        let db = db_lock.as_ref().ok_or(ControllerError::NoVaultOpen)?;
+
+        // Check session timeout
+        db.check_session_timeout().map_err(|e| match e {
+            DbError::SessionExpired => ControllerError::SessionExpired,
+            _ => ControllerError::Database(e),
+        })?;
+
+        f(db)
+    }
+
+    // ==================== Database Management ====================
+
+    /// Returns true if the database is initialized, false otherwise
+    pub fn is_db_initialized(&self) -> bool {
+        self.db.lock().map(|guard| guard.is_some()).unwrap_or(false)
+    }
+
+    /// Creates a new vault at the specified path
+    pub fn create_db(&self, password: String, path: Option<String>) -> Result<String, ControllerError> {
+        let password = validate_password_strict(password)?;
+        self.ensure_no_connection()?;
+
+        let db_path_raw = if let Some(p) = path {
+            let trimmed = p.trim();
+            if trimmed.is_empty() {
+                self.default_db_path()
+            } else {
+                PathBuf::from(trimmed)
+            }
+        } else {
+            self.default_db_path()
+        };
+
+        let db_path = self.sanitize_db_path(db_path_raw.to_string_lossy().as_ref())?;
+
+        if db_path.exists() {
+            return Err(ControllerError::VaultExists);
+        }
+
+        let database = Database::init(db_path.clone(), &password)?;
+        database.health_check()?;
+
+        let mut db_lock = self.db.lock().map_err(|_| ControllerError::Internal)?;
+        *db_lock = Some(database);
+
+        self.persist_last_db_path(&db_path)?;
+        self.reset_persistent_rate_limit(&db_path);
+
+        log_security_event(SecurityEvent::VaultCreated, None);
+
+        Ok("Vault created successfully".to_string())
+    }
+
+    /// Opens an existing vault with the provided password
+    pub fn open_db(&self, password: String, path: Option<String>) -> Result<String, ControllerError> {
+        let password = validate_password_basic(password)?;
+        self.ensure_no_connection()?;
+
+        // Resolve path
+        let raw_path = if let Some(p) = path {
+            let trimmed = p.trim();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
+        } else {
+            None
+        }
+        .or_else(|| self.load_config().ok().and_then(|c| c.last_db_path));
+
+        let db_path_raw = if let Some(p) = raw_path {
+            PathBuf::from(p)
+        } else {
+            self.default_db_path()
+        };
+
+        let db_path = self.sanitize_db_path(db_path_raw.to_string_lossy().as_ref())?;
+
+        if !db_path.exists() {
+            return Err(ControllerError::VaultNotFound);
+        }
+
+        // Persistent rate limiting check
+        self.check_persistent_rate_limit(&db_path)?;
+
+        // Try to open the database
+        let database = match Database::init(db_path.clone(), &password) {
+            Ok(db) => {
+                self.reset_persistent_rate_limit(&db_path);
+                db
+            }
+            Err(e) => {
+                self.record_persistent_failed_attempt(&db_path);
+                log_security_event(SecurityEvent::VaultOpenFailed, None);
+                return Err(ControllerError::Database(e));
+            }
+        };
+
+        database.health_check()?;
+
+        let mut db_lock = self.db.lock().map_err(|_| ControllerError::Internal)?;
+        *db_lock = Some(database);
+
+        self.persist_last_db_path(&db_path)?;
+
+        log_security_event(SecurityEvent::VaultOpened, None);
+
+        Ok("Vault unlocked successfully".to_string())
+    }
+
+    /// Closes the current vault connection
+    pub fn close_db(&self) -> Result<String, ControllerError> {
+        let mut db_lock = self.db.lock().map_err(|_| ControllerError::Internal)?;
+
+        if db_lock.is_none() {
+            return Err(ControllerError::NoVaultOpen);
+        }
+
+        *db_lock = None;
+
+        log_security_event(SecurityEvent::VaultClosed, None);
+
+        Ok("Vault locked successfully".to_string())
+    }
+
+    /// Returns the remaining session time in seconds
+    pub fn get_session_remaining(&self) -> Result<i64, ControllerError> {
+        self.with_db(|db| {
+            db.get_session_remaining().map_err(ControllerError::Database)
+        })
+    }
+
+    /// Checks if a vault file exists
+    pub fn check_vault_exists(&self) -> bool {
+        // Check if custom path was used previously
+        if let Ok(config) = self.load_config() {
+            if let Some(last_path) = config.last_db_path {
+                let path = PathBuf::from(&last_path);
+                if path.exists() {
+                    return true;
+                }
+            }
+        }
+
+        // Check default path
+        self.default_db_path().exists()
+    }
+
+    /// Returns the current vault path
+    pub fn get_db_path(&self) -> Result<String, ControllerError> {
+        // If there's an active connection, use that path
+        {
+            let db_lock = self.db.lock().map_err(|_| ControllerError::Internal)?;
+            if let Some(db) = db_lock.as_ref() {
+                return Ok(db.path().to_string_lossy().to_string());
+            }
+        }
+
+        // Otherwise, return the last used path or default
+        if let Ok(config) = self.load_config() {
+            if let Some(last) = config.last_db_path {
+                return Ok(last);
+            }
+        }
+
+        Ok(self.default_db_path().to_string_lossy().to_string())
+    }
+
+    // ==================== FIAT Account Methods ====================
+
+    /// Creates a new account
+    pub fn create_account(
+        &self,
+        name: String,
+        account_type: String,
+        currency: String,
+        initial_balance: i64,
+        color: String,
+        icon: Option<String>,
+    ) -> Result<String, ControllerError> {
+        self.with_db(|db| {
+            let name = validate_field_length(&name, MAX_ACCOUNT_NAME_LENGTH, "Account name")?;
+            let name = sanitize_string(&name);
+
+            if name.is_empty() {
+                return Err(ControllerError::Validation("Account name cannot be empty".to_string()));
+            }
+
+            let currency = validate_field_length(&currency, MAX_CURRENCY_LENGTH, "Currency")?;
+            let currency = sanitize_string(&currency).to_uppercase();
+
+            if currency.is_empty() {
+                return Err(ControllerError::Validation("Currency cannot be empty".to_string()));
+            }
+
+            let color = validate_color(&color)?;
+
+            let icon = if let Some(i) = icon {
+                let i = validate_field_length(&i, MAX_ICON_LENGTH, "Icon")?;
+                if i.is_empty() { None } else { Some(i) }
+            } else {
+                None
+            };
+
+            let id = Uuid::new_v4().to_string();
+            let created_at = chrono::Utc::now().to_rfc3339();
+
+            let account = Account::new(
+                id.clone(),
+                name,
+                account_type,
+                currency,
+                initial_balance,
+                color,
+                icon,
+                created_at,
+            );
+
+            db.create_account(&account)?;
+
+            log_security_event(SecurityEvent::TransactionCreated, Some("account_created"));
+
+            Ok(id)
+        })
+    }
+
+    /// Gets all accounts
+    pub fn get_accounts(&self) -> Result<Vec<Account>, ControllerError> {
+        self.with_db(|db| db.get_accounts().map_err(ControllerError::Database))
+    }
+
+    /// Gets all account balances
+    pub fn get_account_balances(&self) -> Result<Vec<AccountBalance>, ControllerError> {
+        self.with_db(|db| db.get_all_account_balances().map_err(ControllerError::Database))
+    }
+
+    /// Updates an account
+    pub fn update_account(
+        &self,
+        id: String,
+        name: String,
+        account_type: String,
+        currency: String,
+        initial_balance: i64,
+        color: String,
+        icon: Option<String>,
+    ) -> Result<(), ControllerError> {
+        self.with_db(|db| {
+            let validated_id = validate_uuid(&id)?;
+
+            let name = validate_field_length(&name, MAX_ACCOUNT_NAME_LENGTH, "Account name")?;
+            let name = sanitize_string(&name);
+
+            if name.is_empty() {
+                return Err(ControllerError::Validation("Account name cannot be empty".to_string()));
+            }
+
+            let currency = validate_field_length(&currency, MAX_CURRENCY_LENGTH, "Currency")?;
+            let currency = sanitize_string(&currency).to_uppercase();
+
+            let color = validate_color(&color)?;
+
+            let icon = if let Some(i) = icon {
+                let i = validate_field_length(&i, MAX_ICON_LENGTH, "Icon")?;
+                if i.is_empty() { None } else { Some(i) }
+            } else {
+                None
+            };
+
+            let existing = db.get_account(&validated_id)?;
+
+            let account = Account {
+                id: validated_id,
+                name,
+                account_type,
+                currency,
+                initial_balance,
+                color,
+                icon,
+                is_archived: existing.is_archived,
+                created_at: existing.created_at,
+            };
+
+            db.update_account(&account).map_err(ControllerError::Database)
+        })
+    }
+
+    /// Archives an account (soft delete)
+    pub fn archive_account(&self, id: String) -> Result<(), ControllerError> {
+        self.with_db(|db| {
+            let validated_id = validate_uuid(&id)?;
+            db.archive_account(&validated_id).map_err(ControllerError::Database)
+        })
+    }
+
+    /// Transfers funds between accounts
+    pub fn transfer_funds(
+        &self,
+        from_account_id: String,
+        to_account_id: String,
+        amount: i64,
+        description: String,
+        date: String,
+    ) -> Result<String, ControllerError> {
+        self.with_db(|db| {
+            let from_id = validate_uuid(&from_account_id)?;
+            let to_id = validate_uuid(&to_account_id)?;
+
+            if amount <= 0 {
+                return Err(ControllerError::Validation("Transfer amount must be greater than zero".to_string()));
+            }
+
+            let description = validate_field_length(&description, MAX_DESCRIPTION_LENGTH, "Description")?;
+            let description = sanitize_string(&description);
+            let date = validate_date(&date)?;
+
+            let tx_id = db.create_transfer(&from_id, &to_id, amount, &description, &date)?;
+            log_security_event(SecurityEvent::TransactionCreated, Some("transfer"));
+            Ok(tx_id)
+        })
+    }
+
+    // ==================== Financial Transaction Methods ====================
+
+    /// Adds a transaction
+    pub fn add_transaction(
+        &self,
+        account_id: String,
+        amount: i64,
+        category: String,
+        description: String,
+        date: String,
+        is_expense: bool,
+    ) -> Result<String, ControllerError> {
+        self.with_db(|db| {
+            let account_id = validate_uuid(&account_id)?;
+            let category = validate_field_length(&category, MAX_CATEGORY_LENGTH, "Category")?;
+            let category = sanitize_string(&category);
+
+            if category.is_empty() {
+                return Err(ControllerError::Validation("Category cannot be empty".to_string()));
+            }
+
+            let description = validate_field_length(&description, MAX_DESCRIPTION_LENGTH, "Description")?;
+            let description = sanitize_string(&description);
+            let date = validate_date(&date)?;
+
+            if amount <= 0 {
+                return Err(ControllerError::Validation("Amount must be greater than zero".to_string()));
+            }
+
+            let id = Uuid::new_v4().to_string();
+            let transaction_type = if is_expense { "expense" } else { "income" };
+
+            let transaction = Transaction::new(
+                id.clone(),
+                account_id,
+                amount,
+                category,
+                description,
+                date,
+                transaction_type.to_string(),
+                None,
+            );
+
+            db.create_transaction(&transaction)?;
+            log_security_event(SecurityEvent::TransactionCreated, Some(transaction_type));
+            Ok(id)
+        })
+    }
+
+    /// Gets all transactions
+    pub fn get_transactions(&self) -> Result<Vec<Transaction>, ControllerError> {
+        self.with_db(|db| db.get_transactions().map_err(ControllerError::Database))
+    }
+
+    /// Gets balance summary
+    pub fn get_balance(&self) -> Result<BalanceSummary, ControllerError> {
+        self.with_db(|db| db.get_balance_summary().map_err(ControllerError::Database))
+    }
+
+    /// Deletes a transaction
+    pub fn delete_transaction(&self, id: String) -> Result<(), ControllerError> {
+        self.with_db(|db| {
+            let validated_id = validate_uuid(&id)?;
+            db.delete_transaction(&validated_id)?;
+            log_security_event(SecurityEvent::TransactionDeleted, None);
+            Ok(())
+        })
+    }
+
+    // ==================== Crypto Price Methods ====================
+
+    /// Fetches cryptocurrency prices from CoinGecko
+    pub async fn get_crypto_prices(&self, coins: Vec<String>) -> Result<Vec<CryptoAsset>, ControllerError> {
+        crypto::fetch_crypto_prices(coins).await.map_err(ControllerError::Api)
+    }
+
+    /// Fetches CLP to USD exchange rate
+    pub async fn get_clp_usd_rate(&self) -> Result<f64, ControllerError> {
+        crypto::fetch_clp_usd_rate().await.map_err(ControllerError::Api)
+    }
+
+    /// Saves exchange rate to cache
+    pub fn save_exchange_rate(&self, pair: String, rate: f64) -> Result<(), ControllerError> {
+        self.with_db(|db| db.save_exchange_rate(&pair, rate).map_err(ControllerError::Database))
+    }
+
+    /// Loads cached exchange rate
+    pub fn load_exchange_rate(&self, pair: String) -> Result<Option<(f64, String)>, ControllerError> {
+        self.with_db(|db| db.load_exchange_rate(&pair).map_err(ControllerError::Database))
+    }
+
+    /// Saves crypto prices to cache
+    pub fn save_crypto_prices(&self, prices: Vec<CryptoAsset>) -> Result<(), ControllerError> {
+        self.with_db(|db| {
+            for price in prices {
+                db.save_crypto_price(
+                    &price.id,
+                    &price.symbol,
+                    &price.name,
+                    price.current_price,
+                    price.price_change_percentage_24h,
+                )?;
+            }
+            Ok(())
+        })
+    }
+
+    /// Loads cached crypto prices
+    pub fn load_crypto_prices(&self) -> Result<Vec<CryptoAsset>, ControllerError> {
+        self.with_db(|db| {
+            let cached = db.load_crypto_prices()?;
+            Ok(cached
+                .into_iter()
+                .map(|(id, symbol, name, price, change, updated)| CryptoAsset {
+                    id,
+                    symbol,
+                    name,
+                    current_price: price,
+                    price_change_percentage_24h: change,
+                    last_updated: updated,
+                })
+                .collect())
+        })
+    }
+
+    // ==================== Crypto Wallet Methods ====================
+
+    /// Creates a new crypto wallet
+    pub fn add_wallet(&self, name: String, category: String, icon: Option<String>) -> Result<String, ControllerError> {
+        self.with_db(|db| {
+            let name = validate_field_length(&name, MAX_WALLET_NAME_LENGTH, "Wallet name")?;
+            let name = sanitize_string(&name);
+
+            if name.is_empty() {
+                return Err(ControllerError::Validation("Wallet name cannot be empty".to_string()));
+            }
+
+            let valid_categories = ["exchange", "wallet_single", "wallet_multi"];
+            if !valid_categories.contains(&category.as_str()) {
+                return Err(ControllerError::Validation(format!(
+                    "Invalid category. Must be one of: {}",
+                    valid_categories.join(", ")
+                )));
+            }
+
+            let icon = match icon {
+                Some(i) => Some(validate_field_length(&i, MAX_ICON_LENGTH, "Icon")?),
+                None => None,
+            };
+
+            let id = Uuid::new_v4().to_string();
+            log_security_event(SecurityEvent::WalletCreated, Some(&category));
+
+            let wallet = CryptoWallet::new(id.clone(), name, category, icon);
+            db.create_wallet(&wallet)?;
+            Ok(id)
+        })
+    }
+
+    /// Gets all wallets
+    pub fn get_wallets(&self) -> Result<Vec<CryptoWallet>, ControllerError> {
+        self.with_db(|db| db.get_wallets().map_err(ControllerError::Database))
+    }
+
+    /// Deletes a wallet
+    pub fn delete_wallet(&self, id: String) -> Result<(), ControllerError> {
+        self.with_db(|db| {
+            let validated_id = validate_uuid(&id)?;
+            db.delete_wallet(&validated_id)?;
+            log_security_event(SecurityEvent::WalletDeleted, None);
+            Ok(())
+        })
+    }
+
+    // ==================== Crypto Transaction Methods ====================
+
+    /// Adds a crypto transaction
+    pub fn add_crypto_transaction(
+        &self,
+        wallet_id: String,
+        coin_id: String,
+        symbol: String,
+        transaction_type: String,
+        amount: f64,
+        price_per_coin: Option<f64>,
+        fee: Option<f64>,
+        date: String,
+        notes: Option<String>,
+    ) -> Result<String, ControllerError> {
+        self.with_db(|db| {
+            if wallet_id.trim().is_empty() {
+                return Err(ControllerError::Validation("Wallet ID cannot be empty".to_string()));
+            }
+
+            let coin_id = validate_coin_id_str(&coin_id)?;
+            let symbol = validate_symbol(&symbol)?;
+
+            let notes = match notes {
+                Some(n) => {
+                    let validated = validate_field_length(&n, MAX_NOTES_LENGTH, "Notes")?;
+                    Some(sanitize_string(&validated))
+                }
+                None => None,
+            };
+
+            validate_positive_amount(amount, "Amount")?;
+            let price_per_coin = validate_non_negative(price_per_coin, "Price per coin")?;
+            let fee = validate_non_negative(fee, "Fee")?;
+            let date = validate_date(&date)?;
+
+            let valid_types = ["buy", "sell", "transfer_in", "transfer_out", "swap"];
+            if !valid_types.contains(&transaction_type.as_str()) {
+                return Err(ControllerError::Validation(format!(
+                    "Invalid transaction type. Must be one of: {}",
+                    valid_types.join(", ")
+                )));
+            }
+
+            log_security_event(SecurityEvent::CryptoTransactionCreated, Some(&transaction_type));
+
+            let id = Uuid::new_v4().to_string();
+            let transaction = CryptoTransaction::new(
+                id.clone(),
+                wallet_id.trim().to_string(),
+                coin_id.to_lowercase(),
+                symbol.to_uppercase(),
+                transaction_type,
+                amount,
+                price_per_coin,
+                fee,
+                date,
+                notes,
+            );
+
+            db.create_crypto_transaction(&transaction)?;
+            Ok(id)
+        })
+    }
+
+    /// Gets wallet transactions
+    pub fn get_wallet_transactions(&self, wallet_id: String) -> Result<Vec<CryptoTransaction>, ControllerError> {
+        self.with_db(|db| {
+            let validated_id = validate_uuid(&wallet_id)?;
+            db.get_wallet_transactions(&validated_id).map_err(ControllerError::Database)
+        })
+    }
+
+    /// Deletes a crypto transaction
+    pub fn delete_crypto_transaction(&self, id: String) -> Result<(), ControllerError> {
+        self.with_db(|db| {
+            let validated_id = validate_uuid(&id)?;
+
+            // Check if this transaction has a related transaction (swap/transfer)
+            if let Ok(Some(tx)) = db.get_crypto_transaction(&validated_id) {
+                if let Some(related_id) = tx.related_tx_id {
+                    let _ = db.delete_crypto_transaction(&related_id);
+                }
+            }
+
+            db.delete_crypto_transaction(&validated_id)?;
+            Ok(())
+        })
+    }
+
+    // ==================== Portfolio Aggregation Methods ====================
+
+    /// Gets aggregated portfolio across all wallets
+    pub fn get_aggregated_portfolio(&self) -> Result<Vec<AggregatedAsset>, ControllerError> {
+        self.with_db(|db| db.get_aggregated_portfolio().map_err(ControllerError::Database))
+    }
+
+    /// Gets aggregated holdings for a specific wallet
+    pub fn get_wallet_holdings(&self, wallet_id: String) -> Result<Vec<AggregatedAsset>, ControllerError> {
+        self.with_db(|db| {
+            let validated_id = validate_uuid(&wallet_id)?;
+            db.get_wallet_aggregated_holdings(&validated_id).map_err(ControllerError::Database)
+        })
+    }
+
+    // ==================== Habits Methods ====================
+
+    /// Creates a new habit
+    pub fn create_habit(&self, name: String, description: Option<String>, color: String) -> Result<String, ControllerError> {
+        self.with_db(|db| {
+            let name = validate_field_length(&name, MAX_HABIT_NAME_LENGTH, "Habit name")?;
+            let name = sanitize_string(&name);
+
+            if name.is_empty() {
+                return Err(ControllerError::Validation("Habit name cannot be empty".to_string()));
+            }
+
+            let description = match description {
+                Some(d) => {
+                    let validated = validate_field_length(&d, MAX_HABIT_DESCRIPTION_LENGTH, "Description")?;
+                    let sanitized = sanitize_string(&validated);
+                    if sanitized.is_empty() { None } else { Some(sanitized) }
+                }
+                None => None,
+            };
+
+            let color = validate_color(&color)?;
+
+            let id = Uuid::new_v4().to_string();
+            let created_at = chrono::Utc::now().to_rfc3339();
+
+            let habit = Habit::new(id.clone(), name, description, color, created_at);
+            db.create_habit(&habit)?;
+            Ok(id)
+        })
+    }
+
+    /// Gets all active habits
+    pub fn get_habits(&self) -> Result<Vec<Habit>, ControllerError> {
+        self.with_db(|db| db.get_habits().map_err(ControllerError::Database))
+    }
+
+    /// Updates a habit
+    pub fn update_habit(&self, id: String, name: String, description: Option<String>, color: String) -> Result<(), ControllerError> {
+        self.with_db(|db| {
+            let validated_id = validate_uuid(&id)?;
+
+            let name = validate_field_length(&name, MAX_HABIT_NAME_LENGTH, "Habit name")?;
+            let name = sanitize_string(&name);
+
+            if name.is_empty() {
+                return Err(ControllerError::Validation("Habit name cannot be empty".to_string()));
+            }
+
+            let description = match description {
+                Some(d) => {
+                    let validated = validate_field_length(&d, MAX_HABIT_DESCRIPTION_LENGTH, "Description")?;
+                    let sanitized = sanitize_string(&validated);
+                    if sanitized.is_empty() { None } else { Some(sanitized) }
+                }
+                None => None,
+            };
+
+            let color = validate_color(&color)?;
+
+            let existing = db.get_habit(&validated_id)?
+                .ok_or_else(|| ControllerError::Validation("Habit not found".to_string()))?;
+
+            let habit = Habit {
+                id: validated_id,
+                name,
+                description,
+                color,
+                created_at: existing.created_at,
+                archived: existing.archived,
+            };
+
+            db.update_habit(&habit).map_err(ControllerError::Database)
+        })
+    }
+
+    /// Archives a habit
+    pub fn archive_habit(&self, id: String) -> Result<(), ControllerError> {
+        self.with_db(|db| {
+            let validated_id = validate_uuid(&id)?;
+            db.archive_habit(&validated_id).map_err(ControllerError::Database)
+        })
+    }
+
+    /// Deletes a habit
+    pub fn delete_habit(&self, id: String) -> Result<(), ControllerError> {
+        self.with_db(|db| {
+            let validated_id = validate_uuid(&id)?;
+            db.delete_habit(&validated_id).map_err(ControllerError::Database)
+        })
+    }
+
+    /// Toggles habit completion for a date
+    pub fn toggle_habit_completion(&self, habit_id: String, date: String) -> Result<(bool, Option<String>), ControllerError> {
+        self.with_db(|db| {
+            let validated_habit_id = validate_uuid(&habit_id)?;
+            let validated_date = validate_date(&date)?;
+            db.toggle_habit_log(&validated_habit_id, &validated_date).map_err(ControllerError::Database)
+        })
+    }
+
+    /// Gets habit logs for a date range
+    pub fn get_habit_logs(&self, start_date: String, end_date: String) -> Result<Vec<HabitLog>, ControllerError> {
+        self.with_db(|db| {
+            let start = validate_date(&start_date)?;
+            let end = validate_date(&end_date)?;
+            db.get_habit_logs(&start, &end).map_err(ControllerError::Database)
+        })
+    }
+
+    // ==================== Legacy Crypto Holdings (backwards compatibility) ====================
+
+    /// Adds a crypto holding (LEGACY)
+    pub fn add_crypto_holding(
+        &self,
+        coin_id: String,
+        symbol: String,
+        amount: f64,
+        purchase_price: f64,
+        purchase_date: String,
+    ) -> Result<String, ControllerError> {
+        self.with_db(|db| {
+            let coin_id = validate_coin_id_str(&coin_id)?;
+            let symbol = validate_symbol(&symbol)?;
+            validate_positive_amount(amount, "Amount")?;
+            validate_non_negative(Some(purchase_price), "Purchase price")?;
+            let purchase_date = validate_date(&purchase_date)?;
+
+            let id = Uuid::new_v4().to_string();
+            let holding = CryptoHolding::new(
+                id.clone(),
+                coin_id.to_lowercase(),
+                symbol.to_uppercase(),
+                amount,
+                purchase_price,
+                purchase_date,
+            );
+
+            db.create_crypto_holding(&holding)?;
+            Ok(id)
+        })
+    }
+
+    /// Gets all crypto holdings (LEGACY)
+    pub fn get_crypto_holdings(&self) -> Result<Vec<CryptoHolding>, ControllerError> {
+        self.with_db(|db| db.get_crypto_holdings().map_err(ControllerError::Database))
+    }
+
+    /// Deletes a crypto holding (LEGACY)
+    pub fn delete_crypto_holding(&self, id: String) -> Result<(), ControllerError> {
+        self.with_db(|db| {
+            let validated_id = validate_uuid(&id)?;
+            db.delete_crypto_holding(&validated_id).map_err(ControllerError::Database)
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use secrecy::ExposeSecret;
+
+    #[test]
+    fn test_validate_uuid_valid() {
+        assert!(validate_uuid("550e8400-e29b-41d4-a716-446655440000").is_ok());
+        assert!(validate_uuid("migrated_test").is_ok());
+        assert!(validate_uuid("legacy_portfolio").is_ok());
+    }
+
+    #[test]
+    fn test_validate_uuid_invalid() {
+        assert!(validate_uuid("").is_err());
+        assert!(validate_uuid("   ").is_err());
+        assert!(validate_uuid("not-a-uuid").is_err());
+    }
+
+    #[test]
+    fn test_validate_password_basic_empty() {
+        let result = validate_password_basic("".to_string());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_password_basic_valid() {
+        let result = validate_password_basic("simple".to_string());
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().expose_secret(), "simple");
+    }
+
+    #[test]
+    fn test_validate_password_strict_valid() {
+        let result = validate_password_strict("Password1!".to_string());
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().expose_secret(), "Password1!");
+    }
+
+    #[test]
+    fn test_validate_date_valid() {
+        assert!(validate_date("2024-01-15").is_ok());
+        assert_eq!(validate_date("15-01-2024").unwrap(), "2024-01-15");
+    }
+
+    #[test]
+    fn test_validate_date_invalid() {
+        assert!(validate_date("").is_err());
+        assert!(validate_date("not-a-date").is_err());
+    }
+}
