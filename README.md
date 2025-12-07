@@ -13,7 +13,10 @@
       <img src="https://img.shields.io/badge/Core-Rust-orange?style=for-the-badge&logo=rust" alt="Rust" />
     </a>
     <a href="">
-      <img src="https://img.shields.io/badge/Frontend-Slint-4B8BBE?style=for-the-badge&logo=rust" alt="Slint" />
+      <img src="https://img.shields.io/badge/Frontend-Tauri_v2-blue?style=for-the-badge&logo=tauri" alt="Tauri" />
+    </a>
+    <a href="">
+      <img src="https://img.shields.io/badge/Runtime-Deno-black?style=for-the-badge&logo=deno" alt="Deno" />
     </a>
     <a href="">
       <img src="https://img.shields.io/badge/Security-SQLCipher-green?style=for-the-badge&logo=sqlite" alt="SQLCipher" />
@@ -48,8 +51,8 @@ no leaks.
   multi-wallet asset aggregation.
 - **Atomic Habits:** (In development) Integrated productivity tracker to align
   your finances with your lifestyle.
-- **Linux Native:** Optimized for the Linux desktop ecosystem with a Rust-only
-  Slint UI (Wayland-first, X11 fallback optional).
+- **Linux Native:** Optimized for the Linux desktop ecosystem with GTK and
+  WebKit.
 
 ## Tech Stack
 
@@ -58,29 +61,16 @@ Sanctum is built prioritizing performance, type safety, and auditability.
 | Component            | Technology             | Description                                               |
 | :------------------- | :--------------------- | :-------------------------------------------------------- |
 | **Core**             | **Rust**               | Business logic, financial calculations, and security.     |
-| **GUI Framework**    | **Slint**              | Native Rust UI, no JavaScript runtime.                    |
-| **Frontend Runtime** | **Rust**               | Single-toolchain build; no npm/Deno involved.             |
+| **GUI Framework**    | **Tauri v2**           | Native bindings and lightweight window management.        |
+| **Frontend Runtime** | **Deno**               | Secure runtime for the frontend build (TypeScript/React). |
 | **Database**         | **SQLite + SQLCipher** | Locally encrypted relational storage.                     |
 | **Environment**      | **Nix + Direnv**       | Reproducible and hermetic development environment.        |
-
-## Branch Strategy
-
-- `main`: Slint-based Rust UI (current active line).
-- `tauri-legacy`: frozen Tauri/React client for reference and hotfixes.
-- `feature/slint-migration`: long-lived branch that landed the Slint rewrite.
-- Short-lived work branches should target `main`; hotfixes can cherry-pick into `tauri-legacy` if needed.
-
-## Workspace Layout
-
-- `core/`: shared Rust library (SQLCipher DB, crypto client, models, session logic).
-- `app-slint/`: Slint desktop client (Rust-only UI) consuming `core`.
-- `app-tauri/` (legacy): previous Tauri/React client kept for reference on `tauri-legacy`.
 
 ## Installation & Development
 
 This project uses **Nix Flakes** to guarantee a reproducible environment without
-polluting your global system. You don't need to manually install Rust or system
-libraries.
+polluting your global system. You don't need to manually install Rust, Deno, or
+system libraries.
 
 ### Prerequisites
 
@@ -88,7 +78,7 @@ libraries.
 - [Direnv](https://direnv.net/) (Optional, but highly recommended)
 - Git
 
-### Quick Start (Slint client)
+### Quick Start
 
 1. **Clone the repository:**
    ```bash
@@ -98,7 +88,9 @@ libraries.
 
 2. **Activate the Environment:**
 
-   - **Option A (Recommended with `direnv`):**
+   - **Option A (Recommended with `direnv`):** If you have `direnv` installed,
+     simply allow the environment. This will automatically load Rust, Deno,
+     Tauri CLI, and all GTK/WebKit libraries upon entering the folder.
      ```bash
      direnv allow
      ```
@@ -108,17 +100,11 @@ libraries.
      nix develop
      ```
 
-3. **Run in Development Mode:**
+3. **Run in Development Mode:** Once inside the Nix shell, you can launch the
+   app:
    ```bash
-   cargo run -p app-slint
+   cargo tauri dev
    ```
-
-4. **Build release binary:**
-   ```bash
-   cargo build -p app-slint --release
-   ```
-
-Legacy Tauri client lives on branch `tauri-legacy` and can be built with `cargo tauri dev` there if you need it.
 
 ## Development Transparency
 
