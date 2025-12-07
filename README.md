@@ -13,10 +13,10 @@
       <img src="https://img.shields.io/badge/Core-Rust-orange?style=for-the-badge&logo=rust" alt="Rust" />
     </a>
     <a href="">
-      <img src="https://img.shields.io/badge/Frontend-Tauri_v2-blue?style=for-the-badge&logo=tauri" alt="Tauri" />
+      <img src="https://img.shields.io/badge/GUI-Slint-blue?style=for-the-badge" alt="Slint" />
     </a>
     <a href="">
-      <img src="https://img.shields.io/badge/Runtime-Deno-black?style=for-the-badge&logo=deno" alt="Deno" />
+      <img src="https://img.shields.io/badge/Render-Skia%20%2B%20OpenGL-informational?style=for-the-badge" alt="Skia" />
     </a>
     <a href="">
       <img src="https://img.shields.io/badge/Security-SQLCipher-green?style=for-the-badge&logo=sqlite" alt="SQLCipher" />
@@ -34,8 +34,8 @@
 ## About
 
 **Sanctum** is a desktop application designed for those who refuse to compromise
-on privacy. Unlike cloud-based solutions, Sanctum runs entirely offline on your
-Linux machine.
+on privacy. Unlike cloud-based solutions or heavy web-wrappers, Sanctum runs entirely
+offline on your Linux machine with native performance.
 
 Your financial data, crypto portfolio, and habits are stored in a local **SQLite
 database encrypted with SQLCipher**. You hold the keys. No servers, no tracking,
@@ -44,32 +44,31 @@ no leaks.
 ## Key Features
 
 - **Military-Grade Encryption:** Zero-knowledge architecture. The database is
-  unreadable without your master password (AES-256).
+  unreadable without your master password (AES-256 + 600k iterations).
 - **Financial Ledger:** Advanced management of wallets, income, expenses, and
   transfers. Complete audit trail.
 - **Crypto Portfolio:** Investment tracking, PnL (Profit/Loss) calculation, and
   multi-wallet asset aggregation.
-- **Atomic Habits:** (In development) Integrated productivity tracker to align
-  your finances with your lifestyle.
-- **Linux Native:** Optimized for the Linux desktop ecosystem with GTK and
-  WebKit.
+- **Native Performance:** Built with Slint and Skia for a GPU-accelerated,
+  lightweight interface (No WebKit/Chromium RAM usage).
+- **Linux Native:** Optimized for the Linux desktop ecosystem (Wayland & X11 support).
 
 ## Tech Stack
 
 Sanctum is built prioritizing performance, type safety, and auditability.
 
-| Component            | Technology             | Description                                               |
-| :------------------- | :--------------------- | :-------------------------------------------------------- |
-| **Core**             | **Rust**               | Business logic, financial calculations, and security.     |
-| **GUI Framework**    | **Tauri v2**           | Native bindings and lightweight window management.        |
-| **Frontend Runtime** | **Deno**               | Secure runtime for the frontend build (TypeScript/React). |
-| **Database**         | **SQLite + SQLCipher** | Locally encrypted relational storage.                     |
-| **Environment**      | **Nix + Direnv**       | Reproducible and hermetic development environment.        |
+| Component            | Technology             | Description                                                       |
+| :------------------- | :--------------------- | :---------------------------------------------------------------- |
+| **Core** | **Rust** | Business logic, financial calculations, and security.             |
+| **GUI Framework** | **Slint** | Native Rust-based UI toolkit. Lightweight and type-safe.          |
+| **Renderer** | **Skia / OpenGL** | High-performance 2D graphics rendering via Winit.                 |
+| **Database** | **SQLite + SQLCipher** | Locally encrypted relational storage.                             |
+| **Environment** | **Nix + Direnv** | Reproducible and hermetic development environment.                |
 
 ## Installation & Development
 
 This project uses **Nix Flakes** to guarantee a reproducible environment without
-polluting your global system. You don't need to manually install Rust, Deno, or
+polluting your global system. You don't need to manually install Rust or
 system libraries.
 
 ### Prerequisites
@@ -82,44 +81,46 @@ system libraries.
 
 1. **Clone the repository:**
    ```bash
-   git clone https://codeberg.org/Kyronix/Sanctum.git
+   git clone [https://codeberg.org/Kyronix/Sanctum.git](https://codeberg.org/Kyronix/Sanctum.git)
    cd Sanctum
-   ```
+   ````
 
-2. **Activate the Environment:**
+2.  **Activate the Environment:**
 
-   - **Option A (Recommended with `direnv`):** If you have `direnv` installed,
-     simply allow the environment. This will automatically load Rust, Deno,
-     Tauri CLI, and all GTK/WebKit libraries upon entering the folder.
-     ```bash
-     direnv allow
-     ```
+      - **Option A (Recommended with `direnv`):** If you have `direnv` installed,
+        simply allow the environment. This will automatically load Rust, Slint dependencies,
+        and system libraries (Wayland/GL) upon entering the folder.
 
-   - **Option B (Manual with Nix):**
-     ```bash
-     nix develop
-     ```
+        ```bash
+        direnv allow
+        ```
 
-3. **Run in Development Mode:** Once inside the Nix shell, you can launch the
-   app:
-   ```bash
-   cargo tauri dev
-   ```
+      - **Option B (Manual with Nix):**
+
+        ```bash
+        nix develop
+        ```
+
+3.  **Run in Development Mode:** Once inside the Nix shell, launch the app:
+
+    ```bash
+    cargo run
+    ```
 
 ## Development Transparency
 
 This is a modern Open Source project that embraces the evolution of software
 development.
 
-- **Architecture and Vision:** Designed and directed by humans, prioritizing
-  privacy and local security.
-- **AI Collaboration:** Parts of the code have been generated and refactored
-  with the assistance of advanced LLMs. Models such as **Gemini 3 Pro**,
-  **Claude Opus 4.5**, **Claude Sonnet 4.5**, and **Codex 5.1** have been used
-  under strict human supervision and auditing to ensure security and business
-  logic.
-- **Auditability:** The code is open so anyone can verify that there is no
-  hidden telemetry or attack vectors.
+  - **Architecture and Vision:** Designed and directed by humans, prioritizing
+    privacy and local security.
+  - **AI Collaboration:** Parts of the code have been generated and refactored
+    with the assistance of advanced LLMs. Models such as **Gemini 3 Pro**,
+    **Claude Opus 4.5**, **Claude Sonnet 4.5**, and **Codex 5.1** have been used
+    under strict human supervision and auditing to ensure security and business
+    logic.
+  - **Auditability:** The code is open so anyone can verify that there is no
+    hidden telemetry or attack vectors.
 
 ## Disclaimer
 
@@ -130,10 +131,11 @@ of your recovery keys.
 ## License
 
 This project is open-source and available under the **GNU General Public License
-v3.0**. See the [LICENSE](LICENSE) file for more info.
+v3.0**. See the [LICENSE](https://www.google.com/search?q=LICENSE) file for more info.
 
----
+-----
 
 <div align="center">
-  <sub>Built with ❤️, 🦀 Rust and ❄️ Nix</sub>
+<sub>Built with ❤️, 🦀 Rust and ❄️ Nix</sub>
 </div>
+
