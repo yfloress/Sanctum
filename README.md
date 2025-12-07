@@ -82,7 +82,7 @@ system libraries.
 
 1. **Clone the repository:**
    ```bash
-   git clone [https://codeberg.org/Kyronix/Sanctum](https://codeberg.org/Kyronix/Sanctum)
+   git clone https://codeberg.org/Kyronix/Sanctum.git
    cd Sanctum
    ```
 
