@@ -6,6 +6,10 @@ import { AddHabitModal } from "../modals/add_habit.slint";
 export component HabitsPage inherits Rectangle {
     background: Palette.background;
 
+    init => {
+        HabitAdapter.load-initial-data();
+    }
+
     VerticalLayout {
         padding: 48px;
         padding-left: 64px;

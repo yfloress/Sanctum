@@ -783,13 +783,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    // Init Habits
+    // Callbacks
     {
-       let d = *current_habit_date.lock().unwrap();
-       reload_habits(&ui_weak, &controller, d);
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let date_lock = current_habit_date.clone();
+        ui.global::<HabitAdapter>().on_load_initial_data(move || {
+             let now = chrono::Local::now().date_naive();
+             *date_lock.lock().unwrap() = now;
+             reload_habits(&ui_weak, &controller, now);
+        });
     }
 
-    // Callbacks
     {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();

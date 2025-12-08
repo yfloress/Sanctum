@@ -134,6 +134,7 @@ export global HabitAdapter {
 
     // Actions
     callback fetch-habits(int, int); // month (1-12), year
+    callback load-initial-data(); // Load current month on startup
     callback create-habit(string, string, string) -> string; // name, desc, color -> error or ""
     callback toggle-habit(string, string); // id, date
     callback delete-habit(string) -> string;
