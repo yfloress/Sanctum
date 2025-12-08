@@ -8,11 +8,13 @@ import {
     AccountAdapter,
     TransactionAdapter,
     DashboardAdapter,
+    AnalyticsAdapter,
 } from "globals.slint";
 import { LoginPage } from "pages/login.slint";
 import { DashboardPage } from "pages/dashboard.slint";
 import { AccountsPage } from "pages/accounts.slint";
 import { TransactionsPage } from "pages/transactions.slint";
+import { AnalyticsPage } from "pages/analytics.slint";
 import { SanctumSidebar } from "components/sidebar.slint";
 import { AddTransactionModal } from "modals/add_transaction.slint";
 import { AddAccountModal } from "modals/add_account.slint";
@@ -60,6 +62,12 @@ export component AppWindow inherits Window {
 
             // Transactions
             if AppState.active-page == "transactions": TransactionsPage {
+                width: 100%;
+                height: 100%;
+            }
+
+            // Analytics
+            if AppState.active-page == "analytics": AnalyticsPage {
                 width: 100%;
                 height: 100%;
             }
@@ -122,4 +130,4 @@ export component AppWindow inherits Window {
 }
 
 // Re-export adapters for main.rs
-export { AuthAdapter, AccountAdapter, TransactionAdapter, DashboardAdapter, AppState }
+export { AuthAdapter, AccountAdapter, TransactionAdapter, DashboardAdapter, AnalyticsAdapter, AppState }

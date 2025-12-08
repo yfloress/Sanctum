@@ -353,6 +353,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let _ = reload_accounts(&ui_weak, &controller);
                         if let Some(ui) = ui_weak.upgrade() {
                             ui.global::<AppState>().set_show_add_account(false);
+                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics();
                         }
                         SharedString::from("")
                     }
@@ -384,6 +385,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let _ = reload_accounts(&ui_weak, &controller);
                         if let Some(ui) = ui_weak.upgrade() {
                             ui.global::<AppState>().set_show_add_account(false);
+                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics();
                         }
                         SharedString::from("")
                     }
@@ -518,6 +520,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_weak = ui_weak.clone();
         ui.global::<DashboardAdapter>().on_fetch_recent(move || {
             let _ = reload_recent(&ui_weak, &controller);
+        });
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        ui.global::<AnalyticsAdapter>().on_fetch_analytics(move || {
+            if let Ok((path, net_worth)) = controller.get_net_worth_history() {
+                if let Some(ui) = ui_weak.upgrade() {
+                    let adapter = ui.global::<AnalyticsAdapter>();
+                    adapter.set_chart_path(SharedString::from(path));
+                    adapter.set_net_worth(SharedString::from(net_worth));
+                }
+            }
         });
     }
 

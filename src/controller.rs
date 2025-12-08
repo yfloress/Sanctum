@@ -1337,6 +1337,79 @@ impl AppController {
             db.delete_crypto_holding(&validated_id).map_err(ControllerError::Database)
         })
     }
+
+    /// Returns normalized SVG path commands (0-100 space) for net worth history and current net worth formatted
+    pub fn get_net_worth_history(&self) -> Result<(String, String), ControllerError> {
+        let accounts = self.get_accounts()?;
+        let mut transactions = self.get_transactions()?;
+
+        // Sum initial balances
+        let mut total_balance: i64 = accounts.iter().map(|a| a.initial_balance).sum();
+
+        // Simple formatter: $ units.cents
+        fn format_money(value: i64) -> String {
+            let abs = value.abs();
+            let units = abs / 100;
+            let cents = abs % 100;
+            let sign = if value < 0 { "-" } else { "" };
+            format!("{sign}$ {units}.{cents:02}")
+        }
+
+        // Use DB order (date DESC, rowid DESC) reversed to keep chronological sequence
+        transactions.reverse();
+
+        let mut balances: Vec<i64> = Vec::new();
+        balances.push(total_balance); // initial point before any tx
+
+        for tx in &transactions {
+            let delta = match tx.transaction_type.as_str() {
+                "income" => tx.amount,
+                "expense" => -tx.amount,
+                _ => 0, // transfers do not affect net worth
+            };
+            total_balance += delta;
+            balances.push(total_balance);
+        }
+
+        let net_worth_formatted = format_money(total_balance);
+
+        if balances.is_empty() {
+            return Ok(("M 0 50 L 100 50".to_string(), net_worth_formatted));
+        }
+
+        let min_val = *balances.iter().min().unwrap_or(&0);
+        let max_val = *balances.iter().max().unwrap_or(&0);
+
+        let len = balances.len() as f32;
+        let mut path_cmd = String::new();
+
+        for (idx, val) in balances.iter().enumerate() {
+            let x = if len > 1.0 {
+                (idx as f32) * (100.0 / (len - 1.0))
+            } else {
+                0.0
+            };
+
+            let y_norm = if max_val == min_val {
+                50.0
+            } else {
+                let ratio = (*val - min_val) as f32 / (max_val - min_val) as f32;
+                100.0 - (ratio * 100.0)
+            };
+
+            if idx == 0 {
+                path_cmd.push_str(&format!("M {:.2} {:.2}", x, y_norm));
+            } else {
+                path_cmd.push_str(&format!(" L {:.2} {:.2}", x, y_norm));
+            }
+        }
+
+        if path_cmd.is_empty() {
+            path_cmd = "M 0 50 L 100 50".to_string();
+        }
+
+        Ok((path_cmd, net_worth_formatted))
+    }
 }
 
 #[cfg(test)]

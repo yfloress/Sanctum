@@ -87,6 +87,15 @@ export struct BalanceData {
     total-expense: string,
 }
 
+// ==================== Analytics Adapter ====================
+
+export global AnalyticsAdapter {
+    in-out property <string> chart-path: "M 0 50 L 100 50";
+    in-out property <string> net-worth: "$ 0.00";
+
+    callback fetch-analytics();
+}
+
 // ==================== Authentication Adapter ====================
 // Bridge between Slint UI and Rust backend
 
