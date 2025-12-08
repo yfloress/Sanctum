@@ -19,6 +19,15 @@ export component TransactionItem inherits Rectangle {
         easing: ease-out;
     }
 
+    // Main touch area (background)
+    touch := TouchArea {
+        mouse-cursor: pointer;
+
+        clicked => {
+            root.clicked();
+        }
+    }
+
     // Content layout
     HorizontalLayout {
         padding-left: 24px;
@@ -105,14 +114,5 @@ export component TransactionItem inherits Rectangle {
         x: 24px;
         width: parent.width - 48px;
         background: Palette.border-subtle;
-    }
-
-    // Touch area
-    touch := TouchArea {
-        mouse-cursor: pointer;
-
-        clicked => {
-            root.clicked();
-        }
     }
 }

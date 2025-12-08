@@ -1,7 +1,7 @@
 // ==================== Login Page ====================
 // Noir Minimalist - Elegant, luxury-inspired authentication
 
-import { Palette, AuthAdapter, AppState } from "../globals.slint";
+import { Palette, AuthAdapter, AppState, NotificationAdapter } from "../globals.slint";
 import { TextButton } from "../widgets.slint";
 
 // ==================== PasswordInput ====================
@@ -114,7 +114,6 @@ export component LoginPage inherits Rectangle {
 
     // Internal state
     in-out property <string> password-text: "";
-    in-out property <string> error-message: "";
     in-out property <bool> vault-exists: false;
     in-out property <bool> is-loading: false;
 
@@ -173,25 +172,6 @@ export component LoginPage inherits Rectangle {
                     // Spacer
                     Rectangle {
                         height: 64px;
-                    }
-
-                    // Error message (if any)
-                    if error-message != "": Rectangle {
-                        height: 32px;
-
-                        Text {
-                            text: error-message;
-                            color: Palette.danger;
-                            font-size: 12px;
-                            font-weight: 400;
-                            horizontal-alignment: center;
-                            vertical-alignment: center;
-                        }
-                    }
-
-                    // Spacer after error
-                    if error-message != "": Rectangle {
-                        height: 16px;
                     }
 
                     // Password input with toggle
@@ -274,38 +254,38 @@ export component LoginPage inherits Rectangle {
 
     // Handler: Create new vault
     function handle-create() {
-        error-message = "";
-
         if (password-text == "") {
-            error-message = "Password required";
+            NotificationAdapter.show("Password required", true);
             return;
         }
         if (password-text.character-count < 8) {
-            error-message = "Password too short";
+            NotificationAdapter.show("Password too short", true);
             return;
         }
         is-loading = true;
-        error-message = AuthAdapter.create-vault(password-text);
+        let result = AuthAdapter.create-vault(password-text);
 
-        if (error-message == "") {
+        if (result == "") {
             AppState.is-logged-in = true;
+        } else {
+            NotificationAdapter.show(result, true);
         }
         is-loading = false;
     }
 
     // Handler: Unlock existing vault
     function handle-unlock() {
-        error-message = "";
-
         if (password-text == "") {
-            error-message = "Password required";
+            NotificationAdapter.show("Password required", true);
             return;
         }
         is-loading = true;
-        error-message = AuthAdapter.unlock-vault(password-text);
+        let result = AuthAdapter.unlock-vault(password-text);
 
-        if (error-message == "") {
+        if (result == "") {
             AppState.is-logged-in = true;
+        } else {
+            NotificationAdapter.show(result, true);
         }
         is-loading = false;
     }

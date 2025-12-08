@@ -48,104 +48,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create the Slint UI
     let ui = AppWindow::new()?;
 
-    // ==================== AuthAdapter Callbacks ====================
-
-    // Get handle to the AuthAdapter global
-    let auth_adapter = ui.global::<AuthAdapter>();
-
-    // Callback: check_vault_exists
-    // Returns true if a vault file exists on disk
-    {
-        let controller_clone = controller.clone();
-        auth_adapter.on_check_vault_exists(move || {
-            let exists = controller_clone.check_vault_exists();
-            log::info!("check_vault_exists called, result: {}", exists);
-            exists
-        });
-    }
-
-    // Callback: create_vault
-    // Attempts to create a new vault with the given password
-    // Returns empty string on success, error message on failure
-    {
-        let controller_clone = controller.clone();
-        auth_adapter.on_create_vault(move |password: SharedString| {
-            log::info!("create_vault called");
-
-            let password_str = password.to_string();
-
-            match controller_clone.create_db(password_str, None) {
-                Ok(msg) => {
-                    log::info!("Vault created successfully: {}", msg);
-                    SharedString::from("")
-                }
-                Err(e) => {
-                    let error_msg = e.to_string();
-                    log::error!("Failed to create vault: {}", error_msg);
-                    SharedString::from(error_msg)
-                }
-            }
-        });
-    }
-
-    // Callback: unlock_vault
-    // Attempts to unlock an existing vault with the given password
-    // Returns empty string on success, error message on failure
-    {
-        let controller_clone = controller.clone();
-        auth_adapter.on_unlock_vault(move |password: SharedString| {
-            log::info!("unlock_vault called");
-
-            let password_str = password.to_string();
-
-            match controller_clone.open_db(password_str, None) {
-                Ok(msg) => {
-                    log::info!("Vault unlocked successfully: {}", msg);
-                    SharedString::from("")
-                }
-                Err(e) => {
-                    let error_msg = e.to_string();
-                    log::error!("Failed to unlock vault: {}", error_msg);
-                    SharedString::from(error_msg)
-                }
-            }
-        });
-    }
-
-    // Callback: lock_vault
-    // Closes the current vault connection
-    // Returns empty string on success, error message on failure
-    {
-        let controller_clone = controller.clone();
-        auth_adapter.on_lock_vault(move || {
-            log::info!("lock_vault called");
-
-            match controller_clone.close_db() {
-                Ok(msg) => {
-                    log::info!("Vault locked successfully: {}", msg);
-                    SharedString::from("")
-                }
-                Err(e) => {
-                    let error_msg = e.to_string();
-                    log::error!("Failed to lock vault: {}", error_msg);
-                    SharedString::from(error_msg)
-                }
-            }
-        });
-    }
-
-    // ==================== Application Startup ====================
-
-    println!("Sanctum Core Initialized.");
-    println!("Data directory: {}", controller.get_db_path().unwrap_or_default());
-
     // =============== Wire Adapters ===============
 
     let ui_weak = ui.as_weak();
-
-    // Current date (YYYY-MM-DD) for default form values
-    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
-    ui.global::<AppState>().set_current_date(SharedString::from(today));
 
     // Notification Helper
     let notification_timer = std::rc::Rc::new(slint::Timer::default());
@@ -181,6 +86,111 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             notify(message.to_string(), is_error);
         });
     }
+
+    // ==================== AuthAdapter Callbacks ====================
+
+    // Get handle to the AuthAdapter global
+    let auth_adapter = ui.global::<AuthAdapter>();
+
+    // Callback: check_vault_exists
+    // Returns true if a vault file exists on disk
+    {
+        let controller_clone = controller.clone();
+        auth_adapter.on_check_vault_exists(move || {
+            let exists = controller_clone.check_vault_exists();
+            log::info!("check_vault_exists called, result: {}", exists);
+            exists
+        });
+    }
+
+    // Callback: create_vault
+    // Attempts to create a new vault with the given password
+    // Returns empty string on success, error message on failure
+    {
+        let controller_clone = controller.clone();
+        let notify = show_notification.clone();
+        auth_adapter.on_create_vault(move |password: SharedString| {
+            log::info!("create_vault called");
+
+            let password_str = password.to_string();
+
+            match controller_clone.create_db(password_str, None) {
+                Ok(msg) => {
+                    log::info!("Vault created successfully: {}", msg);
+                    notify("Vault created successfully".into(), false);
+                    SharedString::from("")
+                }
+                Err(e) => {
+                    let error_msg = e.to_string();
+                    log::error!("Failed to create vault: {}", error_msg);
+                    notify(error_msg.clone().into(), true);
+                    SharedString::from(error_msg)
+                }
+            }
+        });
+    }
+
+    // Callback: unlock_vault
+    // Attempts to unlock an existing vault with the given password
+    // Returns empty string on success, error message on failure
+    {
+        let controller_clone = controller.clone();
+        let notify = show_notification.clone();
+        auth_adapter.on_unlock_vault(move |password: SharedString| {
+            log::info!("unlock_vault called");
+
+            let password_str = password.to_string();
+
+            match controller_clone.open_db(password_str, None) {
+                Ok(msg) => {
+                    log::info!("Vault unlocked successfully: {}", msg);
+                    notify("Vault unlocked successfully".into(), false);
+                    SharedString::from("")
+                }
+                Err(e) => {
+                    let error_msg = e.to_string();
+                    log::error!("Failed to unlock vault: {}", error_msg);
+                    notify(error_msg.clone().into(), true);
+                    SharedString::from(error_msg)
+                }
+            }
+        });
+    }
+
+    // Callback: lock_vault
+    // Closes the current vault connection
+    // Returns empty string on success, error message on failure
+    {
+        let controller_clone = controller.clone();
+        let notify = show_notification.clone();
+        auth_adapter.on_lock_vault(move || {
+            log::info!("lock_vault called");
+
+            match controller_clone.close_db() {
+                Ok(msg) => {
+                    log::info!("Vault locked successfully: {}", msg);
+                    notify("Vault locked".into(), false);
+                    SharedString::from("")
+                }
+                Err(e) => {
+                    let error_msg = e.to_string();
+                    log::error!("Failed to lock vault: {}", error_msg);
+                    SharedString::from(error_msg)
+                }
+            }
+        });
+    }
+
+    // ==================== Application Startup ====================
+
+    println!("Sanctum Core Initialized.");
+    println!("Data directory: {}", controller.get_db_path().unwrap_or_default());
+
+    // =============== Wire Adapters ===============
+
+    // Current date (YYYY-MM-DD) for default form values
+    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+    ui.global::<AppState>().set_current_date(SharedString::from(today));
 
     // Helpers to refresh UI models
     fn format_amount(amount_cents: i64) -> String {
