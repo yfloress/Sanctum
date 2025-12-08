@@ -1,0 +1,96 @@
+// ==================== Transaction Item ====================
+// Noir Minimalist - Single transaction row for list view
+
+import { Palette, TransactionData } from "../globals.slint";
+
+export component TransactionItem inherits Rectangle {
+    in property <TransactionData> transaction;
+    in property <bool> is-last: false;
+
+    callback clicked();
+
+    height: 56px;
+    background: touch.has-hover ? Palette.surface-hover : transparent;
+
+    animate background {
+        duration: 120ms;
+        easing: ease-out;
+    }
+
+    // Content layout
+    HorizontalLayout {
+        padding-left: 24px;
+        padding-right: 24px;
+        spacing: 16px;
+
+        // Date and Category (left)
+        VerticalLayout {
+            width: 100px;
+            alignment: center;
+            spacing: 2px;
+
+            Text {
+                text: transaction.date;
+                color: Palette.text-muted;
+                font-size: 10px;
+                font-weight: 400;
+                letter-spacing: 0.5px;
+            }
+
+            Text {
+                text: transaction.category;
+                color: Palette.text-secondary;
+                font-size: 10px;
+                font-weight: 400;
+                letter-spacing: 2px;
+            }
+        }
+
+        // Description (center)
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+
+            Text {
+                text: transaction.description;
+                color: Palette.text-primary;
+                font-size: 13px;
+                font-weight: 400;
+                overflow: elide;
+            }
+        }
+
+        // Amount (right)
+        VerticalLayout {
+            width: 120px;
+            alignment: center;
+
+            Text {
+                text: transaction.amount;
+                color: transaction.is-expense ? Palette.danger : Palette.success;
+                font-size: 13px;
+                font-weight: 400;
+                letter-spacing: 0.5px;
+                horizontal-alignment: right;
+            }
+        }
+    }
+
+    // Bottom border (except for last item)
+    if !is-last: Rectangle {
+        y: parent.height - 1px;
+        height: 1px;
+        x: 24px;
+        width: parent.width - 48px;
+        background: Palette.border-subtle;
+    }
+
+    // Touch area
+    touch := TouchArea {
+        mouse-cursor: pointer;
+
+        clicked => {
+            root.clicked();
+        }
+    }
+}

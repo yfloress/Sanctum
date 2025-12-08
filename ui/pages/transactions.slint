@@ -1,0 +1,126 @@
+// ==================== Transactions Page ====================
+// Noir Minimalist - Transaction management view
+
+import { Palette, TransactionAdapter, AppState } from "../globals.slint";
+import { TransactionItem } from "../components/transaction_item.slint";
+import { TextButton } from "../widgets.slint";
+
+export component TransactionsPage inherits Rectangle {
+    background: Palette.background;
+
+    VerticalLayout {
+        padding: 48px;
+        padding-left: 64px;
+        padding-right: 64px;
+        spacing: 0px;
+
+        // Header section
+        HorizontalLayout {
+            height: 48px;
+            spacing: 0px;
+
+            // Title
+            Text {
+                text: "TRANSACTIONS";
+                color: Palette.text-muted;
+                font-size: 11px;
+                font-weight: 400;
+                letter-spacing: 3px;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+            }
+
+            // Add transaction button
+            Rectangle {
+                width: 120px;
+
+                TextButton {
+                    text: "+ ADD";
+                    enabled: true;
+
+                    clicked => {
+                        AppState.show-add-transaction = true;
+                    }
+                }
+            }
+        }
+
+        // Spacer
+        Rectangle {
+            height: 24px;
+        }
+
+        // Divider
+        Rectangle {
+            height: 1px;
+            background: Palette.border;
+        }
+
+        // Transaction list
+        if TransactionAdapter.transactions.length > 0: Rectangle {
+            vertical-stretch: 1;
+
+            Flickable {
+                viewport-height: TransactionAdapter.transactions.length * 56px;
+
+                VerticalLayout {
+                    spacing: 0px;
+
+                    for transaction[index] in TransactionAdapter.transactions: TransactionItem {
+                        transaction: transaction;
+                        is-last: index == TransactionAdapter.transactions.length - 1;
+
+                        clicked => {
+                            // TODO: Open transaction details
+                        }
+                    }
+                }
+            }
+        }
+
+        // Empty state
+        if TransactionAdapter.transactions.length == 0: Rectangle {
+            vertical-stretch: 1;
+
+            VerticalLayout {
+                alignment: center;
+                spacing: 16px;
+
+                Text {
+                    text: "No transactions yet";
+                    color: Palette.text-muted;
+                    font-size: 14px;
+                    font-weight: 300;
+                    font-italic: true;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: "Add your first entry to start tracking";
+                    color: Palette.text-subtle;
+                    font-size: 12px;
+                    font-weight: 400;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+
+        // Footer
+        Rectangle {
+            height: 48px;
+
+            HorizontalLayout {
+                alignment: start;
+
+                Text {
+                    text: TransactionAdapter.transactions.length == 1 ? "1 entry" : TransactionAdapter.transactions.length + " entries";
+                    color: Palette.text-subtle;
+                    font-size: 10px;
+                    font-weight: 400;
+                    letter-spacing: 1px;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,98 @@
+// ==================== Account Item ====================
+// Noir Minimalist - Single account row for list view
+
+import { Palette, AccountData } from "../globals.slint";
+
+export component AccountItem inherits Rectangle {
+    in property <AccountData> account;
+    in property <bool> is-last: false;
+
+    callback clicked();
+
+    height: 64px;
+    background: touch.has-hover ? Palette.surface-hover : transparent;
+
+    animate background {
+        duration: 120ms;
+        easing: ease-out;
+    }
+
+    // Content layout
+    HorizontalLayout {
+        padding-left: 24px;
+        padding-right: 24px;
+        spacing: 16px;
+
+        // Account initial / icon
+        Rectangle {
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            background: Palette.surface;
+
+            Text {
+                text: account.account-type == "Bank" ? "B" : account.account-type == "Cash" ? "C" : account.account-type == "Credit" ? "CR" : "•";
+                color: Palette.text-secondary;
+                font-size: 14px;
+                font-weight: 500;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        // Account info (name + type)
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            spacing: 4px;
+
+            Text {
+                text: account.name;
+                color: Palette.text-primary;
+                font-size: 14px;
+                font-weight: 400;
+                overflow: elide;
+            }
+
+            Text {
+                text: account.account-type;
+                color: Palette.text-muted;
+                font-size: 11px;
+                font-weight: 400;
+                letter-spacing: 0.5px;
+            }
+        }
+
+        // Balance (right aligned)
+        VerticalLayout {
+            alignment: center;
+
+            Text {
+                text: account.balance;
+                color: Palette.text-primary;
+                font-size: 14px;
+                font-weight: 400;
+                letter-spacing: 0.5px;
+                horizontal-alignment: right;
+            }
+        }
+    }
+
+    // Bottom border (except for last item)
+    if !is-last: Rectangle {
+        y: parent.height - 1px;
+        height: 1px;
+        x: 24px;
+        width: parent.width - 48px;
+        background: Palette.border-subtle;
+    }
+
+    // Touch area
+    touch := TouchArea {
+        mouse-cursor: pointer;
+
+        clicked => {
+            root.clicked();
+        }
+    }
+}

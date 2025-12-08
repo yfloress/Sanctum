@@ -4,7 +4,10 @@
 import { Palette, AuthAdapter, AppState } from "globals.slint";
 import { LoginPage } from "pages/login.slint";
 import { DashboardPage } from "pages/dashboard.slint";
+import { AccountsPage } from "pages/accounts.slint";
+import { TransactionsPage } from "pages/transactions.slint";
 import { SanctumSidebar } from "components/sidebar.slint";
+import { AddTransactionModal } from "modals/add_transaction.slint";
 
 // ==================== Main Application Window ====================
 
@@ -40,68 +43,16 @@ export component AppWindow inherits Window {
                 height: 100%;
             }
 
-            // Accounts (placeholder)
-            if AppState.active-page == "accounts": Rectangle {
+            // Accounts
+            if AppState.active-page == "accounts": AccountsPage {
                 width: 100%;
                 height: 100%;
-
-                VerticalLayout {
-                    alignment: center;
-
-                    Text {
-                        text: "ACCOUNTS";
-                        color: Palette.text-muted;
-                        font-size: 11px;
-                        font-weight: 400;
-                        letter-spacing: 3px;
-                        horizontal-alignment: center;
-                    }
-
-                    Rectangle {
-                        height: 16px;
-                    }
-
-                    Text {
-                        text: "Coming soon";
-                        color: Palette.text-subtle;
-                        font-size: 13px;
-                        font-weight: 300;
-                        font-italic: true;
-                        horizontal-alignment: center;
-                    }
-                }
             }
 
-            // Transactions (placeholder)
-            if AppState.active-page == "transactions": Rectangle {
+            // Transactions
+            if AppState.active-page == "transactions": TransactionsPage {
                 width: 100%;
                 height: 100%;
-
-                VerticalLayout {
-                    alignment: center;
-
-                    Text {
-                        text: "TRANSACTIONS";
-                        color: Palette.text-muted;
-                        font-size: 11px;
-                        font-weight: 400;
-                        letter-spacing: 3px;
-                        horizontal-alignment: center;
-                    }
-
-                    Rectangle {
-                        height: 16px;
-                    }
-
-                    Text {
-                        text: "Coming soon";
-                        color: Palette.text-subtle;
-                        font-size: 13px;
-                        font-weight: 300;
-                        font-italic: true;
-                        horizontal-alignment: center;
-                    }
-                }
             }
 
             // Settings (placeholder)
@@ -137,7 +88,15 @@ export component AppWindow inherits Window {
             }
         }
     }
+
+    // ==================== Modal Overlays ====================
+
+    // Add Transaction Modal
+    if AppState.show-add-transaction: AddTransactionModal {
+        width: 100%;
+        height: 100%;
+    }
 }
 
-// Re-export AuthAdapter for main.rs to access
+// Re-export adapters for main.rs
 export { AuthAdapter }

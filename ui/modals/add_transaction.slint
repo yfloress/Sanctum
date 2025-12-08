@@ -1,0 +1,509 @@
+// ==================== Add Transaction Modal ====================
+// Noir Minimalist - Overlay form for adding new transactions
+
+import {
+    Palette,
+    AppState,
+    TransactionAdapter,
+    Categories,
+} from "../globals.slint";
+
+// ==================== UnderlineField ====================
+// Minimal input with only bottom border
+
+component UnderlineField inherits Rectangle {
+    in property <string> label: "";
+    in property <string> placeholder: "";
+    in-out property <string> value: "";
+    in property <bool> large: false;
+
+    height: large ? 80px : 56px;
+    background: transparent;
+
+    VerticalLayout {
+        spacing: 8px;
+
+        // Label
+        Text {
+            text: root.label;
+            color: Palette.text-muted;
+            font-size: 10px;
+            font-weight: 400;
+            letter-spacing: 2px;
+        }
+
+        // Input area
+        Rectangle {
+            vertical-stretch: 1;
+
+            // Placeholder
+            if root.value == "" && !input.has-focus: Text {
+                text: root.placeholder;
+                color: Palette.text-subtle;
+                font-size: large ? 28px : 14px;
+                font-weight: 300;
+                vertical-alignment: center;
+            }
+
+            input := TextInput {
+                text <=> root.value;
+                color: Palette.text-primary;
+                font-size: large ? 28px : 14px;
+                font-weight: 300;
+                vertical-alignment: center;
+            }
+
+            TouchArea {
+                clicked => {
+                    input.focus();
+                }
+            }
+        }
+
+        // Underline
+        Rectangle {
+            height: input.has-focus ? 2px : 1px;
+            background: input.has-focus ? Palette.accent : Palette.border;
+
+            animate height {
+                duration: 150ms;
+                easing: ease-out;
+            }
+            animate background {
+                duration: 150ms;
+                easing: ease-out;
+            }
+        }
+    }
+}
+
+// ==================== CategorySelector ====================
+// Dropdown-style category picker
+
+component CategorySelector inherits Rectangle {
+    in property <string> label: "CATEGORY";
+    in property <[string]> categories: [];
+    in-out property <int> selected-index: 0;
+    in-out property <bool> expanded: false;
+
+    height: expanded ? 56px + (categories.length * 36px) + 8px : 56px;
+    background: transparent;
+    clip: true;
+
+    animate height {
+        duration: 150ms;
+        easing: ease-out;
+    }
+
+    VerticalLayout {
+        spacing: 8px;
+
+        // Label
+        Text {
+            text: root.label;
+            color: Palette.text-muted;
+            font-size: 10px;
+            font-weight: 400;
+            letter-spacing: 2px;
+        }
+
+        // Selected value / trigger
+        Rectangle {
+            height: 32px;
+
+            HorizontalLayout {
+                Text {
+                    text: categories.length > 0 ? categories[selected-index] : "Select...";
+                    color: Palette.text-primary;
+                    font-size: 14px;
+                    font-weight: 300;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+
+                Text {
+                    text: expanded ? "▲" : "▼";
+                    color: Palette.text-muted;
+                    font-size: 10px;
+                    vertical-alignment: center;
+                }
+            }
+
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.expanded = !root.expanded;
+                }
+            }
+        }
+
+        // Underline
+        Rectangle {
+            height: 1px;
+            background: expanded ? Palette.accent : Palette.border;
+
+            animate background {
+                duration: 150ms;
+                easing: ease-out;
+            }
+        }
+
+        // Dropdown options
+        if expanded: Rectangle {
+            background: Palette.surface;
+            border-radius: 4px;
+
+            VerticalLayout {
+                padding: 4px;
+                spacing: 0px;
+
+                for category[index] in categories: Rectangle {
+                    height: 36px;
+                    background: option-touch.has-hover ? Palette.surface-hover : transparent;
+                    border-radius: 2px;
+
+                    Text {
+                        text: category;
+                        color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
+                        font-size: 12px;
+                        font-weight: index == selected-index ? 500 : 400;
+                        letter-spacing: 1px;
+                        vertical-alignment: center;
+                        horizontal-alignment: left;
+                        x: 12px;
+                    }
+
+                    option-touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            root.selected-index = index;
+                            root.expanded = false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ==================== TypeToggle ====================
+// Expense / Income toggle switch
+
+component TypeToggle inherits Rectangle {
+    in-out property <bool> is-expense: true;
+
+    height: 48px;
+    background: transparent;
+
+    HorizontalLayout {
+        spacing: 0px;
+
+        // Expense button
+        Rectangle {
+            horizontal-stretch: 1;
+            background: is-expense ? Palette.surface : transparent;
+            border-radius: 4px;
+
+            animate background {
+                duration: 150ms;
+                easing: ease-out;
+            }
+
+            Text {
+                text: "EXPENSE";
+                color: is-expense ? Palette.danger : Palette.text-muted;
+                font-size: 11px;
+                font-weight: is-expense ? 500 : 400;
+                letter-spacing: 2px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+
+                animate color {
+                    duration: 150ms;
+                    easing: ease-out;
+                }
+            }
+
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.is-expense = true;
+                }
+            }
+        }
+
+        // Spacer
+        Rectangle {
+            width: 8px;
+        }
+
+        // Income button
+        Rectangle {
+            horizontal-stretch: 1;
+            background: !is-expense ? Palette.surface : transparent;
+            border-radius: 4px;
+
+            animate background {
+                duration: 150ms;
+                easing: ease-out;
+            }
+
+            Text {
+                text: "INCOME";
+                color: !is-expense ? Palette.success : Palette.text-muted;
+                font-size: 11px;
+                font-weight: !is-expense ? 500 : 400;
+                letter-spacing: 2px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+
+                animate color {
+                    duration: 150ms;
+                    easing: ease-out;
+                }
+            }
+
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.is-expense = false;
+                }
+            }
+        }
+    }
+}
+
+// ==================== AddTransactionModal ====================
+// Main modal component
+
+export component AddTransactionModal inherits Rectangle {
+    // Form state
+    property <string> amount-value: "";
+    property <string> description-value: "";
+    property <int> category-index: 0;
+    property <string> date-value: "2024-01-15";
+    property <bool> is-expense: true;
+    property <string> error-message: "";
+    property <bool> category-expanded: false;
+
+    // Get current categories based on type
+    property <[string]> current-categories: is-expense ? Categories.expense-categories : Categories.income-categories;
+
+    // Reset form
+    function reset-form() {
+        amount-value = "";
+        description-value = "";
+        category-index = 0;
+        date-value = "2024-01-15";
+        is-expense = true;
+        error-message = "";
+        category-expanded = false;
+    }
+
+    // Submit form
+    function submit() {
+        if (amount-value == "") {
+            error-message = "Amount is required";
+            return;
+        }
+
+        // Get selected category
+        // Call adapter (using first account as default for now)
+        error-message = TransactionAdapter.add-transaction(
+            "1",  // account_id placeholder
+            amount-value,
+            current-categories[category-index],
+            description-value,
+            is-expense);
+
+        if (error-message == "") {
+            root.reset-form();
+            AppState.show-add-transaction = false;
+        }
+    }
+
+    width: 100%;
+    height: 100%;
+    background: transparent;
+
+    // Backdrop
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        background: #000000cc;
+
+        TouchArea {
+            clicked => {
+                root.reset-form();
+                AppState.show-add-transaction = false;
+            }
+        }
+    }
+
+    // Modal panel
+    Rectangle {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        width: 400px;
+        height: 540px;
+        background: Palette.sidebar-bg;
+        border-radius: 8px;
+        border-width: 1px;
+        border-color: Palette.border;
+
+        // Prevent clicks from closing
+        TouchArea { }
+
+        VerticalLayout {
+            padding: 32px;
+            spacing: 0px;
+
+            // Header
+            HorizontalLayout {
+                height: 32px;
+
+                Text {
+                    text: "NEW ENTRY";
+                    color: Palette.text-primary;
+                    font-size: 12px;
+                    font-weight: 400;
+                    letter-spacing: 3px;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+
+                // Close button
+                Rectangle {
+                    width: 32px;
+                    height: 32px;
+
+                    Text {
+                        text: "×";
+                        color: close-touch.has-hover ? Palette.text-primary : Palette.text-muted;
+                        font-size: 24px;
+                        font-weight: 300;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+
+                        animate color { duration: 120ms; }
+                    }
+
+                    close-touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            root.reset-form();
+                            AppState.show-add-transaction = false;
+                        }
+                    }
+                }
+            }
+
+            // Spacer
+            Rectangle {
+                height: 24px;
+            }
+
+            // Type toggle
+            TypeToggle {
+                is-expense <=> root.is-expense;
+            }
+
+            // Spacer
+            Rectangle {
+                height: 32px;
+            }
+
+            // Amount field (large)
+            UnderlineField {
+                label: "AMOUNT";
+                placeholder: "0.00";
+                value <=> amount-value;
+                large: true;
+            }
+
+            // Spacer
+            Rectangle {
+                height: 24px;
+            }
+
+            // Category selector
+            CategorySelector {
+                label: "CATEGORY";
+                categories: current-categories;
+                selected-index <=> category-index;
+                expanded <=> category-expanded;
+            }
+
+            // Spacer
+            Rectangle {
+                height: 16px;
+            }
+
+            // Description field (optional)
+            UnderlineField {
+                label: "DESCRIPTION (OPTIONAL)";
+                placeholder: "Add a note...";
+                value <=> description-value;
+            }
+
+            // Spacer
+            Rectangle {
+                height: 16px;
+            }
+
+            // Date field
+            UnderlineField {
+                label: "DATE";
+                placeholder: "YYYY-MM-DD";
+                value <=> date-value;
+            }
+
+            // Error message
+            if error-message != "": Rectangle {
+                height: 32px;
+
+                Text {
+                    text: error-message;
+                    color: Palette.danger;
+                    font-size: 12px;
+                    font-weight: 400;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+
+            // Spacer
+            Rectangle {
+                vertical-stretch: 1;
+            }
+
+            // Submit button
+            Rectangle {
+                height: 48px;
+                background: submit-touch.has-hover ? Palette.surface-hover : Palette.surface;
+                border-radius: 4px;
+                border-width: 1px;
+                border-color: Palette.border;
+
+                animate background { duration: 120ms; }
+
+                Text {
+                    text: "SAVE ENTRY";
+                    color: Palette.text-primary;
+                    font-size: 12px;
+                    font-weight: 400;
+                    letter-spacing: 2px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+
+                submit-touch := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.submit();
+                    }
+                }
+            }
+        }
+    }
+}

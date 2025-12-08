@@ -34,6 +34,7 @@ export global Palette {
     out property <color> border: #333333;          // Dark border
     out property <color> border-light: #ffffff;    // White border/lines
     out property <color> border-focus: #ffffff;    // Focus state
+    out property <color> border-subtle: #222222;   // Very subtle borders
 
     // Spacing scale
     out property <length> spacing-xs: 4px;
@@ -58,6 +59,25 @@ export global Palette {
     out property <length> font-size-3xl: 48px;
 }
 
+// ==================== Data Structures ====================
+
+export struct AccountData {
+    id: string,
+    name: string,
+    account-type: string,   // "Bank", "Cash", "Credit", etc.
+    currency: string,
+    balance: string,        // Pre-formatted string e.g. "$ 12,500.00"
+}
+
+export struct TransactionData {
+    id: string,
+    date: string,           // Formatted date e.g. "2024-01-15"
+    description: string,
+    category: string,
+    amount: string,         // Pre-formatted e.g. "- $ 50.00" or "+ $ 100.00"
+    is-expense: bool,
+}
+
 // ==================== Authentication Adapter ====================
 // Bridge between Slint UI and Rust backend
 
@@ -75,6 +95,59 @@ export global AuthAdapter {
     callback lock-vault() -> string;
 }
 
+// ==================== Account Adapter ====================
+// Bridge for account management
+
+export global AccountAdapter {
+    // List of accounts (populated from Rust backend)
+    in-out property <[AccountData]> accounts: [];
+
+    // Callback to fetch/refresh accounts from Rust backend
+    callback fetch-accounts();
+
+    // Callback to create a new account
+    callback create-account(string, string, string) -> string; // name, type, currency -> "" or error
+
+    // Callback to delete an account
+    callback delete-account(string) -> string; // id -> "" or error
+}
+
+// ==================== Transaction Adapter ====================
+// Bridge for transaction management
+
+// ==================== Categories ====================
+// Predefined list of transaction categories
+
+export global Categories {
+    out property <[string]> expense-categories: [
+        "FOOD",
+        "TRANSPORT",
+        "UTILITIES",
+        "ENTERTAINMENT",
+        "HEALTH",
+        "SHOPPING",
+        "EDUCATION",
+        "OTHER"
+    ];
+
+    out property <[string]> income-categories: ["SALARY", "FREELANCE", "INVESTMENT", "GIFT", "OTHER"];
+}
+
+export global TransactionAdapter {
+    // List of transactions (populated from Rust backend)
+    in-out property <[TransactionData]> transactions: [];
+
+    // Callback to fetch/refresh transactions from Rust backend
+    callback fetch-transactions();
+
+    // Callback to add a new transaction
+    // (account_id, amount, category, description, is_expense) -> "" or error
+    callback add-transaction(string, string, string, string, bool) -> string;
+
+    // Callback to delete a transaction
+    callback delete-transaction(string) -> string; // id -> "" or error
+}
+
 // ==================== Application State ====================
 // Global state management
 
@@ -87,4 +160,8 @@ export global AppState {
 
     // Loading state
     in-out property <bool> is-loading: false;
+
+    // Modal states
+    in-out property <bool> show-add-transaction: false;
+    in-out property <bool> show-add-account: false;
 }
