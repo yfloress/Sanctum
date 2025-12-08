@@ -107,6 +107,41 @@ export global AnalyticsAdapter {
     callback fetch-analytics(string); // range
 }
 
+// ==================== Habit Adapter ====================
+
+export struct HabitDay {
+    day: int,
+    completed: bool,
+    date: string, // YYYY-MM-DD
+}
+
+export struct HabitData {
+    id: string,
+    name: string,
+    description: string,
+    color: color,
+    streak: int,
+    completion-rate: int,
+    days: [HabitDay], // Array of days for the current month
+}
+
+export global HabitAdapter {
+    in-out property <[HabitData]> habits: [];
+    in-out property <string> current-month-name: "";
+    in-out property <int> current-year: 2024;
+    in-out property <int> current-month-index: 1;
+
+    // Actions
+    callback fetch-habits(int, int); // month (1-12), year
+    callback create-habit(string, string, string) -> string; // name, desc, color -> error or ""
+    callback toggle-habit(string, string); // id, date
+    callback delete-habit(string) -> string;
+    
+    // Navigation
+    callback prev-month();
+    callback next-month();
+}
+
 // ==================== Notification Adapter ====================
 
 export global NotificationAdapter {
@@ -224,6 +259,7 @@ export global AppState {
     in-out property <bool> account-edit-mode: false;
     in-out property <int> selected-account-index: 0;
     in-out property <bool> show-transfer-modal: false;
+    in-out property <bool> show-add-habit: false;
 
     // Current date (YYYY-MM-DD), set from backend to avoid hardcoded defaults
     in-out property <string> current-date: "2024-01-01";

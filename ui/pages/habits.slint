@@ -1,0 +1,93 @@
+import { Palette, HabitAdapter, AppState } from "../globals.slint";
+import { HabitRow } from "../components/habit_row.slint";
+import { TextButton } from "../widgets.slint";
+import { AddHabitModal } from "../modals/add_habit.slint";
+
+export component HabitsPage inherits Rectangle {
+    background: Palette.background;
+
+    VerticalLayout {
+        padding: 48px;
+        padding-left: 64px;
+        padding-right: 64px;
+        spacing: 0px;
+
+        // Header
+        HorizontalLayout {
+            height: 48px;
+            alignment: space-between;
+
+            // Month Navigation
+            HorizontalLayout {
+                spacing: 16px;
+                
+                Text {
+                    text: "←";
+                    color: Palette.text-muted;
+                    font-size: 18px;
+                    vertical-alignment: center;
+                    TouchArea { mouse-cursor: pointer; clicked => { HabitAdapter.prev-month(); } }
+                }
+                
+                Text {
+                    text: HabitAdapter.current-month-name + " " + HabitAdapter.current-year;
+                    color: Palette.text-primary;
+                    font-size: 14px;
+                    font-weight: 500;
+                    letter-spacing: 2px;
+                    vertical-alignment: center;
+                    width: 160px;
+                    horizontal-alignment: center;
+                }
+                
+                Text {
+                    text: "→";
+                    color: Palette.text-muted;
+                    font-size: 18px;
+                    vertical-alignment: center;
+                    TouchArea { mouse-cursor: pointer; clicked => { HabitAdapter.next-month(); } }
+                }
+            }
+
+            // Add Button
+            Rectangle {
+                width: 120px;
+                TextButton {
+                    text: "+ HABIT";
+                    clicked => { AppState.show-add-habit = true; }
+                }
+            }
+        }
+
+        Rectangle { height: 32px; }
+        
+        // Days Header (Optional, complicated to align perfectly without grid layout)
+        // Skipping days header for MVP, relying on tooltips or grid position.
+
+        // Habits List
+        if HabitAdapter.habits.length > 0 : Flickable {
+            viewport-height: HabitAdapter.habits.length * 64px;
+            VerticalLayout {
+                for habit in HabitAdapter.habits : HabitRow {
+                    habit: habit;
+                    toggle(date) => { HabitAdapter.toggle-habit(habit.id, date); }
+                    delete(id) => { HabitAdapter.delete-habit(id); }
+                }
+            }
+        }
+        
+        if HabitAdapter.habits.length == 0 : Rectangle {
+            vertical-stretch: 1;
+            Text {
+                text: "No habits tracked this month.";
+                color: Palette.text-muted;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+    
+    if AppState.show-add-habit : AddHabitModal {
+        close => { AppState.show-add-habit = false; }
+    }
+}

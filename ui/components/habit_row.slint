@@ -1,0 +1,106 @@
+import { Palette, HabitData, HabitDay, HabitAdapter } from "../globals.slint";
+
+export component HabitRow inherits Rectangle {
+    in property <HabitData> habit;
+    callback toggle(string); // date
+    callback delete(string); // id
+
+    height: 64px;
+    background: main-touch.has-hover ? Palette.surface-hover : transparent;
+    
+    main-touch := TouchArea { }
+
+    HorizontalLayout {
+        spacing: 16px;
+        alignment: start;
+
+        // Info Column
+        Rectangle {
+            width: 200px;
+            
+            HorizontalLayout {
+                spacing: 12px;
+                
+                // Color Indicator
+                Rectangle {
+                    width: 4px;
+                    height: 24px;
+                    background: habit.color;
+                    border-radius: 2px;
+                    y: (parent.height - self.height) / 2;
+                }
+                
+                VerticalLayout {
+                    alignment: center;
+                    spacing: 4px;
+                    
+                    Text {
+                        text: habit.name;
+                        color: Palette.text-primary;
+                        font-size: 13px;
+                        font-weight: 400;
+                        overflow: elide;
+                    }
+                    
+                    Text {
+                        text: habit.completion-rate + "% completed";
+                        color: Palette.text-muted;
+                        font-size: 10px;
+                    }
+                }
+                
+                // Delete button (hover)
+                if main-touch.has-hover : TouchArea {
+                    width: 24px;
+                    height: 24px;
+                    y: (parent.height - self.height) / 2;
+                    
+                    Text {
+                        text: "×";
+                        color: parent.has-hover ? Palette.danger : Palette.text-muted;
+                        font-size: 16px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                    
+                    clicked => {
+                        root.delete(habit.id);
+                    }
+                }
+            }
+        }
+
+        // Days Grid
+        HorizontalLayout {
+            spacing: 4px;
+            
+            for day in habit.days : Rectangle {
+                width: 24px;
+                height: 24px;
+                y: (parent.height - self.height) / 2;
+                
+                border-radius: 4px;
+                background: day.completed ? habit.color : Palette.surface;
+                border-width: 1px;
+                border-color: day.completed ? habit.color : Palette.border-subtle;
+                
+                // Day Number (visible if hovered or not completed to guide)
+                Text {
+                    text: day.day;
+                    color: day.completed ? Palette.background : Palette.text-muted;
+                    font-size: 9px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    opacity: day.completed ? 0.8 : 0.5;
+                }
+                
+                TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.toggle(day.date);
+                    }
+                }
+            }
+        }
+    }
+}

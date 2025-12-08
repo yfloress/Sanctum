@@ -10,6 +10,7 @@ use slint::SharedString;
 use slint::{ModelRc, VecModel, Weak};
 use std::collections::HashMap;
 use std::sync::Arc;
+use chrono::Datelike; // Import Datelike trait
 
 slint::include_modules!();
 
@@ -651,6 +652,193 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             },
         );
+    }
+
+    // ==================== HabitAdapter Logic ====================
+    
+    let current_habit_date = Arc::new(std::sync::Mutex::new(chrono::Local::now().date_naive()));
+
+    fn reload_habits(
+        ui_weak: &Weak<AppWindow>,
+        controller: &Arc<AppController>,
+        current_date: chrono::NaiveDate,
+    ) {
+        let year = current_date.year();
+        let month = current_date.month();
+        
+        let start_date = chrono::NaiveDate::from_ymd_opt(year, month, 1).unwrap();
+        let next_month = if month == 12 { 1 } else { month + 1 };
+        let next_year = if month == 12 { year + 1 } else { year };
+        let end_date = chrono::NaiveDate::from_ymd_opt(next_year, next_month, 1)
+            .unwrap()
+            .pred_opt()
+            .unwrap();
+            
+        let days_in_month = end_date.day();
+        
+        if let Ok(habits) = controller.get_habits() {
+            let start_str = start_date.format("%Y-%m-%d").to_string();
+            let end_str = end_date.format("%Y-%m-%d").to_string();
+            
+            let logs = controller.get_habit_logs(start_str, end_str).unwrap_or_default();
+            
+            let mut log_map: std::collections::HashSet<(String, String)> = std::collections::HashSet::new();
+            for log in logs {
+                log_map.insert((log.habit_id, log.completed_date));
+            }
+            
+            let mapped_habits: Vec<HabitData> = habits.into_iter().map(|h| {
+                let mut days_vec: Vec<HabitDay> = Vec::new();
+                let mut completions = 0;
+                
+                for d in 1..=days_in_month {
+                    let date = chrono::NaiveDate::from_ymd_opt(year, month, d).unwrap();
+                    let date_str = date.format("%Y-%m-%d").to_string();
+                    
+                    let completed = log_map.contains(&(h.id.clone(), date_str.clone()));
+                    if completed { completions += 1; }
+                    
+                    days_vec.push(HabitDay {
+                        day: d as i32,
+                        completed,
+                        date: SharedString::from(date_str),
+                    });
+                }
+                
+                let completion_rate = if days_in_month > 0 {
+                    ((completions as f32 / days_in_month as f32) * 100.0) as i32
+                } else { 0 };
+                
+                let color = if h.color.starts_with("#") && h.color.len() == 7 {
+                    let r = u8::from_str_radix(&h.color[1..3], 16).unwrap_or(0);
+                    let g = u8::from_str_radix(&h.color[3..5], 16).unwrap_or(0);
+                    let b = u8::from_str_radix(&h.color[5..7], 16).unwrap_or(0);
+                    slint::Color::from_rgb_u8(r, g, b)
+                } else {
+                    slint::Color::from_rgb_u8(139, 92, 246)
+                };
+
+                HabitData {
+                    id: SharedString::from(h.id),
+                    name: SharedString::from(h.name),
+                    description: SharedString::from(h.description.unwrap_or_default()),
+                    color,
+                    streak: 0, 
+                    completion_rate,
+                    days: ModelRc::new(VecModel::from(days_vec)),
+                }
+            }).collect();
+            
+            if let Some(ui) = ui_weak.upgrade() {
+                let adapter = ui.global::<HabitAdapter>();
+                adapter.set_habits(ModelRc::new(VecModel::from(mapped_habits)));
+                adapter.set_current_month_name(SharedString::from(start_date.format("%B").to_string().to_uppercase()));
+                adapter.set_current_year(year);
+                adapter.set_current_month_index(month as i32);
+            }
+        }
+    }
+
+    // Init Habits
+    {
+       let d = *current_habit_date.lock().unwrap();
+       reload_habits(&ui_weak, &controller, d);
+    }
+
+    // Callbacks
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let date_lock = current_habit_date.clone();
+        ui.global::<HabitAdapter>().on_fetch_habits(move |month, year| {
+             if let Some(date) = chrono::NaiveDate::from_ymd_opt(year, month as u32, 1) {
+                 *date_lock.lock().unwrap() = date;
+                 reload_habits(&ui_weak, &controller, date);
+             }
+        });
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let date_lock = current_habit_date.clone();
+        let notify = show_notification.clone();
+        ui.global::<HabitAdapter>().on_create_habit(move |name, desc, color| -> SharedString {
+            let result = controller.create_habit(
+                name.to_string(),
+                Some(desc.to_string()),
+                color.to_string(),
+            );
+            match result {
+                Ok(_) => {
+                    let d = *date_lock.lock().unwrap();
+                    reload_habits(&ui_weak, &controller, d);
+                    notify("Habit created".into(), false);
+                    SharedString::from("")
+                }
+                Err(e) => SharedString::from(e.to_string()),
+            }
+        });
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let date_lock = current_habit_date.clone();
+        let notify = show_notification.clone();
+        ui.global::<HabitAdapter>().on_delete_habit(move |id| -> SharedString {
+            let result = controller.delete_habit(id.to_string());
+            match result {
+                Ok(_) => {
+                    let d = *date_lock.lock().unwrap();
+                    reload_habits(&ui_weak, &controller, d);
+                    notify("Habit deleted".into(), false);
+                    SharedString::from("")
+                }
+                Err(e) => SharedString::from(e.to_string()),
+            }
+        });
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let date_lock = current_habit_date.clone();
+        ui.global::<HabitAdapter>().on_toggle_habit(move |id, date| {
+            if let Ok(_) = controller.toggle_habit_completion(id.to_string(), date.to_string()) {
+                 let d = *date_lock.lock().unwrap();
+                 reload_habits(&ui_weak, &controller, d);
+            }
+        });
+    }
+    
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let date_lock = current_habit_date.clone();
+        ui.global::<HabitAdapter>().on_prev_month(move || {
+             let mut d = date_lock.lock().unwrap();
+             // Subtract 1 month safely
+             let month = d.month();
+             let year = d.year();
+             let (new_y, new_m) = if month == 1 { (year - 1, 12) } else { (year, month - 1) };
+             *d = chrono::NaiveDate::from_ymd_opt(new_y, new_m, 1).unwrap();
+             reload_habits(&ui_weak, &controller, *d);
+        });
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let date_lock = current_habit_date.clone();
+        ui.global::<HabitAdapter>().on_next_month(move || {
+             let mut d = date_lock.lock().unwrap();
+             let month = d.month();
+             let year = d.year();
+             let (new_y, new_m) = if month == 12 { (year + 1, 1) } else { (year, month + 1) };
+             *d = chrono::NaiveDate::from_ymd_opt(new_y, new_m, 1).unwrap();
+             reload_habits(&ui_weak, &controller, *d);
+        });
     }
 
     // Run the UI event loop
