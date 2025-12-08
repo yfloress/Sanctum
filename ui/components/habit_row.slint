@@ -6,9 +6,7 @@ export component HabitRow inherits Rectangle {
     callback delete(string); // id
 
     height: 64px;
-    background: main-touch.has-hover ? Palette.surface-hover : transparent;
-    
-    main-touch := TouchArea { }
+    background: transparent;
 
     HorizontalLayout {
         spacing: 16px;
@@ -17,6 +15,8 @@ export component HabitRow inherits Rectangle {
         // Info Column
         Rectangle {
             width: 200px;
+            
+            info-touch := TouchArea { }
             
             HorizontalLayout {
                 spacing: 12px;
@@ -50,7 +50,7 @@ export component HabitRow inherits Rectangle {
                 }
                 
                 // Delete button (hover)
-                if main-touch.has-hover : TouchArea {
+                if info-touch.has-hover : TouchArea {
                     width: 24px;
                     height: 24px;
                     y: (parent.height - self.height) / 2;

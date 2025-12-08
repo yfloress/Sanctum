@@ -687,6 +687,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 log_map.insert((log.habit_id, log.completed_date));
             }
             
+            let mut daily_counts = vec![0; days_in_month as usize];
+            
             let mapped_habits: Vec<HabitData> = habits.into_iter().map(|h| {
                 let mut days_vec: Vec<HabitDay> = Vec::new();
                 let mut completions = 0;
@@ -696,7 +698,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let date_str = date.format("%Y-%m-%d").to_string();
                     
                     let completed = log_map.contains(&(h.id.clone(), date_str.clone()));
-                    if completed { completions += 1; }
+                    if completed { 
+                        completions += 1;
+                        daily_counts[(d-1) as usize] += 1;
+                    }
                     
                     days_vec.push(HabitDay {
                         day: d as i32,
@@ -729,12 +734,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }).collect();
             
+            // Generate Chart Path
+            let max_daily = *daily_counts.iter().max().unwrap_or(&0);
+            let len = daily_counts.len() as f32;
+            let mut path_cmd = String::new();
+            
+            for (idx, val) in daily_counts.iter().enumerate() {
+                let x = if len > 1.0 { (idx as f32) * (100.0 / (len - 1.0)) } else { 0.0 };
+                let y_norm = if max_daily == 0 { 
+                    100.0 // Flat at bottom
+                } else {
+                    let ratio = *val as f32 / max_daily as f32;
+                    100.0 - (10.0 + (ratio * 80.0)) // Padding
+                };
+                
+                if idx == 0 {
+                    path_cmd.push_str(&format!("M {:.2} {:.2}", x, y_norm));
+                } else {
+                    path_cmd.push_str(&format!(" L {:.2} {:.2}", x, y_norm));
+                }
+            }
+            if path_cmd.is_empty() { path_cmd = "M 0 100 L 100 100".to_string(); }
+            
             if let Some(ui) = ui_weak.upgrade() {
                 let adapter = ui.global::<HabitAdapter>();
                 adapter.set_habits(ModelRc::new(VecModel::from(mapped_habits)));
                 adapter.set_current_month_name(SharedString::from(start_date.format("%B").to_string().to_uppercase()));
                 adapter.set_current_year(year);
                 adapter.set_current_month_index(month as i32);
+                adapter.set_daily_activity_path(SharedString::from(path_cmd));
             }
         }
     }

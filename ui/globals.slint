@@ -128,8 +128,9 @@ export struct HabitData {
 export global HabitAdapter {
     in-out property <[HabitData]> habits: [];
     in-out property <string> current-month-name: "";
-    in-out property <int> current-year: 2024;
+    in-out property <int> current-year;
     in-out property <int> current-month-index: 1;
+    in-out property <string> daily-activity-path: "M 0 50 L 100 50"; // Chart path
 
     // Actions
     callback fetch-habits(int, int); // month (1-12), year
