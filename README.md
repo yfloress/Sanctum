@@ -31,6 +31,8 @@
 
 ---
 
+![Sanctum](./.img/sanctum.png)
+
 ## About
 
 **Sanctum** is a desktop application designed for those who refuse to compromise
