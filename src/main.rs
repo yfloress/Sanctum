@@ -687,25 +687,45 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 log_map.insert((log.habit_id, log.completed_date));
             }
             
-            let mapped_habits: Vec<HabitData> = habits.into_iter().map(|h| {
-                let mut days_vec: Vec<HabitDay> = Vec::new();
-                let mut completions = 0;
-                
-                for d in 1..=days_in_month {
-                    let date = chrono::NaiveDate::from_ymd_opt(year, month, d).unwrap();
-                    let date_str = date.format("%Y-%m-%d").to_string();
-                    
-                    let completed = log_map.contains(&(h.id.clone(), date_str.clone()));
-                    if completed { 
-                        completions += 1;
-                    }
-                    
-                    days_vec.push(HabitDay {
-                        day: d as i32,
-                        completed,
-                        date: SharedString::from(date_str),
-                    });
-                }
+                        let mapped_habits: Vec<HabitData> = habits.into_iter().map(|h| {
+            
+                            let mut days_vec: Vec<HabitDay> = Vec::new();
+            
+                            let mut completions = 0;
+            
+                            let today = chrono::Local::now().date_naive();
+            
+                            
+            
+                            for d in 1..=days_in_month {
+            
+                                let date = chrono::NaiveDate::from_ymd_opt(year, month, d).unwrap();
+            
+                                let date_str = date.format("%Y-%m-%d").to_string();
+            
+                                let is_future = date > today;
+            
+                                
+            
+                                let completed = log_map.contains(&(h.id.clone(), date_str.clone()));
+            
+                                if completed { completions += 1; }
+            
+                                
+            
+                                days_vec.push(HabitDay {
+            
+                                    day: d as i32,
+            
+                                    completed,
+            
+                                    date: SharedString::from(date_str),
+            
+                                    is_future,
+            
+                                });
+            
+                            }
                 
                 let completion_rate = if days_in_month > 0 {
                     ((completions as f32 / days_in_month as f32) * 100.0) as i32

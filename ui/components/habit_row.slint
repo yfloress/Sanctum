@@ -86,11 +86,12 @@ export component HabitRow inherits Rectangle {
                 y: (parent.height - self.height) / 2;
                 
                 border-radius: 4px;
-                background: day.completed ? habit.color : Palette.surface;
+                background: day.completed ? habit.color : (day.is-future ? Palette.background : Palette.surface);
                 border-width: 1px;
                 border-color: day.completed ? habit.color : Palette.border-subtle;
+                opacity: day.is-future ? 0.3 : 1.0;
                 
-                // Day Number (visible if hovered or not completed to guide)
+                // Day Number
                 Text {
                     text: day.day;
                     color: day.completed ? Palette.background : Palette.text-muted;
@@ -101,7 +102,8 @@ export component HabitRow inherits Rectangle {
                 }
                 
                 TouchArea {
-                    mouse-cursor: pointer;
+                    enabled: !day.is-future;
+                    mouse-cursor: self.enabled ? pointer : default;
                     clicked => {
                         root.toggle(day.date);
                     }

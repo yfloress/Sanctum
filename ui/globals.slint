@@ -113,6 +113,7 @@ export struct HabitDay {
     day: int,
     completed: bool,
     date: string, // YYYY-MM-DD
+    is-future: bool,
 }
 
 export struct HabitData {
@@ -128,7 +129,7 @@ export struct HabitData {
 export global HabitAdapter {
     in-out property <[HabitData]> habits: [];
     in-out property <string> current-month-name: "";
-    in-out property <int> current-year: 2025;
+    in-out property <int> current-year;
     in-out property <int> current-month-index: 1;
 
     // Actions
