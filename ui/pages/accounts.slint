@@ -40,17 +40,33 @@ export component AccountsPage inherits Rectangle {
                 horizontal-stretch: 1;
             }
 
-            // New account button
+            // Actions
             Rectangle {
-                width: 120px;
+                width: 260px;
 
-                TextButton {
-                    text: "+ NEW";
-                    enabled: true;
+                HorizontalLayout {
+                    spacing: 12px;
 
-                    clicked => {
-                        AccountAdapter.fetch-accounts();
-                        AppState.show-add-account = true;
+                    TextButton {
+                        text: "TRANSFER";
+                        enabled: AccountAdapter.accounts.length > 1;
+
+                        clicked => {
+                            AccountAdapter.fetch-accounts();
+                            AppState.show-transfer-modal = true;
+                        }
+                    }
+
+                    TextButton {
+                        text: "+ NEW";
+                        enabled: true;
+
+                        clicked => {
+                            AccountAdapter.fetch-accounts();
+                            AppState.account-edit-mode = false;
+                            AppState.selected-account-index = 0;
+                            AppState.show-add-account = true;
+                        }
                     }
                 }
             }
@@ -82,7 +98,9 @@ export component AccountsPage inherits Rectangle {
                         is-last: index == AccountAdapter.accounts.length - 1;
 
                         clicked => {
-                            // TODO: Open account details
+                            AppState.account-edit-mode = true;
+                            AppState.selected-account-index = index;
+                            AppState.show-add-account = true;
                         }
                     }
                 }

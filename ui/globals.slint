@@ -65,8 +65,11 @@ export struct AccountData {
     id: string,
     name: string,
     account-type: string,   // "Bank", "Cash", "Credit", etc.
+    account-type-key: string, // raw key: bank/cash/savings/credit_card/other
     currency: string,
     balance: string,        // Pre-formatted string e.g. "$ 12,500.00"
+    initial-balance: string, // Raw decimal string e.g. "12500.00"
+    is-archived: bool,
 }
 
 export struct TransactionData {
@@ -108,8 +111,14 @@ export global AccountAdapter {
     // Callback to create a new account
     callback create-account(string, string, string, string) -> string; // name, type, currency, initial -> "" or error
 
+    // Callback to update an account
+    callback update-account(string, string, string, string, string) -> string; // id, name, type, currency, initial -> "" or error
+
     // Callback to delete an account
     callback delete-account(string) -> string; // id -> "" or error
+
+    // Transfer funds between accounts
+    callback transfer-funds(string, string, string, string, string) -> string; // from, to, amount, description, date
 }
 
 // ==================== Transaction Adapter ====================
@@ -164,6 +173,9 @@ export global AppState {
     // Modal states
     in-out property <bool> show-add-transaction: false;
     in-out property <bool> show-add-account: false;
+    in-out property <bool> account-edit-mode: false;
+    in-out property <int> selected-account-index: 0;
+    in-out property <bool> show-transfer-modal: false;
 
     // Current date (YYYY-MM-DD), set from backend to avoid hardcoded defaults
     in-out property <string> current-date: "2024-01-01";

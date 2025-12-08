@@ -192,6 +192,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             balance_map.insert(bal.account_id.clone(), bal.current_balance);
         }
 
+        fn format_decimal_from_cents(value: i64) -> String {
+            let units = value / 100;
+            let cents = value.abs() % 100;
+            format!("{units}.{cents:02}")
+        }
+
         let mapped: Vec<AccountData> = accounts
             .iter()
             .map(|acc| {
@@ -212,8 +218,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     id: acc.id.clone().into(),
                     name: acc.name.clone().into(),
                     account_type: account_type.into(),
+                    account_type_key: acc.account_type.clone().into(),
                     currency: acc.currency.clone().into(),
                     balance: format_money(current_balance, &acc.currency).into(),
+                    initial_balance: format_decimal_from_cents(acc.initial_balance).into(),
+                    is_archived: acc.is_archived,
                 }
             })
             .collect();
@@ -299,6 +308,70 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let _ = reload_accounts(&ui_weak, &controller);
                         if let Some(ui) = ui_weak.upgrade() {
                             ui.global::<AppState>().set_show_add_account(false);
+                        }
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            },
+        );
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        ui.global::<AccountAdapter>().on_update_account(
+            move |id, name, account_type, currency, initial_balance| -> SharedString {
+                let amount_cents = parse_amount_input(&initial_balance).unwrap_or(0);
+
+                let result = controller.update_account(
+                    id.to_string(),
+                    name.to_string(),
+                    account_type.to_string().to_lowercase(),
+                    currency.to_string().to_uppercase(),
+                    amount_cents,
+                    "#8b5cf6".to_string(),
+                    None,
+                );
+
+                match result {
+                    Ok(_) => {
+                        let _ = reload_accounts(&ui_weak, &controller);
+                        if let Some(ui) = ui_weak.upgrade() {
+                            ui.global::<AppState>().set_show_add_account(false);
+                        }
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            },
+        );
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        ui.global::<AccountAdapter>().on_transfer_funds(
+            move |from_id, to_id, amount, description, date| -> SharedString {
+                let amount_cents = match parse_amount_input(&amount) {
+                    Some(v) if v > 0 => v,
+                    _ => return SharedString::from("Amount must be greater than zero"),
+                };
+
+                let result = controller.transfer_funds(
+                    from_id.to_string(),
+                    to_id.to_string(),
+                    amount_cents,
+                    description.to_string(),
+                    date.to_string(),
+                );
+
+                match result {
+                    Ok(_) => {
+                        let _ = reload_accounts(&ui_weak, &controller);
+                        let _ = reload_transactions(&ui_weak, &controller);
+                        if let Some(ui) = ui_weak.upgrade() {
+                            ui.global::<AppState>().set_show_transfer_modal(false);
                         }
                         SharedString::from("")
                     }

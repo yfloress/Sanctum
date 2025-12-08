@@ -15,6 +15,7 @@ import { TransactionsPage } from "pages/transactions.slint";
 import { SanctumSidebar } from "components/sidebar.slint";
 import { AddTransactionModal } from "modals/add_transaction.slint";
 import { AddAccountModal } from "modals/add_account.slint";
+import { TransferFundsModal } from "modals/transfer_funds.slint";
 
 // ==================== Main Application Window ====================
 
@@ -106,6 +107,14 @@ export component AppWindow inherits Window {
 
     // Add Account Modal
     if AppState.show-add-account: AddAccountModal {
+        width: 100%;
+        height: 100%;
+        editing: AppState.account-edit-mode;
+        selected-index: AppState.selected-account-index;
+    }
+
+    // Transfer Modal
+    if AppState.show-transfer-modal: TransferFundsModal {
         width: 100%;
         height: 100%;
     }

@@ -1,10 +1,7 @@
-// ==================== Add Account Modal ====================
-// Noir Minimalist - Overlay form for creating new accounts
+// ==================== Transfer Funds Modal ====================
+// Noir Minimalist - Overlay form for transferring between accounts
 
 import { Palette, AppState, AccountAdapter } from "../globals.slint";
-
-// ==================== UnderlineField ====================
-// Minimal input with bottom border
 
 component UnderlineField inherits Rectangle {
     in property <string> label: "";
@@ -67,16 +64,12 @@ component UnderlineField inherits Rectangle {
     }
 }
 
-// ==================== OptionSelector ====================
-// Simple dropdown-style selector
-
-component OptionSelector inherits Rectangle {
-    in property <string> label: "";
-    in property <[string]> options: [];
+component AccountSelector inherits Rectangle {
+    in property <string> label: "ACCOUNT";
     in-out property <int> selected-index: 0;
     in-out property <bool> expanded: false;
 
-    height: expanded ? 56px + (options.length * 32px) + 8px : 56px;
+    height: expanded ? 56px + (AccountAdapter.accounts.length * 36px) + 8px : 56px;
     background: transparent;
     clip: true;
 
@@ -101,7 +94,7 @@ component OptionSelector inherits Rectangle {
 
             HorizontalLayout {
                 Text {
-                    text: options.length > 0 ? options[selected-index] : "Select...";
+                    text: AccountAdapter.accounts.length > 0 ? AccountAdapter.accounts[selected-index].name + " (" + AccountAdapter.accounts[selected-index].currency + ")" : "No accounts";
                     color: Palette.text-primary;
                     font-size: 14px;
                     font-weight: 300;
@@ -142,13 +135,13 @@ component OptionSelector inherits Rectangle {
                 padding: 4px;
                 spacing: 0px;
 
-                for option[index] in options: Rectangle {
-                    height: 32px;
+                for account[index] in AccountAdapter.accounts: Rectangle {
+                    height: 36px;
                     background: option-touch.has-hover ? Palette.surface-hover : transparent;
                     border-radius: 2px;
 
                     Text {
-                        text: option;
+                        text: account.name + " (" + account.currency + ")";
                         color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
                         font-size: 12px;
                         font-weight: index == selected-index ? 500 : 400;
@@ -170,54 +163,46 @@ component OptionSelector inherits Rectangle {
     }
 }
 
-// ==================== AddAccountModal ====================
-
-export component AddAccountModal inherits Rectangle {
-    in property <bool> editing: false;
-    in property <int> selected-index: 0;
-
-    // Form state
-    property <string> name-value: editing && AccountAdapter.accounts.length > selected-index ? AccountAdapter.accounts[selected-index].name : "";
-    property <string> initial-balance: editing && AccountAdapter.accounts.length > selected-index ? AccountAdapter.accounts[selected-index].initial-balance : "";
-    property <int> type-index: editing && AccountAdapter.accounts.length > selected-index ? (AccountAdapter.accounts[selected-index].account-type-key == "cash" ? 1 : AccountAdapter.accounts[selected-index].account-type-key == "savings" ? 2 : AccountAdapter.accounts[selected-index].account-type-key == "credit_card" ? 3 : 0) : 0;
-    property <int> currency-index: editing && AccountAdapter.accounts.length > selected-index ? (AccountAdapter.accounts[selected-index].currency == "CLP" ? 1 : 0) : 0;
-    property <bool> type-expanded: false;
-    property <bool> currency-expanded: false;
+export component TransferFundsModal inherits Rectangle {
+    property <int> from-index: 0;
+    property <int> to-index: AccountAdapter.accounts.length > 1 ? 1 : 0;
+    property <string> amount-value: "";
+    property <string> description-value: "";
+    property <string> date-value: AppState.current-date;
     property <string> error-message: "";
 
-    property <[string]> type-options: ["Bank", "Cash", "Savings", "Credit"];
-    property <[string]> currency-options: ["USD", "CLP"];
-
     function reset-form() {
-        name-value = "";
-        initial-balance = "";
-        type-index = 0;
-        currency-index = 0;
-        type-expanded = false;
-        currency-expanded = false;
+        from-index = 0;
+        to-index = AccountAdapter.accounts.length > 1 ? 1 : 0;
+        amount-value = "";
+        description-value = "";
+        date-value = AppState.current-date;
         error-message = "";
     }
 
     function submit() {
-        if (name-value == "") {
-            error-message = "Name is required";
+        if (AccountAdapter.accounts.length < 2) {
+            error-message = "Need at least two accounts";
             return;
         }
-        let safe-index = selected-index >= AccountAdapter.accounts.length ? 0 : selected-index;
-        let result = editing ? AccountAdapter.update-account(
-                AccountAdapter.accounts[safe-index].id,
-                name-value,
-                type-options[type-index],
-                currency-options[currency-index],
-                initial-balance) : AccountAdapter.create-account(
-                name-value,
-                type-options[type-index],
-                currency-options[currency-index],
-                initial-balance);
+        if (from-index == to-index) {
+            error-message = "Select different accounts";
+            return;
+        }
+        if (amount-value == "") {
+            error-message = "Amount is required";
+            return;
+        }
+        let result = AccountAdapter.transfer-funds(
+            AccountAdapter.accounts[from-index].id,
+            AccountAdapter.accounts[to-index].id,
+            amount-value,
+            description-value,
+            date-value);
 
         if (result == "") {
             root.reset-form();
-            AppState.show-add-account = false;
+            AppState.show-transfer-modal = false;
             AccountAdapter.fetch-accounts();
         } else {
             error-message = result;
@@ -228,7 +213,6 @@ export component AddAccountModal inherits Rectangle {
     height: 100%;
     background: transparent;
 
-    // Backdrop
     Rectangle {
         width: 100%;
         height: 100%;
@@ -237,35 +221,32 @@ export component AddAccountModal inherits Rectangle {
         TouchArea {
             clicked => {
                 root.reset-form();
-                AppState.show-add-account = false;
+                AppState.show-transfer-modal = false;
             }
         }
     }
 
-    // Modal panel
     Rectangle {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
-        width: 420px;
-        height: 420px;
+        width: 440px;
+        height: 520px;
         background: Palette.sidebar-bg;
         border-radius: 8px;
         border-width: 1px;
         border-color: Palette.border;
 
-        // Prevent clicks from closing
         TouchArea { }
 
         VerticalLayout {
             padding: 32px;
             spacing: 0px;
 
-            // Header
             HorizontalLayout {
                 height: 32px;
 
                 Text {
-                    text: editing ? "EDIT ACCOUNT" : "NEW ACCOUNT";
+                    text: "TRANSFER FUNDS";
                     color: Palette.text-primary;
                     font-size: 12px;
                     font-weight: 400;
@@ -285,15 +266,13 @@ export component AddAccountModal inherits Rectangle {
                         font-weight: 300;
                         horizontal-alignment: center;
                         vertical-alignment: center;
-
-                        animate color { duration: 120ms; }
                     }
 
                     close-touch := TouchArea {
                         mouse-cursor: pointer;
                         clicked => {
                             root.reset-form();
-                            AppState.show-add-account = false;
+                            AppState.show-transfer-modal = false;
                         }
                     }
                 }
@@ -303,34 +282,29 @@ export component AddAccountModal inherits Rectangle {
                 height: 24px;
             }
 
-            UnderlineField {
-                label: "NAME";
-                placeholder: "Main Checking";
-                value <=> name-value;
+            AccountSelector {
+                label: "FROM";
+                selected-index <=> from-index;
             }
 
             Rectangle {
-                height: 16px;
+                height: 12px;
             }
 
-            HorizontalLayout {
-                spacing: 12px;
+            Text {
+                text: "↓";
+                color: Palette.text-muted;
+                font-size: 12px;
+                horizontal-alignment: center;
+            }
 
-                OptionSelector {
-                    horizontal-stretch: 1;
-                    label: "TYPE";
-                    options: type-options;
-                    selected-index <=> type-index;
-                    expanded <=> type-expanded;
-                }
+            Rectangle {
+                height: 12px;
+            }
 
-                OptionSelector {
-                    horizontal-stretch: 1;
-                    label: "CURRENCY";
-                    options: currency-options;
-                    selected-index <=> currency-index;
-                    expanded <=> currency-expanded;
-                }
+            AccountSelector {
+                label: "TO";
+                selected-index <=> to-index;
             }
 
             Rectangle {
@@ -338,9 +312,29 @@ export component AddAccountModal inherits Rectangle {
             }
 
             UnderlineField {
-                label: "INITIAL BALANCE";
+                label: "AMOUNT";
                 placeholder: "0.00";
-                value <=> initial-balance;
+                value <=> amount-value;
+            }
+
+            Rectangle {
+                height: 12px;
+            }
+
+            UnderlineField {
+                label: "DESCRIPTION (OPTIONAL)";
+                placeholder: "Reason for transfer";
+                value <=> description-value;
+            }
+
+            Rectangle {
+                height: 12px;
+            }
+
+            UnderlineField {
+                label: "DATE";
+                placeholder: "YYYY-MM-DD";
+                value <=> date-value;
             }
 
             if error-message != "": Rectangle {
@@ -370,7 +364,7 @@ export component AddAccountModal inherits Rectangle {
                 animate background { duration: 120ms; }
 
                 Text {
-                    text: "SAVE ACCOUNT";
+                    text: "TRANSFER";
                     color: Palette.text-primary;
                     font-size: 12px;
                     font-weight: 400;
