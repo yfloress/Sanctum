@@ -174,6 +174,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
+    // Register NotificationAdapter callback so UI can trigger it
+    {
+        let notify = show_notification.clone();
+        ui.global::<NotificationAdapter>().on_show(move |message, is_error| {
+            notify(message.to_string(), is_error);
+        });
+    }
+
     // Helpers to refresh UI models
     fn format_amount(amount_cents: i64) -> String {
         let abs = amount_cents.abs();
