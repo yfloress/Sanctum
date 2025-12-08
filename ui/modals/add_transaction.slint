@@ -79,22 +79,15 @@ component UnderlineField inherits Rectangle {
 }
 
 // ==================== CategorySelector ====================
-// Dropdown-style category picker
+// Dropdown-style category picker using PopupWindow
 
 component CategorySelector inherits Rectangle {
     in property <string> label: "CATEGORY";
     in property <[string]> categories: [];
     in-out property <int> selected-index: 0;
-    in-out property <bool> expanded: false;
 
-    height: expanded ? 56px + (categories.length * 36px) + 8px : 56px;
+    height: 56px;
     background: transparent;
-    clip: true;
-
-    animate height {
-        duration: 150ms;
-        easing: ease-out;
-    }
 
     VerticalLayout {
         spacing: 8px;
@@ -123,7 +116,7 @@ component CategorySelector inherits Rectangle {
                 }
 
                 Text {
-                    text: expanded ? "▲" : "▼";
+                    text: "▼";
                     color: Palette.text-muted;
                     font-size: 10px;
                     vertical-alignment: center;
@@ -133,7 +126,7 @@ component CategorySelector inherits Rectangle {
             TouchArea {
                 mouse-cursor: pointer;
                 clicked => {
-                    root.expanded = !root.expanded;
+                    popup.show();
                 }
             }
         }
@@ -141,44 +134,51 @@ component CategorySelector inherits Rectangle {
         // Underline
         Rectangle {
             height: 1px;
-            background: expanded ? Palette.accent : Palette.border;
-
-            animate background {
-                duration: 150ms;
-                easing: ease-out;
-            }
+            background: Palette.border;
         }
+    }
 
-        // Dropdown options
-        if expanded: Rectangle {
+    // Dropdown Popup
+    popup := PopupWindow {
+        x: 0;
+        y: 56px;
+        width: root.width;
+        
+        Rectangle {
             background: Palette.surface;
             border-radius: 4px;
+            border-width: 1px;
+            border-color: Palette.border;
+            height: min(categories.length * 36px + 8px, 240px);
 
-            VerticalLayout {
-                padding: 4px;
-                spacing: 0px;
+            Flickable {
+                viewport-height: categories.length * 36px + 8px;
+                
+                VerticalLayout {
+                    padding: 4px;
+                    spacing: 0px;
 
-                for category[index] in categories: Rectangle {
-                    height: 36px;
-                    background: option-touch.has-hover ? Palette.surface-hover : transparent;
-                    border-radius: 2px;
+                    for category[index] in categories: Rectangle {
+                        height: 36px;
+                        background: option-touch.has-hover ? Palette.surface-hover : transparent;
+                        border-radius: 2px;
 
-                    Text {
-                        text: category;
-                        color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
-                        font-size: 12px;
-                        font-weight: index == selected-index ? 500 : 400;
-                        letter-spacing: 1px;
-                        vertical-alignment: center;
-                        horizontal-alignment: left;
-                        x: 12px;
-                    }
+                        Text {
+                            text: category;
+                            color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
+                            font-size: 12px;
+                            font-weight: index == selected-index ? 500 : 400;
+                            letter-spacing: 1px;
+                            vertical-alignment: center;
+                            horizontal-alignment: left;
+                            x: 12px;
+                        }
 
-                    option-touch := TouchArea {
-                        mouse-cursor: pointer;
-                        clicked => {
-                            root.selected-index = index;
-                            root.expanded = false;
+                        option-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                root.selected-index = index;
+                            }
                         }
                     }
                 }
@@ -188,20 +188,13 @@ component CategorySelector inherits Rectangle {
 }
 
 // ==================== AccountSelector ====================
-// Dropdown for choosing an account
+// Dropdown for choosing an account using PopupWindow
 
 component AccountSelector inherits Rectangle {
     in-out property <int> selected-index: 0;
-    in-out property <bool> expanded: false;
 
-    height: expanded ? 56px + (AccountAdapter.accounts.length * 36px) + 8px : 56px;
+    height: 56px;
     background: transparent;
-    clip: true;
-
-    animate height {
-        duration: 150ms;
-        easing: ease-out;
-    }
 
     VerticalLayout {
         spacing: 8px;
@@ -228,7 +221,7 @@ component AccountSelector inherits Rectangle {
                 }
 
                 Text {
-                    text: expanded ? "▲" : "▼";
+                    text: "▼";
                     color: Palette.text-muted;
                     font-size: 10px;
                     vertical-alignment: center;
@@ -238,48 +231,56 @@ component AccountSelector inherits Rectangle {
             TouchArea {
                 mouse-cursor: pointer;
                 clicked => {
-                    root.expanded = !root.expanded;
+                    popup.show();
                 }
             }
         }
 
         Rectangle {
             height: 1px;
-            background: expanded ? Palette.accent : Palette.border;
-            animate background {
-                duration: 150ms;
-                easing: ease-out;
-            }
+            background: Palette.border;
         }
+    }
 
-        if expanded: Rectangle {
+    popup := PopupWindow {
+        x: 0;
+        y: 56px;
+        width: root.width;
+        
+        Rectangle {
             background: Palette.surface;
             border-radius: 4px;
+            border-width: 1px;
+            border-color: Palette.border;
+            height: min(AccountAdapter.accounts.length * 36px + 8px, 240px);
 
-            VerticalLayout {
-                padding: 4px;
-                spacing: 0px;
+            Flickable {
+                viewport-height: AccountAdapter.accounts.length * 36px + 8px;
+                
+                VerticalLayout {
+                    padding: 4px;
+                    spacing: 0px;
 
-                for account[index] in AccountAdapter.accounts: Rectangle {
-                    height: 36px;
-                    background: option-touch.has-hover ? Palette.surface-hover : transparent;
-                    border-radius: 2px;
+                    for account[index] in AccountAdapter.accounts: Rectangle {
+                        height: 36px;
+                        background: option-touch.has-hover ? Palette.surface-hover : transparent;
+                        border-radius: 2px;
 
-                    Text {
-                        text: account.name + " (" + account.currency + ")";
-                        color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
-                        font-size: 12px;
-                        font-weight: index == selected-index ? 500 : 400;
-                        letter-spacing: 1px;
-                        vertical-alignment: center;
-                        x: 12px;
-                    }
+                        Text {
+                            text: account.name + " (" + account.currency + ")";
+                            color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
+                            font-size: 12px;
+                            font-weight: index == selected-index ? 500 : 400;
+                            letter-spacing: 1px;
+                            vertical-alignment: center;
+                            x: 12px;
+                        }
 
-                    option-touch := TouchArea {
-                        mouse-cursor: pointer;
-                        clicked => {
-                            root.selected-index = index;
-                            root.expanded = false;
+                        option-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                root.selected-index = index;
+                            }
                         }
                     }
                 }
@@ -386,9 +387,7 @@ export component AddTransactionModal inherits Rectangle {
     property <string> date-value: AppState.current-date;
     property <bool> is-expense: true;
     property <string> error-message: "";
-    property <bool> category-expanded: false;
     property <int> account-index: 0;
-    property <bool> account-expanded: false;
 
     // Get current categories based on type
     property <[string]> current-categories: is-expense ? Categories.expense-categories : Categories.income-categories;
@@ -401,9 +400,7 @@ export component AddTransactionModal inherits Rectangle {
         date-value = AppState.current-date;
         is-expense = true;
         error-message = "";
-        category-expanded = false;
         account-index = 0;
-        account-expanded = false;
     }
 
     // Submit form
@@ -535,7 +532,6 @@ export component AddTransactionModal inherits Rectangle {
             // Account selector
             if AccountAdapter.accounts.length > 0: AccountSelector {
                 selected-index <=> account-index;
-                expanded <=> account-expanded;
             }
 
             if AccountAdapter.accounts.length == 0: Rectangle {
@@ -574,7 +570,6 @@ export component AddTransactionModal inherits Rectangle {
                 label: "CATEGORY";
                 categories: current-categories;
                 selected-index <=> category-index;
-                expanded <=> category-expanded;
             }
 
             // Spacer

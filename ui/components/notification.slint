@@ -1,0 +1,56 @@
+// ==================== Notification Toast ====================
+// Floating temporary message
+
+import { Palette } from "../globals.slint";
+
+export struct NotificationData {
+    message: string,
+    is-error: bool,
+    visible: bool,
+}
+
+export component NotificationToast inherits Rectangle {
+    in property <string> message: "";
+    in property <bool> is-error: false;
+    in property <bool> active: false;
+
+    width: 320px;
+    height: active ? 56px : 0px;
+    opacity: active ? 1.0 : 0.0;
+    visible: root.opacity > 0;
+
+    background: Palette.sidebar-bg;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: is-error ? Palette.danger : Palette.success;
+    
+    // Animation
+    animate height { duration: 200ms; easing: ease-out-back; }
+    animate opacity { duration: 200ms; easing: ease-out; }
+
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        spacing: 12px;
+        
+        // Icon
+        Text {
+            text: is-error ? "!" : "✓";
+            color: is-error ? Palette.danger : Palette.success;
+            font-size: 18px;
+            font-weight: 500;
+            vertical-alignment: center;
+        }
+        
+        // Message
+        Text {
+            text: root.message;
+            color: Palette.text-primary;
+            font-size: 13px;
+            font-weight: 400;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+            overflow: elide;
+        }
+    }
+}

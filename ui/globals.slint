@@ -107,6 +107,17 @@ export global AnalyticsAdapter {
     callback fetch-analytics(string); // range
 }
 
+// ==================== Notification Adapter ====================
+
+export global NotificationAdapter {
+    in-out property <string> message: "";
+    in-out property <bool> is-error: false;
+    in-out property <bool> active: false;
+    
+    // Call this to show a message
+    callback show(string, bool);
+}
+
 // ==================== Authentication Adapter ====================
 // Bridge between Slint UI and Rust backend
 

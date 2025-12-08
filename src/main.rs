@@ -147,6 +147,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let today = chrono::Local::now().format("%Y-%m-%d").to_string();
     ui.global::<AppState>().set_current_date(SharedString::from(today));
 
+    // Notification Helper
+    let notification_timer = std::rc::Rc::new(slint::Timer::default());
+    let show_notification = {
+        let ui_weak = ui_weak.clone();
+        let timer = notification_timer.clone();
+        move |message: String, is_error: bool| {
+            if let Some(ui) = ui_weak.upgrade() {
+                let adapter = ui.global::<NotificationAdapter>();
+                adapter.set_message(SharedString::from(message));
+                adapter.set_is_error(is_error);
+                adapter.set_active(true);
+                
+                let ui_weak_inner = ui_weak.clone();
+                timer.start(slint::TimerMode::SingleShot, std::time::Duration::from_secs(3), move || {
+                    if let Some(ui) = ui_weak_inner.upgrade() {
+                        ui.global::<NotificationAdapter>().set_active(false);
+                    }
+                });
+            }
+        }
+    };
+
     // Helpers to refresh UI models
     fn format_amount(amount_cents: i64) -> String {
         let abs = amount_cents.abs();
@@ -335,6 +357,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
+        let notify = show_notification.clone();
         ui.global::<AccountAdapter>().on_create_account(
             move |name, account_type, currency, initial_balance| -> SharedString {
                 let amount_cents = parse_amount_input(&initial_balance).unwrap_or(0);
@@ -355,6 +378,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             ui.global::<AppState>().set_show_add_account(false);
                             ui.global::<AnalyticsAdapter>().invoke_fetch_analytics("ALL".into());
                         }
+                        notify("Account created successfully".into(), false);
                         SharedString::from("")
                     }
                     Err(e) => SharedString::from(e.to_string()),
@@ -366,6 +390,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
+        let notify = show_notification.clone();
         ui.global::<AccountAdapter>().on_update_account(
             move |id, name, account_type, currency, initial_balance| -> SharedString {
                 let amount_cents = parse_amount_input(&initial_balance).unwrap_or(0);
@@ -387,6 +412,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             ui.global::<AppState>().set_show_add_account(false);
                             ui.global::<AnalyticsAdapter>().invoke_fetch_analytics("ALL".into());
                         }
+                        notify("Account updated successfully".into(), false);
                         SharedString::from("")
                     }
                     Err(e) => SharedString::from(e.to_string()),
@@ -398,6 +424,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
+        let notify = show_notification.clone();
         ui.global::<AccountAdapter>().on_transfer_funds(
             move |from_id, to_id, amount, description, date| -> SharedString {
                 let amount_cents = match parse_amount_input(&amount) {
@@ -420,6 +447,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(ui) = ui_weak.upgrade() {
                             ui.global::<AppState>().set_show_transfer_modal(false);
                         }
+                        notify("Transfer successful".into(), false);
                         SharedString::from("")
                     }
                     Err(e) => SharedString::from(e.to_string()),
@@ -431,12 +459,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
+        let notify = show_notification.clone();
         ui.global::<AccountAdapter>().on_delete_account(
             move |id| -> SharedString {
                 let result = controller.archive_account(id.to_string());
                 match result {
                     Ok(_) => {
                         let _ = reload_accounts(&ui_weak, &controller);
+                        notify("Account archived".into(), false);
                         SharedString::from("")
                     }
                     Err(e) => SharedString::from(e.to_string()),
@@ -458,6 +488,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
+        let notify = show_notification.clone();
         ui.global::<TransactionAdapter>().on_add_transaction(
             move |account_id,
                   amount,
@@ -488,6 +519,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(ui) = ui_weak.upgrade() {
                             ui.global::<AppState>().set_show_add_transaction(false);
                         }
+                        notify("Transaction added".into(), false);
                         SharedString::from("")
                     }
                     Err(e) => SharedString::from(e.to_string()),
@@ -581,6 +613,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
+        let notify = show_notification.clone();
         ui.global::<TransactionAdapter>().on_delete_transaction(
             move |id| -> SharedString {
                 let result = controller.delete_transaction(id.to_string());
@@ -588,6 +621,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Ok(_) => {
                         let _ = reload_transactions(&ui_weak, &controller);
                         let _ = reload_accounts(&ui_weak, &controller);
+                        notify("Transaction deleted".into(), false);
                         SharedString::from("")
                     }
                     Err(e) => SharedString::from(e.to_string()),
