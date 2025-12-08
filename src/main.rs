@@ -9,6 +9,7 @@ use sanctum::security_log::init_security_logger;
 use slint::SharedString;
 use slint::{ModelRc, VecModel, Weak};
 use std::collections::HashMap;
+use std::cell::Cell;
 use std::sync::Arc;
 use chrono::Datelike; // Import Datelike trait
 
@@ -80,6 +81,68 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
+    // Session monitor: warn and auto-logout on inactivity
+    let session_timer = std::rc::Rc::new(slint::Timer::default());
+    let session_warned = std::rc::Rc::new(Cell::new(false));
+    let start_session_monitor = std::rc::Rc::new({
+        let ui_weak = ui_weak.clone();
+        let controller = controller.clone();
+        let notify = show_notification.clone();
+        let timer = session_timer.clone();
+        let warned = session_warned.clone();
+        move || {
+            warned.set(false);
+            timer.start(
+                slint::TimerMode::Repeated,
+                std::time::Duration::from_secs(30),
+                {
+                    let ui_weak = ui_weak.clone();
+                    let controller = controller.clone();
+                    let notify = notify.clone();
+                    let timer = timer.clone();
+                    let warned = warned.clone();
+                    move || {
+                        match controller.get_session_remaining() {
+                            Ok(remaining) => {
+                                if remaining <= 0 {
+                                    timer.stop();
+                                    let _ = controller.close_db();
+                                    if let Some(ui) = ui_weak.upgrade() {
+                                        ui.global::<AppState>().set_is_logged_in(false);
+                                    }
+                                    notify("Session expired due to inactivity".into(), true);
+                                    warned.set(false);
+                                    return;
+                                }
+                                if remaining <= 120 {
+                                    if !warned.get() {
+                                        let mins = (remaining + 59) / 60;
+                                        notify(
+                                            format!("Session expires in {mins} minute(s)").into(),
+                                            true,
+                                        );
+                                        warned.set(true);
+                                    }
+                                } else {
+                                    warned.set(false);
+                                }
+                            }
+                            Err(_) => {
+                                timer.stop();
+                                let _ = controller.close_db();
+                                if let Some(ui) = ui_weak.upgrade() {
+                                    ui.global::<AppState>().set_is_logged_in(false);
+                                }
+                                notify("Session ended".into(), true);
+                                warned.set(false);
+                            }
+                        }
+                    }
+                },
+            );
+        }
+    });
+
     // Register NotificationAdapter callback so UI can trigger it
     {
         let notify = show_notification.clone();
@@ -110,6 +173,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let controller_clone = controller.clone();
         let notify = show_notification.clone();
+        let session_monitor = start_session_monitor.clone();
         auth_adapter.on_create_vault(move |password: SharedString| {
             log::info!("create_vault called");
 
@@ -119,6 +183,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Ok(msg) => {
                     log::info!("Vault created successfully: {}", msg);
                     notify("Vault created successfully".into(), false);
+                    session_monitor();
                     SharedString::from("")
                 }
                 Err(e) => {
@@ -137,6 +202,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let controller_clone = controller.clone();
         let notify = show_notification.clone();
+        let session_monitor = start_session_monitor.clone();
         auth_adapter.on_unlock_vault(move |password: SharedString| {
             log::info!("unlock_vault called");
 
@@ -146,6 +212,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Ok(msg) => {
                     log::info!("Vault unlocked successfully: {}", msg);
                     notify("Vault unlocked successfully".into(), false);
+                    session_monitor();
                     SharedString::from("")
                 }
                 Err(e) => {
@@ -164,6 +231,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let controller_clone = controller.clone();
         let notify = show_notification.clone();
+        let session_timer = session_timer.clone();
+        let session_warned = session_warned.clone();
         auth_adapter.on_lock_vault(move || {
             log::info!("lock_vault called");
 
@@ -171,6 +240,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Ok(msg) => {
                     log::info!("Vault locked successfully: {}", msg);
                     notify("Vault locked".into(), false);
+                    session_timer.stop();
+                    session_warned.set(false);
                     SharedString::from("")
                 }
                 Err(e) => {
