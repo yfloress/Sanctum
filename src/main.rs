@@ -527,12 +527,51 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         ui.global::<AnalyticsAdapter>().on_fetch_analytics(move || {
+            // 1. Net Worth History
             if let Ok((path, net_worth)) = controller.get_net_worth_history() {
                 if let Some(ui) = ui_weak.upgrade() {
                     let adapter = ui.global::<AnalyticsAdapter>();
                     adapter.set_chart_path(SharedString::from(path));
                     adapter.set_net_worth(SharedString::from(net_worth));
                 }
+            }
+
+            // 2. Expense Breakdown
+            if let Ok(expenses) = controller.get_expenses_by_category() {
+                 let total_expense: i64 = expenses.iter().map(|(_, amt)| amt).sum();
+                 
+                 let colors = [
+                    slint::Color::from_rgb_u8(139, 92, 246), // #8b5cf6
+                    slint::Color::from_rgb_u8(236, 72, 153), // #ec4899
+                    slint::Color::from_rgb_u8(59, 130, 246), // #3b82f6
+                    slint::Color::from_rgb_u8(16, 185, 129), // #10b981
+                    slint::Color::from_rgb_u8(245, 158, 11), // #f59e0b
+                    slint::Color::from_rgb_u8(239, 68, 68),  // #ef4444
+                    slint::Color::from_rgb_u8(99, 102, 241), // #6366f1
+                    slint::Color::from_rgb_u8(20, 184, 166), // #14b8a6
+                 ];
+
+                 let mapped: Vec<CategoryData> = expenses.iter().enumerate().map(|(i, (cat, amt))| {
+                     let percentage = if total_expense > 0 {
+                         *amt as f32 / total_expense as f32
+                     } else {
+                         0.0
+                     };
+                     
+                     let color = colors[i % colors.len()];
+                     
+                     CategoryData {
+                         name: SharedString::from(cat),
+                         amount: SharedString::from(format_money(*amt, "USD")),
+                         percentage,
+                         color,
+                     }
+                 }).collect();
+                 
+                 if let Some(ui) = ui_weak.upgrade() {
+                     let adapter = ui.global::<AnalyticsAdapter>();
+                     adapter.set_expense_breakdown(ModelRc::new(VecModel::from(mapped)));
+                 }
             }
         });
     }

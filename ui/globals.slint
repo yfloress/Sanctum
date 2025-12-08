@@ -87,11 +87,19 @@ export struct BalanceData {
     total-expense: string,
 }
 
+export struct CategoryData {
+    name: string,
+    amount: string,
+    percentage: float,
+    color: color,
+}
+
 // ==================== Analytics Adapter ====================
 
 export global AnalyticsAdapter {
     in-out property <string> chart-path: "M 0 50 L 100 50";
     in-out property <string> net-worth: "$ 0.00";
+    in-out property <[CategoryData]> expense-breakdown: [];
 
     callback fetch-analytics();
 }

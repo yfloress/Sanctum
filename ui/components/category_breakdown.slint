@@ -1,0 +1,67 @@
+import { Palette, CategoryData } from "../globals.slint";
+
+export component CategoryItem inherits Rectangle {
+    in property <CategoryData> category;
+    
+    height: 40px;
+    background: transparent;
+    
+    VerticalLayout {
+        spacing: 6px;
+        alignment: center;
+        
+        HorizontalLayout {
+            Text {
+                text: category.name;
+                color: Palette.text-primary;
+                font-size: 11px;
+                font-weight: 400;
+                horizontal-stretch: 1;
+                letter-spacing: 1px;
+            }
+            
+            Text {
+                text: category.amount;
+                color: Palette.text-secondary;
+                font-size: 11px;
+                font-weight: 400;
+            }
+        }
+        
+        // Progress Bar Background
+        Rectangle {
+            height: 3px;
+            background: Palette.surface;
+            border-radius: 1px;
+            clip: true;
+            
+            // Fill
+            Rectangle {
+                x: 0;
+                width: parent.width * category.percentage;
+                height: 100%;
+                background: category.color;
+                border-radius: 1px;
+                
+                animate width { duration: 800ms; easing: ease-out-expo; }
+            }
+        }
+    }
+}
+
+export component CategoryBreakdown inherits VerticalLayout {
+    in property <[CategoryData]> categories;
+    spacing: 16px;
+    
+    if categories.length == 0: Text {
+        text: "No expenses recorded";
+        color: Palette.text-muted;
+        font-size: 12px;
+        horizontal-alignment: center;
+        font-italic: true;
+    }
+
+    for category in categories : CategoryItem {
+        category: category;
+    }
+}

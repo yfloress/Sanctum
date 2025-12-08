@@ -3,6 +3,7 @@
 
 import { Palette, AnalyticsAdapter } from "../globals.slint";
 import { SanctumChart } from "../components/chart.slint";
+import { CategoryBreakdown } from "../components/category_breakdown.slint";
 
 export component AnalyticsPage inherits Rectangle {
     background: Palette.background;
@@ -44,7 +45,7 @@ export component AnalyticsPage inherits Rectangle {
 
         // Chart
         Rectangle {
-            height: 320px;
+            height: 240px;
             background: Palette.surface;
             border-radius: 8px;
             border-width: 1px;
@@ -58,25 +59,31 @@ export component AnalyticsPage inherits Rectangle {
         }
 
         Rectangle {
-            height: 24px;
+            height: 32px;
         }
 
-        // Footer placeholders
-        VerticalLayout {
-            spacing: 6px;
+        // Expenses Breakdown
+        Text {
+            text: "EXPENSES BY CATEGORY";
+            color: Palette.text-muted;
+            font-size: 11px;
+            font-weight: 400;
+            letter-spacing: 3px;
+        }
 
-            Text {
-                text: "HIGHEST INCOME (MONTH): --";
-                color: Palette.text-secondary;
-                font-size: 12px;
-                font-weight: 400;
-            }
+        Rectangle {
+            height: 16px;
+        }
 
-            Text {
-                text: "HIGHEST EXPENSE (MONTH): --";
-                color: Palette.text-secondary;
-                font-size: 12px;
-                font-weight: 400;
+        Rectangle {
+            vertical-stretch: 1;
+            
+            Flickable {
+                viewport-height: AnalyticsAdapter.expense-breakdown.length * 56px;
+                
+                CategoryBreakdown {
+                    categories: AnalyticsAdapter.expense-breakdown;
+                }
             }
         }
     }

@@ -961,6 +961,23 @@ impl AppController {
         self.with_db(|db| db.get_balance_summary().map_err(ControllerError::Database))
     }
 
+    /// Gets expenses aggregated by category
+    pub fn get_expenses_by_category(&self) -> Result<Vec<(String, i64)>, ControllerError> {
+        let transactions = self.get_transactions()?;
+        let mut map: std::collections::HashMap<String, i64> = std::collections::HashMap::new();
+
+        for tx in transactions {
+            if tx.transaction_type == "expense" {
+                *map.entry(tx.category).or_default() += tx.amount;
+            }
+        }
+
+        let mut result: Vec<(String, i64)> = map.into_iter().collect();
+        // Sort by amount descending
+        result.sort_by(|a, b| b.1.cmp(&a.1));
+        Ok(result)
+    }
+
     /// Deletes a transaction
     pub fn delete_transaction(&self, id: String) -> Result<(), ControllerError> {
         self.with_db(|db| {
