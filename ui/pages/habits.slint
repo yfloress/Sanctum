@@ -2,7 +2,6 @@ import { Palette, HabitAdapter, AppState } from "../globals.slint";
 import { HabitRow } from "../components/habit_row.slint";
 import { TextButton } from "../widgets.slint";
 import { AddHabitModal } from "../modals/add_habit.slint";
-import { ActivityBarChart } from "../components/activity_bar_chart.slint";
 
 export component HabitsPage inherits Rectangle {
     background: Palette.background;
@@ -81,39 +80,6 @@ export component HabitsPage inherits Rectangle {
                 color: Palette.text-muted;
                 horizontal-alignment: center;
                 vertical-alignment: center;
-            }
-        }
-        
-        // Daily Activity Chart
-        if HabitAdapter.habits.length > 0 : Rectangle {
-            height: 160px;
-            
-            VerticalLayout {
-                spacing: 12px;
-                
-                Rectangle { height: 1px; background: Palette.border; }
-                
-                Text { 
-                    text: "DAILY ACTIVITY"; 
-                    color: Palette.text-muted; 
-                    font-size: 10px; 
-                    letter-spacing: 2px; 
-                }
-                
-                Rectangle {
-                    background: Palette.surface;
-                    border-radius: 8px;
-                    border-width: 1px;
-                    border-color: Palette.border;
-                    
-                    ActivityBarChart {
-                        x: 16px;
-                        y: 16px;
-                        width: parent.width - 32px;
-                        height: parent.height - 32px;
-                        data: HabitAdapter.daily-activity-data;
-                    }
-                }
             }
         }
     }

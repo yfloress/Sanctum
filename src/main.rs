@@ -687,8 +687,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 log_map.insert((log.habit_id, log.completed_date));
             }
             
-            let mut daily_counts = vec![0; days_in_month as usize];
-            
             let mapped_habits: Vec<HabitData> = habits.into_iter().map(|h| {
                 let mut days_vec: Vec<HabitDay> = Vec::new();
                 let mut completions = 0;
@@ -700,7 +698,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let completed = log_map.contains(&(h.id.clone(), date_str.clone()));
                     if completed { 
                         completions += 1;
-                        daily_counts[(d-1) as usize] += 1;
                     }
                     
                     days_vec.push(HabitDay {
@@ -714,6 +711,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ((completions as f32 / days_in_month as f32) * 100.0) as i32
                 } else { 0 };
                 
+                // Streak Calculation (Within viewed month context for now)
+                let today = chrono::Local::now().date_naive();
+                // If viewing past month, check from end of that month. If future, 0. If current, from today.
+                let mut streak = 0;
+                if year == today.year() && month == today.month() {
+                    let mut check_date = today;
+                    // If today is not done, check if yesterday was done to show "current streak"
+                    // But usually streak is strictly consecutive including today or breaking today.
+                    // We will check from today backwards.
+                    while check_date >= start_date {
+                        let d_str = check_date.format("%Y-%m-%d").to_string();
+                        if log_map.contains(&(h.id.clone(), d_str)) {
+                            streak += 1;
+                        } else if check_date == today {
+                            // Skip today if not done, try yesterday
+                        } else {
+                            break;
+                        }
+                        check_date = check_date.pred_opt().unwrap();
+                    }
+                }
+
                 let color = if h.color.starts_with("#") && h.color.len() == 7 {
                     let r = u8::from_str_radix(&h.color[1..3], 16).unwrap_or(0);
                     let g = u8::from_str_radix(&h.color[3..5], 16).unwrap_or(0);
@@ -728,19 +747,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     name: SharedString::from(h.name),
                     description: SharedString::from(h.description.unwrap_or_default()),
                     color,
-                    streak: 0, 
+                    streak, 
                     completion_rate,
                     days: ModelRc::new(VecModel::from(days_vec)),
                 }
             }).collect();
-            
-            // Generate Chart Data
-            let max_daily = *daily_counts.iter().max().unwrap_or(&0);
-            let max_f = if max_daily > 0 { max_daily as f32 } else { 1.0 };
-            
-            let chart_data: Vec<f32> = daily_counts.iter()
-                .map(|&c| c as f32 / max_f)
-                .collect();
             
             if let Some(ui) = ui_weak.upgrade() {
                 let adapter = ui.global::<HabitAdapter>();
@@ -748,7 +759,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 adapter.set_current_month_name(SharedString::from(start_date.format("%B").to_string().to_uppercase()));
                 adapter.set_current_year(year);
                 adapter.set_current_month_index(month as i32);
-                adapter.set_daily_activity_data(ModelRc::new(VecModel::from(chart_data)));
             }
         }
     }

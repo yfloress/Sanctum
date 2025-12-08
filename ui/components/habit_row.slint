@@ -43,9 +43,15 @@ export component HabitRow inherits Rectangle {
                     }
                     
                     Text {
-                        text: habit.completion-rate + "% completed";
+                        text: habit.completion-rate + "%";
                         color: Palette.text-muted;
                         font-size: 10px;
+                    }
+                    
+                    if habit.streak > 0 : HorizontalLayout {
+                        spacing: 2px;
+                        Text { text: "🔥"; font-size: 10px; }
+                        Text { text: habit.streak; color: Palette.warning; font-size: 10px; font-weight: 500; }
                     }
                 }
                 
