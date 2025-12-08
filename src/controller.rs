@@ -1356,27 +1356,31 @@ impl AppController {
     }
 
     /// Returns normalized SVG path commands (0-100 space) for net worth history and current net worth formatted
-    pub fn get_net_worth_history(&self) -> Result<(String, String), ControllerError> {
+    /// Also returns min and max values formatted for labels
+    pub fn get_net_worth_history(&self, range: &str) -> Result<(String, String, String, String), ControllerError> {
         let accounts = self.get_accounts()?;
         let mut transactions = self.get_transactions()?;
 
         // Sum initial balances
-        let mut total_balance: i64 = accounts.iter().map(|a| a.initial_balance).sum();
-
-        // Simple formatter: $ units.cents
-        fn format_money(value: i64) -> String {
-            let abs = value.abs();
-            let units = abs / 100;
-            let cents = abs % 100;
-            let sign = if value < 0 { "-" } else { "" };
-            format!("{sign}$ {units}.{cents:02}")
-        }
+        let initial_total_balance: i64 = accounts.iter().map(|a| a.initial_balance).sum();
 
         // Use DB order (date DESC, rowid DESC) reversed to keep chronological sequence
         transactions.reverse();
 
-        let mut balances: Vec<i64> = Vec::new();
-        balances.push(total_balance); // initial point before any tx
+        // 1. Calculate the running balance history for ALL time first
+        // We need this to find the starting balance at the beginning of the requested range
+        let mut full_history: Vec<(chrono::NaiveDate, i64)> = Vec::new();
+        let mut current_balance = initial_total_balance;
+        
+        // Push initial state (arbitrary date before first tx, or creation date of oldest account?)
+        // For simplicity, we assume initial balance is at time 0 of the first transaction or now if empty
+        if let Some(first_tx) = transactions.first() {
+             if let Ok(date) = NaiveDate::parse_from_str(&first_tx.date, "%Y-%m-%d") {
+                  full_history.push((date.pred_opt().unwrap_or(date), initial_total_balance));
+             }
+        } else {
+             full_history.push((chrono::Local::now().date_naive(), initial_total_balance));
+        }
 
         for tx in &transactions {
             let delta = match tx.transaction_type.as_str() {
@@ -1384,21 +1388,49 @@ impl AppController {
                 "expense" => -tx.amount,
                 _ => 0, // transfers do not affect net worth
             };
-            total_balance += delta;
-            balances.push(total_balance);
+            current_balance += delta;
+            
+            if let Ok(date) = NaiveDate::parse_from_str(&tx.date, "%Y-%m-%d") {
+                full_history.push((date, current_balance));
+            }
+        }
+        
+        let net_worth_formatted = self.format_money_display(current_balance);
+
+        // 2. Filter based on Range
+        let now = chrono::Local::now().date_naive();
+        let start_date = match range {
+            "1M" => Some(now - chrono::Duration::days(30)),
+            "3M" => Some(now - chrono::Duration::days(90)),
+            "6M" => Some(now - chrono::Duration::days(180)),
+            "1Y" => Some(now - chrono::Duration::days(365)),
+            _ => None, // ALL
+        };
+
+        let filtered_history: Vec<(chrono::NaiveDate, i64)> = if let Some(start) = start_date {
+            full_history.into_iter().filter(|(d, _)| *d >= start).collect()
+        } else {
+            full_history
+        };
+
+        if filtered_history.is_empty() {
+             return Ok(("M 0 50 L 100 50".to_string(), net_worth_formatted, "$ 0.00".to_string(), "$ 0.00".to_string()));
         }
 
-        let net_worth_formatted = format_money(total_balance);
-
-        if balances.is_empty() {
-            return Ok(("M 0 50 L 100 50".to_string(), net_worth_formatted));
-        }
-
+        let balances: Vec<i64> = filtered_history.iter().map(|(_, b)| *b).collect();
         let min_val = *balances.iter().min().unwrap_or(&0);
         let max_val = *balances.iter().max().unwrap_or(&0);
+        
+        let min_formatted = self.format_money_display(min_val);
+        let max_formatted = self.format_money_display(max_val);
 
         let len = balances.len() as f32;
         let mut path_cmd = String::new();
+        
+        // PADDING: Add 5% padding top and bottom so the line doesn't touch the edges
+        let range = (max_val - min_val) as f32;
+        // avoid division by zero
+        let safe_range = if range == 0.0 { 1.0 } else { range };
 
         for (idx, val) in balances.iter().enumerate() {
             let x = if len > 1.0 {
@@ -1410,8 +1442,10 @@ impl AppController {
             let y_norm = if max_val == min_val {
                 50.0
             } else {
-                let ratio = (*val - min_val) as f32 / (max_val - min_val) as f32;
-                100.0 - (ratio * 100.0)
+                // Normalize 0..1
+                let ratio = (*val - min_val) as f32 / safe_range;
+                // Scale to 5..95 (inverted because SVG Y is down)
+                100.0 - (5.0 + (ratio * 90.0)) 
             };
 
             if idx == 0 {
@@ -1425,7 +1459,15 @@ impl AppController {
             path_cmd = "M 0 50 L 100 50".to_string();
         }
 
-        Ok((path_cmd, net_worth_formatted))
+        Ok((path_cmd, net_worth_formatted, min_formatted, max_formatted))
+    }
+
+    fn format_money_display(&self, value: i64) -> String {
+        let abs = value.abs();
+        let units = abs / 100;
+        let cents = abs % 100;
+        let sign = if value < 0 { "-" } else { "" };
+        format!("{sign}$ {units}.{cents:02}")
     }
 }
 

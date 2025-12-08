@@ -5,21 +5,64 @@ import { Palette } from "../globals.slint";
 
 export component SanctumChart inherits Rectangle {
     in property <string> commands: "M 0 50 L 100 50";
+    in property <string> min-label: "";
+    in property <string> max-label: "";
 
     background: Palette.background;
+    clip: true;
 
-    // Fill (closed path)
-    Path {
-        commands: commands + " L 100 100 L 0 100 Z";
-        fill: @linear-gradient(0deg, Palette.accent-muted, #00000000);
-        stroke-width: 0px;
+    // Grid Lines (Horizontal)
+    VerticalLayout {
+        padding-top: 20px;
+        padding-bottom: 20px;
+        alignment: space-between;
+        
+        // Top line
+        Rectangle { height: 1px; background: Palette.border-subtle; opacity: 0.5; }
+        // Middle line
+        Rectangle { height: 1px; background: Palette.border-subtle; opacity: 0.3; }
+        // Bottom line
+        Rectangle { height: 1px; background: Palette.border-subtle; opacity: 0.5; }
+    }
+    
+    // Labels (Y-Axis)
+    if max-label != "": Text {
+        x: 8px;
+        y: 8px;
+        text: max-label;
+        color: Palette.text-muted;
+        font-size: 10px;
+    }
+    
+    if min-label != "": Text {
+        x: 8px;
+        y: parent.height - 20px;
+        text: min-label;
+        color: Palette.text-muted;
+        font-size: 10px;
     }
 
-    // Line
-    Path {
-        commands: commands;
-        stroke: Palette.accent;
-        stroke-width: 2px;
-        fill: transparent;
+    // Chart Content
+    // We use a container with padding so the line doesn't get cut off by the labels or edges
+    Rectangle {
+        x: 0;
+        y: 0;
+        width: 100%;
+        height: 100%;
+        
+        // Fill (closed path)
+        Path {
+            commands: commands + " L 100 100 L 0 100 Z";
+            fill: @linear-gradient(0deg, Palette.accent-muted, #00000000);
+            stroke-width: 0px;
+        }
+
+        // Line
+        Path {
+            commands: commands;
+            stroke: Palette.accent;
+            stroke-width: 2px;
+            fill: transparent;
+        }
     }
 }

@@ -99,9 +99,12 @@ export struct CategoryData {
 export global AnalyticsAdapter {
     in-out property <string> chart-path: "M 0 50 L 100 50";
     in-out property <string> net-worth: "$ 0.00";
+    in-out property <string> max-value: "";
+    in-out property <string> min-value: "";
     in-out property <[CategoryData]> expense-breakdown: [];
+    in-out property <string> active-range: "ALL"; // 1M, 6M, 1Y, ALL
 
-    callback fetch-analytics();
+    callback fetch-analytics(string); // range
 }
 
 // ==================== Authentication Adapter ====================

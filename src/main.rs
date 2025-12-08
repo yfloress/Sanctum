@@ -353,7 +353,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let _ = reload_accounts(&ui_weak, &controller);
                         if let Some(ui) = ui_weak.upgrade() {
                             ui.global::<AppState>().set_show_add_account(false);
-                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics();
+                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics("ALL".into());
                         }
                         SharedString::from("")
                     }
@@ -385,7 +385,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let _ = reload_accounts(&ui_weak, &controller);
                         if let Some(ui) = ui_weak.upgrade() {
                             ui.global::<AppState>().set_show_add_account(false);
-                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics();
+                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics("ALL".into());
                         }
                         SharedString::from("")
                     }
@@ -526,17 +526,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
-        ui.global::<AnalyticsAdapter>().on_fetch_analytics(move || {
+        ui.global::<AnalyticsAdapter>().on_fetch_analytics(move |range| {
             // 1. Net Worth History
-            if let Ok((path, net_worth)) = controller.get_net_worth_history() {
+            if let Ok((path, net_worth, min_val, max_val)) = controller.get_net_worth_history(&range) {
                 if let Some(ui) = ui_weak.upgrade() {
                     let adapter = ui.global::<AnalyticsAdapter>();
                     adapter.set_chart_path(SharedString::from(path));
                     adapter.set_net_worth(SharedString::from(net_worth));
+                    adapter.set_min_value(SharedString::from(min_val));
+                    adapter.set_max_value(SharedString::from(max_val));
                 }
             }
 
-            // 2. Expense Breakdown
+            // 2. Expense Breakdown (Keep it global/ALL for now, or filter later if needed)
             if let Ok(expenses) = controller.get_expenses_by_category() {
                  let total_expense: i64 = expenses.iter().map(|(_, amt)| amt).sum();
                  
