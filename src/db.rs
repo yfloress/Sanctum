@@ -1,3 +1,5 @@
+#![allow(clippy::collapsible_if, clippy::if_same_then_else, clippy::type_complexity)]
+
 use crate::models::{
     Account, AccountBalance, AggregatedAsset, BalanceSummary, CryptoHolding, CryptoTransaction,
     CryptoTransactionType, CryptoWallet, Habit, HabitLog, Transaction,

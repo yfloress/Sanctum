@@ -714,12 +714,12 @@ impl AppController {
     /// Checks if a vault file exists
     pub fn check_vault_exists(&self) -> bool {
         // Check if custom path was used previously
-        if let Ok(config) = self.load_config() {
-            if let Some(last_path) = config.last_db_path {
-                let path = PathBuf::from(&last_path);
-                if path.exists() {
-                    return true;
-                }
+        if let Ok(config) = self.load_config()
+            && let Some(last_path) = config.last_db_path
+        {
+            let path = PathBuf::from(&last_path);
+            if path.exists() {
+                return true;
             }
         }
 
@@ -738,10 +738,10 @@ impl AppController {
         }
 
         // Otherwise, return the last used path or default
-        if let Ok(config) = self.load_config() {
-            if let Some(last) = config.last_db_path {
-                return Ok(last);
-            }
+        if let Ok(config) = self.load_config()
+            && let Some(last) = config.last_db_path
+        {
+            return Ok(last);
         }
 
         Ok(self.default_db_path().to_string_lossy().to_string())
@@ -816,6 +816,7 @@ impl AppController {
     }
 
     /// Updates an account
+    #[allow(clippy::too_many_arguments)]
     pub fn update_account(
         &self,
         id: String,
@@ -1078,6 +1079,7 @@ impl AppController {
     // ==================== Crypto Transaction Methods ====================
 
     /// Adds a crypto transaction
+    #[allow(clippy::too_many_arguments)]
     pub fn add_crypto_transaction(
         &self,
         wallet_id: String,
@@ -1154,10 +1156,10 @@ impl AppController {
             let validated_id = validate_uuid(&id)?;
 
             // Check if this transaction has a related transaction (swap/transfer)
-            if let Ok(Some(tx)) = db.get_crypto_transaction(&validated_id) {
-                if let Some(related_id) = tx.related_tx_id {
-                    let _ = db.delete_crypto_transaction(&related_id);
-                }
+            if let Ok(Some(tx)) = db.get_crypto_transaction(&validated_id)
+                && let Some(related_id) = tx.related_tx_id
+            {
+                let _ = db.delete_crypto_transaction(&related_id);
             }
 
             db.delete_crypto_transaction(&validated_id)?;

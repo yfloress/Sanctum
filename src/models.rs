@@ -468,6 +468,7 @@ pub struct AccountBalance {
 
 impl Transaction {
     /// Crea una nueva transacción
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         id: String,
         account_id: String,
