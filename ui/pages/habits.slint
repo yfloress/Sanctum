@@ -2,7 +2,7 @@ import { Palette, HabitAdapter, AppState } from "../globals.slint";
 import { HabitRow } from "../components/habit_row.slint";
 import { TextButton } from "../widgets.slint";
 import { AddHabitModal } from "../modals/add_habit.slint";
-import { SanctumChart } from "../components/chart.slint";
+import { ActivityBarChart } from "../components/activity_bar_chart.slint";
 
 export component HabitsPage inherits Rectangle {
     background: Palette.background;
@@ -106,10 +106,12 @@ export component HabitsPage inherits Rectangle {
                     border-width: 1px;
                     border-color: Palette.border;
                     
-                    SanctumChart {
-                        width: 100%;
-                        height: 100%;
-                        commands: HabitAdapter.daily-activity-path;
+                    ActivityBarChart {
+                        x: 16px;
+                        y: 16px;
+                        width: parent.width - 32px;
+                        height: parent.height - 32px;
+                        data: HabitAdapter.daily-activity-data;
                     }
                 }
             }

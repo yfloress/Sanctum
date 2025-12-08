@@ -1,0 +1,30 @@
+import { Palette } from "../globals.slint";
+
+export component ActivityBarChart inherits Rectangle {
+    in property <[float]> data: [];
+    
+    height: 100%;
+    background: transparent;
+    
+    HorizontalLayout {
+        height: 100%;
+        spacing: 4px;
+        alignment: center;
+        
+        for val in data : VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: end; // Align to bottom
+            
+            Rectangle {
+                width: 100%;
+                height: root.height * val;
+                border-radius: 2px;
+                background: val > 0 ? Palette.accent : Palette.surface;
+                opacity: val > 0 ? 0.4 + (val * 0.6) : 0.2; // Opacity based on intensity
+                
+                animate height { duration: 400ms; easing: ease-out-expo; }
+                animate background { duration: 400ms; }
+            }
+        }
+    }
+}
