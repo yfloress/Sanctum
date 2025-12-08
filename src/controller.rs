@@ -1359,56 +1359,108 @@ impl AppController {
     /// Also returns min and max values formatted for labels
     pub fn get_net_worth_history(&self, range: &str) -> Result<(String, String, String, String), ControllerError> {
         let accounts = self.get_accounts()?;
-        let mut transactions = self.get_transactions()?;
+        let transactions = self.get_transactions()?;
 
-        // Sum initial balances
-        let initial_total_balance: i64 = accounts.iter().map(|a| a.initial_balance).sum();
-
-        // Use DB order (date DESC, rowid DESC) reversed to keep chronological sequence
-        transactions.reverse();
-
-        // 1. Calculate the running balance history for ALL time first
-        // We need this to find the starting balance at the beginning of the requested range
-        let mut full_history: Vec<(chrono::NaiveDate, i64)> = Vec::new();
-        let mut current_balance = initial_total_balance;
-        
-        // Push initial state (arbitrary date before first tx, or creation date of oldest account?)
-        // For simplicity, we assume initial balance is at time 0 of the first transaction or now if empty
-        if let Some(first_tx) = transactions.first() {
-             if let Ok(date) = NaiveDate::parse_from_str(&first_tx.date, "%Y-%m-%d") {
-                  full_history.push((date.pred_opt().unwrap_or(date), initial_total_balance));
-             }
-        } else {
-             full_history.push((chrono::Local::now().date_naive(), initial_total_balance));
+        // Event definition to merge Account Creations and Transactions
+        struct FinancialEvent {
+            date: chrono::NaiveDate,
+            amount_delta: i64,
         }
 
-        for tx in &transactions {
-            let delta = match tx.transaction_type.as_str() {
-                "income" => tx.amount,
-                "expense" => -tx.amount,
-                _ => 0, // transfers do not affect net worth
-            };
-            current_balance += delta;
-            
-            if let Ok(date) = NaiveDate::parse_from_str(&tx.date, "%Y-%m-%d") {
-                full_history.push((date, current_balance));
+        let mut events: Vec<FinancialEvent> = Vec::new();
+
+        // 1. Add Account Creation Events (Initial Balances)
+        for acc in &accounts {
+            if acc.initial_balance != 0 {
+                // Try to parse created_at, fallback to today if invalid
+                let date = if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(&acc.created_at) {
+                    dt.date_naive()
+                } else if let Ok(d) = NaiveDate::parse_from_str(&acc.created_at, "%Y-%m-%d") {
+                    d
+                } else {
+                     chrono::Local::now().date_naive()
+                };
+                
+                events.push(FinancialEvent {
+                    date,
+                    amount_delta: acc.initial_balance,
+                });
             }
         }
+
+        // 2. Add Transaction Events
+        for tx in &transactions {
+             let delta = match tx.transaction_type.as_str() {
+                "income" => tx.amount,
+                "expense" => -tx.amount,
+                _ => 0, 
+            };
+            
+            if delta != 0 {
+                if let Ok(date) = NaiveDate::parse_from_str(&tx.date, "%Y-%m-%d") {
+                    events.push(FinancialEvent {
+                        date,
+                        amount_delta: delta,
+                    });
+                }
+            }
+        }
+
+        // 3. Sort chronologically
+        events.sort_by(|a, b| a.date.cmp(&b.date));
+
+        // 4. Build Full History
+        let mut full_history: Vec<(chrono::NaiveDate, i64)> = Vec::new();
+        let mut current_balance = 0;
         
+        // Add a "zero" start point if we have events, slightly before the first one
+        if let Some(first) = events.first() {
+             full_history.push((first.date.pred_opt().unwrap_or(first.date), 0));
+        } else {
+             // No events at all
+             full_history.push((chrono::Local::now().date_naive(), 0));
+        }
+
+        for event in events {
+            current_balance += event.amount_delta;
+            full_history.push((event.date, current_balance));
+        }
+        
+        // Ensure the last point reflects "today" (extend the line to now)
+        let today = chrono::Local::now().date_naive();
+        if let Some(last) = full_history.last() {
+             if last.0 < today {
+                 full_history.push((today, current_balance));
+             }
+        }
+
         let net_worth_formatted = self.format_money_display(current_balance);
 
-        // 2. Filter based on Range
-        let now = chrono::Local::now().date_naive();
+        // 5. Filter based on Range
         let start_date = match range {
-            "1M" => Some(now - chrono::Duration::days(30)),
-            "3M" => Some(now - chrono::Duration::days(90)),
-            "6M" => Some(now - chrono::Duration::days(180)),
-            "1Y" => Some(now - chrono::Duration::days(365)),
+            "1M" => Some(today - chrono::Duration::days(30)),
+            "3M" => Some(today - chrono::Duration::days(90)),
+            "6M" => Some(today - chrono::Duration::days(180)),
+            "1Y" => Some(today - chrono::Duration::days(365)),
             _ => None, // ALL
         };
 
         let filtered_history: Vec<(chrono::NaiveDate, i64)> = if let Some(start) = start_date {
-            full_history.into_iter().filter(|(d, _)| *d >= start).collect()
+            // Find the balance *at* the start date to be the first point
+            // This prevents the graph from starting at 0 if the user had money before the range
+            let start_balance = full_history.iter()
+                .filter(|(d, _)| *d <= start)
+                .last()
+                .map(|(_, b)| *b)
+                .unwrap_or(0); // If no history before start, balance is 0
+                
+            let mut range_points: Vec<(chrono::NaiveDate, i64)> = Vec::new();
+            // Add start point
+            range_points.push((start, start_balance));
+            
+            // Add all points within range
+            range_points.extend(full_history.into_iter().filter(|(d, _)| *d >= start));
+            range_points
         } else {
             full_history
         };
@@ -1427,11 +1479,14 @@ impl AppController {
         let len = balances.len() as f32;
         let mut path_cmd = String::new();
         
-        // PADDING: Add 5% padding top and bottom so the line doesn't touch the edges
+        // PADDING: Add 5% padding top and bottom
         let range = (max_val - min_val) as f32;
-        // avoid division by zero
         let safe_range = if range == 0.0 { 1.0 } else { range };
 
+        // Generate Path (Bezier Curve approximation or simple Line)
+        // For simplicity and robustness, we stick to Line first. 
+        // Slint Path supports cubic-bezier but calculating control points manually is verbose.
+        // Let's stick to Lines but ensure they look good.
         for (idx, val) in balances.iter().enumerate() {
             let x = if len > 1.0 {
                 (idx as f32) * (100.0 / (len - 1.0))
@@ -1442,9 +1497,8 @@ impl AppController {
             let y_norm = if max_val == min_val {
                 50.0
             } else {
-                // Normalize 0..1
                 let ratio = (*val - min_val) as f32 / safe_range;
-                // Scale to 5..95 (inverted because SVG Y is down)
+                // Scale to 5..95 (inverted)
                 100.0 - (5.0 + (ratio * 90.0)) 
             };
 

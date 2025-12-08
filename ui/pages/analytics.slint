@@ -9,7 +9,7 @@ export component AnalyticsPage inherits Rectangle {
     background: Palette.background;
 
     init => {
-        AnalyticsAdapter.fetch-analytics("ALL");
+        AnalyticsAdapter.fetch-analytics("1M");
     }
 
     VerticalLayout {
@@ -83,7 +83,7 @@ export component AnalyticsPage inherits Rectangle {
 
         // Chart
         Rectangle {
-            height: 240px;
+            height: 320px;
             background: Palette.surface;
             border-radius: 8px;
             border-width: 1px;
