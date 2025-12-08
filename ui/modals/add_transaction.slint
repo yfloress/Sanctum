@@ -7,6 +7,7 @@ import {
     TransactionAdapter,
     Categories,
     AccountAdapter,
+    NotificationAdapter,
 } from "../globals.slint";
 
 // ==================== UnderlineField ====================
@@ -386,7 +387,6 @@ export component AddTransactionModal inherits Rectangle {
     property <int> category-index: 0;
     property <string> date-value: AppState.current-date;
     property <bool> is-expense: true;
-    property <string> error-message: "";
     property <int> account-index: 0;
 
     // Get current categories based on type
@@ -399,18 +399,17 @@ export component AddTransactionModal inherits Rectangle {
         category-index = 0;
         date-value = AppState.current-date;
         is-expense = true;
-        error-message = "";
         account-index = 0;
     }
 
     // Submit form
     function submit() {
         if (AccountAdapter.accounts.length == 0) {
-            error-message = "Create an account first";
+            NotificationAdapter.show("Create an account first", true);
             return;
         }
         if (amount-value == "") {
-            error-message = "Amount is required";
+            NotificationAdapter.show("Amount is required", true);
             return;
         }
 
@@ -422,7 +421,7 @@ export component AddTransactionModal inherits Rectangle {
 
         // Get selected category
         // Call adapter (using first account as default for now)
-        error-message = TransactionAdapter.add-transaction(
+        let result = TransactionAdapter.add-transaction(
             account-id,
             amount-value,
             current-categories[category-index],
@@ -430,11 +429,13 @@ export component AddTransactionModal inherits Rectangle {
             date-value,
             is-expense);
 
-        if (error-message == "") {
+        if (result == "") {
             root.reset-form();
             AppState.show-add-transaction = false;
             TransactionAdapter.fetch-transactions();
             AccountAdapter.fetch-accounts();
+        } else {
+            NotificationAdapter.show(result, true);
         }
     }
 
@@ -461,7 +462,7 @@ export component AddTransactionModal inherits Rectangle {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
         width: 400px;
-        height: 540px;
+        height: 640px;
         background: Palette.sidebar-bg;
         border-radius: 8px;
         border-width: 1px;
@@ -594,20 +595,6 @@ export component AddTransactionModal inherits Rectangle {
                 label: "DATE";
                 placeholder: "YYYY-MM-DD";
                 value <=> date-value;
-            }
-
-            // Error message
-            if error-message != "": Rectangle {
-                height: 32px;
-
-                Text {
-                    text: error-message;
-                    color: Palette.danger;
-                    font-size: 12px;
-                    font-weight: 400;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
             }
 
             // Spacer

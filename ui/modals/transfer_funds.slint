@@ -1,7 +1,7 @@
 // ==================== Transfer Funds Modal ====================
 // Noir Minimalist - Overlay form for transferring between accounts
 
-import { Palette, AppState, AccountAdapter } from "../globals.slint";
+import { Palette, AppState, AccountAdapter, NotificationAdapter } from "../globals.slint";
 
 component UnderlineField inherits Rectangle {
     in property <string> label: "";
@@ -170,7 +170,6 @@ export component TransferFundsModal inherits Rectangle {
     property <string> amount-value: "";
     property <string> description-value: "";
     property <string> date-value: AppState.current-date;
-    property <string> error-message: "";
 
     function reset-form() {
         from-index = 0;
@@ -178,20 +177,19 @@ export component TransferFundsModal inherits Rectangle {
         amount-value = "";
         description-value = "";
         date-value = AppState.current-date;
-        error-message = "";
     }
 
     function submit() {
         if (AccountAdapter.accounts.length < 2) {
-            error-message = "Need at least two accounts";
+            NotificationAdapter.show("Need at least two accounts", true);
             return;
         }
         if (from-index == to-index) {
-            error-message = "Select different accounts";
+            NotificationAdapter.show("Select different accounts", true);
             return;
         }
         if (amount-value == "") {
-            error-message = "Amount is required";
+            NotificationAdapter.show("Amount is required", true);
             return;
         }
         let result = AccountAdapter.transfer-funds(
@@ -206,7 +204,7 @@ export component TransferFundsModal inherits Rectangle {
             AppState.show-transfer-modal = false;
             AccountAdapter.fetch-accounts();
         } else {
-            error-message = result;
+            NotificationAdapter.show(result, true);
         }
     }
 
@@ -336,19 +334,6 @@ export component TransferFundsModal inherits Rectangle {
                 label: "DATE";
                 placeholder: "YYYY-MM-DD";
                 value <=> date-value;
-            }
-
-            if error-message != "": Rectangle {
-                height: 32px;
-
-                Text {
-                    text: error-message;
-                    color: Palette.danger;
-                    font-size: 12px;
-                    font-weight: 400;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
             }
 
             Rectangle {

@@ -1,7 +1,7 @@
 // ==================== Add Account Modal ====================
 // Noir Minimalist - Overlay form for creating new accounts
 
-import { Palette, AppState, AccountAdapter } from "../globals.slint";
+import { Palette, AppState, AccountAdapter, NotificationAdapter } from "../globals.slint";
 
 // ==================== UnderlineField ====================
 // Minimal input with bottom border
@@ -193,7 +193,6 @@ export component AddAccountModal inherits Rectangle {
     property <string> initial-balance: editing && AccountAdapter.accounts.length > selected-index ? AccountAdapter.accounts[selected-index].initial-balance : "";
     property <int> type-index: editing && AccountAdapter.accounts.length > selected-index ? (AccountAdapter.accounts[selected-index].account-type-key == "cash" ? 1 : AccountAdapter.accounts[selected-index].account-type-key == "savings" ? 2 : AccountAdapter.accounts[selected-index].account-type-key == "credit_card" ? 3 : 0) : 0;
     property <int> currency-index: editing && AccountAdapter.accounts.length > selected-index ? (AccountAdapter.accounts[selected-index].currency == "CLP" ? 1 : 0) : 0;
-    property <string> error-message: "";
 
     property <[string]> type-options: ["Bank", "Cash", "Savings", "Credit"];
     property <[string]> currency-options: ["USD", "CLP"];
@@ -203,12 +202,11 @@ export component AddAccountModal inherits Rectangle {
         initial-balance = "";
         type-index = 0;
         currency-index = 0;
-        error-message = "";
     }
 
     function submit() {
         if (name-value == "") {
-            error-message = "Name is required";
+            NotificationAdapter.show("Name is required", true);
             return;
         }
         let safe-index = selected-index >= AccountAdapter.accounts.length ? 0 : selected-index;
@@ -228,7 +226,7 @@ export component AddAccountModal inherits Rectangle {
             AppState.show-add-account = false;
             AccountAdapter.fetch-accounts();
         } else {
-            error-message = result;
+            NotificationAdapter.show(result, true);
         }
     }
 
@@ -347,19 +345,6 @@ export component AddAccountModal inherits Rectangle {
                 label: "INITIAL BALANCE";
                 placeholder: "0.00";
                 value <=> initial-balance;
-            }
-
-            if error-message != "": Rectangle {
-                height: 32px;
-
-                Text {
-                    text: error-message;
-                    color: Palette.danger;
-                    font-size: 12px;
-                    font-weight: 400;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
             }
 
             Rectangle {
