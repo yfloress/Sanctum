@@ -1,10 +1,21 @@
 // ==================== Dashboard Page ====================
 // Noir Minimalist - Financial overview and summary
 
-import { Palette, AppState } from "../globals.slint";
+import {
+    Palette,
+    DashboardAdapter,
+    TransactionAdapter,
+} from "../globals.slint";
+import { TransactionItem } from "../components/transaction_item.slint";
 
 export component DashboardPage inherits Rectangle {
     background: Palette.background;
+
+    init => {
+        DashboardAdapter.fetch-balance();
+        DashboardAdapter.fetch-recent();
+        TransactionAdapter.fetch-transactions();
+    }
 
     VerticalLayout {
         padding: 48px;
@@ -30,7 +41,7 @@ export component DashboardPage inherits Rectangle {
 
                 // Value
                 Text {
-                    text: "$ 0.00";
+                    text: DashboardAdapter.balance.total-balance;
                     color: Palette.text-primary;
                     font-size: 48px;
                     font-weight: 300;
@@ -46,52 +57,119 @@ export component DashboardPage inherits Rectangle {
             horizontal-stretch: 1;
         }
 
-        // Content area
-        Rectangle {
-            vertical-stretch: 1;
+        // Summary cards
+        HorizontalLayout {
+            height: 80px;
+            spacing: 12px;
 
-            VerticalLayout {
-                alignment: center;
-                spacing: 16px;
+            Rectangle {
+                horizontal-stretch: 1;
+                background: Palette.surface;
+                border-radius: 6px;
+                border-width: 1px;
+                border-color: Palette.border;
 
-                // Empty state message
-                Text {
-                    text: "No accounts connected";
-                    color: Palette.text-muted;
-                    font-size: 14px;
-                    font-weight: 300;
-                    font-italic: true;
-                    horizontal-alignment: center;
+                VerticalLayout {
+                    padding: 16px;
+                    spacing: 4px;
+
+                    Text {
+                        text: "INCOME";
+                        color: Palette.text-muted;
+                        font-size: 11px;
+                        font-weight: 400;
+                        letter-spacing: 2px;
+                    }
+
+                    Text {
+                        text: DashboardAdapter.balance.total-income;
+                        color: Palette.success;
+                        font-size: 18px;
+                        font-weight: 500;
+                    }
                 }
+            }
 
-                // Subtle hint
-                Text {
-                    text: "Add an account to start tracking your finances";
-                    color: Palette.text-subtle;
-                    font-size: 12px;
-                    font-weight: 400;
-                    horizontal-alignment: center;
+            Rectangle {
+                horizontal-stretch: 1;
+                background: Palette.surface;
+                border-radius: 6px;
+                border-width: 1px;
+                border-color: Palette.border;
+
+                VerticalLayout {
+                    padding: 16px;
+                    spacing: 4px;
+
+                    Text {
+                        text: "EXPENSE";
+                        color: Palette.text-muted;
+                        font-size: 11px;
+                        font-weight: 400;
+                        letter-spacing: 2px;
+                    }
+
+                    Text {
+                        text: DashboardAdapter.balance.total-expense;
+                        color: Palette.danger;
+                        font-size: 18px;
+                        font-weight: 500;
+                    }
                 }
             }
         }
 
-        // Footer
         Rectangle {
-            height: 48px;
+            height: 24px;
+        }
 
-            HorizontalLayout {
-                alignment: start;
+        // Recent transactions
+        Rectangle {
+            vertical-stretch: 1;
+
+            VerticalLayout {
+                spacing: 12px;
 
                 Text {
-                    text: "Last updated: --";
-                    color: Palette.text-subtle;
-                    font-size: 10px;
+                    text: "RECENT ACTIVITY";
+                    color: Palette.text-muted;
+                    font-size: 11px;
                     font-weight: 400;
-                    letter-spacing: 1px;
-                    vertical-alignment: center;
+                    letter-spacing: 3px;
+                }
+
+                if DashboardAdapter.recent.length == 0: Rectangle {
+                    vertical-stretch: 1;
+
+                    Text {
+                        text: "No transactions yet";
+                        color: Palette.text-muted;
+                        font-size: 14px;
+                        font-weight: 300;
+                        font-italic: true;
+                        horizontal-alignment: left;
+                        vertical-alignment: center;
+                    }
+                }
+
+                if DashboardAdapter.recent.length > 0: Rectangle {
+                    vertical-stretch: 1;
+
+                    Flickable {
+                        viewport-height: DashboardAdapter.recent.length * 56px;
+
+                        VerticalLayout {
+                            spacing: 0px;
+
+                            for transaction[index] in DashboardAdapter.recent: TransactionItem {
+                                transaction: transaction;
+                                is-last: index == DashboardAdapter.recent.length - 1;
+                                show-delete: false;
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 }
-

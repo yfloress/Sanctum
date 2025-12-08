@@ -7,6 +7,7 @@ import {
     AppState,
     AccountAdapter,
     TransactionAdapter,
+    DashboardAdapter,
 } from "globals.slint";
 import { LoginPage } from "pages/login.slint";
 import { DashboardPage } from "pages/dashboard.slint";
@@ -121,4 +122,4 @@ export component AppWindow inherits Window {
 }
 
 // Re-export adapters for main.rs
-export { AuthAdapter, AccountAdapter, TransactionAdapter, AppState }
+export { AuthAdapter, AccountAdapter, TransactionAdapter, DashboardAdapter, AppState }

@@ -278,6 +278,51 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
 
+    fn reload_recent(
+        ui_weak: &Weak<AppWindow>,
+        controller: &Arc<AppController>,
+    ) -> Result<(), sanctum::controller::ControllerError> {
+        let accounts = controller.get_accounts()?;
+        let account_lookup: HashMap<String, String> = accounts
+            .iter()
+            .map(|a| (a.id.clone(), a.currency.clone()))
+            .collect();
+
+        let mut transactions = controller.get_transactions()?;
+        transactions.sort_by(|a, b| b.date.cmp(&a.date));
+        let transactions = transactions.into_iter().take(5).collect::<Vec<_>>();
+
+        let mapped: Vec<TransactionData> = transactions
+            .iter()
+            .map(|tx| {
+                let currency = account_lookup
+                    .get(&tx.account_id)
+                    .cloned()
+                    .unwrap_or_else(|| "USD".to_string());
+
+                let is_expense = tx.transaction_type == "expense";
+                let sign = if is_expense { "-" } else { "+" };
+                let amount_str = format!("{sign} {}", format_money(tx.amount, &currency));
+
+                TransactionData {
+                    id: tx.id.clone().into(),
+                    date: tx.date.clone().into(),
+                    description: tx.description.clone().into(),
+                    category: tx.category.to_uppercase().into(),
+                    amount: amount_str.into(),
+                    is_expense,
+                }
+            })
+            .collect();
+
+        if let Some(ui) = ui_weak.upgrade() {
+            let dash = ui.global::<DashboardAdapter>();
+            dash.set_recent(ModelRc::new(VecModel::from(mapped)));
+        }
+
+        Ok(())
+    }
+
     // AccountAdapter callbacks
     {
         let controller = controller.clone();
@@ -404,6 +449,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_weak = ui_weak.clone();
         ui.global::<TransactionAdapter>().on_fetch_transactions(move || {
             let _ = reload_transactions(&ui_weak, &controller);
+            let _ = reload_recent(&ui_weak, &controller);
         });
     }
 
@@ -446,6 +492,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             },
         );
+    }
+
+    // DashboardAdapter callbacks
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        ui.global::<DashboardAdapter>().on_fetch_balance(move || {
+            let result = controller.get_balance();
+            if let Ok(balance) = result {
+                if let Some(ui) = ui_weak.upgrade() {
+                    let dash = ui.global::<DashboardAdapter>();
+                    dash.set_balance(BalanceData {
+                        total_balance: format_money(balance.total_balance, "USD").into(),
+                        total_income: format_money(balance.total_income, "USD").into(),
+                        total_expense: format_money(balance.total_expense, "USD").into(),
+                    });
+                }
+            }
+        });
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        ui.global::<DashboardAdapter>().on_fetch_recent(move || {
+            let _ = reload_recent(&ui_weak, &controller);
+        });
     }
 
     {

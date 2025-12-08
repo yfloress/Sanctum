@@ -81,6 +81,12 @@ export struct TransactionData {
     is-expense: bool,
 }
 
+export struct BalanceData {
+    total-balance: string,
+    total-income: string,
+    total-expense: string,
+}
+
 // ==================== Authentication Adapter ====================
 // Bridge between Slint UI and Rust backend
 
@@ -155,6 +161,17 @@ export global TransactionAdapter {
 
     // Callback to delete a transaction
     callback delete-transaction(string) -> string; // id -> "" or error
+}
+
+// ==================== Dashboard Adapter ====================
+// Balance summary and recent activity
+
+export global DashboardAdapter {
+    in-out property <BalanceData> balance: { total-balance: "$ 0.00", total-income: "$ 0.00", total-expense: "$ 0.00" };
+    in-out property <[TransactionData]> recent: [];
+
+    callback fetch-balance();
+    callback fetch-recent();
 }
 
 // ==================== Application State ====================
