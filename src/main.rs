@@ -153,18 +153,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_weak = ui_weak.clone();
         let timer = notification_timer.clone();
         move |message: String, is_error: bool| {
+            println!("DEBUG: Notification requested: '{}', error: {}", message, is_error); // DEBUG LOG
             if let Some(ui) = ui_weak.upgrade() {
                 let adapter = ui.global::<NotificationAdapter>();
                 adapter.set_message(SharedString::from(message));
                 adapter.set_is_error(is_error);
                 adapter.set_active(true);
+                println!("DEBUG: Notification active set to true"); // DEBUG LOG
                 
                 let ui_weak_inner = ui_weak.clone();
                 timer.start(slint::TimerMode::SingleShot, std::time::Duration::from_secs(3), move || {
+                    println!("DEBUG: Timer fired, hiding notification"); // DEBUG LOG
                     if let Some(ui) = ui_weak_inner.upgrade() {
                         ui.global::<NotificationAdapter>().set_active(false);
                     }
                 });
+            } else {
+                println!("DEBUG: Failed to upgrade UI weak ref for notification");
             }
         }
     };
