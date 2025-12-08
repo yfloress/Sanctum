@@ -1,12 +1,22 @@
 // ==================== Transactions Page ====================
 // Noir Minimalist - Transaction management view
 
-import { Palette, TransactionAdapter, AppState } from "../globals.slint";
+import {
+    Palette,
+    TransactionAdapter,
+    AccountAdapter,
+    AppState,
+} from "../globals.slint";
 import { TransactionItem } from "../components/transaction_item.slint";
 import { TextButton } from "../widgets.slint";
 
 export component TransactionsPage inherits Rectangle {
     background: Palette.background;
+
+    init => {
+        AccountAdapter.fetch-accounts();
+        TransactionAdapter.fetch-transactions();
+    }
 
     VerticalLayout {
         padding: 48px;
@@ -39,6 +49,7 @@ export component TransactionsPage inherits Rectangle {
                     enabled: true;
 
                     clicked => {
+                        AccountAdapter.fetch-accounts();
                         AppState.show-add-transaction = true;
                     }
                 }
@@ -69,9 +80,18 @@ export component TransactionsPage inherits Rectangle {
                     for transaction[index] in TransactionAdapter.transactions: TransactionItem {
                         transaction: transaction;
                         is-last: index == TransactionAdapter.transactions.length - 1;
+                        show-delete: true;
 
                         clicked => {
                             // TODO: Open transaction details
+                        }
+
+                        delete-clicked => {
+                            let result = TransactionAdapter.delete-transaction(transaction.id);
+                            if (result == "") {
+                                TransactionAdapter.fetch-transactions();
+                                AccountAdapter.fetch-accounts();
+                            }
                         }
                     }
                 }

@@ -1,12 +1,22 @@
 // ==================== Accounts Page ====================
 // Noir Minimalist - Account management view
 
-import { Palette, AccountAdapter, AccountData } from "../globals.slint";
+import {
+    Palette,
+    AccountAdapter,
+    AccountData,
+    AppState,
+} from "../globals.slint";
 import { AccountItem } from "../components/account_item.slint";
 import { TextButton } from "../widgets.slint";
 
 export component AccountsPage inherits Rectangle {
     background: Palette.background;
+
+    // Load accounts when page is shown
+    init => {
+        AccountAdapter.fetch-accounts();
+    }
 
     VerticalLayout {
         padding: 48px;
@@ -39,7 +49,8 @@ export component AccountsPage inherits Rectangle {
                     enabled: true;
 
                     clicked => {
-                        // TODO: Open new account modal
+                        AccountAdapter.fetch-accounts();
+                        AppState.show-add-account = true;
                     }
                 }
             }

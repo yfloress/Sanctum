@@ -1,13 +1,20 @@
 // ==================== Sanctum - Main Application Entry Point ====================
 // Noir Minimalist - Elegant, luxury-inspired interface
 
-import { Palette, AuthAdapter, AppState } from "globals.slint";
+import {
+    Palette,
+    AuthAdapter,
+    AppState,
+    AccountAdapter,
+    TransactionAdapter,
+} from "globals.slint";
 import { LoginPage } from "pages/login.slint";
 import { DashboardPage } from "pages/dashboard.slint";
 import { AccountsPage } from "pages/accounts.slint";
 import { TransactionsPage } from "pages/transactions.slint";
 import { SanctumSidebar } from "components/sidebar.slint";
 import { AddTransactionModal } from "modals/add_transaction.slint";
+import { AddAccountModal } from "modals/add_account.slint";
 
 // ==================== Main Application Window ====================
 
@@ -96,7 +103,13 @@ export component AppWindow inherits Window {
         width: 100%;
         height: 100%;
     }
+
+    // Add Account Modal
+    if AppState.show-add-account: AddAccountModal {
+        width: 100%;
+        height: 100%;
+    }
 }
 
 // Re-export adapters for main.rs
-export { AuthAdapter }
+export { AuthAdapter, AccountAdapter, TransactionAdapter, AppState }

@@ -6,8 +6,10 @@ import { Palette, TransactionData } from "../globals.slint";
 export component TransactionItem inherits Rectangle {
     in property <TransactionData> transaction;
     in property <bool> is-last: false;
+    in property <bool> show-delete: true;
 
     callback clicked();
+    callback delete-clicked();
 
     height: 56px;
     background: touch.has-hover ? Palette.surface-hover : transparent;
@@ -72,6 +74,26 @@ export component TransactionItem inherits Rectangle {
                 font-weight: 400;
                 letter-spacing: 0.5px;
                 horizontal-alignment: right;
+            }
+        }
+
+        if show-delete: Rectangle {
+            width: 32px;
+
+            Text {
+                text: "×";
+                color: delete-touch.has-hover ? Palette.text-primary : Palette.text-muted;
+                font-size: 16px;
+                font-weight: 300;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            delete-touch := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.delete-clicked();
+                }
             }
         }
     }

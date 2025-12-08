@@ -106,7 +106,7 @@ export global AccountAdapter {
     callback fetch-accounts();
 
     // Callback to create a new account
-    callback create-account(string, string, string) -> string; // name, type, currency -> "" or error
+    callback create-account(string, string, string, string) -> string; // name, type, currency, initial -> "" or error
 
     // Callback to delete an account
     callback delete-account(string) -> string; // id -> "" or error
@@ -141,8 +141,8 @@ export global TransactionAdapter {
     callback fetch-transactions();
 
     // Callback to add a new transaction
-    // (account_id, amount, category, description, is_expense) -> "" or error
-    callback add-transaction(string, string, string, string, bool) -> string;
+    // (account_id, amount, category, description, date, is_expense) -> "" or error
+    callback add-transaction(string, string, string, string, string, bool) -> string;
 
     // Callback to delete a transaction
     callback delete-transaction(string) -> string; // id -> "" or error
@@ -164,4 +164,7 @@ export global AppState {
     // Modal states
     in-out property <bool> show-add-transaction: false;
     in-out property <bool> show-add-account: false;
+
+    // Current date (YYYY-MM-DD), set from backend to avoid hardcoded defaults
+    in-out property <string> current-date: "2024-01-01";
 }

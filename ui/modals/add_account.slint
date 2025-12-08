@@ -1,0 +1,382 @@
+// ==================== Add Account Modal ====================
+// Noir Minimalist - Overlay form for creating new accounts
+
+import { Palette, AppState, AccountAdapter } from "../globals.slint";
+
+// ==================== UnderlineField ====================
+// Minimal input with bottom border
+
+component UnderlineField inherits Rectangle {
+    in property <string> label: "";
+    in property <string> placeholder: "";
+    in-out property <string> value: "";
+
+    height: 64px;
+    background: transparent;
+
+    VerticalLayout {
+        spacing: 8px;
+
+        Text {
+            text: root.label;
+            color: Palette.text-muted;
+            font-size: 10px;
+            font-weight: 400;
+            letter-spacing: 2px;
+        }
+
+        Rectangle {
+            vertical-stretch: 1;
+
+            if root.value == "" && !input.has-focus: Text {
+                text: root.placeholder;
+                color: Palette.text-subtle;
+                font-size: 14px;
+                font-weight: 300;
+                vertical-alignment: center;
+            }
+
+            input := TextInput {
+                text <=> root.value;
+                color: Palette.text-primary;
+                font-size: 14px;
+                font-weight: 300;
+                vertical-alignment: center;
+            }
+
+            TouchArea {
+                clicked => {
+                    input.focus();
+                }
+            }
+        }
+
+        Rectangle {
+            height: input.has-focus ? 2px : 1px;
+            background: input.has-focus ? Palette.accent : Palette.border;
+
+            animate height {
+                duration: 150ms;
+                easing: ease-out;
+            }
+            animate background {
+                duration: 150ms;
+                easing: ease-out;
+            }
+        }
+    }
+}
+
+// ==================== OptionSelector ====================
+// Simple dropdown-style selector
+
+component OptionSelector inherits Rectangle {
+    in property <string> label: "";
+    in property <[string]> options: [];
+    in-out property <int> selected-index: 0;
+    in-out property <bool> expanded: false;
+
+    height: expanded ? 56px + (options.length * 32px) + 8px : 56px;
+    background: transparent;
+    clip: true;
+
+    animate height {
+        duration: 150ms;
+        easing: ease-out;
+    }
+
+    VerticalLayout {
+        spacing: 8px;
+
+        Text {
+            text: root.label;
+            color: Palette.text-muted;
+            font-size: 10px;
+            font-weight: 400;
+            letter-spacing: 2px;
+        }
+
+        Rectangle {
+            height: 32px;
+
+            HorizontalLayout {
+                Text {
+                    text: options.length > 0 ? options[selected-index] : "Select...";
+                    color: Palette.text-primary;
+                    font-size: 14px;
+                    font-weight: 300;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+
+                Text {
+                    text: expanded ? "▲" : "▼";
+                    color: Palette.text-muted;
+                    font-size: 10px;
+                    vertical-alignment: center;
+                }
+            }
+
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.expanded = !root.expanded;
+                }
+            }
+        }
+
+        Rectangle {
+            height: 1px;
+            background: expanded ? Palette.accent : Palette.border;
+            animate background {
+                duration: 150ms;
+                easing: ease-out;
+            }
+        }
+
+        if expanded: Rectangle {
+            background: Palette.surface;
+            border-radius: 4px;
+
+            VerticalLayout {
+                padding: 4px;
+                spacing: 0px;
+
+                for option[index] in options: Rectangle {
+                    height: 32px;
+                    background: option-touch.has-hover ? Palette.surface-hover : transparent;
+                    border-radius: 2px;
+
+                    Text {
+                        text: option;
+                        color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
+                        font-size: 12px;
+                        font-weight: index == selected-index ? 500 : 400;
+                        letter-spacing: 1px;
+                        vertical-alignment: center;
+                        x: 12px;
+                    }
+
+                    option-touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            root.selected-index = index;
+                            root.expanded = false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ==================== AddAccountModal ====================
+
+export component AddAccountModal inherits Rectangle {
+    // Form state
+    property <string> name-value: "";
+    property <string> initial-balance: "";
+    property <int> type-index: 0;
+    property <int> currency-index: 0;
+    property <bool> type-expanded: false;
+    property <bool> currency-expanded: false;
+    property <string> error-message: "";
+
+    property <[string]> type-options: ["Bank", "Cash", "Savings", "Credit"];
+    property <[string]> currency-options: ["USD", "CLP"];
+
+    function reset-form() {
+        name-value = "";
+        initial-balance = "";
+        type-index = 0;
+        currency-index = 0;
+        type-expanded = false;
+        currency-expanded = false;
+        error-message = "";
+    }
+
+    function submit() {
+        if (name-value == "") {
+            error-message = "Name is required";
+            return;
+        }
+        let result = AccountAdapter.create-account(
+            name-value,
+            type-options[type-index],
+            currency-options[currency-index],
+            initial-balance);
+
+        if (result == "") {
+            root.reset-form();
+            AppState.show-add-account = false;
+            AccountAdapter.fetch-accounts();
+        } else {
+            error-message = result;
+        }
+    }
+
+    width: 100%;
+    height: 100%;
+    background: transparent;
+
+    // Backdrop
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        background: #000000cc;
+
+        TouchArea {
+            clicked => {
+                root.reset-form();
+                AppState.show-add-account = false;
+            }
+        }
+    }
+
+    // Modal panel
+    Rectangle {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        width: 420px;
+        height: 420px;
+        background: Palette.sidebar-bg;
+        border-radius: 8px;
+        border-width: 1px;
+        border-color: Palette.border;
+
+        // Prevent clicks from closing
+        TouchArea { }
+
+        VerticalLayout {
+            padding: 32px;
+            spacing: 0px;
+
+            // Header
+            HorizontalLayout {
+                height: 32px;
+
+                Text {
+                    text: "NEW ACCOUNT";
+                    color: Palette.text-primary;
+                    font-size: 12px;
+                    font-weight: 400;
+                    letter-spacing: 3px;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+
+                Rectangle {
+                    width: 32px;
+                    height: 32px;
+
+                    Text {
+                        text: "×";
+                        color: close-touch.has-hover ? Palette.text-primary : Palette.text-muted;
+                        font-size: 24px;
+                        font-weight: 300;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+
+                        animate color { duration: 120ms; }
+                    }
+
+                    close-touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            root.reset-form();
+                            AppState.show-add-account = false;
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                height: 24px;
+            }
+
+            UnderlineField {
+                label: "NAME";
+                placeholder: "Main Checking";
+                value <=> name-value;
+            }
+
+            Rectangle {
+                height: 16px;
+            }
+
+            HorizontalLayout {
+                spacing: 12px;
+
+                OptionSelector {
+                    horizontal-stretch: 1;
+                    label: "TYPE";
+                    options: type-options;
+                    selected-index <=> type-index;
+                    expanded <=> type-expanded;
+                }
+
+                OptionSelector {
+                    horizontal-stretch: 1;
+                    label: "CURRENCY";
+                    options: currency-options;
+                    selected-index <=> currency-index;
+                    expanded <=> currency-expanded;
+                }
+            }
+
+            Rectangle {
+                height: 16px;
+            }
+
+            UnderlineField {
+                label: "INITIAL BALANCE";
+                placeholder: "0.00";
+                value <=> initial-balance;
+            }
+
+            if error-message != "": Rectangle {
+                height: 32px;
+
+                Text {
+                    text: error-message;
+                    color: Palette.danger;
+                    font-size: 12px;
+                    font-weight: 400;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+
+            Rectangle {
+                vertical-stretch: 1;
+            }
+
+            Rectangle {
+                height: 48px;
+                background: submit-touch.has-hover ? Palette.surface-hover : Palette.surface;
+                border-radius: 4px;
+                border-width: 1px;
+                border-color: Palette.border;
+
+                animate background { duration: 120ms; }
+
+                Text {
+                    text: "SAVE ACCOUNT";
+                    color: Palette.text-primary;
+                    font-size: 12px;
+                    font-weight: 400;
+                    letter-spacing: 2px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+
+                submit-touch := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.submit();
+                    }
+                }
+            }
+        }
+    }
+}
