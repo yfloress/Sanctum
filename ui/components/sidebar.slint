@@ -1,0 +1,186 @@
+// ==================== Sanctum Sidebar ====================
+// Noir Minimalist navigation sidebar
+
+import { Palette, AppState, AuthAdapter } from "../globals.slint";
+
+// ==================== SidebarItem ====================
+// Individual navigation item with active state indicator
+
+component SidebarItem inherits Rectangle {
+    in property <string> label: "ITEM";
+    in property <string> page-id: "";
+    in property <bool> is-active: AppState.active-page == page-id;
+
+    callback clicked();
+
+    height: 48px;
+    background: transparent;
+
+    HorizontalLayout {
+        spacing: 0px;
+
+        // Active indicator line
+        Rectangle {
+            width: 3px;
+            background: is-active ? Palette.accent : transparent;
+
+            animate background {
+                duration: 150ms;
+                easing: ease-out;
+            }
+        }
+
+        // Spacer
+        Rectangle {
+            width: 24px;
+        }
+
+        // Label
+        Text {
+            text: root.label;
+            color: is-active ? Palette.text-primary : Palette.text-muted;
+            font-size: 11px;
+            font-weight: is-active ? 500 : 400;
+            letter-spacing: 2.5px;
+            vertical-alignment: center;
+
+            animate color {
+                duration: 150ms;
+                easing: ease-out;
+            }
+        }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+
+        clicked => {
+            AppState.active-page = root.page-id;
+            root.clicked();
+        }
+    }
+}
+
+// ==================== SanctumSidebar ====================
+// Main sidebar component with navigation and lock button
+
+export component SanctumSidebar inherits Rectangle {
+    width: 200px;
+    background: Palette.sidebar-bg;
+
+    // Right border
+    Rectangle {
+        x: parent.width - 1px;
+        width: 1px;
+        height: 100%;
+        background: Palette.sidebar-border;
+    }
+
+    VerticalLayout {
+        padding-top: 32px;
+        spacing: 0px;
+
+        // Logo/Brand
+        Rectangle {
+            height: 64px;
+
+            HorizontalLayout {
+                padding-left: 27px;
+
+                Text {
+                    text: "SANCTUM";
+                    color: Palette.text-primary;
+                    font-size: 14px;
+                    font-weight: 300;
+                    letter-spacing: 4px;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // Spacer
+        Rectangle {
+            height: 32px;
+        }
+
+        // Navigation items
+        SidebarItem {
+            label: "DASHBOARD";
+            page-id: "dashboard";
+        }
+
+        SidebarItem {
+            label: "ACCOUNTS";
+            page-id: "accounts";
+        }
+
+        SidebarItem {
+            label: "TRANSACTIONS";
+            page-id: "transactions";
+        }
+
+        SidebarItem {
+            label: "SETTINGS";
+            page-id: "settings";
+        }
+
+        // Flexible spacer to push lock button to bottom
+        Rectangle {
+            vertical-stretch: 1;
+        }
+
+        // Divider
+        Rectangle {
+            height: 1px;
+            background: Palette.border;
+
+            HorizontalLayout {
+                padding-left: 27px;
+                padding-right: 27px;
+
+                Rectangle {
+                    horizontal-stretch: 1;
+                    background: Palette.border;
+                }
+            }
+        }
+
+        // Lock button
+        Rectangle {
+            height: 64px;
+
+            HorizontalLayout {
+                padding-left: 27px;
+                spacing: 0px;
+
+                Text {
+                    text: "LOCK";
+                    color: lock-touch.has-hover ? Palette.text-primary : Palette.text-muted;
+                    font-size: 11px;
+                    font-weight: 400;
+                    letter-spacing: 2.5px;
+                    vertical-alignment: center;
+
+                    animate color {
+                        duration: 150ms;
+                        easing: ease-out;
+                    }
+                }
+            }
+
+            lock-touch := TouchArea {
+                mouse-cursor: pointer;
+
+                clicked => {
+                    AuthAdapter.lock-vault();
+                    AppState.is-logged-in = false;
+                }
+            }
+        }
+
+        // Bottom padding
+        Rectangle {
+            height: 16px;
+        }
+    }
+}

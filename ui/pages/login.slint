@@ -2,7 +2,112 @@
 // Noir Minimalist - Elegant, luxury-inspired authentication
 
 import { Palette, AuthAdapter, AppState } from "../globals.slint";
-import { UnderlineInput, TextButton } from "../widgets.slint";
+import { TextButton } from "../widgets.slint";
+
+// ==================== PasswordInput ====================
+// Custom password input with visibility toggle
+
+component PasswordInput inherits Rectangle {
+    in property <string> placeholder: "";
+    in-out property <string> text: "";
+    in property <bool> enabled: true;
+
+    callback accepted(string);
+
+    height: 48px;
+    background: transparent;
+
+    property <bool> show-password: false;
+
+    // Main vertical layout (centered)
+    VerticalLayout {
+        spacing: 0px;
+
+        // Input area
+        Rectangle {
+            height: 36px;
+
+            // Placeholder (shown when empty and not focused)
+            if root.text == "" && !input.has-focus: Text {
+                text: root.placeholder;
+                color: Palette.text-muted;
+                font-size: 16px;
+                font-weight: 300;
+                vertical-alignment: center;
+                horizontal-alignment: left;
+                letter-spacing: 1px;
+            }
+
+            input := TextInput {
+                text <=> root.text;
+                input-type: root.show-password ? InputType.text : InputType.password;
+                enabled: root.enabled;
+                color: Palette.text-primary;
+                font-size: 16px;
+                font-weight: 300;
+                vertical-alignment: center;
+                letter-spacing: 0.5px;
+
+                accepted => {
+                    root.accepted(root.text);
+                }
+            }
+
+            // Click to focus
+            TouchArea {
+                clicked => {
+                    input.focus();
+                }
+            }
+        }
+
+        // Underline (full width, centered with container)
+        Rectangle {
+            height: input.has-focus ? 2px : 1px;
+            background: input.has-focus ? Palette.border-light : Palette.border;
+
+            animate height {
+                duration: 150ms;
+                easing: ease-out;
+            }
+            animate background {
+                duration: 150ms;
+                easing: ease-out;
+            }
+        }
+    }
+
+    // Visibility toggle button (positioned absolutely to the right)
+    Rectangle {
+        x: parent.width + 16px;
+        y: 0px;
+        width: 44px;
+        height: 36px;
+
+        Text {
+            text: root.show-password ? "HIDE" : "SHOW";
+            color: toggle-touch.has-hover ? Palette.text-primary : Palette.text-muted;
+            font-size: 10px;
+            font-weight: 400;
+            letter-spacing: 1.5px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+
+            animate color {
+                duration: 150ms;
+                easing: ease-out;
+            }
+        }
+
+        toggle-touch := TouchArea {
+            mouse-cursor: pointer;
+
+            clicked => {
+                root.show-password = !root.show-password;
+            }
+        }
+    }
+}
 
 export component LoginPage inherits Rectangle {
     background: Palette.background;
@@ -89,11 +194,10 @@ export component LoginPage inherits Rectangle {
                         height: 16px;
                     }
 
-                    // Password input
-                    UnderlineInput {
+                    // Password input with toggle
+                    PasswordInput {
                         placeholder: vault-exists ? "password" : "create password";
                         text <=> password-text;
-                        is-password: true;
                         enabled: !is-loading;
                         horizontal-stretch: 1;
 

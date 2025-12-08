@@ -6,9 +6,13 @@
 
 export global Palette {
     // Core backgrounds
-    out property <color> background: #0a0a0a;      // Near-black - App background
+    out property <color> background: #000000;      // Pure black - Main content
     out property <color> surface: #111111;         // Slightly lighter - Cards
     out property <color> surface-hover: #1a1a1a;   // Hover state
+
+    // Sidebar
+    out property <color> sidebar-bg: #050505;      // Near-black sidebar
+    out property <color> sidebar-border: #333333;  // Sidebar right border
 
     // Accent colors
     out property <color> accent: #ffffff;          // Pure white - Primary accent
@@ -23,8 +27,8 @@ export global Palette {
     // Text colors
     out property <color> text-primary: #ffffff;    // Pure white - Titles
     out property <color> text-secondary: #a3a3a3;  // Gray - Body text
-    out property <color> text-muted: #525252;      // Dark gray - Hints
-    out property <color> text-subtle: #2a2a2a;     // Very dark - Footer
+    out property <color> text-muted: #666666;      // Dark gray - Inactive items
+    out property <color> text-subtle: #333333;     // Very dark - Footer
 
     // Border colors
     out property <color> border: #333333;          // Dark border
@@ -78,8 +82,8 @@ export global AppState {
     // Authentication state
     in-out property <bool> is-logged-in: false;
 
-    // Current view
-    in-out property <string> current-page: "login";
+    // Current active page in sidebar navigation
+    in-out property <string> active-page: "dashboard";
 
     // Loading state
     in-out property <bool> is-loading: false;
