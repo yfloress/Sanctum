@@ -1,5 +1,6 @@
 import { Palette, HabitAdapter, AppState } from "../globals.slint";
 import { HabitRow } from "../components/habit_row.slint";
+import { HabitHeatmap } from "../components/habit_heatmap.slint";
 import { TextButton } from "../widgets.slint";
 import { AddHabitModal } from "../modals/add_habit.slint";
 
@@ -8,6 +9,7 @@ export component HabitsPage inherits Rectangle {
 
     init => {
         HabitAdapter.load-initial-data();
+        HabitAdapter.fetch-heatmap-data();
     }
 
     VerticalLayout {
@@ -61,6 +63,59 @@ export component HabitsPage inherits Rectangle {
                     clicked => { AppState.show-add-habit = true; }
                 }
             }
+        }
+
+        Rectangle { height: 32px; }
+
+        // Heatmap Header
+        HorizontalLayout {
+            height: 32px;
+            alignment: start;
+            spacing: 16px;
+            
+            Text {
+                text: "YEARLY OVERVIEW";
+                color: Palette.text-secondary;
+                font-size: 12px;
+                font-weight: 700;
+                vertical-alignment: center;
+            }
+
+            // Year Navigation
+            HorizontalLayout {
+                spacing: 12px;
+                
+                Text {
+                    text: "←";
+                    color: Palette.text-muted;
+                    font-size: 14px;
+                    vertical-alignment: center;
+                    TouchArea { mouse-cursor: pointer; clicked => { HabitAdapter.prev-heatmap-year(); } }
+                }
+                
+                Text {
+                    text: HabitAdapter.heatmap-year;
+                    color: Palette.text-primary;
+                    font-size: 12px;
+                    font-weight: 500;
+                    vertical-alignment: center;
+                }
+                
+                Text {
+                    text: "→";
+                    color: Palette.text-muted;
+                    font-size: 14px;
+                    vertical-alignment: center;
+                    TouchArea { mouse-cursor: pointer; clicked => { HabitAdapter.next-heatmap-year(); } }
+                }
+            }
+        }
+        
+        Rectangle { height: 8px; }
+
+        // Heatmap
+        HabitHeatmap {
+            height: 120px;
         }
 
         Rectangle { height: 32px; }

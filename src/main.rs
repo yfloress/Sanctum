@@ -9,6 +9,7 @@ use sanctum::security_log::init_security_logger;
 use slint::SharedString;
 use slint::{ModelRc, VecModel, Weak};
 use std::collections::HashMap;
+use std::cell::Cell;
 use std::sync::Arc;
 use chrono::Datelike; // Import Datelike trait
 
@@ -80,6 +81,68 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
+    // Session monitor: warn and auto-logout on inactivity
+    let session_timer = std::rc::Rc::new(slint::Timer::default());
+    let session_warned = std::rc::Rc::new(Cell::new(false));
+    let start_session_monitor = std::rc::Rc::new({
+        let ui_weak = ui_weak.clone();
+        let controller = controller.clone();
+        let notify = show_notification.clone();
+        let timer = session_timer.clone();
+        let warned = session_warned.clone();
+        move || {
+            warned.set(false);
+            timer.start(
+                slint::TimerMode::Repeated,
+                std::time::Duration::from_secs(30),
+                {
+                    let ui_weak = ui_weak.clone();
+                    let controller = controller.clone();
+                    let notify = notify.clone();
+                    let timer = timer.clone();
+                    let warned = warned.clone();
+                    move || {
+                        match controller.get_session_remaining() {
+                            Ok(remaining) => {
+                                if remaining <= 0 {
+                                    timer.stop();
+                                    let _ = controller.close_db();
+                                    if let Some(ui) = ui_weak.upgrade() {
+                                        ui.global::<AppState>().set_is_logged_in(false);
+                                    }
+                                    notify("Session expired due to inactivity".into(), true);
+                                    warned.set(false);
+                                    return;
+                                }
+                                if remaining <= 120 {
+                                    if !warned.get() {
+                                        let mins = (remaining + 59) / 60;
+                                        notify(
+                                            format!("Session expires in {mins} minute(s)").into(),
+                                            true,
+                                        );
+                                        warned.set(true);
+                                    }
+                                } else {
+                                    warned.set(false);
+                                }
+                            }
+                            Err(_) => {
+                                timer.stop();
+                                let _ = controller.close_db();
+                                if let Some(ui) = ui_weak.upgrade() {
+                                    ui.global::<AppState>().set_is_logged_in(false);
+                                }
+                                notify("Session ended".into(), true);
+                                warned.set(false);
+                            }
+                        }
+                    }
+                },
+            );
+        }
+    });
+
     // Register NotificationAdapter callback so UI can trigger it
     {
         let notify = show_notification.clone();
@@ -110,6 +173,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let controller_clone = controller.clone();
         let notify = show_notification.clone();
+        let session_monitor = start_session_monitor.clone();
         auth_adapter.on_create_vault(move |password: SharedString| {
             log::info!("create_vault called");
 
@@ -119,6 +183,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Ok(msg) => {
                     log::info!("Vault created successfully: {}", msg);
                     notify("Vault created successfully".into(), false);
+                    session_monitor();
                     SharedString::from("")
                 }
                 Err(e) => {
@@ -137,6 +202,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let controller_clone = controller.clone();
         let notify = show_notification.clone();
+        let session_monitor = start_session_monitor.clone();
         auth_adapter.on_unlock_vault(move |password: SharedString| {
             log::info!("unlock_vault called");
 
@@ -146,6 +212,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Ok(msg) => {
                     log::info!("Vault unlocked successfully: {}", msg);
                     notify("Vault unlocked successfully".into(), false);
+                    session_monitor();
                     SharedString::from("")
                 }
                 Err(e) => {
@@ -164,6 +231,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let controller_clone = controller.clone();
         let notify = show_notification.clone();
+        let session_timer = session_timer.clone();
+        let session_warned = session_warned.clone();
         auth_adapter.on_lock_vault(move || {
             log::info!("lock_vault called");
 
@@ -171,6 +240,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Ok(msg) => {
                     log::info!("Vault locked successfully: {}", msg);
                     notify("Vault locked".into(), false);
+                    session_timer.stop();
+                    session_warned.set(false);
                     SharedString::from("")
                 }
                 Err(e) => {
@@ -657,6 +728,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // ==================== HabitAdapter Logic ====================
     
     let current_habit_date = Arc::new(std::sync::Mutex::new(chrono::Local::now().date_naive()));
+    let current_heatmap_year = Arc::new(std::sync::Mutex::new(chrono::Local::now().year()));
 
     fn reload_habits(
         ui_weak: &Weak<AppWindow>,
@@ -783,14 +855,100 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    fn reload_heatmap(
+        ui_weak: &Weak<AppWindow>,
+        controller: &Arc<AppController>,
+        year: i32,
+    ) {
+        // 1. Calculate Date Range (Selected Calendar Year)
+        let today = chrono::Local::now().date_naive();
+        
+        let first_day_year = chrono::NaiveDate::from_ymd_opt(year, 1, 1).unwrap();
+        let last_day_year = chrono::NaiveDate::from_ymd_opt(year, 12, 31).unwrap();
+        
+        // Align start to Monday
+        let days_from_mon = first_day_year.weekday().num_days_from_monday();
+        let start_date = first_day_year - chrono::Duration::days(days_from_mon as i64);
+        
+        // Align end to Sunday (so we finish the last week grid)
+        let days_to_sun = 6 - last_day_year.weekday().num_days_from_monday(); 
+        let end_date = last_day_year + chrono::Duration::days(days_to_sun as i64);
+
+        // 2. Fetch Logs (Only up to today if current year, otherwise full year)
+        // If year < current year, show all. If year == current year, show up to today. If year > current, show none (but grid exists).
+        
+        let query_end = if year == today.year() { today } else if year < today.year() { end_date } else { start_date };
+        
+        let start_str = start_date.format("%Y-%m-%d").to_string();
+        let end_str = query_end.format("%Y-%m-%d").to_string();
+        
+        let mut daily_counts: HashMap<String, i32> = HashMap::new();
+        
+        if year <= today.year() {
+             if let Ok(logs) = controller.get_habit_logs(start_str, end_str) {
+                for log in logs {
+                    *daily_counts.entry(log.completed_date).or_insert(0) += 1;
+                }
+             }
+        }
+            
+        // 4. Build Structure
+        let mut weeks_vec: Vec<HeatmapWeek> = Vec::new();
+        let mut current_day = start_date;
+        
+        // Iterate until we cover the full end_date
+        while current_day <= end_date {
+            let mut week_days: Vec<HeatmapDay> = Vec::new();
+            
+            for _ in 0..7 {
+                let date_str = current_day.format("%Y-%m-%d").to_string();
+                let count = *daily_counts.get(&date_str).unwrap_or(&0);
+                
+                // Logic: 
+                // If viewing current year: hide future days (> today).
+                // If viewing past year: show all.
+                // If viewing future year: show empty grid.
+                
+                let is_future = if year == today.year() { current_day > today } else { year > today.year() };
+                
+                let level = if is_future { 0 }
+                else if count == 0 { 0 }
+                else if count <= 1 { 1 }
+                else if count <= 2 { 2 }
+                else if count <= 4 { 3 }
+                else { 4 };
+                
+                week_days.push(HeatmapDay {
+                    date: SharedString::from(date_str),
+                    count,
+                    level,
+                });
+                
+                current_day = current_day + chrono::Duration::days(1);
+            }
+            
+            weeks_vec.push(HeatmapWeek {
+                days: ModelRc::new(VecModel::from(week_days)),
+            });
+        }
+        
+        if let Some(ui) = ui_weak.upgrade() {
+            let adapter = ui.global::<HabitAdapter>();
+            adapter.set_heatmap_data(ModelRc::new(VecModel::from(weeks_vec)));
+            adapter.set_heatmap_year(year);
+        }
+    }
+
     // Callbacks
     {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         let date_lock = current_habit_date.clone();
+        let year_lock = current_heatmap_year.clone();
         ui.global::<HabitAdapter>().on_load_initial_data(move || {
              let now = chrono::Local::now().date_naive();
              *date_lock.lock().unwrap() = now;
+             *year_lock.lock().unwrap() = now.year();
              reload_habits(&ui_weak, &controller, now);
         });
     }
@@ -811,6 +969,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         let date_lock = current_habit_date.clone();
+        let year_lock = current_heatmap_year.clone();
         let notify = show_notification.clone();
         ui.global::<HabitAdapter>().on_create_habit(move |name, desc, color| -> SharedString {
             let result = controller.create_habit(
@@ -821,7 +980,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             match result {
                 Ok(_) => {
                     let d = *date_lock.lock().unwrap();
+                    let y = *year_lock.lock().unwrap();
                     reload_habits(&ui_weak, &controller, d);
+                    reload_heatmap(&ui_weak, &controller, y); // Refresh heatmap
                     notify("Habit created".into(), false);
                     SharedString::from("")
                 }
@@ -834,13 +995,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         let date_lock = current_habit_date.clone();
+        let year_lock = current_heatmap_year.clone();
         let notify = show_notification.clone();
         ui.global::<HabitAdapter>().on_delete_habit(move |id| -> SharedString {
             let result = controller.delete_habit(id.to_string());
             match result {
                 Ok(_) => {
                     let d = *date_lock.lock().unwrap();
+                    let y = *year_lock.lock().unwrap();
                     reload_habits(&ui_weak, &controller, d);
+                    reload_heatmap(&ui_weak, &controller, y); // Refresh heatmap
                     notify("Habit deleted".into(), false);
                     SharedString::from("")
                 }
@@ -853,10 +1017,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         let date_lock = current_habit_date.clone();
+        let year_lock = current_heatmap_year.clone();
         ui.global::<HabitAdapter>().on_toggle_habit(move |id, date| {
             if let Ok(_) = controller.toggle_habit_completion(id.to_string(), date.to_string()) {
                  let d = *date_lock.lock().unwrap();
+                 let y = *year_lock.lock().unwrap();
                  reload_habits(&ui_weak, &controller, d);
+                 reload_heatmap(&ui_weak, &controller, y); // Refresh heatmap
             }
         });
     }
@@ -887,6 +1054,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
              let (new_y, new_m) = if month == 12 { (year + 1, 1) } else { (year, month + 1) };
              *d = chrono::NaiveDate::from_ymd_opt(new_y, new_m, 1).unwrap();
              reload_habits(&ui_weak, &controller, *d);
+        });
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let year_lock = current_heatmap_year.clone();
+        ui.global::<HabitAdapter>().on_fetch_heatmap_data(move || {
+            let y = *year_lock.lock().unwrap();
+            reload_heatmap(&ui_weak, &controller, y);
+        });
+    }
+    
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let year_lock = current_heatmap_year.clone();
+        ui.global::<HabitAdapter>().on_prev_heatmap_year(move || {
+            let mut y = year_lock.lock().unwrap();
+            *y -= 1;
+            reload_heatmap(&ui_weak, &controller, *y);
+        });
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let year_lock = current_heatmap_year.clone();
+        ui.global::<HabitAdapter>().on_next_heatmap_year(move || {
+            let mut y = year_lock.lock().unwrap();
+            *y += 1;
+            reload_heatmap(&ui_weak, &controller, *y);
         });
     }
 

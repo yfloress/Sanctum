@@ -126,14 +126,29 @@ export struct HabitData {
     days: [HabitDay], // Array of days for the current month
 }
 
+export struct HeatmapDay {
+    date: string,
+    count: int,
+    level: int, // 0-4 intensity
+}
+
+export struct HeatmapWeek {
+    days: [HeatmapDay],
+}
+
 export global HabitAdapter {
     in-out property <[HabitData]> habits: [];
     in-out property <string> current-month-name: "";
     in-out property <int> current-year;
     in-out property <int> current-month-index: 1;
+    
+    // Heatmap
+    in-out property <[HeatmapWeek]> heatmap-data: [];
+    in-out property <int> heatmap-year;
 
     // Actions
     callback fetch-habits(int, int); // month (1-12), year
+    callback fetch-heatmap-data(); // Load last 365 days
     callback load-initial-data(); // Load current month on startup
     callback create-habit(string, string, string) -> string; // name, desc, color -> error or ""
     callback toggle-habit(string, string); // id, date
@@ -142,6 +157,10 @@ export global HabitAdapter {
     // Navigation
     callback prev-month();
     callback next-month();
+    
+    // Heatmap Navigation
+    callback prev-heatmap-year();
+    callback next-heatmap-year();
 }
 
 // ==================== Notification Adapter ====================
