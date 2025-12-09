@@ -144,6 +144,7 @@ export global HabitAdapter {
     
     // Heatmap
     in-out property <[HeatmapWeek]> heatmap-data: [];
+    in-out property <int> heatmap-year;
 
     // Actions
     callback fetch-habits(int, int); // month (1-12), year
@@ -156,6 +157,10 @@ export global HabitAdapter {
     // Navigation
     callback prev-month();
     callback next-month();
+    
+    // Heatmap Navigation
+    callback prev-heatmap-year();
+    callback next-heatmap-year();
 }
 
 // ==================== Notification Adapter ====================

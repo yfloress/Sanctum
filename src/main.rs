@@ -728,6 +728,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // ==================== HabitAdapter Logic ====================
     
     let current_habit_date = Arc::new(std::sync::Mutex::new(chrono::Local::now().date_naive()));
+    let current_heatmap_year = Arc::new(std::sync::Mutex::new(chrono::Local::now().year()));
 
     fn reload_habits(
         ui_weak: &Weak<AppWindow>,
@@ -857,67 +858,84 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     fn reload_heatmap(
         ui_weak: &Weak<AppWindow>,
         controller: &Arc<AppController>,
+        year: i32,
     ) {
-        // 1. Calculate Date Range (Last 52 weeks, aligned to Monday)
+        // 1. Calculate Date Range (Selected Calendar Year)
         let today = chrono::Local::now().date_naive();
-        // Go back 52 weeks
-        let start_approx = today - chrono::Duration::weeks(52);
-        // Align to previous Monday
-        let days_from_mon = start_approx.weekday().num_days_from_monday();
-        let start_date = start_approx - chrono::Duration::days(days_from_mon as i64);
         
-        // 2. Fetch Logs
+        let first_day_year = chrono::NaiveDate::from_ymd_opt(year, 1, 1).unwrap();
+        let last_day_year = chrono::NaiveDate::from_ymd_opt(year, 12, 31).unwrap();
+        
+        // Align start to Monday
+        let days_from_mon = first_day_year.weekday().num_days_from_monday();
+        let start_date = first_day_year - chrono::Duration::days(days_from_mon as i64);
+        
+        // Align end to Sunday (so we finish the last week grid)
+        let days_to_sun = 6 - last_day_year.weekday().num_days_from_monday(); 
+        let end_date = last_day_year + chrono::Duration::days(days_to_sun as i64);
+
+        // 2. Fetch Logs (Only up to today if current year, otherwise full year)
+        // If year < current year, show all. If year == current year, show up to today. If year > current, show none (but grid exists).
+        
+        let query_end = if year == today.year() { today } else if year < today.year() { end_date } else { start_date };
+        
         let start_str = start_date.format("%Y-%m-%d").to_string();
-        let end_str = today.format("%Y-%m-%d").to_string();
+        let end_str = query_end.format("%Y-%m-%d").to_string();
         
-        if let Ok(logs) = controller.get_habit_logs(start_str, end_str) {
-            // 3. Process Counts
-            let mut daily_counts: HashMap<String, i32> = HashMap::new();
-            for log in logs {
-                *daily_counts.entry(log.completed_date).or_insert(0) += 1;
-            }
-            
-            // 4. Build Structure
-            let mut weeks_vec: Vec<HeatmapWeek> = Vec::new();
-            let mut current_day = start_date;
-            
-            // We iterate week by week until we pass today
-            while current_day <= today || current_day.weekday() != chrono::Weekday::Mon {
-                let mut week_days: Vec<HeatmapDay> = Vec::new();
-                
-                for _ in 0..7 {
-                    let date_str = current_day.format("%Y-%m-%d").to_string();
-                    let count = *daily_counts.get(&date_str).unwrap_or(&0);
-                    
-                    // Simple intensity mapping: 1 habit = lvl 1, 2 = lvl 2, etc. Cap at 4.
-                    let level = if count == 0 { 0 }
-                    else if count <= 1 { 1 }
-                    else if count <= 2 { 2 }
-                    else if count <= 4 { 3 }
-                    else { 4 };
-                    
-                    week_days.push(HeatmapDay {
-                        date: SharedString::from(date_str),
-                        count,
-                        level,
-                    });
-                    
-                    current_day = current_day + chrono::Duration::days(1);
+        let mut daily_counts: HashMap<String, i32> = HashMap::new();
+        
+        if year <= today.year() {
+             if let Ok(logs) = controller.get_habit_logs(start_str, end_str) {
+                for log in logs {
+                    *daily_counts.entry(log.completed_date).or_insert(0) += 1;
                 }
+             }
+        }
+            
+        // 4. Build Structure
+        let mut weeks_vec: Vec<HeatmapWeek> = Vec::new();
+        let mut current_day = start_date;
+        
+        // Iterate until we cover the full end_date
+        while current_day <= end_date {
+            let mut week_days: Vec<HeatmapDay> = Vec::new();
+            
+            for _ in 0..7 {
+                let date_str = current_day.format("%Y-%m-%d").to_string();
+                let count = *daily_counts.get(&date_str).unwrap_or(&0);
                 
-                weeks_vec.push(HeatmapWeek {
-                    days: ModelRc::new(VecModel::from(week_days)),
+                // Logic: 
+                // If viewing current year: hide future days (> today).
+                // If viewing past year: show all.
+                // If viewing future year: show empty grid.
+                
+                let is_future = if year == today.year() { current_day > today } else { year > today.year() };
+                
+                let level = if is_future { 0 }
+                else if count == 0 { 0 }
+                else if count <= 1 { 1 }
+                else if count <= 2 { 2 }
+                else if count <= 4 { 3 }
+                else { 4 };
+                
+                week_days.push(HeatmapDay {
+                    date: SharedString::from(date_str),
+                    count,
+                    level,
                 });
                 
-                if current_day > today {
-                    break;
-                }
+                current_day = current_day + chrono::Duration::days(1);
             }
             
-            if let Some(ui) = ui_weak.upgrade() {
-                let adapter = ui.global::<HabitAdapter>();
-                adapter.set_heatmap_data(ModelRc::new(VecModel::from(weeks_vec)));
-            }
+            weeks_vec.push(HeatmapWeek {
+                days: ModelRc::new(VecModel::from(week_days)),
+            });
+        }
+        
+        if let Some(ui) = ui_weak.upgrade() {
+            let adapter = ui.global::<HabitAdapter>();
+            adapter.set_heatmap_data(ModelRc::new(VecModel::from(weeks_vec)));
+            adapter.set_heatmap_year(year);
         }
     }
 
@@ -926,12 +944,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         let date_lock = current_habit_date.clone();
+        let year_lock = current_heatmap_year.clone();
         ui.global::<HabitAdapter>().on_load_initial_data(move || {
              let now = chrono::Local::now().date_naive();
              *date_lock.lock().unwrap() = now;
+             *year_lock.lock().unwrap() = now.year();
              reload_habits(&ui_weak, &controller, now);
-             // Ensure heatmap is also loaded initially if not handled by explicit fetch call
-             // The HabitsPage init calls fetch-heatmap-data separately, so we are good.
         });
     }
 
@@ -951,6 +969,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         let date_lock = current_habit_date.clone();
+        let year_lock = current_heatmap_year.clone();
         let notify = show_notification.clone();
         ui.global::<HabitAdapter>().on_create_habit(move |name, desc, color| -> SharedString {
             let result = controller.create_habit(
@@ -961,8 +980,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             match result {
                 Ok(_) => {
                     let d = *date_lock.lock().unwrap();
+                    let y = *year_lock.lock().unwrap();
                     reload_habits(&ui_weak, &controller, d);
-                    reload_heatmap(&ui_weak, &controller); // Refresh heatmap
+                    reload_heatmap(&ui_weak, &controller, y); // Refresh heatmap
                     notify("Habit created".into(), false);
                     SharedString::from("")
                 }
@@ -975,14 +995,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         let date_lock = current_habit_date.clone();
+        let year_lock = current_heatmap_year.clone();
         let notify = show_notification.clone();
         ui.global::<HabitAdapter>().on_delete_habit(move |id| -> SharedString {
             let result = controller.delete_habit(id.to_string());
             match result {
                 Ok(_) => {
                     let d = *date_lock.lock().unwrap();
+                    let y = *year_lock.lock().unwrap();
                     reload_habits(&ui_weak, &controller, d);
-                    reload_heatmap(&ui_weak, &controller); // Refresh heatmap
+                    reload_heatmap(&ui_weak, &controller, y); // Refresh heatmap
                     notify("Habit deleted".into(), false);
                     SharedString::from("")
                 }
@@ -995,11 +1017,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         let date_lock = current_habit_date.clone();
+        let year_lock = current_heatmap_year.clone();
         ui.global::<HabitAdapter>().on_toggle_habit(move |id, date| {
             if let Ok(_) = controller.toggle_habit_completion(id.to_string(), date.to_string()) {
                  let d = *date_lock.lock().unwrap();
+                 let y = *year_lock.lock().unwrap();
                  reload_habits(&ui_weak, &controller, d);
-                 reload_heatmap(&ui_weak, &controller); // Refresh heatmap
+                 reload_heatmap(&ui_weak, &controller, y); // Refresh heatmap
             }
         });
     }
@@ -1036,8 +1060,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
+        let year_lock = current_heatmap_year.clone();
         ui.global::<HabitAdapter>().on_fetch_heatmap_data(move || {
-            reload_heatmap(&ui_weak, &controller);
+            let y = *year_lock.lock().unwrap();
+            reload_heatmap(&ui_weak, &controller, y);
+        });
+    }
+    
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let year_lock = current_heatmap_year.clone();
+        ui.global::<HabitAdapter>().on_prev_heatmap_year(move || {
+            let mut y = year_lock.lock().unwrap();
+            *y -= 1;
+            reload_heatmap(&ui_weak, &controller, *y);
+        });
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let year_lock = current_heatmap_year.clone();
+        ui.global::<HabitAdapter>().on_next_heatmap_year(move || {
+            let mut y = year_lock.lock().unwrap();
+            *y += 1;
+            reload_heatmap(&ui_weak, &controller, *y);
         });
     }
 

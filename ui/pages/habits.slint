@@ -67,6 +67,52 @@ export component HabitsPage inherits Rectangle {
 
         Rectangle { height: 32px; }
 
+        // Heatmap Header
+        HorizontalLayout {
+            height: 32px;
+            alignment: start;
+            spacing: 16px;
+            
+            Text {
+                text: "YEARLY OVERVIEW";
+                color: Palette.text-secondary;
+                font-size: 12px;
+                font-weight: 700;
+                vertical-alignment: center;
+            }
+
+            // Year Navigation
+            HorizontalLayout {
+                spacing: 12px;
+                
+                Text {
+                    text: "←";
+                    color: Palette.text-muted;
+                    font-size: 14px;
+                    vertical-alignment: center;
+                    TouchArea { mouse-cursor: pointer; clicked => { HabitAdapter.prev-heatmap-year(); } }
+                }
+                
+                Text {
+                    text: HabitAdapter.heatmap-year;
+                    color: Palette.text-primary;
+                    font-size: 12px;
+                    font-weight: 500;
+                    vertical-alignment: center;
+                }
+                
+                Text {
+                    text: "→";
+                    color: Palette.text-muted;
+                    font-size: 14px;
+                    vertical-alignment: center;
+                    TouchArea { mouse-cursor: pointer; clicked => { HabitAdapter.next-heatmap-year(); } }
+                }
+            }
+        }
+        
+        Rectangle { height: 8px; }
+
         // Heatmap
         HabitHeatmap {
             height: 120px;
