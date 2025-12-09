@@ -854,6 +854,73 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    fn reload_heatmap(
+        ui_weak: &Weak<AppWindow>,
+        controller: &Arc<AppController>,
+    ) {
+        // 1. Calculate Date Range (Last 52 weeks, aligned to Monday)
+        let today = chrono::Local::now().date_naive();
+        // Go back 52 weeks
+        let start_approx = today - chrono::Duration::weeks(52);
+        // Align to previous Monday
+        let days_from_mon = start_approx.weekday().num_days_from_monday();
+        let start_date = start_approx - chrono::Duration::days(days_from_mon as i64);
+        
+        // 2. Fetch Logs
+        let start_str = start_date.format("%Y-%m-%d").to_string();
+        let end_str = today.format("%Y-%m-%d").to_string();
+        
+        if let Ok(logs) = controller.get_habit_logs(start_str, end_str) {
+            // 3. Process Counts
+            let mut daily_counts: HashMap<String, i32> = HashMap::new();
+            for log in logs {
+                *daily_counts.entry(log.completed_date).or_insert(0) += 1;
+            }
+            
+            // 4. Build Structure
+            let mut weeks_vec: Vec<HeatmapWeek> = Vec::new();
+            let mut current_day = start_date;
+            
+            // We iterate week by week until we pass today
+            while current_day <= today || current_day.weekday() != chrono::Weekday::Mon {
+                let mut week_days: Vec<HeatmapDay> = Vec::new();
+                
+                for _ in 0..7 {
+                    let date_str = current_day.format("%Y-%m-%d").to_string();
+                    let count = *daily_counts.get(&date_str).unwrap_or(&0);
+                    
+                    // Simple intensity mapping: 1 habit = lvl 1, 2 = lvl 2, etc. Cap at 4.
+                    let level = if count == 0 { 0 }
+                    else if count <= 1 { 1 }
+                    else if count <= 2 { 2 }
+                    else if count <= 4 { 3 }
+                    else { 4 };
+                    
+                    week_days.push(HeatmapDay {
+                        date: SharedString::from(date_str),
+                        count,
+                        level,
+                    });
+                    
+                    current_day = current_day + chrono::Duration::days(1);
+                }
+                
+                weeks_vec.push(HeatmapWeek {
+                    days: ModelRc::new(VecModel::from(week_days)),
+                });
+                
+                if current_day > today {
+                    break;
+                }
+            }
+            
+            if let Some(ui) = ui_weak.upgrade() {
+                let adapter = ui.global::<HabitAdapter>();
+                adapter.set_heatmap_data(ModelRc::new(VecModel::from(weeks_vec)));
+            }
+        }
+    }
+
     // Callbacks
     {
         let controller = controller.clone();
@@ -863,6 +930,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
              let now = chrono::Local::now().date_naive();
              *date_lock.lock().unwrap() = now;
              reload_habits(&ui_weak, &controller, now);
+             // Ensure heatmap is also loaded initially if not handled by explicit fetch call
+             // The HabitsPage init calls fetch-heatmap-data separately, so we are good.
         });
     }
 
@@ -893,6 +962,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Ok(_) => {
                     let d = *date_lock.lock().unwrap();
                     reload_habits(&ui_weak, &controller, d);
+                    reload_heatmap(&ui_weak, &controller); // Refresh heatmap
                     notify("Habit created".into(), false);
                     SharedString::from("")
                 }
@@ -912,6 +982,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Ok(_) => {
                     let d = *date_lock.lock().unwrap();
                     reload_habits(&ui_weak, &controller, d);
+                    reload_heatmap(&ui_weak, &controller); // Refresh heatmap
                     notify("Habit deleted".into(), false);
                     SharedString::from("")
                 }
@@ -928,6 +999,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(_) = controller.toggle_habit_completion(id.to_string(), date.to_string()) {
                  let d = *date_lock.lock().unwrap();
                  reload_habits(&ui_weak, &controller, d);
+                 reload_heatmap(&ui_weak, &controller); // Refresh heatmap
             }
         });
     }
@@ -965,74 +1037,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         ui.global::<HabitAdapter>().on_fetch_heatmap_data(move || {
-            // 1. Calculate Date Range (Last 52 weeks, aligned to Monday)
-            let today = chrono::Local::now().date_naive();
-            // Go back 52 weeks
-            let start_approx = today - chrono::Duration::weeks(52);
-            // Align to previous Monday
-            let days_from_mon = start_approx.weekday().num_days_from_monday();
-            let start_date = start_approx - chrono::Duration::days(days_from_mon as i64);
-            
-            // 2. Fetch Logs
-            let start_str = start_date.format("%Y-%m-%d").to_string();
-            let end_str = today.format("%Y-%m-%d").to_string();
-            
-            if let Ok(logs) = controller.get_habit_logs(start_str, end_str) {
-                // 3. Process Counts
-                let mut daily_counts: HashMap<String, i32> = HashMap::new();
-                for log in logs {
-                    *daily_counts.entry(log.completed_date).or_insert(0) += 1;
-                }
-                
-                // 4. Build Structure
-                let mut weeks_vec: Vec<HeatmapWeek> = Vec::new();
-                let mut current_day = start_date;
-                
-                // We iterate week by week until we pass today
-                while current_day <= today || current_day.weekday() != chrono::Weekday::Mon {
-                    let mut week_days: Vec<HeatmapDay> = Vec::new();
-                    
-                    for _ in 0..7 {
-                        // If we are past today, we can stop or just fill with empty/future
-                        // Requirement: "Show up to today" usually.
-                        // But for a grid, we usually fill the last week.
-                        
-                        let date_str = current_day.format("%Y-%m-%d").to_string();
-                        let count = *daily_counts.get(&date_str).unwrap_or(&0);
-                        
-                        // Simple intensity mapping: 1 habit = lvl 1, 2 = lvl 2, etc. Cap at 4.
-                        let level = if count == 0 { 0 }
-                        else if count <= 1 { 1 }
-                        else if count <= 2 { 2 }
-                        else if count <= 4 { 3 }
-                        else { 4 };
-                        
-                        week_days.push(HeatmapDay {
-                            date: SharedString::from(date_str),
-                            count,
-                            level,
-                        });
-                        
-                        current_day = current_day + chrono::Duration::days(1);
-                        
-                        // Break outer loop if we've gone far enough? 
-                        // Actually, we want to finish the current week row.
-                    }
-                    
-                    weeks_vec.push(HeatmapWeek {
-                        days: ModelRc::new(VecModel::from(week_days)),
-                    });
-                    
-                    if current_day > today {
-                        break;
-                    }
-                }
-                
-                if let Some(ui) = ui_weak.upgrade() {
-                    let adapter = ui.global::<HabitAdapter>();
-                    adapter.set_heatmap_data(ModelRc::new(VecModel::from(weeks_vec)));
-                }
-            }
+            reload_heatmap(&ui_weak, &controller);
         });
     }
 
