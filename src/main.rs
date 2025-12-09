@@ -890,30 +890,60 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let start_str = format!("{}-01-01", year);
         let end_str = format!("{}-12-31", year);
         
+        // Fetch all habits to map IDs to Colors
+        let habit_colors: HashMap<String, slint::Color> = if let Ok(habits) = controller.get_habits() {
+            habits.into_iter().map(|h| {
+                 let color = if h.color.starts_with("#") && h.color.len() == 7 {
+                    let r = u8::from_str_radix(&h.color[1..3], 16).unwrap_or(0);
+                    let g = u8::from_str_radix(&h.color[3..5], 16).unwrap_or(0);
+                    let b = u8::from_str_radix(&h.color[5..7], 16).unwrap_or(0);
+                    slint::Color::from_rgb_u8(r, g, b)
+                } else {
+                    slint::Color::from_rgb_u8(139, 92, 246)
+                };
+                (h.id, color)
+            }).collect()
+        } else {
+            HashMap::new()
+        };
+        
         if let Ok(logs) = controller.get_habit_logs(start_str, end_str) {
-            // Aggregate by month (0-11)
-            let mut month_counts = [0; 12];
+            // Aggregate by month (0-11) -> Total Count, and Dominant Habit ID tracking
+            // Structure: month_index -> (total_count, HashMap<habit_id, count>)
+            let mut month_data: Vec<(i32, HashMap<String, i32>)> = vec![(0, HashMap::new()); 12];
             
             for log in logs {
                 if let Ok(date) = chrono::NaiveDate::parse_from_str(&log.completed_date, "%Y-%m-%d") {
                      let m = date.month0() as usize;
                      if m < 12 {
-                         month_counts[m] += 1;
+                         month_data[m].0 += 1;
+                         *month_data[m].1.entry(log.habit_id).or_insert(0) += 1;
                      }
                 }
             }
             
-            let max_val = *month_counts.iter().max().unwrap_or(&1);
-            // Ensure visualization isn't empty if max is 0
+            let max_val = month_data.iter().map(|(total, _)| *total).max().unwrap_or(1);
             let scale_max = if max_val == 0 { 10 } else { max_val }; 
             
             let month_names = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
             
-            let stats: Vec<MonthlyStats> = month_counts.iter().enumerate().map(|(i, &count)| {
+            let stats: Vec<MonthlyStats> = month_data.iter().enumerate().map(|(i, (total, habits_map))| {
+                // Find dominant habit
+                let mut dominant_color = slint::Color::from_rgb_u8(100, 100, 100); // Default gray
+                
+                if *total > 0 {
+                    if let Some((best_habit_id, _)) = habits_map.iter().max_by_key(|(_, count)| **count) {
+                        if let Some(c) = habit_colors.get(best_habit_id) {
+                            dominant_color = *c;
+                        }
+                    }
+                }
+                
                 MonthlyStats {
                     month_name: SharedString::from(month_names[i]),
-                    total_completions: count,
+                    total_completions: *total,
                     max_completions: scale_max,
+                    dominant_color,
                 }
             }).collect();
             

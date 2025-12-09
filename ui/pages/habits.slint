@@ -119,13 +119,6 @@ export component HabitsPage inherits Rectangle {
             height: 120px;
         }
 
-        Rectangle { height: 24px; }
-        
-        // Bar Chart
-        HabitBarChart {}
-
-        Rectangle { height: 32px; }
-        
         // Habits List
         if HabitAdapter.habits.length > 0 : Flickable {
             viewport-height: HabitAdapter.habits.length * 64px;
@@ -147,6 +140,13 @@ export component HabitsPage inherits Rectangle {
                 vertical-alignment: center;
             }
         }
+
+        Rectangle { height: 32px; }
+        
+        // Bar Chart
+        HabitBarChart {}
+        
+        Rectangle { height: 32px; }
     }
     
     if AppState.show-add-habit : AddHabitModal {

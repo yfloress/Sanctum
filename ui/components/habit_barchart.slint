@@ -39,7 +39,7 @@ export component HabitBarChart inherits Rectangle {
                         // Avoid division by zero
                         height: stat.max-completions > 0 ? (stat.total-completions / stat.max-completions) * 100px : 0px;
                         y: parent.height - self.height;
-                        background: Palette.text-primary;
+                        background: stat.dominant-color;
                         border-radius: 2px;
                         opacity: 0.8;
                         
