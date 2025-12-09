@@ -1,0 +1,88 @@
+import { Palette, MonthlyStats, HabitAdapter } from "../globals.slint";
+
+export component HabitBarChart inherits Rectangle {
+    height: 160px;
+    background: Palette.surface;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: Palette.border-subtle;
+    
+    VerticalLayout {
+        padding: 16px;
+        spacing: 12px;
+        
+        Text {
+            text: "MONTHLY COMPLETION VOLUME";
+            color: Palette.text-secondary;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+        
+        HorizontalLayout {
+            alignment: space-between;
+            spacing: 8px;
+            
+            for stat in HabitAdapter.chart-data : VerticalLayout {
+                alignment: end;
+                spacing: 4px;
+                
+                // Bar container
+                Rectangle {
+                    width: 24px;
+                    height: 100px; // Max height area
+                    
+                    // The actual bar
+                    Rectangle {
+                        width: 100%;
+                        // Scale height based on max value (e.g. 150 completions max)
+                        // Avoid division by zero
+                        height: stat.max-completions > 0 ? (stat.total-completions / stat.max-completions) * 100px : 0px;
+                        y: parent.height - self.height;
+                        background: stat.dominant-color;
+                        border-radius: 2px;
+                        opacity: 0.8;
+                        
+                        // Simple hover effect
+                        states [
+                            hover when touch.has-hover: {
+                                opacity: 1.0;
+                            }
+                        ]
+                        
+                        touch := TouchArea {}
+                        
+                        // Tooltip (Basic, centered on bar)
+                        if touch.has-hover : Rectangle {
+                            x: -20px; 
+                            y: -30px;
+                            width: 64px;
+                            height: 24px;
+                            background: Palette.surface-hover;
+                            border-radius: 4px;
+                            border-width: 1px;
+                            border-color: Palette.border;
+                            Text {
+                                text: stat.total-completions;
+                                color: Palette.text-primary;
+                                font-size: 12px;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+                
+                // Month Label
+                Text {
+                    text: stat.month-name;
+                    color: Palette.text-muted;
+                    font-size: 10px;
+                    horizontal-alignment: center;
+                    width: 24px;
+                    overflow: elide;
+                }
+            }
+        }
+    }
+}

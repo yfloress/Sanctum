@@ -752,6 +752,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let start_str = start_date.format("%Y-%m-%d").to_string();
             let end_str = end_date.format("%Y-%m-%d").to_string();
             
+            // Fetch logs for the current month view (optimized: single query)
             let logs = controller.get_habit_logs(start_str, end_str).unwrap_or_default();
             
             let mut log_map: std::collections::HashSet<(String, String)> = std::collections::HashSet::new();
@@ -759,70 +760,89 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 log_map.insert((log.habit_id, log.completed_date));
             }
             
-                        let mapped_habits: Vec<HabitData> = habits.into_iter().map(|h| {
+            // OPTIMIZATION: Fetch ALL historical logs once for streak calculations
+            // Instead of querying per habit inside the loop (N+1 problem), we query once.
+            // "1970-01-01" to "2100-01-01" covers all reasonable dates.
+            let all_history_logs = controller.get_habit_logs("1970-01-01".to_string(), "2100-01-01".to_string()).unwrap_or_default();
             
-                            let mut days_vec: Vec<HabitDay> = Vec::new();
+            // Group history logs by habit_id -> Sorted Vec of NaiveDates
+            let mut history_map: HashMap<String, Vec<chrono::NaiveDate>> = HashMap::new();
             
-                            let mut completions = 0;
+            for log in all_history_logs {
+                if let Ok(date) = chrono::NaiveDate::parse_from_str(&log.completed_date, "%Y-%m-%d") {
+                    history_map.entry(log.habit_id).or_default().push(date);
+                }
+            }
             
-                            let today = chrono::Local::now().date_naive();
+            // Sort and dedup dates for each habit
+            for dates in history_map.values_mut() {
+                dates.sort();
+                dates.dedup();
+            }
             
-                            
-            
-                            for d in 1..=days_in_month {
-            
-                                let date = chrono::NaiveDate::from_ymd_opt(year, month, d).unwrap();
-            
-                                let date_str = date.format("%Y-%m-%d").to_string();
-            
-                                let is_future = date > today;
-            
-                                
-            
-                                let completed = log_map.contains(&(h.id.clone(), date_str.clone()));
-            
-                                if completed { completions += 1; }
-            
-                                
-            
-                                days_vec.push(HabitDay {
-            
-                                    day: d as i32,
-            
-                                    completed,
-            
-                                    date: SharedString::from(date_str),
-            
-                                    is_future,
-            
-                                });
-            
-                            }
+            let mapped_habits: Vec<HabitData> = habits.into_iter().map(|h| {
+                let mut days_vec: Vec<HabitDay> = Vec::new();
+                let mut completions = 0;
+                let today = chrono::Local::now().date_naive();
+                
+                // Build monthly view
+                for d in 1..=days_in_month {
+                    let date = chrono::NaiveDate::from_ymd_opt(year, month, d).unwrap();
+                    let date_str = date.format("%Y-%m-%d").to_string();
+                    let is_future = date > today;
+                    
+                    let completed = log_map.contains(&(h.id.clone(), date_str.clone()));
+                    if completed { completions += 1; }
+                    
+                    days_vec.push(HabitDay {
+                        day: d as i32,
+                        completed,
+                        date: SharedString::from(date_str),
+                        is_future,
+                    });
+                }
                 
                 let completion_rate = if days_in_month > 0 {
                     ((completions as f32 / days_in_month as f32) * 100.0) as i32
                 } else { 0 };
                 
-                // Streak Calculation (Within viewed month context for now)
-                let today = chrono::Local::now().date_naive();
-                // If viewing past month, check from end of that month. If future, 0. If current, from today.
-                let mut streak = 0;
-                if year == today.year() && month == today.month() {
+                // Retrieve pre-processed historical dates for this habit
+                let habit_dates = history_map.get(&h.id).cloned().unwrap_or_default();
+                
+                // Calculate Current Streak
+                let mut current_streak = 0;
+                if !habit_dates.is_empty() {
                     let mut check_date = today;
-                    // If today is not done, check if yesterday was done to show "current streak"
-                    // But usually streak is strictly consecutive including today or breaking today.
-                    // We will check from today backwards.
-                    while check_date >= start_date {
-                        let d_str = check_date.format("%Y-%m-%d").to_string();
-                        if log_map.contains(&(h.id.clone(), d_str)) {
-                            streak += 1;
-                        } else if check_date == today {
-                            // Skip today if not done, try yesterday
-                        } else {
-                            break;
-                        }
+                    if !habit_dates.contains(&today) {
+                         // If today is not done, check if yesterday was done to keep streak alive
+                         check_date = today.pred_opt().unwrap();
+                    }
+                    
+                    while habit_dates.contains(&check_date) {
+                        current_streak += 1;
                         check_date = check_date.pred_opt().unwrap();
                     }
+                }
+                
+                // Calculate Best Streak
+                let mut best_streak = 0;
+                let mut temp_streak = 0;
+                let mut prev_date: Option<chrono::NaiveDate> = None;
+                
+                for date in &habit_dates {
+                    if let Some(prev) = prev_date {
+                        if *date == prev.succ_opt().unwrap() {
+                            temp_streak += 1;
+                        } else {
+                            temp_streak = 1;
+                        }
+                    } else {
+                        temp_streak = 1;
+                    }
+                    if temp_streak > best_streak {
+                        best_streak = temp_streak;
+                    }
+                    prev_date = Some(*date);
                 }
 
                 let color = if h.color.starts_with("#") && h.color.len() == 7 {
@@ -839,7 +859,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     name: SharedString::from(h.name),
                     description: SharedString::from(h.description.unwrap_or_default()),
                     color,
-                    streak, 
+                    streak: current_streak,
+                    best_streak,
                     completion_rate,
                     days: ModelRc::new(VecModel::from(days_vec)),
                 }
@@ -854,12 +875,87 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
+    
+    fn reload_barchart(
+        ui_weak: &Weak<AppWindow>,
+        controller: &Arc<AppController>,
+        year: i32,
+    ) {
+        let start_str = format!("{}-01-01", year);
+        let end_str = format!("{}-12-31", year);
+        
+        // Fetch all habits to map IDs to Colors
+        let habit_colors: HashMap<String, slint::Color> = if let Ok(habits) = controller.get_habits() {
+            habits.into_iter().map(|h| {
+                 let color = if h.color.starts_with("#") && h.color.len() == 7 {
+                    let r = u8::from_str_radix(&h.color[1..3], 16).unwrap_or(0);
+                    let g = u8::from_str_radix(&h.color[3..5], 16).unwrap_or(0);
+                    let b = u8::from_str_radix(&h.color[5..7], 16).unwrap_or(0);
+                    slint::Color::from_rgb_u8(r, g, b)
+                } else {
+                    slint::Color::from_rgb_u8(139, 92, 246)
+                };
+                (h.id, color)
+            }).collect()
+        } else {
+            HashMap::new()
+        };
+        
+        if let Ok(logs) = controller.get_habit_logs(start_str, end_str) {
+            // Aggregate by month (0-11) -> Total Count, and Dominant Habit ID tracking
+            // Structure: month_index -> (total_count, HashMap<habit_id, count>)
+            let mut month_data: Vec<(i32, HashMap<String, i32>)> = vec![(0, HashMap::new()); 12];
+            
+            for log in logs {
+                if let Ok(date) = chrono::NaiveDate::parse_from_str(&log.completed_date, "%Y-%m-%d") {
+                     let m = date.month0() as usize;
+                     if m < 12 {
+                         month_data[m].0 += 1;
+                         *month_data[m].1.entry(log.habit_id).or_insert(0) += 1;
+                     }
+                }
+            }
+            
+            let max_val = month_data.iter().map(|(total, _)| *total).max().unwrap_or(1);
+            let scale_max = if max_val == 0 { 10 } else { max_val }; 
+            
+            let month_names = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+            
+            let stats: Vec<MonthlyStats> = month_data.iter().enumerate().map(|(i, (total, habits_map))| {
+                // Find dominant habit
+                let mut dominant_color = slint::Color::from_rgb_u8(100, 100, 100); // Default gray
+                
+                if *total > 0 {
+                    if let Some((best_habit_id, _)) = habits_map.iter().max_by_key(|(_, count)| **count) {
+                        if let Some(c) = habit_colors.get(best_habit_id) {
+                            dominant_color = *c;
+                        }
+                    }
+                }
+                
+                MonthlyStats {
+                    month_name: SharedString::from(month_names[i]),
+                    total_completions: *total,
+                    max_completions: scale_max,
+                    dominant_color,
+                }
+            }).collect();
+            
+            if let Some(ui) = ui_weak.upgrade() {
+                let adapter = ui.global::<HabitAdapter>();
+                adapter.set_chart_data(ModelRc::new(VecModel::from(stats)));
+            }
+        }
+    }
 
     fn reload_heatmap(
         ui_weak: &Weak<AppWindow>,
         controller: &Arc<AppController>,
         year: i32,
     ) {
+        // Reload bar chart whenever heatmap (year) changes
+        reload_barchart(ui_weak, controller, year);
+        
         // 1. Calculate Date Range (Selected Calendar Year)
         let today = chrono::Local::now().date_naive();
         

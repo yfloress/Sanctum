@@ -1,6 +1,7 @@
 import { Palette, HabitAdapter, AppState } from "../globals.slint";
 import { HabitRow } from "../components/habit_row.slint";
 import { HabitHeatmap } from "../components/habit_heatmap.slint";
+import { HabitBarChart } from "../components/habit_barchart.slint";
 import { TextButton } from "../widgets.slint";
 import { AddHabitModal } from "../modals/add_habit.slint";
 
@@ -118,8 +119,6 @@ export component HabitsPage inherits Rectangle {
             height: 120px;
         }
 
-        Rectangle { height: 32px; }
-        
         // Habits List
         if HabitAdapter.habits.length > 0 : Flickable {
             viewport-height: HabitAdapter.habits.length * 64px;
@@ -141,6 +140,13 @@ export component HabitsPage inherits Rectangle {
                 vertical-alignment: center;
             }
         }
+
+        Rectangle { height: 32px; }
+        
+        // Bar Chart
+        HabitBarChart {}
+        
+        Rectangle { height: 32px; }
     }
     
     if AppState.show-add-habit : AddHabitModal {

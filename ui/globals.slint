@@ -116,16 +116,6 @@ export struct HabitDay {
     is-future: bool,
 }
 
-export struct HabitData {
-    id: string,
-    name: string,
-    description: string,
-    color: color,
-    streak: int,
-    completion-rate: int,
-    days: [HabitDay], // Array of days for the current month
-}
-
 export struct HeatmapDay {
     date: string,
     count: int,
@@ -134,6 +124,24 @@ export struct HeatmapDay {
 
 export struct HeatmapWeek {
     days: [HeatmapDay],
+}
+
+export struct HabitData {
+    id: string,
+    name: string,
+    description: string,
+    color: color,
+    streak: int,
+    best-streak: int,
+    completion-rate: int,
+    days: [HabitDay], // Array of days for the current month
+}
+
+export struct MonthlyStats {
+    month-name: string,
+    total-completions: int,
+    max-completions: int, // For scaling
+    dominant-color: color,
 }
 
 export global HabitAdapter {
@@ -145,6 +153,9 @@ export global HabitAdapter {
     // Heatmap
     in-out property <[HeatmapWeek]> heatmap-data: [];
     in-out property <int> heatmap-year;
+
+    // Bar Chart
+    in-out property <[MonthlyStats]> chart-data: [];
 
     // Actions
     callback fetch-habits(int, int); // month (1-12), year
