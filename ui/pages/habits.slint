@@ -1,5 +1,6 @@
 import { Palette, HabitAdapter, AppState } from "../globals.slint";
 import { HabitRow } from "../components/habit_row.slint";
+import { HabitHeatmap } from "../components/habit_heatmap.slint";
 import { TextButton } from "../widgets.slint";
 import { AddHabitModal } from "../modals/add_habit.slint";
 
@@ -8,6 +9,7 @@ export component HabitsPage inherits Rectangle {
 
     init => {
         HabitAdapter.load-initial-data();
+        HabitAdapter.fetch-heatmap-data();
     }
 
     VerticalLayout {
@@ -61,6 +63,13 @@ export component HabitsPage inherits Rectangle {
                     clicked => { AppState.show-add-habit = true; }
                 }
             }
+        }
+
+        Rectangle { height: 32px; }
+
+        // Heatmap
+        HabitHeatmap {
+            height: 120px;
         }
 
         Rectangle { height: 32px; }

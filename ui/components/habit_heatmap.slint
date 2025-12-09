@@ -1,0 +1,42 @@
+import { Palette, HabitAdapter, HeatmapWeek, HeatmapDay } from "../globals.slint";
+
+export component HabitHeatmap inherits Rectangle {
+    height: 140px; // 7 days * (12px size + 4px gap) roughly
+    background: Palette.background;
+
+    // Logic to determine color based on level (0-4)
+    pure function get-color(level: int) -> color {
+        if (level == 0) { return Palette.surface; }
+        if (level == 1) { return #e9d5ff; } // Lightest purple
+        if (level == 2) { return #c084fc; }
+        if (level == 3) { return #9333ea; }
+        if (level == 4) { return #581c87; } // Darkest purple
+        return Palette.surface;
+    }
+
+    Flickable {
+        interactive: true;
+        viewport-width: (HabitAdapter.heatmap-data.length * 16px); // 12px width + 4px gap
+        width: 100%;
+        height: 100%;
+
+        HorizontalLayout {
+            spacing: 4px;
+            padding: 4px;
+            alignment: start;
+
+            for week in HabitAdapter.heatmap-data : VerticalLayout {
+                spacing: 4px;
+                for day in week.days : Rectangle {
+                    width: 12px;
+                    height: 12px;
+                    border-radius: 2px;
+                    background: get-color(day.level);
+                    
+                    // Tooltip-ish behavior could be added here if supported, 
+                    // but for now simple visual feedback
+                }
+            }
+        }
+    }
+}
