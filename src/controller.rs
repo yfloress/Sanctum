@@ -1450,7 +1450,7 @@ impl AppController {
             // This prevents the graph from starting at 0 if the user had money before the range
             let start_balance = full_history.iter()
                 .filter(|(d, _)| *d <= start)
-                .last()
+                .next_back()
                 .map(|(_, b)| *b)
                 .unwrap_or(0); // If no history before start, balance is 0
                 
