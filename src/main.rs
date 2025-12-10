@@ -11,7 +11,8 @@ use slint::{ModelRc, VecModel, Weak};
 use std::collections::HashMap;
 use std::cell::Cell;
 use std::sync::Arc;
-use chrono::Datelike; // Import Datelike trait
+use chrono::Datelike;
+use rand::Rng; // For title animation
 
 slint::include_modules!();
 
@@ -49,6 +50,52 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create the Slint UI
     let ui = AppWindow::new()?;
+
+    // Title Animation: Decryption Effect
+    {
+        let ui_weak = ui.as_weak();
+        std::thread::spawn(move || {
+            let target_text = "SANCTUM";
+            let target_len = target_text.len();
+            let total_steps = 50; // Total frames (approx 3 seconds)
+            let mut rng = rand::rng();
+            
+            for step in 0..total_steps {
+                let mut current_string = String::new();
+                
+                // Calculate how many characters should be resolved from the left
+                // We want to hold the "resolved" state for a bit for each char.
+                // Map step 0..total_steps to 0..target_len
+                // Use a slight curve to make the end faster or linear.
+                // Linear is fine for "one by one".
+                let resolved_count = (step as f64 / total_steps as f64 * (target_len as f64 + 1.0)) as usize;
+                
+                for (i, char) in target_text.chars().enumerate() {
+                    if i < resolved_count {
+                        // Character is resolved
+                        current_string.push(char);
+                    } else {
+                        // Character is scrambling (A-Z only)
+                        // 'A' is 65, 'Z' is 90
+                        let random_char = rng.random_range(65..91) as u8 as char;
+                        current_string.push(random_char);
+                    }
+                }
+                
+                let text = SharedString::from(current_string);
+                let _ = ui_weak.upgrade_in_event_loop(move |ui| {
+                    ui.set_login_title(text);
+                });
+                
+                std::thread::sleep(std::time::Duration::from_millis(60));
+            }
+            
+            // Final state ensure clean text
+            let _ = ui_weak.upgrade_in_event_loop(move |ui| {
+                ui.set_login_title("SANCTUM".into());
+            });
+        });
+    }
 
     // =============== Wire Adapters ===============
 

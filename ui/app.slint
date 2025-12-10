@@ -32,12 +32,15 @@ export component AppWindow inherits Window {
     min-height: 680px;
     background: Palette.background;
 
+    in-out property <string> login-title: "SANCTUM";
+
     // ==================== Conditional Rendering ====================
 
     // Login view
     if !AppState.is-logged-in: LoginPage {
         width: 100%;
         height: 100%;
+        title-text: root.login-title;
     }
 
     // Main application shell (when logged in)

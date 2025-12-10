@@ -7,9 +7,10 @@ use crate::crypto;
 use crate::db::{Database, DbError};
 use crate::models::{
     Account, AccountBalance, AggregatedAsset, BalanceSummary, CryptoAsset, CryptoHolding,
-    CryptoTransaction, CryptoWallet, Habit, HabitLog, Transaction,
+    CryptoTransaction, CryptoWallet, Habit, HabitLog, Transaction
 };
 use crate::security_log::{SecurityEvent, log_auth_failure, log_security_event};
+use crate::services::habit::HabitService;
 use chrono::NaiveDate;
 use rusqlite::Connection;
 use secrecy::SecretString;
@@ -18,14 +19,14 @@ use std::fs::{self, Permissions};
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Component, Path, PathBuf};
-use std::sync::Mutex;
-use thiserror::Error;
+use std::sync::{Arc, Mutex};
 use uuid::Uuid;
+use regex::Regex;
 
 // ==================== Error Types ====================
 
 /// Errors that can occur in the controller layer
-#[derive(Error, Debug)]
+#[derive(thiserror::Error, Debug)]
 pub enum ControllerError {
     #[error("Database error: {0}")]
     Database(#[from] DbError),
@@ -76,8 +77,6 @@ const MAX_SYMBOL_LENGTH: usize = 16;
 const MAX_ICON_LENGTH: usize = 32;
 const MAX_PASSWORD_LENGTH: usize = 128;
 const MIN_PASSWORD_LENGTH: usize = 8;
-const MAX_HABIT_NAME_LENGTH: usize = 128;
-const MAX_HABIT_DESCRIPTION_LENGTH: usize = 512;
 const MAX_ACCOUNT_NAME_LENGTH: usize = 64;
 const MAX_CURRENCY_LENGTH: usize = 8;
 
@@ -365,28 +364,25 @@ struct AppConfig {
     last_db_path: Option<String>,
 }
 
-// ==================== Main Controller ====================
 
-/// Main application controller that manages database connections and business logic
+
 pub struct AppController {
-    db: Mutex<Option<Database>>,
+    db: Arc<Mutex<Option<Database>>>,
+    habit_service: HabitService,
     app_data_dir: PathBuf,
 }
 
 impl AppController {
-    /// Creates a new AppController with the specified application data directory
-    ///
-    /// # Arguments
-    /// * `app_data_dir` - Directory where the application stores its data (vaults, config, etc.)
-    pub fn new(app_data_dir: PathBuf) -> Self {
-        // Ensure the directory exists
-        if !app_data_dir.exists() {
-            let _ = fs::create_dir_all(&app_data_dir);
-        }
+    pub fn new(data_dir: PathBuf) -> Self {
+        // Initialize with None as vault is locked
+        let db = Arc::new(Mutex::new(None));
+        // HabitService needs access to the same (potentially empty) db lock
+        let habit_service = HabitService::new(db.clone());
 
         Self {
-            db: Mutex::new(None),
-            app_data_dir,
+            db,
+            habit_service,
+            app_data_dir: data_dir,
         }
     }
 
@@ -1201,112 +1197,119 @@ impl AppController {
 
     // ==================== Habits Methods ====================
 
-    /// Creates a new habit
-    pub fn create_habit(&self, name: String, description: Option<String>, color: String) -> Result<String, ControllerError> {
-        self.with_db(|db| {
-            let name = validate_field_length(&name, MAX_HABIT_NAME_LENGTH, "Habit name")?;
-            let name = sanitize_string(&name);
+    // ==================== Habit Management ====================
 
-            if name.is_empty() {
-                return Err(ControllerError::Validation("Habit name cannot be empty".to_string()));
-            }
+    pub fn create_habit(
+        &self,
+        name: String,
+        description: Option<String>,
+        color: String,
+    ) -> std::result::Result<String, ControllerError> {
+        if name.trim().is_empty() {
+            return Err(ControllerError::Validation("Habit name cannot be empty".to_string()));
+        }
 
-            let description = match description {
-                Some(d) => {
-                    let validated = validate_field_length(&d, MAX_HABIT_DESCRIPTION_LENGTH, "Description")?;
-                    let sanitized = sanitize_string(&validated);
-                    if sanitized.is_empty() { None } else { Some(sanitized) }
-                }
-                None => None,
-            };
+        // Validate color format (basic hex)
+        let color_regex = Regex::new(r"^#[0-9a-fA-F]{6}$").unwrap();
+        if !color_regex.is_match(&color) {
+            return Err(ControllerError::Validation("Invalid color format. Use #RRGGBB".to_string()));
+        }
 
-            let color = validate_color(&color)?;
-
-            let id = Uuid::new_v4().to_string();
-            let created_at = chrono::Utc::now().to_rfc3339();
-
-            let habit = Habit::new(id.clone(), name, description, color, created_at);
-            db.create_habit(&habit)?;
-            Ok(id)
-        })
+        self.habit_service
+            .create_habit(name, description, color)
+            .map_err(ControllerError::Database)
     }
 
-    /// Gets all active habits
-    pub fn get_habits(&self) -> Result<Vec<Habit>, ControllerError> {
-        self.with_db(|db| db.get_habits().map_err(ControllerError::Database))
+    pub fn get_habits(&self) -> std::result::Result<Vec<Habit>, ControllerError> {
+        self.habit_service.get_habits().map_err(ControllerError::Database)
     }
 
     /// Updates a habit
-    pub fn update_habit(&self, id: String, name: String, description: Option<String>, color: String) -> Result<(), ControllerError> {
-        self.with_db(|db| {
-            let validated_id = validate_uuid(&id)?;
+    pub fn update_habit(
+        &self,
+        id: String,
+        name: String,
+        description: Option<String>,
+        color: String,
+        is_archived: bool,
+    ) -> std::result::Result<(), ControllerError> {
+        if validate_uuid(&id).is_err() {
+            return Err(ControllerError::Validation("Invalid UUID".to_string()));
+        }
 
-            let name = validate_field_length(&name, MAX_HABIT_NAME_LENGTH, "Habit name")?;
-            let name = sanitize_string(&name);
+        if name.trim().is_empty() {
+            return Err(ControllerError::Validation(
+                "Habit name cannot be empty".to_string(),
+            ));
+        }
+        
+        // Validate color
+        let color_regex = Regex::new(r"^#[0-9a-fA-F]{6}$").unwrap();
+        if !color_regex.is_match(&color) {
+            return Err(ControllerError::Validation(
+                "Invalid color format. Use #RRGGBB".to_string(),
+            ));
+        }
 
-            if name.is_empty() {
-                return Err(ControllerError::Validation("Habit name cannot be empty".to_string()));
-            }
-
-            let description = match description {
-                Some(d) => {
-                    let validated = validate_field_length(&d, MAX_HABIT_DESCRIPTION_LENGTH, "Description")?;
-                    let sanitized = sanitize_string(&validated);
-                    if sanitized.is_empty() { None } else { Some(sanitized) }
-                }
-                None => None,
-            };
-
-            let color = validate_color(&color)?;
-
-            let existing = db.get_habit(&validated_id)?
-                .ok_or_else(|| ControllerError::Validation("Habit not found".to_string()))?;
-
-            let habit = Habit {
-                id: validated_id,
-                name,
-                description,
-                color,
-                created_at: existing.created_at,
-                archived: existing.archived,
-            };
-
-            db.update_habit(&habit).map_err(ControllerError::Database)
-        })
+        self.habit_service
+            .update_habit(id, name, description, color, is_archived)
+            .map_err(ControllerError::Database)
     }
 
-    /// Archives a habit
-    pub fn archive_habit(&self, id: String) -> Result<(), ControllerError> {
-        self.with_db(|db| {
-            let validated_id = validate_uuid(&id)?;
-            db.archive_habit(&validated_id).map_err(ControllerError::Database)
-        })
+    pub fn archive_habit(&self, id: String) -> std::result::Result<(), ControllerError> {
+        if validate_uuid(&id).is_err() {
+            return Err(ControllerError::Validation("Invalid UUID".to_string()));
+        }
+        self.habit_service.archive_habit(id).map_err(ControllerError::Database)
     }
 
     /// Deletes a habit
-    pub fn delete_habit(&self, id: String) -> Result<(), ControllerError> {
-        self.with_db(|db| {
-            let validated_id = validate_uuid(&id)?;
-            db.delete_habit(&validated_id).map_err(ControllerError::Database)
-        })
+    pub fn delete_habit(&self, id: String) -> std::result::Result<(), ControllerError> {
+        if validate_uuid(&id).is_err() {
+            return Err(ControllerError::Validation("Invalid UUID".to_string()));
+        }
+        self.habit_service.delete_habit(id).map_err(ControllerError::Database)
     }
 
     /// Toggles habit completion for a date
-    pub fn toggle_habit_completion(&self, habit_id: String, date: String) -> Result<(bool, Option<String>), ControllerError> {
-        self.with_db(|db| {
-            let validated_habit_id = validate_uuid(&habit_id)?;
-            let validated_date = validate_date(&date)?;
-            db.toggle_habit_log(&validated_habit_id, &validated_date).map_err(ControllerError::Database)
-        })
+    pub fn toggle_habit_completion(
+        &self,
+        habit_id: String,
+        date: String,
+    ) -> std::result::Result<bool, ControllerError> {
+        if validate_uuid(&habit_id).is_err() {
+            return Err(ControllerError::Validation("Invalid UUID".to_string()));
+        }
+
+        // Validate date format YYYY-MM-DD
+        if NaiveDate::parse_from_str(&date, "%Y-%m-%d").is_err() {
+            return Err(ControllerError::Validation(
+                "Invalid date format. Use YYYY-MM-DD".to_string(),
+            ));
+        }
+
+        self.habit_service
+            .toggle_habit_completion(habit_id, date)
+            .map_err(ControllerError::Database)
     }
 
-    /// Gets habit logs for a date range
-    pub fn get_habit_logs(&self, start_date: String, end_date: String) -> Result<Vec<HabitLog>, ControllerError> {
-        self.with_db(|db| {
-            let start = validate_date(&start_date)?;
-            let end = validate_date(&end_date)?;
-            db.get_habit_logs(&start, &end).map_err(ControllerError::Database)
-        })
+    pub fn get_habit_logs(
+        &self,
+        start_date: String,
+        end_date: String,
+    ) -> std::result::Result<Vec<HabitLog>, ControllerError> {
+        // Validate dates
+        if NaiveDate::parse_from_str(&start_date, "%Y-%m-%d").is_err()
+            || NaiveDate::parse_from_str(&end_date, "%Y-%m-%d").is_err()
+        {
+            return Err(ControllerError::Validation(
+                "Invalid date format".to_string(),
+            ));
+        }
+
+        self.habit_service
+            .get_habit_logs(start_date, end_date)
+            .map_err(ControllerError::Database)
     }
 
     // ==================== Legacy Crypto Holdings (backwards compatibility) ====================
@@ -1396,13 +1399,13 @@ impl AppController {
                 _ => 0, 
             };
             
-            if delta != 0 {
-                if let Ok(date) = NaiveDate::parse_from_str(&tx.date, "%Y-%m-%d") {
-                    events.push(FinancialEvent {
-                        date,
-                        amount_delta: delta,
-                    });
-                }
+            if delta == 0 { continue; }
+            
+            if let Ok(date) = NaiveDate::parse_from_str(&tx.date, "%Y-%m-%d") {
+                events.push(FinancialEvent {
+                    date,
+                    amount_delta: delta,
+                });
             }
         }
 
@@ -1428,10 +1431,8 @@ impl AppController {
         
         // Ensure the last point reflects "today" (extend the line to now)
         let today = chrono::Local::now().date_naive();
-        if let Some(last) = full_history.last() {
-             if last.0 < today {
-                 full_history.push((today, current_balance));
-             }
+        if full_history.last().is_some_and(|last| last.0 < today) {
+             full_history.push((today, current_balance));
         }
 
         let net_worth_formatted = self.format_money_display(current_balance);
