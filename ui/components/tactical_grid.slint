@@ -4,12 +4,17 @@
 import { Palette } from "../globals.slint";
 
 export component TacticalGrid inherits Rectangle {
+    in property <int> grid-cols: 20;
+    in property <int> grid-rows: 12;
+    in property <bool> show-background: true;
+
     // Fill the parent
     width: 100%;
     height: 100%;
     
     // Base radial gradient: "Focal point"
-    background: @radial-gradient(circle, #1a1a1a 0%, #050505 60%, #000000 100%);
+    // Only show if show-background is true
+    background: root.show-background ? @radial-gradient(circle, #1a1a1a 0%, #050505 60%, #000000 100%) : transparent;
 
     // Grid Container
     Rectangle {
@@ -17,16 +22,9 @@ export component TacticalGrid inherits Rectangle {
         height: 100%;
         opacity: 0.04; // Very subtle
 
-        // Since Slint doesn't support tiled images or complex repeating gradients easily yet,
-        // we can simulate a grid using a repeated linear gradient for CSS-like backends,
-        // or just use a few strategically placed lines. 
-        
-        // However, standard Slint doesn't have `repeating-linear-gradient`.
-        // We will create a loop of lines. This is computationally fine for ~20-30 lines.
-        
         // Vertical lines
-        for i in 20 : Rectangle {
-            x: (parent.width / 20) * i;
+        for i in root.grid-cols : Rectangle {
+            x: (parent.width / root.grid-cols) * i;
             y: 0;
             width: 1px;
             height: 100%;
@@ -34,9 +32,9 @@ export component TacticalGrid inherits Rectangle {
         }
 
         // Horizontal lines
-        for i in 12 : Rectangle {
+        for i in root.grid-rows : Rectangle {
             x: 0;
-            y: (parent.height / 12) * i;
+            y: (parent.height / root.grid-rows) * i;
             width: 100%;
             height: 1px;
             background: #ffffff;
@@ -44,7 +42,7 @@ export component TacticalGrid inherits Rectangle {
     }
     
     // Optional: Vignette overlay (corner darkness)
-    Rectangle {
+    if root.show-background : Rectangle {
         background: @radial-gradient(circle, transparent 50%, #000000 100%);
     }
 }
