@@ -11,6 +11,7 @@ import {
     AnalyticsAdapter,
     NotificationAdapter,
     HabitAdapter,
+    CryptoAdapter,
 } from "globals.slint";
 import { LoginPage } from "pages/login.slint";
 import { DashboardPage } from "pages/dashboard.slint";
@@ -18,10 +19,12 @@ import { AccountsPage } from "pages/accounts.slint";
 import { TransactionsPage } from "pages/transactions.slint";
 import { AnalyticsPage } from "pages/analytics.slint";
 import { HabitsPage } from "pages/habits.slint";
+import { CryptoPage } from "pages/crypto.slint";
 import { SanctumSidebar } from "components/sidebar.slint";
 import { AddTransactionModal } from "modals/add_transaction.slint";
 import { AddAccountModal } from "modals/add_account.slint";
 import { TransferFundsModal } from "modals/transfer_funds.slint";
+import { AddCryptoTransactionModal } from "modals/add_crypto_transaction.slint";
 import { NotificationToast } from "components/notification.slint";
 
 // ==================== Main Application Window ====================
@@ -85,6 +88,12 @@ export component AppWindow inherits Window {
                 height: 100%;
             }
 
+            // Crypto
+            if AppState.active-page == "crypto": CryptoPage {
+                width: 100%;
+                height: 100%;
+            }
+
             // Settings (placeholder)
             if AppState.active-page == "settings": Rectangle {
                 width: 100%;
@@ -141,6 +150,12 @@ export component AppWindow inherits Window {
         height: 100%;
     }
     
+    // Add Crypto Modal
+    if AppState.show-add-crypto: AddCryptoTransactionModal {
+        width: 100%;
+        height: 100%;
+    }
+    
     // Notification Toast (Global Overlay)
     NotificationToast {
         x: parent.width - self.width - 32px;
@@ -152,4 +167,4 @@ export component AppWindow inherits Window {
 }
 
 // Re-export adapters for main.rs
-export { AuthAdapter, AccountAdapter, TransactionAdapter, DashboardAdapter, AnalyticsAdapter, NotificationAdapter, HabitAdapter, AppState }
+export { AuthAdapter, AccountAdapter, TransactionAdapter, DashboardAdapter, AnalyticsAdapter, NotificationAdapter, HabitAdapter, CryptoAdapter, AppState }

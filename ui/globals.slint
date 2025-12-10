@@ -225,6 +225,34 @@ export global AccountAdapter {
     callback transfer-funds(string, string, string, string, string) -> string; // from, to, amount, description, date
 }
 
+// ==================== Crypto Adapter ====================
+
+export struct CryptoAssetData {
+    id: string,
+    symbol: string,
+    name: string,
+    price: string,          // Formatted "$ 65,000.00"
+    amount: string,         // Formatted "0.5 BTC"
+    value: string,          // Formatted "$ 32,500.00"
+    change-24h: string,     // Formatted "+ 2.5%"
+    is-positive: bool,      // For coloring change
+    allocation: float,      // 0.0 to 1.0
+}
+
+export global CryptoAdapter {
+    in-out property <[CryptoAssetData]> portfolio: [];
+    in-out property <string> total-value: "$ 0.00";
+    in-out property <string> total-pnl: "+ $ 0.00";
+    in-out property <string> clp-rate: "Loading...";
+
+    // Actions
+    callback fetch-portfolio();
+    callback refresh-prices();
+    
+    // (wallet_id, coin_id, symbol, type, amount, price, fee, date)
+    callback add-transaction(string, string, string, string, string, string, string, string) -> string; 
+}
+
 // ==================== Transaction Adapter ====================
 // Bridge for transaction management
 
@@ -292,6 +320,7 @@ export global AppState {
     in-out property <int> selected-account-index: 0;
     in-out property <bool> show-transfer-modal: false;
     in-out property <bool> show-add-habit: false;
+    in-out property <bool> show-add-crypto: false;
 
     // Current date (YYYY-MM-DD), set from backend to avoid hardcoded defaults
     in-out property <string> current-date: "2024-01-01";

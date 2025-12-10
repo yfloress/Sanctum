@@ -13,6 +13,7 @@ use std::cell::Cell;
 use std::sync::Arc;
 use chrono::Datelike;
 use rand::Rng; // For title animation
+use sanctum::models::CryptoAsset; // Added for CryptoAdapter logic
 
 slint::include_modules!();
 
@@ -101,30 +102,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let ui_weak = ui.as_weak();
 
-    // Notification Helper
-    let notification_timer = std::rc::Rc::new(slint::Timer::default());
+    // Thread-safe notification helper that upgrades to UI thread
     let show_notification = {
         let ui_weak = ui_weak.clone();
-        let timer = notification_timer.clone();
         move |message: String, is_error: bool| {
-            println!("DEBUG: Notification requested: '{}', error: {}", message, is_error); // DEBUG LOG
-            if let Some(ui) = ui_weak.upgrade() {
-                let adapter = ui.global::<NotificationAdapter>();
-                adapter.set_message(SharedString::from(message));
-                adapter.set_is_error(is_error);
-                adapter.set_active(true);
-                println!("DEBUG: Notification active set to true"); // DEBUG LOG
-                
-                let ui_weak_inner = ui_weak.clone();
-                timer.start(slint::TimerMode::SingleShot, std::time::Duration::from_secs(3), move || {
-                    println!("DEBUG: Timer fired, hiding notification"); // DEBUG LOG
-                    if let Some(ui) = ui_weak_inner.upgrade() {
-                        ui.global::<NotificationAdapter>().set_active(false);
-                    }
-                });
-            } else {
-                println!("DEBUG: Failed to upgrade UI weak ref for notification");
-            }
+            let ui_weak_clone = ui_weak.clone();
+            let _ = ui_weak_clone.upgrade_in_event_loop(move |ui| {
+                ui.global::<NotificationAdapter>().invoke_show(SharedString::from(message), is_error);
+            });
         }
     };
 
@@ -134,7 +119,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let start_session_monitor = std::rc::Rc::new({
         let ui_weak = ui_weak.clone();
         let controller = controller.clone();
-        let notify = show_notification.clone();
+        let show_notification_clone = show_notification.clone(); // Capture the thread-safe version
         let timer = session_timer.clone();
         let warned = session_warned.clone();
         move || {
@@ -145,7 +130,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 {
                     let ui_weak = ui_weak.clone();
                     let controller = controller.clone();
-                    let notify = notify.clone();
+                    let notify_inner_for_session = show_notification_clone.clone();
                     let timer = timer.clone();
                     let warned = warned.clone();
                     move || {
@@ -157,14 +142,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     if let Some(ui) = ui_weak.upgrade() {
                                         ui.global::<AppState>().set_is_logged_in(false);
                                     }
-                                    notify("Session expired due to inactivity".into(), true);
+                                    notify_inner_for_session("Session expired due to inactivity".into(), true);
                                     warned.set(false);
                                     return;
                                 }
                                 if remaining <= 120 {
                                     if !warned.get() {
                                         let mins = (remaining + 59) / 60;
-                                        notify(
+                                        notify_inner_for_session(
                                             format!("Session expires in {mins} minute(s)"),
                                             true,
                                         );
@@ -180,7 +165,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 if let Some(ui) = ui_weak.upgrade() {
                                     ui.global::<AppState>().set_is_logged_in(false);
                                 }
-                                notify("Session ended".into(), true);
+                                notify_inner_for_session("Session ended".into(), true);
                                 warned.set(false);
                             }
                         }
@@ -190,13 +175,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    // Register NotificationAdapter callback so UI can trigger it
-    {
-        let notify = show_notification.clone();
-        ui.global::<NotificationAdapter>().on_show(move |message, is_error| {
-            notify(message.to_string(), is_error);
-        });
-    }
+
 
     // ==================== AuthAdapter Callbacks ====================
 
@@ -1223,6 +1202,196 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut y = year_lock.lock().unwrap();
             *y += 1;
             reload_heatmap(&ui_weak, &controller, *y);
+        });
+    }
+
+    // ==================== CryptoAdapter Logic ====================
+
+    fn reload_portfolio(
+        ui_weak: &Weak<AppWindow>,
+        controller: &Arc<AppController>,
+    ) {
+        if let Ok(mut assets) = controller.get_aggregated_portfolio() {
+            // Load cached prices to update current value
+            let prices = controller.load_crypto_prices().unwrap_or_default();
+            let price_map: HashMap<String, CryptoAsset> = prices.into_iter().map(|p| (p.id.clone(), p)).collect();
+
+            // Update assets with current prices
+            for asset in &mut assets {
+                if let Some(price_data) = price_map.get(&asset.coin_id) {
+                    asset.update_with_price(price_data.current_price);
+                }
+            }
+
+            // Sort by value descending
+            assets.sort_by(|a, b| b.current_value.partial_cmp(&a.current_value).unwrap_or(std::cmp::Ordering::Equal));
+
+            let mut total_val = 0.0;
+            let mut total_cost = 0.0;
+
+            let mapped_assets: Vec<CryptoAssetData> = assets.iter().map(|a| {
+                total_val += a.current_value;
+                total_cost += a.total_cost_basis;
+
+                let change_str = if a.unrealized_pnl_percentage >= 0.0 {
+                    format!("+ {:.2}%", a.unrealized_pnl_percentage)
+                } else {
+                    format!("{:.2}%", a.unrealized_pnl_percentage)
+                };
+
+                let price_fmt = if a.current_price < 1.0 {
+                     format!("$ {:.4}", a.current_price)
+                } else {
+                     format_money((a.current_price * 100.0) as i64, "USD")
+                };
+
+                CryptoAssetData {
+                    id: SharedString::from(&a.coin_id),
+                    symbol: SharedString::from(&a.symbol),
+                    name: SharedString::from(&a.coin_id),
+                    price: SharedString::from(price_fmt),
+                    amount: SharedString::from(format!("{:.4} {}", a.total_amount, a.symbol)),
+                    value: SharedString::from(format_money((a.current_value * 100.0) as i64, "USD")),
+                    change_24h: SharedString::from(change_str),
+                    is_positive: a.unrealized_pnl >= 0.0,
+                    allocation: 0.0,
+                }
+            }).collect();
+
+            let total_pnl_val = total_val - total_cost;
+            let pnl_sign = if total_pnl_val >= 0.0 { "+" } else { "-" };
+            
+            // Try to load CLP rate
+            let clp_rate = controller.load_exchange_rate("CLP_USD".to_string())
+                .ok().flatten().map(|(r, _)| r).unwrap_or(0.0);
+
+            if let Some(ui) = ui_weak.upgrade() {
+                let adapter = ui.global::<CryptoAdapter>();
+                adapter.set_portfolio(ModelRc::new(VecModel::from(mapped_assets)));
+                adapter.set_total_value(SharedString::from(format_money((total_val * 100.0) as i64, "USD")));
+                adapter.set_total_pnl(SharedString::from(format!("{} {}", pnl_sign, format_money((total_pnl_val.abs() * 100.0) as i64, "USD"))));
+                if clp_rate > 0.0 {
+                     adapter.set_clp_rate(SharedString::from(format!("$ {:.0}", clp_rate)));
+                }
+            }
+        }
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        ui.global::<CryptoAdapter>().on_fetch_portfolio(move || {
+            reload_portfolio(&ui_weak, &controller);
+        });
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let show_notification_clone_for_refresh = show_notification.clone(); // Clone for refresh_prices callback
+
+        ui.global::<CryptoAdapter>().on_refresh_prices(move || {
+            let controller_async = controller.clone();
+            let ui_weak_async = ui_weak.clone();
+            let notify_start = show_notification_clone_for_refresh.clone();
+            notify_start("Fetching prices...".into(), false);
+
+            let notify_for_async_block = show_notification_clone_for_refresh.clone(); // Clone for the async block
+
+            tokio::spawn(async move {
+                // 1. Get coins to update
+                let coins = if let Ok(assets) = controller_async.get_aggregated_portfolio() {
+                    assets.iter().map(|a| a.coin_id.clone()).collect::<Vec<_>>()
+                } else {
+                    Vec::new()
+                };
+
+                if !coins.is_empty() {
+                    match controller_async.get_crypto_prices(coins).await {
+                        Ok(prices) => {
+                            let _ = controller_async.save_crypto_prices(prices);
+                        }
+                        Err(e) => {
+                            let notify_fail = notify_for_async_block.clone(); // Clone for failure message
+                            let _ = ui_weak_async.upgrade_in_event_loop(move |_| {
+                                notify_fail(format!("Price update failed: {}", e), true);
+                            });
+                        }
+                    }
+                }
+
+                // 2. Get CLP Rate
+                if let Ok(rate) = controller_async.get_clp_usd_rate().await {
+                    let _ = controller_async.save_exchange_rate("CLP_USD".to_string(), rate);
+                }
+
+                // 3. Reload UI on main thread
+                let notify_success = notify_for_async_block.clone(); // Clone for success message
+                let _ = ui_weak_async.upgrade_in_event_loop(move |ui| {
+                    ui.global::<CryptoAdapter>().invoke_fetch_portfolio();
+                    notify_success("Prices updated".into(), false);
+                });
+            });
+        });
+    }
+    
+    // Add Transaction Callback
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = show_notification.clone();
+        
+        // (wallet_id, coin_id, symbol, type, amount, price, fee, date)
+        ui.global::<CryptoAdapter>().on_add_transaction(move |wallet_id_raw, coin_id, symbol, type_str, amount_str, price_str, fee_str, date| -> SharedString {
+             // 1. Parse Amount (String -> f64)
+             let amount_clean = amount_str.replace(",", "").replace("$", "").trim().to_string();
+             let amount: f64 = match amount_clean.parse() {
+                 Ok(v) => v,
+                 Err(_) => return SharedString::from("Invalid amount format"),
+             };
+             
+             let price_clean = price_str.replace(",", "").replace("$", "").trim().to_string();
+             let price_per_coin: Option<f64> = if price_clean.is_empty() { None } else { price_clean.parse().ok() };
+             
+             let fee_clean = fee_str.replace(",", "").replace("$", "").trim().to_string();
+             let fee: Option<f64> = if fee_clean.is_empty() { None } else { fee_clean.parse().ok() };
+
+             // 2. Handle Wallet
+             let target_wallet_id = if wallet_id_raw == "default" {
+                 let wallets = controller.get_wallets().unwrap_or_default();
+                 if let Some(w) = wallets.iter().find(|w| w.name == "Trading" || w.category == "wallet_single") {
+                     w.id.clone()
+                 } else {
+                     match controller.add_wallet("Trading".to_string(), "wallet_single".to_string(), None) {
+                         Ok(id) => id,
+                         Err(e) => return SharedString::from(e.to_string()),
+                     }
+                 }
+             } else {
+                 wallet_id_raw.to_string()
+             };
+
+             // 3. Add Transaction
+             let result = controller.add_crypto_transaction(
+                 target_wallet_id,
+                 coin_id.to_string(),
+                 symbol.to_string(),
+                 type_str.to_string(),
+                 amount,
+                 price_per_coin,
+                 fee,
+                 date.to_string(),
+                 None 
+             );
+
+             match result {
+                 Ok(_) => {
+                     reload_portfolio(&ui_weak, &controller);
+                     notify("Asset added successfully".into(), false);
+                     SharedString::from("")
+                 },
+                 Err(e) => SharedString::from(e.to_string()),
+             }
         });
     }
 

@@ -1,0 +1,248 @@
+// ==================== Add Crypto Transaction Modal ====================
+
+import {
+    Palette,
+    AppState,
+    CryptoAdapter,
+    NotificationAdapter,
+} from "../globals.slint";
+
+component UnderlineField inherits Rectangle {
+    in property <string> label: "";
+    in property <string> placeholder: "";
+    in-out property <string> value: "";
+    in property <bool> large: false;
+
+    height: large ? 80px : 56px;
+    background: transparent;
+
+    VerticalLayout {
+        spacing: 8px;
+
+        Text {
+            text: root.label;
+            color: Palette.text-muted;
+            font-size: 10px;
+            font-weight: 400;
+            letter-spacing: 2px;
+        }
+
+        Rectangle {
+            vertical-stretch: 1;
+
+            if root.value == "" && !input.has-focus: Text {
+                text: root.placeholder;
+                color: Palette.text-subtle;
+                font-size: large ? 28px : 14px;
+                font-weight: 300;
+                vertical-alignment: center;
+            }
+
+            input := TextInput {
+                text <=> root.value;
+                color: Palette.text-primary;
+                font-size: large ? 28px : 14px;
+                font-weight: 300;
+                vertical-alignment: center;
+            }
+
+            TouchArea {
+                clicked => { input.focus(); }
+            }
+        }
+
+        Rectangle {
+            height: input.has-focus ? 2px : 1px;
+            background: input.has-focus ? Palette.accent : Palette.border;
+            animate height { duration: 150ms; }
+            animate background { duration: 150ms; }
+        }
+    }
+}
+
+component TypeToggle inherits Rectangle {
+    in-out property <bool> is-buy: true;
+
+    height: 48px;
+    background: transparent;
+
+    HorizontalLayout {
+        spacing: 0px;
+
+        Rectangle {
+            horizontal-stretch: 1;
+            background: is-buy ? Palette.surface : transparent;
+            border-radius: 4px;
+            animate background { duration: 150ms; }
+
+            Text {
+                text: "BUY";
+                color: is-buy ? Palette.success : Palette.text-muted;
+                font-size: 11px;
+                font-weight: is-buy ? 500 : 400;
+                letter-spacing: 2px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            TouchArea { clicked => { root.is-buy = true; } }
+        }
+
+        Rectangle { width: 8px; }
+
+        Rectangle {
+            horizontal-stretch: 1;
+            background: !is-buy ? Palette.surface : transparent;
+            border-radius: 4px;
+            animate background { duration: 150ms; }
+
+            Text {
+                text: "SELL";
+                color: !is-buy ? Palette.danger : Palette.text-muted;
+                font-size: 11px;
+                font-weight: !is-buy ? 500 : 400;
+                letter-spacing: 2px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            TouchArea { clicked => { root.is-buy = false; } }
+        }
+    }
+}
+
+export component AddCryptoTransactionModal inherits Rectangle {
+    property <string> coin-id: "";
+    property <string> symbol: "";
+    property <string> amount: "";
+    property <string> price: "";
+    property <string> date: AppState.current-date;
+    property <bool> is-buy: true;
+
+    function reset() {
+        coin-id = "";
+        symbol = "";
+        amount = "";
+        price = "";
+        date = AppState.current-date;
+        is-buy = true;
+    }
+
+    function submit() {
+        if (coin-id == "" || symbol == "" || amount == "") {
+            NotificationAdapter.show("Coin, Symbol and Amount are required", true);
+            return;
+        }
+
+        let type = is-buy ? "buy" : "sell";
+        // Pass "default" as wallet_id to let backend handle it
+        let result = CryptoAdapter.add-transaction(
+            "default", 
+            coin-id, 
+            symbol, 
+            type, 
+            amount, 
+            price, 
+            "0", 
+            date
+        );
+
+        if (result == "") {
+            root.reset();
+            AppState.show-add-crypto = false;
+            CryptoAdapter.fetch-portfolio();
+        } else {
+            NotificationAdapter.show(result, true);
+        }
+    }
+
+    width: 100%;
+    height: 100%;
+    background: transparent;
+
+    // Backdrop
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        background: #000000cc;
+        TouchArea {
+            clicked => {
+                root.reset();
+                AppState.show-add-crypto = false;
+            }
+        }
+    }
+
+    // Panel
+    Rectangle {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        width: 400px;
+        height: 600px;
+        background: Palette.sidebar-bg;
+        border-radius: 8px;
+        border-width: 1px;
+        border-color: Palette.border;
+
+        TouchArea { } // Block clicks
+
+        VerticalLayout {
+            padding: 32px;
+            spacing: 0px;
+
+            // Header
+            HorizontalLayout {
+                height: 32px;
+                Text {
+                    text: "ADD CRYPTO ASSET";
+                    color: Palette.text-primary;
+                    font-size: 12px;
+                    letter-spacing: 3px;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+                Rectangle {
+                    width: 32px; height: 32px;
+                    Text { text: "×"; color: Palette.text-muted; font-size: 24px; vertical-alignment: center; horizontal-alignment: center;}
+                    TouchArea { clicked => { root.reset(); AppState.show-add-crypto = false; } }
+                }
+            }
+
+            Rectangle { height: 24px; }
+
+            TypeToggle { is-buy <=> root.is-buy; }
+
+            Rectangle { height: 24px; }
+
+            UnderlineField { label: "COIN ID (e.g. bitcoin)"; value <=> root.coin-id; }
+            Rectangle { height: 16px; }
+            UnderlineField { label: "SYMBOL (e.g. BTC)"; value <=> root.symbol; }
+            Rectangle { height: 16px; }
+            UnderlineField { label: "AMOUNT"; placeholder: "0.00"; value <=> root.amount; large: true; }
+            Rectangle { height: 16px; }
+            UnderlineField { label: "PRICE PER COIN (USD)"; placeholder: "Optional"; value <=> root.price; }
+            Rectangle { height: 16px; }
+            UnderlineField { label: "DATE"; value <=> root.date; }
+
+            Rectangle { vertical-stretch: 1; }
+
+            Rectangle {
+                height: 48px;
+                background: Palette.surface;
+                border-radius: 4px;
+                border-width: 1px;
+                border-color: Palette.border;
+                
+                Text {
+                    text: "SAVE ASSET";
+                    color: Palette.text-primary;
+                    font-size: 12px;
+                    letter-spacing: 2px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+                TouchArea { clicked => { root.submit(); } }
+            }
+        }
+    }
+}
