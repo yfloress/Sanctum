@@ -165,7 +165,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                     if !warned.get() {
                                         let mins = (remaining + 59) / 60;
                                         notify(
-                                            format!("Session expires in {mins} minute(s)").into(),
+                                            format!("Session expires in {mins} minute(s)"),
                                             true,
                                         );
                                         warned.set(true);
@@ -236,7 +236,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Err(e) => {
                     let error_msg = e.to_string();
                     log::error!("Failed to create vault: {}", error_msg);
-                    notify(error_msg.clone().into(), true);
+                    notify(error_msg.clone(), true);
                     SharedString::from(error_msg)
                 }
             }
@@ -265,7 +265,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Err(e) => {
                     let error_msg = e.to_string();
                     log::error!("Failed to unlock vault: {}", error_msg);
-                    notify(error_msg.clone().into(), true);
+                    notify(error_msg.clone(), true);
                     SharedString::from(error_msg)
                 }
             }
@@ -676,8 +676,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_weak = ui_weak.clone();
         ui.global::<DashboardAdapter>().on_fetch_balance(move || {
             let result = controller.get_balance();
-            if let Ok(balance) = result {
-                if let Some(ui) = ui_weak.upgrade() {
+            if let Ok(balance) = result
+                && let Some(ui) = ui_weak.upgrade() {
                     let dash = ui.global::<DashboardAdapter>();
                     dash.set_balance(BalanceData {
                         total_balance: format_money(balance.total_balance, "USD").into(),
@@ -685,7 +685,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         total_expense: format_money(balance.total_expense, "USD").into(),
                     });
                 }
-            }
         });
     }
 
@@ -702,15 +701,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_weak = ui_weak.clone();
         ui.global::<AnalyticsAdapter>().on_fetch_analytics(move |range| {
             // 1. Net Worth History
-            if let Ok((path, net_worth, min_val, max_val)) = controller.get_net_worth_history(&range) {
-                if let Some(ui) = ui_weak.upgrade() {
+            if let Ok((path, net_worth, min_val, max_val)) = controller.get_net_worth_history(&range)
+                && let Some(ui) = ui_weak.upgrade() {
                     let adapter = ui.global::<AnalyticsAdapter>();
                     adapter.set_chart_path(SharedString::from(path));
                     adapter.set_net_worth(SharedString::from(net_worth));
                     adapter.set_min_value(SharedString::from(min_val));
                     adapter.set_max_value(SharedString::from(max_val));
                 }
-            }
 
             // 2. Expense Breakdown (Keep it global/ALL for now, or filter later if needed)
             if let Ok(expenses) = controller.get_expenses_by_category() {
@@ -972,13 +970,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // Find dominant habit
                 let mut dominant_color = slint::Color::from_rgb_u8(100, 100, 100); // Default gray
                 
-                if *total > 0 {
-                    if let Some((best_habit_id, _)) = habits_map.iter().max_by_key(|(_, count)| **count) {
-                        if let Some(c) = habit_colors.get(best_habit_id) {
+                if *total > 0
+                    && let Some((best_habit_id, _)) = habits_map.iter().max_by_key(|(_, count)| **count)
+                        && let Some(c) = habit_colors.get(best_habit_id) {
                             dominant_color = *c;
                         }
-                    }
-                }
                 
                 MonthlyStats {
                     month_name: SharedString::from(month_names[i]),
@@ -1027,13 +1023,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         
         let mut daily_counts: HashMap<String, i32> = HashMap::new();
         
-        if year <= today.year() {
-             if let Ok(logs) = controller.get_habit_logs(start_str, end_str) {
+        if year <= today.year()
+             && let Ok(logs) = controller.get_habit_logs(start_str, end_str) {
                 for log in logs {
                     *daily_counts.entry(log.completed_date).or_insert(0) += 1;
                 }
              }
-        }
             
         // 4. Build Structure
         let mut weeks_vec: Vec<HeatmapWeek> = Vec::new();
@@ -1054,8 +1049,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 
                 let is_future = if year == today.year() { current_day > today } else { year > today.year() };
                 
-                let level = if is_future { 0 }
-                else if count == 0 { 0 }
+                let level = if is_future || count == 0 { 0 }
                 else if count <= 1 { 1 }
                 else if count <= 2 { 2 }
                 else if count <= 4 { 3 }
@@ -1067,7 +1061,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     level,
                 });
                 
-                current_day = current_day + chrono::Duration::days(1);
+                current_day += chrono::Duration::days(1);
             }
             
             weeks_vec.push(HeatmapWeek {
@@ -1162,7 +1156,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let date_lock = current_habit_date.clone();
         let year_lock = current_heatmap_year.clone();
         ui.global::<HabitAdapter>().on_toggle_habit(move |id, date| {
-            if let Ok(_) = controller.toggle_habit_completion(id.to_string(), date.to_string()) {
+            if controller.toggle_habit_completion(id.to_string(), date.to_string()).is_ok() {
                  let d = *date_lock.lock().unwrap();
                  let y = *year_lock.lock().unwrap();
                  reload_habits(&ui_weak, &controller, d);

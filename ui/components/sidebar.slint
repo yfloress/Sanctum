@@ -2,6 +2,7 @@
 // Noir Minimalist navigation sidebar
 
 import { Palette, AppState, AuthAdapter } from "../globals.slint";
+import { TacticalGrid } from "../components/tactical_grid.slint";
 
 // ==================== SidebarItem ====================
 // Individual navigation item with active state indicator
@@ -67,6 +68,14 @@ component SidebarItem inherits Rectangle {
 export component SanctumSidebar inherits Rectangle {
     width: 200px;
     background: Palette.sidebar-bg;
+
+    // Background texture
+    TacticalGrid {
+        show-background: false;
+        grid-cols: 6;
+        grid-rows: 15;
+        opacity: 0.5; // Blend nicely with the dark background
+    }
 
     // Right border
     Rectangle {

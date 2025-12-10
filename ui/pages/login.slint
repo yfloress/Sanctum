@@ -3,6 +3,7 @@
 
 import { Palette, AuthAdapter, AppState, NotificationAdapter } from "../globals.slint";
 import { TextButton } from "../widgets.slint";
+import { TacticalGrid } from "../components/tactical_grid.slint";
 
 // ==================== PasswordInput ====================
 // Custom password input with visibility toggle
@@ -110,7 +111,8 @@ component PasswordInput inherits Rectangle {
 }
 
 export component LoginPage inherits Rectangle {
-    background: Palette.background;
+    // Use TacticalGrid for sophisticated background
+    TacticalGrid {}
 
     // Internal state
     in-out property <string> password-text: "";
@@ -252,6 +254,7 @@ export component LoginPage inherits Rectangle {
             }
         }
     }
+
 
     // Handler: Create new vault
     function handle-create() {
