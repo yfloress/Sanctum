@@ -62,12 +62,16 @@ export component DashboardPage inherits Rectangle {
             height: 80px;
             spacing: 12px;
 
+            // Income Card
             Rectangle {
                 horizontal-stretch: 1;
-                background: Palette.surface;
+                background: income-area.has-hover ? Palette.surface-hover : Palette.surface;
                 border-radius: 6px;
                 border-width: 1px;
-                border-color: Palette.border;
+                border-color: income-area.has-hover ? Palette.border-light : Palette.border;
+
+                animate background { duration: 150ms; }
+                animate border-color { duration: 150ms; }
 
                 VerticalLayout {
                     padding: 16px;
@@ -88,14 +92,20 @@ export component DashboardPage inherits Rectangle {
                         font-weight: 500;
                     }
                 }
+
+                income-area := TouchArea {}
             }
 
+            // Expense Card
             Rectangle {
                 horizontal-stretch: 1;
-                background: Palette.surface;
+                background: expense-area.has-hover ? Palette.surface-hover : Palette.surface;
                 border-radius: 6px;
                 border-width: 1px;
-                border-color: Palette.border;
+                border-color: expense-area.has-hover ? Palette.border-light : Palette.border;
+
+                animate background { duration: 150ms; }
+                animate border-color { duration: 150ms; }
 
                 VerticalLayout {
                     padding: 16px;
@@ -116,6 +126,8 @@ export component DashboardPage inherits Rectangle {
                         font-weight: 500;
                     }
                 }
+                
+                expense-area := TouchArea {}
             }
         }
 
