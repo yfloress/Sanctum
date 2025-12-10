@@ -116,6 +116,7 @@ export component LoginPage inherits Rectangle {
     in-out property <string> password-text: "";
     in-out property <bool> vault-exists: false;
     in-out property <bool> is-loading: false;
+    in property <string> title-text: "SANCTUM";
 
     // Check vault status on init
     init => {
@@ -145,7 +146,7 @@ export component LoginPage inherits Rectangle {
 
                     // Title
                     Text {
-                        text: "SANCTUM";
+                        text: root.title-text;
                         color: Palette.text-primary;
                         font-size: 42px;
                         font-weight: 300;

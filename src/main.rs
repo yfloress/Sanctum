@@ -11,7 +11,8 @@ use slint::{ModelRc, VecModel, Weak};
 use std::collections::HashMap;
 use std::cell::Cell;
 use std::sync::Arc;
-use chrono::Datelike; // Import Datelike trait
+use chrono::Datelike;
+use rand::Rng; // For title animation
 
 slint::include_modules!();
 
@@ -49,6 +50,66 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create the Slint UI
     let ui = AppWindow::new()?;
+
+    // Title Animation: Decryption Effect
+    {
+        let ui_weak = ui.as_weak();
+        std::thread::spawn(move || {
+            let target_text = "SANCTUM";
+            let total_steps = 50; // Total frames
+            let mut rng = rand::rng();
+            
+            for step in 0..total_steps {
+                let mut current_string = String::new();
+                
+                // Calculate progress (0.0 to 1.0)
+                let progress = step as f64 / total_steps as f64;
+                
+                // Use a curve so it starts chaotic and resolves quickly at the end
+                // progress^3 keeps it low (chaotic) longer
+                let resolve_threshold = progress * progress * progress;
+
+                for (_i, char) in target_text.chars().enumerate() {
+                    // Logic: As we progress, the chance of showing the correct char increases.
+                    // Once a char is "resolved" by chance, does it stay resolved?
+                    // "Digital rain" style: it flickers until it locks.
+                    // Let's make "locked" state probability based on progress + index bias?
+                    // No, let's keep it simple: Probability to show REAL char vs RANDOM char.
+                    
+                    let show_real = if step > total_steps - 5 {
+                        true // Force resolve at end
+                    } else {
+                        rng.random_bool(resolve_threshold)
+                    };
+
+                    if show_real {
+                        current_string.push(char);
+                    } else {
+                        // Random char: Uppercase, numbers, symbols
+                        // ASCII 33 (!) to 90 (Z), maybe avoid lowercase to keep it "blocky"
+                        // Or just 65-90 (A-Z) and some symbols.
+                        // Let's use 33..126 for "hacker" look.
+                        let random_char = rng.random_range(33..91) as u8 as char; 
+                        current_string.push(random_char);
+                    }
+                }
+                
+                let text = SharedString::from(current_string);
+                let _ = ui_weak.upgrade_in_event_loop(move |ui| {
+                    ui.set_login_title(text);
+                });
+                
+                // Variable speed: Start fast, slow down as it resolves?
+                // Or just constant. Constant is usually fine for "decryption".
+                std::thread::sleep(std::time::Duration::from_millis(60));
+            }
+            
+            // Final state
+            let _ = ui_weak.upgrade_in_event_loop(move |ui| {
+                ui.set_login_title("SANCTUM".into());
+            });
+        });
+    }
 
     // =============== Wire Adapters ===============
 
