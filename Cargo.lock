@@ -4417,6 +4417,7 @@ dependencies = [
  "env_logger",
  "futures",
  "log",
+ "regex",
  "reqwest",
  "rusqlite",
  "secrecy",

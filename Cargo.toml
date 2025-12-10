@@ -3,6 +3,18 @@ name = "sanctum"
 version = "0.1.0"
 edition = "2024"
 build = "build.rs"
+authors = ["Kyronix"]
+license = "AGPL-3.0-or-later"
+description = "Your personal financial fortress. Private. Encrypted. Local-first."
+repository = "https://codeberg.org/Kyronix/Sanctum"
+homepage = "https://codeberg.org/Kyronix/Sanctum"
+readme = "README.md"
+keywords = ["finance", "privacy", "crypto", "slint", "sqlite"]
+categories = ["cryptography", "database"]
+exclude = [
+    ".img/*",
+    ".envrc"
+]
 
 [[bin]]
 name = "sanctum"
@@ -23,6 +35,7 @@ env_logger = "0.11"
 directories = "5.0"
 reqwest = { version = "0.11", features = ["json", "stream"] }
 futures = "0.3"
+regex = "1"
 
 [build-dependencies]
 slint-build = "1.9"
