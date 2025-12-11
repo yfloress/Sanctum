@@ -6,131 +6,8 @@ import {
     CryptoAdapter,
     AppState
 } from "../globals.slint";
-
-component CryptoRow inherits Rectangle {
-    in property <bool> is-last: false;
-    in property <string> name;
-    in property <string> symbol;
-    in property <string> price;
-    in property <string> amount;
-    in property <string> value;
-    in property <string> change;
-    in property <bool> is-positive;
-
-    height: 56px;
-    background: area.has-hover ? Palette.surface-hover : Palette.background;
-    animate background { duration: 150ms; }
-
-    HorizontalLayout {
-        padding-left: 12px;
-        padding-right: 12px;
-        spacing: 16px;
-        alignment: space-between;
-
-        HorizontalLayout {
-            width: 200px;
-            spacing: 12px;
-            alignment: start;
-            Rectangle {
-                width: 32px; height: 32px; border-radius: 16px; background: Palette.surface; y: (parent.height - self.height) / 2;
-                Text { text: root.symbol; color: Palette.text-primary; font-size: 10px; font-weight: 500; vertical-alignment: center; horizontal-alignment: center; }
-            }
-            VerticalLayout {
-                alignment: center;
-                Text { text: root.name; color: Palette.text-primary; font-size: 14px; font-weight: 400; }
-                Text { text: root.symbol; color: Palette.text-muted; font-size: 11px; }
-            }
-        }
-        Text { width: 120px; text: root.price; color: Palette.text-secondary; font-size: 14px; vertical-alignment: center; horizontal-alignment: right; }
-        VerticalLayout {
-            width: 140px; alignment: center;
-            Text { text: root.amount; color: Palette.text-primary; font-size: 14px; horizontal-alignment: right; }
-            Text { text: root.value; color: Palette.text-muted; font-size: 11px; horizontal-alignment: right; }
-        }
-        Rectangle {
-            width: 80px; height: 28px; background: root.is-positive ? Palette.success.with-alpha(0.1) : Palette.danger.with-alpha(0.1); border-radius: 4px; y: (parent.height - self.height) / 2;
-            Text { text: root.change; color: root.is-positive ? Palette.success : Palette.danger; font-size: 12px; font-weight: 500; vertical-alignment: center; horizontal-alignment: center; }
-        }
-    }
-    if !root.is-last: Rectangle { height: 1px; width: parent.width; background: Palette.border-subtle; y: parent.height - 1px; }
-    area := TouchArea {}
-}
-
-component WalletRow inherits Rectangle {
-    in property <bool> is-last: false;
-    in property <string> name;
-    in property <string> category;
-    in property <string> balance;
-    in property <int> count;
-    in property <string> id;
-
-    callback delete;
-
-    height: 64px;
-    background: area.has-hover ? Palette.surface-hover : Palette.background;
-    animate background { duration: 150ms; }
-
-    HorizontalLayout {
-        padding-left: 12px;
-        padding-right: 12px;
-        spacing: 16px;
-        alignment: space-between;
-
-        HorizontalLayout {
-            width: 250px;
-            spacing: 12px;
-            alignment: start;
-            Rectangle {
-                width: 40px; height: 40px; border-radius: 6px; background: Palette.surface; y: (parent.height - self.height) / 2;
-                Text { text: "📦"; font-size: 18px; vertical-alignment: center; horizontal-alignment: center; }
-            }
-            VerticalLayout {
-                alignment: center;
-                Text { text: root.name; color: Palette.text-primary; font-size: 14px; font-weight: 500; }
-                Text { text: root.category; color: Palette.text-muted; font-size: 11px; }
-            }
-        }
-        
-        Text { width: 100px; text: root.count + " Assets"; color: Palette.text-secondary; font-size: 12px; vertical-alignment: center; horizontal-alignment: center; }
-        
-        Text { width: 120px; text: root.balance; color: Palette.text-primary; font-size: 14px; font-weight: 500; vertical-alignment: center; horizontal-alignment: right; }
-        
-        Rectangle {
-            width: 32px; height: 32px;
-            Text { text: "🗑"; font-size: 14px; vertical-alignment: center; horizontal-alignment: center; opacity: del-area.has-hover ? 1 : 0.5; }
-            del-area := TouchArea { clicked => { root.delete(); } }
-        }
-    }
-    if !root.is-last: Rectangle { height: 1px; width: parent.width; background: Palette.border-subtle; y: parent.height - 1px; }
-    area := TouchArea {}
-}
-
-component TickerItem inherits Rectangle {
-    in property <string> symbol;
-    in property <string> price;
-    in property <string> change;
-    in property <bool> is-positive;
-
-    width: 140px;
-    height: 48px;
-    background: Palette.surface;
-    border-radius: 4px;
-    border-width: 1px;
-    border-color: Palette.border;
-
-    VerticalLayout {
-        padding: 8px;
-        spacing: 4px;
-        
-        HorizontalLayout {
-            alignment: space-between;
-            Text { text: root.symbol; color: Palette.text-muted; font-size: 10px; font-weight: 500; }
-            Text { text: root.change; color: root.is-positive ? Palette.success : Palette.danger; font-size: 10px; }
-        }
-        
-        Text { text: root.price; color: Palette.text-primary; font-size: 14px; font-weight: 500; }
-    }
-}
+import { CryptoRow, WalletRow, TickerItem } from "../components/crypto_widgets.slint";
+import { AssetDetailPanel } from "../components/asset_detail.slint";
 
 export component CryptoPage inherits Rectangle {
     background: Palette.background;
@@ -277,6 +154,10 @@ export component CryptoPage inherits Rectangle {
                                 change: asset.change-24h;
                                 is-positive: asset.is-positive;
                                 is-last: index == CryptoAdapter.portfolio.length - 1;
+                                clicked => {
+                                    CryptoAdapter.fetch-asset-details(asset.id);
+                                    CryptoAdapter.show-asset-detail = true;
+                                }
                             }
                         }
                     }
@@ -319,6 +200,22 @@ export component CryptoPage inherits Rectangle {
                     }
                 }
             }
+        }
+    }
+    
+    // DETAIL OVERLAY
+    if CryptoAdapter.show-asset-detail: Rectangle {
+        x: 0; y: 0; width: 100%; height: 100%;
+        
+        // Backdrop
+        Rectangle {
+            background: #00000080;
+            TouchArea { clicked => { CryptoAdapter.show-asset-detail = false; } }
+        }
+        
+        // Drawer
+        AssetDetailPanel {
+            x: parent.width - self.width;
         }
     }
 }

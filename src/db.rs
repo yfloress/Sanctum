@@ -1552,6 +1552,38 @@ impl Database {
         Ok(transactions)
     }
 
+    /// Gets all crypto transactions for a specific coin across all wallets
+    pub fn get_crypto_transactions_by_coin(&self, coin_id: &str) -> Result<Vec<CryptoTransaction>, DbError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, fee_coin_id, fee_amount, date, notes, related_tx_id
+             FROM crypto_transactions
+             WHERE coin_id = ?1
+             ORDER BY date DESC, rowid DESC",
+        )?;
+
+        let transactions = stmt
+            .query_map(params![coin_id], |row| {
+                Ok(CryptoTransaction {
+                    id: row.get(0)?,
+                    wallet_id: row.get(1)?,
+                    coin_id: row.get(2)?,
+                    symbol: row.get(3)?,
+                    transaction_type: row.get(4)?,
+                    amount: row.get(5)?,
+                    price_per_coin: row.get(6)?,
+                    fee: row.get(7)?,
+                    fee_coin_id: row.get(8)?,
+                    fee_amount: row.get(9)?,
+                    date: row.get(10)?,
+                    notes: row.get(11)?,
+                    related_tx_id: row.get(12)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(transactions)
+    }
+
     /// Deletes a crypto transaction by ID
     pub fn delete_crypto_transaction(&self, id: &str) -> Result<(), DbError> {
         self.conn

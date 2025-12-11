@@ -1523,6 +1523,96 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
          ui.global::<CryptoAdapter>().set_clp_rate(SharedString::from(format!("$ {:.0}", rate)));
     }
 
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        
+        ui.global::<CryptoAdapter>().on_fetch_asset_details(move |coin_id| {
+            let coin_id_str = coin_id.to_string();
+            
+            // 1. Get Selected Asset Info
+            if let Ok(assets) = controller.get_aggregated_portfolio() {
+                if let Some(asset) = assets.iter().find(|a| a.coin_id == coin_id_str) {
+                    let prices = controller.load_crypto_prices().unwrap_or_default();
+                    let current_price = prices.iter().find(|p| p.id == coin_id_str).map(|p| p.current_price).unwrap_or(0.0);
+                    
+                    let mut updated_asset = asset.clone();
+                    if current_price > 0.0 {
+                        updated_asset.update_with_price(current_price);
+                    }
+                    
+                    let change_str = if updated_asset.unrealized_pnl_percentage >= 0.0 {
+                        format!("+ {:.2}%", updated_asset.unrealized_pnl_percentage)
+                    } else {
+                        format!("{:.2}%", updated_asset.unrealized_pnl_percentage)
+                    };
+                    
+                    let price_fmt = if updated_asset.current_price < 1.0 {
+                         format!("$ {:.4}", updated_asset.current_price)
+                    } else {
+                         format_money((updated_asset.current_price * 100.0) as i64, "USD")
+                    };
+                    
+                    let selected = CryptoAssetData {
+                        id: SharedString::from(&updated_asset.coin_id),
+                        symbol: SharedString::from(&updated_asset.symbol),
+                        name: SharedString::from(&updated_asset.coin_id),
+                        price: SharedString::from(price_fmt),
+                        amount: SharedString::from(format!("{:.4} {}", updated_asset.total_amount, updated_asset.symbol)),
+                        value: SharedString::from(format_money((updated_asset.current_value * 100.0) as i64, "USD")),
+                        change_24h: SharedString::from(change_str),
+                        is_positive: updated_asset.unrealized_pnl >= 0.0,
+                        allocation: 0.0,
+                    };
+                    
+                    // 2. Wallet Breakdown
+                    let wallets = controller.get_wallets().unwrap_or_default();
+                    let mut wallet_breakdown: Vec<AssetWalletBreakdown> = Vec::new();
+                    
+                    for w in wallets {
+                        let holdings = controller.get_wallet_holdings(w.id.clone()).unwrap_or_default();
+                        if let Some(h) = holdings.iter().find(|h| h.coin_id == coin_id_str) {
+                            if h.total_amount > 0.0 {
+                                let val = h.total_amount * current_price;
+                                wallet_breakdown.push(AssetWalletBreakdown {
+                                    wallet_name: SharedString::from(w.name),
+                                    amount: SharedString::from(format!("{:.4}", h.total_amount)),
+                                    value: SharedString::from(format_money((val * 100.0) as i64, "USD")),
+                                });
+                            }
+                        }
+                    }
+                    
+                    // 3. Transactions History
+                    let history = controller.get_crypto_transactions_by_coin(coin_id_str).unwrap_or_default();
+                    let history_mapped: Vec<AssetTransaction> = history.iter().map(|tx| {
+                        let price_val = tx.price_per_coin.unwrap_or(0.0);
+                        let p_fmt = if price_val < 1.0 && price_val > 0.0 {
+                             format!("$ {:.4}", price_val)
+                        } else {
+                             format_money((price_val * 100.0) as i64, "USD")
+                        };
+                        
+                        AssetTransaction {
+                            id: SharedString::from(&tx.id),
+                            date: SharedString::from(&tx.date),
+                            r#type: SharedString::from(tx.transaction_type.to_uppercase()),
+                            amount: SharedString::from(format!("{:.4}", tx.amount)),
+                            price: SharedString::from(p_fmt),
+                        }
+                    }).collect();
+                    
+                    if let Some(ui) = ui_weak.upgrade() {
+                        let adapter = ui.global::<CryptoAdapter>();
+                        adapter.set_selected_asset(selected);
+                        adapter.set_asset_wallets(ModelRc::new(VecModel::from(wallet_breakdown)));
+                        adapter.set_asset_history(ModelRc::new(VecModel::from(history_mapped)));
+                    }
+                }
+            }
+        });
+    }
+
     // Run the UI event loop
     ui.run()?;
 

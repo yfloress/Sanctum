@@ -253,11 +253,31 @@ export struct WalletSimple {
     name: string,
 }
 
+export struct AssetWalletBreakdown {
+    wallet-name: string,
+    amount: string,
+    value: string,
+}
+
+export struct AssetTransaction {
+    id: string,
+    date: string,
+    type: string,
+    amount: string,
+    price: string,
+}
+
 export global CryptoAdapter {
     in-out property <[CryptoAssetData]> portfolio: [];
     in-out property <[CryptoAssetData]> market-tickers: [];
     in-out property <[CryptoWalletData]> wallets: [];
     in-out property <[WalletSimple]> wallet-list: []; // For dropdowns
+    
+    // Asset Detail View Data
+    in-out property <CryptoAssetData> selected-asset;
+    in-out property <[AssetWalletBreakdown]> asset-wallets: [];
+    in-out property <[AssetTransaction]> asset-history: [];
+    in-out property <bool> show-asset-detail: false;
     
     in-out property <string> total-value: "$ 0.00";
     in-out property <string> total-pnl: "+ $ 0.00";
@@ -267,6 +287,7 @@ export global CryptoAdapter {
     callback fetch-portfolio();
     callback fetch-wallets();
     callback refresh-prices();
+    callback fetch-asset-details(string); // coin_id
     
     // (wallet_id, coin_id, symbol, type, amount, price, fee, date)
     callback add-transaction(string, string, string, string, string, string, string, string) -> string;

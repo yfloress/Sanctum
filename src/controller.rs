@@ -1163,6 +1163,14 @@ impl AppController {
         })
     }
 
+    /// Gets crypto transactions for a specific coin
+    pub fn get_crypto_transactions_by_coin(&self, coin_id: String) -> Result<Vec<CryptoTransaction>, ControllerError> {
+        self.with_db(|db| {
+            let validated = validate_coin_id_str(&coin_id)?;
+            db.get_crypto_transactions_by_coin(&validated).map_err(ControllerError::Database)
+        })
+    }
+
     /// Deletes a crypto transaction
     pub fn delete_crypto_transaction(&self, id: String) -> Result<(), ControllerError> {
         self.with_db(|db| {
