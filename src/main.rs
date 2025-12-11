@@ -1213,10 +1213,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ) {
         if let Ok(wallets) = controller.get_wallets() {
             let mut wallet_data: Vec<CryptoWalletData> = Vec::new();
+            let mut wallet_simple: Vec<WalletSimple> = Vec::new(); // For dropdowns
+            
             let prices = controller.load_crypto_prices().unwrap_or_default();
             let price_map: HashMap<String, f64> = prices.into_iter().map(|p| (p.id, p.current_price)).collect();
             
             for w in wallets {
+                // Populate simple list
+                wallet_simple.push(WalletSimple {
+                    id: SharedString::from(&w.id),
+                    name: SharedString::from(&w.name),
+                });
+
                 let holdings = controller.get_wallet_holdings(w.id.clone()).unwrap_or_default();
                 let total_bal: f64 = holdings.iter().map(|h| {
                     let price = price_map.get(&h.coin_id).cloned().unwrap_or(0.0);
@@ -1227,8 +1235,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     id: SharedString::from(w.id),
                     name: SharedString::from(w.name),
                     category: SharedString::from(match w.category.as_str() {
-                        "wallet_single" => "Software",
-                        "wallet_multi" => "Hardware",
+                        "wallet_single" => "Single Coin",
+                        "wallet_multi" => "Multi-Chain",
                         "exchange" => "Exchange",
                         _ => "Wallet"
                     }),
@@ -1240,6 +1248,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             
             if let Some(ui) = ui_weak.upgrade() {
                 ui.global::<CryptoAdapter>().set_wallets(ModelRc::new(VecModel::from(wallet_data)));
+                ui.global::<CryptoAdapter>().set_wallet_list(ModelRc::new(VecModel::from(wallet_simple)));
             }
         }
     }
@@ -1432,24 +1441,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
              let fee_clean = fee_str.replace(",", "").replace("$", "").trim().to_string();
              let fee: Option<f64> = if fee_clean.is_empty() { None } else { fee_clean.parse().ok() };
 
-             // 2. Handle Wallet
-             let target_wallet_id = if wallet_id_raw == "default" {
-                 let wallets = controller.get_wallets().unwrap_or_default();
-                 if let Some(w) = wallets.iter().find(|w| w.name == "Trading" || w.category == "wallet_single") {
-                     w.id.clone()
-                 } else {
-                     match controller.add_wallet("Trading".to_string(), "wallet_single".to_string(), None) {
-                         Ok(id) => id,
-                         Err(e) => return SharedString::from(e.to_string()),
-                     }
-                 }
-             } else {
-                 wallet_id_raw.to_string()
-             };
-
              // 3. Add Transaction
              let result = controller.add_crypto_transaction(
-                 target_wallet_id,
+                 wallet_id_raw.to_string(),
                  coin_id.to_string(),
                  symbol.to_string(),
                  type_str.to_string(),
@@ -1510,6 +1504,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Err(e) => SharedString::from(e.to_string()),
             }
         });
+    }
+
+    // Initial Load
+    if let Ok(Some((rate, _))) = controller.load_exchange_rate("CLP_USD".to_string()) {
+         ui.global::<CryptoAdapter>().set_clp_rate(SharedString::from(format!("$ {:.0}", rate)));
     }
 
     // Run the UI event loop

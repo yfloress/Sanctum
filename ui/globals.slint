@@ -248,10 +248,16 @@ export struct CryptoWalletData {
     asset-count: int,
 }
 
+export struct WalletSimple {
+    id: string,
+    name: string,
+}
+
 export global CryptoAdapter {
     in-out property <[CryptoAssetData]> portfolio: [];
-    in-out property <[CryptoAssetData]> market-tickers: []; // BTC, LTC, XMR, etc.
+    in-out property <[CryptoAssetData]> market-tickers: [];
     in-out property <[CryptoWalletData]> wallets: [];
+    in-out property <[WalletSimple]> wallet-list: []; // For dropdowns
     
     in-out property <string> total-value: "$ 0.00";
     in-out property <string> total-pnl: "+ $ 0.00";

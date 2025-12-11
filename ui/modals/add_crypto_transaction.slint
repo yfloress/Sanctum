@@ -111,6 +111,51 @@ component TypeToggle inherits Rectangle {
     }
 }
 
+component WalletSelector inherits Rectangle {
+    in-out property <int> selected-index: 0;
+    
+    height: 56px;
+    background: transparent;
+
+    VerticalLayout {
+        spacing: 8px;
+        Text { text: "WALLET"; color: Palette.text-muted; font-size: 10px; font-weight: 400; letter-spacing: 2px; }
+        
+        Rectangle {
+            height: 32px;
+            HorizontalLayout {
+                Text {
+                    text: CryptoAdapter.wallet-list.length > 0 ? CryptoAdapter.wallet-list[selected-index].name : "No wallets available";
+                    color: Palette.text-primary; font-size: 14px; font-weight: 300; vertical-alignment: center; horizontal-stretch: 1;
+                }
+                Text { text: "▼"; color: Palette.text-muted; font-size: 10px; vertical-alignment: center; }
+            }
+            TouchArea { clicked => { if (CryptoAdapter.wallet-list.length > 0) { popup.show(); } } }
+        }
+        Rectangle { height: 1px; background: Palette.border; }
+    }
+
+    popup := PopupWindow {
+        x: 0; y: 56px; width: root.width;
+        Rectangle {
+            background: Palette.surface; border-radius: 4px; border-width: 1px; border-color: Palette.border;
+            height: min(CryptoAdapter.wallet-list.length * 36px + 8px, 240px);
+            
+            Flickable {
+                viewport-height: CryptoAdapter.wallet-list.length * 36px + 8px;
+                VerticalLayout {
+                    padding: 4px; spacing: 0px;
+                    for wallet[index] in CryptoAdapter.wallet-list: Rectangle {
+                        height: 36px; background: option-touch.has-hover ? Palette.surface-hover : transparent; border-radius: 2px;
+                        Text { text: wallet.name; color: index == selected-index ? Palette.text-primary : Palette.text-secondary; font-size: 12px; font-weight: index == selected-index ? 500 : 400; vertical-alignment: center; x: 12px; }
+                        option-touch := TouchArea { clicked => { root.selected-index = index; } }
+                    }
+                }
+            }
+        }
+    }
+}
+
 export component AddCryptoTransactionModal inherits Rectangle {
     property <string> coin-id: "";
     property <string> symbol: "";
@@ -118,6 +163,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
     property <string> price: "";
     property <string> date: AppState.current-date;
     property <bool> is-buy: true;
+    property <int> wallet-index: 0;
 
     function reset() {
         coin-id = "";
@@ -126,18 +172,29 @@ export component AddCryptoTransactionModal inherits Rectangle {
         price = "";
         date = AppState.current-date;
         is-buy = true;
+        wallet-index = 0;
     }
 
     function submit() {
+        if (CryptoAdapter.wallet-list.length == 0) {
+            NotificationAdapter.show("Please create a wallet first", true);
+            return;
+        }
         if (coin-id == "" || symbol == "" || amount == "") {
             NotificationAdapter.show("Coin, Symbol and Amount are required", true);
             return;
         }
 
+        // Safe guard index
+        if (wallet-index >= CryptoAdapter.wallet-list.length) {
+            wallet-index = 0;
+        }
+        let wallet-id = CryptoAdapter.wallet-list[wallet-index].id;
+
         let type = is-buy ? "buy" : "sell";
-        // Pass "default" as wallet_id to let backend handle it
+        
         let result = CryptoAdapter.add-transaction(
-            "default", 
+            wallet-id, 
             coin-id, 
             symbol, 
             type, 
@@ -151,6 +208,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
             root.reset();
             AppState.show-add-crypto = false;
             CryptoAdapter.fetch-portfolio();
+            CryptoAdapter.fetch-wallets(); // Update wallet balance
         } else {
             NotificationAdapter.show(result, true);
         }
@@ -178,7 +236,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
         width: 400px;
-        height: 600px;
+        height: 680px; // Increased height for wallet selector
         background: Palette.sidebar-bg;
         border-radius: 8px;
         border-width: 1px;
@@ -213,6 +271,15 @@ export component AddCryptoTransactionModal inherits Rectangle {
             TypeToggle { is-buy <=> root.is-buy; }
 
             Rectangle { height: 24px; }
+            
+            WalletSelector { selected-index <=> root.wallet-index; }
+            
+            if CryptoAdapter.wallet-list.length == 0: Rectangle {
+                height: 24px;
+                Text { text: "Create a wallet in the Wallets tab first."; color: Palette.danger; font-size: 10px; vertical-alignment: center; }
+            }
+
+            Rectangle { height: 16px; }
 
             UnderlineField { label: "COIN ID (e.g. bitcoin)"; value <=> root.coin-id; }
             Rectangle { height: 16px; }
