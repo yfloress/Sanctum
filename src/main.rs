@@ -1207,6 +1207,43 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // ==================== CryptoAdapter Logic ====================
 
+    fn reload_wallets(
+        ui_weak: &Weak<AppWindow>,
+        controller: &Arc<AppController>,
+    ) {
+        if let Ok(wallets) = controller.get_wallets() {
+            let mut wallet_data: Vec<CryptoWalletData> = Vec::new();
+            let prices = controller.load_crypto_prices().unwrap_or_default();
+            let price_map: HashMap<String, f64> = prices.into_iter().map(|p| (p.id, p.current_price)).collect();
+            
+            for w in wallets {
+                let holdings = controller.get_wallet_holdings(w.id.clone()).unwrap_or_default();
+                let total_bal: f64 = holdings.iter().map(|h| {
+                    let price = price_map.get(&h.coin_id).cloned().unwrap_or(0.0);
+                    h.total_amount * price
+                }).sum();
+                
+                wallet_data.push(CryptoWalletData {
+                    id: SharedString::from(w.id),
+                    name: SharedString::from(w.name),
+                    category: SharedString::from(match w.category.as_str() {
+                        "wallet_single" => "Software",
+                        "wallet_multi" => "Hardware",
+                        "exchange" => "Exchange",
+                        _ => "Wallet"
+                    }),
+                    icon: SharedString::from(w.icon.unwrap_or_default()),
+                    balance: SharedString::from(format_money((total_bal * 100.0) as i64, "USD")),
+                    asset_count: holdings.len() as i32,
+                });
+            }
+            
+            if let Some(ui) = ui_weak.upgrade() {
+                ui.global::<CryptoAdapter>().set_wallets(ModelRc::new(VecModel::from(wallet_data)));
+            }
+        }
+    }
+
     fn reload_portfolio(
         ui_weak: &Weak<AppWindow>,
         controller: &Arc<AppController>,
@@ -1214,7 +1251,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Ok(mut assets) = controller.get_aggregated_portfolio() {
             // Load cached prices to update current value
             let prices = controller.load_crypto_prices().unwrap_or_default();
-            let price_map: HashMap<String, CryptoAsset> = prices.into_iter().map(|p| (p.id.clone(), p)).collect();
+            let price_map: HashMap<String, CryptoAsset> = prices.clone().into_iter().map(|p| (p.id.clone(), p)).collect();
 
             // Update assets with current prices
             for asset in &mut assets {
@@ -1257,6 +1294,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     allocation: 0.0,
                 }
             }).collect();
+            
+            // Tickers
+            let ticker_ids = ["bitcoin", "litecoin", "monero"];
+            let mut tickers: Vec<CryptoAssetData> = Vec::new();
+            
+            for id in ticker_ids {
+                if let Some(data) = prices.iter().find(|p| p.id == id) {
+                    let change_str = if data.price_change_percentage_24h >= 0.0 {
+                        format!("+ {:.2}%", data.price_change_percentage_24h)
+                    } else {
+                        format!("{:.2}%", data.price_change_percentage_24h)
+                    };
+                    let price_fmt = if data.current_price < 1.0 {
+                         format!("$ {:.4}", data.current_price)
+                    } else {
+                         format_money((data.current_price * 100.0) as i64, "USD")
+                    };
+                    
+                    tickers.push(CryptoAssetData {
+                        id: SharedString::from(id),
+                        symbol: SharedString::from(&data.symbol),
+                        name: SharedString::from(&data.name),
+                        price: SharedString::from(price_fmt),
+                        amount: "".into(), value: "".into(),
+                        change_24h: SharedString::from(change_str),
+                        is_positive: data.price_change_percentage_24h >= 0.0,
+                        allocation: 0.0,
+                    });
+                }
+            }
 
             let total_pnl_val = total_val - total_cost;
             let pnl_sign = if total_pnl_val >= 0.0 { "+" } else { "-" };
@@ -1268,6 +1335,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = ui_weak.upgrade() {
                 let adapter = ui.global::<CryptoAdapter>();
                 adapter.set_portfolio(ModelRc::new(VecModel::from(mapped_assets)));
+                adapter.set_market_tickers(ModelRc::new(VecModel::from(tickers)));
                 adapter.set_total_value(SharedString::from(format_money((total_val * 100.0) as i64, "USD")));
                 adapter.set_total_pnl(SharedString::from(format!("{} {}", pnl_sign, format_money((total_pnl_val.abs() * 100.0) as i64, "USD"))));
                 if clp_rate > 0.0 {
@@ -1300,11 +1368,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             tokio::spawn(async move {
                 // 1. Get coins to update
-                let coins = if let Ok(assets) = controller_async.get_aggregated_portfolio() {
+                let mut coins = if let Ok(assets) = controller_async.get_aggregated_portfolio() {
                     assets.iter().map(|a| a.coin_id.clone()).collect::<Vec<_>>()
                 } else {
                     Vec::new()
                 };
+                
+                // Always fetch tickers
+                coins.push("bitcoin".to_string());
+                coins.push("litecoin".to_string());
+                coins.push("monero".to_string());
+                
+                coins.sort();
+                coins.dedup();
 
                 if !coins.is_empty() {
                     match controller_async.get_crypto_prices(coins).await {
@@ -1392,6 +1468,47 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                  },
                  Err(e) => SharedString::from(e.to_string()),
              }
+        });
+    }
+
+    // Wallet Callbacks
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        ui.global::<CryptoAdapter>().on_fetch_wallets(move || {
+            reload_wallets(&ui_weak, &controller);
+        });
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = show_notification.clone();
+        ui.global::<CryptoAdapter>().on_create_wallet(move |name, category| -> SharedString {
+            match controller.add_wallet(name.to_string(), category.to_string(), None) {
+                Ok(_) => {
+                    reload_wallets(&ui_weak, &controller);
+                    notify("Wallet created successfully".into(), false);
+                    SharedString::from("")
+                }
+                Err(e) => SharedString::from(e.to_string()),
+            }
+        });
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = show_notification.clone();
+        ui.global::<CryptoAdapter>().on_delete_wallet(move |id| -> SharedString {
+            match controller.delete_wallet(id.to_string()) {
+                Ok(_) => {
+                    reload_wallets(&ui_weak, &controller);
+                    notify("Wallet deleted".into(), false);
+                    SharedString::from("")
+                }
+                Err(e) => SharedString::from(e.to_string()),
+            }
         });
     }
 
