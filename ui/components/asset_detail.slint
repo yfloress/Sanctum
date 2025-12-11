@@ -17,40 +17,52 @@ export component AssetDetailPanel inherits Rectangle {
     }
 
     VerticalLayout {
-        padding: 24px;
-        spacing: 24px;
+        padding: 0px; // Remove padding from main layout
+        spacing: 0px;
 
-        // Header
-        HorizontalLayout {
-            spacing: 12px;
+        // Header with background
+        Rectangle {
+            height: 80px;
+            background: Palette.surface;
+            border-bottom-width: 1px;
+            border-bottom-color: Palette.border;
             
-            Rectangle {
-                width: 40px; height: 40px; border-radius: 20px; background: Palette.surface;
-                Text { text: CryptoAdapter.selected-asset.symbol; color: Palette.text-primary; font-size: 14px; font-weight: 500; vertical-alignment: center; horizontal-alignment: center; }
-            }
-            
-            VerticalLayout {
-                alignment: center;
-                Text { text: CryptoAdapter.selected-asset.name; color: Palette.text-primary; font-size: 18px; font-weight: 300; letter-spacing: 1px; }
-                Text { text: CryptoAdapter.selected-asset.price; color: Palette.text-muted; font-size: 12px; }
-            }
-            
-            Rectangle { horizontal-stretch: 1; }
-            
-            // Close Button
-            Rectangle {
-                width: 32px; height: 32px;
-                Text { text: "×"; color: Palette.text-muted; font-size: 24px; vertical-alignment: center; horizontal-alignment: center; }
-                TouchArea { 
-                    mouse-cursor: pointer;
-                    clicked => { CryptoAdapter.show-asset-detail = false; } 
+            HorizontalLayout {
+                padding-left: 24px; padding-right: 24px;
+                spacing: 12px;
+                
+                Rectangle {
+                    width: 40px; height: 40px; border-radius: 20px; background: Palette.background; border-width: 1px; border-color: Palette.border-subtle; y: (parent.height - self.height) / 2;
+                    Text { text: CryptoAdapter.selected-asset.symbol; color: Palette.text-primary; font-size: 14px; font-weight: 500; vertical-alignment: center; horizontal-alignment: center; }
+                }
+                
+                VerticalLayout {
+                    alignment: center;
+                    Text { text: CryptoAdapter.selected-asset.name; color: Palette.text-primary; font-size: 18px; font-weight: 300; letter-spacing: 1px; }
+                    Text { text: CryptoAdapter.selected-asset.price; color: Palette.text-muted; font-size: 12px; }
+                }
+                
+                Rectangle { horizontal-stretch: 1; }
+                
+                // Close Button
+                Rectangle {
+                    width: 32px; height: 32px; y: (parent.height - self.height) / 2;
+                    Text { text: "×"; color: Palette.text-muted; font-size: 24px; vertical-alignment: center; horizontal-alignment: center; }
+                    TouchArea { 
+                        mouse-cursor: pointer;
+                        clicked => { CryptoAdapter.show-asset-detail = false; } 
+                    }
                 }
             }
         }
         
-        // Summary Card
-        Rectangle {
-            height: 100px;
+        VerticalLayout {
+            padding: 24px;
+            spacing: 24px;
+            
+            // Summary Card
+            Rectangle {
+                height: 100px;
             background: Palette.surface;
             border-radius: 8px;
             border-width: 1px;

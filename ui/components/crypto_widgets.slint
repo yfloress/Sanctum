@@ -49,10 +49,14 @@ export component CryptoRow inherits Rectangle {
             width: 80px; height: 28px; background: root.is-positive ? Palette.success.with-alpha(0.1) : Palette.danger.with-alpha(0.1); border-radius: 4px; y: (parent.height - self.height) / 2;
             Text { text: root.change; color: root.is-positive ? Palette.success : Palette.danger; font-size: 12px; font-weight: 500; vertical-alignment: center; horizontal-alignment: center; }
         }
+        
+        // Chevron indicator
+        Text { text: "›"; color: Palette.text-muted; font-size: 18px; font-weight: 300; vertical-alignment: center; }
     }
     if !root.is-last: Rectangle { height: 1px; width: parent.width; background: Palette.border-subtle; y: parent.height - 1px; }
     
     area := TouchArea {
+        mouse-cursor: pointer;
         clicked => { root.clicked(); }
     }
 }
