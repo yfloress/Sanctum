@@ -100,6 +100,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // =============== Wire Adapters ===============
 
+    let notification_adapter = ui.global::<NotificationAdapter>();
+    let ui_weak_for_notifications = ui.as_weak();
+    notification_adapter.on_show(move |message, is_error| {
+        if let Some(ui) = ui_weak_for_notifications.upgrade() {
+            let adapter = ui.global::<NotificationAdapter>();
+            adapter.set_message(message);
+            adapter.set_is_error(is_error);
+            adapter.set_active(true);
+
+            // Auto-hide after 4 seconds
+            let adapter_timer = ui.as_weak();
+            slint::Timer::single_shot(std::time::Duration::from_secs(4), move || {
+                if let Some(ui) = adapter_timer.upgrade() {
+                    ui.global::<NotificationAdapter>().set_active(false);
+                }
+            });
+        }
+    });
+
     let ui_weak = ui.as_weak();
 
     // Thread-safe notification helper that upgrades to UI thread
@@ -1234,12 +1253,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 wallet_data.push(CryptoWalletData {
                     id: SharedString::from(w.id),
                     name: SharedString::from(w.name),
-                    category: SharedString::from(match w.category.as_str() {
-                        "wallet_single" => "Single Coin",
-                        "wallet_multi" => "Multi-Chain",
-                        "exchange" => "Exchange",
-                        _ => "Wallet"
-                    }),
+                    category: SharedString::from(w.category.clone()),
                     icon: SharedString::from(w.icon.unwrap_or_default()),
                     balance: SharedString::from(format_money((total_bal * 100.0) as i64, "USD")),
                     asset_count: holdings.len() as i32,
@@ -1279,11 +1293,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 total_val += a.current_value;
                 total_cost += a.total_cost_basis;
 
-                let change_str = if a.unrealized_pnl_percentage >= 0.0 {
-                    format!("+ {:.2}%", a.unrealized_pnl_percentage)
+                let price_data = price_map.get(&a.coin_id);
+                let change_percent = price_data
+                    .map(|p| p.price_change_percentage_24h)
+                    .unwrap_or(0.0);
+                let change_str = if change_percent >= 0.0 {
+                    format!("+ {:.2}%", change_percent)
                 } else {
-                    format!("{:.2}%", a.unrealized_pnl_percentage)
+                    format!("{:.2}%", change_percent)
                 };
+
+                let asset_name = price_data
+                    .map(|p| p.name.clone())
+                    .unwrap_or_else(|| a.symbol.clone());
 
                 let price_fmt = if a.current_price < 1.0 {
                      format!("$ {:.4}", a.current_price)
@@ -1294,12 +1316,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 CryptoAssetData {
                     id: SharedString::from(&a.coin_id),
                     symbol: SharedString::from(&a.symbol),
-                    name: SharedString::from(&a.coin_id),
+                    name: SharedString::from(asset_name),
                     price: SharedString::from(price_fmt),
                     amount: SharedString::from(format!("{:.4} {}", a.total_amount, a.symbol)),
                     value: SharedString::from(format_money((a.current_value * 100.0) as i64, "USD")),
                     change_24h: SharedString::from(change_str),
-                    is_positive: a.unrealized_pnl >= 0.0,
+                    is_positive: change_percent >= 0.0,
                     allocation: 0.0,
                 }
             }).collect();
@@ -1531,20 +1553,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let coin_id_str = coin_id.to_string();
             
             // 1. Get Selected Asset Info
-            if let Ok(assets) = controller.get_aggregated_portfolio() {
-                if let Some(asset) = assets.iter().find(|a| a.coin_id == coin_id_str) {
+            if let Ok(assets) = controller.get_aggregated_portfolio()
+                && let Some(asset) = assets.iter().find(|a| a.coin_id == coin_id_str) {
                     let prices = controller.load_crypto_prices().unwrap_or_default();
-                    let current_price = prices.iter().find(|p| p.id == coin_id_str).map(|p| p.current_price).unwrap_or(0.0);
+                    let price_data = prices.iter().find(|p| p.id == coin_id_str);
+                    let current_price = price_data.map(|p| p.current_price).unwrap_or(0.0);
+                    let price_change = price_data
+                        .map(|p| p.price_change_percentage_24h)
+                        .unwrap_or(0.0);
+                    let asset_name = price_data
+                        .map(|p| p.name.clone())
+                        .unwrap_or_else(|| asset.symbol.clone());
                     
                     let mut updated_asset = asset.clone();
                     if current_price > 0.0 {
                         updated_asset.update_with_price(current_price);
                     }
                     
-                    let change_str = if updated_asset.unrealized_pnl_percentage >= 0.0 {
-                        format!("+ {:.2}%", updated_asset.unrealized_pnl_percentage)
+                    let change_str = if price_change >= 0.0 {
+                        format!("+ {:.2}%", price_change)
                     } else {
-                        format!("{:.2}%", updated_asset.unrealized_pnl_percentage)
+                        format!("{:.2}%", price_change)
                     };
                     
                     let price_fmt = if updated_asset.current_price < 1.0 {
@@ -1556,12 +1585,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let selected = CryptoAssetData {
                         id: SharedString::from(&updated_asset.coin_id),
                         symbol: SharedString::from(&updated_asset.symbol),
-                        name: SharedString::from(&updated_asset.coin_id),
+                        name: SharedString::from(asset_name),
                         price: SharedString::from(price_fmt),
                         amount: SharedString::from(format!("{:.4} {}", updated_asset.total_amount, updated_asset.symbol)),
                         value: SharedString::from(format_money((updated_asset.current_value * 100.0) as i64, "USD")),
                         change_24h: SharedString::from(change_str),
-                        is_positive: updated_asset.unrealized_pnl >= 0.0,
+                        is_positive: price_change >= 0.0,
                         allocation: 0.0,
                     };
                     
@@ -1571,15 +1600,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     
                     for w in wallets {
                         let holdings = controller.get_wallet_holdings(w.id.clone()).unwrap_or_default();
-                        if let Some(h) = holdings.iter().find(|h| h.coin_id == coin_id_str) {
-                            if h.total_amount > 0.0 {
+                        if let Some(h) = holdings.iter().find(|h| h.coin_id == coin_id_str)
+                            && h.total_amount > 0.0 {
                                 let val = h.total_amount * current_price;
                                 wallet_breakdown.push(AssetWalletBreakdown {
                                     wallet_name: SharedString::from(w.name),
                                     amount: SharedString::from(format!("{:.4}", h.total_amount)),
                                     value: SharedString::from(format_money((val * 100.0) as i64, "USD")),
                                 });
-                            }
                         }
                     }
                     
@@ -1609,7 +1637,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         adapter.set_asset_history(ModelRc::new(VecModel::from(history_mapped)));
                     }
                 }
-            }
         });
     }
 
