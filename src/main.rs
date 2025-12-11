@@ -1406,14 +1406,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
 
                 // 2. Get CLP Rate
-                if let Ok(rate) = controller_async.get_clp_usd_rate().await {
-                    let _ = controller_async.save_exchange_rate("CLP_USD".to_string(), rate);
-                }
+                let clp_display = match controller_async.get_clp_usd_rate().await {
+                    Ok(rate) => {
+                        let _ = controller_async.save_exchange_rate("CLP_USD".to_string(), rate);
+                        format!("$ {:.0}", rate)
+                    }
+                    Err(_) => {
+                        // Try fallback to cache
+                        if let Ok(Some((rate, _))) = controller_async.load_exchange_rate("CLP_USD".to_string()) {
+                            format!("$ {:.0}", rate)
+                        } else {
+                            "N/A".to_string()
+                        }
+                    }
+                };
 
                 // 3. Reload UI on main thread
                 let notify_success = notify_for_async_block.clone(); // Clone for success message
                 let _ = ui_weak_async.upgrade_in_event_loop(move |ui| {
                     ui.global::<CryptoAdapter>().invoke_fetch_portfolio();
+                    ui.global::<CryptoAdapter>().set_clp_rate(SharedString::from(clp_display));
                     notify_success("Prices updated".into(), false);
                 });
             });
