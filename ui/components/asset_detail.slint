@@ -24,8 +24,6 @@ export component AssetDetailPanel inherits Rectangle {
         Rectangle {
             height: 80px;
             background: Palette.surface;
-            border-bottom-width: 1px;
-            border-bottom-color: Palette.border;
             
             HorizontalLayout {
                 padding-left: 24px; padding-right: 24px;
@@ -54,6 +52,14 @@ export component AssetDetailPanel inherits Rectangle {
                     }
                 }
             }
+            
+            // Explicit bottom border
+            Rectangle {
+                height: 1px;
+                width: parent.width;
+                background: Palette.border;
+                y: parent.height - 1px;
+            }
         }
         
         VerticalLayout {
@@ -63,76 +69,77 @@ export component AssetDetailPanel inherits Rectangle {
             // Summary Card
             Rectangle {
                 height: 100px;
-            background: Palette.surface;
-            border-radius: 8px;
-            border-width: 1px;
-            border-color: Palette.border;
-            
-            VerticalLayout {
-                padding: 16px;
-                spacing: 4px;
-                alignment: center;
-                
-                Text { text: "TOTAL HOLDINGS"; color: Palette.text-muted; font-size: 10px; letter-spacing: 2px; horizontal-alignment: center; }
-                Text { text: CryptoAdapter.selected-asset.amount; color: Palette.text-primary; font-size: 24px; font-weight: 300; horizontal-alignment: center; }
-                Text { text: CryptoAdapter.selected-asset.value; color: Palette.text-secondary; font-size: 14px; horizontal-alignment: center; }
-            }
-        }
-        
-        // Section: Wallet Breakdown
-        VerticalLayout {
-            spacing: 12px;
-            Text { text: "WALLET BREAKDOWN"; color: Palette.text-muted; font-size: 10px; letter-spacing: 2px; }
-            
-            if CryptoAdapter.asset-wallets.length == 0: Text { text: "No data"; color: Palette.text-subtle; font-size: 12px; font-italic: true; }
-            
-            for item in CryptoAdapter.asset-wallets: Rectangle {
-                height: 48px;
                 background: Palette.surface;
-                border-radius: 4px;
+                border-radius: 8px;
                 border-width: 1px;
-                border-color: Palette.border-subtle;
+                border-color: Palette.border;
                 
-                HorizontalLayout {
-                    padding-left: 12px; padding-right: 12px;
-                    alignment: space-between;
-                    Text { text: item.wallet-name; color: Palette.text-primary; font-size: 12px; vertical-alignment: center; }
-                    VerticalLayout {
-                        alignment: center;
-                        Text { text: item.amount; color: Palette.text-primary; font-size: 12px; horizontal-alignment: right; }
-                        Text { text: item.value; color: Palette.text-muted; font-size: 10px; horizontal-alignment: right; }
+                VerticalLayout {
+                    padding: 16px;
+                    spacing: 4px;
+                    alignment: center;
+                    
+                    Text { text: "TOTAL HOLDINGS"; color: Palette.text-muted; font-size: 10px; letter-spacing: 2px; horizontal-alignment: center; }
+                    Text { text: CryptoAdapter.selected-asset.amount; color: Palette.text-primary; font-size: 24px; font-weight: 300; horizontal-alignment: center; }
+                    Text { text: CryptoAdapter.selected-asset.value; color: Palette.text-secondary; font-size: 14px; horizontal-alignment: center; }
+                }
+            }
+            
+            // Section: Wallet Breakdown
+            VerticalLayout {
+                spacing: 12px;
+                Text { text: "WALLET BREAKDOWN"; color: Palette.text-muted; font-size: 10px; letter-spacing: 2px; }
+                
+                if CryptoAdapter.asset-wallets.length == 0: Text { text: "No data"; color: Palette.text-subtle; font-size: 12px; font-italic: true; }
+                
+                for item in CryptoAdapter.asset-wallets: Rectangle {
+                    height: 48px;
+                    background: Palette.surface;
+                    border-radius: 4px;
+                    border-width: 1px;
+                    border-color: Palette.border-subtle;
+                    
+                    HorizontalLayout {
+                        padding-left: 12px; padding-right: 12px;
+                        alignment: space-between;
+                        Text { text: item.wallet-name; color: Palette.text-primary; font-size: 12px; vertical-alignment: center; }
+                        VerticalLayout {
+                            alignment: center;
+                            Text { text: item.amount; color: Palette.text-primary; font-size: 12px; horizontal-alignment: right; }
+                            Text { text: item.value; color: Palette.text-muted; font-size: 10px; horizontal-alignment: right; }
+                        }
                     }
                 }
             }
-        }
-        
-        // Section: History
-        VerticalLayout {
-            vertical-stretch: 1;
-            spacing: 12px;
-            Text { text: "HISTORY"; color: Palette.text-muted; font-size: 10px; letter-spacing: 2px; }
             
-            if CryptoAdapter.asset-history.length == 0: Text { text: "No transactions found"; color: Palette.text-subtle; font-size: 12px; font-italic: true; }
+            // Section: History
+            VerticalLayout {
+                vertical-stretch: 1;
+                spacing: 12px;
+                Text { text: "HISTORY"; color: Palette.text-muted; font-size: 10px; letter-spacing: 2px; }
+                
+                if CryptoAdapter.asset-history.length == 0: Text { text: "No transactions found"; color: Palette.text-subtle; font-size: 12px; font-italic: true; }
 
-            Flickable {
-                viewport-height: CryptoAdapter.asset-history.length * 48px;
-                VerticalLayout {
-                    for tx in CryptoAdapter.asset-history: Rectangle {
-                        height: 48px;
-                        HorizontalLayout {
-                            alignment: space-between;
-                            VerticalLayout {
-                                alignment: center;
-                                Text { text: tx.type; color: Palette.text-primary; font-size: 12px; font-weight: 500; }
-                                Text { text: tx.date; color: Palette.text-muted; font-size: 10px; }
+                Flickable {
+                    viewport-height: CryptoAdapter.asset-history.length * 48px;
+                    VerticalLayout {
+                        for tx in CryptoAdapter.asset-history: Rectangle {
+                            height: 48px;
+                            HorizontalLayout {
+                                alignment: space-between;
+                                VerticalLayout {
+                                    alignment: center;
+                                    Text { text: tx.type; color: Palette.text-primary; font-size: 12px; font-weight: 500; }
+                                    Text { text: tx.date; color: Palette.text-muted; font-size: 10px; }
+                                }
+                                VerticalLayout {
+                                    alignment: center;
+                                    Text { text: tx.amount; color: Palette.text-primary; font-size: 12px; horizontal-alignment: right; }
+                                    Text { text: "@ " + tx.price; color: Palette.text-muted; font-size: 10px; horizontal-alignment: right; }
+                                }
                             }
-                            VerticalLayout {
-                                alignment: center;
-                                Text { text: tx.amount; color: Palette.text-primary; font-size: 12px; horizontal-alignment: right; }
-                                Text { text: "@ " + tx.price; color: Palette.text-muted; font-size: 10px; horizontal-alignment: right; }
-                            }
+                            Rectangle { height: 1px; width: parent.width; background: Palette.border-subtle; y: parent.height - 1px; }
                         }
-                        Rectangle { height: 1px; width: parent.width; background: Palette.border-subtle; y: parent.height - 1px; }
                     }
                 }
             }
