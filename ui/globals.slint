@@ -94,14 +94,27 @@ export struct CategoryData {
     color: color,
 }
 
+export struct PieSegment {
+    label: string,
+    value: string,
+    percentage: float,
+    path: string,
+    color: color,
+}
+
+export struct AnalyticsData {
+    chart_path: string,
+    net_worth: string,
+    max_value: string,
+    min_value: string,
+    expense_segments: [PieSegment],
+    expense_breakdown: [CategoryData],
+}
+
 // ==================== Analytics Adapter ====================
 
 export global AnalyticsAdapter {
-    in-out property <string> chart-path: "M 0 50 L 100 50";
-    in-out property <string> net-worth: "$ 0.00";
-    in-out property <string> max-value: "";
-    in-out property <string> min-value: "";
-    in-out property <[CategoryData]> expense-breakdown: [];
+    in-out property <AnalyticsData> summary;
     in-out property <string> active-range: "1M"; // 1M, 6M, 1Y, ALL
 
     callback fetch-analytics(string); // range

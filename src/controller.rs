@@ -6,12 +6,12 @@
 use crate::crypto;
 use crate::db::{Database, DbError};
 use crate::models::{
-    Account, AccountBalance, AggregatedAsset, BalanceSummary, CryptoAsset, CryptoHolding,
-    CryptoTransaction, CryptoWallet, Habit, HabitLog, Transaction
+    Account, AccountBalance, AggregatedAsset, BalanceSummary, CryptoAsset, CryptoTransaction,
+    CryptoWallet, Habit, HabitLog, Transaction,
 };
 use crate::security_log::{SecurityEvent, log_auth_failure, log_security_event};
 use crate::services::habit::HabitService;
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate};
 use rusqlite::Connection;
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
@@ -66,6 +66,26 @@ impl From<String> for ControllerError {
     fn from(s: String) -> Self {
         ControllerError::Validation(s)
     }
+}
+
+// ==================== Analytics Types ====================
+
+#[derive(Debug, Clone)]
+pub struct ExpenseSlice {
+    pub category: String,
+    pub amount: i64,
+    pub percentage: f32,
+    pub path: String,
+    pub color: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct AnalyticsSummary {
+    pub chart_path: String,
+    pub net_worth: String,
+    pub max_value: String,
+    pub min_value: String,
+    pub expense_slices: Vec<ExpenseSlice>,
 }
 
 // ==================== Security: Field Length Limits ====================
@@ -1320,49 +1340,218 @@ impl AppController {
             .map_err(ControllerError::Database)
     }
 
-    // ==================== Legacy Crypto Holdings (backwards compatibility) ====================
+    /// Provides analytics summary (net worth history + expense donut)
+    pub fn get_analytics_summary(&self, range: String) -> Result<AnalyticsSummary, ControllerError> {
+        let balances = self.get_account_balances()?;
+        let current_balance: i64 = balances.iter().map(|b| b.current_balance).sum();
+        let transactions = self.get_transactions()?;
 
-    /// Adds a crypto holding (LEGACY)
-    pub fn add_crypto_holding(
-        &self,
-        coin_id: String,
-        symbol: String,
-        amount: f64,
-        purchase_price: f64,
-        purchase_date: String,
-    ) -> Result<String, ControllerError> {
-        self.with_db(|db| {
-            let coin_id = validate_coin_id_str(&coin_id)?;
-            let symbol = validate_symbol(&symbol)?;
-            validate_positive_amount(amount, "Amount")?;
-            validate_non_negative(Some(purchase_price), "Purchase price")?;
-            let purchase_date = validate_date(&purchase_date)?;
+        let today = chrono::Local::now().date_naive();
+        let start_date = match range.as_str() {
+            "1M" => today
+                .checked_sub_signed(chrono::Duration::days(30))
+                .unwrap_or(today),
+            "3M" => today
+                .checked_sub_signed(chrono::Duration::days(90))
+                .unwrap_or(today),
+            "6M" => today
+                .checked_sub_signed(chrono::Duration::days(180))
+                .unwrap_or(today),
+            "1Y" => today
+                .checked_sub_signed(chrono::Duration::days(365))
+                .unwrap_or(today),
+            _ => today,
+        };
 
-            let id = Uuid::new_v4().to_string();
-            let holding = CryptoHolding::new(
-                id.clone(),
-                coin_id.to_lowercase(),
-                symbol.to_uppercase(),
-                amount,
-                purchase_price,
-                purchase_date,
-            );
+        // Build daily deltas
+        let mut delta_by_day: std::collections::HashMap<NaiveDate, i64> = std::collections::HashMap::new();
+        let mut earliest_tx: Option<NaiveDate> = None;
+        for tx in &transactions {
+            if let Ok(date) = NaiveDate::parse_from_str(&tx.date, "%Y-%m-%d") {
+                let delta = match tx.transaction_type.as_str() {
+                    "income" => tx.amount,
+                    "expense" => -tx.amount,
+                    _ => 0,
+                };
+                *delta_by_day.entry(date).or_insert(0) += delta;
+                earliest_tx = Some(earliest_tx.map_or(date, |d| d.min(date)));
+            }
+        }
 
-            db.create_crypto_holding(&holding)?;
-            Ok(id)
-        })
-    }
+        let effective_start = if range == "ALL" {
+            earliest_tx.unwrap_or(today)
+        } else {
+            start_date.min(today)
+        };
 
-    /// Gets all crypto holdings (LEGACY)
-    pub fn get_crypto_holdings(&self) -> Result<Vec<CryptoHolding>, ControllerError> {
-        self.with_db(|db| db.get_crypto_holdings().map_err(ControllerError::Database))
-    }
+        // Time travel backwards from today
+        let mut cursor = today;
+        let mut points_rev: Vec<(NaiveDate, i64)> = Vec::new();
+        let mut balance = current_balance;
 
-    /// Deletes a crypto holding (LEGACY)
-    pub fn delete_crypto_holding(&self, id: String) -> Result<(), ControllerError> {
-        self.with_db(|db| {
-            let validated_id = validate_uuid(&id)?;
-            db.delete_crypto_holding(&validated_id).map_err(ControllerError::Database)
+        loop {
+            points_rev.push((cursor, balance));
+            let delta = *delta_by_day.get(&cursor).unwrap_or(&0);
+            balance -= delta;
+
+            if cursor <= effective_start {
+                break;
+            }
+            if let Some(prev) = cursor.pred_opt() {
+                cursor = prev;
+            } else {
+                break;
+            }
+        }
+
+        points_rev.reverse();
+        if points_rev.is_empty() {
+            points_rev.push((today, current_balance));
+        }
+
+        let values: Vec<i64> = points_rev.iter().map(|(_, v)| *v).collect();
+        let min_val = *values.iter().min().unwrap_or(&0);
+        let max_val = *values.iter().max().unwrap_or(&0);
+        let safe_range = if max_val == min_val {
+            1.0
+        } else {
+            (max_val - min_val) as f32
+        };
+
+        let mut path_cmd = String::new();
+        let len = values.len() as f32;
+
+        for (idx, val) in values.iter().enumerate() {
+            let x = if len > 1.0 {
+                (idx as f32) * (100.0 / (len - 1.0))
+            } else {
+                0.0
+            };
+
+            let ratio = (*val - min_val) as f32 / safe_range;
+            let y_norm = 100.0 - (5.0 + (ratio * 90.0));
+
+            if idx == 0 {
+                path_cmd.push_str(&format!("M {:.2} {:.2}", x, y_norm));
+            } else {
+                path_cmd.push_str(&format!(" L {:.2} {:.2}", x, y_norm));
+            }
+        }
+
+        if path_cmd.is_empty() {
+            path_cmd = "M 0 50 L 100 50".to_string();
+        }
+
+        // Expense donut (current month)
+        let mut expenses: std::collections::HashMap<String, i64> = std::collections::HashMap::new();
+        let current_month = today.month();
+        let current_year = today.year();
+        for tx in &transactions {
+            if tx.transaction_type != "expense" {
+                continue;
+            }
+            if let Ok(date) = NaiveDate::parse_from_str(&tx.date, "%Y-%m-%d")
+                && date.year() == current_year
+                && date.month() == current_month
+            {
+                *expenses
+                    .entry(tx.category.to_uppercase())
+                    .or_insert(0) += tx.amount;
+            }
+        }
+
+        let total_expense: i64 = expenses.values().sum();
+        let mut expense_slices: Vec<ExpenseSlice> = Vec::new();
+        if total_expense > 0 {
+            let mut by_amount: Vec<(String, i64)> = expenses.into_iter().collect();
+            by_amount.sort_by(|a, b| b.1.cmp(&a.1));
+
+            let colors = [
+                "#8b5cf6",
+                "#ec4899",
+                "#3b82f6",
+                "#10b981",
+                "#f59e0b",
+                "#ef4444",
+                "#6366f1",
+                "#14b8a6",
+            ];
+
+            fn build_donut_segment_path(start_angle: f32, sweep_angle: f32, outer_r: f32, inner_r: f32) -> String {
+                if sweep_angle <= 0.0 {
+                    return String::new();
+                }
+                let start_rad = start_angle.to_radians();
+                let end_rad = (start_angle + sweep_angle).to_radians();
+
+                let center = 50.0_f32;
+
+                let (x1, y1) = (
+                    center + outer_r * start_rad.cos(),
+                    center + outer_r * start_rad.sin(),
+                );
+                let (x2, y2) = (
+                    center + outer_r * end_rad.cos(),
+                    center + outer_r * end_rad.sin(),
+                );
+                let (x3, y3) = (
+                    center + inner_r * end_rad.cos(),
+                    center + inner_r * end_rad.sin(),
+                );
+                let (x4, y4) = (
+                    center + inner_r * start_rad.cos(),
+                    center + inner_r * start_rad.sin(),
+                );
+
+                let large_arc = if sweep_angle > 180.0 { 1 } else { 0 };
+
+                format!(
+                    "M {:.2} {:.2} A {:.2} {:.2} 0 {} 1 {:.2} {:.2} L {:.2} {:.2} A {:.2} {:.2} 0 {} 0 {:.2} {:.2} Z",
+                    x1,
+                    y1,
+                    outer_r,
+                    outer_r,
+                    large_arc,
+                    x2,
+                    y2,
+                    x3,
+                    y3,
+                    inner_r,
+                    inner_r,
+                    large_arc,
+                    x4,
+                    y4
+                )
+            }
+
+            let mut start_angle = -90.0_f32;
+            for (idx, (category, amount)) in by_amount.iter().enumerate() {
+                if *amount <= 0 {
+                    continue;
+                }
+                let percentage = *amount as f32 / total_expense as f32;
+                let sweep = percentage * 360.0;
+                let color = colors[idx % colors.len()].to_string();
+
+                let path = build_donut_segment_path(start_angle, sweep, 46.0, 34.0);
+                expense_slices.push(ExpenseSlice {
+                    category: category.clone(),
+                    amount: *amount,
+                    percentage,
+                    path,
+                    color,
+                });
+
+                start_angle += sweep;
+            }
+        }
+
+        Ok(AnalyticsSummary {
+            chart_path: path_cmd,
+            net_worth: self.format_money_display(current_balance),
+            max_value: self.format_money_display(max_val),
+            min_value: self.format_money_display(min_val),
+            expense_slices,
         })
     }
 
