@@ -5,6 +5,7 @@
 use directories::ProjectDirs;
 use log::error;
 use sanctum::controller::AppController;
+use sanctum::crypto;
 use sanctum::security_log::init_security_logger;
 use slint::SharedString;
 use slint::{ModelRc, VecModel, Weak};
@@ -1405,20 +1406,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let notify_for_async_block = show_notification_clone_for_refresh.clone(); // Clone for the async block
 
             tokio::spawn(async move {
-                // 1. Get coins to update
-                let mut coins = if let Ok(assets) = controller_async.get_aggregated_portfolio() {
-                    assets.iter().map(|a| a.coin_id.clone()).collect::<Vec<_>>()
-                } else {
-                    Vec::new()
-                };
-                
-                // Always fetch tickers
-                coins.push("bitcoin".to_string());
-                coins.push("litecoin".to_string());
-                coins.push("monero".to_string());
-                
-                coins.sort();
-                coins.dedup();
+                // 1. Get coins to update (fixed allowlist to avoid leaking portfolio composition)
+                let mut coins = crypto::default_price_allowlist();
 
                 if !coins.is_empty() {
                     match controller_async.get_crypto_prices(coins).await {
