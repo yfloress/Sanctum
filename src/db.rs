@@ -693,9 +693,6 @@ impl Database {
                 return Err(DbError::SessionExpired);
             }
         }
-
-        // Update last activity on successful check
-        self.touch_session()?;
         Ok(())
     }
 

@@ -601,6 +601,29 @@ impl AppController {
             _ => ControllerError::Database(e),
         })?;
 
+        // Run the operation
+        let result = f(db)?;
+
+        // Mark activity only after successful operations to avoid extending sessions from idle checks
+        db.touch_session().map_err(ControllerError::Database)?;
+
+        Ok(result)
+    }
+
+    /// Helper that does not refresh session activity (for passive checks like countdown timers)
+    fn with_db_no_touch<T, F>(&self, f: F) -> Result<T, ControllerError>
+    where
+        F: FnOnce(&Database) -> Result<T, ControllerError>,
+    {
+        let db_lock = self.db.lock().map_err(|_| ControllerError::Internal)?;
+        let db = db_lock.as_ref().ok_or(ControllerError::NoVaultOpen)?;
+
+        // Only validate expiration; do not extend activity timestamp
+        db.check_session_timeout().map_err(|e| match e {
+            DbError::SessionExpired => ControllerError::SessionExpired,
+            _ => ControllerError::Database(e),
+        })?;
+
         f(db)
     }
 
@@ -722,7 +745,7 @@ impl AppController {
 
     /// Returns the remaining session time in seconds
     pub fn get_session_remaining(&self) -> Result<i64, ControllerError> {
-        self.with_db(|db| {
+        self.with_db_no_touch(|db| {
             db.get_session_remaining().map_err(ControllerError::Database)
         })
     }
