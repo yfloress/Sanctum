@@ -1406,7 +1406,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             tokio::spawn(async move {
                 // 1. Get coins to update (fixed allowlist to avoid leaking portfolio composition)
-                let mut coins = crypto::default_price_allowlist();
+                let coins = crypto::default_price_allowlist();
 
                 if !coins.is_empty() {
                     match controller_async.get_crypto_prices(coins).await {
