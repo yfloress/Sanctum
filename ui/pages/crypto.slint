@@ -45,19 +45,24 @@ export component CryptoPage inherits Rectangle {
                 Rectangle { width: 1px; background: Palette.border-subtle; }
 
                 // Sliding Ticker
-                Flickable {
+                Rectangle {
                     horizontal-stretch: 1;
                     height: parent.height;
-                    viewport-width: (CryptoAdapter.market-tickers.length * 160px); // 160px per item
-                    interactive: true;
                     clip: true;
-                    
-                    HorizontalLayout {
-                        for ticker in CryptoAdapter.market-tickers: TickerItem {
-                            symbol: ticker.symbol;
-                            price: ticker.price;
-                            change: ticker.change-24h;
-                            is-positive: ticker.is-positive;
+
+                    Flickable {
+                        horizontal-stretch: 1;
+                        height: parent.height;
+                        viewport-width: (CryptoAdapter.market-tickers.length * 160px); // 160px per item
+                        interactive: true;
+                        
+                        HorizontalLayout {
+                            for ticker in CryptoAdapter.market-tickers: TickerItem {
+                                symbol: ticker.symbol;
+                                price: ticker.price;
+                                change: ticker.change-24h;
+                                is-positive: ticker.is-positive;
+                            }
                         }
                     }
                 }
@@ -183,6 +188,7 @@ export component CryptoPage inherits Rectangle {
                 // List
                 Rectangle {
                     vertical-stretch: 1;
+                    clip: true;
                     
                     if CryptoAdapter.portfolio.length == 0: Text { 
                         text: "No assets found. Start building your empire."; 
@@ -192,7 +198,6 @@ export component CryptoPage inherits Rectangle {
 
                     Flickable {
                         width: parent.width;
-                        clip: true;
                         viewport-height: CryptoAdapter.portfolio.length * 56px;
                         VerticalLayout {
                             for asset[index] in CryptoAdapter.portfolio: CryptoRow {
@@ -238,6 +243,7 @@ export component CryptoPage inherits Rectangle {
                 // List
                 Rectangle {
                     vertical-stretch: 1;
+                    clip: true;
 
                     if CryptoAdapter.wallets.length == 0: Text { 
                         text: "No wallets connected."; 
@@ -247,7 +253,6 @@ export component CryptoPage inherits Rectangle {
 
                     Flickable {
                         width: parent.width;
-                        clip: true;
                         viewport-height: CryptoAdapter.wallets.length * 64px;
                         VerticalLayout {
                             for wallet[index] in CryptoAdapter.wallets: WalletRow {
