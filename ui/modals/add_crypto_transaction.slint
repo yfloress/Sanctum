@@ -171,30 +171,60 @@ component CoinSelector inherits Rectangle {
             height: 32px;
             HorizontalLayout {
                 Text {
-                    text: root.options[selected-index];
+                    text: root.options.length > selected-index ? root.options[selected-index] : "Select Asset";
                     color: Palette.text-primary; font-size: 14px; font-weight: 300; vertical-alignment: center; horizontal-stretch: 1;
                 }
                 Text { text: "▼"; color: Palette.text-muted; font-size: 10px; vertical-alignment: center; }
             }
-            TouchArea { clicked => { popup.show(); } }
+            TouchArea { 
+                clicked => { 
+                    if (root.options.length > 0) {
+                        popup.show(); 
+                    }
+                } 
+            }
         }
         Rectangle { height: 1px; background: Palette.border; }
     }
 
     popup := PopupWindow {
         x: 0; y: 56px; width: root.width;
+        close-policy: close-on-click;
+        
         Rectangle {
-            background: Palette.surface; border-radius: 4px; border-width: 1px; border-color: Palette.border;
+            background: Palette.surface; 
+            border-radius: 4px; 
+            border-width: 1px; 
+            border-color: Palette.border;
+            // Limit height to 240px or content height
             height: min(root.options.length * 36px + 8px, 240px);
             
             Flickable {
                 viewport-height: root.options.length * 36px + 8px;
+                interactive: true;
+                
                 VerticalLayout {
                     padding: 4px; spacing: 0px;
                     for option[index] in root.options: Rectangle {
-                        height: 36px; background: option-touch.has-hover ? Palette.surface-hover : transparent; border-radius: 2px;
-                        Text { text: option; color: index == selected-index ? Palette.text-primary : Palette.text-secondary; font-size: 12px; font-weight: index == selected-index ? 500 : 400; vertical-alignment: center; x: 12px; }
-                        option-touch := TouchArea { clicked => { root.selected-index = index; } }
+                        height: 36px; 
+                        background: option-touch.has-hover ? Palette.surface-hover : transparent; 
+                        border-radius: 2px;
+                        
+                        Text { 
+                            text: option; 
+                            color: index == selected-index ? Palette.text-primary : Palette.text-secondary; 
+                            font-size: 12px; 
+                            font-weight: index == selected-index ? 500 : 400; 
+                            vertical-alignment: center; 
+                            x: 12px; 
+                        }
+                        
+                        option-touch := TouchArea { 
+                            clicked => { 
+                                root.selected-index = index; 
+                                popup.close();
+                            } 
+                        }
                     }
                 }
             }
