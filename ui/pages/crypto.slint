@@ -83,6 +83,7 @@ export component CryptoPage inherits Rectangle {
             background: Palette.background;
             
             HorizontalLayout {
+                y: (parent.height - self.height) / 2;
                 padding-left: 48px;
                 padding-right: 48px;
                 alignment: space-between;
@@ -105,8 +106,9 @@ export component CryptoPage inherits Rectangle {
                                 padding-left: 8px; padding-right: 8px;
                                 Text { 
                                     text: CryptoAdapter.total-pnl; 
-                                    color: Palette.text-secondary; 
+                                    color: CryptoAdapter.total-pnl-positive ? Palette.success : Palette.danger; 
                                     font-size: 12px; 
+                                    font-weight: 600;
                                     vertical-alignment: center; 
                                 }
                             }
@@ -154,6 +156,9 @@ export component CryptoPage inherits Rectangle {
                     }
                 }
             }
+
+            // Divider
+            Rectangle { height: 1px; width: parent.width; background: Palette.border-subtle; y: parent.height - 1px; }
         }
 
         // ==================== ZONA 3: EL CAMPO DE BATALLA (Content) ====================
@@ -167,103 +172,129 @@ export component CryptoPage inherits Rectangle {
             if root.active-tab == "portfolio": VerticalLayout {
                 spacing: 0px;
 
-                // Sticky Header
-                Rectangle {
-                    height: 40px;
-                    HorizontalLayout {
-                        spacing: 0px;
-                        padding-left: 24px; padding-right: 24px;
-                        alignment: start;
-                        
-                        Text { width: 240px; text: "ASSET"; color: Palette.text-muted; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; }
-                        Text { width: 140px; text: "PRICE"; color: Palette.text-muted; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: right; }
-                        Text { width: 140px; text: "HOLDINGS"; color: Palette.text-muted; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: right; }
-                        Text { width: 140px; text: "VALUE"; color: Palette.text-muted; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: right; }
-                        Rectangle { width: 40px; }
-                        Text { width: 100px; text: "24H"; color: Palette.text-muted; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: center; }
-                    }
-                    Rectangle { height: 1px; width: parent.width; background: Palette.border-subtle; y: parent.height - 1px; }
-                }
-
-                // List
                 Rectangle {
                     vertical-stretch: 1;
+                    background: Palette.surface;
+                    border-radius: 8px;
+                    border-width: 1px;
+                    border-color: Palette.border-subtle;
                     clip: true;
-                    
-                    if CryptoAdapter.portfolio.length == 0: Text { 
-                        text: "No assets found. Start building your empire."; 
-                        color: Palette.text-muted; font-size: 14px; font-italic: true; 
-                        horizontal-alignment: center; vertical-alignment: center; 
-                    }
 
-                    Flickable {
-                        width: parent.width;
-                        viewport-height: CryptoAdapter.portfolio.length * 56px;
-                        VerticalLayout {
-                            for asset[index] in CryptoAdapter.portfolio: CryptoRow {
-                                name: asset.name;
-                                symbol: asset.symbol;
-                                price: asset.price;
-                                amount: asset.amount;
-                                value: asset.value;
-                                change: asset.change-24h;
-                                is-positive: asset.is-positive;
-                                is-last: index == CryptoAdapter.portfolio.length - 1;
-                                clicked => {
-                                    CryptoAdapter.fetch-asset-details(asset.id);
-                                    CryptoAdapter.show-asset-detail = true;
+                    VerticalLayout {
+                        spacing: 0px;
+
+                        // Sticky Header
+                        Rectangle {
+                            height: 44px;
+                            background: Palette.surface;
+                            HorizontalLayout {
+                                spacing: 0px;
+                                padding-left: 24px; padding-right: 24px;
+                                alignment: start;
+                                
+                                Text { width: 240px; text: "ASSET"; color: Palette.text-muted; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; }
+                                Text { width: 140px; text: "PRICE"; color: Palette.text-muted; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: right; }
+                                Text { width: 140px; text: "HOLDINGS"; color: Palette.text-muted; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: right; }
+                                Text { width: 140px; text: "VALUE"; color: Palette.text-muted; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: right; }
+                                Rectangle { width: 40px; }
+                                Text { width: 100px; text: "24H"; color: Palette.text-muted; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: center; }
+                            }
+                            Rectangle { height: 1px; width: parent.width; background: Palette.border-subtle; y: parent.height - 1px; }
+                        }
+
+                        // List
+                        Rectangle {
+                            vertical-stretch: 1;
+                            background: Palette.surface;
+                            
+                            if CryptoAdapter.portfolio.length == 0: Text { 
+                                text: "No assets found. Start building your empire."; 
+                                color: Palette.text-muted; font-size: 14px; font-italic: true; 
+                                horizontal-alignment: center; vertical-alignment: center; 
+                            }
+
+                            Flickable {
+                                width: parent.width;
+                                viewport-height: CryptoAdapter.portfolio.length * 56px;
+                                VerticalLayout {
+                                    for asset[index] in CryptoAdapter.portfolio: CryptoRow {
+                                        name: asset.name;
+                                        symbol: asset.symbol;
+                                        price: asset.price;
+                                        amount: asset.amount;
+                                        value: asset.value;
+                                        change: asset.change-24h;
+                                        is-positive: asset.is-positive;
+                                        is-last: index == CryptoAdapter.portfolio.length - 1;
+                                        clicked => {
+                                            CryptoAdapter.fetch-asset-details(asset.id);
+                                            CryptoAdapter.show-asset-detail = true;
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
-                
-                // Add Button (Integrated at bottom of list or overlay? Using overlay for better UX)
             }
 
             // TAB: WALLETS
             if root.active-tab == "wallets": VerticalLayout {
                 spacing: 0px;
 
-                // Header
-                Rectangle {
-                    height: 40px;
-                    HorizontalLayout {
-                        padding-left: 24px; padding-right: 24px;
-                        alignment: start;
-                        
-                        Text { width: 300px; text: "WALLET / SOURCE"; color: Palette.text-muted; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; }
-                        Text { width: 100px; text: "ASSETS"; color: Palette.text-muted; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: center; }
-                        Text { width: 150px; text: "TOTAL BALANCE"; color: Palette.text-muted; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: right; }
-                        Rectangle { width: 32px; }
-                    }
-                    Rectangle { height: 1px; width: parent.width; background: Palette.border-subtle; y: parent.height - 1px; }
-                }
-
-                // List
                 Rectangle {
                     vertical-stretch: 1;
+                    background: Palette.surface;
+                    border-radius: 8px;
+                    border-width: 1px;
+                    border-color: Palette.border-subtle;
                     clip: true;
 
-                    if CryptoAdapter.wallets.length == 0: Text { 
-                        text: "No wallets connected."; 
-                        color: Palette.text-muted; font-size: 14px; font-italic: true; 
-                        horizontal-alignment: center; vertical-alignment: center; 
-                    }
+                    VerticalLayout {
+                        spacing: 0px;
 
-                    Flickable {
-                        width: parent.width;
-                        viewport-height: CryptoAdapter.wallets.length * 64px;
-                        VerticalLayout {
-                            for wallet[index] in CryptoAdapter.wallets: WalletRow {
-                                name: wallet.name;
-                                category: wallet.category;
-                                balance: wallet.balance;
-                                count: wallet.asset-count;
-                                id: wallet.id;
-                                is-last: index == CryptoAdapter.wallets.length - 1;
-                                delete => {
-                                    CryptoAdapter.delete-wallet(wallet.id);
+                        // Header
+                        Rectangle {
+                            height: 44px;
+                            background: Palette.surface;
+                            HorizontalLayout {
+                                padding-left: 24px; padding-right: 24px;
+                                alignment: start;
+                                
+                                Text { width: 300px; text: "WALLET / SOURCE"; color: Palette.text-muted; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; }
+                                Text { width: 100px; text: "ASSETS"; color: Palette.text-muted; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: center; }
+                                Text { width: 150px; text: "TOTAL BALANCE"; color: Palette.text-muted; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: right; }
+                                Rectangle { width: 32px; }
+                            }
+                            Rectangle { height: 1px; width: parent.width; background: Palette.border-subtle; y: parent.height - 1px; }
+                        }
+
+                        // List
+                        Rectangle {
+                            vertical-stretch: 1;
+                            background: Palette.surface;
+
+                            if CryptoAdapter.wallets.length == 0: Text { 
+                                text: "No wallets connected."; 
+                                color: Palette.text-muted; font-size: 14px; font-italic: true; 
+                                horizontal-alignment: center; vertical-alignment: center; 
+                            }
+
+                            Flickable {
+                                width: parent.width;
+                                viewport-height: CryptoAdapter.wallets.length * 64px;
+                                VerticalLayout {
+                                    for wallet[index] in CryptoAdapter.wallets: WalletRow {
+                                        name: wallet.name;
+                                        category: wallet.category;
+                                        balance: wallet.balance;
+                                        count: wallet.asset-count;
+                                        id: wallet.id;
+                                        is-last: index == CryptoAdapter.wallets.length - 1;
+                                        delete => {
+                                            CryptoAdapter.delete-wallet(wallet.id);
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -275,8 +306,8 @@ export component CryptoPage inherits Rectangle {
 
     // Floating Action Button (FAB)
     Rectangle {
-        x: parent.width - 80px;
-        y: parent.height - 80px;
+        x: parent.width - self.width - 48px;
+        y: parent.height - self.height - 48px;
         width: 48px; height: 48px;
         border-radius: 24px;
         background: fab-touch.has-hover ? Palette.accent-hover : Palette.accent;

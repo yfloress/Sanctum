@@ -15,6 +15,7 @@ export component CryptoRow inherits Rectangle {
     
     callback clicked();
 
+    horizontal-stretch: 1;
     height: 56px;
     background: area.has-hover ? Palette.surface-hover : Palette.background;
     animate background { duration: 150ms; }
@@ -116,6 +117,7 @@ export component WalletRow inherits Rectangle {
 
     callback delete;
 
+    horizontal-stretch: 1;
     height: 64px;
     background: area.has-hover ? Palette.surface-hover : Palette.background;
     animate background { duration: 150ms; }
@@ -147,6 +149,7 @@ export component WalletRow inherits Rectangle {
         
         Rectangle {
             width: 32px; height: 32px;
+            y: (parent.height - self.height) / 2;
             Text { text: "🗑"; font-size: 14px; vertical-alignment: center; horizontal-alignment: center; opacity: del-area.has-hover ? 1 : 0.5; }
             del-area := TouchArea { clicked => { root.delete(); } }
         }
