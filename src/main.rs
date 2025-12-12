@@ -783,13 +783,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let year = current_date.year();
         let month = current_date.month();
         
-        let start_date = chrono::NaiveDate::from_ymd_opt(year, month, 1).unwrap();
+        let Some(start_date) = chrono::NaiveDate::from_ymd_opt(year, month, 1) else {
+            return;
+        };
         let next_month = if month == 12 { 1 } else { month + 1 };
         let next_year = if month == 12 { year + 1 } else { year };
-        let end_date = chrono::NaiveDate::from_ymd_opt(next_year, next_month, 1)
-            .unwrap()
-            .pred_opt()
-            .unwrap();
+        let Some(end_date) = chrono::NaiveDate::from_ymd_opt(next_year, next_month, 1).and_then(|d| d.pred_opt()) else {
+            return;
+        };
             
         let days_in_month = end_date.day();
         
@@ -832,7 +833,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 
                 // Build monthly view
                 for d in 1..=days_in_month {
-                    let date = chrono::NaiveDate::from_ymd_opt(year, month, d).unwrap();
+                    let Some(date) = chrono::NaiveDate::from_ymd_opt(year, month, d) else { continue; };
                     let date_str = date.format("%Y-%m-%d").to_string();
                     let is_future = date > today;
                     
@@ -859,13 +860,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if !habit_dates.is_empty() {
                     let mut check_date = today;
                     if !habit_dates.contains(&today) {
-                         // If today is not done, check if yesterday was done to keep streak alive
-                         check_date = today.pred_opt().unwrap();
+                        if let Some(prev) = today.pred_opt() {
+                            check_date = prev;
+                        }
                     }
                     
                     while habit_dates.contains(&check_date) {
                         current_streak += 1;
-                        check_date = check_date.pred_opt().unwrap();
+                        if let Some(prev) = check_date.pred_opt() {
+                            check_date = prev;
+                        } else {
+                            break;
+                        }
                     }
                 }
                 
@@ -876,8 +882,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 
                 for date in &habit_dates {
                     if let Some(prev) = prev_date {
-                        if *date == prev.succ_opt().unwrap() {
-                            temp_streak += 1;
+                        if let Some(next) = prev.succ_opt() {
+                            if *date == next {
+                                temp_streak += 1;
+                            } else {
+                                temp_streak = 1;
+                            }
                         } else {
                             temp_streak = 1;
                         }
@@ -1002,8 +1012,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // 1. Calculate Date Range (Selected Calendar Year)
         let today = chrono::Local::now().date_naive();
         
-        let first_day_year = chrono::NaiveDate::from_ymd_opt(year, 1, 1).unwrap();
-        let last_day_year = chrono::NaiveDate::from_ymd_opt(year, 12, 31).unwrap();
+        let Some(first_day_year) = chrono::NaiveDate::from_ymd_opt(year, 1, 1) else { return; };
+        let Some(last_day_year) = chrono::NaiveDate::from_ymd_opt(year, 12, 31) else { return; };
         
         // Align start to Monday
         let days_from_mon = first_day_year.weekday().num_days_from_monday();
