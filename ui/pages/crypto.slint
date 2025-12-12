@@ -46,8 +46,11 @@ export component CryptoPage inherits Rectangle {
 
                 // Sliding Ticker
                 Flickable {
+                    horizontal-stretch: 1;
+                    height: parent.height;
                     viewport-width: (CryptoAdapter.market-tickers.length * 160px); // 160px per item
                     interactive: true;
+                    clip: true;
                     
                     HorizontalLayout {
                         for ticker in CryptoAdapter.market-tickers: TickerItem {
@@ -188,6 +191,8 @@ export component CryptoPage inherits Rectangle {
                     }
 
                     Flickable {
+                        width: parent.width;
+                        clip: true;
                         viewport-height: CryptoAdapter.portfolio.length * 56px;
                         VerticalLayout {
                             for asset[index] in CryptoAdapter.portfolio: CryptoRow {
@@ -241,6 +246,8 @@ export component CryptoPage inherits Rectangle {
                     }
 
                     Flickable {
+                        width: parent.width;
+                        clip: true;
                         viewport-height: CryptoAdapter.wallets.length * 64px;
                         VerticalLayout {
                             for wallet[index] in CryptoAdapter.wallets: WalletRow {
