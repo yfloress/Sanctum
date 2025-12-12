@@ -2,7 +2,7 @@
 // Noir Minimalist - Net worth + Expenses
 
 import { Palette, AnalyticsAdapter } from "../globals.slint";
-import { SanctumLineChart, SanctumDonutChart } from "../components/charts.slint";
+import { SanctumLineChart } from "../components/charts.slint";
 import { CategoryBreakdown } from "../components/category_breakdown.slint";
 
 export component AnalyticsPage inherits Rectangle {
@@ -103,27 +103,16 @@ export component AnalyticsPage inherits Rectangle {
         }
 
         // Expenses Breakdown
-        HorizontalLayout {
-            spacing: 24px;
-
-            Rectangle {
-                width: 320px;
-                height: 320px;
-                background: Palette.surface;
-                border-radius: 8px;
-                border-width: 1px;
-                border-color: Palette.border;
-                clip: true;
-
-                SanctumDonutChart {
-                    width: 100%;
-                    height: 100%;
-                    segments: AnalyticsAdapter.summary.expense_segments;
-                }
-            }
+        Rectangle {
+            height: 360px;
+            background: Palette.surface;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: Palette.border;
 
             VerticalLayout {
-                spacing: 12px;
+                padding: 20px;
+                spacing: 16px;
                 vertical-stretch: 1;
 
                 Text {
@@ -135,7 +124,7 @@ export component AnalyticsPage inherits Rectangle {
                 }
 
                 Flickable {
-                    viewport-height: 320px;
+                    viewport-height: 300px;
 
                     CategoryBreakdown {
                         categories: AnalyticsAdapter.summary.expense_breakdown;

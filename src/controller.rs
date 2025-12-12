@@ -75,7 +75,6 @@ pub struct ExpenseSlice {
     pub category: String,
     pub amount: i64,
     pub percentage: f32,
-    pub path: String,
     pub color: String,
 }
 
@@ -1360,7 +1359,7 @@ impl AppController {
             .map_err(ControllerError::Database)
     }
 
-    /// Provides analytics summary (net worth history + expense donut)
+    /// Provides analytics summary (net worth history + expense breakdown)
     pub fn get_analytics_summary(&self, range: String) -> Result<AnalyticsSummary, ControllerError> {
         let balances = self.get_account_balances()?;
         let current_balance: i64 = balances.iter().map(|b| b.current_balance).sum();
@@ -1432,11 +1431,8 @@ impl AppController {
         let values: Vec<i64> = points_rev.iter().map(|(_, v)| *v).collect();
         let min_val = *values.iter().min().unwrap_or(&0);
         let max_val = *values.iter().max().unwrap_or(&0);
-        let safe_range = if max_val == min_val {
-            1.0
-        } else {
-            (max_val - min_val) as f32
-        };
+        let is_flat = max_val == min_val;
+        let safe_range = if is_flat { 1.0 } else { (max_val - min_val) as f32 };
 
         let mut path_cmd = String::new();
         let len = values.len() as f32;
@@ -1448,7 +1444,12 @@ impl AppController {
                 0.0
             };
 
-            let ratio = (*val - min_val) as f32 / safe_range;
+            let ratio = if is_flat {
+                0.5
+            } else {
+                ((*val - min_val) as f32 / safe_range).clamp(0.0, 1.0)
+            };
+
             let y_norm = 100.0 - (5.0 + (ratio * 90.0));
 
             if idx == 0 {
@@ -1497,72 +1498,19 @@ impl AppController {
                 "#14b8a6",
             ];
 
-            fn build_donut_segment_path(start_angle: f32, sweep_angle: f32, outer_r: f32, inner_r: f32) -> String {
-                if sweep_angle <= 0.0 {
-                    return String::new();
-                }
-                let start_rad = start_angle.to_radians();
-                let end_rad = (start_angle + sweep_angle).to_radians();
-
-                let center = 50.0_f32;
-
-                let (x1, y1) = (
-                    center + outer_r * start_rad.cos(),
-                    center + outer_r * start_rad.sin(),
-                );
-                let (x2, y2) = (
-                    center + outer_r * end_rad.cos(),
-                    center + outer_r * end_rad.sin(),
-                );
-                let (x3, y3) = (
-                    center + inner_r * end_rad.cos(),
-                    center + inner_r * end_rad.sin(),
-                );
-                let (x4, y4) = (
-                    center + inner_r * start_rad.cos(),
-                    center + inner_r * start_rad.sin(),
-                );
-
-                let large_arc = if sweep_angle > 180.0 { 1 } else { 0 };
-
-                format!(
-                    "M {:.2} {:.2} A {:.2} {:.2} 0 {} 1 {:.2} {:.2} L {:.2} {:.2} A {:.2} {:.2} 0 {} 0 {:.2} {:.2} Z",
-                    x1,
-                    y1,
-                    outer_r,
-                    outer_r,
-                    large_arc,
-                    x2,
-                    y2,
-                    x3,
-                    y3,
-                    inner_r,
-                    inner_r,
-                    large_arc,
-                    x4,
-                    y4
-                )
-            }
-
-            let mut start_angle = -90.0_f32;
             for (idx, (category, amount)) in by_amount.iter().enumerate() {
                 if *amount <= 0 {
                     continue;
                 }
                 let percentage = *amount as f32 / total_expense as f32;
-                let sweep = percentage * 360.0;
                 let color = colors[idx % colors.len()].to_string();
 
-                let path = build_donut_segment_path(start_angle, sweep, 46.0, 34.0);
                 expense_slices.push(ExpenseSlice {
                     category: category.clone(),
                     amount: *amount,
                     percentage,
-                    path,
                     color,
                 });
-
-                start_angle += sweep;
             }
         }
 

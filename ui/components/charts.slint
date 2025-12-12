@@ -1,7 +1,7 @@
 // ==================== Charts ====================
-// Noir Minimalist line and donut charts
+// Noir Minimalist line chart
 
-import { Palette, PieSegment } from "../globals.slint";
+import { Palette } from "../globals.slint";
 
 export component SanctumLineChart inherits Rectangle {
     in property <string> path: "M 0 50 L 100 50";
@@ -52,31 +52,5 @@ export component SanctumLineChart inherits Rectangle {
             stroke-width: 2px;
             fill: transparent;
         }
-    }
-}
-
-export component SanctumDonutChart inherits Rectangle {
-    in property <[PieSegment]> segments: [];
-
-    background: Palette.surface;
-    clip: true;
-
-    Rectangle {
-        width: 100%;
-        height: 100%;
-        for segment in segments: Path {
-            commands: segment.path;
-            fill: segment.color;
-            stroke: segment.color;
-            stroke-width: 0px;
-        }
-    }
-
-    if segments.length == 0: Text {
-        text: "No expenses";
-        color: Palette.text-muted;
-        font-size: 12px;
-        horizontal-alignment: center;
-        vertical-alignment: center;
     }
 }

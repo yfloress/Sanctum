@@ -94,20 +94,11 @@ export struct CategoryData {
     color: color,
 }
 
-export struct PieSegment {
-    label: string,
-    value: string,
-    percentage: float,
-    path: string,
-    color: color,
-}
-
 export struct AnalyticsData {
     chart_path: string,
     net_worth: string,
     max_value: string,
     min_value: string,
-    expense_segments: [PieSegment],
     expense_breakdown: [CategoryData],
 }
 

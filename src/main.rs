@@ -730,16 +730,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 && let Some(ui) = ui_weak.upgrade() {
                     let adapter = ui.global::<AnalyticsAdapter>();
 
-                    let segments: Vec<PieSegment> = summary.expense_slices.iter().map(|slice| {
-                        PieSegment {
-                            label: SharedString::from(&slice.category),
-                            value: SharedString::from(format_money(slice.amount, "USD")),
-                            percentage: slice.percentage,
-                            path: SharedString::from(&slice.path),
-                            color: color_from_hex(&slice.color),
-                        }
-                    }).collect();
-
                     let breakdown: Vec<CategoryData> = summary.expense_slices.iter().map(|slice| {
                         CategoryData {
                             name: SharedString::from(&slice.category),
@@ -754,7 +744,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         net_worth: SharedString::from(summary.net_worth),
                         max_value: SharedString::from(summary.max_value),
                         min_value: SharedString::from(summary.min_value),
-                        expense_segments: ModelRc::new(VecModel::from(segments)),
                         expense_breakdown: ModelRc::new(VecModel::from(breakdown)),
                     });
                 }
