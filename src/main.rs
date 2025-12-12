@@ -1376,6 +1376,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 adapter.set_portfolio(ModelRc::new(VecModel::from(mapped_assets)));
                 adapter.set_market_tickers(ModelRc::new(VecModel::from(tickers)));
                 adapter.set_total_value(SharedString::from(format_money((total_val * 100.0) as i64, "USD")));
+                adapter.set_total_pnl_positive(total_pnl_val >= 0.0);
                 adapter.set_total_pnl(SharedString::from(format!("{} {}", pnl_sign, format_money((total_pnl_val.abs() * 100.0) as i64, "USD"))));
                 adapter.set_clp_rate(SharedString::from(clp_display));
             }

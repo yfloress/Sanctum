@@ -90,7 +90,7 @@ export component CryptoPage inherits Rectangle {
                         Rectangle {
                             height: 24px;
                             y: (parent.height - self.height) / 2;
-                            background: CryptoAdapter.total-pnl.to-float() >= 0 ? Palette.success.with-alpha(0.1) : Palette.danger.with-alpha(0.1);
+                            background: CryptoAdapter.total-pnl-positive ? Palette.success.with-alpha(0.1) : Palette.danger.with-alpha(0.1);
                             border-radius: 4px;
                             
                             HorizontalLayout {
@@ -295,14 +295,24 @@ export component CryptoPage inherits Rectangle {
         x: 0; y: 0; width: 100%; height: 100%;
         
         // Backdrop
-        Rectangle {
-            background: #00000080;
-            TouchArea { clicked => { CryptoAdapter.show-asset-detail = false; } }
-        }
-        
-        // Drawer
-        AssetDetailPanel {
-            x: parent.width - self.width;
+        Rectangle { background: #00000080; }
+
+        // Layout: close area + drawer so clicks on panel don't close it
+        HorizontalLayout {
+            width: parent.width;
+            height: parent.height;
+            spacing: 0px;
+
+            Rectangle {
+                horizontal-stretch: 1;
+                height: parent.height;
+                TouchArea { clicked => { CryptoAdapter.show-asset-detail = false; } }
+            }
+
+            AssetDetailPanel {
+                // Stick to right edge
+                height: parent.height;
+            }
         }
     }
 }
