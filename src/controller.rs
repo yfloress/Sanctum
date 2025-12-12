@@ -461,6 +461,24 @@ impl AppController {
         self.save_config(&config)
     }
 
+    /// Opens (or creates) the persistent rate-limit store with restrictive permissions
+    fn open_rate_limit_conn(&self, rate_limit_path: &Path) -> Result<Connection, ControllerError> {
+        if let Some(parent) = rate_limit_path.parent() {
+            fs::create_dir_all(parent)
+                .map_err(|_| ControllerError::Config("Could not create rate limit directory".to_string()))?;
+        }
+
+        let conn = Connection::open(rate_limit_path)
+            .map_err(|_| ControllerError::Config("Could not open rate limit store".to_string()))?;
+
+        // Restrict permissions to owner read/write only
+        #[cfg(unix)]
+        fs::set_permissions(rate_limit_path, Permissions::from_mode(0o600))
+            .map_err(|_| ControllerError::Config("Could not set rate limit file permissions".to_string()))?;
+
+        Ok(conn)
+    }
+
     /// Sanitizes the requested vault path to ensure it stays inside the app data directory
     fn sanitize_db_path(&self, raw: &str) -> Result<PathBuf, ControllerError> {
         // Ensure the base directory exists so canonicalization behaves deterministically
@@ -522,18 +540,7 @@ impl AppController {
         // This uses a separate unencrypted DB for rate limiting
         let rate_limit_path = db_path.with_extension("ratelimit");
 
-        if let Ok(conn) = Connection::open(&rate_limit_path) {
-            // Create table if not exists
-            let _ = conn.execute(
-                "CREATE TABLE IF NOT EXISTS auth_attempts (
-                    vault_path TEXT PRIMARY KEY NOT NULL,
-                    failed_count INTEGER NOT NULL DEFAULT 0,
-                    locked_until TEXT,
-                    last_attempt TEXT NOT NULL
-                )",
-                [],
-            );
-
+        if let Ok(conn) = self.open_rate_limit_conn(&rate_limit_path) {
             let vault_key = db_path.to_string_lossy().to_string();
             if let Err(DbError::RateLimited) = Database::check_rate_limit(&conn, &vault_key) {
                 let remaining = Database::get_lockout_remaining(&conn, &vault_key).unwrap_or(0);
@@ -548,17 +555,7 @@ impl AppController {
     fn record_persistent_failed_attempt(&self, db_path: &Path) {
         let rate_limit_path = db_path.with_extension("ratelimit");
 
-        if let Ok(conn) = Connection::open(&rate_limit_path) {
-            let _ = conn.execute(
-                "CREATE TABLE IF NOT EXISTS auth_attempts (
-                    vault_path TEXT PRIMARY KEY NOT NULL,
-                    failed_count INTEGER NOT NULL DEFAULT 0,
-                    locked_until TEXT,
-                    last_attempt TEXT NOT NULL
-                )",
-                [],
-            );
-
+        if let Ok(conn) = self.open_rate_limit_conn(&rate_limit_path) {
             let vault_key = db_path.to_string_lossy().to_string();
             if let Ok((attempts, locked)) = Database::record_failed_attempt(&conn, &vault_key) {
                 log_auth_failure(attempts, locked);
@@ -570,7 +567,7 @@ impl AppController {
     fn reset_persistent_rate_limit(&self, db_path: &Path) {
         let rate_limit_path = db_path.with_extension("ratelimit");
 
-        if let Ok(conn) = Connection::open(&rate_limit_path) {
+        if let Ok(conn) = self.open_rate_limit_conn(&rate_limit_path) {
             let vault_key = db_path.to_string_lossy().to_string();
             let _ = Database::reset_rate_limit(&conn, &vault_key);
         }
