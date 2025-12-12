@@ -45,7 +45,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Get the application data directory using the directories crate
     let app_data_dir = get_app_data_dir();
 
-    log::info!("Sanctum data directory: {}", app_data_dir.display());
+    log::info!("Sanctum data directory initialized");
 
     // Create the application controller
     let controller = Arc::new(AppController::new(app_data_dir));
@@ -302,7 +302,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // ==================== Application Startup ====================
 
     println!("Sanctum Core Initialized.");
-    println!("Data directory: {}", controller.get_db_path().unwrap_or_default());
 
     // =============== Wire Adapters ===============
 

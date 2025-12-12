@@ -9,8 +9,12 @@ use chrono::{DateTime, Duration, Utc};
 use rusqlite::{Connection, Error as RusqliteError, ErrorCode, params};
 use secrecy::{ExposeSecret, SecretString};
 use std::collections::{HashMap, HashSet};
+use std::fs;
 use std::path::PathBuf;
 use thiserror::Error;
+
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 
 /// Errores personalizados para operaciones de base de datos
 #[derive(Error, Debug)]
@@ -95,14 +99,22 @@ impl Database {
         // Crear el directorio si no existe
         if let Some(parent) = db_path.parent() {
             if !parent.exists() {
-                std::fs::create_dir_all(parent).map_err(|_| DbError::DirectoryCreation)?;
+                fs::create_dir_all(parent).map_err(|_| DbError::DirectoryCreation)?;
             }
+            #[cfg(unix)]
+            fs::set_permissions(parent, fs::Permissions::from_mode(0o700))
+                .map_err(|_| DbError::DirectoryCreation)?;
         }
 
         let is_new_db = !db_path.exists();
 
         // Abrir conexión a la base de datos
         let conn = Connection::open(&db_path)?;
+
+        // Ensure restrictive permissions on the vault file
+        #[cfg(unix)]
+        fs::set_permissions(&db_path, fs::Permissions::from_mode(0o600))
+            .map_err(DbError::Io)?;
 
         // Enforce foreign key constraints for the connection
         conn.pragma_update(None, "foreign_keys", true)
