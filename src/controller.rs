@@ -11,7 +11,7 @@ use crate::models::{
 };
 use crate::security_log::{SecurityEvent, log_auth_failure, log_security_event};
 use crate::services::habit::HabitService;
-use chrono::{Datelike, NaiveDate};
+use chrono::{Datelike, NaiveDate, Utc};
 use rusqlite::Connection;
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
@@ -99,6 +99,7 @@ const MAX_PASSWORD_LENGTH: usize = 128;
 const MIN_PASSWORD_LENGTH: usize = 8;
 const MAX_ACCOUNT_NAME_LENGTH: usize = 64;
 const MAX_CURRENCY_LENGTH: usize = 8;
+const EXCHANGE_RATE_TTL_SECS: i64 = 6 * 60 * 60; // 6 hours
 
 // ==================== Helper Functions ====================
 
@@ -1023,7 +1024,26 @@ impl AppController {
 
     /// Loads cached exchange rate
     pub fn load_exchange_rate(&self, pair: String) -> Result<Option<(f64, String)>, ControllerError> {
-        self.with_db(|db| db.load_exchange_rate(&pair).map_err(ControllerError::Database))
+        self.with_db(|db| {
+            let cached = db.load_exchange_rate(&pair).map_err(ControllerError::Database)?;
+
+            if let Some((rate, updated_at)) = cached {
+                let is_fresh = chrono::DateTime::parse_from_rfc3339(&updated_at)
+                    .map(|dt| {
+                        let age = Utc::now().signed_duration_since(dt.with_timezone(&Utc));
+                        age.num_seconds() <= EXCHANGE_RATE_TTL_SECS
+                    })
+                    .unwrap_or(false);
+
+                if !is_fresh {
+                    return Ok(None);
+                }
+
+                return Ok(Some((rate, updated_at)));
+            }
+
+            Ok(None)
+        })
     }
 
     /// Saves crypto prices to cache
@@ -1646,9 +1666,9 @@ impl AppController {
         let filtered_history: Vec<(chrono::NaiveDate, i64)> = if let Some(start) = start_date {
             // Find the balance *at* the start date to be the first point
             // This prevents the graph from starting at 0 if the user had money before the range
-            let start_balance = full_history.iter()
-                .filter(|(d, _)| *d <= start)
-                .next_back()
+            let start_balance = full_history
+                .iter()
+                .rfind(|(d, _)| *d <= start)
                 .map(|(_, b)| *b)
                 .unwrap_or(0); // If no history before start, balance is 0
                 

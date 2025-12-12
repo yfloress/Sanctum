@@ -330,6 +330,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         format!("{symbol} {}", format_amount(amount_cents))
     }
 
+    fn format_clp_rate(rate: f64) -> String {
+        let rounded = rate.round() as i64;
+        let mut digits = rounded.abs().to_string();
+        let mut grouped = String::new();
+
+        while digits.len() > 3 {
+            let chunk = digits.split_off(digits.len() - 3);
+            grouped = format!(",{chunk}{grouped}");
+        }
+
+        let formatted = format!("{digits}{grouped}");
+        format!("$ {formatted}")
+    }
+
     fn color_from_hex(hex: &str) -> slint::Color {
         if let Some(stripped) = hex.strip_prefix('#')
             && stripped.len() == 6
@@ -1359,8 +1373,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let pnl_sign = if total_pnl_val >= 0.0 { "+" } else { "-" };
             
             // Try to load CLP rate
-            let clp_rate = controller.load_exchange_rate("CLP_USD".to_string())
-                .ok().flatten().map(|(r, _)| r).unwrap_or(0.0);
+            let clp_cached = controller
+                .load_exchange_rate("CLP_USD".to_string())
+                .ok()
+                .flatten();
+
+            let clp_display = clp_cached
+                .and_then(|(r, _)| if r > 0.0 { Some(format_clp_rate(r)) } else { None })
+                .unwrap_or_else(|| "N/A".to_string());
 
             if let Some(ui) = ui_weak.upgrade() {
                 let adapter = ui.global::<CryptoAdapter>();
@@ -1368,9 +1388,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 adapter.set_market_tickers(ModelRc::new(VecModel::from(tickers)));
                 adapter.set_total_value(SharedString::from(format_money((total_val * 100.0) as i64, "USD")));
                 adapter.set_total_pnl(SharedString::from(format!("{} {}", pnl_sign, format_money((total_pnl_val.abs() * 100.0) as i64, "USD"))));
-                if clp_rate > 0.0 {
-                     adapter.set_clp_rate(SharedString::from(format!("$ {:.0}", clp_rate)));
-                }
+                adapter.set_clp_rate(SharedString::from(clp_display));
             }
         }
     }
@@ -1430,12 +1448,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let clp_display = match controller_async.get_clp_usd_rate().await {
                     Ok(rate) => {
                         let _ = controller_async.save_exchange_rate("CLP_USD".to_string(), rate);
-                        format!("$ {:.0}", rate)
+                        format_clp_rate(rate)
                     }
                     Err(_) => {
                         // Try fallback to cache
                         if let Ok(Some((rate, _))) = controller_async.load_exchange_rate("CLP_USD".to_string()) {
-                            format!("$ {:.0}", rate)
+                            format_clp_rate(rate)
                         } else {
                             "N/A".to_string()
                         }
@@ -1541,8 +1559,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Initial Load
     if let Ok(Some((rate, _))) = controller.load_exchange_rate("CLP_USD".to_string()) {
-         ui.global::<CryptoAdapter>().set_clp_rate(SharedString::from(format!("$ {:.0}", rate)));
+         ui.global::<CryptoAdapter>().set_clp_rate(SharedString::from(format_clp_rate(rate)));
     } else {
+         ui.global::<CryptoAdapter>().set_clp_rate(SharedString::from("N/A"));
          let controller_async = controller.clone();
          let ui_weak_async = ui_weak.clone();
          let notify_clp = show_notification.clone();
@@ -1552,11 +1571,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                      let _ = controller_async.save_exchange_rate("CLP_USD".to_string(), rate);
                      let _ = ui_weak_async.upgrade_in_event_loop(move |ui| {
                          ui.global::<CryptoAdapter>()
-                             .set_clp_rate(SharedString::from(format!("$ {:.0}", rate)));
+                             .set_clp_rate(SharedString::from(format_clp_rate(rate)));
                      });
                  }
                  Err(e) => {
-                     let _ = ui_weak_async.upgrade_in_event_loop(move |_| {
+                     let _ = ui_weak_async.upgrade_in_event_loop(move |ui| {
+                         ui.global::<CryptoAdapter>().set_clp_rate(SharedString::from("N/A"));
                          notify_clp(format!("CLP rate unavailable: {e}"), true);
                      });
                  }
