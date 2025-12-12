@@ -20,13 +20,14 @@ export component CryptoRow inherits Rectangle {
     animate background { duration: 150ms; }
 
     HorizontalLayout {
-        padding-left: 12px;
-        padding-right: 12px;
-        spacing: 16px;
-        alignment: space-between;
+        padding-left: 24px;
+        padding-right: 24px;
+        spacing: 0px; // Using fixed widths for alignment
+        alignment: start;
 
+        // Asset Column (240px)
         HorizontalLayout {
-            width: 200px;
+            width: 240px;
             spacing: 12px;
             alignment: start;
             Rectangle {
@@ -35,24 +36,68 @@ export component CryptoRow inherits Rectangle {
             }
             VerticalLayout {
                 alignment: center;
-                Text { text: root.name; color: Palette.text-primary; font-size: 14px; font-weight: 400; }
+                Text { text: root.name; color: Palette.text-primary; font-size: 14px; font-weight: 400; overflow: elide; }
                 Text { text: root.symbol; color: Palette.text-muted; font-size: 11px; }
             }
         }
-        Text { width: 120px; text: root.price; color: Palette.text-secondary; font-size: 14px; vertical-alignment: center; horizontal-alignment: right; }
-        VerticalLayout {
-            width: 140px; alignment: center;
-            Text { text: root.amount; color: Palette.text-primary; font-size: 14px; horizontal-alignment: right; }
-            Text { text: root.value; color: Palette.text-muted; font-size: 11px; horizontal-alignment: right; }
+
+        // Price Column (140px)
+        Text { 
+            width: 140px; 
+            text: root.price; 
+            color: Palette.text-secondary; 
+            font-size: 14px; 
+            vertical-alignment: center; 
+            horizontal-alignment: right; 
         }
+
+        // Holdings Column (140px)
+        Text { 
+            width: 140px; 
+            text: root.amount; 
+            color: Palette.text-secondary; 
+            font-size: 14px; 
+            vertical-alignment: center; 
+            horizontal-alignment: right; 
+        }
+
+        // Value Column (140px)
+        Text { 
+            width: 140px; 
+            text: root.value; 
+            color: Palette.text-primary; 
+            font-size: 14px; 
+            font-weight: 500;
+            vertical-alignment: center; 
+            horizontal-alignment: right; 
+        }
+
+        // Spacer to push 24h to end or fixed width
+        Rectangle { width: 40px; }
+
+        // 24h Change Column (100px)
         Rectangle {
-            width: 80px; height: 28px; background: root.is-positive ? Palette.success.with-alpha(0.1) : Palette.danger.with-alpha(0.1); border-radius: 4px; y: (parent.height - self.height) / 2;
-            Text { text: root.change; color: root.is-positive ? Palette.success : Palette.danger; font-size: 12px; font-weight: 500; vertical-alignment: center; horizontal-alignment: center; }
+            width: 100px;
+            HorizontalLayout {
+                alignment: end;
+                Rectangle {
+                    width: 80px; height: 28px; 
+                    background: root.is-positive ? Palette.success.with-alpha(0.1) : Palette.danger.with-alpha(0.1); 
+                    border-radius: 4px; 
+                    y: (parent.height - self.height) / 2;
+                    Text { 
+                        text: root.change; 
+                        color: root.is-positive ? Palette.success : Palette.danger; 
+                        font-size: 12px; 
+                        font-weight: 500; 
+                        vertical-alignment: center; 
+                        horizontal-alignment: center; 
+                    }
+                }
+            }
         }
-        
-        // Chevron indicator
-        Text { text: "›"; color: Palette.text-muted; font-size: 18px; font-weight: 300; vertical-alignment: center; }
     }
+    
     if !root.is-last: Rectangle { height: 1px; width: parent.width; background: Palette.border-subtle; y: parent.height - 1px; }
     
     area := TouchArea {
@@ -76,14 +121,14 @@ export component WalletRow inherits Rectangle {
     animate background { duration: 150ms; }
 
     HorizontalLayout {
-        padding-left: 12px;
-        padding-right: 12px;
+        padding-left: 24px;
+        padding-right: 24px;
         spacing: 16px;
         alignment: space-between;
 
         HorizontalLayout {
-            width: 250px;
-            spacing: 12px;
+            width: 300px;
+            spacing: 16px;
             alignment: start;
             Rectangle {
                 width: 40px; height: 40px; border-radius: 6px; background: Palette.surface; y: (parent.height - self.height) / 2;
@@ -98,7 +143,7 @@ export component WalletRow inherits Rectangle {
         
         Text { width: 100px; text: root.count + " Assets"; color: Palette.text-secondary; font-size: 12px; vertical-alignment: center; horizontal-alignment: center; }
         
-        Text { width: 120px; text: root.balance; color: Palette.text-primary; font-size: 14px; font-weight: 500; vertical-alignment: center; horizontal-alignment: right; }
+        Text { width: 150px; text: root.balance; color: Palette.text-primary; font-size: 14px; font-weight: 500; vertical-alignment: center; horizontal-alignment: right; }
         
         Rectangle {
             width: 32px; height: 32px;
@@ -116,23 +161,45 @@ export component TickerItem inherits Rectangle {
     in property <string> change;
     in property <bool> is-positive;
 
-    width: 140px;
-    height: 48px;
-    background: Palette.surface;
-    border-radius: 4px;
-    border-width: 1px;
-    border-color: Palette.border;
+    width: 160px; // Compact width
+    height: 40px; // Fits in header
+    background: transparent;
 
-    VerticalLayout {
-        padding: 8px;
-        spacing: 4px;
+    HorizontalLayout {
+        padding-left: 8px;
+        padding-right: 8px;
+        spacing: 8px;
+        alignment: center;
         
-        HorizontalLayout {
-            alignment: space-between;
-            Text { text: root.symbol; color: Palette.text-muted; font-size: 10px; font-weight: 500; }
-            Text { text: root.change; color: root.is-positive ? Palette.success : Palette.danger; font-size: 10px; }
+        Text { 
+            text: root.symbol; 
+            color: Palette.text-primary; 
+            font-size: 12px; 
+            font-weight: 600; 
+            vertical-alignment: center;
         }
         
-        Text { text: root.price; color: Palette.text-primary; font-size: 14px; font-weight: 500; }
+        Text { 
+            text: root.price; 
+            color: Palette.text-secondary; 
+            font-size: 12px; 
+            vertical-alignment: center;
+        }
+        
+        Text { 
+            text: root.change; 
+            color: root.is-positive ? Palette.success : Palette.danger; 
+            font-size: 11px; 
+            vertical-alignment: center;
+        }
+    }
+    
+    // Separator line
+    Rectangle {
+        width: 1px;
+        height: 16px;
+        background: Palette.border-subtle;
+        x: parent.width - 1px;
+        y: (parent.height - self.height) / 2;
     }
 }
