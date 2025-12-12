@@ -83,10 +83,12 @@ export component CryptoPage inherits Rectangle {
             background: Palette.background;
             
             HorizontalLayout {
-                y: (parent.height - self.height) / 2;
                 padding-left: 48px;
                 padding-right: 48px;
+                padding-top: 20px;
+                padding-bottom: 12px;
                 alignment: space-between;
+                spacing: 16px;
                 
                 // Left: Summary
                 VerticalLayout {
@@ -117,42 +119,52 @@ export component CryptoPage inherits Rectangle {
                 }
 
                 // Right: Tabs
-                HorizontalLayout {
-                    alignment: center;
-                    spacing: 4px;
-                    
-                    Rectangle {
-                        width: 120px; height: 36px;
-                        background: root.active-tab == "portfolio" ? Palette.surface : transparent;
-                        border-radius: 4px;
-                        border-width: root.active-tab == "portfolio" ? 1px : 0px;
-                        border-color: Palette.border-subtle;
+                Rectangle {
+                    height: 40px;
+                    width: 260px;
+                    border-radius: 20px;
+                    background: Palette.surface;
+                    border-width: 1px;
+                    border-color: Palette.border-subtle;
+
+                    HorizontalLayout {
+                        padding: 2px;
+                        spacing: 4px;
+                        alignment: center;
                         
-                        Text { 
-                            text: "PORTFOLIO"; 
-                            color: root.active-tab == "portfolio" ? Palette.text-primary : Palette.text-muted; 
-                            font-size: 11px; font-weight: 600; 
-                            vertical-alignment: center; horizontal-alignment: center; 
+                        Rectangle {
+                            horizontal-stretch: 1;
+                            height: 36px;
+                            background: root.active-tab == "portfolio" ? Palette.accent.with-alpha(0.06) : transparent;
+                            border-radius: 18px;
+                            border-width: root.active-tab == "portfolio" ? 1px : 0px;
+                            border-color: Palette.border-subtle;
+                            
+                            Text { 
+                                text: "PORTFOLIO"; 
+                                color: root.active-tab == "portfolio" ? Palette.text-primary : Palette.text-muted; 
+                                font-size: 11px; font-weight: 600; 
+                                vertical-alignment: center; horizontal-alignment: center; 
+                            }
+                            TouchArea { clicked => { root.active-tab = "portfolio"; } }
                         }
-                        TouchArea { clicked => { root.active-tab = "portfolio"; } }
-                    }
 
-                    Rectangle { width: 1px; height: 16px; background: Palette.border-subtle; y: (parent.height - self.height) / 2; }
+                        Rectangle {
+                            horizontal-stretch: 1;
+                            height: 36px;
+                            background: root.active-tab == "wallets" ? Palette.accent.with-alpha(0.06) : transparent;
+                            border-radius: 18px;
+                            border-width: root.active-tab == "wallets" ? 1px : 0px;
+                            border-color: Palette.border-subtle;
 
-                    Rectangle {
-                        width: 120px; height: 36px;
-                        background: root.active-tab == "wallets" ? Palette.surface : transparent;
-                        border-radius: 4px;
-                        border-width: root.active-tab == "wallets" ? 1px : 0px;
-                        border-color: Palette.border-subtle;
-
-                        Text { 
-                            text: "WALLETS"; 
-                            color: root.active-tab == "wallets" ? Palette.text-primary : Palette.text-muted; 
-                            font-size: 11px; font-weight: 600; 
-                            vertical-alignment: center; horizontal-alignment: center; 
+                            Text { 
+                                text: "WALLETS"; 
+                                color: root.active-tab == "wallets" ? Palette.text-primary : Palette.text-muted; 
+                                font-size: 11px; font-weight: 600; 
+                                vertical-alignment: center; horizontal-alignment: center; 
+                            }
+                            TouchArea { clicked => { root.active-tab = "wallets"; } }
                         }
-                        TouchArea { clicked => { root.active-tab = "wallets"; } }
                     }
                 }
             }
@@ -213,7 +225,7 @@ export component CryptoPage inherits Rectangle {
                                 horizontal-alignment: center; vertical-alignment: center; 
                             }
 
-                            Flickable {
+                            if CryptoAdapter.portfolio.length > 0: Flickable {
                                 width: parent.width;
                                 viewport-height: CryptoAdapter.portfolio.length * 56px;
                                 VerticalLayout {
@@ -280,7 +292,7 @@ export component CryptoPage inherits Rectangle {
                                 horizontal-alignment: center; vertical-alignment: center; 
                             }
 
-                            Flickable {
+                            if CryptoAdapter.wallets.length > 0: Flickable {
                                 width: parent.width;
                                 viewport-height: CryptoAdapter.wallets.length * 64px;
                                 VerticalLayout {
@@ -319,7 +331,7 @@ export component CryptoPage inherits Rectangle {
             color: #000000; 
             font-size: 24px; font-weight: 400; 
             vertical-alignment: center; horizontal-alignment: center; 
-            y: -2px; // Visual correction
+            y: 0px;
         }
         
         fab-touch := TouchArea {
