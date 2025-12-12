@@ -1541,26 +1541,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
          ui.global::<CryptoAdapter>().set_clp_rate(SharedString::from(format_clp_rate(rate)));
     } else {
          ui.global::<CryptoAdapter>().set_clp_rate(SharedString::from("N/A"));
-         let controller_async = controller.clone();
-         let ui_weak_async = ui_weak.clone();
-         let notify_clp = show_notification.clone();
-         tokio::spawn(async move {
-             match controller_async.get_clp_usd_rate().await {
-                 Ok(rate) => {
-                     let _ = controller_async.save_exchange_rate("CLP_USD".to_string(), rate);
-                     let _ = ui_weak_async.upgrade_in_event_loop(move |ui| {
-                         ui.global::<CryptoAdapter>()
-                             .set_clp_rate(SharedString::from(format_clp_rate(rate)));
-                     });
-                 }
-                 Err(e) => {
-                     let _ = ui_weak_async.upgrade_in_event_loop(move |ui| {
-                         ui.global::<CryptoAdapter>().set_clp_rate(SharedString::from("N/A"));
-                         notify_clp(format!("CLP rate unavailable: {e}"), true);
-                     });
-                 }
-             }
-         });
     }
 
     {
