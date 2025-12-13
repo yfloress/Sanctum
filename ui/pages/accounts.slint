@@ -129,6 +129,7 @@ export component AccountsPage inherits Rectangle {
 
                             VerticalLayout {
                                 spacing: 0px;
+                                preferred-height: AccountAdapter.accounts.length * 70px;
 
                                 for account[index] in AccountAdapter.accounts: AccountItem {
                                     account: account;
