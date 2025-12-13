@@ -1313,10 +1313,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 total_cost += a.total_cost_basis;
 
                 let price_data = price_map.get(&a.coin_id);
+                
                 let change_percent = price_data
                     .map(|p| p.price_change_percentage_24h)
                     .unwrap_or(0.0);
-                let change_str = if change_percent >= 0.0 {
+                
+                let change_str = if price_data.is_none() {
+                    "N/A".to_string() // Explicitly N/A if no price data for change
+                } else if change_percent >= 0.0 {
                     format!("+ {:.2}%", change_percent)
                 } else {
                     format!("{:.2}%", change_percent)
@@ -1326,10 +1330,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .map(|p| p.name.clone())
                     .unwrap_or_else(|| a.symbol.clone());
 
-                let price_fmt = if a.current_price < 1.0 {
+                let price_fmt = if price_data.is_none() {
+                    "N/A".to_string() // Explicitly N/A if no price data for price
+                } else if a.current_price < 1.0 {
                      format!("$ {:.4}", a.current_price)
                 } else {
                      format_money((a.current_price * 100.0) as i64, "USD")
+                };
+
+                let value_fmt = if price_data.is_none() {
+                    "N/A".to_string() // Explicitly N/A if no price data for value
+                } else {
+                    format_money((a.current_value * 100.0) as i64, "USD")
                 };
 
                 CryptoAssetData {
@@ -1338,7 +1350,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     name: SharedString::from(asset_name),
                     price: SharedString::from(price_fmt),
                     amount: SharedString::from(format!("{:.4} {}", a.total_amount, a.symbol)),
-                    value: SharedString::from(format_money((a.current_value * 100.0) as i64, "USD")),
+                    value: SharedString::from(value_fmt),
                     change_24h: SharedString::from(change_str),
                     is_positive: change_percent >= 0.0,
                     allocation: 0.0,
