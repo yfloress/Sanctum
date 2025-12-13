@@ -327,13 +327,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         
         let units_str = units.to_string();
         let mut formatted_units = String::new();
-        let mut count = 0;
-        for c in units_str.chars().rev() {
+        for (count, c) in units_str.chars().rev().enumerate() {
             if count > 0 && count % 3 == 0 {
                 formatted_units.insert(0, ',');
             }
             formatted_units.insert(0, c);
-            count += 1;
         }
         format!("{formatted_units}.{cents:02}")
     }
