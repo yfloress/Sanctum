@@ -7,7 +7,7 @@ import {
     CryptoAdapter,
     AppState
 } from "../globals.slint";
-import { CryptoRow, WalletRow, TickerItem, CryptoCard } from "../components/crypto_widgets.slint";
+import { CryptoRow, WalletRow, TickerItem, CryptoCard, GhostButton } from "../components/crypto_widgets.slint";
 import { AssetDetailPanel } from "../components/asset_detail.slint";
 import { TextButton, BorderButton } from "../widgets.slint";
 
@@ -148,7 +148,7 @@ export component CryptoPage inherits Rectangle {
 
                     settings-touch := TouchArea {
                         mouse-cursor: pointer;
-                        clicked => { AppState.active-page = "settings"; }
+                        clicked => { AppState.show-configure-ticker = true; }
                     }
                 }
             }
@@ -191,7 +191,7 @@ export component CryptoPage inherits Rectangle {
                             vertical-alignment: center;
                         }
                         
-                        BorderButton {
+                        GhostButton {
                             text: "REFRESH";
                             clicked => { CryptoAdapter.refresh-prices(); }
                         }

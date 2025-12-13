@@ -305,3 +305,29 @@ export component CryptoCard inherits Rectangle {
         }
     }
 }
+
+export component GhostButton inherits Rectangle {
+    in property <string> text;
+    callback clicked;
+
+    width: 64px;
+    height: 24px;
+    background: transparent;
+
+    Text {
+        text: root.text;
+        color: touch.has-hover ? Palette.accent : Palette.text-muted;
+        font-size: 10px;
+        font-weight: 500;
+        letter-spacing: 1px;
+        vertical-alignment: center;
+        horizontal-alignment: center;
+        
+        animate color { duration: 150ms; }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}

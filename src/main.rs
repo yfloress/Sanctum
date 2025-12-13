@@ -7,11 +7,10 @@ use directories::ProjectDirs;
 use log::error;
 use rand::Rng; // For title animation
 use sanctum::controller::{AppController, SETTING_AUTO_FETCH};
-use sanctum::crypto;
 use sanctum::models::CryptoAsset;
 use sanctum::security_log::init_security_logger;
 use slint::SharedString;
-use slint::{ModelRc, VecModel, Weak};
+use slint::{Model, ModelRc, VecModel, Weak};
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::sync::Arc; // Added for CryptoAdapter logic
@@ -1586,8 +1585,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let notify_for_async_block = show_notification_clone_for_refresh.clone(); // Clone for the async block
 
             tokio::spawn(async move {
-                // 1. Get coins to update (fixed allowlist to avoid leaking portfolio composition)
-                let coins = crypto::default_price_allowlist();
+                // 1. Get coins to update (from settings)
+                let coins = controller_async.get_active_ticker_ids();
 
                 if !coins.is_empty() {
                     match controller_async.get_crypto_prices(coins).await {
@@ -1745,6 +1744,71 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Err(e) => SharedString::from(e.to_string()),
                 }
             });
+    }
+
+    // Ticker Config
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        
+        ui.global::<CryptoAdapter>().on_load_ticker_options(move || {
+            let available_coins = vec![
+                ("bitcoin", "Bitcoin", "BTC"),
+                ("ethereum", "Ethereum", "ETH"),
+                ("litecoin", "Litecoin", "LTC"),
+                ("monero", "Monero", "XMR"),
+                ("solana", "Solana", "SOL"),
+                ("polkadot", "Polkadot", "DOT"),
+                ("cardano", "Cardano", "ADA"),
+                ("dogecoin", "Dogecoin", "DOGE"),
+                ("tether", "Tether", "USDT"),
+                ("ripple", "XRP", "XRP"),
+            ];
+
+            let active_ids = controller.get_active_ticker_ids();
+            
+            let options: Vec<TickerOption> = available_coins.iter().map(|(id, name, symbol)| {
+                TickerOption {
+                    id: SharedString::from(*id),
+                    name: SharedString::from(*name),
+                    symbol: SharedString::from(*symbol),
+                    enabled: active_ids.contains(&id.to_string()),
+                }
+            }).collect();
+
+            if let Some(ui) = ui_weak.upgrade() {
+                ui.global::<CryptoAdapter>().set_ticker_options(
+                    ModelRc::new(VecModel::from(options))
+                );
+            }
+        });
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = show_notification.clone();
+        
+        ui.global::<CryptoAdapter>().on_save_ticker_options(move || {
+            if let Some(ui) = ui_weak.upgrade() {
+                let options = ui.global::<CryptoAdapter>().get_ticker_options();
+                let mut new_active_ids: Vec<String> = Vec::new();
+                
+                for opt in options.iter() {
+                    if opt.enabled {
+                        new_active_ids.push(opt.id.to_string());
+                    }
+                }
+                
+                if let Err(e) = controller.save_active_ticker_ids(new_active_ids) {
+                    notify(format!("Failed to save: {}", e), true);
+                    return;
+                }
+                
+                ui.global::<CryptoAdapter>().invoke_refresh_prices();
+                notify("Ticker updated".into(), false);
+            }
+        });
     }
 
     // Initial Load

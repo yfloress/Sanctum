@@ -283,12 +283,24 @@ export struct AssetTransaction {
     price: string,
 }
 
+export struct TickerOption {
+    id: string,
+    name: string,
+    symbol: string,
+    enabled: bool,
+}
+
 export global CryptoAdapter {
     in-out property <[CryptoAssetData]> portfolio: [];
     in-out property <[CryptoAssetData]> market-tickers: [];
     in-out property <[CryptoWalletData]> wallets: [];
     in-out property <[WalletSimple]> wallet-list: []; // For dropdowns
     
+    // Config
+    in-out property <[TickerOption]> ticker-options: [];
+    callback load-ticker-options();
+    callback save-ticker-options();
+
     // Asset Detail View Data
     in-out property <CryptoAssetData> selected-asset;
     in-out property <[AssetWalletBreakdown]> asset-wallets: [];
@@ -383,6 +395,7 @@ export global AppState {
     in-out property <bool> show-add-habit: false;
     in-out property <bool> show-add-crypto: false;
     in-out property <bool> show-add-wallet: false;
+    in-out property <bool> show-configure-ticker: false;
 
     // Current date (YYYY-MM-DD), set from backend to avoid hardcoded defaults
     in-out property <string> current-date: "2024-01-01";
