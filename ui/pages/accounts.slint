@@ -18,31 +18,28 @@ export component AccountsPage inherits Rectangle {
         AccountAdapter.fetch-accounts();
     }
 
-    VerticalLayout {
-        padding: 48px;
-        padding-left: 64px;
-        padding-right: 64px;
-        spacing: 0px;
+    Flickable {
+        width: parent.width;
+        height: parent.height;
 
-        // Header section
-        HorizontalLayout {
-            height: 48px;
-            spacing: 0px;
+        content := VerticalLayout {
+            width: parent.width;
+            padding: 48px;
+            padding-left: 64px;
+            padding-right: 64px;
+            spacing: 16px;
 
-            // Title
-            Text {
-                text: "ACCOUNTS";
-                color: Palette.text-muted;
-                font-size: 11px;
-                font-weight: 400;
-                letter-spacing: 3px;
-                vertical-alignment: center;
-                horizontal-stretch: 1;
-            }
+            // Header actions
+            HorizontalLayout {
+                alignment: space-between;
 
-            // Actions
-            Rectangle {
-                width: 260px;
+                Text {
+                    text: "ACCOUNTS";
+                    color: Palette.text-muted;
+                    font-size: 11px;
+                    font-weight: 400;
+                    letter-spacing: 3px;
+                }
 
                 HorizontalLayout {
                     spacing: 12px;
@@ -59,8 +56,6 @@ export component AccountsPage inherits Rectangle {
 
                     TextButton {
                         text: "+ NEW";
-                        enabled: true;
-
                         clicked => {
                             AccountAdapter.fetch-accounts();
                             AppState.account-edit-mode = false;
@@ -70,84 +65,85 @@ export component AccountsPage inherits Rectangle {
                     }
                 }
             }
-        }
 
-        // Spacer
-        Rectangle {
-            height: 24px;
-        }
-
-        // Divider
-        Rectangle {
-            height: 1px;
-            background: Palette.border;
-        }
-
-        // Account list
-        if AccountAdapter.accounts.length > 0: Rectangle {
-            vertical-stretch: 1;
-
-            Flickable {
-                viewport-height: AccountAdapter.accounts.length * 64px;
+            // List container
+            Rectangle {
+                background: Palette.surface;
+                border-radius: 10px;
+                border-width: 1px;
+                border-color: Palette.border;
 
                 VerticalLayout {
-                    spacing: 0px;
+                    padding: 20px;
+                    spacing: 16px;
 
-                    for account[index] in AccountAdapter.accounts: AccountItem {
-                        account: account;
-                        is-last: index == AccountAdapter.accounts.length - 1;
+                    HorizontalLayout {
+                        alignment: space-between;
 
-                        clicked => {
-                            AppState.account-edit-mode = true;
-                            AppState.selected-account-index = index;
-                            AppState.show-add-account = true;
+                        Text {
+                            text: "ACCOUNT LIST";
+                            color: Palette.text-muted;
+                            font-size: 11px;
+                            font-weight: 400;
+                            letter-spacing: 3px;
+                        }
+
+                        Text {
+                            text: AccountAdapter.accounts.length == 1 ? "1 account" : AccountAdapter.accounts.length + " accounts";
+                            color: Palette.text-secondary;
+                            font-size: 12px;
+                            font-weight: 400;
                         }
                     }
-                }
-            }
-        }
 
-        // Empty state
-        if AccountAdapter.accounts.length == 0: Rectangle {
-            vertical-stretch: 1;
+                    if AccountAdapter.accounts.length == 0: Rectangle {
+                        vertical-stretch: 1;
 
-            VerticalLayout {
-                alignment: center;
-                spacing: 16px;
+                        VerticalLayout {
+                            alignment: center;
+                            spacing: 14px;
 
-                Text {
-                    text: "No accounts yet";
-                    color: Palette.text-muted;
-                    font-size: 14px;
-                    font-weight: 300;
-                    font-italic: true;
-                    horizontal-alignment: center;
-                }
+                            Text {
+                                text: "No accounts yet";
+                                color: Palette.text-muted;
+                                font-size: 14px;
+                                font-weight: 300;
+                                font-italic: true;
+                                horizontal-alignment: center;
+                            }
 
-                Text {
-                    text: "Create your first account to start tracking";
-                    color: Palette.text-subtle;
-                    font-size: 12px;
-                    font-weight: 400;
-                    horizontal-alignment: center;
-                }
-            }
-        }
+                            Text {
+                                text: "Create your first account to start tracking.";
+                                color: Palette.text-secondary;
+                                font-size: 12px;
+                                font-weight: 400;
+                                horizontal-alignment: center;
+                            }
+                        }
+                    }
 
-        // Footer
-        Rectangle {
-            height: 48px;
+                    if AccountAdapter.accounts.length > 0: Rectangle {
+                        Flickable {
+                            height: AccountAdapter.accounts.length * 70px < 360px ? AccountAdapter.accounts.length * 70px : 360px;
+                            viewport-height: AccountAdapter.accounts.length * 70px;
 
-            HorizontalLayout {
-                alignment: start;
+                            VerticalLayout {
+                                spacing: 0px;
+                                preferred-height: AccountAdapter.accounts.length * 70px;
 
-                Text {
-                    text: AccountAdapter.accounts.length == 1 ? "1 account" : AccountAdapter.accounts.length + " accounts";
-                    color: Palette.text-subtle;
-                    font-size: 10px;
-                    font-weight: 400;
-                    letter-spacing: 1px;
-                    vertical-alignment: center;
+                                for account[index] in AccountAdapter.accounts: AccountItem {
+                                    account: account;
+                                    is-last: index == AccountAdapter.accounts.length - 1;
+
+                                    clicked => {
+                                        AppState.account-edit-mode = true;
+                                        AppState.selected-account-index = index;
+                                        AppState.show-add-account = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

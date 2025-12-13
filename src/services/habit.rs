@@ -17,7 +17,7 @@ impl HabitService {
     where
         F: FnOnce(&Database) -> Result<T, DbError>,
     {
-        let guard = self.db.lock().unwrap();
+        let guard = self.db.lock().map_err(|_| DbError::InvalidPassword)?; // Reuse existing error for "vault not open/usable"
         if let Some(db) = guard.as_ref() {
             f(db)
         } else {
@@ -33,7 +33,7 @@ impl HabitService {
     ) -> Result<String, DbError> {
         let id = Uuid::new_v4().to_string();
         let now = chrono::Local::now().to_rfc3339();
-        
+
         let habit = Habit {
             id: id.clone(),
             name,
@@ -42,12 +42,12 @@ impl HabitService {
             created_at: now,
             archived: false,
         };
-        
+
         self.get_db(|db| {
             db.create_habit(&habit)?;
             Ok(())
         })?;
-        
+
         Ok(id)
     }
 
@@ -69,9 +69,9 @@ impl HabitService {
                 habit.description = description.clone();
                 habit.color = color.clone();
                 // habit.archived = is_archived; // DB update doesn't support this
-                
+
                 db.update_habit(&habit)?;
-                
+
                 if is_archived {
                     db.archive_habit(&id)?;
                 }
@@ -95,7 +95,11 @@ impl HabitService {
         Ok(active)
     }
 
-    pub fn get_habit_logs(&self, start_date: String, end_date: String) -> Result<Vec<HabitLog>, DbError> {
+    pub fn get_habit_logs(
+        &self,
+        start_date: String,
+        end_date: String,
+    ) -> Result<Vec<HabitLog>, DbError> {
         self.get_db(|db| db.get_habit_logs(&start_date, &end_date))
     }
 }

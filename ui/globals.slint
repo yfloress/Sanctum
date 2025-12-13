@@ -94,14 +94,18 @@ export struct CategoryData {
     color: color,
 }
 
+export struct AnalyticsData {
+    chart_path: string,
+    net_worth: string,
+    max_value: string,
+    min_value: string,
+    expense_breakdown: [CategoryData],
+}
+
 // ==================== Analytics Adapter ====================
 
 export global AnalyticsAdapter {
-    in-out property <string> chart-path: "M 0 50 L 100 50";
-    in-out property <string> net-worth: "$ 0.00";
-    in-out property <string> max-value: "";
-    in-out property <string> min-value: "";
-    in-out property <[CategoryData]> expense-breakdown: [];
+    in-out property <AnalyticsData> summary;
     in-out property <string> active-range: "1M"; // 1M, 6M, 1Y, ALL
 
     callback fetch-analytics(string); // range
@@ -225,6 +229,91 @@ export global AccountAdapter {
     callback transfer-funds(string, string, string, string, string) -> string; // from, to, amount, description, date
 }
 
+// ==================== Settings Adapter ====================
+
+export global SettingsAdapter {
+    in-out property <bool> auto-fetch-enabled: false;
+    
+    // Callback to load settings from backend
+    callback load-settings();
+    
+    // Callback to toggle auto-fetch setting
+    callback set-auto-fetch(bool);
+}
+
+// ==================== Crypto Adapter ====================
+
+export struct CryptoAssetData {
+    id: string,
+    symbol: string,
+    name: string,
+    price: string,          // Formatted "$ 65,000.00"
+    amount: string,         // Formatted "0.5 BTC"
+    value: string,          // Formatted "$ 32,500.00"
+    change-24h: string,     // Formatted "+ 2.5%"
+    is-positive: bool,      // For coloring change
+    allocation: float,      // 0.0 to 1.0
+}
+
+export struct CryptoWalletData {
+    id: string,
+    name: string,
+    category: string,       // exchange, hardware, software
+    icon: string,           // path or emoji
+    balance: string,        // Formatted total value
+    asset-count: int,
+}
+
+export struct WalletSimple {
+    id: string,
+    name: string,
+}
+
+export struct AssetWalletBreakdown {
+    wallet-name: string,
+    amount: string,
+    value: string,
+}
+
+export struct AssetTransaction {
+    id: string,
+    date: string,
+    type: string,
+    amount: string,
+    price: string,
+}
+
+export global CryptoAdapter {
+    in-out property <[CryptoAssetData]> portfolio: [];
+    in-out property <[CryptoAssetData]> market-tickers: [];
+    in-out property <[CryptoWalletData]> wallets: [];
+    in-out property <[WalletSimple]> wallet-list: []; // For dropdowns
+    
+    // Asset Detail View Data
+    in-out property <CryptoAssetData> selected-asset;
+    in-out property <[AssetWalletBreakdown]> asset-wallets: [];
+    in-out property <[AssetTransaction]> asset-history: [];
+    in-out property <bool> show-asset-detail: false;
+    
+    in-out property <string> total-value: "$ 0.00";
+    in-out property <string> total-pnl: "+ $ 0.00";
+    in-out property <bool> total-pnl-positive: true;
+    in-out property <string> clp-rate: "...";
+
+    // Actions
+    callback fetch-portfolio();
+    callback fetch-wallets();
+    callback refresh-prices();
+    callback fetch-asset-details(string); // coin_id
+    
+    // (wallet_id, coin_id, symbol, type, amount, price, fee, date)
+    callback add-transaction(string, string, string, string, string, string, string, string) -> string;
+    
+    // (name, category) -> id or error
+    callback create-wallet(string, string) -> string;
+    callback delete-wallet(string) -> string;
+}
+
 // ==================== Transaction Adapter ====================
 // Bridge for transaction management
 
@@ -292,6 +381,8 @@ export global AppState {
     in-out property <int> selected-account-index: 0;
     in-out property <bool> show-transfer-modal: false;
     in-out property <bool> show-add-habit: false;
+    in-out property <bool> show-add-crypto: false;
+    in-out property <bool> show-add-wallet: false;
 
     // Current date (YYYY-MM-DD), set from backend to avoid hardcoded defaults
     in-out property <string> current-date: "2024-01-01";

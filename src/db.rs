@@ -1,4 +1,8 @@
-#![allow(clippy::collapsible_if, clippy::if_same_then_else, clippy::type_complexity)]
+#![allow(
+    clippy::collapsible_if,
+    clippy::if_same_then_else,
+    clippy::type_complexity
+)]
 
 use crate::models::{
     Account, AccountBalance, AggregatedAsset, BalanceSummary, CryptoHolding, CryptoTransaction,
@@ -9,8 +13,12 @@ use chrono::{DateTime, Duration, Utc};
 use rusqlite::{Connection, Error as RusqliteError, ErrorCode, params};
 use secrecy::{ExposeSecret, SecretString};
 use std::collections::{HashMap, HashSet};
+use std::fs;
 use std::path::PathBuf;
 use thiserror::Error;
+
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 
 /// Errores personalizados para operaciones de base de datos
 #[derive(Error, Debug)]
@@ -95,14 +103,21 @@ impl Database {
         // Crear el directorio si no existe
         if let Some(parent) = db_path.parent() {
             if !parent.exists() {
-                std::fs::create_dir_all(parent).map_err(|_| DbError::DirectoryCreation)?;
+                fs::create_dir_all(parent).map_err(|_| DbError::DirectoryCreation)?;
             }
+            #[cfg(unix)]
+            fs::set_permissions(parent, fs::Permissions::from_mode(0o700))
+                .map_err(|_| DbError::DirectoryCreation)?;
         }
 
         let is_new_db = !db_path.exists();
 
         // Abrir conexión a la base de datos
         let conn = Connection::open(&db_path)?;
+
+        // Ensure restrictive permissions on the vault file
+        #[cfg(unix)]
+        fs::set_permissions(&db_path, fs::Permissions::from_mode(0o600)).map_err(DbError::Io)?;
 
         // Enforce foreign key constraints for the connection
         conn.pragma_update(None, "foreign_keys", true)
@@ -327,6 +342,42 @@ impl Database {
         // ==================== Price Cache Tables ====================
         self.create_price_cache_tables()?;
 
+        // ==================== Settings Table ====================
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY NOT NULL,
+                value TEXT NOT NULL
+            )",
+            [],
+        )?;
+
+        Ok(())
+    }
+
+    // ==================== Settings Methods ====================
+
+    /// Gets a setting value by key
+    pub fn get_setting(&self, key: &str) -> Result<Option<String>, DbError> {
+        let result = self.conn.query_row(
+            "SELECT value FROM settings WHERE key = ?1",
+            params![key],
+            |row| row.get(0),
+        );
+
+        match result {
+            Ok(value) => Ok(Some(value)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(DbError::Sqlite(e)),
+        }
+    }
+
+    /// Sets a setting value (upsert)
+    pub fn set_setting(&self, key: &str, value: &str) -> Result<(), DbError> {
+        self.conn.execute(
+            "INSERT INTO settings (key, value) VALUES (?1, ?2)
+             ON CONFLICT(key) DO UPDATE SET value = ?2",
+            params![key, value],
+        )?;
         Ok(())
     }
 
@@ -693,9 +744,6 @@ impl Database {
                 return Err(DbError::SessionExpired);
             }
         }
-
-        // Update last activity on successful check
-        self.touch_session()?;
         Ok(())
     }
 
@@ -1552,6 +1600,41 @@ impl Database {
         Ok(transactions)
     }
 
+    /// Gets all crypto transactions for a specific coin across all wallets
+    pub fn get_crypto_transactions_by_coin(
+        &self,
+        coin_id: &str,
+    ) -> Result<Vec<CryptoTransaction>, DbError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, fee_coin_id, fee_amount, date, notes, related_tx_id
+             FROM crypto_transactions
+             WHERE coin_id = ?1
+             ORDER BY date DESC, rowid DESC",
+        )?;
+
+        let transactions = stmt
+            .query_map(params![coin_id], |row| {
+                Ok(CryptoTransaction {
+                    id: row.get(0)?,
+                    wallet_id: row.get(1)?,
+                    coin_id: row.get(2)?,
+                    symbol: row.get(3)?,
+                    transaction_type: row.get(4)?,
+                    amount: row.get(5)?,
+                    price_per_coin: row.get(6)?,
+                    fee: row.get(7)?,
+                    fee_coin_id: row.get(8)?,
+                    fee_amount: row.get(9)?,
+                    date: row.get(10)?,
+                    notes: row.get(11)?,
+                    related_tx_id: row.get(12)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(transactions)
+    }
+
     /// Deletes a crypto transaction by ID
     pub fn delete_crypto_transaction(&self, id: &str) -> Result<(), DbError> {
         self.conn
@@ -1659,7 +1742,8 @@ impl Database {
                 if let Some(counter) = tx_map.get(rel_id) {
                     let is_swap_pair = (tx.transaction_type == "swap"
                         && counter.transaction_type == "transfer_in")
-                        || (tx.transaction_type == "transfer_in" && counter.transaction_type == "swap");
+                        || (tx.transaction_type == "transfer_in"
+                            && counter.transaction_type == "swap");
 
                     if is_swap_pair {
                         if processed.contains(rel_id) || processed.contains(&tx.id) {
@@ -1760,7 +1844,8 @@ impl Database {
                 if let Some(counter) = tx_map.get(rel_id) {
                     let is_swap_pair = (tx.transaction_type == "swap"
                         && counter.transaction_type == "transfer_in")
-                        || (tx.transaction_type == "transfer_in" && counter.transaction_type == "swap");
+                        || (tx.transaction_type == "transfer_in"
+                            && counter.transaction_type == "swap");
 
                     if is_swap_pair {
                         if processed.contains(rel_id) || processed.contains(&tx.id) {
@@ -2049,7 +2134,10 @@ mod tests {
             "Could not create data directory"
         );
         assert_eq!(DbError::WalletNotFound.to_string(), "Wallet not found");
-        assert_eq!(DbError::SessionExpired.to_string(), "Session expired due to inactivity");
+        assert_eq!(
+            DbError::SessionExpired.to_string(),
+            "Session expired due to inactivity"
+        );
         assert_eq!(DbError::RateLimited.to_string(), "Too many failed attempts");
     }
 }

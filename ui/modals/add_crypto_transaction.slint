@@ -1,0 +1,707 @@
+// ==================== Add Crypto Transaction Modal ====================
+
+import {
+    Palette,
+    AppState,
+    CryptoAdapter,
+    NotificationAdapter,
+} from "../globals.slint";
+
+component UnderlineField inherits Rectangle {
+    in property <string> label: "";
+    in property <string> placeholder: "";
+    in-out property <string> value: "";
+    in property <bool> large: false;
+
+    height: large ? 80px : 56px;
+    background: transparent;
+
+    VerticalLayout {
+        spacing: 8px;
+
+        Text {
+            text: root.label;
+            color: Palette.text-muted;
+            font-size: 10px;
+            font-weight: 400;
+            letter-spacing: 2px;
+        }
+
+        Rectangle {
+            vertical-stretch: 1;
+
+            if root.value == "" && !input.has-focus: Text {
+                text: root.placeholder;
+                color: Palette.text-subtle;
+                font-size: large ? 28px : 14px;
+                font-weight: 300;
+                vertical-alignment: center;
+            }
+
+            input := TextInput {
+                text <=> root.value;
+                color: Palette.text-primary;
+                font-size: large ? 28px : 14px;
+                font-weight: 300;
+                vertical-alignment: center;
+            }
+
+            TouchArea {
+                clicked => { input.focus(); }
+            }
+        }
+
+        Rectangle {
+            height: input.has-focus ? 2px : 1px;
+            background: input.has-focus ? Palette.accent : Palette.border;
+            animate height { duration: 150ms; }
+            animate background { duration: 150ms; }
+        }
+    }
+}
+
+component TypeToggle inherits Rectangle {
+    in-out property <bool> is-buy: true;
+
+    height: 48px;
+    background: transparent;
+
+    HorizontalLayout {
+        spacing: 0px;
+
+        Rectangle {
+            horizontal-stretch: 1;
+            background: is-buy ? Palette.surface : transparent;
+            border-radius: 4px;
+            animate background { duration: 150ms; }
+
+            Text {
+                text: "BUY";
+                color: is-buy ? Palette.success : Palette.text-muted;
+                font-size: 11px;
+                font-weight: is-buy ? 500 : 400;
+                letter-spacing: 2px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            TouchArea { clicked => { root.is-buy = true; } }
+        }
+
+        Rectangle { width: 8px; }
+
+        Rectangle {
+            horizontal-stretch: 1;
+            background: !is-buy ? Palette.surface : transparent;
+            border-radius: 4px;
+            animate background { duration: 150ms; }
+
+            Text {
+                text: "SELL";
+                color: !is-buy ? Palette.danger : Palette.text-muted;
+                font-size: 11px;
+                font-weight: !is-buy ? 500 : 400;
+                letter-spacing: 2px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            TouchArea { clicked => { root.is-buy = false; } }
+        }
+    }
+}
+
+component WalletSelector inherits Rectangle {
+    in-out property <int> selected-index: 0;
+    
+    height: 56px;
+    background: transparent;
+
+    VerticalLayout {
+        spacing: 8px;
+        Text { text: "WALLET"; color: Palette.text-muted; font-size: 10px; font-weight: 400; letter-spacing: 2px; }
+        
+        Rectangle {
+            height: 32px;
+            HorizontalLayout {
+                Text {
+                    text: CryptoAdapter.wallet-list.length > 0 ? CryptoAdapter.wallet-list[selected-index].name : "No wallets available";
+                    color: Palette.text-primary; font-size: 14px; font-weight: 300; vertical-alignment: center; horizontal-stretch: 1;
+                }
+                Text { text: "▼"; color: Palette.text-muted; font-size: 10px; vertical-alignment: center; }
+            }
+            TouchArea { clicked => { if (CryptoAdapter.wallet-list.length > 0) { popup.show(); } } }
+        }
+        Rectangle { height: 1px; background: Palette.border; }
+    }
+
+    popup := PopupWindow {
+        x: 0; y: 56px; width: root.width;
+        close-policy: close-on-click;
+        Rectangle {
+            background: Palette.surface; border-radius: 4px; border-width: 1px; border-color: Palette.border;
+            height: min(CryptoAdapter.wallet-list.length * 36px + 8px, 240px);
+            
+            Flickable {
+                viewport-height: CryptoAdapter.wallet-list.length * 36px + 8px;
+                VerticalLayout {
+                    padding: 4px; spacing: 0px;
+                    for wallet[index] in CryptoAdapter.wallet-list: Rectangle {
+                        height: 36px; background: option-touch.has-hover ? Palette.surface-hover : transparent; border-radius: 2px;
+                        Text { text: wallet.name; color: index == selected-index ? Palette.text-primary : Palette.text-secondary; font-size: 12px; font-weight: index == selected-index ? 500 : 400; vertical-alignment: center; x: 12px; }
+                        option-touch := TouchArea { clicked => { root.selected-index = index; popup.close(); } }
+                    }
+                }
+            }
+        }
+    }
+}
+
+component CoinSelector inherits Rectangle {
+    in-out property <int> selected-index: 0;
+    in property <[string]> options;
+    
+    height: 56px;
+    background: transparent;
+
+    VerticalLayout {
+        spacing: 8px;
+        Text { text: "ASSET"; color: Palette.text-muted; font-size: 10px; font-weight: 400; letter-spacing: 2px; }
+        
+        Rectangle {
+            height: 32px;
+            HorizontalLayout {
+                Text {
+                    text: root.options.length > selected-index ? root.options[selected-index] : "Select Asset";
+                    color: Palette.text-primary; font-size: 14px; font-weight: 300; vertical-alignment: center; horizontal-stretch: 1;
+                }
+                Text { text: "▼"; color: Palette.text-muted; font-size: 10px; vertical-alignment: center; }
+            }
+        }
+        Rectangle { height: 1px; background: Palette.border; }
+    }
+    
+    // TouchArea covering the whole selector
+    TouchArea { 
+        clicked => { 
+            if (root.options.length > 0) {
+                popup.show(); 
+            }
+        } 
+    }
+
+    popup := PopupWindow {
+        x: 0; y: 56px; width: root.width;
+        close-policy: close-on-click;
+        
+        Rectangle {
+            background: Palette.sidebar-bg; // Solid background
+            border-radius: 4px; 
+            border-width: 1px; 
+            border-color: Palette.accent; // Highlight border
+            // Limit height to 300px
+            height: min(root.options.length * 36px + 8px, 300px);
+            
+            Flickable {
+                viewport-height: root.options.length * 36px + 8px;
+                interactive: true;
+                
+                VerticalLayout {
+                    padding: 4px; spacing: 0px;
+                    for option[index] in root.options: Rectangle {
+                        height: 36px; 
+                        background: option-touch.has-hover ? Palette.surface-hover : transparent; 
+                        border-radius: 2px;
+                        
+                        Text { 
+                            text: option; 
+                            color: index == selected-index ? Palette.text-primary : Palette.text-secondary; 
+                            font-size: 12px; 
+                            font-weight: index == selected-index ? 500 : 400; 
+                            vertical-alignment: center; 
+                            x: 12px; 
+                        }
+                        
+                        option-touch := TouchArea { 
+                            clicked => { 
+                                root.selected-index = index; 
+                                popup.close();
+                            } 
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+export component AddCryptoTransactionModal inherits Rectangle {
+    property <string> amount: "";
+    property <string> price: "";
+    property <string> date: AppState.current-date;
+    property <bool> is-buy: true;
+    property <int> wallet-index: 0;
+    property <int> coin-index: 0;
+
+    property <[string]> coin-names: [
+        "Bitcoin (BTC)",
+        "Monero (XMR)",
+        "Litecoin (LTC)",
+        "Tether (USDT)",
+        "Polygon (POL)",
+        "Ethereum (ETH)",
+        "BNB (BNB)",
+        "XRP (XRP)",
+        "USDC (USDC)",
+        "Solana (SOL)",
+        "Lido Staked Ether (STETH)",
+        "TRON (TRX)",
+        "Dogecoin (DOGE)",
+        "Cardano (ADA)",
+        "Figure Heloc (FIGR_HELOC)",
+        "WhiteBIT Coin (WBT)",
+        "Wrapped stETH (WSTETH)",
+        "Bitcoin Cash (BCH)",
+        "Wrapped Bitcoin (WBTC)",
+        "Wrapped Beacon ETH (WBETH)",
+        "USDS (USDS)",
+        "Chainlink (LINK)",
+        "Wrapped eETH (WEETH)",
+        "Binance Bridged USDT (BSC-USD)",
+        "LEO Token (LEO)",
+        "WETH (WETH)",
+        "Hyperliquid (HYPE)",
+        "Stellar (XLM)",
+        "Zcash (ZEC)",
+        "Coinbase Wrapped BTC (CBBTC)",
+        "Ethena USDe (USDE)",
+        "Sui (SUI)",
+        "Avalanche (AVAX)",
+        "Hedera (HBAR)",
+        "Shiba Inu (SHIB)",
+        "USDT0 (USDT0)",
+        "sUSDS (SUSDS)",
+        "Dai (DAI)",
+        "Toncoin (TON)",
+        "World Liberty Financial (WLFI)",
+        "PayPal USD (PYUSD)",
+        "Mantle (MNT)",
+        "Cronos (CRO)",
+        "Ethena Staked USDe (SUSDE)",
+        "Uniswap (UNI)",
+        "Polkadot (DOT)",
+        "Aave (AAVE)",
+        "Bittensor (TAO)",
+        "MemeCore (M)",
+        "USD1 (USD1)",
+        "Canton (CC)",
+        "Rain (RAIN)",
+        "Bitget Token (BGB)",
+        "OKB (OKB)",
+        "Tether Gold (XAUT)",
+        "Falcon USD (USDF)",
+        "NEAR Protocol (NEAR)",
+        "Ethereum Classic (ETC)",
+        "Ethena (ENA)",
+        "Aster (ASTER)",
+        "Binance-Peg WETH (WETH)",
+        "Pepe (PEPE)",
+        "Jito Staked SOL (JITOSOL)",
+        "Internet Computer (ICP)",
+        "BlackRock USD Institutional Digital Liquidity Fund (BUIDL)",
+        "Pi Network (PI)",
+        "Wrapped SOL (SOL)",
+        "Jupiter Perpetuals Liquidity Provider Token (JLP)",
+        "Pump.fun (PUMP)",
+        "syrupUSDC (SYRUPUSDC)",
+        "Provenance Blockchain (HASH)",
+        "HTX DAO (HTX)",
+        "Ondo (ONDO)",
+        "PAX Gold (PAXG)",
+        "Worldcoin (WLD)",
+        "Global Dollar (USDG)",
+        "KuCoin (KCS)",
+        "Circle USYC (USYC)",
+        "Rocket Pool ETH (RETH)",
+        "syrupUSDT (SYRUPUSDT)",
+        "BFUSD (BFUSD)",
+        "Ripple USD (RLUSD)",
+        "Binance Bridged USDC (USDC)",
+        "Sky (SKY)",
+        "Kaspa (KAS)",
+        "Aptos (APT)",
+        "Gate (GT)",
+        "Quant (QNT)",
+        "Arbitrum (ARB)",
+        "Wrapped BNB (WBNB)",
+        "Binance Staked SOL (BNSOL)",
+        "Kelp DAO Restaked ETH (RSETH)",
+        "Algorand (ALGO)",
+        "Official Trump (TRUMP)",
+        "Liquid Staked ETH (LSETH)",
+        "Function FBTC (FBTC)",
+        "Cosmos Hub (ATOM)",
+        "Lombard Staked BTC (LBTC)",
+        "VeChain (VET)",
+        "Flare (FLR)"
+    ];
+    property <[string]> coin-ids: [
+        "bitcoin",
+        "monero",
+        "litecoin",
+        "tether",
+        "polygon-ecosystem-token",
+        "ethereum",
+        "binancecoin",
+        "ripple",
+        "usd-coin",
+        "solana",
+        "staked-ether",
+        "tron",
+        "dogecoin",
+        "cardano",
+        "figure-heloc",
+        "whitebit",
+        "wrapped-steth",
+        "bitcoin-cash",
+        "wrapped-bitcoin",
+        "wrapped-beacon-eth",
+        "usds",
+        "chainlink",
+        "wrapped-eeth",
+        "binance-bridged-usdt-bnb-smart-chain",
+        "leo-token",
+        "weth",
+        "hyperliquid",
+        "stellar",
+        "zcash",
+        "coinbase-wrapped-btc",
+        "ethena-usde",
+        "sui",
+        "avalanche-2",
+        "hedera-hashgraph",
+        "shiba-inu",
+        "usdt0",
+        "susds",
+        "dai",
+        "the-open-network",
+        "world-liberty-financial",
+        "paypal-usd",
+        "mantle",
+        "crypto-com-chain",
+        "ethena-staked-usde",
+        "uniswap",
+        "polkadot",
+        "aave",
+        "bittensor",
+        "memecore",
+        "usd1-wlfi",
+        "canton-network",
+        "rain",
+        "bitget-token",
+        "okb",
+        "tether-gold",
+        "falcon-finance",
+        "near",
+        "ethereum-classic",
+        "ethena",
+        "aster-2",
+        "binance-peg-weth",
+        "pepe",
+        "jito-staked-sol",
+        "internet-computer",
+        "blackrock-usd-institutional-digital-liquidity-fund",
+        "pi-network",
+        "wrapped-solana",
+        "jupiter-perpetuals-liquidity-provider-token",
+        "pump-fun",
+        "syrupusdc",
+        "hash-2",
+        "htx-dao",
+        "ondo-finance",
+        "pax-gold",
+        "worldcoin-wld",
+        "global-dollar",
+        "kucoin-shares",
+        "hashnote-usyc",
+        "rocket-pool-eth",
+        "syrupusdt",
+        "bfusd",
+        "ripple-usd",
+        "binance-bridged-usdc-bnb-smart-chain",
+        "sky",
+        "kaspa",
+        "aptos",
+        "gatechain-token",
+        "quant-network",
+        "arbitrum",
+        "wbnb",
+        "binance-staked-sol",
+        "kelp-dao-restaked-eth",
+        "algorand",
+        "official-trump",
+        "liquid-staked-ethereum",
+        "ignition-fbtc",
+        "cosmos",
+        "lombard-staked-btc",
+        "vechain",
+        "flare-networks"
+    ];
+    property <[string]> coin-symbols: [
+        "BTC",
+        "XMR",
+        "LTC",
+        "USDT",
+        "POL",
+        "ETH",
+        "BNB",
+        "XRP",
+        "USDC",
+        "SOL",
+        "STETH",
+        "TRX",
+        "DOGE",
+        "ADA",
+        "FIGR_HELOC",
+        "WBT",
+        "WSTETH",
+        "BCH",
+        "WBTC",
+        "WBETH",
+        "USDS",
+        "LINK",
+        "WEETH",
+        "BSC-USD",
+        "LEO",
+        "WETH",
+        "HYPE",
+        "XLM",
+        "ZEC",
+        "CBBTC",
+        "USDE",
+        "SUI",
+        "AVAX",
+        "HBAR",
+        "SHIB",
+        "USDT0",
+        "SUSDS",
+        "DAI",
+        "TON",
+        "WLFI",
+        "PYUSD",
+        "MNT",
+        "CRO",
+        "SUSDE",
+        "UNI",
+        "DOT",
+        "AAVE",
+        "TAO",
+        "M",
+        "USD1",
+        "CC",
+        "RAIN",
+        "BGB",
+        "OKB",
+        "XAUT",
+        "USDF",
+        "NEAR",
+        "ETC",
+        "ENA",
+        "ASTER",
+        "WETH",
+        "PEPE",
+        "JITOSOL",
+        "ICP",
+        "BUIDL",
+        "PI",
+        "SOL",
+        "JLP",
+        "PUMP",
+        "SYRUPUSDC",
+        "HASH",
+        "HTX",
+        "ONDO",
+        "PAXG",
+        "WLD",
+        "USDG",
+        "KCS",
+        "USYC",
+        "RETH",
+        "SYRUPUSDT",
+        "BFUSD",
+        "RLUSD",
+        "USDC",
+        "SKY",
+        "KAS",
+        "APT",
+        "GT",
+        "QNT",
+        "ARB",
+        "WBNB",
+        "BNSOL",
+        "RSETH",
+        "ALGO",
+        "TRUMP",
+        "LSETH",
+        "FBTC",
+        "ATOM",
+        "LBTC",
+        "VET",
+        "FLR"
+    ];
+
+    function reset() {
+        amount = "";
+        price = "";
+        date = AppState.current-date;
+        is-buy = true;
+        wallet-index = 0;
+        coin-index = 0;
+    }
+
+    function submit() {
+        if (CryptoAdapter.wallet-list.length == 0) {
+            NotificationAdapter.show("Please create a wallet first", true);
+            return;
+        }
+        if (amount == "") {
+            NotificationAdapter.show("Amount is required", true);
+            return;
+        }
+
+        // Safe guard index
+        if (wallet-index >= CryptoAdapter.wallet-list.length) {
+            wallet-index = 0;
+        }
+        let wallet-id = CryptoAdapter.wallet-list[wallet-index].id;
+        
+        // Coin logic
+        if (coin-index >= coin-ids.length) { coin-index = 0; }
+        let coin-id = coin-ids[coin-index];
+        let symbol = coin-symbols[coin-index];
+
+        let type = is-buy ? "buy" : "sell";
+        
+        let result = CryptoAdapter.add-transaction(
+            wallet-id, 
+            coin-id, 
+            symbol, 
+            type, 
+            amount, 
+            price, 
+            "0", 
+            date
+        );
+
+        if (result == "") {
+            root.reset();
+            AppState.show-add-crypto = false;
+            CryptoAdapter.fetch-portfolio();
+            CryptoAdapter.fetch-wallets(); // Update wallet balance
+        } else {
+            NotificationAdapter.show(result, true);
+        }
+    }
+
+    width: 100%;
+    height: 100%;
+    background: transparent;
+
+    // Backdrop
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        background: #000000cc;
+        TouchArea {
+            clicked => {
+                root.reset();
+                AppState.show-add-crypto = false;
+            }
+        }
+    }
+
+    // Panel
+    Rectangle {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        width: 400px;
+        height: 680px;
+        background: Palette.sidebar-bg;
+        border-radius: 8px;
+        border-width: 1px;
+        border-color: Palette.border;
+
+        TouchArea { } // Block clicks
+
+        VerticalLayout {
+            padding: 32px;
+            spacing: 0px;
+
+            // Header
+            HorizontalLayout {
+                height: 32px;
+                Text {
+                    text: "ADD CRYPTO ASSET";
+                    color: Palette.text-primary;
+                    font-size: 12px;
+                    letter-spacing: 3px;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+                Rectangle {
+                    width: 32px; height: 32px;
+                    Text { text: "×"; color: Palette.text-muted; font-size: 24px; vertical-alignment: center; horizontal-alignment: center;}
+                    TouchArea { clicked => { root.reset(); AppState.show-add-crypto = false; } }
+                }
+            }
+
+            Rectangle { height: 24px; }
+
+            TypeToggle { is-buy <=> root.is-buy; }
+
+            Rectangle { height: 24px; }
+            
+            WalletSelector { selected-index <=> root.wallet-index; }
+            
+            if CryptoAdapter.wallet-list.length == 0: Rectangle {
+                height: 24px;
+                Text { text: "Create a wallet in the Wallets tab first."; color: Palette.danger; font-size: 10px; vertical-alignment: center; }
+            }
+
+            Rectangle { height: 16px; }
+
+            CoinSelector { 
+                options: root.coin-names;
+                selected-index <=> root.coin-index; 
+            }
+            
+            Rectangle { height: 16px; }
+            
+            UnderlineField { label: "AMOUNT"; placeholder: "0.00"; value <=> root.amount; large: true; }
+            Rectangle { height: 16px; }
+            UnderlineField { label: "PRICE PER COIN (USD)"; placeholder: "Leave empty for current market price"; value <=> root.price; }
+            Rectangle { height: 16px; }
+            UnderlineField { label: "DATE"; value <=> root.date; }
+
+            Rectangle { vertical-stretch: 1; }
+
+            Rectangle {
+                height: 48px;
+                background: Palette.surface;
+                border-radius: 4px;
+                border-width: 1px;
+                border-color: Palette.border;
+                
+                Text {
+                    text: "SAVE ASSET";
+                    color: Palette.text-primary;
+                    font-size: 12px;
+                    letter-spacing: 2px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+                TouchArea { clicked => { root.submit(); } }
+            }
+        }
+    }
+}

@@ -17,6 +17,7 @@ use serde::Deserialize;
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
+use tokio::time::sleep;
 
 /// CoinGecko API base URL (free tier, no API key required)
 const COINGECKO_API_BASE: &str = "https://api.coingecko.com/api/v3";
@@ -41,6 +42,11 @@ const MAX_SANITIZED_STRING_LENGTH: usize = 128;
 
 /// Last request timestamp for rate limiting (atomic for thread safety)
 static LAST_REQUEST_TIME: AtomicU64 = AtomicU64::new(0);
+
+/// Fixed allowlist of public tickers to avoid leaking a user's private portfolio
+/// Only these IDs are ever sent to CoinGecko
+const PRIVACY_PRESERVING_PRICE_IDS: &[&str] =
+    &["bitcoin", "ethereum", "litecoin", "monero", "tether"];
 
 /// Internal struct to deserialize CoinGecko API response
 #[derive(Debug, Deserialize)]
@@ -144,27 +150,36 @@ fn validate_percentage(pct: f64) -> f64 {
     }
 }
 
-/// Checks and enforces client-side rate limiting
-fn check_rate_limit() -> Result<(), String> {
-    let now = std::time::SystemTime::now()
+/// Returns current time in milliseconds since UNIX epoch
+fn now_millis() -> u64 {
+    std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
-        .as_millis() as u64;
+        .as_millis() as u64
+}
 
-    let last_request = LAST_REQUEST_TIME.load(Ordering::SeqCst);
+/// Enforces client-side rate limiting with a wait instead of an error
+async fn enforce_rate_limit() -> Result<(), String> {
+    loop {
+        let now = now_millis();
+        let last_request = LAST_REQUEST_TIME.load(Ordering::SeqCst);
 
-    if last_request > 0 && now < last_request + MIN_REQUEST_INTERVAL_MS {
-        let wait_time = (last_request + MIN_REQUEST_INTERVAL_MS - now) / 1000 + 1;
-        // Log rate limit event
-        log_rate_limit("coingecko_api", wait_time);
-        return Err(format!(
-            "Please wait {} seconds before making another request",
-            wait_time
-        ));
+        if last_request == 0 || now >= last_request + MIN_REQUEST_INTERVAL_MS {
+            if LAST_REQUEST_TIME
+                .compare_exchange(last_request, now, Ordering::SeqCst, Ordering::SeqCst)
+                .is_ok()
+            {
+                return Ok(());
+            }
+            // If another thread updated the timestamp, re-evaluate
+            continue;
+        }
+
+        let wait_ms = last_request + MIN_REQUEST_INTERVAL_MS - now;
+        let wait_secs = wait_ms.div_ceil(1000);
+        log_rate_limit("coingecko_api", wait_secs);
+        sleep(Duration::from_millis(wait_ms)).await;
     }
-
-    LAST_REQUEST_TIME.store(now, Ordering::SeqCst);
-    Ok(())
 }
 
 /// Creates a secure HTTP client with appropriate settings
@@ -203,8 +218,8 @@ pub async fn fetch_crypto_prices(coin_ids: Vec<String>) -> Result<Vec<CryptoAsse
         return Ok(Vec::new());
     }
 
-    // Check rate limit before proceeding
-    check_rate_limit()?;
+    // Check rate limit before proceeding (waits instead of failing fast)
+    enforce_rate_limit().await?;
 
     // Validate, sanitize, and deduplicate all coin IDs
     let mut seen = HashSet::new();
@@ -317,14 +332,22 @@ pub async fn fetch_crypto_prices(coin_ids: Vec<String>) -> Result<Vec<CryptoAsse
     Ok(assets)
 }
 
+/// Returns the fixed allowlist of public tickers to fetch, preventing portfolio fingerprinting
+pub fn default_price_allowlist() -> Vec<String> {
+    PRIVACY_PRESERVING_PRICE_IDS
+        .iter()
+        .map(|s| s.to_string())
+        .collect()
+}
+
 /// Fetches the current CLP to USD exchange rate using CoinGecko
 /// Returns how many CLP equals 1 USD (e.g., ~950 CLP = 1 USD)
 ///
 /// We use USDT/CLP as proxy since CoinGecko provides this pair.
 /// The rate returned is CLP per 1 USD.
 pub async fn fetch_clp_usd_rate() -> Result<f64, String> {
-    // Check rate limit before proceeding
-    check_rate_limit()?;
+    // Check rate limit before proceeding (waits instead of failing fast)
+    enforce_rate_limit().await?;
 
     // Use simple/price endpoint to get USDT price in CLP
     // USDT ≈ 1 USD, so this gives us CLP/USD rate
@@ -351,10 +374,28 @@ pub async fn fetch_clp_usd_rate() -> Result<f64, String> {
         return Err("Failed to fetch exchange rate".to_string());
     }
 
-    let body = response
-        .bytes()
+    // Limit response size to prevent abuse
+    if let Some(content_length) = response.content_length()
+        && content_length as usize > MAX_RESPONSE_SIZE
+    {
+        return Err("Response too large".to_string());
+    }
+
+    let mut downloaded: usize = 0;
+    let mut body: Vec<u8> = Vec::new();
+    let mut stream = response.bytes_stream();
+
+    while let Some(chunk) = stream
+        .try_next()
         .await
-        .map_err(|_| "Failed to read response")?;
+        .map_err(|_| "Failed to download response".to_string())?
+    {
+        downloaded += chunk.len();
+        if downloaded > MAX_RESPONSE_SIZE {
+            return Err("Response too large".to_string());
+        }
+        body.extend_from_slice(&chunk);
+    }
 
     let price_data: SimplePriceResponse =
         serde_json::from_slice(&body).map_err(|_| "Failed to parse exchange rate data")?;

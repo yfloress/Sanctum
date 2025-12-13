@@ -1,0 +1,208 @@
+// ==================== Crypto Widgets ====================
+// Reusable UI components for the Crypto Module
+
+import { Palette } from "../globals.slint";
+
+export component CryptoRow inherits Rectangle {
+    in property <bool> is-last: false;
+    in property <string> name;
+    in property <string> symbol;
+    in property <string> price;
+    in property <string> amount;
+    in property <string> value;
+    in property <string> change;
+    in property <bool> is-positive;
+    
+    callback clicked();
+
+    horizontal-stretch: 1;
+    height: 56px;
+    background: area.has-hover ? Palette.surface-hover : Palette.background;
+    animate background { duration: 150ms; }
+
+    HorizontalLayout {
+        padding-left: 24px;
+        padding-right: 24px;
+        spacing: 0px; // Using fixed widths for alignment
+        alignment: start;
+
+        // Asset Column (Stretches)
+        HorizontalLayout {
+            horizontal-stretch: 1;
+            spacing: 12px;
+            alignment: start;
+            Rectangle {
+                width: 32px; height: 32px; border-radius: 16px; background: Palette.text-primary; y: (parent.height - self.height) / 2;
+                Text { text: root.symbol; color: Palette.background; font-size: 10px; font-weight: 700; vertical-alignment: center; horizontal-alignment: center; }
+            }
+            VerticalLayout {
+                alignment: center;
+                Text { text: root.name; color: Palette.text-primary; font-size: 14px; font-weight: 400; overflow: elide; }
+                Text { text: root.symbol; color: Palette.text-muted; font-size: 11px; }
+            }
+        }
+
+        // Price Column (Fixed 100px)
+        Text { 
+            width: 100px; 
+            text: root.price; 
+            color: Palette.text-secondary; 
+            font-size: 14px; 
+            vertical-alignment: center; 
+            horizontal-alignment: right; 
+        }
+
+        // Holdings Column (Fixed 100px)
+        Text { 
+            width: 100px; 
+            text: root.amount; 
+            color: Palette.text-secondary; 
+            font-size: 14px; 
+            vertical-alignment: center; 
+            horizontal-alignment: right; 
+        }
+
+        // Value Column (Fixed 100px)
+        Text { 
+            width: 100px; 
+            text: root.value; 
+            color: Palette.text-primary; 
+            font-size: 14px; 
+            font-weight: 500;
+            vertical-alignment: center; 
+            horizontal-alignment: right; 
+        }
+
+        // Spacer (Reduced to 20px)
+        Rectangle { width: 20px; }
+
+        // 24h Change Column (Fixed 100px)
+        Rectangle {
+            width: 100px;
+            HorizontalLayout {
+                alignment: center; // Aligned with header
+                Rectangle {
+                    width: 80px; height: 28px; 
+                    background: root.is-positive ? Palette.success.with-alpha(0.1) : Palette.danger.with-alpha(0.1); 
+                    border-radius: 4px; 
+                    y: (parent.height - self.height) / 2;
+                    Text { 
+                        text: root.change; 
+                        color: root.is-positive ? Palette.success : Palette.danger; 
+                        font-size: 12px; 
+                        font-weight: 500; 
+                        vertical-alignment: center; 
+                        horizontal-alignment: center; 
+                    }
+                }
+            }
+        }
+    }
+    
+    if !root.is-last: Rectangle { height: 1px; width: parent.width; background: Palette.border-subtle; y: parent.height - 1px; }
+    
+    area := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+export component WalletRow inherits Rectangle {
+    in property <bool> is-last: false;
+    in property <string> name;
+    in property <string> category;
+    in property <string> balance;
+    in property <int> count;
+    in property <string> id;
+
+    callback delete;
+
+    horizontal-stretch: 1;
+    height: 64px;
+    background: area.has-hover ? Palette.surface-hover : Palette.background;
+    animate background { duration: 150ms; }
+
+    HorizontalLayout {
+        padding-left: 24px;
+        padding-right: 24px;
+        spacing: 0px;
+        alignment: start;
+
+        HorizontalLayout {
+            width: 300px;
+            spacing: 16px;
+            alignment: start;
+            Rectangle {
+                width: 40px; height: 40px; border-radius: 6px; background: Palette.surface; y: (parent.height - self.height) / 2;
+                Text { text: "📦"; font-size: 18px; vertical-alignment: center; horizontal-alignment: center; }
+            }
+            VerticalLayout {
+                alignment: center;
+                Text { text: root.name; color: Palette.text-primary; font-size: 14px; font-weight: 500; }
+                Text { text: root.category; color: Palette.text-muted; font-size: 11px; }
+            }
+        }
+        
+        Text { width: 100px; text: root.count + " Assets"; color: Palette.text-secondary; font-size: 12px; vertical-alignment: center; horizontal-alignment: center; }
+        
+        Text { width: 150px; text: root.balance; color: Palette.text-primary; font-size: 14px; font-weight: 500; vertical-alignment: center; horizontal-alignment: right; }
+        
+        Rectangle {
+            width: 32px; height: 32px;
+            y: (parent.height - self.height) / 2;
+            Text { text: "🗑"; font-size: 14px; vertical-alignment: center; horizontal-alignment: center; opacity: del-area.has-hover ? 1 : 0.5; }
+            del-area := TouchArea { clicked => { root.delete(); } }
+        }
+    }
+    if !root.is-last: Rectangle { height: 1px; width: parent.width; background: Palette.border-subtle; y: parent.height - 1px; }
+    area := TouchArea {}
+}
+
+export component TickerItem inherits Rectangle {
+    in property <string> symbol;
+    in property <string> price;
+    in property <string> change;
+    in property <bool> is-positive;
+
+    width: 160px; // Compact width
+    height: 40px; // Fits in header
+    background: transparent;
+
+    HorizontalLayout {
+        padding-left: 8px;
+        padding-right: 8px;
+        spacing: 8px;
+        alignment: center;
+        
+        Text { 
+            text: root.symbol; 
+            color: Palette.text-primary; 
+            font-size: 12px; 
+            font-weight: 600; 
+            vertical-alignment: center;
+        }
+        
+        Text { 
+            text: root.price; 
+            color: Palette.text-secondary; 
+            font-size: 12px; 
+            vertical-alignment: center;
+        }
+        
+        Text { 
+            text: root.change; 
+            color: root.is-positive ? Palette.success : Palette.danger; 
+            font-size: 11px; 
+            vertical-alignment: center;
+        }
+    }
+    
+    // Separator line
+    Rectangle {
+        width: 1px;
+        height: 16px;
+        background: Palette.border-subtle;
+        x: parent.width - 1px;
+        y: (parent.height - self.height) / 2;
+    }
+}

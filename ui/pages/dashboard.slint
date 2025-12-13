@@ -1,12 +1,65 @@
 // ==================== Dashboard Page ====================
-// Noir Minimalist - Financial overview and summary
+// Noir Minimalist - Net worth cockpit
 
 import {
     Palette,
     DashboardAdapter,
     TransactionAdapter,
+    AccountAdapter,
+    AppState,
 } from "../globals.slint";
+import { TacticalGrid } from "../components/tactical_grid.slint";
 import { TransactionItem } from "../components/transaction_item.slint";
+import { TextButton, BorderButton } from "../widgets.slint";
+
+component StatPill inherits Rectangle {
+    in property <string> label: "";
+    in property <string> value: "";
+    in property <color> accent: Palette.text-secondary;
+
+    min-width: 160px;
+    height: 64px;
+    background: Palette.surface-hover;
+    border-radius: Palette.radius-lg;
+    border-width: 1px;
+    border-color: Palette.border;
+
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 14px;
+        padding-top: 12px;
+        padding-bottom: 12px;
+        spacing: 10px;
+        alignment: center;
+
+        Rectangle {
+            width: 9px;
+            height: 9px;
+            border-radius: 5px;
+            background: root.accent;
+            opacity: 0.9;
+        }
+
+        VerticalLayout {
+            spacing: 4px;
+
+            Text {
+                text: root.label;
+                color: Palette.text-muted;
+                font-size: 11px;
+                font-weight: 400;
+                letter-spacing: 2px;
+            }
+
+            Text {
+                text: root.value;
+                color: root.accent;
+                font-size: 16px;
+                font-weight: 500;
+            }
+        }
+    }
+}
 
 export component DashboardPage inherits Rectangle {
     background: Palette.background;
@@ -20,17 +73,29 @@ export component DashboardPage inherits Rectangle {
     VerticalLayout {
         padding: 48px;
         padding-left: 64px;
-        spacing: 0px;
+        padding-right: 64px;
+        spacing: 24px;
 
-        // Header section
+        // Hero / net worth
         Rectangle {
-            height: 120px;
+            height: 220px;
+            background: @linear-gradient(135deg, #0f0f0f 0%, #090909 50%, #0f0f0f 100%);
+            border-radius: 10px;
+            border-width: 1px;
+            border-color: Palette.border;
+            clip: true;
+
+            TacticalGrid {
+                grid-cols: 14;
+                grid-rows: 6;
+                show-background: false;
+                opacity: 0.25;
+            }
 
             VerticalLayout {
-                spacing: 12px;
-                alignment: start;
+                padding: 24px;
+                spacing: 14px;
 
-                // Label
                 Text {
                     text: "NET WORTH";
                     color: Palette.text-muted;
@@ -39,128 +104,139 @@ export component DashboardPage inherits Rectangle {
                     letter-spacing: 3px;
                 }
 
-                // Value
                 Text {
                     text: DashboardAdapter.balance.total-balance;
                     color: Palette.text-primary;
-                    font-size: 48px;
-                    font-weight: 300;
-                    letter-spacing: -1px;
+                    font-size: 42px;
+                    font-weight: 400;
+                    letter-spacing: -0.5px;
                 }
-            }
-        }
 
-        // Divider
-        Rectangle {
-            height: 1px;
-            background: Palette.border;
-            horizontal-stretch: 1;
-        }
+                Text {
+                    text: "Sum across all accounts and wallets";
+                    color: Palette.text-secondary;
+                    font-size: 12px;
+                    font-weight: 400;
+                }
 
-        // Summary cards
-        HorizontalLayout {
-            height: 80px;
-            spacing: 12px;
+                HorizontalLayout {
+                    spacing: 12px;
 
-            // Income Card
-            Rectangle {
-                horizontal-stretch: 1;
-                background: income-area.has-hover ? Palette.surface-hover : Palette.surface;
-                border-radius: 6px;
-                border-width: 1px;
-                border-color: income-area.has-hover ? Palette.border-light : Palette.border;
-
-                animate background { duration: 150ms; }
-                animate border-color { duration: 150ms; }
-
-                VerticalLayout {
-                    padding: 16px;
-                    spacing: 4px;
-
-                    Text {
-                        text: "INCOME";
-                        color: Palette.text-muted;
-                        font-size: 11px;
-                        font-weight: 400;
-                        letter-spacing: 2px;
+                    StatPill {
+                        label: "INFLOW";
+                        value: DashboardAdapter.balance.total-income;
+                        accent: Palette.success;
                     }
 
-                    Text {
-                        text: DashboardAdapter.balance.total-income;
-                        color: Palette.success;
-                        font-size: 18px;
-                        font-weight: 500;
+                    StatPill {
+                        label: "OUTFLOW";
+                        value: DashboardAdapter.balance.total-expense;
+                        accent: Palette.danger;
+                    }
+
+                    StatPill {
+                        label: "ACTIVITY";
+                        value: DashboardAdapter.recent.length == 1 ? "1 move" : DashboardAdapter.recent.length + " moves";
+                        accent: Palette.text-primary;
                     }
                 }
 
-                income-area := TouchArea {}
-            }
+                Rectangle {
+                    vertical-stretch: 1;
+                }
 
-            // Expense Card
-            Rectangle {
-                horizontal-stretch: 1;
-                background: expense-area.has-hover ? Palette.surface-hover : Palette.surface;
-                border-radius: 6px;
-                border-width: 1px;
-                border-color: expense-area.has-hover ? Palette.border-light : Palette.border;
+                HorizontalLayout {
+                    spacing: 12px;
 
-                animate background { duration: 150ms; }
-                animate border-color { duration: 150ms; }
+                    BorderButton {
+                        text: "VIEW ANALYTICS";
 
-                VerticalLayout {
-                    padding: 16px;
-                    spacing: 4px;
-
-                    Text {
-                        text: "EXPENSE";
-                        color: Palette.text-muted;
-                        font-size: 11px;
-                        font-weight: 400;
-                        letter-spacing: 2px;
+                        clicked => {
+                            AppState.active-page = "analytics";
+                        }
                     }
 
-                    Text {
-                        text: DashboardAdapter.balance.total-expense;
-                        color: Palette.danger;
-                        font-size: 18px;
-                        font-weight: 500;
+                    TextButton {
+                        text: "+ ADD TRANSACTION";
+                        uppercase: true;
+
+                        clicked => {
+                            AccountAdapter.fetch-accounts();
+                            AppState.show-add-transaction = true;
+                        }
                     }
                 }
-                
-                expense-area := TouchArea {}
             }
-        }
-
-        Rectangle {
-            height: 24px;
         }
 
         // Recent transactions
         Rectangle {
             vertical-stretch: 1;
+            background: Palette.surface;
+            border-radius: 10px;
+            border-width: 1px;
+            border-color: Palette.border;
 
             VerticalLayout {
-                spacing: 12px;
+                padding: 24px;
+                spacing: 16px;
 
-                Text {
-                    text: "RECENT ACTIVITY";
-                    color: Palette.text-muted;
-                    font-size: 11px;
-                    font-weight: 400;
-                    letter-spacing: 3px;
+                HorizontalLayout {
+                    alignment: space-between;
+
+                    Text {
+                        text: "RECENT ACTIVITY";
+                        color: Palette.text-muted;
+                        font-size: 11px;
+                        font-weight: 400;
+                        letter-spacing: 3px;
+                    }
+
+                    HorizontalLayout {
+                        spacing: 12px;
+
+                        BorderButton {
+                            text: "VIEW ALL";
+
+                            clicked => {
+                                AppState.active-page = "transactions";
+                            }
+                        }
+
+                        TextButton {
+                            text: "+ ADD";
+
+                            clicked => {
+                                AccountAdapter.fetch-accounts();
+                                AppState.show-add-transaction = true;
+                            }
+                        }
+                    }
                 }
 
                 if DashboardAdapter.recent.length == 0: Rectangle {
                     vertical-stretch: 1;
 
-                    Text {
-                        text: "No transactions yet";
-                        color: Palette.text-muted;
-                        font-size: 14px;
-                        font-weight: 300;
-                        font-italic: true;
-                        horizontal-alignment: left;
-                        vertical-alignment: center;
+                    VerticalLayout {
+                        alignment: center;
+                        spacing: 10px;
+
+                        Text {
+                            text: "No transactions yet";
+                            color: Palette.text-muted;
+                            font-size: 14px;
+                            font-weight: 300;
+                            font-italic: true;
+                            horizontal-alignment: center;
+                        }
+
+                        Text {
+                            text: "Registra tu primer movimiento para poblar el panel";
+                            color: Palette.text-subtle;
+                            font-size: 12px;
+                            font-weight: 400;
+                            horizontal-alignment: center;
+                        }
                     }
                 }
 
