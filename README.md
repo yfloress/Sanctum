@@ -6,7 +6,11 @@
     <strong>Your personal financial fortress.</strong>
     <br />
     Private. Encrypted. Local-first.
-  </p>
+</p>
+
+<p>
+    <a href="./README_ES.md">Versión en Español 🇪🇸</a>
+</p>
 
 <div align="center">
     <a href="">
@@ -51,6 +55,8 @@ no leaks.
   transfers. Complete audit trail.
 - **Crypto Portfolio:** Investment tracking, PnL (Profit/Loss) calculation, and
   multi-wallet asset aggregation.
+- **Habit Tracking:** Streak monitoring and daily consistency checks integrated into your workflow.
+- **Analytics:** Net worth trajectory charts and expense breakdown.
 - **Native Performance:** Built with Slint and Skia for a GPU-accelerated,
   lightweight interface (No WebKit/Chromium RAM usage).
 - **Linux Native:** Optimized for the Linux desktop ecosystem (Wayland & X11 support).
