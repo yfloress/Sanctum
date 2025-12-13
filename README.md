@@ -9,7 +9,7 @@
 </p>
 
 <p>
-    <a href="./README_ES.md">Versión en Español 🇪🇸</a>
+    <a href="README_ES.md">Versión en Español</a>
 </p>
 
 <div align="center">
