@@ -51,27 +51,14 @@ export component AnalyticsPage inherits Rectangle {
         padding: 48px;
         padding-left: 64px;
         padding-right: 64px;
-        spacing: 24px;
+        spacing: 20px;
 
-        // Hero - net worth snapshot
-        Rectangle {
-            height: 220px;
-            background: @linear-gradient(135deg, #0f0f0f 0%, #090909 50%, #0f0f0f 100%);
-            border-radius: 10px;
-            border-width: 1px;
-            border-color: Palette.border;
-            clip: true;
-
-            TacticalGrid {
-                grid-cols: 14;
-                grid-rows: 6;
-                show-background: false;
-                opacity: 0.22;
-            }
+        // Header compact
+        HorizontalLayout {
+            alignment: space-between;
 
             VerticalLayout {
-                padding: 24px;
-                spacing: 14px;
+                spacing: 8px;
 
                 Text {
                     text: "ANALYTICS";
@@ -84,51 +71,86 @@ export component AnalyticsPage inherits Rectangle {
                 Text {
                     text: AnalyticsAdapter.summary.net_worth;
                     color: Palette.text-primary;
-                    font-size: 36px;
+                    font-size: 32px;
                     font-weight: 400;
                     font-family: "monospace";
                 }
 
                 Text {
-                    text: "Net worth snapshot · Range " + AnalyticsAdapter.active-range;
+                    text: "Range " + AnalyticsAdapter.active-range;
                     color: Palette.text-secondary;
                     font-size: 12px;
                     font-weight: 400;
                 }
+            }
 
-                HorizontalLayout {
-                    spacing: 12px;
+            HorizontalLayout {
+                spacing: 12px;
 
-                    MiniStat {
-                        label: "RANGE";
-                        value: AnalyticsAdapter.active-range;
-                        accent: Palette.text-primary;
-                    }
-
-                    MiniStat {
-                        label: "HIGH";
-                        value: AnalyticsAdapter.summary.max_value;
-                        accent: Palette.success;
-                    }
-
-                    MiniStat {
-                        label: "LOW";
-                        value: AnalyticsAdapter.summary.min_value;
-                        accent: Palette.danger;
-                    }
-                }
-
+                // Range selector
                 Rectangle {
-                    vertical-stretch: 1;
+                    background: Palette.surface;
+                    border-radius: 6px;
+                    border-width: 1px;
+                    border-color: Palette.border;
+                    height: 32px;
+
+                    HorizontalLayout {
+                        spacing: 0px;
+
+                        for range in ["1M", "3M", "6M", "1Y", "ALL"] : Rectangle {
+                            width: 54px;
+                            background: AnalyticsAdapter.active-range == range ? Palette.border : transparent;
+
+                            Text {
+                                text: range;
+                                color: AnalyticsAdapter.active-range == range ? Palette.text-primary : Palette.text-secondary;
+                                font-size: 11px;
+                                font-weight: 500;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+
+                            TouchArea {
+                                clicked => {
+                                    AnalyticsAdapter.active-range = range;
+                                    AnalyticsAdapter.fetch-analytics(range);
+                                }
+                            }
+                        }
+                    }
                 }
 
                 BorderButton {
-                    text: "REFRESH RANGE";
+                    text: "REFRESH";
 
                     clicked => {
                         AnalyticsAdapter.fetch-analytics(AnalyticsAdapter.active-range);
                     }
                 }
+            }
+        }
+
+        // Inline stats
+        HorizontalLayout {
+            spacing: 12px;
+
+            MiniStat {
+                label: "RANGE";
+                value: AnalyticsAdapter.active-range;
+                accent: Palette.text-primary;
+            }
+
+            MiniStat {
+                label: "HIGH";
+                value: AnalyticsAdapter.summary.max_value;
+                accent: Palette.success;
+            }
+
+            MiniStat {
+                label: "LOW";
+                value: AnalyticsAdapter.summary.min_value;
+                accent: Palette.danger;
             }
         }
 
@@ -144,50 +166,12 @@ export component AnalyticsPage inherits Rectangle {
                 padding: 20px;
                 spacing: 14px;
 
-                HorizontalLayout {
-                    alignment: space-between;
-
-                    Text {
-                        text: "NET WORTH TREND";
-                        color: Palette.text-muted;
-                        font-size: 11px;
-                        font-weight: 400;
-                        letter-spacing: 3px;
-                    }
-
-                    // Range selector
-                    Rectangle {
-                        background: Palette.surface-hover;
-                        border-radius: 6px;
-                        border-width: 1px;
-                        border-color: Palette.border;
-                        height: 32px;
-
-                        HorizontalLayout {
-                            spacing: 0px;
-
-                            for range in ["1M", "3M", "6M", "1Y", "ALL"] : Rectangle {
-                                width: 54px;
-                                background: AnalyticsAdapter.active-range == range ? Palette.border : transparent;
-
-                                Text {
-                                    text: range;
-                                    color: AnalyticsAdapter.active-range == range ? Palette.text-primary : Palette.text-secondary;
-                                    font-size: 11px;
-                                    font-weight: 500;
-                                    horizontal-alignment: center;
-                                    vertical-alignment: center;
-                                }
-
-                                TouchArea {
-                                    clicked => {
-                                        AnalyticsAdapter.active-range = range;
-                                        AnalyticsAdapter.fetch-analytics(range);
-                                    }
-                                }
-                            }
-                        }
-                    }
+                Text {
+                    text: "NET WORTH TREND";
+                    color: Palette.text-muted;
+                    font-size: 11px;
+                    font-weight: 400;
+                    letter-spacing: 3px;
                 }
 
                 SanctumLineChart {
