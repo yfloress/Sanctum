@@ -1572,7 +1572,7 @@ impl AppController {
             }
         };
 
-        // Calculate Normalized Current Balance (Fiat only)
+        // Calculate Normalized Current Balance
         let current_balance: i64 = balances.iter().map(|b| {
             normalize(b.current_balance, &b.account_id)
         }).sum();
@@ -1646,39 +1646,37 @@ impl AppController {
         let values: Vec<i64> = points_rev.iter().map(|(_, v)| *v).collect();
         let min_val = *values.iter().min().unwrap_or(&0);
         let max_val = *values.iter().max().unwrap_or(&0);
-        let is_flat = max_val == min_val;
-        let safe_range = if is_flat {
-            1.0
-        } else {
-            (max_val - min_val) as f32
-        };
+        let safe_range = ((max_val - min_val) as f64).max(1.0);
+
+        // Generate Smooth Path (Catmull-Rom Spline -> Cubic Bezier)
+        // Normalize points to 0..100 space
+        let points: Vec<(f64, f64)> = values.iter().enumerate().map(|(i, &v)| {
+            let x = (i as f64 / (values.len().max(2) - 1) as f64) * 100.0;
+            let y_ratio = (v - min_val) as f64 / safe_range;
+            let y = 100.0 - (5.0 + (y_ratio * 90.0)); // 5% padding
+            (x, y)
+        }).collect();
 
         let mut path_cmd = String::new();
-        let len = values.len() as f32;
+        if !points.is_empty() {
+            path_cmd.push_str(&format!("M {:.2} {:.2}", points[0].0, points[0].1));
 
-        for (idx, val) in values.iter().enumerate() {
-            let x = if len > 1.0 {
-                (idx as f32) * (100.0 / (len - 1.0))
-            } else {
-                0.0
-            };
+            for i in 0..points.len() - 1 {
+                let p0 = if i == 0 { points[0] } else { points[i - 1] };
+                let p1 = points[i];
+                let p2 = points[i + 1];
+                let p3 = if i + 2 < points.len() { points[i + 2] } else { p2 };
 
-            let ratio = if is_flat {
-                0.5
-            } else {
-                ((*val - min_val) as f32 / safe_range).clamp(0.0, 1.0)
-            };
+                let cp1x = p1.0 + (p2.0 - p0.0) / 6.0;
+                let cp1y = p1.1 + (p2.1 - p0.1) / 6.0;
 
-            let y_norm = 100.0 - (5.0 + (ratio * 90.0));
+                let cp2x = p2.0 - (p3.0 - p1.0) / 6.0;
+                let cp2y = p2.1 - (p3.1 - p1.1) / 6.0;
 
-            if idx == 0 {
-                path_cmd.push_str(&format!("M {:.2} {:.2}", x, y_norm));
-            } else {
-                path_cmd.push_str(&format!(" L {:.2} {:.2}", x, y_norm));
+                path_cmd.push_str(&format!(" C {:.2} {:.2} {:.2} {:.2} {:.2} {:.2}", 
+                    cp1x, cp1y, cp2x, cp2y, p2.0, p2.1));
             }
-        }
-
-        if path_cmd.is_empty() {
+        } else {
             path_cmd = "M 0 50 L 100 50".to_string();
         }
 
@@ -1734,6 +1732,8 @@ impl AppController {
             expense_slices,
         })
     }
+
+
 
     /// Returns normalized SVG path commands (0-100 space) for net worth history and current net worth formatted
     /// Also returns min and max values formatted for labels
