@@ -61,46 +61,6 @@ component StatPill inherits Rectangle {
     }
 }
 
-component SummaryCard inherits Rectangle {
-    in property <string> label: "";
-    in property <string> value: "";
-    in property <string> caption: "";
-    in property <color> accent: Palette.text-secondary;
-
-    background: Palette.surface;
-    border-radius: 8px;
-    border-width: 1px;
-    border-color: Palette.border;
-    horizontal-stretch: 1;
-
-    VerticalLayout {
-        padding: 18px;
-        spacing: 8px;
-
-        Text {
-            text: root.label;
-            color: Palette.text-muted;
-            font-size: 11px;
-            font-weight: 400;
-            letter-spacing: 2px;
-        }
-
-        Text {
-            text: root.value;
-            color: root.accent;
-            font-size: 20px;
-            font-weight: 500;
-        }
-
-        Text {
-            text: root.caption;
-            color: Palette.text-secondary;
-            font-size: 12px;
-            font-weight: 400;
-        }
-    }
-}
-
 export component DashboardPage inherits Rectangle {
     background: Palette.background;
 
@@ -206,33 +166,6 @@ export component DashboardPage inherits Rectangle {
                         }
                     }
                 }
-            }
-        }
-
-        // Quick summary row
-        HorizontalLayout {
-            spacing: 12px;
-            height: 110px;
-
-            SummaryCard {
-                label: "INFLOW";
-                value: DashboardAdapter.balance.total-income;
-                caption: "Entradas registradas en el periodo";
-                accent: Palette.success;
-            }
-
-            SummaryCard {
-                label: "OUTFLOW";
-                value: DashboardAdapter.balance.total-expense;
-                caption: "Gasto total consolidado";
-                accent: Palette.danger;
-            }
-
-            SummaryCard {
-                label: "NET POSITION";
-                value: DashboardAdapter.balance.total-balance;
-                caption: "Liquidez + inversión disponible";
-                accent: Palette.text-primary;
             }
         }
 
