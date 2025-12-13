@@ -32,8 +32,8 @@ export component CryptoRow inherits Rectangle {
             spacing: 12px;
             alignment: start;
             Rectangle {
-                width: 32px; height: 32px; border-radius: 16px; background: Palette.surface; y: (parent.height - self.height) / 2;
-                Text { text: root.symbol; color: Palette.text-primary; font-size: 10px; font-weight: 500; vertical-alignment: center; horizontal-alignment: center; }
+                width: 32px; height: 32px; border-radius: 16px; background: Palette.text-primary; y: (parent.height - self.height) / 2;
+                Text { text: root.symbol; color: Palette.background; font-size: 10px; font-weight: 700; vertical-alignment: center; horizontal-alignment: center; }
             }
             VerticalLayout {
                 alignment: center;
