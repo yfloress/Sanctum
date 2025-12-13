@@ -7,9 +7,9 @@ import {
     CryptoAdapter,
     AppState
 } from "../globals.slint";
-import { CryptoRow, WalletRow, TickerItem } from "../components/crypto_widgets.slint";
+import { CryptoRow, WalletRow, TickerItem, CryptoCard } from "../components/crypto_widgets.slint";
 import { AssetDetailPanel } from "../components/asset_detail.slint";
-import { TextButton } from "../widgets.slint";
+import { TextButton, BorderButton } from "../widgets.slint";
 
 component TabButton inherits Rectangle {
     in property <string> text;
@@ -60,8 +60,10 @@ export component CryptoPage inherits Rectangle {
             HorizontalLayout {
                 // Exchange Rate Badge
                 Rectangle {
-                    width: 120px;
+                    width: 180px;
                     background: transparent;
+                    clip: true;
+
                     HorizontalLayout {
                         alignment: center;
                         spacing: 8px;
@@ -145,7 +147,7 @@ export component CryptoPage inherits Rectangle {
                     spacing: 8px;
                     
                     HorizontalLayout {
-                        spacing: 8px;
+                        spacing: 12px;
                         Text { 
                             text: "CRYPTO PORTFOLIO"; 
                             color: Palette.text-muted; 
@@ -155,19 +157,9 @@ export component CryptoPage inherits Rectangle {
                             vertical-alignment: center;
                         }
                         
-                        // Refrescar
-                        Rectangle {
-                            height: 16px; width: 16px;
-                            Text {
-                                text: "↻";
-                                color: refresh-touch.has-hover ? Palette.accent : Palette.text-muted;
-                                font-size: 12px;
-                                vertical-alignment: center; horizontal-alignment: center;
-                            }
-                            refresh-touch := TouchArea {
-                                mouse-cursor: pointer;
-                                clicked => { CryptoAdapter.refresh-prices(); }
-                            }
+                        BorderButton {
+                            text: "REFRESH";
+                            clicked => { CryptoAdapter.refresh-prices(); }
                         }
                     }
 
@@ -248,22 +240,6 @@ export component CryptoPage inherits Rectangle {
                 padding-bottom: 24px;
                 spacing: 0px;
 
-                // Headers
-                Rectangle {
-                    height: 32px;
-                    HorizontalLayout {
-                        padding-left: 16px; padding-right: 16px;
-                        Text { width: 240px; text: "ASSET"; color: Palette.text-subtle; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; }
-                        Text { width: 140px; text: "PRICE"; color: Palette.text-subtle; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: right; }
-                        Text { width: 140px; text: "HOLDINGS"; color: Palette.text-subtle; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: right; }
-                        Text { width: 140px; text: "VALUE"; color: Palette.text-subtle; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: right; }
-                        Rectangle { width: 20px; }
-                        Text { width: 100px; text: "24H CHANGE"; color: Palette.text-subtle; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: center; }
-                    }
-                }
-                
-                Rectangle { height: 8px; }
-
                 if CryptoAdapter.portfolio.length == 0: VerticalLayout {
                     alignment: center;
                     spacing: 16px;
@@ -275,34 +251,32 @@ export component CryptoPage inherits Rectangle {
                 }
 
                 if CryptoAdapter.portfolio.length > 0: Flickable {
-                    viewport-height: CryptoAdapter.portfolio.length * 60px;
+                    height: 180px; // Fixed height for card row
+                    viewport-width: (CryptoAdapter.portfolio.length * 236px);
                     
-                    VerticalLayout {
-                        spacing: 4px;
-                        for asset[index] in CryptoAdapter.portfolio: Rectangle {
-                            height: 56px;
-                            background: Palette.surface;
-                            border-radius: 8px;
-                            border-width: 1px;
-                            border-color: Palette.border-subtle;
+                    HorizontalLayout {
+                        spacing: 16px;
+                        alignment: start;
+                        
+                        for asset[index] in CryptoAdapter.portfolio: CryptoCard {
+                            name: asset.name;
+                            symbol: asset.symbol;
+                            price: asset.price;
+                            amount: asset.amount;
+                            value: asset.value;
+                            change: asset.change-24h;
+                            is-positive: asset.is-positive;
                             
-                            CryptoRow {
-                                name: asset.name;
-                                symbol: asset.symbol;
-                                price: asset.price;
-                                amount: asset.amount;
-                                value: asset.value;
-                                change: asset.change-24h;
-                                is-positive: asset.is-positive;
-                                is-last: false;
-                                clicked => {
-                                    CryptoAdapter.fetch-asset-details(asset.id);
-                                    CryptoAdapter.show-asset-detail = true;
-                                }
+                            clicked => {
+                                CryptoAdapter.fetch-asset-details(asset.id);
+                                CryptoAdapter.show-asset-detail = true;
                             }
                         }
                     }
                 }
+                
+                // Flexible spacer
+                Rectangle { vertical-stretch: 1; }
             }
 
             // TAB: WALLETS
@@ -367,7 +341,9 @@ export component CryptoPage inherits Rectangle {
     // DETAIL OVERLAY
     if CryptoAdapter.show-asset-detail: Rectangle {
         x: 0; y: 0; width: 100%; height: 100%;
-        background: #000000cc;
+        
+        // Backdrop
+        Rectangle { background: #00000090; animate background { duration: 200ms; } }
 
         HorizontalLayout {
             width: parent.width;

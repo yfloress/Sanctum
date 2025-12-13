@@ -206,3 +206,102 @@ export component TickerItem inherits Rectangle {
         y: (parent.height - self.height) / 2;
     }
 }
+
+export component CryptoCard inherits Rectangle {
+    in property <string> name;
+    in property <string> symbol;
+    in property <string> price;
+    in property <string> amount;
+    in property <string> value;
+    in property <string> change;
+    in property <bool> is-positive;
+    
+    callback clicked();
+
+    width: 220px;
+    height: 160px;
+    background: touch.has-hover ? Palette.surface-hover : Palette.surface;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: Palette.border-subtle;
+
+    animate background { duration: 150ms; }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+
+    VerticalLayout {
+        padding: 16px;
+        spacing: 0px;
+        alignment: space-between;
+
+        // Header: Symbol + Change
+        HorizontalLayout {
+            alignment: space-between;
+            
+            // Icon + Symbol
+            HorizontalLayout {
+                spacing: 8px;
+                Rectangle {
+                    width: 32px; height: 32px; 
+                    border-radius: 16px; 
+                    background: Palette.text-primary;
+                    Text { 
+                        text: root.symbol; 
+                        color: Palette.background; 
+                        font-size: 8px; 
+                        font-weight: 700; 
+                        vertical-alignment: center; horizontal-alignment: center; 
+                    }
+                }
+                VerticalLayout {
+                    alignment: center;
+                    Text { text: root.symbol; color: Palette.text-primary; font-size: 12px; font-weight: 700; }
+                    Text { text: root.name; color: Palette.text-muted; font-size: 10px; overflow: elide; }
+                }
+            }
+
+            // Change Pill
+            Rectangle {
+                width: 60px; height: 24px;
+                border-radius: 4px;
+                background: root.is-positive ? Palette.success.with-alpha(0.1) : Palette.danger.with-alpha(0.1);
+                Text { 
+                    text: root.change; 
+                    color: root.is-positive ? Palette.success : Palette.danger; 
+                    font-size: 10px; 
+                    font-weight: 600; 
+                    vertical-alignment: center; horizontal-alignment: center; 
+                }
+            }
+        }
+
+        // Center: Price
+        Text {
+            text: root.price;
+            color: Palette.text-primary;
+            font-size: 22px;
+            font-weight: 300;
+            horizontal-alignment: center;
+        }
+
+        // Footer: Holdings
+        VerticalLayout {
+            spacing: 2px;
+            Text { 
+                text: root.amount; 
+                color: Palette.text-secondary; 
+                font-size: 11px; 
+                horizontal-alignment: center; 
+            }
+            Text { 
+                text: "≈ " + root.value; 
+                color: Palette.text-muted; 
+                font-size: 10px; 
+                horizontal-alignment: center; 
+            }
+        }
+    }
+}
