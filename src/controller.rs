@@ -1088,11 +1088,34 @@ impl AppController {
     /// Gets expenses aggregated by category
     pub fn get_expenses_by_category(&self) -> Result<Vec<(String, i64)>, ControllerError> {
         let transactions = self.get_transactions()?;
+        let accounts = self.get_accounts()?;
+        
+        let currency_map: std::collections::HashMap<String, String> = accounts
+            .iter()
+            .map(|a| (a.id.clone(), a.currency.to_uppercase()))
+            .collect();
+
+        let clp_rate = match self.load_exchange_rate("CLP_USD".to_string()) {
+            Ok(Some((r, _))) => r,
+            _ => 1.0,
+        };
+        let rate = if clp_rate > 0.0 { clp_rate } else { 1.0 };
+
+        let normalize = |amount: i64, account_id: &str| -> i64 {
+            let currency = currency_map.get(account_id).map(|s| s.as_str()).unwrap_or("USD");
+            if currency == "CLP" {
+                ((amount as f64) / rate) as i64
+            } else {
+                amount
+            }
+        };
+
         let mut map: std::collections::HashMap<String, i64> = std::collections::HashMap::new();
 
         for tx in transactions {
             if tx.transaction_type == "expense" {
-                *map.entry(tx.category).or_default() += tx.amount;
+                let amount = normalize(tx.amount, &tx.account_id);
+                *map.entry(tx.category).or_default() += amount;
             }
         }
 
@@ -1525,8 +1548,34 @@ impl AppController {
         range: String,
     ) -> Result<AnalyticsSummary, ControllerError> {
         let balances = self.get_account_balances()?;
-        let current_balance: i64 = balances.iter().map(|b| b.current_balance).sum();
+        let accounts = self.get_accounts()?;
         let transactions = self.get_transactions()?;
+
+        // Currency Normalization Setup
+        let currency_map: std::collections::HashMap<String, String> = accounts
+            .iter()
+            .map(|a| (a.id.clone(), a.currency.to_uppercase()))
+            .collect();
+
+        let clp_rate = match self.load_exchange_rate("CLP_USD".to_string()) {
+            Ok(Some((r, _))) => r,
+            _ => 1.0,
+        };
+        let rate = if clp_rate > 0.0 { clp_rate } else { 1.0 };
+
+        let normalize = |amount: i64, account_id: &str| -> i64 {
+            let currency = currency_map.get(account_id).map(|s| s.as_str()).unwrap_or("USD");
+            if currency == "CLP" {
+                ((amount as f64) / rate) as i64
+            } else {
+                amount
+            }
+        };
+
+        // Calculate Normalized Current Balance (Fiat only)
+        let current_balance: i64 = balances.iter().map(|b| {
+            normalize(b.current_balance, &b.account_id)
+        }).sum();
 
         let today = chrono::Local::now().date_naive();
         let start_date = match range.as_str() {
@@ -1545,17 +1594,19 @@ impl AppController {
             _ => today,
         };
 
-        // Build daily deltas
+        // Build daily deltas (Normalized)
         let mut delta_by_day: std::collections::HashMap<NaiveDate, i64> =
             std::collections::HashMap::new();
         let mut earliest_tx: Option<NaiveDate> = None;
         for tx in &transactions {
             if let Ok(date) = NaiveDate::parse_from_str(&tx.date, "%Y-%m-%d") {
-                let delta = match tx.transaction_type.as_str() {
+                let raw_delta = match tx.transaction_type.as_str() {
                     "income" => tx.amount,
                     "expense" => -tx.amount,
                     _ => 0,
                 };
+                let delta = normalize(raw_delta, &tx.account_id);
+                
                 *delta_by_day.entry(date).or_insert(0) += delta;
                 earliest_tx = Some(earliest_tx.map_or(date, |d| d.min(date)));
             }
@@ -1631,7 +1682,7 @@ impl AppController {
             path_cmd = "M 0 50 L 100 50".to_string();
         }
 
-        // Expense donut (current month)
+        // Expense donut (Normalized)
         let mut expenses: std::collections::HashMap<String, i64> = std::collections::HashMap::new();
         let current_month = today.month();
         let current_year = today.year();
@@ -1643,7 +1694,8 @@ impl AppController {
                 && date.year() == current_year
                 && date.month() == current_month
             {
-                *expenses.entry(tx.category.to_uppercase()).or_insert(0) += tx.amount;
+                let amount = normalize(tx.amount, &tx.account_id);
+                *expenses.entry(tx.category.to_uppercase()).or_insert(0) += amount;
             }
         }
 
@@ -1692,6 +1744,27 @@ impl AppController {
         let accounts = self.get_accounts()?;
         let transactions = self.get_transactions()?;
 
+        // Currency Normalization Setup
+        let currency_map: std::collections::HashMap<String, String> = accounts
+            .iter()
+            .map(|a| (a.id.clone(), a.currency.to_uppercase()))
+            .collect();
+
+        let clp_rate = match self.load_exchange_rate("CLP_USD".to_string()) {
+            Ok(Some((r, _))) => r,
+            _ => 1.0,
+        };
+        let rate = if clp_rate > 0.0 { clp_rate } else { 1.0 };
+
+        let normalize = |amount: i64, account_id: &str| -> i64 {
+            let currency = currency_map.get(account_id).map(|s| s.as_str()).unwrap_or("USD");
+            if currency == "CLP" {
+                ((amount as f64) / rate) as i64
+            } else {
+                amount
+            }
+        };
+
         // Event definition to merge Account Creations and Transactions
         struct FinancialEvent {
             date: chrono::NaiveDate,
@@ -1712,29 +1785,32 @@ impl AppController {
                     chrono::Local::now().date_naive()
                 };
 
+                let amount_delta = normalize(acc.initial_balance, &acc.id);
+
                 events.push(FinancialEvent {
                     date,
-                    amount_delta: acc.initial_balance,
+                    amount_delta,
                 });
             }
         }
 
         // 2. Add Transaction Events
         for tx in &transactions {
-            let delta = match tx.transaction_type.as_str() {
+            let raw_delta = match tx.transaction_type.as_str() {
                 "income" => tx.amount,
                 "expense" => -tx.amount,
                 _ => 0,
             };
 
-            if delta == 0 {
+            if raw_delta == 0 {
                 continue;
             }
 
             if let Ok(date) = NaiveDate::parse_from_str(&tx.date, "%Y-%m-%d") {
+                let amount_delta = normalize(raw_delta, &tx.account_id);
                 events.push(FinancialEvent {
                     date,
-                    amount_delta: delta,
+                    amount_delta,
                 });
             }
         }
