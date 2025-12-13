@@ -38,16 +38,19 @@ export component CryptoPage inherits Rectangle {
                         spacing: 12px;
                         
                         // Etiqueta CLP estilizada
-                        Rectangle {
-                            width: 36px; height: 20px;
-                            border-radius: 4px;
-                            background: Palette.surface-hover;
-                            Text { 
-                                text: "CLP"; 
-                                color: Palette.text-muted; 
-                                font-size: 10px; 
-                                font-weight: 700; 
-                                vertical-alignment: center; horizontal-alignment: center; 
+                        VerticalLayout {
+                            alignment: center;
+                            Rectangle {
+                                width: 36px; height: 20px;
+                                border-radius: 4px;
+                                background: Palette.surface-hover;
+                                Text { 
+                                    text: "CLP"; 
+                                    color: Palette.text-muted; 
+                                    font-size: 10px; 
+                                    font-weight: 700; 
+                                    vertical-alignment: center; horizontal-alignment: center; 
+                                }
                             }
                         }
                         

@@ -26,9 +26,9 @@ export component CryptoRow inherits Rectangle {
         spacing: 0px; // Using fixed widths for alignment
         alignment: start;
 
-        // Asset Column (240px)
+        // Asset Column (Stretches)
         HorizontalLayout {
-            width: 240px;
+            horizontal-stretch: 1;
             spacing: 12px;
             alignment: start;
             Rectangle {
@@ -42,9 +42,9 @@ export component CryptoRow inherits Rectangle {
             }
         }
 
-        // Price Column (140px)
+        // Price Column (Fixed 100px)
         Text { 
-            width: 140px; 
+            width: 100px; 
             text: root.price; 
             color: Palette.text-secondary; 
             font-size: 14px; 
@@ -52,9 +52,9 @@ export component CryptoRow inherits Rectangle {
             horizontal-alignment: right; 
         }
 
-        // Holdings Column (140px)
+        // Holdings Column (Fixed 100px)
         Text { 
-            width: 140px; 
+            width: 100px; 
             text: root.amount; 
             color: Palette.text-secondary; 
             font-size: 14px; 
@@ -62,9 +62,9 @@ export component CryptoRow inherits Rectangle {
             horizontal-alignment: right; 
         }
 
-        // Value Column (140px)
+        // Value Column (Fixed 100px)
         Text { 
-            width: 140px; 
+            width: 100px; 
             text: root.value; 
             color: Palette.text-primary; 
             font-size: 14px; 
@@ -73,10 +73,10 @@ export component CryptoRow inherits Rectangle {
             horizontal-alignment: right; 
         }
 
-        // Spacer to push 24h to end or fixed width
-        Rectangle { width: 40px; }
+        // Spacer (Reduced to 20px)
+        Rectangle { width: 20px; }
 
-        // 24h Change Column (100px)
+        // 24h Change Column (Fixed 100px)
         Rectangle {
             width: 100px;
             HorizontalLayout {
