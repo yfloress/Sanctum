@@ -220,6 +220,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let controller_clone = controller.clone();
         let notify = show_notification.clone();
         let session_monitor = start_session_monitor.clone();
+        let ui_weak = ui_weak.clone();
         auth_adapter.on_create_vault(move |password: SharedString| {
             log::info!("create_vault called");
 
@@ -252,6 +253,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let controller_clone = controller.clone();
         let notify = show_notification.clone();
         let session_monitor = start_session_monitor.clone();
+        let ui_weak = ui_weak.clone();
         auth_adapter.on_unlock_vault(move |password: SharedString| {
             log::info!("unlock_vault called");
 
@@ -865,11 +867,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let mut current_streak = 0;
                 if !habit_dates.is_empty() {
                     let mut check_date = today;
-                    if !habit_dates.contains(&today) {
-                        if let Some(prev) = today.pred_opt() {
+                    if !habit_dates.contains(&today)
+                        && let Some(prev) = today.pred_opt() {
                             check_date = prev;
                         }
-                    }
                     
                     while habit_dates.contains(&check_date) {
                         current_streak += 1;

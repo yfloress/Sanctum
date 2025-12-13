@@ -52,33 +52,35 @@ export component SettingsPage inherits Rectangle {
                 }
                 
                 // Toggle Switch
-                Rectangle {
-                    width: 48px;
-                    height: 24px;
-                    border-radius: 12px;
-                    background: SettingsAdapter.auto-fetch-enabled ? Palette.success : Palette.surface-hover;
-                    border-width: 1px;
-                    border-color: Palette.border;
-                    vertical-alignment: center;
-                    
-                    animate background { duration: 200ms; }
-                    
-                    // Knob
+                VerticalLayout {
+                    alignment: center;
                     Rectangle {
-                        x: SettingsAdapter.auto-fetch-enabled ? 26px : 2px;
-                        y: 2px;
-                        width: 20px;
-                        height: 20px;
-                        border-radius: 10px;
-                        background: Palette.text-primary;
+                        width: 48px;
+                        height: 24px;
+                        border-radius: 12px;
+                        background: SettingsAdapter.auto-fetch-enabled ? Palette.success : Palette.surface-hover;
+                        border-width: 1px;
+                        border-color: Palette.border;
                         
-                        animate x { duration: 200ms; easing: ease-out; }
-                    }
-                    
-                    TouchArea {
-                        clicked => {
-                            SettingsAdapter.set-auto-fetch(!SettingsAdapter.auto-fetch-enabled);
-                            SettingsAdapter.auto-fetch-enabled = !SettingsAdapter.auto-fetch-enabled;
+                        animate background { duration: 200ms; }
+                        
+                        // Knob
+                        Rectangle {
+                            x: SettingsAdapter.auto-fetch-enabled ? 26px : 2px;
+                            y: 2px;
+                            width: 20px;
+                            height: 20px;
+                            border-radius: 10px;
+                            background: Palette.text-primary;
+                            
+                            animate x { duration: 200ms; easing: ease-out; }
+                        }
+                        
+                        TouchArea {
+                            clicked => {
+                                SettingsAdapter.set-auto-fetch(!SettingsAdapter.auto-fetch-enabled);
+                                SettingsAdapter.auto-fetch-enabled = !SettingsAdapter.auto-fetch-enabled;
+                            }
                         }
                     }
                 }
