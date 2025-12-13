@@ -21,6 +21,7 @@ import { TransactionsPage } from "pages/transactions.slint";
 import { AnalyticsPage } from "pages/analytics.slint";
 import { HabitsPage } from "pages/habits.slint";
 import { CryptoPage } from "pages/crypto.slint";
+import { SettingsPage } from "pages/settings.slint";
 import { SanctumSidebar } from "components/sidebar.slint";
 import { AddTransactionModal } from "modals/add_transaction.slint";
 import { AddAccountModal } from "modals/add_account.slint";
@@ -97,89 +98,9 @@ export component AppWindow inherits Window {
             }
 
             // Settings
-            if AppState.active-page == "settings": Rectangle {
+            if AppState.active-page == "settings": SettingsPage {
                 width: 100%;
                 height: 100%;
-
-                VerticalLayout {
-                    padding: 48px;
-                    spacing: 24px;
-                    alignment: start;
-
-                    Text {
-                        text: "SETTINGS";
-                        color: Palette.text-muted;
-                        font-size: 11px;
-                        font-weight: 600;
-                        letter-spacing: 3px;
-                    }
-
-                    Rectangle {
-                        height: 1px;
-                        background: Palette.border-subtle;
-                    }
-
-                    // Setting Item: Auto-fetch
-                    Rectangle {
-                        height: 64px;
-                        background: Palette.surface;
-                        border-radius: 4px;
-                        
-                        HorizontalLayout {
-                            padding-left: 24px;
-                            padding-right: 24px;
-                            alignment: space-between;
-                            
-                            VerticalLayout {
-                                alignment: center;
-                                spacing: 4px;
-                                Text { 
-                                    text: "Auto-fetch Crypto Prices"; 
-                                    color: Palette.text-primary; 
-                                    font-size: 14px; 
-                                    font-weight: 500; 
-                                }
-                                Text { 
-                                    text: "Automatically update prices when app starts (uses data)"; 
-                                    color: Palette.text-secondary; 
-                                    font-size: 12px; 
-                                }
-                            }
-                            
-                            // Toggle Switch
-                            Rectangle {
-                                width: 48px;
-                                height: 24px;
-                                border-radius: 12px;
-                                background: SettingsAdapter.auto-fetch-enabled ? Palette.success : Palette.surface-hover;
-                                border-width: 1px;
-                                border-color: Palette.border;
-                                vertical-alignment: center;
-                                
-                                animate background { duration: 200ms; }
-                                
-                                // Knob
-                                Rectangle {
-                                    x: SettingsAdapter.auto-fetch-enabled ? 26px : 2px;
-                                    y: 2px;
-                                    width: 20px;
-                                    height: 20px;
-                                    border-radius: 10px;
-                                    background: Palette.text-primary;
-                                    
-                                    animate x { duration: 200ms; easing: ease-out; }
-                                }
-                                
-                                TouchArea {
-                                    clicked => {
-                                        SettingsAdapter.set-auto-fetch(!SettingsAdapter.auto-fetch-enabled);
-                                        SettingsAdapter.auto-fetch-enabled = !SettingsAdapter.auto-fetch-enabled;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
             }
         }
     }
