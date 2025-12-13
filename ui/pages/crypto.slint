@@ -52,17 +52,20 @@ export component CryptoPage inherits Rectangle {
     VerticalLayout {
         spacing: 0px;
 
-        // ==================== ZONA 1: MARKET TICKER ====================
+        // ==================== ZONA 1: TOP BAR (Ticker + Config) ====================
         Rectangle {
-            height: 40px;
+            height: 48px; // Fixed height
             background: Palette.surface;
+            z: 10; // Ensure it stays on top if needed
             
             HorizontalLayout {
-                // Exchange Rate Badge
+                spacing: 0px;
+
+                // 1. CLP Rate (Fixed Width, Solid Background)
                 Rectangle {
-                    width: 180px;
-                    background: transparent;
-                    clip: true;
+                    width: 140px; 
+                    background: Palette.surface; // Solid background covers ticker
+                    z: 2; // Above ticker
 
                     HorizontalLayout {
                         alignment: center;
@@ -88,23 +91,24 @@ export component CryptoPage inherits Rectangle {
                     // Separator
                     Rectangle { 
                         width: 1px; 
-                        height: 16px; 
+                        height: 24px; 
                         background: Palette.border-subtle; 
                         x: parent.width - 1px; 
                         y: 12px;
                     }
                 }
 
-                // Ticker Deslizante
+                // 2. Ticker (Stretches)
                 Rectangle {
                     horizontal-stretch: 1;
-                    height: parent.height;
-                    clip: true;
+                    clip: true; // CRITICAL: Prevent overflow text drawing
+                    background: transparent;
+                    z: 1;
 
                     Flickable {
-                        horizontal-stretch: 1;
-                        height: parent.height;
-                        viewport-width: (CryptoAdapter.market-tickers.length * 160px);
+                        width: 100%;
+                        height: 100%;
+                        viewport-width: (CryptoAdapter.market-tickers.length * 200px); // Adjusted for wider items
                         interactive: true;
                         
                         HorizontalLayout {
@@ -118,6 +122,35 @@ export component CryptoPage inherits Rectangle {
                         }
                     }
                 }
+
+                // 3. Settings Button (Fixed Width)
+                Rectangle {
+                    width: 48px;
+                    background: Palette.surface; // Solid background
+                    z: 2;
+
+                    // Left separator
+                    Rectangle { 
+                        width: 1px; 
+                        height: 24px; 
+                        background: Palette.border-subtle; 
+                        x: 0; 
+                        y: 12px;
+                    }
+
+                    Text {
+                        text: "⚙";
+                        color: settings-touch.has-hover ? Palette.text-primary : Palette.text-muted;
+                        font-size: 14px;
+                        vertical-alignment: center; horizontal-alignment: center;
+                        animate color { duration: 150ms; }
+                    }
+
+                    settings-touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { AppState.active-page = "settings"; }
+                    }
+                }
             }
             
             // Bottom border
@@ -129,9 +162,9 @@ export component CryptoPage inherits Rectangle {
             }
         }
 
-        // ==================== ZONA 2: SUMMARY & CONTROLS ====================
+        // ==================== ZONA 2: HERO & CONTROLS ====================
         Rectangle {
-            height: 160px;
+            height: 180px; // Taller for vertical layout
             background: Palette.background;
             
             HorizontalLayout {
@@ -141,11 +174,12 @@ export component CryptoPage inherits Rectangle {
                 padding-bottom: 32px;
                 alignment: space-between;
                 
-                // Left: Portfolio Value
+                // Left: Portfolio Value (Vertical Layout to avoid overlap)
                 VerticalLayout {
                     alignment: center;
-                    spacing: 8px;
+                    spacing: 12px; // Clear spacing
                     
+                    // Row 1: Title + Refresh
                     HorizontalLayout {
                         spacing: 12px;
                         Text { 
@@ -163,6 +197,7 @@ export component CryptoPage inherits Rectangle {
                         }
                     }
 
+                    // Row 2: Big Number
                     Text { 
                         text: CryptoAdapter.total-value; 
                         color: Palette.text-primary; 
@@ -171,20 +206,22 @@ export component CryptoPage inherits Rectangle {
                         letter-spacing: -1px; 
                     }
                     
+                    // Row 3: Badge
                     HorizontalLayout {
                         spacing: 8px;
-                        Text { 
-                            text: CryptoAdapter.total-pnl-positive ? "▲" : "▼";
-                            color: CryptoAdapter.total-pnl-positive ? Palette.success : Palette.danger;
-                            font-size: 10px;
-                            vertical-alignment: center;
-                        }
-                        Text { 
-                            text: CryptoAdapter.total-pnl + " (24h)"; 
-                            color: CryptoAdapter.total-pnl-positive ? Palette.success : Palette.danger; 
-                            font-size: 12px; 
-                            font-weight: 500;
-                            vertical-alignment: center; 
+                        Rectangle {
+                            height: 24px;
+                            width: 100px;
+                            border-radius: 4px;
+                            background: CryptoAdapter.total-pnl-positive ? Palette.success.with-alpha(0.1) : Palette.danger.with-alpha(0.1);
+                            
+                            Text { 
+                                text: (CryptoAdapter.total-pnl-positive ? "▲ " : "▼ ") + CryptoAdapter.total-pnl; 
+                                color: CryptoAdapter.total-pnl-positive ? Palette.success : Palette.danger; 
+                                font-size: 11px; 
+                                font-weight: 600;
+                                vertical-alignment: center; horizontal-alignment: center;
+                            }
                         }
                     }
                 }
@@ -233,12 +270,15 @@ export component CryptoPage inherits Rectangle {
         Rectangle {
             vertical-stretch: 1;
 
-            // TAB: PORTFOLIO
+            // TAB: PORTFOLIO (Card View)
             if root.active-tab == "portfolio": VerticalLayout {
                 padding-left: 64px;
                 padding-right: 64px;
                 padding-bottom: 24px;
                 spacing: 0px;
+
+                // Spacer
+                Rectangle { height: 32px; }
 
                 if CryptoAdapter.portfolio.length == 0: VerticalLayout {
                     alignment: center;
@@ -251,8 +291,8 @@ export component CryptoPage inherits Rectangle {
                 }
 
                 if CryptoAdapter.portfolio.length > 0: Flickable {
-                    height: 180px; // Fixed height for card row
-                    viewport-width: (CryptoAdapter.portfolio.length * 236px);
+                    height: 180px; // Card height (160) + margins
+                    viewport-width: (CryptoAdapter.portfolio.length * 236px); // 220px card + 16px spacing
                     
                     HorizontalLayout {
                         spacing: 16px;

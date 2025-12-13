@@ -164,13 +164,13 @@ export component TickerItem inherits Rectangle {
     in property <string> change;
     in property <bool> is-positive;
 
-    width: 160px; // Compact width
-    height: 40px; // Fits in header
+    width: 200px; // Expanded width
+    height: 40px; 
     background: transparent;
 
     HorizontalLayout {
-        padding-left: 8px;
-        padding-right: 8px;
+        padding-left: 12px;
+        padding-right: 12px;
         spacing: 8px;
         alignment: center;
         
@@ -282,7 +282,7 @@ export component CryptoCard inherits Rectangle {
         Text {
             text: root.price;
             color: Palette.text-primary;
-            font-size: 22px;
+            font-size: 24px;
             font-weight: 300;
             horizontal-alignment: center;
         }
