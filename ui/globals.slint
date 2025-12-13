@@ -229,6 +229,18 @@ export global AccountAdapter {
     callback transfer-funds(string, string, string, string, string) -> string; // from, to, amount, description, date
 }
 
+// ==================== Settings Adapter ====================
+
+export global SettingsAdapter {
+    in-out property <bool> auto-fetch-enabled: false;
+    
+    // Callback to load settings from backend
+    callback load-settings();
+    
+    // Callback to toggle auto-fetch setting
+    callback set-auto-fetch(bool);
+}
+
 // ==================== Crypto Adapter ====================
 
 export struct CryptoAssetData {

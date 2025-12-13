@@ -4,7 +4,7 @@
 
 use directories::ProjectDirs;
 use log::error;
-use sanctum::controller::AppController;
+use sanctum::controller::{AppController, SETTING_AUTO_FETCH};
 use sanctum::crypto;
 use sanctum::security_log::init_security_logger;
 use slint::SharedString;
@@ -230,6 +230,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     log::info!("Vault created successfully: {}", msg);
                     notify("Vault created successfully".into(), false);
                     session_monitor();
+                    if let Some(ui) = ui_weak.upgrade() {
+                        ui.global::<SettingsAdapter>().invoke_load_settings();
+                    }
                     SharedString::from("")
                 }
                 Err(e) => {
@@ -259,6 +262,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     log::info!("Vault unlocked successfully: {}", msg);
                     notify("Vault unlocked successfully".into(), false);
                     session_monitor();
+                    if let Some(ui) = ui_weak.upgrade() {
+                        ui.global::<SettingsAdapter>().invoke_load_settings();
+                    }
                     SharedString::from("")
                 }
                 Err(e) => {
@@ -1644,6 +1650,54 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         adapter.set_asset_history(ModelRc::new(VecModel::from(history_mapped)));
                     }
                 }
+        });
+    }
+
+    // ==================== SettingsAdapter Logic ====================
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        
+        ui.global::<SettingsAdapter>().on_load_settings(move || {
+            // Load auto-fetch setting
+            if let Ok(val) = controller.get_app_setting(SETTING_AUTO_FETCH) {
+                let enabled = val == "true";
+                if let Some(ui) = ui_weak.upgrade() {
+                    ui.global::<SettingsAdapter>().set_auto_fetch_enabled(enabled);
+                    
+                    // SMART FETCH LOGIC
+                    // If enabled, check if we need to update prices
+                    if enabled {
+                        // Check if we have recent prices. We check a benchmark coin (e.g. bitcoin)
+                        // Or simply check the CLP rate timestamp as a proxy for all prices
+                        let needs_update = if let Ok(Some((_, updated_at))) = controller.load_exchange_rate("CLP_USD".to_string()) {
+                            // Check age
+                             if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(&updated_at) {
+                                 let now = chrono::Utc::now();
+                                 let age = now.signed_duration_since(dt.with_timezone(&chrono::Utc)).num_minutes();
+                                 age > 10 // Refresh if older than 10 minutes
+                             } else {
+                                 true
+                             }
+                        } else {
+                            true // No cache, update needed
+                        };
+                        
+                        if needs_update {
+                            ui.global::<CryptoAdapter>().invoke_refresh_prices();
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    {
+        let controller = controller.clone();
+        ui.global::<SettingsAdapter>().on_set_auto_fetch(move |enabled| {
+            let val = if enabled { "true" } else { "false" };
+            let _ = controller.set_app_setting(SETTING_AUTO_FETCH, val);
         });
     }
 

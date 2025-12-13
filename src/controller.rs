@@ -99,6 +99,7 @@ const MIN_PASSWORD_LENGTH: usize = 8;
 const MAX_ACCOUNT_NAME_LENGTH: usize = 64;
 const MAX_CURRENCY_LENGTH: usize = 8;
 const EXCHANGE_RATE_TTL_SECS: i64 = 6 * 60 * 60; // 6 hours
+pub const SETTING_AUTO_FETCH: &str = "auto_fetch_crypto";
 
 // ==================== Helper Functions ====================
 
@@ -744,6 +745,23 @@ impl AppController {
     pub fn get_session_remaining(&self) -> Result<i64, ControllerError> {
         self.with_db_no_touch(|db| {
             db.get_session_remaining().map_err(ControllerError::Database)
+        })
+    }
+
+    // ==================== Settings Methods ====================
+
+    /// Gets an application setting
+    pub fn get_app_setting(&self, key: &str) -> Result<String, ControllerError> {
+        self.with_db(|db| {
+            let val = db.get_setting(key).map_err(ControllerError::Database)?;
+            Ok(val.unwrap_or_default())
+        })
+    }
+
+    /// Sets an application setting
+    pub fn set_app_setting(&self, key: &str, value: &str) -> Result<(), ControllerError> {
+        self.with_db(|db| {
+            db.set_setting(key, value).map_err(ControllerError::Database)
         })
     }
 

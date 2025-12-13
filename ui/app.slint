@@ -12,6 +12,7 @@ import {
     NotificationAdapter,
     HabitAdapter,
     CryptoAdapter,
+    SettingsAdapter,
 } from "globals.slint";
 import { LoginPage } from "pages/login.slint";
 import { DashboardPage } from "pages/dashboard.slint";
@@ -95,34 +96,88 @@ export component AppWindow inherits Window {
                 height: 100%;
             }
 
-            // Settings (placeholder)
+            // Settings
             if AppState.active-page == "settings": Rectangle {
                 width: 100%;
                 height: 100%;
 
                 VerticalLayout {
-                    alignment: center;
+                    padding: 48px;
+                    spacing: 24px;
+                    alignment: start;
 
                     Text {
                         text: "SETTINGS";
                         color: Palette.text-muted;
                         font-size: 11px;
-                        font-weight: 400;
+                        font-weight: 600;
                         letter-spacing: 3px;
-                        horizontal-alignment: center;
                     }
 
                     Rectangle {
-                        height: 16px;
+                        height: 1px;
+                        background: Palette.border-subtle;
                     }
 
-                    Text {
-                        text: "Coming soon";
-                        color: Palette.text-subtle;
-                        font-size: 13px;
-                        font-weight: 300;
-                        font-italic: true;
-                        horizontal-alignment: center;
+                    // Setting Item: Auto-fetch
+                    Rectangle {
+                        height: 64px;
+                        background: Palette.surface;
+                        border-radius: 4px;
+                        
+                        HorizontalLayout {
+                            padding-left: 24px;
+                            padding-right: 24px;
+                            alignment: space-between;
+                            
+                            VerticalLayout {
+                                alignment: center;
+                                spacing: 4px;
+                                Text { 
+                                    text: "Auto-fetch Crypto Prices"; 
+                                    color: Palette.text-primary; 
+                                    font-size: 14px; 
+                                    font-weight: 500; 
+                                }
+                                Text { 
+                                    text: "Automatically update prices when app starts (uses data)"; 
+                                    color: Palette.text-secondary; 
+                                    font-size: 12px; 
+                                }
+                            }
+                            
+                            // Toggle Switch
+                            Rectangle {
+                                width: 48px;
+                                height: 24px;
+                                border-radius: 12px;
+                                background: SettingsAdapter.auto-fetch-enabled ? Palette.success : Palette.surface-hover;
+                                border-width: 1px;
+                                border-color: Palette.border;
+                                vertical-alignment: center;
+                                
+                                animate background { duration: 200ms; }
+                                
+                                // Knob
+                                Rectangle {
+                                    x: SettingsAdapter.auto-fetch-enabled ? 26px : 2px;
+                                    y: 2px;
+                                    width: 20px;
+                                    height: 20px;
+                                    border-radius: 10px;
+                                    background: Palette.text-primary;
+                                    
+                                    animate x { duration: 200ms; easing: ease-out; }
+                                }
+                                
+                                TouchArea {
+                                    clicked => {
+                                        SettingsAdapter.set-auto-fetch(!SettingsAdapter.auto-fetch-enabled);
+                                        SettingsAdapter.auto-fetch-enabled = !SettingsAdapter.auto-fetch-enabled;
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -174,4 +229,4 @@ export component AppWindow inherits Window {
 }
 
 // Re-export adapters for main.rs
-export { AuthAdapter, AccountAdapter, TransactionAdapter, DashboardAdapter, AnalyticsAdapter, NotificationAdapter, HabitAdapter, CryptoAdapter, AppState }
+export { AuthAdapter, AccountAdapter, TransactionAdapter, DashboardAdapter, AnalyticsAdapter, NotificationAdapter, HabitAdapter, CryptoAdapter, AppState, SettingsAdapter }

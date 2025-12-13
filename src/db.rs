@@ -339,6 +339,42 @@ impl Database {
         // ==================== Price Cache Tables ====================
         self.create_price_cache_tables()?;
 
+        // ==================== Settings Table ====================
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY NOT NULL,
+                value TEXT NOT NULL
+            )",
+            [],
+        )?;
+
+        Ok(())
+    }
+
+    // ==================== Settings Methods ====================
+
+    /// Gets a setting value by key
+    pub fn get_setting(&self, key: &str) -> Result<Option<String>, DbError> {
+        let result = self.conn.query_row(
+            "SELECT value FROM settings WHERE key = ?1",
+            params![key],
+            |row| row.get(0),
+        );
+
+        match result {
+            Ok(value) => Ok(Some(value)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(DbError::Sqlite(e)),
+        }
+    }
+
+    /// Sets a setting value (upsert)
+    pub fn set_setting(&self, key: &str, value: &str) -> Result<(), DbError> {
+        self.conn.execute(
+            "INSERT INTO settings (key, value) VALUES (?1, ?2)
+             ON CONFLICT(key) DO UPDATE SET value = ?2",
+            params![key, value],
+        )?;
         Ok(())
     }
 
