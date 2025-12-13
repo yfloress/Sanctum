@@ -1,7 +1,7 @@
 // ==================== Analytics Page ====================
 // Net worth intelligence: hero, trajectory, and spending focus
 
-import { Palette, AnalyticsAdapter } from "../globals.slint";
+import { Palette, AnalyticsAdapter, CategoryData } from "../globals.slint";
 import { SanctumLineChart } from "../components/charts.slint";
 import { CategoryBreakdown } from "../components/category_breakdown.slint";
 
@@ -70,38 +70,184 @@ component StatCard inherits Rectangle {
     }
 }
 
-component InsightItem inherits Rectangle {
-    in property <string> text-value: "";
+component RangeMarkersCard inherits Rectangle {
+    in property <string> max-value: "";
+    in property <string> min-value: "";
+    in property <int> category-count: 0;
 
-    height: 32px;
-    background: transparent;
+    background: Palette.surface;
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: Palette.border;
 
-    HorizontalLayout {
-        spacing: 10px;
-        alignment: start;
+    VerticalLayout {
+        padding: 18px;
+        spacing: 12px;
+
+        Text {
+            text: "RANGE MARKERS";
+            color: Palette.text-muted;
+            font-size: 11px;
+            font-weight: 400;
+            letter-spacing: 3px;
+        }
+
+        StatCard {
+            label: "Period high";
+            value: max-value;
+            helper: "Highest point in the active range.";
+            accent: Palette.success;
+        }
+
+        StatCard {
+            label: "Period low";
+            value: min-value;
+            helper: "Floor reference for your net worth.";
+            accent: Palette.danger;
+        }
+
+        StatCard {
+            label: "Tracked categories";
+            value: category-count == 1 ? "1 category" : category-count + " categories";
+            helper: "Expenses included in this view.";
+            accent: Palette.text-primary;
+        }
+    }
+}
+
+component TrajectoryCard inherits Rectangle {
+    in property <string> range-label: "";
+    in property <string> max-value: "";
+    in property <string> min-value: "";
+
+    background: Palette.surface;
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: Palette.border;
+
+    VerticalLayout {
+        padding: 18px;
+        spacing: 12px;
+
+        HorizontalLayout {
+            alignment: space-between;
+
+            VerticalLayout {
+                spacing: 4px;
+
+                Text {
+                    text: "NET WORTH TRAJECTORY";
+                    color: Palette.text-muted;
+                    font-size: 11px;
+                    font-weight: 500;
+                    letter-spacing: 3px;
+                }
+
+                Text {
+                    text: "Smooth line with visible peaks and floors.";
+                    color: Palette.text-secondary;
+                    font-size: 12px;
+                }
+            }
+
+            Rectangle {
+                height: 28px;
+                min-width: 86px;
+                background: Palette.surface-hover;
+                border-radius: 8px;
+                border-width: 1px;
+                border-color: Palette.border;
+
+                Text {
+                    text: range-label + " window";
+                    color: Palette.text-secondary;
+                    font-size: 11px;
+                    font-weight: 500;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
 
         Rectangle {
-            width: 8px;
-            height: 8px;
-            border-radius: 5px;
-            background: Palette.accent;
-            opacity: 0.8;
-            y: 10px;
+            vertical-stretch: 1;
+            min-height: 260px;
+            background: @linear-gradient(180deg, #121212 0%, #0e0e0e 100%);
+            border-radius: 10px;
+            border-width: 1px;
+            border-color: Palette.border-subtle;
+
+            SanctumLineChart {
+                width: 100%;
+                height: 100%;
+                path: AnalyticsAdapter.summary.chart_path;
+                min-label: min-value;
+                max-label: max-value;
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 10px;
+
+            StatCard {
+                label: "High watermark";
+                value: max-value;
+                helper: "Latest recorded peak.";
+                accent: Palette.text-primary;
+                horizontal-stretch: 1;
+            }
+
+            StatCard {
+                label: "Low watermark";
+                value: min-value;
+                helper: "Latest recorded low.";
+                accent: Palette.text-secondary;
+                horizontal-stretch: 1;
+            }
+        }
+    }
+}
+
+component SpendingCard inherits Rectangle {
+    in property <[CategoryData]> categories: [];
+
+    background: Palette.surface;
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: Palette.border;
+
+    VerticalLayout {
+        padding: 20px;
+        spacing: 14px;
+
+        Text {
+            text: "SPENDING FOCUS";
+            color: Palette.text-muted;
+            font-size: 11px;
+            font-weight: 400;
+            letter-spacing: 3px;
         }
 
         Text {
-            text: text-value;
+            text: "Expense distribution for the active range.";
             color: Palette.text-secondary;
             font-size: 12px;
             font-weight: 400;
-            horizontal-stretch: 1;
-            wrap: word-wrap;
+        }
+
+        Flickable {
+            viewport-height: 320px;
+
+            CategoryBreakdown {
+                categories: categories;
+            }
         }
     }
 }
 
 export component AnalyticsPage inherits Rectangle {
     background: Palette.background;
+    property <bool> is-narrow: self.width < 1100px;
 
     init => {
         AnalyticsAdapter.fetch-analytics("1M");
@@ -115,7 +261,7 @@ export component AnalyticsPage inherits Rectangle {
 
         // Hero: net worth + ranges
         Rectangle {
-            height: 220px;
+            min-height: 200px;
             background: @linear-gradient(135deg, #0b0b0d 0%, #0c0c10 55%, #0b0b0d 100%);
             border-radius: 12px;
             border-width: 1px;
@@ -143,7 +289,7 @@ export component AnalyticsPage inherits Rectangle {
                 }
 
                 Text {
-                    text: "Rango activo: " + AnalyticsAdapter.active-range + " — visualiza tu patrimonio sin ruido.";
+                    text: "Active range: " + AnalyticsAdapter.active-range + " — focused view of your wealth.";
                     color: Palette.text-secondary;
                     font-size: 13px;
                     font-weight: 400;
@@ -167,203 +313,48 @@ export component AnalyticsPage inherits Rectangle {
             }
         }
 
-        // Trajectory + markers
-        HorizontalLayout {
+        // Range markers + trajectory
+        if is-narrow: VerticalLayout {
             spacing: 16px;
 
-            Rectangle {
-                min-width: 280px;
-                max-width: 320px;
-                background: Palette.surface;
-                border-radius: 10px;
-                border-width: 1px;
-                border-color: Palette.border;
-
-                VerticalLayout {
-                    padding: 18px;
-                    spacing: 12px;
-
-                    Text {
-                        text: "RANGE MARKERS";
-                        color: Palette.text-muted;
-                        font-size: 11px;
-                        font-weight: 400;
-                        letter-spacing: 3px;
-                    }
-
-                    StatCard {
-                        label: "Máximo del periodo";
-                        value: AnalyticsAdapter.summary.max_value;
-                        helper: "Punto más alto en el rango activo.";
-                        accent: Palette.success;
-                    }
-
-                    StatCard {
-                        label: "Mínimo del periodo";
-                        value: AnalyticsAdapter.summary.min_value;
-                        helper: "Referencia de piso para tu patrimonio.";
-                        accent: Palette.danger;
-                    }
-
-                    StatCard {
-                        label: "Categorías activas";
-                        value: AnalyticsAdapter.summary.expense_breakdown.length == 1 ? "1 categoría" : AnalyticsAdapter.summary.expense_breakdown.length + " categorías";
-                        helper: "Distribución de gastos monitoreada.";
-                        accent: Palette.text-primary;
-                    }
-                }
+            RangeMarkersCard {
+                max-value: AnalyticsAdapter.summary.max_value;
+                min-value: AnalyticsAdapter.summary.min_value;
+                category-count: AnalyticsAdapter.summary.expense_breakdown.length;
             }
 
-            Rectangle {
-                vertical-stretch: 1;
-                height: 380px;
-                background: Palette.surface;
-                border-radius: 10px;
-                border-width: 1px;
-                border-color: Palette.border;
-
-                VerticalLayout {
-                    padding: 18px;
-                    spacing: 12px;
-
-                    HorizontalLayout {
-                        alignment: space-between;
-
-                        Text {
-                            text: "Net worth trajectory";
-                            color: Palette.text-muted;
-                            font-size: 12px;
-                            font-weight: 500;
-                            letter-spacing: 2px;
-                        }
-
-                        Text {
-                            text: AnalyticsAdapter.active-range + " window";
-                            color: Palette.text-secondary;
-                            font-size: 12px;
-                            font-weight: 400;
-                        }
-                    }
-
-                    Rectangle {
-                        vertical-stretch: 1;
-                        background: Palette.surface-hover;
-                        border-radius: 8px;
-                        border-width: 1px;
-                        border-color: Palette.border-subtle;
-
-                        SanctumLineChart {
-                            width: 100%;
-                            height: 100%;
-                            path: AnalyticsAdapter.summary.chart_path;
-                            min-label: AnalyticsAdapter.summary.min_value;
-                            max-label: AnalyticsAdapter.summary.max_value;
-                        }
-                    }
-
-                    HorizontalLayout {
-                        spacing: 12px;
-
-                        StatCard {
-                            label: "High watermark";
-                            value: AnalyticsAdapter.summary.max_value;
-                            helper: "Último pico registrado.";
-                            accent: Palette.text-primary;
-                            horizontal-stretch: 1;
-                        }
-
-                        StatCard {
-                            label: "Low watermark";
-                            value: AnalyticsAdapter.summary.min_value;
-                            helper: "Último mínimo registrado.";
-                            accent: Palette.text-secondary;
-                            horizontal-stretch: 1;
-                        }
-                    }
-                }
+            TrajectoryCard {
+                range-label: AnalyticsAdapter.active-range;
+                max-value: AnalyticsAdapter.summary.max_value;
+                min-value: AnalyticsAdapter.summary.min_value;
+                height: 420px;
             }
         }
 
-        // Spending focus + insights
-        HorizontalLayout {
+        if !is-narrow: HorizontalLayout {
             spacing: 16px;
 
-            Rectangle {
-                vertical-stretch: 1;
-                background: Palette.surface;
-                border-radius: 10px;
-                border-width: 1px;
-                border-color: Palette.border;
-                min-width: 460px;
-                height: 400px;
-
-                VerticalLayout {
-                    padding: 20px;
-                    spacing: 14px;
-
-                    Text {
-                        text: "SPENDING FOCUS";
-                        color: Palette.text-muted;
-                        font-size: 11px;
-                        font-weight: 400;
-                        letter-spacing: 3px;
-                    }
-
-                    Text {
-                        text: "Tu distribución de gastos en este rango de net worth.";
-                        color: Palette.text-secondary;
-                        font-size: 12px;
-                        font-weight: 400;
-                    }
-
-                    Flickable {
-                        viewport-height: 320px;
-
-                        CategoryBreakdown {
-                            categories: AnalyticsAdapter.summary.expense_breakdown;
-                        }
-                    }
-                }
+            RangeMarkersCard {
+                max-width: 320px;
+                min-width: 260px;
+                max-value: AnalyticsAdapter.summary.max_value;
+                min-value: AnalyticsAdapter.summary.min_value;
+                category-count: AnalyticsAdapter.summary.expense_breakdown.length;
             }
 
-            Rectangle {
-                width: 320px;
-                background: Palette.surface;
-                border-radius: 10px;
-                border-width: 1px;
-                border-color: Palette.border;
-
-                VerticalLayout {
-                    padding: 18px;
-                    spacing: 12px;
-
-                    Text {
-                        text: "INSIGHTS";
-                        color: Palette.text-muted;
-                        font-size: 11px;
-                        font-weight: 400;
-                        letter-spacing: 3px;
-                    }
-
-                    InsightItem {
-                        text-value: "Ventana activa: " + AnalyticsAdapter.active-range;
-                    }
-
-                    InsightItem {
-                        text-value: "Pico observado: " + AnalyticsAdapter.summary.max_value;
-                    }
-
-                    InsightItem {
-                        text-value: "Piso observado: " + AnalyticsAdapter.summary.min_value;
-                    }
-
-                    InsightItem {
-                        text-value: AnalyticsAdapter.summary.expense_breakdown.length == 0
-                            ? "Aún no hay distribución de gastos."
-                            : "Seguimiento de " + AnalyticsAdapter.summary.expense_breakdown.length + " categorías.";
-                    }
-                }
+            TrajectoryCard {
+                horizontal-stretch: 1;
+                height: 420px;
+                range-label: AnalyticsAdapter.active-range;
+                max-value: AnalyticsAdapter.summary.max_value;
+                min-value: AnalyticsAdapter.summary.min_value;
             }
+        }
+
+        // Spending focus
+        SpendingCard {
+            categories: AnalyticsAdapter.summary.expense_breakdown;
+            height: is-narrow ? 380px : 420px;
         }
     }
 }
