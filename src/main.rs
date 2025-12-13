@@ -1495,7 +1495,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .collect();
 
             // Tickers
-            let ticker_ids = ["bitcoin", "litecoin", "monero"];
+            let ticker_ids = controller.get_active_ticker_ids();
             let mut tickers: Vec<CryptoAssetData> = Vec::new();
 
             for id in ticker_ids {
