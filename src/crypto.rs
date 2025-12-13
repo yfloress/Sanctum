@@ -45,7 +45,8 @@ static LAST_REQUEST_TIME: AtomicU64 = AtomicU64::new(0);
 
 /// Fixed allowlist of public tickers to avoid leaking a user's private portfolio
 /// Only these IDs are ever sent to CoinGecko
-const PRIVACY_PRESERVING_PRICE_IDS: &[&str] = &["bitcoin", "ethereum", "litecoin", "monero", "tether"];
+const PRIVACY_PRESERVING_PRICE_IDS: &[&str] =
+    &["bitcoin", "ethereum", "litecoin", "monero", "tether"];
 
 /// Internal struct to deserialize CoinGecko API response
 #[derive(Debug, Deserialize)]
@@ -333,7 +334,10 @@ pub async fn fetch_crypto_prices(coin_ids: Vec<String>) -> Result<Vec<CryptoAsse
 
 /// Returns the fixed allowlist of public tickers to fetch, preventing portfolio fingerprinting
 pub fn default_price_allowlist() -> Vec<String> {
-    PRIVACY_PRESERVING_PRICE_IDS.iter().map(|s| s.to_string()).collect()
+    PRIVACY_PRESERVING_PRICE_IDS
+        .iter()
+        .map(|s| s.to_string())
+        .collect()
 }
 
 /// Fetches the current CLP to USD exchange rate using CoinGecko

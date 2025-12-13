@@ -1,4 +1,8 @@
-#![allow(clippy::collapsible_if, clippy::if_same_then_else, clippy::type_complexity)]
+#![allow(
+    clippy::collapsible_if,
+    clippy::if_same_then_else,
+    clippy::type_complexity
+)]
 
 use crate::models::{
     Account, AccountBalance, AggregatedAsset, BalanceSummary, CryptoHolding, CryptoTransaction,
@@ -113,8 +117,7 @@ impl Database {
 
         // Ensure restrictive permissions on the vault file
         #[cfg(unix)]
-        fs::set_permissions(&db_path, fs::Permissions::from_mode(0o600))
-            .map_err(DbError::Io)?;
+        fs::set_permissions(&db_path, fs::Permissions::from_mode(0o600)).map_err(DbError::Io)?;
 
         // Enforce foreign key constraints for the connection
         conn.pragma_update(None, "foreign_keys", true)
@@ -1598,7 +1601,10 @@ impl Database {
     }
 
     /// Gets all crypto transactions for a specific coin across all wallets
-    pub fn get_crypto_transactions_by_coin(&self, coin_id: &str) -> Result<Vec<CryptoTransaction>, DbError> {
+    pub fn get_crypto_transactions_by_coin(
+        &self,
+        coin_id: &str,
+    ) -> Result<Vec<CryptoTransaction>, DbError> {
         let mut stmt = self.conn.prepare(
             "SELECT id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, fee_coin_id, fee_amount, date, notes, related_tx_id
              FROM crypto_transactions
@@ -1736,7 +1742,8 @@ impl Database {
                 if let Some(counter) = tx_map.get(rel_id) {
                     let is_swap_pair = (tx.transaction_type == "swap"
                         && counter.transaction_type == "transfer_in")
-                        || (tx.transaction_type == "transfer_in" && counter.transaction_type == "swap");
+                        || (tx.transaction_type == "transfer_in"
+                            && counter.transaction_type == "swap");
 
                     if is_swap_pair {
                         if processed.contains(rel_id) || processed.contains(&tx.id) {
@@ -1837,7 +1844,8 @@ impl Database {
                 if let Some(counter) = tx_map.get(rel_id) {
                     let is_swap_pair = (tx.transaction_type == "swap"
                         && counter.transaction_type == "transfer_in")
-                        || (tx.transaction_type == "transfer_in" && counter.transaction_type == "swap");
+                        || (tx.transaction_type == "transfer_in"
+                            && counter.transaction_type == "swap");
 
                     if is_swap_pair {
                         if processed.contains(rel_id) || processed.contains(&tx.id) {
@@ -2126,7 +2134,10 @@ mod tests {
             "Could not create data directory"
         );
         assert_eq!(DbError::WalletNotFound.to_string(), "Wallet not found");
-        assert_eq!(DbError::SessionExpired.to_string(), "Session expired due to inactivity");
+        assert_eq!(
+            DbError::SessionExpired.to_string(),
+            "Session expired due to inactivity"
+        );
         assert_eq!(DbError::RateLimited.to_string(), "Too many failed attempts");
     }
 }
