@@ -324,20 +324,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let abs = amount_cents.abs();
         let units = abs / 100;
         let cents = abs % 100;
-        format!("{units}.{cents:02}")
-    }
-
-    fn currency_symbol(code: &str) -> &str {
-        match code.to_uppercase().as_str() {
-            "USD" => "$",
-            "CLP" => "$",
-            _ => "",
+        
+        let units_str = units.to_string();
+        let mut formatted_units = String::new();
+        let mut count = 0;
+        for c in units_str.chars().rev() {
+            if count > 0 && count % 3 == 0 {
+                formatted_units.insert(0, ',');
+            }
+            formatted_units.insert(0, c);
+            count += 1;
         }
+        format!("{formatted_units}.{cents:02}")
     }
 
     fn format_money(amount_cents: i64, currency: &str) -> String {
-        let symbol = currency_symbol(currency);
-        format!("{symbol} {}", format_amount(amount_cents))
+        let code = currency.to_uppercase();
+        format!("{code} {}", format_amount(amount_cents))
     }
 
     fn format_clp_rate(rate: f64) -> String {
