@@ -253,11 +253,16 @@ export component AnalyticsPage inherits Rectangle {
         AnalyticsAdapter.fetch-analytics("1M");
     }
 
-    VerticalLayout {
-        padding: 48px;
-        padding-left: 64px;
-        padding-right: 64px;
-        spacing: 20px;
+    Flickable {
+        width: parent.width;
+        height: parent.height;
+
+        content := VerticalLayout {
+            width: parent.width;
+            padding: 48px;
+            padding-left: 64px;
+            padding-right: 64px;
+            spacing: 20px;
 
         // Hero: net worth + ranges
         Rectangle {
@@ -356,5 +361,6 @@ export component AnalyticsPage inherits Rectangle {
             categories: AnalyticsAdapter.summary.expense_breakdown;
             height: is-narrow ? 380px : 420px;
         }
+    }
     }
 }
