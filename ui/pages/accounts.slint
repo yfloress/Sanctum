@@ -10,38 +10,6 @@ import {
 import { AccountItem } from "../components/account_item.slint";
 import { TextButton } from "../widgets.slint";
 
-component StatBadge inherits Rectangle {
-    in property <string> label: "";
-    in property <string> value: "";
-
-    height: 64px;
-    min-width: 160px;
-    background: Palette.surface-hover;
-    border-radius: Palette.radius-lg;
-    border-width: 1px;
-    border-color: Palette.border;
-
-    VerticalLayout {
-        padding: 12px;
-        spacing: 6px;
-
-        Text {
-            text: label;
-            color: Palette.text-muted;
-            font-size: 11px;
-            font-weight: 400;
-            letter-spacing: 2px;
-        }
-
-        Text {
-            text: value;
-            color: Palette.text-primary;
-            font-size: 16px;
-            font-weight: 600;
-        }
-    }
-}
-
 export component AccountsPage inherits Rectangle {
     background: Palette.background;
 
@@ -59,73 +27,40 @@ export component AccountsPage inherits Rectangle {
             padding: 48px;
             padding-left: 64px;
             padding-right: 64px;
-            spacing: 20px;
+            spacing: 16px;
 
-            // Hero
-            Rectangle {
-                min-height: 200px;
-                background: @linear-gradient(135deg, #0c0c0c 0%, #101010 50%, #0c0c0c 100%);
-                border-radius: 12px;
-                border-width: 1px;
-                border-color: Palette.border;
-                clip: true;
+            // Header actions
+            HorizontalLayout {
+                alignment: space-between;
 
-                VerticalLayout {
-                    padding: 24px;
+                Text {
+                    text: "ACCOUNTS";
+                    color: Palette.text-muted;
+                    font-size: 11px;
+                    font-weight: 400;
+                    letter-spacing: 3px;
+                }
+
+                HorizontalLayout {
                     spacing: 12px;
 
-                    Text {
-                        text: "ACCOUNTS OVERVIEW";
-                        color: Palette.text-muted;
-                        font-size: 11px;
-                        font-weight: 400;
-                        letter-spacing: 3px;
-                    }
+                    TextButton {
+                        text: "TRANSFER";
+                        enabled: AccountAdapter.accounts.length > 1;
 
-                    Text {
-                        text: "Control balances, transfers, and custody points.";
-                        color: Palette.text-secondary;
-                        font-size: 14px;
-                        font-weight: 400;
-                    }
-
-                    HorizontalLayout {
-                        spacing: 12px;
-
-                        StatBadge {
-                            label: "TOTAL ACCOUNTS";
-                            value: AccountAdapter.accounts.length == 1 ? "1 account" : AccountAdapter.accounts.length + " accounts";
-                        }
-
-                        StatBadge {
-                            label: "TRANSFER READY";
-                            value: AccountAdapter.accounts.length > 1 ? "Yes" : "Add one more";
+                        clicked => {
+                            AccountAdapter.fetch-accounts();
+                            AppState.show-transfer-modal = true;
                         }
                     }
 
-                    Rectangle { vertical-stretch: 1; }
-
-                    HorizontalLayout {
-                        spacing: 12px;
-
-                        TextButton {
-                            text: "TRANSFER";
-                            enabled: AccountAdapter.accounts.length > 1;
-
-                            clicked => {
-                                AccountAdapter.fetch-accounts();
-                                AppState.show-transfer-modal = true;
-                            }
-                        }
-
-                        TextButton {
-                            text: "+ NEW";
-                            clicked => {
-                                AccountAdapter.fetch-accounts();
-                                AppState.account-edit-mode = false;
-                                AppState.selected-account-index = 0;
-                                AppState.show-add-account = true;
-                            }
+                    TextButton {
+                        text: "+ NEW";
+                        clicked => {
+                            AccountAdapter.fetch-accounts();
+                            AppState.account-edit-mode = false;
+                            AppState.selected-account-index = 0;
+                            AppState.show-add-account = true;
                         }
                     }
                 }
