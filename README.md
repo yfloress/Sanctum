@@ -8,9 +8,7 @@
     Private. Encrypted. Local-first.
 </p>
 
-<p>
-    <a href="README_ES.md">Versión en Español</a>
-</p>
+[Versión en Español](README_ES.md)
 
 <div align="center">
     <a href="">
