@@ -22,28 +22,55 @@ export component CryptoPage inherits Rectangle {
     VerticalLayout {
         spacing: 0px;
 
-        // ==================== ZONA 1: EL RADAR (Ticker Tape) ====================
+        // ==================== ZONA 1: EL RADAR (Market Ticker) ====================
         Rectangle {
-            height: 40px;
-            background: Palette.surface;
+            height: 48px;
+            background: Palette.sidebar-bg.with-alpha(0.5); // Más sutil
+            border-width: 0px; // Sin bordes duros
             
             HorizontalLayout {
-                // Fixed Element (CLP Rate)
+                // Exchange Rate Badge
                 Rectangle {
-                    width: 120px;
+                    width: 140px;
                     background: transparent;
                     HorizontalLayout {
                         alignment: center;
-                        spacing: 8px;
-                        Text { text: "CLP"; font-size: 14px; font-weight: 500; vertical-alignment: center; }
-                        Text { text: CryptoAdapter.clp-rate; color: Palette.text-secondary; font-size: 12px; font-weight: 500; vertical-alignment: center; }
+                        spacing: 12px;
+                        
+                        // Etiqueta CLP estilizada
+                        Rectangle {
+                            width: 36px; height: 20px;
+                            border-radius: 4px;
+                            background: Palette.surface-hover;
+                            Text { 
+                                text: "CLP"; 
+                                color: Palette.text-muted; 
+                                font-size: 10px; 
+                                font-weight: 700; 
+                                vertical-alignment: center; horizontal-alignment: center; 
+                            }
+                        }
+                        
+                        Text { 
+                            text: CryptoAdapter.clp-rate; 
+                            color: Palette.text-secondary; 
+                            font-size: 12px; 
+                            font-weight: 500; 
+                            vertical-alignment: center; 
+                        }
+                    }
+                    
+                    // Separador vertical sutil
+                    Rectangle { 
+                        width: 1px; 
+                        height: 24px; 
+                        background: Palette.border-subtle; 
+                        x: parent.width - 1px; 
+                        y: 12px;
                     }
                 }
 
-                // Separator
-                Rectangle { width: 1px; background: Palette.border-subtle; }
-
-                // Sliding Ticker
+                // Ticker Deslizante
                 Rectangle {
                     horizontal-stretch: 1;
                     height: parent.height;
@@ -52,10 +79,11 @@ export component CryptoPage inherits Rectangle {
                     Flickable {
                         horizontal-stretch: 1;
                         height: parent.height;
-                        viewport-width: (CryptoAdapter.market-tickers.length * 160px); // 160px per item
+                        viewport-width: (CryptoAdapter.market-tickers.length * 160px);
                         interactive: true;
                         
                         HorizontalLayout {
+                            padding-left: 16px;
                             for ticker in CryptoAdapter.market-tickers: TickerItem {
                                 symbol: ticker.symbol;
                                 price: ticker.price;
@@ -67,199 +95,253 @@ export component CryptoPage inherits Rectangle {
                 }
             }
             
-            // Bottom border for Radar
+            // Línea separadora inferior muy sutil
             Rectangle { 
                 height: 1px; 
                 width: parent.width; 
                 background: Palette.border-subtle; 
+                opacity: 0.3;
                 y: parent.height - 1px; 
             }
         }
 
-        // ==================== ZONA 2: EL CONTROL (Summary & Navigation) ====================
+        // ==================== ZONA 2: EL CENTRO DE MANDO (Summary) ====================
         Rectangle {
-            height: 100px;
+            height: 140px; // Un poco más alto para elegancia
             background: Palette.background;
             
             HorizontalLayout {
                 padding-left: 48px;
                 padding-right: 48px;
-                padding-top: 20px;
-                padding-bottom: 12px;
+                padding-top: 32px;
+                padding-bottom: 24px;
                 alignment: space-between;
-                spacing: 16px;
+                spacing: 24px;
                 
-                // Left: Summary
+                // Left: Net Asset Value
                 VerticalLayout {
-                    alignment: center;
-                    spacing: 4px;
-                    Text { text: "NET ASSET VALUE"; color: Palette.text-muted; font-size: 10px; font-weight: 500; letter-spacing: 2px; }
+                    alignment: start;
+                    spacing: 8px;
+                    
                     HorizontalLayout {
-                        spacing: 16px;
-                        Text { text: CryptoAdapter.total-value; color: Palette.text-primary; font-size: 32px; font-weight: 300; letter-spacing: -1px; }
+                        spacing: 8px;
+                        Text { 
+                            text: "TOTAL ASSET VALUE"; 
+                            color: Palette.text-muted; 
+                            font-size: 11px; 
+                            font-weight: 600; 
+                            letter-spacing: 2px; 
+                            vertical-alignment: center;
+                        }
+                        
+                        // Botón Refrescar Minimalista
                         Rectangle {
-                            height: 24px;
-                            y: (parent.height - self.height) / 2;
+                            height: 16px; width: 16px;
+                            background: transparent;
+                            Text {
+                                text: "↻";
+                                color: refresh-touch.has-hover ? Palette.accent : Palette.text-muted;
+                                font-size: 12px;
+                                vertical-alignment: center; horizontal-alignment: center;
+                                animate color { duration: 150ms; }
+                            }
+                            refresh-touch := TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => { CryptoAdapter.refresh-prices(); }
+                            }
+                        }
+                    }
+
+                    HorizontalLayout {
+                        spacing: 20px;
+                        
+                        // El número GRANDE y FINO (Elegancia)
+                        Text { 
+                            text: CryptoAdapter.total-value; 
+                            color: Palette.text-primary; 
+                            font-size: 48px; 
+                            font-weight: 200; // Ultra Light
+                            letter-spacing: -1px; 
+                            vertical-alignment: bottom;
+                        }
+                        
+                        // PnL Badge más moderno
+                        Rectangle {
+                            height: 28px;
+                            border-radius: 14px;
                             background: CryptoAdapter.total-pnl-positive ? Palette.success.with-alpha(0.1) : Palette.danger.with-alpha(0.1);
-                            border-radius: 4px;
+                            border-width: 1px;
+                            border-color: CryptoAdapter.total-pnl-positive ? Palette.success.with-alpha(0.2) : Palette.danger.with-alpha(0.2);
+                            y: 14px; // Ajuste visual para alinear con la línea base del texto grande
                             
                             HorizontalLayout {
-                                padding-left: 8px; padding-right: 8px;
+                                padding-left: 12px; padding-right: 12px;
+                                spacing: 6px;
+                                
+                                Text { 
+                                    text: CryptoAdapter.total-pnl-positive ? "▲" : "▼";
+                                    color: CryptoAdapter.total-pnl-positive ? Palette.success : Palette.danger;
+                                    font-size: 8px;
+                                    vertical-alignment: center;
+                                }
+
                                 Text { 
                                     text: CryptoAdapter.total-pnl; 
                                     color: CryptoAdapter.total-pnl-positive ? Palette.success : Palette.danger; 
-                                    font-size: 12px; 
-                                    font-weight: 600;
-                                                                        vertical-alignment: center;
-                                                                    }
-                                                                }
-                                                            }
-                                                            
-                                                            // Manual Refresh Button
-                                                            Rectangle {
-                                                                height: 24px;
-                                                                width: 24px;
-                                                                border-radius: 12px;
-                                                                background: refresh-button-touch.has-hover ? Palette.surface-hover : transparent;
-                                                                
-                                                                Text {
-                                                                    text: "↻"; // Refresh icon
-                                                                    color: Palette.text-muted;
-                                                                    font-size: 14px;
-                                                                    vertical-alignment: center; horizontal-alignment: center;
-                                                                }
-                                                                
-                                                                refresh-button-touch := TouchArea {
-                                                                    clicked => {
-                                                                        CryptoAdapter.refresh-prices();
-                                                                    }
-                                                                }
-                                                            }                    }
+                                    font-size: 13px; 
+                                    font-weight: 500;
+                                    vertical-alignment: center; 
+                                }
+                            }
+                        }
+                    }
                 }
 
-                // Right: Tabs
-                Rectangle {
-                    height: 40px;
-                    width: 260px;
-                    border-radius: 20px;
-                    background: Palette.surface;
-                    border-width: 1px;
-                    border-color: Palette.border-subtle;
+                // Right: Navigation Tabs (Segmented Control style)
+                VerticalLayout {
+                    alignment: center;
+                    
+                    Rectangle {
+                        height: 44px;
+                        width: 240px;
+                        border-radius: 8px;
+                        background: Palette.surface;
+                        clip: true;
 
-                    HorizontalLayout {
-                        padding: 2px;
-                        spacing: 4px;
-                        alignment: center;
-                        
-                        Rectangle {
-                            horizontal-stretch: 1;
-                            height: 36px;
-                            background: root.active-tab == "portfolio" ? Palette.accent.with-alpha(0.06) : transparent;
-                            border-radius: 18px;
-                            border-width: root.active-tab == "portfolio" ? 1px : 0px;
-                            border-color: Palette.border-subtle;
+                        HorizontalLayout {
+                            padding: 4px;
+                            spacing: 0px;
                             
-                            Text { 
-                                text: "PORTFOLIO"; 
-                                color: root.active-tab == "portfolio" ? Palette.text-primary : Palette.text-muted; 
-                                font-size: 11px; font-weight: 600; 
-                                vertical-alignment: center; horizontal-alignment: center; 
-                            }
-                            TouchArea { clicked => { root.active-tab = "portfolio"; } }
-                        }
+                            // Tab 1: Portfolio
+                            Rectangle {
+                                horizontal-stretch: 1;
+                                border-radius: 6px;
+                                background: root.active-tab == "portfolio" ? Palette.background : transparent;
+                                border-width: root.active-tab == "portfolio" ? 1px : 0px;
+                                border-color: Palette.border.with-alpha(0.5);
+                                drop-shadow-blur: root.active-tab == "portfolio" ? 4px : 0px;
+                                drop-shadow-color: #00000040;
+                                
+                                animate background { duration: 150ms; }
 
-                        Rectangle {
-                            horizontal-stretch: 1;
-                            height: 36px;
-                            background: root.active-tab == "wallets" ? Palette.accent.with-alpha(0.06) : transparent;
-                            border-radius: 18px;
-                            border-width: root.active-tab == "wallets" ? 1px : 0px;
-                            border-color: Palette.border-subtle;
-
-                            Text { 
-                                text: "WALLETS"; 
-                                color: root.active-tab == "wallets" ? Palette.text-primary : Palette.text-muted; 
-                                font-size: 11px; font-weight: 600; 
-                                vertical-alignment: center; horizontal-alignment: center; 
+                                Text { 
+                                    text: "PORTFOLIO"; 
+                                    color: root.active-tab == "portfolio" ? Palette.text-primary : Palette.text-muted; 
+                                    font-size: 11px; font-weight: 600; 
+                                    vertical-alignment: center; horizontal-alignment: center; 
+                                }
+                                TouchArea { clicked => { root.active-tab = "portfolio"; } }
                             }
-                            TouchArea { clicked => { root.active-tab = "wallets"; } }
+
+                            // Tab 2: Wallets
+                            Rectangle {
+                                horizontal-stretch: 1;
+                                border-radius: 6px;
+                                background: root.active-tab == "wallets" ? Palette.background : transparent;
+                                border-width: root.active-tab == "wallets" ? 1px : 0px;
+                                border-color: Palette.border.with-alpha(0.5);
+                                drop-shadow-blur: root.active-tab == "wallets" ? 4px : 0px;
+                                drop-shadow-color: #00000040;
+
+                                animate background { duration: 150ms; }
+
+                                Text { 
+                                    text: "WALLETS"; 
+                                    color: root.active-tab == "wallets" ? Palette.text-primary : Palette.text-muted; 
+                                    font-size: 11px; font-weight: 600; 
+                                    vertical-alignment: center; horizontal-alignment: center; 
+                                }
+                                TouchArea { clicked => { root.active-tab = "wallets"; } }
+                            }
                         }
                     }
                 }
             }
-
-            // Divider
-            Rectangle { height: 1px; width: parent.width; background: Palette.border-subtle; y: parent.height - 1px; }
         }
 
-        // ==================== ZONA 3: EL CAMPO DE BATALLA (Content) ====================
+        // ==================== ZONA 3: LISTADO (Content) ====================
         VerticalLayout {
             vertical-stretch: 1;
             padding-left: 48px;
             padding-right: 48px;
             padding-bottom: 24px;
 
-            // TAB: PORTFOLIO
-            if root.active-tab == "portfolio": VerticalLayout {
-                spacing: 0px;
+            // Contenedor principal sin bordes visibles (Look más limpio)
+            Rectangle {
+                background: transparent;
+                
+                // TAB: PORTFOLIO
+                if root.active-tab == "portfolio": VerticalLayout {
+                    spacing: 0px;
 
-                Rectangle {
-                    vertical-stretch: 1;
-                    background: Palette.surface;
-                    border-radius: 8px;
-                    border-width: 1px;
-                    border-color: Palette.border-subtle;
-                    clip: true;
+                    // Encabezados de columna flotantes
+                    Rectangle {
+                        height: 32px;
+                        background: transparent;
+                        HorizontalLayout {
+                            spacing: 0px;
+                            padding-left: 16px; padding-right: 16px;
+                            alignment: start;
+                            
+                            Text { width: 240px; text: "ASSET"; color: Palette.text-subtle; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; }
+                            Text { width: 140px; text: "PRICE"; color: Palette.text-subtle; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: right; }
+                            Text { width: 140px; text: "HOLDINGS"; color: Palette.text-subtle; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: right; }
+                            Text { width: 140px; text: "VALUE"; color: Palette.text-subtle; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: right; }
+                            Rectangle { width: 40px; }
+                            Text { width: 100px; text: "24H CHANGE"; color: Palette.text-subtle; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: center; }
+                        }
+                    }
+                    
+                    Rectangle { height: 8px; } // Spacer
 
-                    VerticalLayout {
-                        spacing: 0px;
-
-                        // Sticky Header
-                        Rectangle {
-                            height: 44px;
-                            background: Palette.surface;
-                            HorizontalLayout {
-                                spacing: 0px;
-                                padding-left: 24px; padding-right: 24px;
-                                alignment: start;
-                                
-                                Text { width: 240px; text: "ASSET"; color: Palette.text-muted; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; }
-                                Text { width: 140px; text: "PRICE"; color: Palette.text-muted; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: right; }
-                                Text { width: 140px; text: "HOLDINGS"; color: Palette.text-muted; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: right; }
-                                Text { width: 140px; text: "VALUE"; color: Palette.text-muted; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: right; }
-                                Rectangle { width: 40px; }
-                                Text { width: 100px; text: "24H"; color: Palette.text-muted; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: center; }
+                    // Lista de Activos
+                    Rectangle {
+                        vertical-stretch: 1;
+                        background: transparent;
+                        
+                        if CryptoAdapter.portfolio.length == 0: VerticalLayout {
+                            alignment: center;
+                            spacing: 16px;
+                            Text { 
+                                text: "No assets found"; 
+                                color: Palette.text-muted; font-size: 16px; font-weight: 500;
+                                horizontal-alignment: center; 
                             }
-                            Rectangle { height: 1px; width: parent.width; background: Palette.border-subtle; y: parent.height - 1px; }
+                            Text { 
+                                text: "Add a transaction or wallet to start tracking."; 
+                                color: Palette.text-subtle; font-size: 13px; 
+                                horizontal-alignment: center; 
+                            }
                         }
 
-                        // List
-                        Rectangle {
-                            vertical-stretch: 1;
-                            background: Palette.surface;
+                        if CryptoAdapter.portfolio.length > 0: Flickable {
+                            width: parent.width;
+                            viewport-height: CryptoAdapter.portfolio.length * 60px; // Un poco más alto por fila
                             
-                            if CryptoAdapter.portfolio.length == 0: Text { 
-                                text: "No assets found. Start building your empire."; 
-                                color: Palette.text-muted; font-size: 14px; font-italic: true; 
-                                horizontal-alignment: center; vertical-alignment: center; 
-                            }
-
-                            if CryptoAdapter.portfolio.length > 0: Flickable {
-                                width: parent.width;
-                                viewport-height: CryptoAdapter.portfolio.length * 56px;
-                                VerticalLayout {
-                                    for asset[index] in CryptoAdapter.portfolio: CryptoRow {
-                                        name: asset.name;
-                                        symbol: asset.symbol;
-                                        price: asset.price;
-                                        amount: asset.amount;
-                                        value: asset.value;
-                                        change: asset.change-24h;
-                                        is-positive: asset.is-positive;
-                                        is-last: index == CryptoAdapter.portfolio.length - 1;
-                                        clicked => {
-                                            CryptoAdapter.fetch-asset-details(asset.id);
-                                            CryptoAdapter.show-asset-detail = true;
+                            VerticalLayout {
+                                spacing: 4px; // Espacio entre filas
+                                for asset[index] in CryptoAdapter.portfolio: Rectangle {
+                                    height: 56px;
+                                    background: Palette.surface.with-alpha(0.4); // Fondo sutil por fila
+                                    border-radius: 6px;
+                                    
+                                    // Row Wrapper
+                                    HorizontalLayout {
+                                        padding-left: 8px; // Padding interno para que el hover no toque bordes
+                                        padding-right: 8px;
+                                        CryptoRow {
+                                            name: asset.name;
+                                            symbol: asset.symbol;
+                                            price: asset.price;
+                                            amount: asset.amount;
+                                            value: asset.value;
+                                            change: asset.change-24h;
+                                            is-positive: asset.is-positive;
+                                            is-last: false; // Ya no necesitamos la línea divisoria del row widget
+                                            clicked => {
+                                                CryptoAdapter.fetch-asset-details(asset.id);
+                                                CryptoAdapter.show-asset-detail = true;
+                                            }
                                         }
                                     }
                                 }
@@ -267,63 +349,65 @@ export component CryptoPage inherits Rectangle {
                         }
                     }
                 }
-            }
 
-            // TAB: WALLETS
-            if root.active-tab == "wallets": VerticalLayout {
-                spacing: 0px;
+                // TAB: WALLETS
+                if root.active-tab == "wallets": VerticalLayout {
+                    spacing: 0px;
 
-                Rectangle {
-                    vertical-stretch: 1;
-                    background: Palette.surface;
-                    border-radius: 8px;
-                    border-width: 1px;
-                    border-color: Palette.border-subtle;
-                    clip: true;
+                    // Encabezados
+                    Rectangle {
+                        height: 32px;
+                        background: transparent;
+                        HorizontalLayout {
+                            padding-left: 16px; padding-right: 16px;
+                            alignment: start;
+                            
+                            Text { width: 300px; text: "WALLET SOURCE"; color: Palette.text-subtle; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; }
+                            Text { width: 100px; text: "ASSETS"; color: Palette.text-subtle; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: center; }
+                            Text { width: 150px; text: "TOTAL BALANCE"; color: Palette.text-subtle; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: right; }
+                            Rectangle { width: 32px; }
+                        }
+                    }
 
-                    VerticalLayout {
-                        spacing: 0px;
+                    Rectangle { height: 8px; }
 
-                        // Header
-                        Rectangle {
-                            height: 44px;
-                            background: Palette.surface;
-                            HorizontalLayout {
-                                padding-left: 24px; padding-right: 24px;
-                                alignment: start;
-                                
-                                Text { width: 300px; text: "WALLET / SOURCE"; color: Palette.text-muted; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; }
-                                Text { width: 100px; text: "ASSETS"; color: Palette.text-muted; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: center; }
-                                Text { width: 150px; text: "TOTAL BALANCE"; color: Palette.text-muted; font-size: 10px; font-weight: 600; letter-spacing: 1px; vertical-alignment: center; horizontal-alignment: right; }
-                                Rectangle { width: 32px; }
+                    // Lista de Wallets
+                    Rectangle {
+                        vertical-stretch: 1;
+                        background: transparent;
+
+                        if CryptoAdapter.wallets.length == 0: VerticalLayout {
+                            alignment: center;
+                            spacing: 16px;
+                            Text { 
+                                text: "No wallets connected"; 
+                                color: Palette.text-muted; font-size: 16px; font-weight: 500;
+                                horizontal-alignment: center; 
                             }
-                            Rectangle { height: 1px; width: parent.width; background: Palette.border-subtle; y: parent.height - 1px; }
                         }
 
-                        // List
-                        Rectangle {
-                            vertical-stretch: 1;
-                            background: Palette.surface;
-
-                            if CryptoAdapter.wallets.length == 0: Text { 
-                                text: "No wallets connected."; 
-                                color: Palette.text-muted; font-size: 14px; font-italic: true; 
-                                horizontal-alignment: center; vertical-alignment: center; 
-                            }
-
-                            if CryptoAdapter.wallets.length > 0: Flickable {
-                                width: parent.width;
-                                viewport-height: CryptoAdapter.wallets.length * 64px;
-                                VerticalLayout {
-                                    for wallet[index] in CryptoAdapter.wallets: WalletRow {
-                                        name: wallet.name;
-                                        category: wallet.category;
-                                        balance: wallet.balance;
-                                        count: wallet.asset-count;
-                                        id: wallet.id;
-                                        is-last: index == CryptoAdapter.wallets.length - 1;
-                                        delete => {
-                                            CryptoAdapter.delete-wallet(wallet.id);
+                        if CryptoAdapter.wallets.length > 0: Flickable {
+                            width: parent.width;
+                            viewport-height: CryptoAdapter.wallets.length * 68px;
+                            VerticalLayout {
+                                spacing: 4px;
+                                for wallet[index] in CryptoAdapter.wallets: Rectangle {
+                                    height: 64px;
+                                    background: Palette.surface.with-alpha(0.4);
+                                    border-radius: 6px;
+                                    
+                                    HorizontalLayout {
+                                        padding-left: 8px; padding-right: 8px;
+                                        WalletRow {
+                                            name: wallet.name;
+                                            category: wallet.category;
+                                            balance: wallet.balance;
+                                            count: wallet.asset-count;
+                                            id: wallet.id;
+                                            is-last: false;
+                                            delete => {
+                                                CryptoAdapter.delete-wallet(wallet.id);
+                                            }
                                         }
                                     }
                                 }
@@ -339,21 +423,22 @@ export component CryptoPage inherits Rectangle {
     Rectangle {
         x: parent.width - self.width - 48px;
         y: parent.height - self.height - 48px;
-        width: 48px; height: 48px;
-        border-radius: 24px;
+        width: 56px; height: 56px; // Un poco más grande
+        border-radius: 28px;
         background: fab-touch.has-hover ? Palette.accent-hover : Palette.accent;
-        drop-shadow-blur: 8px;
+        drop-shadow-blur: 12px;
         drop-shadow-color: #00000080;
         
         Text { 
             text: "+"; 
             color: #000000; 
-            font-size: 24px; font-weight: 400; 
+            font-size: 28px; font-weight: 300; 
             vertical-alignment: center; horizontal-alignment: center; 
-            y: 0px;
+            y: -2px; // Ajuste óptico
         }
         
         fab-touch := TouchArea {
+            mouse-cursor: pointer;
             clicked => {
                 if (root.active-tab == "portfolio") {
                     AppState.show-add-crypto = true;
@@ -362,6 +447,10 @@ export component CryptoPage inherits Rectangle {
                 }
             }
         }
+        
+        animate width { duration: 150ms; easing: ease-out; }
+        animate height { duration: 150ms; easing: ease-out; }
+        animate background { duration: 150ms; }
     }
     
     // DETAIL OVERLAY
@@ -369,9 +458,8 @@ export component CryptoPage inherits Rectangle {
         x: 0; y: 0; width: 100%; height: 100%;
         
         // Backdrop
-        Rectangle { background: #00000080; }
+        Rectangle { background: #00000090; animate background { duration: 200ms; } }
 
-        // Layout: close area + drawer so clicks on panel don't close it
         HorizontalLayout {
             width: parent.width;
             height: parent.height;
@@ -386,6 +474,7 @@ export component CryptoPage inherits Rectangle {
             AssetDetailPanel {
                 // Stick to right edge
                 height: parent.height;
+                // Ancho controlado por el componente
             }
         }
     }
