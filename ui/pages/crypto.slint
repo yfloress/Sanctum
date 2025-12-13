@@ -17,7 +17,6 @@ export component CryptoPage inherits Rectangle {
     init => {
         CryptoAdapter.fetch-portfolio();
         CryptoAdapter.fetch-wallets();
-        CryptoAdapter.refresh-prices(); // Fetch ticker prices
     }
 
     VerticalLayout {
@@ -111,11 +110,31 @@ export component CryptoPage inherits Rectangle {
                                     color: CryptoAdapter.total-pnl-positive ? Palette.success : Palette.danger; 
                                     font-size: 12px; 
                                     font-weight: 600;
-                                    vertical-alignment: center; 
-                                }
-                            }
-                        }
-                    }
+                                                                        vertical-alignment: center;
+                                                                    }
+                                                                }
+                                                            }
+                                                            
+                                                            // Manual Refresh Button
+                                                            Rectangle {
+                                                                height: 24px;
+                                                                width: 24px;
+                                                                border-radius: 12px;
+                                                                background: refresh-button-touch.has-hover ? Palette.surface-hover : transparent;
+                                                                
+                                                                Text {
+                                                                    text: "↻"; // Refresh icon
+                                                                    color: Palette.text-muted;
+                                                                    font-size: 14px;
+                                                                    vertical-alignment: center; horizontal-alignment: center;
+                                                                }
+                                                                
+                                                                refresh-button-touch := TouchArea {
+                                                                    clicked => {
+                                                                        CryptoAdapter.refresh-prices();
+                                                                    }
+                                                                }
+                                                            }                    }
                 }
 
                 // Right: Tabs
