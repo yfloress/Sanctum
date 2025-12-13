@@ -6,11 +6,255 @@ import {
     DashboardAdapter,
     TransactionAdapter,
     AccountAdapter,
+    AnalyticsAdapter,
+    CategoryData,
     AppState,
 } from "../globals.slint";
 import { TacticalGrid } from "../components/tactical_grid.slint";
 import { TransactionItem } from "../components/transaction_item.slint";
 import { TextButton, BorderButton } from "../widgets.slint";
+import { SanctumLineChart } from "../components/charts.slint";
+import { CategoryBreakdown } from "../components/category_breakdown.slint";
+
+component RangeChip inherits Rectangle {
+    in property <string> label: "";
+    in property <bool> active: false;
+    callback clicked;
+
+    height: 30px;
+    min-width: 56px;
+    background: active ? Palette.surface-hover : Palette.surface;
+    border-radius: Palette.radius-lg;
+    border-width: 1px;
+    border-color: active ? Palette.border-light : Palette.border;
+
+    Text {
+        text: label;
+        color: active ? Palette.text-primary : Palette.text-secondary;
+        font-size: 11px;
+        font-weight: 500;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        letter-spacing: 1px;
+    }
+
+    TouchArea { clicked => { root.clicked(); } }
+}
+
+component StatCard inherits Rectangle {
+    in property <string> label: "";
+    in property <string> value: "";
+    in property <string> helper: "";
+    in property <color> accent: Palette.text-secondary;
+
+    min-height: 80px;
+    background: Palette.surface;
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: Palette.border;
+
+    VerticalLayout {
+        padding: 14px;
+        spacing: 6px;
+
+        Text {
+            text: label;
+            color: Palette.text-muted;
+            font-size: 11px;
+            font-weight: 400;
+            letter-spacing: 2px;
+        }
+
+        Text {
+            text: value;
+            color: accent;
+            font-size: 17px;
+            font-weight: 600;
+        }
+
+        if helper != "": Text {
+            text: helper;
+            color: Palette.text-secondary;
+            font-size: 12px;
+            font-weight: 400;
+        }
+    }
+}
+
+export component RangeMarkersCard inherits Rectangle {
+    in property <string> max-value: "";
+    in property <string> min-value: "";
+    in property <int> category-count: 0;
+
+    background: Palette.surface;
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: Palette.border;
+
+    VerticalLayout {
+        padding: 18px;
+        spacing: 12px;
+
+        Text {
+            text: "RANGE MARKERS";
+            color: Palette.text-muted;
+            font-size: 11px;
+            font-weight: 400;
+            letter-spacing: 3px;
+        }
+
+        StatCard {
+            label: "Period high";
+            value: max-value;
+            helper: "Highest point in the active range.";
+            accent: Palette.success;
+        }
+
+        StatCard {
+            label: "Period low";
+            value: min-value;
+            helper: "Floor reference for your net worth.";
+            accent: Palette.danger;
+        }
+
+        StatCard {
+            label: "Tracked categories";
+            value: category-count == 1 ? "1 category" : category-count + " categories";
+            helper: "Expenses included in this view.";
+            accent: Palette.text-primary;
+        }
+    }
+}
+
+component TrajectoryCard inherits Rectangle {
+    in property <string> range-label: "";
+    in property <string> max-value: "";
+    in property <string> min-value: "";
+
+    background: Palette.surface;
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: Palette.border;
+
+    VerticalLayout {
+        padding: 18px;
+        spacing: 12px;
+
+        HorizontalLayout {
+            alignment: space-between;
+
+            VerticalLayout {
+                spacing: 4px;
+
+                Text {
+                    text: "NET WORTH TRAJECTORY";
+                    color: Palette.text-muted;
+                    font-size: 11px;
+                    font-weight: 500;
+                    letter-spacing: 3px;
+                }
+
+                Text {
+                    text: "Smooth line with visible peaks and floors.";
+                    color: Palette.text-secondary;
+                    font-size: 12px;
+                }
+            }
+
+            Rectangle {
+                height: 28px;
+                min-width: 86px;
+                background: Palette.surface-hover;
+                border-radius: 8px;
+                border-width: 1px;
+                border-color: Palette.border;
+
+                Text {
+                    text: range-label + " window";
+                    color: Palette.text-secondary;
+                    font-size: 11px;
+                    font-weight: 500;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        Rectangle {
+            vertical-stretch: 1;
+            min-height: 260px;
+            background: @linear-gradient(180deg, #121212 0%, #0e0e0e 100%);
+            border-radius: 10px;
+            border-width: 1px;
+            border-color: Palette.border-subtle;
+
+            SanctumLineChart {
+                width: 100%;
+                height: 100%;
+                path: AnalyticsAdapter.summary.chart_path;
+                min-label: min-value;
+                max-label: max-value;
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 10px;
+
+            StatCard {
+                label: "High watermark";
+                value: max-value;
+                helper: "Latest recorded peak.";
+                accent: Palette.text-primary;
+                horizontal-stretch: 1;
+            }
+
+            StatCard {
+                label: "Low watermark";
+                value: min-value;
+                helper: "Latest recorded low.";
+                accent: Palette.text-secondary;
+                horizontal-stretch: 1;
+            }
+        }
+    }
+}
+
+component SpendingCard inherits Rectangle {
+    in property <[CategoryData]> categories: [];
+
+    background: Palette.surface;
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: Palette.border;
+
+    VerticalLayout {
+        padding: 20px;
+        spacing: 14px;
+
+        Text {
+            text: "SPENDING FOCUS";
+            color: Palette.text-muted;
+            font-size: 11px;
+            font-weight: 400;
+            letter-spacing: 3px;
+        }
+
+        Text {
+            text: "Expense distribution for the active range.";
+            color: Palette.text-secondary;
+            font-size: 12px;
+            font-weight: 400;
+        }
+
+        Flickable {
+            viewport-height: 320px;
+
+            CategoryBreakdown {
+                categories: categories;
+            }
+        }
+    }
+}
 
 component StatPill inherits Rectangle {
     in property <string> label: "";
@@ -66,145 +310,102 @@ export component DashboardPage inherits Rectangle {
 
     init => {
         DashboardAdapter.fetch-balance();
-        DashboardAdapter.fetch-recent();
         TransactionAdapter.fetch-transactions();
+        AnalyticsAdapter.fetch-analytics("1M");
     }
 
-    VerticalLayout {
-        padding: 48px;
-        padding-left: 64px;
-        padding-right: 64px;
-        spacing: 24px;
+    Flickable {
+        width: parent.width;
+        height: parent.height;
 
-        // Hero / net worth
-        Rectangle {
-            height: 220px;
-            background: @linear-gradient(135deg, #0f0f0f 0%, #090909 50%, #0f0f0f 100%);
-            border-radius: 10px;
-            border-width: 1px;
-            border-color: Palette.border;
-            clip: true;
+        VerticalLayout {
+            padding: 48px;
+            padding-left: 64px;
+            padding-right: 64px;
+            spacing: 24px;
 
-            TacticalGrid {
-                grid-cols: 14;
-                grid-rows: 6;
-                show-background: false;
-                opacity: 0.25;
-            }
+            // Hero / net worth
+            Rectangle {
+                height: 220px;
+                background: @linear-gradient(135deg, #0f0f0f 0%, #090909 50%, #0f0f0f 100%);
+                border-radius: 10px;
+                border-width: 1px;
+                border-color: Palette.border;
+                clip: true;
 
-            VerticalLayout {
-                padding: 24px;
-                spacing: 14px;
-
-                Text {
-                    text: "NET WORTH";
-                    color: Palette.text-muted;
-                    font-size: 11px;
-                    font-weight: 400;
-                    letter-spacing: 3px;
+                TacticalGrid {
+                    grid-cols: 14;
+                    grid-rows: 6;
+                    show-background: false;
+                    opacity: 0.25;
                 }
 
-                Text {
-                    text: DashboardAdapter.balance.total-balance;
-                    color: Palette.text-primary;
-                    font-size: 42px;
-                    font-weight: 400;
-                    letter-spacing: -0.5px;
-                }
-
-                Text {
-                    text: "Sum across all accounts and wallets";
-                    color: Palette.text-secondary;
-                    font-size: 12px;
-                    font-weight: 400;
-                }
-
-                HorizontalLayout {
-                    spacing: 12px;
-
-                    StatPill {
-                        label: "INFLOW";
-                        value: DashboardAdapter.balance.total-income;
-                        accent: Palette.success;
-                    }
-
-                    StatPill {
-                        label: "OUTFLOW";
-                        value: DashboardAdapter.balance.total-expense;
-                        accent: Palette.danger;
-                    }
-
-                    StatPill {
-                        label: "ACTIVITY";
-                        value: DashboardAdapter.recent.length == 1 ? "1 move" : DashboardAdapter.recent.length + " moves";
-                        accent: Palette.text-primary;
-                    }
-                }
-
-                Rectangle {
-                    vertical-stretch: 1;
-                }
-
-                HorizontalLayout {
-                    spacing: 12px;
-
-                    BorderButton {
-                        text: "VIEW ANALYTICS";
-
-                        clicked => {
-                            AppState.active-page = "analytics";
-                        }
-                    }
-
-                    TextButton {
-                        text: "+ ADD TRANSACTION";
-                        uppercase: true;
-
-                        clicked => {
-                            AccountAdapter.fetch-accounts();
-                            AppState.show-add-transaction = true;
-                        }
-                    }
-                }
-            }
-        }
-
-        // Recent transactions
-        Rectangle {
-            vertical-stretch: 1;
-            background: Palette.surface;
-            border-radius: 10px;
-            border-width: 1px;
-            border-color: Palette.border;
-
-            VerticalLayout {
-                padding: 24px;
-                spacing: 16px;
-
-                HorizontalLayout {
-                    alignment: space-between;
+                VerticalLayout {
+                    padding: 24px;
+                    spacing: 14px;
 
                     Text {
-                        text: "RECENT ACTIVITY";
+                        text: "NET WORTH";
                         color: Palette.text-muted;
                         font-size: 11px;
                         font-weight: 400;
                         letter-spacing: 3px;
                     }
 
+                    Text {
+                        text: DashboardAdapter.balance.total-balance;
+                        color: Palette.text-primary;
+                        font-size: 42px;
+                        font-weight: 400;
+                        letter-spacing: -0.5px;
+                    }
+
+                    Text {
+                        text: "Sum across all accounts and wallets";
+                        color: Palette.text-secondary;
+                        font-size: 12px;
+                        font-weight: 400;
+                    }
+
                     HorizontalLayout {
                         spacing: 12px;
 
-                        BorderButton {
-                            text: "VIEW ALL";
-
-                            clicked => {
-                                AppState.active-page = "transactions";
-                            }
+                        StatPill {
+                            label: "INFLOW";
+                            value: DashboardAdapter.balance.total-income;
+                            accent: Palette.success;
                         }
 
+                        StatPill {
+                            label: "OUTFLOW";
+                            value: DashboardAdapter.balance.total-expense;
+                            accent: Palette.danger;
+                        }
+
+                        // Range Selector (New)
+                        HorizontalLayout {
+                            spacing: 8px;
+                            for range in ["1M", "3M", "6M", "1Y", "ALL"] : RangeChip {
+                                label: range;
+                                active: AnalyticsAdapter.active-range == range;
+                                clicked => {
+                                    AnalyticsAdapter.active-range = range;
+                                    AnalyticsAdapter.fetch-analytics(range);
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        vertical-stretch: 1;
+                    }
+
+                    HorizontalLayout {
+                        spacing: 12px;
+
                         TextButton {
-                            text: "+ ADD";
+                            text: "+ ADD TRANSACTION";
+                            uppercase: true;
 
                             clicked => {
                                 AccountAdapter.fetch-accounts();
@@ -213,51 +414,24 @@ export component DashboardPage inherits Rectangle {
                         }
                     }
                 }
-
-                if DashboardAdapter.recent.length == 0: Rectangle {
-                    vertical-stretch: 1;
-
-                    VerticalLayout {
-                        alignment: center;
-                        spacing: 10px;
-
-                        Text {
-                            text: "No transactions yet";
-                            color: Palette.text-muted;
-                            font-size: 14px;
-                            font-weight: 300;
-                            font-italic: true;
-                            horizontal-alignment: center;
-                        }
-
-                        Text {
-                            text: "Registra tu primer movimiento para poblar el panel";
-                            color: Palette.text-subtle;
-                            font-size: 12px;
-                            font-weight: 400;
-                            horizontal-alignment: center;
-                        }
-                    }
-                }
-
-                if DashboardAdapter.recent.length > 0: Rectangle {
-                    vertical-stretch: 1;
-
-                    Flickable {
-                        viewport-height: DashboardAdapter.recent.length * 56px;
-
-                        VerticalLayout {
-                            spacing: 0px;
-
-                            for transaction[index] in DashboardAdapter.recent: TransactionItem {
-                                transaction: transaction;
-                                is-last: index == DashboardAdapter.recent.length - 1;
-                                show-delete: false;
-                            }
-                        }
-                    }
-                }
             }
+
+            // Trajectory Card
+            TrajectoryCard {
+                height: 420px;
+                range-label: AnalyticsAdapter.active-range;
+                max-value: AnalyticsAdapter.summary.max_value;
+                min-value: AnalyticsAdapter.summary.min_value;
+            }
+
+            // Spending Focus
+            SpendingCard {
+                height: 420px;
+                categories: AnalyticsAdapter.summary.expense_breakdown;
+            }
+            
+            // Padding bottom
+            Rectangle { height: 48px; }
         }
     }
 }

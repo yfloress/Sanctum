@@ -16,9 +16,7 @@ import {
 } from "globals.slint";
 import { LoginPage } from "pages/login.slint";
 import { DashboardPage } from "pages/dashboard.slint";
-import { AccountsPage } from "pages/accounts.slint";
-import { TransactionsPage } from "pages/transactions.slint";
-import { AnalyticsPage } from "pages/analytics.slint";
+import { FinancesPage } from "pages/finances.slint";
 import { HabitsPage } from "pages/habits.slint";
 import { CryptoPage } from "pages/crypto.slint";
 import { SettingsPage } from "pages/settings.slint";
@@ -67,20 +65,8 @@ export component AppWindow inherits Window {
                 height: 100%;
             }
 
-            // Accounts
-            if AppState.active-page == "accounts": AccountsPage {
-                width: 100%;
-                height: 100%;
-            }
-
-            // Transactions
-            if AppState.active-page == "transactions": TransactionsPage {
-                width: 100%;
-                height: 100%;
-            }
-
-            // Analytics
-            if AppState.active-page == "analytics": AnalyticsPage {
+            // Finances (Unified Accounts & Transactions)
+            if AppState.active-page == "finances": FinancesPage {
                 width: 100%;
                 height: 100%;
             }

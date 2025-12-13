@@ -707,13 +707,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         ui.global::<DashboardAdapter>().on_fetch_balance(move || {
-            let result = controller.get_balance();
-            if let Ok(balance) = result
+            // 1. Fetch Fiat Balance
+            let fiat_result = controller.get_balance();
+            
+            // 2. Fetch Crypto Portfolio
+            let crypto_result = controller.get_aggregated_portfolio();
+            let prices = controller.load_crypto_prices().unwrap_or_default();
+            
+            // Create price map for O(1) lookup
+            let price_map: HashMap<String, f64> = prices
+                .into_iter()
+                .map(|p| (p.id, p.current_price))
+                .collect();
+
+            if let Ok(balance) = fiat_result
+                && let Ok(assets) = crypto_result
                 && let Some(ui) = ui_weak.upgrade()
             {
+                // Calculate Total Crypto Value
+                let crypto_total: f64 = assets.iter().map(|asset| {
+                    let price = price_map.get(&asset.coin_id).cloned().unwrap_or(0.0);
+                    asset.total_amount * price
+                }).sum();
+
+                // Fiat is in cents, convert to dollars for total calc
+                let fiat_total_dollars = balance.total_balance as f64 / 100.0;
+                
+                // Net Worth = Fiat + Crypto
+                let net_worth = fiat_total_dollars + crypto_total;
+                
                 let dash = ui.global::<DashboardAdapter>();
                 dash.set_balance(BalanceData {
-                    total_balance: format_money(balance.total_balance, "USD").into(),
+                    total_balance: format_money((net_worth * 100.0) as i64, "USD").into(),
                     total_income: format_money(balance.total_income, "USD").into(),
                     total_expense: format_money(balance.total_expense, "USD").into(),
                 });
