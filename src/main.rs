@@ -324,20 +324,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let abs = amount_cents.abs();
         let units = abs / 100;
         let cents = abs % 100;
-        format!("{units}.{cents:02}")
-    }
-
-    fn currency_symbol(code: &str) -> &str {
-        match code.to_uppercase().as_str() {
-            "USD" => "$",
-            "CLP" => "$",
-            _ => "",
+        
+        let units_str = units.to_string();
+        let mut formatted_units = String::new();
+        for (count, c) in units_str.chars().rev().enumerate() {
+            if count > 0 && count % 3 == 0 {
+                formatted_units.insert(0, ',');
+            }
+            formatted_units.insert(0, c);
         }
+        format!("{formatted_units}.{cents:02}")
     }
 
     fn format_money(amount_cents: i64, currency: &str) -> String {
-        let symbol = currency_symbol(currency);
-        format!("{symbol} {}", format_amount(amount_cents))
+        let code = currency.to_uppercase();
+        format!("{code} {}", format_amount(amount_cents))
     }
 
     fn format_clp_rate(rate: f64) -> String {
@@ -707,15 +708,70 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         ui.global::<DashboardAdapter>().on_fetch_balance(move || {
-            let result = controller.get_balance();
-            if let Ok(balance) = result
+            // 1. Load Exchange Rate (CLP -> USD)
+            let clp_rate = match controller.load_exchange_rate("CLP_USD".to_string()) {
+                Ok(Some((r, _))) => r,
+                _ => 0.0,
+            };
+
+            // 2. Fetch Accounts & Balances (for normalized calculation)
+            let accounts_res = controller.get_accounts();
+            let balances_res = controller.get_account_balances();
+            
+            // 3. Fetch Crypto Portfolio
+            let crypto_result = controller.get_aggregated_portfolio();
+            let prices = controller.load_crypto_prices().unwrap_or_default();
+            
+            // Create price map for O(1) lookup
+            let price_map: HashMap<String, f64> = prices
+                .into_iter()
+                .map(|p| (p.id, p.current_price))
+                .collect();
+
+            if let Ok(accounts) = accounts_res
+                && let Ok(balances) = balances_res
+                && let Ok(assets) = crypto_result
                 && let Some(ui) = ui_weak.upgrade()
             {
+                // Create Currency Map (Account ID -> Currency)
+                let currency_map: HashMap<String, String> = accounts
+                    .into_iter()
+                    .map(|a| (a.id, a.currency.to_uppercase()))
+                    .collect();
+
+                // Calculate Normalized Fiat Totals
+                let mut total_fiat_usd: f64 = 0.0;
+                let mut total_income_usd: f64 = 0.0;
+                let mut total_expense_usd: f64 = 0.0;
+
+                for bal in balances {
+                    let currency = currency_map.get(&bal.account_id).map(|s| s.as_str()).unwrap_or("USD");
+                    let rate = if currency == "CLP" { clp_rate } else { 1.0 };
+                    
+                    if rate > 0.0 {
+                        total_fiat_usd += (bal.current_balance as f64) / rate;
+                        total_income_usd += (bal.total_income as f64) / rate;
+                        total_expense_usd += (bal.total_expense as f64) / rate;
+                    }
+                }
+
+                // Calculate Total Crypto Value (in USD)
+                let crypto_total: f64 = assets.iter().map(|asset| {
+                    let price = price_map.get(&asset.coin_id).cloned().unwrap_or(0.0);
+                    asset.total_amount * price
+                }).sum();
+
+                // Net Worth (Normalized Fiat + Crypto)
+                // Fiat sums are in cents (converted to USD cents), Crypto is in dollars
+                // Convert Fiat USD cents to dollars for the sum
+                let fiat_total_dollars = total_fiat_usd / 100.0;
+                let net_worth = fiat_total_dollars + crypto_total;
+                
                 let dash = ui.global::<DashboardAdapter>();
                 dash.set_balance(BalanceData {
-                    total_balance: format_money(balance.total_balance, "USD").into(),
-                    total_income: format_money(balance.total_income, "USD").into(),
-                    total_expense: format_money(balance.total_expense, "USD").into(),
+                    total_balance: format_money((net_worth * 100.0) as i64, "USD").into(),
+                    total_income: format_money(total_income_usd as i64, "USD").into(),
+                    total_expense: format_money(total_expense_usd as i64, "USD").into(),
                 });
             }
         });

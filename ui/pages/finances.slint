@@ -1,0 +1,332 @@
+// ==================== Finances Page ====================
+// Unified view for Transactions and Accounts
+// Based on "Sanctum Command" Architecture
+
+import {
+    Palette,
+    TransactionAdapter,
+    AccountAdapter,
+    AccountData,
+    AppState
+} from "../globals.slint";
+import { TransactionItem } from "../components/transaction_item.slint";
+import { AccountItem } from "../components/account_item.slint";
+import { TextButton } from "../widgets.slint";
+
+component TabButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> active;
+    callback clicked;
+
+    width: 100px;
+    height: 32px;
+    border-radius: 16px;
+    background: active ? Palette.surface-hover : transparent;
+    border-width: 1px;
+    border-color: active ? Palette.border-light : transparent;
+
+    animate background { duration: 200ms; easing: ease-out; }
+    animate border-color { duration: 200ms; easing: ease-out; }
+
+    Text {
+        text: root.text;
+        color: active ? Palette.text-primary : Palette.text-muted;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        animate color { duration: 200ms; }
+    }
+
+    TouchArea { clicked => { root.clicked(); } }
+}
+
+export component FinancesPage inherits Rectangle {
+    background: Palette.background;
+    in-out property <string> active-tab: "activity"; // activity, accounts
+
+    init => {
+        TransactionAdapter.fetch-transactions();
+        AccountAdapter.fetch-accounts();
+    }
+
+    VerticalLayout {
+        spacing: 0px;
+
+        // ==================== HEADER (Tabs) ====================
+        Rectangle {
+            height: 80px;
+            background: Palette.background;
+            
+            HorizontalLayout {
+                padding-left: 64px;
+                padding-right: 64px;
+                alignment: space-between;
+                
+                // Left: Title
+                VerticalLayout {
+                    alignment: center;
+                    Text { 
+                        text: "FINANCES"; 
+                        color: Palette.text-muted; 
+                        font-size: 11px; 
+                        font-weight: 600; 
+                        letter-spacing: 3px; 
+                    }
+                }
+
+                // Right: Navigation Tabs
+                VerticalLayout {
+                    alignment: center;
+                    
+                    HorizontalLayout {
+                        spacing: 8px;
+                        
+                        TabButton {
+                            text: "ACTIVITY";
+                            active: root.active-tab == "activity";
+                            clicked => { root.active-tab = "activity"; }
+                        }
+
+                        TabButton {
+                            text: "ACCOUNTS";
+                            active: root.active-tab == "accounts";
+                            clicked => { root.active-tab = "accounts"; }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Divider
+        Rectangle {
+            height: 1px;
+            background: Palette.border;
+            opacity: 0.5;
+        }
+
+        // ==================== CONTENT AREA ====================
+        Rectangle {
+            vertical-stretch: 1;
+            background: transparent;
+
+            // TAB: ACTIVITY (Content from transactions.slint)
+            if root.active-tab == "activity": VerticalLayout {
+                padding: 48px;
+                padding-left: 64px;
+                padding-right: 64px;
+                spacing: 0px;
+
+                // Header section
+                HorizontalLayout {
+                    height: 48px;
+                    spacing: 0px;
+
+                    // Title
+                    Text {
+                        text: "RECENT TRANSACTIONS";
+                        color: Palette.text-secondary;
+                        font-size: 14px;
+                        font-weight: 300;
+                        letter-spacing: 1px;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                    }
+
+                    // Add transaction button
+                    Rectangle {
+                        width: 120px;
+
+                        TextButton {
+                            text: "+ NEW ENTRY";
+                            enabled: true;
+
+                            clicked => {
+                                AccountAdapter.fetch-accounts();
+                                AppState.show-add-transaction = true;
+                            }
+                        }
+                    }
+                }
+
+                // Spacer
+                Rectangle {
+                    height: 24px;
+                }
+
+                // Transaction list
+                if TransactionAdapter.transactions.length > 0: Rectangle {
+                    vertical-stretch: 1;
+
+                    Flickable {
+                        viewport-height: TransactionAdapter.transactions.length * 60px;
+
+                        VerticalLayout {
+                            spacing: 0px;
+
+                            for transaction[index] in TransactionAdapter.transactions: TransactionItem {
+                                transaction: transaction;
+                                is-last: index == TransactionAdapter.transactions.length - 1;
+                                show-delete: true;
+
+                                clicked => {
+                                    // TODO: Open transaction details
+                                }
+
+                                delete-clicked => {
+                                    let result = TransactionAdapter.delete-transaction(transaction.id);
+                                    if (result == "") {
+                                        TransactionAdapter.fetch-transactions();
+                                        AccountAdapter.fetch-accounts();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Empty state
+                if TransactionAdapter.transactions.length == 0: Rectangle {
+                    vertical-stretch: 1;
+
+                    VerticalLayout {
+                        alignment: center;
+                        spacing: 16px;
+
+                        Text {
+                            text: "No transactions yet";
+                            color: Palette.text-muted;
+                            font-size: 14px;
+                            font-weight: 300;
+                            font-italic: true;
+                            horizontal-alignment: center;
+                        }
+
+                        Text {
+                            text: "Add your first entry to start tracking";
+                            color: Palette.text-subtle;
+                            font-size: 12px;
+                            font-weight: 400;
+                            horizontal-alignment: center;
+                        }
+                    }
+                }
+
+                // Footer
+                Rectangle {
+                    height: 48px;
+
+                    HorizontalLayout {
+                        alignment: start;
+
+                        Text {
+                            text: TransactionAdapter.transactions.length == 1 ? "1 entry" : TransactionAdapter.transactions.length + " entries";
+                            color: Palette.text-subtle;
+                            font-size: 10px;
+                            font-weight: 400;
+                            letter-spacing: 1px;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+            }
+
+            // TAB: ACCOUNTS (Content from accounts.slint)
+            if root.active-tab == "accounts": Flickable {
+                width: parent.width;
+                height: parent.height;
+
+                content := VerticalLayout {
+                    width: parent.width;
+                    padding: 48px;
+                    padding-left: 64px;
+                    padding-right: 64px;
+                    spacing: 24px;
+
+                    // Header actions
+                    HorizontalLayout {
+                        alignment: space-between;
+
+                        Text {
+                            text: "MY ACCOUNTS";
+                            color: Palette.text-secondary;
+                            font-size: 14px;
+                            font-weight: 300;
+                            letter-spacing: 1px;
+                        }
+
+                        HorizontalLayout {
+                            spacing: 16px;
+
+                            TextButton {
+                                text: "TRANSFER FUNDS";
+                                enabled: AccountAdapter.accounts.length > 1;
+
+                                clicked => {
+                                    AccountAdapter.fetch-accounts();
+                                    AppState.show-transfer-modal = true;
+                                }
+                            }
+
+                            TextButton {
+                                text: "+ NEW ACCOUNT";
+                                clicked => {
+                                    AccountAdapter.fetch-accounts();
+                                    AppState.account-edit-mode = false;
+                                    AppState.selected-account-index = 0;
+                                    AppState.show-add-account = true;
+                                }
+                            }
+                        }
+                    }
+
+                    // List container
+                    if AccountAdapter.accounts.length > 0: VerticalLayout {
+                        spacing: 12px;
+                        for account[index] in AccountAdapter.accounts: AccountItem {
+                            account: account;
+                            is-last: false; // Cards don't need borders separator usually if spaced
+
+                            clicked => {
+                                AppState.account-edit-mode = true;
+                                AppState.selected-account-index = index;
+                                AppState.show-add-account = true;
+                            }
+                        }
+                    }
+
+                    if AccountAdapter.accounts.length == 0: Rectangle {
+                        height: 200px;
+                        background: Palette.surface;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: Palette.border;
+
+                        VerticalLayout {
+                            alignment: center;
+                            spacing: 14px;
+
+                            Text {
+                                text: "No accounts configured";
+                                color: Palette.text-muted;
+                                font-size: 14px;
+                                font-weight: 300;
+                                font-italic: true;
+                                horizontal-alignment: center;
+                            }
+
+                            Text {
+                                text: "Create an account to manage your funds.";
+                                color: Palette.text-secondary;
+                                font-size: 12px;
+                                font-weight: 400;
+                                horizontal-alignment: center;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

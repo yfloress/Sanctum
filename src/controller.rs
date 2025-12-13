@@ -1088,11 +1088,34 @@ impl AppController {
     /// Gets expenses aggregated by category
     pub fn get_expenses_by_category(&self) -> Result<Vec<(String, i64)>, ControllerError> {
         let transactions = self.get_transactions()?;
+        let accounts = self.get_accounts()?;
+        
+        let currency_map: std::collections::HashMap<String, String> = accounts
+            .iter()
+            .map(|a| (a.id.clone(), a.currency.to_uppercase()))
+            .collect();
+
+        let clp_rate = match self.load_exchange_rate("CLP_USD".to_string()) {
+            Ok(Some((r, _))) => r,
+            _ => 1.0,
+        };
+        let rate = if clp_rate > 0.0 { clp_rate } else { 1.0 };
+
+        let normalize = |amount: i64, account_id: &str| -> i64 {
+            let currency = currency_map.get(account_id).map(|s| s.as_str()).unwrap_or("USD");
+            if currency == "CLP" {
+                ((amount as f64) / rate) as i64
+            } else {
+                amount
+            }
+        };
+
         let mut map: std::collections::HashMap<String, i64> = std::collections::HashMap::new();
 
         for tx in transactions {
             if tx.transaction_type == "expense" {
-                *map.entry(tx.category).or_default() += tx.amount;
+                let amount = normalize(tx.amount, &tx.account_id);
+                *map.entry(tx.category).or_default() += amount;
             }
         }
 
@@ -1525,8 +1548,34 @@ impl AppController {
         range: String,
     ) -> Result<AnalyticsSummary, ControllerError> {
         let balances = self.get_account_balances()?;
-        let current_balance: i64 = balances.iter().map(|b| b.current_balance).sum();
+        let accounts = self.get_accounts()?;
         let transactions = self.get_transactions()?;
+
+        // Currency Normalization Setup
+        let currency_map: std::collections::HashMap<String, String> = accounts
+            .iter()
+            .map(|a| (a.id.clone(), a.currency.to_uppercase()))
+            .collect();
+
+        let clp_rate = match self.load_exchange_rate("CLP_USD".to_string()) {
+            Ok(Some((r, _))) => r,
+            _ => 1.0,
+        };
+        let rate = if clp_rate > 0.0 { clp_rate } else { 1.0 };
+
+        let normalize = |amount: i64, account_id: &str| -> i64 {
+            let currency = currency_map.get(account_id).map(|s| s.as_str()).unwrap_or("USD");
+            if currency == "CLP" {
+                ((amount as f64) / rate) as i64
+            } else {
+                amount
+            }
+        };
+
+        // Calculate Normalized Current Balance
+        let current_balance: i64 = balances.iter().map(|b| {
+            normalize(b.current_balance, &b.account_id)
+        }).sum();
 
         let today = chrono::Local::now().date_naive();
         let start_date = match range.as_str() {
@@ -1545,17 +1594,19 @@ impl AppController {
             _ => today,
         };
 
-        // Build daily deltas
+        // Build daily deltas (Normalized)
         let mut delta_by_day: std::collections::HashMap<NaiveDate, i64> =
             std::collections::HashMap::new();
         let mut earliest_tx: Option<NaiveDate> = None;
         for tx in &transactions {
             if let Ok(date) = NaiveDate::parse_from_str(&tx.date, "%Y-%m-%d") {
-                let delta = match tx.transaction_type.as_str() {
+                let raw_delta = match tx.transaction_type.as_str() {
                     "income" => tx.amount,
                     "expense" => -tx.amount,
                     _ => 0,
                 };
+                let delta = normalize(raw_delta, &tx.account_id);
+                
                 *delta_by_day.entry(date).or_insert(0) += delta;
                 earliest_tx = Some(earliest_tx.map_or(date, |d| d.min(date)));
             }
@@ -1595,43 +1646,41 @@ impl AppController {
         let values: Vec<i64> = points_rev.iter().map(|(_, v)| *v).collect();
         let min_val = *values.iter().min().unwrap_or(&0);
         let max_val = *values.iter().max().unwrap_or(&0);
-        let is_flat = max_val == min_val;
-        let safe_range = if is_flat {
-            1.0
-        } else {
-            (max_val - min_val) as f32
-        };
+        let safe_range = ((max_val - min_val) as f64).max(1.0);
+
+        // Generate Smooth Path (Catmull-Rom Spline -> Cubic Bezier)
+        // Normalize points to 0..100 space
+        let points: Vec<(f64, f64)> = values.iter().enumerate().map(|(i, &v)| {
+            let x = (i as f64 / (values.len().max(2) - 1) as f64) * 100.0;
+            let y_ratio = (v - min_val) as f64 / safe_range;
+            let y = 100.0 - (5.0 + (y_ratio * 90.0)); // 5% padding
+            (x, y)
+        }).collect();
 
         let mut path_cmd = String::new();
-        let len = values.len() as f32;
+        if !points.is_empty() {
+            path_cmd.push_str(&format!("M {:.2} {:.2}", points[0].0, points[0].1));
 
-        for (idx, val) in values.iter().enumerate() {
-            let x = if len > 1.0 {
-                (idx as f32) * (100.0 / (len - 1.0))
-            } else {
-                0.0
-            };
+            for i in 0..points.len() - 1 {
+                let p0 = if i == 0 { points[0] } else { points[i - 1] };
+                let p1 = points[i];
+                let p2 = points[i + 1];
+                let p3 = if i + 2 < points.len() { points[i + 2] } else { p2 };
 
-            let ratio = if is_flat {
-                0.5
-            } else {
-                ((*val - min_val) as f32 / safe_range).clamp(0.0, 1.0)
-            };
+                let cp1x = p1.0 + (p2.0 - p0.0) / 6.0;
+                let cp1y = p1.1 + (p2.1 - p0.1) / 6.0;
 
-            let y_norm = 100.0 - (5.0 + (ratio * 90.0));
+                let cp2x = p2.0 - (p3.0 - p1.0) / 6.0;
+                let cp2y = p2.1 - (p3.1 - p1.1) / 6.0;
 
-            if idx == 0 {
-                path_cmd.push_str(&format!("M {:.2} {:.2}", x, y_norm));
-            } else {
-                path_cmd.push_str(&format!(" L {:.2} {:.2}", x, y_norm));
+                path_cmd.push_str(&format!(" C {:.2} {:.2} {:.2} {:.2} {:.2} {:.2}", 
+                    cp1x, cp1y, cp2x, cp2y, p2.0, p2.1));
             }
-        }
-
-        if path_cmd.is_empty() {
+        } else {
             path_cmd = "M 0 50 L 100 50".to_string();
         }
 
-        // Expense donut (current month)
+        // Expense donut (Normalized)
         let mut expenses: std::collections::HashMap<String, i64> = std::collections::HashMap::new();
         let current_month = today.month();
         let current_year = today.year();
@@ -1643,7 +1692,8 @@ impl AppController {
                 && date.year() == current_year
                 && date.month() == current_month
             {
-                *expenses.entry(tx.category.to_uppercase()).or_insert(0) += tx.amount;
+                let amount = normalize(tx.amount, &tx.account_id);
+                *expenses.entry(tx.category.to_uppercase()).or_insert(0) += amount;
             }
         }
 
@@ -1683,6 +1733,8 @@ impl AppController {
         })
     }
 
+
+
     /// Returns normalized SVG path commands (0-100 space) for net worth history and current net worth formatted
     /// Also returns min and max values formatted for labels
     pub fn get_net_worth_history(
@@ -1691,6 +1743,27 @@ impl AppController {
     ) -> Result<(String, String, String, String), ControllerError> {
         let accounts = self.get_accounts()?;
         let transactions = self.get_transactions()?;
+
+        // Currency Normalization Setup
+        let currency_map: std::collections::HashMap<String, String> = accounts
+            .iter()
+            .map(|a| (a.id.clone(), a.currency.to_uppercase()))
+            .collect();
+
+        let clp_rate = match self.load_exchange_rate("CLP_USD".to_string()) {
+            Ok(Some((r, _))) => r,
+            _ => 1.0,
+        };
+        let rate = if clp_rate > 0.0 { clp_rate } else { 1.0 };
+
+        let normalize = |amount: i64, account_id: &str| -> i64 {
+            let currency = currency_map.get(account_id).map(|s| s.as_str()).unwrap_or("USD");
+            if currency == "CLP" {
+                ((amount as f64) / rate) as i64
+            } else {
+                amount
+            }
+        };
 
         // Event definition to merge Account Creations and Transactions
         struct FinancialEvent {
@@ -1712,29 +1785,32 @@ impl AppController {
                     chrono::Local::now().date_naive()
                 };
 
+                let amount_delta = normalize(acc.initial_balance, &acc.id);
+
                 events.push(FinancialEvent {
                     date,
-                    amount_delta: acc.initial_balance,
+                    amount_delta,
                 });
             }
         }
 
         // 2. Add Transaction Events
         for tx in &transactions {
-            let delta = match tx.transaction_type.as_str() {
+            let raw_delta = match tx.transaction_type.as_str() {
                 "income" => tx.amount,
                 "expense" => -tx.amount,
                 _ => 0,
             };
 
-            if delta == 0 {
+            if raw_delta == 0 {
                 continue;
             }
 
             if let Ok(date) = NaiveDate::parse_from_str(&tx.date, "%Y-%m-%d") {
+                let amount_delta = normalize(raw_delta, &tx.account_id);
                 events.push(FinancialEvent {
                     date,
-                    amount_delta: delta,
+                    amount_delta,
                 });
             }
         }

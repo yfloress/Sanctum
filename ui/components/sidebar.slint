@@ -1,60 +1,71 @@
 // ==================== Sanctum Sidebar ====================
-// Noir Minimalist navigation sidebar
+// Noir Minimalist navigation sidebar with collapse support
 
 import { Palette, AppState, AuthAdapter } from "../globals.slint";
 import { TacticalGrid } from "../components/tactical_grid.slint";
 
 // ==================== SidebarItem ====================
-// Individual navigation item with active state indicator
 
 component SidebarItem inherits Rectangle {
     in property <string> label: "ITEM";
+    in property <string> icon: "•";
     in property <string> page-id: "";
     in property <bool> is-active: AppState.active-page == page-id;
+    in property <bool> collapsed: false;
 
     callback clicked();
 
     height: 48px;
     background: transparent;
 
+    // Active indicator (left border)
+    Rectangle {
+        x: 0;
+        width: 3px;
+        height: 100%;
+        background: is-active ? Palette.accent : transparent;
+        opacity: is-active ? 1.0 : 0.0;
+
+        animate background { duration: 150ms; }
+    }
+
     HorizontalLayout {
         spacing: 0px;
 
-        // Active indicator line
+        // Icon Area (always visible, centered in collapsed mode)
         Rectangle {
-            width: 3px;
-            background: is-active ? Palette.accent : transparent;
-
-            animate background {
-                duration: 150ms;
-                easing: ease-out;
+            width: collapsed ? parent.width : 54px;
+            
+            Text {
+                text: root.icon;
+                color: is-active ? Palette.text-primary : Palette.text-muted;
+                font-size: 14px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+                animate color { duration: 150ms; }
             }
         }
 
-        // Spacer
-        Rectangle {
-            width: 24px;
-        }
-
-        // Label
-        Text {
-            text: root.label;
-            color: is-active ? Palette.text-primary : Palette.text-muted;
-            font-size: 11px;
-            font-weight: is-active ? 500 : 400;
-            letter-spacing: 2.5px;
-            vertical-alignment: center;
-
-            animate color {
-                duration: 150ms;
-                easing: ease-out;
+        // Label Area (hidden when collapsed)
+        if !collapsed : Rectangle {
+            horizontal-stretch: 1;
+            clip: true;
+            
+            Text {
+                text: root.label;
+                color: is-active ? Palette.text-primary : Palette.text-muted;
+                font-size: 11px;
+                font-weight: is-active ? 500 : 400;
+                letter-spacing: 2.5px;
+                vertical-alignment: center;
+                
+                animate color { duration: 150ms; }
             }
         }
     }
 
     touch := TouchArea {
         mouse-cursor: pointer;
-
         clicked => {
             AppState.active-page = root.page-id;
             root.clicked();
@@ -63,18 +74,21 @@ component SidebarItem inherits Rectangle {
 }
 
 // ==================== SanctumSidebar ====================
-// Main sidebar component with navigation and lock button
 
 export component SanctumSidebar inherits Rectangle {
-    width: 200px;
+    property <bool> collapsed: false;
+    
+    width: collapsed ? 64px : 220px;
     background: Palette.sidebar-bg;
+
+    animate width { duration: 250ms; easing: ease-in-out; }
 
     // Background texture
     TacticalGrid {
         show-background: false;
-        grid-cols: 6;
+        grid-cols: collapsed ? 2 : 6;
         grid-rows: 15;
-        opacity: 0.5; // Blend nicely with the dark background
+        opacity: 0.5;
     }
 
     // Right border
@@ -86,18 +100,19 @@ export component SanctumSidebar inherits Rectangle {
     }
 
     VerticalLayout {
-        padding-top: 32px;
         spacing: 0px;
 
-        // Logo/Brand
+        // Logo/Brand Area
         Rectangle {
-            height: 64px;
+            height: 80px;
+            clip: true;
 
             HorizontalLayout {
-                padding-left: 27px;
+                padding-left: collapsed ? 0px : 24px;
+                alignment: collapsed ? center : start;
 
                 Text {
-                    text: "SANCTUM";
+                    text: collapsed ? "S" : "SANCTUM";
                     color: Palette.text-primary;
                     font-size: 14px;
                     font-weight: 300;
@@ -107,48 +122,42 @@ export component SanctumSidebar inherits Rectangle {
             }
         }
 
-        // Spacer
-        Rectangle {
-            height: 32px;
-        }
-
-        // Navigation items
+        // Navigation Items
         SidebarItem {
             label: "DASHBOARD";
+            icon: "⊞";
             page-id: "dashboard";
+            collapsed: root.collapsed;
         }
 
         SidebarItem {
-            label: "ACCOUNTS";
-            page-id: "accounts";
-        }
-
-        SidebarItem {
-            label: "TRANSACTIONS";
-            page-id: "transactions";
-        }
-
-        SidebarItem {
-            label: "ANALYTICS";
-            page-id: "analytics";
+            label: "FINANCES";
+            icon: "☰";
+            page-id: "finances";
+            collapsed: root.collapsed;
         }
 
         SidebarItem {
             label: "CRYPTO";
+            icon: "₿";
             page-id: "crypto";
+            collapsed: root.collapsed;
         }
 
         SidebarItem {
             label: "HABITS";
+            icon: "✓";
             page-id: "habits";
+            collapsed: root.collapsed;
         }
 
         SidebarItem {
             label: "SETTINGS";
+            icon: "⚙";
             page-id: "settings";
+            collapsed: root.collapsed;
         }
 
-        // Flexible spacer to push lock button to bottom
         Rectangle {
             vertical-stretch: 1;
         }
@@ -157,54 +166,68 @@ export component SanctumSidebar inherits Rectangle {
         Rectangle {
             height: 1px;
             background: Palette.border;
-
-            HorizontalLayout {
-                padding-left: 27px;
-                padding-right: 27px;
-
-                Rectangle {
-                    horizontal-stretch: 1;
-                    background: Palette.border;
-                }
-            }
+            opacity: 0.3;
         }
 
-        // Lock button
+        // Lock Button
         Rectangle {
             height: 64px;
-
+            
             HorizontalLayout {
-                padding-left: 27px;
+                padding-left: 0px;
                 spacing: 0px;
+                alignment: center; // Center content relative to width
 
-                Text {
-                    text: "LOCK";
+                // Icon logic handled manually here for custom behavior
+                Rectangle {
+                    width: root.collapsed ? parent.width : 54px;
+                    Text {
+                        text: "🔒";
+                        color: lock-touch.has-hover ? Palette.text-primary : Palette.text-muted;
+                        font-size: 12px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+
+                if !root.collapsed : Text {
+                    text: "LOCK VAULT";
                     color: lock-touch.has-hover ? Palette.text-primary : Palette.text-muted;
                     font-size: 11px;
                     font-weight: 400;
                     letter-spacing: 2.5px;
                     vertical-alignment: center;
-
-                    animate color {
-                        duration: 150ms;
-                        easing: ease-out;
-                    }
+                    horizontal-stretch: 1;
                 }
             }
 
             lock-touch := TouchArea {
                 mouse-cursor: pointer;
-
                 clicked => {
                     AuthAdapter.lock-vault();
                     AppState.is-logged-in = false;
                 }
             }
         }
-
-        // Bottom padding
+        
+        // Collapse Toggle
         Rectangle {
-            height: 16px;
+            height: 48px;
+            background: toggle-touch.has-hover ? Palette.surface-hover : transparent;
+            animate background { duration: 150ms; }
+
+            Text {
+                text: root.collapsed ? "»" : "«";
+                color: Palette.text-secondary;
+                font-size: 16px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+            
+            toggle-touch := TouchArea {
+                mouse-cursor: pointer;
+                clicked => { root.collapsed = !root.collapsed; }
+            }
         }
     }
 }

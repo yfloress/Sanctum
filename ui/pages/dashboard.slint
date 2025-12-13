@@ -1,263 +1,281 @@
 // ==================== Dashboard Page ====================
-// Noir Minimalist - Net worth cockpit
+// Noir Minimalist - Net worth cockpit Redesign
 
 import {
     Palette,
     DashboardAdapter,
     TransactionAdapter,
     AccountAdapter,
+    AnalyticsAdapter,
+    CategoryData,
     AppState,
 } from "../globals.slint";
 import { TacticalGrid } from "../components/tactical_grid.slint";
 import { TransactionItem } from "../components/transaction_item.slint";
-import { TextButton, BorderButton } from "../widgets.slint";
+import { TextButton } from "../widgets.slint";
+import { SanctumLineChart } from "../components/charts.slint";
+import { CategoryBreakdown } from "../components/category_breakdown.slint";
 
-component StatPill inherits Rectangle {
-    in property <string> label: "";
-    in property <string> value: "";
-    in property <color> accent: Palette.text-secondary;
+// ==================== Local Components ====================
 
-    min-width: 160px;
-    height: 64px;
-    background: Palette.surface-hover;
-    border-radius: Palette.radius-lg;
+component RangeSelector inherits Rectangle {
+    in property <string> active-range;
+    callback range-selected(string);
+
+    height: 32px;
+    background: Palette.surface;
+    border-radius: 16px;
     border-width: 1px;
     border-color: Palette.border;
 
     HorizontalLayout {
-        padding-left: 14px;
-        padding-right: 14px;
-        padding-top: 12px;
-        padding-bottom: 12px;
-        spacing: 10px;
-        alignment: center;
+        padding-left: 4px;
+        padding-right: 4px;
+        spacing: 2px;
 
-        Rectangle {
-            width: 9px;
-            height: 9px;
-            border-radius: 5px;
-            background: root.accent;
-            opacity: 0.9;
-        }
-
-        VerticalLayout {
-            spacing: 4px;
+        for range in ["1M", "3M", "6M", "1Y", "ALL"] : Rectangle {
+            width: 48px;
+            border-radius: 14px;
+            background: active-range == range ? Palette.surface-hover : transparent;
+            
+            animate background { duration: 150ms; }
 
             Text {
-                text: root.label;
-                color: Palette.text-muted;
-                font-size: 11px;
-                font-weight: 400;
-                letter-spacing: 2px;
+                text: range;
+                color: active-range == range ? Palette.text-primary : Palette.text-muted;
+                font-size: 10px;
+                font-weight: 600;
+                horizontal-alignment: center;
+                vertical-alignment: center;
             }
 
-            Text {
-                text: root.value;
-                color: root.accent;
-                font-size: 16px;
-                font-weight: 500;
+            TouchArea {
+                clicked => { root.range-selected(range); }
             }
         }
     }
 }
+
+component ChartSection inherits Rectangle {
+    in property <string> min-label;
+    in property <string> max-label;
+    in property <string> path;
+
+    height: 280px;
+    background: @linear-gradient(180deg, #0a0a0a 0%, #050505 100%);
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: Palette.border;
+    clip: true;
+
+    // Grid lines visual
+    TacticalGrid {
+        opacity: 0.1;
+        grid-cols: 10;
+        grid-rows: 5;
+    }
+
+    SanctumLineChart {
+        width: 100%;
+        height: 100%;
+        path: root.path;
+        min-label: root.min-label;
+        max-label: root.max-label;
+    }
+}
+
+// ==================== Main Page ====================
 
 export component DashboardPage inherits Rectangle {
     background: Palette.background;
 
     init => {
         DashboardAdapter.fetch-balance();
-        DashboardAdapter.fetch-recent();
         TransactionAdapter.fetch-transactions();
+        AnalyticsAdapter.fetch-analytics("1M");
     }
 
-    VerticalLayout {
-        padding: 48px;
-        padding-left: 64px;
-        padding-right: 64px;
-        spacing: 24px;
+    Flickable {
+        width: parent.width;
+        height: parent.height;
 
-        // Hero / net worth
-        Rectangle {
-            height: 220px;
-            background: @linear-gradient(135deg, #0f0f0f 0%, #090909 50%, #0f0f0f 100%);
-            border-radius: 10px;
-            border-width: 1px;
-            border-color: Palette.border;
-            clip: true;
+        VerticalLayout {
+            padding-top: 48px;
+            padding-bottom: 48px;
+            padding-left: 64px;
+            padding-right: 64px;
+            spacing: 40px;
 
-            TacticalGrid {
-                grid-cols: 14;
-                grid-rows: 6;
-                show-background: false;
-                opacity: 0.25;
-            }
-
+            // 1. HERO SECTION (Net Worth)
             VerticalLayout {
-                padding: 24px;
-                spacing: 14px;
+                alignment: center;
+                spacing: 16px;
 
                 Text {
-                    text: "NET WORTH";
+                    text: "TOTAL NET WORTH";
                     color: Palette.text-muted;
                     font-size: 11px;
-                    font-weight: 400;
-                    letter-spacing: 3px;
+                    font-weight: 600;
+                    letter-spacing: 4px;
+                    horizontal-alignment: center;
                 }
 
                 Text {
                     text: DashboardAdapter.balance.total-balance;
                     color: Palette.text-primary;
-                    font-size: 42px;
-                    font-weight: 400;
-                    letter-spacing: -0.5px;
+                    font-size: 56px;
+                    font-weight: 300;
+                    letter-spacing: -1px;
+                    horizontal-alignment: center;
                 }
 
-                Text {
-                    text: "Sum across all accounts and wallets";
-                    color: Palette.text-secondary;
-                    font-size: 12px;
-                    font-weight: 400;
-                }
-
+                // Quick stats row
                 HorizontalLayout {
-                    spacing: 12px;
+                    alignment: center;
+                    spacing: 24px;
 
-                    StatPill {
-                        label: "INFLOW";
-                        value: DashboardAdapter.balance.total-income;
-                        accent: Palette.success;
-                    }
-
-                    StatPill {
-                        label: "OUTFLOW";
-                        value: DashboardAdapter.balance.total-expense;
-                        accent: Palette.danger;
-                    }
-
-                    StatPill {
-                        label: "ACTIVITY";
-                        value: DashboardAdapter.recent.length == 1 ? "1 move" : DashboardAdapter.recent.length + " moves";
-                        accent: Palette.text-primary;
-                    }
-                }
-
-                Rectangle {
-                    vertical-stretch: 1;
-                }
-
-                HorizontalLayout {
-                    spacing: 12px;
-
-                    BorderButton {
-                        text: "VIEW ANALYTICS";
-
-                        clicked => {
-                            AppState.active-page = "analytics";
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Text { text: "▲"; color: Palette.success; font-size: 12px; vertical-alignment: center; }
+                        Text { 
+                            text: DashboardAdapter.balance.total-income; 
+                            color: Palette.text-secondary; 
+                            font-size: 13px; 
+                            vertical-alignment: center;
                         }
                     }
 
-                    TextButton {
-                        text: "+ ADD TRANSACTION";
-                        uppercase: true;
+                    Rectangle { width: 1px; height: 16px; background: Palette.border; }
 
-                        clicked => {
-                            AccountAdapter.fetch-accounts();
-                            AppState.show-add-transaction = true;
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Text { text: "▼"; color: Palette.danger; font-size: 12px; vertical-alignment: center; }
+                        Text { 
+                            text: DashboardAdapter.balance.total-expense; 
+                            color: Palette.text-secondary; 
+                            font-size: 13px; 
+                            vertical-alignment: center;
                         }
                     }
                 }
             }
-        }
 
-        // Recent transactions
-        Rectangle {
-            vertical-stretch: 1;
-            background: Palette.surface;
-            border-radius: 10px;
-            border-width: 1px;
-            border-color: Palette.border;
+            // 2. CONTROLS & ACTIONS
+            HorizontalLayout {
+                alignment: space-between;
+                height: 32px;
 
-            VerticalLayout {
-                padding: 24px;
+                // Range Selector
+                RangeSelector {
+                    active-range: AnalyticsAdapter.active-range;
+                    range-selected(r) => {
+                        AnalyticsAdapter.active-range = r;
+                        AnalyticsAdapter.fetch-analytics(r);
+                    }
+                }
+
+                // Add Button
+                TextButton {
+                    text: "+ ADD TRANSACTION";
+                    clicked => {
+                        AccountAdapter.fetch-accounts();
+                        AppState.show-add-transaction = true;
+                    }
+                }
+            }
+
+            // 3. CHART VISUALIZATION
+            ChartSection {
+                path: AnalyticsAdapter.summary.chart_path;
+                min-label: AnalyticsAdapter.summary.min_value;
+                max-label: AnalyticsAdapter.summary.max_value;
+            }
+
+            // 4. SPENDING BREAKDOWN
+            if AnalyticsAdapter.summary.expense_breakdown.length > 0 : VerticalLayout {
+                spacing: 16px;
+
+                Text {
+                    text: "SPENDING FOCUS";
+                    color: Palette.text-muted;
+                    font-size: 11px;
+                    font-weight: 600;
+                    letter-spacing: 3px;
+                }
+
+                Rectangle {
+                    height: 300px;
+                    background: Palette.surface;
+                    border-radius: 12px;
+                    border-width: 1px;
+                    border-color: Palette.border;
+                    clip: true; // Ensure content stays inside
+
+                    Flickable {
+                        width: 100%;
+                        height: 100%;
+                        viewport-height: max(300px, (AnalyticsAdapter.summary.expense_breakdown.length * 56px) + 48px);
+
+                        VerticalLayout {
+                            padding: 24px;
+                            alignment: start; // Start from top
+                            
+                            CategoryBreakdown {
+                                categories: AnalyticsAdapter.summary.expense_breakdown;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 5. RECENT ACTIVITY
+            if DashboardAdapter.recent.length > 0 : VerticalLayout {
                 spacing: 16px;
 
                 HorizontalLayout {
                     alignment: space-between;
-
                     Text {
                         text: "RECENT ACTIVITY";
                         color: Palette.text-muted;
                         font-size: 11px;
-                        font-weight: 400;
+                        font-weight: 600;
                         letter-spacing: 3px;
                     }
-
-                    HorizontalLayout {
-                        spacing: 12px;
-
-                        BorderButton {
-                            text: "VIEW ALL";
-
-                            clicked => {
-                                AppState.active-page = "transactions";
-                            }
-                        }
-
-                        TextButton {
-                            text: "+ ADD";
-
-                            clicked => {
-                                AccountAdapter.fetch-accounts();
-                                AppState.show-add-transaction = true;
-                            }
+                    
+                    Text {
+                        text: "VIEW ALL →";
+                        color: view-all-touch.has-hover ? Palette.text-primary : Palette.text-secondary;
+                        font-size: 10px;
+                        font-weight: 400;
+                        letter-spacing: 1px;
+                        animate color { duration: 150ms; }
+                        
+                        view-all-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { AppState.active-page = "finances"; }
                         }
                     }
                 }
 
-                if DashboardAdapter.recent.length == 0: Rectangle {
-                    vertical-stretch: 1;
+                Rectangle {
+                    background: Palette.surface;
+                    border-radius: 12px;
+                    border-width: 1px;
+                    border-color: Palette.border;
+                    clip: true;
 
                     VerticalLayout {
-                        alignment: center;
-                        spacing: 10px;
-
-                        Text {
-                            text: "No transactions yet";
-                            color: Palette.text-muted;
-                            font-size: 14px;
-                            font-weight: 300;
-                            font-italic: true;
-                            horizontal-alignment: center;
-                        }
-
-                        Text {
-                            text: "Registra tu primer movimiento para poblar el panel";
-                            color: Palette.text-subtle;
-                            font-size: 12px;
-                            font-weight: 400;
-                            horizontal-alignment: center;
-                        }
-                    }
-                }
-
-                if DashboardAdapter.recent.length > 0: Rectangle {
-                    vertical-stretch: 1;
-
-                    Flickable {
-                        viewport-height: DashboardAdapter.recent.length * 56px;
-
-                        VerticalLayout {
-                            spacing: 0px;
-
-                            for transaction[index] in DashboardAdapter.recent: TransactionItem {
-                                transaction: transaction;
-                                is-last: index == DashboardAdapter.recent.length - 1;
-                                show-delete: false;
-                            }
+                        for transaction[index] in DashboardAdapter.recent : TransactionItem {
+                            transaction: transaction;
+                            is-last: index == DashboardAdapter.recent.length - 1;
+                            show-delete: false; 
                         }
                     }
                 }
             }
+            
+            // Spacer
+            Rectangle { height: 24px; }
         }
     }
 }

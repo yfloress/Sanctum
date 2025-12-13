@@ -8,30 +8,26 @@ export component SanctumLineChart inherits Rectangle {
     in property <string> min-label: "";
     in property <string> max-label: "";
 
-    background: Palette.surface;
+    background: transparent;
     clip: true;
 
-    // Grid
-    VerticalLayout {
-        padding: 20px;
-        alignment: space-between;
-        Rectangle { height: 1px; background: Palette.border-subtle; opacity: 0.3; }
-        Rectangle { height: 1px; background: Palette.border-subtle; opacity: 0.2; }
-        Rectangle { height: 1px; background: Palette.border-subtle; opacity: 0.3; }
-    }
-
+    // Labels
     if max-label != "": Text {
-        x: 12px; y: 10px;
+        x: 16px; y: 16px;
         text: max-label;
-        color: Palette.text-secondary;
+        color: Palette.text-muted;
         font-size: 10px;
+        font-weight: 500;
+        letter-spacing: 1px;
     }
 
     if min-label != "": Text {
-        x: 12px; y: parent.height - 18px;
+        x: 16px; y: parent.height - 24px;
         text: min-label;
-        color: Palette.text-secondary;
+        color: Palette.text-muted;
         font-size: 10px;
+        font-weight: 500;
+        letter-spacing: 1px;
     }
 
     // Chart content
@@ -40,17 +36,29 @@ export component SanctumLineChart inherits Rectangle {
         height: 100%;
         clip: true;
 
+        // Gradient Fill
         Path {
             commands: path + " L 100 100 L 0 100 Z";
             fill: @linear-gradient(180deg, Palette.accent-muted, #00000000);
             stroke-width: 0px;
+            opacity: 0.5; // Slight transparency for the fill
         }
 
+        // Line Stroke
         Path {
             commands: path;
             stroke: Palette.accent;
-            stroke-width: 2px;
+            stroke-width: 3px; // Thicker line
             fill: transparent;
+        }
+        
+        // Glow effect (duplicate line with blur)
+        Path {
+            commands: path;
+            stroke: Palette.accent;
+            stroke-width: 6px;
+            fill: transparent;
+            opacity: 0.15;
         }
     }
 }
