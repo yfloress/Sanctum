@@ -13,6 +13,35 @@ import { TransactionItem } from "../components/transaction_item.slint";
 import { AccountItem } from "../components/account_item.slint";
 import { TextButton } from "../widgets.slint";
 
+component TabButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> active;
+    callback clicked;
+
+    width: 100px;
+    height: 32px;
+    border-radius: 16px;
+    background: active ? Palette.surface-hover : transparent;
+    border-width: 1px;
+    border-color: active ? Palette.border-light : transparent;
+
+    animate background { duration: 200ms; easing: ease-out; }
+    animate border-color { duration: 200ms; easing: ease-out; }
+
+    Text {
+        text: root.text;
+        color: active ? Palette.text-primary : Palette.text-muted;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        animate color { duration: 200ms; }
+    }
+
+    TouchArea { clicked => { root.clicked(); } }
+}
+
 export component FinancesPage inherits Rectangle {
     background: Palette.background;
     in-out property <string> active-tab: "activity"; // activity, accounts
@@ -27,90 +56,54 @@ export component FinancesPage inherits Rectangle {
 
         // ==================== HEADER (Tabs) ====================
         Rectangle {
-            height: 100px;
+            height: 80px;
             background: Palette.background;
             
             HorizontalLayout {
-                padding-left: 48px;
-                padding-right: 48px;
-                padding-top: 24px;
-                padding-bottom: 24px;
+                padding-left: 64px;
+                padding-right: 64px;
                 alignment: space-between;
-                spacing: 24px;
                 
-                // Left: Title / Summary Area
+                // Left: Title
                 VerticalLayout {
                     alignment: center;
                     Text { 
-                        text: "FINANCIAL OVERVIEW"; 
+                        text: "FINANCES"; 
                         color: Palette.text-muted; 
                         font-size: 11px; 
                         font-weight: 600; 
-                        letter-spacing: 2px; 
-                        vertical-alignment: center;
+                        letter-spacing: 3px; 
                     }
                 }
 
-                // Right: Navigation Tabs (Segmented Control style)
+                // Right: Navigation Tabs
                 VerticalLayout {
                     alignment: center;
                     
-                    Rectangle {
-                        height: 44px;
-                        width: 240px;
-                        border-radius: 8px;
-                        background: Palette.surface;
-                        clip: true;
+                    HorizontalLayout {
+                        spacing: 8px;
+                        
+                        TabButton {
+                            text: "ACTIVITY";
+                            active: root.active-tab == "activity";
+                            clicked => { root.active-tab = "activity"; }
+                        }
 
-                        HorizontalLayout {
-                            padding: 4px;
-                            spacing: 0px;
-                            
-                            // Tab 1: ACTIVITY
-                            Rectangle {
-                                horizontal-stretch: 1;
-                                border-radius: 6px;
-                                background: root.active-tab == "activity" ? Palette.background : transparent;
-                                border-width: root.active-tab == "activity" ? 1px : 0px;
-                                border-color: Palette.border.with-alpha(0.5);
-                                drop-shadow-blur: root.active-tab == "activity" ? 4px : 0px;
-                                drop-shadow-color: #00000040;
-                                
-                                animate background { duration: 150ms; }
-
-                                Text { 
-                                    text: "ACTIVITY"; 
-                                    color: root.active-tab == "activity" ? Palette.text-primary : Palette.text-muted; 
-                                    font-size: 11px; font-weight: 600; 
-                                    vertical-alignment: center; horizontal-alignment: center; 
-                                }
-                                TouchArea { clicked => { root.active-tab = "activity"; } }
-                            }
-
-                            // Tab 2: ACCOUNTS
-                            Rectangle {
-                                horizontal-stretch: 1;
-                                border-radius: 6px;
-                                background: root.active-tab == "accounts" ? Palette.background : transparent;
-                                border-width: root.active-tab == "accounts" ? 1px : 0px;
-                                border-color: Palette.border.with-alpha(0.5);
-                                drop-shadow-blur: root.active-tab == "accounts" ? 4px : 0px;
-                                drop-shadow-color: #00000040;
-
-                                animate background { duration: 150ms; }
-
-                                Text { 
-                                    text: "ACCOUNTS"; 
-                                    color: root.active-tab == "accounts" ? Palette.text-primary : Palette.text-muted; 
-                                    font-size: 11px; font-weight: 600; 
-                                    vertical-alignment: center; horizontal-alignment: center; 
-                                }
-                                TouchArea { clicked => { root.active-tab = "accounts"; } }
-                            }
+                        TabButton {
+                            text: "ACCOUNTS";
+                            active: root.active-tab == "accounts";
+                            clicked => { root.active-tab = "accounts"; }
                         }
                     }
                 }
             }
+        }
+
+        // Divider
+        Rectangle {
+            height: 1px;
+            background: Palette.border;
+            opacity: 0.5;
         }
 
         // ==================== CONTENT AREA ====================
@@ -133,10 +126,10 @@ export component FinancesPage inherits Rectangle {
                     // Title
                     Text {
                         text: "RECENT TRANSACTIONS";
-                        color: Palette.text-muted;
-                        font-size: 11px;
-                        font-weight: 400;
-                        letter-spacing: 3px;
+                        color: Palette.text-secondary;
+                        font-size: 14px;
+                        font-weight: 300;
+                        letter-spacing: 1px;
                         vertical-alignment: center;
                         horizontal-stretch: 1;
                     }
@@ -146,7 +139,7 @@ export component FinancesPage inherits Rectangle {
                         width: 120px;
 
                         TextButton {
-                            text: "+ ADD";
+                            text: "+ NEW ENTRY";
                             enabled: true;
 
                             clicked => {
@@ -162,18 +155,12 @@ export component FinancesPage inherits Rectangle {
                     height: 24px;
                 }
 
-                // Divider
-                Rectangle {
-                    height: 1px;
-                    background: Palette.border;
-                }
-
                 // Transaction list
                 if TransactionAdapter.transactions.length > 0: Rectangle {
                     vertical-stretch: 1;
 
                     Flickable {
-                        viewport-height: TransactionAdapter.transactions.length * 56px;
+                        viewport-height: TransactionAdapter.transactions.length * 60px;
 
                         VerticalLayout {
                             spacing: 0px;
@@ -255,25 +242,25 @@ export component FinancesPage inherits Rectangle {
                     padding: 48px;
                     padding-left: 64px;
                     padding-right: 64px;
-                    spacing: 16px;
+                    spacing: 24px;
 
                     // Header actions
                     HorizontalLayout {
                         alignment: space-between;
 
                         Text {
-                            text: "ACCOUNTS";
-                            color: Palette.text-muted;
-                            font-size: 11px;
-                            font-weight: 400;
-                            letter-spacing: 3px;
+                            text: "MY ACCOUNTS";
+                            color: Palette.text-secondary;
+                            font-size: 14px;
+                            font-weight: 300;
+                            letter-spacing: 1px;
                         }
 
                         HorizontalLayout {
-                            spacing: 12px;
+                            spacing: 16px;
 
                             TextButton {
-                                text: "TRANSFER";
+                                text: "TRANSFER FUNDS";
                                 enabled: AccountAdapter.accounts.length > 1;
 
                                 clicked => {
@@ -283,7 +270,7 @@ export component FinancesPage inherits Rectangle {
                             }
 
                             TextButton {
-                                text: "+ NEW";
+                                text: "+ NEW ACCOUNT";
                                 clicked => {
                                     AccountAdapter.fetch-accounts();
                                     AppState.account-edit-mode = false;
@@ -295,82 +282,46 @@ export component FinancesPage inherits Rectangle {
                     }
 
                     // List container
-                    Rectangle {
+                    if AccountAdapter.accounts.length > 0: VerticalLayout {
+                        spacing: 12px;
+                        for account[index] in AccountAdapter.accounts: AccountItem {
+                            account: account;
+                            is-last: false; // Cards don't need borders separator usually if spaced
+
+                            clicked => {
+                                AppState.account-edit-mode = true;
+                                AppState.selected-account-index = index;
+                                AppState.show-add-account = true;
+                            }
+                        }
+                    }
+
+                    if AccountAdapter.accounts.length == 0: Rectangle {
+                        height: 200px;
                         background: Palette.surface;
-                        border-radius: 10px;
+                        border-radius: 8px;
                         border-width: 1px;
                         border-color: Palette.border;
 
                         VerticalLayout {
-                            padding: 20px;
-                            spacing: 16px;
+                            alignment: center;
+                            spacing: 14px;
 
-                            HorizontalLayout {
-                                alignment: space-between;
-
-                                Text {
-                                    text: "ACCOUNT LIST";
-                                    color: Palette.text-muted;
-                                    font-size: 11px;
-                                    font-weight: 400;
-                                    letter-spacing: 3px;
-                                }
-
-                                Text {
-                                    text: AccountAdapter.accounts.length == 1 ? "1 account" : AccountAdapter.accounts.length + " accounts";
-                                    color: Palette.text-secondary;
-                                    font-size: 12px;
-                                    font-weight: 400;
-                                }
+                            Text {
+                                text: "No accounts configured";
+                                color: Palette.text-muted;
+                                font-size: 14px;
+                                font-weight: 300;
+                                font-italic: true;
+                                horizontal-alignment: center;
                             }
 
-                            if AccountAdapter.accounts.length == 0: Rectangle {
-                                vertical-stretch: 1;
-
-                                VerticalLayout {
-                                    alignment: center;
-                                    spacing: 14px;
-
-                                    Text {
-                                        text: "No accounts yet";
-                                        color: Palette.text-muted;
-                                        font-size: 14px;
-                                        font-weight: 300;
-                                        font-italic: true;
-                                        horizontal-alignment: center;
-                                    }
-
-                                    Text {
-                                        text: "Create your first account to start tracking.";
-                                        color: Palette.text-secondary;
-                                        font-size: 12px;
-                                        font-weight: 400;
-                                        horizontal-alignment: center;
-                                    }
-                                }
-                            }
-
-                            if AccountAdapter.accounts.length > 0: Rectangle {
-                                Flickable {
-                                    height: AccountAdapter.accounts.length * 70px < 360px ? AccountAdapter.accounts.length * 70px : 360px;
-                                    viewport-height: AccountAdapter.accounts.length * 70px;
-
-                                    VerticalLayout {
-                                        spacing: 0px;
-                                        preferred-height: AccountAdapter.accounts.length * 70px;
-
-                                        for account[index] in AccountAdapter.accounts: AccountItem {
-                                            account: account;
-                                            is-last: index == AccountAdapter.accounts.length - 1;
-
-                                            clicked => {
-                                                AppState.account-edit-mode = true;
-                                                AppState.selected-account-index = index;
-                                                AppState.show-add-account = true;
-                                            }
-                                        }
-                                    }
-                                }
+                            Text {
+                                text: "Create an account to manage your funds.";
+                                color: Palette.text-secondary;
+                                font-size: 12px;
+                                font-weight: 400;
+                                horizontal-alignment: center;
                             }
                         }
                     }
