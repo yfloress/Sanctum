@@ -123,9 +123,8 @@ export component AccountsPage inherits Rectangle {
                     }
 
                     if AccountAdapter.accounts.length > 0: Rectangle {
-                        vertical-stretch: 1;
-
                         Flickable {
+                            height: AccountAdapter.accounts.length * 70px < 360px ? AccountAdapter.accounts.length * 70px : 360px;
                             viewport-height: AccountAdapter.accounts.length * 70px;
 
                             VerticalLayout {
