@@ -26,6 +26,7 @@ import { AddAccountModal } from "modals/add_account.slint";
 import { TransferFundsModal } from "modals/transfer_funds.slint";
 import { AddCryptoTransactionModal } from "modals/add_crypto_transaction.slint";
 import { AddCryptoWalletModal } from "modals/add_crypto_wallet.slint";
+import { ConfigureTickerModal } from "modals/configure_ticker.slint";
 import { NotificationToast } from "components/notification.slint";
 
 // ==================== Main Application Window ====================
@@ -121,6 +122,12 @@ export component AppWindow inherits Window {
 
     // Add Wallet Modal
     if AppState.show-add-wallet: AddCryptoWalletModal {
+        width: 100%;
+        height: 100%;
+    }
+    
+    // Configure Ticker Modal
+    if AppState.show-configure-ticker: ConfigureTickerModal {
         width: 100%;
         height: 100%;
     }

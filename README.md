@@ -113,6 +113,8 @@ system libraries.
     cargo run
     ```
 
+For detailed setup on other platforms (manual Linux, macOS, Windows), see [docs/BUILDING.md](docs/BUILDING.md).
+
 ## Development Transparency
 
 This is a modern Open Source project that embraces the evolution of software
@@ -144,4 +146,3 @@ v3.0**. See the [LICENSE](https://www.google.com/search?q=LICENSE) file for more
 <div align="center">
 <sub>Built with ❤️, 🦀 Rust and ❄️ Nix</sub>
 </div>
-

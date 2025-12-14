@@ -99,6 +99,8 @@ Este proyecto utiliza **Nix Flakes** para garantizar un entorno reproducible sin
     cargo run
     ```
 
+Para instrucciones detalladas en otras plataformas (Linux manual, macOS, Windows), revisa [docs/BUILDING_ES.md](docs/BUILDING_ES.md).
+
 ## Transparencia en el Desarrollo
 
 Este es un proyecto Open Source moderno que abraza la evolución del desarrollo de software.

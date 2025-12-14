@@ -177,17 +177,20 @@ component CoinSelector inherits Rectangle {
                 }
                 Text { text: "▼"; color: Palette.text-muted; font-size: 10px; vertical-alignment: center; }
             }
+
+            // Make the entire row clickable to open the popup
+            TouchArea {
+                width: parent.width;
+                height: parent.height;
+                mouse-cursor: pointer;
+                clicked => {
+                    if (root.options.length > 0) {
+                        popup.show();
+                    }
+                }
+            }
         }
         Rectangle { height: 1px; background: Palette.border; }
-    }
-    
-    // TouchArea covering the whole selector
-    TouchArea { 
-        clicked => { 
-            if (root.options.length > 0) {
-                popup.show(); 
-            }
-        } 
     }
 
     popup := PopupWindow {
@@ -199,10 +202,13 @@ component CoinSelector inherits Rectangle {
             border-radius: 4px; 
             border-width: 1px; 
             border-color: Palette.accent; // Highlight border
+            clip: true;
             // Limit height to 300px
             height: min(root.options.length * 36px + 8px, 300px);
             
             Flickable {
+                width: parent.width;
+                height: parent.height;
                 viewport-height: root.options.length * 36px + 8px;
                 interactive: true;
                 

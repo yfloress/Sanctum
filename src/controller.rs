@@ -100,6 +100,7 @@ const MAX_ACCOUNT_NAME_LENGTH: usize = 64;
 const MAX_CURRENCY_LENGTH: usize = 8;
 const EXCHANGE_RATE_TTL_SECS: i64 = 6 * 60 * 60; // 6 hours
 pub const SETTING_AUTO_FETCH: &str = "auto_fetch_crypto";
+pub const SETTING_TICKER_COINS: &str = "ticker_coins";
 
 // ==================== Helper Functions ====================
 
@@ -814,6 +815,21 @@ impl AppController {
             db.set_setting(key, value)
                 .map_err(ControllerError::Database)
         })
+    }
+
+    /// Gets active ticker IDs from settings or default
+    pub fn get_active_ticker_ids(&self) -> Vec<String> {
+        self.get_app_setting(SETTING_TICKER_COINS)
+            .ok()
+            .filter(|val| !val.is_empty())
+            .and_then(|val| serde_json::from_str::<Vec<String>>(&val).ok())
+            .unwrap_or_else(crypto::default_price_allowlist)
+    }
+
+    /// Saves active ticker IDs to settings
+    pub fn save_active_ticker_ids(&self, ids: Vec<String>) -> Result<(), ControllerError> {
+        let json = serde_json::to_string(&ids).map_err(|e| ControllerError::Validation(e.to_string()))?;
+        self.set_app_setting(SETTING_TICKER_COINS, &json)
     }
 
     /// Checks if a vault file exists

@@ -1,0 +1,153 @@
+// ==================== Configure Ticker Modal ====================
+// Select which coins appear in the top scrolling ticker
+
+import { Palette, AppState, CryptoAdapter } from "../globals.slint";
+import { TextButton } from "../widgets.slint";
+
+component TickerToggleRow inherits Rectangle {
+    in property <string> symbol;
+    in property <string> name;
+    in property <bool> checked;
+    
+    callback toggled;
+
+    height: 48px;
+    background: transparent;
+
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        spacing: 16px;
+        alignment: space-between;
+
+        // Label
+        VerticalLayout {
+            alignment: center;
+            Text { text: root.symbol; color: Palette.text-primary; font-size: 12px; font-weight: 600; }
+            Text { text: root.name; color: Palette.text-muted; font-size: 10px; }
+        }
+
+        // Toggle Switch
+        Rectangle {
+            width: 36px; height: 20px;
+            border-radius: 10px;
+            background: root.checked ? Palette.accent : Palette.surface-hover;
+            border-width: 1px;
+            border-color: root.checked ? Palette.accent : Palette.border;
+
+            animate background { duration: 150ms; }
+
+            // Knob
+            Rectangle {
+                x: root.checked ? 18px : 2px;
+                y: 2px;
+                width: 16px; height: 16px;
+                border-radius: 8px;
+                background: root.checked ? Palette.background : Palette.text-secondary;
+                
+                animate x { duration: 150ms; easing: ease-in-out; }
+            }
+
+            TouchArea {
+                clicked => { root.toggled(); }
+            }
+        }
+    }
+    
+    // Bottom line
+    Rectangle {
+        y: parent.height - 1px;
+        height: 1px;
+        background: Palette.border-subtle;
+        opacity: 0.5;
+    }
+}
+
+export component ConfigureTickerModal inherits Rectangle {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+
+    init => {
+        CryptoAdapter.load-ticker-options();
+    }
+
+    // Backdrop
+    Rectangle {
+        background: #000000cc;
+        TouchArea { clicked => { AppState.show-configure-ticker = false; } }
+    }
+
+    // Modal Panel
+    Rectangle {
+        width: 400px;
+        height: 500px;
+        background: Palette.sidebar-bg;
+        border-radius: 12px;
+        border-width: 1px;
+        border-color: Palette.border;
+        
+        // Prevent click-through
+        TouchArea {}
+
+        VerticalLayout {
+            padding: 32px;
+            spacing: 0px;
+
+            // Header
+            Text {
+                text: "TICKER DISPLAY";
+                color: Palette.text-muted;
+                font-size: 11px;
+                font-weight: 600;
+                letter-spacing: 2px;
+                horizontal-alignment: center;
+            }
+
+            Rectangle { height: 24px; }
+
+            // List
+            Rectangle {
+                vertical-stretch: 1;
+                background: Palette.surface;
+                border-radius: 8px;
+                border-width: 1px;
+                border-color: Palette.border-subtle;
+                clip: true;
+
+                Flickable {
+                    viewport-height: CryptoAdapter.ticker-options.length * 48px;
+                    
+                    VerticalLayout {
+                        spacing: 0px;
+
+                        for option[index] in CryptoAdapter.ticker-options : TickerToggleRow {
+                            symbol: option.symbol;
+                            name: option.name;
+                            checked: option.enabled;
+                            
+                            toggled => {
+                                // Direct model modification
+                                CryptoAdapter.ticker-options[index].enabled = !CryptoAdapter.ticker-options[index].enabled;
+                            }
+                        }
+                    }
+                }
+            }
+
+            Rectangle { height: 24px; }
+
+            // Actions
+            HorizontalLayout {
+                alignment: center;
+                TextButton {
+                    text: "SAVE CONFIGURATION";
+                    clicked => {
+                        CryptoAdapter.save-ticker-options();
+                        AppState.show-configure-ticker = false;
+                    }
+                }
+            }
+        }
+    }
+}
