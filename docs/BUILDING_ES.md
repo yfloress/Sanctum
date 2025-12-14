@@ -1,5 +1,12 @@
 # Compilación de Sanctum
 
+## Índice
+- [1) Linux (recomendado)](#1-linux-recomendado)
+  - [Opción A: Nix (preferida)](#opción-a-nix-preferida)
+  - [Opción B: Dependencias manuales (sin Nix)](#opción-b-dependencias-manuales-sin-nix)
+- [2) macOS](#2-macos)
+- [3) Windows](#3-windows)
+
 Sanctum incluye un entorno reproducible con Nix, pero también puedes compilarlo manualmente en Linux, macOS y Windows. A continuación se listan dependencias y pasos por plataforma.
 
 ## 1) Linux (recomendado)

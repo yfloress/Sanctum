@@ -1,5 +1,12 @@
 # Building Sanctum
 
+## Table of Contents
+- [1) Linux (recommended)](#1-linux-recommended)
+  - [Option A: Nix (preferred)](#option-a-nix-preferred)
+  - [Option B: Manual dependencies (no Nix)](#option-b-manual-dependencies-no-nix)
+- [2) macOS](#2-macos)
+- [3) Windows](#3-windows)
+
 Sanctum ships with a reproducible Nix environment, but you can also build manually on Linux, macOS, and Windows. Each section below lists the required system dependencies and how to compile.
 
 ## 1) Linux (recommended)
