@@ -51,6 +51,7 @@
           sqlite
           cargo-audit
           slint-lsp
+          bacon
         ];
       in
       {
