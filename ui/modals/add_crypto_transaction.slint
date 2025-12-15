@@ -194,8 +194,11 @@ component CoinSelector inherits Rectangle {
     }
 
     popup := PopupWindow {
-        x: 0; y: root.height; width: root.width;
-        close-policy: close-on-click;
+        x: 0;
+        y: root.height;
+        width: root.width;
+        // Allow interacting inside; close when clicking outside or pressing escape
+        close-policy: PopupClosePolicy.close-on-click-outside;
 
         Rectangle {
             background: Palette.sidebar-bg; // Solid background
