@@ -184,9 +184,7 @@ component CoinSelector inherits Rectangle {
                 height: parent.height;
                 mouse-cursor: pointer;
                 clicked => {
-                    if (popup.visible) {
-                        popup.close();
-                    } else if (root.options.length > 0) {
+                    if (root.options.length > 0) {
                         popup.show();
                     }
                 }
@@ -197,7 +195,7 @@ component CoinSelector inherits Rectangle {
 
     popup := PopupWindow {
         x: 0; y: root.height; width: root.width;
-        close-policy: close-on-press-outside;
+        close-policy: close-on-click;
 
         Rectangle {
             background: Palette.sidebar-bg; // Solid background
