@@ -26,23 +26,27 @@
 ---
 ## src/db.rs
 **Tipo:** Rust Backend
-**Resumen:** Capa de acceso a datos, maneja la conexión SQLite cifrada (SQLCipher) y migraciones.
+**Resumen:** Capa de acceso a datos, maneja la conexión SQLite cifrada (SQLCipher), migraciones, seguridad y caché.
 **Estructura Clave:**
 - `struct Database`: Envoltorio de conexión `rusqlite`.
-- `init`: Inicialización y configuración de cifrado.
-- `create_account`, `get_accounts`, `create_transaction`: Métodos CRUD financieros.
-- `create_wallet`, `add_crypto_transaction`: Métodos CRUD cripto.
-- `migrate_habits_tables`, `create_security_tables`: Migraciones.
+- `init`: Inicialización y configuración de cifrado (SQLCipher).
+- `apply_sqlcipher_hardening`: Configuración de seguridad (PBKDF2, HMAC).
+- **Seguridad:** `check_rate_limit`, `record_failed_attempt` (Protección fuerza bruta).
+- **Finanzas:** `create_account`, `get_accounts`, `create_transaction`, `get_balance_summary`.
+- **Cripto:** `create_wallet`, `add_crypto_transaction`, `migrate_crypto_ledger`, `get_aggregated_portfolio`.
+- **Caché:** `save_exchange_rate`, `load_crypto_prices` (Soporte offline).
+- **Migraciones:** `run_migrations`, `migrate_habits_tables`.
 **Dependencias:** `rusqlite`, `secrecy`, `uuid`, `chrono`
 ---
 ## src/models.rs
 **Tipo:** Rust Backend
 **Resumen:** Define las estructuras de datos fundamentales compartidas entre la DB y la lógica.
 **Estructura Clave:**
-- `struct Account`: Representa una cuenta bancaria/fiat.
-- `struct Transaction`: Representa un ingreso o gasto.
-- `struct CryptoAsset`, `struct CryptoTransaction`, `struct CryptoWallet`: Modelos para criptomonedas.
-- `struct Habit`, `struct HabitLog`: Modelos para seguimiento de hábitos.
+- `struct Account`, `struct AccountBalance`: Cuentas fiat y saldos calculados.
+- `struct Transaction`, `struct BalanceSummary`: Transacciones y resumen financiero.
+- `struct CryptoAsset`, `struct AggregatedAsset`: Datos de mercado y portafolio calculado.
+- `struct CryptoTransaction`, `struct CryptoWallet`: Ledger cripto.
+- `struct Habit`, `struct HabitLog`: Seguimiento de hábitos.
 **Dependencias:** `serde`
 ---
 ## src/controller.rs
@@ -51,8 +55,9 @@
 **Estructura Clave:**
 - `struct AppController`: Controlador principal.
 - `create_db`, `open_db`: Gestión de la bóveda cifrada.
-- `get_analytics_summary`: Lógica de cálculo de patrimonio.
+- `get_analytics_summary`, `get_net_worth_history`: Lógica de análisis financiero.
 - `get_aggregated_portfolio`: Cálculo de portafolio cripto.
+- `check_persistent_rate_limit`: Verificación de seguridad persistente.
 **Dependencias:** `crate::db`, `crate::models`, `crate::crypto`
 ---
 ## src/crypto.rs
@@ -71,6 +76,13 @@
 - `enum SecurityEvent`: Tipos de eventos (Login, Bloqueo, etc.).
 - `log_security_event`: Función de registro.
 **Dependencias:** `log`, `chrono`
+---
+## src/services/mod.rs
+**Tipo:** Rust Backend
+**Resumen:** Módulo raíz de servicios, expone sub-módulos.
+**Estructura Clave:**
+- `pub mod habit;`
+**Dependencias:** N/A
 ---
 ## src/services/habit.rs
 **Tipo:** Rust Backend
@@ -120,7 +132,7 @@
 **Tipo:** Slint UI
 **Resumen:** Panel lateral deslizable con detalles de un activo cripto.
 **Estructura Clave:**
-- `export component AssetDetailPanel`: Muestra gráfico, desglose por wallet e historial.
+- `export component AssetDetailPanel`: Muestra desglose por wallet e historial.
 - Conecta directamente con `CryptoAdapter`.
 **Dependencias:** `globals.slint`
 ---
@@ -133,16 +145,16 @@
 ---
 ## ui/components/chart.slint
 **Tipo:** Slint UI
-**Resumen:** Componente base para gráficos de línea usando `Path`.
+**Resumen:** Componente base para gráficos de línea (OBSOLETO / SIN USO).
 **Estructura Clave:**
-- `export component SanctumChart`: Dibuja líneas y relleno degradado basado en comandos SVG.
+- `export component SanctumChart`: Definición de gráfico no utilizada actualmente.
 **Dependencias:** `globals.slint`
 ---
 ## ui/components/charts.slint
 **Tipo:** Slint UI
-**Resumen:** Variante del gráfico de línea (posible duplicado o especialización).
+**Resumen:** Gráfico de línea principal utilizado en la aplicación.
 **Estructura Clave:**
-- `export component SanctumLineChart`: Similar a `SanctumChart` pero con estilos específicos.
+- `export component SanctumLineChart`: Gráfico con relleno degradado y ejes. Usado en `DashboardPage`.
 **Dependencias:** `globals.slint`
 ---
 ## ui/components/crypto_widgets.slint
