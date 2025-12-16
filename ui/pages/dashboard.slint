@@ -1,5 +1,5 @@
 // ==================== Dashboard Page ====================
-// Noir Minimalist - Net worth cockpit Redesign
+// Noir Fintech - Premium Net Worth Command Center
 
 import {
     Palette,
@@ -16,63 +16,127 @@ import { TextButton } from "../widgets.slint";
 import { SanctumLineChart } from "../components/charts.slint";
 import { CategoryBreakdown } from "../components/category_breakdown.slint";
 
-// ==================== Local Components ====================
-
+// ==================== Range Selector ====================
 component RangeSelector inherits Rectangle {
     in property <string> active-range;
     callback range-selected(string);
 
-    height: 32px;
+    height: 36px;
     background: Palette.surface;
-    border-radius: 16px;
+    border-radius: 8px;
     border-width: 1px;
-    border-color: Palette.border;
+    border-color: Palette.border-subtle;
 
     HorizontalLayout {
-        padding-left: 4px;
-        padding-right: 4px;
-        spacing: 2px;
+        padding: 4px;
+        spacing: 4px;
 
-        for range in ["1M", "3M", "6M", "1Y", "ALL"] : Rectangle {
-            width: 48px;
-            border-radius: 14px;
-            background: active-range == range ? Palette.surface-hover : transparent;
+        for range in ["1M", "3M", "6M", "1Y", "ALL"]: Rectangle {
+            width: 52px;
+            border-radius: 6px;
+            background: active-range == range ? Palette.background : transparent;
+            border-width: active-range == range ? 1px : 0px;
+            border-color: Palette.border-subtle;
             
-            animate background { duration: 150ms; }
+            animate background { duration: 200ms; easing: ease-out; }
 
             Text {
                 text: range;
                 color: active-range == range ? Palette.text-primary : Palette.text-muted;
-                font-size: 10px;
-                font-weight: 600;
+                font-size: 11px;
+                font-weight: active-range == range ? 600 : 500;
+                letter-spacing: 0.5px;
                 horizontal-alignment: center;
                 vertical-alignment: center;
+                
+                animate color { duration: 200ms; }
             }
 
             TouchArea {
+                mouse-cursor: pointer;
                 clicked => { root.range-selected(range); }
             }
         }
     }
 }
 
-component ChartSection inherits Rectangle {
+// ==================== Stat Badge ====================
+component StatBadge inherits Rectangle {
+    in property <string> value;
+    in property <bool> positive: true;
+    in property <string> label;
+    
+    width: 160px;
+    height: 72px;
+    background: Palette.surface;
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: Palette.border-subtle;
+    
+    HorizontalLayout {
+        padding: 16px;
+        spacing: 12px;
+        
+        // Indicator
+        Rectangle {
+            width: 3px;
+            height: 40px;
+            border-radius: 2px;
+            background: positive ? Palette.success : Palette.danger;
+            y: (parent.height - self.height) / 2;
+        }
+        
+        VerticalLayout {
+            alignment: center;
+            spacing: 4px;
+            
+            Text {
+                text: label;
+                color: Palette.text-muted;
+                font-size: 10px;
+                font-weight: 500;
+                letter-spacing: 1.5px;
+            }
+            
+            HorizontalLayout {
+                spacing: 6px;
+                
+                Text { 
+                    text: positive ? "▲" : "▼"; 
+                    color: positive ? Palette.success : Palette.danger; 
+                    font-size: 10px; 
+                    vertical-alignment: center; 
+                }
+                Text { 
+                    text: value; 
+                    color: Palette.text-primary; 
+                    font-size: 16px;
+                    font-weight: 500;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+}
+
+// ==================== Chart Card ====================
+component ChartCard inherits Rectangle {
     in property <string> min-label;
     in property <string> max-label;
     in property <string> path;
 
-    height: 280px;
-    background: @linear-gradient(180deg, #0a0a0a 0%, #050505 100%);
-    border-radius: 12px;
+    height: 320px;
+    background: @linear-gradient(180deg, #0d0d12 0%, #080810 100%);
+    border-radius: 16px;
     border-width: 1px;
-    border-color: Palette.border;
+    border-color: Palette.border-subtle;
     clip: true;
 
-    // Grid lines visual
+    // Decorative grid background
     TacticalGrid {
-        opacity: 0.1;
-        grid-cols: 10;
-        grid-rows: 5;
+        opacity: 0.06;
+        grid-cols: 12;
+        grid-rows: 6;
     }
 
     SanctumLineChart {
@@ -82,10 +146,111 @@ component ChartSection inherits Rectangle {
         min-label: root.min-label;
         max-label: root.max-label;
     }
+    
+    // Top accent line
+    Rectangle {
+        y: 0;
+        width: 100%;
+        height: 1px;
+        background: @linear-gradient(90deg, transparent 0%, Palette.border-light.with-alpha(0.2) 50%, transparent 100%);
+    }
+}
+
+// ==================== Section Header ====================
+component SectionHeader inherits Rectangle {
+    in property <string> title;
+    in property <string> action-text: "";
+    callback action-clicked;
+    
+    height: 24px;
+    background: transparent;
+    
+    HorizontalLayout {
+        alignment: space-between;
+        
+        HorizontalLayout {
+            spacing: 12px;
+            
+            Rectangle {
+                width: 3px;
+                height: 16px;
+                border-radius: 1px;
+                background: Palette.accent;
+                y: (parent.height - self.height) / 2;
+            }
+            
+            Text {
+                text: title;
+                color: Palette.text-muted;
+                font-size: 11px;
+                font-weight: 600;
+                letter-spacing: 2px;
+                vertical-alignment: center;
+            }
+        }
+        
+        if action-text != "": Rectangle {
+            width: 100px;
+            
+            Text {
+                text: action-text;
+                color: action-touch.has-hover ? Palette.text-primary : Palette.text-secondary;
+                font-size: 10px;
+                font-weight: 500;
+                letter-spacing: 1px;
+                horizontal-alignment: right;
+                vertical-alignment: center;
+                animate color { duration: 150ms; }
+            }
+            
+            action-touch := TouchArea {
+                mouse-cursor: pointer;
+                clicked => { root.action-clicked(); }
+            }
+        }
+    }
+}
+
+// ==================== Action Button ====================
+component ActionButton inherits Rectangle {
+    in property <string> text;
+    callback clicked;
+    
+    height: 40px;
+    min-width: 160px;
+    background: touch.has-hover ? Palette.accent-hover : Palette.accent;
+    border-radius: 8px;
+    
+    animate background { duration: 150ms; }
+    
+    HorizontalLayout {
+        alignment: center;
+        spacing: 8px;
+        
+        Text {
+            text: "+";
+            color: Palette.background;
+            font-size: 16px;
+            font-weight: 400;
+            vertical-alignment: center;
+        }
+        Text {
+            text: root.text;
+            color: Palette.background;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            vertical-alignment: center;
+        }
+    }
+    
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
 }
 
 // ==================== Main Page ====================
-
 export component DashboardPage inherits Rectangle {
     background: Palette.background;
 
@@ -101,71 +266,90 @@ export component DashboardPage inherits Rectangle {
 
         VerticalLayout {
             padding-top: 48px;
-            padding-bottom: 48px;
+            padding-bottom: 64px;
             padding-left: 64px;
             padding-right: 64px;
-            spacing: 40px;
+            spacing: 32px;
 
-            // 1. HERO SECTION (Net Worth)
-            VerticalLayout {
-                alignment: center;
-                spacing: 16px;
-
-                Text {
-                    text: "TOTAL NET WORTH";
-                    color: Palette.text-muted;
-                    font-size: 11px;
-                    font-weight: 600;
-                    letter-spacing: 4px;
-                    horizontal-alignment: center;
-                }
-
-                Text {
-                    text: DashboardAdapter.balance.total-balance;
-                    color: Palette.text-primary;
-                    font-size: 56px;
-                    font-weight: 300;
-                    letter-spacing: -1px;
-                    horizontal-alignment: center;
-                }
-
-                // Quick stats row
-                HorizontalLayout {
+            // ==================== HERO SECTION ====================
+            Rectangle {
+                height: 200px;
+                background: @linear-gradient(180deg, #0a0a10 0%, Palette.background 100%);
+                border-radius: 20px;
+                
+                VerticalLayout {
                     alignment: center;
-                    spacing: 24px;
+                    spacing: 20px;
+                    padding: 32px;
 
+                    // Label
                     HorizontalLayout {
+                        alignment: center;
                         spacing: 8px;
-                        Text { text: "▲"; color: Palette.success; font-size: 12px; vertical-alignment: center; }
-                        Text { 
-                            text: DashboardAdapter.balance.total-income; 
-                            color: Palette.text-secondary; 
-                            font-size: 13px; 
+                        
+                        Rectangle {
+                            width: 8px;
+                            height: 8px;
+                            border-radius: 4px;
+                            background: Palette.success;
+                            y: (parent.height - self.height) / 2;
+                            
+                            // Pulse animation placeholder
+                            Rectangle {
+                                x: -4px;
+                                y: -4px;
+                                width: 16px;
+                                height: 16px;
+                                border-radius: 8px;
+                                background: Palette.success.with-alpha(0.3);
+                            }
+                        }
+                        
+                        Text {
+                            text: "TOTAL NET WORTH";
+                            color: Palette.text-muted;
+                            font-size: 11px;
+                            font-weight: 600;
+                            letter-spacing: 3px;
                             vertical-alignment: center;
                         }
                     }
 
-                    Rectangle { width: 1px; height: 16px; background: Palette.border; }
+                    // Big number
+                    Text {
+                        text: DashboardAdapter.balance.total-balance;
+                        color: Palette.text-primary;
+                        font-size: 56px;
+                        font-weight: 300;
+                        letter-spacing: -2px;
+                        horizontal-alignment: center;
+                    }
 
+                    // Stats row
                     HorizontalLayout {
-                        spacing: 8px;
-                        Text { text: "▼"; color: Palette.danger; font-size: 12px; vertical-alignment: center; }
-                        Text { 
-                            text: DashboardAdapter.balance.total-expense; 
-                            color: Palette.text-secondary; 
-                            font-size: 13px; 
-                            vertical-alignment: center;
+                        alignment: center;
+                        spacing: 24px;
+
+                        StatBadge {
+                            label: "INCOME";
+                            value: DashboardAdapter.balance.total-income;
+                            positive: true;
+                        }
+
+                        StatBadge {
+                            label: "EXPENSES";
+                            value: DashboardAdapter.balance.total-expense;
+                            positive: false;
                         }
                     }
                 }
             }
 
-            // 2. CONTROLS & ACTIONS
+            // ==================== CONTROLS ROW ====================
             HorizontalLayout {
                 alignment: space-between;
-                height: 32px;
+                height: 40px;
 
-                // Range Selector
                 RangeSelector {
                     active-range: AnalyticsAdapter.active-range;
                     range-selected(r) => {
@@ -174,9 +358,8 @@ export component DashboardPage inherits Rectangle {
                     }
                 }
 
-                // Add Button
-                TextButton {
-                    text: "+ ADD TRANSACTION";
+                ActionButton {
+                    text: "ADD TRANSACTION";
                     clicked => {
                         AccountAdapter.fetch-accounts();
                         AppState.show-add-transaction = true;
@@ -184,41 +367,37 @@ export component DashboardPage inherits Rectangle {
                 }
             }
 
-            // 3. CHART VISUALIZATION
-            ChartSection {
+            // ==================== CHART ====================
+            ChartCard {
                 path: AnalyticsAdapter.summary.chart_path;
                 min-label: AnalyticsAdapter.summary.min_value;
                 max-label: AnalyticsAdapter.summary.max_value;
             }
 
-            // 4. SPENDING BREAKDOWN
-            if AnalyticsAdapter.summary.expense_breakdown.length > 0 : VerticalLayout {
+            // ==================== SPENDING BREAKDOWN ====================
+            if AnalyticsAdapter.summary.expense_breakdown.length > 0: VerticalLayout {
                 spacing: 16px;
 
-                Text {
-                    text: "SPENDING FOCUS";
-                    color: Palette.text-muted;
-                    font-size: 11px;
-                    font-weight: 600;
-                    letter-spacing: 3px;
+                SectionHeader { 
+                    title: "SPENDING BREAKDOWN"; 
                 }
 
                 Rectangle {
-                    height: 300px;
+                    height: 340px;
                     background: Palette.surface;
                     border-radius: 12px;
                     border-width: 1px;
-                    border-color: Palette.border;
-                    clip: true; // Ensure content stays inside
+                    border-color: Palette.border-subtle;
+                    clip: true;
 
                     Flickable {
                         width: 100%;
                         height: 100%;
-                        viewport-height: max(300px, (AnalyticsAdapter.summary.expense_breakdown.length * 56px) + 48px);
+                        viewport-height: max(320px, (AnalyticsAdapter.summary.expense_breakdown.length * 72px) + 48px);
 
                         VerticalLayout {
                             padding: 24px;
-                            alignment: start; // Start from top
+                            alignment: start;
                             
                             CategoryBreakdown {
                                 categories: AnalyticsAdapter.summary.expense_breakdown;
@@ -228,54 +407,35 @@ export component DashboardPage inherits Rectangle {
                 }
             }
 
-            // 5. RECENT ACTIVITY
-            if DashboardAdapter.recent.length > 0 : VerticalLayout {
+            // ==================== RECENT ACTIVITY ====================
+            if DashboardAdapter.recent.length > 0: VerticalLayout {
                 spacing: 16px;
 
-                HorizontalLayout {
-                    alignment: space-between;
-                    Text {
-                        text: "RECENT ACTIVITY";
-                        color: Palette.text-muted;
-                        font-size: 11px;
-                        font-weight: 600;
-                        letter-spacing: 3px;
-                    }
-                    
-                    Text {
-                        text: "VIEW ALL →";
-                        color: view-all-touch.has-hover ? Palette.text-primary : Palette.text-secondary;
-                        font-size: 10px;
-                        font-weight: 400;
-                        letter-spacing: 1px;
-                        animate color { duration: 150ms; }
-                        
-                        view-all-touch := TouchArea {
-                            mouse-cursor: pointer;
-                            clicked => { AppState.active-page = "finances"; }
-                        }
-                    }
+                SectionHeader {
+                    title: "RECENT ACTIVITY";
+                    action-text: "VIEW ALL →";
+                    action-clicked => { AppState.active-page = "finances"; }
                 }
 
                 Rectangle {
                     background: Palette.surface;
                     border-radius: 12px;
                     border-width: 1px;
-                    border-color: Palette.border;
+                    border-color: Palette.border-subtle;
                     clip: true;
 
                     VerticalLayout {
-                        for transaction[index] in DashboardAdapter.recent : TransactionItem {
+                        for transaction[index] in DashboardAdapter.recent: TransactionItem {
                             transaction: transaction;
                             is-last: index == DashboardAdapter.recent.length - 1;
-                            show-delete: false; 
+                            show-delete: false;
                         }
                     }
                 }
             }
             
-            // Spacer
-            Rectangle { height: 24px; }
+            // Bottom spacer
+            Rectangle { height: 32px; }
         }
     }
 }
