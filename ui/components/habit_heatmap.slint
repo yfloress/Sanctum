@@ -1,41 +1,113 @@
+// ==================== Habit Heatmap ====================
+// Premium Fintech UI - GitHub-style yearly contribution heatmap
+// Horizontal scroll only, 7 rows for days of week
+
 import { Palette, HabitAdapter, HeatmapWeek, HeatmapDay } from "../globals.slint";
+import { CustomScrollbar } from "../widgets.slint";
 
-export component HabitHeatmap inherits Rectangle {
-    height: 140px; // 7 days * (12px size + 4px gap) roughly
-    background: Palette.background;
+component HeatmapCell inherits Rectangle {
+    in property <int> level;
+    
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    background: level == 0 ? Palette.surface-hover :
+                level == 1 ? #3b2f5f :
+                level == 2 ? #6b4f9f :
+                level == 3 ? #8b5cf6 :
+                level == 4 ? #a78bfa : Palette.surface-hover;
+    border-width: level > 0 ? 0px : 1px;
+    border-color: Palette.border;
 
-    // Logic to determine color based on level (0-4)
-    pure function get-color(level: int) -> color {
-        if (level == 0) { return Palette.surface; }
-        if (level == 1) { return #e9d5ff; } // Lightest purple
-        if (level == 2) { return #c084fc; }
-        if (level == 3) { return #9333ea; }
-        if (level == 4) { return #581c87; } // Darkest purple
-        return Palette.surface;
+    // Glow for high activity
+    if level >= 3: Rectangle {
+        x: -1px;
+        y: -1px;
+        width: parent.width + 2px;
+        height: parent.height + 2px;
+        border-radius: 4px;
+        background: level == 3 ? #8b5cf6 : #a78bfa;
+        opacity: 0.3;
     }
 
-    Flickable {
-        interactive: true;
-        viewport-width: (HabitAdapter.heatmap-data.length * 16px); // 12px width + 4px gap
-        width: 100%;
-        height: 100%;
+    TouchArea {
+        mouse-cursor: pointer;
+    }
+}
 
+export component HabitHeatmap inherits Rectangle {
+    // Fixed height for 7 rows (days of week) + legend + padding
+    // Adjusted to fit content: 12px pad + ~20px legend + 8px gap + 108px grid + 12px pad = ~160px
+    height: 180px;
+    background: transparent;
+
+    VerticalLayout {
+        padding: 12px;
+        padding-bottom: 16px; // Extra bottom padding for visual balance
+        spacing: 8px;
+
+        // Legend at top right
         HorizontalLayout {
-            spacing: 4px;
-            padding: 4px;
-            alignment: start;
+            alignment: end;
+            spacing: 6px;
 
-            for week in HabitAdapter.heatmap-data : VerticalLayout {
-                spacing: 4px;
-                for day in week.days : Rectangle {
-                    width: 12px;
-                    height: 12px;
-                    border-radius: 2px;
-                    background: get-color(day.level);
-                    
-                    // Tooltip-ish behavior could be added here if supported, 
-                    // but for now simple visual feedback
+            Text {
+                text: "Less";
+                color: Palette.text-muted;
+                font-size: 9px;
+                vertical-alignment: center;
+            }
+
+            HeatmapCell { level: 0; }
+            HeatmapCell { level: 1; }
+            HeatmapCell { level: 2; }
+            HeatmapCell { level: 3; }
+            HeatmapCell { level: 4; }
+
+            Text {
+                text: "More";
+                color: Palette.text-muted;
+                font-size: 9px;
+                vertical-alignment: center;
+            }
+        }
+
+        // Heatmap Grid Container
+        Rectangle {
+            vertical-stretch: 1;
+            clip: true; // Prevent overflow overlapping
+
+            // Heatmap Grid - horizontal scroll only
+            heatmap-scroll := Flickable {
+                height: 7 * 12px + 6 * 4px; // 108px content
+                y: (parent.height - self.height) / 2; // Center vertically
+                horizontal-stretch: 1;
+                interactive: true;
+                viewport-width: HabitAdapter.heatmap-data.length * 16px;
+                
+                // Auto-scroll to current week if available
+                viewport-x: -1 * max(0px, ((HabitAdapter.current-week-int - 4) * 16px));
+
+                HorizontalLayout {
+                    spacing: 4px;
+                    alignment: start;
+
+                    for week in HabitAdapter.heatmap-data: VerticalLayout {
+                        spacing: 4px;
+                        for day in week.days: HeatmapCell {
+                            level: day.level;
+                        }
+                    }
                 }
+            }
+
+            // Scrollbar
+            CustomScrollbar {
+                width: parent.width;
+                y: parent.height - self.height;
+                visible-width: parent.width;
+                viewport-width: heatmap-scroll.viewport-width;
+                viewport-x: heatmap-scroll.viewport-x;
             }
         }
     }

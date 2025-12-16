@@ -143,8 +143,8 @@ export struct HabitData {
 
 export struct MonthlyStats {
     month-name: string,
-    total-completions: int,
-    max-completions: int, // For scaling
+    total-completions: float,
+    max-completions: float, // For scaling
     dominant-color: color,
 }
 
@@ -173,6 +173,11 @@ export global HabitAdapter {
     callback prev-month();
     callback next-month();
     
+    // Auto-scroll context
+    in-out property <int> current-day-int: 1; // 1-31 (Real today)
+    in-out property <int> current-week-int: 1; // 1-52 (Real current week)
+    in-out property <bool> is-viewing-current-month: true; // True if navigating actual current month
+
     // Heatmap Navigation
     callback prev-heatmap-year();
     callback next-heatmap-year();

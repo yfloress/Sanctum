@@ -1,14 +1,194 @@
 // ==================== Asset Detail Panel ====================
-// Slide-over drawer for asset drill-down
+// Noir Fintech - Premium asset details drawer
 
 import { Palette, CryptoAdapter } from "../globals.slint";
 
-export component AssetDetailPanel inherits Rectangle {
-    width: 400px;
-    height: 100%;
-    background: Palette.sidebar-bg;
+// ==================== Section Header ====================
+component SectionHeader inherits Rectangle {
+    in property <string> title;
     
-    // Border left
+    height: 32px;
+    background: transparent;
+    
+    HorizontalLayout {
+        spacing: 12px;
+        
+        Rectangle {
+            width: 3px;
+            height: 16px;
+            border-radius: 1px;
+            background: Palette.accent;
+            y: (parent.height - self.height) / 2;
+        }
+        
+        Text { 
+            text: root.title; 
+            color: Palette.text-muted; 
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 2px; 
+            vertical-alignment: center;
+        }
+    }
+}
+
+// ==================== Wallet Breakdown Row ====================
+component WalletBreakdownRow inherits Rectangle {
+    in property <string> wallet-name;
+    in property <string> amount;
+    in property <string> value;
+    
+    height: 56px;
+    background: Palette.surface;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: Palette.border-subtle;
+    
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        alignment: space-between;
+        
+        HorizontalLayout {
+            spacing: 12px;
+            alignment: start;
+            
+            Rectangle {
+                width: 32px;
+                height: 32px;
+                border-radius: 8px;
+                background: Palette.background;
+                border-width: 1px;
+                border-color: Palette.border-subtle;
+                y: (parent.height - self.height) / 2;
+                
+                Text {
+                    text: "💼";
+                    font-size: 14px;
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
+                }
+            }
+            
+            Text { 
+                text: root.wallet-name; 
+                color: Palette.text-primary; 
+                font-size: 13px;
+                font-weight: 500;
+                vertical-alignment: center; 
+            }
+        }
+        
+        VerticalLayout {
+            alignment: center;
+            spacing: 2px;
+            
+            Text { 
+                text: root.amount; 
+                color: Palette.text-primary; 
+                font-size: 13px;
+                font-weight: 500;
+                horizontal-alignment: right; 
+            }
+            Text { 
+                text: root.value; 
+                color: Palette.text-muted; 
+                font-size: 11px; 
+                horizontal-alignment: right; 
+            }
+        }
+    }
+}
+
+// ==================== Transaction Row ====================
+component TransactionRow inherits Rectangle {
+    in property <string> tx-type;
+    in property <string> tx-date;
+    in property <string> tx-amount;
+    in property <string> tx-price;
+    in property <bool> is-last: false;
+    
+    height: 56px;
+    background: transparent;
+    
+    HorizontalLayout {
+        alignment: space-between;
+        
+        HorizontalLayout {
+            spacing: 12px;
+            alignment: start;
+            
+            Rectangle {
+                width: 32px;
+                height: 32px;
+                border-radius: 8px;
+                background: tx-type == "BUY" ? Palette.success.with-alpha(0.1) : Palette.danger.with-alpha(0.1);
+                border-width: 1px;
+                border-color: tx-type == "BUY" ? Palette.success.with-alpha(0.2) : Palette.danger.with-alpha(0.2);
+                y: (parent.height - self.height) / 2;
+                
+                Text {
+                    text: tx-type == "BUY" ? "▲" : "▼";
+                    color: tx-type == "BUY" ? Palette.success : Palette.danger;
+                    font-size: 10px;
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
+                }
+            }
+            
+            VerticalLayout {
+                alignment: center;
+                spacing: 2px;
+                
+                Text { 
+                    text: root.tx-type; 
+                    color: Palette.text-primary; 
+                    font-size: 12px; 
+                    font-weight: 500; 
+                }
+                Text { 
+                    text: root.tx-date; 
+                    color: Palette.text-muted; 
+                    font-size: 10px; 
+                }
+            }
+        }
+        
+        VerticalLayout {
+            alignment: center;
+            spacing: 2px;
+            
+            Text { 
+                text: root.tx-amount; 
+                color: Palette.text-primary; 
+                font-size: 12px;
+                font-weight: 500;
+                horizontal-alignment: right; 
+            }
+            Text { 
+                text: "@ " + root.tx-price; 
+                color: Palette.text-muted; 
+                font-size: 10px; 
+                horizontal-alignment: right; 
+            }
+        }
+    }
+    
+    if !root.is-last: Rectangle { 
+        height: 1px; 
+        width: parent.width; 
+        background: Palette.border-subtle; 
+        y: parent.height - 1px; 
+    }
+}
+
+// ==================== Main Panel ====================
+export component AssetDetailPanel inherits Rectangle {
+    width: 420px;
+    height: 100%;
+    background: @linear-gradient(180deg, #0a0a10 0%, #080810 100%);
+    
+    // Left border accent
     Rectangle {
         width: 1px;
         height: 100%;
@@ -17,43 +197,109 @@ export component AssetDetailPanel inherits Rectangle {
     }
 
     VerticalLayout {
-        padding: 0px; // Remove padding from main layout
+        padding: 0px;
         spacing: 0px;
 
-        // Header with background
+        // Header
         Rectangle {
-            height: 80px;
+            height: 100px;
             background: Palette.surface;
             
             HorizontalLayout {
-                padding-left: 24px; padding-right: 24px;
-                spacing: 12px;
+                padding-left: 28px;
+                padding-right: 28px;
+                spacing: 16px;
                 
+                // Asset Icon
                 Rectangle {
-                    width: 40px; height: 40px; border-radius: 20px; background: Palette.background; border-width: 1px; border-color: Palette.border-subtle; y: (parent.height - self.height) / 2;
-                    Text { text: CryptoAdapter.selected-asset.symbol; color: Palette.text-primary; font-size: 14px; font-weight: 500; vertical-alignment: center; horizontal-alignment: center; }
+                    width: 52px;
+                    height: 52px;
+                    border-radius: 26px;
+                    background: @linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                    border-width: 1px;
+                    border-color: Palette.border-subtle;
+                    y: (parent.height - self.height) / 2;
+                    
+                    Text { 
+                        text: CryptoAdapter.selected-asset.symbol; 
+                        color: Palette.text-primary; 
+                        font-size: 16px; 
+                        font-weight: 600;
+                        letter-spacing: 0.5px;
+                        vertical-alignment: center; 
+                        horizontal-alignment: center; 
+                    }
                 }
                 
+                // Asset Info
                 VerticalLayout {
                     alignment: center;
-                    Text { text: CryptoAdapter.selected-asset.name; color: Palette.text-primary; font-size: 18px; font-weight: 300; letter-spacing: 1px; }
-                    Text { text: CryptoAdapter.selected-asset.price; color: Palette.text-muted; font-size: 12px; }
+                    spacing: 4px;
+                    horizontal-stretch: 1;
+                    
+                    Text { 
+                        text: CryptoAdapter.selected-asset.name; 
+                        color: Palette.text-primary; 
+                        font-size: 18px; 
+                        font-weight: 400;
+                        letter-spacing: 0.5px; 
+                    }
+                    
+                    HorizontalLayout {
+                        spacing: 10px;
+                        
+                        Text { 
+                            text: CryptoAdapter.selected-asset.price; 
+                            color: Palette.text-secondary; 
+                            font-size: 13px; 
+                        }
+                        
+                        // Change badge
+                        Rectangle {
+                            width: 60px;
+                            height: 20px;
+                            border-radius: 4px;
+                            background: CryptoAdapter.selected-asset.is-positive ? 
+                                Palette.success.with-alpha(0.1) : Palette.danger.with-alpha(0.1);
+                            
+                            Text {
+                                text: CryptoAdapter.selected-asset.change-24h;
+                                color: CryptoAdapter.selected-asset.is-positive ? Palette.success : Palette.danger;
+                                font-size: 10px;
+                                font-weight: 600;
+                                vertical-alignment: center;
+                                horizontal-alignment: center;
+                            }
+                        }
+                    }
                 }
-                
-                Rectangle { horizontal-stretch: 1; }
                 
                 // Close Button
                 Rectangle {
-                    width: 32px; height: 32px; y: (parent.height - self.height) / 2;
-                    Text { text: "×"; color: Palette.text-muted; font-size: 24px; vertical-alignment: center; horizontal-alignment: center; }
-                    TouchArea { 
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 10px;
+                    background: close-touch.has-hover ? Palette.surface-hover : transparent;
+                    y: (parent.height - self.height) / 2;
+                    
+                    animate background { duration: 150ms; }
+                    
+                    Text { 
+                        text: "✕"; 
+                        color: Palette.text-muted; 
+                        font-size: 16px; 
+                        vertical-alignment: center; 
+                        horizontal-alignment: center; 
+                    }
+                    
+                    close-touch := TouchArea { 
                         mouse-cursor: pointer;
                         clicked => { CryptoAdapter.show-asset-detail = false; } 
                     }
                 }
             }
             
-            // Explicit bottom border
+            // Bottom border
             Rectangle {
                 height: 1px;
                 width: parent.width;
@@ -62,83 +308,110 @@ export component AssetDetailPanel inherits Rectangle {
             }
         }
         
+        // Content
         VerticalLayout {
-            padding: 24px;
+            padding: 28px;
             spacing: 24px;
             
-            // Summary Card
+            // Holdings Card
             Rectangle {
-                height: 100px;
-                background: Palette.surface;
-                border-radius: 8px;
+                height: 120px;
+                background: @linear-gradient(135deg, #111118 0%, #0d0d14 100%);
+                border-radius: 12px;
                 border-width: 1px;
-                border-color: Palette.border;
+                border-color: Palette.border-subtle;
                 
                 VerticalLayout {
-                    padding: 16px;
-                    spacing: 4px;
+                    padding: 20px;
+                    spacing: 12px;
                     alignment: center;
                     
-                    Text { text: "TOTAL HOLDINGS"; color: Palette.text-muted; font-size: 10px; letter-spacing: 2px; horizontal-alignment: center; }
-                    Text { text: CryptoAdapter.selected-asset.amount; color: Palette.text-primary; font-size: 24px; font-weight: 300; horizontal-alignment: center; }
-                    Text { text: CryptoAdapter.selected-asset.value; color: Palette.text-secondary; font-size: 14px; horizontal-alignment: center; }
-                }
-            }
-            
-            // Section: Wallet Breakdown
-            VerticalLayout {
-                spacing: 12px;
-                Text { text: "WALLET BREAKDOWN"; color: Palette.text-muted; font-size: 10px; letter-spacing: 2px; }
-                
-                if CryptoAdapter.asset-wallets.length == 0: Text { text: "No data"; color: Palette.text-subtle; font-size: 12px; font-italic: true; }
-                
-                for item in CryptoAdapter.asset-wallets: Rectangle {
-                    height: 48px;
-                    background: Palette.surface;
-                    border-radius: 4px;
-                    border-width: 1px;
-                    border-color: Palette.border-subtle;
+                    Text { 
+                        text: "TOTAL HOLDINGS"; 
+                        color: Palette.text-muted; 
+                        font-size: 10px;
+                        font-weight: 600;
+                        letter-spacing: 2px; 
+                        horizontal-alignment: center; 
+                    }
                     
-                    HorizontalLayout {
-                        padding-left: 12px; padding-right: 12px;
-                        alignment: space-between;
-                        Text { text: item.wallet-name; color: Palette.text-primary; font-size: 12px; vertical-alignment: center; }
-                        VerticalLayout {
-                            alignment: center;
-                            Text { text: item.amount; color: Palette.text-primary; font-size: 12px; horizontal-alignment: right; }
-                            Text { text: item.value; color: Palette.text-muted; font-size: 10px; horizontal-alignment: right; }
-                        }
+                    Text { 
+                        text: CryptoAdapter.selected-asset.amount; 
+                        color: Palette.text-primary; 
+                        font-size: 28px; 
+                        font-weight: 300;
+                        letter-spacing: -0.5px;
+                        horizontal-alignment: center; 
+                    }
+                    
+                    Text { 
+                        text: "≈ " + CryptoAdapter.selected-asset.value; 
+                        color: Palette.text-secondary; 
+                        font-size: 14px; 
+                        horizontal-alignment: center; 
                     }
                 }
             }
             
-            // Section: History
+            // Wallet Breakdown Section
+            VerticalLayout {
+                spacing: 12px;
+                
+                SectionHeader { title: "WALLET BREAKDOWN"; }
+                
+                if CryptoAdapter.asset-wallets.length == 0: Rectangle {
+                    height: 48px;
+                    background: Palette.surface.with-alpha(0.3);
+                    border-radius: 8px;
+                    
+                    Text { 
+                        text: "No wallet data available"; 
+                        color: Palette.text-subtle; 
+                        font-size: 12px;
+                        vertical-alignment: center;
+                        horizontal-alignment: center;
+                    }
+                }
+                
+                for item in CryptoAdapter.asset-wallets: WalletBreakdownRow {
+                    wallet-name: item.wallet-name;
+                    amount: item.amount;
+                    value: item.value;
+                }
+            }
+            
+            // History Section
             VerticalLayout {
                 vertical-stretch: 1;
                 spacing: 12px;
-                Text { text: "HISTORY"; color: Palette.text-muted; font-size: 10px; letter-spacing: 2px; }
                 
-                if CryptoAdapter.asset-history.length == 0: Text { text: "No transactions found"; color: Palette.text-subtle; font-size: 12px; font-italic: true; }
+                SectionHeader { title: "TRANSACTION HISTORY"; }
+                
+                if CryptoAdapter.asset-history.length == 0: Rectangle {
+                    height: 48px;
+                    background: Palette.surface.with-alpha(0.3);
+                    border-radius: 8px;
+                    
+                    Text { 
+                        text: "No transactions found"; 
+                        color: Palette.text-subtle; 
+                        font-size: 12px;
+                        vertical-alignment: center;
+                        horizontal-alignment: center;
+                    }
+                }
 
                 Flickable {
-                    viewport-height: CryptoAdapter.asset-history.length * 48px;
+                    vertical-stretch: 1;
+                    viewport-height: CryptoAdapter.asset-history.length * 56px;
+                    
                     VerticalLayout {
-                        for tx in CryptoAdapter.asset-history: Rectangle {
-                            height: 48px;
-                            HorizontalLayout {
-                                alignment: space-between;
-                                VerticalLayout {
-                                    alignment: center;
-                                    Text { text: tx.type; color: Palette.text-primary; font-size: 12px; font-weight: 500; }
-                                    Text { text: tx.date; color: Palette.text-muted; font-size: 10px; }
-                                }
-                                VerticalLayout {
-                                    alignment: center;
-                                    Text { text: tx.amount; color: Palette.text-primary; font-size: 12px; horizontal-alignment: right; }
-                                    Text { text: "@ " + tx.price; color: Palette.text-muted; font-size: 10px; horizontal-alignment: right; }
-                                }
-                            }
-                            Rectangle { height: 1px; width: parent.width; background: Palette.border-subtle; y: parent.height - 1px; }
+                        for tx[index] in CryptoAdapter.asset-history: TransactionRow {
+                            tx-type: tx.type;
+                            tx-date: tx.date;
+                            tx-amount: tx.amount;
+                            tx-price: tx.price;
+                            is-last: index == CryptoAdapter.asset-history.length - 1;
                         }
                     }
                 }

@@ -1,8 +1,89 @@
 // ==================== Crypto Widgets ====================
-// Reusable UI components for the Crypto Module
+// Noir Fintech - Premium crypto portfolio components
 
 import { Palette } from "../globals.slint";
 
+// ==================== Animated Glow Effect ====================
+component GlowDot inherits Rectangle {
+    in property <color> glow-color: Palette.success;
+    in property <bool> animated: true;
+    
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    background: glow-color;
+    
+    // Outer glow
+    Rectangle {
+        x: -4px;
+        y: -4px;
+        width: 16px;
+        height: 16px;
+        border-radius: 8px;
+        background: glow-color.with-alpha(animated ? 0.3 : 0.1);
+        animate background { duration: 1500ms; }
+    }
+}
+
+// ==================== Crypto Icon ====================
+component CryptoIcon inherits Rectangle {
+    in property <string> symbol;
+    in property <bool> large: false;
+    
+    width: large ? 48px : 36px;
+    height: large ? 48px : 36px;
+    border-radius: large ? 24px : 18px;
+    
+    // Gradient background based on symbol
+    background: @linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border-width: 1px;
+    border-color: Palette.border-subtle;
+    
+    Text { 
+        text: symbol; 
+        color: Palette.text-primary; 
+        font-size: large ? 14px : 11px; 
+        font-weight: 700; 
+        letter-spacing: 0.5px;
+        vertical-alignment: center; 
+        horizontal-alignment: center; 
+    }
+}
+
+// ==================== Change Badge ====================
+component ChangeBadge inherits Rectangle {
+    in property <string> change;
+    in property <bool> is-positive;
+    in property <bool> compact: false;
+    
+    width: compact ? 64px : 80px;
+    height: compact ? 22px : 28px;
+    border-radius: 4px;
+    background: is-positive ? Palette.success.with-alpha(0.12) : Palette.danger.with-alpha(0.12);
+    border-width: 1px;
+    border-color: is-positive ? Palette.success.with-alpha(0.2) : Palette.danger.with-alpha(0.2);
+    
+    HorizontalLayout {
+        alignment: center;
+        spacing: 3px;
+        
+        Text { 
+            text: is-positive ? "▲" : "▼"; 
+            color: is-positive ? Palette.success : Palette.danger; 
+            font-size: compact ? 8px : 9px;
+            vertical-alignment: center;
+        }
+        Text { 
+            text: change; 
+            color: is-positive ? Palette.success : Palette.danger; 
+            font-size: compact ? 10px : 11px; 
+            font-weight: 600; 
+            vertical-alignment: center;
+        }
+    }
+}
+
+// ==================== Crypto Row (Table) ====================
 export component CryptoRow inherits Rectangle {
     in property <bool> is-last: false;
     in property <string> name;
@@ -16,90 +97,108 @@ export component CryptoRow inherits Rectangle {
     callback clicked();
 
     horizontal-stretch: 1;
-    height: 56px;
-    background: area.has-hover ? Palette.surface-hover : Palette.background;
-    animate background { duration: 150ms; }
+    height: 64px;
+    background: area.has-hover ? Palette.surface-hover : transparent;
+    border-radius: 8px;
+    
+    animate background { duration: 200ms; easing: ease-out; }
 
     HorizontalLayout {
-        padding-left: 24px;
-        padding-right: 24px;
-        spacing: 0px; // Using fixed widths for alignment
+        padding-left: 16px;
+        padding-right: 16px;
+        spacing: 0px;
         alignment: start;
 
-        // Asset Column (Stretches)
+        // Asset Column
         HorizontalLayout {
             horizontal-stretch: 1;
-            spacing: 12px;
+            spacing: 14px;
             alignment: start;
-            Rectangle {
-                width: 32px; height: 32px; border-radius: 16px; background: Palette.text-primary; y: (parent.height - self.height) / 2;
-                Text { text: root.symbol; color: Palette.background; font-size: 10px; font-weight: 700; vertical-alignment: center; horizontal-alignment: center; }
+            
+            CryptoIcon {
+                symbol: root.symbol;
+                y: (parent.height - self.height) / 2;
             }
+            
             VerticalLayout {
                 alignment: center;
-                Text { text: root.name; color: Palette.text-primary; font-size: 14px; font-weight: 400; overflow: elide; }
-                Text { text: root.symbol; color: Palette.text-muted; font-size: 11px; }
+                spacing: 2px;
+                Text { 
+                    text: root.name; 
+                    color: Palette.text-primary; 
+                    font-size: 14px; 
+                    font-weight: 500; 
+                    overflow: elide; 
+                }
+                Text { 
+                    text: root.symbol; 
+                    color: Palette.text-muted; 
+                    font-size: 11px;
+                    font-weight: 500;
+                    letter-spacing: 0.5px;
+                }
             }
         }
 
-        // Price Column (Fixed 100px)
-        Text { 
-            width: 100px; 
-            text: root.price; 
-            color: Palette.text-secondary; 
-            font-size: 14px; 
-            vertical-alignment: center; 
-            horizontal-alignment: right; 
+        // Price Column
+        VerticalLayout {
+            width: 120px;
+            alignment: center;
+            Text { 
+                text: root.price; 
+                color: Palette.text-primary; 
+                font-size: 14px;
+                font-weight: 500;
+                horizontal-alignment: right; 
+            }
         }
 
-        // Holdings Column (Fixed 100px)
-        Text { 
-            width: 100px; 
-            text: root.amount; 
-            color: Palette.text-secondary; 
-            font-size: 14px; 
-            vertical-alignment: center; 
-            horizontal-alignment: right; 
+        // Holdings Column
+        VerticalLayout {
+            width: 120px;
+            alignment: center;
+            Text { 
+                text: root.amount; 
+                color: Palette.text-secondary; 
+                font-size: 13px; 
+                horizontal-alignment: right; 
+            }
         }
 
-        // Value Column (Fixed 100px)
-        Text { 
-            width: 100px; 
-            text: root.value; 
-            color: Palette.text-primary; 
-            font-size: 14px; 
-            font-weight: 500;
-            vertical-alignment: center; 
-            horizontal-alignment: right; 
+        // Value Column
+        VerticalLayout {
+            width: 120px;
+            alignment: center;
+            Text { 
+                text: root.value; 
+                color: Palette.text-primary; 
+                font-size: 14px; 
+                font-weight: 600;
+                horizontal-alignment: right; 
+            }
         }
 
-        // Spacer (Reduced to 20px)
-        Rectangle { width: 20px; }
+        Rectangle { width: 24px; }
 
-        // 24h Change Column (Fixed 100px)
+        // 24h Change
         Rectangle {
-            width: 100px;
-            HorizontalLayout {
-                alignment: center; // Aligned with header
-                Rectangle {
-                    width: 80px; height: 28px; 
-                    background: root.is-positive ? Palette.success.with-alpha(0.1) : Palette.danger.with-alpha(0.1); 
-                    border-radius: 4px; 
-                    y: (parent.height - self.height) / 2;
-                    Text { 
-                        text: root.change; 
-                        color: root.is-positive ? Palette.success : Palette.danger; 
-                        font-size: 12px; 
-                        font-weight: 500; 
-                        vertical-alignment: center; 
-                        horizontal-alignment: center; 
-                    }
-                }
+            width: 90px;
+            ChangeBadge {
+                change: root.change;
+                is-positive: root.is-positive;
+                y: (parent.height - self.height) / 2;
+                x: (parent.width - self.width) / 2;
             }
         }
     }
     
-    if !root.is-last: Rectangle { height: 1px; width: parent.width; background: Palette.border-subtle; y: parent.height - 1px; }
+    if !root.is-last: Rectangle { 
+        height: 1px; 
+        width: parent.width - 32px; 
+        x: 16px;
+        background: Palette.border-subtle; 
+        y: parent.height - 1px; 
+    }
     
     area := TouchArea {
         mouse-cursor: pointer;
@@ -107,6 +206,7 @@ export component CryptoRow inherits Rectangle {
     }
 }
 
+// ==================== Wallet Row ====================
 export component WalletRow inherits Rectangle {
     in property <bool> is-last: false;
     in property <string> name;
@@ -118,95 +218,193 @@ export component WalletRow inherits Rectangle {
     callback delete;
 
     horizontal-stretch: 1;
-    height: 64px;
-    background: area.has-hover ? Palette.surface-hover : Palette.background;
-    animate background { duration: 150ms; }
+    height: 72px;
+    background: transparent;
 
     HorizontalLayout {
-        padding-left: 24px;
-        padding-right: 24px;
+        padding-left: 20px;
+        padding-right: 20px;
         spacing: 0px;
         alignment: start;
 
+        // Wallet Info
         HorizontalLayout {
             width: 300px;
             spacing: 16px;
             alignment: start;
+            
+            // Icon based on category
             Rectangle {
-                width: 40px; height: 40px; border-radius: 6px; background: Palette.surface; y: (parent.height - self.height) / 2;
-                Text { text: "📦"; font-size: 18px; vertical-alignment: center; horizontal-alignment: center; }
+                width: 44px; 
+                height: 44px; 
+                border-radius: 10px; 
+                background: @linear-gradient(135deg, #1f1f2e 0%, #2a2a3e 100%);
+                border-width: 1px;
+                border-color: Palette.border-subtle;
+                y: (parent.height - self.height) / 2;
+                
+                Text { 
+                    text: root.category == "exchange" ? "📊" : root.category == "wallet_multi" ? "🔐" : "💳";
+                    font-size: 20px; 
+                    vertical-alignment: center; 
+                    horizontal-alignment: center; 
+                }
             }
+            
             VerticalLayout {
                 alignment: center;
-                Text { text: root.name; color: Palette.text-primary; font-size: 14px; font-weight: 500; }
-                Text { text: root.category; color: Palette.text-muted; font-size: 11px; }
+                spacing: 4px;
+                Text { 
+                    text: root.name; 
+                    color: Palette.text-primary; 
+                    font-size: 14px; 
+                    font-weight: 500; 
+                }
+                Text { 
+                    text: root.category == "exchange" ? "Exchange" : root.category == "wallet_multi" ? "Hardware Wallet" : "Software Wallet";
+                    color: Palette.text-muted; 
+                    font-size: 11px;
+                    letter-spacing: 0.5px;
+                }
             }
         }
         
-        Text { width: 100px; text: root.count + " Assets"; color: Palette.text-secondary; font-size: 12px; vertical-alignment: center; horizontal-alignment: center; }
-        
-        Text { width: 150px; text: root.balance; color: Palette.text-primary; font-size: 14px; font-weight: 500; vertical-alignment: center; horizontal-alignment: right; }
-        
+        // Asset count
         Rectangle {
-            width: 32px; height: 32px;
+            width: 100px;
+            VerticalLayout {
+                alignment: center;
+                HorizontalLayout {
+                    alignment: center;
+                    spacing: 6px;
+                    Rectangle {
+                        width: 6px;
+                        height: 6px;
+                        border-radius: 3px;
+                        background: root.count > 0 ? Palette.success : Palette.text-subtle;
+                        y: (parent.height - self.height) / 2;
+                    }
+                    Text { 
+                        text: root.count + " Assets"; 
+                        color: Palette.text-secondary; 
+                        font-size: 12px; 
+                        font-weight: 500;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+        
+        // Balance
+        Text { 
+            width: 150px; 
+            text: root.balance; 
+            color: Palette.text-primary; 
+            font-size: 15px; 
+            font-weight: 600; 
+            vertical-alignment: center; 
+            horizontal-alignment: right; 
+        }
+        
+        // Delete button
+        Rectangle {
+            width: 40px; 
+            height: 40px;
             y: (parent.height - self.height) / 2;
-            Text { text: "🗑"; font-size: 14px; vertical-alignment: center; horizontal-alignment: center; opacity: del-area.has-hover ? 1 : 0.5; }
-            del-area := TouchArea { clicked => { root.delete(); } }
+            border-radius: 8px;
+            background: del-area.has-hover ? Palette.danger.with-alpha(0.1) : transparent;
+            animate background { duration: 150ms; }
+            
+            Text { 
+                text: "✕"; 
+                color: del-area.has-hover ? Palette.danger : Palette.text-muted;
+                font-size: 14px; 
+                font-weight: 500;
+                vertical-alignment: center; 
+                horizontal-alignment: center;
+                animate color { duration: 150ms; }
+            }
+            del-area := TouchArea { 
+                mouse-cursor: pointer;
+                clicked => { root.delete(); } 
+            }
         }
     }
-    if !root.is-last: Rectangle { height: 1px; width: parent.width; background: Palette.border-subtle; y: parent.height - 1px; }
+    
     area := TouchArea {}
 }
 
+// ==================== Ticker Item ====================
 export component TickerItem inherits Rectangle {
     in property <string> symbol;
     in property <string> price;
     in property <string> change;
     in property <bool> is-positive;
 
-    width: 200px; // Expanded width
-    height: 40px; 
+    width: 180px;
+    height: 48px;
     background: transparent;
 
     HorizontalLayout {
-        padding-left: 12px;
-        padding-right: 12px;
-        spacing: 8px;
-        alignment: center;
+        padding-left: 16px;
+        padding-right: 16px;
+        spacing: 0px;
+        alignment: space-between;
         
-        Text { 
-            text: root.symbol; 
-            color: Palette.text-primary; 
-            font-size: 12px; 
-            font-weight: 600; 
-            vertical-alignment: center;
+        // Left: Symbol
+        HorizontalLayout {
+            spacing: 8px;
+            alignment: start;
+            
+            GlowDot {
+                glow-color: root.is-positive ? Palette.success : Palette.danger;
+                y: (parent.height - self.height) / 2;
+            }
+            
+            Text { 
+                text: root.symbol; 
+                color: Palette.text-primary; 
+                font-size: 12px; 
+                font-weight: 600;
+                letter-spacing: 0.5px;
+                vertical-alignment: center;
+            }
         }
         
-        Text { 
-            text: root.price; 
-            color: Palette.text-secondary; 
-            font-size: 12px; 
-            vertical-alignment: center;
-        }
-        
-        Text { 
-            text: root.change; 
-            color: root.is-positive ? Palette.success : Palette.danger; 
-            font-size: 11px; 
-            vertical-alignment: center;
+        // Right: Price & Change
+        VerticalLayout {
+            alignment: center;
+            spacing: 2px;
+            
+            Text { 
+                text: root.price; 
+                color: Palette.text-primary; 
+                font-size: 12px;
+                font-weight: 500;
+                horizontal-alignment: right;
+            }
+            
+            Text { 
+                text: root.change; 
+                color: root.is-positive ? Palette.success : Palette.danger; 
+                font-size: 10px;
+                font-weight: 600;
+                horizontal-alignment: right;
+            }
         }
     }
     
-    // Separator line
+    // Separator
     Rectangle {
         width: 1px;
-        height: 16px;
+        height: 24px;
         background: Palette.border-subtle;
         x: parent.width - 1px;
         y: (parent.height - self.height) / 2;
     }
 }
 
+// ==================== Crypto Card (Portfolio View) ====================
 export component CryptoCard inherits Rectangle {
     in property <string> name;
     in property <string> symbol;
@@ -218,14 +416,32 @@ export component CryptoCard inherits Rectangle {
     
     callback clicked();
 
-    width: 220px;
-    height: 160px;
-    background: touch.has-hover ? Palette.surface-hover : Palette.surface;
-    border-radius: 8px;
-    border-width: 1px;
-    border-color: Palette.border-subtle;
-
-    animate background { duration: 150ms; }
+    width: 240px;
+    height: 180px;
+    border-radius: 12px;
+    clip: true;
+    
+    // Background with gradient
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        background: @linear-gradient(145deg, #0d0d14 0%, #111118 50%, #0a0a10 100%);
+        border-width: 1px;
+        border-color: touch.has-hover ? Palette.border-light.with-alpha(0.3) : Palette.border-subtle;
+        border-radius: 12px;
+        
+        animate border-color { duration: 250ms; easing: ease-out; }
+    }
+    
+    // Decorative accent line at top
+    Rectangle {
+        width: parent.width;
+        height: 2px;
+        y: 0;
+        background: is-positive ? 
+            @linear-gradient(90deg, transparent 0%, Palette.success.with-alpha(0.5) 50%, transparent 100%) :
+            @linear-gradient(90deg, transparent 0%, Palette.danger.with-alpha(0.5) 50%, transparent 100%);
+    }
 
     touch := TouchArea {
         mouse-cursor: pointer;
@@ -233,7 +449,7 @@ export component CryptoCard inherits Rectangle {
     }
 
     VerticalLayout {
-        padding: 16px;
+        padding: 20px;
         spacing: 0px;
         alignment: space-between;
 
@@ -241,84 +457,136 @@ export component CryptoCard inherits Rectangle {
         HorizontalLayout {
             alignment: space-between;
             
-            // Icon + Symbol
+            // Icon + Info
             HorizontalLayout {
-                spacing: 8px;
-                Rectangle {
-                    width: 32px; height: 32px; 
-                    border-radius: 16px; 
-                    background: Palette.text-primary;
-                    Text { 
-                        text: root.symbol; 
-                        color: Palette.background; 
-                        font-size: 8px; 
-                        font-weight: 700; 
-                        vertical-alignment: center; horizontal-alignment: center; 
-                    }
+                spacing: 12px;
+                
+                CryptoIcon {
+                    symbol: root.symbol;
+                    large: true;
                 }
+                
                 VerticalLayout {
                     alignment: center;
-                    Text { text: root.symbol; color: Palette.text-primary; font-size: 12px; font-weight: 700; }
-                    Text { text: root.name; color: Palette.text-muted; font-size: 10px; overflow: elide; }
+                    spacing: 2px;
+                    Text { 
+                        text: root.symbol; 
+                        color: Palette.text-primary; 
+                        font-size: 14px; 
+                        font-weight: 700;
+                        letter-spacing: 0.5px;
+                    }
+                    Text { 
+                        text: root.name; 
+                        color: Palette.text-muted; 
+                        font-size: 11px; 
+                        overflow: elide;
+                        max-width: 80px;
+                    }
                 }
             }
 
-            // Change Pill
-            Rectangle {
-                width: 60px; height: 24px;
-                border-radius: 4px;
-                background: root.is-positive ? Palette.success.with-alpha(0.1) : Palette.danger.with-alpha(0.1);
-                Text { 
-                    text: root.change; 
-                    color: root.is-positive ? Palette.success : Palette.danger; 
-                    font-size: 10px; 
-                    font-weight: 600; 
-                    vertical-alignment: center; horizontal-alignment: center; 
-                }
+            // Change Badge
+            ChangeBadge {
+                change: root.change;
+                is-positive: root.is-positive;
+                compact: true;
             }
         }
 
         // Center: Price
-        Text {
-            text: root.price;
-            color: Palette.text-primary;
-            font-size: 24px;
-            font-weight: 300;
-            horizontal-alignment: center;
+        VerticalLayout {
+            alignment: center;
+            spacing: 4px;
+            
+            Text {
+                text: root.price;
+                color: Palette.text-primary;
+                font-size: 24px;
+                font-weight: 300;
+                letter-spacing: -0.5px;
+                horizontal-alignment: center;
+            }
+            
+            Text {
+                text: "per coin";
+                color: Palette.text-subtle;
+                font-size: 10px;
+                letter-spacing: 1px;
+                horizontal-alignment: center;
+            }
         }
 
         // Footer: Holdings
-        VerticalLayout {
-            spacing: 2px;
-            Text { 
-                text: root.amount; 
-                color: Palette.text-secondary; 
-                font-size: 11px; 
-                horizontal-alignment: center; 
-            }
-            Text { 
-                text: "≈ " + root.value; 
-                color: Palette.text-muted; 
-                font-size: 10px; 
-                horizontal-alignment: center; 
+        Rectangle {
+            height: 40px;
+            background: Palette.surface.with-alpha(0.5);
+            border-radius: 6px;
+            
+            HorizontalLayout {
+                padding-left: 12px;
+                padding-right: 12px;
+                alignment: space-between;
+                
+                VerticalLayout {
+                    alignment: center;
+                    Text { 
+                        text: "Holdings"; 
+                        color: Palette.text-muted; 
+                        font-size: 9px;
+                        letter-spacing: 1px;
+                    }
+                    Text { 
+                        text: root.amount; 
+                        color: Palette.text-primary; 
+                        font-size: 12px;
+                        font-weight: 500;
+                    }
+                }
+                
+                VerticalLayout {
+                    alignment: center;
+                    Text { 
+                        text: "Value"; 
+                        color: Palette.text-muted; 
+                        font-size: 9px;
+                        letter-spacing: 1px;
+                        horizontal-alignment: right;
+                    }
+                    Text { 
+                        text: root.value; 
+                        color: Palette.text-primary; 
+                        font-size: 12px;
+                        font-weight: 600;
+                        horizontal-alignment: right;
+                    }
+                }
             }
         }
     }
 }
 
+// ==================== Ghost Button ====================
 export component GhostButton inherits Rectangle {
     in property <string> text;
+    in property <bool> icon-mode: false;
     callback clicked;
 
-    width: 64px;
-    height: 24px;
-    background: transparent;
+    width: icon-mode ? 32px : 80px;
+    height: 28px;
+    background: touch.has-hover ? Palette.surface : transparent;
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: touch.has-hover ? Palette.border-subtle : transparent;
+    
+    animate background { duration: 150ms; }
+    animate border-color { duration: 150ms; }
 
     Text {
         text: root.text;
-        color: touch.has-hover ? Palette.accent : Palette.text-muted;
+        color: touch.has-hover ? Palette.text-primary : Palette.text-muted;
         font-size: 10px;
-        font-weight: 500;
+        font-weight: 600;
         letter-spacing: 1px;
         vertical-alignment: center;
         horizontal-alignment: center;
@@ -331,3 +599,4 @@ export component GhostButton inherits Rectangle {
         clicked => { root.clicked(); }
     }
 }
+

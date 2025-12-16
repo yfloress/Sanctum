@@ -1,11 +1,15 @@
+// ==================== Add Habit Modal ====================
+// Premium Fintech UI - Overlay form for creating new habits
+
 import { Palette, AppState, HabitAdapter, NotificationAdapter } from "../globals.slint";
 
-component UnderlineField inherits Rectangle {
+// ==================== FormField ====================
+component FormField inherits Rectangle {
     in property <string> label: "";
     in property <string> placeholder: "";
     in-out property <string> value: "";
 
-    height: 56px;
+    height: 64px;
     background: transparent;
 
     VerticalLayout {
@@ -15,63 +19,102 @@ component UnderlineField inherits Rectangle {
             text: root.label;
             color: Palette.text-muted;
             font-size: 10px;
-            font-weight: 400;
-            letter-spacing: 2px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
         }
 
         Rectangle {
-            vertical-stretch: 1;
+            height: 40px;
+            background: Palette.surface;
+            border-radius: 8px;
+            border-width: input.has-focus ? 2px : 1px;
+            border-color: input.has-focus ? Palette.accent : Palette.border;
 
-            if root.value == "" && !input.has-focus: Text {
-                text: root.placeholder;
-                color: Palette.text-subtle;
-                font-size: 14px;
-                font-weight: 300;
-                vertical-alignment: center;
-            }
+            animate border-color { duration: 150ms; }
 
-            input := TextInput {
-                text <=> root.value;
-                color: Palette.text-primary;
-                font-size: 14px;
-                font-weight: 300;
-                vertical-alignment: center;
+            HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+
+                if root.value == "" && !input.has-focus: Text {
+                    text: root.placeholder;
+                    color: Palette.text-subtle;
+                    font-size: 14px;
+                    font-weight: 300;
+                    vertical-alignment: center;
+                }
+
+                input := TextInput {
+                    text <=> root.value;
+                    color: Palette.text-primary;
+                    font-size: 14px;
+                    font-weight: 400;
+                    vertical-alignment: center;
+                }
             }
 
             TouchArea {
-                clicked => {
-                    input.focus();
-                }
-            }
-        }
-
-        Rectangle {
-            height: input.has-focus ? 2px : 1px;
-            background: input.has-focus ? Palette.accent : Palette.border;
-
-            animate height {
-                duration: 150ms;
-                easing: ease-out;
-            }
-            animate background {
-                duration: 150ms;
-                easing: ease-out;
+                clicked => { input.focus(); }
             }
         }
     }
 }
 
+// ==================== ColorOption ====================
+component ColorOption inherits Rectangle {
+    in property <color> option-color;
+    in property <bool> selected;
+    callback clicked;
+
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: option-color;
+    border-width: selected ? 3px : 0px;
+    border-color: Palette.text-primary;
+
+    // Glow when selected
+    if selected: Rectangle {
+        x: -4px;
+        y: -4px;
+        width: parent.width + 8px;
+        height: parent.height + 8px;
+        border-radius: 14px;
+        background: option-color;
+        opacity: 0.4;
+    }
+
+    // Inner highlight
+    Rectangle {
+        width: 50%;
+        height: 50%;
+        x: 4px;
+        y: 4px;
+        border-radius: 6px;
+        background: @linear-gradient(135deg, #ffffff30 0%, transparent 100%);
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+// ==================== AddHabitModal ====================
 export component AddHabitModal inherits Rectangle {
     property <string> name: "";
     property <string> description: "";
-    property <string> habit-color: "#8b5cf6"; // Default purple
+    property <int> selected-color-index: 0;
+
+    property <[color]> color-options: [#8b5cf6, #ec4899, #3b82f6, #10b981, #f59e0b, #ef4444];
+    property <[string]> color-strings: ["#8b5cf6", "#ec4899", "#3b82f6", "#10b981", "#f59e0b", "#ef4444"];
     
     callback close();
 
     function reset() {
         name = "";
         description = "";
-        habit-color = "#8b5cf6";
+        selected-color-index = 0;
     }
 
     function submit() {
@@ -80,13 +123,11 @@ export component AddHabitModal inherits Rectangle {
             return;
         }
         
+        let habit-color = color-strings[selected-color-index];
         let result = HabitAdapter.create-habit(name, description, habit-color);
         
         if (result == "") {
             reset();
-            // Parent will handle closing via callback if needed, or we set global state here?
-            // We don't have direct access to AppState to close unless imported.
-            // We imported AppState.
             AppState.show-add-habit = false;
         } else {
             NotificationAdapter.show(result, true);
@@ -97,6 +138,7 @@ export component AddHabitModal inherits Rectangle {
     height: 100%;
     background: transparent;
 
+    // Backdrop
     Rectangle {
         width: 100%;
         height: 100%;
@@ -104,104 +146,153 @@ export component AddHabitModal inherits Rectangle {
         TouchArea { clicked => { root.close(); } }
     }
 
+    // Modal panel
     Rectangle {
-        width: 400px;
-        height: 420px;
-        background: Palette.sidebar-bg;
-        border-radius: 8px;
+        width: 440px;
+        height: 480px;
+        background: @linear-gradient(180deg, Palette.sidebar-bg 0%, #0f0f1a 100%);
+        border-radius: 16px;
         border-width: 1px;
-        border-color: Palette.border;
+        border-color: Palette.border-light;
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
+        drop-shadow-blur: 40px;
+        drop-shadow-color: #00000088;
 
-        // Prevent clicks from closing
         TouchArea { }
 
         VerticalLayout {
             padding: 32px;
             spacing: 24px;
 
-            Text {
-                text: "NEW HABIT";
-                color: Palette.text-primary;
-                font-size: 12px;
-                font-weight: 400;
-                letter-spacing: 3px;
+            // Header
+            HorizontalLayout {
+                height: 32px;
+
+                HorizontalLayout {
+                    spacing: 12px;
+                    horizontal-stretch: 1;
+
+                    Rectangle {
+                        width: 4px;
+                        height: 20px;
+                        border-radius: 2px;
+                        background: @linear-gradient(180deg, #8b5cf6 0%, #ec4899 100%);
+                        y: (parent.height - self.height) / 2;
+                    }
+
+                    Text {
+                        text: "NEW HABIT";
+                        color: Palette.text-primary;
+                        font-size: 16px;
+                        font-weight: 500;
+                        letter-spacing: 2px;
+                        vertical-alignment: center;
+                    }
+                }
+
+                Rectangle {
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 8px;
+                    background: close-touch.has-hover ? Palette.surface-hover : transparent;
+
+                    Text {
+                        text: "×";
+                        color: close-touch.has-hover ? Palette.text-primary : Palette.text-muted;
+                        font-size: 20px;
+                        font-weight: 300;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    close-touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.close(); }
+                    }
+                }
             }
 
-            UnderlineField {
+            FormField {
                 label: "NAME";
                 placeholder: "e.g. Read 10 pages";
                 value <=> name;
             }
 
-            UnderlineField {
+            FormField {
                 label: "DESCRIPTION (OPTIONAL)";
                 placeholder: "Why this habit matters";
                 value <=> description;
             }
             
-            // Color Picker (Simple row)
+            // Color Picker
             VerticalLayout {
-                spacing: 8px;
+                spacing: 12px;
+
                 Text {
                     text: "COLOR";
                     color: Palette.text-muted;
                     font-size: 10px;
-                    letter-spacing: 2px;
+                    font-weight: 500;
+                    letter-spacing: 1.5px;
                 }
                 
                 HorizontalLayout {
-                    spacing: 8px;
+                    spacing: 12px;
                     
-                    Rectangle {
-                        width: 24px; height: 24px; border-radius: 12px; background: #8b5cf6;
-                        border-width: root.habit-color == "#8b5cf6" ? 2px : 0px; border-color: Palette.text-primary;
-                        TouchArea { clicked => { root.habit-color = "#8b5cf6"; } }
+                    ColorOption {
+                        option-color: color-options[0];
+                        selected: selected-color-index == 0;
+                        clicked => { selected-color-index = 0; }
                     }
-                    Rectangle {
-                        width: 24px; height: 24px; border-radius: 12px; background: #ec4899;
-                        border-width: root.habit-color == "#ec4899" ? 2px : 0px; border-color: Palette.text-primary;
-                        TouchArea { clicked => { root.habit-color = "#ec4899"; } }
+
+                    ColorOption {
+                        option-color: color-options[1];
+                        selected: selected-color-index == 1;
+                        clicked => { selected-color-index = 1; }
                     }
-                    Rectangle {
-                        width: 24px; height: 24px; border-radius: 12px; background: #3b82f6;
-                        border-width: root.habit-color == "#3b82f6" ? 2px : 0px; border-color: Palette.text-primary;
-                        TouchArea { clicked => { root.habit-color = "#3b82f6"; } }
+
+                    ColorOption {
+                        option-color: color-options[2];
+                        selected: selected-color-index == 2;
+                        clicked => { selected-color-index = 2; }
                     }
-                    Rectangle {
-                        width: 24px; height: 24px; border-radius: 12px; background: #10b981;
-                        border-width: root.habit-color == "#10b981" ? 2px : 0px; border-color: Palette.text-primary;
-                        TouchArea { clicked => { root.habit-color = "#10b981"; } }
+
+                    ColorOption {
+                        option-color: color-options[3];
+                        selected: selected-color-index == 3;
+                        clicked => { selected-color-index = 3; }
                     }
-                    Rectangle {
-                        width: 24px; height: 24px; border-radius: 12px; background: #f59e0b;
-                        border-width: root.habit-color == "#f59e0b" ? 2px : 0px; border-color: Palette.text-primary;
-                        TouchArea { clicked => { root.habit-color = "#f59e0b"; } }
+
+                    ColorOption {
+                        option-color: color-options[4];
+                        selected: selected-color-index == 4;
+                        clicked => { selected-color-index = 4; }
                     }
-                    Rectangle {
-                        width: 24px; height: 24px; border-radius: 12px; background: #ef4444;
-                        border-width: root.habit-color == "#ef4444" ? 2px : 0px; border-color: Palette.text-primary;
-                        TouchArea { clicked => { root.habit-color = "#ef4444"; } }
+
+                    ColorOption {
+                        option-color: color-options[5];
+                        selected: selected-color-index == 5;
+                        clicked => { selected-color-index = 5; }
                     }
                 }
             }
 
+            Rectangle { vertical-stretch: 1; }
+
+            // Submit button
             Rectangle {
                 height: 48px;
-                background: submit-touch.has-hover ? Palette.surface-hover : Palette.surface;
-                border-radius: 4px;
-                border-width: 1px;
-                border-color: Palette.border;
+                background: @linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+                border-radius: 10px;
                 
-                animate background { duration: 120ms; }
-
                 Text { 
                     text: "SAVE HABIT"; 
-                    color: Palette.text-primary;  
+                    color: #ffffff;
                     horizontal-alignment: center; 
                     vertical-alignment: center; 
-                    font-size: 12px; 
+                    font-size: 12px;
+                    font-weight: 600;
                     letter-spacing: 2px; 
                 }
                 
@@ -209,6 +300,12 @@ export component AddHabitModal inherits Rectangle {
                     mouse-cursor: pointer;
                     clicked => { root.submit(); }
                 }
+
+                states [
+                    hover when submit-touch.has-hover: {
+                        opacity: 0.9;
+                    }
+                ]
             }
         }
     }

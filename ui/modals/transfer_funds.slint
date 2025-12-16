@@ -1,9 +1,10 @@
 // ==================== Transfer Funds Modal ====================
-// Noir Minimalist - Overlay form for transferring between accounts
+// Premium Fintech UI - Overlay form for transferring between accounts
 
 import { Palette, AppState, AccountAdapter, NotificationAdapter } from "../globals.slint";
 
-component UnderlineField inherits Rectangle {
+// ==================== FormField ====================
+component FormField inherits Rectangle {
     in property <string> label: "";
     in property <string> placeholder: "";
     in-out property <string> value: "";
@@ -18,57 +19,53 @@ component UnderlineField inherits Rectangle {
             text: root.label;
             color: Palette.text-muted;
             font-size: 10px;
-            font-weight: 400;
-            letter-spacing: 2px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
         }
 
         Rectangle {
-            vertical-stretch: 1;
+            height: 40px;
+            background: Palette.surface;
+            border-radius: 8px;
+            border-width: input.has-focus ? 2px : 1px;
+            border-color: input.has-focus ? Palette.accent : Palette.border;
 
-            if root.value == "" && !input.has-focus: Text {
-                text: root.placeholder;
-                color: Palette.text-subtle;
-                font-size: 14px;
-                font-weight: 300;
-                vertical-alignment: center;
-            }
+            animate border-color { duration: 150ms; }
 
-            input := TextInput {
-                text <=> root.value;
-                color: Palette.text-primary;
-                font-size: 14px;
-                font-weight: 300;
-                vertical-alignment: center;
+            HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+
+                if root.value == "" && !input.has-focus: Text {
+                    text: root.placeholder;
+                    color: Palette.text-subtle;
+                    font-size: 14px;
+                    font-weight: 300;
+                    vertical-alignment: center;
+                }
+
+                input := TextInput {
+                    text <=> root.value;
+                    color: Palette.text-primary;
+                    font-size: 14px;
+                    font-weight: 400;
+                    vertical-alignment: center;
+                }
             }
 
             TouchArea {
-                clicked => {
-                    input.focus();
-                }
-            }
-        }
-
-        Rectangle {
-            height: input.has-focus ? 2px : 1px;
-            background: input.has-focus ? Palette.accent : Palette.border;
-
-            animate height {
-                duration: 150ms;
-                easing: ease-out;
-            }
-            animate background {
-                duration: 150ms;
-                easing: ease-out;
+                clicked => { input.focus(); }
             }
         }
     }
 }
 
+// ==================== AccountSelector ====================
 component AccountSelector inherits Rectangle {
     in property <string> label: "ACCOUNT";
     in-out property <int> selected-index: 0;
 
-    height: 56px;
+    height: 64px;
     background: transparent;
 
     VerticalLayout {
@@ -78,19 +75,26 @@ component AccountSelector inherits Rectangle {
             text: root.label;
             color: Palette.text-muted;
             font-size: 10px;
-            font-weight: 400;
-            letter-spacing: 2px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
         }
 
         Rectangle {
-            height: 32px;
+            height: 40px;
+            background: Palette.surface;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: Palette.border;
 
             HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+
                 Text {
                     text: AccountAdapter.accounts.length > 0 ? AccountAdapter.accounts[selected-index].name + " (" + AccountAdapter.accounts[selected-index].currency + ")" : "No accounts";
                     color: Palette.text-primary;
                     font-size: 14px;
-                    font-weight: 300;
+                    font-weight: 400;
                     vertical-alignment: center;
                     horizontal-stretch: 1;
                 }
@@ -105,57 +109,61 @@ component AccountSelector inherits Rectangle {
 
             TouchArea {
                 mouse-cursor: pointer;
-                clicked => {
-                    popup.show();
-                }
+                clicked => { popup.show(); }
             }
-        }
-
-        Rectangle {
-            height: 1px;
-            background: Palette.border;
         }
     }
 
     popup := PopupWindow {
         x: 0;
-        y: 56px;
+        y: 64px;
         width: root.width;
         
         Rectangle {
-            background: Palette.surface;
-            border-radius: 4px;
+            background: Palette.sidebar-bg;
+            border-radius: 8px;
             border-width: 1px;
-            border-color: Palette.border;
-            height: min(AccountAdapter.accounts.length * 36px + 8px, 240px);
+            border-color: Palette.border-light;
+            height: min(AccountAdapter.accounts.length * 40px + 8px, 240px);
+            drop-shadow-blur: 16px;
+            drop-shadow-color: #00000066;
 
             Flickable {
-                viewport-height: AccountAdapter.accounts.length * 36px + 8px;
+                viewport-height: AccountAdapter.accounts.length * 40px + 8px;
                 
                 VerticalLayout {
                     padding: 4px;
                     spacing: 0px;
 
                     for account[index] in AccountAdapter.accounts: Rectangle {
-                        height: 36px;
+                        height: 40px;
                         background: option-touch.has-hover ? Palette.surface-hover : transparent;
-                        border-radius: 2px;
+                        border-radius: 6px;
 
-                        Text {
-                            text: account.name + " (" + account.currency + ")";
-                            color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
-                            font-size: 12px;
-                            font-weight: index == selected-index ? 500 : 400;
-                            letter-spacing: 1px;
-                            vertical-alignment: center;
-                            x: 12px;
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+
+                            Text {
+                                text: account.name + " (" + account.currency + ")";
+                                color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
+                                font-size: 13px;
+                                font-weight: index == selected-index ? 500 : 400;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+
+                            if index == selected-index: Text {
+                                text: "✓";
+                                color: Palette.accent;
+                                font-size: 12px;
+                                vertical-alignment: center;
+                            }
                         }
 
                         option-touch := TouchArea {
                             mouse-cursor: pointer;
-                            clicked => {
-                                root.selected-index = index;
-                            }
+                            clicked => { root.selected-index = index; }
                         }
                     }
                 }
@@ -164,6 +172,7 @@ component AccountSelector inherits Rectangle {
     }
 }
 
+// ==================== TransferFundsModal ====================
 export component TransferFundsModal inherits Rectangle {
     property <int> from-index: 0;
     property <int> to-index: AccountAdapter.accounts.length > 1 ? 1 : 0;
@@ -212,6 +221,7 @@ export component TransferFundsModal inherits Rectangle {
     height: 100%;
     background: transparent;
 
+    // Backdrop
     Rectangle {
         width: 100%;
         height: 100%;
@@ -225,43 +235,61 @@ export component TransferFundsModal inherits Rectangle {
         }
     }
 
+    // Modal panel
     Rectangle {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
         width: 440px;
-        height: 520px;
-        background: Palette.sidebar-bg;
-        border-radius: 8px;
+        height: 560px;
+        background: @linear-gradient(180deg, Palette.sidebar-bg 0%, #0f0f1a 100%);
+        border-radius: 16px;
         border-width: 1px;
-        border-color: Palette.border;
+        border-color: Palette.border-light;
+        drop-shadow-blur: 40px;
+        drop-shadow-color: #00000088;
 
         TouchArea { }
 
         VerticalLayout {
             padding: 32px;
-            spacing: 0px;
+            spacing: 16px;
 
+            // Header
             HorizontalLayout {
                 height: 32px;
 
-                Text {
-                    text: "TRANSFER FUNDS";
-                    color: Palette.text-primary;
-                    font-size: 12px;
-                    font-weight: 400;
-                    letter-spacing: 3px;
-                    vertical-alignment: center;
+                HorizontalLayout {
+                    spacing: 12px;
                     horizontal-stretch: 1;
+
+                    Rectangle {
+                        width: 4px;
+                        height: 20px;
+                        border-radius: 2px;
+                        background: @linear-gradient(180deg, Palette.accent 0%, #6366f1 100%);
+                        y: (parent.height - self.height) / 2;
+                    }
+
+                    Text {
+                        text: "TRANSFER FUNDS";
+                        color: Palette.text-primary;
+                        font-size: 16px;
+                        font-weight: 500;
+                        letter-spacing: 2px;
+                        vertical-alignment: center;
+                    }
                 }
 
                 Rectangle {
                     width: 32px;
                     height: 32px;
+                    border-radius: 8px;
+                    background: close-touch.has-hover ? Palette.surface-hover : transparent;
 
                     Text {
                         text: "×";
                         color: close-touch.has-hover ? Palette.text-primary : Palette.text-muted;
-                        font-size: 24px;
+                        font-size: 20px;
                         font-weight: 300;
                         horizontal-alignment: center;
                         vertical-alignment: center;
@@ -277,28 +305,34 @@ export component TransferFundsModal inherits Rectangle {
                 }
             }
 
-            Rectangle {
-                height: 24px;
-            }
-
             AccountSelector {
                 label: "FROM";
                 selected-index <=> from-index;
             }
 
+            // Arrow indicator
             Rectangle {
-                height: 12px;
-            }
+                height: 32px;
 
-            Text {
-                text: "↓";
-                color: Palette.text-muted;
-                font-size: 12px;
-                horizontal-alignment: center;
-            }
+                Rectangle {
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 20px;
+                    background: Palette.surface;
+                    border-width: 1px;
+                    border-color: Palette.border;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
 
-            Rectangle {
-                height: 12px;
+                    Text {
+                        text: "↓";
+                        color: Palette.accent;
+                        font-size: 18px;
+                        font-weight: 500;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
             }
 
             AccountSelector {
@@ -306,54 +340,37 @@ export component TransferFundsModal inherits Rectangle {
                 selected-index <=> to-index;
             }
 
-            Rectangle {
-                height: 16px;
-            }
-
-            UnderlineField {
+            FormField {
                 label: "AMOUNT";
                 placeholder: "0.00";
                 value <=> amount-value;
             }
 
-            Rectangle {
-                height: 12px;
-            }
-
-            UnderlineField {
+            FormField {
                 label: "DESCRIPTION (OPTIONAL)";
                 placeholder: "Reason for transfer";
                 value <=> description-value;
             }
 
-            Rectangle {
-                height: 12px;
-            }
-
-            UnderlineField {
+            FormField {
                 label: "DATE";
                 placeholder: "YYYY-MM-DD";
                 value <=> date-value;
             }
 
-            Rectangle {
-                vertical-stretch: 1;
-            }
+            Rectangle { vertical-stretch: 1; }
 
+            // Submit button
             Rectangle {
                 height: 48px;
-                background: submit-touch.has-hover ? Palette.surface-hover : Palette.surface;
-                border-radius: 4px;
-                border-width: 1px;
-                border-color: Palette.border;
-
-                animate background { duration: 120ms; }
+                background: @linear-gradient(135deg, Palette.accent 0%, #6366f1 100%);
+                border-radius: 10px;
 
                 Text {
                     text: "TRANSFER";
-                    color: Palette.text-primary;
+                    color: #ffffff;
                     font-size: 12px;
-                    font-weight: 400;
+                    font-weight: 600;
                     letter-spacing: 2px;
                     horizontal-alignment: center;
                     vertical-alignment: center;
@@ -361,10 +378,14 @@ export component TransferFundsModal inherits Rectangle {
 
                 submit-touch := TouchArea {
                     mouse-cursor: pointer;
-                    clicked => {
-                        root.submit();
-                    }
+                    clicked => { root.submit(); }
                 }
+
+                states [
+                    hover when submit-touch.has-hover: {
+                        opacity: 0.9;
+                    }
+                ]
             }
         }
     }

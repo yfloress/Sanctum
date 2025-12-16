@@ -29,6 +29,7 @@
           fontconfig
           freetype
           harfbuzz
+          openssl
           # X11 support (uncomment if running on Xorg)
           # xorg.libX11
           # xorg.libXcursor
@@ -50,6 +51,7 @@
           sqlite
           cargo-audit
           slint-lsp
+          bacon
         ];
       in
       {
@@ -66,7 +68,6 @@
           shellHook = ''
             export LIBRARY_PATH=${pkgs.lib.makeLibraryPath libraries}:$LIBRARY_PATH
             export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath libraries}:$LD_LIBRARY_PATH
-            export PKG_CONFIG_PATH=${pkgs.openssl_3.dev}/lib/pkgconfig:${pkgs.fontconfig.dev}/lib/pkgconfig:${pkgs.freetype.dev}/lib/pkgconfig:$PKG_CONFIG_PATH
 
             echo "> SANCTUM DEV SHELL ACTIVE"
             echo "   Compiler:  Rust $(rustc --version)"

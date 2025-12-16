@@ -1,5 +1,5 @@
 // ==================== Sanctum Sidebar ====================
-// Noir Minimalist navigation sidebar with collapse support
+// Premium Fintech UI - Navigation sidebar with collapse support
 
 import { Palette, AppState, AuthAdapter } from "../globals.slint";
 import { TacticalGrid } from "../components/tactical_grid.slint";
@@ -16,17 +16,32 @@ component SidebarItem inherits Rectangle {
     callback clicked();
 
     height: 48px;
-    background: transparent;
+    background: is-active ? Palette.surface : (touch.has-hover ? Palette.surface-hover : transparent);
+    border-radius: collapsed ? 8px : 0px;
+
+    animate background { duration: 150ms; easing: ease-out; }
 
     // Active indicator (left border)
-    Rectangle {
+    if !collapsed: Rectangle {
         x: 0;
         width: 3px;
         height: 100%;
-        background: is-active ? Palette.accent : transparent;
-        opacity: is-active ? 1.0 : 0.0;
+        background: is-active 
+            ? @linear-gradient(180deg, Palette.accent 0%, #6366f1 100%) 
+            : transparent;
 
         animate background { duration: 150ms; }
+    }
+
+    // Active glow for collapsed mode
+    if collapsed && is-active: Rectangle {
+        x: -2px;
+        y: -2px;
+        width: parent.width + 4px;
+        height: parent.height + 4px;
+        border-radius: 10px;
+        background: Palette.accent;
+        opacity: 0.15;
     }
 
     HorizontalLayout {
@@ -36,18 +51,27 @@ component SidebarItem inherits Rectangle {
         Rectangle {
             width: collapsed ? parent.width : 54px;
             
-            Text {
-                text: root.icon;
-                color: is-active ? Palette.text-primary : Palette.text-muted;
-                font-size: 14px;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-                animate color { duration: 150ms; }
+            Rectangle {
+                width: 32px;
+                height: 32px;
+                border-radius: 8px;
+                background: is-active ? Palette.surface-hover : transparent;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+
+                Text {
+                    text: root.icon;
+                    color: is-active ? Palette.text-primary : Palette.text-muted;
+                    font-size: 14px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    animate color { duration: 150ms; }
+                }
             }
         }
 
         // Label Area (hidden when collapsed)
-        if !collapsed : Rectangle {
+        if !collapsed: Rectangle {
             horizontal-stretch: 1;
             clip: true;
             
@@ -55,8 +79,8 @@ component SidebarItem inherits Rectangle {
                 text: root.label;
                 color: is-active ? Palette.text-primary : Palette.text-muted;
                 font-size: 11px;
-                font-weight: is-active ? 500 : 400;
-                letter-spacing: 2.5px;
+                font-weight: is-active ? 600 : 400;
+                letter-spacing: 2px;
                 vertical-alignment: center;
                 
                 animate color { duration: 150ms; }
@@ -78,7 +102,7 @@ component SidebarItem inherits Rectangle {
 export component SanctumSidebar inherits Rectangle {
     property <bool> collapsed: false;
     
-    width: collapsed ? 64px : 220px;
+    width: collapsed ? 72px : 220px;
     background: Palette.sidebar-bg;
 
     animate width { duration: 250ms; easing: ease-in-out; }
@@ -88,15 +112,19 @@ export component SanctumSidebar inherits Rectangle {
         show-background: false;
         grid-cols: collapsed ? 2 : 6;
         grid-rows: 15;
-        opacity: 0.5;
+        opacity: 0.3;
     }
 
-    // Right border
+    // Right border with gradient
     Rectangle {
         x: parent.width - 1px;
         width: 1px;
         height: 100%;
-        background: Palette.sidebar-border;
+        background: @linear-gradient(180deg, 
+            Palette.border-light 0%, 
+            Palette.sidebar-border 50%, 
+            Palette.border-light 100%
+        );
     }
 
     VerticalLayout {
@@ -108,54 +136,91 @@ export component SanctumSidebar inherits Rectangle {
             clip: true;
 
             HorizontalLayout {
-                padding-left: collapsed ? 0px : 24px;
-                alignment: collapsed ? center : start;
+                padding-left: 0px;
+                alignment: center;
 
-                Text {
-                    text: collapsed ? "S" : "SANCTUM";
-                    color: Palette.text-primary;
-                    font-size: 14px;
-                    font-weight: 300;
-                    letter-spacing: 4px;
-                    vertical-alignment: center;
+                // Logo container
+                if collapsed: Rectangle {
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 10px;
+                    background: @linear-gradient(135deg, Palette.accent 0%, #6366f1 100%);
+                    y: (parent.height - self.height) / 2; // Center vertically
+
+                    Text {
+                        text: "S";
+                        color: #ffffff;
+                        font-size: 18px;
+                        font-weight: 600;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+
+                if !collapsed: HorizontalLayout {
+                    spacing: 12px;
+
+                    Text {
+                        text: "SANCTUM";
+                        color: Palette.text-primary;
+                        font-size: 14px;
+                        font-weight: 500;
+                        letter-spacing: 3px;
+                        vertical-alignment: center;
+                    }
                 }
             }
         }
 
+        // Divider
+        Rectangle {
+            height: 1px;
+            background: @linear-gradient(90deg, transparent 0%, Palette.border 50%, transparent 100%);
+            opacity: 0.5;
+        }
+
+        Rectangle { height: 16px; }
+
         // Navigation Items
-        SidebarItem {
-            label: "DASHBOARD";
-            icon: "⊞";
-            page-id: "dashboard";
-            collapsed: root.collapsed;
-        }
+        VerticalLayout {
+            padding-left: collapsed ? 12px : 0px;
+            padding-right: collapsed ? 12px : 0px;
+            spacing: collapsed ? 8px : 0px;
 
-        SidebarItem {
-            label: "FINANCES";
-            icon: "☰";
-            page-id: "finances";
-            collapsed: root.collapsed;
-        }
+            SidebarItem {
+                label: "DASHBOARD";
+                icon: "⊞";
+                page-id: "dashboard";
+                collapsed: root.collapsed;
+            }
 
-        SidebarItem {
-            label: "CRYPTO";
-            icon: "₿";
-            page-id: "crypto";
-            collapsed: root.collapsed;
-        }
+            SidebarItem {
+                label: "FINANCES";
+                icon: "☰";
+                page-id: "finances";
+                collapsed: root.collapsed;
+            }
 
-        SidebarItem {
-            label: "HABITS";
-            icon: "✓";
-            page-id: "habits";
-            collapsed: root.collapsed;
-        }
+            SidebarItem {
+                label: "CRYPTO";
+                icon: "₿";
+                page-id: "crypto";
+                collapsed: root.collapsed;
+            }
 
-        SidebarItem {
-            label: "SETTINGS";
-            icon: "⚙";
-            page-id: "settings";
-            collapsed: root.collapsed;
+            SidebarItem {
+                label: "HABITS";
+                icon: "✓";
+                page-id: "habits";
+                collapsed: root.collapsed;
+            }
+
+            SidebarItem {
+                label: "SETTINGS";
+                icon: "⚙";
+                page-id: "settings";
+                collapsed: root.collapsed;
+            }
         }
 
         Rectangle {
@@ -165,39 +230,46 @@ export component SanctumSidebar inherits Rectangle {
         // Divider
         Rectangle {
             height: 1px;
-            background: Palette.border;
+            background: @linear-gradient(90deg, transparent 0%, Palette.border 50%, transparent 100%);
             opacity: 0.3;
         }
 
         // Lock Button
         Rectangle {
-            height: 64px;
+            height: 56px;
+            background: lock-touch.has-hover ? Palette.surface-hover : transparent;
+
+            animate background { duration: 150ms; }
             
             HorizontalLayout {
                 padding-left: 0px;
-                spacing: 0px;
-                alignment: center; // Center content relative to width
+                alignment: center;
 
-                // Icon logic handled manually here for custom behavior
-                Rectangle {
-                    width: root.collapsed ? parent.width : 54px;
+                // Icon only visible when collapsed
+                if collapsed: Rectangle {
+                    width: 28px;
+                    height: 28px;
+                    border-radius: 8px;
+                    background: lock-touch.has-hover ? #3d2020 : transparent;
+                    y: (parent.height - self.height) / 2 + 2px; // Centered + slight nudge down
+
                     Text {
                         text: "🔒";
-                        color: lock-touch.has-hover ? Palette.text-primary : Palette.text-muted;
                         font-size: 12px;
                         horizontal-alignment: center;
                         vertical-alignment: center;
                     }
                 }
 
-                if !root.collapsed : Text {
+                if !collapsed: Text {
                     text: "LOCK VAULT";
-                    color: lock-touch.has-hover ? Palette.text-primary : Palette.text-muted;
+                    color: lock-touch.has-hover ? Palette.danger : Palette.text-muted;
                     font-size: 11px;
-                    font-weight: 400;
-                    letter-spacing: 2.5px;
+                    font-weight: 500;
+                    letter-spacing: 2px;
                     vertical-alignment: center;
-                    horizontal-stretch: 1;
+
+                    animate color { duration: 150ms; }
                 }
             }
 
@@ -214,14 +286,26 @@ export component SanctumSidebar inherits Rectangle {
         Rectangle {
             height: 48px;
             background: toggle-touch.has-hover ? Palette.surface-hover : transparent;
+
             animate background { duration: 150ms; }
 
-            Text {
-                text: root.collapsed ? "»" : "«";
-                color: Palette.text-secondary;
-                font-size: 16px;
-                horizontal-alignment: center;
-                vertical-alignment: center;
+            Rectangle {
+                width: 28px;
+                height: 28px;
+                border-radius: 6px;
+                background: toggle-touch.has-hover ? Palette.surface : transparent;
+                border-width: toggle-touch.has-hover ? 1px : 0px;
+                border-color: Palette.border;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+
+                Text {
+                    text: root.collapsed ? "»" : "«";
+                    color: Palette.text-secondary;
+                    font-size: 14px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
             }
             
             toggle-touch := TouchArea {

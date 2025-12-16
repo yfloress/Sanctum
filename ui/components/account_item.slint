@@ -1,7 +1,40 @@
 // ==================== Account Item ====================
-// Noir Minimalist - Single account row for list view
+// Premium Fintech UI - Single account card for list view
 
 import { Palette, AccountData } from "../globals.slint";
+
+component AccountTypeIcon inherits Rectangle {
+    in property <string> account-type;
+
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: @linear-gradient(135deg, 
+        account-type == "Bank" ? #1e3a5f : 
+        account-type == "Cash" ? #2d4a3e :
+        account-type == "Savings" ? #3d3a1e :
+        account-type == "Credit" ? #3d1e2e : #1a1a2e,
+        account-type == "Bank" ? #2d5a8f : 
+        account-type == "Cash" ? #3d6a5e :
+        account-type == "Savings" ? #5d5a2e :
+        account-type == "Credit" ? #5d2e4e : #2d2d4e
+    );
+    border-width: 1px;
+    border-color: account-type == "Bank" ? #3d6a9f : 
+                  account-type == "Cash" ? #4d8a7e :
+                  account-type == "Savings" ? #7d7a4e :
+                  account-type == "Credit" ? #7d4e6e : #3d3d5e;
+
+    Text {
+        text: account-type == "Bank" ? "🏦" : 
+              account-type == "Cash" ? "💵" : 
+              account-type == "Savings" ? "🏆" :
+              account-type == "Credit" ? "💳" : "💰";
+        font-size: 20px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
 
 export component AccountItem inherits Rectangle {
     in property <AccountData> account;
@@ -9,34 +42,26 @@ export component AccountItem inherits Rectangle {
 
     callback clicked();
 
-    height: 64px;
-    background: touch.has-hover ? Palette.surface-hover : transparent;
+    height: 80px;
+    background: touch.has-hover ? Palette.surface-hover : Palette.surface;
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: touch.has-hover ? Palette.border-light : Palette.border;
 
-    animate background {
-        duration: 120ms;
-        easing: ease-out;
-    }
+    animate background { duration: 150ms; easing: ease-out; }
+    animate border-color { duration: 150ms; easing: ease-out; }
 
     // Content layout
     HorizontalLayout {
-        padding-left: 24px;
-        padding-right: 24px;
+        padding-left: 20px;
+        padding-right: 20px;
         spacing: 16px;
 
-        // Account initial / icon
-        Rectangle {
-            width: 40px;
-            height: 40px;
-            border-radius: 4px;
-            background: Palette.surface;
-
-            Text {
-                text: account.account-type == "Bank" ? "B" : account.account-type == "Cash" ? "C" : account.account-type == "Credit" ? "CR" : "•";
-                color: Palette.text-secondary;
-                font-size: 14px;
-                font-weight: 500;
-                horizontal-alignment: center;
-                vertical-alignment: center;
+        // Account icon
+        VerticalLayout {
+            alignment: center;
+            AccountTypeIcon {
+                account-type: account.account-type;
             }
         }
 
@@ -50,41 +75,109 @@ export component AccountItem inherits Rectangle {
                 text: account.name;
                 color: Palette.text-primary;
                 font-size: 14px;
-                font-weight: 400;
+                font-weight: 500;
                 overflow: elide;
             }
 
-            Text {
-                text: account.account-type;
-                color: Palette.text-muted;
-                font-size: 11px;
-                font-weight: 400;
-                letter-spacing: 0.5px;
+            HorizontalLayout {
+                spacing: 8px;
+
+                // Type badge
+                Rectangle {
+                    height: 20px;
+                    min-width: 50px;
+                    border-radius: 4px;
+                    background: Palette.surface-hover;
+                    border-width: 1px;
+                    border-color: Palette.border;
+
+                    HorizontalLayout {
+                        padding-left: 8px;
+                        padding-right: 8px;
+
+                        Text {
+                            text: account.account-type;
+                            color: Palette.text-muted;
+                            font-size: 10px;
+                            font-weight: 500;
+                            letter-spacing: 0.5px;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+
+                // Currency badge
+                Rectangle {
+                    height: 20px;
+                    min-width: 36px;
+                    border-radius: 4px;
+                    background: @linear-gradient(135deg, #1a2a1f 0%, #1f3a2a 100%);
+                    border-width: 1px;
+                    border-color: #2d5a4a;
+
+                    HorizontalLayout {
+                        padding-left: 8px;
+                        padding-right: 8px;
+
+                        Text {
+                            text: account.currency;
+                            color: Palette.success;
+                            font-size: 10px;
+                            font-weight: 600;
+                            letter-spacing: 0.5px;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
             }
         }
 
         // Balance (right aligned)
         VerticalLayout {
             alignment: center;
+            spacing: 4px;
 
             Text {
-                text: account.balance;
-                color: Palette.text-primary;
-                font-size: 14px;
+                text: "Balance";
+                color: Palette.text-muted;
+                font-size: 10px;
                 font-weight: 400;
                 letter-spacing: 0.5px;
                 horizontal-alignment: right;
             }
-        }
-    }
 
-    // Bottom border (except for last item)
-    if !is-last: Rectangle {
-        y: parent.height - 1px;
-        height: 1px;
-        x: 24px;
-        width: parent.width - 48px;
-        background: Palette.border-subtle;
+            Text {
+                text: account.balance;
+                color: Palette.text-primary;
+                font-size: 18px;
+                font-weight: 600;
+                letter-spacing: 0.5px;
+                horizontal-alignment: right;
+            }
+        }
+
+        // Edit indicator
+        VerticalLayout {
+            alignment: center;
+
+            Rectangle {
+                width: 28px;
+                height: 28px;
+                border-radius: 8px;
+                background: touch.has-hover ? Palette.surface : transparent;
+                border-width: touch.has-hover ? 1px : 0px;
+                border-color: Palette.border-light;
+
+                Text {
+                    text: "›";
+                    color: Palette.text-muted;
+                    font-size: 18px;
+                    font-weight: 300;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
     }
 
     // Touch area

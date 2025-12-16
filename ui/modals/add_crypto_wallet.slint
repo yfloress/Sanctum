@@ -1,4 +1,5 @@
 // ==================== Add Crypto Wallet Modal ====================
+// Premium Fintech UI - Wallet creation flow
 
 import {
     Palette,
@@ -7,77 +8,164 @@ import {
     NotificationAdapter,
 } from "../globals.slint";
 
-component UnderlineField inherits Rectangle {
+// ==================== FormField ====================
+component FormField inherits Rectangle {
     in property <string> label: "";
     in property <string> placeholder: "";
     in-out property <string> value: "";
 
-    height: 56px;
+    height: 64px;
     background: transparent;
 
     VerticalLayout {
         spacing: 8px;
+        
         Text {
             text: root.label;
             color: Palette.text-muted;
             font-size: 10px;
-            font-weight: 400;
-            letter-spacing: 2px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
         }
+        
         Rectangle {
-            vertical-stretch: 1;
-            if root.value == "" && !input.has-focus: Text {
-                text: root.placeholder;
-                color: Palette.text-subtle;
-                font-size: 14px;
-                font-weight: 300;
-                vertical-alignment: center;
+            height: 40px;
+            background: Palette.surface;
+            border-radius: 8px;
+            border-width: input.has-focus ? 2px : 1px;
+            border-color: input.has-focus ? Palette.accent : Palette.border;
+            
+            animate border-color { duration: 150ms; }
+
+            HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+                
+                if root.value == "" && !input.has-focus: Text {
+                    text: root.placeholder;
+                    color: Palette.text-subtle;
+                    font-size: 14px;
+                    font-weight: 300;
+                    vertical-alignment: center;
+                }
+
+                input := TextInput {
+                    text <=> root.value;
+                    color: Palette.text-primary;
+                    font-size: 14px;
+                    font-weight: 400;
+                    vertical-alignment: center;
+                }
             }
-            input := TextInput {
-                text <=> root.value;
-                color: Palette.text-primary;
-                font-size: 14px;
-                font-weight: 300;
-                vertical-alignment: center;
-            }
+
             TouchArea { clicked => { input.focus(); } }
-        }
-        Rectangle {
-            height: input.has-focus ? 2px : 1px;
-            background: input.has-focus ? Palette.accent : Palette.border;
-            animate height { duration: 150ms; }
-            animate background { duration: 150ms; }
         }
     }
 }
 
-component CategoryOption inherits Rectangle {
-    in property <string> label;
+// ==================== CategoryCard ====================
+component CategoryCard inherits Rectangle {
+    in property <string> icon;
+    in property <string> title;
+    in property <string> subtitle;
     in property <string> value;
     in property <bool> selected;
     callback clicked;
 
-    height: 40px;
-    background: selected ? Palette.surface : transparent;
-    border-radius: 4px;
-    border-width: 1px;
-    border-color: selected ? Palette.border-light : Palette.border;
+    height: 76px;
+    background: selected 
+        ? @linear-gradient(135deg, Palette.surface 0%, #1a1a2e 100%)
+        : (touch.has-hover ? Palette.surface-hover : Palette.surface);
+    border-radius: 12px;
+    border-width: selected ? 2px : 1px;
+    border-color: selected ? Palette.accent : Palette.border;
+    
+    animate background { duration: 200ms; }
+    animate border-color { duration: 200ms; }
+    animate border-width { duration: 200ms; }
 
-    Text {
-        text: root.label;
-        color: selected ? Palette.text-primary : Palette.text-muted;
-        font-size: 12px;
-        font-weight: selected ? 500 : 400;
-        horizontal-alignment: center;
-        vertical-alignment: center;
+    // Glow when selected
+    if selected: Rectangle {
+        x: -3px;
+        y: -3px;
+        width: parent.width + 6px;
+        height: parent.height + 6px;
+        border-radius: 15px;
+        background: Palette.accent;
+        opacity: 0.15;
     }
 
-    TouchArea { clicked => { root.clicked(); } }
+    HorizontalLayout {
+        padding: 16px;
+        spacing: 14px;
+        
+        // Icon
+        Rectangle {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            background: selected 
+                ? @linear-gradient(135deg, Palette.accent 0%, #6366f1 100%)
+                : Palette.surface-hover;
+            
+            Text {
+                text: root.icon;
+                font-size: 20px;
+                vertical-alignment: center;
+                horizontal-alignment: center;
+            }
+        }
+        
+        // Text
+        VerticalLayout {
+            alignment: center;
+            spacing: 4px;
+            horizontal-stretch: 1;
+            
+            Text {
+                text: root.title;
+                color: selected ? Palette.text-primary : Palette.text-secondary;
+                font-size: 13px;
+                font-weight: selected ? 600 : 400;
+            }
+            
+            Text {
+                text: root.subtitle;
+                color: Palette.text-muted;
+                font-size: 10px;
+                font-weight: 400;
+            }
+        }
+        
+        // Checkmark
+        if selected: Rectangle {
+            width: 24px;
+            height: 24px;
+            border-radius: 12px;
+            background: Palette.accent;
+            y: (parent.height - self.height) / 2;
+            
+            Text {
+                text: "✓";
+                color: #ffffff;
+                font-size: 12px;
+                font-weight: 700;
+                vertical-alignment: center;
+                horizontal-alignment: center;
+            }
+        }
+    }
+
+    touch := TouchArea { 
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); } 
+    }
 }
 
+// ==================== Main Modal ====================
 export component AddCryptoWalletModal inherits Rectangle {
     property <string> wallet-name: "";
-    property <string> category: "wallet_single"; // wallet_single, wallet_multi, exchange
+    property <string> category: "wallet_single";
 
     function reset() {
         wallet-name = "";
@@ -110,6 +198,7 @@ export component AddCryptoWalletModal inherits Rectangle {
         width: 100%;
         height: 100%;
         background: #000000cc;
+        
         TouchArea {
             clicked => {
                 root.reset();
@@ -118,97 +207,164 @@ export component AddCryptoWalletModal inherits Rectangle {
         }
     }
 
-    // Panel
+    // Modal Panel
     Rectangle {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
-        width: 400px;
-        height: 450px;
-        background: Palette.sidebar-bg;
-        border-radius: 8px;
+        width: 440px;
+        height: 520px;
+        background: @linear-gradient(180deg, Palette.sidebar-bg 0%, #0f0f1a 100%);
+        border-radius: 16px;
         border-width: 1px;
-        border-color: Palette.border;
+        border-color: Palette.border-light;
+        drop-shadow-blur: 40px;
+        drop-shadow-color: #00000088;
 
         TouchArea { }
 
         VerticalLayout {
             padding: 32px;
-            spacing: 0px;
+            spacing: 24px;
 
             // Header
             HorizontalLayout {
                 height: 32px;
-                Text {
-                    text: "NEW CRYPTO WALLET";
-                    color: Palette.text-primary;
-                    font-size: 12px;
-                    letter-spacing: 3px;
-                    vertical-alignment: center;
+
+                HorizontalLayout {
+                    spacing: 12px;
                     horizontal-stretch: 1;
+
+                    Rectangle {
+                        width: 4px;
+                        height: 20px;
+                        border-radius: 2px;
+                        background: @linear-gradient(180deg, #f7931a 0%, #ff9500 100%);
+                        y: (parent.height - self.height) / 2;
+                    }
+
+                    Text {
+                        text: "NEW WALLET";
+                        color: Palette.text-primary;
+                        font-size: 16px;
+                        font-weight: 500;
+                        letter-spacing: 2px;
+                        vertical-alignment: center;
+                    }
                 }
+                
                 Rectangle {
-                    width: 32px; height: 32px;
-                    Text { text: "×"; color: Palette.text-muted; font-size: 24px; vertical-alignment: center; horizontal-alignment: center;}
-                    TouchArea { clicked => { root.reset(); AppState.show-add-wallet = false; } }
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 8px;
+                    background: close-touch.has-hover ? Palette.surface-hover : transparent;
+                    
+                    Text { 
+                        text: "×"; 
+                        color: close-touch.has-hover ? Palette.text-primary : Palette.text-muted;
+                        font-size: 20px;
+                        font-weight: 300;
+                        vertical-alignment: center; 
+                        horizontal-alignment: center;
+                    }
+                    
+                    close-touch := TouchArea { 
+                        mouse-cursor: pointer;
+                        clicked => { root.reset(); AppState.show-add-wallet = false; } 
+                    }
                 }
             }
 
-            Rectangle { height: 32px; }
-
-            UnderlineField { label: "WALLET NAME"; placeholder: "e.g. Ledger Nano X"; value <=> root.wallet-name; }
-
-            Rectangle { height: 24px; }
-
-            Text {
-                text: "CATEGORY";
-                color: Palette.text-muted;
-                font-size: 10px;
-                font-weight: 400;
-                letter-spacing: 2px;
+            // Name Field
+            FormField { 
+                label: "WALLET NAME"; 
+                placeholder: "e.g. Ledger Nano X"; 
+                value <=> root.wallet-name; 
             }
-            
-            Rectangle { height: 12px; }
 
+            // Category Label
             VerticalLayout {
-                spacing: 8px;
-                CategoryOption { 
-                    label: "Software / Hot Wallet"; 
-                    value: "wallet_single"; 
-                    selected: root.category == "wallet_single";
-                    clicked => { root.category = "wallet_single"; }
+                spacing: 12px;
+
+                Text {
+                    text: "WALLET TYPE";
+                    color: Palette.text-muted;
+                    font-size: 10px;
+                    font-weight: 500;
+                    letter-spacing: 1.5px;
                 }
-                CategoryOption { 
-                    label: "Hardware / Cold Wallet"; 
-                    value: "wallet_multi"; 
-                    selected: root.category == "wallet_multi";
-                    clicked => { root.category = "wallet_multi"; }
-                }
-                CategoryOption { 
-                    label: "Exchange"; 
-                    value: "exchange"; 
-                    selected: root.category == "exchange";
-                    clicked => { root.category = "exchange"; }
+
+                // Category Options
+                VerticalLayout {
+                    spacing: 10px;
+                    
+                    CategoryCard { 
+                        icon: "💳";
+                        title: "Software Wallet"; 
+                        subtitle: "MetaMask, Trust Wallet, Exodus";
+                        value: "wallet_single"; 
+                        selected: root.category == "wallet_single";
+                        clicked => { root.category = "wallet_single"; }
+                    }
+                    
+                    CategoryCard { 
+                        icon: "🔐";
+                        title: "Hardware Wallet"; 
+                        subtitle: "Ledger, Trezor, KeepKey";
+                        value: "wallet_multi"; 
+                        selected: root.category == "wallet_multi";
+                        clicked => { root.category = "wallet_multi"; }
+                    }
+                    
+                    CategoryCard { 
+                        icon: "📊";
+                        title: "Exchange"; 
+                        subtitle: "Binance, Coinbase, Kraken";
+                        value: "exchange"; 
+                        selected: root.category == "exchange";
+                        clicked => { root.category = "exchange"; }
+                    }
                 }
             }
 
             Rectangle { vertical-stretch: 1; }
 
+            // Submit Button
             Rectangle {
                 height: 48px;
-                background: Palette.surface;
-                border-radius: 4px;
-                border-width: 1px;
-                border-color: Palette.border;
+                background: @linear-gradient(135deg, #f7931a 0%, #ff9500 100%);
+                border-radius: 10px;
                 
-                Text {
-                    text: "CREATE WALLET";
-                    color: Palette.text-primary;
-                    font-size: 12px;
-                    letter-spacing: 2px;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
+                HorizontalLayout {
+                    alignment: center;
+                    spacing: 10px;
+                    
+                    Text {
+                        text: "+";
+                        color: #ffffff;
+                        font-size: 16px;
+                        font-weight: 500;
+                        vertical-alignment: center;
+                    }
+                    Text {
+                        text: "CREATE WALLET";
+                        color: #ffffff;
+                        font-size: 12px;
+                        font-weight: 600;
+                        letter-spacing: 2px;
+                        vertical-alignment: center;
+                    }
                 }
-                TouchArea { clicked => { root.submit(); } }
+                
+                submit-touch := TouchArea { 
+                    mouse-cursor: pointer;
+                    clicked => { root.submit(); } 
+                }
+
+                states [
+                    hover when submit-touch.has-hover: {
+                        opacity: 0.9;
+                    }
+                ]
             }
         }
     }
