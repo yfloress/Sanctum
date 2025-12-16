@@ -317,3 +317,43 @@ export component ActionButton inherits Rectangle {
         clicked => { root.clicked(); }
     }
 }
+
+// ==================== CustomScrollbar ====================
+// Horizontal scrollbar indicator
+
+export component CustomScrollbar inherits Rectangle {
+    in property <length> viewport-width;
+    in property <length> viewport-x;
+    in property <length> visible-width;
+    
+    height: 4px;
+    width: visible-width;
+    background: transparent;
+    
+    // Only show if content overflows
+    visible: viewport-width > visible-width;
+    
+    // The Scroll Thumb
+    Rectangle {
+        height: 100%;
+        border-radius: 2px;
+        background: Palette.text-muted;
+        opacity: 0.3;
+        
+        // Calculate width: Ratio of visible to total
+        width: max(20px, parent.width * (parent.width / max(1px, viewport-width)));
+        
+        // Calculate position: Inverse of viewport-x (which is negative)
+        x: (-viewport-x / max(1px, viewport-width)) * parent.width;
+
+        animate opacity { duration: 200ms; }
+        
+        states [
+            hover when touch.has-hover: {
+                opacity: 0.6;
+            }
+        ]
+        
+        touch := TouchArea {}
+    }
+}

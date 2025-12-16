@@ -2,6 +2,7 @@
 // Premium Fintech UI - Habit tracking row with day grid
 
 import { Palette, HabitData, HabitDay, HabitAdapter } from "../globals.slint";
+import { CustomScrollbar } from "../widgets.slint";
 
 component StatBadge inherits Rectangle {
     in property <string> icon;
@@ -185,29 +186,43 @@ export component HabitRow inherits Rectangle {
             }
         }
 
-        // Days Grid - Scrollable
-        Flickable {
+        // Days Grid Container with Scrollbar
+        Rectangle {
             horizontal-stretch: 1;
-            height: 30px; // Tighter height (26px cells + buffer) for perfect vertical centering
-            viewport-width: habit.days.length * (26px + 4px); // width + spacing
-            interactive: true;
+            height: 36px; // Container height
 
-            // Auto-scroll to today
-            // Cell width = 30px (26 + 4). 
-            // Logic: Center the day. Offset = (ScreenCenter) - (DayPosition).
-            viewport-x: HabitAdapter.is-viewing-current-month 
-                ? min(0px, max(parent.width - self.viewport-width, (parent.width / 2) - ((HabitAdapter.current-day-int * 30px) - 15px)))
-                : 0px;
+            // The Scrollable Grid
+            grid-scroll := Flickable {
+                width: 100%;
+                height: 30px; // Content height
+                y: (parent.height - self.height) / 2; // Center vertically
+                viewport-width: habit.days.length * (26px + 4px);
+                interactive: true;
 
-            HorizontalLayout {
-                spacing: 4px;
-                alignment: start;
-                
-                for day in habit.days: DayCell {
-                    day: day;
-                    habit-color: habit.color;
-                    clicked => { root.toggle(day.date); }
+                // Auto-scroll logic
+                viewport-x: HabitAdapter.is-viewing-current-month 
+                    ? min(0px, max(parent.width - self.viewport-width, (parent.width / 2) - ((HabitAdapter.current-day-int * 30px) - 15px)))
+                    : 0px;
+
+                HorizontalLayout {
+                    spacing: 4px;
+                    alignment: start;
+                    
+                    for day in habit.days: DayCell {
+                        day: day;
+                        habit-color: habit.color;
+                        clicked => { root.toggle(day.date); }
+                    }
                 }
+            }
+
+            // The Scrollbar
+            CustomScrollbar {
+                width: parent.width;
+                y: parent.height - self.height;
+                visible-width: parent.width;
+                viewport-width: grid-scroll.viewport-width;
+                viewport-x: grid-scroll.viewport-x;
             }
         }
     }

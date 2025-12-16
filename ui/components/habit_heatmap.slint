@@ -3,6 +3,7 @@
 // Horizontal scroll only, 7 rows for days of week
 
 import { Palette, HabitAdapter, HeatmapWeek, HeatmapDay } from "../globals.slint";
+import { CustomScrollbar } from "../widgets.slint";
 
 component HeatmapCell inherits Rectangle {
     in property <int> level;
@@ -70,28 +71,41 @@ export component HabitHeatmap inherits Rectangle {
             }
         }
 
-        // Heatmap Grid - horizontal scroll only
-        // Height is fixed: 7 days * 12px height + 6 gaps * 4px = 108px
-        Flickable {
-            height: 7 * 12px + 6 * 4px;
-            horizontal-stretch: 1;
-            interactive: true;
-            viewport-width: HabitAdapter.heatmap-data.length * 16px;
-            
-            // Auto-scroll to current week if available
-            // 16px per week column. Buffer of 4 weeks (64px) for context.
-            viewport-x: -1 * max(0px, ((HabitAdapter.current-week-int - 4) * 16px));
+        // Heatmap Grid Container
+        Rectangle {
+            vertical-stretch: 1;
 
-            HorizontalLayout {
-                spacing: 4px;
-                alignment: start;
+            // Heatmap Grid - horizontal scroll only
+            heatmap-scroll := Flickable {
+                height: 7 * 12px + 6 * 4px; // 108px content
+                y: (parent.height - self.height) / 2; // Center vertically
+                horizontal-stretch: 1;
+                interactive: true;
+                viewport-width: HabitAdapter.heatmap-data.length * 16px;
+                
+                // Auto-scroll to current week if available
+                viewport-x: -1 * max(0px, ((HabitAdapter.current-week-int - 4) * 16px));
 
-                for week in HabitAdapter.heatmap-data: VerticalLayout {
+                HorizontalLayout {
                     spacing: 4px;
-                    for day in week.days: HeatmapCell {
-                        level: day.level;
+                    alignment: start;
+
+                    for week in HabitAdapter.heatmap-data: VerticalLayout {
+                        spacing: 4px;
+                        for day in week.days: HeatmapCell {
+                            level: day.level;
+                        }
                     }
                 }
+            }
+
+            // Scrollbar
+            CustomScrollbar {
+                width: parent.width;
+                y: parent.height - self.height;
+                visible-width: parent.width;
+                viewport-width: heatmap-scroll.viewport-width;
+                viewport-x: heatmap-scroll.viewport-x;
             }
         }
     }
