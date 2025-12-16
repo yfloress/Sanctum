@@ -1,4 +1,5 @@
-// ==================== Add Crypto Transaction Modal ====================
+// ==================== Add Crypto Asset Modal ====================
+// Noir Fintech - Premium asset registration flow
 
 import {
     Palette,
@@ -7,149 +8,300 @@ import {
     NotificationAdapter,
 } from "../globals.slint";
 
-component UnderlineField inherits Rectangle {
+// ==================== Form Field ====================
+component FormField inherits Rectangle {
     in property <string> label: "";
     in property <string> placeholder: "";
     in-out property <string> value: "";
     in property <bool> large: false;
+    in property <bool> readonly: false;
 
-    height: large ? 80px : 56px;
+    height: large ? 88px : 64px;
     background: transparent;
 
     VerticalLayout {
-        spacing: 8px;
+        spacing: 10px;
 
         Text {
             text: root.label;
             color: Palette.text-muted;
             font-size: 10px;
-            font-weight: 400;
+            font-weight: 600;
             letter-spacing: 2px;
         }
 
         Rectangle {
             vertical-stretch: 1;
+            background: Palette.surface;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: input.has-focus ? Palette.accent : Palette.border-subtle;
+            
+            animate border-color { duration: 150ms; }
 
-            if root.value == "" && !input.has-focus: Text {
-                text: root.placeholder;
-                color: Palette.text-subtle;
-                font-size: large ? 28px : 14px;
-                font-weight: 300;
-                vertical-alignment: center;
-            }
+            HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+                
+                if root.value == "" && !input.has-focus: Text {
+                    text: root.placeholder;
+                    color: Palette.text-subtle;
+                    font-size: large ? 24px : 14px;
+                    font-weight: 300;
+                    vertical-alignment: center;
+                }
 
-            input := TextInput {
-                text <=> root.value;
-                color: Palette.text-primary;
-                font-size: large ? 28px : 14px;
-                font-weight: 300;
-                vertical-alignment: center;
+                input := TextInput {
+                    text <=> root.value;
+                    color: Palette.text-primary;
+                    font-size: large ? 24px : 14px;
+                    font-weight: large ? 400 : 300;
+                    vertical-alignment: center;
+                    read-only: root.readonly;
+                }
             }
 
             TouchArea {
-                clicked => { input.focus(); }
+                clicked => { if (!root.readonly) { input.focus(); } }
             }
-        }
-
-        Rectangle {
-            height: input.has-focus ? 2px : 1px;
-            background: input.has-focus ? Palette.accent : Palette.border;
-            animate height { duration: 150ms; }
-            animate background { duration: 150ms; }
         }
     }
 }
 
+// ==================== Transaction Type Toggle ====================
 component TypeToggle inherits Rectangle {
     in-out property <bool> is-buy: true;
 
     height: 48px;
-    background: transparent;
+    background: Palette.surface;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: Palette.border-subtle;
 
     HorizontalLayout {
-        spacing: 0px;
+        padding: 4px;
+        spacing: 4px;
 
         Rectangle {
             horizontal-stretch: 1;
-            background: is-buy ? Palette.surface : transparent;
-            border-radius: 4px;
+            background: is-buy ? Palette.success.with-alpha(0.15) : transparent;
+            border-radius: 6px;
+            border-width: 1px;
+            border-color: is-buy ? Palette.success.with-alpha(0.3) : transparent;
             animate background { duration: 150ms; }
+            animate border-color { duration: 150ms; }
 
-            Text {
-                text: "BUY";
-                color: is-buy ? Palette.success : Palette.text-muted;
-                font-size: 11px;
-                font-weight: is-buy ? 500 : 400;
-                letter-spacing: 2px;
-                horizontal-alignment: center;
-                vertical-alignment: center;
+            HorizontalLayout {
+                alignment: center;
+                spacing: 8px;
+                
+                Text {
+                    text: "▲";
+                    color: is-buy ? Palette.success : Palette.text-subtle;
+                    font-size: 10px;
+                    vertical-alignment: center;
+                }
+                Text {
+                    text: "BUY";
+                    color: is-buy ? Palette.success : Palette.text-muted;
+                    font-size: 11px;
+                    font-weight: is-buy ? 600 : 400;
+                    letter-spacing: 2px;
+                    vertical-alignment: center;
+                }
             }
 
-            TouchArea { clicked => { root.is-buy = true; } }
+            TouchArea { 
+                mouse-cursor: pointer;
+                clicked => { root.is-buy = true; } 
+            }
         }
 
-        Rectangle { width: 8px; }
-
         Rectangle {
             horizontal-stretch: 1;
-            background: !is-buy ? Palette.surface : transparent;
-            border-radius: 4px;
+            background: !is-buy ? Palette.danger.with-alpha(0.15) : transparent;
+            border-radius: 6px;
+            border-width: 1px;
+            border-color: !is-buy ? Palette.danger.with-alpha(0.3) : transparent;
             animate background { duration: 150ms; }
+            animate border-color { duration: 150ms; }
 
-            Text {
-                text: "SELL";
-                color: !is-buy ? Palette.danger : Palette.text-muted;
-                font-size: 11px;
-                font-weight: !is-buy ? 500 : 400;
-                letter-spacing: 2px;
-                horizontal-alignment: center;
-                vertical-alignment: center;
+            HorizontalLayout {
+                alignment: center;
+                spacing: 8px;
+                
+                Text {
+                    text: "▼";
+                    color: !is-buy ? Palette.danger : Palette.text-subtle;
+                    font-size: 10px;
+                    vertical-alignment: center;
+                }
+                Text {
+                    text: "SELL";
+                    color: !is-buy ? Palette.danger : Palette.text-muted;
+                    font-size: 11px;
+                    font-weight: !is-buy ? 600 : 400;
+                    letter-spacing: 2px;
+                    vertical-alignment: center;
+                }
             }
 
-            TouchArea { clicked => { root.is-buy = false; } }
+            TouchArea { 
+                mouse-cursor: pointer;
+                clicked => { root.is-buy = false; } 
+            }
         }
     }
 }
 
+// ==================== Wallet Selector ====================
 component WalletSelector inherits Rectangle {
     in-out property <int> selected-index: 0;
     
-    height: 56px;
+    height: 64px;
     background: transparent;
 
     VerticalLayout {
-        spacing: 8px;
-        Text { text: "WALLET"; color: Palette.text-muted; font-size: 10px; font-weight: 400; letter-spacing: 2px; }
+        spacing: 10px;
+        
+        Text { 
+            text: "TARGET WALLET"; 
+            color: Palette.text-muted; 
+            font-size: 10px; 
+            font-weight: 600; 
+            letter-spacing: 2px; 
+        }
         
         Rectangle {
-            height: 32px;
+            height: 40px;
+            background: Palette.surface;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: touch.has-hover ? Palette.border-light.with-alpha(0.3) : Palette.border-subtle;
+            
+            animate border-color { duration: 150ms; }
+            
             HorizontalLayout {
-                Text {
-                    text: CryptoAdapter.wallet-list.length > 0 ? CryptoAdapter.wallet-list[selected-index].name : "No wallets available";
-                    color: Palette.text-primary; font-size: 14px; font-weight: 300; vertical-alignment: center; horizontal-stretch: 1;
+                padding-left: 16px;
+                padding-right: 16px;
+                
+                // Wallet icon
+                Rectangle {
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 6px;
+                    background: Palette.background;
+                    y: (parent.height - self.height) / 2;
+                    
+                    Text {
+                        text: "💼";
+                        font-size: 12px;
+                        vertical-alignment: center;
+                        horizontal-alignment: center;
+                    }
                 }
-                Text { text: "▼"; color: Palette.text-muted; font-size: 10px; vertical-alignment: center; }
+                
+                Rectangle { width: 12px; }
+                
+                Text {
+                    text: CryptoAdapter.wallet-list.length > 0 ? 
+                        CryptoAdapter.wallet-list[selected-index].name : 
+                        "No wallets available";
+                    color: CryptoAdapter.wallet-list.length > 0 ? Palette.text-primary : Palette.text-muted;
+                    font-size: 14px;
+                    font-weight: 400;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+                
+                Text { 
+                    text: "▾"; 
+                    color: Palette.text-muted; 
+                    font-size: 12px; 
+                    vertical-alignment: center; 
+                }
             }
-            TouchArea { clicked => { if (CryptoAdapter.wallet-list.length > 0) { popup.show(); } } }
+
+            touch := TouchArea {
+                mouse-cursor: pointer;
+                clicked => { 
+                    if (CryptoAdapter.wallet-list.length > 0) { 
+                        popup.show(); 
+                    } 
+                }
+            }
         }
-        Rectangle { height: 1px; background: Palette.border; }
     }
 
     popup := PopupWindow {
-        x: 0; y: 56px; width: root.width;
+        x: 0; 
+        y: 64px; 
+        width: root.width;
         close-policy: close-on-click;
+        
         Rectangle {
-            background: Palette.surface; border-radius: 4px; border-width: 1px; border-color: Palette.border;
-            height: min(CryptoAdapter.wallet-list.length * 36px + 8px, 240px);
+            background: Palette.sidebar-bg;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: Palette.border;
+            height: min(CryptoAdapter.wallet-list.length * 44px + 8px, 220px);
             
             Flickable {
-                viewport-height: CryptoAdapter.wallet-list.length * 36px + 8px;
+                viewport-height: CryptoAdapter.wallet-list.length * 44px + 8px;
+                
                 VerticalLayout {
-                    padding: 4px; spacing: 0px;
+                    padding: 4px;
+                    spacing: 2px;
+                    
                     for wallet[index] in CryptoAdapter.wallet-list: Rectangle {
-                        height: 36px; background: option-touch.has-hover ? Palette.surface-hover : transparent; border-radius: 2px;
-                        Text { text: wallet.name; color: index == selected-index ? Palette.text-primary : Palette.text-secondary; font-size: 12px; font-weight: index == selected-index ? 500 : 400; vertical-alignment: center; x: 12px; }
-                        option-touch := TouchArea { clicked => { root.selected-index = index; popup.close(); } }
+                        height: 40px;
+                        background: option-touch.has-hover ? Palette.surface-hover : transparent;
+                        border-radius: 6px;
+                        
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+                            spacing: 10px;
+                            
+                            Rectangle {
+                                width: 20px;
+                                height: 20px;
+                                border-radius: 5px;
+                                background: Palette.surface;
+                                y: (parent.height - self.height) / 2;
+                                
+                                Text {
+                                    text: "💼";
+                                    font-size: 10px;
+                                    vertical-alignment: center;
+                                    horizontal-alignment: center;
+                                }
+                            }
+                            
+                            Text { 
+                                text: wallet.name; 
+                                color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
+                                font-size: 13px;
+                                font-weight: index == selected-index ? 500 : 400;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+                            
+                            if index == selected-index: Text {
+                                text: "✓";
+                                color: Palette.accent;
+                                font-size: 12px;
+                                vertical-alignment: center;
+                            }
+                        }
+                        
+                        option-touch := TouchArea { 
+                            mouse-cursor: pointer;
+                            clicked => { 
+                                root.selected-index = index; 
+                                popup.close(); 
+                            } 
+                        }
                     }
                 }
             }
@@ -157,31 +309,79 @@ component WalletSelector inherits Rectangle {
     }
 }
 
+// ==================== Coin Selector ====================
 component CoinSelector inherits Rectangle {
     in-out property <int> selected-index: 0;
     in property <[string]> options;
     
-    height: 56px;
+    height: 64px;
     background: transparent;
 
     VerticalLayout {
-        spacing: 8px;
-        Text { text: "ASSET"; color: Palette.text-muted; font-size: 10px; font-weight: 400; letter-spacing: 2px; }
+        spacing: 10px;
+        
+        Text { 
+            text: "CRYPTOCURRENCY"; 
+            color: Palette.text-muted; 
+            font-size: 10px; 
+            font-weight: 600; 
+            letter-spacing: 2px; 
+        }
         
         Rectangle {
-            height: 32px;
+            height: 40px;
+            background: Palette.surface;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: touch.has-hover ? Palette.border-light.with-alpha(0.3) : Palette.border-subtle;
+            
+            animate border-color { duration: 150ms; }
+            
             HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+                
+                // Coin icon placeholder
+                Rectangle {
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 12px;
+                    background: @linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                    border-width: 1px;
+                    border-color: Palette.border-subtle;
+                    y: (parent.height - self.height) / 2;
+                    
+                    Text {
+                        text: "₿";
+                        color: Palette.text-primary;
+                        font-size: 12px;
+                        font-weight: 600;
+                        vertical-alignment: center;
+                        horizontal-alignment: center;
+                    }
+                }
+                
+                Rectangle { width: 12px; }
+                
                 Text {
                     text: root.options.length > selected-index ? root.options[selected-index] : "Select Asset";
-                    color: Palette.text-primary; font-size: 14px; font-weight: 300; vertical-alignment: center; horizontal-stretch: 1;
+                    color: Palette.text-primary;
+                    font-size: 14px;
+                    font-weight: 400;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                    overflow: elide;
                 }
-                Text { text: "▼"; color: Palette.text-muted; font-size: 10px; vertical-alignment: center; }
+                
+                Text { 
+                    text: "▾"; 
+                    color: Palette.text-muted; 
+                    font-size: 12px; 
+                    vertical-alignment: center; 
+                }
             }
 
-            // Make the entire row clickable to open the popup
-            TouchArea {
-                width: parent.width;
-                height: parent.height;
+            touch := TouchArea {
                 mouse-cursor: pointer;
                 clicked => {
                     if (root.options.length > 0) {
@@ -190,48 +390,61 @@ component CoinSelector inherits Rectangle {
                 }
             }
         }
-        Rectangle { height: 1px; background: Palette.border; }
     }
 
     popup := PopupWindow {
         x: 0;
         y: root.height;
         width: root.width;
-        // Allow interacting inside; close when clicking outside or pressing escape
         close-policy: PopupClosePolicy.close-on-click-outside;
 
         Rectangle {
-            background: Palette.sidebar-bg; // Solid background
-            border-radius: 4px; 
-            border-width: 1px; 
-            border-color: Palette.accent; // Highlight border
+            background: Palette.sidebar-bg;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: Palette.border;
             clip: true;
-            // Limit height to 300px
-            height: min(root.options.length * 36px + 8px, 300px);
+            height: min(root.options.length * 40px + 8px, 300px);
             
             Flickable {
                 width: parent.width;
                 height: parent.height;
-                viewport-height: root.options.length * 36px + 8px;
+                viewport-height: root.options.length * 40px + 8px;
                 interactive: true;
                 
                 VerticalLayout {
-                    padding: 4px; spacing: 0px;
+                    padding: 4px;
+                    spacing: 2px;
+                    
                     for option[index] in root.options: Rectangle {
-                        height: 36px; 
-                        background: option-touch.has-hover ? Palette.surface-hover : transparent; 
-                        border-radius: 2px;
+                        height: 36px;
+                        background: option-touch.has-hover ? Palette.surface-hover : transparent;
+                        border-radius: 6px;
                         
-                        Text { 
-                            text: option; 
-                            color: index == selected-index ? Palette.text-primary : Palette.text-secondary; 
-                            font-size: 12px; 
-                            font-weight: index == selected-index ? 500 : 400; 
-                            vertical-alignment: center; 
-                            x: 12px; 
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+                            
+                            Text { 
+                                text: option; 
+                                color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
+                                font-size: 12px;
+                                font-weight: index == selected-index ? 500 : 400;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                                overflow: elide;
+                            }
+                            
+                            if index == selected-index: Text {
+                                text: "✓";
+                                color: Palette.accent;
+                                font-size: 11px;
+                                vertical-alignment: center;
+                            }
                         }
                         
                         option-touch := TouchArea { 
+                            mouse-cursor: pointer;
                             clicked => { 
                                 root.selected-index = index; 
                                 popup.close();
@@ -244,6 +457,7 @@ component CoinSelector inherits Rectangle {
     }
 }
 
+// ==================== Main Modal ====================
 export component AddCryptoTransactionModal inherits Rectangle {
     property <string> amount: "";
     property <string> price: "";
@@ -354,6 +568,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
         "VeChain (VET)",
         "Flare (FLR)"
     ];
+    
     property <[string]> coin-ids: [
         "bitcoin",
         "monero",
@@ -456,6 +671,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
         "vechain",
         "flare-networks"
     ];
+    
     property <[string]> coin-symbols: [
         "BTC",
         "XMR",
@@ -578,13 +794,11 @@ export component AddCryptoTransactionModal inherits Rectangle {
             return;
         }
 
-        // Safe guard index
         if (wallet-index >= CryptoAdapter.wallet-list.length) {
             wallet-index = 0;
         }
         let wallet-id = CryptoAdapter.wallet-list[wallet-index].id;
         
-        // Coin logic
         if (coin-index >= coin-ids.length) { coin-index = 0; }
         let coin-id = coin-ids[coin-index];
         let symbol = coin-symbols[coin-index];
@@ -606,7 +820,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
             root.reset();
             AppState.show-add-crypto = false;
             CryptoAdapter.fetch-portfolio();
-            CryptoAdapter.fetch-wallets(); // Update wallet balance
+            CryptoAdapter.fetch-wallets();
         } else {
             NotificationAdapter.show(result, true);
         }
@@ -620,7 +834,8 @@ export component AddCryptoTransactionModal inherits Rectangle {
     Rectangle {
         width: 100%;
         height: 100%;
-        background: #000000cc;
+        background: #000000.with-alpha(0.85);
+        
         TouchArea {
             clicked => {
                 root.reset();
@@ -629,14 +844,14 @@ export component AddCryptoTransactionModal inherits Rectangle {
         }
     }
 
-    // Panel
+    // Modal Panel
     Rectangle {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
-        width: 400px;
+        width: 440px;
         height: 680px;
-        background: Palette.sidebar-bg;
-        border-radius: 8px;
+        background: @linear-gradient(180deg, #0a0a10 0%, #080810 100%);
+        border-radius: 16px;
         border-width: 1px;
         border-color: Palette.border;
 
@@ -648,37 +863,81 @@ export component AddCryptoTransactionModal inherits Rectangle {
 
             // Header
             HorizontalLayout {
-                height: 32px;
-                Text {
-                    text: "ADD CRYPTO ASSET";
-                    color: Palette.text-primary;
-                    font-size: 12px;
-                    letter-spacing: 3px;
-                    vertical-alignment: center;
-                    horizontal-stretch: 1;
+                height: 40px;
+                alignment: space-between;
+                
+                VerticalLayout {
+                    alignment: center;
+                    Text {
+                        text: "ADD CRYPTO ASSET";
+                        color: Palette.text-primary;
+                        font-size: 14px;
+                        font-weight: 500;
+                        letter-spacing: 2px;
+                    }
                 }
+                
                 Rectangle {
-                    width: 32px; height: 32px;
-                    Text { text: "×"; color: Palette.text-muted; font-size: 24px; vertical-alignment: center; horizontal-alignment: center;}
-                    TouchArea { clicked => { root.reset(); AppState.show-add-crypto = false; } }
+                    width: 36px;
+                    height: 36px;
+                    border-radius: 8px;
+                    background: close-touch.has-hover ? Palette.surface : transparent;
+                    
+                    Text { 
+                        text: "✕"; 
+                        color: Palette.text-muted; 
+                        font-size: 16px; 
+                        vertical-alignment: center; 
+                        horizontal-alignment: center;
+                    }
+                    
+                    close-touch := TouchArea { 
+                        mouse-cursor: pointer;
+                        clicked => { root.reset(); AppState.show-add-crypto = false; } 
+                    }
                 }
             }
 
             Rectangle { height: 24px; }
 
+            // Type Toggle
             TypeToggle { is-buy <=> root.is-buy; }
 
-            Rectangle { height: 24px; }
+            Rectangle { height: 20px; }
             
+            // Wallet Selector
             WalletSelector { selected-index <=> root.wallet-index; }
             
+            // Warning if no wallets
             if CryptoAdapter.wallet-list.length == 0: Rectangle {
-                height: 24px;
-                Text { text: "Create a wallet in the Wallets tab first."; color: Palette.danger; font-size: 10px; vertical-alignment: center; }
+                height: 36px;
+                background: Palette.danger.with-alpha(0.1);
+                border-radius: 6px;
+                border-width: 1px;
+                border-color: Palette.danger.with-alpha(0.2);
+                
+                HorizontalLayout {
+                    padding-left: 12px;
+                    spacing: 8px;
+                    
+                    Text { 
+                        text: "⚠"; 
+                        color: Palette.danger; 
+                        font-size: 12px; 
+                        vertical-alignment: center; 
+                    }
+                    Text { 
+                        text: "Create a wallet first in the Wallets tab"; 
+                        color: Palette.danger; 
+                        font-size: 11px; 
+                        vertical-alignment: center; 
+                    }
+                }
             }
 
             Rectangle { height: 16px; }
 
+            // Coin Selector
             CoinSelector { 
                 options: root.coin-names;
                 selected-index <=> root.coin-index; 
@@ -686,30 +945,65 @@ export component AddCryptoTransactionModal inherits Rectangle {
             
             Rectangle { height: 16px; }
             
-            UnderlineField { label: "AMOUNT"; placeholder: "0.00"; value <=> root.amount; large: true; }
-            Rectangle { height: 16px; }
-            UnderlineField { label: "PRICE PER COIN (USD)"; placeholder: "Leave empty for current market price"; value <=> root.price; }
-            Rectangle { height: 16px; }
-            UnderlineField { label: "DATE"; value <=> root.date; }
+            // Amount Field
+            FormField { 
+                label: "AMOUNT"; 
+                placeholder: "0.00"; 
+                value <=> root.amount; 
+                large: true; 
+            }
+            
+            Rectangle { height: 12px; }
+            
+            // Price Field
+            FormField { 
+                label: "PRICE PER COIN (USD)"; 
+                placeholder: "Leave empty for market price"; 
+                value <=> root.price; 
+            }
+            
+            Rectangle { height: 12px; }
+            
+            // Date Field
+            FormField { 
+                label: "DATE"; 
+                value <=> root.date; 
+            }
 
             Rectangle { vertical-stretch: 1; }
 
+            // Submit Button
             Rectangle {
-                height: 48px;
-                background: Palette.surface;
-                border-radius: 4px;
-                border-width: 1px;
-                border-color: Palette.border;
+                height: 52px;
+                background: touch.has-hover ? Palette.accent-hover : Palette.accent;
+                border-radius: 10px;
                 
-                Text {
-                    text: "SAVE ASSET";
-                    color: Palette.text-primary;
-                    font-size: 12px;
-                    letter-spacing: 2px;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
+                animate background { duration: 150ms; }
+                
+                HorizontalLayout {
+                    alignment: center;
+                    spacing: 10px;
+                    
+                    Text {
+                        text: is-buy ? "▲" : "▼";
+                        color: Palette.background;
+                        font-size: 12px;
+                        vertical-alignment: center;
+                    }
+                    Text {
+                        text: is-buy ? "ADD TO PORTFOLIO" : "RECORD SALE";
+                        color: Palette.background;
+                        font-size: 12px;
+                        font-weight: 600;
+                        letter-spacing: 2px;
+                        vertical-alignment: center;
+                    }
                 }
-                TouchArea { clicked => { root.submit(); } }
+                
+                touch := TouchArea { 
+                    mouse-cursor: pointer;
+                    clicked => { root.submit(); } 
+                }
             }
         }
     }
