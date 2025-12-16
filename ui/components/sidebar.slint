@@ -145,6 +145,7 @@ export component SanctumSidebar inherits Rectangle {
                     height: 40px;
                     border-radius: 10px;
                     background: @linear-gradient(135deg, Palette.accent 0%, #6366f1 100%);
+                    y: (parent.height - self.height) / 2; // Center vertically
 
                     Text {
                         text: "S";
@@ -250,6 +251,7 @@ export component SanctumSidebar inherits Rectangle {
                     height: 28px;
                     border-radius: 8px;
                     background: lock-touch.has-hover ? #3d2020 : transparent;
+                    y: (parent.height - self.height) / 2 + 2px; // Centered + slight nudge down
 
                     Text {
                         text: "🔒";
