@@ -1084,8 +1084,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     MonthlyStats {
                         month_name: SharedString::from(month_names[i]),
-                        total_completions: *total,
-                        max_completions: scale_max,
+                        total_completions: *total as f32,
+                        max_completions: scale_max as f32,
                         dominant_color,
                     }
                 })

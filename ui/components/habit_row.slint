@@ -93,11 +93,11 @@ export component HabitRow inherits Rectangle {
 
     HorizontalLayout {
         spacing: 16px;
-        alignment: start;
+        alignment: center; // Fix alignment between text and days
 
         // Info Column
         Rectangle {
-            width: 200px;
+            horizontal-stretch: 1; // Make responsive
             
             info-touch := TouchArea { }
             
