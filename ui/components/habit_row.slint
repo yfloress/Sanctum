@@ -94,7 +94,7 @@ export component HabitRow inherits Rectangle {
 
     HorizontalLayout {
         spacing: 16px;
-        alignment: center; // Restored alignment
+        // alignment: center; // Must be removed to allow stretch
 
         // Info Column
         Rectangle {
@@ -189,6 +189,7 @@ export component HabitRow inherits Rectangle {
         // Days Grid Container with Scrollbar
         Rectangle {
             horizontal-stretch: 1;
+            min-width: 1px; // Ensure layout calculation
             height: 36px; // Container height
             clip: true; // Prevent overflow glitches
 
