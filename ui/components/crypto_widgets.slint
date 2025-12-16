@@ -600,35 +600,3 @@ export component GhostButton inherits Rectangle {
     }
 }
 
-// ==================== Action Button (Primary) ====================
-export component ActionButton inherits Rectangle {
-    in property <string> text;
-    in property <bool> primary: false;
-    callback clicked;
-    
-    height: 36px;
-    min-width: 120px;
-    border-radius: 8px;
-    background: primary ? 
-        (touch.has-hover ? Palette.accent-hover : Palette.accent) : 
-        (touch.has-hover ? Palette.surface-hover : Palette.surface);
-    border-width: primary ? 0px : 1px;
-    border-color: Palette.border;
-    
-    animate background { duration: 150ms; }
-    
-    Text {
-        text: root.text;
-        color: primary ? Palette.background : Palette.text-primary;
-        font-size: 11px;
-        font-weight: 600;
-        letter-spacing: 1.5px;
-        vertical-alignment: center;
-        horizontal-alignment: center;
-    }
-    
-    touch := TouchArea {
-        mouse-cursor: pointer;
-        clicked => { root.clicked(); }
-    }
-}

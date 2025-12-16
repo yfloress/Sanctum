@@ -5,7 +5,7 @@ import { Palette, HabitAdapter, AppState } from "../globals.slint";
 import { HabitRow } from "../components/habit_row.slint";
 import { HabitHeatmap } from "../components/habit_heatmap.slint";
 import { HabitBarChart } from "../components/habit_barchart.slint";
-import { TextButton } from "../widgets.slint";
+import { TextButton, ActionButton } from "../widgets.slint";
 import { AddHabitModal } from "../modals/add_habit.slint";
 
 component NavButton inherits Rectangle {
@@ -38,43 +38,6 @@ component NavButton inherits Rectangle {
     }
 }
 
-component ActionButton inherits Rectangle {
-    in property <string> text;
-    in property <bool> primary: false;
-    callback clicked;
-
-    height: 36px;
-    min-width: 100px;
-    border-radius: 8px;
-    background: primary 
-        ? @linear-gradient(135deg, Palette.accent 0%, #6366f1 100%)
-        : (touch.has-hover ? Palette.surface-hover : Palette.surface);
-    border-width: primary ? 0px : 1px;
-    border-color: Palette.border-light;
-
-    animate background { duration: 200ms; easing: ease-out; }
-
-    HorizontalLayout {
-        padding-left: 16px;
-        padding-right: 16px;
-        spacing: 8px;
-        alignment: center;
-
-        Text {
-            text: root.text;
-            color: primary ? #ffffff : Palette.text-primary;
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 1px;
-            vertical-alignment: center;
-        }
-    }
-
-    touch := TouchArea {
-        mouse-cursor: pointer;
-        clicked => { root.clicked(); }
-    }
-}
 
 component SectionHeader inherits Rectangle {
     in property <string> title;

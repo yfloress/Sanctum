@@ -10,7 +10,7 @@ import {
 } from "../globals.slint";
 import { TransactionItem } from "../components/transaction_item.slint";
 import { AccountItem } from "../components/account_item.slint";
-import { TextButton } from "../widgets.slint";
+import { TextButton, ActionButton } from "../widgets.slint";
 
 component TabButton inherits Rectangle {
     in property <string> text;
@@ -52,44 +52,6 @@ component TabButton inherits Rectangle {
     TouchArea { 
         mouse-cursor: pointer;
         clicked => { root.clicked(); } 
-    }
-}
-
-component ActionButton inherits Rectangle {
-    in property <string> text;
-    in property <bool> primary: false;
-    callback clicked;
-
-    height: 36px;
-    min-width: 120px;
-    border-radius: 8px;
-    background: primary 
-        ? @linear-gradient(135deg, Palette.accent 0%, #6366f1 100%)
-        : (touch.has-hover ? Palette.surface-hover : Palette.surface);
-    border-width: primary ? 0px : 1px;
-    border-color: Palette.border-light;
-
-    animate background { duration: 200ms; easing: ease-out; }
-
-    HorizontalLayout {
-        padding-left: 16px;
-        padding-right: 16px;
-        spacing: 8px;
-        alignment: center;
-
-        Text {
-            text: root.text;
-            color: primary ? #ffffff : Palette.text-primary;
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 1px;
-            vertical-alignment: center;
-        }
-    }
-
-    touch := TouchArea {
-        mouse-cursor: pointer;
-        clicked => { root.clicked(); }
     }
 }
 

@@ -242,22 +242,21 @@ export component SanctumSidebar inherits Rectangle {
             animate background { duration: 150ms; }
             
             HorizontalLayout {
-                padding-left: collapsed ? 0px : 16px;
-                spacing: 0px;
-                alignment: center;
+                padding-left: collapsed ? 0px : 24px;
+                alignment: collapsed ? center : start;
 
-                Rectangle {
-                    width: collapsed ? parent.width : 38px;
-                    
-                    Rectangle {
-                        width: 28px;
-                        height: 28px;
-                        border-radius: 8px;
-                        background: lock-touch.has-hover ? #3d2020 : transparent;
-                        x: (parent.width - self.width) / 2;
-                        y: (parent.height - self.height) / 2;
+                // Icon only visible when collapsed
+                if collapsed: Rectangle {
+                    width: 28px;
+                    height: 28px;
+                    border-radius: 8px;
+                    background: lock-touch.has-hover ? #3d2020 : transparent;
 
-                        // Lock icon removed
+                    Text {
+                        text: "🔒";
+                        font-size: 12px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
                     }
                 }
 
@@ -265,10 +264,9 @@ export component SanctumSidebar inherits Rectangle {
                     text: "LOCK VAULT";
                     color: lock-touch.has-hover ? Palette.danger : Palette.text-muted;
                     font-size: 11px;
-                    font-weight: 400;
+                    font-weight: 500;
                     letter-spacing: 2px;
                     vertical-alignment: center;
-                    horizontal-stretch: 1;
 
                     animate color { duration: 150ms; }
                 }
