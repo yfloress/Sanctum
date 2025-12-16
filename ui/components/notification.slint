@@ -1,5 +1,5 @@
 // ==================== Notification Toast ====================
-// Floating temporary message
+// Premium Fintech UI - Floating temporary message
 
 import { Palette } from "../globals.slint";
 
@@ -14,42 +14,94 @@ export component NotificationToast inherits Rectangle {
     in property <bool> is-error: false;
     in property <bool> active: false;
 
-    width: 320px;
-    height: active ? 56px : 0px;
+    width: 360px;
+    height: active ? 64px : 0px;
     opacity: active ? 1.0 : 0.0;
 
-    background: Palette.sidebar-bg;
-    border-radius: 4px;
+    background: @linear-gradient(135deg, 
+        Palette.sidebar-bg 0%, 
+        is-error ? #1a1215 : #0f1a15 100%
+    );
+    border-radius: 12px;
     border-width: 1px;
-    border-color: is-error ? Palette.danger : Palette.success;
+    border-color: is-error ? #5d2a2a : #2a5d4a;
+    drop-shadow-blur: 20px;
+    drop-shadow-color: #00000066;
+    drop-shadow-offset-y: 4px;
     
     // Animation
-    animate height { duration: 200ms; easing: ease-out-back; }
+    animate height { duration: 250ms; easing: ease-out-back; }
     animate opacity { duration: 200ms; easing: ease-out; }
 
+    // Left accent bar
+    Rectangle {
+        x: 0;
+        width: 4px;
+        height: 100%;
+        background: is-error 
+            ? @linear-gradient(180deg, Palette.danger 0%, #dc2626 100%)
+            : @linear-gradient(180deg, Palette.success 0%, #059669 100%);
+    }
+
     HorizontalLayout {
-        padding-left: 16px;
-        padding-right: 16px;
-        spacing: 12px;
+        padding-left: 20px;
+        padding-right: 20px;
+        spacing: 16px;
         
-        // Icon
-        Text {
-            text: is-error ? "!" : "✓";
-            color: is-error ? Palette.danger : Palette.success;
-            font-size: 18px;
-            font-weight: 500;
-            vertical-alignment: center;
+        // Icon with glow
+        VerticalLayout {
+            alignment: center;
+
+            Rectangle {
+                width: 36px;
+                height: 36px;
+                border-radius: 10px;
+                background: is-error ? #2d1515 : #152d20;
+                border-width: 1px;
+                border-color: is-error ? #3d2020 : #203d30;
+
+                // Glow
+                Rectangle {
+                    x: -3px;
+                    y: -3px;
+                    width: parent.width + 6px;
+                    height: parent.height + 6px;
+                    border-radius: 13px;
+                    background: is-error ? Palette.danger : Palette.success;
+                    opacity: 0.2;
+                }
+
+                Text {
+                    text: is-error ? "✕" : "✓";
+                    color: is-error ? Palette.danger : Palette.success;
+                    font-size: 16px;
+                    font-weight: 600;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
         }
         
         // Message
-        Text {
-            text: root.message;
-            color: Palette.text-primary;
-            font-size: 13px;
-            font-weight: 400;
-            vertical-alignment: center;
+        VerticalLayout {
+            alignment: center;
             horizontal-stretch: 1;
-            overflow: elide;
+
+            Text {
+                text: is-error ? "Error" : "Success";
+                color: is-error ? Palette.danger : Palette.success;
+                font-size: 10px;
+                font-weight: 600;
+                letter-spacing: 1px;
+            }
+
+            Text {
+                text: root.message;
+                color: Palette.text-primary;
+                font-size: 13px;
+                font-weight: 400;
+                overflow: elide;
+            }
         }
     }
 }

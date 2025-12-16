@@ -1,5 +1,5 @@
 // ==================== Add Transaction Modal ====================
-// Noir Minimalist - Overlay form for adding new transactions
+// Premium Fintech UI - Overlay form for adding new transactions
 
 import {
     Palette,
@@ -10,16 +10,14 @@ import {
     NotificationAdapter,
 } from "../globals.slint";
 
-// ==================== UnderlineField ====================
-// Minimal input with only bottom border
-
-component UnderlineField inherits Rectangle {
+// ==================== FormField ====================
+component FormField inherits Rectangle {
     in property <string> label: "";
     in property <string> placeholder: "";
     in-out property <string> value: "";
     in property <bool> large: false;
 
-    height: large ? 80px : 56px;
+    height: large ? 88px : 64px;
     background: transparent;
 
     VerticalLayout {
@@ -30,88 +28,86 @@ component UnderlineField inherits Rectangle {
             text: root.label;
             color: Palette.text-muted;
             font-size: 10px;
-            font-weight: 400;
-            letter-spacing: 2px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
         }
 
-        // Input area
+        // Input container
         Rectangle {
-            vertical-stretch: 1;
+            height: large ? 56px : 40px;
+            background: Palette.surface;
+            border-radius: 8px;
+            border-width: input.has-focus ? 2px : 1px;
+            border-color: input.has-focus ? Palette.accent : Palette.border;
 
-            // Placeholder
-            if root.value == "" && !input.has-focus: Text {
-                text: root.placeholder;
-                color: Palette.text-subtle;
-                font-size: large ? 28px : 14px;
-                font-weight: 300;
-                vertical-alignment: center;
-            }
+            animate border-color { duration: 150ms; }
+            animate border-width { duration: 150ms; }
 
-            input := TextInput {
-                text <=> root.value;
-                color: Palette.text-primary;
-                font-size: large ? 28px : 14px;
-                font-weight: 300;
-                vertical-alignment: center;
+            HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+
+                // Placeholder
+                if root.value == "" && !input.has-focus: Text {
+                    text: root.placeholder;
+                    color: Palette.text-subtle;
+                    font-size: large ? 24px : 14px;
+                    font-weight: 300;
+                    vertical-alignment: center;
+                }
+
+                input := TextInput {
+                    text <=> root.value;
+                    color: Palette.text-primary;
+                    font-size: large ? 24px : 14px;
+                    font-weight: large ? 500 : 400;
+                    vertical-alignment: center;
+                }
             }
 
             TouchArea {
-                clicked => {
-                    input.focus();
-                }
-            }
-        }
-
-        // Underline
-        Rectangle {
-            height: input.has-focus ? 2px : 1px;
-            background: input.has-focus ? Palette.accent : Palette.border;
-
-            animate height {
-                duration: 150ms;
-                easing: ease-out;
-            }
-            animate background {
-                duration: 150ms;
-                easing: ease-out;
+                clicked => { input.focus(); }
             }
         }
     }
 }
 
 // ==================== CategorySelector ====================
-// Dropdown-style category picker using PopupWindow
-
 component CategorySelector inherits Rectangle {
     in property <string> label: "CATEGORY";
     in property <[string]> categories: [];
     in-out property <int> selected-index: 0;
 
-    height: 56px;
+    height: 64px;
     background: transparent;
 
     VerticalLayout {
         spacing: 8px;
 
-        // Label
         Text {
             text: root.label;
             color: Palette.text-muted;
             font-size: 10px;
-            font-weight: 400;
-            letter-spacing: 2px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
         }
 
-        // Selected value / trigger
         Rectangle {
-            height: 32px;
+            height: 40px;
+            background: Palette.surface;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: Palette.border;
 
             HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+
                 Text {
                     text: categories.length > 0 ? categories[selected-index] : "Select...";
                     color: Palette.text-primary;
                     font-size: 14px;
-                    font-weight: 300;
+                    font-weight: 400;
                     vertical-alignment: center;
                     horizontal-stretch: 1;
                 }
@@ -126,60 +122,61 @@ component CategorySelector inherits Rectangle {
 
             TouchArea {
                 mouse-cursor: pointer;
-                clicked => {
-                    popup.show();
-                }
+                clicked => { popup.show(); }
             }
-        }
-
-        // Underline
-        Rectangle {
-            height: 1px;
-            background: Palette.border;
         }
     }
 
-    // Dropdown Popup
     popup := PopupWindow {
         x: 0;
-        y: 56px;
+        y: 64px;
         width: root.width;
         
         Rectangle {
-            background: Palette.surface;
-            border-radius: 4px;
+            background: Palette.sidebar-bg;
+            border-radius: 8px;
             border-width: 1px;
-            border-color: Palette.border;
-            height: min(categories.length * 36px + 8px, 240px);
+            border-color: Palette.border-light;
+            height: min(categories.length * 40px + 8px, 280px);
+            drop-shadow-blur: 16px;
+            drop-shadow-color: #00000066;
 
             Flickable {
-                viewport-height: categories.length * 36px + 8px;
+                viewport-height: categories.length * 40px + 8px;
                 
                 VerticalLayout {
                     padding: 4px;
                     spacing: 0px;
 
                     for category[index] in categories: Rectangle {
-                        height: 36px;
+                        height: 40px;
                         background: option-touch.has-hover ? Palette.surface-hover : transparent;
-                        border-radius: 2px;
+                        border-radius: 6px;
 
-                        Text {
-                            text: category;
-                            color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
-                            font-size: 12px;
-                            font-weight: index == selected-index ? 500 : 400;
-                            letter-spacing: 1px;
-                            vertical-alignment: center;
-                            horizontal-alignment: left;
-                            x: 12px;
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+
+                            Text {
+                                text: category;
+                                color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
+                                font-size: 13px;
+                                font-weight: index == selected-index ? 500 : 400;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+
+                            if index == selected-index: Text {
+                                text: "✓";
+                                color: Palette.accent;
+                                font-size: 12px;
+                                vertical-alignment: center;
+                            }
                         }
 
                         option-touch := TouchArea {
                             mouse-cursor: pointer;
-                            clicked => {
-                                root.selected-index = index;
-                            }
+                            clicked => { root.selected-index = index; }
                         }
                     }
                 }
@@ -189,12 +186,10 @@ component CategorySelector inherits Rectangle {
 }
 
 // ==================== AccountSelector ====================
-// Dropdown for choosing an account using PopupWindow
-
 component AccountSelector inherits Rectangle {
     in-out property <int> selected-index: 0;
 
-    height: 56px;
+    height: 64px;
     background: transparent;
 
     VerticalLayout {
@@ -204,19 +199,26 @@ component AccountSelector inherits Rectangle {
             text: "ACCOUNT";
             color: Palette.text-muted;
             font-size: 10px;
-            font-weight: 400;
-            letter-spacing: 2px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
         }
 
         Rectangle {
-            height: 32px;
+            height: 40px;
+            background: Palette.surface;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: Palette.border;
 
             HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+
                 Text {
                     text: AccountAdapter.accounts.length > 0 ? AccountAdapter.accounts[selected-index].name : "No accounts";
                     color: Palette.text-primary;
                     font-size: 14px;
-                    font-weight: 300;
+                    font-weight: 400;
                     vertical-alignment: center;
                     horizontal-stretch: 1;
                 }
@@ -231,57 +233,61 @@ component AccountSelector inherits Rectangle {
 
             TouchArea {
                 mouse-cursor: pointer;
-                clicked => {
-                    popup.show();
-                }
+                clicked => { popup.show(); }
             }
-        }
-
-        Rectangle {
-            height: 1px;
-            background: Palette.border;
         }
     }
 
     popup := PopupWindow {
         x: 0;
-        y: 56px;
+        y: 64px;
         width: root.width;
         
         Rectangle {
-            background: Palette.surface;
-            border-radius: 4px;
+            background: Palette.sidebar-bg;
+            border-radius: 8px;
             border-width: 1px;
-            border-color: Palette.border;
-            height: min(AccountAdapter.accounts.length * 36px + 8px, 240px);
+            border-color: Palette.border-light;
+            height: min(AccountAdapter.accounts.length * 40px + 8px, 240px);
+            drop-shadow-blur: 16px;
+            drop-shadow-color: #00000066;
 
             Flickable {
-                viewport-height: AccountAdapter.accounts.length * 36px + 8px;
+                viewport-height: AccountAdapter.accounts.length * 40px + 8px;
                 
                 VerticalLayout {
                     padding: 4px;
                     spacing: 0px;
 
                     for account[index] in AccountAdapter.accounts: Rectangle {
-                        height: 36px;
+                        height: 40px;
                         background: option-touch.has-hover ? Palette.surface-hover : transparent;
-                        border-radius: 2px;
+                        border-radius: 6px;
 
-                        Text {
-                            text: account.name + " (" + account.currency + ")";
-                            color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
-                            font-size: 12px;
-                            font-weight: index == selected-index ? 500 : 400;
-                            letter-spacing: 1px;
-                            vertical-alignment: center;
-                            x: 12px;
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+
+                            Text {
+                                text: account.name + " (" + account.currency + ")";
+                                color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
+                                font-size: 13px;
+                                font-weight: index == selected-index ? 500 : 400;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+
+                            if index == selected-index: Text {
+                                text: "✓";
+                                color: Palette.accent;
+                                font-size: 12px;
+                                vertical-alignment: center;
+                            }
                         }
 
                         option-touch := TouchArea {
                             mouse-cursor: pointer;
-                            clicked => {
-                                root.selected-index = index;
-                            }
+                            clicked => { root.selected-index = index; }
                         }
                     }
                 }
@@ -291,97 +297,83 @@ component AccountSelector inherits Rectangle {
 }
 
 // ==================== TypeToggle ====================
-// Expense / Income toggle switch
-
 component TypeToggle inherits Rectangle {
     in-out property <bool> is-expense: true;
 
     height: 48px;
-    background: transparent;
+    background: Palette.surface;
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: Palette.border;
 
     HorizontalLayout {
-        spacing: 0px;
+        padding: 4px;
+        spacing: 4px;
 
         // Expense button
         Rectangle {
             horizontal-stretch: 1;
-            background: is-expense ? Palette.surface : transparent;
-            border-radius: 4px;
+            background: is-expense 
+                ? @linear-gradient(135deg, #3d1f2f 0%, #2d1520 100%)
+                : transparent;
+            border-radius: 8px;
+            border-width: is-expense ? 1px : 0px;
+            border-color: #5d2f4f;
 
-            animate background {
-                duration: 150ms;
-                easing: ease-out;
-            }
+            animate background { duration: 200ms; easing: ease-out; }
 
             Text {
                 text: "EXPENSE";
                 color: is-expense ? Palette.danger : Palette.text-muted;
                 font-size: 11px;
-                font-weight: is-expense ? 500 : 400;
-                letter-spacing: 2px;
+                font-weight: is-expense ? 600 : 400;
+                letter-spacing: 1.5px;
                 horizontal-alignment: center;
                 vertical-alignment: center;
 
-                animate color {
-                    duration: 150ms;
-                    easing: ease-out;
-                }
+                animate color { duration: 150ms; }
             }
 
             TouchArea {
                 mouse-cursor: pointer;
-                clicked => {
-                    root.is-expense = true;
-                }
+                clicked => { root.is-expense = true; }
             }
-        }
-
-        // Spacer
-        Rectangle {
-            width: 8px;
         }
 
         // Income button
         Rectangle {
             horizontal-stretch: 1;
-            background: !is-expense ? Palette.surface : transparent;
-            border-radius: 4px;
+            background: !is-expense 
+                ? @linear-gradient(135deg, #1f3d2f 0%, #152d20 100%)
+                : transparent;
+            border-radius: 8px;
+            border-width: !is-expense ? 1px : 0px;
+            border-color: #2f5d4f;
 
-            animate background {
-                duration: 150ms;
-                easing: ease-out;
-            }
+            animate background { duration: 200ms; easing: ease-out; }
 
             Text {
                 text: "INCOME";
                 color: !is-expense ? Palette.success : Palette.text-muted;
                 font-size: 11px;
-                font-weight: !is-expense ? 500 : 400;
-                letter-spacing: 2px;
+                font-weight: !is-expense ? 600 : 400;
+                letter-spacing: 1.5px;
                 horizontal-alignment: center;
                 vertical-alignment: center;
 
-                animate color {
-                    duration: 150ms;
-                    easing: ease-out;
-                }
+                animate color { duration: 150ms; }
             }
 
             TouchArea {
                 mouse-cursor: pointer;
-                clicked => {
-                    root.is-expense = false;
-                }
+                clicked => { root.is-expense = false; }
             }
         }
     }
 }
 
 // ==================== AddTransactionModal ====================
-// Main modal component
-
 export component AddTransactionModal inherits Rectangle {
-    // Form state
     property <string> amount-value: "";
     property <string> description-value: "";
     property <int> category-index: 0;
@@ -389,10 +381,8 @@ export component AddTransactionModal inherits Rectangle {
     property <bool> is-expense: true;
     property <int> account-index: 0;
 
-    // Get current categories based on type
     property <[string]> current-categories: is-expense ? Categories.expense-categories : Categories.income-categories;
 
-    // Reset form
     function reset-form() {
         amount-value = "";
         description-value = "";
@@ -402,7 +392,6 @@ export component AddTransactionModal inherits Rectangle {
         account-index = 0;
     }
 
-    // Submit form
     function submit() {
         if (AccountAdapter.accounts.length == 0) {
             NotificationAdapter.show("Create an account first", true);
@@ -413,14 +402,11 @@ export component AddTransactionModal inherits Rectangle {
             return;
         }
 
-        // Safe guard index
         if (account-index >= AccountAdapter.accounts.length) {
             account-index = 0;
         }
         let account-id = AccountAdapter.accounts[account-index].id;
 
-        // Get selected category
-        // Call adapter (using first account as default for now)
         let result = TransactionAdapter.add-transaction(
             account-id,
             amount-value,
@@ -461,48 +447,60 @@ export component AddTransactionModal inherits Rectangle {
     Rectangle {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
-        width: 400px;
+        width: 440px;
         height: 640px;
-        background: Palette.sidebar-bg;
-        border-radius: 8px;
+        background: @linear-gradient(180deg, Palette.sidebar-bg 0%, #0f0f1a 100%);
+        border-radius: 16px;
         border-width: 1px;
-        border-color: Palette.border;
+        border-color: Palette.border-light;
+        drop-shadow-blur: 40px;
+        drop-shadow-color: #00000088;
 
-        // Prevent clicks from closing
         TouchArea { }
 
         VerticalLayout {
             padding: 32px;
-            spacing: 0px;
+            spacing: 20px;
 
             // Header
             HorizontalLayout {
                 height: 32px;
 
-                Text {
-                    text: "NEW ENTRY";
-                    color: Palette.text-primary;
-                    font-size: 12px;
-                    font-weight: 400;
-                    letter-spacing: 3px;
-                    vertical-alignment: center;
+                HorizontalLayout {
+                    spacing: 12px;
                     horizontal-stretch: 1;
+
+                    Rectangle {
+                        width: 4px;
+                        height: 20px;
+                        border-radius: 2px;
+                        background: @linear-gradient(180deg, Palette.accent 0%, #6366f1 100%);
+                        y: (parent.height - self.height) / 2;
+                    }
+
+                    Text {
+                        text: "NEW ENTRY";
+                        color: Palette.text-primary;
+                        font-size: 16px;
+                        font-weight: 500;
+                        letter-spacing: 2px;
+                        vertical-alignment: center;
+                    }
                 }
 
-                // Close button
                 Rectangle {
                     width: 32px;
                     height: 32px;
+                    border-radius: 8px;
+                    background: close-touch.has-hover ? Palette.surface-hover : transparent;
 
                     Text {
                         text: "×";
                         color: close-touch.has-hover ? Palette.text-primary : Palette.text-muted;
-                        font-size: 24px;
+                        font-size: 20px;
                         font-weight: 300;
                         horizontal-alignment: center;
                         vertical-alignment: center;
-
-                        animate color { duration: 120ms; }
                     }
 
                     close-touch := TouchArea {
@@ -515,19 +513,9 @@ export component AddTransactionModal inherits Rectangle {
                 }
             }
 
-            // Spacer
-            Rectangle {
-                height: 24px;
-            }
-
             // Type toggle
             TypeToggle {
                 is-expense <=> root.is-expense;
-            }
-
-            // Spacer
-            Rectangle {
-                height: 24px;
             }
 
             // Account selector
@@ -536,34 +524,27 @@ export component AddTransactionModal inherits Rectangle {
             }
 
             if AccountAdapter.accounts.length == 0: Rectangle {
-                height: 40px;
+                height: 48px;
+                background: Palette.surface;
+                border-radius: 8px;
+                border-width: 1px;
+                border-color: Palette.border;
 
                 Text {
                     text: "No accounts available. Create one first.";
                     color: Palette.text-muted;
                     font-size: 12px;
-                    font-weight: 400;
-                    horizontal-alignment: left;
+                    horizontal-alignment: center;
                     vertical-alignment: center;
                 }
             }
 
-            // Spacer
-            Rectangle {
-                height: 16px;
-            }
-
-            // Amount field (large)
-            UnderlineField {
+            // Amount field
+            FormField {
                 label: "AMOUNT";
                 placeholder: "0.00";
                 value <=> amount-value;
                 large: true;
-            }
-
-            // Spacer
-            Rectangle {
-                height: 16px;
             }
 
             // Category selector
@@ -573,50 +554,35 @@ export component AddTransactionModal inherits Rectangle {
                 selected-index <=> category-index;
             }
 
-            // Spacer
-            Rectangle {
-                height: 16px;
-            }
-
-            // Description field (optional)
-            UnderlineField {
+            // Description field
+            FormField {
                 label: "DESCRIPTION (OPTIONAL)";
                 placeholder: "Add a note...";
                 value <=> description-value;
             }
 
-            // Spacer
-            Rectangle {
-                height: 16px;
-            }
-
             // Date field
-            UnderlineField {
+            FormField {
                 label: "DATE";
                 placeholder: "YYYY-MM-DD";
                 value <=> date-value;
             }
 
-            // Spacer
-            Rectangle {
-                vertical-stretch: 1;
-            }
+            Rectangle { vertical-stretch: 1; }
 
             // Submit button
             Rectangle {
                 height: 48px;
-                background: submit-touch.has-hover ? Palette.surface-hover : Palette.surface;
-                border-radius: 4px;
-                border-width: 1px;
-                border-color: Palette.border;
+                background: @linear-gradient(135deg, Palette.accent 0%, #6366f1 100%);
+                border-radius: 10px;
 
-                animate background { duration: 120ms; }
+                animate background { duration: 150ms; }
 
                 Text {
                     text: "SAVE ENTRY";
-                    color: Palette.text-primary;
+                    color: #ffffff;
                     font-size: 12px;
-                    font-weight: 400;
+                    font-weight: 600;
                     letter-spacing: 2px;
                     horizontal-alignment: center;
                     vertical-alignment: center;
@@ -624,10 +590,14 @@ export component AddTransactionModal inherits Rectangle {
 
                 submit-touch := TouchArea {
                     mouse-cursor: pointer;
-                    clicked => {
-                        root.submit();
-                    }
+                    clicked => { root.submit(); }
                 }
+
+                states [
+                    hover when submit-touch.has-hover: {
+                        opacity: 0.9;
+                    }
+                ]
             }
         }
     }

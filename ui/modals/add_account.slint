@@ -1,12 +1,10 @@
 // ==================== Add Account Modal ====================
-// Noir Minimalist - Overlay form for creating new accounts
+// Premium Fintech UI - Overlay form for creating new accounts
 
 import { Palette, AppState, AccountAdapter, NotificationAdapter } from "../globals.slint";
 
-// ==================== UnderlineField ====================
-// Minimal input with bottom border
-
-component UnderlineField inherits Rectangle {
+// ==================== FormField ====================
+component FormField inherits Rectangle {
     in property <string> label: "";
     in property <string> placeholder: "";
     in-out property <string> value: "";
@@ -21,61 +19,54 @@ component UnderlineField inherits Rectangle {
             text: root.label;
             color: Palette.text-muted;
             font-size: 10px;
-            font-weight: 400;
-            letter-spacing: 2px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
         }
 
         Rectangle {
-            vertical-stretch: 1;
+            height: 40px;
+            background: Palette.surface;
+            border-radius: 8px;
+            border-width: input.has-focus ? 2px : 1px;
+            border-color: input.has-focus ? Palette.accent : Palette.border;
 
-            if root.value == "" && !input.has-focus: Text {
-                text: root.placeholder;
-                color: Palette.text-subtle;
-                font-size: 14px;
-                font-weight: 300;
-                vertical-alignment: center;
-            }
+            animate border-color { duration: 150ms; }
 
-            input := TextInput {
-                text <=> root.value;
-                color: Palette.text-primary;
-                font-size: 14px;
-                font-weight: 300;
-                vertical-alignment: center;
+            HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+
+                if root.value == "" && !input.has-focus: Text {
+                    text: root.placeholder;
+                    color: Palette.text-subtle;
+                    font-size: 14px;
+                    font-weight: 300;
+                    vertical-alignment: center;
+                }
+
+                input := TextInput {
+                    text <=> root.value;
+                    color: Palette.text-primary;
+                    font-size: 14px;
+                    font-weight: 400;
+                    vertical-alignment: center;
+                }
             }
 
             TouchArea {
-                clicked => {
-                    input.focus();
-                }
-            }
-        }
-
-        Rectangle {
-            height: input.has-focus ? 2px : 1px;
-            background: input.has-focus ? Palette.accent : Palette.border;
-
-            animate height {
-                duration: 150ms;
-                easing: ease-out;
-            }
-            animate background {
-                duration: 150ms;
-                easing: ease-out;
+                clicked => { input.focus(); }
             }
         }
     }
 }
 
 // ==================== OptionSelector ====================
-// Simple dropdown-style selector using PopupWindow
-
 component OptionSelector inherits Rectangle {
     in property <string> label: "";
     in property <[string]> options: [];
     in-out property <int> selected-index: 0;
 
-    height: 56px;
+    height: 64px;
     background: transparent;
 
     VerticalLayout {
@@ -85,19 +76,26 @@ component OptionSelector inherits Rectangle {
             text: root.label;
             color: Palette.text-muted;
             font-size: 10px;
-            font-weight: 400;
-            letter-spacing: 2px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
         }
 
         Rectangle {
-            height: 32px;
+            height: 40px;
+            background: Palette.surface;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: Palette.border;
 
             HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+
                 Text {
                     text: options.length > 0 ? options[selected-index] : "Select...";
                     color: Palette.text-primary;
                     font-size: 14px;
-                    font-weight: 300;
+                    font-weight: 400;
                     vertical-alignment: center;
                     horizontal-stretch: 1;
                 }
@@ -112,68 +110,61 @@ component OptionSelector inherits Rectangle {
 
             TouchArea {
                 mouse-cursor: pointer;
-                clicked => {
-                    popup.show();
-                }
+                clicked => { popup.show(); }
             }
-        }
-
-        Rectangle {
-            height: 1px;
-            background: Palette.border;
         }
     }
 
     popup := PopupWindow {
         x: 0;
-        y: 56px; 
+        y: 64px; 
         width: root.width;
         
         Rectangle {
-            background: Palette.surface;
-            border-radius: 4px;
+            background: Palette.sidebar-bg;
+            border-radius: 8px;
             border-width: 1px;
-            border-color: Palette.border;
-            
-            // Limit height and allow scrolling if many options
-            height: min(options.length * 32px + 8px, 200px);
+            border-color: Palette.border-light;
+            height: min(options.length * 40px + 8px, 200px);
+            drop-shadow-blur: 16px;
+            drop-shadow-color: #00000066;
 
             Flickable {
-                viewport-height: options.length * 32px + 8px;
+                viewport-height: options.length * 40px + 8px;
                 
                 VerticalLayout {
                     padding: 4px;
                     spacing: 0px;
 
                     for option[index] in options: Rectangle {
-                        height: 32px;
+                        height: 40px;
                         background: option-touch.has-hover ? Palette.surface-hover : transparent;
-                        border-radius: 2px;
+                        border-radius: 6px;
 
-                        Text {
-                            text: option;
-                            color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
-                            font-size: 12px;
-                            font-weight: index == selected-index ? 500 : 400;
-                            letter-spacing: 1px;
-                            vertical-alignment: center;
-                            x: 12px;
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+
+                            Text {
+                                text: option;
+                                color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
+                                font-size: 13px;
+                                font-weight: index == selected-index ? 500 : 400;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+
+                            if index == selected-index: Text {
+                                text: "✓";
+                                color: Palette.accent;
+                                font-size: 12px;
+                                vertical-alignment: center;
+                            }
                         }
 
                         option-touch := TouchArea {
                             mouse-cursor: pointer;
-                            clicked => {
-                                root.selected-index = index;
-                                // Slint's PopupWindow closes automatically on click outside, 
-                                // but we explicitly close it here for better UX
-                                // However, currently there isn't a direct close() on PopupWindow in vanilla Slint 1.8 
-                                // without toggling visibility manually if it wasn't a PopupWindow.
-                                // Standard PopupWindow closes when clicking an item if it consumes the event? 
-                                // Actually usually we rely on focus loss. 
-                                // Let's try to just set index. The popup stays open? 
-                                // No, PopupWindow behavior is transient.
-                                // We might need a way to close it programmatically if we want instant close.
-                            }
+                            clicked => { root.selected-index = index; }
                         }
                     }
                 }
@@ -183,12 +174,10 @@ component OptionSelector inherits Rectangle {
 }
 
 // ==================== AddAccountModal ====================
-
 export component AddAccountModal inherits Rectangle {
     in property <bool> editing: false;
     in property <int> selected-index: 0;
 
-    // Form state
     property <string> name-value: editing && AccountAdapter.accounts.length > selected-index ? AccountAdapter.accounts[selected-index].name : "";
     property <string> initial-balance: editing && AccountAdapter.accounts.length > selected-index ? AccountAdapter.accounts[selected-index].initial-balance : "";
     property <int> type-index: editing && AccountAdapter.accounts.length > selected-index ? (AccountAdapter.accounts[selected-index].account-type-key == "cash" ? 1 : AccountAdapter.accounts[selected-index].account-type-key == "savings" ? 2 : AccountAdapter.accounts[selected-index].account-type-key == "credit_card" ? 3 : 0) : 0;
@@ -252,47 +241,60 @@ export component AddAccountModal inherits Rectangle {
     Rectangle {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
-        width: 420px;
-        height: 420px;
-        background: Palette.sidebar-bg;
-        border-radius: 8px;
+        width: 440px;
+        height: 460px;
+        background: @linear-gradient(180deg, Palette.sidebar-bg 0%, #0f0f1a 100%);
+        border-radius: 16px;
         border-width: 1px;
-        border-color: Palette.border;
+        border-color: Palette.border-light;
+        drop-shadow-blur: 40px;
+        drop-shadow-color: #00000088;
 
-        // Prevent clicks from closing
         TouchArea { }
 
         VerticalLayout {
             padding: 32px;
-            spacing: 0px;
+            spacing: 20px;
 
             // Header
             HorizontalLayout {
                 height: 32px;
 
-                Text {
-                    text: editing ? "EDIT ACCOUNT" : "NEW ACCOUNT";
-                    color: Palette.text-primary;
-                    font-size: 12px;
-                    font-weight: 400;
-                    letter-spacing: 3px;
-                    vertical-alignment: center;
+                HorizontalLayout {
+                    spacing: 12px;
                     horizontal-stretch: 1;
+
+                    Rectangle {
+                        width: 4px;
+                        height: 20px;
+                        border-radius: 2px;
+                        background: @linear-gradient(180deg, Palette.accent 0%, #6366f1 100%);
+                        y: (parent.height - self.height) / 2;
+                    }
+
+                    Text {
+                        text: editing ? "EDIT ACCOUNT" : "NEW ACCOUNT";
+                        color: Palette.text-primary;
+                        font-size: 16px;
+                        font-weight: 500;
+                        letter-spacing: 2px;
+                        vertical-alignment: center;
+                    }
                 }
 
                 Rectangle {
                     width: 32px;
                     height: 32px;
+                    border-radius: 8px;
+                    background: close-touch.has-hover ? Palette.surface-hover : transparent;
 
                     Text {
                         text: "×";
                         color: close-touch.has-hover ? Palette.text-primary : Palette.text-muted;
-                        font-size: 24px;
+                        font-size: 20px;
                         font-weight: 300;
                         horizontal-alignment: center;
                         vertical-alignment: center;
-
-                        animate color { duration: 120ms; }
                     }
 
                     close-touch := TouchArea {
@@ -305,18 +307,10 @@ export component AddAccountModal inherits Rectangle {
                 }
             }
 
-            Rectangle {
-                height: 24px;
-            }
-
-            UnderlineField {
+            FormField {
                 label: "NAME";
                 placeholder: "Main Checking";
                 value <=> name-value;
-            }
-
-            Rectangle {
-                height: 16px;
             }
 
             HorizontalLayout {
@@ -337,34 +331,25 @@ export component AddAccountModal inherits Rectangle {
                 }
             }
 
-            Rectangle {
-                height: 16px;
-            }
-
-            UnderlineField {
+            FormField {
                 label: "INITIAL BALANCE";
                 placeholder: "0.00";
                 value <=> initial-balance;
             }
 
-            Rectangle {
-                vertical-stretch: 1;
-            }
+            Rectangle { vertical-stretch: 1; }
 
+            // Submit button
             Rectangle {
                 height: 48px;
-                background: submit-touch.has-hover ? Palette.surface-hover : Palette.surface;
-                border-radius: 4px;
-                border-width: 1px;
-                border-color: Palette.border;
-
-                animate background { duration: 120ms; }
+                background: @linear-gradient(135deg, Palette.accent 0%, #6366f1 100%);
+                border-radius: 10px;
 
                 Text {
                     text: "SAVE ACCOUNT";
-                    color: Palette.text-primary;
+                    color: #ffffff;
                     font-size: 12px;
-                    font-weight: 400;
+                    font-weight: 600;
                     letter-spacing: 2px;
                     horizontal-alignment: center;
                     vertical-alignment: center;
@@ -372,10 +357,14 @@ export component AddAccountModal inherits Rectangle {
 
                 submit-touch := TouchArea {
                     mouse-cursor: pointer;
-                    clicked => {
-                        root.submit();
-                    }
+                    clicked => { root.submit(); }
                 }
+
+                states [
+                    hover when submit-touch.has-hover: {
+                        opacity: 0.9;
+                    }
+                ]
             }
         }
     }

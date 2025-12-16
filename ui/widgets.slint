@@ -1,10 +1,10 @@
 // ==================== Sanctum Widgets ====================
-// Noir Minimalist - Clean, luxury-inspired components
+// Premium Fintech UI - Core reusable components
 
 import { Palette } from "globals.slint";
 
 // ==================== UnderlineInput ====================
-// Minimalist input with only a bottom line, no box
+// Minimalist input with underline focus indicator
 
 export component UnderlineInput inherits Rectangle {
     in property <string> placeholder: "";
@@ -26,7 +26,7 @@ export component UnderlineInput inherits Rectangle {
             height: 36px;
 
             HorizontalLayout {
-                // Placeholder (shown when empty and not focused)
+                // Placeholder
                 if root.text == "" && !input.has-focus: Text {
                     text: root.placeholder;
                     color: Palette.text-muted;
@@ -58,19 +58,15 @@ export component UnderlineInput inherits Rectangle {
             }
         }
 
-        // Underline
+        // Underline with gradient
         Rectangle {
             height: input.has-focus ? 2px : 1px;
-            background: input.has-focus ? Palette.border-light : Palette.border;
+            background: input.has-focus 
+                ? @linear-gradient(90deg, Palette.accent 0%, #6366f1 100%)
+                : Palette.border;
 
-            animate height {
-                duration: 150ms;
-                easing: ease-out;
-            }
-            animate background {
-                duration: 150ms;
-                easing: ease-out;
-            }
+            animate height { duration: 150ms; easing: ease-out; }
+            animate background { duration: 150ms; easing: ease-out; }
         }
     }
 
@@ -83,7 +79,7 @@ export component UnderlineInput inherits Rectangle {
 }
 
 // ==================== TextButton ====================
-// Minimalist text-only button with opacity hover effect
+// Minimalist text-only button with hover effect
 
 export component TextButton inherits Rectangle {
     in property <string> text: "BUTTON";
@@ -98,9 +94,9 @@ export component TextButton inherits Rectangle {
     label := Text {
         text: root.uppercase ? root.text : root.text;
         color: Palette.text-primary;
-        font-size: 13px;
-        font-weight: 500;
-        letter-spacing: 3px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 2px;
         horizontal-alignment: center;
         vertical-alignment: center;
         opacity: !root.enabled ? 0.3 : touch.has-hover ? 0.7 : 1.0;
@@ -109,6 +105,16 @@ export component TextButton inherits Rectangle {
             duration: 150ms;
             easing: ease-out;
         }
+    }
+
+    // Subtle underline on hover
+    if touch.has-hover && enabled: Rectangle {
+        y: parent.height - 4px;
+        height: 2px;
+        width: parent.width * 0.4;
+        x: parent.width * 0.3;
+        background: @linear-gradient(90deg, transparent 0%, Palette.accent 50%, transparent 100%);
+        opacity: 0.5;
     }
 
     touch := TouchArea {
@@ -132,22 +138,20 @@ export component BorderButton inherits Rectangle {
 
     height: 48px;
     min-width: 160px;
-    background: transparent;
+    background: touch.has-hover ? Palette.surface : transparent;
     border-width: 1px;
-    border-color: touch.has-hover ? Palette.text-primary : Palette.border;
-    border-radius: Palette.radius-sm;
+    border-color: touch.has-hover ? Palette.border-light : Palette.border;
+    border-radius: 8px;
 
-    animate border-color {
-        duration: 150ms;
-        easing: ease-out;
-    }
+    animate background { duration: 150ms; easing: ease-out; }
+    animate border-color { duration: 150ms; easing: ease-out; }
 
     Text {
         text: root.text;
         color: Palette.text-primary;
-        font-size: 12px;
-        font-weight: 500;
-        letter-spacing: 2.5px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 2px;
         horizontal-alignment: center;
         vertical-alignment: center;
         opacity: !root.enabled ? 0.3 : 1.0;
@@ -163,28 +167,130 @@ export component BorderButton inherits Rectangle {
     }
 }
 
+// ==================== PrimaryButton ====================
+// Gradient action button
+
+export component PrimaryButton inherits Rectangle {
+    in property <string> text: "BUTTON";
+    in property <bool> enabled: true;
+
+    callback clicked();
+
+    height: 48px;
+    min-width: 160px;
+    background: @linear-gradient(135deg, Palette.accent 0%, #6366f1 100%);
+    border-radius: 10px;
+    opacity: enabled ? (touch.has-hover ? 0.9 : 1.0) : 0.5;
+
+    animate opacity { duration: 150ms; easing: ease-out; }
+
+    Text {
+        text: root.text;
+        color: #ffffff;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 2px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? pointer : default;
+
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
 // ==================== Divider ====================
-// Simple horizontal line
+// Gradient horizontal line
 
 export component Divider inherits Rectangle {
     height: 1px;
-    background: Palette.border;
+    background: @linear-gradient(90deg, transparent 0%, Palette.border 50%, transparent 100%);
     horizontal-stretch: 1;
 }
 
 // ==================== SanctumCard ====================
-// Minimal card container
+// Premium card container with gradient background
 
 export component SanctumCard inherits Rectangle {
-    in property <length> card-padding: 48px;
+    in property <length> card-padding: 24px;
 
-    background: Palette.surface;
-    border-radius: Palette.radius-md;
+    background: @linear-gradient(135deg, Palette.surface 0%, #1a1a2e 100%);
+    border-radius: 12px;
     border-width: 1px;
     border-color: Palette.border;
 
     VerticalLayout {
         padding: root.card-padding;
         @children
+    }
+}
+
+// ==================== IconButton ====================
+// Circular icon button
+
+export component IconButton inherits Rectangle {
+    in property <string> icon: "•";
+    in property <bool> enabled: true;
+
+    callback clicked();
+
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: touch.has-hover ? Palette.surface-hover : Palette.surface;
+    border-width: 1px;
+    border-color: touch.has-hover ? Palette.border-light : Palette.border;
+
+    animate background { duration: 150ms; }
+    animate border-color { duration: 150ms; }
+
+    Text {
+        text: root.icon;
+        color: enabled ? Palette.text-primary : Palette.text-muted;
+        font-size: 16px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? pointer : default;
+
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+// ==================== Badge ====================
+// Small status indicator
+
+export component Badge inherits Rectangle {
+    in property <string> text: "";
+    in property <color> badge-color: Palette.accent;
+
+    height: 22px;
+    border-radius: 6px;
+    background: badge-color.with-alpha(0.15);
+    border-width: 1px;
+    border-color: badge-color.with-alpha(0.3);
+
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 10px;
+
+        Text {
+            text: root.text;
+            color: badge-color;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            vertical-alignment: center;
+        }
     }
 }

@@ -1,11 +1,94 @@
+// ==================== Habit Row ====================
+// Premium Fintech UI - Habit tracking row with day grid
+
 import { Palette, HabitData, HabitDay, HabitAdapter } from "../globals.slint";
+
+component StatBadge inherits Rectangle {
+    in property <string> icon;
+    in property <string> value;
+    in property <color> accent-color: Palette.text-muted;
+
+    height: 22px;
+    border-radius: 6px;
+    background: Palette.surface-hover;
+    border-width: 1px;
+    border-color: Palette.border;
+
+    HorizontalLayout {
+        padding-left: 8px;
+        padding-right: 8px;
+        spacing: 4px;
+
+        Text {
+            text: root.icon;
+            font-size: 10px;
+            vertical-alignment: center;
+        }
+
+        Text {
+            text: root.value;
+            color: accent-color;
+            font-size: 10px;
+            font-weight: 600;
+            vertical-alignment: center;
+        }
+    }
+}
+
+component DayCell inherits Rectangle {
+    in property <HabitDay> day;
+    in property <color> habit-color;
+    callback clicked;
+
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    background: day.completed 
+        ? habit-color 
+        : (day.is-future ? Palette.background : (touch.has-hover && !day.is-future ? Palette.surface-hover : Palette.surface));
+    border-width: 1px;
+    border-color: day.completed 
+        ? habit-color.darker(0.2)
+        : (touch.has-hover && !day.is-future ? Palette.border-light : Palette.border);
+    opacity: day.is-future ? 0.3 : 1.0;
+
+    animate background { duration: 150ms; }
+    animate border-color { duration: 150ms; }
+
+    // Glow for completed
+    if day.completed: Rectangle {
+        x: -2px;
+        y: -2px;
+        width: parent.width + 4px;
+        height: parent.height + 4px;
+        border-radius: 8px;
+        background: habit-color;
+        opacity: 0.3;
+    }
+
+    // Day Number
+    Text {
+        text: day.day;
+        color: day.completed ? Palette.background : Palette.text-muted;
+        font-size: 10px;
+        font-weight: day.completed ? 600 : 400;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch := TouchArea {
+        enabled: !day.is-future;
+        mouse-cursor: self.enabled ? pointer : default;
+        clicked => { root.clicked(); }
+    }
+}
 
 export component HabitRow inherits Rectangle {
     in property <HabitData> habit;
     callback toggle(string); // date
     callback delete(string); // id
 
-    height: 64px;
+    height: 72px;
     background: transparent;
 
     HorizontalLayout {
@@ -20,74 +103,83 @@ export component HabitRow inherits Rectangle {
             
             HorizontalLayout {
                 spacing: 12px;
+                padding-left: 8px;
                 
-                // Color Indicator
+                // Color Indicator with glow
                 Rectangle {
                     width: 4px;
-                    height: 24px;
-                    background: habit.color;
+                    height: 32px;
+                    background: @linear-gradient(180deg, habit.color 0%, habit.color.darker(0.3) 100%);
                     border-radius: 2px;
                     y: (parent.height - self.height) / 2;
+
+                    // Glow effect
+                    Rectangle {
+                        x: -3px;
+                        y: -3px;
+                        width: parent.width + 6px;
+                        height: parent.height + 6px;
+                        border-radius: 4px;
+                        background: habit.color;
+                        opacity: 0.3;
+                    }
                 }
                 
                 VerticalLayout {
                     alignment: center;
-                    spacing: 4px;
+                    spacing: 6px;
                     
-                Text {
-                    text: habit.name;
-                    color: Palette.text-primary;
-                    font-size: 14px;
-                    overflow: elide;
-                }
-                
-                // Stats Row
-                HorizontalLayout {
-                    spacing: 8px;
                     Text {
-                        text: "🔥 " + habit.streak;
-                        color: Palette.text-muted;
-                        font-size: 10px;
+                        text: habit.name;
+                        color: Palette.text-primary;
+                        font-size: 13px;
+                        font-weight: 500;
+                        overflow: elide;
                     }
-                    Text {
-                        text: "|";
-                        color: Palette.text-subtle;
-                        font-size: 10px;
+                    
+                    // Stats Row
+                    HorizontalLayout {
+                        spacing: 6px;
+
+                        StatBadge {
+                            icon: "🔥";
+                            value: habit.streak;
+                            accent-color: #f59e0b;
+                        }
+
+                        StatBadge {
+                            icon: "🏆";
+                            value: habit.best-streak;
+                            accent-color: #8b5cf6;
+                        }
+
+                        StatBadge {
+                            icon: "📊";
+                            value: habit.completion-rate + "%";
+                            accent-color: Palette.success;
+                        }
                     }
-                    Text {
-                        text: "🏆 " + habit.best-streak;
-                        color: Palette.text-muted;
-                        font-size: 10px;
-                    }
-                    Text {
-                        text: "|";
-                        color: Palette.text-subtle;
-                        font-size: 10px;
-                    }
-                    Text {
-                        text: habit.completion-rate + "%";
-                        color: Palette.text-muted;
-                        font-size: 10px;
-                    }
-                }
                 }
                 
                 // Delete button (hover)
-                if info-touch.has-hover : TouchArea {
+                if info-touch.has-hover: Rectangle {
                     width: 24px;
                     height: 24px;
                     y: (parent.height - self.height) / 2;
-                    
+                    border-radius: 6px;
+                    background: delete-touch.has-hover ? #3d2020 : transparent;
+
                     Text {
                         text: "×";
-                        color: parent.has-hover ? Palette.danger : Palette.text-muted;
+                        color: delete-touch.has-hover ? Palette.danger : Palette.text-muted;
                         font-size: 16px;
                         horizontal-alignment: center;
                         vertical-alignment: center;
                     }
-                    
-                    clicked => {
-                        root.delete(habit.id);
+
+                    delete-touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.delete(habit.id); }
                     }
                 }
             }
@@ -97,34 +189,10 @@ export component HabitRow inherits Rectangle {
         HorizontalLayout {
             spacing: 4px;
             
-            for day in habit.days : Rectangle {
-                width: 24px;
-                height: 24px;
-                y: (parent.height - self.height) / 2;
-                
-                border-radius: 4px;
-                background: day.completed ? habit.color : (day.is-future ? Palette.background : Palette.surface);
-                border-width: 1px;
-                border-color: day.completed ? habit.color : Palette.border-subtle;
-                opacity: day.is-future ? 0.3 : 1.0;
-                
-                // Day Number
-                Text {
-                    text: day.day;
-                    color: day.completed ? Palette.background : Palette.text-muted;
-                    font-size: 9px;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                    opacity: day.completed ? 0.8 : 0.5;
-                }
-                
-                TouchArea {
-                    enabled: !day.is-future;
-                    mouse-cursor: self.enabled ? pointer : default;
-                    clicked => {
-                        root.toggle(day.date);
-                    }
-                }
+            for day in habit.days: DayCell {
+                day: day;
+                habit-color: habit.color;
+                clicked => { root.toggle(day.date); }
             }
         }
     }

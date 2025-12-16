@@ -1,9 +1,168 @@
+// ==================== Habits Page ====================
+// Premium Fintech UI - Habit tracking with visual analytics
+
 import { Palette, HabitAdapter, AppState } from "../globals.slint";
 import { HabitRow } from "../components/habit_row.slint";
 import { HabitHeatmap } from "../components/habit_heatmap.slint";
 import { HabitBarChart } from "../components/habit_barchart.slint";
 import { TextButton } from "../widgets.slint";
 import { AddHabitModal } from "../modals/add_habit.slint";
+
+component NavButton inherits Rectangle {
+    in property <string> icon;
+    in property <bool> enabled: true;
+    callback clicked;
+
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: touch.has-hover && enabled ? Palette.surface-hover : transparent;
+    border-width: 1px;
+    border-color: touch.has-hover && enabled ? Palette.border-light : transparent;
+    opacity: enabled ? 1.0 : 0.3;
+
+    animate background { duration: 150ms; }
+    animate border-color { duration: 150ms; }
+
+    Text {
+        text: root.icon;
+        color: Palette.text-secondary;
+        font-size: 14px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch := TouchArea {
+        mouse-cursor: enabled ? pointer : default;
+        clicked => { if enabled { root.clicked(); } }
+    }
+}
+
+component ActionButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> primary: false;
+    callback clicked;
+
+    height: 36px;
+    min-width: 100px;
+    border-radius: 8px;
+    background: primary 
+        ? @linear-gradient(135deg, Palette.accent 0%, #6366f1 100%)
+        : (touch.has-hover ? Palette.surface-hover : Palette.surface);
+    border-width: primary ? 0px : 1px;
+    border-color: Palette.border-light;
+
+    animate background { duration: 200ms; easing: ease-out; }
+
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        spacing: 8px;
+        alignment: center;
+
+        Text {
+            text: root.text;
+            color: primary ? #ffffff : Palette.text-primary;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            vertical-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+component SectionHeader inherits Rectangle {
+    in property <string> title;
+    
+    height: 32px;
+    background: transparent;
+
+    HorizontalLayout {
+        spacing: 10px;
+        alignment: start;
+
+        // Accent line
+        Rectangle {
+            width: 3px;
+            height: 20px;
+            border-radius: 2px;
+            background: @linear-gradient(180deg, #8b5cf6 0%, #ec4899 100%);
+            y: (parent.height - self.height) / 2;
+        }
+
+        Text {
+            text: root.title;
+            color: Palette.text-secondary;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            vertical-alignment: center;
+        }
+    }
+}
+
+component EmptyState inherits Rectangle {
+    in property <string> icon: "✓";
+    in property <string> title: "No habits";
+    in property <string> description: "Start building better habits today";
+
+    height: 160px;
+    background: @linear-gradient(135deg, Palette.surface 0%, #1a1a2e 100%);
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: Palette.border;
+
+    VerticalLayout {
+        alignment: center;
+        spacing: 12px;
+
+        Rectangle {
+            width: 48px;
+            height: 48px;
+            border-radius: 24px;
+            background: Palette.surface-hover;
+            x: (parent.width - self.width) / 2;
+
+            Rectangle {
+                x: -3px;
+                y: -3px;
+                width: parent.width + 6px;
+                height: parent.height + 6px;
+                border-radius: 27px;
+                background: #8b5cf6;
+                opacity: 0.2;
+            }
+
+            Text {
+                text: root.icon;
+                font-size: 22px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        Text {
+            text: root.title;
+            color: Palette.text-secondary;
+            font-size: 13px;
+            font-weight: 500;
+            horizontal-alignment: center;
+        }
+
+        Text {
+            text: root.description;
+            color: Palette.text-muted;
+            font-size: 11px;
+            font-weight: 400;
+            horizontal-alignment: center;
+        }
+    }
+}
 
 export component HabitsPage inherits Rectangle {
     background: Palette.background;
@@ -14,142 +173,211 @@ export component HabitsPage inherits Rectangle {
     }
 
     VerticalLayout {
-        padding: 48px;
-        padding-left: 64px;
-        padding-right: 64px;
         spacing: 0px;
 
-        // Header
-        HorizontalLayout {
-            height: 48px;
-            alignment: space-between;
-
-            // Month Navigation
-            HorizontalLayout {
-                spacing: 16px;
-                
-                Text {
-                    text: "←";
-                    color: Palette.text-muted;
-                    font-size: 18px;
-                    vertical-alignment: center;
-                    TouchArea { mouse-cursor: pointer; clicked => { HabitAdapter.prev-month(); } }
-                }
-                
-                Text {
-                    text: HabitAdapter.current-month-name + " " + HabitAdapter.current-year;
-                    color: Palette.text-primary;
-                    font-size: 14px;
-                    font-weight: 500;
-                    letter-spacing: 2px;
-                    vertical-alignment: center;
-                    width: 160px;
-                    horizontal-alignment: center;
-                }
-                
-                Text {
-                    text: "→";
-                    color: Palette.text-muted;
-                    font-size: 18px;
-                    vertical-alignment: center;
-                    TouchArea { mouse-cursor: pointer; clicked => { HabitAdapter.next-month(); } }
-                }
-            }
-
-            // Add Button
-            Rectangle {
-                width: 120px;
-                TextButton {
-                    text: "+ HABIT";
-                    clicked => { AppState.show-add-habit = true; }
-                }
-            }
-        }
-
-        Rectangle { height: 32px; }
-
-        // Heatmap Header
-        HorizontalLayout {
-            height: 32px;
-            alignment: start;
-            spacing: 16px;
+        // ==================== HERO HEADER ====================
+        Rectangle {
+            height: 100px;
+            background: @linear-gradient(180deg, #0f0f1a 0%, Palette.background 100%);
             
-            Text {
-                text: "YEARLY OVERVIEW";
-                color: Palette.text-secondary;
-                font-size: 12px;
-                font-weight: 700;
-                vertical-alignment: center;
+            // Decorative pattern
+            Rectangle {
+                width: 100%;
+                height: 100%;
+                opacity: 0.02;
+                background: @linear-gradient(45deg, Palette.accent 25%, transparent 25%);
             }
 
-            // Year Navigation
             HorizontalLayout {
-                spacing: 12px;
+                padding-left: 64px;
+                padding-right: 64px;
+                alignment: space-between;
                 
-                Text {
-                    text: "←";
-                    color: Palette.text-muted;
-                    font-size: 14px;
-                    vertical-alignment: center;
-                    TouchArea { mouse-cursor: pointer; clicked => { HabitAdapter.prev-heatmap-year(); } }
+                // Left: Title & Month Navigation
+                VerticalLayout {
+                    alignment: center;
+                    spacing: 12px;
+
+                    Text { 
+                        text: "HABITS"; 
+                        color: Palette.text-primary; 
+                        font-size: 24px; 
+                        font-weight: 300; 
+                        letter-spacing: 6px;
+                    }
+
+                    // Month selector
+                    HorizontalLayout {
+                        spacing: 12px;
+                        alignment: start;
+                        
+                        NavButton {
+                            icon: "←";
+                            clicked => { HabitAdapter.prev-month(); }
+                        }
+                        
+                        Rectangle {
+                            width: 140px;
+                            height: 28px;
+                            background: Palette.surface;
+                            border-radius: 6px;
+                            border-width: 1px;
+                            border-color: Palette.border;
+
+                            Text {
+                                text: HabitAdapter.current-month-name + " " + HabitAdapter.current-year;
+                                color: Palette.text-primary;
+                                font-size: 12px;
+                                font-weight: 500;
+                                letter-spacing: 1px;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+                        
+                        NavButton {
+                            icon: "→";
+                            clicked => { HabitAdapter.next-month(); }
+                        }
+                    }
                 }
-                
-                Text {
-                    text: HabitAdapter.heatmap-year;
-                    color: Palette.text-primary;
-                    font-size: 12px;
-                    font-weight: 500;
-                    vertical-alignment: center;
-                }
-                
-                Text {
-                    text: "→";
-                    color: Palette.text-muted;
-                    font-size: 14px;
-                    vertical-alignment: center;
-                    TouchArea { mouse-cursor: pointer; clicked => { HabitAdapter.next-heatmap-year(); } }
+
+                // Right: Add button
+                VerticalLayout {
+                    alignment: center;
+
+                    ActionButton {
+                        text: "+ HABIT";
+                        primary: true;
+                        clicked => { AppState.show-add-habit = true; }
+                    }
                 }
             }
         }
-        
-        Rectangle { height: 8px; }
 
-        // Heatmap
-        HabitHeatmap {
-            height: 120px;
+        // Gradient divider
+        Rectangle {
+            height: 1px;
+            background: @linear-gradient(90deg, transparent 0%, Palette.border-light 50%, transparent 100%);
         }
 
-        // Habits List
-        if HabitAdapter.habits.length > 0 : Flickable {
-            viewport-height: HabitAdapter.habits.length * 64px;
-            VerticalLayout {
-                for habit in HabitAdapter.habits : HabitRow {
-                    habit: habit;
-                    toggle(date) => { HabitAdapter.toggle-habit(habit.id, date); }
-                    delete(id) => { HabitAdapter.delete-habit(id); }
-                }
-            }
-        }
-        
-        if HabitAdapter.habits.length == 0 : Rectangle {
+        // ==================== CONTENT ====================
+        Flickable {
             vertical-stretch: 1;
-            Text {
-                text: "No habits tracked this month.";
-                color: Palette.text-muted;
-                horizontal-alignment: center;
-                vertical-alignment: center;
+
+            VerticalLayout {
+                padding: 32px;
+                padding-left: 64px;
+                padding-right: 64px;
+                spacing: 24px;
+
+                // Yearly Overview Section
+                VerticalLayout {
+                    spacing: 12px;
+
+                    HorizontalLayout {
+                        alignment: space-between;
+
+                        SectionHeader {
+                            title: "YEARLY OVERVIEW";
+                        }
+
+                        // Year Navigation
+                        HorizontalLayout {
+                            spacing: 8px;
+                            
+                            NavButton {
+                                icon: "←";
+                                clicked => { HabitAdapter.prev-heatmap-year(); }
+                            }
+                            
+                            Rectangle {
+                                width: 60px;
+                                height: 28px;
+                                background: Palette.surface;
+                                border-radius: 6px;
+
+                                Text {
+                                    text: HabitAdapter.heatmap-year;
+                                    color: Palette.text-primary;
+                                    font-size: 12px;
+                                    font-weight: 500;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+                            }
+                            
+                            NavButton {
+                                icon: "→";
+                                clicked => { HabitAdapter.next-heatmap-year(); }
+                            }
+                        }
+                    }
+
+                    // Heatmap container
+                    Rectangle {
+                        height: 130px;
+                        background: Palette.surface;
+                        border-radius: 12px;
+                        border-width: 1px;
+                        border-color: Palette.border;
+
+                        HabitHeatmap {}
+                    }
+                }
+
+                // Habits List Section
+                VerticalLayout {
+                    spacing: 12px;
+
+                    SectionHeader {
+                        title: "MY HABITS";
+                    }
+
+                    if HabitAdapter.habits.length > 0: Rectangle {
+                        height: HabitAdapter.habits.length * 72px;
+                        background: Palette.surface;
+                        border-radius: 12px;
+                        border-width: 1px;
+                        border-color: Palette.border;
+
+                        VerticalLayout {
+                            padding: 8px;
+                            spacing: 0px;
+
+                            for habit in HabitAdapter.habits: HabitRow {
+                                habit: habit;
+                                toggle(date) => { HabitAdapter.toggle-habit(habit.id, date); }
+                                delete(id) => { HabitAdapter.delete-habit(id); }
+                            }
+                        }
+                    }
+                    
+                    if HabitAdapter.habits.length == 0: EmptyState {
+                        icon: "✓";
+                        title: "No habits tracked this month";
+                        description: "Create a habit to start building consistency";
+                    }
+                }
+
+                // Bar Chart Section
+                VerticalLayout {
+                    spacing: 12px;
+
+                    SectionHeader {
+                        title: "COMPLETION ANALYTICS";
+                    }
+
+                    HabitBarChart {}
+                }
+
+                // Bottom spacer
+                Rectangle { height: 32px; }
             }
         }
-
-        Rectangle { height: 32px; }
-        
-        // Bar Chart
-        HabitBarChart {}
-        
-        Rectangle { height: 32px; }
     }
     
-    if AppState.show-add-habit : AddHabitModal {
+    if AppState.show-add-habit: AddHabitModal {
         close => { AppState.show-add-habit = false; }
     }
 }

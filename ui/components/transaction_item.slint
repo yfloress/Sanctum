@@ -1,7 +1,42 @@
 // ==================== Transaction Item ====================
-// Noir Minimalist - Single transaction row for list view
+// Premium Fintech UI - Single transaction row for list view
 
 import { Palette, TransactionData } from "../globals.slint";
+
+// Category icon mapping
+component CategoryIcon inherits Rectangle {
+    in property <string> category;
+    in property <bool> is-expense;
+
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: @linear-gradient(135deg, 
+        is-expense ? #1a1a2e : #0f2922,
+        is-expense ? #2d1f3d : #1a3d2e
+    );
+    border-width: 1px;
+    border-color: is-expense ? #3d2953 : #2d5a4a;
+
+    Text {
+        text: root.category == "Food" ? "🍽" :
+              root.category == "Transport" ? "🚗" :
+              root.category == "Shopping" ? "🛍" :
+              root.category == "Entertainment" ? "🎬" :
+              root.category == "Health" ? "💊" :
+              root.category == "Bills" ? "📄" :
+              root.category == "Education" ? "📚" :
+              root.category == "Travel" ? "✈" :
+              root.category == "Salary" ? "💰" :
+              root.category == "Investment" ? "📈" :
+              root.category == "Freelance" ? "💼" :
+              root.category == "Gift" ? "🎁" :
+              root.category == "Other" ? "📌" : "•";
+        font-size: 16px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
 
 export component TransactionItem inherits Rectangle {
     in property <TransactionData> transaction;
@@ -11,11 +46,12 @@ export component TransactionItem inherits Rectangle {
     callback clicked();
     callback delete-clicked();
 
-    height: 56px;
+    height: 64px;
     background: touch.has-hover ? Palette.surface-hover : transparent;
+    border-radius: 8px;
 
     animate background {
-        duration: 120ms;
+        duration: 150ms;
         easing: ease-out;
     }
 
@@ -30,78 +66,121 @@ export component TransactionItem inherits Rectangle {
 
     // Content layout
     HorizontalLayout {
-        padding-left: 24px;
-        padding-right: 24px;
+        padding-left: 12px;
+        padding-right: 12px;
         spacing: 16px;
 
-        // Date and Category (left)
+        // Category Icon
         VerticalLayout {
-            width: 100px;
             alignment: center;
-            spacing: 2px;
-
-            Text {
-                text: transaction.date;
-                color: Palette.text-muted;
-                font-size: 10px;
-                font-weight: 400;
-                letter-spacing: 0.5px;
-            }
-
-            Text {
-                text: transaction.category;
-                color: Palette.text-secondary;
-                font-size: 10px;
-                font-weight: 400;
-                letter-spacing: 2px;
+            CategoryIcon {
+                category: transaction.category;
+                is-expense: transaction.is-expense;
             }
         }
 
-        // Description (center)
+        // Description and category (left)
         VerticalLayout {
             horizontal-stretch: 1;
             alignment: center;
+            spacing: 4px;
 
             Text {
-                text: transaction.description;
+                text: transaction.description != "" ? transaction.description : transaction.category;
                 color: Palette.text-primary;
                 font-size: 13px;
-                font-weight: 400;
+                font-weight: 500;
                 overflow: elide;
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+
+                Text {
+                    text: transaction.date;
+                    color: Palette.text-muted;
+                    font-size: 10px;
+                    font-weight: 400;
+                    letter-spacing: 0.3px;
+                }
+
+                if transaction.description != "": Rectangle {
+                    width: 4px;
+                    height: 4px;
+                    border-radius: 2px;
+                    background: Palette.text-subtle;
+                    y: (parent.height - self.height) / 2;
+                }
+
+                if transaction.description != "": Text {
+                    text: transaction.category;
+                    color: Palette.text-subtle;
+                    font-size: 10px;
+                    font-weight: 400;
+                    letter-spacing: 0.5px;
+                }
             }
         }
 
         // Amount (right)
         VerticalLayout {
-            width: 120px;
             alignment: center;
 
-            Text {
-                text: transaction.amount;
-                color: transaction.is-expense ? Palette.danger : Palette.success;
-                font-size: 13px;
-                font-weight: 400;
-                letter-spacing: 0.5px;
-                horizontal-alignment: right;
+            Rectangle {
+                height: 28px;
+                min-width: 80px;
+                border-radius: 6px;
+                background: transaction.is-expense ? #2d1f2f : #0f2922;
+                border-width: 1px;
+                border-color: transaction.is-expense ? #3d2953 : #2d5a4a;
+
+                HorizontalLayout {
+                    padding-left: 10px;
+                    padding-right: 10px;
+
+                    Text {
+                        text: transaction.amount;
+                        color: transaction.is-expense ? Palette.danger : Palette.success;
+                        font-size: 12px;
+                        font-weight: 600;
+                        letter-spacing: 0.3px;
+                        horizontal-alignment: right;
+                        vertical-alignment: center;
+                    }
+                }
             }
         }
 
-        if show-delete: Rectangle {
-            width: 32px;
+        // Delete button
+        if show-delete: VerticalLayout {
+            alignment: center;
 
-            Text {
-                text: "×";
-                color: delete-touch.has-hover ? Palette.text-primary : Palette.text-muted;
-                font-size: 16px;
-                font-weight: 300;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-            }
+            Rectangle {
+                width: 28px;
+                height: 28px;
+                border-radius: 6px;
+                background: delete-touch.has-hover ? #3d2020 : transparent;
+                border-width: delete-touch.has-hover ? 1px : 0px;
+                border-color: Palette.danger;
 
-            delete-touch := TouchArea {
-                mouse-cursor: pointer;
-                clicked => {
-                    root.delete-clicked();
+                animate background { duration: 150ms; }
+
+                Text {
+                    text: "×";
+                    color: delete-touch.has-hover ? Palette.danger : Palette.text-muted;
+                    font-size: 18px;
+                    font-weight: 400;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+
+                    animate color { duration: 150ms; }
+                }
+
+                delete-touch := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.delete-clicked();
+                    }
                 }
             }
         }
@@ -111,8 +190,9 @@ export component TransactionItem inherits Rectangle {
     if !is-last: Rectangle {
         y: parent.height - 1px;
         height: 1px;
-        x: 24px;
-        width: parent.width - 48px;
+        x: 64px;
+        width: parent.width - 76px;
         background: Palette.border-subtle;
+        opacity: 0.5;
     }
 }
