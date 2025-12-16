@@ -136,8 +136,8 @@ export component SanctumSidebar inherits Rectangle {
             clip: true;
 
             HorizontalLayout {
-                padding-left: collapsed ? 0px : 24px;
-                alignment: collapsed ? center : start;
+                padding-left: 0px;
+                alignment: center;
 
                 // Logo container
                 if collapsed: Rectangle {
@@ -158,7 +158,6 @@ export component SanctumSidebar inherits Rectangle {
 
                 if !collapsed: HorizontalLayout {
                     spacing: 12px;
-                    padding-left: 20px;
 
                     Text {
                         text: "SANCTUM";
@@ -242,8 +241,8 @@ export component SanctumSidebar inherits Rectangle {
             animate background { duration: 150ms; }
             
             HorizontalLayout {
-                padding-left: collapsed ? 0px : 24px;
-                alignment: collapsed ? center : start;
+                padding-left: 0px;
+                alignment: center;
 
                 // Icon only visible when collapsed
                 if collapsed: Rectangle {
