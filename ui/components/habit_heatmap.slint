@@ -71,7 +71,10 @@ export component HabitHeatmap inherits Rectangle {
     }
 
     VerticalLayout {
-        padding: 12px;
+        padding-left: 12px;
+        padding-right: 12px;
+        padding-top: 8px;
+        padding-bottom: 8px;
         spacing: 0px;
 
         // Heatmap Grid Container
@@ -81,7 +84,7 @@ export component HabitHeatmap inherits Rectangle {
 
             // Heatmap Grid - horizontal scroll only
             heatmap-scroll := Flickable {
-                height: 7 * 12px + 6 * 4px; // 108px content
+                height: 7 * 12px + 6 * 5px; // 114px content
                 y: (parent.height - self.height) / 2; // Center vertically
                 horizontal-stretch: 1;
                 interactive: true;
@@ -95,7 +98,7 @@ export component HabitHeatmap inherits Rectangle {
                     alignment: start;
 
                     for week in HabitAdapter.heatmap-data: VerticalLayout {
-                        spacing: 4px;
+                        spacing: 5px;
                         for day in week.days: HeatmapCell {
                             level: day.level;
                         }

@@ -70,13 +70,13 @@ component DayCell inherits Rectangle {
     // Day Number
     Text {
         text: day.day;
-        width: parent.width;
-        height: parent.height;
+        width: 100%;
+        height: 100%;
+        vertical-alignment: center;
+        horizontal-alignment: center;
         color: day.completed ? Palette.background : Palette.text-muted;
         font-size: 10px;
         font-weight: day.completed ? 600 : 400;
-        horizontal-alignment: center;
-        vertical-alignment: center;
     }
 
     touch := TouchArea {
