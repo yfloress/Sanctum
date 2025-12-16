@@ -1011,6 +1011,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ));
                 adapter.set_current_year(year);
                 adapter.set_current_month_index(month as i32);
+
+                // Auto-scroll context
+                let now = chrono::Local::now().date_naive();
+                let is_current = year == now.year() && month == now.month();
+                adapter.set_is_viewing_current_month(is_current);
+                adapter.set_current_day_int(now.day() as i32);
             }
         }
     }
@@ -1197,6 +1203,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let adapter = ui.global::<HabitAdapter>();
             adapter.set_heatmap_data(ModelRc::new(VecModel::from(weeks_vec)));
             adapter.set_heatmap_year(year);
+
+            // Auto-scroll context (Heatmap)
+            // Determine week number (1-52/53)
+            // If year matches current year, send current week. Else send 1 (start of year).
+            let current_week = if year == today.year() {
+                today.iso_week().week() as i32
+            } else {
+                1
+            };
+            adapter.set_current_week_int(current_week);
         }
     }
 

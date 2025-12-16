@@ -77,6 +77,10 @@ export component HabitHeatmap inherits Rectangle {
             horizontal-stretch: 1;
             interactive: true;
             viewport-width: HabitAdapter.heatmap-data.length * 16px;
+            
+            // Auto-scroll to current week if available
+            // 16px per week column. Buffer of 4 weeks (64px) for context.
+            viewport-x: -1 * max(0px, ((HabitAdapter.current-week-int - 4) * 16px));
 
             HorizontalLayout {
                 spacing: 4px;

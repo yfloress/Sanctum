@@ -192,6 +192,13 @@ export component HabitRow inherits Rectangle {
             viewport-width: habit.days.length * (26px + 4px); // width + spacing
             interactive: true;
 
+            // Auto-scroll to today
+            // Cell width = 30px (26 + 4). 
+            // Logic: Center the day. Offset = (ScreenCenter) - (DayPosition).
+            viewport-x: HabitAdapter.is-viewing-current-month 
+                ? min(0px, max(parent.width - self.viewport-width, (parent.width / 2) - ((HabitAdapter.current-day-int * 30px) - 15px)))
+                : 0px;
+
             HorizontalLayout {
                 spacing: 4px;
                 alignment: start;
