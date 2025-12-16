@@ -226,97 +226,96 @@ component WalletSelector inherits Rectangle {
 
 // ==================== Coin Selector ====================
 component CoinSelector inherits Rectangle {
+    in property <[string]> coins: [];
     in-out property <int> selected-index: 0;
-    in property <[string]> options;
-    
+
     height: 56px;
     background: transparent;
 
     VerticalLayout {
         spacing: 8px;
-        
-        Text { 
-            text: "CRYPTOCURRENCY"; 
-            color: Palette.text-muted; 
-            font-size: 10px; 
-            font-weight: 600; 
-            letter-spacing: 2px; 
+
+        Text {
+            text: "CRYPTOCURRENCY";
+            color: Palette.text-muted;
+            font-size: 10px;
+            font-weight: 400;
+            letter-spacing: 2px;
         }
-        
+
         Rectangle {
             height: 32px;
-            
+
             HorizontalLayout {
                 Text {
-                    text: root.options.length > selected-index ? root.options[selected-index] : "Select Asset";
+                    text: coins.length > 0 ? coins[selected-index] : "Select...";
                     color: Palette.text-primary;
                     font-size: 14px;
                     font-weight: 300;
                     vertical-alignment: center;
                     horizontal-stretch: 1;
                 }
-                
-                Text { 
-                    text: "▼"; 
-                    color: Palette.text-muted; 
-                    font-size: 10px; 
-                    vertical-alignment: center; 
+
+                Text {
+                    text: "▼";
+                    color: Palette.text-muted;
+                    font-size: 10px;
+                    vertical-alignment: center;
                 }
             }
 
             TouchArea {
                 mouse-cursor: pointer;
                 clicked => {
-                    if (root.options.length > 0) {
-                        popup.show();
-                    }
+                    popup.show();
                 }
             }
         }
-        
-        Rectangle { 
-            height: 1px; 
-            background: Palette.border; 
+
+        Rectangle {
+            height: 1px;
+            background: Palette.border;
         }
     }
 
     popup := PopupWindow {
         x: 0;
-        y: 56px;
+        y: 56px; 
         width: root.width;
-
+        
         Rectangle {
             background: Palette.surface;
             border-radius: 4px;
             border-width: 1px;
             border-color: Palette.border;
-            height: min(root.options.length * 36px + 8px, 300px);
-            
+            height: min(coins.length * 36px + 8px, 300px);
+
             Flickable {
-                viewport-height: root.options.length * 36px + 8px;
+                viewport-height: coins.length * 36px + 8px;
                 
                 VerticalLayout {
                     padding: 4px;
                     spacing: 0px;
-                    
-                    for option[index] in root.options: Rectangle {
+
+                    for coin[index] in coins: Rectangle {
                         height: 36px;
                         background: option-touch.has-hover ? Palette.surface-hover : transparent;
                         border-radius: 2px;
 
-                        Text { 
-                            text: option; 
+                        Text {
+                            text: coin;
                             color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
                             font-size: 12px;
                             font-weight: index == selected-index ? 500 : 400;
                             letter-spacing: 1px;
                             vertical-alignment: center;
+                            horizontal-alignment: left;
                             x: 12px;
                         }
 
                         option-touch := TouchArea {
                             mouse-cursor: pointer;
-                            clicked => { 
+                            clicked => {
                                 root.selected-index = index;
                             }
                         }
@@ -791,7 +790,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
 
             // Coin Selector
             CoinSelector { 
-                options: root.coin-names;
+                coins: root.coin-names;
                 selected-index <=> root.coin-index; 
             }
             
