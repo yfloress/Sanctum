@@ -43,6 +43,7 @@ export component HabitHeatmap inherits Rectangle {
 
     VerticalLayout {
         padding: 12px;
+        padding-bottom: 16px; // Extra bottom padding for visual balance
         spacing: 8px;
 
         // Legend at top right
@@ -74,6 +75,7 @@ export component HabitHeatmap inherits Rectangle {
         // Heatmap Grid Container
         Rectangle {
             vertical-stretch: 1;
+            clip: true; // Prevent overflow overlapping
 
             // Heatmap Grid - horizontal scroll only
             heatmap-scroll := Flickable {
