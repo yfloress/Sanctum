@@ -180,13 +180,20 @@ export component HabitBarChart inherits Rectangle {
         }
         
         // Chart area
-        HorizontalLayout {
-            alignment: space-between;
-            spacing: 8px;
+        Flickable {
+            vertical-stretch: 1;
             horizontal-stretch: 1;
-            
-            for stat in HabitAdapter.chart-data: ChartBar {
-                stat: stat;
+            viewport-width: 12 * (36px + 8px); // 12 months * (bar width + spacing)
+            interactive: true;
+
+            HorizontalLayout {
+                alignment: start; // Align start to respect scrolling
+                spacing: 8px;
+                // horizontal-stretch: 1; // Removed to allow proper scrolling sizing
+                
+                for stat in HabitAdapter.chart-data: ChartBar {
+                    stat: stat;
+                }
             }
         }
     }

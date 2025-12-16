@@ -97,7 +97,7 @@ export component HabitRow inherits Rectangle {
 
         // Info Column
         Rectangle {
-            horizontal-stretch: 1; // Make responsive
+            width: 180px;
             
             info-touch := TouchArea { }
             
@@ -185,14 +185,22 @@ export component HabitRow inherits Rectangle {
             }
         }
 
-        // Days Grid
-        HorizontalLayout {
-            spacing: 4px;
-            
-            for day in habit.days: DayCell {
-                day: day;
-                habit-color: habit.color;
-                clicked => { root.toggle(day.date); }
+        // Days Grid - Scrollable
+        Flickable {
+            horizontal-stretch: 1;
+            height: 30px; // Tighter height (26px cells + buffer) for perfect vertical centering
+            viewport-width: habit.days.length * (26px + 4px); // width + spacing
+            interactive: true;
+
+            HorizontalLayout {
+                spacing: 4px;
+                alignment: start;
+                
+                for day in habit.days: DayCell {
+                    day: day;
+                    habit-color: habit.color;
+                    clicked => { root.toggle(day.date); }
+                }
             }
         }
     }
