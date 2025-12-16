@@ -458,9 +458,9 @@ export component AddTransactionModal inherits Rectangle {
 
         TouchArea { }
 
-        VerticalLayout {
-            padding: 32px;
-            spacing: 20px;
+	        VerticalLayout {
+	            padding: 32px;
+	            spacing: 20px;
 
             // Header
             HorizontalLayout {
@@ -470,13 +470,13 @@ export component AddTransactionModal inherits Rectangle {
                     spacing: 12px;
                     horizontal-stretch: 1;
 
-                    Rectangle {
-                        width: 4px;
-                        height: 20px;
-                        border-radius: 2px;
-                        background: @linear-gradient(180deg, Palette.accent 0%, #6366f1 100%);
-                        y: (parent.height - self.height) / 2;
-                    }
+	                    Rectangle {
+	                        width: 4px;
+	                        height: 20px;
+	                        border-radius: 2px;
+	                        background: @linear-gradient(180deg, Palette.accent 0%, Palette.primary 100%);
+	                        y: (parent.height - self.height) / 2;
+	                    }
 
                     Text {
                         text: "NEW ENTRY";
@@ -511,70 +511,80 @@ export component AddTransactionModal inherits Rectangle {
                         }
                     }
                 }
-            }
-
-            // Type toggle
-            TypeToggle {
-                is-expense <=> root.is-expense;
-            }
-
-            // Account selector
-            if AccountAdapter.accounts.length > 0: AccountSelector {
-                selected-index <=> account-index;
-            }
-
-            if AccountAdapter.accounts.length == 0: Rectangle {
-                height: 48px;
-                background: Palette.surface;
-                border-radius: 8px;
-                border-width: 1px;
-                border-color: Palette.border;
-
-                Text {
-                    text: "No accounts available. Create one first.";
-                    color: Palette.text-muted;
-                    font-size: 12px;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
-            }
-
-            // Amount field
-            FormField {
-                label: "AMOUNT";
-                placeholder: "0.00";
-                value <=> amount-value;
-                large: true;
-            }
-
-            // Category selector
-            CategorySelector {
-                label: "CATEGORY";
-                categories: current-categories;
-                selected-index <=> category-index;
-            }
-
-            // Description field
-            FormField {
-                label: "DESCRIPTION (OPTIONAL)";
-                placeholder: "Add a note...";
-                value <=> description-value;
-            }
-
-            // Date field
-            FormField {
-                label: "DATE";
-                placeholder: "YYYY-MM-DD";
-                value <=> date-value;
-            }
-
-            Rectangle { vertical-stretch: 1; }
-
-            // Submit button
-            Rectangle {
-                height: 48px;
-                background: @linear-gradient(135deg, Palette.accent 0%, #6366f1 100%);
-                border-radius: 10px;
+	            }
+	
+	            body := Flickable {
+	                horizontal-stretch: 1;
+	                vertical-stretch: 1;
+	
+	                VerticalLayout {
+	                    width: parent.width;
+	                    spacing: 20px;
+	
+	                    // Type toggle
+	                    TypeToggle {
+	                        is-expense <=> root.is-expense;
+	                    }
+	
+	                    // Account selector
+	                    if AccountAdapter.accounts.length > 0: AccountSelector {
+	                        selected-index <=> account-index;
+	                    }
+	
+	                    if AccountAdapter.accounts.length == 0: Rectangle {
+	                        height: 48px;
+	                        background: Palette.surface;
+	                        border-radius: 8px;
+	                        border-width: 1px;
+	                        border-color: Palette.border;
+	
+	                        Text {
+	                            text: "No accounts available. Create one first.";
+	                            color: Palette.text-muted;
+	                            font-size: 12px;
+	                            horizontal-alignment: center;
+	                            vertical-alignment: center;
+	                        }
+	                    }
+	
+	                    // Amount field
+	                    FormField {
+	                        label: "AMOUNT";
+	                        placeholder: "0.00";
+	                        value <=> amount-value;
+	                        large: true;
+	                    }
+	
+	                    // Category selector
+	                    CategorySelector {
+	                        label: "CATEGORY";
+	                        categories: current-categories;
+	                        selected-index <=> category-index;
+	                    }
+	
+	                    // Description field
+	                    FormField {
+	                        label: "DESCRIPTION (OPTIONAL)";
+	                        placeholder: "Add a note...";
+	                        value <=> description-value;
+	                    }
+	
+	                    // Date field
+	                    FormField {
+	                        label: "DATE";
+	                        placeholder: "YYYY-MM-DD";
+	                        value <=> date-value;
+	                    }
+	
+	                    Rectangle { height: 8px; }
+	                }
+	            }
+	
+	            // Submit button
+	            Rectangle {
+	                height: 48px;
+	                background: @linear-gradient(135deg, Palette.accent 0%, Palette.primary 100%);
+	                border-radius: 10px;
 
                 animate background { duration: 150ms; }
 

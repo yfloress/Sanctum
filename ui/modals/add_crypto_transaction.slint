@@ -507,13 +507,13 @@ export component AddCryptoTransactionModal inherits Rectangle {
                     spacing: 12px;
                     horizontal-stretch: 1;
 
-                    Rectangle {
-                        width: 4px;
-                        height: 20px;
-                        border-radius: 2px;
-                        background: @linear-gradient(180deg, #f7931a 0%, #ff9500 100%);
-                        y: (parent.height - self.height) / 2;
-                    }
+	                    Rectangle {
+	                        width: 4px;
+	                        height: 20px;
+	                        border-radius: 2px;
+	                        background: @linear-gradient(180deg, Palette.accent 0%, Palette.primary 100%);
+	                        y: (parent.height - self.height) / 2;
+	                    }
 
                     Text {
                         text: "ADD CRYPTO ASSET";
@@ -547,78 +547,89 @@ export component AddCryptoTransactionModal inherits Rectangle {
                 }
             }
 
-            // Type Toggle
-            TypeToggle { is-buy <=> root.is-buy; }
-            
-            // Wallet Selector
-            WalletSelector { selected-index <=> root.wallet-index; }
-            
-            // Warning if no wallets
-            if CryptoAdapter.wallet-list.length == 0: Rectangle {
-                height: 40px;
-                background: #2d1515;
-                border-radius: 8px;
-                border-width: 1px;
-                border-color: #4d2525;
-
-                HorizontalLayout {
-                    padding-left: 12px;
-                    padding-right: 12px;
-                    spacing: 8px;
-
-                    Text {
-                        text: "⚠";
-                        color: Palette.danger;
-                        font-size: 14px;
-                        vertical-alignment: center;
-                    }
-
-                    Text { 
-                        text: "Create a wallet in the Wallets tab first"; 
-                        color: Palette.danger; 
-                        font-size: 11px;
-                        font-weight: 400;
-                        vertical-alignment: center; 
-                    }
-                }
-            }
-
-            // Coin Selector
-            CoinSelector { 
-                selected-index <=> root.coin-index; 
-            }
-            
-            // Amount Field
-            FormField { 
-                label: "AMOUNT"; 
-                placeholder: "0.00"; 
-                value <=> root.amount; 
-                large: true; 
-            }
-            
-            // Price Field
-            FormField { 
-                label: "PRICE PER COIN (USD)"; 
-                placeholder: "Leave empty for market price"; 
-                value <=> root.price; 
-            }
-            
-            // Date Field
-            FormField { 
-                label: "DATE"; 
-                placeholder: "YYYY-MM-DD";
-                value <=> root.date; 
-            }
-
-            Rectangle { vertical-stretch: 1; }
-
-            // Submit Button
-            Rectangle {
-                height: 48px;
-                background: @linear-gradient(135deg, #f7931a 0%, #ff9500 100%);
-                border-radius: 10px;
-                
-                Text {
+	
+	            body := Flickable {
+	                horizontal-stretch: 1;
+	                vertical-stretch: 1;
+	
+	                VerticalLayout {
+	                    width: parent.width;
+	                    spacing: 20px;
+	
+	                    // Type Toggle
+	                    TypeToggle { is-buy <=> root.is-buy; }
+	                    
+	                    // Wallet Selector
+	                    WalletSelector { selected-index <=> root.wallet-index; }
+	                    
+	                    // Warning if no wallets
+	                    if CryptoAdapter.wallet-list.length == 0: Rectangle {
+	                        height: 40px;
+	                        background: #2d1515;
+	                        border-radius: 8px;
+	                        border-width: 1px;
+	                        border-color: #4d2525;
+	
+	                        HorizontalLayout {
+	                            padding-left: 12px;
+	                            padding-right: 12px;
+	                            spacing: 8px;
+	
+	                            Text {
+	                                text: "⚠";
+	                                color: Palette.danger;
+	                                font-size: 14px;
+	                                vertical-alignment: center;
+	                            }
+	
+	                            Text { 
+	                                text: "Create a wallet in the Wallets tab first"; 
+	                                color: Palette.danger; 
+	                                font-size: 11px;
+	                                font-weight: 400;
+	                                vertical-alignment: center; 
+	                            }
+	                        }
+	                    }
+	
+	                    // Coin Selector
+	                    CoinSelector { 
+	                        selected-index <=> root.coin-index; 
+	                    }
+	                    
+	                    // Amount Field
+	                    FormField { 
+	                        label: "AMOUNT"; 
+	                        placeholder: "0.00"; 
+	                        value <=> root.amount; 
+	                        large: true; 
+	                    }
+	                    
+	                    // Price Field
+	                    FormField { 
+	                        label: "PRICE PER COIN (USD)"; 
+	                        placeholder: "Leave empty for market price"; 
+	                        value <=> root.price; 
+	                    }
+	                    
+	                    // Date Field
+	                    FormField { 
+	                        label: "DATE"; 
+	                        placeholder: "YYYY-MM-DD";
+	                        value <=> root.date; 
+	                    }
+	
+	                    Rectangle { height: 8px; }
+	                }
+	            }
+	
+	            // Submit Button
+	            Rectangle {
+	                height: 48px;
+	                background: @linear-gradient(135deg, Palette.accent 0%, Palette.primary 100%);
+	                border-radius: 10px;
+	                
+	                Text {
                     text: "SAVE ASSET";
                     color: #ffffff;
                     font-size: 12px;

@@ -250,9 +250,9 @@ export component TransferFundsModal inherits Rectangle {
 
         TouchArea { }
 
-        VerticalLayout {
-            padding: 32px;
-            spacing: 16px;
+	        VerticalLayout {
+	            padding: 32px;
+	            spacing: 16px;
 
             // Header
             HorizontalLayout {
@@ -262,13 +262,13 @@ export component TransferFundsModal inherits Rectangle {
                     spacing: 12px;
                     horizontal-stretch: 1;
 
-                    Rectangle {
-                        width: 4px;
-                        height: 20px;
-                        border-radius: 2px;
-                        background: @linear-gradient(180deg, Palette.accent 0%, #6366f1 100%);
-                        y: (parent.height - self.height) / 2;
-                    }
+	                    Rectangle {
+	                        width: 4px;
+	                        height: 20px;
+	                        border-radius: 2px;
+	                        background: @linear-gradient(180deg, Palette.accent 0%, Palette.primary 100%);
+	                        y: (parent.height - self.height) / 2;
+	                    }
 
                     Text {
                         text: "TRANSFER FUNDS";
@@ -303,68 +303,78 @@ export component TransferFundsModal inherits Rectangle {
                         }
                     }
                 }
-            }
-
-            AccountSelector {
-                label: "FROM";
-                selected-index <=> from-index;
-            }
-
-            // Arrow indicator
-            Rectangle {
-                height: 32px;
-
-                Rectangle {
-                    width: 40px;
-                    height: 40px;
-                    border-radius: 20px;
-                    background: Palette.surface;
-                    border-width: 1px;
-                    border-color: Palette.border;
-                    x: (parent.width - self.width) / 2;
-                    y: (parent.height - self.height) / 2;
-
-                    Text {
-                        text: "↓";
-                        color: Palette.accent;
-                        font-size: 18px;
-                        font-weight: 500;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
-                    }
-                }
-            }
-
-            AccountSelector {
-                label: "TO";
-                selected-index <=> to-index;
-            }
-
-            FormField {
-                label: "AMOUNT";
-                placeholder: "0.00";
-                value <=> amount-value;
-            }
-
-            FormField {
-                label: "DESCRIPTION (OPTIONAL)";
-                placeholder: "Reason for transfer";
-                value <=> description-value;
-            }
-
-            FormField {
-                label: "DATE";
-                placeholder: "YYYY-MM-DD";
-                value <=> date-value;
-            }
-
-            Rectangle { vertical-stretch: 1; }
-
-            // Submit button
-            Rectangle {
-                height: 48px;
-                background: @linear-gradient(135deg, Palette.accent 0%, #6366f1 100%);
-                border-radius: 10px;
+	            }
+	
+	            body := Flickable {
+	                horizontal-stretch: 1;
+	                vertical-stretch: 1;
+	
+	                VerticalLayout {
+	                    width: parent.width;
+	                    spacing: 16px;
+	
+	                    AccountSelector {
+	                        label: "FROM";
+	                        selected-index <=> from-index;
+	                    }
+	
+	                    // Arrow indicator
+	                    Rectangle {
+	                        height: 32px;
+	
+	                        Rectangle {
+	                            width: 40px;
+	                            height: 40px;
+	                            border-radius: 20px;
+	                            background: Palette.surface;
+	                            border-width: 1px;
+	                            border-color: Palette.border;
+	                            x: (parent.width - self.width) / 2;
+	                            y: (parent.height - self.height) / 2;
+	
+	                            Text {
+	                                text: "↓";
+	                                color: Palette.accent;
+	                                font-size: 18px;
+	                                font-weight: 500;
+	                                horizontal-alignment: center;
+	                                vertical-alignment: center;
+	                            }
+	                        }
+	                    }
+	
+	                    AccountSelector {
+	                        label: "TO";
+	                        selected-index <=> to-index;
+	                    }
+	
+	                    FormField {
+	                        label: "AMOUNT";
+	                        placeholder: "0.00";
+	                        value <=> amount-value;
+	                    }
+	
+	                    FormField {
+	                        label: "DESCRIPTION (OPTIONAL)";
+	                        placeholder: "Reason for transfer";
+	                        value <=> description-value;
+	                    }
+	
+	                    FormField {
+	                        label: "DATE";
+	                        placeholder: "YYYY-MM-DD";
+	                        value <=> date-value;
+	                    }
+	
+	                    Rectangle { height: 8px; }
+	                }
+	            }
+	
+	            // Submit button
+	            Rectangle {
+	                height: 48px;
+	                background: @linear-gradient(135deg, Palette.accent 0%, Palette.primary 100%);
+	                border-radius: 10px;
 
                 Text {
                     text: "TRANSFER";
