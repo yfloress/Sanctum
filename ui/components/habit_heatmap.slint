@@ -1,5 +1,6 @@
 // ==================== Habit Heatmap ====================
 // Premium Fintech UI - GitHub-style yearly contribution heatmap
+// Horizontal scroll only, 7 rows for days of week
 
 import { Palette, HabitAdapter, HeatmapWeek, HeatmapDay } from "../globals.slint";
 
@@ -28,30 +29,25 @@ component HeatmapCell inherits Rectangle {
         opacity: 0.3;
     }
 
-    touch := TouchArea {
+    TouchArea {
         mouse-cursor: pointer;
     }
-
-    // Hover effect
-    states [
-        hover when touch.has-hover: {
-            opacity: 0.8;
-        }
-    ]
 }
 
 export component HabitHeatmap inherits Rectangle {
-    height: 130px;
+    // Fixed height for 7 rows (days of week) + legend + padding
+    // 7 rows * 12px + 6 gaps * 4px + legend 24px + padding 24px = 136px
+    height: 136px;
     background: transparent;
 
     VerticalLayout {
         padding: 12px;
         spacing: 8px;
 
-        // Legend
+        // Legend at top right
         HorizontalLayout {
             alignment: end;
-            spacing: 8px;
+            spacing: 6px;
 
             Text {
                 text: "Less";
@@ -74,16 +70,16 @@ export component HabitHeatmap inherits Rectangle {
             }
         }
 
-        // Heatmap Grid
+        // Heatmap Grid - horizontal scroll only
+        // Height is fixed: 7 days * 12px height + 6 gaps * 4px = 108px
         Flickable {
+            height: 7 * 12px + 6 * 4px;
             horizontal-stretch: 1;
-            vertical-stretch: 1;
             interactive: true;
-            viewport-width: (HabitAdapter.heatmap-data.length * 16px);
+            viewport-width: HabitAdapter.heatmap-data.length * 16px;
 
             HorizontalLayout {
                 spacing: 4px;
-                padding: 4px;
                 alignment: start;
 
                 for week in HabitAdapter.heatmap-data: VerticalLayout {

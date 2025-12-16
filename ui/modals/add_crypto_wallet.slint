@@ -1,5 +1,5 @@
 // ==================== Add Crypto Wallet Modal ====================
-// Noir Fintech - Premium wallet creation flow
+// Premium Fintech UI - Wallet creation flow
 
 import {
     Palette,
@@ -8,7 +8,7 @@ import {
     NotificationAdapter,
 } from "../globals.slint";
 
-// ==================== Form Field ====================
+// ==================== FormField ====================
 component FormField inherits Rectangle {
     in property <string> label: "";
     in property <string> placeholder: "";
@@ -18,22 +18,22 @@ component FormField inherits Rectangle {
     background: transparent;
 
     VerticalLayout {
-        spacing: 10px;
+        spacing: 8px;
         
         Text {
             text: root.label;
             color: Palette.text-muted;
             font-size: 10px;
-            font-weight: 600;
-            letter-spacing: 2px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
         }
         
         Rectangle {
-            vertical-stretch: 1;
+            height: 40px;
             background: Palette.surface;
             border-radius: 8px;
-            border-width: 1px;
-            border-color: input.has-focus ? Palette.accent : Palette.border-subtle;
+            border-width: input.has-focus ? 2px : 1px;
+            border-color: input.has-focus ? Palette.accent : Palette.border;
             
             animate border-color { duration: 150ms; }
 
@@ -63,7 +63,7 @@ component FormField inherits Rectangle {
     }
 }
 
-// ==================== Category Card ====================
+// ==================== CategoryCard ====================
 component CategoryCard inherits Rectangle {
     in property <string> icon;
     in property <string> title;
@@ -72,31 +72,45 @@ component CategoryCard inherits Rectangle {
     in property <bool> selected;
     callback clicked;
 
-    height: 80px;
-    background: selected ? Palette.surface : Palette.surface.with-alpha(0.3);
-    border-radius: 10px;
-    border-width: 1px;
-    border-color: selected ? Palette.accent.with-alpha(0.5) : Palette.border-subtle;
+    height: 76px;
+    background: selected 
+        ? @linear-gradient(135deg, Palette.surface 0%, #1a1a2e 100%)
+        : (touch.has-hover ? Palette.surface-hover : Palette.surface);
+    border-radius: 12px;
+    border-width: selected ? 2px : 1px;
+    border-color: selected ? Palette.accent : Palette.border;
     
     animate background { duration: 200ms; }
     animate border-color { duration: 200ms; }
+    animate border-width { duration: 200ms; }
+
+    // Glow when selected
+    if selected: Rectangle {
+        x: -3px;
+        y: -3px;
+        width: parent.width + 6px;
+        height: parent.height + 6px;
+        border-radius: 15px;
+        background: Palette.accent;
+        opacity: 0.15;
+    }
 
     HorizontalLayout {
         padding: 16px;
-        spacing: 16px;
+        spacing: 14px;
         
         // Icon
         Rectangle {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            background: selected ? Palette.accent.with-alpha(0.1) : Palette.background;
-            border-width: 1px;
-            border-color: selected ? Palette.accent.with-alpha(0.2) : Palette.border-subtle;
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            background: selected 
+                ? @linear-gradient(135deg, Palette.accent 0%, #6366f1 100%)
+                : Palette.surface-hover;
             
             Text {
                 text: root.icon;
-                font-size: 22px;
+                font-size: 20px;
                 vertical-alignment: center;
                 horizontal-alignment: center;
             }
@@ -111,14 +125,15 @@ component CategoryCard inherits Rectangle {
             Text {
                 text: root.title;
                 color: selected ? Palette.text-primary : Palette.text-secondary;
-                font-size: 14px;
-                font-weight: selected ? 500 : 400;
+                font-size: 13px;
+                font-weight: selected ? 600 : 400;
             }
             
             Text {
                 text: root.subtitle;
                 color: Palette.text-muted;
-                font-size: 11px;
+                font-size: 10px;
+                font-weight: 400;
             }
         }
         
@@ -132,7 +147,7 @@ component CategoryCard inherits Rectangle {
             
             Text {
                 text: "✓";
-                color: Palette.background;
+                color: #ffffff;
                 font-size: 12px;
                 font-weight: 700;
                 vertical-alignment: center;
@@ -141,7 +156,7 @@ component CategoryCard inherits Rectangle {
         }
     }
 
-    TouchArea { 
+    touch := TouchArea { 
         mouse-cursor: pointer;
         clicked => { root.clicked(); } 
     }
@@ -182,7 +197,7 @@ export component AddCryptoWalletModal inherits Rectangle {
     Rectangle {
         width: 100%;
         height: 100%;
-        background: #000000.with-alpha(0.85);
+        background: #000000cc;
         
         TouchArea {
             clicked => {
@@ -198,44 +213,56 @@ export component AddCryptoWalletModal inherits Rectangle {
         y: (parent.height - self.height) / 2;
         width: 440px;
         height: 520px;
-        background: @linear-gradient(180deg, #0a0a10 0%, #080810 100%);
+        background: @linear-gradient(180deg, Palette.sidebar-bg 0%, #0f0f1a 100%);
         border-radius: 16px;
         border-width: 1px;
-        border-color: Palette.border;
+        border-color: Palette.border-light;
+        drop-shadow-blur: 40px;
+        drop-shadow-color: #00000088;
 
         TouchArea { }
 
         VerticalLayout {
             padding: 32px;
-            spacing: 0px;
+            spacing: 24px;
 
             // Header
             HorizontalLayout {
-                height: 40px;
-                alignment: space-between;
-                
-                VerticalLayout {
-                    alignment: center;
-                    
+                height: 32px;
+
+                HorizontalLayout {
+                    spacing: 12px;
+                    horizontal-stretch: 1;
+
+                    Rectangle {
+                        width: 4px;
+                        height: 20px;
+                        border-radius: 2px;
+                        background: @linear-gradient(180deg, #f7931a 0%, #ff9500 100%);
+                        y: (parent.height - self.height) / 2;
+                    }
+
                     Text {
                         text: "NEW WALLET";
                         color: Palette.text-primary;
-                        font-size: 14px;
+                        font-size: 16px;
                         font-weight: 500;
                         letter-spacing: 2px;
+                        vertical-alignment: center;
                     }
                 }
                 
                 Rectangle {
-                    width: 36px;
-                    height: 36px;
+                    width: 32px;
+                    height: 32px;
                     border-radius: 8px;
-                    background: close-touch.has-hover ? Palette.surface : transparent;
+                    background: close-touch.has-hover ? Palette.surface-hover : transparent;
                     
                     Text { 
-                        text: "✕"; 
-                        color: Palette.text-muted; 
-                        font-size: 16px; 
+                        text: "×"; 
+                        color: close-touch.has-hover ? Palette.text-primary : Palette.text-muted;
+                        font-size: 20px;
+                        font-weight: 300;
                         vertical-alignment: center; 
                         horizontal-alignment: center;
                     }
@@ -247,8 +274,6 @@ export component AddCryptoWalletModal inherits Rectangle {
                 }
             }
 
-            Rectangle { height: 28px; }
-
             // Name Field
             FormField { 
                 label: "WALLET NAME"; 
@@ -256,48 +281,48 @@ export component AddCryptoWalletModal inherits Rectangle {
                 value <=> root.wallet-name; 
             }
 
-            Rectangle { height: 24px; }
-
             // Category Label
-            Text {
-                text: "WALLET TYPE";
-                color: Palette.text-muted;
-                font-size: 10px;
-                font-weight: 600;
-                letter-spacing: 2px;
-            }
-            
-            Rectangle { height: 12px; }
-
-            // Category Options
             VerticalLayout {
-                spacing: 10px;
-                
-                CategoryCard { 
-                    icon: "💳";
-                    title: "Software Wallet"; 
-                    subtitle: "MetaMask, Trust Wallet, Exodus";
-                    value: "wallet_single"; 
-                    selected: root.category == "wallet_single";
-                    clicked => { root.category = "wallet_single"; }
+                spacing: 12px;
+
+                Text {
+                    text: "WALLET TYPE";
+                    color: Palette.text-muted;
+                    font-size: 10px;
+                    font-weight: 500;
+                    letter-spacing: 1.5px;
                 }
-                
-                CategoryCard { 
-                    icon: "🔐";
-                    title: "Hardware Wallet"; 
-                    subtitle: "Ledger, Trezor, KeepKey";
-                    value: "wallet_multi"; 
-                    selected: root.category == "wallet_multi";
-                    clicked => { root.category = "wallet_multi"; }
-                }
-                
-                CategoryCard { 
-                    icon: "📊";
-                    title: "Exchange"; 
-                    subtitle: "Binance, Coinbase, Kraken";
-                    value: "exchange"; 
-                    selected: root.category == "exchange";
-                    clicked => { root.category = "exchange"; }
+
+                // Category Options
+                VerticalLayout {
+                    spacing: 10px;
+                    
+                    CategoryCard { 
+                        icon: "💳";
+                        title: "Software Wallet"; 
+                        subtitle: "MetaMask, Trust Wallet, Exodus";
+                        value: "wallet_single"; 
+                        selected: root.category == "wallet_single";
+                        clicked => { root.category = "wallet_single"; }
+                    }
+                    
+                    CategoryCard { 
+                        icon: "🔐";
+                        title: "Hardware Wallet"; 
+                        subtitle: "Ledger, Trezor, KeepKey";
+                        value: "wallet_multi"; 
+                        selected: root.category == "wallet_multi";
+                        clicked => { root.category = "wallet_multi"; }
+                    }
+                    
+                    CategoryCard { 
+                        icon: "📊";
+                        title: "Exchange"; 
+                        subtitle: "Binance, Coinbase, Kraken";
+                        value: "exchange"; 
+                        selected: root.category == "exchange";
+                        clicked => { root.category = "exchange"; }
+                    }
                 }
             }
 
@@ -305,11 +330,9 @@ export component AddCryptoWalletModal inherits Rectangle {
 
             // Submit Button
             Rectangle {
-                height: 52px;
-                background: touch.has-hover ? Palette.accent-hover : Palette.accent;
+                height: 48px;
+                background: @linear-gradient(135deg, #f7931a 0%, #ff9500 100%);
                 border-radius: 10px;
-                
-                animate background { duration: 150ms; }
                 
                 HorizontalLayout {
                     alignment: center;
@@ -317,14 +340,14 @@ export component AddCryptoWalletModal inherits Rectangle {
                     
                     Text {
                         text: "+";
-                        color: Palette.background;
+                        color: #ffffff;
                         font-size: 16px;
                         font-weight: 500;
                         vertical-alignment: center;
                     }
                     Text {
                         text: "CREATE WALLET";
-                        color: Palette.background;
+                        color: #ffffff;
                         font-size: 12px;
                         font-weight: 600;
                         letter-spacing: 2px;
@@ -332,10 +355,16 @@ export component AddCryptoWalletModal inherits Rectangle {
                     }
                 }
                 
-                touch := TouchArea { 
+                submit-touch := TouchArea { 
                     mouse-cursor: pointer;
                     clicked => { root.submit(); } 
                 }
+
+                states [
+                    hover when submit-touch.has-hover: {
+                        opacity: 0.9;
+                    }
+                ]
             }
         }
     }

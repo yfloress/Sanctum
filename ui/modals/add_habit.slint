@@ -94,32 +94,27 @@ component ColorOption inherits Rectangle {
         background: @linear-gradient(135deg, #ffffff30 0%, transparent 100%);
     }
 
-    TouchArea {
+    touch := TouchArea {
         mouse-cursor: pointer;
         clicked => { root.clicked(); }
     }
-
-    states [
-        hover when touch.has-hover && !selected: {
-            opacity: 0.8;
-        }
-    ]
-
-    touch := TouchArea { }
 }
 
 // ==================== AddHabitModal ====================
 export component AddHabitModal inherits Rectangle {
     property <string> name: "";
     property <string> description: "";
-    property <string> habit-color: "#8b5cf6";
+    property <int> selected-color-index: 0;
+
+    property <[color]> color-options: [#8b5cf6, #ec4899, #3b82f6, #10b981, #f59e0b, #ef4444];
+    property <[string]> color-strings: ["#8b5cf6", "#ec4899", "#3b82f6", "#10b981", "#f59e0b", "#ef4444"];
     
     callback close();
 
     function reset() {
         name = "";
         description = "";
-        habit-color = "#8b5cf6";
+        selected-color-index = 0;
     }
 
     function submit() {
@@ -128,6 +123,7 @@ export component AddHabitModal inherits Rectangle {
             return;
         }
         
+        let habit-color = color-strings[selected-color-index];
         let result = HabitAdapter.create-habit(name, description, habit-color);
         
         if (result == "") {
@@ -245,39 +241,39 @@ export component AddHabitModal inherits Rectangle {
                     spacing: 12px;
                     
                     ColorOption {
-                        option-color: #8b5cf6;
-                        selected: root.habit-color == "#8b5cf6";
-                        clicked => { root.habit-color = "#8b5cf6"; }
+                        option-color: color-options[0];
+                        selected: selected-color-index == 0;
+                        clicked => { selected-color-index = 0; }
                     }
 
                     ColorOption {
-                        option-color: #ec4899;
-                        selected: root.habit-color == "#ec4899";
-                        clicked => { root.habit-color = "#ec4899"; }
+                        option-color: color-options[1];
+                        selected: selected-color-index == 1;
+                        clicked => { selected-color-index = 1; }
                     }
 
                     ColorOption {
-                        option-color: #3b82f6;
-                        selected: root.habit-color == "#3b82f6";
-                        clicked => { root.habit-color = "#3b82f6"; }
+                        option-color: color-options[2];
+                        selected: selected-color-index == 2;
+                        clicked => { selected-color-index = 2; }
                     }
 
                     ColorOption {
-                        option-color: #10b981;
-                        selected: root.habit-color == "#10b981";
-                        clicked => { root.habit-color = "#10b981"; }
+                        option-color: color-options[3];
+                        selected: selected-color-index == 3;
+                        clicked => { selected-color-index = 3; }
                     }
 
                     ColorOption {
-                        option-color: #f59e0b;
-                        selected: root.habit-color == "#f59e0b";
-                        clicked => { root.habit-color = "#f59e0b"; }
+                        option-color: color-options[4];
+                        selected: selected-color-index == 4;
+                        clicked => { selected-color-index = 4; }
                     }
 
                     ColorOption {
-                        option-color: #ef4444;
-                        selected: root.habit-color == "#ef4444";
-                        clicked => { root.habit-color = "#ef4444"; }
+                        option-color: color-options[5];
+                        selected: selected-color-index == 5;
+                        clicked => { selected-color-index = 5; }
                     }
                 }
             }
