@@ -4,7 +4,6 @@
 import { Palette, HabitAdapter, AppState } from "../globals.slint";
 import { HabitRow } from "../components/habit_row.slint";
 import { HabitHeatmap } from "../components/habit_heatmap.slint";
-import { DayEfficiencyChart, MonthEfficiencyChart } from "../components/analytics_charts.slint";
 import { TextButton, ActionButton } from "../widgets.slint";
 import { AddHabitModal } from "../modals/add_habit.slint";
 
@@ -133,7 +132,6 @@ export component HabitsPage inherits Rectangle {
     init => {
         HabitAdapter.load-initial-data();
         HabitAdapter.fetch-heatmap-data();
-        HabitAdapter.fetch-efficiency-data();
     }
 
     VerticalLayout {
@@ -321,37 +319,6 @@ export component HabitsPage inherits Rectangle {
                         icon: "✓";
                         title: "No habits tracked this month";
                         description: "Create a habit to start building consistency";
-                    }
-                }
-
-                // Analytics Charts Section (Day & Month Efficiency)
-                VerticalLayout {
-                    spacing: 12px;
-                    
-                    SectionHeader {
-                        title: "PERFORMANCE ANALYTICS";
-                    }
-
-                    HorizontalLayout {
-                        spacing: 24px;
-                        height: 200px;
-
-                        // Left: Day Efficiency
-                        DayEfficiencyChart {
-                            horizontal-stretch: 1;
-                            data: HabitAdapter.day-efficiency;
-                            best-day-index: HabitAdapter.best-day-index;
-                        }
-
-                        // Right: Month Efficiency
-                        MonthEfficiencyChart {
-                            horizontal-stretch: 1;
-                            data: HabitAdapter.month-efficiency-data;
-                            path-command: HabitAdapter.month-efficiency-path;
-                            min-val: HabitAdapter.month-efficiency-min;
-                            max-val: HabitAdapter.month-efficiency-max;
-                            avg-val: HabitAdapter.month-efficiency-avg;
-                        }
                     }
                 }
 
