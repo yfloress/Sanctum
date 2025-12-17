@@ -1310,8 +1310,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // Deterministic Mock Data (No Randomness)
 
                 // 1. Day Efficiency (7 days)
-                // Tuesday (index 1) is highest: [45, 100, 60, 75, 80, 50, 55] -> Normalized
-                let day_data: Vec<f32> = vec![0.45, 1.0, 0.60, 0.75, 0.80, 0.50, 0.55];
+                // Tuesday (index 1) is 100%: [0.3, 1.0, 0.5, 0.2, 0.8, 0.4, 0.6]
+                let day_data: Vec<f32> = vec![0.3, 1.0, 0.5, 0.2, 0.8, 0.4, 0.6];
                 
                 // Find best day
                 let mut max_val = -1.0;
@@ -1336,27 +1336,57 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                    let val = (trend + wave).clamp(0.0, 1.0);
                    month_data.push(val as f32);
                 }
-                
-                // Generate Path (Polyline matching exact coordinates)
-                let mut path = String::new();
-                let len = month_data.len();
-                
-                if len > 1 {
-                    for (i, val) in month_data.iter().enumerate() {
-                        // X maps 0..29 -> 0..100
-                        let x = (i as f64 / (len - 1) as f64) * 100.0;
-                        // Y maps 0.0..1.0 -> 100..0 (Inverted)
-                        let y = (1.0 - *val as f64) * 100.0; 
-                        
-                        if i == 0 {
-                            path.push_str(&format!("M {:.2} {:.2}", x, y));
-                        } else {
-                            path.push_str(&format!(" L {:.2} {:.2}", x, y));
-                        }
-                    }
-                } else {
-                    path = "M 0 100 L 100 100".to_string();
+
+                // Generate a smooth path (Catmull-Rom -> cubic Bézier) in a 0..100 viewbox.
+                // Mapping matches the UI dot math:
+                //   x = (index / (n - 1)) * width
+                //   y = height - (value * height)
+                // Here width/height are 100 (viewbox units).
+                fn clamp01(v: f32) -> f32 {
+                    v.max(0.0).min(1.0)
                 }
+
+                fn point_at(i: usize, values: &[f32]) -> (f32, f32) {
+                    let n = values.len();
+                    if n <= 1 {
+                        return (0.0, 100.0);
+                    }
+                    let x = (i as f32 / (n - 1) as f32) * 100.0;
+                    let y = 100.0 - (clamp01(values[i]) * 100.0);
+                    (x, y)
+                }
+
+                let path = if month_data.len() >= 2 {
+                    let mut s = String::new();
+                    let (x0, y0) = point_at(0, &month_data);
+                    s.push_str(&format!("M {:.2} {:.2}", x0, y0));
+
+                    for i in 0..(month_data.len() - 1) {
+                        let p0_idx = if i == 0 { 0 } else { i - 1 };
+                        let p1_idx = i;
+                        let p2_idx = i + 1;
+                        let p3_idx = if i + 2 < month_data.len() { i + 2 } else { i + 1 };
+
+                        let (x0, y0) = point_at(p0_idx, &month_data);
+                        let (x1, y1) = point_at(p1_idx, &month_data);
+                        let (x2, y2) = point_at(p2_idx, &month_data);
+                        let (x3, y3) = point_at(p3_idx, &month_data);
+
+                        let c1x = x1 + (x2 - x0) / 6.0;
+                        let c1y = y1 + (y2 - y0) / 6.0;
+                        let c2x = x2 - (x3 - x1) / 6.0;
+                        let c2y = y2 - (y3 - y1) / 6.0;
+
+                        s.push_str(&format!(
+                            " C {:.2} {:.2} {:.2} {:.2} {:.2} {:.2}",
+                            c1x, c1y, c2x, c2y, x2, y2
+                        ));
+                    }
+
+                    s
+                } else {
+                    "M 0 100 L 100 100".to_string()
+                };
 
                 adapter.set_day_efficiency(ModelRc::new(VecModel::from(day_data)));
                 adapter.set_best_day_index(best_idx as i32);

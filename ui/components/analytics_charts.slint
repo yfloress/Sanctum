@@ -25,39 +25,54 @@ export component DayEfficiencyChart inherits Rectangle {
         }
 
         // Chart Container
+        // Robust layout:
+        // Column = VerticalLayout(bar-area -> label)
+        // Bar-area = VerticalLayout(spacer -> bar) where spacer/bar stretch add to 1.0
         Rectangle {
             vertical-stretch: 1;
-            
-            HorizontalLayout {
-                spacing: 4px;
-                padding: 0px;
 
-                // Iterate bars with even distribution
+            HorizontalLayout {
+                spacing: 10px;
+
                 for val[i] in root.data: VerticalLayout {
                     horizontal-stretch: 1;
-                    alignment: end;
                     spacing: 8px;
 
-                    // Bar Area (takes available height minus text)
-                    Rectangle {
-                        vertical-stretch: 1; 
-                        
-                        // The Bar itself
-                        Rectangle {
-                            width: 20px;
-                            height: val * parent.height;
-                            y: parent.height - self.height;
-                            x: (parent.width - self.width) / 2; // Center in column
-                            
-                            border-radius: 4px;
-                            background: i == root.best-day-index ? #3b82f6 : #333333;
-                            
-                            animate height { duration: 400ms; easing: ease-out; }
+                    // Bar Area
+                    bar-area := Rectangle {
+                        vertical-stretch: 1;
+                        background: transparent;
+                        clip: true;
+
+                        property <float> pct: val < 0.0 ? 0.0 : val > 1.0 ? 1.0 : val;
+
+                        VerticalLayout {
+                            spacing: 0px;
+
+                            // Spacer (pushes bar down)
+                            Rectangle {
+                                vertical-stretch: 1.0 - bar-area.pct;
+                                background: transparent;
+                            }
+
+                            // Bar wrapper (takes pct of the height)
+                            Rectangle {
+                                vertical-stretch: bar-area.pct;
+                                background: transparent;
+
+                                Rectangle {
+                                    width: 20px;
+                                    x: (parent.width - self.width) / 2;
+                                    border-radius: 4px;
+                                    background: i == root.best-day-index ? Palette.primary : Palette.border;
+                                }
+                            }
                         }
                     }
 
-                    // Label
+                    // Footer label
                     Text {
+                        width: 100%;
                         text: i == 0 ? "MON" : i == 1 ? "TUE" : i == 2 ? "WED" : i == 3 ? "THU" : i == 4 ? "FRI" : i == 5 ? "SAT" : "SUN";
                         color: i == root.best-day-index ? Palette.text-primary : Palette.text-muted;
                         font-size: 9px;
@@ -92,8 +107,10 @@ export component MonthEfficiencyChart inherits Rectangle {
         }
 
         // Chart Area
-        Rectangle {
+        plot := Rectangle {
             vertical-stretch: 1;
+            clip: true;
+            property <float> denom: root.data.length > 1 ? (root.data.length - 1) * 1.0 : 1.0;
             
             // Grid Lines
             VerticalLayout {
@@ -105,23 +122,19 @@ export component MonthEfficiencyChart inherits Rectangle {
                 }
             }
             
-            // Path Line
-            // viewbox maps logical 0..100 coordinates to actual width/height
-            Path {
-                width: 100%;
-                height: 100%;
+            // Path Line (viewbox: 0..100)
+            if root.path-command != "": Path {
                 commands: root.path-command;
                 stroke: #A855F7;
                 stroke-width: 2px;
+                stroke-line-cap: round;
                 fill: transparent;
                 viewbox-width: 100;
                 viewbox-height: 100;
             }
-            
+
             // Gradient Fill
-            Path {
-                width: 100%;
-                height: 100%;
+            if root.path-command != "": Path {
                 commands: root.path-command + " L 100 100 L 0 100 Z";
                 fill: @linear-gradient(180deg, #A855F733 0%, transparent 100%);
                 stroke-width: 0px;
@@ -130,12 +143,15 @@ export component MonthEfficiencyChart inherits Rectangle {
             }
 
             // Dots overlay
-            // Position matches viewbox logic: 
-            // x (0..100) -> 0..parent.width
-            // y (0..100) -> 0..parent.height
+            // EXACT SAME mapping as the Path (just scaled to pixels):
+            // x = (index / (total_points - 1)) * plot.width
+            // y = plot.height - (value * plot.height)
             for val[i] in root.data: Rectangle {
-                x: (i / (root.data.length - 1)) * parent.width - 2.5px; 
-                y: (1.0 - val) * parent.height - 2.5px;
+                property <float> pct: val < 0.0 ? 0.0 : val > 1.0 ? 1.0 : val;
+                property <float> t: root.data.length > 1 ? (i * 1.0) / plot.denom : 0.0;
+
+                x: (t * plot.width) - 2.5px;
+                y: (plot.height - (pct * plot.height)) - 2.5px;
                 
                 width: 5px;
                 height: 5px;
