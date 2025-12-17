@@ -1358,8 +1358,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let path = if month_data.len() >= 2 {
                     let mut s = String::new();
+
+                    // Always start exactly at the first point (matches dot math: x = 0)
                     let (x0, y0) = point_at(0, &month_data);
-                    s.push_str(&format!("M {:.2} {:.2}", x0, y0));
+                    s.push_str(&format!("M {:.4} {:.4}", x0, y0));
 
                     for i in 0..(month_data.len() - 1) {
                         let p0_idx = if i == 0 { 0 } else { i - 1 };
@@ -1378,7 +1380,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let c2y = y2 - (y3 - y1) / 6.0;
 
                         s.push_str(&format!(
-                            " C {:.2} {:.2} {:.2} {:.2} {:.2} {:.2}",
+                            " C {:.4} {:.4} {:.4} {:.4} {:.4} {:.4}",
                             c1x, c1y, c2x, c2y, x2, y2
                         ));
                     }
