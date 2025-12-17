@@ -15,8 +15,9 @@ component Tooltip inherits Rectangle {
     z: 1000;
     
     // Position relative to the cell
-    x: -5px; 
-    y: root.position-below ? 18px : -25px;
+    // Shift left to avoid overlapping the next column (which is drawn on top)
+    x: -8px; 
+    y: root.position-below ? 18px : -28px;
     
     background: #1e1e1e;
     border-width: 1px;
