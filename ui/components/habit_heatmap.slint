@@ -9,29 +9,49 @@ component Tooltip inherits Rectangle {
     in property <string> text;
     in property <int> count;
     
-    x: -30px; 
+    width: 120px;
+    height: 40px;
+    z: 1000; // Relative to parent (Cell)
+    
+    // Position relative to the cell (top-left of cell is 0,0)
+    // Cell is 14x14. We want tooltip above and centered.
+    // Center of cell x: 7px. Center of tooltip x: 60px.
+    // x = 7 - 60 = -53px.
+    x: -53px; 
     y: -45px; 
-    z: 1000;
     
     background: #1e1e1e;
     border-width: 1px;
     border-color: Palette.border;
     border-radius: 4px;
-    // padding is not a property of Rectangle, layout needed
     
+    // Shadow
+    Rectangle {
+        z: -1;
+        width: 100%;
+        height: 100%;
+        background: black;
+        opacity: 0.5;
+        x: 2px;
+        y: 2px;
+        border-radius: 4px;
+    }
+
     VerticalLayout {
-        padding: 6px;
+        padding: 8px;
         spacing: 2px;
         Text { 
             text: root.text; 
             color: Palette.text-primary; 
-            font-size: 10px; 
+            font-size: 11px; 
             font-weight: 600;
+            overflow: elide;
         }
         Text { 
             text: root.count == 1 ? "1 contribution" : root.count + " contributions"; 
             color: Palette.text-secondary; 
-            font-size: 9px; 
+            font-size: 10px; 
+            overflow: elide;
         }
     }
 }
@@ -44,6 +64,10 @@ component HeatmapCell inherits Rectangle {
     width: 14px;
     height: 14px;
     border-radius: 3px;
+    
+    // Elevate when hovered to show tooltip above neighbors
+    z: ta.has-hover ? 100 : 0;
+
     background: level == 0 ? Palette.surface-hover :
                 level == 1 ? #3b2f5f :
                 level == 2 ? #6b4f9f :
@@ -66,7 +90,7 @@ component HeatmapCell inherits Rectangle {
     ta := TouchArea {
         mouse-cursor: pointer;
     }
-
+    
     if ta.has-hover && root.date != "": Tooltip {
         text: root.date;
         count: root.count;
@@ -113,9 +137,9 @@ export component HabitHeatmap inherits Rectangle {
         }
 
         // Heatmap Grid Container
-        Rectangle {
+        grid-container := Rectangle {
             vertical-stretch: 1; // Ocupa el espacio restante
-            // clip removed to allow tooltip overflow
+            clip: false; // Allow tooltip to overflow container
 
             // Heatmap Grid
             heatmap-scroll := Flickable {
