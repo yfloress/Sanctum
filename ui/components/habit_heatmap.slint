@@ -5,8 +5,41 @@
 import { Palette, HabitAdapter, HeatmapWeek, HeatmapDay } from "../globals.slint";
 import { CustomScrollbar } from "../widgets.slint";
 
+component Tooltip inherits Rectangle {
+    in property <string> text;
+    in property <int> count;
+    
+    x: -30px; 
+    y: -45px; 
+    z: 1000;
+    
+    background: #1e1e1e;
+    border-width: 1px;
+    border-color: Palette.border;
+    border-radius: 4px;
+    // padding is not a property of Rectangle, layout needed
+    
+    VerticalLayout {
+        padding: 6px;
+        spacing: 2px;
+        Text { 
+            text: root.text; 
+            color: Palette.text-primary; 
+            font-size: 10px; 
+            font-weight: 600;
+        }
+        Text { 
+            text: root.count == 1 ? "1 contribution" : root.count + " contributions"; 
+            color: Palette.text-secondary; 
+            font-size: 9px; 
+        }
+    }
+}
+
 component HeatmapCell inherits Rectangle {
     in property <int> level;
+    in property <string> date: "";
+    in property <int> count: 0;
     
     width: 14px;
     height: 14px;
@@ -30,8 +63,13 @@ component HeatmapCell inherits Rectangle {
         opacity: 0.3;
     }
 
-    TouchArea {
+    ta := TouchArea {
         mouse-cursor: pointer;
+    }
+
+    if ta.has-hover && root.date != "": Tooltip {
+        text: root.date;
+        count: root.count;
     }
 }
 
@@ -77,7 +115,7 @@ export component HabitHeatmap inherits Rectangle {
         // Heatmap Grid Container
         Rectangle {
             vertical-stretch: 1; // Ocupa el espacio restante
-            clip: true;
+            // clip removed to allow tooltip overflow
 
             // Heatmap Grid
             heatmap-scroll := Flickable {
@@ -100,6 +138,8 @@ export component HabitHeatmap inherits Rectangle {
                         spacing: 4px;
                         for day in week.days: HeatmapCell {
                             level: day.level;
+                            date: day.date;
+                            count: day.count;
                         }
                     }
                 }

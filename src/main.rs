@@ -12,7 +12,7 @@ use sanctum::security_log::init_security_logger;
 use slint::SharedString;
 use slint::{Model, ModelRc, VecModel, Weak};
 use std::cell::Cell;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc; // Added for CryptoAdapter logic
 
 slint::include_modules!();
