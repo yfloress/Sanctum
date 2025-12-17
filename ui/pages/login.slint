@@ -62,10 +62,12 @@ component PasswordInput inherits Rectangle {
             }
         }
 
-        // Underline (full width, centered with container)
+        // Underline with gradient (full width, centered with container)
         Rectangle {
             height: input.has-focus ? 2px : 1px;
-            background: input.has-focus ? Palette.border-light : Palette.border;
+            background: input.has-focus
+                ? @linear-gradient(90deg, transparent 0%, #6366f1 20%, #ffffff 50%, #6366f1 80%, transparent 100%)
+                : @linear-gradient(90deg, transparent 0%, Palette.border 50%, transparent 100%);
 
             animate height {
                 duration: 150ms;

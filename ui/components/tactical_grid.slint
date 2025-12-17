@@ -11,16 +11,15 @@ export component TacticalGrid inherits Rectangle {
     // Fill the parent
     width: 100%;
     height: 100%;
-    
-    // Base radial gradient: "Focal point"
-    // Only show if show-background is true
-    background: root.show-background ? @radial-gradient(circle, #1a1a1a 0%, #050505 60%, #000000 100%) : transparent;
 
-    // Grid Container
+    // Enhanced background with depth
+    background: root.show-background ? @radial-gradient(circle, #1a1a2e 0%, #0d0d1a 40%, #000000 100%) : transparent;
+
+    // Grid Container with enhanced lines
     Rectangle {
         width: 100%;
         height: 100%;
-        opacity: 0.04; // Very subtle
+        opacity: 0.06; // Slightly more visible
 
         // Vertical lines
         for i in root.grid-cols : Rectangle {
@@ -28,7 +27,7 @@ export component TacticalGrid inherits Rectangle {
             y: 0;
             width: 1px;
             height: 100%;
-            background: #ffffff;
+            background: @linear-gradient(180deg, #6366f120 0%, #ffffff30 50%, #6366f120 100%);
         }
 
         // Horizontal lines
@@ -37,7 +36,7 @@ export component TacticalGrid inherits Rectangle {
             y: (parent.height / root.grid-rows) * i;
             width: 100%;
             height: 1px;
-            background: #ffffff;
+            background: @linear-gradient(90deg, #6366f120 0%, #ffffff30 50%, #6366f120 100%);
         }
     }
     
