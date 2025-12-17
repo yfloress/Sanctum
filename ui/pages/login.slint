@@ -163,14 +163,14 @@ export component LoginPage inherits Rectangle {
                         height: 16px;
                     }
 
-                    // Subtitle
+                    // Subtitle with elegant styling
                     Text {
                         text: "Personal Financial Fortress";
-                        color: Palette.text-muted;
+                        color: @linear-gradient(90deg, Palette.text-muted 0%, Palette.text-secondary 50%, Palette.text-muted 100%);
                         font-size: 13px;
-                        font-weight: 300;
+                        font-weight: 200;
                         font-italic: true;
-                        letter-spacing: 1px;
+                        letter-spacing: 2.5px;
                         horizontal-alignment: center;
                     }
 
@@ -241,18 +241,42 @@ export component LoginPage inherits Rectangle {
             vertical-stretch: 1;
         }
 
-        // Footer
+        // Footer with security badge
         Rectangle {
             height: 60px;
 
-            Text {
-                text: "AES-256 encrypted";
-                color: Palette.text-subtle;
-                font-size: 10px;
-                font-weight: 400;
-                letter-spacing: 2px;
-                horizontal-alignment: center;
-                vertical-alignment: center;
+            HorizontalLayout {
+                alignment: center;
+                spacing: 8px;
+
+                // Security icon
+                Rectangle {
+                    width: 12px;
+                    height: 12px;
+                    border-radius: 6px;
+                    border-width: 1px;
+                    border-color: Palette.success;
+                    background: transparent;
+
+                    Rectangle {
+                        width: 6px;
+                        height: 6px;
+                        x: 3px;
+                        y: 3px;
+                        border-radius: 3px;
+                        background: Palette.success;
+                        opacity: 0.4;
+                    }
+                }
+
+                Text {
+                    text: "AES-256 ENCRYPTED";
+                    color: Palette.text-subtle;
+                    font-size: 9px;
+                    font-weight: 500;
+                    letter-spacing: 3px;
+                    vertical-alignment: center;
+                }
             }
         }
     }
