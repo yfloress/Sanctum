@@ -128,6 +128,14 @@
 - `callback clicked()`: Evento al seleccionar.
 **Dependencias:** `globals.slint`
 ---
+## ui/components/analytics_charts.slint
+**Tipo:** Slint UI
+**Resumen:** Gráficos especializados para estadísticas de hábitos.
+**Estructura Clave:**
+- `export component DayEfficiencyChart`: Gráfico de barras para eficiencia diaria (últimos 90 días).
+- `export component MonthEfficiencyChart`: Gráfico de línea para tendencia mensual.
+**Dependencias:** `globals.slint`
+---
 ## ui/components/asset_detail.slint
 **Tipo:** Slint UI
 **Resumen:** Panel lateral deslizable con detalles de un activo cripto.
@@ -141,13 +149,6 @@
 **Resumen:** Lista visual de gastos por categoría con barras de progreso.
 **Estructura Clave:**
 - `export component CategoryBreakdown`: Itera sobre `CategoryData`.
-**Dependencias:** `globals.slint`
----
-## ui/components/chart.slint
-**Tipo:** Slint UI
-**Resumen:** Componente base para gráficos de línea (OBSOLETO / SIN USO).
-**Estructura Clave:**
-- `export component SanctumChart`: Definición de gráfico no utilizada actualmente.
 **Dependencias:** `globals.slint`
 ---
 ## ui/components/charts.slint
@@ -291,7 +292,7 @@
 **Resumen:** Página de seguimiento de hábitos.
 **Estructura Clave:**
 - `export component HabitsPage`: Muestra lista de hábitos, heatmap anual y gráfico mensual.
-**Dependencias:** `globals.slint`, `components/habit_*.slint`
+**Dependencias:** `globals.slint`, `components/habit_*.slint`, `components/analytics_charts.slint`
 ---
 ## ui/pages/login.slint
 **Tipo:** Slint UI
