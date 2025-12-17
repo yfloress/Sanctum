@@ -1505,42 +1505,71 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
 
                     // Generate smooth path for the line chart
+                    // CRITICAL: Path must start at x:0 and end at x:100 for perfect alignment
                     fn generate_smooth_path(values: &[f32]) -> String {
-                        if values.len() < 2 {
-                            return "M 0 100 L 100 100".to_string();
+                        if values.is_empty() {
+                            return String::new();
+                        }
+
+                        if values.len() == 1 {
+                            // Single point: horizontal line at that value
+                            let y = 100.0 - (clamp01(values[0]) * 100.0);
+                            return format!("M 0 {:.2} L 100 {:.2}", y, y);
                         }
 
                         let n = values.len();
                         let mut path = String::new();
 
                         // Helper to get point coordinates
+                        // x: 0 to 100 (viewbox coordinates)
+                        // y: 100 (bottom, 0%) to 0 (top, 100%)
                         let point_at = |i: usize| -> (f32, f32) {
-                            let x = (i as f32 / (n - 1) as f32) * 100.0;
+                            let x = if n > 1 {
+                                (i as f32 / (n - 1) as f32) * 100.0
+                            } else {
+                                50.0
+                            };
                             let y = 100.0 - (clamp01(values[i]) * 100.0);
                             (x, y)
                         };
 
-                        // Start point
+                        // Start point - MUST be at x:0
                         let (x0, y0) = point_at(0);
                         path.push_str(&format!("M {:.2} {:.2}", x0, y0));
 
-                        // Generate smooth curves using Catmull-Rom spline
+                        // For 2 points, use a simple line
+                        if n == 2 {
+                            let (x1, y1) = point_at(1);
+                            path.push_str(&format!(" L {:.2} {:.2}", x1, y1));
+                            return path;
+                        }
+
+                        // For 3+ points, use smooth Bezier curves with constrained control points
+                        // This prevents overshoot at the start and end
                         for i in 0..(n - 1) {
-                            let p0_idx = if i == 0 { 0 } else { i - 1 };
-                            let p1_idx = i;
-                            let p2_idx = i + 1;
-                            let p3_idx = if i + 2 < n { i + 2 } else { i + 1 };
+                            let (x1, y1) = point_at(i);
+                            let (x2, y2) = point_at(i + 1);
 
-                            let (x0, y0) = point_at(p0_idx);
-                            let (x1, y1) = point_at(p1_idx);
-                            let (x2, y2) = point_at(p2_idx);
-                            let (x3, y3) = point_at(p3_idx);
+                            // Get neighboring points for tangent calculation
+                            let (x0, y0) = if i > 0 {
+                                point_at(i - 1)
+                            } else {
+                                (x1, y1) // Clamp to start point
+                            };
+                            let (x3, y3) = if i + 2 < n {
+                                point_at(i + 2)
+                            } else {
+                                (x2, y2) // Clamp to end point
+                            };
 
-                            // Calculate control points
-                            let c1x = x1 + (x2 - x0) / 6.0;
-                            let c1y = y1 + (y2 - y0) / 6.0;
-                            let c2x = x2 - (x3 - x1) / 6.0;
-                            let c2y = y2 - (y3 - y1) / 6.0;
+                            // Tension factor (0.0 = linear, 0.5 = smooth, lower = less overshoot)
+                            let tension = 0.3;
+
+                            // Calculate control points with constrained tangents
+                            let c1x = x1 + (x2 - x0) * tension;
+                            let c1y = y1 + (y2 - y0) * tension;
+                            let c2x = x2 - (x3 - x1) * tension;
+                            let c2y = y2 - (y3 - y1) * tension;
 
                             path.push_str(&format!(
                                 " C {:.2} {:.2}, {:.2} {:.2}, {:.2} {:.2}",

@@ -7,12 +7,12 @@ export component DayEfficiencyChart inherits Rectangle {
     in property <[float]> data; // Normalized 0.0 - 1.0
     in property <int> best-day-index: 0;
     property <[string]> day-labels: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
-    
+
     background: Palette.surface;
     border-radius: 12px;
     border-width: 1px;
     border-color: Palette.border;
-    
+
     VerticalLayout {
         padding: 16px;
         spacing: 16px;
@@ -20,7 +20,7 @@ export component DayEfficiencyChart inherits Rectangle {
         // Header
         HorizontalLayout {
             spacing: 8px;
-            
+
             Text {
                 text: "Day Efficiency";
                 color: Palette.text-primary;
@@ -28,14 +28,14 @@ export component DayEfficiencyChart inherits Rectangle {
                 font-weight: 600;
                 vertical-alignment: center;
             }
-            
+
             Rectangle {
                 width: 2px;
                 height: 12px;
                 background: Palette.border;
                 y: (parent.height - self.height) / 2;
             }
-            
+
             Text {
                 text: "Last 90 days";
                 color: Palette.text-muted;
@@ -60,25 +60,30 @@ export component DayEfficiencyChart inherits Rectangle {
                 Rectangle {
                     height: 100px;
                     width: 100%;
-                    
+
                     VerticalLayout {
                         alignment: end;
-                        
-                        // The actual bar
+
+                        // The actual bar - Best day in blue, others in gradient based on value
                         Rectangle {
+                            property <float> clamped: val < 0.0 ? 0.0 : val > 1.0 ? 1.0 : val;
+                            property <length> bar-height: 100px * clamped;
                             width: 24px;
-                            height: 100px * (val < 0.0 ? 0.0 : val > 1.0 ? 1.0 : val);
-                            background: i == root.best-day-index ? #3B82F6 : #333333;
+                            // Ensure minimum visible height for non-zero values
+                            height: clamped > 0.0 && bar-height < 4px ? 4px : bar-height;
+                            background: i == root.best-day-index ? #3B82F6 :
+                                clamped > 0.7 ? #4ADE80 :
+                                clamped > 0.4 ? #FBBF24 : #333333;
                             border-radius: 4px;
                             x: (parent.width - self.width) / 2;
-                            
+
                             // Smooth animation
-                            animate height { 
-                                duration: 300ms; 
+                            animate height {
+                                duration: 300ms;
                                 easing: ease-out;
                             }
-                            animate background { 
-                                duration: 200ms; 
+                            animate background {
+                                duration: 200ms;
                             }
                         }
                     }
@@ -92,19 +97,19 @@ export component DayEfficiencyChart inherits Rectangle {
                     font-size: 9px;
                     font-weight: 600;
                     letter-spacing: 0.5px;
-                    
-                    animate color { 
-                        duration: 200ms; 
+
+                    animate color {
+                        duration: 200ms;
                     }
                 }
 
-                // Percentage label (optional, shows on hover)
-                if val > 0.0: Text {
-                    text: Math.round(val * 100.0) + "%";
+                // Percentage label
+                Text {
+                    text: val > 0.0 ? Math.round(val * 100.0) + "%" : "-";
                     horizontal-alignment: center;
-                    color: Palette.text-muted;
+                    color: val > 0.0 ? Palette.text-muted : Palette.text-subtle;
                     font-size: 8px;
-                    opacity: 0.6;
+                    opacity: val > 0.0 ? 0.8 : 0.4;
                 }
             }
         }
@@ -112,12 +117,15 @@ export component DayEfficiencyChart inherits Rectangle {
 }
 
 export component MonthEfficiencyChart inherits Rectangle {
-    in property <[float]> data; 
+    in property <[float]> data;
     in property <string> path-command;
     in property <float> min-val: 0.0;
     in property <float> max-val: 0.0;
     in property <float> avg-val: 0.0;
-    
+
+    // Internal: total days for coordinate calculation (must match data.length)
+    property <int> total-days: root.data.length;
+
     background: Palette.surface;
     border-radius: 12px;
     border-width: 1px;
@@ -141,78 +149,88 @@ export component MonthEfficiencyChart inherits Rectangle {
             vertical-stretch: 1;
             clip: true;
             background: transparent;
-            
+
             // Grid Lines (horizontal)
             VerticalLayout {
                 alignment: space-between;
                 padding: 0px;
-                
+
                 for i in 5: Rectangle {
                     height: 1px;
                     background: Palette.border-subtle;
                     opacity: 0.3;
                 }
             }
-            
+
             // Only render if we have data
-            if root.data.length > 0 && root.path-command != "": Rectangle {
+            if root.total-days > 0 && root.path-command != "": Rectangle {
                 width: 100%;
                 height: 100%;
-                
-                // Gradient Fill Area
+
+                // Gradient Fill Area - Path uses viewbox 0-100 mapped to container
                 Path {
                     commands: root.path-command + " L 100 100 L 0 100 Z";
                     fill: @linear-gradient(180deg, #A855F744 0%, #A855F711 50%, transparent 100%);
                     stroke-width: 0px;
+                    viewbox-x: 0;
+                    viewbox-y: 0;
                     viewbox-width: 100;
                     viewbox-height: 100;
                 }
-                
-                // Main Line
+
+                // Main Line - Same viewbox as fill for perfect alignment
                 Path {
                     commands: root.path-command;
                     stroke: #A855F7;
-                    stroke-width: 2.5px;
+                    stroke-width: 2px;
                     fill: transparent;
+                    viewbox-x: 0;
+                    viewbox-y: 0;
                     viewbox-width: 100;
                     viewbox-height: 100;
                 }
 
-                // Data Points (dots)
+                // Data Points (dots) - CRITICAL: Use same formula as Rust path generation
+                // Path uses: x = (i / (n-1)) * 100, y = 100 - (val * 100)
+                // Dots must use: x = (i / (n-1)) * width, y = (1 - val) * height
                 for val[i] in root.data: Rectangle {
                     property <float> pct: val < 0.0 ? 0.0 : val > 1.0 ? 1.0 : val;
-                    property <float> x-pos: root.data.length > 1 
-                        ? (i * 1.0) / (root.data.length - 1) 
+                    // X position: same formula as path - index divided by (total-1) for 0-1 range
+                    property <float> x-norm: root.total-days > 1
+                        ? (i * 1.0) / (root.total-days - 1)
                         : 0.5;
-
-                    x: (x-pos * plot.width) - 3px;
+                    // Center the 6px dot on the coordinate
+                    x: (x-norm * plot.width) - 3px;
                     y: ((1.0 - pct) * plot.height) - 3px;
-                    
+
                     width: 6px;
                     height: 6px;
                     border-radius: 3px;
                     background: #A855F7;
                     border-width: 1.5px;
                     border-color: Palette.surface;
-                    
-                    // Glow effect for non-zero values
-                    if val > 0.0: Rectangle {
+
+                    // Only show dots for non-zero or significant days
+                    opacity: pct > 0.0 ? 1.0 : 0.3;
+
+                    // Glow effect for high-value days
+                    if pct >= 0.8: Rectangle {
                         x: -2px;
                         y: -2px;
                         width: parent.width + 4px;
                         height: parent.height + 4px;
                         border-radius: 5px;
                         background: #A855F7;
-                        opacity: 0.3;
+                        opacity: 0.4;
                     }
                 }
             }
-            
+
             // Empty state message
-            if root.data.length == 0: Rectangle {
+            if root.total-days == 0: Rectangle {
                 width: 100%;
                 height: 100%;
-                
+
                 Text {
                     text: "No data for this month";
                     color: Palette.text-muted;
@@ -224,14 +242,14 @@ export component MonthEfficiencyChart inherits Rectangle {
         }
 
         // Stats footer (min, avg, max)
-        if root.data.length > 0: HorizontalLayout {
+        if root.total-days > 0: HorizontalLayout {
             spacing: 16px;
             alignment: space-between;
-            
+
             // Min
             HorizontalLayout {
                 spacing: 4px;
-                
+
                 Text {
                     text: "MIN";
                     color: Palette.text-muted;
@@ -244,11 +262,11 @@ export component MonthEfficiencyChart inherits Rectangle {
                     font-size: 9px;
                 }
             }
-            
+
             // Avg
             HorizontalLayout {
                 spacing: 4px;
-                
+
                 Text {
                     text: "AVG";
                     color: Palette.text-muted;
@@ -257,15 +275,16 @@ export component MonthEfficiencyChart inherits Rectangle {
                 }
                 Text {
                     text: Math.round(root.avg-val * 100.0) + "%";
-                    color: Palette.text-secondary;
+                    color: #A855F7;
                     font-size: 9px;
+                    font-weight: 500;
                 }
             }
-            
+
             // Max
             HorizontalLayout {
                 spacing: 4px;
-                
+
                 Text {
                     text: "MAX";
                     color: Palette.text-muted;
@@ -274,7 +293,7 @@ export component MonthEfficiencyChart inherits Rectangle {
                 }
                 Text {
                     text: Math.round(root.max-val * 100.0) + "%";
-                    color: #A855F7;
+                    color: #4ADE80;
                     font-size: 9px;
                     font-weight: 600;
                 }
