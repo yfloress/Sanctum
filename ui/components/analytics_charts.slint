@@ -4,8 +4,8 @@
 import { Palette } from "../globals.slint";
 
 export component DayEfficiencyChart inherits Rectangle {
-    in property <[float]> data: [0.3, 0.5, 0.8, 0.4, 0.9, 0.2, 0.6]; // Normalized 0.0 - 1.0
-    in property <int> best-day-index: 4; // Index to highlight (e.g. 4 = Friday)
+    in property <[float]> data; // Normalized 0.0 - 1.0
+    in property <int> best-day-index: 4;
     
     background: Palette.surface;
     border-radius: 12px;
@@ -16,7 +16,6 @@ export component DayEfficiencyChart inherits Rectangle {
         padding: 16px;
         spacing: 12px;
 
-        // Header
         Text {
             text: "Day Efficiency";
             color: Palette.text-secondary;
@@ -25,36 +24,34 @@ export component DayEfficiencyChart inherits Rectangle {
             letter-spacing: 0.5px;
         }
 
-        // Chart Area
+        // Chart Container
         Rectangle {
             vertical-stretch: 1;
             
             HorizontalLayout {
-                spacing: 2px; 
-                
-                // Bars
+                spacing: 4px;
+                padding: 0px;
+
+                // Iterate bars with even distribution
                 for val[i] in root.data: VerticalLayout {
-                    horizontal-stretch: 1; // Distribute evenly
+                    horizontal-stretch: 1;
                     alignment: end;
                     spacing: 8px;
 
-                    // Bar container
+                    // Bar Area (takes available height minus text)
                     Rectangle {
-                        width: 100%;
-                        height: 100%; 
+                        vertical-stretch: 1; 
                         
-                        // The actual bar (variable height)
+                        // The Bar itself
                         Rectangle {
+                            width: 20px;
+                            height: val * parent.height;
                             y: parent.height - self.height;
-                            width: 20px; // Chunky bars
-                            height: val * parent.height; // Scale by value
-                            border-radius: 4px;
-                            x: (parent.width - self.width) / 2; // Center in the distributed slot
+                            x: (parent.width - self.width) / 2; // Center in column
                             
-                            // Highlight best day
+                            border-radius: 4px;
                             background: i == root.best-day-index ? #3b82f6 : #333333;
                             
-                            // Animation
                             animate height { duration: 400ms; easing: ease-out; }
                         }
                     }
@@ -73,19 +70,19 @@ export component DayEfficiencyChart inherits Rectangle {
 }
 
 export component MonthEfficiencyChart inherits Rectangle {
-    in property <[float]> data: [0.2, 0.4, 0.3, 0.6, 0.5, 0.8, 0.7, 0.9, 0.6, 0.4]; // Normalized 0.0 - 1.0
+    in property <[float]> data; 
+    in property <string> path-command;
     
     background: Palette.surface;
     border-radius: 12px;
     border-width: 1px;
     border-color: Palette.border;
-    clip: true; // Clip the chart content
+    clip: true;
 
     VerticalLayout {
         padding: 16px;
         spacing: 12px;
 
-        // Header
         Text {
             text: "Month Efficiency";
             color: Palette.text-secondary;
@@ -98,7 +95,7 @@ export component MonthEfficiencyChart inherits Rectangle {
         Rectangle {
             vertical-stretch: 1;
             
-            // Grid Lines (Dashed)
+            // Grid Lines
             VerticalLayout {
                 alignment: space-between;
                 for i in 3: Rectangle {
@@ -108,9 +105,13 @@ export component MonthEfficiencyChart inherits Rectangle {
                 }
             }
             
+            // Path Line
+            // viewbox maps logical 0..100 coordinates to actual width/height
             Path {
+                width: 100%;
+                height: 100%;
                 commands: root.path-command;
-                stroke: #A855F7; // Fixed Purple as requested
+                stroke: #A855F7;
                 stroke-width: 2px;
                 fill: transparent;
                 viewbox-width: 100;
@@ -119,6 +120,8 @@ export component MonthEfficiencyChart inherits Rectangle {
             
             // Gradient Fill
             Path {
+                width: 100%;
+                height: 100%;
                 commands: root.path-command + " L 100 100 L 0 100 Z";
                 fill: @linear-gradient(180deg, #A855F733 0%, transparent 100%);
                 stroke-width: 0px;
@@ -126,21 +129,21 @@ export component MonthEfficiencyChart inherits Rectangle {
                 viewbox-height: 100;
             }
 
-            // Dots (Markers)
+            // Dots overlay
+            // Position matches viewbox logic: 
+            // x (0..100) -> 0..parent.width
+            // y (0..100) -> 0..parent.height
             for val[i] in root.data: Rectangle {
-                // Calculate position matching the path generation logic (0..100 based)
                 x: (i / (root.data.length - 1)) * parent.width - 2.5px; 
                 y: (1.0 - val) * parent.height - 2.5px;
                 
                 width: 5px;
                 height: 5px;
                 border-radius: 2.5px;
-                background: #A855F7; // Match line color
+                background: #A855F7;
                 border-width: 1px;
                 border-color: Palette.surface;
             }
         }
     }
-    
-    in property <string> path-command: "M 0 100 L 100 100";
 }
