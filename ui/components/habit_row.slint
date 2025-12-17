@@ -14,12 +14,10 @@ component StatBadge inherits Rectangle {
     background: Palette.surface-hover;
     border-width: 1px;
     border-color: Palette.border;
-
     HorizontalLayout {
         padding-left: 8px;
         padding-right: 8px;
         spacing: 4px;
-
         Text {
             text: root.icon;
             font-size: 10px;
@@ -70,13 +68,11 @@ component DayCell inherits Rectangle {
     // Day Number
     Text {
         text: day.day;
-        width: 100%;
-        height: 100%;
-        vertical-alignment: center;
-        horizontal-alignment: center;
         color: day.completed ? Palette.background : Palette.text-muted;
         font-size: 10px;
         font-weight: day.completed ? 600 : 400;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
     }
 
     touch := TouchArea {
@@ -88,25 +84,25 @@ component DayCell inherits Rectangle {
 
 export component HabitRow inherits Rectangle {
     in property <HabitData> habit;
-    callback toggle(string); // date
-    callback delete(string); // id
+    callback toggle(string);
+    callback delete(string); 
 
     height: 72px;
     background: transparent;
-
+    
     HorizontalLayout {
         spacing: 16px;
-        // alignment: center; // Must be removed to allow stretch
 
         // Info Column
         Rectangle {
             width: 180px;
-            
             info-touch := TouchArea { }
             
             HorizontalLayout {
                 spacing: 12px;
                 padding-left: 8px;
+                // Centrado vertical del contenido
+                alignment: center;
                 
                 // Color Indicator with glow
                 Rectangle {
@@ -114,9 +110,7 @@ export component HabitRow inherits Rectangle {
                     height: 32px;
                     background: @linear-gradient(180deg, habit.color 0%, habit.color.darker(0.3) 100%);
                     border-radius: 2px;
-                    y: (parent.height - self.height) / 2;
-
-                    // Glow effect
+                    
                     Rectangle {
                         x: -3px;
                         y: -3px;
@@ -143,7 +137,6 @@ export component HabitRow inherits Rectangle {
                     // Stats Row
                     HorizontalLayout {
                         spacing: 6px;
-
                         StatBadge {
                             icon: "🔥";
                             value: habit.streak;
@@ -164,20 +157,18 @@ export component HabitRow inherits Rectangle {
                     }
                 }
                 
-                // Delete button (hover)
+                // Delete button
                 if info-touch.has-hover: Rectangle {
                     width: 24px;
                     height: 24px;
-                    y: (parent.height - self.height) / 2;
                     border-radius: 6px;
                     background: delete-touch.has-hover ? #3d2020 : transparent;
-
                     Text {
                         text: "×";
                         color: delete-touch.has-hover ? Palette.danger : Palette.text-muted;
                         font-size: 16px;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
                     }
 
                     delete-touch := TouchArea {
@@ -191,23 +182,22 @@ export component HabitRow inherits Rectangle {
         // Days Grid Container with Scrollbar
         Rectangle {
             horizontal-stretch: 1;
-            min-width: 1px; // Ensure layout calculation
-            height: 36px; // Container height
-            clip: true; // Prevent overflow glitches
+            min-width: 1px;
+            // Eliminamos height fijo, dejamos que el HorizontalLayout lo maneje
+            clip: true;
 
-            // The Scrollable Grid
+            // The Scrollable Grid - centrado verticalmente
             grid-scroll := Flickable {
                 width: 100%;
-                height: 30px; // Content height
-                y: (parent.height - self.height) / 2; // Center vertically
+                height: 30px;
+                y: (parent.height - self.height) / 2;
                 viewport-width: habit.days.length * (26px + 4px);
                 interactive: true;
 
-                // Auto-scroll logic
                 viewport-x: HabitAdapter.is-viewing-current-month 
                     ? min(0px, max(parent.width - self.viewport-width, (parent.width / 2) - ((HabitAdapter.current-day-int * 30px) - 15px)))
                     : 0px;
-
+                    
                 HorizontalLayout {
                     spacing: 4px;
                     alignment: start;

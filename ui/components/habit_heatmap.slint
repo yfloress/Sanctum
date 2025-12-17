@@ -8,8 +8,8 @@ import { CustomScrollbar } from "../widgets.slint";
 component HeatmapCell inherits Rectangle {
     in property <int> level;
     
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
     border-radius: 3px;
     background: level == 0 ? Palette.surface-hover :
                 level == 1 ? #3b2f5f :
@@ -37,68 +37,67 @@ component HeatmapCell inherits Rectangle {
 
 export component HabitHeatmap inherits Rectangle {
     width: 100%;
-    height: 100%;
+    height: 100%; // Toma toda la altura del contenedor padre
     background: transparent;
-
-    // Legend (overlay) - keeps the grid centered vertically in the card
-    HorizontalLayout {
-        x: 12px;
-        y: 0;
-        width: parent.width - 24px;
-        height: 12px;
-        alignment: end;
-        spacing: 6px;
-
-        Text {
-            text: "Less";
-            color: Palette.text-muted;
-            font-size: 9px;
-            vertical-alignment: center;
-        }
-
-        HeatmapCell { level: 0; }
-        HeatmapCell { level: 1; }
-        HeatmapCell { level: 2; }
-        HeatmapCell { level: 3; }
-        HeatmapCell { level: 4; }
-
-        Text {
-            text: "More";
-            color: Palette.text-muted;
-            font-size: 9px;
-            vertical-alignment: center;
-        }
-    }
 
     VerticalLayout {
         padding-left: 12px;
         padding-right: 12px;
-        padding-top: 8px;
-        padding-bottom: 8px;
-        spacing: 0px;
+        padding-top: 16px;
+        padding-bottom: 20px;
+        spacing: 20px; // Espacio entre legend y heatmap
+
+        // Legend
+        HorizontalLayout {
+            height: 16px; // Altura fija para la leyenda
+            alignment: end;
+            spacing: 6px;
+            
+            Text {
+                text: "Less";
+                color: Palette.text-muted;
+                font-size: 10px;
+                vertical-alignment: center;
+            }
+
+            HeatmapCell { level: 0; }
+            HeatmapCell { level: 1; }
+            HeatmapCell { level: 2; }
+            HeatmapCell { level: 3; }
+            HeatmapCell { level: 4; }
+
+            Text {
+                text: "More";
+                color: Palette.text-muted;
+                font-size: 10px;
+                vertical-alignment: center;
+            }
+        }
 
         // Heatmap Grid Container
         Rectangle {
-            vertical-stretch: 1;
-            clip: true; // Prevent overflow overlapping
+            vertical-stretch: 1; // Ocupa el espacio restante
+            clip: true;
 
-            // Heatmap Grid - horizontal scroll only
+            // Heatmap Grid
             heatmap-scroll := Flickable {
-                height: 7 * 12px + 6 * 5px; // 114px content
-                y: (parent.height - self.height) / 2; // Center vertically
-                horizontal-stretch: 1;
+                // Altura del contenido: 7 filas * 14px + 6 espacios * 4px = 122px
+                height: 122px;
+                // Centrado vertical
+                y: (parent.height - self.height) / 2;
+                width: parent.width;
                 interactive: true;
-                viewport-width: HabitAdapter.heatmap-data.length * 16px;
+                viewport-width: HabitAdapter.heatmap-data.length * 18px;
                 
-                // Auto-scroll to current week if available
-                viewport-x: -1 * max(0px, ((HabitAdapter.current-week-int - 4) * 16px));
-
+                // Auto-scroll logic
+                viewport-x: -1 * max(0px, ((HabitAdapter.current-week-int - 4) * 18px));
+                
                 HorizontalLayout {
                     spacing: 4px;
                     alignment: start;
 
                     for week in HabitAdapter.heatmap-data: VerticalLayout {
-                        spacing: 5px;
+                        spacing: 4px;
                         for day in week.days: HeatmapCell {
                             level: day.level;
                         }
