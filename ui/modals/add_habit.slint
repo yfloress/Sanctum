@@ -106,8 +106,16 @@ export component AddHabitModal inherits Rectangle {
     property <string> description: "";
     property <int> selected-color-index: 0;
 
-    property <[color]> color-options: [#8b5cf6, #ec4899, #3b82f6, #10b981, #f59e0b, #ef4444];
-    property <[string]> color-strings: ["#8b5cf6", "#ec4899", "#3b82f6", "#10b981", "#f59e0b", "#ef4444"];
+    property <[color]> color-options: [
+        #8b5cf6, #ec4899, #3b82f6, #10b981, #f59e0b, #ef4444,
+        #14b8a6, #22d3ee, #a855f7, #f97316, #eab308, #0ea5e9
+    ];
+    property <[string]> color-strings: [
+        "#8b5cf6", "#ec4899", "#3b82f6", "#10b981", "#f59e0b", "#ef4444",
+        "#14b8a6", "#22d3ee", "#a855f7", "#f97316", "#eab308", "#0ea5e9"
+    ];
+    property <[int]> color-row1: [0, 1, 2, 3, 4, 5];
+    property <[int]> color-row2: [6, 7, 8, 9, 10, 11];
     
     callback close();
 
@@ -237,43 +245,25 @@ export component AddHabitModal inherits Rectangle {
                     letter-spacing: 1.5px;
                 }
                 
-                HorizontalLayout {
+                VerticalLayout {
                     spacing: 12px;
-                    
-                    ColorOption {
-                        option-color: color-options[0];
-                        selected: selected-color-index == 0;
-                        clicked => { selected-color-index = 0; }
+
+                    HorizontalLayout {
+                        spacing: 12px;
+                        for idx in color-row1: ColorOption {
+                            option-color: color-options[idx];
+                            selected: selected-color-index == idx;
+                            clicked => { selected-color-index = idx; }
+                        }
                     }
 
-                    ColorOption {
-                        option-color: color-options[1];
-                        selected: selected-color-index == 1;
-                        clicked => { selected-color-index = 1; }
-                    }
-
-                    ColorOption {
-                        option-color: color-options[2];
-                        selected: selected-color-index == 2;
-                        clicked => { selected-color-index = 2; }
-                    }
-
-                    ColorOption {
-                        option-color: color-options[3];
-                        selected: selected-color-index == 3;
-                        clicked => { selected-color-index = 3; }
-                    }
-
-                    ColorOption {
-                        option-color: color-options[4];
-                        selected: selected-color-index == 4;
-                        clicked => { selected-color-index = 4; }
-                    }
-
-                    ColorOption {
-                        option-color: color-options[5];
-                        selected: selected-color-index == 5;
-                        clicked => { selected-color-index = 5; }
+                    HorizontalLayout {
+                        spacing: 12px;
+                        for idx in color-row2: ColorOption {
+                            option-color: color-options[idx];
+                            selected: selected-color-index == idx;
+                            clicked => { selected-color-index = idx; }
+                        }
                     }
                 }
             }
