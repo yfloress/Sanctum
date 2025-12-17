@@ -8,7 +8,6 @@ import { CustomScrollbar } from "../widgets.slint";
 component Tooltip inherits Rectangle {
     in property <string> text; // Kept for interface compatibility, but unused
     in property <int> count;
-    in property <bool> position-below: false;
     
     width: 24px;
     height: 22px;
@@ -17,7 +16,7 @@ component Tooltip inherits Rectangle {
     // Position relative to the cell
     // Shift left to avoid overlapping the next column (which is drawn on top)
     x: -8px; 
-    y: root.position-below ? 18px : -28px;
+    y: -28px;
     
     background: #1e1e1e;
     border-width: 1px;
@@ -38,7 +37,6 @@ component HeatmapCell inherits Rectangle {
     in property <int> level;
     in property <string> date: "";
     in property <int> count: 0;
-    in property <int> row-index: 0;
     
     width: 14px;
     height: 14px;
@@ -74,7 +72,6 @@ component HeatmapCell inherits Rectangle {
     if ta.has-hover && root.date != "": Tooltip {
         text: root.date;
         count: root.count;
-        position-below: root.row-index <= 1;
     }
 }
 
@@ -86,9 +83,9 @@ export component HabitHeatmap inherits Rectangle {
     VerticalLayout {
         padding-left: 12px;
         padding-right: 12px;
-        padding-top: 16px;
+        padding-top: 8px;
         padding-bottom: 20px;
-        spacing: 20px; // Espacio entre legend y heatmap
+        spacing: 12px; // Espacio entre legend y heatmap
 
         // Legend
         HorizontalLayout {
@@ -125,7 +122,8 @@ export component HabitHeatmap inherits Rectangle {
             // Heatmap Grid
             heatmap-scroll := Flickable {
                 // Altura del contenido: 7 filas * 14px + 6 espacios * 4px = 122px
-                height: 122px;
+                // + 30px padding top = 152px minimum
+                height: 160px;
                 // Centrado vertical
                 y: (parent.height - self.height) / 2;
                 width: parent.width;
@@ -138,14 +136,14 @@ export component HabitHeatmap inherits Rectangle {
                 HorizontalLayout {
                     spacing: 4px;
                     alignment: start;
+                    padding-top: 30px;
 
                     for week in HabitAdapter.heatmap-data: VerticalLayout {
                         spacing: 4px;
-                        for day[d-idx] in week.days: HeatmapCell {
+                        for day in week.days: HeatmapCell {
                             level: day.level;
                             date: day.date;
                             count: day.count;
-                            row-index: d-idx;
                         }
                     }
                 }
