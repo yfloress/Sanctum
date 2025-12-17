@@ -6,19 +6,17 @@ import { Palette, HabitAdapter, HeatmapWeek, HeatmapDay } from "../globals.slint
 import { CustomScrollbar } from "../widgets.slint";
 
 component Tooltip inherits Rectangle {
-    in property <string> text;
+    in property <string> text; // Kept for interface compatibility, but unused
     in property <int> count;
     
-    width: 120px;
-    height: 40px;
-    z: 1000; // Relative to parent (Cell)
+    width: 24px;
+    height: 22px;
+    z: 1000;
     
     // Position relative to the cell (top-left of cell is 0,0)
-    // Cell is 14x14. We want tooltip above and centered.
-    // Center of cell x: 7px. Center of tooltip x: 60px.
-    // x = 7 - 60 = -53px.
-    x: -53px; 
-    y: -45px; 
+    // Cell is 14px wide. Tooltip is 24px. Center diff is 5px.
+    x: -5px; 
+    y: -28px; 
     
     background: #1e1e1e;
     border-width: 1px;
@@ -32,27 +30,18 @@ component Tooltip inherits Rectangle {
         height: 100%;
         background: black;
         opacity: 0.5;
-        x: 2px;
-        y: 2px;
+        x: 1px;
+        y: 1px;
         border-radius: 4px;
     }
 
-    VerticalLayout {
-        padding: 8px;
-        spacing: 2px;
-        Text { 
-            text: root.text; 
-            color: Palette.text-primary; 
-            font-size: 11px; 
-            font-weight: 600;
-            overflow: elide;
-        }
-        Text { 
-            text: root.count == 1 ? "1 contribution" : root.count + " contributions"; 
-            color: Palette.text-secondary; 
-            font-size: 10px; 
-            overflow: elide;
-        }
+    Text { 
+        text: root.count; 
+        color: Palette.text-primary; 
+        font-size: 11px; 
+        font-weight: 600;
+        horizontal-alignment: center;
+        vertical-alignment: center;
     }
 }
 
