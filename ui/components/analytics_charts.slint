@@ -177,7 +177,7 @@ export component MonthlyLineChart inherits Rectangle {
                     fill: transparent;
                 }
 
-                // Data points
+                // Data points (positioned to match viewbox 0-100)
                 for point in data: Rectangle {
                     x: (parent.width * point.x-percent / 100) - 4px;
                     y: (parent.height * point.y-percent / 100) - 4px;
@@ -187,27 +187,6 @@ export component MonthlyLineChart inherits Rectangle {
                     background: Palette.action-gradient-end;
                     border-width: 2px;
                     border-color: Palette.surface;
-
-                    // Hover tooltip
-                    if point-touch.has-hover: Rectangle {
-                        x: -20px;
-                        y: -28px;
-                        width: 48px;
-                        height: 20px;
-                        background: Palette.surface;
-                        border-radius: 4px;
-                        border-width: 1px;
-                        border-color: Palette.border;
-
-                        Text {
-                            text: "\{round(point.avg-per-day * 10) / 10}";
-                            color: Palette.text-primary;
-                            font-size: 10px;
-                            font-weight: 500;
-                            horizontal-alignment: center;
-                            vertical-alignment: center;
-                        }
-                    }
 
                     point-touch := TouchArea {
                         mouse-cursor: pointer;

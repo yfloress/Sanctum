@@ -1750,19 +1750,13 @@ impl AppController {
             })
             .collect();
 
-        // Generate SVG path for monthly trend
+        // Generate SVG path for monthly trend (simple lines)
         let mut path = String::new();
         for (i, point) in monthly_data.iter().enumerate() {
             if i == 0 {
                 path.push_str(&format!("M {:.2} {:.2}", point.x_percent, point.y_percent));
             } else {
-                // Use smooth curves (quadratic bezier for simplicity)
-                let prev = &monthly_data[i - 1];
-                let mid_x = (prev.x_percent + point.x_percent) / 2.0;
-                path.push_str(&format!(
-                    " Q {:.2} {:.2} {:.2} {:.2}",
-                    mid_x, prev.y_percent, point.x_percent, point.y_percent
-                ));
+                path.push_str(&format!(" L {:.2} {:.2}", point.x_percent, point.y_percent));
             }
         }
 
