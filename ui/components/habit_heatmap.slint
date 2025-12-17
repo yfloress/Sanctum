@@ -16,7 +16,7 @@ component Tooltip inherits Rectangle {
     
     // Position relative to the cell
     x: -5px; 
-    y: root.position-below ? 20px : -28px;
+    y: root.position-below ? 18px : -25px;
     
     background: #1e1e1e;
     border-width: 1px;
@@ -54,9 +54,10 @@ component HeatmapCell inherits Rectangle {
     width: 14px;
     height: 14px;
     border-radius: 3px;
+    clip: false; // Ensure tooltip can overflow
     
     // Elevate when hovered to show tooltip above neighbors
-    z: ta.has-hover ? 100 : 0;
+    z: ta.has-hover ? 1000 : 1;
 
     background: level == 0 ? Palette.surface-hover :
                 level == 1 ? #3b2f5f :
