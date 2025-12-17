@@ -241,32 +241,18 @@ export component LoginPage inherits Rectangle {
             vertical-stretch: 1;
         }
 
-        // Footer with security badge
+        // Footer
         Rectangle {
             height: 60px;
 
-            HorizontalLayout {
-                alignment: center;
-                spacing: 8px;
-
-                // Security icon
-                Rectangle {
-                    width: 12px;
-                    height: 12px;
-                    border-radius: 6px;
-                    border-width: 1px;
-                    border-color: Palette.success;
-                    background: transparent;
-                }
-
-                Text {
-                    text: "AES-256 ENCRYPTED";
-                    color: Palette.text-subtle;
-                    font-size: 9px;
-                    font-weight: 500;
-                    letter-spacing: 3px;
-                    vertical-alignment: center;
-                }
+            Text {
+                text: "AES-256 ENCRYPTED";
+                color: Palette.text-subtle;
+                font-size: 9px;
+                font-weight: 500;
+                letter-spacing: 3px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
             }
         }
     }
