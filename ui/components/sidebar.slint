@@ -2,7 +2,6 @@
 // Premium Fintech UI - Navigation sidebar with collapse support
 
 import { Palette, AppState, AuthAdapter } from "../globals.slint";
-import { TacticalGrid } from "../components/tactical_grid.slint";
 
 // ==================== SidebarItem ====================
 
@@ -106,14 +105,6 @@ export component SanctumSidebar inherits Rectangle {
     background: Palette.sidebar-bg;
 
     animate width { duration: 250ms; easing: ease-in-out; }
-
-    // Background texture
-    TacticalGrid {
-        show-background: false;
-        grid-cols: collapsed ? 2 : 6;
-        grid-rows: 15;
-        opacity: 0.3;
-    }
 
     // Right border with gradient
     Rectangle {

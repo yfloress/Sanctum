@@ -10,7 +10,6 @@ import {
     CategoryData,
     AppState,
 } from "../globals.slint";
-import { TacticalGrid } from "../components/tactical_grid.slint";
 import { TransactionItem } from "../components/transaction_item.slint";
 import { TextButton, ActionButton } from "../widgets.slint";
 import { SanctumLineChart } from "../components/charts.slint";
@@ -131,13 +130,6 @@ component ChartCard inherits Rectangle {
     border-width: 1px;
     border-color: Palette.border-subtle;
     clip: true;
-
-    // Decorative grid background
-    TacticalGrid {
-        opacity: 0.06;
-        grid-cols: 12;
-        grid-rows: 6;
-    }
 
     SanctumLineChart {
         width: 100%;

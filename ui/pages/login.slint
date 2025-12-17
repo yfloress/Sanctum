@@ -3,7 +3,7 @@
 
 import { Palette, AuthAdapter, AppState, NotificationAdapter } from "../globals.slint";
 import { TextButton } from "../widgets.slint";
-import { TacticalGrid } from "../components/tactical_grid.slint";
+import { GradientBackground } from "../components/gradient_background.slint";
 
 // ==================== PasswordInput ====================
 // Custom password input with visibility toggle
@@ -113,8 +113,8 @@ component PasswordInput inherits Rectangle {
 }
 
 export component LoginPage inherits Rectangle {
-    // Use TacticalGrid for sophisticated background
-    TacticalGrid {}
+    // Smooth gradient background
+    GradientBackground {}
 
     // Internal state
     in-out property <string> password-text: "";
