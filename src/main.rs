@@ -1301,6 +1301,57 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
+    {
+        let ui_weak = ui_weak.clone();
+        ui.global::<HabitAdapter>().on_fetch_efficiency_data(move || {
+            if let Some(ui) = ui_weak.upgrade() {
+                let adapter = ui.global::<HabitAdapter>();
+
+                // Mock Data Generation
+                let mut rng = rand::rng(); 
+
+                // 1. Day Efficiency (7 days)
+                let mut day_data = Vec::new();
+                for _ in 0..7 {
+                    day_data.push(rng.random_range(0.1..=1.0));
+                }
+                // Find best day
+                let mut max_val = -1.0;
+                let mut best_idx = 0;
+                for (i, val) in day_data.iter().enumerate() {
+                    if *val > max_val {
+                        max_val = *val;
+                        best_idx = i;
+                    }
+                }
+                
+                // 2. Month Efficiency (30 days)
+                let mut month_data = Vec::new();
+                for _ in 0..30 {
+                    month_data.push(rng.random_range(0.2..=0.9));
+                }
+                
+                // Generate Path (Simple Polyline)
+                let mut path = String::new();
+                for (i, val) in month_data.iter().enumerate() {
+                    let x = (i as f64 / 29.0) * 100.0;
+                    let y = (1.0 - val) * 100.0; // Invert Y because SVG 0 is top
+                    
+                    if i == 0 {
+                        path.push_str(&format!("M {:.2} {:.2}", x, y));
+                    } else {
+                        path.push_str(&format!(" L {:.2} {:.2}", x, y));
+                    }
+                }
+
+                adapter.set_day_efficiency(ModelRc::new(VecModel::from(day_data)));
+                adapter.set_best_day_index(best_idx as i32);
+                adapter.set_month_efficiency_data(ModelRc::new(VecModel::from(month_data)));
+                adapter.set_month_efficiency_path(SharedString::from(path));
+            }
+        });
+    }
+
     // ==================== CryptoAdapter Logic ====================
 
     fn reload_wallets(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>) {
