@@ -30,25 +30,27 @@ export component DayEfficiencyChart inherits Rectangle {
             vertical-stretch: 1;
             
             HorizontalLayout {
-                spacing: 8px;
-                alignment: space-between;
+                spacing: 4px; // Reduced spacing to fit wider bars
+                alignment: space-around; // Better distribution
 
                 // Bars
                 for val[i] in root.data: VerticalLayout {
                     alignment: end;
                     spacing: 8px;
+                    width: 24px; // Explicit width for the column
 
                     // Bar container
                     Rectangle {
-                        width: 8px;
+                        width: 100%;
                         height: 100%; 
                         
                         // The actual bar (variable height)
                         Rectangle {
                             y: parent.height - self.height;
-                            width: 100%;
+                            width: 20px; // Chunky bars
                             height: val * parent.height; // Scale by value
                             border-radius: 4px;
+                            x: (parent.width - self.width) / 2;
                             
                             // Highlight best day
                             background: i == root.best-day-index ? #3b82f6 : #333333;
@@ -60,9 +62,9 @@ export component DayEfficiencyChart inherits Rectangle {
 
                     // Label
                     Text {
-                        text: i == 0 ? "M" : i == 1 ? "T" : i == 2 ? "W" : i == 3 ? "T" : i == 4 ? "F" : i == 5 ? "S" : "S";
+                        text: i == 0 ? "MON" : i == 1 ? "TUE" : i == 2 ? "WED" : i == 3 ? "THU" : i == 4 ? "FRI" : i == 5 ? "SAT" : "SUN";
                         color: i == root.best-day-index ? Palette.text-primary : Palette.text-muted;
-                        font-size: 10px;
+                        font-size: 9px;
                         horizontal-alignment: center;
                     }
                 }
@@ -107,58 +109,35 @@ export component MonthEfficiencyChart inherits Rectangle {
                 }
             }
             
-            // The Line Path
-            // We use a custom path based on the data points. 
-            // Since we can't dynamically generate SVG path strings easily in pure Slint without backend,
-            // we will simulate the "continuous look" by placing small connected line segments 
-            // OR ideally, we assume the backend provides the path string.
-            // BUT, the prompt said "Use the Path element to draw the line." and "Replicate... using Slint's vector primitives".
-            
-            // Strategy: The backend will provide a "path-command" string for the smooth line.
-            // But for the "dots", we can iterate over the data in Slint.
-            
-            // Wait, I can't iterate to create a Path command in Slint markup easily.
-            // I'll assume the backend provides the `path_command` string for the line, similar to the main chart.
-            // AND I will overlay dots.
-            
             Path {
                 commands: root.path-command;
-                stroke: Palette.primary; // Purple
+                stroke: #A855F7; // Fixed Purple as requested
                 stroke-width: 2px;
                 fill: transparent;
             }
             
-            // Gradient Fill (Optional, for "Efficiency" look)
+            // Gradient Fill
             Path {
                 commands: root.path-command + " L 100 100 L 0 100 Z";
-                fill: @linear-gradient(180deg, Palette.primary.with-alpha(0.2) 0%, transparent 100%);
+                fill: @linear-gradient(180deg, #A855F733 0%, transparent 100%);
                 stroke-width: 0px;
             }
 
             // Dots (Markers)
-            // We can't easily place dots exactly on the path without X/Y coordinates for each point.
-            // If `data` is just floats, we can compute Y, but X depends on spacing.
-            // Let's assume we can calculate X based on index.
-            
             for val[i] in root.data: Rectangle {
-                // Calculate position
-                // x = i / (count - 1) * width
-                // y = (1 - val) * height
+                // Calculate position matching the path generation logic (0..100 based)
+                x: (i / (root.data.length - 1)) * parent.width - 2.5px; 
+                y: (1.0 - val) * parent.height - 2.5px;
                 
-                x: (i / (root.data.length - 1)) * parent.width - 2px; // Center the 4px dot
-                y: (1.0 - val) * parent.height - 2px;
-                
-                width: 4px;
-                height: 4px;
-                border-radius: 2px;
-                background: Palette.primary;
+                width: 5px;
+                height: 5px;
+                border-radius: 2.5px;
+                background: #A855F7; // Match line color
                 border-width: 1px;
                 border-color: Palette.surface;
             }
         }
     }
     
-    // Property to receive the pre-calculated path from backend (or we could try to approximate it)
-    // For "Month Efficiency", a smooth curve is best generated by Rust.
     in property <string> path-command: "M 0 100 L 100 100";
 }

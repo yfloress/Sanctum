@@ -1307,14 +1307,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Some(ui) = ui_weak.upgrade() {
                 let adapter = ui.global::<HabitAdapter>();
 
-                // Mock Data Generation
-                let mut rng = rand::rng(); 
+                // Deterministic Mock Data (No Randomness)
 
                 // 1. Day Efficiency (7 days)
-                let mut day_data = Vec::new();
-                for _ in 0..7 {
-                    day_data.push(rng.random_range(0.1..=1.0));
-                }
+                // Tuesday (index 1) is highest: [45, 100, 60, 75, 80, 50, 55] -> Normalized
+                let day_data: Vec<f32> = vec![0.45, 1.0, 0.60, 0.75, 0.80, 0.50, 0.55];
+                
                 // Find best day
                 let mut max_val = -1.0;
                 let mut best_idx = 0;
@@ -1325,23 +1323,39 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
                 
-                // 2. Month Efficiency (30 days)
-                let mut month_data = Vec::new();
-                for _ in 0..30 {
-                    month_data.push(rng.random_range(0.2..=0.9));
+                // 2. Month Efficiency (30 days) - Smooth realistic upward trend
+                // Hardcoded smooth curve (sine wave + linear trend)
+                // f(x) = 0.4 + (x/30)*0.4 + sin(x/2)*0.05
+                let mut month_data: Vec<f32> = Vec::new();
+                for i in 0..30 {
+                   let x = i as f64;
+                   // Base trend from 0.4 to 0.8
+                   let trend = 0.4 + (x / 29.0) * 0.4;
+                   // Gentle oscillation
+                   let wave = (x / 3.0).sin() * 0.05;
+                   let val = (trend + wave).clamp(0.0, 1.0);
+                   month_data.push(val as f32);
                 }
                 
-                // Generate Path (Simple Polyline)
+                // Generate Path (Polyline matching exact coordinates)
                 let mut path = String::new();
-                for (i, val) in month_data.iter().enumerate() {
-                    let x = (i as f64 / 29.0) * 100.0;
-                    let y = (1.0 - val) * 100.0; // Invert Y because SVG 0 is top
-                    
-                    if i == 0 {
-                        path.push_str(&format!("M {:.2} {:.2}", x, y));
-                    } else {
-                        path.push_str(&format!(" L {:.2} {:.2}", x, y));
+                let len = month_data.len();
+                
+                if len > 1 {
+                    for (i, val) in month_data.iter().enumerate() {
+                        // X maps 0..29 -> 0..100
+                        let x = (i as f64 / (len - 1) as f64) * 100.0;
+                        // Y maps 0.0..1.0 -> 100..0 (Inverted)
+                        let y = (1.0 - *val as f64) * 100.0; 
+                        
+                        if i == 0 {
+                            path.push_str(&format!("M {:.2} {:.2}", x, y));
+                        } else {
+                            path.push_str(&format!(" L {:.2} {:.2}", x, y));
+                        }
                     }
+                } else {
+                    path = "M 0 100 L 100 100".to_string();
                 }
 
                 adapter.set_day_efficiency(ModelRc::new(VecModel::from(day_data)));
