@@ -27,7 +27,7 @@ component SidebarItem inherits Rectangle {
         width: 3px;
         height: 100%;
         background: is-active 
-            ? @linear-gradient(180deg, Palette.accent 0%, #6366f1 100%) 
+            ? @linear-gradient(180deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%) 
             : transparent;
 
         animate background { duration: 150ms; }
@@ -144,7 +144,7 @@ export component SanctumSidebar inherits Rectangle {
                     width: 40px;
                     height: 40px;
                     border-radius: 10px;
-                    background: @linear-gradient(135deg, Palette.accent 0%, #6366f1 100%);
+                    background: @linear-gradient(135deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%);
                     y: (parent.height - self.height) / 2; // Center vertically
 
                     Text {

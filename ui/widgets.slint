@@ -178,7 +178,7 @@ export component PrimaryButton inherits Rectangle {
 
     height: 48px;
     min-width: 160px;
-    background: @linear-gradient(135deg, Palette.accent 0%, #6366f1 100%);
+    background: @linear-gradient(135deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%);
     border-radius: 10px;
     opacity: enabled ? (touch.has-hover ? 0.9 : 1.0) : 0.5;
 
@@ -281,7 +281,7 @@ export component ActionButton inherits Rectangle {
     min-width: 120px;
     border-radius: 8px;
     background: primary 
-        ? @linear-gradient(135deg, Palette.accent 0%, #6366f1 100%)
+        ? @linear-gradient(135deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%)
         : (touch.has-hover ? Palette.surface-hover : Palette.surface);
     border-width: primary ? 0px : 1px;
     border-color: Palette.border-light;

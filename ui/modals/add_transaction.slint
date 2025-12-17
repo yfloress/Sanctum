@@ -474,7 +474,7 @@ export component AddTransactionModal inherits Rectangle {
 	                        width: 4px;
 	                        height: 20px;
 	                        border-radius: 2px;
-	                        background: @linear-gradient(180deg, Palette.accent 0%, Palette.primary 100%);
+	                        background: @linear-gradient(180deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%);
 	                        y: (parent.height - self.height) / 2;
 	                    }
 
@@ -583,7 +583,7 @@ export component AddTransactionModal inherits Rectangle {
 	            // Submit button
 	            Rectangle {
 	                height: 48px;
-	                background: @linear-gradient(135deg, Palette.accent 0%, Palette.primary 100%);
+	                background: @linear-gradient(135deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%);
 	                border-radius: 10px;
 
                 animate background { duration: 150ms; }
