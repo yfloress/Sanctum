@@ -6,6 +6,7 @@ import { Palette } from "../globals.slint";
 export component DayEfficiencyChart inherits Rectangle {
     in property <[float]> data; // Normalized 0.0 - 1.0
     in property <int> best-day-index: 4;
+    property <[string]> day-labels: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
     
     background: Palette.surface;
     border-radius: 12px;
@@ -25,59 +26,32 @@ export component DayEfficiencyChart inherits Rectangle {
         }
 
         // Chart Container
-        // Robust layout:
-        // Column = VerticalLayout(bar-area -> label)
-        // Bar-area = VerticalLayout(spacer -> bar) where spacer/bar stretch add to 1.0
-        Rectangle {
-            vertical-stretch: 1;
+        // Direct HorizontalLayout with simple spacer/bar/label stack per day
+        HorizontalLayout {
+            spacing: 10px;
+            padding: 10px;
 
-            HorizontalLayout {
-                spacing: 10px;
+            for val[i] in root.data: VerticalLayout {
+                spacing: 6px;
+                horizontal-stretch: 1;
 
-                for val[i] in root.data: VerticalLayout {
-                    horizontal-stretch: 1;
-                    spacing: 8px;
+                // 1. Spacer to push bar down
+                Rectangle { vertical-stretch: 1; background: transparent; }
 
-                    // Bar Area
-                    bar-area := Rectangle {
-                        vertical-stretch: 1;
-                        background: transparent;
-                        clip: true;
+                // 2. The Bar
+                Rectangle {
+                    width: 20px;
+                    height: 100px * (val < 0.0 ? 0.0 : val > 1.0 ? 1.0 : val);
+                    background: i == root.best-day-index ? #3B82F6 : #333333;
+                    border-radius: 4px;
+                }
 
-                        property <float> pct: val < 0.0 ? 0.0 : val > 1.0 ? 1.0 : val;
-
-                        VerticalLayout {
-                            spacing: 0px;
-
-                            // Spacer (pushes bar down)
-                            Rectangle {
-                                vertical-stretch: 1.0 - bar-area.pct;
-                                background: transparent;
-                            }
-
-                            // Bar wrapper (takes pct of the height)
-                            Rectangle {
-                                vertical-stretch: bar-area.pct;
-                                background: transparent;
-
-                                Rectangle {
-                                    width: 20px;
-                                    x: (parent.width - self.width) / 2;
-                                    border-radius: 4px;
-                                    background: i == root.best-day-index ? Palette.primary : Palette.border;
-                                }
-                            }
-                        }
-                    }
-
-                    // Footer label
-                    Text {
-                        width: 100%;
-                        text: i == 0 ? "MON" : i == 1 ? "TUE" : i == 2 ? "WED" : i == 3 ? "THU" : i == 4 ? "FRI" : i == 5 ? "SAT" : "SUN";
-                        color: i == root.best-day-index ? Palette.text-primary : Palette.text-muted;
-                        font-size: 9px;
-                        horizontal-alignment: center;
-                    }
+                // 3. The Label
+                Text {
+                    text: root.day-labels.length > i ? root.day-labels[i] : "";
+                    horizontal-alignment: center;
+                    color: #888888;
+                    font-size: 9px;
                 }
             }
         }
