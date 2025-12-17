@@ -4,6 +4,7 @@
 import { Palette, HabitAdapter, AppState } from "../globals.slint";
 import { HabitRow } from "../components/habit_row.slint";
 import { HabitHeatmap } from "../components/habit_heatmap.slint";
+import { WeeklyBarChart, MonthlyLineChart } from "../components/analytics_charts.slint";
 import { TextButton, ActionButton } from "../widgets.slint";
 import { AddHabitModal } from "../modals/add_habit.slint";
 
@@ -132,6 +133,7 @@ export component HabitsPage inherits Rectangle {
     init => {
         HabitAdapter.load-initial-data();
         HabitAdapter.fetch-heatmap-data();
+        HabitAdapter.fetch-habit-analytics();
     }
 
     VerticalLayout {
@@ -319,6 +321,48 @@ export component HabitsPage inherits Rectangle {
                         icon: "✓";
                         title: "No habits tracked this month";
                         description: "Create a habit to start building consistency";
+                    }
+                }
+
+                // Analytics Section
+                if HabitAdapter.weekday-efficiency.length > 0: VerticalLayout {
+                    spacing: 16px;
+
+                    SectionHeader {
+                        title: "ANALYTICS";
+                    }
+
+                    HorizontalLayout {
+                        spacing: 16px;
+
+                        // Weekly Efficiency Chart
+                        Rectangle {
+                            horizontal-stretch: 1;
+                            height: 200px;
+                            background: Palette.surface;
+                            border-radius: 12px;
+                            border-width: 1px;
+                            border-color: Palette.border;
+
+                            WeeklyBarChart {
+                                data: HabitAdapter.weekday-efficiency;
+                            }
+                        }
+
+                        // Monthly Trend Chart
+                        Rectangle {
+                            horizontal-stretch: 1;
+                            height: 200px;
+                            background: Palette.surface;
+                            border-radius: 12px;
+                            border-width: 1px;
+                            border-color: Palette.border;
+
+                            MonthlyLineChart {
+                                data: HabitAdapter.monthly-trend;
+                                path: HabitAdapter.monthly-trend-path;
+                            }
+                        }
                     }
                 }
 

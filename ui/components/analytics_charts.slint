@@ -1,0 +1,236 @@
+// ==================== Habit Analytics Charts ====================
+// Bar chart for weekday efficiency and line chart for monthly trend
+
+import { Palette, WeekdayEfficiencyData, MonthlyTrendData } from "../globals.slint";
+
+// ==================== Weekly Efficiency Bar Chart ====================
+// Shows average habits completed per day of the week
+
+export component WeeklyBarChart inherits Rectangle {
+    in property <[WeekdayEfficiencyData]> data;
+
+    background: transparent;
+
+    VerticalLayout {
+        padding: 16px;
+        spacing: 12px;
+
+        // Title
+        Text {
+            text: "WEEKLY EFFICIENCY";
+            color: Palette.text-muted;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+        }
+
+        // Chart area - fixed height
+        Rectangle {
+            height: 120px;
+
+            HorizontalLayout {
+                spacing: 8px;
+                alignment: space-around;
+
+                for day[idx] in data: Rectangle {
+                    horizontal-stretch: 1;
+                    height: 100%;
+
+                    // Bar column layout
+                    Rectangle {
+                        width: 100%;
+                        height: 100%;
+
+                        // Value label at top
+                        Text {
+                            y: 0;
+                            text: day.avg-count >= 1.0
+                                ? "\{round(day.avg-count)}"
+                                : "\{round(day.avg-count * 10) / 10}";
+                            color: day.is-best ? Palette.text-primary : Palette.text-secondary;
+                            font-size: 10px;
+                            font-weight: 500;
+                            horizontal-alignment: center;
+                            opacity: day.is-best || bar-touch.has-hover ? 1.0 : 0.0;
+
+                            animate opacity { duration: 150ms; }
+                        }
+
+                        // Bar area (middle section)
+                        Rectangle {
+                            y: 18px;
+                            height: parent.height - 38px;
+                            width: 100%;
+
+                            // The actual bar (grows from bottom)
+                            Rectangle {
+                                width: 100%;
+                                height: parent.height * (day.bar-height-percent / 100);
+                                y: parent.height - self.height;
+                                border-radius: 4px;
+
+                                // Best day gets gradient, others get gray
+                                background: day.is-best
+                                    ? @linear-gradient(180deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%)
+                                    : Palette.border-subtle;
+
+                                // Subtle glow for best day
+                                if day.is-best: Rectangle {
+                                    x: -2px;
+                                    y: -2px;
+                                    width: parent.width + 4px;
+                                    height: parent.height + 4px;
+                                    border-radius: 6px;
+                                    background: Palette.action-gradient-start;
+                                    opacity: 0.2;
+                                }
+
+                                animate height { duration: 400ms; easing: ease-out; }
+                            }
+                        }
+
+                        // Day label at bottom
+                        Text {
+                            y: parent.height - 16px;
+                            text: day.day-short;
+                            color: day.is-best ? Palette.text-primary : Palette.text-muted;
+                            font-size: 10px;
+                            font-weight: day.is-best ? 600 : 400;
+                            letter-spacing: 0.5px;
+                            horizontal-alignment: center;
+                        }
+                    }
+
+                    bar-touch := TouchArea {
+                        mouse-cursor: pointer;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ==================== Monthly Trend Line Chart ====================
+// Shows habit trend over the last months
+
+export component MonthlyLineChart inherits Rectangle {
+    in property <[MonthlyTrendData]> data;
+    in property <string> path;
+
+    background: transparent;
+
+    VerticalLayout {
+        padding: 16px;
+        spacing: 12px;
+
+        // Title
+        Text {
+            text: "MONTHLY TREND";
+            color: Palette.text-muted;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+        }
+
+        // Chart area - fixed height
+        Rectangle {
+            height: 120px;
+            clip: true;
+
+            // Grid lines (horizontal)
+            Rectangle {
+                width: 100%;
+                height: 100%;
+
+                Rectangle { y: 0; height: 1px; width: 100%; background: Palette.border-subtle; opacity: 0.3; }
+                Rectangle { y: parent.height * 0.25; height: 1px; width: 100%; background: Palette.border-subtle; opacity: 0.3; }
+                Rectangle { y: parent.height * 0.50; height: 1px; width: 100%; background: Palette.border-subtle; opacity: 0.3; }
+                Rectangle { y: parent.height * 0.75; height: 1px; width: 100%; background: Palette.border-subtle; opacity: 0.3; }
+            }
+
+            // Line chart container
+            Rectangle {
+                x: 0;
+                y: 0;
+                width: 100%;
+                height: 90px;
+
+                // Gradient fill under the line
+                Path {
+                    viewbox-x: 0;
+                    viewbox-y: 0;
+                    viewbox-width: 100;
+                    viewbox-height: 100;
+                    commands: path != "" ? path + " L 100 100 L 0 100 Z" : "M 0 50 L 100 50 L 100 100 L 0 100 Z";
+                    fill: @linear-gradient(180deg, #8b5cf620 0%, #8b5cf605 50%, transparent 100%);
+                }
+
+                // Main line
+                Path {
+                    viewbox-x: 0;
+                    viewbox-y: 0;
+                    viewbox-width: 100;
+                    viewbox-height: 100;
+                    commands: path != "" ? path : "M 0 50 L 100 50";
+                    stroke: @linear-gradient(90deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%);
+                    stroke-width: 2px;
+                    fill: transparent;
+                }
+
+                // Data points
+                for point in data: Rectangle {
+                    x: (parent.width * point.x-percent / 100) - 4px;
+                    y: (parent.height * point.y-percent / 100) - 4px;
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 4px;
+                    background: Palette.action-gradient-end;
+                    border-width: 2px;
+                    border-color: Palette.surface;
+
+                    // Hover tooltip
+                    if point-touch.has-hover: Rectangle {
+                        x: -20px;
+                        y: -28px;
+                        width: 48px;
+                        height: 20px;
+                        background: Palette.surface;
+                        border-radius: 4px;
+                        border-width: 1px;
+                        border-color: Palette.border;
+
+                        Text {
+                            text: "\{round(point.avg-per-day * 10) / 10}";
+                            color: Palette.text-primary;
+                            font-size: 10px;
+                            font-weight: 500;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    point-touch := TouchArea {
+                        mouse-cursor: pointer;
+                    }
+                }
+            }
+
+            // Month labels at bottom
+            HorizontalLayout {
+                y: 96px;
+                height: 24px;
+                alignment: space-between;
+                padding-left: 4px;
+                padding-right: 4px;
+
+                for point in data: Text {
+                    text: point.month-name;
+                    color: Palette.text-muted;
+                    font-size: 9px;
+                    font-weight: 400;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+    }
+}

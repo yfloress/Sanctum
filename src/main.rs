@@ -1301,6 +1301,49 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
+    // Habit Analytics callback
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        ui.global::<HabitAdapter>()
+            .on_fetch_habit_analytics(move || {
+                // Analyze last 180 days (6 months) for good trend data
+                if let Ok(analytics) = controller.get_habit_analytics(180) {
+                    // Convert weekday data
+                    let weekday_data: Vec<WeekdayEfficiencyData> = analytics
+                        .weekday_data
+                        .iter()
+                        .map(|w| WeekdayEfficiencyData {
+                            day_name: SharedString::from(&w.day_name),
+                            day_short: SharedString::from(&w.day_short),
+                            avg_count: w.avg_count,
+                            is_best: w.is_best,
+                            bar_height_percent: w.bar_height_percent,
+                        })
+                        .collect();
+
+                    // Convert monthly data
+                    let monthly_data: Vec<MonthlyTrendData> = analytics
+                        .monthly_data
+                        .iter()
+                        .map(|m| MonthlyTrendData {
+                            month_name: SharedString::from(&m.month_name),
+                            avg_per_day: m.avg_per_day,
+                            x_percent: m.x_percent,
+                            y_percent: m.y_percent,
+                        })
+                        .collect();
+
+                    if let Some(ui) = ui_weak.upgrade() {
+                        let adapter = ui.global::<HabitAdapter>();
+                        adapter.set_weekday_efficiency(ModelRc::new(VecModel::from(weekday_data)));
+                        adapter.set_monthly_trend(ModelRc::new(VecModel::from(monthly_data)));
+                        adapter.set_monthly_trend_path(SharedString::from(&analytics.monthly_path));
+                    }
+                }
+            });
+    }
+
     // ==================== CryptoAdapter Logic ====================
 
     fn reload_wallets(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>) {

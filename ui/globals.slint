@@ -144,6 +144,22 @@ export struct HabitData {
     days: [HabitDay], // Array of days for the current month
 }
 
+// Habit Analytics Structs
+export struct WeekdayEfficiencyData {
+    day-name: string,
+    day-short: string,
+    avg-count: float,
+    is-best: bool,
+    bar-height-percent: float,
+}
+
+export struct MonthlyTrendData {
+    month-name: string,
+    avg-per-day: float,
+    x-percent: float,
+    y-percent: float,
+}
+
 export global HabitAdapter {
     in-out property <[HabitData]> habits: [];
     in-out property <string> current-month-name: "";
@@ -175,6 +191,11 @@ export global HabitAdapter {
     callback prev-heatmap-year();
     callback next-heatmap-year();
 
+    // Habit Analytics
+    in-out property <[WeekdayEfficiencyData]> weekday-efficiency: [];
+    in-out property <[MonthlyTrendData]> monthly-trend: [];
+    in-out property <string> monthly-trend-path: "";
+    callback fetch-habit-analytics();
 }
 
 // ==================== Notification Adapter ====================
