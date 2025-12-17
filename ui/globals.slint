@@ -142,19 +142,6 @@ export struct HabitData {
     days: [HabitDay], // Array of days for the current month
 }
 
-export struct BarSegment {
-    color: color,
-    // Stretch weight inside the bar (usually 1 per segment for ties)
-    weight: int,
-}
-
-export struct MonthlyStats {
-    month-name: string,
-    total-completions: float,
-    max-completions: float, // For scaling
-    segments: [BarSegment],
-}
-
 export global HabitAdapter {
     in-out property <[HabitData]> habits: [];
     in-out property <string> current-month-name: "";
@@ -164,9 +151,6 @@ export global HabitAdapter {
     // Heatmap
     in-out property <[HeatmapWeek]> heatmap-data: [];
     in-out property <int> heatmap-year;
-
-    // Bar Chart
-    in-out property <[MonthlyStats]> chart-data: [];
 
     // Actions
     callback fetch-habits(int, int); // month (1-12), year

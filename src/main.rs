@@ -1027,46 +1027,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    fn reload_barchart(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>, year: i32) {
-        if let Ok(stats_data) = controller.get_habit_monthly_stats(year) {
-            let max_val = stats_data
-                .iter()
-                .map(|(_, total, _)| *total)
-                .max()
-                .unwrap_or(1);
-            let scale_max = if max_val == 0 { 10 } else { max_val };
-
-            let stats: Vec<MonthlyStats> = stats_data
-                .into_iter()
-                .map(|(month_name, total, top_colors)| {
-                    let segments: Vec<BarSegment> = top_colors
-                        .into_iter()
-                        .map(|hex| BarSegment {
-                            color: color_from_hex(&hex),
-                            weight: 1,
-                        })
-                        .collect();
-
-                    MonthlyStats {
-                        month_name: SharedString::from(month_name),
-                        total_completions: total as f32,
-                        max_completions: scale_max as f32,
-                        segments: ModelRc::new(VecModel::from(segments)),
-                    }
-                })
-                .collect();
-
-            if let Some(ui) = ui_weak.upgrade() {
-                let adapter = ui.global::<HabitAdapter>();
-                adapter.set_chart_data(ModelRc::new(VecModel::from(stats)));
-            }
-        }
-    }
-
     fn reload_heatmap(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>, year: i32) {
-        // Reload bar chart whenever heatmap (year) changes
-        reload_barchart(ui_weak, controller, year);
-
         // 1. Calculate Date Range (Selected Calendar Year)
         let today = chrono::Local::now().date_naive();
 
@@ -1186,7 +1147,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             *date_lock.lock().unwrap() = now;
             *year_lock.lock().unwrap() = now.year();
             reload_habits(&ui_weak, &controller, now);
-            reload_heatmap(&ui_weak, &controller, now.year());
         });
     }
 

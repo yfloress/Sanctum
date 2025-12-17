@@ -4,7 +4,6 @@
 import { Palette, HabitAdapter, AppState } from "../globals.slint";
 import { HabitRow } from "../components/habit_row.slint";
 import { HabitHeatmap } from "../components/habit_heatmap.slint";
-import { HabitBarChart } from "../components/habit_barchart.slint";
 import { TextButton, ActionButton } from "../widgets.slint";
 import { AddHabitModal } from "../modals/add_habit.slint";
 
@@ -132,6 +131,7 @@ export component HabitsPage inherits Rectangle {
 
     init => {
         HabitAdapter.load-initial-data();
+        HabitAdapter.fetch-heatmap-data();
     }
 
     VerticalLayout {
@@ -320,17 +320,6 @@ export component HabitsPage inherits Rectangle {
                         title: "No habits tracked this month";
                         description: "Create a habit to start building consistency";
                     }
-                }
-
-                // Bar Chart Section
-                VerticalLayout {
-                    spacing: 12px;
-
-                    SectionHeader {
-                        title: "COMPLETION ANALYTICS";
-                    }
-
-                    HabitBarChart {}
                 }
 
                 // Bottom spacer
