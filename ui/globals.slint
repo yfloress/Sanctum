@@ -142,11 +142,16 @@ export struct HabitData {
     days: [HabitDay], // Array of days for the current month
 }
 
+export struct BarSegment {
+    color: color,
+    fraction: float, // 0.0 - 1.0 (should sum to ~1.0)
+}
+
 export struct MonthlyStats {
     month-name: string,
     total-completions: float,
     max-completions: float, // For scaling
-    dominant-color: color,
+    segments: [BarSegment],
 }
 
 export global HabitAdapter {

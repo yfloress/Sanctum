@@ -1038,14 +1038,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let stats: Vec<MonthlyStats> = stats_data
                 .into_iter()
-                .map(|(month_name, total, color_hex)| {
-                    let color = color_from_hex(&color_hex);
+                .map(|(month_name, total, top_colors)| {
+                    let seg_count = std::cmp::max(1, top_colors.len());
+                    let fraction = 1.0f32 / seg_count as f32;
+
+                    let segments: Vec<BarSegment> = top_colors
+                        .into_iter()
+                        .map(|hex| BarSegment {
+                            color: color_from_hex(&hex),
+                            fraction,
+                        })
+                        .collect();
 
                     MonthlyStats {
                         month_name: SharedString::from(month_name),
                         total_completions: total as f32,
                         max_completions: scale_max as f32,
-                        dominant_color: color,
+                        segments: ModelRc::new(VecModel::from(segments)),
                     }
                 })
                 .collect();

@@ -424,12 +424,12 @@ pub struct AppController {
 
 impl AppController {
     /// Genera estadísticas mensuales de hábitos para el bar chart
-    /// Retorna un array de 12 meses con total de completaciones y color dominante
+    /// Retorna un array de 12 meses con total de completaciones y colores "top" del mes
     pub fn get_habit_monthly_stats(
         &self,
         year: i32,
-    ) -> Result<Vec<(String, i64, String)>, ControllerError> {
-        // (month_name, total_completions, dominant_color_hex)
+    ) -> Result<Vec<(String, i64, Vec<String>)>, ControllerError> {
+        // (month_name, total_completions, top_color_hexes)
 
         let start_date = format!("{}-01-01", year);
         let end_date = format!("{}-12-31", year);
@@ -438,17 +438,15 @@ impl AppController {
         let logs = self.get_habit_logs(start_date, end_date)?;
         let habits = self.get_habits()?;
 
-        // Crear mapa de habit_id -> color
-        let habit_colors: std::collections::HashMap<String, String> = habits
+        // Crear mapa de habit_id -> (name, color)
+        let habit_meta: std::collections::HashMap<String, (String, String)> = habits
             .iter()
-            .map(|h| (h.id.clone(), h.color.clone()))
+            .map(|h| (h.id.clone(), (h.name.clone(), h.color.clone())))
             .collect();
 
         // Estructura: month (1-12) -> habit_id -> count
-        let mut monthly_data: std::collections::HashMap<
-            u32,
-            std::collections::HashMap<String, i64>,
-        > = std::collections::HashMap::new();
+        let mut monthly_data: std::collections::HashMap<u32, std::collections::HashMap<String, i64>> =
+            std::collections::HashMap::new();
 
         // Procesar logs
         for log in logs {
@@ -457,17 +455,17 @@ impl AppController {
 
                 let month_map = monthly_data
                     .entry(month)
-                    .or_insert_with(std::collections::HashMap::new);
+                    .or_default();
                 *month_map.entry(log.habit_id).or_insert(0) += 1;
             }
         }
 
         // Nombres de meses
         let month_names = [
-            "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+            "ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC",
         ];
 
-        let mut result: Vec<(String, i64, String)> = Vec::new();
+        let mut result: Vec<(String, i64, Vec<String>)> = Vec::new();
 
         // Generar estadísticas para cada mes (1-12)
         for month in 1..=12 {
@@ -477,26 +475,34 @@ impl AppController {
                 // Total de completaciones del mes
                 let total: i64 = habit_counts.values().sum();
 
-                // Encontrar el hábito con más completaciones
-                let dominant_habit_id = habit_counts
-                    .iter()
-                    .max_by_key(|(_, count)| *count)
-                    .map(|(id, _)| id);
+                // Encontrar el máximo número de completaciones por hábito para el mes
+                let max_count = habit_counts.values().copied().max().unwrap_or(0);
 
-                // Obtener el color del hábito dominante
-                let color = if let Some(habit_id) = dominant_habit_id {
-                    habit_colors
-                        .get(habit_id)
-                        .cloned()
-                        .unwrap_or_else(|| "#8b5cf6".to_string())
+                // Si hay empate, retornamos los colores de todos los hábitos empatados
+                let mut top: Vec<(String, String)> = habit_counts
+                    .iter()
+                    .filter(|(_, count)| **count == max_count)
+                    .map(|(habit_id, _)| {
+                        habit_meta
+                            .get(habit_id)
+                            .cloned()
+                            .unwrap_or_else(|| (habit_id.clone(), "#8b5cf6".to_string()))
+                    })
+                    .collect();
+
+                // Orden estable para que los segmentos no "salten" entre renders
+                top.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
+
+                let top_colors: Vec<String> = if max_count > 0 {
+                    top.into_iter().map(|(_, color)| color).collect()
                 } else {
-                    "#8b5cf6".to_string() // Color por defecto
+                    vec!["#8b5cf6".to_string()]
                 };
 
-                result.push((month_name, total, color));
+                result.push((month_name, total, top_colors));
             } else {
                 // Mes sin completaciones
-                result.push((month_name, 0, "#8b5cf6".to_string()));
+                result.push((month_name, 0, vec!["#8b5cf6".to_string()]));
             }
         }
 

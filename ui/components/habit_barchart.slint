@@ -2,46 +2,71 @@
 // Premium Fintech UI - Monthly completion volume chart
 
 import { Palette, MonthlyStats, HabitAdapter } from "../globals.slint";
-import { CustomScrollbar } from "../widgets.slint";
 
 component ChartBar inherits Rectangle {
     in property <MonthlyStats> stat;
+
+    horizontal-stretch: 1;
+    height: 100%;
+    background: transparent;
     
-    width: 50px;
+    touch := TouchArea { mouse-cursor: pointer; }
 
     VerticalLayout {
         alignment: end;
-        spacing: 8px;
-        
-        // Bar container
+        spacing: 10px;
+
+        Text {
+            text: stat.total-completions > 0 || touch.has-hover ? round(stat.total-completions) : "";
+            color: touch.has-hover ? Palette.text-primary : Palette.text-muted;
+            font-size: 10px;
+            font-weight: 600;
+            horizontal-alignment: center;
+            width: 100%;
+            opacity: stat.total-completions > 0 || touch.has-hover ? 1.0 : 0.0;
+        }
+
+        // Track
         Rectangle {
             width: 100%;
-            height: 100px;
-            background: #222222; // Debug background
-            border-radius: 4px;
-            
-            // The actual bar (positioned from bottom)
+            vertical-stretch: 1;
+            background: Palette.background.with-alpha(0.25);
+            border-radius: 10px;
+            border-width: 1px;
+            border-color: touch.has-hover ? Palette.border-light.with-alpha(0.25) : Palette.border-subtle;
+            clip: true;
+
+            // Bar fill (from bottom)
             Rectangle {
-                width: parent.width - 4px;
-                x: 2px;
-                height: max(5px, (stat.total-completions / max(1.0, stat.max-completions)) * 100px);
+                width: parent.width;
+                height: stat.total-completions <= 0 ?
+                    0px :
+                    max(6px, (stat.total-completions / max(1.0, stat.max-completions)) * parent.height);
                 y: parent.height - self.height;
-                border-radius: 3px;
-                background: stat.dominant-color;
-                
-                animate height { duration: 400ms; easing: ease-out; }
-                
-                // Debug text showing value
-                Text {
-                    text: round(stat.total-completions);
-                    color: white;
-                    font-size: 10px;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
+                border-radius: 10px;
+                clip: true;
+                background: transparent;
+
+                animate height { duration: 350ms; easing: ease-out; }
+
+                HorizontalLayout {
+                    spacing: 0px;
+                    for seg in stat.segments: Rectangle {
+                        background: seg.color;
+                        horizontal-stretch: seg.fraction;
+                    }
+                }
+
+                // Subtle shine
+                Rectangle {
+                    width: 100%;
+                    height: 100%;
+                    background: @linear-gradient(180deg, #ffffff22 0%, #ffffff00 60%);
+                    opacity: 0.25;
                 }
             }
         }
-        
+
         // Month Label
         Text {
             text: stat.month-name;
@@ -50,12 +75,13 @@ component ChartBar inherits Rectangle {
             font-weight: 600;
             horizontal-alignment: center;
             width: 100%;
+            opacity: touch.has-hover ? 1.0 : 0.85;
         }
     }
 }
 
 export component HabitBarChart inherits Rectangle {
-    height: 220px;
+    height: 240px;
     background: Palette.surface;
     border-radius: 12px;
     border-width: 1px;
@@ -63,7 +89,7 @@ export component HabitBarChart inherits Rectangle {
     
     VerticalLayout {
         padding: 20px;
-        spacing: 12px;
+        spacing: 16px;
         
         // Header
         HorizontalLayout {
@@ -71,7 +97,7 @@ export component HabitBarChart inherits Rectangle {
             alignment: space-between;
 
             Text {
-                text: "MONTHLY VOLUME";
+                text: "MONTHLY COMPLETIONS";
                 color: Palette.text-secondary;
                 font-size: 11px;
                 font-weight: 600;
@@ -91,33 +117,36 @@ export component HabitBarChart inherits Rectangle {
         // Chart area
         Rectangle {
             vertical-stretch: 1;
-            background: #0a0a0a; // Debug background
             clip: true;
 
-            chart-scroll := Flickable {
+            // Grid lines
+            VerticalLayout {
                 width: 100%;
-                height: parent.height;
-                viewport-width: 12 * 54px;
-                interactive: true;
+                height: 100%;
+                padding-top: 10px;
+                padding-bottom: 24px;
+                alignment: space-between;
 
-                HorizontalLayout {
-                    spacing: 4px;
-                    padding: 10px;
-                    alignment: start;
-                    
-                    for stat in HabitAdapter.chart-data: ChartBar {
-                        stat: stat;
-                    }
+                for i in 5: Rectangle {
+                    height: 1px;
+                    background: Palette.border-subtle;
+                    opacity: i == 2 ? 0.35 : 0.12;
                 }
             }
 
-            // Scrollbar
-            CustomScrollbar {
-                width: parent.width;
-                y: parent.height - self.height;
-                visible-width: parent.width;
-                viewport-width: chart-scroll.viewport-width;
-                viewport-x: chart-scroll.viewport-x;
+            // Bars
+            HorizontalLayout {
+                width: 100%;
+                height: 100%;
+                padding-top: 6px;
+                padding-left: 6px;
+                padding-right: 6px;
+                padding-bottom: 6px;
+                spacing: 10px;
+
+                for stat in HabitAdapter.chart-data: ChartBar {
+                    stat: stat;
+                }
             }
         }
     }
