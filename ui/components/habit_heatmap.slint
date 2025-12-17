@@ -5,12 +5,47 @@
 import { Palette, HabitAdapter, HeatmapWeek, HeatmapDay } from "../globals.slint";
 import { CustomScrollbar } from "../widgets.slint";
 
+component Tooltip inherits Rectangle {
+    in property <string> text; // Kept for interface compatibility, but unused
+    in property <int> count;
+    
+    width: 24px;
+    height: 22px;
+    z: 1000;
+    
+    // Position relative to the cell
+    // Shift left to avoid overlapping the next column (which is drawn on top)
+    x: -8px; 
+    y: -28px;
+    
+    background: #1e1e1e;
+    border-width: 1px;
+    border-color: Palette.border;
+    border-radius: 4px;
+
+    Text { 
+        text: "\{root.count}"; 
+        color: #ffffff; 
+        font-size: 10px; 
+        font-weight: 600;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
 component HeatmapCell inherits Rectangle {
     in property <int> level;
+    in property <string> date: "";
+    in property <int> count: 0;
     
     width: 14px;
     height: 14px;
     border-radius: 3px;
+    clip: false; // Ensure tooltip can overflow
+    
+    // Elevate when hovered to show tooltip above neighbors
+    z: ta.has-hover ? 1000 : 1;
+
     background: level == 0 ? Palette.surface-hover :
                 level == 1 ? #3b2f5f :
                 level == 2 ? #6b4f9f :
@@ -30,8 +65,13 @@ component HeatmapCell inherits Rectangle {
         opacity: 0.3;
     }
 
-    TouchArea {
+    ta := TouchArea {
         mouse-cursor: pointer;
+    }
+    
+    if ta.has-hover && root.date != "": Tooltip {
+        text: root.date;
+        count: root.count;
     }
 }
 
@@ -43,9 +83,9 @@ export component HabitHeatmap inherits Rectangle {
     VerticalLayout {
         padding-left: 12px;
         padding-right: 12px;
-        padding-top: 16px;
+        padding-top: 8px;
         padding-bottom: 20px;
-        spacing: 20px; // Espacio entre legend y heatmap
+        spacing: 12px; // Espacio entre legend y heatmap
 
         // Legend
         HorizontalLayout {
@@ -75,14 +115,15 @@ export component HabitHeatmap inherits Rectangle {
         }
 
         // Heatmap Grid Container
-        Rectangle {
+        grid-container := Rectangle {
             vertical-stretch: 1; // Ocupa el espacio restante
-            clip: true;
+            clip: false; // Allow tooltip to overflow container
 
             // Heatmap Grid
             heatmap-scroll := Flickable {
                 // Altura del contenido: 7 filas * 14px + 6 espacios * 4px = 122px
-                height: 122px;
+                // + 30px padding top = 152px minimum
+                height: 160px;
                 // Centrado vertical
                 y: (parent.height - self.height) / 2;
                 width: parent.width;
@@ -95,11 +136,14 @@ export component HabitHeatmap inherits Rectangle {
                 HorizontalLayout {
                     spacing: 4px;
                     alignment: start;
+                    padding-top: 30px;
 
                     for week in HabitAdapter.heatmap-data: VerticalLayout {
                         spacing: 4px;
                         for day in week.days: HeatmapCell {
                             level: day.level;
+                            date: day.date;
+                            count: day.count;
                         }
                     }
                 }
