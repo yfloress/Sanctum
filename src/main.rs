@@ -12,7 +12,7 @@ use sanctum::security_log::init_security_logger;
 use slint::SharedString;
 use slint::{Model, ModelRc, VecModel, Weak};
 use std::cell::Cell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc; // Added for CryptoAdapter logic
 
 slint::include_modules!();
@@ -1315,7 +1315,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     // Helper functions
                     fn clamp01(v: f32) -> f32 {
-                        v.max(0.0).min(1.0)
+                        v.clamp(0.0, 1.0)
                     }
 
                     fn parse_log_date(date_str: &str) -> Option<chrono::NaiveDate> {
@@ -1364,19 +1364,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         HashMap::new();
 
                     for log in logs_day {
-                        if let Some(log_date) = parse_log_date(&log.completed_date) {
-                            if let Some(created) = habit_date_map.get(&log.habit_id) {
-                                // Only count if log is after habit creation and within range
-                                if log_date >= *created
-                                    && log_date >= day_range_start
-                                    && log_date <= day_range_end
-                                {
-                                    completions_by_date
-                                        .entry(log_date)
-                                        .or_insert_with(HashSet::new)
-                                        .insert(log.habit_id.clone());
-                                }
-                            }
+                        if let Some(log_date) = parse_log_date(&log.completed_date)
+                            && let Some(created) = habit_date_map.get(&log.habit_id)
+                            && log_date >= *created
+                            && log_date >= day_range_start
+                            && log_date <= day_range_end
+                        {
+                            completions_by_date
+                                .entry(log_date)
+                                .or_default()
+                                .insert(log.habit_id.clone());
                         }
                     }
 
@@ -1469,18 +1466,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         HashMap::new();
 
                     for log in logs_month {
-                        if let Some(log_date) = parse_log_date(&log.completed_date) {
-                            if let Some(created) = habit_date_map.get(&log.habit_id) {
-                                if log_date >= *created
-                                    && log_date >= month_start
-                                    && log_date <= visible_end
-                                {
-                                    month_completions
-                                        .entry(log_date)
-                                        .or_insert_with(HashSet::new)
-                                        .insert(log.habit_id.clone());
-                                }
-                            }
+                        if let Some(log_date) = parse_log_date(&log.completed_date)
+                            && let Some(created) = habit_date_map.get(&log.habit_id)
+                            && log_date >= *created
+                            && log_date >= month_start
+                            && log_date <= visible_end
+                        {
+                            month_completions
+                                .entry(log_date)
+                                .or_default()
+                                .insert(log.habit_id.clone());
                         }
                     }
 
@@ -1558,11 +1553,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     let path = generate_smooth_path(&month_data);
 
+                    let (min_val, max_val, avg_val) = if month_data.is_empty() {
+                        (0.0, 0.0, 0.0)
+                    } else {
+                        let min = month_data.iter().fold(1.0f32, |a, &b| a.min(b));
+                        let max = month_data.iter().fold(0.0f32, |a, &b| a.max(b));
+                        let sum: f32 = month_data.iter().sum();
+                        (min, max, sum / month_data.len() as f32)
+                    };
+
                     // Update UI
                     adapter.set_day_efficiency(ModelRc::new(VecModel::from(day_data)));
                     adapter.set_best_day_index(best_idx);
                     adapter.set_month_efficiency_data(ModelRc::new(VecModel::from(month_data)));
                     adapter.set_month_efficiency_path(SharedString::from(path));
+                    adapter.set_month_efficiency_min(min_val);
+                    adapter.set_month_efficiency_max(max_val);
+                    adapter.set_month_efficiency_avg(avg_val);
                 }
             });
     }

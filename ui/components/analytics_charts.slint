@@ -114,6 +114,9 @@ export component DayEfficiencyChart inherits Rectangle {
 export component MonthEfficiencyChart inherits Rectangle {
     in property <[float]> data; 
     in property <string> path-command;
+    in property <float> min-val: 0.0;
+    in property <float> max-val: 0.0;
+    in property <float> avg-val: 0.0;
     
     background: Palette.surface;
     border-radius: 12px;
@@ -170,8 +173,6 @@ export component MonthEfficiencyChart inherits Rectangle {
                     commands: root.path-command;
                     stroke: #A855F7;
                     stroke-width: 2.5px;
-                    stroke-line-cap: round;
-                    stroke-line-join: round;
                     fill: transparent;
                     viewbox-width: 100;
                     viewbox-height: 100;
@@ -227,33 +228,6 @@ export component MonthEfficiencyChart inherits Rectangle {
             spacing: 16px;
             alignment: space-between;
             
-            property <float> min-val: {
-                if root.data.length == 0 { return 0.0; }
-                let mut m: float = 1.0;
-                for v in root.data {
-                    if v < m { m = v; }
-                }
-                return m;
-            };
-            
-            property <float> max-val: {
-                if root.data.length == 0 { return 0.0; }
-                let mut m: float = 0.0;
-                for v in root.data {
-                    if v > m { m = v; }
-                }
-                return m;
-            };
-            
-            property <float> avg-val: {
-                if root.data.length == 0 { return 0.0; }
-                let mut sum: float = 0.0;
-                for v in root.data {
-                    sum += v;
-                }
-                return sum / root.data.length;
-            };
-            
             // Min
             HorizontalLayout {
                 spacing: 4px;
@@ -265,7 +239,7 @@ export component MonthEfficiencyChart inherits Rectangle {
                     font-weight: 600;
                 }
                 Text {
-                    text: Math.round(parent.min-val * 100.0) + "%";
+                    text: Math.round(root.min-val * 100.0) + "%";
                     color: Palette.text-secondary;
                     font-size: 9px;
                 }
@@ -282,7 +256,7 @@ export component MonthEfficiencyChart inherits Rectangle {
                     font-weight: 600;
                 }
                 Text {
-                    text: Math.round(parent.avg-val * 100.0) + "%";
+                    text: Math.round(root.avg-val * 100.0) + "%";
                     color: Palette.text-secondary;
                     font-size: 9px;
                 }
@@ -299,7 +273,7 @@ export component MonthEfficiencyChart inherits Rectangle {
                     font-weight: 600;
                 }
                 Text {
-                    text: Math.round(parent.max-val * 100.0) + "%";
+                    text: Math.round(root.max-val * 100.0) + "%";
                     color: #A855F7;
                     font-size: 9px;
                     font-weight: 600;

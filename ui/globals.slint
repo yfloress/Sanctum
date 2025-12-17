@@ -178,6 +178,9 @@ export global HabitAdapter {
     in-out property <int> best-day-index: 0;
     in-out property <[float]> month-efficiency-data: [];
     in-out property <string> month-efficiency-path: "";
+    in-out property <float> month-efficiency-min: 0.0;
+    in-out property <float> month-efficiency-max: 0.0;
+    in-out property <float> month-efficiency-avg: 0.0;
     callback fetch-efficiency-data();
 }
 
