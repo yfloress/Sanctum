@@ -2,12 +2,14 @@
 // Premium Fintech UI - Monthly completion volume chart
 
 import { Palette, MonthlyStats, HabitAdapter } from "../globals.slint";
+import { CustomScrollbar } from "../widgets.slint";
 
 component ChartBar inherits Rectangle {
     in property <MonthlyStats> stat;
+    in property <length> bar-width: 36px;
 
-    horizontal-stretch: 1;
-    height: 100%;
+    width: bar-width;
+    height: parent.height;
     background: transparent;
     
     touch := TouchArea { mouse-cursor: pointer; }
@@ -53,7 +55,7 @@ component ChartBar inherits Rectangle {
                     spacing: 0px;
                     for seg in stat.segments: Rectangle {
                         background: seg.color;
-                        horizontal-stretch: seg.fraction;
+                        horizontal-stretch: seg.weight;
                     }
                 }
 
@@ -86,6 +88,12 @@ export component HabitBarChart inherits Rectangle {
     border-radius: 12px;
     border-width: 1px;
     border-color: Palette.border;
+
+    property <int> month-count: 12;
+    property <length> bar-gap: 10px;
+    property <length> bar-min-width: 22px;
+    property <length> bar-max-width: 56px;
+    property <length> inner-padding: 8px;
     
     VerticalLayout {
         padding: 20px;
@@ -135,18 +143,45 @@ export component HabitBarChart inherits Rectangle {
             }
 
             // Bars
-            HorizontalLayout {
+            chart-scroll := Flickable {
                 width: 100%;
                 height: 100%;
-                padding-top: 6px;
-                padding-left: 6px;
-                padding-right: 6px;
-                padding-bottom: 6px;
-                spacing: 10px;
 
-                for stat in HabitAdapter.chart-data: ChartBar {
-                    stat: stat;
+                // Prefer to show all 12 months without scrolling if there's space.
+                property <length> computed-bar-width: max(
+                    bar-min-width,
+                    min(
+                        bar-max-width,
+                        (self.width - 2 * inner-padding - (bar-gap * (month-count - 1))) / month-count
+                    )
+                );
+
+                property <length> required-width: (month-count * (computed-bar-width + bar-gap)) - bar-gap + 2 * inner-padding;
+                viewport-width: max(self.width, required-width);
+                interactive: viewport-width > self.width;
+
+                HorizontalLayout {
+                    spacing: bar-gap;
+                    padding-left: inner-padding;
+                    padding-right: inner-padding;
+                    padding-top: 6px;
+                    padding-bottom: 6px;
+                    alignment: start;
+
+                    for stat in HabitAdapter.chart-data: ChartBar {
+                        stat: stat;
+                        bar-width: computed-bar-width;
+                    }
                 }
+            }
+
+            CustomScrollbar {
+                width: parent.width;
+                y: parent.height - self.height;
+                visible-width: parent.width;
+                viewport-width: chart-scroll.viewport-width;
+                viewport-x: chart-scroll.viewport-x;
+                visible: chart-scroll.viewport-width > chart-scroll.width;
             }
         }
     }

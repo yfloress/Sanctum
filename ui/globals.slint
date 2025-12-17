@@ -144,7 +144,8 @@ export struct HabitData {
 
 export struct BarSegment {
     color: color,
-    fraction: float, // 0.0 - 1.0 (should sum to ~1.0)
+    // Stretch weight inside the bar (usually 1 per segment for ties)
+    weight: int,
 }
 
 export struct MonthlyStats {

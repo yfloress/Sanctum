@@ -1039,14 +1039,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let stats: Vec<MonthlyStats> = stats_data
                 .into_iter()
                 .map(|(month_name, total, top_colors)| {
-                    let seg_count = std::cmp::max(1, top_colors.len());
-                    let fraction = 1.0f32 / seg_count as f32;
-
                     let segments: Vec<BarSegment> = top_colors
                         .into_iter()
                         .map(|hex| BarSegment {
                             color: color_from_hex(&hex),
-                            fraction,
+                            weight: 1,
                         })
                         .collect();
 
@@ -1189,6 +1186,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             *date_lock.lock().unwrap() = now;
             *year_lock.lock().unwrap() = now.year();
             reload_habits(&ui_weak, &controller, now);
+            reload_heatmap(&ui_weak, &controller, now.year());
         });
     }
 
