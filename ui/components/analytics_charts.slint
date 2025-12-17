@@ -1,12 +1,12 @@
 // ==================== Analytics Charts ====================
-// Custom charts for Habit Analytics
+// Performance Analytics - Day & Month Efficiency
 
 import { Palette } from "../globals.slint";
 
+// Simple bar chart for weekday efficiency (7 bars)
 export component DayEfficiencyChart inherits Rectangle {
-    in property <[float]> data; // Normalized 0.0 - 1.0
+    in property <[float]> data: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
     in property <int> best-day-index: 0;
-    property <[string]> day-labels: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
     background: Palette.surface;
     border-radius: 12px;
@@ -15,107 +15,277 @@ export component DayEfficiencyChart inherits Rectangle {
 
     VerticalLayout {
         padding: 16px;
-        spacing: 16px;
+        spacing: 12px;
 
         // Header
-        HorizontalLayout {
-            spacing: 8px;
-
-            Text {
-                text: "Day Efficiency";
-                color: Palette.text-primary;
-                font-size: 13px;
-                font-weight: 600;
-                vertical-alignment: center;
-            }
-
-            Rectangle {
-                width: 2px;
-                height: 12px;
-                background: Palette.border;
-                y: (parent.height - self.height) / 2;
-            }
-
-            Text {
-                text: "Last 90 days";
-                color: Palette.text-muted;
-                font-size: 10px;
-                font-weight: 400;
-                vertical-alignment: center;
-            }
+        Text {
+            text: "Day Efficiency - Last 90 days";
+            color: Palette.text-primary;
+            font-size: 13px;
+            font-weight: 600;
         }
 
-        // Chart Container
-        HorizontalLayout {
-            spacing: 12px;
-            padding: 12px;
+        // Chart area
+        VerticalLayout {
+            spacing: 8px;
             vertical-stretch: 1;
 
-            for val[i] in root.data: VerticalLayout {
+            // Bars container
+            HorizontalLayout {
                 spacing: 8px;
-                horizontal-stretch: 1;
                 alignment: end;
+                padding-bottom: 4px;
 
-                // Bar container with fixed height
-                Rectangle {
-                    height: 100px;
-                    width: 100%;
+                // Monday
+                bar0 := VerticalLayout {
+                    spacing: 4px;
+                    alignment: end;
+                    horizontal-stretch: 1;
 
-                    VerticalLayout {
-                        alignment: end;
-
-                        // The actual bar - Best day in blue, others in gradient based on value
-                        Rectangle {
-                            property <float> clamped: val < 0.0 ? 0.0 : val > 1.0 ? 1.0 : val;
-                            property <length> bar-height: 100px * clamped;
-                            width: 24px;
-                            // Ensure minimum visible height for non-zero values
-                            height: clamped > 0.0 && bar-height < 4px ? 4px : bar-height;
-                            background: i == root.best-day-index ? #3B82F6 :
-                                clamped > 0.7 ? #4ADE80 :
-                                clamped > 0.4 ? #FBBF24 : #333333;
-                            border-radius: 4px;
-                            x: (parent.width - self.width) / 2;
-
-                            // Smooth animation
-                            animate height {
-                                duration: 300ms;
-                                easing: ease-out;
-                            }
-                            animate background {
-                                duration: 200ms;
+                    Rectangle {
+                        height: 80px;
+                        VerticalLayout {
+                            alignment: end;
+                            Rectangle {
+                                width: 100%;
+                                max-width: 32px;
+                                height: 80px * Math.max(0.0, Math.min(1.0, root.data[0]));
+                                background: root.best-day-index == 0 ? #3B82F6 : #555555;
+                                border-radius: 4px;
+                                x: (parent.width - self.width) / 2;
                             }
                         }
                     }
-                }
-
-                // Day label
-                Text {
-                    text: root.day-labels[i];
-                    horizontal-alignment: center;
-                    color: i == root.best-day-index ? #3B82F6 : #666666;
-                    font-size: 9px;
-                    font-weight: 600;
-                    letter-spacing: 0.5px;
-
-                    animate color {
-                        duration: 200ms;
+                    Text {
+                        text: "MON";
+                        color: root.best-day-index == 0 ? #3B82F6 : #888888;
+                        font-size: 9px;
+                        font-weight: 600;
+                        horizontal-alignment: center;
+                    }
+                    Text {
+                        text: Math.round(root.data[0] * 100.0) + "%";
+                        color: Palette.text-muted;
+                        font-size: 8px;
+                        horizontal-alignment: center;
                     }
                 }
 
-                // Percentage label
-                Text {
-                    text: val > 0.0 ? Math.round(val * 100.0) + "%" : "-";
-                    horizontal-alignment: center;
-                    color: val > 0.0 ? Palette.text-muted : Palette.text-subtle;
-                    font-size: 8px;
-                    opacity: val > 0.0 ? 0.8 : 0.4;
+                // Tuesday
+                VerticalLayout {
+                    spacing: 4px;
+                    alignment: end;
+                    horizontal-stretch: 1;
+
+                    Rectangle {
+                        height: 80px;
+                        VerticalLayout {
+                            alignment: end;
+                            Rectangle {
+                                width: 100%;
+                                max-width: 32px;
+                                height: 80px * Math.max(0.0, Math.min(1.0, root.data[1]));
+                                background: root.best-day-index == 1 ? #3B82F6 : #555555;
+                                border-radius: 4px;
+                                x: (parent.width - self.width) / 2;
+                            }
+                        }
+                    }
+                    Text {
+                        text: "TUE";
+                        color: root.best-day-index == 1 ? #3B82F6 : #888888;
+                        font-size: 9px;
+                        font-weight: 600;
+                        horizontal-alignment: center;
+                    }
+                    Text {
+                        text: Math.round(root.data[1] * 100.0) + "%";
+                        color: Palette.text-muted;
+                        font-size: 8px;
+                        horizontal-alignment: center;
+                    }
+                }
+
+                // Wednesday
+                VerticalLayout {
+                    spacing: 4px;
+                    alignment: end;
+                    horizontal-stretch: 1;
+
+                    Rectangle {
+                        height: 80px;
+                        VerticalLayout {
+                            alignment: end;
+                            Rectangle {
+                                width: 100%;
+                                max-width: 32px;
+                                height: 80px * Math.max(0.0, Math.min(1.0, root.data[2]));
+                                background: root.best-day-index == 2 ? #3B82F6 : #555555;
+                                border-radius: 4px;
+                                x: (parent.width - self.width) / 2;
+                            }
+                        }
+                    }
+                    Text {
+                        text: "WED";
+                        color: root.best-day-index == 2 ? #3B82F6 : #888888;
+                        font-size: 9px;
+                        font-weight: 600;
+                        horizontal-alignment: center;
+                    }
+                    Text {
+                        text: Math.round(root.data[2] * 100.0) + "%";
+                        color: Palette.text-muted;
+                        font-size: 8px;
+                        horizontal-alignment: center;
+                    }
+                }
+
+                // Thursday
+                VerticalLayout {
+                    spacing: 4px;
+                    alignment: end;
+                    horizontal-stretch: 1;
+
+                    Rectangle {
+                        height: 80px;
+                        VerticalLayout {
+                            alignment: end;
+                            Rectangle {
+                                width: 100%;
+                                max-width: 32px;
+                                height: 80px * Math.max(0.0, Math.min(1.0, root.data[3]));
+                                background: root.best-day-index == 3 ? #3B82F6 : #555555;
+                                border-radius: 4px;
+                                x: (parent.width - self.width) / 2;
+                            }
+                        }
+                    }
+                    Text {
+                        text: "THU";
+                        color: root.best-day-index == 3 ? #3B82F6 : #888888;
+                        font-size: 9px;
+                        font-weight: 600;
+                        horizontal-alignment: center;
+                    }
+                    Text {
+                        text: Math.round(root.data[3] * 100.0) + "%";
+                        color: Palette.text-muted;
+                        font-size: 8px;
+                        horizontal-alignment: center;
+                    }
+                }
+
+                // Friday
+                VerticalLayout {
+                    spacing: 4px;
+                    alignment: end;
+                    horizontal-stretch: 1;
+
+                    Rectangle {
+                        height: 80px;
+                        VerticalLayout {
+                            alignment: end;
+                            Rectangle {
+                                width: 100%;
+                                max-width: 32px;
+                                height: 80px * Math.max(0.0, Math.min(1.0, root.data[4]));
+                                background: root.best-day-index == 4 ? #3B82F6 : #555555;
+                                border-radius: 4px;
+                                x: (parent.width - self.width) / 2;
+                            }
+                        }
+                    }
+                    Text {
+                        text: "FRI";
+                        color: root.best-day-index == 4 ? #3B82F6 : #888888;
+                        font-size: 9px;
+                        font-weight: 600;
+                        horizontal-alignment: center;
+                    }
+                    Text {
+                        text: Math.round(root.data[4] * 100.0) + "%";
+                        color: Palette.text-muted;
+                        font-size: 8px;
+                        horizontal-alignment: center;
+                    }
+                }
+
+                // Saturday
+                VerticalLayout {
+                    spacing: 4px;
+                    alignment: end;
+                    horizontal-stretch: 1;
+
+                    Rectangle {
+                        height: 80px;
+                        VerticalLayout {
+                            alignment: end;
+                            Rectangle {
+                                width: 100%;
+                                max-width: 32px;
+                                height: 80px * Math.max(0.0, Math.min(1.0, root.data[5]));
+                                background: root.best-day-index == 5 ? #3B82F6 : #555555;
+                                border-radius: 4px;
+                                x: (parent.width - self.width) / 2;
+                            }
+                        }
+                    }
+                    Text {
+                        text: "SAT";
+                        color: root.best-day-index == 5 ? #3B82F6 : #888888;
+                        font-size: 9px;
+                        font-weight: 600;
+                        horizontal-alignment: center;
+                    }
+                    Text {
+                        text: Math.round(root.data[5] * 100.0) + "%";
+                        color: Palette.text-muted;
+                        font-size: 8px;
+                        horizontal-alignment: center;
+                    }
+                }
+
+                // Sunday
+                VerticalLayout {
+                    spacing: 4px;
+                    alignment: end;
+                    horizontal-stretch: 1;
+
+                    Rectangle {
+                        height: 80px;
+                        VerticalLayout {
+                            alignment: end;
+                            Rectangle {
+                                width: 100%;
+                                max-width: 32px;
+                                height: 80px * Math.max(0.0, Math.min(1.0, root.data[6]));
+                                background: root.best-day-index == 6 ? #3B82F6 : #555555;
+                                border-radius: 4px;
+                                x: (parent.width - self.width) / 2;
+                            }
+                        }
+                    }
+                    Text {
+                        text: "SUN";
+                        color: root.best-day-index == 6 ? #3B82F6 : #888888;
+                        font-size: 9px;
+                        font-weight: 600;
+                        horizontal-alignment: center;
+                    }
+                    Text {
+                        text: Math.round(root.data[6] * 100.0) + "%";
+                        color: Palette.text-muted;
+                        font-size: 8px;
+                        horizontal-alignment: center;
+                    }
                 }
             }
         }
     }
 }
 
+// Line chart for monthly efficiency
 export component MonthEfficiencyChart inherits Rectangle {
     in property <[float]> data;
     in property <string> path-command;
@@ -123,18 +293,14 @@ export component MonthEfficiencyChart inherits Rectangle {
     in property <float> max-val: 0.0;
     in property <float> avg-val: 0.0;
 
-    // Internal: total days for coordinate calculation (must match data.length)
-    property <int> total-days: root.data.length;
-
     background: Palette.surface;
     border-radius: 12px;
     border-width: 1px;
     border-color: Palette.border;
-    clip: true;
 
     VerticalLayout {
         padding: 16px;
-        spacing: 16px;
+        spacing: 12px;
 
         // Header
         Text {
@@ -144,17 +310,15 @@ export component MonthEfficiencyChart inherits Rectangle {
             font-weight: 600;
         }
 
-        // Chart Area
-        plot := Rectangle {
+        // Chart area
+        chart-container := Rectangle {
             vertical-stretch: 1;
             clip: true;
-            background: transparent;
+            min-height: 100px;
 
-            // Grid Lines (horizontal)
+            // Grid lines
             VerticalLayout {
                 alignment: space-between;
-                padding: 0px;
-
                 for i in 5: Rectangle {
                     height: 1px;
                     background: Palette.border-subtle;
@@ -162,12 +326,12 @@ export component MonthEfficiencyChart inherits Rectangle {
                 }
             }
 
-            // Only render if we have data
-            if root.total-days > 0 && root.path-command != "": Rectangle {
+            // Chart content
+            if root.data.length > 0 && root.path-command != "": Rectangle {
                 width: 100%;
                 height: 100%;
 
-                // Gradient Fill Area - Path uses viewbox 0-100 mapped to container
+                // Fill gradient
                 Path {
                     commands: root.path-command + " L 100 100 L 0 100 Z";
                     fill: @linear-gradient(180deg, #A855F744 0%, #A855F711 50%, transparent 100%);
@@ -178,7 +342,7 @@ export component MonthEfficiencyChart inherits Rectangle {
                     viewbox-height: 100;
                 }
 
-                // Main Line - Same viewbox as fill for perfect alignment
+                // Line
                 Path {
                     commands: root.path-command;
                     stroke: #A855F7;
@@ -190,66 +354,38 @@ export component MonthEfficiencyChart inherits Rectangle {
                     viewbox-height: 100;
                 }
 
-                // Data Points (dots) - CRITICAL: Use same formula as Rust path generation
-                // Path uses: x = (i / (n-1)) * 100, y = 100 - (val * 100)
-                // Dots must use: x = (i / (n-1)) * width, y = (1 - val) * height
+                // Data points
                 for val[i] in root.data: Rectangle {
-                    property <float> pct: val < 0.0 ? 0.0 : val > 1.0 ? 1.0 : val;
-                    // X position: same formula as path - index divided by (total-1) for 0-1 range
-                    property <float> x-norm: root.total-days > 1
-                        ? (i * 1.0) / (root.total-days - 1)
-                        : 0.5;
-                    // Center the 6px dot on the coordinate
-                    x: (x-norm * plot.width) - 3px;
-                    y: ((1.0 - pct) * plot.height) - 3px;
+                    property <float> norm-val: Math.max(0.0, Math.min(1.0, val));
+                    property <float> x-pos: root.data.length > 1 ? (i * 1.0) / (root.data.length - 1.0) : 0.5;
 
+                    x: (x-pos * chart-container.width) - 3px;
+                    y: ((1.0 - norm-val) * chart-container.height) - 3px;
                     width: 6px;
                     height: 6px;
                     border-radius: 3px;
                     background: #A855F7;
-                    border-width: 1.5px;
-                    border-color: Palette.surface;
-
-                    // Only show dots for non-zero or significant days
-                    opacity: pct > 0.0 ? 1.0 : 0.3;
-
-                    // Glow effect for high-value days
-                    if pct >= 0.8: Rectangle {
-                        x: -2px;
-                        y: -2px;
-                        width: parent.width + 4px;
-                        height: parent.height + 4px;
-                        border-radius: 5px;
-                        background: #A855F7;
-                        opacity: 0.4;
-                    }
+                    opacity: norm-val > 0.0 ? 1.0 : 0.3;
                 }
             }
 
-            // Empty state message
-            if root.total-days == 0: Rectangle {
-                width: 100%;
-                height: 100%;
-
-                Text {
-                    text: "No data for this month";
-                    color: Palette.text-muted;
-                    font-size: 11px;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
+            // Empty state
+            if root.data.length == 0: Text {
+                text: "No data for this month";
+                color: Palette.text-muted;
+                font-size: 11px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
             }
         }
 
-        // Stats footer (min, avg, max)
-        if root.total-days > 0: HorizontalLayout {
+        // Stats footer
+        if root.data.length > 0: HorizontalLayout {
             spacing: 16px;
             alignment: space-between;
 
-            // Min
             HorizontalLayout {
                 spacing: 4px;
-
                 Text {
                     text: "MIN";
                     color: Palette.text-muted;
@@ -263,10 +399,8 @@ export component MonthEfficiencyChart inherits Rectangle {
                 }
             }
 
-            // Avg
             HorizontalLayout {
                 spacing: 4px;
-
                 Text {
                     text: "AVG";
                     color: Palette.text-muted;
@@ -277,14 +411,11 @@ export component MonthEfficiencyChart inherits Rectangle {
                     text: Math.round(root.avg-val * 100.0) + "%";
                     color: #A855F7;
                     font-size: 9px;
-                    font-weight: 500;
                 }
             }
 
-            // Max
             HorizontalLayout {
                 spacing: 4px;
-
                 Text {
                     text: "MAX";
                     color: Palette.text-muted;
