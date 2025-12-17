@@ -12,11 +12,6 @@ export component TacticalGrid inherits Rectangle {
     width: 100%;
     height: 100%;
 
-    // Clean gradient background with depth
-    background: root.show-background ? @radial-gradient(circle, #1a1a2e 0%, #0d0d1a 40%, #000000 100%) : transparent;
-
-    // Subtle vignette overlay for depth
-    if root.show-background : Rectangle {
-        background: @radial-gradient(circle, transparent 60%, #00000080 100%);
-    }
+    // Smooth purple gradient background
+    background: root.show-background ? @radial-gradient(circle, #1a1a28 0%, #0f0f18 50%, #000000 100%) : transparent;
 }

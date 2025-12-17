@@ -1,5 +1,5 @@
 // ==================== Login Page ====================
-// Noir Minimalist - Elegant, luxury-inspired authentication
+// Noir Minimalist - Elegant authentication with smooth gradient background and refined typography
 
 import { Palette, AuthAdapter, AppState, NotificationAdapter } from "../globals.slint";
 import { TextButton } from "../widgets.slint";
@@ -257,16 +257,6 @@ export component LoginPage inherits Rectangle {
                     border-width: 1px;
                     border-color: Palette.success;
                     background: transparent;
-
-                    Rectangle {
-                        width: 6px;
-                        height: 6px;
-                        x: 3px;
-                        y: 3px;
-                        border-radius: 3px;
-                        background: Palette.success;
-                        opacity: 0.4;
-                    }
                 }
 
                 Text {
