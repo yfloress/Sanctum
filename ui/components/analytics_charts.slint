@@ -5,7 +5,7 @@ import { Palette } from "../globals.slint";
 
 export component DayEfficiencyChart inherits Rectangle {
     in property <[float]> data; // Normalized 0.0 - 1.0
-    in property <int> best-day-index: 4;
+    in property <int> best-day-index: 0;
     property <[string]> day-labels: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
     
     background: Palette.surface;
@@ -15,43 +15,96 @@ export component DayEfficiencyChart inherits Rectangle {
     
     VerticalLayout {
         padding: 16px;
-        spacing: 12px;
+        spacing: 16px;
 
-        Text {
-            text: "Day Efficiency";
-            color: Palette.text-secondary;
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
+        // Header
+        HorizontalLayout {
+            spacing: 8px;
+            
+            Text {
+                text: "Day Efficiency";
+                color: Palette.text-primary;
+                font-size: 13px;
+                font-weight: 600;
+                vertical-alignment: center;
+            }
+            
+            Rectangle {
+                width: 2px;
+                height: 12px;
+                background: Palette.border;
+                y: (parent.height - self.height) / 2;
+            }
+            
+            Text {
+                text: "Last 90 days";
+                color: Palette.text-muted;
+                font-size: 10px;
+                font-weight: 400;
+                vertical-alignment: center;
+            }
         }
 
         // Chart Container
-        // Direct HorizontalLayout with simple spacer/bar/label stack per day
         HorizontalLayout {
-            spacing: 10px;
-            padding: 10px;
+            spacing: 12px;
+            padding: 12px;
+            vertical-stretch: 1;
 
             for val[i] in root.data: VerticalLayout {
-                spacing: 6px;
+                spacing: 8px;
                 horizontal-stretch: 1;
+                alignment: end;
 
-                // 1. Spacer to push bar down
-                Rectangle { vertical-stretch: 1; background: transparent; }
-
-                // 2. The Bar
+                // Bar container with fixed height
                 Rectangle {
-                    width: 20px;
-                    height: 100px * (val < 0.0 ? 0.0 : val > 1.0 ? 1.0 : val);
-                    background: i == root.best-day-index ? #3B82F6 : #333333;
-                    border-radius: 4px;
+                    height: 100px;
+                    width: 100%;
+                    
+                    VerticalLayout {
+                        alignment: end;
+                        
+                        // The actual bar
+                        Rectangle {
+                            width: 24px;
+                            height: 100px * (val < 0.0 ? 0.0 : val > 1.0 ? 1.0 : val);
+                            background: i == root.best-day-index ? #3B82F6 : #333333;
+                            border-radius: 4px;
+                            x: (parent.width - self.width) / 2;
+                            
+                            // Smooth animation
+                            animate height { 
+                                duration: 300ms; 
+                                easing: ease-out;
+                            }
+                            animate background { 
+                                duration: 200ms; 
+                            }
+                        }
+                    }
                 }
 
-                // 3. The Label
+                // Day label
                 Text {
-                    text: root.day-labels.length > i ? root.day-labels[i] : "";
+                    text: root.day-labels[i];
                     horizontal-alignment: center;
-                    color: #888888;
+                    color: i == root.best-day-index ? #3B82F6 : #666666;
                     font-size: 9px;
+                    font-weight: 600;
+                    letter-spacing: 0.5px;
+                    
+                    animate color { 
+                        duration: 200ms; 
+                    }
+                }
+
+                // Percentage label (optional, shows on hover)
+                if val > 0.0: Text {
+                    text: Math.round(val * 100.0) + "%";
+                    horizontal-alignment: center;
+                    color: Palette.text-muted;
+                    font-size: 8px;
+                    opacity: 0.6;
                 }
             }
         }
@@ -70,69 +123,187 @@ export component MonthEfficiencyChart inherits Rectangle {
 
     VerticalLayout {
         padding: 16px;
-        spacing: 12px;
+        spacing: 16px;
 
+        // Header
         Text {
-            text: "Month Efficiency";
-            color: Palette.text-secondary;
-            font-size: 11px;
+            text: "Monthly Efficiency";
+            color: Palette.text-primary;
+            font-size: 13px;
             font-weight: 600;
-            letter-spacing: 0.5px;
         }
 
         // Chart Area
         plot := Rectangle {
             vertical-stretch: 1;
             clip: true;
-            property <float> denom: root.data.length > 1 ? (root.data.length - 1) * 1.0 : 1.0;
+            background: transparent;
             
-            // Grid Lines
+            // Grid Lines (horizontal)
             VerticalLayout {
                 alignment: space-between;
-                for i in 3: Rectangle {
+                padding: 0px;
+                
+                for i in 5: Rectangle {
                     height: 1px;
                     background: Palette.border-subtle;
-                    opacity: 0.5;
+                    opacity: 0.3;
                 }
             }
             
-            // Path Line (viewbox: 0..100)
-            if root.path-command != "": Path {
-                commands: root.path-command;
-                stroke: #A855F7;
-                stroke-width: 2px;
-                stroke-line-cap: round;
-                fill: transparent;
-                viewbox-width: 100;
-                viewbox-height: 100;
-            }
-
-            // Gradient Fill
-            if root.path-command != "": Path {
-                commands: root.path-command + " L 100 100 L 0 100 Z";
-                fill: @linear-gradient(180deg, #A855F733 0%, transparent 100%);
-                stroke-width: 0px;
-                viewbox-width: 100;
-                viewbox-height: 100;
-            }
-
-            // Dots overlay
-            // EXACT SAME mapping as the Path (just scaled to pixels):
-            // x = (index / (total_points - 1)) * plot.width
-            // y = plot.height - (value * plot.height)
-            for val[i] in root.data: Rectangle {
-                property <float> pct: val < 0.0 ? 0.0 : val > 1.0 ? 1.0 : val;
-                property <float> t: root.data.length > 1 ? (i * 1.0) / plot.denom : 0.0;
-
-                x: (t * plot.width) - 2.5px;
-                y: (plot.height - (pct * plot.height)) - 2.5px;
+            // Only render if we have data
+            if root.data.length > 0 && root.path-command != "": Rectangle {
+                width: 100%;
+                height: 100%;
                 
-                width: 5px;
-                height: 5px;
-                border-radius: 2.5px;
-                background: #A855F7;
-                border-width: 1px;
-                border-color: Palette.surface;
+                // Gradient Fill Area
+                Path {
+                    commands: root.path-command + " L 100 100 L 0 100 Z";
+                    fill: @linear-gradient(180deg, #A855F744 0%, #A855F711 50%, transparent 100%);
+                    stroke-width: 0px;
+                    viewbox-width: 100;
+                    viewbox-height: 100;
+                }
+                
+                // Main Line
+                Path {
+                    commands: root.path-command;
+                    stroke: #A855F7;
+                    stroke-width: 2.5px;
+                    stroke-line-cap: round;
+                    stroke-line-join: round;
+                    fill: transparent;
+                    viewbox-width: 100;
+                    viewbox-height: 100;
+                }
+
+                // Data Points (dots)
+                for val[i] in root.data: Rectangle {
+                    property <float> pct: val < 0.0 ? 0.0 : val > 1.0 ? 1.0 : val;
+                    property <float> x-pos: root.data.length > 1 
+                        ? (i * 1.0) / (root.data.length - 1) 
+                        : 0.5;
+
+                    x: (x-pos * plot.width) - 3px;
+                    y: ((1.0 - pct) * plot.height) - 3px;
+                    
+                    width: 6px;
+                    height: 6px;
+                    border-radius: 3px;
+                    background: #A855F7;
+                    border-width: 1.5px;
+                    border-color: Palette.surface;
+                    
+                    // Glow effect for non-zero values
+                    if val > 0.0: Rectangle {
+                        x: -2px;
+                        y: -2px;
+                        width: parent.width + 4px;
+                        height: parent.height + 4px;
+                        border-radius: 5px;
+                        background: #A855F7;
+                        opacity: 0.3;
+                    }
+                }
+            }
+            
+            // Empty state message
+            if root.data.length == 0: Rectangle {
+                width: 100%;
+                height: 100%;
+                
+                Text {
+                    text: "No data for this month";
+                    color: Palette.text-muted;
+                    font-size: 11px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // Stats footer (min, avg, max)
+        if root.data.length > 0: HorizontalLayout {
+            spacing: 16px;
+            alignment: space-between;
+            
+            property <float> min-val: {
+                if root.data.length == 0 { return 0.0; }
+                let mut m: float = 1.0;
+                for v in root.data {
+                    if v < m { m = v; }
+                }
+                return m;
+            };
+            
+            property <float> max-val: {
+                if root.data.length == 0 { return 0.0; }
+                let mut m: float = 0.0;
+                for v in root.data {
+                    if v > m { m = v; }
+                }
+                return m;
+            };
+            
+            property <float> avg-val: {
+                if root.data.length == 0 { return 0.0; }
+                let mut sum: float = 0.0;
+                for v in root.data {
+                    sum += v;
+                }
+                return sum / root.data.length;
+            };
+            
+            // Min
+            HorizontalLayout {
+                spacing: 4px;
+                
+                Text {
+                    text: "MIN";
+                    color: Palette.text-muted;
+                    font-size: 9px;
+                    font-weight: 600;
+                }
+                Text {
+                    text: Math.round(parent.min-val * 100.0) + "%";
+                    color: Palette.text-secondary;
+                    font-size: 9px;
+                }
+            }
+            
+            // Avg
+            HorizontalLayout {
+                spacing: 4px;
+                
+                Text {
+                    text: "AVG";
+                    color: Palette.text-muted;
+                    font-size: 9px;
+                    font-weight: 600;
+                }
+                Text {
+                    text: Math.round(parent.avg-val * 100.0) + "%";
+                    color: Palette.text-secondary;
+                    font-size: 9px;
+                }
+            }
+            
+            // Max
+            HorizontalLayout {
+                spacing: 4px;
+                
+                Text {
+                    text: "MAX";
+                    color: Palette.text-muted;
+                    font-size: 9px;
+                    font-weight: 600;
+                }
+                Text {
+                    text: Math.round(parent.max-val * 100.0) + "%";
+                    color: #A855F7;
+                    font-size: 9px;
+                    font-weight: 600;
+                }
             }
         }
     }

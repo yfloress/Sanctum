@@ -1301,223 +1301,270 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
+    // Reemplaza el callback on_fetch_efficiency_data en main.rs (líneas ~1308-1518)
     {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         let date_lock = current_habit_date.clone();
-        ui.global::<HabitAdapter>().on_fetch_efficiency_data(move || {
-            if let Some(ui) = ui_weak.upgrade() {
-                let adapter = ui.global::<HabitAdapter>();
-                let today = chrono::Local::now().date_naive();
 
-                // Helpers
-                fn clamp01(v: f32) -> f32 {
-                    v.max(0.0).min(1.0)
-                }
+        ui.global::<HabitAdapter>()
+            .on_fetch_efficiency_data(move || {
+                if let Some(ui) = ui_weak.upgrade() {
+                    let adapter = ui.global::<HabitAdapter>();
+                    let today = chrono::Local::now().date_naive();
 
-                fn parse_log_date(date_str: &str) -> Option<chrono::NaiveDate> {
-                    chrono::NaiveDate::parse_from_str(date_str, "%Y-%m-%d").ok()
-                }
+                    // Helper functions
+                    fn clamp01(v: f32) -> f32 {
+                        v.max(0.0).min(1.0)
+                    }
 
-                fn parse_created(date_str: &str) -> Option<chrono::NaiveDate> {
-                    chrono::DateTime::parse_from_rfc3339(date_str)
-                        .ok()
-                        .map(|dt| dt.date_naive())
-                }
+                    fn parse_log_date(date_str: &str) -> Option<chrono::NaiveDate> {
+                        chrono::NaiveDate::parse_from_str(date_str, "%Y-%m-%d").ok()
+                    }
 
-                // Load habits (only active)
-                let habits = match controller.get_habits() {
-                    Ok(h) => h,
-                    Err(e) => {
-                        error!("Failed to load habits: {}", e);
+                    fn parse_created(date_str: &str) -> Option<chrono::NaiveDate> {
+                        chrono::DateTime::parse_from_rfc3339(date_str)
+                            .ok()
+                            .map(|dt| dt.date_naive())
+                    }
+
+                    // Load active habits only
+                    let habits = match controller.get_habits() {
+                        Ok(h) => h,
+                        Err(e) => {
+                            error!("Failed to load habits: {}", e);
+                            return;
+                        }
+                    };
+
+                    let active_habits: Vec<_> =
+                        habits.into_iter().filter(|h| !h.archived).collect();
+
+                    // Build habit creation date map
+                    let habit_date_map: HashMap<String, chrono::NaiveDate> = active_habits
+                        .iter()
+                        .filter_map(|h| parse_created(&h.created_at).map(|d| (h.id.clone(), d)))
+                        .collect();
+
+                    // ============================================================
+                    // 1) DAY EFFICIENCY (Last 90 days)
+                    // ============================================================
+                    let day_range_end = today;
+                    let day_range_start = today - chrono::Duration::days(89);
+
+                    let start_str = day_range_start.format("%Y-%m-%d").to_string();
+                    let end_str = day_range_end.format("%Y-%m-%d").to_string();
+
+                    let logs_day = controller
+                        .get_habit_logs(start_str, end_str)
+                        .unwrap_or_default();
+
+                    // Group completions by date
+                    let mut completions_by_date: HashMap<chrono::NaiveDate, HashSet<String>> =
+                        HashMap::new();
+
+                    for log in logs_day {
+                        if let Some(log_date) = parse_log_date(&log.completed_date) {
+                            if let Some(created) = habit_date_map.get(&log.habit_id) {
+                                // Only count if log is after habit creation and within range
+                                if log_date >= *created
+                                    && log_date >= day_range_start
+                                    && log_date <= day_range_end
+                                {
+                                    completions_by_date
+                                        .entry(log_date)
+                                        .or_insert_with(HashSet::new)
+                                        .insert(log.habit_id.clone());
+                                }
+                            }
+                        }
+                    }
+
+                    // Calculate efficiency per weekday
+                    let mut weekday_completed = [0.0; 7]; // Total completed per weekday
+                    let mut weekday_possible = [0.0; 7]; // Total possible per weekday
+
+                    let mut current = day_range_start;
+                    while current <= day_range_end {
+                        // Count active habits on this date
+                        let active_count = habit_date_map
+                            .values()
+                            .filter(|created| **created <= current)
+                            .count() as f32;
+
+                        if active_count > 0.0 {
+                            let weekday_idx = current.weekday().num_days_from_monday() as usize;
+                            weekday_possible[weekday_idx] += active_count;
+
+                            if let Some(completed_habits) = completions_by_date.get(&current) {
+                                weekday_completed[weekday_idx] += completed_habits.len() as f32;
+                            }
+                        }
+
+                        current += chrono::Duration::days(1);
+                    }
+
+                    // Calculate efficiency percentages
+                    let mut day_data: Vec<f32> = Vec::with_capacity(7);
+                    for i in 0..7 {
+                        let efficiency = if weekday_possible[i] > 0.0 {
+                            clamp01(weekday_completed[i] / weekday_possible[i])
+                        } else {
+                            0.0
+                        };
+                        day_data.push(efficiency);
+                    }
+
+                    // Find best day index
+                    let best_idx = day_data
+                        .iter()
+                        .enumerate()
+                        .max_by(|a, b| a.1.partial_cmp(b.1).unwrap_or(std::cmp::Ordering::Equal))
+                        .map(|(i, _)| i as i32)
+                        .unwrap_or(0);
+
+                    // ============================================================
+                    // 2) MONTH EFFICIENCY (Current viewed month)
+                    // ============================================================
+                    let current_month = *date_lock.lock().unwrap();
+                    let Some(month_start) = chrono::NaiveDate::from_ymd_opt(
+                        current_month.year(),
+                        current_month.month(),
+                        1,
+                    ) else {
                         return;
-                    }
-                };
-
-                let active_habits: Vec<_> = habits.into_iter().filter(|h| !h.archived).collect();
-                let habit_dates: Vec<(String, chrono::NaiveDate)> = active_habits
-                    .iter()
-                    .filter_map(|h| parse_created(&h.created_at).map(|d| (h.id.clone(), d)))
-                    .collect();
-
-                let habit_date_map: HashMap<String, chrono::NaiveDate> = habit_dates
-                    .iter()
-                    .cloned()
-                    .collect();
-
-                // ----------------------------
-                // 1) Day Efficiency (last 90 days)
-                // ----------------------------
-                let day_range_end = today;
-                let day_range_start = today - chrono::Duration::days(89);
-
-                let start_str = day_range_start.format("%Y-%m-%d").to_string();
-                let end_str = day_range_end.format("%Y-%m-%d").to_string();
-
-                let logs_day = controller
-                    .get_habit_logs(start_str, end_str)
-                    .unwrap_or_default();
-
-                let mut completions_by_date: HashMap<chrono::NaiveDate, i32> = HashMap::new();
-                for log in logs_day {
-                    if let (Some(log_date), Some(created)) = (
-                        parse_log_date(&log.completed_date),
-                        habit_date_map.get(&log.habit_id),
-                    ) {
-                        if log_date >= *created && log_date >= day_range_start && log_date <= day_range_end {
-                            *completions_by_date.entry(log_date).or_insert(0) += 1;
-                        }
-                    }
-                }
-
-                let mut weekday_numerators = [0f32; 7];
-                let mut weekday_denominators = [0f32; 7];
-
-                let mut current = day_range_start;
-                while current <= day_range_end {
-                    let active_count = habit_dates
-                        .iter()
-                        .filter(|(_, created)| *created <= current)
-                        .count() as f32;
-
-                    if active_count > 0.0 {
-                        let wd = current.weekday().num_days_from_monday() as usize;
-                        weekday_denominators[wd] += active_count;
-                        let completed = *completions_by_date.get(&current).unwrap_or(&0) as f32;
-                        weekday_numerators[wd] += completed;
-                    }
-
-                    current += chrono::Duration::days(1);
-                }
-
-                let mut day_data: Vec<f32> = Vec::with_capacity(7);
-                for i in 0..7 {
-                    let val = if weekday_denominators[i] > 0.0 {
-                        (weekday_numerators[i] / weekday_denominators[i]).clamp(0.0, 1.0)
-                    } else {
-                        0.0
                     };
-                    day_data.push(val);
-                }
 
-                let best_idx = day_data
-                    .iter()
-                    .enumerate()
-                    .max_by(|a, b| {
-                        a.1.partial_cmp(b.1).unwrap_or(std::cmp::Ordering::Equal)
-                    })
-                    .map(|(i, _)| i as i32)
-                    .unwrap_or(0);
-
-                // ----------------------------
-                // 2) Month Efficiency (current viewed month)
-                // ----------------------------
-                let current_month = *date_lock.lock().unwrap();
-                let Some(month_start) =
-                    chrono::NaiveDate::from_ymd_opt(current_month.year(), current_month.month(), 1)
-                else {
-                    return;
-                };
-
-                let next_month = if current_month.month() == 12 {
-                    chrono::NaiveDate::from_ymd_opt(current_month.year() + 1, 1, 1).unwrap()
-                } else {
-                    chrono::NaiveDate::from_ymd_opt(current_month.year(), current_month.month() + 1, 1)
+                    // Calculate month end
+                    let next_month = if current_month.month() == 12 {
+                        chrono::NaiveDate::from_ymd_opt(current_month.year() + 1, 1, 1).unwrap()
+                    } else {
+                        chrono::NaiveDate::from_ymd_opt(
+                            current_month.year(),
+                            current_month.month() + 1,
+                            1,
+                        )
                         .unwrap()
-                };
-                let month_end = next_month - chrono::Duration::days(1);
-                let visible_end = if current_month.year() == today.year()
-                    && current_month.month() == today.month()
-                {
-                    std::cmp::min(today, month_end)
-                } else {
-                    month_end
-                };
+                    };
+                    let month_end = next_month - chrono::Duration::days(1);
 
-                let month_start_str = month_start.format("%Y-%m-%d").to_string();
-                let month_end_str = visible_end.format("%Y-%m-%d").to_string();
+                    // Only show data up to today if viewing current month
+                    let visible_end = if current_month.year() == today.year()
+                        && current_month.month() == today.month()
+                    {
+                        std::cmp::min(today, month_end)
+                    } else {
+                        month_end
+                    };
 
-                let logs_month = controller
-                    .get_habit_logs(month_start_str, month_end_str)
-                    .unwrap_or_default();
+                    let month_start_str = month_start.format("%Y-%m-%d").to_string();
+                    let month_end_str = visible_end.format("%Y-%m-%d").to_string();
 
-                let mut month_completions: HashMap<chrono::NaiveDate, i32> = HashMap::new();
-                for log in logs_month {
-                    if let (Some(log_date), Some(created)) = (
-                        parse_log_date(&log.completed_date),
-                        habit_date_map.get(&log.habit_id),
-                    ) {
-                        if log_date >= *created && log_date >= month_start && log_date <= visible_end {
-                            *month_completions.entry(log_date).or_insert(0) += 1;
+                    let logs_month = controller
+                        .get_habit_logs(month_start_str, month_end_str)
+                        .unwrap_or_default();
+
+                    // Group completions by date for the month
+                    let mut month_completions: HashMap<chrono::NaiveDate, HashSet<String>> =
+                        HashMap::new();
+
+                    for log in logs_month {
+                        if let Some(log_date) = parse_log_date(&log.completed_date) {
+                            if let Some(created) = habit_date_map.get(&log.habit_id) {
+                                if log_date >= *created
+                                    && log_date >= month_start
+                                    && log_date <= visible_end
+                                {
+                                    month_completions
+                                        .entry(log_date)
+                                        .or_insert_with(HashSet::new)
+                                        .insert(log.habit_id.clone());
+                                }
+                            }
                         }
                     }
-                }
 
-                let mut month_data: Vec<f32> = Vec::new();
-                let mut day_cursor = month_start;
-                while day_cursor <= visible_end {
-                    let active_count = habit_dates
-                        .iter()
-                        .filter(|(_, created)| *created <= day_cursor)
-                        .count() as f32;
-                    let completed = *month_completions.get(&day_cursor).unwrap_or(&0) as f32;
-                    let val = if active_count > 0.0 {
-                        (completed / active_count).clamp(0.0, 1.0)
-                    } else {
-                        0.0
-                    };
-                    month_data.push(val);
-                    day_cursor += chrono::Duration::days(1);
-                }
+                    // Calculate daily efficiency for the month
+                    let mut month_data: Vec<f32> = Vec::new();
+                    let mut day_cursor = month_start;
 
-                fn point_at(i: usize, values: &[f32]) -> (f32, f32) {
-                    let n = values.len();
-                    if n <= 1 {
-                        return (0.0, 100.0);
-                    }
-                    let x = (i as f32 / (n - 1) as f32) * 100.0;
-                    let y = 100.0 - (clamp01(values[i]) * 100.0);
-                    (x, y)
-                }
+                    while day_cursor <= visible_end {
+                        let active_count = habit_date_map
+                            .values()
+                            .filter(|created| **created <= day_cursor)
+                            .count() as f32;
 
-                let path = if month_data.len() >= 2 {
-                    let mut s = String::new();
-                    let (x0, y0) = point_at(0, &month_data);
-                    s.push_str(&format!("M {:.4} {:.4}", x0, y0));
+                        let completed_count = month_completions
+                            .get(&day_cursor)
+                            .map(|s| s.len() as f32)
+                            .unwrap_or(0.0);
 
-                    for i in 0..(month_data.len() - 1) {
-                        let p0_idx = if i == 0 { 0 } else { i - 1 };
-                        let p1_idx = i;
-                        let p2_idx = i + 1;
-                        let p3_idx = if i + 2 < month_data.len() { i + 2 } else { i + 1 };
+                        let efficiency = if active_count > 0.0 {
+                            clamp01(completed_count / active_count)
+                        } else {
+                            0.0
+                        };
 
-                        let (x0, y0) = point_at(p0_idx, &month_data);
-                        let (x1, y1) = point_at(p1_idx, &month_data);
-                        let (x2, y2) = point_at(p2_idx, &month_data);
-                        let (x3, y3) = point_at(p3_idx, &month_data);
-
-                        let c1x = x1 + (x2 - x0) / 6.0;
-                        let c1y = y1 + (y2 - y0) / 6.0;
-                        let c2x = x2 - (x3 - x1) / 6.0;
-                        let c2y = y2 - (y3 - y1) / 6.0;
-
-                        s.push_str(&format!(
-                            " C {:.4} {:.4} {:.4} {:.4} {:.4} {:.4}",
-                            c1x, c1y, c2x, c2y, x2, y2
-                        ));
+                        month_data.push(efficiency);
+                        day_cursor += chrono::Duration::days(1);
                     }
 
-                    s
-                } else {
-                    "M 0 100 L 100 100".to_string()
-                };
+                    // Generate smooth path for the line chart
+                    fn generate_smooth_path(values: &[f32]) -> String {
+                        if values.len() < 2 {
+                            return "M 0 100 L 100 100".to_string();
+                        }
 
-                adapter.set_day_efficiency(ModelRc::new(VecModel::from(day_data)));
-                adapter.set_best_day_index(best_idx as i32);
-                adapter.set_month_efficiency_data(ModelRc::new(VecModel::from(month_data)));
-                adapter.set_month_efficiency_path(SharedString::from(path));
-            }
-        });
+                        let n = values.len();
+                        let mut path = String::new();
+
+                        // Helper to get point coordinates
+                        let point_at = |i: usize| -> (f32, f32) {
+                            let x = (i as f32 / (n - 1) as f32) * 100.0;
+                            let y = 100.0 - (clamp01(values[i]) * 100.0);
+                            (x, y)
+                        };
+
+                        // Start point
+                        let (x0, y0) = point_at(0);
+                        path.push_str(&format!("M {:.2} {:.2}", x0, y0));
+
+                        // Generate smooth curves using Catmull-Rom spline
+                        for i in 0..(n - 1) {
+                            let p0_idx = if i == 0 { 0 } else { i - 1 };
+                            let p1_idx = i;
+                            let p2_idx = i + 1;
+                            let p3_idx = if i + 2 < n { i + 2 } else { i + 1 };
+
+                            let (x0, y0) = point_at(p0_idx);
+                            let (x1, y1) = point_at(p1_idx);
+                            let (x2, y2) = point_at(p2_idx);
+                            let (x3, y3) = point_at(p3_idx);
+
+                            // Calculate control points
+                            let c1x = x1 + (x2 - x0) / 6.0;
+                            let c1y = y1 + (y2 - y0) / 6.0;
+                            let c2x = x2 - (x3 - x1) / 6.0;
+                            let c2y = y2 - (y3 - y1) / 6.0;
+
+                            path.push_str(&format!(
+                                " C {:.2} {:.2}, {:.2} {:.2}, {:.2} {:.2}",
+                                c1x, c1y, c2x, c2y, x2, y2
+                            ));
+                        }
+
+                        path
+                    }
+
+                    let path = generate_smooth_path(&month_data);
+
+                    // Update UI
+                    adapter.set_day_efficiency(ModelRc::new(VecModel::from(day_data)));
+                    adapter.set_best_day_index(best_idx);
+                    adapter.set_month_efficiency_data(ModelRc::new(VecModel::from(month_data)));
+                    adapter.set_month_efficiency_path(SharedString::from(path));
+                }
+            });
     }
 
     // ==================== CryptoAdapter Logic ====================
