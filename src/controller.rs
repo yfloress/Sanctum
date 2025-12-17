@@ -423,6 +423,86 @@ pub struct AppController {
 }
 
 impl AppController {
+    /// Genera estadísticas mensuales de hábitos para el bar chart
+    /// Retorna un array de 12 meses con total de completaciones y color dominante
+    pub fn get_habit_monthly_stats(
+        &self,
+        year: i32,
+    ) -> Result<Vec<(String, i64, String)>, ControllerError> {
+        // (month_name, total_completions, dominant_color_hex)
+
+        let start_date = format!("{}-01-01", year);
+        let end_date = format!("{}-12-31", year);
+
+        // Obtener todos los logs del año
+        let logs = self.get_habit_logs(start_date, end_date)?;
+        let habits = self.get_habits()?;
+
+        // Crear mapa de habit_id -> color
+        let habit_colors: std::collections::HashMap<String, String> = habits
+            .iter()
+            .map(|h| (h.id.clone(), h.color.clone()))
+            .collect();
+
+        // Estructura: month (1-12) -> habit_id -> count
+        let mut monthly_data: std::collections::HashMap<
+            u32,
+            std::collections::HashMap<String, i64>,
+        > = std::collections::HashMap::new();
+
+        // Procesar logs
+        for log in logs {
+            if let Ok(date) = NaiveDate::parse_from_str(&log.completed_date, "%Y-%m-%d") {
+                let month = date.month(); // 1-12
+
+                let month_map = monthly_data
+                    .entry(month)
+                    .or_insert_with(std::collections::HashMap::new);
+                *month_map.entry(log.habit_id).or_insert(0) += 1;
+            }
+        }
+
+        // Nombres de meses
+        let month_names = [
+            "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+        ];
+
+        let mut result: Vec<(String, i64, String)> = Vec::new();
+
+        // Generar estadísticas para cada mes (1-12)
+        for month in 1..=12 {
+            let month_name = month_names[(month - 1) as usize].to_string();
+
+            if let Some(habit_counts) = monthly_data.get(&month) {
+                // Total de completaciones del mes
+                let total: i64 = habit_counts.values().sum();
+
+                // Encontrar el hábito con más completaciones
+                let dominant_habit_id = habit_counts
+                    .iter()
+                    .max_by_key(|(_, count)| *count)
+                    .map(|(id, _)| id);
+
+                // Obtener el color del hábito dominante
+                let color = if let Some(habit_id) = dominant_habit_id {
+                    habit_colors
+                        .get(habit_id)
+                        .cloned()
+                        .unwrap_or_else(|| "#8b5cf6".to_string())
+                } else {
+                    "#8b5cf6".to_string() // Color por defecto
+                };
+
+                result.push((month_name, total, color));
+            } else {
+                // Mes sin completaciones
+                result.push((month_name, 0, "#8b5cf6".to_string()));
+            }
+        }
+
+        Ok(result)
+    }
+
     pub fn new(data_dir: PathBuf) -> Self {
         // Initialize with None as vault is locked
         let db = Arc::new(Mutex::new(None));
@@ -828,7 +908,8 @@ impl AppController {
 
     /// Saves active ticker IDs to settings
     pub fn save_active_ticker_ids(&self, ids: Vec<String>) -> Result<(), ControllerError> {
-        let json = serde_json::to_string(&ids).map_err(|e| ControllerError::Validation(e.to_string()))?;
+        let json =
+            serde_json::to_string(&ids).map_err(|e| ControllerError::Validation(e.to_string()))?;
         self.set_app_setting(SETTING_TICKER_COINS, &json)
     }
 
@@ -1105,7 +1186,7 @@ impl AppController {
     pub fn get_expenses_by_category(&self) -> Result<Vec<(String, i64)>, ControllerError> {
         let transactions = self.get_transactions()?;
         let accounts = self.get_accounts()?;
-        
+
         let currency_map: std::collections::HashMap<String, String> = accounts
             .iter()
             .map(|a| (a.id.clone(), a.currency.to_uppercase()))
@@ -1118,7 +1199,10 @@ impl AppController {
         let rate = if clp_rate > 0.0 { clp_rate } else { 1.0 };
 
         let normalize = |amount: i64, account_id: &str| -> i64 {
-            let currency = currency_map.get(account_id).map(|s| s.as_str()).unwrap_or("USD");
+            let currency = currency_map
+                .get(account_id)
+                .map(|s| s.as_str())
+                .unwrap_or("USD");
             if currency == "CLP" {
                 ((amount as f64) / rate) as i64
             } else {
@@ -1580,7 +1664,10 @@ impl AppController {
         let rate = if clp_rate > 0.0 { clp_rate } else { 1.0 };
 
         let normalize = |amount: i64, account_id: &str| -> i64 {
-            let currency = currency_map.get(account_id).map(|s| s.as_str()).unwrap_or("USD");
+            let currency = currency_map
+                .get(account_id)
+                .map(|s| s.as_str())
+                .unwrap_or("USD");
             if currency == "CLP" {
                 ((amount as f64) / rate) as i64
             } else {
@@ -1589,9 +1676,10 @@ impl AppController {
         };
 
         // Calculate Normalized Current Balance
-        let current_balance: i64 = balances.iter().map(|b| {
-            normalize(b.current_balance, &b.account_id)
-        }).sum();
+        let current_balance: i64 = balances
+            .iter()
+            .map(|b| normalize(b.current_balance, &b.account_id))
+            .sum();
 
         let today = chrono::Local::now().date_naive();
         let start_date = match range.as_str() {
@@ -1622,7 +1710,7 @@ impl AppController {
                     _ => 0,
                 };
                 let delta = normalize(raw_delta, &tx.account_id);
-                
+
                 *delta_by_day.entry(date).or_insert(0) += delta;
                 earliest_tx = Some(earliest_tx.map_or(date, |d| d.min(date)));
             }
@@ -1666,12 +1754,16 @@ impl AppController {
 
         // Generate Smooth Path (Catmull-Rom Spline -> Cubic Bezier)
         // Normalize points to 0..100 space
-        let points: Vec<(f64, f64)> = values.iter().enumerate().map(|(i, &v)| {
-            let x = (i as f64 / (values.len().max(2) - 1) as f64) * 100.0;
-            let y_ratio = (v - min_val) as f64 / safe_range;
-            let y = 100.0 - (5.0 + (y_ratio * 90.0)); // 5% padding
-            (x, y)
-        }).collect();
+        let points: Vec<(f64, f64)> = values
+            .iter()
+            .enumerate()
+            .map(|(i, &v)| {
+                let x = (i as f64 / (values.len().max(2) - 1) as f64) * 100.0;
+                let y_ratio = (v - min_val) as f64 / safe_range;
+                let y = 100.0 - (5.0 + (y_ratio * 90.0)); // 5% padding
+                (x, y)
+            })
+            .collect();
 
         let mut path_cmd = String::new();
         if !points.is_empty() {
@@ -1681,7 +1773,11 @@ impl AppController {
                 let p0 = if i == 0 { points[0] } else { points[i - 1] };
                 let p1 = points[i];
                 let p2 = points[i + 1];
-                let p3 = if i + 2 < points.len() { points[i + 2] } else { p2 };
+                let p3 = if i + 2 < points.len() {
+                    points[i + 2]
+                } else {
+                    p2
+                };
 
                 let cp1x = p1.0 + (p2.0 - p0.0) / 6.0;
                 let cp1y = p1.1 + (p2.1 - p0.1) / 6.0;
@@ -1689,8 +1785,10 @@ impl AppController {
                 let cp2x = p2.0 - (p3.0 - p1.0) / 6.0;
                 let cp2y = p2.1 - (p3.1 - p1.1) / 6.0;
 
-                path_cmd.push_str(&format!(" C {:.2} {:.2} {:.2} {:.2} {:.2} {:.2}", 
-                    cp1x, cp1y, cp2x, cp2y, p2.0, p2.1));
+                path_cmd.push_str(&format!(
+                    " C {:.2} {:.2} {:.2} {:.2} {:.2} {:.2}",
+                    cp1x, cp1y, cp2x, cp2y, p2.0, p2.1
+                ));
             }
         } else {
             path_cmd = "M 0 50 L 100 50".to_string();
@@ -1749,8 +1847,6 @@ impl AppController {
         })
     }
 
-
-
     /// Returns normalized SVG path commands (0-100 space) for net worth history and current net worth formatted
     /// Also returns min and max values formatted for labels
     pub fn get_net_worth_history(
@@ -1773,7 +1869,10 @@ impl AppController {
         let rate = if clp_rate > 0.0 { clp_rate } else { 1.0 };
 
         let normalize = |amount: i64, account_id: &str| -> i64 {
-            let currency = currency_map.get(account_id).map(|s| s.as_str()).unwrap_or("USD");
+            let currency = currency_map
+                .get(account_id)
+                .map(|s| s.as_str())
+                .unwrap_or("USD");
             if currency == "CLP" {
                 ((amount as f64) / rate) as i64
             } else {
@@ -1803,10 +1902,7 @@ impl AppController {
 
                 let amount_delta = normalize(acc.initial_balance, &acc.id);
 
-                events.push(FinancialEvent {
-                    date,
-                    amount_delta,
-                });
+                events.push(FinancialEvent { date, amount_delta });
             }
         }
 
@@ -1824,10 +1920,7 @@ impl AppController {
 
             if let Ok(date) = NaiveDate::parse_from_str(&tx.date, "%Y-%m-%d") {
                 let amount_delta = normalize(raw_delta, &tx.account_id);
-                events.push(FinancialEvent {
-                    date,
-                    amount_delta,
-                });
+                events.push(FinancialEvent { date, amount_delta });
             }
         }
 
