@@ -1,0 +1,14 @@
+// ==================== Gradient Background ====================
+// Smooth purple to black radial gradient for authentication screens
+
+import { Palette } from "../globals.slint";
+
+export component GradientBackground inherits Rectangle {
+    in property <bool> show-background: true;
+
+    width: 100%;
+    height: 100%;
+
+    // Smooth purple to black radial gradient with multiple stops for seamless transition
+    background: root.show-background ? @radial-gradient(circle, #2d1b4e 0%, #261545 15%, #1f1038 30%, #180c2d 45%, #110822 60%, #0a0515 75%, #050208 88%, #000000 100%) : transparent;
+}

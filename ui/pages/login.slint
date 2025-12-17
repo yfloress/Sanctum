@@ -1,9 +1,9 @@
 // ==================== Login Page ====================
-// Noir Minimalist - Elegant, luxury-inspired authentication
+// Noir Minimalist - Elegant authentication with smooth gradient background and refined typography
 
 import { Palette, AuthAdapter, AppState, NotificationAdapter } from "../globals.slint";
 import { TextButton } from "../widgets.slint";
-import { TacticalGrid } from "../components/tactical_grid.slint";
+import { GradientBackground } from "../components/gradient_background.slint";
 
 // ==================== PasswordInput ====================
 // Custom password input with visibility toggle
@@ -62,10 +62,12 @@ component PasswordInput inherits Rectangle {
             }
         }
 
-        // Underline (full width, centered with container)
+        // Underline with gradient (full width, centered with container)
         Rectangle {
             height: input.has-focus ? 2px : 1px;
-            background: input.has-focus ? Palette.border-light : Palette.border;
+            background: input.has-focus
+                ? @linear-gradient(90deg, transparent 0%, #6366f1 20%, #ffffff 50%, #6366f1 80%, transparent 100%)
+                : @linear-gradient(90deg, transparent 0%, Palette.border 50%, transparent 100%);
 
             animate height {
                 duration: 150ms;
@@ -111,8 +113,8 @@ component PasswordInput inherits Rectangle {
 }
 
 export component LoginPage inherits Rectangle {
-    // Use TacticalGrid for sophisticated background
-    TacticalGrid {}
+    // Smooth gradient background
+    GradientBackground {}
 
     // Internal state
     in-out property <string> password-text: "";
@@ -161,14 +163,14 @@ export component LoginPage inherits Rectangle {
                         height: 16px;
                     }
 
-                    // Subtitle
+                    // Subtitle with elegant styling
                     Text {
                         text: "Personal Financial Fortress";
-                        color: Palette.text-muted;
+                        color: @linear-gradient(90deg, Palette.text-muted 0%, Palette.text-secondary 50%, Palette.text-muted 100%);
                         font-size: 13px;
-                        font-weight: 300;
+                        font-weight: 200;
                         font-italic: true;
-                        letter-spacing: 1px;
+                        letter-spacing: 2.5px;
                         horizontal-alignment: center;
                     }
 
@@ -244,11 +246,11 @@ export component LoginPage inherits Rectangle {
             height: 60px;
 
             Text {
-                text: "AES-256 encrypted";
+                text: "AES-256 ENCRYPTED";
                 color: Palette.text-subtle;
-                font-size: 10px;
-                font-weight: 400;
-                letter-spacing: 2px;
+                font-size: 9px;
+                font-weight: 500;
+                letter-spacing: 3px;
                 horizontal-alignment: center;
                 vertical-alignment: center;
             }

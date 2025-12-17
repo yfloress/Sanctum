@@ -100,12 +100,12 @@ component CategoryCard inherits Rectangle {
 	        spacing: 14px;
         
         // Icon
-	        Rectangle {
-	            width: 44px;
-	            height: 44px;
-	            border-radius: 10px;
-	            background: selected 
-	                ? @linear-gradient(135deg, Palette.accent 0%, Palette.primary 100%)
+	            Rectangle {
+	                width: 44px;
+	                height: 44px;
+	                border-radius: 10px;
+	                background: selected 
+	                ? @linear-gradient(135deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%)
 	                : Palette.surface-hover;
             
             Text {
@@ -234,13 +234,13 @@ export component AddCryptoWalletModal inherits Rectangle {
                     spacing: 12px;
                     horizontal-stretch: 1;
 
-	                    Rectangle {
-	                        width: 4px;
-	                        height: 20px;
-	                        border-radius: 2px;
-	                        background: @linear-gradient(180deg, Palette.accent 0%, Palette.primary 100%);
-	                        y: (parent.height - self.height) / 2;
-	                    }
+	                        Rectangle {
+	                            width: 4px;
+	                            height: 20px;
+	                            border-radius: 2px;
+	                            background: @linear-gradient(180deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%);
+	                            y: (parent.height - self.height) / 2;
+	                        }
 
                     Text {
                         text: "NEW WALLET";
@@ -341,7 +341,7 @@ export component AddCryptoWalletModal inherits Rectangle {
 	            // Submit Button
 	            Rectangle {
 	                height: 48px;
-	                background: @linear-gradient(135deg, Palette.accent 0%, Palette.primary 100%);
+	                background: @linear-gradient(135deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%);
 	                border-radius: 10px;
 	                
 	                HorizontalLayout {
