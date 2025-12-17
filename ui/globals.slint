@@ -18,6 +18,7 @@ export global Palette {
     out property <color> accent: #ffffff;          // Pure white - Primary accent
     out property <color> accent-muted: #ffffff20;  // Transparent white
     out property <color> accent-hover: #ffffffcc;  // Slightly transparent white
+    out property <color> primary: #6366f1;         // Brand purple
 
     // Semantic colors
     out property <color> success: #22c55e;         // Green
@@ -141,13 +142,6 @@ export struct HabitData {
     days: [HabitDay], // Array of days for the current month
 }
 
-export struct MonthlyStats {
-    month-name: string,
-    total-completions: float,
-    max-completions: float, // For scaling
-    dominant-color: color,
-}
-
 export global HabitAdapter {
     in-out property <[HabitData]> habits: [];
     in-out property <string> current-month-name: "";
@@ -157,9 +151,6 @@ export global HabitAdapter {
     // Heatmap
     in-out property <[HeatmapWeek]> heatmap-data: [];
     in-out property <int> heatmap-year;
-
-    // Bar Chart
-    in-out property <[MonthlyStats]> chart-data: [];
 
     // Actions
     callback fetch-habits(int, int); // month (1-12), year

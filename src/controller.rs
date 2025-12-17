@@ -828,7 +828,8 @@ impl AppController {
 
     /// Saves active ticker IDs to settings
     pub fn save_active_ticker_ids(&self, ids: Vec<String>) -> Result<(), ControllerError> {
-        let json = serde_json::to_string(&ids).map_err(|e| ControllerError::Validation(e.to_string()))?;
+        let json =
+            serde_json::to_string(&ids).map_err(|e| ControllerError::Validation(e.to_string()))?;
         self.set_app_setting(SETTING_TICKER_COINS, &json)
     }
 
@@ -1105,7 +1106,7 @@ impl AppController {
     pub fn get_expenses_by_category(&self) -> Result<Vec<(String, i64)>, ControllerError> {
         let transactions = self.get_transactions()?;
         let accounts = self.get_accounts()?;
-        
+
         let currency_map: std::collections::HashMap<String, String> = accounts
             .iter()
             .map(|a| (a.id.clone(), a.currency.to_uppercase()))
@@ -1118,7 +1119,10 @@ impl AppController {
         let rate = if clp_rate > 0.0 { clp_rate } else { 1.0 };
 
         let normalize = |amount: i64, account_id: &str| -> i64 {
-            let currency = currency_map.get(account_id).map(|s| s.as_str()).unwrap_or("USD");
+            let currency = currency_map
+                .get(account_id)
+                .map(|s| s.as_str())
+                .unwrap_or("USD");
             if currency == "CLP" {
                 ((amount as f64) / rate) as i64
             } else {
@@ -1580,7 +1584,10 @@ impl AppController {
         let rate = if clp_rate > 0.0 { clp_rate } else { 1.0 };
 
         let normalize = |amount: i64, account_id: &str| -> i64 {
-            let currency = currency_map.get(account_id).map(|s| s.as_str()).unwrap_or("USD");
+            let currency = currency_map
+                .get(account_id)
+                .map(|s| s.as_str())
+                .unwrap_or("USD");
             if currency == "CLP" {
                 ((amount as f64) / rate) as i64
             } else {
@@ -1589,9 +1596,10 @@ impl AppController {
         };
 
         // Calculate Normalized Current Balance
-        let current_balance: i64 = balances.iter().map(|b| {
-            normalize(b.current_balance, &b.account_id)
-        }).sum();
+        let current_balance: i64 = balances
+            .iter()
+            .map(|b| normalize(b.current_balance, &b.account_id))
+            .sum();
 
         let today = chrono::Local::now().date_naive();
         let start_date = match range.as_str() {
@@ -1622,7 +1630,7 @@ impl AppController {
                     _ => 0,
                 };
                 let delta = normalize(raw_delta, &tx.account_id);
-                
+
                 *delta_by_day.entry(date).or_insert(0) += delta;
                 earliest_tx = Some(earliest_tx.map_or(date, |d| d.min(date)));
             }
@@ -1666,12 +1674,16 @@ impl AppController {
 
         // Generate Smooth Path (Catmull-Rom Spline -> Cubic Bezier)
         // Normalize points to 0..100 space
-        let points: Vec<(f64, f64)> = values.iter().enumerate().map(|(i, &v)| {
-            let x = (i as f64 / (values.len().max(2) - 1) as f64) * 100.0;
-            let y_ratio = (v - min_val) as f64 / safe_range;
-            let y = 100.0 - (5.0 + (y_ratio * 90.0)); // 5% padding
-            (x, y)
-        }).collect();
+        let points: Vec<(f64, f64)> = values
+            .iter()
+            .enumerate()
+            .map(|(i, &v)| {
+                let x = (i as f64 / (values.len().max(2) - 1) as f64) * 100.0;
+                let y_ratio = (v - min_val) as f64 / safe_range;
+                let y = 100.0 - (5.0 + (y_ratio * 90.0)); // 5% padding
+                (x, y)
+            })
+            .collect();
 
         let mut path_cmd = String::new();
         if !points.is_empty() {
@@ -1681,7 +1693,11 @@ impl AppController {
                 let p0 = if i == 0 { points[0] } else { points[i - 1] };
                 let p1 = points[i];
                 let p2 = points[i + 1];
-                let p3 = if i + 2 < points.len() { points[i + 2] } else { p2 };
+                let p3 = if i + 2 < points.len() {
+                    points[i + 2]
+                } else {
+                    p2
+                };
 
                 let cp1x = p1.0 + (p2.0 - p0.0) / 6.0;
                 let cp1y = p1.1 + (p2.1 - p0.1) / 6.0;
@@ -1689,8 +1705,10 @@ impl AppController {
                 let cp2x = p2.0 - (p3.0 - p1.0) / 6.0;
                 let cp2y = p2.1 - (p3.1 - p1.1) / 6.0;
 
-                path_cmd.push_str(&format!(" C {:.2} {:.2} {:.2} {:.2} {:.2} {:.2}", 
-                    cp1x, cp1y, cp2x, cp2y, p2.0, p2.1));
+                path_cmd.push_str(&format!(
+                    " C {:.2} {:.2} {:.2} {:.2} {:.2} {:.2}",
+                    cp1x, cp1y, cp2x, cp2y, p2.0, p2.1
+                ));
             }
         } else {
             path_cmd = "M 0 50 L 100 50".to_string();
@@ -1749,8 +1767,6 @@ impl AppController {
         })
     }
 
-
-
     /// Returns normalized SVG path commands (0-100 space) for net worth history and current net worth formatted
     /// Also returns min and max values formatted for labels
     pub fn get_net_worth_history(
@@ -1773,7 +1789,10 @@ impl AppController {
         let rate = if clp_rate > 0.0 { clp_rate } else { 1.0 };
 
         let normalize = |amount: i64, account_id: &str| -> i64 {
-            let currency = currency_map.get(account_id).map(|s| s.as_str()).unwrap_or("USD");
+            let currency = currency_map
+                .get(account_id)
+                .map(|s| s.as_str())
+                .unwrap_or("USD");
             if currency == "CLP" {
                 ((amount as f64) / rate) as i64
             } else {
@@ -1803,10 +1822,7 @@ impl AppController {
 
                 let amount_delta = normalize(acc.initial_balance, &acc.id);
 
-                events.push(FinancialEvent {
-                    date,
-                    amount_delta,
-                });
+                events.push(FinancialEvent { date, amount_delta });
             }
         }
 
@@ -1824,10 +1840,7 @@ impl AppController {
 
             if let Ok(date) = NaiveDate::parse_from_str(&tx.date, "%Y-%m-%d") {
                 let amount_delta = normalize(raw_delta, &tx.account_id);
-                events.push(FinancialEvent {
-                    date,
-                    amount_delta,
-                });
+                events.push(FinancialEvent { date, amount_delta });
             }
         }
 

@@ -319,12 +319,15 @@ export component ActionButton inherits Rectangle {
 }
 
 // ==================== CustomScrollbar ====================
-// Horizontal scrollbar indicator
+// Horizontal scrollbar indicator - Auto-hides when not scrolling
 
 export component CustomScrollbar inherits Rectangle {
     in property <length> viewport-width;
     in property <length> viewport-x;
     in property <length> visible-width;
+    
+    // Internal state to track scrolling
+    property <bool> is-scrolling: false;
     
     height: 4px;
     width: visible-width;
@@ -333,27 +336,41 @@ export component CustomScrollbar inherits Rectangle {
     // Only show if content overflows
     visible: viewport-width > visible-width;
     
+    // Detect viewport changes (scrolling)
+    changed viewport-x => {
+        self.is-scrolling = true;
+        hide-timer.restart();
+    }
+    
     // The Scroll Thumb
-    Rectangle {
+    if viewport-width > visible-width: Rectangle {
         height: 100%;
         border-radius: 2px;
         background: Palette.text-muted;
-        opacity: 0.3;
+        // Show when scrolling or hovering, hide otherwise
+        opacity: (root.is-scrolling || touch.has-hover) ? 0.6 : 0.0;
+        
+        animate opacity { 
+            duration: 600ms;
+            easing: ease-out;
+        }
         
         // Calculate width: Ratio of visible to total
-        width: max(20px, parent.width * (parent.width / max(1px, viewport-width)));
+        width: max(20px, parent.width * (parent.width / viewport-width));
         
         // Calculate position: Inverse of viewport-x (which is negative)
-        x: (-viewport-x / max(1px, viewport-width)) * parent.width;
-
-        animate opacity { duration: 200ms; }
+        x: (-viewport-x / viewport-width) * parent.width;
         
-        states [
-            hover when touch.has-hover: {
-                opacity: 0.6;
-            }
-        ]
-        
-        touch := TouchArea {}
+        touch := TouchArea {
+            mouse-cursor: pointer;
+        }
+    }
+    
+    // Timer to hide after scrolling stops
+    hide-timer := Timer {
+        interval: 1000ms;
+        triggered => {
+            root.is-scrolling = false;
+        }
     }
 }

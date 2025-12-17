@@ -166,13 +166,6 @@
 - `export component CryptoCard`: Tarjeta de resumen de activo.
 **Dependencias:** `globals.slint`
 ---
-## ui/components/habit_barchart.slint
-**Tipo:** Slint UI
-**Resumen:** Gráfico de barras para visualizar volumen mensual de hábitos.
-**Estructura Clave:**
-- `export component HabitBarChart`: Renderiza barras verticales basadas en `HabitAdapter.chart-data`.
-**Dependencias:** `globals.slint`
----
 ## ui/components/habit_heatmap.slint
 **Tipo:** Slint UI
 **Resumen:** Mapa de calor tipo GitHub para consistencia de hábitos.

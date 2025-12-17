@@ -23,6 +23,7 @@
         };
 
         libraries = with pkgs; [
+          stdenv.cc.cc.lib
           libGL
           wayland
           libxkbcommon

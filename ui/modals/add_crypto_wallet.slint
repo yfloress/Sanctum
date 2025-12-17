@@ -95,18 +95,18 @@ component CategoryCard inherits Rectangle {
         opacity: 0.15;
     }
 
-    HorizontalLayout {
-        padding: 16px;
-        spacing: 14px;
+	    HorizontalLayout {
+	        padding: 16px;
+	        spacing: 14px;
         
         // Icon
-        Rectangle {
-            width: 44px;
-            height: 44px;
-            border-radius: 10px;
-            background: selected 
-                ? @linear-gradient(135deg, Palette.accent 0%, #6366f1 100%)
-                : Palette.surface-hover;
+	        Rectangle {
+	            width: 44px;
+	            height: 44px;
+	            border-radius: 10px;
+	            background: selected 
+	                ? @linear-gradient(135deg, Palette.accent 0%, Palette.primary 100%)
+	                : Palette.surface-hover;
             
             Text {
                 text: root.icon;
@@ -222,9 +222,9 @@ export component AddCryptoWalletModal inherits Rectangle {
 
         TouchArea { }
 
-        VerticalLayout {
-            padding: 32px;
-            spacing: 24px;
+	        VerticalLayout {
+	            padding: 32px;
+	            spacing: 24px;
 
             // Header
             HorizontalLayout {
@@ -234,13 +234,13 @@ export component AddCryptoWalletModal inherits Rectangle {
                     spacing: 12px;
                     horizontal-stretch: 1;
 
-                    Rectangle {
-                        width: 4px;
-                        height: 20px;
-                        border-radius: 2px;
-                        background: @linear-gradient(180deg, #f7931a 0%, #ff9500 100%);
-                        y: (parent.height - self.height) / 2;
-                    }
+	                    Rectangle {
+	                        width: 4px;
+	                        height: 20px;
+	                        border-radius: 2px;
+	                        background: @linear-gradient(180deg, Palette.accent 0%, Palette.primary 100%);
+	                        y: (parent.height - self.height) / 2;
+	                    }
 
                     Text {
                         text: "NEW WALLET";
@@ -272,69 +272,79 @@ export component AddCryptoWalletModal inherits Rectangle {
                         clicked => { root.reset(); AppState.show-add-wallet = false; } 
                     }
                 }
-            }
+	            }
 
-            // Name Field
-            FormField { 
-                label: "WALLET NAME"; 
-                placeholder: "e.g. Ledger Nano X"; 
-                value <=> root.wallet-name; 
-            }
+	            body := Flickable {
+	                horizontal-stretch: 1;
+	                vertical-stretch: 1;
 
-            // Category Label
-            VerticalLayout {
-                spacing: 12px;
+	                VerticalLayout {
+	                    width: parent.width;
+	                    spacing: 24px;
 
-                Text {
-                    text: "WALLET TYPE";
-                    color: Palette.text-muted;
-                    font-size: 10px;
-                    font-weight: 500;
-                    letter-spacing: 1.5px;
-                }
+	                    // Name Field
+	                    FormField { 
+	                        label: "WALLET NAME"; 
+	                        placeholder: "e.g. Ledger Nano X"; 
+	                        value <=> root.wallet-name; 
+	                    }
 
-                // Category Options
-                VerticalLayout {
-                    spacing: 10px;
-                    
-                    CategoryCard { 
-                        icon: "💳";
-                        title: "Software Wallet"; 
-                        subtitle: "MetaMask, Trust Wallet, Exodus";
-                        value: "wallet_single"; 
-                        selected: root.category == "wallet_single";
-                        clicked => { root.category = "wallet_single"; }
-                    }
-                    
-                    CategoryCard { 
-                        icon: "🔐";
-                        title: "Hardware Wallet"; 
-                        subtitle: "Ledger, Trezor, KeepKey";
-                        value: "wallet_multi"; 
-                        selected: root.category == "wallet_multi";
-                        clicked => { root.category = "wallet_multi"; }
-                    }
-                    
-                    CategoryCard { 
-                        icon: "📊";
-                        title: "Exchange"; 
-                        subtitle: "Binance, Coinbase, Kraken";
-                        value: "exchange"; 
-                        selected: root.category == "exchange";
-                        clicked => { root.category = "exchange"; }
-                    }
-                }
-            }
+	                    // Category Label
+	                    VerticalLayout {
+	                        spacing: 12px;
 
-            Rectangle { vertical-stretch: 1; }
+	                        Text {
+	                            text: "WALLET TYPE";
+	                            color: Palette.text-muted;
+	                            font-size: 10px;
+	                            font-weight: 500;
+	                            letter-spacing: 1.5px;
+	                        }
 
-            // Submit Button
-            Rectangle {
-                height: 48px;
-                background: @linear-gradient(135deg, #f7931a 0%, #ff9500 100%);
-                border-radius: 10px;
-                
-                HorizontalLayout {
+	                        // Category Options
+	                        VerticalLayout {
+	                            spacing: 10px;
+	                            
+	                            CategoryCard { 
+	                                icon: "💳";
+	                                title: "Software Wallet"; 
+	                                subtitle: "MetaMask, Trust Wallet, Exodus";
+	                                value: "wallet_single"; 
+	                                selected: root.category == "wallet_single";
+	                                clicked => { root.category = "wallet_single"; }
+	                            }
+	                            
+	                            CategoryCard { 
+	                                icon: "🔐";
+	                                title: "Hardware Wallet"; 
+	                                subtitle: "Ledger, Trezor, KeepKey";
+	                                value: "wallet_multi"; 
+	                                selected: root.category == "wallet_multi";
+	                                clicked => { root.category = "wallet_multi"; }
+	                            }
+	                            
+	                            CategoryCard { 
+	                                icon: "📊";
+	                                title: "Exchange"; 
+	                                subtitle: "Binance, Coinbase, Kraken";
+	                                value: "exchange"; 
+	                                selected: root.category == "exchange";
+	                                clicked => { root.category = "exchange"; }
+	                            }
+	                        }
+	                    }
+
+	                    Rectangle { height: 8px; }
+	                }
+	            }
+
+	            // Submit Button
+	            Rectangle {
+	                height: 48px;
+	                background: @linear-gradient(135deg, Palette.accent 0%, Palette.primary 100%);
+	                border-radius: 10px;
+	                
+	                HorizontalLayout {
                     alignment: center;
                     spacing: 10px;
                     
