@@ -30,14 +30,13 @@ export component DayEfficiencyChart inherits Rectangle {
             vertical-stretch: 1;
             
             HorizontalLayout {
-                spacing: 4px; // Reduced spacing to fit wider bars
-                alignment: space-around; // Better distribution
-
+                spacing: 2px; 
+                
                 // Bars
                 for val[i] in root.data: VerticalLayout {
+                    horizontal-stretch: 1; // Distribute evenly
                     alignment: end;
                     spacing: 8px;
-                    width: 24px; // Explicit width for the column
 
                     // Bar container
                     Rectangle {
@@ -50,7 +49,7 @@ export component DayEfficiencyChart inherits Rectangle {
                             width: 20px; // Chunky bars
                             height: val * parent.height; // Scale by value
                             border-radius: 4px;
-                            x: (parent.width - self.width) / 2;
+                            x: (parent.width - self.width) / 2; // Center in the distributed slot
                             
                             // Highlight best day
                             background: i == root.best-day-index ? #3b82f6 : #333333;
@@ -114,6 +113,8 @@ export component MonthEfficiencyChart inherits Rectangle {
                 stroke: #A855F7; // Fixed Purple as requested
                 stroke-width: 2px;
                 fill: transparent;
+                viewbox-width: 100;
+                viewbox-height: 100;
             }
             
             // Gradient Fill
@@ -121,6 +122,8 @@ export component MonthEfficiencyChart inherits Rectangle {
                 commands: root.path-command + " L 100 100 L 0 100 Z";
                 fill: @linear-gradient(180deg, #A855F733 0%, transparent 100%);
                 stroke-width: 0px;
+                viewbox-width: 100;
+                viewbox-height: 100;
             }
 
             // Dots (Markers)
