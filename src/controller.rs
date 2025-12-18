@@ -16,6 +16,7 @@ use regex::Regex;
 use rusqlite::Connection;
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::fs::{self, Permissions};
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -1183,12 +1184,75 @@ impl AppController {
 
     // ==================== Crypto Price Methods ====================
 
+    /// Gets all unique coin IDs that need monitoring (Active Tickers + Wallet Holdings)
+    pub fn get_monitored_coin_ids(&self) -> Result<Vec<String>, ControllerError> {
+        // Preserve priority: tickers first, then wallets.
+        let mut ids = Vec::new();
+        let mut seen = HashSet::new();
+
+        for id in self.get_active_ticker_ids() {
+            if seen.insert(id.clone()) {
+                ids.push(id);
+            }
+        }
+
+        if let Ok(portfolio) = self.get_aggregated_portfolio() {
+            for asset in portfolio {
+                let coin_id = asset.coin_id;
+                if seen.insert(coin_id.clone()) {
+                    ids.push(coin_id);
+                }
+            }
+        }
+
+        Ok(ids)
+    }
+
     /// Fetches cryptocurrency prices from CoinGecko
+    /// Implements privacy padding: mixes requested coins with a default list up to the API limit (50).
     pub async fn get_crypto_prices(
         &self,
         coins: Vec<String>,
     ) -> Result<Vec<CryptoAsset>, ControllerError> {
-        crypto::fetch_crypto_prices(coins)
+        // CoinGecko limit is 50
+        const MAX_BATCH_SIZE: usize = 50;
+
+        let mut final_list = Vec::new();
+        let mut seen = HashSet::new();
+        let mut truncated = false;
+
+        for coin in coins {
+            if seen.insert(coin.clone()) {
+                if final_list.len() < MAX_BATCH_SIZE {
+                    final_list.push(coin);
+                } else {
+                    truncated = true;
+                }
+            }
+        }
+
+        if final_list.len() < MAX_BATCH_SIZE {
+            // Smart padding: fill remaining slots with privacy coins.
+            let padding = crypto::default_price_allowlist();
+
+            for privacy_coin in padding {
+                if final_list.len() >= MAX_BATCH_SIZE {
+                    break;
+                }
+                if seen.insert(privacy_coin.clone()) {
+                    final_list.push(privacy_coin);
+                }
+            }
+        }
+
+        if truncated {
+            log::warn!(
+                "Price request exceeds {} unique coins; truncating to limit",
+                MAX_BATCH_SIZE
+            );
+        }
+
+        crypto::fetch_crypto_prices(final_list)
             .await
             .map_err(ControllerError::Api)
     }

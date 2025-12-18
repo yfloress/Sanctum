@@ -1665,8 +1665,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let notify_for_async_block = show_notification_clone_for_refresh.clone(); // Clone for the async block
 
             tokio::spawn(async move {
-                // 1. Get coins to update (from settings)
-                let coins = controller_async.get_active_ticker_ids();
+                // 1. Get coins to update (Settings + Wallets)
+                let coins = controller_async
+                    .get_monitored_coin_ids()
+                    .unwrap_or_default();
 
                 if !coins.is_empty() {
                     match controller_async.get_crypto_prices(coins).await {
