@@ -1218,11 +1218,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut fontdb = fontdb::Database::new();
         fontdb.load_system_fonts();
 
-        // Load DejaVu Sans from ui/fonts
+        // Load DejaVu Sans from ui/fonts and set it as default for sans-serif
         let font_path = std::path::PathBuf::from("ui/fonts/DejaVuSans.ttf");
         if font_path.exists() {
             fontdb.load_font_file(&font_path).ok();
         }
+
+        // Set DejaVu Sans as the default serif, sans-serif, and monospace families
+        fontdb.set_serif_family("DejaVu Sans");
+        fontdb.set_sans_serif_family("DejaVu Sans");
+        fontdb.set_monospace_family("DejaVu Sans");
 
         // Read and parse SVG with usvg to convert text to paths
         let svg_data = std::fs::read_to_string(&svg_path).ok()?;
