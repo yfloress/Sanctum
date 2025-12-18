@@ -1143,9 +1143,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             return None;
         }
 
-        // Generate SVG with plotters
+        // Generate SVG with plotters (high resolution for crisp rendering)
         let temp_svg = std::env::temp_dir().join("sanctum_monthly_chart_temp.svg");
-        let root = SVGBackend::new(&temp_svg, (1200, 360)).into_drawing_area();
+        let root = SVGBackend::new(&temp_svg, (2400, 720)).into_drawing_area();
         root.fill(&RGBColor(10, 10, 10)).ok()?;
 
         let max_val = data.iter().map(|d| d.avg_per_day).fold(0.0_f32, f32::max);
@@ -1153,9 +1153,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let x_max = data.len().max(1) as i32;
 
         let mut chart = ChartBuilder::on(&root)
-            .margin(20)
-            .x_label_area_size(40)
-            .y_label_area_size(45)
+            .margin(40)
+            .x_label_area_size(80)
+            .y_label_area_size(90)
             .build_cartesian_2d(0..x_max, 0f32..upper)
             .ok()?;
 
@@ -1169,7 +1169,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .map(|d| d.month_name.clone())
                     .unwrap_or_default()
             })
-            .label_style(("sans-serif", 14).into_font().color(&RGBColor(163, 163, 163)))
+            .label_style(("sans-serif", 28).into_font().color(&RGBColor(163, 163, 163)))
             .axis_style(ShapeStyle::from(&RGBColor(51, 51, 51)).stroke_width(1))
             .draw()
             .ok()?;
@@ -1191,13 +1191,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         chart
             .draw_series(LineSeries::new(
                 area_points.iter().copied(),
-                ShapeStyle::from(&RGBColor(139, 92, 246)).stroke_width(2),
+                ShapeStyle::from(&RGBColor(139, 92, 246)).stroke_width(4),
             ))
             .ok()?;
 
         chart
             .draw_series(area_points.iter().map(|&(x, y)| {
-                Circle::new((x, y), 3, ShapeStyle::from(&RGBColor(236, 72, 153)).filled())
+                Circle::new((x, y), 6, ShapeStyle::from(&RGBColor(236, 72, 153)).filled())
             }))
             .ok()?;
 
