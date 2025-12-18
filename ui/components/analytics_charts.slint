@@ -78,6 +78,8 @@ export component MonthlyLineChart inherits Rectangle {
     in property <string> path;
     in property <image> image;
 
+    private property <int> active-point-index: -1;
+
     background: Palette.surface;
     border-radius: 12px;
     border-width: 1px;
@@ -97,20 +99,81 @@ export component MonthlyLineChart inherits Rectangle {
         }
 
         // Chart area
-        Rectangle {
+        chart-area := Rectangle {
             vertical-stretch: 1;
             min-height: 240px;
             border-radius: 8px;
             background: #0a0a0a;
             border-width: 1px;
             border-color: Palette.border-subtle;
-            clip: true;
+            clip: false; // Allow tooltip to overflow if needed
 
             Image {
                 source: root.image;
                 width: 100%;
                 height: 100%;
                 image-fit: contain;
+            }
+
+            // Interactive Tooltip Overlay
+            ta := TouchArea {
+                width: 100%;
+                height: 100%;
+                mouse-cursor: crosshair;
+
+                moved => {
+                    if (root.data.length > 1) {
+                        // Calculate closest index based on mouse X
+                        // Points are evenly distributed from 0 to width
+                        // index = (x / width) * (N - 1)
+                        let raw-idx = (self.mouse-x / self.width) * (root.data.length - 1);
+                        root.active-point-index = max(0, min(root.data.length - 1, round(raw-idx)));
+                    }
+                }
+            }
+
+            // Tooltip Line
+            if ta.has-hover && root.active-point-index >= 0: Rectangle {
+                x: parent.width * (root.data[root.active-point-index].x-percent / 100) - 1px;
+                width: 2px;
+                height: parent.height;
+                background: Palette.border-light;
+                opacity: 0.5;
+            }
+
+            // Tooltip Bubble
+            if ta.has-hover && root.active-point-index >= 0: Rectangle {
+                // Position tooltip above the point if possible, or follow mouse X
+                x: min(parent.width - self.width, max(0px, (parent.width * (root.data[root.active-point-index].x-percent / 100)) - self.width / 2));
+                y: -35px; // Float above the chart area
+                width: 100px;
+                height: 45px;
+                background: Palette.surface-hover;
+                border-radius: 6px;
+                border-width: 1px;
+                border-color: Palette.border;
+                z: 100;
+
+                VerticalLayout {
+                    alignment: center;
+                    spacing: 2px;
+                    
+                    Text {
+                        text: root.data[root.active-point-index].month-name;
+                        color: Palette.text-secondary;
+                        font-size: 10px;
+                        font-weight: 600;
+                        horizontal-alignment: center;
+                    }
+                    
+                    Text {
+                        text: "Avg: " + root.data[root.active-point-index].avg-per-day; // Formatted number would be better but simple float is ok
+                        color: Palette.text-primary;
+                        font-size: 12px;
+                        font-weight: 700;
+                        horizontal-alignment: center;
+                    }
+                }
             }
         }
 

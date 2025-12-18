@@ -1157,7 +1157,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let mut chart = ChartBuilder::on(&root)
             .margin(20)
-            .x_label_area_size(60)
+            .x_label_area_size(40)
             .y_label_area_size(45)
             .build_cartesian_2d(0..x_max, 0f32..upper)
             .ok()?;
@@ -1165,7 +1165,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         chart
             .configure_mesh()
             .disable_mesh()
-            .disable_x_axis()
             .disable_y_axis()
             .x_labels(data.len())
             .x_label_formatter(&|v| {
@@ -1173,7 +1172,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .map(|d| d.month_name.clone())
                     .unwrap_or_default()
             })
-            .label_style(("sans-serif", 12).into_font().color(&RGBColor(170, 170, 170)))
+            .label_style(("sans-serif", 14).into_font().color(&RGBColor(163, 163, 163)))
+            .axis_style(ShapeStyle::from(&RGBColor(51, 51, 51)).stroke_width(1))
             .draw()
             .ok()?;
 
