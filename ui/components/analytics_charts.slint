@@ -32,7 +32,7 @@ export component WeeklyBarChart inherits Rectangle {
             vertical-stretch: 1;
             min-height: 220px;
             border-radius: 16px;
-            background: linear-gradient(180deg, #0a0a0a 0%, #0f0f0f 100%);
+            background: @linear-gradient(180deg, #0a0a0a, #0f0f0f);
             border-width: 1px;
             border-color: Palette.border-subtle;
             clip: true;
@@ -101,7 +101,7 @@ export component MonthlyLineChart inherits Rectangle {
             vertical-stretch: 1;
             min-height: 240px;
             border-radius: 16px;
-            background: linear-gradient(180deg, #0a0a0a 0%, #0f0f0f 100%);
+            background: @linear-gradient(180deg, #0a0a0a, #0f0f0f);
             border-width: 1px;
             border-color: Palette.border-subtle;
             clip: false; // Allow tooltip to overflow if needed
