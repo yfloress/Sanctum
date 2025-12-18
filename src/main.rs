@@ -1143,9 +1143,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             return None;
         }
 
-        let path = std::env::temp_dir().join("sanctum_monthly_chart.svg");
-        let path_str = path.to_string_lossy().into_owned();
-        let root = SVGBackend::new(path_str.as_str(), (1200, 360)).into_drawing_area();
+        // Generate SVG with plotters
+        let svg_path = std::env::temp_dir().join("sanctum_monthly_chart.svg");
+        let svg_path_str = svg_path.to_string_lossy().into_owned();
+        let root = SVGBackend::new(svg_path_str.as_str(), (1200, 360)).into_drawing_area();
         root.fill(&RGBColor(10, 10, 10)).ok()?;
 
         let max_val = data.iter().map(|d| d.avg_per_day).fold(0.0_f32, f32::max);
@@ -1173,11 +1174,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .map(|d| d.month_name.clone())
                     .unwrap_or_default()
             })
-            .label_style(TextStyle::new(
-                FontFamily::SansSerif,
-                14,
-                &RGBColor(163, 163, 163),
-            ))
+            .label_style(("sans-serif", 14).into_font().color(&RGBColor(163, 163, 163)))
             .axis_style(ShapeStyle::from(&RGBColor(51, 51, 51)).stroke_width(1))
             .draw()
             .ok()?;
@@ -1216,7 +1213,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         chart.draw_series(dots.into_iter()).ok()?;
 
         root.present().ok()?;
-        Image::load_from_path(&path).ok()
+
+        // Configure fontdb and load fonts
+        let mut fontdb = fontdb::Database::new();
+        fontdb.load_system_fonts();
+
+        // Load DejaVu Sans from ui/fonts
+        let font_path = std::path::PathBuf::from("ui/fonts/DejaVuSans.ttf");
+        if font_path.exists() {
+            fontdb.load_font_file(&font_path).ok();
+        }
+
+        // Read and parse SVG with usvg to convert text to paths
+        let svg_data = std::fs::read_to_string(&svg_path).ok()?;
+        let opt = usvg::Options {
+            fontdb: std::sync::Arc::new(fontdb),
+            ..Default::default()
+        };
+
+        let tree = usvg::Tree::from_str(&svg_data, &opt).ok()?;
+
+        // Export back to SVG with text converted to paths
+        let final_svg_path = std::env::temp_dir().join("sanctum_monthly_chart_final.svg");
+        let svg_output = tree.to_string(&usvg::WriteOptions::default());
+        std::fs::write(&final_svg_path, svg_output).ok()?;
+
+        // Load the final SVG into Slint
+        Image::load_from_path(&final_svg_path).ok()
     }
 
     fn refresh_habit_analytics(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>) {
