@@ -5,7 +5,7 @@
 )]
 
 use crate::models::{
-    Account, AccountBalance, AggregatedAsset, BalanceSummary, CryptoHolding, CryptoTransaction,
+    Account, AccountBalance, AggregatedAsset, BalanceSummary, CryptoTransaction,
     CryptoTransactionType, CryptoWallet, Habit, HabitLog, Transaction,
 };
 use crate::security_log::{SecurityEvent, log_security_event};
@@ -1264,123 +1264,6 @@ impl Database {
     pub fn delete_transaction(&self, id: &str) -> Result<(), DbError> {
         self.conn
             .execute("DELETE FROM transactions WHERE id = ?1", params![id])?;
-        Ok(())
-    }
-
-    // ==================== Legacy Crypto Holdings CRUD (for backwards compatibility) ====================
-
-    /// Creates a new crypto holding in the database (LEGACY)
-    pub fn create_crypto_holding(&self, holding: &CryptoHolding) -> Result<(), DbError> {
-        if !holding.validate() {
-            return Err(DbError::InvalidTransactionType);
-        }
-
-        // Check if legacy backup table exists, if not check for original
-        let backup_exists: bool = self
-            .conn
-            .query_row(
-                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='crypto_holdings_backup'",
-                [],
-                |row| row.get(0),
-            )
-            .unwrap_or(0)
-            > 0;
-
-        if backup_exists {
-            // Insert into backup table for legacy support
-            self.conn.execute(
-                "INSERT INTO crypto_holdings_backup (id, coin_id, symbol, amount, purchase_price, purchase_date)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-                params![
-                    &holding.id,
-                    &holding.coin_id,
-                    &holding.symbol,
-                    &holding.amount,
-                    &holding.purchase_price,
-                    &holding.purchase_date,
-                ],
-            )?;
-        }
-
-        Ok(())
-    }
-
-    /// Gets all crypto holdings ordered by coin_id (LEGACY)
-    pub fn get_crypto_holdings(&self) -> Result<Vec<CryptoHolding>, DbError> {
-        // Try backup table first, then original
-        let table_name = if self
-            .conn
-            .query_row(
-                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='crypto_holdings_backup'",
-                [],
-                |row| row.get::<_, i32>(0),
-            )
-            .unwrap_or(0)
-            > 0
-        {
-            "crypto_holdings_backup"
-        } else if self
-            .conn
-            .query_row(
-                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='crypto_holdings'",
-                [],
-                |row| row.get::<_, i32>(0),
-            )
-            .unwrap_or(0)
-            > 0
-        {
-            "crypto_holdings"
-        } else {
-            return Ok(Vec::new());
-        };
-
-        let query = format!(
-            "SELECT id, coin_id, symbol, amount, purchase_price, purchase_date
-             FROM {}
-             ORDER BY coin_id ASC, purchase_date DESC",
-            table_name
-        );
-
-        let mut stmt = self.conn.prepare(&query)?;
-
-        let holdings = stmt
-            .query_map([], |row| {
-                Ok(CryptoHolding {
-                    id: row.get(0)?,
-                    coin_id: row.get(1)?,
-                    symbol: row.get(2)?,
-                    amount: row.get(3)?,
-                    purchase_price: row.get(4)?,
-                    purchase_date: row.get(5)?,
-                })
-            })?
-            .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(holdings)
-    }
-
-    /// Deletes a crypto holding by its ID (LEGACY)
-    pub fn delete_crypto_holding(&self, id: &str) -> Result<(), DbError> {
-        // Try backup table first
-        let backup_exists: bool = self
-            .conn
-            .query_row(
-                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='crypto_holdings_backup'",
-                [],
-                |row| row.get(0),
-            )
-            .unwrap_or(0)
-            > 0;
-
-        if backup_exists {
-            self.conn.execute(
-                "DELETE FROM crypto_holdings_backup WHERE id = ?1",
-                params![id],
-            )?;
-        } else {
-            self.conn
-                .execute("DELETE FROM crypto_holdings WHERE id = ?1", params![id])?;
-        }
         Ok(())
     }
 
