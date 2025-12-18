@@ -1191,13 +1191,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         chart
             .draw_series(LineSeries::new(
                 area_points.iter().copied(),
-                ShapeStyle::from(&RGBColor(139, 92, 246)).stroke_width(4),
+                ShapeStyle::from(&RGBColor(139, 92, 246)).stroke_width(5),
             ))
             .ok()?;
 
         chart
             .draw_series(area_points.iter().map(|&(x, y)| {
-                Circle::new((x, y), 6, ShapeStyle::from(&RGBColor(236, 72, 153)).filled())
+                Circle::new((x, y), 8, ShapeStyle::from(&RGBColor(236, 72, 153)).filled())
             }))
             .ok()?;
 

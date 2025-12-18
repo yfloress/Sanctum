@@ -1666,12 +1666,27 @@ impl AppController {
             .collect();
 
         // ==================== Monthly Trend ====================
+        // Show last 12 months including current month (rolling 12-month window)
+        // Example: Dec 2024 shows Jan 2024 - Dec 2024, Jan 2025 shows Feb 2024 - Jan 2025
+        let current_year = today.year();
+        let current_month = today.month();
+
+        // Calculate start month (11 months back)
+        let (start_year, start_month) = if current_month <= 11 {
+            (current_year - 1, current_month + 1)
+        } else {
+            (current_year, current_month - 11)
+        };
+
+        let twelve_months_ago_start = NaiveDate::from_ymd_opt(start_year, start_month, 1)
+            .unwrap_or(start_date);
+
         // Group by month and calculate average habits per day
         let mut monthly_data_map: std::collections::BTreeMap<(i32, u32), (i32, i32)> =
             std::collections::BTreeMap::new(); // (year, month) -> (habit_count, days_in_range)
 
-        // Count days per month in range
-        let mut cursor = start_date;
+        // Count days per month in the last 12 months
+        let mut cursor = twelve_months_ago_start;
         while cursor <= today {
             let key = (cursor.year(), cursor.month());
             monthly_data_map.entry(key).or_insert((0, 0)).1 += 1;
@@ -1681,12 +1696,14 @@ impl AppController {
             }
         }
 
-        // Count habits per month
+        // Count habits per month in the last 12 months
         for log in &logs {
             if let Ok(date) = NaiveDate::parse_from_str(&log.completed_date, "%Y-%m-%d") {
-                let key = (date.year(), date.month());
-                if let Some(entry) = monthly_data_map.get_mut(&key) {
-                    entry.0 += 1;
+                if date >= twelve_months_ago_start {
+                    let key = (date.year(), date.month());
+                    if let Some(entry) = monthly_data_map.get_mut(&key) {
+                        entry.0 += 1;
+                    }
                 }
             }
         }
