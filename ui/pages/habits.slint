@@ -333,37 +333,21 @@ export component HabitsPage inherits Rectangle {
                     }
 
                     HorizontalLayout {
-                        spacing: 16px;
+                        spacing: 20px;
 
                         // Weekly Efficiency Chart
-                        Rectangle {
+                        WeeklyBarChart {
                             horizontal-stretch: 1;
-                            height: 200px;
-                            background: Palette.surface;
-                            border-radius: 12px;
-                            border-width: 1px;
-                            border-color: Palette.border;
-
-                            WeeklyBarChart {
-                                data: HabitAdapter.weekday-efficiency;
-                                image: HabitAdapter.weekly-chart-image;
-                            }
+                            data: HabitAdapter.weekday-efficiency;
+                            image: HabitAdapter.weekly-chart-image;
                         }
 
                         // Monthly Trend Chart
-                        Rectangle {
+                        MonthlyLineChart {
                             horizontal-stretch: 1;
-                            height: 200px;
-                            background: Palette.surface;
-                            border-radius: 12px;
-                            border-width: 1px;
-                            border-color: Palette.border;
-
-                            MonthlyLineChart {
-                                data: HabitAdapter.monthly-trend;
-                                path: HabitAdapter.monthly-trend-path;
-                                image: HabitAdapter.monthly-chart-image;
-                            }
+                            data: HabitAdapter.monthly-trend;
+                            path: HabitAdapter.monthly-trend-path;
+                            image: HabitAdapter.monthly-chart-image;
                         }
                     }
                 }
