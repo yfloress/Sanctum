@@ -8,6 +8,7 @@ import { Palette, WeekdayEfficiencyData, MonthlyTrendData } from "../globals.sli
 
 export component WeeklyBarChart inherits Rectangle {
     in property <[WeekdayEfficiencyData]> data;
+    in property <image> image;
 
     background: transparent;
 
@@ -26,132 +27,18 @@ export component WeeklyBarChart inherits Rectangle {
 
         // Chart area - fixed height
         Rectangle {
-            height: 140px;
+            height: 200px;
             border-radius: 12px;
-            background: @linear-gradient(180deg, Palette.surface-hover 0%, Palette.surface 100%);
+            background: Palette.surface;
             border-width: 1px;
             border-color: Palette.border;
+            clip: true;
 
-            // Soft top sheen
-            Rectangle { height: 2px; width: 100%; background: Palette.border-light; opacity: 0.06; }
-
-            // Subtle grid
-            Rectangle {
+            Image {
+                source: root.image;
                 width: 100%;
                 height: 100%;
-                Rectangle { y: parent.height * 0.25; height: 1px; width: 100%; background: Palette.border-subtle; opacity: 0.20; }
-                Rectangle { y: parent.height * 0.50; height: 1px; width: 100%; background: Palette.border-subtle; opacity: 0.20; }
-                Rectangle { y: parent.height * 0.75; height: 1px; width: 100%; background: Palette.border-subtle; opacity: 0.20; }
-            }
-
-            HorizontalLayout {
-                spacing: 10px;
-                padding-left: 6px;
-                padding-right: 6px;
-                alignment: space-around;
-
-                for day[idx] in data: Rectangle {
-                    horizontal-stretch: 1;
-                    height: 100%;
-
-                    // Bar column layout
-                    Rectangle {
-                        width: 100%;
-                        height: 100%;
-
-                        // Value label pill
-                        Rectangle {
-                            y: 6px;
-                            width: 38px;
-                            height: 18px;
-                            x: (parent.width - self.width) / 2;
-                            border-radius: 9px;
-                            background: Palette.surface;
-                            border-width: 1px;
-                            border-color: day.is-best ? Palette.border-light : Palette.border;
-                            opacity: day.is-best || bar-touch.has-hover ? 1.0 : 0.55;
-
-                            Text {
-                                text: day.avg-count >= 1.0
-                                    ? "\{round(day.avg-count)}"
-                                    : "\{round(day.avg-count * 10) / 10}";
-                                color: day.is-best ? Palette.text-primary : Palette.text-secondary;
-                                font-size: 10px;
-                                font-weight: 600;
-                                horizontal-alignment: center;
-                                vertical-alignment: center;
-                            }
-
-                            animate opacity { duration: 150ms; }
-                        }
-
-                        // Bar area (middle section)
-                        Rectangle {
-                            y: 32px;
-                            height: parent.height - 62px;
-                            width: 100%;
-                            border-radius: 8px;
-                            background: @linear-gradient(180deg, Palette.surface 0%, Palette.surface-hover 100%);
-                            border-width: 1px;
-                            border-color: Palette.border-subtle;
-
-                            // Halo for best day
-                            if day.is-best: Rectangle {
-                                width: parent.width;
-                                height: parent.height;
-                                border-radius: 8px;
-                                background: @linear-gradient(180deg, #8b5cf6 0%, #ec4899 100%);
-                                opacity: 0.08;
-                            }
-
-                            // The actual bar (grows from bottom)
-                            Rectangle {
-                                width: 100%;
-                                height: parent.height * (day.bar-height-percent / 100);
-                                y: parent.height - self.height;
-                                border-radius: 6px;
-
-                                // Best day gets gradient, others get glassy steel
-                                background: day.is-best
-                                    ? @linear-gradient(180deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%)
-                                    : @linear-gradient(180deg, #9ca3af80 0%, #6b728080 100%);
-                                border-width: day.is-best ? 0px : 1px;
-                                border-color: Palette.border-light;
-                                drop-shadow-blur: day.is-best ? 10px : 8px;
-                                drop-shadow-color: day.is-best ? #8b5cf640 : #ffffff20;
-
-                                // Shimmer cap
-                                Rectangle {
-                                    width: parent.width;
-                                    height: 5px;
-                                    y: 0;
-                                    border-radius: 6px;
-                                    background: @linear-gradient(90deg, #ffffff25 0%, transparent 100%);
-                                    opacity: 0.6;
-                                }
-
-                                animate height { duration: 400ms; easing: ease-out; }
-                            }
-                        }
-
-                        // Day label at bottom
-                        Text {
-                            y: parent.height - 18px;
-                            text: day.day-short;
-                            color: day.is-best ? Palette.text-primary : (bar-touch.has-hover ? Palette.text-secondary : Palette.text-muted);
-                            font-size: 11px;
-                            font-weight: day.is-best || bar-touch.has-hover ? 600 : 400;
-                            letter-spacing: 0.5px;
-                            horizontal-alignment: center;
-
-                            animate color { duration: 120ms; }
-                        }
-                    }
-
-                    bar-touch := TouchArea {
-                        mouse-cursor: pointer;
-                    }
-                }
+                image-fit: contain;
             }
         }
     }
@@ -163,6 +50,7 @@ export component WeeklyBarChart inherits Rectangle {
 export component MonthlyLineChart inherits Rectangle {
     in property <[MonthlyTrendData]> data;
     in property <string> path;
+    in property <image> image;
 
     background: transparent;
 
@@ -181,81 +69,18 @@ export component MonthlyLineChart inherits Rectangle {
 
         // Chart area - fixed height
         Rectangle {
-            height: 120px;
+            height: 200px;
+            border-radius: 12px;
+            background: Palette.surface;
+            border-width: 1px;
+            border-color: Palette.border;
             clip: true;
 
-            // Grid lines (horizontal)
-            Rectangle {
+            Image {
+                source: root.image;
                 width: 100%;
                 height: 100%;
-
-                Rectangle { y: 0; height: 1px; width: 100%; background: Palette.border-subtle; opacity: 0.3; }
-                Rectangle { y: parent.height * 0.25; height: 1px; width: 100%; background: Palette.border-subtle; opacity: 0.3; }
-                Rectangle { y: parent.height * 0.50; height: 1px; width: 100%; background: Palette.border-subtle; opacity: 0.3; }
-                Rectangle { y: parent.height * 0.75; height: 1px; width: 100%; background: Palette.border-subtle; opacity: 0.3; }
-            }
-
-            // Line chart container
-            Rectangle {
-                x: 0;
-                y: 0;
-                width: 100%;
-                height: 90px;
-
-                // Gradient fill under the line
-                Path {
-                    viewbox-x: 0;
-                    viewbox-y: 0;
-                    viewbox-width: 100;
-                    viewbox-height: 100;
-                    commands: path != "" ? path + " L 100 100 L 0 100 Z" : "M 0 50 L 100 50 L 100 100 L 0 100 Z";
-                    fill: @linear-gradient(180deg, #8b5cf620 0%, #8b5cf605 50%, transparent 100%);
-                }
-
-                // Main line
-                Path {
-                    viewbox-x: 0;
-                    viewbox-y: 0;
-                    viewbox-width: 100;
-                    viewbox-height: 100;
-                    commands: path != "" ? path : "M 0 50 L 100 50";
-                    stroke: @linear-gradient(90deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%);
-                    stroke-width: 2px;
-                    fill: transparent;
-                }
-
-                // Data points (positioned to match viewbox 0-100)
-                for point in data: Rectangle {
-                    x: (parent.width * point.x-percent / 100) - 4px;
-                    y: (parent.height * point.y-percent / 100) - 4px;
-                    width: 8px;
-                    height: 8px;
-                    border-radius: 4px;
-                    background: Palette.action-gradient-end;
-                    border-width: 2px;
-                    border-color: Palette.surface;
-
-                    point-touch := TouchArea {
-                        mouse-cursor: pointer;
-                    }
-                }
-            }
-
-            // Month labels at bottom
-            HorizontalLayout {
-                y: 96px;
-                height: 24px;
-                alignment: space-between;
-                padding-left: 4px;
-                padding-right: 4px;
-
-                for point in data: Text {
-                    text: point.month-name;
-                    color: Palette.text-muted;
-                    font-size: 9px;
-                    font-weight: 400;
-                    horizontal-alignment: center;
-                }
+                image-fit: contain;
             }
         }
     }

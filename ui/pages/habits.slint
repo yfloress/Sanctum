@@ -346,6 +346,7 @@ export component HabitsPage inherits Rectangle {
 
                             WeeklyBarChart {
                                 data: HabitAdapter.weekday-efficiency;
+                                image: HabitAdapter.weekly-chart-image;
                             }
                         }
 
@@ -361,6 +362,7 @@ export component HabitsPage inherits Rectangle {
                             MonthlyLineChart {
                                 data: HabitAdapter.monthly-trend;
                                 path: HabitAdapter.monthly-trend-path;
+                                image: HabitAdapter.monthly-chart-image;
                             }
                         }
                     }

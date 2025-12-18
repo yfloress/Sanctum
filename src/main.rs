@@ -6,11 +6,13 @@ use chrono::Datelike;
 use directories::ProjectDirs;
 use log::error;
 use rand::Rng; // For title animation
-use sanctum::controller::{AppController, SETTING_AUTO_FETCH};
+use plotters::prelude::*;
+use plotters::series::{AreaSeries, Histogram, LineSeries};
+use sanctum::controller::{AppController, WeekdayEfficiency, MonthlyTrendPoint, SETTING_AUTO_FETCH};
 use sanctum::models::CryptoAsset;
 use sanctum::security_log::init_security_logger;
 use slint::SharedString;
-use slint::{Model, ModelRc, VecModel, Weak};
+use slint::{Image, Model, ModelRc, VecModel, Weak};
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::sync::Arc; // Added for CryptoAdapter logic
@@ -1136,6 +1138,143 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    fn render_weekly_chart_image(data: &[WeekdayEfficiency]) -> Option<Image> {
+        if data.is_empty() {
+            return None;
+        }
+
+        let path = std::env::temp_dir().join("sanctum_weekly_chart.svg");
+        let path_str = path.to_string_lossy().into_owned();
+        let root = SVGBackend::new(path_str.as_str(), (800, 360)).into_drawing_area();
+        root.fill(&RGBColor(8, 8, 8)).ok()?;
+
+        let max_val = data.iter().map(|d| d.avg_count).fold(0.0_f32, f32::max);
+        let upper = if max_val <= 0.0 { 1.0 } else { (max_val * 1.2).ceil() };
+
+        let mut chart = ChartBuilder::on(&root)
+            .margin(16)
+            .x_label_area_size(32)
+            .y_label_area_size(45)
+            .build_cartesian_2d(0..(data.len() as i32), 0f32..upper)
+            .ok()?;
+
+        chart
+            .configure_mesh()
+            .light_line_style(ShapeStyle::from(&RGBColor(40, 40, 40)))
+            .axis_style(ShapeStyle::from(&RGBColor(70, 70, 70)))
+            .y_labels(4)
+            .x_labels(data.len())
+            .x_label_formatter(&|v| {
+                data.get(*v as usize)
+                    .map(|d| d.day_short.clone())
+                    .unwrap_or_default()
+            })
+            .label_style(("sans-serif", 12).into_font().color(&RGBColor(170, 170, 170)))
+            .draw()
+            .ok()?;
+
+        let bars = Histogram::vertical(&chart)
+            .style(RGBColor(118, 128, 141).filled())
+            .margin(4)
+            .data(
+                data.iter()
+                    .enumerate()
+                    .map(|(idx, d)| (idx as i32, d.avg_count.max(0.0))),
+            );
+        chart.draw_series(bars).ok()?;
+
+        chart
+            .draw_series(data.iter().enumerate().map(|(idx, d)| {
+                let x_center = idx as i32 + 1;
+                let color = if d.is_best {
+                    RGBColor(139, 92, 246)
+                } else {
+                    RGBColor(236, 72, 153)
+                };
+                Circle::new((x_center, d.avg_count.max(0.0)), 3, ShapeStyle::from(&color).filled())
+            }))
+            .ok()?;
+
+        root.present().ok()?;
+        Image::load_from_path(&path).ok()
+    }
+
+    fn render_monthly_chart_image(data: &[MonthlyTrendPoint]) -> Option<Image> {
+        if data.is_empty() {
+            return None;
+        }
+
+        let path = std::env::temp_dir().join("sanctum_monthly_chart.svg");
+        let path_str = path.to_string_lossy().into_owned();
+        let root = SVGBackend::new(path_str.as_str(), (800, 360)).into_drawing_area();
+        root.fill(&RGBColor(8, 8, 8)).ok()?;
+
+        let max_val = data
+            .iter()
+            .map(|d| d.avg_per_day)
+            .fold(0.0_f32, f32::max);
+        let upper = if max_val <= 0.0 { 1.0 } else { (max_val * 1.2).ceil() };
+        let x_max = data.len().max(1) as i32;
+
+        let mut chart = ChartBuilder::on(&root)
+            .margin(16)
+            .x_label_area_size(40)
+            .y_label_area_size(45)
+            .build_cartesian_2d(0..x_max, 0f32..upper)
+            .ok()?;
+
+        chart
+            .configure_mesh()
+            .light_line_style(ShapeStyle::from(&RGBColor(40, 40, 40)))
+            .axis_style(ShapeStyle::from(&RGBColor(70, 70, 70)))
+            .y_labels(4)
+            .x_labels(data.len())
+            .x_label_formatter(&|v| {
+                data.get(*v as usize)
+                    .map(|d| d.month_name.clone())
+                    .unwrap_or_default()
+            })
+            .label_style(("sans-serif", 12).into_font().color(&RGBColor(170, 170, 170)))
+            .draw()
+            .ok()?;
+
+        let area_points: Vec<(i32, f32)> = data
+            .iter()
+            .enumerate()
+            .map(|(i, d)| (i as i32, d.avg_per_day))
+            .collect();
+        chart
+            .draw_series(AreaSeries::new(
+                area_points.clone(),
+                0.0,
+                RGBColor(139, 92, 246).mix(0.2),
+            ))
+            .ok()?;
+
+        chart
+            .draw_series(LineSeries::new(
+                area_points.clone(),
+                ShapeStyle::from(&RGBColor(139, 92, 246)).stroke_width(2),
+            ))
+            .ok()?;
+
+        let dots: Vec<_> = data
+            .iter()
+            .enumerate()
+            .map(|(i, d)| {
+                Circle::new(
+                    (i as i32, d.avg_per_day),
+                    3,
+                    ShapeStyle::from(&RGBColor(236, 72, 153)).filled(),
+                )
+            })
+            .collect();
+        chart.draw_series(dots.into_iter()).ok()?;
+
+        root.present().ok()?;
+        Image::load_from_path(&path).ok()
+    }
+
     // Callbacks
     {
         let controller = controller.clone();
@@ -1309,6 +1448,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .on_fetch_habit_analytics(move || {
                 // Analyze last 180 days (6 months) for good trend data
                 if let Ok(analytics) = controller.get_habit_analytics(180) {
+                    let weekly_image = render_weekly_chart_image(&analytics.weekday_data);
+                    let monthly_image = render_monthly_chart_image(&analytics.monthly_data);
+
                     // Convert weekday data
                     let weekday_data: Vec<WeekdayEfficiencyData> = analytics
                         .weekday_data
@@ -1339,6 +1481,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         adapter.set_weekday_efficiency(ModelRc::new(VecModel::from(weekday_data)));
                         adapter.set_monthly_trend(ModelRc::new(VecModel::from(monthly_data)));
                         adapter.set_monthly_trend_path(SharedString::from(&analytics.monthly_path));
+                        adapter.set_weekly_chart_image(weekly_image.unwrap_or_default());
+                        adapter.set_monthly_chart_image(monthly_image.unwrap_or_default());
                     }
                 }
             });
