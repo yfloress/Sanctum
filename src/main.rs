@@ -1275,6 +1275,45 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Image::load_from_path(&path).ok()
     }
 
+    fn refresh_habit_analytics(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>) {
+        if let Ok(analytics) = controller.get_habit_analytics(180) {
+            let weekly_image = render_weekly_chart_image(&analytics.weekday_data);
+            let monthly_image = render_monthly_chart_image(&analytics.monthly_data);
+
+            let weekday_data: Vec<WeekdayEfficiencyData> = analytics
+                .weekday_data
+                .iter()
+                .map(|w| WeekdayEfficiencyData {
+                    day_name: SharedString::from(&w.day_name),
+                    day_short: SharedString::from(&w.day_short),
+                    avg_count: w.avg_count,
+                    is_best: w.is_best,
+                    bar_height_percent: w.bar_height_percent,
+                })
+                .collect();
+
+            let monthly_data: Vec<MonthlyTrendData> = analytics
+                .monthly_data
+                .iter()
+                .map(|m| MonthlyTrendData {
+                    month_name: SharedString::from(&m.month_name),
+                    avg_per_day: m.avg_per_day,
+                    x_percent: m.x_percent,
+                    y_percent: m.y_percent,
+                })
+                .collect();
+
+            if let Some(ui) = ui_weak.upgrade() {
+                let adapter = ui.global::<HabitAdapter>();
+                adapter.set_weekday_efficiency(ModelRc::new(VecModel::from(weekday_data)));
+                adapter.set_monthly_trend(ModelRc::new(VecModel::from(monthly_data)));
+                adapter.set_monthly_trend_path(SharedString::from(&analytics.monthly_path));
+                adapter.set_weekly_chart_image(weekly_image.unwrap_or_default());
+                adapter.set_monthly_chart_image(monthly_image.unwrap_or_default());
+            }
+        }
+    }
+
     // Callbacks
     {
         let controller = controller.clone();
@@ -1321,6 +1360,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let y = *year_lock.lock().unwrap();
                         reload_habits(&ui_weak, &controller, d);
                         reload_heatmap(&ui_weak, &controller, y); // Refresh heatmap
+                        refresh_habit_analytics(&ui_weak, &controller);
                         notify("Habit created".into(), false);
                         SharedString::from("")
                     }
@@ -1344,6 +1384,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let y = *year_lock.lock().unwrap();
                         reload_habits(&ui_weak, &controller, d);
                         reload_heatmap(&ui_weak, &controller, y); // Refresh heatmap
+                        refresh_habit_analytics(&ui_weak, &controller);
                         notify("Habit deleted".into(), false);
                         SharedString::from("")
                     }
@@ -1367,6 +1408,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let y = *year_lock.lock().unwrap();
                     reload_habits(&ui_weak, &controller, d);
                     reload_heatmap(&ui_weak, &controller, y); // Refresh heatmap
+                    refresh_habit_analytics(&ui_weak, &controller);
                 }
             });
     }
@@ -1446,45 +1488,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_weak = ui_weak.clone();
         ui.global::<HabitAdapter>()
             .on_fetch_habit_analytics(move || {
-                // Analyze last 180 days (6 months) for good trend data
-                if let Ok(analytics) = controller.get_habit_analytics(180) {
-                    let weekly_image = render_weekly_chart_image(&analytics.weekday_data);
-                    let monthly_image = render_monthly_chart_image(&analytics.monthly_data);
-
-                    // Convert weekday data
-                    let weekday_data: Vec<WeekdayEfficiencyData> = analytics
-                        .weekday_data
-                        .iter()
-                        .map(|w| WeekdayEfficiencyData {
-                            day_name: SharedString::from(&w.day_name),
-                            day_short: SharedString::from(&w.day_short),
-                            avg_count: w.avg_count,
-                            is_best: w.is_best,
-                            bar_height_percent: w.bar_height_percent,
-                        })
-                        .collect();
-
-                    // Convert monthly data
-                    let monthly_data: Vec<MonthlyTrendData> = analytics
-                        .monthly_data
-                        .iter()
-                        .map(|m| MonthlyTrendData {
-                            month_name: SharedString::from(&m.month_name),
-                            avg_per_day: m.avg_per_day,
-                            x_percent: m.x_percent,
-                            y_percent: m.y_percent,
-                        })
-                        .collect();
-
-                    if let Some(ui) = ui_weak.upgrade() {
-                        let adapter = ui.global::<HabitAdapter>();
-                        adapter.set_weekday_efficiency(ModelRc::new(VecModel::from(weekday_data)));
-                        adapter.set_monthly_trend(ModelRc::new(VecModel::from(monthly_data)));
-                        adapter.set_monthly_trend_path(SharedString::from(&analytics.monthly_path));
-                        adapter.set_weekly_chart_image(weekly_image.unwrap_or_default());
-                        adapter.set_monthly_chart_image(monthly_image.unwrap_or_default());
-                    }
-                }
+                refresh_habit_analytics(&ui_weak, &controller);
             });
     }
 
