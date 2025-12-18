@@ -1,18 +1,12 @@
 // ==================== Habit Analytics Charts ====================
 // Bar chart for weekday efficiency and line chart for monthly trend
 
-import { Palette, WeekdayEfficiencyData, MonthlyTrendData } from "../globals.slint";
-import "../fonts/DejaVuSans.ttf";
-
-export global FontAlias {
-    property<string> dejavu: "DejaVuSans";
-}
+import { Palette, MonthlyTrendData } from "../globals.slint";
 
 // ==================== Weekly Efficiency Bar Chart ====================
 // Shows average habits completed per day of the week
 
 export component WeeklyBarChart inherits Rectangle {
-    in property <[WeekdayEfficiencyData]> data;
     in property <image> image;
 
     background: Palette.surface;
@@ -80,7 +74,6 @@ export component WeeklyBarChart inherits Rectangle {
 
 export component MonthlyLineChart inherits Rectangle {
     in property <[MonthlyTrendData]> data;
-    in property <string> path;
     in property <image> image;
 
     private property <int> active-point-index: -1;

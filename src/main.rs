@@ -1144,17 +1144,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         // Generate SVG with plotters
-        let svg_path = std::env::temp_dir().join("sanctum_monthly_chart.svg");
-        let svg_path_str = svg_path.to_string_lossy().into_owned();
-        let root = SVGBackend::new(svg_path_str.as_str(), (1200, 360)).into_drawing_area();
+        let temp_svg = std::env::temp_dir().join("sanctum_monthly_chart_temp.svg");
+        let root = SVGBackend::new(&temp_svg, (1200, 360)).into_drawing_area();
         root.fill(&RGBColor(10, 10, 10)).ok()?;
 
         let max_val = data.iter().map(|d| d.avg_per_day).fold(0.0_f32, f32::max);
-        let upper = if max_val <= 0.0 {
-            1.0
-        } else {
-            (max_val * 1.2).ceil()
-        };
+        let upper = if max_val <= 0.0 { 1.0 } else { (max_val * 1.2).ceil() };
         let x_max = data.len().max(1) as i32;
 
         let mut chart = ChartBuilder::on(&root)
@@ -1184,9 +1179,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .enumerate()
             .map(|(i, d)| (i as i32, d.avg_per_day))
             .collect();
+
         chart
             .draw_series(AreaSeries::new(
-                area_points.clone(),
+                area_points.iter().copied(),
                 0.0,
                 RGBColor(139, 92, 246).mix(0.2),
             ))
@@ -1194,57 +1190,45 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         chart
             .draw_series(LineSeries::new(
-                area_points.clone(),
+                area_points.iter().copied(),
                 ShapeStyle::from(&RGBColor(139, 92, 246)).stroke_width(2),
             ))
             .ok()?;
 
-        let dots: Vec<_> = data
-            .iter()
-            .enumerate()
-            .map(|(i, d)| {
-                Circle::new(
-                    (i as i32, d.avg_per_day),
-                    3,
-                    ShapeStyle::from(&RGBColor(236, 72, 153)).filled(),
-                )
-            })
-            .collect();
-        chart.draw_series(dots.into_iter()).ok()?;
+        chart
+            .draw_series(area_points.iter().map(|&(x, y)| {
+                Circle::new((x, y), 3, ShapeStyle::from(&RGBColor(236, 72, 153)).filled())
+            }))
+            .ok()?;
 
         root.present().ok()?;
 
-        // Configure fontdb and load fonts
+        // Configure fontdb with DejaVu Sans
         let mut fontdb = fontdb::Database::new();
-        fontdb.load_system_fonts();
-
-        // Load DejaVu Sans from ui/fonts and set it as default for sans-serif
         let font_path = std::path::PathBuf::from("ui/fonts/DejaVuSans.ttf");
         if font_path.exists() {
-            fontdb.load_font_file(&font_path).ok();
+            fontdb.load_font_file(&font_path).ok()?;
+        } else {
+            fontdb.load_system_fonts();
         }
 
-        // Set DejaVu Sans as the default serif, sans-serif, and monospace families
         fontdb.set_serif_family("DejaVu Sans");
         fontdb.set_sans_serif_family("DejaVu Sans");
         fontdb.set_monospace_family("DejaVu Sans");
 
-        // Read and parse SVG with usvg to convert text to paths
-        let svg_data = std::fs::read_to_string(&svg_path).ok()?;
+        // Convert SVG text to paths
+        let svg_data = std::fs::read_to_string(&temp_svg).ok()?;
         let opt = usvg::Options {
             fontdb: std::sync::Arc::new(fontdb),
             ..Default::default()
         };
-
         let tree = usvg::Tree::from_str(&svg_data, &opt).ok()?;
 
-        // Export back to SVG with text converted to paths
-        let final_svg_path = std::env::temp_dir().join("sanctum_monthly_chart_final.svg");
-        let svg_output = tree.to_string(&usvg::WriteOptions::default());
-        std::fs::write(&final_svg_path, svg_output).ok()?;
+        // Write final SVG with text as paths
+        let final_svg = std::env::temp_dir().join("sanctum_monthly_chart.svg");
+        std::fs::write(&final_svg, tree.to_string(&usvg::WriteOptions::default())).ok()?;
 
-        // Load the final SVG into Slint
-        Image::load_from_path(&final_svg_path).ok()
+        Image::load_from_path(&final_svg).ok()
     }
 
     fn refresh_habit_analytics(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>) {
@@ -1278,7 +1262,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let adapter = ui.global::<HabitAdapter>();
                 adapter.set_weekday_efficiency(ModelRc::new(VecModel::from(weekday_data)));
                 adapter.set_monthly_trend(ModelRc::new(VecModel::from(monthly_data)));
-                adapter.set_monthly_trend_path(SharedString::from(&analytics.monthly_path));
                 adapter.set_monthly_chart_image(monthly_image.unwrap_or_default());
             }
         }
