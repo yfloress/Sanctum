@@ -1426,7 +1426,13 @@ impl AppController {
             };
 
             validate_positive_amount(amount, "Amount")?;
-            let price_per_coin = validate_non_negative(price_per_coin, "Price per coin")?;
+            
+            // 1. Validate Price (Mandatory)
+            let price = match price_per_coin {
+                Some(p) if p > 0.0 => p,
+                _ => return Err(ControllerError::Validation("Price per coin is required and must be greater than zero".to_string())),
+            };
+            
             let fee = validate_non_negative(fee, "Fee")?;
             let date = validate_date(&date)?;
 
@@ -1436,6 +1442,22 @@ impl AppController {
                     "Invalid transaction type. Must be one of: {}",
                     valid_types.join(", ")
                 )));
+            }
+
+            // 2. Validate Sufficient Funds (Prevent Negative Balance)
+            if transaction_type == "sell" || transaction_type == "transfer_out" {
+                let holdings = db.get_wallet_aggregated_holdings(&wallet_id).map_err(ControllerError::Database)?;
+                let current_balance = holdings.iter()
+                    .find(|h| h.coin_id == coin_id.trim().to_lowercase())
+                    .map(|h| h.total_amount)
+                    .unwrap_or(0.0);
+                
+                if amount > current_balance {
+                    return Err(ControllerError::Validation(format!(
+                        "Insufficient funds. Available: {:.8} {}",
+                        current_balance, symbol
+                    )));
+                }
             }
 
             log_security_event(
@@ -1451,7 +1473,7 @@ impl AppController {
                 symbol.to_uppercase(),
                 transaction_type,
                 amount,
-                price_per_coin,
+                Some(price), // Always store the validated price
                 fee,
                 date,
                 notes,

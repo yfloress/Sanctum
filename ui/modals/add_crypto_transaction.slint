@@ -605,13 +605,12 @@ export component AddCryptoTransactionModal inherits Rectangle {
 	                        large: true; 
 	                    }
 	                    
-	                    // Price Field
-	                    FormField { 
-	                        label: "PRICE PER COIN (USD)"; 
-	                        placeholder: "Leave empty for market price"; 
-	                        value <=> root.price; 
-	                    }
-	                    
+	                                        // Price Field
+	                                        FormField { 
+	                                            label: "PRICE PER COIN (USD)"; 
+	                                            placeholder: "Required"; 
+	                                            value <=> root.price; 
+	                                        }	                    
 	                    // Date Field
 	                    FormField { 
 	                        label: "DATE"; 
