@@ -7,7 +7,7 @@ use directories::ProjectDirs;
 use log::error;
 use rand::Rng; // For title animation
 use plotters::prelude::*;
-use plotters::series::{AreaSeries, Histogram, LineSeries};
+use plotters::series::{AreaSeries, LineSeries};
 use sanctum::controller::{AppController, WeekdayEfficiency, MonthlyTrendPoint, SETTING_AUTO_FETCH};
 use sanctum::models::CryptoAsset;
 use sanctum::security_log::init_security_logger;
@@ -1160,7 +1160,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         chart
             .configure_mesh()
-            .light_line_style(ShapeStyle::from(&RGBColor(40, 40, 40)))
+            .disable_mesh()
             .axis_style(ShapeStyle::from(&RGBColor(70, 70, 70)))
             .y_labels(4)
             .x_labels(data.len())
@@ -1173,25 +1173,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .draw()
             .ok()?;
 
-        let bars = Histogram::vertical(&chart)
-            .style(RGBColor(118, 128, 141).filled())
-            .margin(4)
-            .data(
-                data.iter()
-                    .enumerate()
-                    .map(|(idx, d)| (idx as i32, d.avg_count.max(0.0))),
-            );
-        chart.draw_series(bars).ok()?;
+        // Find the max bar to color it purple
+        let max_val = data.iter().map(|d| d.avg_count).fold(0.0_f32, f32::max);
 
+        // Draw bars with different colors (purple for max, gray for others)
         chart
             .draw_series(data.iter().enumerate().map(|(idx, d)| {
-                let x_center = idx as i32 + 1;
-                let color = if d.is_best {
-                    RGBColor(139, 92, 246)
+                let color = if (d.avg_count - max_val).abs() < 0.001 {
+                    RGBColor(139, 92, 246) // Purple for max
                 } else {
-                    RGBColor(236, 72, 153)
+                    RGBColor(80, 80, 80) // Gray for others
                 };
-                Circle::new((x_center, d.avg_count.max(0.0)), 3, ShapeStyle::from(&color).filled())
+                Rectangle::new(
+                    [(idx as i32, 0.0), (idx as i32 + 1, d.avg_count.max(0.0))],
+                    color.filled(),
+                )
             }))
             .ok()?;
 
@@ -1225,7 +1221,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         chart
             .configure_mesh()
-            .light_line_style(ShapeStyle::from(&RGBColor(40, 40, 40)))
+            .disable_mesh()
             .axis_style(ShapeStyle::from(&RGBColor(70, 70, 70)))
             .y_labels(4)
             .x_labels(data.len())
