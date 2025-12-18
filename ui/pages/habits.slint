@@ -4,6 +4,7 @@
 import { Palette, HabitAdapter, AppState } from "../globals.slint";
 import { HabitRow } from "../components/habit_row.slint";
 import { HabitHeatmap } from "../components/habit_heatmap.slint";
+import { MonthlyLineChart } from "../components/analytics_charts.slint";
 import { TextButton, ActionButton } from "../widgets.slint";
 import { AddHabitModal } from "../modals/add_habit.slint";
 
@@ -132,6 +133,7 @@ export component HabitsPage inherits Rectangle {
     init => {
         HabitAdapter.load-initial-data();
         HabitAdapter.fetch-heatmap-data();
+        HabitAdapter.fetch-habit-analytics();
     }
 
     VerticalLayout {
@@ -319,6 +321,23 @@ export component HabitsPage inherits Rectangle {
                         icon: "✓";
                         title: "No habits tracked this month";
                         description: "Create a habit to start building consistency";
+                    }
+                }
+
+                // Analytics Section
+                if HabitAdapter.monthly-trend.length > 0: VerticalLayout {
+                    spacing: 16px;
+
+                    SectionHeader {
+                        title: "ANALYTICS";
+                    }
+
+                    // Monthly Trend Chart (Annual view)
+                    MonthlyLineChart {
+                        horizontal-stretch: 1;
+                        data: HabitAdapter.monthly-trend;
+                        path: HabitAdapter.monthly-trend-path;
+                        image: HabitAdapter.monthly-chart-image;
                     }
                 }
 

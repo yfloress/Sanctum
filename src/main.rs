@@ -6,11 +6,13 @@ use chrono::Datelike;
 use directories::ProjectDirs;
 use log::error;
 use rand::Rng; // For title animation
-use sanctum::controller::{AppController, SETTING_AUTO_FETCH};
+use plotters::prelude::*;
+use plotters::series::{AreaSeries, LineSeries};
+use sanctum::controller::{AppController, MonthlyTrendPoint, SETTING_AUTO_FETCH};
 use sanctum::models::CryptoAsset;
 use sanctum::security_log::init_security_logger;
 use slint::SharedString;
-use slint::{Model, ModelRc, VecModel, Weak};
+use slint::{Image, Model, ModelRc, VecModel, Weak};
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::sync::Arc; // Added for CryptoAdapter logic
@@ -1136,6 +1138,119 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    fn render_monthly_chart_image(data: &[MonthlyTrendPoint]) -> Option<Image> {
+        if data.is_empty() {
+            return None;
+        }
+
+        let path = std::env::temp_dir().join("sanctum_monthly_chart.svg");
+        let path_str = path.to_string_lossy().into_owned();
+        let root = SVGBackend::new(path_str.as_str(), (1200, 360)).into_drawing_area();
+        root.fill(&RGBColor(10, 10, 10)).ok()?;
+
+        let max_val = data
+            .iter()
+            .map(|d| d.avg_per_day)
+            .fold(0.0_f32, f32::max);
+        let upper = if max_val <= 0.0 { 1.0 } else { (max_val * 1.2).ceil() };
+        let x_max = data.len().max(1) as i32;
+
+        let mut chart = ChartBuilder::on(&root)
+            .margin(20)
+            .x_label_area_size(60)
+            .y_label_area_size(45)
+            .build_cartesian_2d(0..x_max, 0f32..upper)
+            .ok()?;
+
+        chart
+            .configure_mesh()
+            .disable_mesh()
+            .disable_x_axis()
+            .disable_y_axis()
+            .x_labels(data.len())
+            .x_label_formatter(&|v| {
+                data.get(*v as usize)
+                    .map(|d| d.month_name.clone())
+                    .unwrap_or_default()
+            })
+            .label_style(("sans-serif", 12).into_font().color(&RGBColor(170, 170, 170)))
+            .draw()
+            .ok()?;
+
+        let area_points: Vec<(i32, f32)> = data
+            .iter()
+            .enumerate()
+            .map(|(i, d)| (i as i32, d.avg_per_day))
+            .collect();
+        chart
+            .draw_series(AreaSeries::new(
+                area_points.clone(),
+                0.0,
+                RGBColor(139, 92, 246).mix(0.2),
+            ))
+            .ok()?;
+
+        chart
+            .draw_series(LineSeries::new(
+                area_points.clone(),
+                ShapeStyle::from(&RGBColor(139, 92, 246)).stroke_width(2),
+            ))
+            .ok()?;
+
+        let dots: Vec<_> = data
+            .iter()
+            .enumerate()
+            .map(|(i, d)| {
+                Circle::new(
+                    (i as i32, d.avg_per_day),
+                    3,
+                    ShapeStyle::from(&RGBColor(236, 72, 153)).filled(),
+                )
+            })
+            .collect();
+        chart.draw_series(dots.into_iter()).ok()?;
+
+        root.present().ok()?;
+        Image::load_from_path(&path).ok()
+    }
+
+    fn refresh_habit_analytics(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>) {
+        if let Ok(analytics) = controller.get_habit_analytics(365) {
+            let monthly_image = render_monthly_chart_image(&analytics.monthly_data);
+
+            let weekday_data: Vec<WeekdayEfficiencyData> = analytics
+                .weekday_data
+                .iter()
+                .map(|w| WeekdayEfficiencyData {
+                    day_name: SharedString::from(&w.day_name),
+                    day_short: SharedString::from(&w.day_short),
+                    avg_count: w.avg_count,
+                    is_best: w.is_best,
+                    bar_height_percent: w.bar_height_percent,
+                })
+                .collect();
+
+            let monthly_data: Vec<MonthlyTrendData> = analytics
+                .monthly_data
+                .iter()
+                .map(|m| MonthlyTrendData {
+                    month_name: SharedString::from(&m.month_name),
+                    avg_per_day: m.avg_per_day,
+                    x_percent: m.x_percent,
+                    y_percent: m.y_percent,
+                })
+                .collect();
+
+            if let Some(ui) = ui_weak.upgrade() {
+                let adapter = ui.global::<HabitAdapter>();
+                adapter.set_weekday_efficiency(ModelRc::new(VecModel::from(weekday_data)));
+                adapter.set_monthly_trend(ModelRc::new(VecModel::from(monthly_data)));
+                adapter.set_monthly_trend_path(SharedString::from(&analytics.monthly_path));
+                adapter.set_monthly_chart_image(monthly_image.unwrap_or_default());
+            }
+        }
+    }
+
     // Callbacks
     {
         let controller = controller.clone();
@@ -1182,6 +1297,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let y = *year_lock.lock().unwrap();
                         reload_habits(&ui_weak, &controller, d);
                         reload_heatmap(&ui_weak, &controller, y); // Refresh heatmap
+                        refresh_habit_analytics(&ui_weak, &controller);
                         notify("Habit created".into(), false);
                         SharedString::from("")
                     }
@@ -1205,6 +1321,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let y = *year_lock.lock().unwrap();
                         reload_habits(&ui_weak, &controller, d);
                         reload_heatmap(&ui_weak, &controller, y); // Refresh heatmap
+                        refresh_habit_analytics(&ui_weak, &controller);
                         notify("Habit deleted".into(), false);
                         SharedString::from("")
                     }
@@ -1228,6 +1345,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let y = *year_lock.lock().unwrap();
                     reload_habits(&ui_weak, &controller, d);
                     reload_heatmap(&ui_weak, &controller, y); // Refresh heatmap
+                    refresh_habit_analytics(&ui_weak, &controller);
                 }
             });
     }
@@ -1299,6 +1417,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             *y += 1;
             reload_heatmap(&ui_weak, &controller, *y);
         });
+    }
+
+    // Habit Analytics callback
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        ui.global::<HabitAdapter>()
+            .on_fetch_habit_analytics(move || {
+                refresh_habit_analytics(&ui_weak, &controller);
+            });
     }
 
     // ==================== CryptoAdapter Logic ====================

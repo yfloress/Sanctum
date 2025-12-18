@@ -30,6 +30,8 @@
           fontconfig
           freetype
           harfbuzz
+          dejavu_fonts
+          liberation_ttf
           openssl
           # X11 support (uncomment if running on Xorg)
           # xorg.libX11

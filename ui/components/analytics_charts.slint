@@ -1,0 +1,139 @@
+// ==================== Habit Analytics Charts ====================
+// Bar chart for weekday efficiency and line chart for monthly trend
+
+import { Palette, WeekdayEfficiencyData, MonthlyTrendData } from "../globals.slint";
+
+// ==================== Weekly Efficiency Bar Chart ====================
+// Shows average habits completed per day of the week
+
+export component WeeklyBarChart inherits Rectangle {
+    in property <[WeekdayEfficiencyData]> data;
+    in property <image> image;
+
+    background: Palette.surface;
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: Palette.border;
+
+    VerticalLayout {
+        padding: 20px;
+        spacing: 14px;
+
+        // Title
+        Text {
+            text: "WEEKLY EFFICIENCY";
+            color: Palette.text-secondary;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        // Chart area
+        Rectangle {
+            vertical-stretch: 1;
+            min-height: 220px;
+            border-radius: 8px;
+            background: #0a0a0a;
+            border-width: 1px;
+            border-color: Palette.border-subtle;
+            clip: true;
+
+            Image {
+                source: root.image;
+                width: 100%;
+                height: 100%;
+                image-fit: contain;
+            }
+        }
+
+        // Range note
+        HorizontalLayout {
+            spacing: 6px;
+            alignment: start;
+
+            Rectangle {
+                width: 2px;
+                height: 12px;
+                border-radius: 1px;
+                background: Palette.border-subtle;
+                y: (parent.height - self.height) / 2;
+            }
+
+            Text {
+                text: "Data window: last 365 days";
+                color: Palette.text-muted;
+                font-size: 9px;
+                font-weight: 500;
+                vertical-alignment: center;
+            }
+        }
+    }
+}
+
+// ==================== Monthly Trend Line Chart ====================
+// Shows habit trend over the last months
+
+export component MonthlyLineChart inherits Rectangle {
+    in property <[MonthlyTrendData]> data;
+    in property <string> path;
+    in property <image> image;
+
+    background: Palette.surface;
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: Palette.border;
+
+    VerticalLayout {
+        padding: 20px;
+        spacing: 14px;
+
+        // Title
+        Text {
+            text: "MONTHLY TREND (LAST 12 MONTHS)";
+            color: Palette.text-secondary;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        // Chart area
+        Rectangle {
+            vertical-stretch: 1;
+            min-height: 240px;
+            border-radius: 8px;
+            background: #0a0a0a;
+            border-width: 1px;
+            border-color: Palette.border-subtle;
+            clip: true;
+
+            Image {
+                source: root.image;
+                width: 100%;
+                height: 100%;
+                image-fit: contain;
+            }
+        }
+
+        // Range note
+        HorizontalLayout {
+            spacing: 6px;
+            alignment: start;
+
+            Rectangle {
+                width: 2px;
+                height: 12px;
+                border-radius: 1px;
+                background: Palette.border-subtle;
+                y: (parent.height - self.height) / 2;
+            }
+
+            Text {
+                text: "Data window: last 365 days";
+                color: Palette.text-muted;
+                font-size: 9px;
+                font-weight: 500;
+                vertical-alignment: center;
+            }
+        }
+    }
+}
