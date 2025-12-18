@@ -4,7 +4,7 @@
 import { Palette, HabitAdapter, AppState } from "../globals.slint";
 import { HabitRow } from "../components/habit_row.slint";
 import { HabitHeatmap } from "../components/habit_heatmap.slint";
-import { WeeklyBarChart, MonthlyLineChart } from "../components/analytics_charts.slint";
+import { MonthlyLineChart } from "../components/analytics_charts.slint";
 import { TextButton, ActionButton } from "../widgets.slint";
 import { AddHabitModal } from "../modals/add_habit.slint";
 
@@ -325,30 +325,19 @@ export component HabitsPage inherits Rectangle {
                 }
 
                 // Analytics Section
-                if HabitAdapter.weekday-efficiency.length > 0: VerticalLayout {
+                if HabitAdapter.monthly-trend.length > 0: VerticalLayout {
                     spacing: 16px;
 
                     SectionHeader {
                         title: "ANALYTICS";
                     }
 
-                    HorizontalLayout {
-                        spacing: 20px;
-
-                        // Weekly Efficiency Chart
-                        WeeklyBarChart {
-                            horizontal-stretch: 1;
-                            data: HabitAdapter.weekday-efficiency;
-                            image: HabitAdapter.weekly-chart-image;
-                        }
-
-                        // Monthly Trend Chart
-                        MonthlyLineChart {
-                            horizontal-stretch: 1;
-                            data: HabitAdapter.monthly-trend;
-                            path: HabitAdapter.monthly-trend-path;
-                            image: HabitAdapter.monthly-chart-image;
-                        }
+                    // Monthly Trend Chart (Annual view)
+                    MonthlyLineChart {
+                        horizontal-stretch: 1;
+                        data: HabitAdapter.monthly-trend;
+                        path: HabitAdapter.monthly-trend-path;
+                        image: HabitAdapter.monthly-chart-image;
                     }
                 }
 

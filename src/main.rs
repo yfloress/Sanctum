@@ -8,7 +8,7 @@ use log::error;
 use rand::Rng; // For title animation
 use plotters::prelude::*;
 use plotters::series::{AreaSeries, LineSeries};
-use sanctum::controller::{AppController, WeekdayEfficiency, MonthlyTrendPoint, SETTING_AUTO_FETCH};
+use sanctum::controller::{AppController, MonthlyTrendPoint, SETTING_AUTO_FETCH};
 use sanctum::models::CryptoAsset;
 use sanctum::security_log::init_security_logger;
 use slint::SharedString;
@@ -1138,65 +1138,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    fn render_weekly_chart_image(data: &[WeekdayEfficiency]) -> Option<Image> {
-        if data.is_empty() {
-            return None;
-        }
-
-        let path = std::env::temp_dir().join("sanctum_weekly_chart.svg");
-        let path_str = path.to_string_lossy().into_owned();
-        let root = SVGBackend::new(path_str.as_str(), (800, 360)).into_drawing_area();
-        root.fill(&RGBColor(10, 10, 10)).ok()?;
-
-        let max_val = data.iter().map(|d| d.avg_count).fold(0.0_f32, f32::max);
-        let upper = if max_val <= 0.0 { 1.0 } else { (max_val * 1.2).ceil() };
-
-        let mut chart = ChartBuilder::on(&root)
-            .margin(16)
-            .x_label_area_size(32)
-            .y_label_area_size(45)
-            .build_cartesian_2d(0..(data.len() as i32), 0f32..upper)
-            .ok()?;
-
-        chart
-            .configure_mesh()
-            .disable_mesh()
-            .disable_x_axis()
-            .disable_y_axis()
-            .x_labels(data.len())
-            .x_label_formatter(&|v| {
-                data.get(*v as usize)
-                    .map(|d| d.day_short.clone())
-                    .unwrap_or_default()
-            })
-            .label_style(("sans-serif", 12).into_font().color(&RGBColor(170, 170, 170)))
-            .draw()
-            .ok()?;
-
-        // Draw bars with spacing (narrower bars)
-        for (idx, d) in data.iter().enumerate() {
-            let height = d.avg_count.max(0.0);
-
-            // Determine color (purple for max, gray for others)
-            let color = if (d.avg_count - max_val).abs() < 0.001 {
-                RGBColor(139, 92, 246) // Purple for max
-            } else {
-                RGBColor(80, 80, 80) // Gray for others
-            };
-
-            // Bar with spacing (using narrower width)
-            let mut bar = Rectangle::new(
-                [(idx as i32, 0.0), (idx as i32 + 1, height)],
-                color.filled(),
-            );
-            bar.set_margin(8, 8, 0, 0);
-            chart.draw_series(std::iter::once(bar)).ok()?;
-        }
-
-        root.present().ok()?;
-        Image::load_from_path(&path).ok()
-    }
-
     fn render_monthly_chart_image(data: &[MonthlyTrendPoint]) -> Option<Image> {
         if data.is_empty() {
             return None;
@@ -1204,7 +1145,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let path = std::env::temp_dir().join("sanctum_monthly_chart.svg");
         let path_str = path.to_string_lossy().into_owned();
-        let root = SVGBackend::new(path_str.as_str(), (800, 360)).into_drawing_area();
+        let root = SVGBackend::new(path_str.as_str(), (1200, 360)).into_drawing_area();
         root.fill(&RGBColor(10, 10, 10)).ok()?;
 
         let max_val = data
@@ -1215,8 +1156,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let x_max = data.len().max(1) as i32;
 
         let mut chart = ChartBuilder::on(&root)
-            .margin(16)
-            .x_label_area_size(40)
+            .margin(20)
+            .x_label_area_size(60)
             .y_label_area_size(45)
             .build_cartesian_2d(0..x_max, 0f32..upper)
             .ok()?;
@@ -1274,8 +1215,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     fn refresh_habit_analytics(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>) {
-        if let Ok(analytics) = controller.get_habit_analytics(180) {
-            let weekly_image = render_weekly_chart_image(&analytics.weekday_data);
+        if let Ok(analytics) = controller.get_habit_analytics(365) {
             let monthly_image = render_monthly_chart_image(&analytics.monthly_data);
 
             let weekday_data: Vec<WeekdayEfficiencyData> = analytics
@@ -1306,7 +1246,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 adapter.set_weekday_efficiency(ModelRc::new(VecModel::from(weekday_data)));
                 adapter.set_monthly_trend(ModelRc::new(VecModel::from(monthly_data)));
                 adapter.set_monthly_trend_path(SharedString::from(&analytics.monthly_path));
-                adapter.set_weekly_chart_image(weekly_image.unwrap_or_default());
                 adapter.set_monthly_chart_image(monthly_image.unwrap_or_default());
             }
         }
