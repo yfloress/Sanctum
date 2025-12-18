@@ -217,6 +217,13 @@ export component CryptoPage inherits Rectangle {
                             text: "↻ SYNC";
                             clicked => { CryptoAdapter.refresh-prices(); }
                         }
+
+                        Text { 
+                            text: "Last updated: " + CryptoAdapter.last-updated; 
+                            color: Palette.text-subtle; 
+                            font-size: 10px; 
+                            vertical-alignment: center;
+                        }
                     }
 
                     // Total Value
@@ -268,14 +275,37 @@ export component CryptoPage inherits Rectangle {
                         }
                     }
                     
-                    // Subtitle
-                    Text {
-                        text: CryptoAdapter.portfolio.length > 0 ? 
-                            CryptoAdapter.portfolio.length + " assets across " + CryptoAdapter.wallets.length + " wallets" :
-                            "Start by adding a wallet and your first asset";
-                        color: Palette.text-subtle;
-                        font-size: 12px;
-                        font-weight: 400;
+                    // Subtitle Area
+                    VerticalLayout {
+                        spacing: 4px;
+                        Text {
+                            text: CryptoAdapter.portfolio.length > 0 ? 
+                                CryptoAdapter.portfolio.length + " assets across " + CryptoAdapter.wallets.length + " wallets" :
+                                "Start by adding a wallet and your first asset";
+                            color: Palette.text-subtle;
+                            font-size: 12px;
+                            font-weight: 400;
+                        }
+
+                        if CryptoAdapter.limit-reached: Rectangle {
+                            height: 20px;
+                            background: Palette.danger.with-alpha(0.1);
+                            border-radius: 4px;
+                            
+                            HorizontalLayout {
+                                padding-left: 8px;
+                                padding-right: 8px;
+                                spacing: 6px;
+                                Text { text: "⚠"; color: Palette.danger; font-size: 10px; vertical-alignment: center; }
+                                Text { 
+                                    text: "Coin limit reached (50). Some assets may not update."; 
+                                    color: Palette.danger; 
+                                    font-size: 10px; 
+                                    font-weight: 600;
+                                    vertical-alignment: center; 
+                                }
+                            }
+                        }
                     }
                 }
 

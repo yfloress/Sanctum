@@ -1669,6 +1669,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let coins = controller_async
                     .get_monitored_coin_ids()
                     .unwrap_or_default();
+                
+                let limit_reached = coins.len() > 50;
 
                 if !coins.is_empty() {
                     match controller_async.get_crypto_prices(coins).await {
@@ -1704,10 +1706,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 // 3. Reload UI on main thread
                 let notify_success = notify_for_async_block.clone(); // Clone for success message
+                let now = chrono::Local::now().format("%H:%M").to_string();
                 let _ = ui_weak_async.upgrade_in_event_loop(move |ui| {
                     ui.global::<CryptoAdapter>().invoke_fetch_portfolio();
                     ui.global::<CryptoAdapter>()
                         .set_clp_rate(SharedString::from(clp_display));
+                    ui.global::<CryptoAdapter>()
+                        .set_last_updated(format!("Today at {}", now).into());
+                    ui.global::<CryptoAdapter>().set_limit_reached(limit_reached);
                     notify_success("Prices updated".into(), false);
                 });
             });
@@ -1721,6 +1727,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let notify = show_notification.clone();
 
         // (wallet_id, coin_id, symbol, type, amount, price, fee, date)
+        // (wallet_id, coin_id, symbol, type, amount, price, fee, date, notes)
         ui.global::<CryptoAdapter>().on_add_transaction(
             move |wallet_id_raw,
                   coin_id,
@@ -1729,7 +1736,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                   amount_str,
                   price_str,
                   fee_str,
-                  date|
+                  date,
+                  notes_str|
                   -> SharedString {
                 // 1. Parse Amount (String -> f64)
                 let amount_clean = amount_str
@@ -1760,6 +1768,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     fee_clean.parse().ok()
                 };
 
+                let notes = if notes_str.is_empty() {
+                    None
+                } else {
+                    Some(notes_str.to_string())
+                };
+
                 // 3. Add Transaction
                 let result = controller.add_crypto_transaction(
                     wallet_id_raw.to_string(),
@@ -1770,7 +1784,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     price_per_coin,
                     fee,
                     date.to_string(),
-                    None,
+                    notes,
                 );
 
                 match result {
@@ -1783,6 +1797,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             },
         );
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = show_notification.clone();
+        ui.global::<CryptoAdapter>()
+            .on_delete_crypto_transaction(move |id| -> SharedString {
+                match controller.delete_crypto_transaction(id.to_string()) {
+                    Ok(_) => {
+                        if let Some(ui) = ui_weak.upgrade() {
+                            let coin_id = ui.global::<CryptoAdapter>().get_selected_asset().id;
+                            ui.global::<CryptoAdapter>().invoke_fetch_asset_details(coin_id);
+                            ui.global::<CryptoAdapter>().invoke_fetch_portfolio();
+                        }
+                        notify("Transaction deleted".into(), false);
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            });
     }
 
     // Wallet Callbacks
@@ -1902,6 +1937,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         ui.global::<CryptoAdapter>()
             .set_clp_rate(SharedString::from("N/A"));
+    }
+
+    {
+        let controller = controller.clone();
+        ui.global::<CryptoAdapter>()
+            .on_get_last_price(move |coin_id| {
+                let prices = controller.load_crypto_prices().unwrap_or_default();
+                if let Some(data) = prices.iter().find(|p| p.id == coin_id.as_str()) {
+                    format!("{:.4}", data.current_price).into()
+                } else {
+                    "".into()
+                }
+            });
     }
 
     {

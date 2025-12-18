@@ -102,34 +102,54 @@ component WalletBreakdownRow inherits Rectangle {
 
 // ==================== Transaction Row ====================
 component TransactionRow inherits Rectangle {
+    in property <string> tx-id;
     in property <string> tx-type;
     in property <string> tx-date;
     in property <string> tx-amount;
     in property <string> tx-price;
     in property <bool> is-last: false;
     
+    callback delete-clicked(string);
+
     height: 56px;
     background: transparent;
     
     HorizontalLayout {
         alignment: space-between;
+        spacing: 12px;
         
         HorizontalLayout {
             spacing: 12px;
             alignment: start;
+            horizontal-stretch: 1;
             
             Rectangle {
                 width: 32px;
                 height: 32px;
                 border-radius: 8px;
-                background: tx-type == "BUY" ? Palette.success.with-alpha(0.1) : Palette.danger.with-alpha(0.1);
+                background: 
+                    root.tx-type == "BUY" ? Palette.success.with-alpha(0.1) : 
+                    root.tx-type == "SELL" ? Palette.danger.with-alpha(0.1) :
+                    root.tx-type == "SWAP" ? Palette.primary.with-alpha(0.1) :
+                    Palette.text-muted.with-alpha(0.1);
                 border-width: 1px;
-                border-color: tx-type == "BUY" ? Palette.success.with-alpha(0.2) : Palette.danger.with-alpha(0.2);
+                border-color: 
+                    root.tx-type == "BUY" ? Palette.success.with-alpha(0.2) : 
+                    root.tx-type == "SELL" ? Palette.danger.with-alpha(0.2) :
+                    root.tx-type == "SWAP" ? Palette.primary.with-alpha(0.2) :
+                    Palette.border;
                 y: (parent.height - self.height) / 2;
                 
                 Text {
-                    text: tx-type == "BUY" ? "▲" : "▼";
-                    color: tx-type == "BUY" ? Palette.success : Palette.danger;
+                    text: 
+                        root.tx-type == "BUY" ? "▲" : 
+                        root.tx-type == "SELL" ? "▼" :
+                        root.tx-type == "SWAP" ? "⇄" : "•";
+                    color: 
+                        root.tx-type == "BUY" ? Palette.success : 
+                        root.tx-type == "SELL" ? Palette.danger :
+                        root.tx-type == "SWAP" ? Palette.primary :
+                        Palette.text-muted;
                     font-size: 10px;
                     vertical-alignment: center;
                     horizontal-alignment: center;
@@ -154,22 +174,51 @@ component TransactionRow inherits Rectangle {
             }
         }
         
-        VerticalLayout {
-            alignment: center;
-            spacing: 2px;
-            
-            Text { 
-                text: root.tx-amount; 
-                color: Palette.text-primary; 
-                font-size: 12px;
-                font-weight: 500;
-                horizontal-alignment: right; 
+        HorizontalLayout {
+            spacing: 16px;
+            alignment: end;
+
+            VerticalLayout {
+                alignment: center;
+                spacing: 2px;
+                
+                Text { 
+                    text: root.tx-amount; 
+                    color: Palette.text-primary; 
+                    font-size: 12px;
+                    font-weight: 500;
+                    horizontal-alignment: right; 
+                }
+                Text { 
+                    text: "@ " + root.tx-price; 
+                    color: Palette.text-muted; 
+                    font-size: 10px; 
+                    horizontal-alignment: right; 
+                }
             }
-            Text { 
-                text: "@ " + root.tx-price; 
-                color: Palette.text-muted; 
-                font-size: 10px; 
-                horizontal-alignment: right; 
+
+            // Delete Button
+            Rectangle {
+                width: 28px;
+                height: 28px;
+                border-radius: 6px;
+                background: del-touch.has-hover ? Palette.danger.with-alpha(0.1) : transparent;
+                y: (parent.height - self.height) / 2;
+
+                animate background { duration: 150ms; }
+
+                Text {
+                    text: "×";
+                    color: del-touch.has-hover ? Palette.danger : Palette.text-muted;
+                    font-size: 16px;
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
+                }
+
+                del-touch := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { root.delete-clicked(root.tx-id); }
+                }
             }
         }
     }
@@ -241,7 +290,7 @@ export component AssetDetailPanel inherits Rectangle {
                         text: CryptoAdapter.selected-asset.name; 
                         color: Palette.text-primary; 
                         font-size: 18px; 
-                        font-weight: 400;
+                        font-weight: 400; 
                         letter-spacing: 0.5px; 
                     }
                     
@@ -249,13 +298,13 @@ export component AssetDetailPanel inherits Rectangle {
                         spacing: 10px;
                         
                         Text { 
-                            text: CryptoAdapter.selected-asset.price; 
+                            text: CryptoAdapter.selected-asset.price == "N/A" ? "---" : CryptoAdapter.selected-asset.price; 
                             color: Palette.text-secondary; 
                             font-size: 13px; 
                         }
                         
                         // Change badge
-                        Rectangle {
+                        if CryptoAdapter.selected-asset.price != "N/A": Rectangle {
                             width: 60px;
                             height: 20px;
                             border-radius: 4px;
@@ -345,7 +394,7 @@ export component AssetDetailPanel inherits Rectangle {
                     }
                     
                     Text { 
-                        text: "≈ " + CryptoAdapter.selected-asset.value; 
+                        text: "≈ " + (CryptoAdapter.selected-asset.price == "N/A" ? "---" : CryptoAdapter.selected-asset.value); 
                         color: Palette.text-secondary; 
                         font-size: 14px; 
                         horizontal-alignment: center; 
@@ -407,11 +456,16 @@ export component AssetDetailPanel inherits Rectangle {
                     
                     VerticalLayout {
                         for tx[index] in CryptoAdapter.asset-history: TransactionRow {
+                            tx-id: tx.id;
                             tx-type: tx.type;
                             tx-date: tx.date;
                             tx-amount: tx.amount;
                             tx-price: tx.price;
                             is-last: index == CryptoAdapter.asset-history.length - 1;
+                            
+                            delete-clicked(id) => {
+                                CryptoAdapter.delete-crypto-transaction(id);
+                            }
                         }
                     }
                 }
