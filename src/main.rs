@@ -5,9 +5,9 @@
 use chrono::Datelike;
 use directories::ProjectDirs;
 use log::error;
-use rand::Rng; // For title animation
 use plotters::prelude::*;
 use plotters::series::{AreaSeries, LineSeries};
+use rand::Rng; // For title animation
 use sanctum::controller::{AppController, MonthlyTrendPoint, SETTING_AUTO_FETCH};
 use sanctum::models::CryptoAsset;
 use sanctum::security_log::init_security_logger;
@@ -1148,11 +1148,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let root = SVGBackend::new(path_str.as_str(), (1200, 360)).into_drawing_area();
         root.fill(&RGBColor(10, 10, 10)).ok()?;
 
-        let max_val = data
-            .iter()
-            .map(|d| d.avg_per_day)
-            .fold(0.0_f32, f32::max);
-        let upper = if max_val <= 0.0 { 1.0 } else { (max_val * 1.2).ceil() };
+        let max_val = data.iter().map(|d| d.avg_per_day).fold(0.0_f32, f32::max);
+        let upper = if max_val <= 0.0 {
+            1.0
+        } else {
+            (max_val * 1.2).ceil()
+        };
         let x_max = data.len().max(1) as i32;
 
         let mut chart = ChartBuilder::on(&root)
@@ -1172,7 +1173,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .map(|d| d.month_name.clone())
                     .unwrap_or_default()
             })
-            .label_style(("DejaVu Sans", 14).into_font().color(&RGBColor(163, 163, 163)))
+            .label_style(TextStyle::new(
+                FontFamily::SansSerif,
+                14,
+                &RGBColor(163, 163, 163),
+            ))
             .axis_style(ShapeStyle::from(&RGBColor(51, 51, 51)).stroke_width(1))
             .draw()
             .ok()?;

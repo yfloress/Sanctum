@@ -2,6 +2,11 @@
 // Bar chart for weekday efficiency and line chart for monthly trend
 
 import { Palette, WeekdayEfficiencyData, MonthlyTrendData } from "../globals.slint";
+import "../fonts/DejaVuSans.ttf";
+
+export global FontAlias {
+    property<string> dejavu: "DejaVuSans";
+}
 
 // ==================== Weekly Efficiency Bar Chart ====================
 // Shows average habits completed per day of the week

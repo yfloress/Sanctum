@@ -21,7 +21,7 @@ name = "sanctum"
 path = "src/main.rs"
 
 [dependencies]
-slint = { version = "1.8", features = ["renderer-winit-skia", "default"] }
+slint = { version = "1.9", features = ["renderer-winit-skia", "default"] }
 tokio = { version = "1.40", features = ["full"] }
 rusqlite = { version = "0.32", features = ["bundled-sqlcipher"] }
 serde = { version = "1.0", features = ["derive"] }
