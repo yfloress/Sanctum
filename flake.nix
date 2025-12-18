@@ -30,21 +30,12 @@
           fontconfig
           freetype
           harfbuzz
+          openssl
+        ];
+
+        fonts = with pkgs; [
           dejavu_fonts
           liberation_ttf
-          openssl
-          # X11 support (uncomment if running on Xorg)
-          # xorg.libX11
-          # xorg.libXcursor
-          # xorg.libXi
-          # xorg.libXrandr
-          # xorg.libXrender
-          # xorg.libXfixes
-          # xorg.libxcb
-          # xorg.xcbutil
-          # xorg.xcbutilkeysyms
-          # xorg.xcbutilwm
-          # xorg.xcbutilimage
         ];
 
         packages = with pkgs; [
@@ -55,11 +46,12 @@
           cargo-audit
           slint-lsp
           bacon
+          pkg-config
         ];
       in
       {
         devShells.default = pkgs.mkShell {
-          buildInputs = packages ++ libraries ++ [
+          buildInputs = packages ++ libraries ++ fonts ++ [
             (pkgs.rust-bin.stable.latest.default.override {
               extensions = [
                 "rust-src"
@@ -71,11 +63,10 @@
           shellHook = ''
             export LIBRARY_PATH=${pkgs.lib.makeLibraryPath libraries}:$LIBRARY_PATH
             export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath libraries}:$LD_LIBRARY_PATH
+            export FONTCONFIG_FILE=${pkgs.makeFontsConf { fontDirectories = fonts; }}
 
             echo "> SANCTUM DEV SHELL ACTIVE"
             echo "   Compiler:  Rust $(rustc --version)"
-            echo "   Slint LSP: $(slint-lsp --version 2>/dev/null | head -n1)"
-            echo "   Security:  cargo-audit $(cargo audit --version 2>/dev/null | head -n1)"
           '';
         };
       }
