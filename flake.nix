@@ -64,6 +64,7 @@
             export LIBRARY_PATH=${pkgs.lib.makeLibraryPath libraries}:$LIBRARY_PATH
             export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath libraries}:$LD_LIBRARY_PATH
             export FONTCONFIG_FILE=${pkgs.makeFontsConf { fontDirectories = fonts; }}
+            export XDG_DATA_DIRS=${pkgs.lib.makeSearchPath "share" fonts}:$XDG_DATA_DIRS
 
             echo "> SANCTUM DEV SHELL ACTIVE"
             echo "   Compiler:  Rust $(rustc --version)"
