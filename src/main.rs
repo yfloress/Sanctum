@@ -1172,7 +1172,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .map(|d| d.month_name.clone())
                     .unwrap_or_default()
             })
-            .label_style(("sans-serif", 14).into_font().color(&RGBColor(163, 163, 163)))
+            .label_style(("DejaVu Sans", 14).into_font().color(&RGBColor(163, 163, 163)))
             .axis_style(ShapeStyle::from(&RGBColor(51, 51, 51)).stroke_width(1))
             .draw()
             .ok()?;
