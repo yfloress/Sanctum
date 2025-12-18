@@ -1146,7 +1146,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let path = std::env::temp_dir().join("sanctum_weekly_chart.svg");
         let path_str = path.to_string_lossy().into_owned();
         let root = SVGBackend::new(path_str.as_str(), (800, 360)).into_drawing_area();
-        root.fill(&RGBColor(8, 8, 8)).ok()?;
+        root.fill(&RGBColor(10, 10, 10)).ok()?;
 
         let max_val = data.iter().map(|d| d.avg_count).fold(0.0_f32, f32::max);
         let upper = if max_val <= 0.0 { 1.0 } else { (max_val * 1.2).ceil() };
@@ -1161,8 +1161,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         chart
             .configure_mesh()
             .disable_mesh()
-            .axis_style(ShapeStyle::from(&RGBColor(70, 70, 70)))
-            .y_labels(4)
+            .disable_x_axis()
+            .disable_y_axis()
             .x_labels(data.len())
             .x_label_formatter(&|v| {
                 data.get(*v as usize)
@@ -1173,23 +1173,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .draw()
             .ok()?;
 
-        // Find the max bar to color it purple
-        let max_val = data.iter().map(|d| d.avg_count).fold(0.0_f32, f32::max);
+        // Draw bars with spacing (narrower bars)
+        for (idx, d) in data.iter().enumerate() {
+            let height = d.avg_count.max(0.0);
 
-        // Draw bars with different colors (purple for max, gray for others)
-        chart
-            .draw_series(data.iter().enumerate().map(|(idx, d)| {
-                let color = if (d.avg_count - max_val).abs() < 0.001 {
-                    RGBColor(139, 92, 246) // Purple for max
-                } else {
-                    RGBColor(80, 80, 80) // Gray for others
-                };
-                Rectangle::new(
-                    [(idx as i32, 0.0), (idx as i32 + 1, d.avg_count.max(0.0))],
-                    color.filled(),
-                )
-            }))
-            .ok()?;
+            // Determine color (purple for max, gray for others)
+            let color = if (d.avg_count - max_val).abs() < 0.001 {
+                RGBColor(139, 92, 246) // Purple for max
+            } else {
+                RGBColor(80, 80, 80) // Gray for others
+            };
+
+            // Bar with spacing (using narrower width)
+            let mut bar = Rectangle::new(
+                [(idx as i32, 0.0), (idx as i32 + 1, height)],
+                color.filled(),
+            );
+            bar.set_margin(8, 8, 0, 0);
+            chart.draw_series(std::iter::once(bar)).ok()?;
+        }
 
         root.present().ok()?;
         Image::load_from_path(&path).ok()
@@ -1203,7 +1205,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let path = std::env::temp_dir().join("sanctum_monthly_chart.svg");
         let path_str = path.to_string_lossy().into_owned();
         let root = SVGBackend::new(path_str.as_str(), (800, 360)).into_drawing_area();
-        root.fill(&RGBColor(8, 8, 8)).ok()?;
+        root.fill(&RGBColor(10, 10, 10)).ok()?;
 
         let max_val = data
             .iter()
@@ -1222,8 +1224,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         chart
             .configure_mesh()
             .disable_mesh()
-            .axis_style(ShapeStyle::from(&RGBColor(70, 70, 70)))
-            .y_labels(4)
+            .disable_x_axis()
+            .disable_y_axis()
             .x_labels(data.len())
             .x_label_formatter(&|v| {
                 data.get(*v as usize)
