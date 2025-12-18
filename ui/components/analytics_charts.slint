@@ -114,9 +114,11 @@ export component WeeklyBarChart inherits Rectangle {
                                 // Best day gets gradient, others get glassy steel
                                 background: day.is-best
                                     ? @linear-gradient(180deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%)
-                                    : @linear-gradient(180deg, Palette.border-subtle 0%, Palette.surface-hover 100%);
-                                drop-shadow-blur: day.is-best ? 10px : 6px;
-                                drop-shadow-color: day.is-best ? #8b5cf640 : #00000030;
+                                    : @linear-gradient(180deg, #9ca3af80 0%, #6b728080 100%);
+                                border-width: day.is-best ? 0px : 1px;
+                                border-color: Palette.border-light;
+                                drop-shadow-blur: day.is-best ? 10px : 8px;
+                                drop-shadow-color: day.is-best ? #8b5cf640 : #ffffff20;
 
                                 // Shimmer cap
                                 Rectangle {
