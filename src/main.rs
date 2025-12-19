@@ -1671,11 +1671,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .unwrap_or_default();
                 
                 let limit_reached = coins.len() > 50;
+                let has_coins = !coins.is_empty();
 
+                let mut prices_updated = false;
                 if !coins.is_empty() {
                     match controller_async.get_crypto_prices(coins).await {
                         Ok(prices) => {
                             let _ = controller_async.save_crypto_prices(prices);
+                            prices_updated = true;
                         }
                         Err(e) => {
                             let notify_fail = notify_for_async_block.clone(); // Clone for failure message
@@ -1711,10 +1714,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ui.global::<CryptoAdapter>().invoke_fetch_portfolio();
                     ui.global::<CryptoAdapter>()
                         .set_clp_rate(SharedString::from(clp_display));
-                    ui.global::<CryptoAdapter>()
-                        .set_last_updated(format!("Today at {}", now).into());
+                    if prices_updated {
+                        ui.global::<CryptoAdapter>()
+                            .set_last_updated(format!("Today at {}", now).into());
+                    }
                     ui.global::<CryptoAdapter>().set_limit_reached(limit_reached);
-                    notify_success("Prices updated".into(), false);
+                    if prices_updated {
+                        notify_success("Prices updated".into(), false);
+                    } else if !has_coins {
+                        notify_success("Rates updated".into(), false);
+                    }
                 });
             });
         });
@@ -1758,14 +1767,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let price_per_coin: Option<f64> = if price_clean.is_empty() {
                     None
                 } else {
-                    price_clean.parse().ok()
+                    match price_clean.parse() {
+                        Ok(v) => Some(v),
+                        Err(_) => return SharedString::from("Invalid price format"),
+                    }
                 };
 
                 let fee_clean = fee_str.replace(",", "").replace("$", "").trim().to_string();
                 let fee: Option<f64> = if fee_clean.is_empty() {
                     None
                 } else {
-                    fee_clean.parse().ok()
+                    match fee_clean.parse() {
+                        Ok(v) => Some(v),
+                        Err(_) => return SharedString::from("Invalid fee format"),
+                    }
                 };
 
                 let notes = if notes_str.is_empty() {
@@ -1979,16 +1994,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         updated_asset.update_with_price(current_price);
                     }
 
-                    let change_str = if price_change >= 0.0 {
+                    let missing_price = price_data.is_none();
+                    let change_str = if missing_price {
+                        "N/A".to_string()
+                    } else if price_change >= 0.0 {
                         format!("+ {:.2}%", price_change)
                     } else {
                         format!("{:.2}%", price_change)
                     };
 
-                    let price_fmt = if updated_asset.current_price < 1.0 {
+                    let price_fmt = if missing_price {
+                        "N/A".to_string()
+                    } else if updated_asset.current_price < 1.0 {
                         format!("$ {:.4}", updated_asset.current_price)
                     } else {
                         format_money((updated_asset.current_price * 100.0) as i64, "USD")
+                    };
+
+                    let value_fmt = if missing_price {
+                        "N/A".to_string()
+                    } else {
+                        format_money(
+                            (updated_asset.current_value * 100.0) as i64,
+                            "USD",
+                        )
                     };
 
                     let selected = CryptoAssetData {
@@ -2000,10 +2029,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             "{:.4} {}",
                             updated_asset.total_amount, updated_asset.symbol
                         )),
-                        value: SharedString::from(format_money(
-                            (updated_asset.current_value * 100.0) as i64,
-                            "USD",
-                        )),
+                        value: SharedString::from(value_fmt),
                         change_24h: SharedString::from(change_str),
                         is_positive: price_change >= 0.0,
                         allocation: 0.0,

@@ -1444,8 +1444,17 @@ impl AppController {
                 )));
             }
 
+            if transaction_type == "swap" {
+                return Err(ControllerError::Validation(
+                    "Swap requires paired transactions. Use sell + buy for now.".to_string(),
+                ));
+            }
+
             // 2. Validate Sufficient Funds (Prevent Negative Balance)
-            if transaction_type == "sell" || transaction_type == "transfer_out" {
+            if transaction_type == "sell"
+                || transaction_type == "transfer_out"
+                || transaction_type == "swap"
+            {
                 let holdings = db.get_wallet_aggregated_holdings(&wallet_id).map_err(ControllerError::Database)?;
                 let current_balance = holdings.iter()
                     .find(|h| h.coin_id == coin_id.trim().to_lowercase())

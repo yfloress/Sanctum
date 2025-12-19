@@ -81,24 +81,21 @@ component TypeSelector inherits Rectangle {
         padding: 4px;
         spacing: 4px;
 
-        for type[index] in ["buy", "sell", "transfer_in", "transfer_out", "swap"]: Rectangle {
+        for type[index] in ["buy", "sell", "transfer_in", "transfer_out"]: Rectangle {
             horizontal-stretch: 1;
             background: root.selected-type == type 
                 ? (type == "buy" || type == "transfer_in" ? Palette.success.with-alpha(0.2) : 
-                   type == "sell" || type == "transfer_out" ? Palette.danger.with-alpha(0.2) : 
-                   Palette.primary.with-alpha(0.2))
+                   Palette.danger.with-alpha(0.2))
                 : transparent;
             border-radius: 8px;
             border-width: root.selected-type == type ? 1px : 0px;
             border-color: type == "buy" || type == "transfer_in" ? Palette.success.with-alpha(0.4) : 
-                          type == "sell" || type == "transfer_out" ? Palette.danger.with-alpha(0.4) : 
-                          Palette.primary.with-alpha(0.4);
+                          Palette.danger.with-alpha(0.4);
 
             Text {
                 text: type == "buy" ? "BUY" : 
                       type == "sell" ? "SELL" : 
-                      type == "transfer_in" ? "IN" : 
-                      type == "transfer_out" ? "OUT" : "SWAP";
+                      type == "transfer_in" ? "IN" : "OUT";
                 color: root.selected-type == type ? Palette.text-primary : Palette.text-muted;
                 font-size: 9px;
                 font-weight: 600;
