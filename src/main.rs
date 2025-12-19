@@ -8,7 +8,9 @@ use log::error;
 use plotters::prelude::*;
 use plotters::series::{AreaSeries, LineSeries};
 use rand::Rng; // For title animation
-use sanctum::controller::{AppController, MonthlyTrendPoint, SETTING_AUTO_FETCH};
+use sanctum::controller::{
+    AppController, MonthlyTrendPoint, SETTING_AUTO_FETCH, SETTING_CRYPTO_LAST_UPDATED,
+};
 use sanctum::models::CryptoAsset;
 use sanctum::security_log::init_security_logger;
 use slint::SharedString;
@@ -1710,13 +1712,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // 3. Reload UI on main thread
                 let notify_success = notify_for_async_block.clone(); // Clone for success message
                 let now = chrono::Local::now().format("%H:%M").to_string();
+                let last_updated_label =
+                    if prices_updated { Some(format!("Today at {}", now)) } else { None };
+
+                if let Some(label) = last_updated_label.as_ref() {
+                    let _ = controller_async.set_app_setting(SETTING_CRYPTO_LAST_UPDATED, label);
+                }
+
                 let _ = ui_weak_async.upgrade_in_event_loop(move |ui| {
                     ui.global::<CryptoAdapter>().invoke_fetch_portfolio();
                     ui.global::<CryptoAdapter>()
                         .set_clp_rate(SharedString::from(clp_display));
-                    if prices_updated {
-                        ui.global::<CryptoAdapter>()
-                            .set_last_updated(format!("Today at {}", now).into());
+                    if let Some(label) = last_updated_label {
+                        ui.global::<CryptoAdapter>().set_last_updated(label.into());
                     }
                     ui.global::<CryptoAdapter>().set_limit_reached(limit_reached);
                     if prices_updated {
@@ -1952,6 +1960,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         ui.global::<CryptoAdapter>()
             .set_clp_rate(SharedString::from("N/A"));
+    }
+
+    if let Ok(val) = controller.get_app_setting(SETTING_CRYPTO_LAST_UPDATED) {
+        if !val.is_empty() {
+            ui.global::<CryptoAdapter>().set_last_updated(val.into());
+        }
     }
 
     {

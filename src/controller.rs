@@ -128,6 +128,7 @@ const MAX_CURRENCY_LENGTH: usize = 8;
 const EXCHANGE_RATE_TTL_SECS: i64 = 6 * 60 * 60; // 6 hours
 pub const SETTING_AUTO_FETCH: &str = "auto_fetch_crypto";
 pub const SETTING_TICKER_COINS: &str = "ticker_coins";
+pub const SETTING_CRYPTO_LAST_UPDATED: &str = "crypto_last_updated";
 
 // ==================== Helper Functions ====================
 

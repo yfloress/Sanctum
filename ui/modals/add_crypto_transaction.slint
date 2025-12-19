@@ -236,10 +236,10 @@ component CoinSelector inherits Rectangle {
     callback selected(int, string); // index, name
 
     property <[string]> coins: [
-        "Bitcoin (BTC)", "Ethereum (ETH)", "Tether (USDT)", "BNB (BNB)", "Solana (SOL)",
-        "XRP (XRP)", "USDC (USDC)", "Cardano (ADA)", "Dogecoin (DOGE)", "TRON (TRX)",
-        "Polygon (POL)", "Chainlink (LINK)", "Polkadot (DOT)", "Litecoin (LTC)", "Shiba Inu (SHIB)",
-        "Avalanche (AVAX)", "Stellar (XLM)", "Monero (XMR)", "Bitcoin Cash (BCH)", "Uniswap (UNI)",
+        "Bitcoin (BTC)", "Litecoin (LTC)", "Monero (XMR)", "Ethereum (ETH)", "Tether (USDT)",
+        "BNB (BNB)", "Solana (SOL)", "XRP (XRP)", "USDC (USDC)", "Cardano (ADA)",
+        "Dogecoin (DOGE)", "TRON (TRX)", "Polygon (POL)", "Chainlink (LINK)", "Polkadot (DOT)",
+        "Shiba Inu (SHIB)", "Avalanche (AVAX)", "Stellar (XLM)", "Bitcoin Cash (BCH)", "Uniswap (UNI)",
         "Cosmos Hub (ATOM)", "Ethereum Classic (ETC)", "Hedera (HBAR)", "Aave (AAVE)", "VeChain (VET)",
         "NEAR Protocol (NEAR)", "Algorand (ALGO)", "Quant (QNT)", "Arbitrum (ARB)", "Sui (SUI)",
         "Aptos (APT)", "Cronos (CRO)", "Zcash (ZEC)", "Dai (DAI)", "Toncoin (TON)",
@@ -373,10 +373,10 @@ export component AddCryptoTransactionModal inherits Rectangle {
     property <string> custom-symbol: "";
 
     property <[string]> coin-ids: [
-        "bitcoin", "ethereum", "tether", "binancecoin", "solana",
-        "ripple", "usd-coin", "cardano", "dogecoin", "tron",
-        "polygon-ecosystem-token", "chainlink", "polkadot", "litecoin", "shiba-inu",
-        "avalanche-2", "stellar", "monero", "bitcoin-cash", "uniswap",
+        "bitcoin", "litecoin", "monero", "ethereum", "tether",
+        "binancecoin", "solana", "ripple", "usd-coin", "cardano",
+        "dogecoin", "tron", "polygon-ecosystem-token", "chainlink", "polkadot",
+        "shiba-inu", "avalanche-2", "stellar", "bitcoin-cash", "uniswap",
         "cosmos", "ethereum-classic", "hedera-hashgraph", "aave", "vechain",
         "near", "algorand", "quant-network", "arbitrum", "sui",
         "aptos", "crypto-com-chain", "zcash", "dai", "the-open-network",
@@ -384,10 +384,10 @@ export component AddCryptoTransactionModal inherits Rectangle {
     ];
     
     property <[string]> coin-symbols: [
-        "BTC", "ETH", "USDT", "BNB", "SOL",
-        "XRP", "USDC", "ADA", "DOGE", "TRX",
-        "POL", "LINK", "DOT", "LTC", "SHIB",
-        "AVAX", "XLM", "XMR", "BCH", "UNI",
+        "BTC", "LTC", "XMR", "ETH", "USDT",
+        "BNB", "SOL", "XRP", "USDC", "ADA",
+        "DOGE", "TRX", "POL", "LINK", "DOT",
+        "SHIB", "AVAX", "XLM", "BCH", "UNI",
         "ATOM", "ETC", "HBAR", "AAVE", "VET",
         "NEAR", "ALGO", "QNT", "ARB", "SUI",
         "APT", "CRO", "ZEC", "DAI", "TON",
@@ -554,69 +554,69 @@ export component AddCryptoTransactionModal inherits Rectangle {
 	                    width: parent.width;
 	                    spacing: 20px;
 	
-	                    // Type Toggle
-	                    TypeSelector { selected-type <=> root.selected-type; }
-	                    
-	                    // Wallet Selector
-	                    WalletSelector { selected-index <=> root.wallet-index; }
-	                    
-	                    // Warning if no wallets
-	                    if CryptoAdapter.wallet-list.length == 0: Rectangle {
-	                        height: 40px;
-	                        background: #2d1515;
-	                        border-radius: 8px;
-	                        border-width: 1px;
-	                        border-color: #4d2525;
-	
-	                        HorizontalLayout {
-	                            padding-left: 12px;
-	                            padding-right: 12px;
-	                            spacing: 8px;
-	
-	                            Text {
-	                                text: "⚠";
-	                                color: Palette.danger;
-	                                font-size: 14px;
-	                                vertical-alignment: center;
-	                            }
-	
-	                            Text { 
-	                                text: "Create a wallet in the Wallets tab first"; 
-	                                color: Palette.danger; 
-	                                font-size: 11px;
-	                                font-weight: 400;
-	                                vertical-alignment: center; 
-	                            }
-	                        }
-	                    }
-	
-	                    // Coin Selector
-	                    CoinSelector { 
-	                        selected-index <=> root.coin-index; 
-                            selected(idx, name) => {
-                                if (idx < coin-ids.length) {
-                                    root.price = CryptoAdapter.get-last-price(coin-ids[idx]);
-                                } else {
-                                    root.price = "";
-                                }
-                            }
-	                    }
+                    // Type Toggle
+                    TypeSelector { selected-type <=> root.selected-type; }
 
-                        if root.coin-index == coin-ids.length: HorizontalLayout {
-                            spacing: 12px;
-                            FormField {
-                                label: "COINGECKO ID";
-                                placeholder: "e.g. pepe";
-                                value <=> root.custom-id;
-                                horizontal-stretch: 1;
-                            }
-                            FormField {
-                                label: "SYMBOL";
-                                placeholder: "e.g. PEPE";
-                                value <=> root.custom-symbol;
-                                width: 100px;
+                    // Coin Selector
+                    CoinSelector { 
+                        selected-index <=> root.coin-index; 
+                        selected(idx, name) => {
+                            if (idx < coin-ids.length) {
+                                root.price = CryptoAdapter.get-last-price(coin-ids[idx]);
+                            } else {
+                                root.price = "";
                             }
                         }
+                    }
+
+                    if root.coin-index == coin-ids.length: HorizontalLayout {
+                        spacing: 12px;
+                        FormField {
+                            label: "COINGECKO ID";
+                            placeholder: "e.g. pepe";
+                            value <=> root.custom-id;
+                            horizontal-stretch: 1;
+                        }
+                        FormField {
+                            label: "SYMBOL";
+                            placeholder: "e.g. PEPE";
+                            value <=> root.custom-symbol;
+                            width: 100px;
+                        }
+                    }
+
+                    // Wallet Selector
+                    WalletSelector { selected-index <=> root.wallet-index; }
+                    
+                    // Warning if no wallets
+                    if CryptoAdapter.wallet-list.length == 0: Rectangle {
+                        height: 40px;
+                        background: #2d1515;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: #4d2525;
+
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+                            spacing: 8px;
+
+                            Text {
+                                text: "⚠";
+                                color: Palette.danger;
+                                font-size: 14px;
+                                vertical-alignment: center;
+                            }
+
+                            Text { 
+                                text: "Create a wallet in the Wallets tab first"; 
+                                color: Palette.danger; 
+                                font-size: 11px;
+                                font-weight: 400;
+                                vertical-alignment: center; 
+                            }
+                        }
+                    }
 	                    
 	                    // Amount Field
 	                    FormField { 
