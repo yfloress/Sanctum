@@ -5,10 +5,12 @@
 use chrono::Datelike;
 use directories::ProjectDirs;
 use log::error;
-use rand::Rng; // For title animation
 use plotters::prelude::*;
 use plotters::series::{AreaSeries, LineSeries};
-use sanctum::controller::{AppController, MonthlyTrendPoint, SETTING_AUTO_FETCH};
+use rand::Rng; // For title animation
+use sanctum::controller::{
+    AppController, MonthlyTrendPoint, SETTING_AUTO_FETCH, SETTING_CRYPTO_LAST_UPDATED,
+};
 use sanctum::models::CryptoAsset;
 use sanctum::security_log::init_security_logger;
 use slint::SharedString;
@@ -1143,29 +1145,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             return None;
         }
 
-        let path = std::env::temp_dir().join("sanctum_monthly_chart.svg");
-        let path_str = path.to_string_lossy().into_owned();
-        let root = SVGBackend::new(path_str.as_str(), (1200, 360)).into_drawing_area();
+        // Generate SVG with plotters (high resolution for crisp rendering)
+        let temp_svg = std::env::temp_dir().join("sanctum_monthly_chart_temp.svg");
+        let root = SVGBackend::new(&temp_svg, (2400, 720)).into_drawing_area();
         root.fill(&RGBColor(10, 10, 10)).ok()?;
 
-        let max_val = data
-            .iter()
-            .map(|d| d.avg_per_day)
-            .fold(0.0_f32, f32::max);
+        let max_val = data.iter().map(|d| d.avg_per_day).fold(0.0_f32, f32::max);
         let upper = if max_val <= 0.0 { 1.0 } else { (max_val * 1.2).ceil() };
         let x_max = data.len().max(1) as i32;
 
         let mut chart = ChartBuilder::on(&root)
-            .margin(20)
-            .x_label_area_size(60)
-            .y_label_area_size(45)
+            .margin(40)
+            .x_label_area_size(80)
+            .y_label_area_size(90)
             .build_cartesian_2d(0..x_max, 0f32..upper)
             .ok()?;
 
         chart
             .configure_mesh()
             .disable_mesh()
-            .disable_x_axis()
             .disable_y_axis()
             .x_labels(data.len())
             .x_label_formatter(&|v| {
@@ -1173,7 +1171,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .map(|d| d.month_name.clone())
                     .unwrap_or_default()
             })
-            .label_style(("sans-serif", 12).into_font().color(&RGBColor(170, 170, 170)))
+            .label_style(("sans-serif", 28).into_font().color(&RGBColor(163, 163, 163)))
+            .axis_style(ShapeStyle::from(&RGBColor(51, 51, 51)).stroke_width(1))
             .draw()
             .ok()?;
 
@@ -1182,9 +1181,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .enumerate()
             .map(|(i, d)| (i as i32, d.avg_per_day))
             .collect();
+
         chart
             .draw_series(AreaSeries::new(
-                area_points.clone(),
+                area_points.iter().copied(),
                 0.0,
                 RGBColor(139, 92, 246).mix(0.2),
             ))
@@ -1192,26 +1192,45 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         chart
             .draw_series(LineSeries::new(
-                area_points.clone(),
-                ShapeStyle::from(&RGBColor(139, 92, 246)).stroke_width(2),
+                area_points.iter().copied(),
+                ShapeStyle::from(&RGBColor(139, 92, 246)).stroke_width(5),
             ))
             .ok()?;
 
-        let dots: Vec<_> = data
-            .iter()
-            .enumerate()
-            .map(|(i, d)| {
-                Circle::new(
-                    (i as i32, d.avg_per_day),
-                    3,
-                    ShapeStyle::from(&RGBColor(236, 72, 153)).filled(),
-                )
-            })
-            .collect();
-        chart.draw_series(dots.into_iter()).ok()?;
+        chart
+            .draw_series(area_points.iter().map(|&(x, y)| {
+                Circle::new((x, y), 8, ShapeStyle::from(&RGBColor(236, 72, 153)).filled())
+            }))
+            .ok()?;
 
         root.present().ok()?;
-        Image::load_from_path(&path).ok()
+
+        // Configure fontdb with DejaVu Sans
+        let mut fontdb = fontdb::Database::new();
+        let font_path = std::path::PathBuf::from("ui/fonts/DejaVuSans.ttf");
+        if font_path.exists() {
+            fontdb.load_font_file(&font_path).ok()?;
+        } else {
+            fontdb.load_system_fonts();
+        }
+
+        fontdb.set_serif_family("DejaVu Sans");
+        fontdb.set_sans_serif_family("DejaVu Sans");
+        fontdb.set_monospace_family("DejaVu Sans");
+
+        // Convert SVG text to paths
+        let svg_data = std::fs::read_to_string(&temp_svg).ok()?;
+        let opt = usvg::Options {
+            fontdb: std::sync::Arc::new(fontdb),
+            ..Default::default()
+        };
+        let tree = usvg::Tree::from_str(&svg_data, &opt).ok()?;
+
+        // Write final SVG with text as paths
+        let final_svg = std::env::temp_dir().join("sanctum_monthly_chart.svg");
+        std::fs::write(&final_svg, tree.to_string(&usvg::WriteOptions::default())).ok()?;
+
+        Image::load_from_path(&final_svg).ok()
     }
 
     fn refresh_habit_analytics(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>) {
@@ -1245,7 +1264,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let adapter = ui.global::<HabitAdapter>();
                 adapter.set_weekday_efficiency(ModelRc::new(VecModel::from(weekday_data)));
                 adapter.set_monthly_trend(ModelRc::new(VecModel::from(monthly_data)));
-                adapter.set_monthly_trend_path(SharedString::from(&analytics.monthly_path));
                 adapter.set_monthly_chart_image(monthly_image.unwrap_or_default());
             }
         }
@@ -1649,13 +1667,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let notify_for_async_block = show_notification_clone_for_refresh.clone(); // Clone for the async block
 
             tokio::spawn(async move {
-                // 1. Get coins to update (from settings)
-                let coins = controller_async.get_active_ticker_ids();
+                // 1. Get coins to update (Settings + Wallets)
+                let coins = controller_async
+                    .get_monitored_coin_ids()
+                    .unwrap_or_default();
+                
+                let limit_reached = coins.len() > 50;
+                let has_coins = !coins.is_empty();
 
+                let mut prices_updated = false;
                 if !coins.is_empty() {
                     match controller_async.get_crypto_prices(coins).await {
                         Ok(prices) => {
                             let _ = controller_async.save_crypto_prices(prices);
+                            prices_updated = true;
                         }
                         Err(e) => {
                             let notify_fail = notify_for_async_block.clone(); // Clone for failure message
@@ -1686,11 +1711,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 // 3. Reload UI on main thread
                 let notify_success = notify_for_async_block.clone(); // Clone for success message
+                let now = chrono::Local::now().format("%H:%M").to_string();
+                let last_updated_label =
+                    if prices_updated { Some(format!("Today at {}", now)) } else { None };
+
+                if let Some(label) = last_updated_label.as_ref() {
+                    let _ = controller_async.set_app_setting(SETTING_CRYPTO_LAST_UPDATED, label);
+                }
+
                 let _ = ui_weak_async.upgrade_in_event_loop(move |ui| {
                     ui.global::<CryptoAdapter>().invoke_fetch_portfolio();
                     ui.global::<CryptoAdapter>()
                         .set_clp_rate(SharedString::from(clp_display));
-                    notify_success("Prices updated".into(), false);
+                    if let Some(label) = last_updated_label {
+                        ui.global::<CryptoAdapter>().set_last_updated(label.into());
+                    }
+                    ui.global::<CryptoAdapter>().set_limit_reached(limit_reached);
+                    if prices_updated {
+                        notify_success("Prices updated".into(), false);
+                    } else if !has_coins {
+                        notify_success("Rates updated".into(), false);
+                    }
                 });
             });
         });
@@ -1703,6 +1744,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let notify = show_notification.clone();
 
         // (wallet_id, coin_id, symbol, type, amount, price, fee, date)
+        // (wallet_id, coin_id, symbol, type, amount, price, fee, date, notes)
         ui.global::<CryptoAdapter>().on_add_transaction(
             move |wallet_id_raw,
                   coin_id,
@@ -1711,7 +1753,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                   amount_str,
                   price_str,
                   fee_str,
-                  date|
+                  date,
+                  notes_str|
                   -> SharedString {
                 // 1. Parse Amount (String -> f64)
                 let amount_clean = amount_str
@@ -1732,14 +1775,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let price_per_coin: Option<f64> = if price_clean.is_empty() {
                     None
                 } else {
-                    price_clean.parse().ok()
+                    match price_clean.parse() {
+                        Ok(v) => Some(v),
+                        Err(_) => return SharedString::from("Invalid price format"),
+                    }
                 };
 
                 let fee_clean = fee_str.replace(",", "").replace("$", "").trim().to_string();
                 let fee: Option<f64> = if fee_clean.is_empty() {
                     None
                 } else {
-                    fee_clean.parse().ok()
+                    match fee_clean.parse() {
+                        Ok(v) => Some(v),
+                        Err(_) => return SharedString::from("Invalid fee format"),
+                    }
+                };
+
+                let notes = if notes_str.is_empty() {
+                    None
+                } else {
+                    Some(notes_str.to_string())
                 };
 
                 // 3. Add Transaction
@@ -1752,7 +1807,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     price_per_coin,
                     fee,
                     date.to_string(),
-                    None,
+                    notes,
                 );
 
                 match result {
@@ -1765,6 +1820,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             },
         );
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = show_notification.clone();
+        ui.global::<CryptoAdapter>()
+            .on_delete_crypto_transaction(move |id| -> SharedString {
+                match controller.delete_crypto_transaction(id.to_string()) {
+                    Ok(_) => {
+                        if let Some(ui) = ui_weak.upgrade() {
+                            let coin_id = ui.global::<CryptoAdapter>().get_selected_asset().id;
+                            ui.global::<CryptoAdapter>().invoke_fetch_asset_details(coin_id);
+                            ui.global::<CryptoAdapter>().invoke_fetch_portfolio();
+                        }
+                        notify("Transaction deleted".into(), false);
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            });
     }
 
     // Wallet Callbacks
@@ -1886,6 +1962,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .set_clp_rate(SharedString::from("N/A"));
     }
 
+    if let Ok(val) = controller.get_app_setting(SETTING_CRYPTO_LAST_UPDATED) {
+        if !val.is_empty() {
+            ui.global::<CryptoAdapter>().set_last_updated(val.into());
+        }
+    }
+
+    {
+        let controller = controller.clone();
+        ui.global::<CryptoAdapter>()
+            .on_get_last_price(move |coin_id| {
+                let prices = controller.load_crypto_prices().unwrap_or_default();
+                if let Some(data) = prices.iter().find(|p| p.id == coin_id.as_str()) {
+                    format!("{:.4}", data.current_price).into()
+                } else {
+                    "".into()
+                }
+            });
+    }
+
     {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
@@ -1913,16 +2008,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         updated_asset.update_with_price(current_price);
                     }
 
-                    let change_str = if price_change >= 0.0 {
+                    let missing_price = price_data.is_none();
+                    let change_str = if missing_price {
+                        "N/A".to_string()
+                    } else if price_change >= 0.0 {
                         format!("+ {:.2}%", price_change)
                     } else {
                         format!("{:.2}%", price_change)
                     };
 
-                    let price_fmt = if updated_asset.current_price < 1.0 {
+                    let price_fmt = if missing_price {
+                        "N/A".to_string()
+                    } else if updated_asset.current_price < 1.0 {
                         format!("$ {:.4}", updated_asset.current_price)
                     } else {
                         format_money((updated_asset.current_price * 100.0) as i64, "USD")
+                    };
+
+                    let value_fmt = if missing_price {
+                        "N/A".to_string()
+                    } else {
+                        format_money(
+                            (updated_asset.current_value * 100.0) as i64,
+                            "USD",
+                        )
                     };
 
                     let selected = CryptoAssetData {
@@ -1934,10 +2043,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             "{:.4} {}",
                             updated_asset.total_amount, updated_asset.symbol
                         )),
-                        value: SharedString::from(format_money(
-                            (updated_asset.current_value * 100.0) as i64,
-                            "USD",
-                        )),
+                        value: SharedString::from(value_fmt),
                         change_24h: SharedString::from(change_str),
                         is_positive: price_change >= 0.0,
                         allocation: 0.0,

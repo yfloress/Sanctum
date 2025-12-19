@@ -194,7 +194,6 @@ export global HabitAdapter {
     // Habit Analytics
     in-out property <[WeekdayEfficiencyData]> weekday-efficiency: [];
     in-out property <[MonthlyTrendData]> monthly-trend: [];
-    in-out property <string> monthly-trend-path: "";
     in-out property <image> weekly-chart-image;
     in-out property <image> monthly-chart-image;
     callback fetch-habit-analytics();
@@ -333,19 +332,23 @@ export global CryptoAdapter {
     in-out property <string> total-pnl: "+ $ 0.00";
     in-out property <bool> total-pnl-positive: true;
     in-out property <string> clp-rate: "...";
+    in-out property <string> last-updated: "Never";
+    in-out property <bool> limit-reached: false;
 
     // Actions
     callback fetch-portfolio();
     callback fetch-wallets();
     callback refresh-prices();
     callback fetch-asset-details(string); // coin_id
+    callback get-last-price(string) -> string; // coin_id -> price string
     
-    // (wallet_id, coin_id, symbol, type, amount, price, fee, date)
-    callback add-transaction(string, string, string, string, string, string, string, string) -> string;
+    // (wallet_id, coin_id, symbol, type, amount, price, fee, date, notes)
+    callback add-transaction(string, string, string, string, string, string, string, string, string) -> string;
     
     // (name, category) -> id or error
     callback create-wallet(string, string) -> string;
     callback delete-wallet(string) -> string;
+    callback delete-crypto-transaction(string) -> string;
 }
 
 // ==================== Transaction Adapter ====================

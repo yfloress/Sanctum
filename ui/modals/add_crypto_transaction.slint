@@ -67,9 +67,9 @@ component FormField inherits Rectangle {
     }
 }
 
-// ==================== TypeToggle ====================
-component TypeToggle inherits Rectangle {
-    in-out property <bool> is-buy: true;
+// ==================== TypeSelector ====================
+component TypeSelector inherits Rectangle {
+    in-out property <string> selected-type: "buy";
 
     height: 48px;
     background: Palette.surface;
@@ -81,61 +81,32 @@ component TypeToggle inherits Rectangle {
         padding: 4px;
         spacing: 4px;
 
-        Rectangle {
+        for type[index] in ["buy", "sell", "transfer_in", "transfer_out"]: Rectangle {
             horizontal-stretch: 1;
-            background: is-buy 
-                ? @linear-gradient(135deg, #1f3d2f 0%, #152d20 100%)
+            background: root.selected-type == type 
+                ? (type == "buy" || type == "transfer_in" ? Palette.success.with-alpha(0.2) : 
+                   Palette.danger.with-alpha(0.2))
                 : transparent;
             border-radius: 8px;
-            border-width: is-buy ? 1px : 0px;
-            border-color: #2f5d4f;
-
-            animate background { duration: 200ms; easing: ease-out; }
+            border-width: root.selected-type == type ? 1px : 0px;
+            border-color: type == "buy" || type == "transfer_in" ? Palette.success.with-alpha(0.4) : 
+                          Palette.danger.with-alpha(0.4);
 
             Text {
-                text: "BUY";
-                color: is-buy ? Palette.success : Palette.text-muted;
-                font-size: 11px;
-                font-weight: is-buy ? 600 : 400;
-                letter-spacing: 1.5px;
+                text: type == "buy" ? "BUY" : 
+                      type == "sell" ? "SELL" : 
+                      type == "transfer_in" ? "IN" : "OUT";
+                color: root.selected-type == type ? Palette.text-primary : Palette.text-muted;
+                font-size: 9px;
+                font-weight: 600;
+                letter-spacing: 1px;
                 horizontal-alignment: center;
                 vertical-alignment: center;
-
-                animate color { duration: 150ms; }
             }
 
             TouchArea { 
                 mouse-cursor: pointer;
-                clicked => { root.is-buy = true; } 
-            }
-        }
-
-        Rectangle {
-            horizontal-stretch: 1;
-            background: !is-buy 
-                ? @linear-gradient(135deg, #3d1f2f 0%, #2d1520 100%)
-                : transparent;
-            border-radius: 8px;
-            border-width: !is-buy ? 1px : 0px;
-            border-color: #5d2f4f;
-
-            animate background { duration: 200ms; easing: ease-out; }
-
-            Text {
-                text: "SELL";
-                color: !is-buy ? Palette.danger : Palette.text-muted;
-                font-size: 11px;
-                font-weight: !is-buy ? 600 : 400;
-                letter-spacing: 1.5px;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-
-                animate color { duration: 150ms; }
-            }
-
-            TouchArea { 
-                mouse-cursor: pointer;
-                clicked => { root.is-buy = false; } 
+                clicked => { root.selected-type = type; } 
             }
         }
     }
@@ -262,15 +233,18 @@ component WalletSelector inherits Rectangle {
 component CoinSelector inherits Rectangle {
     in-out property <int> selected-index: 0;
 
+    callback selected(int, string); // index, name
+
     property <[string]> coins: [
-        "Bitcoin (BTC)", "Ethereum (ETH)", "Tether (USDT)", "BNB (BNB)", "Solana (SOL)",
-        "XRP (XRP)", "USDC (USDC)", "Cardano (ADA)", "Dogecoin (DOGE)", "TRON (TRX)",
-        "Polygon (POL)", "Chainlink (LINK)", "Polkadot (DOT)", "Litecoin (LTC)", "Shiba Inu (SHIB)",
-        "Avalanche (AVAX)", "Stellar (XLM)", "Monero (XMR)", "Bitcoin Cash (BCH)", "Uniswap (UNI)",
+        "Bitcoin (BTC)", "Litecoin (LTC)", "Monero (XMR)", "Ethereum (ETH)", "Tether (USDT)",
+        "BNB (BNB)", "Solana (SOL)", "XRP (XRP)", "USDC (USDC)", "Cardano (ADA)",
+        "Dogecoin (DOGE)", "TRON (TRX)", "Polygon (POL)", "Chainlink (LINK)", "Polkadot (DOT)",
+        "Shiba Inu (SHIB)", "Avalanche (AVAX)", "Stellar (XLM)", "Bitcoin Cash (BCH)", "Uniswap (UNI)",
         "Cosmos Hub (ATOM)", "Ethereum Classic (ETC)", "Hedera (HBAR)", "Aave (AAVE)", "VeChain (VET)",
         "NEAR Protocol (NEAR)", "Algorand (ALGO)", "Quant (QNT)", "Arbitrum (ARB)", "Sui (SUI)",
         "Aptos (APT)", "Cronos (CRO)", "Zcash (ZEC)", "Dai (DAI)", "Toncoin (TON)",
-        "Internet Computer (ICP)", "Kaspa (KAS)", "Mantle (MNT)", "Bittensor (TAO)", "Worldcoin (WLD)"
+        "Internet Computer (ICP)", "Kaspa (KAS)", "Mantle (MNT)", "Bittensor (TAO)", "Worldcoin (WLD)",
+        "Other..."
     ];
 
     height: 64px;
@@ -371,7 +345,10 @@ component CoinSelector inherits Rectangle {
 
                         option-touch := TouchArea {
                             mouse-cursor: pointer;
-                            clicked => { root.selected-index = index; }
+                            clicked => { 
+                                root.selected-index = index; 
+                                root.selected(index, coin);
+                            }
                         }
                     }
                 }
@@ -384,16 +361,22 @@ component CoinSelector inherits Rectangle {
 export component AddCryptoTransactionModal inherits Rectangle {
     property <string> amount: "";
     property <string> price: "";
+    property <string> fee: "0";
+    property <string> notes: "";
     property <string> date: AppState.current-date;
-    property <bool> is-buy: true;
+    property <string> selected-type: "buy";
     property <int> wallet-index: 0;
     property <int> coin-index: 0;
+    
+    // Custom coin fields
+    property <string> custom-id: "";
+    property <string> custom-symbol: "";
 
     property <[string]> coin-ids: [
-        "bitcoin", "ethereum", "tether", "binancecoin", "solana",
-        "ripple", "usd-coin", "cardano", "dogecoin", "tron",
-        "polygon-ecosystem-token", "chainlink", "polkadot", "litecoin", "shiba-inu",
-        "avalanche-2", "stellar", "monero", "bitcoin-cash", "uniswap",
+        "bitcoin", "litecoin", "monero", "ethereum", "tether",
+        "binancecoin", "solana", "ripple", "usd-coin", "cardano",
+        "dogecoin", "tron", "polygon-ecosystem-token", "chainlink", "polkadot",
+        "shiba-inu", "avalanche-2", "stellar", "bitcoin-cash", "uniswap",
         "cosmos", "ethereum-classic", "hedera-hashgraph", "aave", "vechain",
         "near", "algorand", "quant-network", "arbitrum", "sui",
         "aptos", "crypto-com-chain", "zcash", "dai", "the-open-network",
@@ -401,10 +384,10 @@ export component AddCryptoTransactionModal inherits Rectangle {
     ];
     
     property <[string]> coin-symbols: [
-        "BTC", "ETH", "USDT", "BNB", "SOL",
-        "XRP", "USDC", "ADA", "DOGE", "TRX",
-        "POL", "LINK", "DOT", "LTC", "SHIB",
-        "AVAX", "XLM", "XMR", "BCH", "UNI",
+        "BTC", "LTC", "XMR", "ETH", "USDT",
+        "BNB", "SOL", "XRP", "USDC", "ADA",
+        "DOGE", "TRX", "POL", "LINK", "DOT",
+        "SHIB", "AVAX", "XLM", "BCH", "UNI",
         "ATOM", "ETC", "HBAR", "AAVE", "VET",
         "NEAR", "ALGO", "QNT", "ARB", "SUI",
         "APT", "CRO", "ZEC", "DAI", "TON",
@@ -414,10 +397,14 @@ export component AddCryptoTransactionModal inherits Rectangle {
     function reset() {
         amount = "";
         price = "";
+        fee = "0";
+        notes = "";
         date = AppState.current-date;
-        is-buy = true;
+        selected-type = "buy";
         wallet-index = 0;
         coin-index = 0;
+        custom-id = "";
+        custom-symbol = "";
     }
 
     function submit() {
@@ -435,21 +422,32 @@ export component AddCryptoTransactionModal inherits Rectangle {
         }
         let wallet-id = CryptoAdapter.wallet-list[wallet-index].id;
         
-        if (coin-index >= coin-ids.length) { coin-index = 0; }
-        let coin-id = coin-ids[coin-index];
-        let symbol = coin-symbols[coin-index];
+        // Validate custom input if selected
+        if (coin-index == coin-ids.length) {
+            if (custom-id == "" || custom-symbol == "") {
+                NotificationAdapter.show("Custom ID and Symbol are required", true);
+                return;
+            }
+        }
 
-        let type = is-buy ? "buy" : "sell";
+        // Safe access to array with clamp
+        let safe-index = coin-index >= coin-ids.length ? 0 : coin-index;
+
+        let final-coin-id = (coin-index == coin-ids.length) ? custom-id : coin-ids[safe-index];
+        let final-symbol = (coin-index == coin-ids.length) ? custom-symbol : coin-symbols[safe-index];
+
+        let type = selected-type;
         
         let result = CryptoAdapter.add-transaction(
             wallet-id, 
-            coin-id, 
-            symbol, 
+            final-coin-id, 
+            final-symbol, 
             type, 
             amount, 
             price, 
-            "0", 
-            date
+            fee, 
+            date,
+            notes
         );
 
         if (result == "") {
@@ -485,7 +483,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
         width: 440px;
-        height: 680px;
+        height: 720px;
         background: @linear-gradient(180deg, Palette.sidebar-bg 0%, #0f0f1a 100%);
         border-radius: 16px;
         border-width: 1px;
@@ -556,46 +554,69 @@ export component AddCryptoTransactionModal inherits Rectangle {
 	                    width: parent.width;
 	                    spacing: 20px;
 	
-	                    // Type Toggle
-	                    TypeToggle { is-buy <=> root.is-buy; }
-	                    
-	                    // Wallet Selector
-	                    WalletSelector { selected-index <=> root.wallet-index; }
-	                    
-	                    // Warning if no wallets
-	                    if CryptoAdapter.wallet-list.length == 0: Rectangle {
-	                        height: 40px;
-	                        background: #2d1515;
-	                        border-radius: 8px;
-	                        border-width: 1px;
-	                        border-color: #4d2525;
-	
-	                        HorizontalLayout {
-	                            padding-left: 12px;
-	                            padding-right: 12px;
-	                            spacing: 8px;
-	
-	                            Text {
-	                                text: "⚠";
-	                                color: Palette.danger;
-	                                font-size: 14px;
-	                                vertical-alignment: center;
-	                            }
-	
-	                            Text { 
-	                                text: "Create a wallet in the Wallets tab first"; 
-	                                color: Palette.danger; 
-	                                font-size: 11px;
-	                                font-weight: 400;
-	                                vertical-alignment: center; 
-	                            }
-	                        }
-	                    }
-	
-	                    // Coin Selector
-	                    CoinSelector { 
-	                        selected-index <=> root.coin-index; 
-	                    }
+                    // Type Toggle
+                    TypeSelector { selected-type <=> root.selected-type; }
+
+                    // Coin Selector
+                    CoinSelector { 
+                        selected-index <=> root.coin-index; 
+                        selected(idx, name) => {
+                            if (idx < coin-ids.length) {
+                                root.price = CryptoAdapter.get-last-price(coin-ids[idx]);
+                            } else {
+                                root.price = "";
+                            }
+                        }
+                    }
+
+                    if root.coin-index == coin-ids.length: HorizontalLayout {
+                        spacing: 12px;
+                        FormField {
+                            label: "COINGECKO ID";
+                            placeholder: "e.g. pepe";
+                            value <=> root.custom-id;
+                            horizontal-stretch: 1;
+                        }
+                        FormField {
+                            label: "SYMBOL";
+                            placeholder: "e.g. PEPE";
+                            value <=> root.custom-symbol;
+                            width: 100px;
+                        }
+                    }
+
+                    // Wallet Selector
+                    WalletSelector { selected-index <=> root.wallet-index; }
+                    
+                    // Warning if no wallets
+                    if CryptoAdapter.wallet-list.length == 0: Rectangle {
+                        height: 40px;
+                        background: #2d1515;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: #4d2525;
+
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+                            spacing: 8px;
+
+                            Text {
+                                text: "⚠";
+                                color: Palette.danger;
+                                font-size: 14px;
+                                vertical-alignment: center;
+                            }
+
+                            Text { 
+                                text: "Create a wallet in the Wallets tab first"; 
+                                color: Palette.danger; 
+                                font-size: 11px;
+                                font-weight: 400;
+                                vertical-alignment: center; 
+                            }
+                        }
+                    }
 	                    
 	                    // Amount Field
 	                    FormField { 
@@ -605,12 +626,30 @@ export component AddCryptoTransactionModal inherits Rectangle {
 	                        large: true; 
 	                    }
 	                    
-	                    // Price Field
-	                    FormField { 
-	                        label: "PRICE PER COIN (USD)"; 
-	                        placeholder: "Leave empty for market price"; 
-	                        value <=> root.price; 
-	                    }
+                        HorizontalLayout {
+                            spacing: 12px;
+                            // Price Field
+                            FormField { 
+                                label: "PRICE (USD)"; 
+                                placeholder: "Required"; 
+                                value <=> root.price; 
+                                horizontal-stretch: 1;
+                            }
+                            // Fee Field
+                            FormField { 
+                                label: "FEE (USD)"; 
+                                placeholder: "0.00"; 
+                                value <=> root.fee; 
+                                width: 120px;
+                            }
+                        }
+
+                        // Notes Field
+                        FormField { 
+                            label: "NOTES"; 
+                            placeholder: "Transaction details..."; 
+                            value <=> root.notes; 
+                        }
 	                    
 	                    // Date Field
 	                    FormField { 

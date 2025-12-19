@@ -104,7 +104,16 @@ export component ConfigureTickerModal inherits Rectangle {
                 horizontal-alignment: center;
             }
 
-            Rectangle { height: 24px; }
+            Rectangle { height: 12px; }
+
+            Text {
+                text: "Max 50 active coins for price updates.";
+                color: Palette.text-muted;
+                font-size: 10px;
+                horizontal-alignment: center;
+            }
+
+            Rectangle { height: 16px; }
 
             // List
             Rectangle {

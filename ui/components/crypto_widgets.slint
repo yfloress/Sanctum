@@ -217,6 +217,8 @@ export component WalletRow inherits Rectangle {
 
     callback delete;
 
+    property <bool> confirm-mode: false;
+
     horizontal-stretch: 1;
     height: 72px;
     background: transparent;
@@ -306,32 +308,48 @@ export component WalletRow inherits Rectangle {
             horizontal-alignment: right; 
         }
         
-        // Delete button
+        // Delete button / Confirm
         Rectangle {
-            width: 40px; 
+            width: root.confirm-mode ? 80px : 40px; 
             height: 40px;
             y: (parent.height - self.height) / 2;
             border-radius: 8px;
-            background: del-area.has-hover ? Palette.danger.with-alpha(0.1) : transparent;
+            background: root.confirm-mode ? Palette.danger : (del-area.has-hover ? Palette.danger.with-alpha(0.1) : transparent);
+            
+            animate width { duration: 150ms; }
             animate background { duration: 150ms; }
             
             Text { 
-                text: "✕"; 
-                color: del-area.has-hover ? Palette.danger : Palette.text-muted;
-                font-size: 14px; 
-                font-weight: 500;
+                text: root.confirm-mode ? "SURE?" : "✕"; 
+                color: root.confirm-mode ? #ffffff : (del-area.has-hover ? Palette.danger : Palette.text-muted);
+                font-size: root.confirm-mode ? 10px : 14px; 
+                font-weight: 700;
+                letter-spacing: root.confirm-mode ? 1px : 0px;
                 vertical-alignment: center; 
                 horizontal-alignment: center;
                 animate color { duration: 150ms; }
             }
             del-area := TouchArea { 
                 mouse-cursor: pointer;
-                clicked => { root.delete(); } 
+                clicked => { 
+                    if (root.confirm-mode) {
+                        root.delete();
+                    } else {
+                        root.confirm-mode = true;
+                    }
+                }
             }
         }
     }
     
-    area := TouchArea {}
+    // Auto-reset confirm mode when mouse leaves
+    TouchArea {
+        pointer-event(event) => {
+            if (event.kind == PointerEventKind.down && !del-area.has-hover) {
+                root.confirm-mode = false;
+            }
+        }
+    }
 }
 
 // ==================== Ticker Item ====================

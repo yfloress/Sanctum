@@ -43,10 +43,13 @@ const MAX_SANITIZED_STRING_LENGTH: usize = 128;
 /// Last request timestamp for rate limiting (atomic for thread safety)
 static LAST_REQUEST_TIME: AtomicU64 = AtomicU64::new(0);
 
-/// Fixed allowlist of public tickers to avoid leaking a user's private portfolio
-/// Only these IDs are ever sent to CoinGecko
-const PRIVACY_PRESERVING_PRICE_IDS: &[&str] =
-    &["bitcoin", "ethereum", "litecoin", "monero", "tether"];
+/// List of popular tickers used for traffic padding/obfuscation.
+/// These are mixed with user requests to make it harder to fingerprint specific portfolio holdings
+/// (e.g. distinguishing if a user owns Bitcoin vs just generic market monitoring).
+const PRIVACY_PRESERVING_PRICE_IDS: &[&str] = &[
+    "bitcoin", "ethereum", "litecoin", "monero", "tether", "solana", "polkadot", "cardano",
+    "dogecoin", "ripple",
+];
 
 /// Internal struct to deserialize CoinGecko API response
 #[derive(Debug, Deserialize)]
@@ -332,7 +335,7 @@ pub async fn fetch_crypto_prices(coin_ids: Vec<String>) -> Result<Vec<CryptoAsse
     Ok(assets)
 }
 
-/// Returns the fixed allowlist of public tickers to fetch, preventing portfolio fingerprinting
+/// Returns the padding list used for default tickers and privacy obfuscation.
 pub fn default_price_allowlist() -> Vec<String> {
     PRIVACY_PRESERVING_PRICE_IDS
         .iter()

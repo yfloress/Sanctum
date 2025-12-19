@@ -14,43 +14,6 @@ pub struct CryptoAsset {
     pub last_updated: String,
 }
 
-/// Represents a cryptocurrency holding in the user's portfolio (LEGACY - kept for migration)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CryptoHolding {
-    pub id: String,
-    pub coin_id: String,
-    pub symbol: String,
-    pub amount: f64,
-    pub purchase_price: f64,
-    pub purchase_date: String,
-}
-
-impl CryptoHolding {
-    /// Creates a new crypto holding
-    pub fn new(
-        id: String,
-        coin_id: String,
-        symbol: String,
-        amount: f64,
-        purchase_price: f64,
-        purchase_date: String,
-    ) -> Self {
-        Self {
-            id,
-            coin_id,
-            symbol,
-            amount,
-            purchase_price,
-            purchase_date,
-        }
-    }
-
-    /// Validates that amount and price are positive
-    pub fn validate(&self) -> bool {
-        self.amount > 0.0 && self.purchase_price >= 0.0 && !self.coin_id.is_empty()
-    }
-}
-
 // ==================== Crypto Ledger System ====================
 
 /// Wallet category types

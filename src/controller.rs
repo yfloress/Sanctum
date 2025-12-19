@@ -16,6 +16,7 @@ use regex::Regex;
 use rusqlite::Connection;
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::fs::{self, Permissions};
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -127,6 +128,7 @@ const MAX_CURRENCY_LENGTH: usize = 8;
 const EXCHANGE_RATE_TTL_SECS: i64 = 6 * 60 * 60; // 6 hours
 pub const SETTING_AUTO_FETCH: &str = "auto_fetch_crypto";
 pub const SETTING_TICKER_COINS: &str = "ticker_coins";
+pub const SETTING_CRYPTO_LAST_UPDATED: &str = "crypto_last_updated";
 
 // ==================== Helper Functions ====================
 
@@ -1183,12 +1185,75 @@ impl AppController {
 
     // ==================== Crypto Price Methods ====================
 
+    /// Gets all unique coin IDs that need monitoring (Active Tickers + Wallet Holdings)
+    pub fn get_monitored_coin_ids(&self) -> Result<Vec<String>, ControllerError> {
+        // Preserve priority: tickers first, then wallets.
+        let mut ids = Vec::new();
+        let mut seen = HashSet::new();
+
+        for id in self.get_active_ticker_ids() {
+            if seen.insert(id.clone()) {
+                ids.push(id);
+            }
+        }
+
+        if let Ok(portfolio) = self.get_aggregated_portfolio() {
+            for asset in portfolio {
+                let coin_id = asset.coin_id;
+                if seen.insert(coin_id.clone()) {
+                    ids.push(coin_id);
+                }
+            }
+        }
+
+        Ok(ids)
+    }
+
     /// Fetches cryptocurrency prices from CoinGecko
+    /// Implements privacy padding: mixes requested coins with a default list up to the API limit (50).
     pub async fn get_crypto_prices(
         &self,
         coins: Vec<String>,
     ) -> Result<Vec<CryptoAsset>, ControllerError> {
-        crypto::fetch_crypto_prices(coins)
+        // CoinGecko limit is 50
+        const MAX_BATCH_SIZE: usize = 50;
+
+        let mut final_list = Vec::new();
+        let mut seen = HashSet::new();
+        let mut truncated = false;
+
+        for coin in coins {
+            if seen.insert(coin.clone()) {
+                if final_list.len() < MAX_BATCH_SIZE {
+                    final_list.push(coin);
+                } else {
+                    truncated = true;
+                }
+            }
+        }
+
+        if final_list.len() < MAX_BATCH_SIZE {
+            // Smart padding: fill remaining slots with privacy coins.
+            let padding = crypto::default_price_allowlist();
+
+            for privacy_coin in padding {
+                if final_list.len() >= MAX_BATCH_SIZE {
+                    break;
+                }
+                if seen.insert(privacy_coin.clone()) {
+                    final_list.push(privacy_coin);
+                }
+            }
+        }
+
+        if truncated {
+            log::warn!(
+                "Price request exceeds {} unique coins; truncating to limit",
+                MAX_BATCH_SIZE
+            );
+        }
+
+        crypto::fetch_crypto_prices(final_list)
             .await
             .map_err(ControllerError::Api)
     }
@@ -1362,7 +1427,13 @@ impl AppController {
             };
 
             validate_positive_amount(amount, "Amount")?;
-            let price_per_coin = validate_non_negative(price_per_coin, "Price per coin")?;
+            
+            // 1. Validate Price (Mandatory)
+            let price = match price_per_coin {
+                Some(p) if p > 0.0 => p,
+                _ => return Err(ControllerError::Validation("Price per coin is required and must be greater than zero".to_string())),
+            };
+            
             let fee = validate_non_negative(fee, "Fee")?;
             let date = validate_date(&date)?;
 
@@ -1372,6 +1443,31 @@ impl AppController {
                     "Invalid transaction type. Must be one of: {}",
                     valid_types.join(", ")
                 )));
+            }
+
+            if transaction_type == "swap" {
+                return Err(ControllerError::Validation(
+                    "Swap requires paired transactions. Use sell + buy for now.".to_string(),
+                ));
+            }
+
+            // 2. Validate Sufficient Funds (Prevent Negative Balance)
+            if transaction_type == "sell"
+                || transaction_type == "transfer_out"
+                || transaction_type == "swap"
+            {
+                let holdings = db.get_wallet_aggregated_holdings(&wallet_id).map_err(ControllerError::Database)?;
+                let current_balance = holdings.iter()
+                    .find(|h| h.coin_id == coin_id.trim().to_lowercase())
+                    .map(|h| h.total_amount)
+                    .unwrap_or(0.0);
+                
+                if amount > current_balance {
+                    return Err(ControllerError::Validation(format!(
+                        "Insufficient funds. Available: {:.8} {}",
+                        current_balance, symbol
+                    )));
+                }
             }
 
             log_security_event(
@@ -1387,7 +1483,7 @@ impl AppController {
                 symbol.to_uppercase(),
                 transaction_type,
                 amount,
-                price_per_coin,
+                Some(price), // Always store the validated price
                 fee,
                 date,
                 notes,
@@ -1666,12 +1762,27 @@ impl AppController {
             .collect();
 
         // ==================== Monthly Trend ====================
+        // Show last 12 months including current month (rolling 12-month window)
+        // Example: Dec 2024 shows Jan 2024 - Dec 2024, Jan 2025 shows Feb 2024 - Jan 2025
+        let current_year = today.year();
+        let current_month = today.month();
+
+        // Calculate start month (11 months back)
+        let (start_year, start_month) = if current_month <= 11 {
+            (current_year - 1, current_month + 1)
+        } else {
+            (current_year, current_month - 11)
+        };
+
+        let twelve_months_ago_start = NaiveDate::from_ymd_opt(start_year, start_month, 1)
+            .unwrap_or(start_date);
+
         // Group by month and calculate average habits per day
         let mut monthly_data_map: std::collections::BTreeMap<(i32, u32), (i32, i32)> =
             std::collections::BTreeMap::new(); // (year, month) -> (habit_count, days_in_range)
 
-        // Count days per month in range
-        let mut cursor = start_date;
+        // Count days per month in the last 12 months
+        let mut cursor = twelve_months_ago_start;
         while cursor <= today {
             let key = (cursor.year(), cursor.month());
             monthly_data_map.entry(key).or_insert((0, 0)).1 += 1;
@@ -1681,12 +1792,14 @@ impl AppController {
             }
         }
 
-        // Count habits per month
+        // Count habits per month in the last 12 months
         for log in &logs {
             if let Ok(date) = NaiveDate::parse_from_str(&log.completed_date, "%Y-%m-%d") {
-                let key = (date.year(), date.month());
-                if let Some(entry) = monthly_data_map.get_mut(&key) {
-                    entry.0 += 1;
+                if date >= twelve_months_ago_start {
+                    let key = (date.year(), date.month());
+                    if let Some(entry) = monthly_data_map.get_mut(&key) {
+                        entry.0 += 1;
+                    }
                 }
             }
         }

@@ -27,24 +27,10 @@
           libGL
           wayland
           libxkbcommon
+          harfbuzz
+          openssl
           fontconfig
           freetype
-          harfbuzz
-          dejavu_fonts
-          liberation_ttf
-          openssl
-          # X11 support (uncomment if running on Xorg)
-          # xorg.libX11
-          # xorg.libXcursor
-          # xorg.libXi
-          # xorg.libXrandr
-          # xorg.libXrender
-          # xorg.libXfixes
-          # xorg.libxcb
-          # xorg.xcbutil
-          # xorg.xcbutilkeysyms
-          # xorg.xcbutilwm
-          # xorg.xcbutilimage
         ];
 
         packages = with pkgs; [
@@ -74,8 +60,6 @@
 
             echo "> SANCTUM DEV SHELL ACTIVE"
             echo "   Compiler:  Rust $(rustc --version)"
-            echo "   Slint LSP: $(slint-lsp --version 2>/dev/null | head -n1)"
-            echo "   Security:  cargo-audit $(cargo audit --version 2>/dev/null | head -n1)"
           '';
         };
       }
