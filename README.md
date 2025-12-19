@@ -37,6 +37,8 @@
 
 ## About
 
+> **NOT READY FOR USE, IN DEVELOPMENT**
+
 **Sanctum** is a desktop application designed for those who refuse to compromise
 on privacy. Unlike cloud-based solutions or heavy web-wrappers, Sanctum runs entirely
 offline on your Linux machine with native performance.

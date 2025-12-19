@@ -35,6 +35,8 @@
 
 ## Acerca de
 
+> **NO ESTA LISTO PARA USAR, EN DESARROLLO**
+
 **Sanctum** es una aplicación de escritorio diseñada para quienes se niegan a comprometer su privacidad. A diferencia de las soluciones basadas en la nube o los pesados wrappers web, Sanctum se ejecuta completamente offline en tu máquina Linux con rendimiento nativo.
 
 Tus datos financieros, portafolio de criptomonedas y hábitos se almacenan en una **base de datos SQLite local encriptada con SQLCipher**. Tú tienes las llaves. Sin servidores, sin rastreo, sin fugas.
