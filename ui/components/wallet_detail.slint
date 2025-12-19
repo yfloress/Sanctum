@@ -1,0 +1,373 @@
+// ==================== Wallet Detail Panel ====================
+// Noir Fintech - Wallet details drawer
+
+import { Palette, CryptoAdapter } from "../globals.slint";
+
+// ==================== Section Header ====================
+component SectionHeader inherits Rectangle {
+    in property <string> title;
+    
+    height: 32px;
+    background: transparent;
+    
+    HorizontalLayout {
+        spacing: 12px;
+        
+        Rectangle {
+            width: 3px;
+            height: 16px;
+            border-radius: 1px;
+            background: Palette.accent;
+            y: (parent.height - self.height) / 2;
+        }
+        
+        Text { 
+            text: root.title; 
+            color: Palette.text-muted; 
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 2px; 
+            vertical-alignment: center;
+        }
+    }
+}
+
+// ==================== Holding Row ====================
+component WalletHoldingRow inherits Rectangle {
+    in property <string> symbol;
+    in property <string> name;
+    in property <string> amount;
+    in property <string> value;
+    
+    height: 56px;
+    background: Palette.surface;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: Palette.border-subtle;
+    
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        alignment: space-between;
+        
+        VerticalLayout {
+            alignment: center;
+            spacing: 2px;
+            Text { text: root.symbol; color: Palette.text-primary; font-size: 13px; font-weight: 600; }
+            Text { text: root.name; color: Palette.text-muted; font-size: 10px; }
+        }
+        
+        VerticalLayout {
+            alignment: center;
+            spacing: 2px;
+            Text { 
+                text: root.amount; 
+                color: Palette.text-primary; 
+                font-size: 12px; 
+                font-weight: 500;
+                horizontal-alignment: right; 
+            }
+            Text { 
+                text: root.value; 
+                color: Palette.text-muted; 
+                font-size: 10px; 
+                horizontal-alignment: right; 
+            }
+        }
+    }
+}
+
+// ==================== Transaction Row ====================
+component WalletTransactionRow inherits Rectangle {
+    in property <string> tx-type;
+    in property <string> tx-date;
+    in property <string> tx-amount;
+    in property <string> tx-price;
+    in property <string> tx-fee;
+    in property <string> tx-notes;
+    in property <bool> is-last: false;
+    
+    height: 64px;
+    background: transparent;
+    
+    HorizontalLayout {
+        alignment: space-between;
+        spacing: 12px;
+        
+        HorizontalLayout {
+            spacing: 12px;
+            alignment: start;
+            horizontal-stretch: 1;
+            
+            Rectangle {
+                width: 32px;
+                height: 32px;
+                border-radius: 8px;
+                background: 
+                    root.tx-type == "BUY" ? Palette.success.with-alpha(0.1) : 
+                    root.tx-type == "SELL" ? Palette.danger.with-alpha(0.1) :
+                    root.tx-type == "SWAP" ? Palette.primary.with-alpha(0.1) :
+                    Palette.text-muted.with-alpha(0.1);
+                border-width: 1px;
+                border-color: 
+                    root.tx-type == "BUY" ? Palette.success.with-alpha(0.2) : 
+                    root.tx-type == "SELL" ? Palette.danger.with-alpha(0.2) :
+                    root.tx-type == "SWAP" ? Palette.primary.with-alpha(0.2) :
+                    Palette.border;
+                y: (parent.height - self.height) / 2;
+                
+                Text {
+                    text: 
+                        root.tx-type == "BUY" ? "▲" : 
+                        root.tx-type == "SELL" ? "▼" :
+                        root.tx-type == "SWAP" ? "⇄" : "•";
+                    color: 
+                        root.tx-type == "BUY" ? Palette.success : 
+                        root.tx-type == "SELL" ? Palette.danger :
+                        root.tx-type == "SWAP" ? Palette.primary :
+                        Palette.text-muted;
+                    font-size: 10px;
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
+                }
+            }
+            
+            VerticalLayout {
+                alignment: center;
+                spacing: 2px;
+                
+                Text { 
+                    text: root.tx-type; 
+                    color: Palette.text-primary; 
+                    font-size: 12px; 
+                    font-weight: 500; 
+                }
+                Text { 
+                    text: root.tx-date; 
+                    color: Palette.text-muted; 
+                    font-size: 10px; 
+                }
+                if root.tx-notes != "": Text { 
+                    text: root.tx-notes; 
+                    color: Palette.text-subtle; 
+                    font-size: 9px; 
+                }
+            }
+        }
+        
+        VerticalLayout {
+            alignment: center;
+            spacing: 2px;
+            
+            Text { 
+                text: root.tx-amount; 
+                color: Palette.text-primary; 
+                font-size: 12px;
+                font-weight: 500;
+                horizontal-alignment: right; 
+            }
+            Text { 
+                text: "@ " + root.tx-price; 
+                color: Palette.text-muted; 
+                font-size: 10px; 
+                horizontal-alignment: right; 
+            }
+            if root.tx-fee != "": Text { 
+                text: "Fee " + root.tx-fee; 
+                color: Palette.text-subtle; 
+                font-size: 9px; 
+                horizontal-alignment: right; 
+            }
+        }
+    }
+    
+    if !root.is-last: Rectangle { 
+        height: 1px; 
+        width: parent.width; 
+        background: Palette.border-subtle; 
+        y: parent.height - 1px; 
+    }
+}
+
+// ==================== Main Panel ====================
+export component WalletDetailPanel inherits Rectangle {
+    width: 420px;
+    height: 100%;
+    background: @linear-gradient(180deg, #0a0a10 0%, #080810 100%);
+    
+    // Left border accent
+    Rectangle {
+        width: 1px;
+        height: 100%;
+        x: 0;
+        background: Palette.border;
+    }
+
+    VerticalLayout {
+        padding: 0px;
+        spacing: 0px;
+
+        // Header
+        Rectangle {
+            height: 100px;
+            background: Palette.surface;
+            
+            HorizontalLayout {
+                padding-left: 28px;
+                padding-right: 28px;
+                spacing: 16px;
+                
+                // Wallet Icon
+                Rectangle {
+                    width: 52px;
+                    height: 52px;
+                    border-radius: 26px;
+                    background: @linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                    border-width: 1px;
+                    border-color: Palette.border-subtle;
+                    y: (parent.height - self.height) / 2;
+                    
+                    Text { 
+                        text: "💼"; 
+                        color: Palette.text-primary; 
+                        font-size: 18px; 
+                        vertical-alignment: center; 
+                        horizontal-alignment: center; 
+                    }
+                }
+                
+                // Wallet Info
+                VerticalLayout {
+                    alignment: center;
+                    spacing: 4px;
+                    horizontal-stretch: 1;
+                    
+                    Text { 
+                        text: CryptoAdapter.selected-wallet-name; 
+                        color: Palette.text-primary; 
+                        font-size: 18px; 
+                        font-weight: 400; 
+                        letter-spacing: 0.5px; 
+                    }
+                    
+                    Text { 
+                        text: CryptoAdapter.selected-wallet-category; 
+                        color: Palette.text-muted; 
+                        font-size: 11px; 
+                    }
+                    
+                    Text { 
+                        text: CryptoAdapter.selected-wallet-balance; 
+                        color: Palette.text-secondary; 
+                        font-size: 13px; 
+                    }
+                }
+                
+                // Close Button
+                Rectangle {
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 10px;
+                    background: close-touch.has-hover ? Palette.surface-hover : transparent;
+                    y: (parent.height - self.height) / 2;
+                    
+                    animate background { duration: 150ms; }
+                    
+                    Text { 
+                        text: "✕"; 
+                        color: Palette.text-muted; 
+                        font-size: 16px; 
+                        vertical-alignment: center; 
+                        horizontal-alignment: center; 
+                    }
+                    
+                    close-touch := TouchArea { 
+                        mouse-cursor: pointer;
+                        clicked => { CryptoAdapter.show-wallet-detail = false; } 
+                    }
+                }
+            }
+            
+            // Bottom border
+            Rectangle {
+                height: 1px;
+                width: parent.width;
+                background: Palette.border;
+                y: parent.height - 1px;
+            }
+        }
+        
+        // Content
+        VerticalLayout {
+            padding: 28px;
+            spacing: 24px;
+            
+            // Holdings Section
+            VerticalLayout {
+                spacing: 12px;
+                
+                SectionHeader { title: "HOLDINGS"; }
+                
+                if CryptoAdapter.wallet-holdings.length == 0: Rectangle {
+                    height: 48px;
+                    background: Palette.surface.with-alpha(0.3);
+                    border-radius: 8px;
+                    
+                    Text { 
+                        text: "No holdings in this wallet"; 
+                        color: Palette.text-subtle; 
+                        font-size: 12px;
+                        vertical-alignment: center;
+                        horizontal-alignment: center;
+                    }
+                }
+                
+                for item in CryptoAdapter.wallet-holdings: WalletHoldingRow {
+                    symbol: item.symbol;
+                    name: item.name;
+                    amount: item.amount;
+                    value: item.value;
+                }
+            }
+            
+            // Transactions Section
+            VerticalLayout {
+                vertical-stretch: 1;
+                spacing: 12px;
+                
+                SectionHeader { title: "TRANSACTIONS"; }
+                
+                if CryptoAdapter.wallet-history.length == 0: Rectangle {
+                    height: 48px;
+                    background: Palette.surface.with-alpha(0.3);
+                    border-radius: 8px;
+                    
+                    Text { 
+                        text: "No transactions found"; 
+                        color: Palette.text-subtle; 
+                        font-size: 12px;
+                        vertical-alignment: center;
+                        horizontal-alignment: center;
+                    }
+                }
+
+                Flickable {
+                    vertical-stretch: 1;
+                    viewport-height: CryptoAdapter.wallet-history.length * 64px;
+                    
+                    VerticalLayout {
+                        for tx[index] in CryptoAdapter.wallet-history: WalletTransactionRow {
+                            tx-type: tx.type;
+                            tx-date: tx.date;
+                            tx-amount: tx.amount;
+                            tx-price: tx.price;
+                            tx-fee: tx.fee;
+                            tx-notes: tx.notes;
+                            is-last: index == CryptoAdapter.wallet-history.length - 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

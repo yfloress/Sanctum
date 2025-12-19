@@ -1447,7 +1447,7 @@ impl AppController {
 
             if transaction_type == "swap" {
                 return Err(ControllerError::Validation(
-                    "Swap requires paired transactions. Use sell + buy for now.".to_string(),
+                    "Swap requires paired transactions. Use the swap flow.".to_string(),
                 ));
             }
 
@@ -1494,6 +1494,119 @@ impl AppController {
         })
     }
 
+    /// Adds a swap as a paired outflow/inflow transaction with shared cost basis
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_crypto_swap(
+        &self,
+        wallet_id: String,
+        from_coin_id: String,
+        from_symbol: String,
+        from_amount: f64,
+        to_coin_id: String,
+        to_symbol: String,
+        to_amount: f64,
+        fee: Option<f64>,
+        date: String,
+        notes: Option<String>,
+    ) -> Result<String, ControllerError> {
+        self.with_db(|db| {
+            if wallet_id.trim().is_empty() {
+                return Err(ControllerError::Validation(
+                    "Wallet ID cannot be empty".to_string(),
+                ));
+            }
+
+            let from_coin_id = validate_coin_id_str(&from_coin_id)?;
+            let to_coin_id = validate_coin_id_str(&to_coin_id)?;
+            if from_coin_id == to_coin_id {
+                return Err(ControllerError::Validation(
+                    "Swap requires two different assets".to_string(),
+                ));
+            }
+
+            let from_symbol = validate_symbol(&from_symbol)?;
+            let to_symbol = validate_symbol(&to_symbol)?;
+            validate_positive_amount(from_amount, "From amount")?;
+            validate_positive_amount(to_amount, "To amount")?;
+
+            let fee = validate_non_negative(fee, "Fee")?;
+            let date = validate_date(&date)?;
+
+            let notes = match notes {
+                Some(n) => {
+                    let validated = validate_field_length(&n, MAX_NOTES_LENGTH, "Notes")?;
+                    Some(sanitize_string(&validated))
+                }
+                None => None,
+            };
+
+            // Validate sufficient funds for the source asset
+            let holdings = db
+                .get_wallet_aggregated_holdings(&wallet_id)
+                .map_err(ControllerError::Database)?;
+            let current_balance = holdings
+                .iter()
+                .find(|h| h.coin_id == from_coin_id)
+                .map(|h| h.total_amount)
+                .unwrap_or(0.0);
+
+            if from_amount > current_balance {
+                return Err(ControllerError::Validation(format!(
+                    "Insufficient funds. Available: {:.8} {}",
+                    current_balance, from_symbol
+                )));
+            }
+
+            log_security_event(
+                SecurityEvent::CryptoTransactionCreated,
+                Some("swap"),
+            );
+
+            let source_id = Uuid::new_v4().to_string();
+            let target_id = Uuid::new_v4().to_string();
+
+            let source = CryptoTransaction {
+                id: source_id.clone(),
+                wallet_id: wallet_id.clone(),
+                coin_id: from_coin_id,
+                symbol: from_symbol,
+                transaction_type: "swap".to_string(),
+                amount: from_amount,
+                price_per_coin: None,
+                fee,
+                fee_coin_id: None,
+                fee_amount: None,
+                date: date.clone(),
+                notes,
+                related_tx_id: Some(target_id.clone()),
+            };
+
+            let target = CryptoTransaction {
+                id: target_id.clone(),
+                wallet_id,
+                coin_id: to_coin_id,
+                symbol: to_symbol,
+                transaction_type: "transfer_in".to_string(),
+                amount: to_amount,
+                price_per_coin: None,
+                fee: None,
+                fee_coin_id: None,
+                fee_amount: None,
+                date,
+                notes: None,
+                related_tx_id: Some(source_id.clone()),
+            };
+
+            db.create_crypto_transaction(&source)?;
+            if let Err(err) = db.create_crypto_transaction(&target) {
+                let _ = db.delete_crypto_transaction(&source_id);
+                return Err(ControllerError::Database(err));
+            }
+
+            Ok(source_id)
+        })
+    }
+
     /// Gets wallet transactions
     pub fn get_wallet_transactions(
         &self,
@@ -1502,6 +1615,18 @@ impl AppController {
         self.with_db(|db| {
             let validated_id = validate_uuid(&wallet_id)?;
             db.get_wallet_transactions(&validated_id)
+                .map_err(ControllerError::Database)
+        })
+    }
+
+    /// Gets a crypto transaction by ID
+    pub fn get_crypto_transaction(
+        &self,
+        id: String,
+    ) -> Result<Option<CryptoTransaction>, ControllerError> {
+        self.with_db(|db| {
+            let validated_id = validate_uuid(&id)?;
+            db.get_crypto_transaction(&validated_id)
                 .map_err(ControllerError::Database)
         })
     }
@@ -1515,6 +1640,89 @@ impl AppController {
             let validated = validate_coin_id_str(&coin_id)?;
             db.get_crypto_transactions_by_coin(&validated)
                 .map_err(ControllerError::Database)
+        })
+    }
+
+    /// Updates a crypto transaction's editable fields
+    pub fn update_crypto_transaction(
+        &self,
+        id: String,
+        amount: f64,
+        price_per_coin: Option<f64>,
+        fee: Option<f64>,
+        date: String,
+        notes: Option<String>,
+    ) -> Result<(), ControllerError> {
+        self.with_db(|db| {
+            let validated_id = validate_uuid(&id)?;
+            let existing = db
+                .get_crypto_transaction(&validated_id)
+                .map_err(ControllerError::Database)?;
+            let existing = match existing {
+                Some(tx) => tx,
+                None => {
+                    return Err(ControllerError::Validation(
+                        "Transaction not found".to_string(),
+                    ))
+                }
+            };
+
+            if existing.transaction_type == "swap" || existing.related_tx_id.is_some() {
+                return Err(ControllerError::Validation(
+                    "Editing swap transactions is not supported".to_string(),
+                ));
+            }
+
+            validate_positive_amount(amount, "Amount")?;
+            let price = match price_per_coin {
+                Some(p) if p > 0.0 => p,
+                _ => {
+                    return Err(ControllerError::Validation(
+                        "Price per coin is required and must be greater than zero".to_string(),
+                    ))
+                }
+            };
+            let fee = validate_non_negative(fee, "Fee")?;
+            let date = validate_date(&date)?;
+
+            let notes = match notes {
+                Some(n) => {
+                    let validated = validate_field_length(&n, MAX_NOTES_LENGTH, "Notes")?;
+                    Some(sanitize_string(&validated))
+                }
+                None => None,
+            };
+
+            if existing.transaction_type == "sell" || existing.transaction_type == "transfer_out"
+            {
+                let holdings = db
+                    .get_wallet_aggregated_holdings(&existing.wallet_id)
+                    .map_err(ControllerError::Database)?;
+                let current_balance = holdings
+                    .iter()
+                    .find(|h| h.coin_id == existing.coin_id)
+                    .map(|h| h.total_amount)
+                    .unwrap_or(0.0);
+                let available = current_balance + existing.amount;
+                if amount > available {
+                    return Err(ControllerError::Validation(format!(
+                        "Insufficient funds. Available: {:.8} {}",
+                        available, existing.symbol
+                    )));
+                }
+            }
+
+            db.update_crypto_transaction_fields(
+                &validated_id,
+                amount,
+                Some(price),
+                fee,
+                &date,
+                notes.as_deref(),
+            )
+            .map_err(ControllerError::Database)?;
+
+            Ok(())
         })
     }
 
@@ -1794,12 +2002,12 @@ impl AppController {
 
         // Count habits per month in the last 12 months
         for log in &logs {
-            if let Ok(date) = NaiveDate::parse_from_str(&log.completed_date, "%Y-%m-%d") {
-                if date >= twelve_months_ago_start {
-                    let key = (date.year(), date.month());
-                    if let Some(entry) = monthly_data_map.get_mut(&key) {
-                        entry.0 += 1;
-                    }
+            if let Ok(date) = NaiveDate::parse_from_str(&log.completed_date, "%Y-%m-%d")
+                && date >= twelve_months_ago_start
+            {
+                let key = (date.year(), date.month());
+                if let Some(entry) = monthly_data_map.get_mut(&key) {
+                    entry.0 += 1;
                 }
             }
         }

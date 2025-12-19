@@ -81,21 +81,24 @@ component TypeSelector inherits Rectangle {
         padding: 4px;
         spacing: 4px;
 
-        for type[index] in ["buy", "sell", "transfer_in", "transfer_out"]: Rectangle {
+        for type[index] in ["buy", "sell", "transfer_in", "transfer_out", "swap"]: Rectangle {
             horizontal-stretch: 1;
             background: root.selected-type == type 
                 ? (type == "buy" || type == "transfer_in" ? Palette.success.with-alpha(0.2) : 
-                   Palette.danger.with-alpha(0.2))
+                   type == "sell" || type == "transfer_out" ? Palette.danger.with-alpha(0.2) :
+                   Palette.primary.with-alpha(0.2))
                 : transparent;
             border-radius: 8px;
             border-width: root.selected-type == type ? 1px : 0px;
             border-color: type == "buy" || type == "transfer_in" ? Palette.success.with-alpha(0.4) : 
-                          Palette.danger.with-alpha(0.4);
+                          type == "sell" || type == "transfer_out" ? Palette.danger.with-alpha(0.4) :
+                          Palette.primary.with-alpha(0.4);
 
             Text {
                 text: type == "buy" ? "BUY" : 
                       type == "sell" ? "SELL" : 
-                      type == "transfer_in" ? "IN" : "OUT";
+                      type == "transfer_in" ? "IN" : 
+                      type == "transfer_out" ? "OUT" : "SWAP";
                 color: root.selected-type == type ? Palette.text-primary : Palette.text-muted;
                 font-size: 9px;
                 font-weight: 600;
@@ -232,6 +235,7 @@ component WalletSelector inherits Rectangle {
 // ==================== CoinSelector ====================
 component CoinSelector inherits Rectangle {
     in-out property <int> selected-index: 0;
+    in property <string> label: "CRYPTOCURRENCY";
 
     callback selected(int, string); // index, name
 
@@ -254,7 +258,7 @@ component CoinSelector inherits Rectangle {
         spacing: 8px;
 
         Text {
-            text: "CRYPTOCURRENCY";
+            text: root.label;
             color: Palette.text-muted;
             font-size: 10px;
             font-weight: 500;
@@ -367,10 +371,14 @@ export component AddCryptoTransactionModal inherits Rectangle {
     property <string> selected-type: "buy";
     property <int> wallet-index: 0;
     property <int> coin-index: 0;
+    property <string> swap-amount: "";
+    property <int> swap-coin-index: 0;
     
     // Custom coin fields
     property <string> custom-id: "";
     property <string> custom-symbol: "";
+    property <string> swap-custom-id: "";
+    property <string> swap-custom-symbol: "";
 
     property <[string]> coin-ids: [
         "bitcoin", "litecoin", "monero", "ethereum", "tether",
@@ -403,8 +411,12 @@ export component AddCryptoTransactionModal inherits Rectangle {
         selected-type = "buy";
         wallet-index = 0;
         coin-index = 0;
+        swap-amount = "";
+        swap-coin-index = 0;
         custom-id = "";
         custom-symbol = "";
+        swap-custom-id = "";
+        swap-custom-symbol = "";
     }
 
     function submit() {
@@ -433,16 +445,60 @@ export component AddCryptoTransactionModal inherits Rectangle {
         // Safe access to array with clamp
         let safe-index = coin-index >= coin-ids.length ? 0 : coin-index;
 
-        let final-coin-id = (coin-index == coin-ids.length) ? custom-id : coin-ids[safe-index];
-        let final-symbol = (coin-index == coin-ids.length) ? custom-symbol : coin-symbols[safe-index];
+        let from-coin-id = (coin-index == coin-ids.length) ? custom-id : coin-ids[safe-index];
+        let from-symbol = (coin-index == coin-ids.length) ? custom-symbol : coin-symbols[safe-index];
 
-        let type = selected-type;
-        
+        if (selected-type == "swap") {
+            if (swap-amount == "") {
+                NotificationAdapter.show("To amount is required", true);
+                return;
+            }
+
+            if (swap-coin-index == coin-ids.length) {
+                if (swap-custom-id == "" || swap-custom-symbol == "") {
+                    NotificationAdapter.show("Custom ID and Symbol are required", true);
+                    return;
+                }
+            }
+
+            let swap-safe-index = swap-coin-index >= coin-ids.length ? 0 : swap-coin-index;
+            let to-coin-id = (swap-coin-index == coin-ids.length) ? swap-custom-id : coin-ids[swap-safe-index];
+            let to-symbol = (swap-coin-index == coin-ids.length) ? swap-custom-symbol : coin-symbols[swap-safe-index];
+
+            if (from-coin-id == to-coin-id) {
+                NotificationAdapter.show("Swap assets must be different", true);
+                return;
+            }
+
+            let result = CryptoAdapter.add-swap(
+                wallet-id,
+                from-coin-id,
+                from-symbol,
+                amount,
+                to-coin-id,
+                to-symbol,
+                swap-amount,
+                fee,
+                date,
+                notes
+            );
+
+            if (result == "") {
+                root.reset();
+                AppState.show-add-crypto = false;
+                CryptoAdapter.fetch-portfolio();
+                CryptoAdapter.fetch-wallets();
+            } else {
+                NotificationAdapter.show(result, true);
+            }
+            return;
+        }
+
         let result = CryptoAdapter.add-transaction(
             wallet-id, 
-            final-coin-id, 
-            final-symbol, 
-            type, 
+            from-coin-id, 
+            from-symbol, 
+            selected-type, 
             amount, 
             price, 
             fee, 
@@ -557,8 +613,9 @@ export component AddCryptoTransactionModal inherits Rectangle {
                     // Type Toggle
                     TypeSelector { selected-type <=> root.selected-type; }
 
-                    // Coin Selector
+                    // Coin Selector (From)
                     CoinSelector { 
+                        label: root.selected-type == "swap" ? "FROM ASSET" : "CRYPTOCURRENCY";
                         selected-index <=> root.coin-index; 
                         selected(idx, name) => {
                             if (idx < coin-ids.length) {
@@ -581,6 +638,28 @@ export component AddCryptoTransactionModal inherits Rectangle {
                             label: "SYMBOL";
                             placeholder: "e.g. PEPE";
                             value <=> root.custom-symbol;
+                            width: 100px;
+                        }
+                    }
+
+                    // Coin Selector (To) for swaps
+                    if root.selected-type == "swap": CoinSelector {
+                        label: "TO ASSET";
+                        selected-index <=> root.swap-coin-index;
+                    }
+
+                    if root.selected-type == "swap" && root.swap-coin-index == coin-ids.length: HorizontalLayout {
+                        spacing: 12px;
+                        FormField {
+                            label: "COINGECKO ID";
+                            placeholder: "e.g. pepe";
+                            value <=> root.swap-custom-id;
+                            horizontal-stretch: 1;
+                        }
+                        FormField {
+                            label: "SYMBOL";
+                            placeholder: "e.g. PEPE";
+                            value <=> root.swap-custom-symbol;
                             width: 100px;
                         }
                     }
@@ -618,31 +697,36 @@ export component AddCryptoTransactionModal inherits Rectangle {
                         }
                     }
 	                    
-	                    // Amount Field
-	                    FormField { 
-	                        label: "AMOUNT"; 
-	                        placeholder: "0.00"; 
-	                        value <=> root.amount; 
-	                        large: true; 
-	                    }
-	                    
-                        HorizontalLayout {
-                            spacing: 12px;
-                            // Price Field
-                            FormField { 
-                                label: "PRICE (USD)"; 
-                                placeholder: "Required"; 
-                                value <=> root.price; 
-                                horizontal-stretch: 1;
-                            }
-                            // Fee Field
-                            FormField { 
-                                label: "FEE (USD)"; 
-                                placeholder: "0.00"; 
-                                value <=> root.fee; 
-                                width: 120px;
-                            }
+                    // Amount Field
+                    FormField { 
+                        label: root.selected-type == "swap" ? "FROM AMOUNT" : "AMOUNT"; 
+                        placeholder: "0.00"; 
+                        value <=> root.amount; 
+                        large: true; 
+                    }
+
+                    if root.selected-type == "swap": FormField {
+                        label: "TO AMOUNT";
+                        placeholder: "0.00";
+                        value <=> root.swap-amount;
+                        large: true;
+                    }
+
+                    HorizontalLayout {
+                        spacing: 12px;
+                        if root.selected-type != "swap": FormField { 
+                            label: "PRICE (USD)"; 
+                            placeholder: "Required"; 
+                            value <=> root.price; 
+                            horizontal-stretch: 1;
                         }
+                        FormField { 
+                            label: "FEE (USD)"; 
+                            placeholder: "0.00"; 
+                            value <=> root.fee; 
+                            width: root.selected-type == "swap" ? 160px : 120px;
+                        }
+                    }
 
                         // Notes Field
                         FormField { 

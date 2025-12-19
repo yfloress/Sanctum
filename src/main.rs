@@ -1673,6 +1673,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .unwrap_or_default();
                 
                 let limit_reached = coins.len() > 50;
+                let limit_excluded = if limit_reached {
+                    let extra_count = coins.len().saturating_sub(50);
+                    let preview: Vec<String> =
+                        coins.iter().skip(50).take(3).cloned().collect();
+                    if preview.is_empty() {
+                        String::new()
+                    } else if extra_count > preview.len() {
+                        format!("{} +{} more", preview.join(", "), extra_count - preview.len())
+                    } else {
+                        preview.join(", ")
+                    }
+                } else {
+                    String::new()
+                };
                 let has_coins = !coins.is_empty();
 
                 let mut prices_updated = false;
@@ -1692,19 +1706,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
 
                 // 2. Get CLP Rate
-                let clp_display = match controller_async.get_clp_usd_rate().await {
+                let (clp_display, clp_updated) = match controller_async.get_clp_usd_rate().await {
                     Ok(rate) => {
                         let _ = controller_async.save_exchange_rate("CLP_USD".to_string(), rate);
-                        format_clp_rate(rate)
+                        (format_clp_rate(rate), true)
                     }
                     Err(_) => {
                         // Try fallback to cache
                         if let Ok(Some((rate, _))) =
                             controller_async.load_exchange_rate("CLP_USD".to_string())
                         {
-                            format_clp_rate(rate)
+                            (format_clp_rate(rate), true)
                         } else {
-                            "N/A".to_string()
+                            ("N/A".to_string(), false)
                         }
                     }
                 };
@@ -1727,9 +1741,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         ui.global::<CryptoAdapter>().set_last_updated(label.into());
                     }
                     ui.global::<CryptoAdapter>().set_limit_reached(limit_reached);
+                    ui.global::<CryptoAdapter>()
+                        .set_limit_excluded(limit_excluded.into());
                     if prices_updated {
                         notify_success("Prices updated".into(), false);
-                    } else if !has_coins {
+                    } else if !has_coins && clp_updated {
                         notify_success("Rates updated".into(), false);
                     }
                 });
@@ -1822,6 +1838,210 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
+    // Add Swap Callback
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = show_notification.clone();
+
+        ui.global::<CryptoAdapter>().on_add_swap(
+            move |wallet_id_raw,
+                  from_coin_id,
+                  from_symbol,
+                  from_amount_str,
+                  to_coin_id,
+                  to_symbol,
+                  to_amount_str,
+                  fee_str,
+                  date,
+                  notes_str|
+                  -> SharedString {
+                let parse_amount = |raw: SharedString, label: &str| -> Result<f64, SharedString> {
+                    let cleaned = raw
+                        .replace(",", "")
+                        .replace("$", "")
+                        .trim()
+                        .to_string();
+                    cleaned
+                        .parse()
+                        .map_err(|_| SharedString::from(format!("Invalid {} format", label)))
+                };
+
+                let from_amount = match parse_amount(from_amount_str, "from amount") {
+                    Ok(v) => v,
+                    Err(e) => return e,
+                };
+
+                let to_amount = match parse_amount(to_amount_str, "to amount") {
+                    Ok(v) => v,
+                    Err(e) => return e,
+                };
+
+                let fee_clean = fee_str.replace(",", "").replace("$", "").trim().to_string();
+                let fee: Option<f64> = if fee_clean.is_empty() {
+                    None
+                } else {
+                    match fee_clean.parse() {
+                        Ok(v) => Some(v),
+                        Err(_) => return SharedString::from("Invalid fee format"),
+                    }
+                };
+
+                let notes = if notes_str.is_empty() {
+                    None
+                } else {
+                    Some(notes_str.to_string())
+                };
+
+                let result = controller.add_crypto_swap(
+                    wallet_id_raw.to_string(),
+                    from_coin_id.to_string(),
+                    from_symbol.to_string(),
+                    from_amount,
+                    to_coin_id.to_string(),
+                    to_symbol.to_string(),
+                    to_amount,
+                    fee,
+                    date.to_string(),
+                    notes,
+                );
+
+                match result {
+                    Ok(_) => {
+                        reload_portfolio(&ui_weak, &controller);
+                        reload_wallets(&ui_weak, &controller);
+                        notify("Swap added successfully".into(), false);
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            },
+        );
+    }
+
+    // Load Transaction for Edit Callback
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        ui.global::<CryptoAdapter>()
+            .on_load_edit_transaction(move |id| -> SharedString {
+                let tx = match controller.get_crypto_transaction(id.to_string()) {
+                    Ok(Some(t)) => t,
+                    Ok(None) => return SharedString::from("Transaction not found"),
+                    Err(e) => return SharedString::from(e.to_string()),
+                };
+
+                if tx.transaction_type == "swap" || tx.related_tx_id.is_some() {
+                    return SharedString::from("Editing swap transactions is not supported");
+                }
+
+                let wallet_name = controller
+                    .get_wallets()
+                    .ok()
+                    .and_then(|wallets| {
+                        wallets
+                            .into_iter()
+                            .find(|w| w.id == tx.wallet_id)
+                            .map(|w| w.name)
+                    })
+                    .unwrap_or_else(|| "Wallet".to_string());
+
+                let price_str = tx
+                    .price_per_coin
+                    .map(|p| format!("{:.4}", p))
+                    .unwrap_or_default();
+                let fee_str = tx.fee.map(|f| format!("{:.4}", f)).unwrap_or_default();
+                let amount_str = format!("{:.4}", tx.amount);
+                let notes_str = tx.notes.unwrap_or_default();
+
+                if let Some(ui) = ui_weak.upgrade() {
+                    ui.global::<CryptoAdapter>()
+                        .set_edit_tx_id(SharedString::from(&tx.id));
+                    ui.global::<CryptoAdapter>()
+                        .set_edit_wallet_id(SharedString::from(&tx.wallet_id));
+                    ui.global::<CryptoAdapter>()
+                        .set_edit_wallet_name(SharedString::from(wallet_name));
+                    ui.global::<CryptoAdapter>()
+                        .set_edit_coin_id(SharedString::from(&tx.coin_id));
+                    ui.global::<CryptoAdapter>()
+                        .set_edit_symbol(SharedString::from(&tx.symbol));
+                    ui.global::<CryptoAdapter>()
+                        .set_edit_type(SharedString::from(tx.transaction_type.to_uppercase()));
+                    ui.global::<CryptoAdapter>()
+                        .set_edit_amount(SharedString::from(amount_str));
+                    ui.global::<CryptoAdapter>()
+                        .set_edit_price(SharedString::from(price_str));
+                    ui.global::<CryptoAdapter>()
+                        .set_edit_fee(SharedString::from(fee_str));
+                    ui.global::<CryptoAdapter>()
+                        .set_edit_date(SharedString::from(&tx.date));
+                    ui.global::<CryptoAdapter>()
+                        .set_edit_notes(SharedString::from(notes_str));
+                }
+
+                SharedString::from("")
+            });
+    }
+
+    // Update Transaction Callback
+    {
+        let controller = controller.clone();
+        ui.global::<CryptoAdapter>()
+            .on_update_transaction(move |id, amount_str, price_str, fee_str, date, notes_str| {
+                let amount_clean = amount_str
+                    .replace(",", "")
+                    .replace("$", "")
+                    .trim()
+                    .to_string();
+                let amount: f64 = match amount_clean.parse() {
+                    Ok(v) => v,
+                    Err(_) => return SharedString::from("Invalid amount format"),
+                };
+
+                let price_clean = price_str
+                    .replace(",", "")
+                    .replace("$", "")
+                    .trim()
+                    .to_string();
+                let price_per_coin: Option<f64> = if price_clean.is_empty() {
+                    None
+                } else {
+                    match price_clean.parse() {
+                        Ok(v) => Some(v),
+                        Err(_) => return SharedString::from("Invalid price format"),
+                    }
+                };
+
+                let fee_clean = fee_str.replace(",", "").replace("$", "").trim().to_string();
+                let fee: Option<f64> = if fee_clean.is_empty() {
+                    None
+                } else {
+                    match fee_clean.parse() {
+                        Ok(v) => Some(v),
+                        Err(_) => return SharedString::from("Invalid fee format"),
+                    }
+                };
+
+                let notes = if notes_str.is_empty() {
+                    None
+                } else {
+                    Some(notes_str.to_string())
+                };
+
+                match controller.update_crypto_transaction(
+                    id.to_string(),
+                    amount,
+                    price_per_coin,
+                    fee,
+                    date.to_string(),
+                    notes,
+                ) {
+                    Ok(_) => SharedString::from(""),
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            });
+    }
+
     {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
@@ -1850,6 +2070,127 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ui.global::<CryptoAdapter>().on_fetch_wallets(move || {
             reload_wallets(&ui_weak, &controller);
         });
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        ui.global::<CryptoAdapter>()
+            .on_fetch_wallet_details(move |wallet_id| {
+                let wallet_id_str = wallet_id.to_string();
+                let wallets = controller.get_wallets().unwrap_or_default();
+                let wallet = wallets.iter().find(|w| w.id == wallet_id_str);
+
+                if let Some(w) = wallet {
+                    let mut holdings = controller
+                        .get_wallet_holdings(wallet_id_str.clone())
+                        .unwrap_or_default();
+
+                    let prices = controller.load_crypto_prices().unwrap_or_default();
+                    let price_map: HashMap<String, CryptoAsset> = prices
+                        .into_iter()
+                        .map(|p| (p.id.clone(), p))
+                        .collect();
+
+                    let mut total_value = 0.0;
+                    let holdings_data: Vec<CryptoAssetData> = holdings
+                        .iter_mut()
+                        .map(|asset| {
+                            if let Some(price_data) = price_map.get(&asset.coin_id) {
+                                asset.update_with_price(price_data.current_price);
+                            }
+
+                            total_value += asset.current_value;
+
+                            let price_data = price_map.get(&asset.coin_id);
+                            let asset_name = price_data
+                                .map(|p| p.name.clone())
+                                .unwrap_or_else(|| asset.symbol.clone());
+
+                            let price_fmt = if price_data.is_none() {
+                                "N/A".to_string()
+                            } else if asset.current_price < 1.0 {
+                                format!("$ {:.4}", asset.current_price)
+                            } else {
+                                format_money((asset.current_price * 100.0) as i64, "USD")
+                            };
+
+                            let value_fmt = if price_data.is_none() {
+                                "N/A".to_string()
+                            } else {
+                                format_money((asset.current_value * 100.0) as i64, "USD")
+                            };
+
+                            CryptoAssetData {
+                                id: SharedString::from(&asset.coin_id),
+                                symbol: SharedString::from(&asset.symbol),
+                                name: SharedString::from(asset_name),
+                                price: SharedString::from(price_fmt),
+                                amount: SharedString::from(format!(
+                                    "{:.4} {}",
+                                    asset.total_amount, asset.symbol
+                                )),
+                                value: SharedString::from(value_fmt),
+                                change_24h: SharedString::from(""),
+                                is_positive: true,
+                                allocation: 0.0,
+                            }
+                        })
+                        .collect();
+
+                    let history = controller
+                        .get_wallet_transactions(wallet_id_str.clone())
+                        .unwrap_or_default();
+                    let history_mapped: Vec<AssetTransaction> = history
+                        .iter()
+                        .map(|tx| {
+                            let price_val = tx.price_per_coin.unwrap_or(0.0);
+                            let p_fmt = if price_val < 1.0 && price_val > 0.0 {
+                                format!("$ {:.4}", price_val)
+                            } else if price_val > 0.0 {
+                                format_money((price_val * 100.0) as i64, "USD")
+                            } else {
+                                "N/A".to_string()
+                            };
+                            let fee_val = tx.fee.unwrap_or(0.0);
+                            let fee_fmt = if fee_val > 0.0 {
+                                format_money((fee_val * 100.0) as i64, "USD")
+                            } else {
+                                "".to_string()
+                            };
+                            let notes = tx.notes.clone().unwrap_or_default();
+
+                            AssetTransaction {
+                                id: SharedString::from(&tx.id),
+                                date: SharedString::from(&tx.date),
+                                r#type: SharedString::from(tx.transaction_type.to_uppercase()),
+                                amount: SharedString::from(format!("{:.4}", tx.amount)),
+                                price: SharedString::from(p_fmt),
+                                fee: SharedString::from(fee_fmt),
+                                notes: SharedString::from(notes),
+                            }
+                        })
+                        .collect();
+
+                    if let Some(ui) = ui_weak.upgrade() {
+                        let adapter = ui.global::<CryptoAdapter>();
+                        let category_label = match w.category.as_str() {
+                            "exchange" => "Exchange",
+                            "wallet_multi" => "Hardware Wallet",
+                            _ => "Software Wallet",
+                        };
+                        adapter.set_selected_wallet_id(SharedString::from(&w.id));
+                        adapter.set_selected_wallet_name(SharedString::from(&w.name));
+                        adapter.set_selected_wallet_category(SharedString::from(category_label));
+                        adapter.set_selected_wallet_balance(SharedString::from(format_money(
+                            (total_value * 100.0) as i64,
+                            "USD",
+                        )));
+                        adapter.set_wallet_holdings(ModelRc::new(VecModel::from(holdings_data)));
+                        adapter.set_wallet_history(ModelRc::new(VecModel::from(history_mapped)));
+                    }
+                }
+            });
     }
 
     {
@@ -1962,10 +2303,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .set_clp_rate(SharedString::from("N/A"));
     }
 
-    if let Ok(val) = controller.get_app_setting(SETTING_CRYPTO_LAST_UPDATED) {
-        if !val.is_empty() {
-            ui.global::<CryptoAdapter>().set_last_updated(val.into());
-        }
+    if let Ok(val) = controller.get_app_setting(SETTING_CRYPTO_LAST_UPDATED)
+        && !val.is_empty()
+    {
+        ui.global::<CryptoAdapter>().set_last_updated(val.into());
     }
 
     {
@@ -2085,6 +2426,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             } else {
                                 format_money((price_val * 100.0) as i64, "USD")
                             };
+                            let fee_val = tx.fee.unwrap_or(0.0);
+                            let fee_fmt = if fee_val > 0.0 {
+                                format_money((fee_val * 100.0) as i64, "USD")
+                            } else {
+                                "".to_string()
+                            };
+                            let notes = tx.notes.clone().unwrap_or_default();
 
                             AssetTransaction {
                                 id: SharedString::from(&tx.id),
@@ -2092,6 +2440,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 r#type: SharedString::from(tx.transaction_type.to_uppercase()),
                                 amount: SharedString::from(format!("{:.4}", tx.amount)),
                                 price: SharedString::from(p_fmt),
+                                fee: SharedString::from(fee_fmt),
+                                notes: SharedString::from(notes),
                             }
                         })
                         .collect();

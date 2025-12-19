@@ -216,12 +216,30 @@ export component WalletRow inherits Rectangle {
     in property <string> id;
 
     callback delete;
+    callback clicked;
 
     property <bool> confirm-mode: false;
 
     horizontal-stretch: 1;
     height: 72px;
     background: transparent;
+
+    // Row click behind interactive controls
+    area := TouchArea {
+        width: parent.width;
+        height: parent.height;
+        mouse-cursor: pointer;
+        clicked => { 
+            if (!del-area.has-hover) {
+                root.clicked(); 
+            }
+        }
+        pointer-event(event) => {
+            if (event.kind == PointerEventKind.down && !del-area.has-hover) {
+                root.confirm-mode = false;
+            }
+        }
+    }
 
     HorizontalLayout {
         padding-left: 20px;
@@ -338,15 +356,6 @@ export component WalletRow inherits Rectangle {
                         root.confirm-mode = true;
                     }
                 }
-            }
-        }
-    }
-    
-    // Auto-reset confirm mode when mouse leaves
-    TouchArea {
-        pointer-event(event) => {
-            if (event.kind == PointerEventKind.down && !del-area.has-hover) {
-                root.confirm-mode = false;
             }
         }
     }
@@ -617,4 +626,3 @@ export component GhostButton inherits Rectangle {
         clicked => { root.clicked(); }
     }
 }
-

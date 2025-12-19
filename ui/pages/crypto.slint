@@ -8,6 +8,7 @@ import {
 } from "../globals.slint";
 import { CryptoRow, WalletRow, TickerItem, CryptoCard, GhostButton } from "../components/crypto_widgets.slint";
 import { AssetDetailPanel } from "../components/asset_detail.slint";
+import { WalletDetailPanel } from "../components/wallet_detail.slint";
 import { TextButton, BorderButton, ActionButton } from "../widgets.slint";
 
 // ==================== Tab Button ====================
@@ -306,6 +307,12 @@ export component CryptoPage inherits Rectangle {
                                 }
                             }
                         }
+
+                        if CryptoAdapter.limit-excluded != "": Text {
+                            text: "Skipped: " + CryptoAdapter.limit-excluded;
+                            color: Palette.text-muted;
+                            font-size: 10px;
+                        }
                     }
                 }
 
@@ -565,21 +572,25 @@ export component CryptoPage inherits Rectangle {
                             border-width: 1px;
                             border-color: Palette.border-subtle;
                             
-                            WalletRow {
-                                name: wallet.name;
-                                category: wallet.category;
-                                balance: wallet.balance;
-                                count: wallet.asset-count;
-                                id: wallet.id;
-                                is-last: index == CryptoAdapter.wallets.length - 1;
-                                delete => {
-                                    CryptoAdapter.delete-wallet(wallet.id);
+                                WalletRow {
+                                    name: wallet.name;
+                                    category: wallet.category;
+                                    balance: wallet.balance;
+                                    count: wallet.asset-count;
+                                    id: wallet.id;
+                                    is-last: index == CryptoAdapter.wallets.length - 1;
+                                    delete => {
+                                        CryptoAdapter.delete-wallet(wallet.id);
+                                    }
+                                    clicked => {
+                                        CryptoAdapter.fetch-wallet-details(wallet.id);
+                                        CryptoAdapter.show-wallet-detail = true;
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
         }
     }
     
@@ -609,6 +620,37 @@ export component CryptoPage inherits Rectangle {
             }
 
             AssetDetailPanel {
+                height: parent.height;
+            }
+        }
+    }
+
+    // ==================== WALLET DETAIL OVERLAY ====================
+    if CryptoAdapter.show-wallet-detail: Rectangle {
+        x: 0; y: 0; width: 100%; height: 100%;
+        
+        // Backdrop
+        Rectangle { 
+            background: #000000.with-alpha(0.85);
+            
+            animate background { duration: 200ms; } 
+        }
+
+        HorizontalLayout {
+            width: parent.width;
+            height: parent.height;
+            spacing: 0px;
+
+            Rectangle {
+                horizontal-stretch: 1;
+                height: parent.height;
+                TouchArea { 
+                    mouse-cursor: pointer;
+                    clicked => { CryptoAdapter.show-wallet-detail = false; } 
+                }
+            }
+
+            WalletDetailPanel {
                 height: parent.height;
             }
         }
