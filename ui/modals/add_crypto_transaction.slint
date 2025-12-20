@@ -236,6 +236,7 @@ component WalletSelector inherits Rectangle {
 component CoinSelector inherits Rectangle {
     in-out property <int> selected-index: 0;
     in property <string> label: "CRYPTOCURRENCY";
+    property <bool> popup-open: false;
 
     callback selected(int, string); // index, name
 
@@ -250,8 +251,9 @@ component CoinSelector inherits Rectangle {
         "Internet Computer (ICP)", "Kaspa (KAS)", "Mantle (MNT)", "Bittensor (TAO)", "Worldcoin (WLD)",
         "Other..."
     ];
+    property <length> popup-height: min(coins.length * 40px + 8px, 300px);
 
-    height: 64px;
+    height: popup-open ? 64px + popup-height : 64px;
     background: transparent;
 
     VerticalLayout {
@@ -295,64 +297,63 @@ component CoinSelector inherits Rectangle {
 
             TouchArea {
                 mouse-cursor: pointer;
-                clicked => { popup.show(); }
+                clicked => { root.popup-open = !root.popup-open; }
             }
         }
     }
 
-    popup := PopupWindow {
+    if popup-open: Rectangle {
         x: 0;
         y: 64px;
         width: root.width;
-        
-        Rectangle {
-            background: Palette.sidebar-bg;
-            border-radius: 8px;
-            border-width: 1px;
-            border-color: Palette.border-light;
-            height: 300px;
-            drop-shadow-blur: 16px;
-            drop-shadow-color: #00000066;
+        height: popup-height;
+        background: Palette.sidebar-bg;
+        border-radius: 8px;
+        border-width: 1px;
+        border-color: Palette.border-light;
+        drop-shadow-blur: 16px;
+        drop-shadow-color: #00000066;
 
-            Flickable {
-                viewport-height: coins.length * 40px + 8px;
-                
-                VerticalLayout {
-                    padding: 4px;
-                    spacing: 0px;
+        Flickable {
+            height: parent.height;
+            viewport-height: coins.length * 40px + 8px;
+            
+            VerticalLayout {
+                padding: 4px;
+                spacing: 0px;
 
-                    for coin[index] in coins: Rectangle {
-                        height: 40px;
-                        background: option-touch.has-hover ? Palette.surface-hover : transparent;
-                        border-radius: 6px;
+                for coin[index] in coins: Rectangle {
+                    height: 40px;
+                    background: option-touch.has-hover ? Palette.surface-hover : transparent;
+                    border-radius: 6px;
 
-                        HorizontalLayout {
-                            padding-left: 12px;
-                            padding-right: 12px;
+                    HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
 
-                            Text {
-                                text: coin;
-                                color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
-                                font-size: 13px;
-                                font-weight: index == selected-index ? 500 : 400;
-                                vertical-alignment: center;
-                                horizontal-stretch: 1;
-                            }
-
-                            if index == selected-index: Text {
-                                text: "✓";
-                                color: Palette.accent;
-                                font-size: 12px;
-                                vertical-alignment: center;
-                            }
+                        Text {
+                            text: coin;
+                            color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
+                            font-size: 13px;
+                            font-weight: index == selected-index ? 500 : 400;
+                            vertical-alignment: center;
+                            horizontal-stretch: 1;
                         }
 
-                        option-touch := TouchArea {
-                            mouse-cursor: pointer;
-                            clicked => { 
-                                root.selected-index = index; 
-                                root.selected(index, coin);
-                            }
+                        if index == selected-index: Text {
+                            text: "✓";
+                            color: Palette.accent;
+                            font-size: 12px;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    option-touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { 
+                            root.selected-index = index; 
+                            root.selected(index, coin);
+                            root.popup-open = false;
                         }
                     }
                 }
@@ -570,7 +571,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
 	                    }
 
                     Text {
-                        text: "ADD CRYPTO ASSET";
+                        text: "NEW CRYPTO TRANSACTION";
                         color: Palette.text-primary;
                         font-size: 16px;
                         font-weight: 500;
@@ -752,8 +753,8 @@ export component AddCryptoTransactionModal inherits Rectangle {
 	                background: @linear-gradient(135deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%);
 	                border-radius: 10px;
 	                
-	                Text {
-                    text: "SAVE ASSET";
+                Text {
+                    text: "SAVE TRANSACTION";
                     color: #ffffff;
                     font-size: 12px;
                     font-weight: 600;

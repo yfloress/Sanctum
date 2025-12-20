@@ -712,7 +712,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_weak = ui_weak.clone();
         ui.global::<DashboardAdapter>().on_fetch_balance(move || {
             // 1. Load Exchange Rate (CLP -> USD)
-            let clp_rate = match controller.load_exchange_rate("CLP_USD".to_string()) {
+            let clp_rate = match controller.load_exchange_rate_allow_stale("CLP_USD".to_string())
+            {
                 Ok(Some((r, _))) => r,
                 _ => 0.0,
             };
@@ -1612,7 +1613,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             // Try to load CLP rate
             let clp_cached = controller
-                .load_exchange_rate("CLP_USD".to_string())
+                .load_exchange_rate_allow_stale("CLP_USD".to_string())
                 .ok()
                 .flatten();
 
@@ -1625,6 +1626,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 })
                 .unwrap_or_else(|| "N/A".to_string());
+
+            let last_updated_label = controller
+                .get_app_setting(SETTING_CRYPTO_LAST_UPDATED)
+                .ok()
+                .filter(|val| !val.is_empty())
+                .or_else(|| {
+                    prices
+                        .iter()
+                        .filter_map(|price| {
+                            chrono::DateTime::parse_from_rfc3339(&price.last_updated).ok()
+                        })
+                        .max()
+                        .map(|dt| {
+                            let local = dt.with_timezone(&chrono::Local);
+                            let now = chrono::Local::now();
+                            if local.date_naive() == now.date_naive() {
+                                format!("Today at {}", local.format("%H:%M"))
+                            } else {
+                                local.format("%Y-%m-%d %H:%M").to_string()
+                            }
+                        })
+                });
 
             if let Some(ui) = ui_weak.upgrade() {
                 let adapter = ui.global::<CryptoAdapter>();
@@ -1641,6 +1664,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     format_money((total_pnl_val.abs() * 100.0) as i64, "USD")
                 )));
                 adapter.set_clp_rate(SharedString::from(clp_display));
+                if let Some(label) = last_updated_label {
+                    adapter.set_last_updated(label.into());
+                }
             }
         }
     }
@@ -1714,7 +1740,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Err(_) => {
                         // Try fallback to cache
                         if let Ok(Some((rate, _))) =
-                            controller_async.load_exchange_rate("CLP_USD".to_string())
+                            controller_async.load_exchange_rate_allow_stale("CLP_USD".to_string())
                         {
                             (format_clp_rate(rate), true)
                         } else {
@@ -2299,7 +2325,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Initial Load
-    if let Ok(Some((rate, _))) = controller.load_exchange_rate("CLP_USD".to_string()) {
+    if let Ok(Some((rate, _))) = controller.load_exchange_rate_allow_stale("CLP_USD".to_string())
+    {
         ui.global::<CryptoAdapter>()
             .set_clp_rate(SharedString::from(format_clp_rate(rate)));
     } else {
@@ -2485,8 +2512,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if enabled {
                         // Check if we have recent prices. We check a benchmark coin (e.g. bitcoin)
                         // Or simply check the CLP rate timestamp as a proxy for all prices
-                        let needs_update = if let Ok(Some((_, updated_at))) =
-                            controller.load_exchange_rate("CLP_USD".to_string())
+                        let needs_update = if let Ok(Some((_, updated_at))) = controller
+                            .load_exchange_rate_allow_stale("CLP_USD".to_string())
                         {
                             // Check age
                             if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(&updated_at) {

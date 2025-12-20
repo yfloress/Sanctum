@@ -521,13 +521,13 @@ export component CryptoCard inherits Rectangle {
             }
         }
 
-        // Center: Price
+        // Center: Holdings Value
         VerticalLayout {
             alignment: center;
             spacing: 4px;
             
             Text {
-                text: root.price;
+                text: root.value;
                 color: Palette.text-primary;
                 font-size: 24px;
                 font-weight: 300;
@@ -536,7 +536,7 @@ export component CryptoCard inherits Rectangle {
             }
             
             Text {
-                text: "per coin";
+                text: "total value";
                 color: Palette.text-subtle;
                 font-size: 10px;
                 letter-spacing: 1px;
@@ -574,14 +574,14 @@ export component CryptoCard inherits Rectangle {
                 VerticalLayout {
                     alignment: center;
                     Text { 
-                        text: "Value"; 
+                        text: "Price"; 
                         color: Palette.text-muted; 
                         font-size: 9px;
                         letter-spacing: 1px;
                         horizontal-alignment: right;
                     }
                     Text { 
-                        text: root.value; 
+                        text: root.price; 
                         color: Palette.text-primary; 
                         font-size: 12px;
                         font-weight: 600;

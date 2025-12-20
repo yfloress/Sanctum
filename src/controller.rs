@@ -1140,7 +1140,7 @@ impl AppController {
             .map(|a| (a.id.clone(), a.currency.to_uppercase()))
             .collect();
 
-        let clp_rate = match self.load_exchange_rate("CLP_USD".to_string()) {
+        let clp_rate = match self.load_exchange_rate_allow_stale("CLP_USD".to_string()) {
             Ok(Some((r, _))) => r,
             _ => 1.0,
         };
@@ -1269,6 +1269,17 @@ impl AppController {
     pub fn save_exchange_rate(&self, pair: String, rate: f64) -> Result<(), ControllerError> {
         self.with_db(|db| {
             db.save_exchange_rate(&pair, rate)
+                .map_err(ControllerError::Database)
+        })
+    }
+
+    /// Loads cached exchange rate, even if stale
+    pub fn load_exchange_rate_allow_stale(
+        &self,
+        pair: String,
+    ) -> Result<Option<(f64, String)>, ControllerError> {
+        self.with_db(|db| {
+            db.load_exchange_rate(&pair)
                 .map_err(ControllerError::Database)
         })
     }
@@ -2107,7 +2118,7 @@ impl AppController {
             .map(|a| (a.id.clone(), a.currency.to_uppercase()))
             .collect();
 
-        let clp_rate = match self.load_exchange_rate("CLP_USD".to_string()) {
+        let clp_rate = match self.load_exchange_rate_allow_stale("CLP_USD".to_string()) {
             Ok(Some((r, _))) => r,
             _ => 1.0,
         };
@@ -2312,7 +2323,7 @@ impl AppController {
             .map(|a| (a.id.clone(), a.currency.to_uppercase()))
             .collect();
 
-        let clp_rate = match self.load_exchange_rate("CLP_USD".to_string()) {
+        let clp_rate = match self.load_exchange_rate_allow_stale("CLP_USD".to_string()) {
             Ok(Some((r, _))) => r,
             _ => 1.0,
         };
