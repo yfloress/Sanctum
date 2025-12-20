@@ -1,8 +1,8 @@
-// ==================== Configure Ticker Modal ====================
-// Select which coins appear in the top scrolling ticker
+// ==================== Configure Crypto Modal ====================
+// Select which coins appear in the top price bar
 
 import { Palette, AppState, CryptoAdapter, NotificationAdapter } from "../globals.slint";
-import { TextButton } from "../widgets.slint";
+import { BorderButton, TextButton } from "../widgets.slint";
 
 component TickerToggleRow inherits Rectangle {
     in property <string> symbol;
@@ -256,6 +256,15 @@ component CatalogRow inherits Rectangle {
                 clicked => { root.delete(); }
             }
         }
+
+        if !root.deletable: Text {
+            text: "DEFAULT";
+            color: Palette.text-subtle;
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            vertical-alignment: center;
+        }
     }
 
     Rectangle {
@@ -281,6 +290,7 @@ export component ConfigureTickerModal inherits Rectangle {
     init => {
         CryptoAdapter.load-ticker-options();
         CryptoAdapter.load-coin-catalog();
+        CryptoAdapter.filter-coin-catalog("");
     }
 
     // Backdrop
@@ -318,7 +328,7 @@ export component ConfigureTickerModal inherits Rectangle {
             Rectangle { height: 8px; }
 
             Text {
-                text: "Manage ticker and coin catalog for selection.";
+                text: "Manage price bar and coin catalog for selection.";
                 color: Palette.text-muted;
                 font-size: 10px;
                 horizontal-alignment: center;
@@ -332,7 +342,7 @@ export component ConfigureTickerModal inherits Rectangle {
                 spacing: 8px;
 
                 ConfigTabButton {
-                    text: "TICKER BAR";
+                    text: "PRICE BAR";
                     active: root.active-tab == "ticker";
                     clicked => { root.active-tab = "ticker"; }
                 }
@@ -358,7 +368,7 @@ export component ConfigureTickerModal inherits Rectangle {
 
                 SearchInput {
                     text <=> root.ticker-search;
-                    placeholder: "Search tickers...";
+                    placeholder: "Search coins...";
                     edited => {
                         CryptoAdapter.filter-ticker-options(root.ticker-search);
                     }
@@ -416,7 +426,7 @@ export component ConfigureTickerModal inherits Rectangle {
                 spacing: 12px;
 
                 Text {
-                    text: "Catalog is used for ticker and transactions.";
+                    text: "Catalog is used for price bar and transactions.";
                     color: Palette.text-muted;
                     font-size: 10px;
                     horizontal-alignment: center;
@@ -492,7 +502,12 @@ export component ConfigureTickerModal inherits Rectangle {
                         }
 
                         Text {
-                            text: "Use CoinGecko ID (lowercase, hyphens). Example: pepe";
+                            text: "Use CoinGecko ID (lowercase, hyphens). Example: litecoin";
+                            color: Palette.text-muted;
+                            font-size: 9px;
+                        }
+                        Text {
+                            text: "Symbol uses letters only. Example: LTC";
                             color: Palette.text-muted;
                             font-size: 9px;
                         }
@@ -550,7 +565,7 @@ export component ConfigureTickerModal inherits Rectangle {
 
                 HorizontalLayout {
                     alignment: center;
-                    TextButton {
+                    BorderButton {
                         text: "CLOSE";
                         clicked => { AppState.show-configure-ticker = false; }
                     }
