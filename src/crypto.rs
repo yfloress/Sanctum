@@ -9,7 +9,7 @@
 //! - Output sanitization
 //! - No sensitive data exposure in errors
 
-use crate::models::CryptoAsset;
+use crate::models::{CryptoAsset, CryptoCatalogCoin};
 use crate::security_log::{SecurityEvent, log_rate_limit, log_security_event};
 use futures::TryStreamExt;
 use reqwest::Client;
@@ -340,6 +340,62 @@ pub fn default_price_allowlist() -> Vec<String> {
     PRIVACY_PRESERVING_PRICE_IDS
         .iter()
         .map(|s| s.to_string())
+        .collect()
+}
+
+/// Returns the default coin catalog used for selection and ticker configuration.
+pub fn default_coin_catalog() -> Vec<CryptoCatalogCoin> {
+    let defaults = [
+        ("bitcoin", "Bitcoin", "BTC"),
+        ("litecoin", "Litecoin", "LTC"),
+        ("monero", "Monero", "XMR"),
+        ("ethereum", "Ethereum", "ETH"),
+        ("tether", "Tether", "USDT"),
+        ("binancecoin", "BNB", "BNB"),
+        ("solana", "Solana", "SOL"),
+        ("ripple", "XRP", "XRP"),
+        ("usd-coin", "USDC", "USDC"),
+        ("cardano", "Cardano", "ADA"),
+        ("dogecoin", "Dogecoin", "DOGE"),
+        ("tron", "TRON", "TRX"),
+        ("polygon-ecosystem-token", "Polygon", "POL"),
+        ("chainlink", "Chainlink", "LINK"),
+        ("polkadot", "Polkadot", "DOT"),
+        ("shiba-inu", "Shiba Inu", "SHIB"),
+        ("avalanche-2", "Avalanche", "AVAX"),
+        ("stellar", "Stellar", "XLM"),
+        ("bitcoin-cash", "Bitcoin Cash", "BCH"),
+        ("uniswap", "Uniswap", "UNI"),
+        ("cosmos", "Cosmos Hub", "ATOM"),
+        ("ethereum-classic", "Ethereum Classic", "ETC"),
+        ("hedera-hashgraph", "Hedera", "HBAR"),
+        ("aave", "Aave", "AAVE"),
+        ("vechain", "VeChain", "VET"),
+        ("near", "NEAR Protocol", "NEAR"),
+        ("algorand", "Algorand", "ALGO"),
+        ("quant-network", "Quant", "QNT"),
+        ("arbitrum", "Arbitrum", "ARB"),
+        ("sui", "Sui", "SUI"),
+        ("aptos", "Aptos", "APT"),
+        ("crypto-com-chain", "Cronos", "CRO"),
+        ("zcash", "Zcash", "ZEC"),
+        ("dai", "Dai", "DAI"),
+        ("the-open-network", "Toncoin", "TON"),
+        ("internet-computer", "Internet Computer", "ICP"),
+        ("kaspa", "Kaspa", "KAS"),
+        ("mantle", "Mantle", "MNT"),
+        ("bittensor", "Bittensor", "TAO"),
+        ("worldcoin-wld", "Worldcoin", "WLD"),
+    ];
+
+    defaults
+        .iter()
+        .map(|(id, name, symbol)| CryptoCatalogCoin {
+            id: (*id).to_string(),
+            name: (*name).to_string(),
+            symbol: (*symbol).to_string(),
+            custom: false,
+        })
         .collect()
 }
 

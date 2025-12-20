@@ -237,21 +237,13 @@ component CoinSelector inherits Rectangle {
     in-out property <int> selected-index: 0;
     in property <string> label: "CRYPTOCURRENCY";
     property <bool> popup-open: false;
+    property <int> safe-index: CryptoAdapter.coin-catalog.length > 0 && selected-index < CryptoAdapter.coin-catalog.length
+        ? selected-index
+        : 0;
 
     callback selected(int, string); // index, name
 
-    property <[string]> coins: [
-        "Bitcoin (BTC)", "Litecoin (LTC)", "Monero (XMR)", "Ethereum (ETH)", "Tether (USDT)",
-        "BNB (BNB)", "Solana (SOL)", "XRP (XRP)", "USDC (USDC)", "Cardano (ADA)",
-        "Dogecoin (DOGE)", "TRON (TRX)", "Polygon (POL)", "Chainlink (LINK)", "Polkadot (DOT)",
-        "Shiba Inu (SHIB)", "Avalanche (AVAX)", "Stellar (XLM)", "Bitcoin Cash (BCH)", "Uniswap (UNI)",
-        "Cosmos Hub (ATOM)", "Ethereum Classic (ETC)", "Hedera (HBAR)", "Aave (AAVE)", "VeChain (VET)",
-        "NEAR Protocol (NEAR)", "Algorand (ALGO)", "Quant (QNT)", "Arbitrum (ARB)", "Sui (SUI)",
-        "Aptos (APT)", "Cronos (CRO)", "Zcash (ZEC)", "Dai (DAI)", "Toncoin (TON)",
-        "Internet Computer (ICP)", "Kaspa (KAS)", "Mantle (MNT)", "Bittensor (TAO)", "Worldcoin (WLD)",
-        "Other..."
-    ];
-    property <length> popup-height: min(coins.length * 40px + 8px, 300px);
+    property <length> popup-height: min(CryptoAdapter.coin-catalog.length * 40px + 8px, 300px);
 
     height: popup-open ? 64px + popup-height : 64px;
     background: transparent;
@@ -279,8 +271,14 @@ component CoinSelector inherits Rectangle {
                 padding-right: 16px;
 
                 Text {
-                    text: coins[selected-index];
-                    color: Palette.text-primary;
+                    text: CryptoAdapter.coin-catalog.length > 0
+                        ? CryptoAdapter.coin-catalog[safe-index].name
+                            + " ("
+                            + CryptoAdapter.coin-catalog[safe-index].symbol
+                            + ")"
+                            + (CryptoAdapter.coin-catalog[safe-index].custom ? " *" : "")
+                        : "No coins available";
+                    color: CryptoAdapter.coin-catalog.length > 0 ? Palette.text-primary : Palette.text-muted;
                     font-size: 14px;
                     font-weight: 400;
                     vertical-alignment: center;
@@ -297,7 +295,11 @@ component CoinSelector inherits Rectangle {
 
             TouchArea {
                 mouse-cursor: pointer;
-                clicked => { root.popup-open = !root.popup-open; }
+                clicked => { 
+                    if (CryptoAdapter.coin-catalog.length > 0) { 
+                        root.popup-open = !root.popup-open; 
+                    } 
+                }
             }
         }
     }
@@ -316,28 +318,28 @@ component CoinSelector inherits Rectangle {
 
         Flickable {
             height: parent.height;
-            viewport-height: coins.length * 40px + 8px;
+            viewport-height: CryptoAdapter.coin-catalog.length * 40px + 8px;
             
             VerticalLayout {
                 padding: 4px;
                 spacing: 0px;
 
-                for coin[index] in coins: Rectangle {
+                for coin[index] in CryptoAdapter.coin-catalog: Rectangle {
                     height: 40px;
                     background: option-touch.has-hover ? Palette.surface-hover : transparent;
                     border-radius: 6px;
 
-                    HorizontalLayout {
-                        padding-left: 12px;
-                        padding-right: 12px;
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
 
-                        Text {
-                            text: coin;
-                            color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
-                            font-size: 13px;
-                            font-weight: index == selected-index ? 500 : 400;
-                            vertical-alignment: center;
-                            horizontal-stretch: 1;
+                            Text {
+                                text: coin.name + " (" + coin.symbol + ")" + (coin.custom ? " *" : "");
+                                color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
+                                font-size: 13px;
+                                font-weight: index == selected-index ? 500 : 400;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
                         }
 
                         if index == selected-index: Text {
@@ -352,7 +354,7 @@ component CoinSelector inherits Rectangle {
                         mouse-cursor: pointer;
                         clicked => { 
                             root.selected-index = index; 
-                            root.selected(index, coin);
+                            root.selected(index, coin.name);
                             root.popup-open = false;
                         }
                     }
@@ -374,34 +376,10 @@ export component AddCryptoTransactionModal inherits Rectangle {
     property <int> coin-index: 0;
     property <string> swap-amount: "";
     property <int> swap-coin-index: 0;
-    
-    // Custom coin fields
-    property <string> custom-id: "";
-    property <string> custom-symbol: "";
-    property <string> swap-custom-id: "";
-    property <string> swap-custom-symbol: "";
 
-    property <[string]> coin-ids: [
-        "bitcoin", "litecoin", "monero", "ethereum", "tether",
-        "binancecoin", "solana", "ripple", "usd-coin", "cardano",
-        "dogecoin", "tron", "polygon-ecosystem-token", "chainlink", "polkadot",
-        "shiba-inu", "avalanche-2", "stellar", "bitcoin-cash", "uniswap",
-        "cosmos", "ethereum-classic", "hedera-hashgraph", "aave", "vechain",
-        "near", "algorand", "quant-network", "arbitrum", "sui",
-        "aptos", "crypto-com-chain", "zcash", "dai", "the-open-network",
-        "internet-computer", "kaspa", "mantle", "bittensor", "worldcoin-wld"
-    ];
-    
-    property <[string]> coin-symbols: [
-        "BTC", "LTC", "XMR", "ETH", "USDT",
-        "BNB", "SOL", "XRP", "USDC", "ADA",
-        "DOGE", "TRX", "POL", "LINK", "DOT",
-        "SHIB", "AVAX", "XLM", "BCH", "UNI",
-        "ATOM", "ETC", "HBAR", "AAVE", "VET",
-        "NEAR", "ALGO", "QNT", "ARB", "SUI",
-        "APT", "CRO", "ZEC", "DAI", "TON",
-        "ICP", "KAS", "MNT", "TAO", "WLD"
-    ];
+    init => {
+        CryptoAdapter.load-coin-catalog();
+    }
 
     function reset() {
         amount = "";
@@ -414,10 +392,6 @@ export component AddCryptoTransactionModal inherits Rectangle {
         coin-index = 0;
         swap-amount = "";
         swap-coin-index = 0;
-        custom-id = "";
-        custom-symbol = "";
-        swap-custom-id = "";
-        swap-custom-symbol = "";
     }
 
     function submit() {
@@ -429,25 +403,19 @@ export component AddCryptoTransactionModal inherits Rectangle {
             NotificationAdapter.show("Amount is required", true);
             return;
         }
+        if (CryptoAdapter.coin-catalog.length == 0) {
+            NotificationAdapter.show("Add coins in settings first", true);
+            return;
+        }
 
         if (wallet-index >= CryptoAdapter.wallet-list.length) {
             wallet-index = 0;
         }
         let wallet-id = CryptoAdapter.wallet-list[wallet-index].id;
         
-        // Validate custom input if selected
-        if (coin-index == coin-ids.length) {
-            if (custom-id == "" || custom-symbol == "") {
-                NotificationAdapter.show("Custom ID and Symbol are required", true);
-                return;
-            }
-        }
-
-        // Safe access to array with clamp
-        let safe-index = coin-index >= coin-ids.length ? 0 : coin-index;
-
-        let from-coin-id = (coin-index == coin-ids.length) ? custom-id : coin-ids[safe-index];
-        let from-symbol = (coin-index == coin-ids.length) ? custom-symbol : coin-symbols[safe-index];
+        let safe-index = coin-index >= CryptoAdapter.coin-catalog.length ? 0 : coin-index;
+        let from-coin-id = CryptoAdapter.coin-catalog[safe-index].id;
+        let from-symbol = CryptoAdapter.coin-catalog[safe-index].symbol;
 
         if (selected-type == "swap") {
             if (swap-amount == "") {
@@ -455,16 +423,9 @@ export component AddCryptoTransactionModal inherits Rectangle {
                 return;
             }
 
-            if (swap-coin-index == coin-ids.length) {
-                if (swap-custom-id == "" || swap-custom-symbol == "") {
-                    NotificationAdapter.show("Custom ID and Symbol are required", true);
-                    return;
-                }
-            }
-
-            let swap-safe-index = swap-coin-index >= coin-ids.length ? 0 : swap-coin-index;
-            let to-coin-id = (swap-coin-index == coin-ids.length) ? swap-custom-id : coin-ids[swap-safe-index];
-            let to-symbol = (swap-coin-index == coin-ids.length) ? swap-custom-symbol : coin-symbols[swap-safe-index];
+            let swap-safe-index = swap-coin-index >= CryptoAdapter.coin-catalog.length ? 0 : swap-coin-index;
+            let to-coin-id = CryptoAdapter.coin-catalog[swap-safe-index].id;
+            let to-symbol = CryptoAdapter.coin-catalog[swap-safe-index].symbol;
 
             if (from-coin-id == to-coin-id) {
                 NotificationAdapter.show("Swap assets must be different", true);
@@ -619,27 +580,13 @@ export component AddCryptoTransactionModal inherits Rectangle {
                         label: root.selected-type == "swap" ? "FROM ASSET" : "CRYPTOCURRENCY";
                         selected-index <=> root.coin-index; 
                         selected(idx, name) => {
-                            if (idx < coin-ids.length) {
-                                root.price = CryptoAdapter.get-last-price(coin-ids[idx]);
+                            if (idx < CryptoAdapter.coin-catalog.length) {
+                                root.price = CryptoAdapter.get-last-price(
+                                    CryptoAdapter.coin-catalog[idx].id
+                                );
                             } else {
                                 root.price = "";
                             }
-                        }
-                    }
-
-                    if root.coin-index == coin-ids.length: HorizontalLayout {
-                        spacing: 12px;
-                        FormField {
-                            label: "COINGECKO ID";
-                            placeholder: "e.g. pepe";
-                            value <=> root.custom-id;
-                            horizontal-stretch: 1;
-                        }
-                        FormField {
-                            label: "SYMBOL";
-                            placeholder: "e.g. PEPE";
-                            value <=> root.custom-symbol;
-                            width: 100px;
                         }
                     }
 
@@ -647,22 +594,6 @@ export component AddCryptoTransactionModal inherits Rectangle {
                     if root.selected-type == "swap": CoinSelector {
                         label: "TO ASSET";
                         selected-index <=> root.swap-coin-index;
-                    }
-
-                    if root.selected-type == "swap" && root.swap-coin-index == coin-ids.length: HorizontalLayout {
-                        spacing: 12px;
-                        FormField {
-                            label: "COINGECKO ID";
-                            placeholder: "e.g. pepe";
-                            value <=> root.swap-custom-id;
-                            horizontal-stretch: 1;
-                        }
-                        FormField {
-                            label: "SYMBOL";
-                            placeholder: "e.g. PEPE";
-                            value <=> root.swap-custom-symbol;
-                            width: 100px;
-                        }
                     }
 
                     // Wallet Selector

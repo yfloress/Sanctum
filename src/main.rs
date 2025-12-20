@@ -8,6 +8,7 @@ use log::error;
 use plotters::prelude::*;
 use plotters::series::{AreaSeries, LineSeries};
 use rand::Rng; // For title animation
+use sanctum::crypto;
 use sanctum::controller::{
     AppController, MonthlyTrendPoint, SETTING_AUTO_FETCH, SETTING_CRYPTO_LAST_UPDATED,
 };
@@ -2264,34 +2265,54 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         ui.global::<CryptoAdapter>()
             .on_load_ticker_options(move || {
-                let available_coins = vec![
-                    ("bitcoin", "Bitcoin", "BTC"),
-                    ("ethereum", "Ethereum", "ETH"),
-                    ("litecoin", "Litecoin", "LTC"),
-                    ("monero", "Monero", "XMR"),
-                    ("solana", "Solana", "SOL"),
-                    ("polkadot", "Polkadot", "DOT"),
-                    ("cardano", "Cardano", "ADA"),
-                    ("dogecoin", "Dogecoin", "DOGE"),
-                    ("tether", "Tether", "USDT"),
-                    ("ripple", "XRP", "XRP"),
-                ];
-
                 let active_ids = controller.get_active_ticker_ids();
+                let catalog = controller
+                    .get_coin_catalog()
+                    .unwrap_or_else(|_| crypto::default_coin_catalog());
 
-                let options: Vec<TickerOption> = available_coins
-                    .iter()
-                    .map(|(id, name, symbol)| TickerOption {
-                        id: SharedString::from(*id),
-                        name: SharedString::from(*name),
-                        symbol: SharedString::from(*symbol),
-                        enabled: active_ids.contains(&id.to_string()),
+                let options: Vec<TickerOption> = catalog
+                    .into_iter()
+                    .map(|coin| TickerOption {
+                        id: SharedString::from(coin.id.clone()),
+                        name: SharedString::from(coin.name),
+                        symbol: SharedString::from(coin.symbol),
+                        enabled: active_ids.contains(&coin.id),
+                        custom: coin.custom,
+                        visible: true,
                     })
                     .collect();
 
                 if let Some(ui) = ui_weak.upgrade() {
                     ui.global::<CryptoAdapter>()
                         .set_ticker_options(ModelRc::new(VecModel::from(options)));
+                }
+            });
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+
+        ui.global::<CryptoAdapter>()
+            .on_load_coin_catalog(move || {
+                let catalog = controller
+                    .get_coin_catalog()
+                    .unwrap_or_else(|_| crypto::default_coin_catalog());
+
+                let options: Vec<CatalogCoin> = catalog
+                    .into_iter()
+                    .map(|coin| CatalogCoin {
+                        id: SharedString::from(coin.id),
+                        name: SharedString::from(coin.name),
+                        symbol: SharedString::from(coin.symbol),
+                        custom: coin.custom,
+                        visible: true,
+                    })
+                    .collect();
+
+                if let Some(ui) = ui_weak.upgrade() {
+                    ui.global::<CryptoAdapter>()
+                        .set_coin_catalog(ModelRc::new(VecModel::from(options)));
                 }
             });
     }
@@ -2320,6 +2341,99 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     ui.global::<CryptoAdapter>().invoke_refresh_prices();
                     notify("Ticker updated".into(), false);
+                }
+            });
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = show_notification.clone();
+
+        ui.global::<CryptoAdapter>()
+            .on_add_custom_coin(move |id, name, symbol| -> SharedString {
+                match controller.add_custom_coin(id.to_string(), name.to_string(), symbol.to_string())
+                {
+                    Ok(_) => {
+                        if let Some(ui) = ui_weak.upgrade() {
+                            ui.global::<CryptoAdapter>().invoke_load_coin_catalog();
+                            ui.global::<CryptoAdapter>().invoke_load_ticker_options();
+                        }
+                        notify("Coin added".into(), false);
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            });
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = show_notification.clone();
+
+        ui.global::<CryptoAdapter>()
+            .on_delete_custom_coin(move |id| -> SharedString {
+                match controller.delete_custom_coin(id.to_string()) {
+                    Ok(_) => {
+                        if let Some(ui) = ui_weak.upgrade() {
+                            ui.global::<CryptoAdapter>().invoke_load_coin_catalog();
+                            ui.global::<CryptoAdapter>().invoke_load_ticker_options();
+                        }
+                        notify("Coin removed".into(), false);
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            });
+    }
+
+    {
+        let ui_weak = ui_weak.clone();
+        ui.global::<CryptoAdapter>()
+            .on_filter_ticker_options(move |query| {
+                if let Some(ui) = ui_weak.upgrade() {
+                    let options = ui.global::<CryptoAdapter>().get_ticker_options();
+                    let mut options: Vec<TickerOption> = options.iter().collect();
+                    let query = query.to_lowercase();
+
+                    for opt in options.iter_mut() {
+                        let haystack = format!(
+                            "{} {} {}",
+                            opt.id.to_lowercase(),
+                            opt.name.to_lowercase(),
+                            opt.symbol.to_lowercase()
+                        );
+                        opt.visible = query.is_empty() || haystack.contains(&query);
+                    }
+
+                    ui.global::<CryptoAdapter>()
+                        .set_ticker_options(ModelRc::new(VecModel::from(options)));
+                }
+            });
+    }
+
+    {
+        let ui_weak = ui_weak.clone();
+        ui.global::<CryptoAdapter>()
+            .on_filter_coin_catalog(move |query| {
+                if let Some(ui) = ui_weak.upgrade() {
+                    let options = ui.global::<CryptoAdapter>().get_coin_catalog();
+                    let mut options: Vec<CatalogCoin> = options.iter().collect();
+                    let query = query.to_lowercase();
+
+                    for opt in options.iter_mut() {
+                        let haystack = format!(
+                            "{} {} {}",
+                            opt.id.to_lowercase(),
+                            opt.name.to_lowercase(),
+                            opt.symbol.to_lowercase()
+                        );
+                        opt.visible = query.is_empty() || haystack.contains(&query);
+                    }
+
+                    ui.global::<CryptoAdapter>()
+                        .set_coin_catalog(ModelRc::new(VecModel::from(options)));
                 }
             });
     }

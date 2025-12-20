@@ -14,6 +14,16 @@ pub struct CryptoAsset {
     pub last_updated: String,
 }
 
+/// Represents a user-facing crypto catalog entry (default or custom)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CryptoCatalogCoin {
+    pub id: String,
+    pub name: String,
+    pub symbol: String,
+    #[serde(default)]
+    pub custom: bool,
+}
+
 // ==================== Crypto Ledger System ====================
 
 /// Wallet category types

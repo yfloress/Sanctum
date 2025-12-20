@@ -6,8 +6,8 @@
 use crate::crypto;
 use crate::db::{Database, DbError};
 use crate::models::{
-    Account, AccountBalance, AggregatedAsset, BalanceSummary, CryptoAsset, CryptoTransaction,
-    CryptoWallet, Habit, HabitLog, Transaction,
+    Account, AccountBalance, AggregatedAsset, BalanceSummary, CryptoAsset, CryptoCatalogCoin,
+    CryptoTransaction, CryptoWallet, Habit, HabitLog, Transaction,
 };
 use crate::security_log::{SecurityEvent, log_auth_failure, log_security_event};
 use crate::services::habit::HabitService;
@@ -125,10 +125,12 @@ const MAX_PASSWORD_LENGTH: usize = 128;
 const MIN_PASSWORD_LENGTH: usize = 8;
 const MAX_ACCOUNT_NAME_LENGTH: usize = 64;
 const MAX_CURRENCY_LENGTH: usize = 8;
+const MAX_COIN_NAME_LENGTH: usize = 64;
 const EXCHANGE_RATE_TTL_SECS: i64 = 6 * 60 * 60; // 6 hours
 pub const SETTING_AUTO_FETCH: &str = "auto_fetch_crypto";
 pub const SETTING_TICKER_COINS: &str = "ticker_coins";
 pub const SETTING_CRYPTO_LAST_UPDATED: &str = "crypto_last_updated";
+pub const SETTING_CRYPTO_CUSTOM_COINS: &str = "crypto_custom_coins";
 
 // ==================== Helper Functions ====================
 
@@ -859,6 +861,108 @@ impl AppController {
         let json =
             serde_json::to_string(&ids).map_err(|e| ControllerError::Validation(e.to_string()))?;
         self.set_app_setting(SETTING_TICKER_COINS, &json)
+    }
+
+    /// Loads custom coins configured by the user
+    pub fn get_custom_coin_catalog(&self) -> Result<Vec<CryptoCatalogCoin>, ControllerError> {
+        let raw = self.get_app_setting(SETTING_CRYPTO_CUSTOM_COINS)?;
+        if raw.trim().is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut coins: Vec<CryptoCatalogCoin> =
+            serde_json::from_str(&raw).map_err(|e| ControllerError::Validation(e.to_string()))?;
+        for coin in &mut coins {
+            coin.custom = true;
+        }
+        Ok(coins)
+    }
+
+    /// Saves custom coins to settings
+    fn save_custom_coin_catalog(
+        &self,
+        coins: Vec<CryptoCatalogCoin>,
+    ) -> Result<(), ControllerError> {
+        let json = serde_json::to_string(&coins)
+            .map_err(|e| ControllerError::Validation(e.to_string()))?;
+        self.set_app_setting(SETTING_CRYPTO_CUSTOM_COINS, &json)
+    }
+
+    /// Returns the full coin catalog (defaults + custom)
+    pub fn get_coin_catalog(&self) -> Result<Vec<CryptoCatalogCoin>, ControllerError> {
+        let mut catalog = crypto::default_coin_catalog();
+        let custom = self.get_custom_coin_catalog()?;
+        let mut ids: HashSet<String> = catalog.iter().map(|c| c.id.clone()).collect();
+
+        for coin in custom {
+            if ids.insert(coin.id.clone()) {
+                catalog.push(coin);
+            }
+        }
+
+        Ok(catalog)
+    }
+
+    /// Adds a custom coin to the catalog
+    pub fn add_custom_coin(
+        &self,
+        id: String,
+        name: String,
+        symbol: String,
+    ) -> Result<(), ControllerError> {
+        let id = validate_coin_id_str(&id)?;
+        let symbol = validate_symbol(&symbol)?;
+        let name = validate_field_length(&name, MAX_COIN_NAME_LENGTH, "Coin name")?;
+        let name = sanitize_string(&name);
+
+        if name.is_empty() {
+            return Err(ControllerError::Validation(
+                "Coin name cannot be empty".to_string(),
+            ));
+        }
+
+        let mut custom = self.get_custom_coin_catalog()?;
+
+        if custom.iter().any(|coin| coin.id == id)
+            || crypto::default_coin_catalog()
+                .iter()
+                .any(|coin| coin.id == id)
+        {
+            return Err(ControllerError::Validation(
+                "Coin ID already exists".to_string(),
+            ));
+        }
+
+        custom.push(CryptoCatalogCoin {
+            id,
+            name,
+            symbol,
+            custom: true,
+        });
+
+        self.save_custom_coin_catalog(custom)
+    }
+
+    /// Deletes a custom coin from the catalog
+    pub fn delete_custom_coin(&self, id: String) -> Result<(), ControllerError> {
+        let id = validate_coin_id_str(&id)?;
+        let mut custom = self.get_custom_coin_catalog()?;
+        let before = custom.len();
+        custom.retain(|coin| coin.id != id);
+
+        if custom.len() == before {
+            return Err(ControllerError::Validation("Coin not found".to_string()));
+        }
+
+        self.save_custom_coin_catalog(custom)?;
+
+        let mut active = self.get_active_ticker_ids();
+        if active.iter().any(|coin| coin == &id) {
+            active.retain(|coin| coin != &id);
+            let _ = self.save_active_ticker_ids(active);
+        }
+
+        Ok(())
     }
 
     /// Checks if a vault file exists

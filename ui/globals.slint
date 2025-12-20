@@ -312,6 +312,16 @@ export struct TickerOption {
     name: string,
     symbol: string,
     enabled: bool,
+    custom: bool,
+    visible: bool,
+}
+
+export struct CatalogCoin {
+    id: string,
+    name: string,
+    symbol: string,
+    custom: bool,
+    visible: bool,
 }
 
 export global CryptoAdapter {
@@ -319,11 +329,17 @@ export global CryptoAdapter {
     in-out property <[CryptoAssetData]> market-tickers: [];
     in-out property <[CryptoWalletData]> wallets: [];
     in-out property <[WalletSimple]> wallet-list: []; // For dropdowns
+    in-out property <[CatalogCoin]> coin-catalog: [];
     
     // Config
     in-out property <[TickerOption]> ticker-options: [];
     callback load-ticker-options();
     callback save-ticker-options();
+    callback filter-ticker-options(string);
+    callback load-coin-catalog();
+    callback filter-coin-catalog(string);
+    callback add-custom-coin(string, string, string) -> string; // id, name, symbol
+    callback delete-custom-coin(string) -> string; // id
 
     // Asset Detail View Data
     in-out property <CryptoAssetData> selected-asset;
