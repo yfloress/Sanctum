@@ -2159,6 +2159,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 "".to_string()
                             };
                             let notes = tx.notes.clone().unwrap_or_default();
+                            let is_swap = tx.transaction_type == "swap"
+                                || (tx.transaction_type == "transfer_in"
+                                    && tx.related_tx_id.is_some());
 
                             AssetTransaction {
                                 id: SharedString::from(&tx.id),
@@ -2168,6 +2171,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 price: SharedString::from(p_fmt),
                                 fee: SharedString::from(fee_fmt),
                                 notes: SharedString::from(notes),
+                                is_swap,
                             }
                         })
                         .collect();
@@ -2433,6 +2437,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 "".to_string()
                             };
                             let notes = tx.notes.clone().unwrap_or_default();
+                            let is_swap = tx.transaction_type == "swap"
+                                || (tx.transaction_type == "transfer_in"
+                                    && tx.related_tx_id.is_some());
 
                             AssetTransaction {
                                 id: SharedString::from(&tx.id),
@@ -2442,6 +2449,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 price: SharedString::from(p_fmt),
                                 fee: SharedString::from(fee_fmt),
                                 notes: SharedString::from(notes),
+                                is_swap,
                             }
                         })
                         .collect();

@@ -109,11 +109,14 @@ component TransactionRow inherits Rectangle {
     in property <string> tx-price;
     in property <string> tx-fee;
     in property <string> tx-notes;
+    in property <bool> tx-is-swap: false;
     in property <bool> is-last: false;
     in-out property <bool> confirm-mode: false;
-    
+
     callback delete-clicked(string);
     callback edit-clicked(string);
+
+    property <bool> show-swap: root.tx-is-swap || root.tx-type == "SWAP";
 
     height: 64px;
     background: transparent;
@@ -145,13 +148,13 @@ component TransactionRow inherits Rectangle {
                 background: 
                     root.tx-type == "BUY" ? Palette.success.with-alpha(0.1) : 
                     root.tx-type == "SELL" ? Palette.danger.with-alpha(0.1) :
-                    root.tx-type == "SWAP" ? Palette.primary.with-alpha(0.1) :
+                    root.show-swap ? Palette.primary.with-alpha(0.1) :
                     Palette.text-muted.with-alpha(0.1);
                 border-width: 1px;
                 border-color: 
                     root.tx-type == "BUY" ? Palette.success.with-alpha(0.2) : 
                     root.tx-type == "SELL" ? Palette.danger.with-alpha(0.2) :
-                    root.tx-type == "SWAP" ? Palette.primary.with-alpha(0.2) :
+                    root.show-swap ? Palette.primary.with-alpha(0.2) :
                     Palette.border;
                 y: (parent.height - self.height) / 2;
                 
@@ -159,11 +162,11 @@ component TransactionRow inherits Rectangle {
                     text: 
                         root.tx-type == "BUY" ? "▲" : 
                         root.tx-type == "SELL" ? "▼" :
-                        root.tx-type == "SWAP" ? "⇄" : "•";
+                        root.show-swap ? "⇄" : "•";
                     color: 
                         root.tx-type == "BUY" ? Palette.success : 
                         root.tx-type == "SELL" ? Palette.danger :
-                        root.tx-type == "SWAP" ? Palette.primary :
+                        root.show-swap ? Palette.primary :
                         Palette.text-muted;
                     font-size: 10px;
                     vertical-alignment: center;
@@ -176,7 +179,7 @@ component TransactionRow inherits Rectangle {
                 spacing: 2px;
                 
                 Text { 
-                    text: root.tx-type; 
+                    text: root.show-swap ? "SWAP" : root.tx-type; 
                     color: Palette.text-primary; 
                     font-size: 12px; 
                     font-weight: 500; 
@@ -520,6 +523,7 @@ export component AssetDetailPanel inherits Rectangle {
                             tx-price: tx.price;
                             tx-fee: tx.fee;
                             tx-notes: tx.notes;
+                            tx-is-swap: tx.is-swap;
                             is-last: index == CryptoAdapter.asset-history.length - 1;
                             
                             delete-clicked(id) => {
