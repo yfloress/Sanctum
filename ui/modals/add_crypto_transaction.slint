@@ -67,64 +67,6 @@ component FormField inherits Rectangle {
     }
 }
 
-component SearchField inherits Rectangle {
-    in property <string> label: "SEARCH COIN";
-    in-out property <string> value: "";
-    callback edited(string);
-
-    height: 56px;
-    background: transparent;
-
-    VerticalLayout {
-        spacing: 6px;
-
-        Text {
-            text: root.label;
-            color: Palette.text-muted;
-            font-size: 10px;
-            font-weight: 500;
-            letter-spacing: 1.5px;
-        }
-
-        Rectangle {
-            height: 36px;
-            background: Palette.surface;
-            border-radius: 8px;
-            border-width: input.has-focus ? 2px : 1px;
-            border-color: input.has-focus ? Palette.accent : Palette.border;
-
-            animate border-color { duration: 150ms; }
-            animate border-width { duration: 150ms; }
-
-            HorizontalLayout {
-                padding-left: 12px;
-                padding-right: 12px;
-
-                if root.value == "" && !input.has-focus: Text {
-                    text: "Type to filter...";
-                    color: Palette.text-subtle;
-                    font-size: 12px;
-                    vertical-alignment: center;
-                }
-
-                input := TextInput {
-                    text <=> root.value;
-                    color: Palette.text-primary;
-                    font-size: 12px;
-                    vertical-alignment: center;
-                    horizontal-stretch: 1;
-
-                    edited => { root.edited(root.value); }
-                }
-            }
-
-            TouchArea {
-                clicked => { input.focus(); }
-            }
-        }
-    }
-}
-
 // ==================== TypeSelector ====================
 component TypeSelector inherits Rectangle {
     in-out property <string> selected-type: "buy";
@@ -295,13 +237,19 @@ component CoinSelector inherits Rectangle {
     in-out property <int> selected-index: 0;
     in property <string> label: "CRYPTOCURRENCY";
     property <bool> popup-open: false;
+    property <string> search-query: "";
     property <int> safe-index: CryptoAdapter.coin-catalog.length > 0 && selected-index < CryptoAdapter.coin-catalog.length
         ? selected-index
         : 0;
 
     callback selected(int, string); // index, name
 
-    property <length> popup-height: min(CryptoAdapter.coin-catalog.length * 40px + 8px, 300px);
+    property <length> popup-height: min(CryptoAdapter.coin-catalog.length * 40px + 64px, 300px);
+
+    function reset-search() {
+        root.search-query = "";
+        CryptoAdapter.filter-coin-catalog("");
+    }
 
     height: popup-open ? 64px + popup-height : 64px;
     background: transparent;
@@ -355,7 +303,8 @@ component CoinSelector inherits Rectangle {
                 mouse-cursor: pointer;
                 clicked => { 
                     if (CryptoAdapter.coin-catalog.length > 0) { 
-                        root.popup-open = !root.popup-open; 
+                        root.popup-open = !root.popup-open;
+                        root.reset-search();
                     } 
                 }
             }
@@ -373,20 +322,69 @@ component CoinSelector inherits Rectangle {
         border-color: Palette.border-light;
         drop-shadow-blur: 16px;
         drop-shadow-color: #00000066;
+        clip: true;
 
-        Flickable {
+        VerticalLayout {
+            width: parent.width;
             height: parent.height;
-            viewport-height: CryptoAdapter.coin-catalog.length * 40px + 8px;
-            
-            VerticalLayout {
-                padding: 4px;
-                spacing: 0px;
+            padding: 8px;
+            spacing: 8px;
 
-                for coin[index] in CryptoAdapter.coin-catalog: Rectangle {
-                    visible: coin.visible;
-                    height: coin.visible ? 40px : 0px;
-                    background: option-touch.has-hover ? Palette.surface-hover : transparent;
-                    border-radius: 6px;
+            Rectangle {
+                height: 32px;
+                background: Palette.surface;
+                border-radius: 6px;
+                border-width: 1px;
+                border-color: search-input.has-focus ? Palette.accent : Palette.border;
+
+                animate border-color { duration: 150ms; }
+
+                HorizontalLayout {
+                    padding-left: 10px;
+                    padding-right: 10px;
+
+                    if root.search-query == "" && !search-input.has-focus: Text {
+                        text: "Search coin...";
+                        color: Palette.text-subtle;
+                        font-size: 12px;
+                        vertical-alignment: center;
+                    }
+
+                    search-input := TextInput {
+                        text <=> root.search-query;
+                        color: Palette.text-primary;
+                        font-size: 12px;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+
+                        edited => { CryptoAdapter.filter-coin-catalog(root.search-query); }
+                    }
+                }
+
+                TouchArea {
+                    clicked => { search-input.focus(); }
+                }
+            }
+
+            Rectangle {
+                height: 1px;
+                background: Palette.border-subtle;
+                opacity: 0.6;
+            }
+
+            Flickable {
+                vertical-stretch: 1;
+                horizontal-stretch: 1;
+                viewport-height: CryptoAdapter.coin-catalog.length * 40px + 8px;
+                
+                coin-list := VerticalLayout {
+                    spacing: 0px;
+
+                    for coin[index] in CryptoAdapter.coin-catalog: Rectangle {
+                        visible: coin.visible;
+                        height: coin.visible ? 40px : 0px;
+                        background: option-touch.has-hover ? Palette.surface-hover : transparent;
+                        border-radius: 6px;
 
                         HorizontalLayout {
                             padding-left: 12px;
@@ -399,22 +397,24 @@ component CoinSelector inherits Rectangle {
                                 font-weight: index == selected-index ? 500 : 400;
                                 vertical-alignment: center;
                                 horizontal-stretch: 1;
+                            }
+
+                            if index == selected-index: Text {
+                                text: "✓";
+                                color: Palette.accent;
+                                font-size: 12px;
+                                vertical-alignment: center;
+                            }
                         }
 
-                        if index == selected-index: Text {
-                            text: "✓";
-                            color: Palette.accent;
-                            font-size: 12px;
-                            vertical-alignment: center;
-                        }
-                    }
-
-                    option-touch := TouchArea {
-                        mouse-cursor: pointer;
-                        clicked => { 
-                            root.selected-index = index; 
-                            root.selected(index, coin.name);
-                            root.popup-open = false;
+                        option-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { 
+                                root.selected-index = index; 
+                                root.selected(index, coin.name);
+                                root.popup-open = false;
+                                root.reset-search();
+                            }
                         }
                     }
                 }
@@ -431,7 +431,6 @@ export component AddCryptoTransactionModal inherits Rectangle {
     property <string> notes: "";
     property <string> date: AppState.current-date;
     property <string> selected-type: "buy";
-    property <string> coin-search: "";
     property <int> wallet-index: 0;
     property <int> coin-index: 0;
     property <string> swap-amount: "";
@@ -449,7 +448,6 @@ export component AddCryptoTransactionModal inherits Rectangle {
         notes = "";
         date = AppState.current-date;
         selected-type = "buy";
-        coin-search = "";
         wallet-index = 0;
         coin-index = 0;
         swap-amount = "";
@@ -637,12 +635,6 @@ export component AddCryptoTransactionModal inherits Rectangle {
 	
                     // Type Toggle
                     TypeSelector { selected-type <=> root.selected-type; }
-
-                    // Coin Search
-                    SearchField {
-                        value <=> root.coin-search;
-                        edited => { CryptoAdapter.filter-coin-catalog(root.coin-search); }
-                    }
 
                     // Coin Selector (From)
                     CoinSelector { 
