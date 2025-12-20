@@ -2427,8 +2427,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             let price_val = tx.price_per_coin.unwrap_or(0.0);
                             let p_fmt = if price_val < 1.0 && price_val > 0.0 {
                                 format!("$ {:.4}", price_val)
-                            } else {
+                            } else if price_val > 0.0 {
                                 format_money((price_val * 100.0) as i64, "USD")
+                            } else {
+                                "N/A".to_string()
                             };
                             let fee_val = tx.fee.unwrap_or(0.0);
                             let fee_fmt = if fee_val > 0.0 {

@@ -324,12 +324,23 @@ export component WalletDetailPanel inherits Rectangle {
                         horizontal-alignment: center;
                     }
                 }
-                
-                for item in CryptoAdapter.wallet-holdings: WalletHoldingRow {
-                    symbol: item.symbol;
-                    name: item.name;
-                    amount: item.amount;
-                    value: item.value;
+
+                if CryptoAdapter.wallet-holdings.length > 0: Flickable {
+                    height: min(256px, CryptoAdapter.wallet-holdings.length * 64px);
+                    horizontal-stretch: 1;
+                    viewport-height: CryptoAdapter.wallet-holdings.length * 64px;
+
+                    VerticalLayout {
+                        width: parent.width;
+                        spacing: 8px;
+
+                        for item in CryptoAdapter.wallet-holdings: WalletHoldingRow {
+                            symbol: item.symbol;
+                            name: item.name;
+                            amount: item.amount;
+                            value: item.value;
+                        }
+                    }
                 }
             }
             
