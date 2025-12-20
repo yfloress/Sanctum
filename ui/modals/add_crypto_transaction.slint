@@ -538,8 +538,8 @@ export component AddCryptoTransactionModal inherits Rectangle {
     Rectangle {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
-        width: 440px;
-        height: 720px;
+        width: max(320px, min(440px, parent.width - 48px));
+        height: max(520px, min(720px, parent.height - 48px));
         background: @linear-gradient(180deg, Palette.sidebar-bg 0%, #0f0f1a 100%);
         border-radius: 16px;
         border-width: 1px;

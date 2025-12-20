@@ -177,8 +177,8 @@ export component EditCryptoTransactionModal inherits Rectangle {
     Rectangle {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
-        width: 440px;
-        height: 640px;
+        width: max(320px, min(440px, parent.width - 48px));
+        height: max(480px, min(640px, parent.height - 48px));
         background: @linear-gradient(180deg, Palette.sidebar-bg 0%, #0f0f1a 100%);
         border-radius: 16px;
         border-width: 1px;
