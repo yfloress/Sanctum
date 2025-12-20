@@ -108,7 +108,7 @@ Para instrucciones detalladas en otras plataformas (Linux manual, macOS, Windows
 Este es un proyecto Open Source moderno que abraza la evolución del desarrollo de software.
 
   - **Arquitectura y Visión:** Diseñado y dirigido por humanos, priorizando la privacidad y la seguridad local.
-  - **Colaboración con IA:** Partes del código han sido generadas y refactorizadas con la asistencia de LLMs avanzados. Modelos como **Gemini 3 Pro**, **Claude Opus 4.5**, **Claude Sonnet 4.5** y **Codex 5.1** han sido utilizados bajo estricta supervisión humana y auditoría para asegurar la seguridad y la lógica de negocio.
+  - **Colaboración con IA:** Partes del código han sido generadas y refactorizadas con la asistencia de LLMs avanzados. Modelos como **Gemini 3 Pro**, **Claude Opus 4.5**, **Claude Sonnet 4.5** y **Codex 5.2** han sido utilizados bajo estricta supervisión humana y auditoría para asegurar la seguridad y la lógica de negocio.
   - **Auditabilidad:** El código es abierto para que cualquiera pueda verificar que no hay telemetría oculta ni vectores de ataque.
 
 ## Aviso Legal
