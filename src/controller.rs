@@ -6,8 +6,8 @@
 use crate::crypto;
 use crate::db::{Database, DbError};
 use crate::models::{
-    Account, AccountBalance, AggregatedAsset, BalanceSummary, CryptoAsset, CryptoTransaction,
-    CryptoWallet, Habit, HabitLog, Transaction,
+    Account, AccountBalance, AggregatedAsset, BalanceSummary, CryptoAsset, CryptoCatalogCoin,
+    CryptoTransaction, CryptoWallet, Habit, HabitLog, Transaction,
 };
 use crate::security_log::{SecurityEvent, log_auth_failure, log_security_event};
 use crate::services::habit::HabitService;
@@ -125,10 +125,13 @@ const MAX_PASSWORD_LENGTH: usize = 128;
 const MIN_PASSWORD_LENGTH: usize = 8;
 const MAX_ACCOUNT_NAME_LENGTH: usize = 64;
 const MAX_CURRENCY_LENGTH: usize = 8;
+const MAX_COIN_NAME_LENGTH: usize = 64;
 const EXCHANGE_RATE_TTL_SECS: i64 = 6 * 60 * 60; // 6 hours
 pub const SETTING_AUTO_FETCH: &str = "auto_fetch_crypto";
 pub const SETTING_TICKER_COINS: &str = "ticker_coins";
 pub const SETTING_CRYPTO_LAST_UPDATED: &str = "crypto_last_updated";
+pub const SETTING_CRYPTO_CUSTOM_COINS: &str = "crypto_custom_coins";
+pub const SETTING_CRYPTO_HIDDEN_COINS: &str = "crypto_hidden_coins";
 
 // ==================== Helper Functions ====================
 
@@ -861,6 +864,148 @@ impl AppController {
         self.set_app_setting(SETTING_TICKER_COINS, &json)
     }
 
+    /// Loads custom coins configured by the user
+    pub fn get_custom_coin_catalog(&self) -> Result<Vec<CryptoCatalogCoin>, ControllerError> {
+        let raw = self.get_app_setting(SETTING_CRYPTO_CUSTOM_COINS)?;
+        if raw.trim().is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut coins: Vec<CryptoCatalogCoin> =
+            serde_json::from_str(&raw).map_err(|e| ControllerError::Validation(e.to_string()))?;
+        for coin in &mut coins {
+            coin.custom = true;
+        }
+        Ok(coins)
+    }
+
+    /// Loads hidden coin IDs for the catalog UI
+    pub fn get_hidden_coin_ids(&self) -> Vec<String> {
+        self.get_app_setting(SETTING_CRYPTO_HIDDEN_COINS)
+            .ok()
+            .filter(|val| !val.is_empty())
+            .and_then(|val| serde_json::from_str::<Vec<String>>(&val).ok())
+            .unwrap_or_default()
+    }
+
+    /// Saves custom coins to settings
+    fn save_custom_coin_catalog(
+        &self,
+        coins: Vec<CryptoCatalogCoin>,
+    ) -> Result<(), ControllerError> {
+        let json = serde_json::to_string(&coins)
+            .map_err(|e| ControllerError::Validation(e.to_string()))?;
+        self.set_app_setting(SETTING_CRYPTO_CUSTOM_COINS, &json)
+    }
+
+    /// Saves hidden coin IDs to settings
+    fn save_hidden_coin_ids(&self, ids: Vec<String>) -> Result<(), ControllerError> {
+        let json =
+            serde_json::to_string(&ids).map_err(|e| ControllerError::Validation(e.to_string()))?;
+        self.set_app_setting(SETTING_CRYPTO_HIDDEN_COINS, &json)
+    }
+
+    /// Returns the full coin catalog (defaults + custom)
+    pub fn get_coin_catalog(&self) -> Result<Vec<CryptoCatalogCoin>, ControllerError> {
+        let mut catalog = crypto::default_coin_catalog();
+        let custom = self.get_custom_coin_catalog()?;
+        let mut ids: HashSet<String> = catalog.iter().map(|c| c.id.clone()).collect();
+
+        for coin in custom {
+            if ids.insert(coin.id.clone()) {
+                catalog.push(coin);
+            }
+        }
+
+        let hidden = self.get_hidden_coin_ids();
+        if !hidden.is_empty() {
+            let hidden: HashSet<String> = hidden.into_iter().collect();
+            catalog.retain(|coin| !hidden.contains(&coin.id));
+        }
+
+        Ok(catalog)
+    }
+
+    /// Adds a custom coin to the catalog
+    pub fn add_custom_coin(
+        &self,
+        id: String,
+        name: String,
+        symbol: String,
+    ) -> Result<(), ControllerError> {
+        let id = validate_coin_id_str(&id)?;
+        let symbol = validate_symbol(&symbol)?;
+        let name = validate_field_length(&name, MAX_COIN_NAME_LENGTH, "Coin name")?;
+        let name = sanitize_string(&name);
+
+        if name.is_empty() {
+            return Err(ControllerError::Validation(
+                "Coin name cannot be empty".to_string(),
+            ));
+        }
+
+        let mut custom = self.get_custom_coin_catalog()?;
+
+        if custom.iter().any(|coin| coin.id == id)
+            || crypto::default_coin_catalog()
+                .iter()
+                .any(|coin| coin.id == id)
+        {
+            return Err(ControllerError::Validation(
+                "Coin ID already exists".to_string(),
+            ));
+        }
+
+        custom.push(CryptoCatalogCoin {
+            id,
+            name,
+            symbol,
+            custom: true,
+        });
+
+        self.save_custom_coin_catalog(custom)
+    }
+
+    /// Deletes a custom coin from the catalog
+    pub fn delete_custom_coin(&self, id: String) -> Result<(), ControllerError> {
+        let id = validate_coin_id_str(&id)?;
+        let mut custom = self.get_custom_coin_catalog()?;
+        let before = custom.len();
+        custom.retain(|coin| coin.id != id);
+        let removed_custom = custom.len() != before;
+
+        if removed_custom {
+            self.save_custom_coin_catalog(custom)?;
+        }
+
+        let is_default = crypto::default_coin_catalog()
+            .iter()
+            .any(|coin| coin.id == id);
+        let mut hidden_updated = false;
+        if is_default {
+            let mut hidden = self.get_hidden_coin_ids();
+            if !hidden.iter().any(|coin| coin == &id) {
+                hidden.push(id.clone());
+                hidden.sort();
+                hidden.dedup();
+                self.save_hidden_coin_ids(hidden)?;
+                hidden_updated = true;
+            }
+        }
+
+        if !removed_custom && !hidden_updated {
+            return Err(ControllerError::Validation("Coin not found".to_string()));
+        }
+
+        let mut active = self.get_active_ticker_ids();
+        if active.iter().any(|coin| coin == &id) {
+            active.retain(|coin| coin != &id);
+            let _ = self.save_active_ticker_ids(active);
+        }
+
+        Ok(())
+    }
+
     /// Checks if a vault file exists
     pub fn check_vault_exists(&self) -> bool {
         // Check if custom path was used previously
@@ -1140,7 +1285,7 @@ impl AppController {
             .map(|a| (a.id.clone(), a.currency.to_uppercase()))
             .collect();
 
-        let clp_rate = match self.load_exchange_rate("CLP_USD".to_string()) {
+        let clp_rate = match self.load_exchange_rate_allow_stale("CLP_USD".to_string()) {
             Ok(Some((r, _))) => r,
             _ => 1.0,
         };
@@ -1269,6 +1414,17 @@ impl AppController {
     pub fn save_exchange_rate(&self, pair: String, rate: f64) -> Result<(), ControllerError> {
         self.with_db(|db| {
             db.save_exchange_rate(&pair, rate)
+                .map_err(ControllerError::Database)
+        })
+    }
+
+    /// Loads cached exchange rate, even if stale
+    pub fn load_exchange_rate_allow_stale(
+        &self,
+        pair: String,
+    ) -> Result<Option<(f64, String)>, ControllerError> {
+        self.with_db(|db| {
+            db.load_exchange_rate(&pair)
                 .map_err(ControllerError::Database)
         })
     }
@@ -1447,7 +1603,7 @@ impl AppController {
 
             if transaction_type == "swap" {
                 return Err(ControllerError::Validation(
-                    "Swap requires paired transactions. Use sell + buy for now.".to_string(),
+                    "Swap requires paired transactions. Use the swap flow.".to_string(),
                 ));
             }
 
@@ -1494,6 +1650,119 @@ impl AppController {
         })
     }
 
+    /// Adds a swap as a paired outflow/inflow transaction with shared cost basis
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_crypto_swap(
+        &self,
+        wallet_id: String,
+        from_coin_id: String,
+        from_symbol: String,
+        from_amount: f64,
+        to_coin_id: String,
+        to_symbol: String,
+        to_amount: f64,
+        fee: Option<f64>,
+        date: String,
+        notes: Option<String>,
+    ) -> Result<String, ControllerError> {
+        self.with_db(|db| {
+            if wallet_id.trim().is_empty() {
+                return Err(ControllerError::Validation(
+                    "Wallet ID cannot be empty".to_string(),
+                ));
+            }
+
+            let from_coin_id = validate_coin_id_str(&from_coin_id)?;
+            let to_coin_id = validate_coin_id_str(&to_coin_id)?;
+            if from_coin_id == to_coin_id {
+                return Err(ControllerError::Validation(
+                    "Swap requires two different assets".to_string(),
+                ));
+            }
+
+            let from_symbol = validate_symbol(&from_symbol)?;
+            let to_symbol = validate_symbol(&to_symbol)?;
+            validate_positive_amount(from_amount, "From amount")?;
+            validate_positive_amount(to_amount, "To amount")?;
+
+            let fee = validate_non_negative(fee, "Fee")?;
+            let date = validate_date(&date)?;
+
+            let notes = match notes {
+                Some(n) => {
+                    let validated = validate_field_length(&n, MAX_NOTES_LENGTH, "Notes")?;
+                    Some(sanitize_string(&validated))
+                }
+                None => None,
+            };
+
+            // Validate sufficient funds for the source asset
+            let holdings = db
+                .get_wallet_aggregated_holdings(&wallet_id)
+                .map_err(ControllerError::Database)?;
+            let current_balance = holdings
+                .iter()
+                .find(|h| h.coin_id == from_coin_id)
+                .map(|h| h.total_amount)
+                .unwrap_or(0.0);
+
+            if from_amount > current_balance {
+                return Err(ControllerError::Validation(format!(
+                    "Insufficient funds. Available: {:.8} {}",
+                    current_balance, from_symbol
+                )));
+            }
+
+            log_security_event(
+                SecurityEvent::CryptoTransactionCreated,
+                Some("swap"),
+            );
+
+            let source_id = Uuid::new_v4().to_string();
+            let target_id = Uuid::new_v4().to_string();
+
+            let source = CryptoTransaction {
+                id: source_id.clone(),
+                wallet_id: wallet_id.clone(),
+                coin_id: from_coin_id,
+                symbol: from_symbol,
+                transaction_type: "swap".to_string(),
+                amount: from_amount,
+                price_per_coin: None,
+                fee,
+                fee_coin_id: None,
+                fee_amount: None,
+                date: date.clone(),
+                notes,
+                related_tx_id: Some(target_id.clone()),
+            };
+
+            let target = CryptoTransaction {
+                id: target_id.clone(),
+                wallet_id,
+                coin_id: to_coin_id,
+                symbol: to_symbol,
+                transaction_type: "transfer_in".to_string(),
+                amount: to_amount,
+                price_per_coin: None,
+                fee: None,
+                fee_coin_id: None,
+                fee_amount: None,
+                date,
+                notes: None,
+                related_tx_id: Some(source_id.clone()),
+            };
+
+            db.create_crypto_transaction(&source)?;
+            if let Err(err) = db.create_crypto_transaction(&target) {
+                let _ = db.delete_crypto_transaction(&source_id);
+                return Err(ControllerError::Database(err));
+            }
+
+            Ok(source_id)
+        })
+    }
+
     /// Gets wallet transactions
     pub fn get_wallet_transactions(
         &self,
@@ -1502,6 +1771,18 @@ impl AppController {
         self.with_db(|db| {
             let validated_id = validate_uuid(&wallet_id)?;
             db.get_wallet_transactions(&validated_id)
+                .map_err(ControllerError::Database)
+        })
+    }
+
+    /// Gets a crypto transaction by ID
+    pub fn get_crypto_transaction(
+        &self,
+        id: String,
+    ) -> Result<Option<CryptoTransaction>, ControllerError> {
+        self.with_db(|db| {
+            let validated_id = validate_uuid(&id)?;
+            db.get_crypto_transaction(&validated_id)
                 .map_err(ControllerError::Database)
         })
     }
@@ -1515,6 +1796,89 @@ impl AppController {
             let validated = validate_coin_id_str(&coin_id)?;
             db.get_crypto_transactions_by_coin(&validated)
                 .map_err(ControllerError::Database)
+        })
+    }
+
+    /// Updates a crypto transaction's editable fields
+    pub fn update_crypto_transaction(
+        &self,
+        id: String,
+        amount: f64,
+        price_per_coin: Option<f64>,
+        fee: Option<f64>,
+        date: String,
+        notes: Option<String>,
+    ) -> Result<(), ControllerError> {
+        self.with_db(|db| {
+            let validated_id = validate_uuid(&id)?;
+            let existing = db
+                .get_crypto_transaction(&validated_id)
+                .map_err(ControllerError::Database)?;
+            let existing = match existing {
+                Some(tx) => tx,
+                None => {
+                    return Err(ControllerError::Validation(
+                        "Transaction not found".to_string(),
+                    ))
+                }
+            };
+
+            if existing.transaction_type == "swap" || existing.related_tx_id.is_some() {
+                return Err(ControllerError::Validation(
+                    "Editing swap transactions is not supported".to_string(),
+                ));
+            }
+
+            validate_positive_amount(amount, "Amount")?;
+            let price = match price_per_coin {
+                Some(p) if p > 0.0 => p,
+                _ => {
+                    return Err(ControllerError::Validation(
+                        "Price per coin is required and must be greater than zero".to_string(),
+                    ))
+                }
+            };
+            let fee = validate_non_negative(fee, "Fee")?;
+            let date = validate_date(&date)?;
+
+            let notes = match notes {
+                Some(n) => {
+                    let validated = validate_field_length(&n, MAX_NOTES_LENGTH, "Notes")?;
+                    Some(sanitize_string(&validated))
+                }
+                None => None,
+            };
+
+            if existing.transaction_type == "sell" || existing.transaction_type == "transfer_out"
+            {
+                let holdings = db
+                    .get_wallet_aggregated_holdings(&existing.wallet_id)
+                    .map_err(ControllerError::Database)?;
+                let current_balance = holdings
+                    .iter()
+                    .find(|h| h.coin_id == existing.coin_id)
+                    .map(|h| h.total_amount)
+                    .unwrap_or(0.0);
+                let available = current_balance + existing.amount;
+                if amount > available {
+                    return Err(ControllerError::Validation(format!(
+                        "Insufficient funds. Available: {:.8} {}",
+                        available, existing.symbol
+                    )));
+                }
+            }
+
+            db.update_crypto_transaction_fields(
+                &validated_id,
+                amount,
+                Some(price),
+                fee,
+                &date,
+                notes.as_deref(),
+            )
+            .map_err(ControllerError::Database)?;
+
+            Ok(())
         })
     }
 
@@ -1794,12 +2158,12 @@ impl AppController {
 
         // Count habits per month in the last 12 months
         for log in &logs {
-            if let Ok(date) = NaiveDate::parse_from_str(&log.completed_date, "%Y-%m-%d") {
-                if date >= twelve_months_ago_start {
-                    let key = (date.year(), date.month());
-                    if let Some(entry) = monthly_data_map.get_mut(&key) {
-                        entry.0 += 1;
-                    }
+            if let Ok(date) = NaiveDate::parse_from_str(&log.completed_date, "%Y-%m-%d")
+                && date >= twelve_months_ago_start
+            {
+                let key = (date.year(), date.month());
+                if let Some(entry) = monthly_data_map.get_mut(&key) {
+                    entry.0 += 1;
                 }
             }
         }
@@ -1899,7 +2263,7 @@ impl AppController {
             .map(|a| (a.id.clone(), a.currency.to_uppercase()))
             .collect();
 
-        let clp_rate = match self.load_exchange_rate("CLP_USD".to_string()) {
+        let clp_rate = match self.load_exchange_rate_allow_stale("CLP_USD".to_string()) {
             Ok(Some((r, _))) => r,
             _ => 1.0,
         };
@@ -2104,7 +2468,7 @@ impl AppController {
             .map(|a| (a.id.clone(), a.currency.to_uppercase()))
             .collect();
 
-        let clp_rate = match self.load_exchange_rate("CLP_USD".to_string()) {
+        let clp_rate = match self.load_exchange_rate_allow_stale("CLP_USD".to_string()) {
             Ok(Some((r, _))) => r,
             _ => 1.0,
         };

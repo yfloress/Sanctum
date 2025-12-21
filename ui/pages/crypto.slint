@@ -8,6 +8,7 @@ import {
 } from "../globals.slint";
 import { CryptoRow, WalletRow, TickerItem, CryptoCard, GhostButton } from "../components/crypto_widgets.slint";
 import { AssetDetailPanel } from "../components/asset_detail.slint";
+import { WalletDetailPanel } from "../components/wallet_detail.slint";
 import { TextButton, BorderButton, ActionButton } from "../widgets.slint";
 
 // ==================== Tab Button ====================
@@ -306,6 +307,12 @@ export component CryptoPage inherits Rectangle {
                                 }
                             }
                         }
+
+                        if CryptoAdapter.limit-excluded != "": Text {
+                            text: "Skipped: " + CryptoAdapter.limit-excluded;
+                            color: Palette.text-muted;
+                            font-size: 10px;
+                        }
                     }
                 }
 
@@ -337,7 +344,7 @@ export component CryptoPage inherits Rectangle {
                         alignment: end;
                         
                         ActionButton {
-                            text: root.active-tab == "portfolio" ? "+ ADD ASSET" : "+ NEW WALLET";
+                            text: root.active-tab == "portfolio" ? "+ ADD TRANSACTION" : "+ NEW WALLET";
                             primary: true;
                             clicked => {
                                 if (root.active-tab == "portfolio") {
@@ -364,7 +371,7 @@ export component CryptoPage inherits Rectangle {
                 padding-bottom: 32px;
                 spacing: 0px;
 
-                Rectangle { height: 24px; }
+                Rectangle { height: 12px; }
 
                 // Empty State
                 if CryptoAdapter.portfolio.length == 0: Rectangle {
@@ -423,14 +430,42 @@ export component CryptoPage inherits Rectangle {
                     
                     // Cards horizontal scroll
                     Flickable {
-                        height: 200px;
-                        viewport-width: (CryptoAdapter.portfolio.length * 256px);
+                        property <bool> two-rows: CryptoAdapter.portfolio.length > 4;
+                        property <int> columns: two-rows 
+                            ? ((CryptoAdapter.portfolio.length + 1) / 2) 
+                            : CryptoAdapter.portfolio.length;
+
+                        height: two-rows ? 388px : 200px;
+                        viewport-width: (columns * 256px);
                         
-                        HorizontalLayout {
+                        if !two-rows: HorizontalLayout {
                             spacing: 16px;
                             alignment: start;
                             
                             for asset[index] in CryptoAdapter.portfolio: CryptoCard {
+                                name: asset.name;
+                                symbol: asset.symbol;
+                                price: asset.price;
+                                amount: asset.amount;
+                                value: asset.value;
+                                change: asset.change-24h;
+                                is-positive: asset.is-positive;
+                                
+                                clicked => {
+                                    CryptoAdapter.fetch-asset-details(asset.id);
+                                    CryptoAdapter.show-asset-detail = true;
+                                }
+                            }
+                        }
+
+                        if two-rows: Rectangle {
+                            width: columns * 256px;
+                            height: 388px;
+                            background: transparent;
+                            
+                            for asset[index] in CryptoAdapter.portfolio: CryptoCard {
+                                x: Math.floor(index / 2) * 256px;
+                                y: Math.mod(index, 2) * 196px;
                                 name: asset.name;
                                 symbol: asset.symbol;
                                 price: asset.price;
@@ -565,21 +600,25 @@ export component CryptoPage inherits Rectangle {
                             border-width: 1px;
                             border-color: Palette.border-subtle;
                             
-                            WalletRow {
-                                name: wallet.name;
-                                category: wallet.category;
-                                balance: wallet.balance;
-                                count: wallet.asset-count;
-                                id: wallet.id;
-                                is-last: index == CryptoAdapter.wallets.length - 1;
-                                delete => {
-                                    CryptoAdapter.delete-wallet(wallet.id);
+                                WalletRow {
+                                    name: wallet.name;
+                                    category: wallet.category;
+                                    balance: wallet.balance;
+                                    count: wallet.asset-count;
+                                    id: wallet.id;
+                                    is-last: index == CryptoAdapter.wallets.length - 1;
+                                    delete => {
+                                        CryptoAdapter.delete-wallet(wallet.id);
+                                    }
+                                    clicked => {
+                                        CryptoAdapter.fetch-wallet-details(wallet.id);
+                                        CryptoAdapter.show-wallet-detail = true;
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
         }
     }
     
@@ -609,6 +648,39 @@ export component CryptoPage inherits Rectangle {
             }
 
             AssetDetailPanel {
+                width: min(420px, parent.width);
+                height: parent.height;
+            }
+        }
+    }
+
+    // ==================== WALLET DETAIL OVERLAY ====================
+    if CryptoAdapter.show-wallet-detail: Rectangle {
+        x: 0; y: 0; width: 100%; height: 100%;
+        
+        // Backdrop
+        Rectangle { 
+            background: #000000.with-alpha(0.85);
+            
+            animate background { duration: 200ms; } 
+        }
+
+        HorizontalLayout {
+            width: parent.width;
+            height: parent.height;
+            spacing: 0px;
+
+            Rectangle {
+                horizontal-stretch: 1;
+                height: parent.height;
+                TouchArea { 
+                    mouse-cursor: pointer;
+                    clicked => { CryptoAdapter.show-wallet-detail = false; } 
+                }
+            }
+
+            WalletDetailPanel {
+                width: min(420px, parent.width);
                 height: parent.height;
             }
         }

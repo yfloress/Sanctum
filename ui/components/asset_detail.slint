@@ -1,7 +1,7 @@
 // ==================== Asset Detail Panel ====================
 // Noir Fintech - Premium asset details drawer
 
-import { Palette, CryptoAdapter } from "../globals.slint";
+import { Palette, CryptoAdapter, AppState, NotificationAdapter } from "../globals.slint";
 
 // ==================== Section Header ====================
 component SectionHeader inherits Rectangle {
@@ -107,12 +107,30 @@ component TransactionRow inherits Rectangle {
     in property <string> tx-date;
     in property <string> tx-amount;
     in property <string> tx-price;
+    in property <string> tx-fee;
+    in property <string> tx-notes;
+    in property <bool> tx-is-swap: false;
     in property <bool> is-last: false;
-    
-    callback delete-clicked(string);
+    in-out property <bool> confirm-mode: false;
 
-    height: 56px;
+    callback delete-clicked(string);
+    callback edit-clicked(string);
+
+    property <bool> show-swap: root.tx-is-swap || root.tx-type == "SWAP";
+
+    height: 64px;
     background: transparent;
+
+    // Reset delete confirm when clicking away from the delete button.
+    touch-area := TouchArea {
+        width: parent.width;
+        height: parent.height;
+        pointer-event(event) => {
+            if (event.kind == PointerEventKind.down && !del-touch.has-hover) {
+                root.confirm-mode = false;
+            }
+        }
+    }
     
     HorizontalLayout {
         alignment: space-between;
@@ -130,13 +148,13 @@ component TransactionRow inherits Rectangle {
                 background: 
                     root.tx-type == "BUY" ? Palette.success.with-alpha(0.1) : 
                     root.tx-type == "SELL" ? Palette.danger.with-alpha(0.1) :
-                    root.tx-type == "SWAP" ? Palette.primary.with-alpha(0.1) :
+                    root.show-swap ? Palette.primary.with-alpha(0.1) :
                     Palette.text-muted.with-alpha(0.1);
                 border-width: 1px;
                 border-color: 
                     root.tx-type == "BUY" ? Palette.success.with-alpha(0.2) : 
                     root.tx-type == "SELL" ? Palette.danger.with-alpha(0.2) :
-                    root.tx-type == "SWAP" ? Palette.primary.with-alpha(0.2) :
+                    root.show-swap ? Palette.primary.with-alpha(0.2) :
                     Palette.border;
                 y: (parent.height - self.height) / 2;
                 
@@ -144,11 +162,11 @@ component TransactionRow inherits Rectangle {
                     text: 
                         root.tx-type == "BUY" ? "▲" : 
                         root.tx-type == "SELL" ? "▼" :
-                        root.tx-type == "SWAP" ? "⇄" : "•";
+                        root.show-swap ? "⇄" : "•";
                     color: 
                         root.tx-type == "BUY" ? Palette.success : 
                         root.tx-type == "SELL" ? Palette.danger :
-                        root.tx-type == "SWAP" ? Palette.primary :
+                        root.show-swap ? Palette.primary :
                         Palette.text-muted;
                     font-size: 10px;
                     vertical-alignment: center;
@@ -161,7 +179,7 @@ component TransactionRow inherits Rectangle {
                 spacing: 2px;
                 
                 Text { 
-                    text: root.tx-type; 
+                    text: root.show-swap ? "SWAP" : root.tx-type; 
                     color: Palette.text-primary; 
                     font-size: 12px; 
                     font-weight: 500; 
@@ -170,6 +188,11 @@ component TransactionRow inherits Rectangle {
                     text: root.tx-date; 
                     color: Palette.text-muted; 
                     font-size: 10px; 
+                }
+                if root.tx-notes != "": Text { 
+                    text: root.tx-notes; 
+                    color: Palette.text-subtle; 
+                    font-size: 9px; 
                 }
             }
         }
@@ -195,6 +218,12 @@ component TransactionRow inherits Rectangle {
                     font-size: 10px; 
                     horizontal-alignment: right; 
                 }
+                if root.tx-fee != "": Text { 
+                    text: "Fee " + root.tx-fee; 
+                    color: Palette.text-subtle; 
+                    font-size: 9px; 
+                    horizontal-alignment: right; 
+                }
             }
 
             // Delete Button
@@ -202,22 +231,53 @@ component TransactionRow inherits Rectangle {
                 width: 28px;
                 height: 28px;
                 border-radius: 6px;
-                background: del-touch.has-hover ? Palette.danger.with-alpha(0.1) : transparent;
+                background: edit-touch.has-hover ? Palette.surface-hover : transparent;
                 y: (parent.height - self.height) / 2;
 
                 animate background { duration: 150ms; }
 
                 Text {
-                    text: "×";
-                    color: del-touch.has-hover ? Palette.danger : Palette.text-muted;
-                    font-size: 16px;
+                    text: "✎";
+                    color: edit-touch.has-hover ? Palette.text-primary : Palette.text-muted;
+                    font-size: 14px;
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
+                }
+
+                edit-touch := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { root.edit-clicked(root.tx-id); }
+                }
+            }
+
+            Rectangle {
+                width: root.confirm-mode ? 52px : 28px;
+                height: 28px;
+                border-radius: 6px;
+                background: root.confirm-mode ? Palette.danger : (del-touch.has-hover ? Palette.danger.with-alpha(0.1) : transparent);
+                y: (parent.height - self.height) / 2;
+
+                animate background { duration: 150ms; }
+                animate width { duration: 150ms; }
+
+                Text {
+                    text: root.confirm-mode ? "SURE?" : "×";
+                    color: root.confirm-mode ? #ffffff : (del-touch.has-hover ? Palette.danger : Palette.text-muted);
+                    font-size: root.confirm-mode ? 9px : 16px;
+                    font-weight: root.confirm-mode ? 700 : 400;
                     vertical-alignment: center;
                     horizontal-alignment: center;
                 }
 
                 del-touch := TouchArea {
                     mouse-cursor: pointer;
-                    clicked => { root.delete-clicked(root.tx-id); }
+                    clicked => { 
+                        if (root.confirm-mode) {
+                            root.delete-clicked(root.tx-id);
+                        } else {
+                            root.confirm-mode = true;
+                        }
+                    }
                 }
             }
         }
@@ -452,7 +512,7 @@ export component AssetDetailPanel inherits Rectangle {
 
                 Flickable {
                     vertical-stretch: 1;
-                    viewport-height: CryptoAdapter.asset-history.length * 56px;
+                    viewport-height: CryptoAdapter.asset-history.length * 64px;
                     
                     VerticalLayout {
                         for tx[index] in CryptoAdapter.asset-history: TransactionRow {
@@ -461,10 +521,21 @@ export component AssetDetailPanel inherits Rectangle {
                             tx-date: tx.date;
                             tx-amount: tx.amount;
                             tx-price: tx.price;
+                            tx-fee: tx.fee;
+                            tx-notes: tx.notes;
+                            tx-is-swap: tx.is-swap;
                             is-last: index == CryptoAdapter.asset-history.length - 1;
                             
                             delete-clicked(id) => {
                                 CryptoAdapter.delete-crypto-transaction(id);
+                            }
+                            edit-clicked(id) => {
+                                let result = CryptoAdapter.load-edit-transaction(id);
+                                if (result == "") {
+                                    AppState.show-edit-crypto = true;
+                                } else {
+                                    NotificationAdapter.show(result, true);
+                                }
                             }
                         }
                     }

@@ -1,13 +1,14 @@
-// ==================== Configure Ticker Modal ====================
-// Select which coins appear in the top scrolling ticker
+// ==================== Configure Crypto Modal ====================
+// Select which coins appear in the top price bar
 
-import { Palette, AppState, CryptoAdapter } from "../globals.slint";
-import { TextButton } from "../widgets.slint";
+import { Palette, AppState, CryptoAdapter, NotificationAdapter } from "../globals.slint";
+import { ActionButton, TextButton } from "../widgets.slint";
 
 component TickerToggleRow inherits Rectangle {
     in property <string> symbol;
     in property <string> name;
     in property <bool> checked;
+    in property <bool> is-custom: false;
     
     callback toggled;
 
@@ -23,33 +24,49 @@ component TickerToggleRow inherits Rectangle {
         // Label
         VerticalLayout {
             alignment: center;
-            Text { text: root.symbol; color: Palette.text-primary; font-size: 12px; font-weight: 600; }
-            Text { text: root.name; color: Palette.text-muted; font-size: 10px; }
+            Text { 
+                text: root.symbol + (root.is-custom ? " *" : ""); 
+                color: root.is-custom ? Palette.accent : Palette.text-primary; 
+                font-size: 12px; 
+                font-weight: 600; 
+            }
+            Text { 
+                text: root.name; 
+                color: root.is-custom ? Palette.text-secondary : Palette.text-muted; 
+                font-size: 10px; 
+            }
         }
 
-        // Toggle Switch
-        Rectangle {
-            width: 36px; height: 20px;
-            border-radius: 10px;
-            background: root.checked ? Palette.accent : Palette.surface-hover;
-            border-width: 1px;
-            border-color: root.checked ? Palette.accent : Palette.border;
+        VerticalLayout {
+            vertical-stretch: 1;
+            alignment: center;
 
-            animate background { duration: 150ms; }
-
-            // Knob
+            // Toggle Switch
             Rectangle {
-                x: root.checked ? 18px : 2px;
-                y: 2px;
-                width: 16px; height: 16px;
-                border-radius: 8px;
-                background: root.checked ? Palette.background : Palette.text-secondary;
-                
-                animate x { duration: 150ms; easing: ease-in-out; }
-            }
+                width: 36px;
+                height: 20px;
+                border-radius: 10px;
+                background: root.checked ? Palette.accent : Palette.surface-hover;
+                border-width: 1px;
+                border-color: root.checked ? Palette.accent : Palette.border;
 
-            TouchArea {
-                clicked => { root.toggled(); }
+                animate background { duration: 150ms; }
+
+                // Knob
+                Rectangle {
+                    x: root.checked ? 18px : 2px;
+                    y: 2px;
+                    width: 16px;
+                    height: 16px;
+                    border-radius: 8px;
+                    background: root.checked ? Palette.background : Palette.text-secondary;
+                    
+                    animate x { duration: 150ms; easing: ease-in-out; }
+                }
+
+                TouchArea {
+                    clicked => { root.toggled(); }
+                }
             }
         }
     }
@@ -63,13 +80,217 @@ component TickerToggleRow inherits Rectangle {
     }
 }
 
+component ConfigTabButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> active: false;
+    callback clicked;
+
+    width: 150px;
+    height: 32px;
+    border-radius: 8px;
+    background: active ? Palette.surface : transparent;
+    border-width: 1px;
+    border-color: active ? Palette.border-subtle : transparent;
+
+    animate background { duration: 150ms; }
+    animate border-color { duration: 150ms; }
+
+    Text {
+        text: root.text;
+        color: active ? Palette.text-primary : Palette.text-muted;
+        font-size: 10px;
+        font-weight: active ? 600 : 500;
+        letter-spacing: 1.5px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+component SearchInput inherits Rectangle {
+    in property <string> placeholder: "Search...";
+    in-out property <string> text: "";
+    callback edited(string);
+
+    height: 40px;
+    background: Palette.surface;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: input.has-focus ? Palette.accent : Palette.border;
+
+    animate border-color { duration: 150ms; }
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+        spacing: 8px;
+
+        if root.text == "" && !input.has-focus: Text {
+            text: root.placeholder;
+            color: Palette.text-subtle;
+            font-size: 12px;
+            vertical-alignment: center;
+        }
+
+        input := TextInput {
+            text <=> root.text;
+            color: Palette.text-primary;
+            font-size: 12px;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+
+            edited => { root.edited(root.text); }
+        }
+    }
+
+    TouchArea {
+        clicked => { input.focus(); }
+    }
+}
+
+component ConfigField inherits Rectangle {
+    in property <string> label: "";
+    in property <string> placeholder: "";
+    in-out property <string> value: "";
+
+    height: 60px;
+    background: transparent;
+
+    VerticalLayout {
+        spacing: 6px;
+
+        Text {
+            text: root.label;
+            color: Palette.text-muted;
+            font-size: 10px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
+        }
+
+        Rectangle {
+            height: 36px;
+            background: Palette.surface;
+            border-radius: 8px;
+            border-width: input.has-focus ? 2px : 1px;
+            border-color: input.has-focus ? Palette.accent : Palette.border;
+
+            animate border-color { duration: 150ms; }
+            animate border-width { duration: 150ms; }
+
+            HorizontalLayout {
+                padding-left: 12px;
+                padding-right: 12px;
+
+                if root.value == "" && !input.has-focus: Text {
+                    text: root.placeholder;
+                    color: Palette.text-subtle;
+                    font-size: 12px;
+                    vertical-alignment: center;
+                }
+
+                input := TextInput {
+                    text <=> root.value;
+                    color: Palette.text-primary;
+                    font-size: 12px;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+            }
+
+            TouchArea {
+                clicked => { input.focus(); }
+            }
+        }
+    }
+}
+
+component CatalogRow inherits Rectangle {
+    in property <string> symbol;
+    in property <string> name;
+    in property <bool> is-custom: false;
+    in property <bool> deletable: false;
+
+    callback delete;
+
+    height: 48px;
+    background: transparent;
+
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        spacing: 16px;
+        alignment: space-between;
+
+        VerticalLayout {
+            alignment: center;
+            Text {
+                text: root.symbol + (root.is-custom ? " *" : "");
+                color: root.is-custom ? Palette.accent : Palette.text-primary;
+                font-size: 12px;
+                font-weight: 600;
+            }
+            Text {
+                text: root.name;
+                color: root.is-custom ? Palette.text-secondary : Palette.text-muted;
+                font-size: 10px;
+            }
+        }
+
+        if root.deletable: ActionButton {
+            text: "REMOVE";
+            primary: false;
+            height: 28px;
+            min-width: 88px;
+            clicked => { root.delete(); }
+        }
+
+        if !root.deletable: Text {
+            text: "DEFAULT";
+            color: Palette.text-subtle;
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            vertical-alignment: center;
+        }
+    }
+
+    Rectangle {
+        y: parent.height - 1px;
+        height: 1px;
+        background: Palette.border-subtle;
+        opacity: 0.5;
+    }
+}
+
 export component ConfigureTickerModal inherits Rectangle {
     width: 100%;
     height: 100%;
     background: transparent;
 
+    property <string> active-tab: "ticker";
+    property <string> ticker-search: "";
+    property <string> catalog-search: "";
+    property <string> catalog-tab: "list";
+    property <string> new-coin-id: "";
+    property <string> new-coin-name: "";
+    property <string> new-coin-symbol: "";
+
     init => {
         CryptoAdapter.load-ticker-options();
+        CryptoAdapter.load-coin-catalog();
+        CryptoAdapter.filter-coin-catalog("");
+    }
+
+    changed ticker-search => {
+        CryptoAdapter.filter-ticker-options(root.ticker-search);
+    }
+
+    changed catalog-search => {
+        CryptoAdapter.filter-coin-catalog(root.catalog-search);
     }
 
     // Backdrop
@@ -80,8 +301,8 @@ export component ConfigureTickerModal inherits Rectangle {
 
     // Modal Panel
     Rectangle {
-        width: 400px;
-        height: 500px;
+        width: 420px;
+        height: 600px;
         background: Palette.sidebar-bg;
         border-radius: 12px;
         border-width: 1px;
@@ -96,7 +317,7 @@ export component ConfigureTickerModal inherits Rectangle {
 
             // Header
             Text {
-                text: "TICKER DISPLAY";
+                text: "CRYPTO SETTINGS";
                 color: Palette.text-muted;
                 font-size: 11px;
                 font-weight: 600;
@@ -104,10 +325,10 @@ export component ConfigureTickerModal inherits Rectangle {
                 horizontal-alignment: center;
             }
 
-            Rectangle { height: 12px; }
+            Rectangle { height: 8px; }
 
             Text {
-                text: "Max 50 active coins for price updates.";
+                text: "Manage price bar and coin catalog for selection.";
                 color: Palette.text-muted;
                 font-size: 10px;
                 horizontal-alignment: center;
@@ -115,42 +336,262 @@ export component ConfigureTickerModal inherits Rectangle {
 
             Rectangle { height: 16px; }
 
-            // List
-            Rectangle {
+            // Tabs
+            HorizontalLayout {
+                alignment: center;
+                spacing: 8px;
+
+                ConfigTabButton {
+                    text: "PRICE BAR";
+                    active: root.active-tab == "ticker";
+                    clicked => { root.active-tab = "ticker"; }
+                }
+
+                ConfigTabButton {
+                    text: "COIN CATALOG";
+                    active: root.active-tab == "catalog";
+                    clicked => { root.active-tab = "catalog"; }
+                }
+            }
+
+            Rectangle { height: 16px; }
+
+            if root.active-tab == "ticker": VerticalLayout {
                 vertical-stretch: 1;
-                background: Palette.surface;
-                border-radius: 8px;
-                border-width: 1px;
-                border-color: Palette.border-subtle;
-                clip: true;
+                spacing: 12px;
 
-                Flickable {
-                    viewport-height: CryptoAdapter.ticker-options.length * 48px;
-                    
-                    VerticalLayout {
-                        spacing: 0px;
+                Text {
+                    text: "Max 50 active coins for price updates.";
+                    color: Palette.text-muted;
+                    font-size: 10px;
+                    horizontal-alignment: center;
+                }
 
-                        for option[index] in CryptoAdapter.ticker-options : TickerToggleRow {
-                            symbol: option.symbol;
-                            name: option.name;
-                            checked: option.enabled;
-                            
-                            toggled => {
-                                // Direct model modification
-                                CryptoAdapter.ticker-options[index].enabled = !CryptoAdapter.ticker-options[index].enabled;
+                SearchInput {
+                    text <=> root.ticker-search;
+                    placeholder: "Search coins...";
+                }
+
+                Rectangle { height: 4px; }
+
+                // List
+                Rectangle {
+                    vertical-stretch: 1;
+                    background: Palette.surface;
+                    border-radius: 8px;
+                    border-width: 1px;
+                    border-color: Palette.border-subtle;
+                    clip: true;
+
+                    Flickable {
+                        vertical-stretch: 1;
+                        horizontal-stretch: 1;
+                        viewport-height: CryptoAdapter.ticker-options.length * 48px;
+                        
+                        ticker-list := VerticalLayout {
+                            spacing: 0px;
+
+                            for option[index] in CryptoAdapter.ticker-options: TickerToggleRow {
+                                visible: option.visible;
+                                height: option.visible ? 48px : 0px;
+                                symbol: option.symbol;
+                                name: option.name;
+                                checked: option.enabled;
+                                is-custom: option.custom;
+                                
+                                toggled => {
+                                    CryptoAdapter.ticker-options[index].enabled = !CryptoAdapter.ticker-options[index].enabled;
+                                }
+                            }
+                        }
+                    }
+                }
+
+            }
+
+            if root.active-tab == "catalog": VerticalLayout {
+                vertical-stretch: 1;
+                spacing: 12px;
+
+                Text {
+                    text: "Catalog is used for price bar and transactions.";
+                    color: Palette.text-muted;
+                    font-size: 10px;
+                    horizontal-alignment: center;
+                }
+
+                HorizontalLayout {
+                    alignment: center;
+                    spacing: 8px;
+
+                    ConfigTabButton {
+                        text: "COIN LIST";
+                        active: root.catalog-tab == "list";
+                        clicked => { root.catalog-tab = "list"; }
+                    }
+
+                    ConfigTabButton {
+                        text: "ADD COIN";
+                        active: root.catalog-tab == "add";
+                        clicked => { root.catalog-tab = "add"; }
+                    }
+                }
+
+                if root.catalog-tab == "list": VerticalLayout {
+                    vertical-stretch: 1;
+                    spacing: 12px;
+
+                    Text {
+                        text: "Removing coins only hides them here.";
+                        color: Palette.text-muted;
+                        font-size: 9px;
+                        horizontal-alignment: center;
+                    }
+
+                    Rectangle {
+                        vertical-stretch: 1;
+                        background: Palette.surface;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: Palette.border-subtle;
+                        clip: true;
+
+                        VerticalLayout {
+                            width: parent.width;
+                            height: parent.height;
+                            padding: 8px;
+                            spacing: 8px;
+
+                            SearchInput {
+                                text <=> root.catalog-search;
+                                placeholder: "Search coins...";
+                                horizontal-stretch: 1;
+                            }
+
+                            Rectangle {
+                                height: 1px;
+                                background: Palette.border-subtle;
+                                opacity: 0.6;
+                            }
+
+                            Flickable {
+                                vertical-stretch: 1;
+                                horizontal-stretch: 1;
+                                viewport-height: CryptoAdapter.coin-catalog.length * 48px;
+                                
+                                catalog-list := VerticalLayout {
+                                    spacing: 0px;
+
+                                    for coin[index] in CryptoAdapter.coin-catalog: CatalogRow {
+                                        visible: coin.visible;
+                                        height: coin.visible ? 48px : 0px;
+                                        symbol: coin.symbol;
+                                        name: coin.name;
+                                        is-custom: coin.custom;
+                                        deletable: true;
+                                        delete => {
+                                            let res = CryptoAdapter.delete-custom-coin(coin.id);
+                                            if (res != "") {
+                                                NotificationAdapter.show(res, true);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if root.catalog-tab == "add": VerticalLayout {
+                    spacing: 12px;
+
+                    Rectangle {
+                        background: Palette.surface;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: Palette.border-subtle;
+
+                        VerticalLayout {
+                            padding: 12px;
+                            spacing: 10px;
+
+                            Text {
+                                text: "ADD CUSTOM COIN";
+                                color: Palette.text-muted;
+                                font-size: 10px;
+                                font-weight: 600;
+                                letter-spacing: 2px;
+                            }
+
+                            Text {
+                                text: "Use CoinGecko ID (lowercase, hyphens). Example: litecoin";
+                                color: Palette.text-muted;
+                                font-size: 9px;
+                            }
+                            Text {
+                                text: "Symbol uses letters only. Example: LTC";
+                                color: Palette.text-muted;
+                                font-size: 9px;
+                            }
+
+                            ConfigField {
+                                label: "COINGECKO ID";
+                                placeholder: "e.g. litecoin";
+                                value <=> root.new-coin-id;
+                            }
+
+                            HorizontalLayout {
+                                spacing: 12px;
+
+                                ConfigField {
+                                    label: "NAME";
+                                    placeholder: "e.g. Litecoin";
+                                    value <=> root.new-coin-name;
+                                    horizontal-stretch: 1;
+                                }
+
+                                ConfigField {
+                                    label: "SYMBOL";
+                                    placeholder: "e.g. LTC";
+                                    value <=> root.new-coin-symbol;
+                                    width: 120px;
+                                }
+                            }
+
+                            HorizontalLayout {
+                                alignment: end;
+                                TextButton {
+                                    text: "ADD COIN";
+                                    clicked => {
+                                        let res = CryptoAdapter.add-custom-coin(
+                                            root.new-coin-id,
+                                            root.new-coin-name,
+                                            root.new-coin-symbol
+                                        );
+                                        if (res != "") {
+                                            NotificationAdapter.show(res, true);
+                                        } else {
+                                            root.new-coin-id = "";
+                                            root.new-coin-name = "";
+                                            root.new-coin-symbol = "";
+                                            root.catalog-search = "";
+                                            CryptoAdapter.filter-coin-catalog(root.catalog-search);
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
 
-            Rectangle { height: 24px; }
+            Rectangle { height: 16px; }
 
-            // Actions
             HorizontalLayout {
                 alignment: center;
-                TextButton {
+                ActionButton {
                     text: "SAVE CONFIGURATION";
+                    primary: true;
                     clicked => {
                         CryptoAdapter.save-ticker-options();
                         AppState.show-configure-ticker = false;

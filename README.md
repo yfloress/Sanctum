@@ -126,7 +126,7 @@ development.
     privacy and local security.
   - **AI Collaboration:** Parts of the code have been generated and refactored
     with the assistance of advanced LLMs. Models such as **Gemini 3 Pro**,
-    **Claude Opus 4.5**, **Claude Sonnet 4.5**, and **Codex 5.1** have been used
+    **Claude Opus 4.5**, **Claude Sonnet 4.5**, and **Codex 5.2** have been used
     under strict human supervision and auditing to ensure security and business
     logic.
   - **Auditability:** The code is open so anyone can verify that there is no

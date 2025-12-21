@@ -302,6 +302,9 @@ export struct AssetTransaction {
     type: string,
     amount: string,
     price: string,
+    fee: string,
+    notes: string,
+    is-swap: bool,
 }
 
 export struct TickerOption {
@@ -309,6 +312,16 @@ export struct TickerOption {
     name: string,
     symbol: string,
     enabled: bool,
+    custom: bool,
+    visible: bool,
+}
+
+export struct CatalogCoin {
+    id: string,
+    name: string,
+    symbol: string,
+    custom: bool,
+    visible: bool,
 }
 
 export global CryptoAdapter {
@@ -316,17 +329,32 @@ export global CryptoAdapter {
     in-out property <[CryptoAssetData]> market-tickers: [];
     in-out property <[CryptoWalletData]> wallets: [];
     in-out property <[WalletSimple]> wallet-list: []; // For dropdowns
+    in-out property <[CatalogCoin]> coin-catalog: [];
     
     // Config
     in-out property <[TickerOption]> ticker-options: [];
     callback load-ticker-options();
     callback save-ticker-options();
+    callback filter-ticker-options(string);
+    callback load-coin-catalog();
+    callback filter-coin-catalog(string);
+    callback add-custom-coin(string, string, string) -> string; // id, name, symbol
+    callback delete-custom-coin(string) -> string; // id
 
     // Asset Detail View Data
     in-out property <CryptoAssetData> selected-asset;
     in-out property <[AssetWalletBreakdown]> asset-wallets: [];
     in-out property <[AssetTransaction]> asset-history: [];
     in-out property <bool> show-asset-detail: false;
+
+    // Wallet Detail View Data
+    in-out property <string> selected-wallet-id: "";
+    in-out property <string> selected-wallet-name: "";
+    in-out property <string> selected-wallet-category: "";
+    in-out property <string> selected-wallet-balance: "$ 0.00";
+    in-out property <[CryptoAssetData]> wallet-holdings: [];
+    in-out property <[AssetTransaction]> wallet-history: [];
+    in-out property <bool> show-wallet-detail: false;
     
     in-out property <string> total-value: "$ 0.00";
     in-out property <string> total-pnl: "+ $ 0.00";
@@ -334,16 +362,36 @@ export global CryptoAdapter {
     in-out property <string> clp-rate: "...";
     in-out property <string> last-updated: "Never";
     in-out property <bool> limit-reached: false;
+    in-out property <string> limit-excluded: "";
+
+    // Edit Transaction State
+    in-out property <string> edit-tx-id: "";
+    in-out property <string> edit-wallet-id: "";
+    in-out property <string> edit-wallet-name: "";
+    in-out property <string> edit-coin-id: "";
+    in-out property <string> edit-symbol: "";
+    in-out property <string> edit-type: "";
+    in-out property <string> edit-amount: "";
+    in-out property <string> edit-price: "";
+    in-out property <string> edit-fee: "";
+    in-out property <string> edit-date: "";
+    in-out property <string> edit-notes: "";
 
     // Actions
     callback fetch-portfolio();
     callback fetch-wallets();
+    callback fetch-wallet-details(string); // wallet_id
     callback refresh-prices();
     callback fetch-asset-details(string); // coin_id
     callback get-last-price(string) -> string; // coin_id -> price string
+    callback load-edit-transaction(string) -> string; // tx_id -> "" or error
     
     // (wallet_id, coin_id, symbol, type, amount, price, fee, date, notes)
     callback add-transaction(string, string, string, string, string, string, string, string, string) -> string;
+    // (wallet_id, from_coin_id, from_symbol, from_amount, to_coin_id, to_symbol, to_amount, fee, date, notes)
+    callback add-swap(string, string, string, string, string, string, string, string, string, string) -> string;
+    // (tx_id, amount, price, fee, date, notes)
+    callback update-transaction(string, string, string, string, string, string) -> string;
     
     // (name, category) -> id or error
     callback create-wallet(string, string) -> string;
@@ -419,6 +467,7 @@ export global AppState {
     in-out property <bool> show-transfer-modal: false;
     in-out property <bool> show-add-habit: false;
     in-out property <bool> show-add-crypto: false;
+    in-out property <bool> show-edit-crypto: false;
     in-out property <bool> show-add-wallet: false;
     in-out property <bool> show-configure-ticker: false;
 

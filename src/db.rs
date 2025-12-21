@@ -1557,6 +1557,29 @@ impl Database {
         }
     }
 
+    /// Updates editable fields of a crypto transaction
+    pub fn update_crypto_transaction_fields(
+        &self,
+        id: &str,
+        amount: f64,
+        price_per_coin: Option<f64>,
+        fee: Option<f64>,
+        date: &str,
+        notes: Option<&str>,
+    ) -> Result<(), DbError> {
+        self.conn.execute(
+            "UPDATE crypto_transactions
+             SET amount = ?1,
+                 price_per_coin = ?2,
+                 fee = ?3,
+                 date = ?4,
+                 notes = ?5
+             WHERE id = ?6",
+            params![amount, price_per_coin, fee, date, notes, id],
+        )?;
+        Ok(())
+    }
+
     // ==================== Portfolio Aggregation ====================
 
     /// Applies a swap pair atomically to source and target assets to preserve cost basis
