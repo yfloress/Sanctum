@@ -37,29 +37,36 @@ component TickerToggleRow inherits Rectangle {
             }
         }
 
-        // Toggle Switch
-        Rectangle {
-            width: 36px; height: 20px;
-            border-radius: 10px;
-            background: root.checked ? Palette.accent : Palette.surface-hover;
-            border-width: 1px;
-            border-color: root.checked ? Palette.accent : Palette.border;
+        VerticalLayout {
+            vertical-stretch: 1;
+            alignment: center;
 
-            animate background { duration: 150ms; }
-
-            // Knob
+            // Toggle Switch
             Rectangle {
-                x: root.checked ? 18px : 2px;
-                y: 2px;
-                width: 16px; height: 16px;
-                border-radius: 8px;
-                background: root.checked ? Palette.background : Palette.text-secondary;
-                
-                animate x { duration: 150ms; easing: ease-in-out; }
-            }
+                width: 36px;
+                height: 20px;
+                border-radius: 10px;
+                background: root.checked ? Palette.accent : Palette.surface-hover;
+                border-width: 1px;
+                border-color: root.checked ? Palette.accent : Palette.border;
 
-            TouchArea {
-                clicked => { root.toggled(); }
+                animate background { duration: 150ms; }
+
+                // Knob
+                Rectangle {
+                    x: root.checked ? 18px : 2px;
+                    y: 2px;
+                    width: 16px;
+                    height: 16px;
+                    border-radius: 8px;
+                    background: root.checked ? Palette.background : Palette.text-secondary;
+                    
+                    animate x { duration: 150ms; easing: ease-in-out; }
+                }
+
+                TouchArea {
+                    clicked => { root.toggled(); }
+                }
             }
         }
     }
@@ -267,11 +274,10 @@ export component ConfigureTickerModal inherits Rectangle {
     property <string> active-tab: "ticker";
     property <string> ticker-search: "";
     property <string> catalog-search: "";
+    property <string> catalog-tab: "list";
     property <string> new-coin-id: "";
     property <string> new-coin-name: "";
     property <string> new-coin-symbol: "";
-    property <length> catalog-list-height: min(260px, CryptoAdapter.coin-catalog.length * 48px + 80px);
-    property <length> catalog-body-height: catalog-list-height + 340px + 12px;
 
     init => {
         CryptoAdapter.load-ticker-options();
@@ -401,19 +407,6 @@ export component ConfigureTickerModal inherits Rectangle {
                     }
                 }
 
-                Rectangle { height: 20px; }
-
-                // Actions
-                HorizontalLayout {
-                    alignment: center;
-                    TextButton {
-                        text: "SAVE CONFIGURATION";
-                        clicked => {
-                            CryptoAdapter.save-ticker-options();
-                            AppState.show-configure-ticker = false;
-                        }
-                    }
-                }
             }
 
             if root.active-tab == "catalog": VerticalLayout {
@@ -427,145 +420,79 @@ export component ConfigureTickerModal inherits Rectangle {
                     horizontal-alignment: center;
                 }
 
-                Text {
-                    text: "Removing coins only hides them here.";
-                    color: Palette.text-muted;
-                    font-size: 9px;
-                    horizontal-alignment: center;
+                HorizontalLayout {
+                    alignment: center;
+                    spacing: 8px;
+
+                    ConfigTabButton {
+                        text: "COIN LIST";
+                        active: root.catalog-tab == "list";
+                        clicked => { root.catalog-tab = "list"; }
+                    }
+
+                    ConfigTabButton {
+                        text: "ADD COIN";
+                        active: root.catalog-tab == "add";
+                        clicked => { root.catalog-tab = "add"; }
+                    }
                 }
 
-                Flickable {
+                if root.catalog-tab == "list": VerticalLayout {
                     vertical-stretch: 1;
-                    horizontal-stretch: 1;
-                    viewport-height: root.catalog-body-height;
+                    spacing: 12px;
 
-                    catalog-body := VerticalLayout {
-                        spacing: 12px;
+                    Text {
+                        text: "Removing coins only hides them here.";
+                        color: Palette.text-muted;
+                        font-size: 9px;
+                        horizontal-alignment: center;
+                    }
 
-                        Rectangle {
-                            height: root.catalog-list-height;
-                            background: Palette.surface;
-                            border-radius: 8px;
-                            border-width: 1px;
-                            border-color: Palette.border-subtle;
-                            clip: true;
+                    Rectangle {
+                        vertical-stretch: 1;
+                        background: Palette.surface;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: Palette.border-subtle;
+                        clip: true;
 
-                            VerticalLayout {
-                                width: parent.width;
-                                height: parent.height;
-                                padding: 8px;
-                                spacing: 8px;
+                        VerticalLayout {
+                            width: parent.width;
+                            height: parent.height;
+                            padding: 8px;
+                            spacing: 8px;
 
-                                SearchInput {
-                                    text <=> root.catalog-search;
-                                    placeholder: "Search coins...";
-                                    horizontal-stretch: 1;
-                                }
-
-                                Rectangle {
-                                    height: 1px;
-                                    background: Palette.border-subtle;
-                                    opacity: 0.6;
-                                }
-
-                                Flickable {
-                                    vertical-stretch: 1;
-                                    horizontal-stretch: 1;
-                                    viewport-height: CryptoAdapter.coin-catalog.length * 48px;
-                                    
-                                    catalog-list := VerticalLayout {
-                                        spacing: 0px;
-
-                                        for coin[index] in CryptoAdapter.coin-catalog: CatalogRow {
-                                            visible: coin.visible;
-                                            height: coin.visible ? 48px : 0px;
-                                            symbol: coin.symbol;
-                                            name: coin.name;
-                                            is-custom: coin.custom;
-                                            deletable: true;
-                                            delete => {
-                                                let res = CryptoAdapter.delete-custom-coin(coin.id);
-                                                if (res != "") {
-                                                    NotificationAdapter.show(res, true);
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
+                            SearchInput {
+                                text <=> root.catalog-search;
+                                placeholder: "Search coins...";
+                                horizontal-stretch: 1;
                             }
-                        }
 
-                        Rectangle {
-                            background: Palette.surface;
-                            border-radius: 8px;
-                            border-width: 1px;
-                            border-color: Palette.border-subtle;
+                            Rectangle {
+                                height: 1px;
+                                background: Palette.border-subtle;
+                                opacity: 0.6;
+                            }
 
-                            VerticalLayout {
-                                padding: 12px;
-                                spacing: 10px;
+                            Flickable {
+                                vertical-stretch: 1;
+                                horizontal-stretch: 1;
+                                viewport-height: CryptoAdapter.coin-catalog.length * 48px;
+                                
+                                catalog-list := VerticalLayout {
+                                    spacing: 0px;
 
-                                Text {
-                                    text: "ADD CUSTOM COIN";
-                                    color: Palette.text-muted;
-                                    font-size: 10px;
-                                    font-weight: 600;
-                                    letter-spacing: 2px;
-                                }
-
-                                Text {
-                                    text: "Use CoinGecko ID (lowercase, hyphens). Example: litecoin";
-                                    color: Palette.text-muted;
-                                    font-size: 9px;
-                                }
-                                Text {
-                                    text: "Symbol uses letters only. Example: LTC";
-                                    color: Palette.text-muted;
-                                    font-size: 9px;
-                                }
-
-                                ConfigField {
-                                    label: "COINGECKO ID";
-                                    placeholder: "e.g. litecoin";
-                                    value <=> root.new-coin-id;
-                                }
-
-                                HorizontalLayout {
-                                    spacing: 12px;
-
-                                    ConfigField {
-                                        label: "NAME";
-                                        placeholder: "e.g. Litecoin";
-                                        value <=> root.new-coin-name;
-                                        horizontal-stretch: 1;
-                                    }
-
-                                    ConfigField {
-                                        label: "SYMBOL";
-                                        placeholder: "e.g. LTC";
-                                        value <=> root.new-coin-symbol;
-                                        width: 120px;
-                                    }
-                                }
-
-                                HorizontalLayout {
-                                    alignment: end;
-                                    TextButton {
-                                        text: "ADD COIN";
-                                        clicked => {
-                                            let res = CryptoAdapter.add-custom-coin(
-                                                root.new-coin-id,
-                                                root.new-coin-name,
-                                                root.new-coin-symbol
-                                            );
+                                    for coin[index] in CryptoAdapter.coin-catalog: CatalogRow {
+                                        visible: coin.visible;
+                                        height: coin.visible ? 48px : 0px;
+                                        symbol: coin.symbol;
+                                        name: coin.name;
+                                        is-custom: coin.custom;
+                                        deletable: true;
+                                        delete => {
+                                            let res = CryptoAdapter.delete-custom-coin(coin.id);
                                             if (res != "") {
                                                 NotificationAdapter.show(res, true);
-                                            } else {
-                                                root.new-coin-id = "";
-                                                root.new-coin-name = "";
-                                                root.new-coin-symbol = "";
-                                                root.catalog-search = "";
-                                                CryptoAdapter.filter-coin-catalog(root.catalog-search);
                                             }
                                         }
                                     }
@@ -575,12 +502,99 @@ export component ConfigureTickerModal inherits Rectangle {
                     }
                 }
 
-                HorizontalLayout {
-                    alignment: center;
-                    ActionButton {
-                        text: "CLOSE";
-                        primary: true;
-                        clicked => { AppState.show-configure-ticker = false; }
+                if root.catalog-tab == "add": VerticalLayout {
+                    spacing: 12px;
+
+                    Rectangle {
+                        background: Palette.surface;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: Palette.border-subtle;
+
+                        VerticalLayout {
+                            padding: 12px;
+                            spacing: 10px;
+
+                            Text {
+                                text: "ADD CUSTOM COIN";
+                                color: Palette.text-muted;
+                                font-size: 10px;
+                                font-weight: 600;
+                                letter-spacing: 2px;
+                            }
+
+                            Text {
+                                text: "Use CoinGecko ID (lowercase, hyphens). Example: litecoin";
+                                color: Palette.text-muted;
+                                font-size: 9px;
+                            }
+                            Text {
+                                text: "Symbol uses letters only. Example: LTC";
+                                color: Palette.text-muted;
+                                font-size: 9px;
+                            }
+
+                            ConfigField {
+                                label: "COINGECKO ID";
+                                placeholder: "e.g. litecoin";
+                                value <=> root.new-coin-id;
+                            }
+
+                            HorizontalLayout {
+                                spacing: 12px;
+
+                                ConfigField {
+                                    label: "NAME";
+                                    placeholder: "e.g. Litecoin";
+                                    value <=> root.new-coin-name;
+                                    horizontal-stretch: 1;
+                                }
+
+                                ConfigField {
+                                    label: "SYMBOL";
+                                    placeholder: "e.g. LTC";
+                                    value <=> root.new-coin-symbol;
+                                    width: 120px;
+                                }
+                            }
+
+                            HorizontalLayout {
+                                alignment: end;
+                                TextButton {
+                                    text: "ADD COIN";
+                                    clicked => {
+                                        let res = CryptoAdapter.add-custom-coin(
+                                            root.new-coin-id,
+                                            root.new-coin-name,
+                                            root.new-coin-symbol
+                                        );
+                                        if (res != "") {
+                                            NotificationAdapter.show(res, true);
+                                        } else {
+                                            root.new-coin-id = "";
+                                            root.new-coin-name = "";
+                                            root.new-coin-symbol = "";
+                                            root.catalog-search = "";
+                                            CryptoAdapter.filter-coin-catalog(root.catalog-search);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Rectangle { height: 16px; }
+
+            HorizontalLayout {
+                alignment: center;
+                ActionButton {
+                    text: "SAVE CONFIGURATION";
+                    primary: true;
+                    clicked => {
+                        CryptoAdapter.save-ticker-options();
+                        AppState.show-configure-ticker = false;
                     }
                 }
             }
