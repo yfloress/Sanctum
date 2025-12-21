@@ -1583,13 +1583,7 @@ impl AppController {
             };
 
             validate_positive_amount(amount, "Amount")?;
-            
-            // 1. Validate Price (Mandatory)
-            let price = match price_per_coin {
-                Some(p) if p > 0.0 => p,
-                _ => return Err(ControllerError::Validation("Price per coin is required and must be greater than zero".to_string())),
-            };
-            
+
             let fee = validate_non_negative(fee, "Fee")?;
             let date = validate_date(&date)?;
 
@@ -1606,6 +1600,22 @@ impl AppController {
                     "Swap requires paired transactions. Use the swap flow.".to_string(),
                 ));
             }
+
+            let price = if transaction_type == "buy" || transaction_type == "sell" {
+                match price_per_coin {
+                    Some(p) => Some(validate_positive_amount(p, "Price per coin")?),
+                    None => {
+                        return Err(ControllerError::Validation(
+                            "Price per coin is required and must be greater than zero".to_string(),
+                        ))
+                    }
+                }
+            } else {
+                match price_per_coin {
+                    Some(p) => Some(validate_positive_amount(p, "Price per coin")?),
+                    None => None,
+                }
+            };
 
             // 2. Validate Sufficient Funds (Prevent Negative Balance)
             if transaction_type == "sell"
@@ -1639,7 +1649,7 @@ impl AppController {
                 symbol.to_uppercase(),
                 transaction_type,
                 amount,
-                Some(price), // Always store the validated price
+                price,
                 fee,
                 date,
                 notes,
@@ -1830,12 +1840,21 @@ impl AppController {
             }
 
             validate_positive_amount(amount, "Amount")?;
-            let price = match price_per_coin {
-                Some(p) if p > 0.0 => p,
-                _ => {
-                    return Err(ControllerError::Validation(
-                        "Price per coin is required and must be greater than zero".to_string(),
-                    ))
+            let price = if existing.transaction_type == "buy"
+                || existing.transaction_type == "sell"
+            {
+                match price_per_coin {
+                    Some(p) => Some(validate_positive_amount(p, "Price per coin")?),
+                    None => {
+                        return Err(ControllerError::Validation(
+                            "Price per coin is required and must be greater than zero".to_string(),
+                        ))
+                    }
+                }
+            } else {
+                match price_per_coin {
+                    Some(p) => Some(validate_positive_amount(p, "Price per coin")?),
+                    None => None,
                 }
             };
             let fee = validate_non_negative(fee, "Fee")?;
@@ -1871,7 +1890,7 @@ impl AppController {
             db.update_crypto_transaction_fields(
                 &validated_id,
                 amount,
-                Some(price),
+                price,
                 fee,
                 &date,
                 notes.as_deref(),

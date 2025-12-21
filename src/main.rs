@@ -2331,6 +2331,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         symbol: SharedString::from(coin.symbol),
                         custom: coin.custom,
                         visible: true,
+                        selected: false,
                     })
                     .collect();
 
@@ -2458,6 +2459,85 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     ui.global::<CryptoAdapter>()
                         .set_coin_catalog(ModelRc::new(VecModel::from(options)));
+                }
+            });
+    }
+
+    {
+        let ui_weak = ui_weak.clone();
+        ui.global::<CryptoAdapter>()
+            .on_select_all_coins(move || {
+                if let Some(ui) = ui_weak.upgrade() {
+                    let options = ui.global::<CryptoAdapter>().get_coin_catalog();
+                    let mut options: Vec<CatalogCoin> = options.iter().collect();
+
+                    for opt in options.iter_mut() {
+                        if opt.visible {
+                            opt.selected = true;
+                        }
+                    }
+
+                    ui.global::<CryptoAdapter>()
+                        .set_coin_catalog(ModelRc::new(VecModel::from(options)));
+                }
+            });
+    }
+
+    {
+        let ui_weak = ui_weak.clone();
+        ui.global::<CryptoAdapter>()
+            .on_clear_coin_selection(move || {
+                if let Some(ui) = ui_weak.upgrade() {
+                    let options = ui.global::<CryptoAdapter>().get_coin_catalog();
+                    let mut options: Vec<CatalogCoin> = options.iter().collect();
+
+                    for opt in options.iter_mut() {
+                        opt.selected = false;
+                    }
+
+                    ui.global::<CryptoAdapter>()
+                        .set_coin_catalog(ModelRc::new(VecModel::from(options)));
+                }
+            });
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = show_notification.clone();
+
+        ui.global::<CryptoAdapter>()
+            .on_delete_selected_coins(move || -> SharedString {
+                if let Some(ui) = ui_weak.upgrade() {
+                    let options = ui.global::<CryptoAdapter>().get_coin_catalog();
+                    let selected: Vec<String> = options
+                        .iter()
+                        .filter(|coin| coin.selected)
+                        .map(|coin| coin.id.to_string())
+                        .collect();
+
+                    if selected.is_empty() {
+                        return SharedString::from("No coins selected");
+                    }
+
+                    let mut error: Option<String> = None;
+                    for id in selected {
+                        if let Err(e) = controller.delete_custom_coin(id) {
+                            error = Some(e.to_string());
+                        }
+                    }
+
+                    ui.global::<CryptoAdapter>().invoke_load_coin_catalog();
+                    ui.global::<CryptoAdapter>().invoke_load_ticker_options();
+
+                    if let Some(err) = error {
+                        return SharedString::from(err);
+                    }
+
+                    notify("Coins removed".into(), false);
+                    SharedString::from("")
+                } else {
+                    SharedString::from("")
                 }
             });
     }

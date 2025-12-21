@@ -130,7 +130,9 @@ export component EditCryptoTransactionModal inherits Rectangle {
             NotificationAdapter.show("Amount is required", true);
             return;
         }
-        if (CryptoAdapter.edit-price == "") {
+        let requires_price = CryptoAdapter.edit-type == "buy"
+            || CryptoAdapter.edit-type == "sell";
+        if (requires_price && CryptoAdapter.edit-price == "") {
             NotificationAdapter.show("Price is required", true);
             return;
         }
@@ -263,7 +265,9 @@ export component EditCryptoTransactionModal inherits Rectangle {
                         spacing: 12px;
                         FormField { 
                             label: "PRICE (USD)"; 
-                            placeholder: "Required"; 
+                            placeholder: (CryptoAdapter.edit-type == "transfer_in" || CryptoAdapter.edit-type == "transfer_out")
+                                ? "Optional"
+                                : "Required"; 
                             value <=> CryptoAdapter.edit-price; 
                             horizontal-stretch: 1;
                         }

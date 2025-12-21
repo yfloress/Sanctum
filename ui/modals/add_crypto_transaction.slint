@@ -709,7 +709,9 @@ export component AddCryptoTransactionModal inherits Rectangle {
                         spacing: 12px;
                         if root.selected-type != "swap": FormField { 
                             label: "PRICE (USD)"; 
-                            placeholder: "Required"; 
+                            placeholder: (root.selected-type == "transfer_in" || root.selected-type == "transfer_out")
+                                ? "Optional"
+                                : "Required"; 
                             value <=> root.price; 
                             horizontal-stretch: 1;
                         }

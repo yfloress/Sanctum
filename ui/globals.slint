@@ -322,6 +322,7 @@ export struct CatalogCoin {
     symbol: string,
     custom: bool,
     visible: bool,
+    selected: bool,
 }
 
 export global CryptoAdapter {
@@ -340,6 +341,9 @@ export global CryptoAdapter {
     callback filter-coin-catalog(string);
     callback add-custom-coin(string, string, string) -> string; // id, name, symbol
     callback delete-custom-coin(string) -> string; // id
+    callback select-all-coins();
+    callback clear-coin-selection();
+    callback delete-selected-coins() -> string;
 
     // Asset Detail View Data
     in-out property <CryptoAssetData> selected-asset;

@@ -1688,6 +1688,10 @@ impl Database {
                 }
                 CryptoTransactionType::TransferIn => {
                     entry.total_amount += tx.amount;
+                    if let Some(price) = tx.price_per_coin {
+                        let fee = tx.fee.unwrap_or(0.0);
+                        entry.total_cost_basis += (tx.amount * price) + fee;
+                    }
                 }
                 CryptoTransactionType::Sell
                 | CryptoTransactionType::TransferOut
@@ -1786,6 +1790,10 @@ impl Database {
                 entry.total_cost_basis += cost + tx.fee.unwrap_or(0.0);
             } else if matches!(tx_type, CryptoTransactionType::TransferIn) {
                 entry.total_amount += tx.amount;
+                if let Some(price) = tx.price_per_coin {
+                    let fee = tx.fee.unwrap_or(0.0);
+                    entry.total_cost_basis += (tx.amount * price) + fee;
+                }
             } else if tx_type.is_outflow() || matches!(tx_type, CryptoTransactionType::Swap) {
                 let prev_amount = entry.total_amount;
                 entry.total_amount -= tx.amount;
