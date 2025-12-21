@@ -1508,6 +1508,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .into_iter()
                 .map(|p| (p.id.clone(), p))
                 .collect();
+            let catalog = controller
+                .get_coin_catalog()
+                .unwrap_or_else(|_| crypto::default_coin_catalog());
+            let catalog_map: HashMap<String, (String, String)> = catalog
+                .into_iter()
+                .map(|coin| (coin.id, (coin.name, coin.symbol)))
+                .collect();
 
             // Update assets with current prices
             for asset in &mut assets {
@@ -1583,7 +1590,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut tickers: Vec<CryptoAssetData> = Vec::new();
 
             for id in ticker_ids {
-                if let Some(data) = prices.iter().find(|p| p.id == id) {
+                if let Some(data) = price_map.get(&id) {
                     let change_str = if data.price_change_percentage_24h >= 0.0 {
                         format!("+ {:.2}%", data.price_change_percentage_24h)
                     } else {
@@ -1596,7 +1603,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     };
 
                     tickers.push(CryptoAssetData {
-                        id: SharedString::from(id),
+                        id: SharedString::from(&id),
                         symbol: SharedString::from(&data.symbol),
                         name: SharedString::from(&data.name),
                         price: SharedString::from(price_fmt),
@@ -1604,6 +1611,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         value: "".into(),
                         change_24h: SharedString::from(change_str),
                         is_positive: data.price_change_percentage_24h >= 0.0,
+                        allocation: 0.0,
+                    });
+                } else {
+                    let (name, symbol) = catalog_map
+                        .get(&id)
+                        .cloned()
+                        .unwrap_or_else(|| (id.clone(), id.to_uppercase()));
+
+                    tickers.push(CryptoAssetData {
+                        id: SharedString::from(&id),
+                        symbol: SharedString::from(symbol),
+                        name: SharedString::from(name),
+                        price: "N/A".into(),
+                        amount: "".into(),
+                        value: "".into(),
+                        change_24h: "N/A".into(),
+                        is_positive: true,
                         allocation: 0.0,
                     });
                 }
@@ -2339,6 +2363,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         return;
                     }
 
+                    reload_portfolio(&ui_weak, &controller);
                     notify("Configuration saved".into(), false);
                 }
             });
