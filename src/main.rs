@@ -2339,8 +2339,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         return;
                     }
 
-                    ui.global::<CryptoAdapter>().invoke_refresh_prices();
-                    notify("Ticker updated".into(), false);
+                    notify("Configuration saved".into(), false);
                 }
             });
     }
