@@ -131,6 +131,7 @@ pub const SETTING_AUTO_FETCH: &str = "auto_fetch_crypto";
 pub const SETTING_TICKER_COINS: &str = "ticker_coins";
 pub const SETTING_CRYPTO_LAST_UPDATED: &str = "crypto_last_updated";
 pub const SETTING_CRYPTO_CUSTOM_COINS: &str = "crypto_custom_coins";
+pub const SETTING_CRYPTO_HIDDEN_COINS: &str = "crypto_hidden_coins";
 
 // ==================== Helper Functions ====================
 
@@ -878,6 +879,15 @@ impl AppController {
         Ok(coins)
     }
 
+    /// Loads hidden coin IDs for the catalog UI
+    pub fn get_hidden_coin_ids(&self) -> Vec<String> {
+        self.get_app_setting(SETTING_CRYPTO_HIDDEN_COINS)
+            .ok()
+            .filter(|val| !val.is_empty())
+            .and_then(|val| serde_json::from_str::<Vec<String>>(&val).ok())
+            .unwrap_or_default()
+    }
+
     /// Saves custom coins to settings
     fn save_custom_coin_catalog(
         &self,
@@ -886,6 +896,13 @@ impl AppController {
         let json = serde_json::to_string(&coins)
             .map_err(|e| ControllerError::Validation(e.to_string()))?;
         self.set_app_setting(SETTING_CRYPTO_CUSTOM_COINS, &json)
+    }
+
+    /// Saves hidden coin IDs to settings
+    fn save_hidden_coin_ids(&self, ids: Vec<String>) -> Result<(), ControllerError> {
+        let json =
+            serde_json::to_string(&ids).map_err(|e| ControllerError::Validation(e.to_string()))?;
+        self.set_app_setting(SETTING_CRYPTO_HIDDEN_COINS, &json)
     }
 
     /// Returns the full coin catalog (defaults + custom)
@@ -898,6 +915,12 @@ impl AppController {
             if ids.insert(coin.id.clone()) {
                 catalog.push(coin);
             }
+        }
+
+        let hidden = self.get_hidden_coin_ids();
+        if !hidden.is_empty() {
+            let hidden: HashSet<String> = hidden.into_iter().collect();
+            catalog.retain(|coin| !hidden.contains(&coin.id));
         }
 
         Ok(catalog)
@@ -949,12 +972,30 @@ impl AppController {
         let mut custom = self.get_custom_coin_catalog()?;
         let before = custom.len();
         custom.retain(|coin| coin.id != id);
+        let removed_custom = custom.len() != before;
 
-        if custom.len() == before {
-            return Err(ControllerError::Validation("Coin not found".to_string()));
+        if removed_custom {
+            self.save_custom_coin_catalog(custom)?;
         }
 
-        self.save_custom_coin_catalog(custom)?;
+        let is_default = crypto::default_coin_catalog()
+            .iter()
+            .any(|coin| coin.id == id);
+        let mut hidden_updated = false;
+        if is_default {
+            let mut hidden = self.get_hidden_coin_ids();
+            if !hidden.iter().any(|coin| coin == &id) {
+                hidden.push(id.clone());
+                hidden.sort();
+                hidden.dedup();
+                self.save_hidden_coin_ids(hidden)?;
+                hidden_updated = true;
+            }
+        }
+
+        if !removed_custom && !hidden_updated {
+            return Err(ControllerError::Validation("Coin not found".to_string()));
+        }
 
         let mut active = self.get_active_ticker_ids();
         if active.iter().any(|coin| coin == &id) {
