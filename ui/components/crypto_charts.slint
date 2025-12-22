@@ -1,0 +1,59 @@
+import { Palette } from "../globals.slint";
+
+// ==================== Portfolio Distribution Chart ====================
+export component PortfolioDistributionChart inherits Rectangle {
+    in property <image> image;
+    in property <bool> has-data: false;
+
+    background: Palette.surface;
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: Palette.border-subtle;
+
+    VerticalLayout {
+        padding: 20px;
+        spacing: 14px;
+
+        Text {
+            text: "PORTFOLIO DISTRIBUTION";
+            color: Palette.text-secondary;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        Rectangle {
+            height: 260px;
+            border-radius: 14px;
+            background: @linear-gradient(180deg, #0a0a0a, #0f0f0f);
+            border-width: 1px;
+            border-color: Palette.border-subtle;
+            clip: true;
+
+            if root.has-data: Image {
+                source: root.image;
+                width: 100%;
+                height: 100%;
+                image-fit: contain;
+            }
+
+            if !root.has-data: VerticalLayout {
+                alignment: center;
+                spacing: 6px;
+                Text {
+                    text: "No priced assets yet";
+                    color: Palette.text-secondary;
+                    font-size: 12px;
+                    font-weight: 600;
+                    horizontal-alignment: center;
+                }
+                Text {
+                    text: "Sync prices to see the distribution";
+                    color: Palette.text-muted;
+                    font-size: 11px;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+    }
+}

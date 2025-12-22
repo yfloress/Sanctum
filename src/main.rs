@@ -7,6 +7,7 @@ use directories::ProjectDirs;
 use log::error;
 use plotters::prelude::*;
 use plotters::series::{AreaSeries, LineSeries};
+use plotters::style::text_anchor::{HPos, Pos, VPos};
 use rand::Rng; // For title animation
 use sanctum::crypto;
 use sanctum::controller::{
@@ -1236,6 +1237,126 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Image::load_from_path(&final_svg).ok()
     }
 
+    fn render_portfolio_distribution_chart(data: &[(String, f64)]) -> Option<Image> {
+        if data.is_empty() {
+            return None;
+        }
+
+        let total: f64 = data.iter().map(|(_, value)| *value).sum();
+        if total <= 0.0 {
+            return None;
+        }
+
+        let max_val = data
+            .iter()
+            .map(|(_, value)| *value)
+            .fold(0.0_f64, f64::max);
+        let upper = if max_val <= 0.0 { 1.0 } else { max_val * 1.08 };
+
+        let temp_svg = std::env::temp_dir().join("sanctum_portfolio_dist_temp.svg");
+        let root = SVGBackend::new(&temp_svg, (1800, 560)).into_drawing_area();
+        root.fill(&RGBColor(10, 10, 15)).ok()?;
+
+        let count = data.len();
+        let labels: Vec<String> = data.iter().map(|(label, _)| label.clone()).collect();
+
+        let mut chart = ChartBuilder::on(&root)
+            .margin(40)
+            .x_label_area_size(20)
+            .y_label_area_size(220)
+            .build_cartesian_2d(0f64..upper, 0f64..count as f64)
+            .ok()?;
+
+        chart
+            .configure_mesh()
+            .disable_mesh()
+            .disable_x_axis()
+            .y_labels(count)
+            .y_label_formatter(&move |v| {
+                let idx = v.round() as isize;
+                if idx < 0 {
+                    return String::new();
+                }
+                let idx = idx as usize;
+                if idx >= labels.len() {
+                    return String::new();
+                }
+                labels[labels.len() - 1 - idx].clone()
+            })
+            .label_style(("sans-serif", 28).into_font().color(&RGBColor(163, 163, 163)))
+            .axis_style(ShapeStyle::from(&RGBColor(45, 45, 45)).stroke_width(1))
+            .draw()
+            .ok()?;
+
+        let colors = [
+            RGBColor(139, 92, 246),
+            RGBColor(236, 72, 153),
+            RGBColor(56, 189, 248),
+            RGBColor(34, 197, 94),
+            RGBColor(245, 158, 11),
+            RGBColor(168, 85, 247),
+        ];
+
+        let value_style = ("sans-serif", 26)
+            .into_font()
+            .color(&RGBColor(203, 213, 225))
+            .pos(Pos::new(HPos::Right, VPos::Center));
+
+        for (idx, (_, value)) in data.iter().enumerate() {
+            let y = (count - 1 - idx) as f64;
+            let color = colors[idx % colors.len()];
+
+            chart
+                .draw_series(std::iter::once(Rectangle::new(
+                    [(0.0, y + 0.18), (*value, y + 0.82)],
+                    ShapeStyle::from(&color).filled(),
+                )))
+                .ok()?;
+
+            let percent = (*value / total) * 100.0;
+            let value_label = format!(
+                "{} · {:.1}%",
+                format_money((value * 100.0) as i64, "USD"),
+                percent
+            );
+
+            chart
+                .draw_series(std::iter::once(Text::new(
+                    value_label,
+                    (upper * 0.98, y + 0.5),
+                    value_style.clone(),
+                )))
+                .ok()?;
+
+        }
+
+        root.present().ok()?;
+
+        let mut fontdb = fontdb::Database::new();
+        let font_path = std::path::PathBuf::from("ui/fonts/DejaVuSans.ttf");
+        if font_path.exists() {
+            fontdb.load_font_file(&font_path).ok()?;
+        } else {
+            fontdb.load_system_fonts();
+        }
+
+        fontdb.set_serif_family("DejaVu Sans");
+        fontdb.set_sans_serif_family("DejaVu Sans");
+        fontdb.set_monospace_family("DejaVu Sans");
+
+        let svg_data = std::fs::read_to_string(&temp_svg).ok()?;
+        let opt = usvg::Options {
+            fontdb: std::sync::Arc::new(fontdb),
+            ..Default::default()
+        };
+        let tree = usvg::Tree::from_str(&svg_data, &opt).ok()?;
+
+        let final_svg = std::env::temp_dir().join("sanctum_portfolio_dist.svg");
+        std::fs::write(&final_svg, tree.to_string(&usvg::WriteOptions::default())).ok()?;
+
+        Image::load_from_path(&final_svg).ok()
+    }
+
     fn refresh_habit_analytics(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>) {
         if let Ok(analytics) = controller.get_habit_analytics(365) {
             let monthly_image = render_monthly_chart_image(&analytics.monthly_data);
@@ -1546,6 +1667,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .unwrap_or(std::cmp::Ordering::Equal)
             });
 
+            let mut chart_assets: Vec<(String, f64)> = assets
+                .iter()
+                .filter(|asset| price_map.contains_key(&asset.coin_id) && asset.current_value > 0.0)
+                .map(|asset| (asset.symbol.clone(), asset.current_value))
+                .collect();
+            chart_assets.sort_by(|a, b| {
+                b.1.partial_cmp(&a.1)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
+
+            let chart_assets = if chart_assets.len() > 6 {
+                let mut trimmed = chart_assets[..6].to_vec();
+                let other_sum: f64 = chart_assets[6..].iter().map(|(_, v)| *v).sum();
+                if other_sum > 0.0 {
+                    trimmed.push(("OTHER".to_string(), other_sum));
+                }
+                trimmed
+            } else {
+                chart_assets
+            };
+            let chart_image = render_portfolio_distribution_chart(&chart_assets);
+            let chart_ready = chart_image.is_some();
+
             let mut total_val = 0.0;
             let mut total_cost = 0.0;
             let mut priced_assets = 0;
@@ -1714,6 +1858,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 adapter.set_total_pnl_positive(total_pnl_positive);
                 adapter.set_total_pnl(SharedString::from(total_pnl_label));
                 adapter.set_clp_rate(SharedString::from(clp_display));
+                adapter.set_portfolio_chart_image(chart_image.unwrap_or_default());
+                adapter.set_portfolio_chart_ready(chart_ready);
                 if let Some(label) = last_updated_label {
                     adapter.set_last_updated(label.into());
                 }

@@ -9,6 +9,7 @@ import {
 import { CryptoRow, WalletRow, TickerItem, CryptoCard, GhostButton } from "../components/crypto_widgets.slint";
 import { AssetDetailPanel } from "../components/asset_detail.slint";
 import { WalletDetailPanel } from "../components/wallet_detail.slint";
+import { PortfolioDistributionChart } from "../components/crypto_charts.slint";
 import { TextButton, BorderButton, ActionButton } from "../widgets.slint";
 
 // ==================== Tab Button ====================
@@ -480,6 +481,12 @@ export component CryptoPage inherits Rectangle {
                                 }
                             }
                         }
+                    }
+
+                    PortfolioDistributionChart {
+                        horizontal-stretch: 1;
+                        has-data: CryptoAdapter.portfolio-chart-ready;
+                        image: CryptoAdapter.portfolio-chart-image;
                     }
                 }
                 
