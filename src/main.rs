@@ -17,7 +17,7 @@ use sanctum::security_log::init_security_logger;
 use slint::SharedString;
 use slint::{Image, Model, ModelRc, VecModel, Weak};
 use std::cell::Cell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc; // Added for CryptoAdapter logic
 
 slint::include_modules!();
@@ -2415,6 +2415,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let catalog = controller
                     .get_coin_catalog()
                     .unwrap_or_else(|_| crypto::default_coin_catalog());
+                let favorites: HashSet<String> = controller
+                    .get_favorite_coin_ids()
+                    .into_iter()
+                    .collect();
 
                 let options: Vec<CatalogCoin> = catalog
                     .into_iter()
@@ -2423,6 +2427,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         name: SharedString::from(coin.name),
                         symbol: SharedString::from(coin.symbol),
                         custom: coin.custom,
+                        favorite: favorites.contains(&coin.id),
                         visible: true,
                         selected: false,
                     })
@@ -2480,6 +2485,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         notify("Coin added".into(), false);
                         SharedString::from("")
                     }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            });
+    }
+
+    {
+        let controller = controller.clone();
+
+        ui.global::<CryptoAdapter>()
+            .on_set_favorite_coin(move |id, favorite| -> SharedString {
+                match controller.set_favorite_coin(id.to_string(), favorite) {
+                    Ok(_) => SharedString::from(""),
                     Err(e) => SharedString::from(e.to_string()),
                 }
             });

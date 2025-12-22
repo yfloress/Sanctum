@@ -334,6 +334,7 @@ component CoinSelector inherits Rectangle {
     in property <string> label: "CRYPTOCURRENCY";
     property <bool> popup-open: false;
     property <string> search-query: "";
+    property <bool> favorites-only: false;
     property <int> safe-index: CryptoAdapter.coin-catalog.length > 0 && selected-index < CryptoAdapter.coin-catalog.length
         ? selected-index
         : 0;
@@ -455,6 +456,29 @@ component CoinSelector inherits Rectangle {
 
                         edited => { CryptoAdapter.filter-coin-catalog(root.search-query); }
                     }
+
+                    Rectangle {
+                        width: 24px;
+                        height: 24px;
+                        border-radius: 6px;
+                        background: root.favorites-only ? Palette.primary.with-alpha(0.2) : transparent;
+                        border-width: root.favorites-only ? 1px : 0px;
+                        border-color: Palette.primary.with-alpha(0.4);
+
+                        Text {
+                            text: root.favorites-only ? "★" : "☆";
+                            color: root.favorites-only ? Palette.accent : Palette.text-muted;
+                            font-size: 12px;
+                            font-weight: 600;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        favorites-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.favorites-only = !root.favorites-only; }
+                        }
+                    }
                 }
 
                 TouchArea {
@@ -477,8 +501,8 @@ component CoinSelector inherits Rectangle {
                     spacing: 0px;
 
                     for coin[index] in CryptoAdapter.coin-catalog: Rectangle {
-                        visible: coin.visible;
-                        height: coin.visible ? 40px : 0px;
+                        visible: coin.visible && (!root.favorites-only || coin.favorite);
+                        height: coin.visible && (!root.favorites-only || coin.favorite) ? 40px : 0px;
                         background: option-touch.has-hover ? Palette.surface-hover : transparent;
                         border-radius: 6px;
 
@@ -493,6 +517,35 @@ component CoinSelector inherits Rectangle {
                                 font-weight: index == selected-index ? 500 : 400;
                                 vertical-alignment: center;
                                 horizontal-stretch: 1;
+                            }
+
+                            Rectangle {
+                                width: 20px;
+                                height: 20px;
+                                border-radius: 4px;
+                                background: favorite-touch.has-hover ? Palette.surface-hover : transparent;
+
+                                Text {
+                                    text: coin.favorite ? "★" : "☆";
+                                    color: coin.favorite ? Palette.accent : Palette.text-muted;
+                                    font-size: 11px;
+                                    font-weight: 600;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+
+                                favorite-touch := TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => {
+                                        let next = !coin.favorite;
+                                        let result = CryptoAdapter.set-favorite-coin(coin.id, next);
+                                        if (result == "") {
+                                            coin.favorite = next;
+                                        } else {
+                                            NotificationAdapter.show(result, true);
+                                        }
+                                    }
+                                }
                             }
 
                             if index == selected-index: Text {

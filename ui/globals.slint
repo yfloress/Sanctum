@@ -321,6 +321,7 @@ export struct CatalogCoin {
     name: string,
     symbol: string,
     custom: bool,
+    favorite: bool,
     visible: bool,
     selected: bool,
 }
@@ -341,6 +342,7 @@ export global CryptoAdapter {
     callback filter-coin-catalog(string);
     callback add-custom-coin(string, string, string) -> string; // id, name, symbol
     callback delete-custom-coin(string) -> string; // id
+    callback set-favorite-coin(string, bool) -> string; // id, favorite
     callback select-all-coins();
     callback clear-coin-selection();
     callback delete-selected-coins() -> string;

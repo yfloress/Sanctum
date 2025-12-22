@@ -132,6 +132,7 @@ pub const SETTING_TICKER_COINS: &str = "ticker_coins";
 pub const SETTING_CRYPTO_LAST_UPDATED: &str = "crypto_last_updated";
 pub const SETTING_CRYPTO_CUSTOM_COINS: &str = "crypto_custom_coins";
 pub const SETTING_CRYPTO_HIDDEN_COINS: &str = "crypto_hidden_coins";
+pub const SETTING_CRYPTO_FAVORITE_COINS: &str = "crypto_favorite_coins";
 
 // ==================== Helper Functions ====================
 
@@ -888,6 +889,15 @@ impl AppController {
             .unwrap_or_default()
     }
 
+    /// Loads favorite coin IDs for the catalog UI
+    pub fn get_favorite_coin_ids(&self) -> Vec<String> {
+        self.get_app_setting(SETTING_CRYPTO_FAVORITE_COINS)
+            .ok()
+            .filter(|val| !val.is_empty())
+            .and_then(|val| serde_json::from_str::<Vec<String>>(&val).ok())
+            .unwrap_or_default()
+    }
+
     /// Saves custom coins to settings
     fn save_custom_coin_catalog(
         &self,
@@ -903,6 +913,32 @@ impl AppController {
         let json =
             serde_json::to_string(&ids).map_err(|e| ControllerError::Validation(e.to_string()))?;
         self.set_app_setting(SETTING_CRYPTO_HIDDEN_COINS, &json)
+    }
+
+    /// Saves favorite coin IDs to settings
+    fn save_favorite_coin_ids(&self, ids: Vec<String>) -> Result<(), ControllerError> {
+        let json =
+            serde_json::to_string(&ids).map_err(|e| ControllerError::Validation(e.to_string()))?;
+        self.set_app_setting(SETTING_CRYPTO_FAVORITE_COINS, &json)
+    }
+
+    /// Marks or unmarks a coin as favorite
+    pub fn set_favorite_coin(&self, id: String, favorite: bool) -> Result<(), ControllerError> {
+        let id = validate_coin_id_str(&id)?;
+        let mut favorites = self.get_favorite_coin_ids();
+        let had_id = favorites.iter().any(|coin| coin == &id);
+
+        if favorite && !had_id {
+            favorites.push(id);
+            favorites.sort();
+            favorites.dedup();
+            self.save_favorite_coin_ids(favorites)?;
+        } else if !favorite && had_id {
+            favorites.retain(|coin| coin != &id);
+            self.save_favorite_coin_ids(favorites)?;
+        }
+
+        Ok(())
     }
 
     /// Returns the full coin catalog (defaults + custom)
@@ -1001,6 +1037,12 @@ impl AppController {
         if active.iter().any(|coin| coin == &id) {
             active.retain(|coin| coin != &id);
             let _ = self.save_active_ticker_ids(active);
+        }
+
+        let mut favorites = self.get_favorite_coin_ids();
+        if favorites.iter().any(|coin| coin == &id) {
+            favorites.retain(|coin| coin != &id);
+            let _ = self.save_favorite_coin_ids(favorites);
         }
 
         Ok(())
