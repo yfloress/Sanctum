@@ -1247,48 +1247,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             return None;
         }
 
-        let max_val = data
-            .iter()
-            .map(|(_, value)| *value)
-            .fold(0.0_f64, f64::max);
-        let upper = if max_val <= 0.0 { 1.0 } else { max_val * 1.08 };
-
         let temp_svg = std::env::temp_dir().join("sanctum_portfolio_dist_temp.svg");
         let root = SVGBackend::new(&temp_svg, (1800, 560)).into_drawing_area();
         root.fill(&RGBColor(10, 10, 15)).ok()?;
 
-        let count = data.len();
-        let labels: Vec<String> = data.iter().map(|(label, _)| label.clone()).collect();
-
-        let mut chart = ChartBuilder::on(&root)
-            .margin(40)
-            .x_label_area_size(20)
-            .y_label_area_size(220)
-            .build_cartesian_2d(0f64..upper, 0f64..count as f64)
-            .ok()?;
-
-        chart
-            .configure_mesh()
-            .disable_mesh()
-            .disable_x_axis()
-            .y_labels(count)
-            .y_label_formatter(&move |v| {
-                let idx = v.round() as isize;
-                if idx < 0 {
-                    return String::new();
-                }
-                let idx = idx as usize;
-                if idx >= labels.len() {
-                    return String::new();
-                }
-                labels[labels.len() - 1 - idx].clone()
-            })
-            .label_style(("sans-serif", 28).into_font().color(&RGBColor(163, 163, 163)))
-            .axis_style(ShapeStyle::from(&RGBColor(45, 45, 45)).stroke_width(1))
-            .draw()
-            .ok()?;
-
-        let colors = [
+        let palette = [
             RGBColor(139, 92, 246),
             RGBColor(236, 72, 153),
             RGBColor(56, 189, 248),
@@ -1297,37 +1260,88 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             RGBColor(168, 85, 247),
         ];
 
-        let value_style = ("sans-serif", 26)
+        let sizes: Vec<f64> = data.iter().map(|(_, value)| *value).collect();
+        let labels_empty: Vec<String> = vec![String::new(); data.len()];
+        let colors: Vec<RGBColor> = data
+            .iter()
+            .enumerate()
+            .map(|(idx, _)| palette[idx % palette.len()])
+            .collect();
+
+        let center = (420, 280);
+        let radius = 190.0;
+        let mut pie = Pie::new(&center, &radius, &sizes, &colors, &labels_empty);
+        pie.start_angle(-90.0);
+        pie.donut_hole(radius * 0.6);
+        pie.label_style(
+            ("sans-serif", 1)
+                .into_font()
+                .color(&RGBColor(10, 10, 15)),
+        );
+
+        root.draw(&pie).ok()?;
+
+        let legend_style = ("sans-serif", 26)
             .into_font()
             .color(&RGBColor(203, 213, 225))
-            .pos(Pos::new(HPos::Right, VPos::Center));
+            .pos(Pos::new(HPos::Left, VPos::Center));
+        let legend_title_style = ("sans-serif", 20)
+            .into_font()
+            .color(&RGBColor(148, 163, 184))
+            .pos(Pos::new(HPos::Left, VPos::Center));
+        let total_style = ("sans-serif", 32)
+            .into_font()
+            .color(&RGBColor(226, 232, 240))
+            .pos(Pos::new(HPos::Center, VPos::Center));
+        let total_label_style = ("sans-serif", 18)
+            .into_font()
+            .color(&RGBColor(148, 163, 184))
+            .pos(Pos::new(HPos::Center, VPos::Center));
 
-        for (idx, (_, value)) in data.iter().enumerate() {
-            let y = (count - 1 - idx) as f64;
+        root.draw(&Text::new("TOTAL", (center.0, center.1 - 16), total_label_style))
+            .ok()?;
+        root.draw(&Text::new(
+            format_money((total * 100.0) as i64, "USD"),
+            (center.0, center.1 + 16),
+            total_style,
+        ))
+        .ok()?;
+
+        let legend_x = 860;
+        let row_height = 48;
+        let height = 560i32;
+        let legend_start_y =
+            ((height - (data.len() as i32 * row_height)) / 2).max(96);
+
+        root.draw(&Text::new(
+            "ASSETS",
+            (legend_x, legend_start_y - 32),
+            legend_title_style,
+        ))
+        .ok()?;
+
+        for (idx, (label, value)) in data.iter().enumerate() {
+            let y = legend_start_y + (idx as i32 * row_height);
             let color = colors[idx % colors.len()];
-
-            chart
-                .draw_series(std::iter::once(Rectangle::new(
-                    [(0.0, y + 0.18), (*value, y + 0.82)],
-                    ShapeStyle::from(&color).filled(),
-                )))
-                .ok()?;
-
             let percent = (*value / total) * 100.0;
             let value_label = format!(
-                "{} · {:.1}%",
-                format_money((value * 100.0) as i64, "USD"),
-                percent
+                "{} · {:.1}% · {}",
+                label,
+                percent,
+                format_money((value * 100.0) as i64, "USD")
             );
 
-            chart
-                .draw_series(std::iter::once(Text::new(
-                    value_label,
-                    (upper * 0.98, y + 0.5),
-                    value_style.clone(),
-                )))
-                .ok()?;
-
+            root.draw(&Rectangle::new(
+                [(legend_x, y - 10), (legend_x + 20, y + 10)],
+                ShapeStyle::from(&color).filled(),
+            ))
+            .ok()?;
+            root.draw(&Text::new(
+                value_label,
+                (legend_x + 32, y),
+                legend_style.clone(),
+            ))
+            .ok()?;
         }
 
         root.present().ok()?;

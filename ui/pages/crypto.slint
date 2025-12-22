@@ -10,7 +10,7 @@ import { CryptoRow, WalletRow, TickerItem, CryptoCard, GhostButton } from "../co
 import { AssetDetailPanel } from "../components/asset_detail.slint";
 import { WalletDetailPanel } from "../components/wallet_detail.slint";
 import { PortfolioDistributionChart } from "../components/crypto_charts.slint";
-import { TextButton, BorderButton, ActionButton } from "../widgets.slint";
+import { TextButton, BorderButton, ActionButton, CustomVScrollbar } from "../widgets.slint";
 
 // ==================== Tab Button ====================
 component TabButton inherits Rectangle {
@@ -366,131 +366,153 @@ export component CryptoPage inherits Rectangle {
             background: Palette.background;
 
             // TAB: PORTFOLIO
-            if root.active-tab == "portfolio": VerticalLayout {
-                padding-left: 64px;
-                padding-right: 64px;
-                padding-bottom: 32px;
-                spacing: 0px;
+            if root.active-tab == "portfolio": portfolio-scroll := Flickable {
+                vertical-stretch: 1;
+                width: 100%;
+                height: 100%;
+                property <length> cards-height: CryptoAdapter.portfolio.length > 4 ? 388px : 200px;
+                property <length> content-height: CryptoAdapter.portfolio.length > 0
+                    ? cards-height + 420px
+                    : 520px;
 
-                Rectangle { height: 12px; }
+                portfolio-content := VerticalLayout {
+                    padding-left: 64px;
+                    padding-right: 64px;
+                    padding-bottom: 32px;
+                    spacing: 0px;
+                    width: parent.width;
 
-                // Empty State
-                if CryptoAdapter.portfolio.length == 0: Rectangle {
-                    vertical-stretch: 1;
-                    
-                    VerticalLayout {
-                        alignment: center;
-                        spacing: 16px;
-                        
-                        Rectangle {
-                            width: 80px;
-                            height: 80px;
-                            border-radius: 40px;
-                            background: Palette.surface;
-                            border-width: 1px;
-                            border-color: Palette.border-subtle;
-                            x: (parent.width - self.width) / 2;
-                            
-                            Text {
-                                text: "📈";
-                                font-size: 32px;
-                                vertical-alignment: center;
-                                horizontal-alignment: center;
-                            }
-                        }
-                        
-                        Text { 
-                            text: "No assets tracked yet"; 
-                            color: Palette.text-secondary; 
-                            font-size: 16px; 
-                            font-weight: 400;
-                            horizontal-alignment: center; 
-                        }
-                        
-                        Text { 
-                            text: "Create a wallet first, then add your crypto holdings"; 
-                            color: Palette.text-muted; 
-                            font-size: 13px;
-                            horizontal-alignment: center; 
-                        }
-                    }
-                }
+                    Rectangle { height: 12px; }
 
-                // Portfolio Cards
-                if CryptoAdapter.portfolio.length > 0: VerticalLayout {
-                    spacing: 24px;
-                    
-                    // Section title
-                    Text {
-                        text: "YOUR HOLDINGS";
-                        color: Palette.text-muted;
-                        font-size: 10px;
-                        font-weight: 600;
-                        letter-spacing: 2px;
-                    }
-                    
-                    // Cards horizontal scroll
-                    Flickable {
-                        property <bool> two-rows: CryptoAdapter.portfolio.length > 4;
-                        property <int> columns: two-rows 
-                            ? ((CryptoAdapter.portfolio.length + 1) / 2) 
-                            : CryptoAdapter.portfolio.length;
-
-                        height: two-rows ? 388px : 200px;
-                        viewport-width: (columns * 256px);
+                    // Empty State
+                    if CryptoAdapter.portfolio.length == 0: Rectangle {
+                        height: 360px;
                         
-                        if !two-rows: HorizontalLayout {
+                        VerticalLayout {
+                            alignment: center;
                             spacing: 16px;
-                            alignment: start;
                             
-                            for asset[index] in CryptoAdapter.portfolio: CryptoCard {
-                                name: asset.name;
-                                symbol: asset.symbol;
-                                price: asset.price;
-                                amount: asset.amount;
-                                value: asset.value;
-                                change: asset.change-24h;
-                                is-positive: asset.is-positive;
+                            Rectangle {
+                                width: 80px;
+                                height: 80px;
+                                border-radius: 40px;
+                                background: Palette.surface;
+                                border-width: 1px;
+                                border-color: Palette.border-subtle;
+                                x: (parent.width - self.width) / 2;
                                 
-                                clicked => {
-                                    CryptoAdapter.fetch-asset-details(asset.id);
-                                    CryptoAdapter.show-asset-detail = true;
+                                Text {
+                                    text: "📈";
+                                    font-size: 32px;
+                                    vertical-alignment: center;
+                                    horizontal-alignment: center;
                                 }
                             }
-                        }
-
-                        if two-rows: Rectangle {
-                            width: columns * 256px;
-                            height: 388px;
-                            background: transparent;
                             
-                            for asset[index] in CryptoAdapter.portfolio: CryptoCard {
-                                x: Math.floor(index / 2) * 256px;
-                                y: Math.mod(index, 2) * 196px;
-                                name: asset.name;
-                                symbol: asset.symbol;
-                                price: asset.price;
-                                amount: asset.amount;
-                                value: asset.value;
-                                change: asset.change-24h;
-                                is-positive: asset.is-positive;
-                                
-                                clicked => {
-                                    CryptoAdapter.fetch-asset-details(asset.id);
-                                    CryptoAdapter.show-asset-detail = true;
-                                }
+                            Text { 
+                                text: "No assets tracked yet"; 
+                                color: Palette.text-secondary; 
+                                font-size: 16px; 
+                                font-weight: 400;
+                                horizontal-alignment: center; 
+                            }
+                            
+                            Text { 
+                                text: "Create a wallet first, then add your crypto holdings"; 
+                                color: Palette.text-muted; 
+                                font-size: 13px;
+                                horizontal-alignment: center; 
                             }
                         }
                     }
 
-                    PortfolioDistributionChart {
-                        horizontal-stretch: 1;
-                        has-data: CryptoAdapter.portfolio-chart-ready;
-                        image: CryptoAdapter.portfolio-chart-image;
+                    // Portfolio Cards
+                    if CryptoAdapter.portfolio.length > 0: VerticalLayout {
+                        spacing: 24px;
+                        
+                        // Section title
+                        Text {
+                            text: "YOUR HOLDINGS";
+                            color: Palette.text-muted;
+                            font-size: 10px;
+                            font-weight: 600;
+                            letter-spacing: 2px;
+                        }
+                        
+                        // Cards horizontal scroll
+                        Flickable {
+                            property <bool> two-rows: CryptoAdapter.portfolio.length > 4;
+                            property <int> columns: two-rows 
+                                ? ((CryptoAdapter.portfolio.length + 1) / 2) 
+                                : CryptoAdapter.portfolio.length;
+
+                            height: two-rows ? 388px : 200px;
+                            viewport-width: (columns * 256px);
+                            
+                            if !two-rows: HorizontalLayout {
+                                spacing: 16px;
+                                alignment: start;
+                                
+                                for asset[index] in CryptoAdapter.portfolio: CryptoCard {
+                                    name: asset.name;
+                                    symbol: asset.symbol;
+                                    price: asset.price;
+                                    amount: asset.amount;
+                                    value: asset.value;
+                                    change: asset.change-24h;
+                                    is-positive: asset.is-positive;
+                                    
+                                    clicked => {
+                                        CryptoAdapter.fetch-asset-details(asset.id);
+                                        CryptoAdapter.show-asset-detail = true;
+                                    }
+                                }
+                            }
+
+                            if two-rows: Rectangle {
+                                width: columns * 256px;
+                                height: 388px;
+                                background: transparent;
+                                
+                                for asset[index] in CryptoAdapter.portfolio: CryptoCard {
+                                    x: Math.floor(index / 2) * 256px;
+                                    y: Math.mod(index, 2) * 196px;
+                                    name: asset.name;
+                                    symbol: asset.symbol;
+                                    price: asset.price;
+                                    amount: asset.amount;
+                                    value: asset.value;
+                                    change: asset.change-24h;
+                                    is-positive: asset.is-positive;
+                                    
+                                    clicked => {
+                                        CryptoAdapter.fetch-asset-details(asset.id);
+                                        CryptoAdapter.show-asset-detail = true;
+                                    }
+                                }
+                            }
+                        }
+
+                        PortfolioDistributionChart {
+                            horizontal-stretch: 1;
+                            has-data: CryptoAdapter.portfolio-chart-ready;
+                            image: CryptoAdapter.portfolio-chart-image;
+                        }
                     }
+                    
+                    Rectangle { height: 24px; }
                 }
-                
-                Rectangle { vertical-stretch: 1; }
+
+                viewport-height: max(self.height, content-height);
+
+                CustomVScrollbar {
+                    x: parent.width - self.width - 6px;
+                    y: 0;
+                    height: parent.height;
+                    visible-height: parent.height;
+                    viewport-height: content-height;
+                    viewport-y: portfolio-scroll.viewport-y;
+                }
             }
 
             // TAB: WALLETS
