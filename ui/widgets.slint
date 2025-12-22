@@ -374,3 +374,51 @@ export component CustomScrollbar inherits Rectangle {
         }
     }
 }
+
+// ==================== CustomVScrollbar ====================
+// Vertical scrollbar indicator - Auto-hides when not scrolling
+
+export component CustomVScrollbar inherits Rectangle {
+    in property <length> viewport-height;
+    in property <length> viewport-y;
+    in property <length> visible-height;
+
+    property <bool> is-scrolling: false;
+
+    width: 4px;
+    height: visible-height;
+    background: transparent;
+
+    visible: viewport-height > visible-height;
+
+    changed viewport-y => {
+        self.is-scrolling = true;
+        hide-timer.restart();
+    }
+
+    if viewport-height > visible-height: Rectangle {
+        width: 100%;
+        border-radius: 2px;
+        background: Palette.text-muted;
+        opacity: (root.is-scrolling || touch.has-hover) ? 0.6 : 0.0;
+
+        animate opacity {
+            duration: 600ms;
+            easing: ease-out;
+        }
+
+        height: max(20px, parent.height * (parent.height / viewport-height));
+        y: (-viewport-y / viewport-height) * parent.height;
+
+        touch := TouchArea {
+            mouse-cursor: pointer;
+        }
+    }
+
+    hide-timer := Timer {
+        interval: 1000ms;
+        triggered => {
+            root.is-scrolling = false;
+        }
+    }
+}
