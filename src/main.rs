@@ -1532,14 +1532,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let mut total_val = 0.0;
             let mut total_cost = 0.0;
+            let mut priced_assets = 0;
 
             let mapped_assets: Vec<CryptoAssetData> = assets
                 .iter()
                 .map(|a| {
-                    total_val += a.current_value;
-                    total_cost += a.total_cost_basis;
-
                     let price_data = price_map.get(&a.coin_id);
+                    if price_data.is_some() {
+                        total_val += a.current_value;
+                        total_cost += a.total_cost_basis;
+                        priced_assets += 1;
+                    }
 
                     let change_percent = price_data
                         .map(|p| p.price_change_percentage_24h)
@@ -1633,8 +1636,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
 
-            let total_pnl_val = total_val - total_cost;
-            let pnl_sign = if total_pnl_val >= 0.0 { "+" } else { "-" };
+            let (total_value_label, total_pnl_label, total_pnl_positive) = if priced_assets > 0 {
+                let total_pnl_val = total_val - total_cost;
+                let pnl_sign = if total_pnl_val >= 0.0 { "+" } else { "-" };
+                (
+                    format_money((total_val * 100.0) as i64, "USD"),
+                    format!(
+                        "{} {}",
+                        pnl_sign,
+                        format_money((total_pnl_val.abs() * 100.0) as i64, "USD")
+                    ),
+                    total_pnl_val >= 0.0,
+                )
+            } else {
+                ("N/A".to_string(), "N/A".to_string(), true)
+            };
 
             // Try to load CLP rate
             let clp_cached = controller
@@ -1678,16 +1694,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let adapter = ui.global::<CryptoAdapter>();
                 adapter.set_portfolio(ModelRc::new(VecModel::from(mapped_assets)));
                 adapter.set_market_tickers(ModelRc::new(VecModel::from(tickers)));
-                adapter.set_total_value(SharedString::from(format_money(
-                    (total_val * 100.0) as i64,
-                    "USD",
-                )));
-                adapter.set_total_pnl_positive(total_pnl_val >= 0.0);
-                adapter.set_total_pnl(SharedString::from(format!(
-                    "{} {}",
-                    pnl_sign,
-                    format_money((total_pnl_val.abs() * 100.0) as i64, "USD")
-                )));
+                adapter.set_total_value(SharedString::from(total_value_label));
+                adapter.set_total_pnl_positive(total_pnl_positive);
+                adapter.set_total_pnl(SharedString::from(total_pnl_label));
                 adapter.set_clp_rate(SharedString::from(clp_display));
                 if let Some(label) = last_updated_label {
                     adapter.set_last_updated(label.into());

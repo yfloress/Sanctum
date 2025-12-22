@@ -1619,6 +1619,40 @@ impl Database {
         target_entry.total_cost_basis += cost_transferred.max(0.0);
     }
 
+    /// Applies a transfer pair for the same asset, reducing cost basis only for fee losses
+    fn apply_transfer_pair(
+        assets: &mut HashMap<String, AggregatedAsset>,
+        source: &CryptoTransaction,
+        target: &CryptoTransaction,
+    ) -> bool {
+        if source.coin_id != target.coin_id {
+            return false;
+        }
+
+        let entry = assets
+            .entry(source.coin_id.clone())
+            .or_insert_with(|| AggregatedAsset::new(source.coin_id.clone(), source.symbol.clone()));
+
+        let prev_amount = entry.total_amount;
+        let prev_cost = entry.total_cost_basis;
+        if prev_amount <= 0.0 {
+            entry.total_amount = (entry.total_amount - source.amount).max(0.0) + target.amount;
+            entry.total_cost_basis += target.fee.unwrap_or(0.0);
+            return true;
+        }
+
+        let unit_cost = prev_cost / prev_amount;
+        let cost_out = unit_cost * source.amount;
+
+        entry.total_amount = (entry.total_amount - source.amount).max(0.0);
+        entry.total_cost_basis = (entry.total_cost_basis - cost_out).max(0.0);
+
+        entry.total_amount += target.amount;
+        entry.total_cost_basis += unit_cost * target.amount;
+        entry.total_cost_basis += target.fee.unwrap_or(0.0);
+        true
+    }
+
     /// Calculates aggregated portfolio from all transactions across all wallets
     /// This is the CRITICAL function that computes total holdings per coin
     pub fn get_aggregated_portfolio(&self) -> Result<Vec<AggregatedAsset>, DbError> {
@@ -1643,13 +1677,35 @@ impl Database {
                 continue;
             }
 
-            // Handle swap pairs to carry over cost basis to the acquired asset
+            // Handle swap/transfer pairs to carry over cost basis
             if let Some(rel_id) = &tx.related_tx_id {
                 if let Some(counter) = tx_map.get(rel_id) {
+                    let is_transfer_pair = (tx.transaction_type == "transfer_out"
+                        && counter.transaction_type == "transfer_in")
+                        || (tx.transaction_type == "transfer_in"
+                            && counter.transaction_type == "transfer_out");
                     let is_swap_pair = (tx.transaction_type == "swap"
                         && counter.transaction_type == "transfer_in")
                         || (tx.transaction_type == "transfer_in"
                             && counter.transaction_type == "swap");
+
+                    if is_transfer_pair {
+                        if processed.contains(rel_id) || processed.contains(&tx.id) {
+                            continue;
+                        }
+
+                        let applied = if tx.transaction_type == "transfer_out" {
+                            Self::apply_transfer_pair(&mut assets, &tx, counter)
+                        } else {
+                            Self::apply_transfer_pair(&mut assets, counter, &tx)
+                        };
+
+                        if applied {
+                            processed.insert(tx.id.clone());
+                            processed.insert(rel_id.clone());
+                            continue;
+                        }
+                    }
 
                     if is_swap_pair {
                         if processed.contains(rel_id) || processed.contains(&tx.id) {
@@ -1752,10 +1808,32 @@ impl Database {
 
             if let Some(rel_id) = &tx.related_tx_id {
                 if let Some(counter) = tx_map.get(rel_id) {
+                    let is_transfer_pair = (tx.transaction_type == "transfer_out"
+                        && counter.transaction_type == "transfer_in")
+                        || (tx.transaction_type == "transfer_in"
+                            && counter.transaction_type == "transfer_out");
                     let is_swap_pair = (tx.transaction_type == "swap"
                         && counter.transaction_type == "transfer_in")
                         || (tx.transaction_type == "transfer_in"
                             && counter.transaction_type == "swap");
+
+                    if is_transfer_pair {
+                        if processed.contains(rel_id) || processed.contains(&tx.id) {
+                            continue;
+                        }
+
+                        let applied = if tx.transaction_type == "transfer_out" {
+                            Self::apply_transfer_pair(&mut assets, &tx, counter)
+                        } else {
+                            Self::apply_transfer_pair(&mut assets, counter, &tx)
+                        };
+
+                        if applied {
+                            processed.insert(tx.id.clone());
+                            processed.insert(rel_id.clone());
+                            continue;
+                        }
+                    }
 
                     if is_swap_pair {
                         if processed.contains(rel_id) || processed.contains(&tx.id) {
