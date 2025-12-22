@@ -485,6 +485,15 @@ component CoinSelector inherits Rectangle {
                     width: parent.width;
                     height: parent.height;
                     viewport-height: CryptoAdapter.coin-catalog.length * 40px + 8px;
+
+                    background-touch := TouchArea {
+                        width: parent.width;
+                        height: parent.height;
+                        clicked => {
+                            root.popup-open = false;
+                            root.reset-search();
+                        }
+                    }
                     
                     coin-list := VerticalLayout {
                         spacing: 0px;
