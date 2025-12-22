@@ -15,6 +15,9 @@ component FormField inherits Rectangle {
     in property <string> placeholder: "";
     in-out property <string> value: "";
     in property <bool> large: false;
+    in property <bool> show-refresh: false;
+    callback edited(string);
+    callback refresh();
 
     height: large ? 88px : 64px;
     background: transparent;
@@ -22,12 +25,38 @@ component FormField inherits Rectangle {
     VerticalLayout {
         spacing: 8px;
 
-        Text {
-            text: root.label;
-            color: Palette.text-muted;
-            font-size: 10px;
-            font-weight: 500;
-            letter-spacing: 1.5px;
+        HorizontalLayout {
+            spacing: 8px;
+
+            Text {
+                text: root.label;
+                color: Palette.text-muted;
+                font-size: 10px;
+                font-weight: 500;
+                letter-spacing: 1.5px;
+                horizontal-stretch: 1;
+            }
+
+            if root.show-refresh: Rectangle {
+                width: 20px;
+                height: 20px;
+                border-radius: 6px;
+                background: @linear-gradient(135deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%);
+
+                Text {
+                    text: "↻";
+                    color: Palette.text-primary;
+                    font-size: 10px;
+                    font-weight: 600;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+
+                TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { root.refresh(); }
+                }
+            }
         }
 
         Rectangle {
@@ -58,6 +87,7 @@ component FormField inherits Rectangle {
                     font-size: large ? 24px : 14px;
                     font-weight: large ? 500 : 400;
                     vertical-alignment: center;
+                    edited => { root.edited(root.value); }
                 }
             }
 
@@ -680,6 +710,35 @@ export component AddCryptoTransactionModal inherits Rectangle {
     property <int> swap-coin-index: 0;
     property <string> move-amount: "";
 
+    function update-swap-quote() {
+        if (selected-type != "swap") {
+            return;
+        }
+        if (amount == "" || CryptoAdapter.coin-catalog.length == 0) {
+            swap-amount = "";
+            return;
+        }
+
+        let safe-index = coin-index >= CryptoAdapter.coin-catalog.length ? 0 : coin-index;
+        let swap-safe-index = swap-coin-index >= CryptoAdapter.coin-catalog.length ? 0 : swap-coin-index;
+        let from-coin-id = CryptoAdapter.coin-catalog[safe-index].id;
+        let to-coin-id = CryptoAdapter.coin-catalog[swap-safe-index].id;
+
+        let quote = CryptoAdapter.get-swap-quote(from-coin-id, to-coin-id, amount);
+        swap-amount = quote;
+    }
+
+    function refresh-swap-quote() {
+        CryptoAdapter.refresh-prices();
+        root.update-swap-quote();
+        swap-quote-timer.restart();
+    }
+
+    swap-quote-timer := Timer {
+        interval: 1200ms;
+        triggered => { root.update-swap-quote(); }
+    }
+
     init => {
         CryptoAdapter.load-coin-catalog();
         CryptoAdapter.filter-coin-catalog("");
@@ -702,6 +761,15 @@ export component AddCryptoTransactionModal inherits Rectangle {
         move-amount = "";
         CryptoAdapter.filter-coin-catalog("");
     }
+
+    changed selected-type => {
+        if (selected-type == "swap") {
+            root.update-swap-quote();
+        }
+    }
+
+    changed coin-index => { root.update-swap-quote(); }
+    changed swap-coin-index => { root.update-swap-quote(); }
 
     function submit() {
         if (CryptoAdapter.wallet-list.length == 0) {
@@ -1028,6 +1096,11 @@ export component AddCryptoTransactionModal inherits Rectangle {
                         placeholder: "0.00"; 
                         value <=> root.amount; 
                         large: true; 
+                        edited => {
+                            if (root.selected-type == "swap") {
+                                root.update-swap-quote();
+                            }
+                        }
                     }
 
                     if root.selected-type == "swap": FormField {
@@ -1035,6 +1108,8 @@ export component AddCryptoTransactionModal inherits Rectangle {
                         placeholder: "0.00";
                         value <=> root.swap-amount;
                         large: true;
+                        show-refresh: true;
+                        refresh => { root.refresh-swap-quote(); }
                     }
                     if root.selected-type == "move": FormField {
                         label: "TO AMOUNT (optional)";

@@ -2739,6 +2739,49 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     {
         let controller = controller.clone();
+        ui.global::<CryptoAdapter>()
+            .on_get_swap_quote(move |from_coin_id, to_coin_id, amount_str| {
+                let amount_clean = amount_str
+                    .replace(",", "")
+                    .replace("$", "")
+                    .trim()
+                    .to_string();
+                let amount: f64 = match amount_clean.parse() {
+                    Ok(value) if value > 0.0 => value,
+                    _ => return SharedString::from(""),
+                };
+
+                let prices = controller.load_crypto_prices().unwrap_or_default();
+                let from_price = prices
+                    .iter()
+                    .find(|p| p.id == from_coin_id.as_str())
+                    .map(|p| p.current_price)
+                    .unwrap_or(0.0);
+                let to_price = prices
+                    .iter()
+                    .find(|p| p.id == to_coin_id.as_str())
+                    .map(|p| p.current_price)
+                    .unwrap_or(0.0);
+
+                if from_price <= 0.0 || to_price <= 0.0 {
+                    return SharedString::from("");
+                }
+
+                let to_amount = amount * (from_price / to_price);
+                let mut formatted = format!("{:.8}", to_amount);
+                while formatted.contains('.') && formatted.ends_with('0') {
+                    formatted.pop();
+                }
+                if formatted.ends_with('.') {
+                    formatted.pop();
+                }
+
+                SharedString::from(formatted)
+            });
+    }
+
+    {
+        let controller = controller.clone();
         let ui_weak = ui_weak.clone();
 
         ui.global::<CryptoAdapter>()
