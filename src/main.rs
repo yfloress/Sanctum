@@ -2422,14 +2422,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let options: Vec<CatalogCoin> = catalog
                     .into_iter()
-                    .map(|coin| CatalogCoin {
-                        id: SharedString::from(coin.id),
-                        name: SharedString::from(coin.name),
-                        symbol: SharedString::from(coin.symbol),
-                        custom: coin.custom,
-                        favorite: favorites.contains(&coin.id),
-                        visible: true,
-                        selected: false,
+                    .map(|coin| {
+                        let is_favorite = favorites.contains(&coin.id);
+                        CatalogCoin {
+                            id: SharedString::from(coin.id),
+                            name: SharedString::from(coin.name),
+                            symbol: SharedString::from(coin.symbol),
+                            custom: coin.custom,
+                            favorite: is_favorite,
+                            visible: true,
+                            selected: false,
+                        }
                     })
                     .collect();
 
