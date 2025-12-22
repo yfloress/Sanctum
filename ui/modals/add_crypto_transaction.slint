@@ -70,46 +70,141 @@ component FormField inherits Rectangle {
 // ==================== TypeSelector ====================
 component TypeSelector inherits Rectangle {
     in-out property <string> selected-type: "buy";
+    property <string> active-group: (root.selected-type == "buy" || root.selected-type == "sell")
+        ? "trade"
+        : (root.selected-type == "swap" ? "swap" : "move");
 
-    height: 48px;
-    background: Palette.surface;
-    border-radius: 10px;
-    border-width: 1px;
-    border-color: Palette.border;
+    height: root.active-group == "swap" ? 48px : 92px;
+    background: transparent;
 
-    HorizontalLayout {
-        padding: 4px;
-        spacing: 4px;
+    VerticalLayout {
+        spacing: 6px;
 
-        for type[index] in ["buy", "sell", "transfer_in", "transfer_out", "swap"]: Rectangle {
-            horizontal-stretch: 1;
-            background: root.selected-type == type 
-                ? (type == "buy" || type == "transfer_in" ? Palette.success.with-alpha(0.2) : 
-                   type == "sell" || type == "transfer_out" ? Palette.danger.with-alpha(0.2) :
-                   Palette.primary.with-alpha(0.2))
-                : transparent;
-            border-radius: 8px;
-            border-width: root.selected-type == type ? 1px : 0px;
-            border-color: type == "buy" || type == "transfer_in" ? Palette.success.with-alpha(0.4) : 
-                          type == "sell" || type == "transfer_out" ? Palette.danger.with-alpha(0.4) :
-                          Palette.primary.with-alpha(0.4);
+        Rectangle {
+            height: 36px;
+            background: Palette.surface;
+            border-radius: 10px;
+            border-width: 1px;
+            border-color: Palette.border;
 
-            Text {
-                text: type == "buy" ? "BUY" : 
-                      type == "sell" ? "SELL" : 
-                      type == "transfer_in" ? "IN" : 
-                      type == "transfer_out" ? "OUT" : "SWAP";
-                color: root.selected-type == type ? Palette.text-primary : Palette.text-muted;
-                font-size: 9px;
-                font-weight: 600;
-                letter-spacing: 1px;
-                horizontal-alignment: center;
-                vertical-alignment: center;
+            HorizontalLayout {
+                padding: 4px;
+                spacing: 4px;
+
+                for group[index] in ["trade", "move", "swap"]: Rectangle {
+                    horizontal-stretch: 1;
+                    background: root.active-group == group ? Palette.primary.with-alpha(0.2) : transparent;
+                    border-radius: 8px;
+                    border-width: root.active-group == group ? 1px : 0px;
+                    border-color: Palette.primary.with-alpha(0.4);
+
+                    Text {
+                        text: group == "trade" ? "TRADE" : group == "move" ? "MOVE" : "SWAP";
+                        color: root.active-group == group ? Palette.text-primary : Palette.text-muted;
+                        font-size: 9px;
+                        font-weight: 600;
+                        letter-spacing: 1px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            if (group == "trade") {
+                                root.selected-type = "buy";
+                            } else if (group == "move") {
+                                root.selected-type = "move";
+                            } else {
+                                root.selected-type = "swap";
+                            }
+                        }
+                    }
+                }
             }
+        }
 
-            TouchArea { 
-                mouse-cursor: pointer;
-                clicked => { root.selected-type = type; } 
+        if root.active-group == "trade": Rectangle {
+            height: 48px;
+            background: Palette.surface;
+            border-radius: 10px;
+            border-width: 1px;
+            border-color: Palette.border;
+
+            HorizontalLayout {
+                padding: 4px;
+                spacing: 4px;
+
+                for type[index] in ["buy", "sell"]: Rectangle {
+                    horizontal-stretch: 1;
+                    background: root.selected-type == type
+                        ? (type == "buy" ? Palette.success.with-alpha(0.2) : Palette.danger.with-alpha(0.2))
+                        : transparent;
+                    border-radius: 8px;
+                    border-width: root.selected-type == type ? 1px : 0px;
+                    border-color: type == "buy"
+                        ? Palette.success.with-alpha(0.4)
+                        : Palette.danger.with-alpha(0.4);
+
+                    Text {
+                        text: type == "buy" ? "BUY" : "SELL";
+                        color: root.selected-type == type ? Palette.text-primary : Palette.text-muted;
+                        font-size: 9px;
+                        font-weight: 600;
+                        letter-spacing: 1px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.selected-type = type; }
+                    }
+                }
+            }
+        }
+
+        if root.active-group == "move": Rectangle {
+            height: 48px;
+            background: Palette.surface;
+            border-radius: 10px;
+            border-width: 1px;
+            border-color: Palette.border;
+
+            HorizontalLayout {
+                padding: 4px;
+                spacing: 4px;
+
+                for type[index] in ["transfer_in", "transfer_out", "move"]: Rectangle {
+                    horizontal-stretch: 1;
+                    background: root.selected-type == type
+                        ? (type == "transfer_in" ? Palette.success.with-alpha(0.2) :
+                           type == "transfer_out" ? Palette.danger.with-alpha(0.2) :
+                           Palette.primary.with-alpha(0.2))
+                        : transparent;
+                    border-radius: 8px;
+                    border-width: root.selected-type == type ? 1px : 0px;
+                    border-color: type == "transfer_in"
+                        ? Palette.success.with-alpha(0.4)
+                        : type == "transfer_out"
+                            ? Palette.danger.with-alpha(0.4)
+                            : Palette.primary.with-alpha(0.4);
+
+                    Text {
+                        text: type == "transfer_in" ? "IN" : type == "transfer_out" ? "OUT" : "MOVE";
+                        color: root.selected-type == type ? Palette.text-primary : Palette.text-muted;
+                        font-size: 9px;
+                        font-weight: 600;
+                        letter-spacing: 1px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.selected-type = type; }
+                    }
+                }
             }
         }
     }
@@ -118,6 +213,7 @@ component TypeSelector inherits Rectangle {
 // ==================== WalletSelector ====================
 component WalletSelector inherits Rectangle {
     in-out property <int> selected-index: 0;
+    in property <string> label: "WALLET";
     
     height: 64px;
     background: transparent;
@@ -126,7 +222,7 @@ component WalletSelector inherits Rectangle {
         spacing: 8px;
         
         Text { 
-            text: "WALLET"; 
+            text: root.label; 
             color: Palette.text-muted; 
             font-size: 10px; 
             font-weight: 500; 
@@ -432,9 +528,11 @@ export component AddCryptoTransactionModal inherits Rectangle {
     property <string> date: AppState.current-date;
     property <string> selected-type: "buy";
     property <int> wallet-index: 0;
+    property <int> wallet-index-to: 0;
     property <int> coin-index: 0;
     property <string> swap-amount: "";
     property <int> swap-coin-index: 0;
+    property <string> move-amount: "";
 
     init => {
         CryptoAdapter.load-coin-catalog();
@@ -449,15 +547,21 @@ export component AddCryptoTransactionModal inherits Rectangle {
         date = AppState.current-date;
         selected-type = "buy";
         wallet-index = 0;
+        wallet-index-to = 0;
         coin-index = 0;
         swap-amount = "";
         swap-coin-index = 0;
+        move-amount = "";
         CryptoAdapter.filter-coin-catalog("");
     }
 
     function submit() {
         if (CryptoAdapter.wallet-list.length == 0) {
             NotificationAdapter.show("Please create a wallet first", true);
+            return;
+        }
+        if (selected-type == "move" && CryptoAdapter.wallet-list.length < 2) {
+            NotificationAdapter.show("Create two wallets to move assets", true);
             return;
         }
         if (amount == "") {
@@ -473,6 +577,45 @@ export component AddCryptoTransactionModal inherits Rectangle {
             wallet-index = 0;
         }
         let wallet-id = CryptoAdapter.wallet-list[wallet-index].id;
+
+        if (selected-type == "move") {
+            if (wallet-index-to >= CryptoAdapter.wallet-list.length) {
+                wallet-index-to = 0;
+            }
+            let to-wallet-id = CryptoAdapter.wallet-list[wallet-index-to].id;
+            if (wallet-id == to-wallet-id) {
+                NotificationAdapter.show("Pick two different wallets", true);
+                return;
+            }
+
+            let to-amount = move-amount == "" ? amount : move-amount;
+
+            let safe-index = coin-index >= CryptoAdapter.coin-catalog.length ? 0 : coin-index;
+            let from-coin-id = CryptoAdapter.coin-catalog[safe-index].id;
+            let from-symbol = CryptoAdapter.coin-catalog[safe-index].symbol;
+
+            let result = CryptoAdapter.add-transfer(
+                wallet-id,
+                to-wallet-id,
+                from-coin-id,
+                from-symbol,
+                amount,
+                to-amount,
+                fee,
+                date,
+                notes
+            );
+
+            if (result == "") {
+                root.reset();
+                AppState.show-add-crypto = false;
+                CryptoAdapter.fetch-portfolio();
+                CryptoAdapter.fetch-wallets();
+            } else {
+                NotificationAdapter.show(result, true);
+            }
+            return;
+        }
         
         let safe-index = coin-index >= CryptoAdapter.coin-catalog.length ? 0 : coin-index;
         let from-coin-id = CryptoAdapter.coin-catalog[safe-index].id;
@@ -658,7 +801,20 @@ export component AddCryptoTransactionModal inherits Rectangle {
                     }
 
                     // Wallet Selector
-                    WalletSelector { selected-index <=> root.wallet-index; }
+                    if root.selected-type == "move": VerticalLayout {
+                        spacing: 12px;
+                        WalletSelector {
+                            label: "FROM WALLET";
+                            selected-index <=> root.wallet-index;
+                        }
+                        WalletSelector {
+                            label: "TO WALLET";
+                            selected-index <=> root.wallet-index-to;
+                        }
+                    }
+                    if root.selected-type != "move": WalletSelector {
+                        selected-index <=> root.wallet-index;
+                    }
                     
                     // Warning if no wallets
                     if CryptoAdapter.wallet-list.length == 0: Rectangle {
@@ -689,10 +845,38 @@ export component AddCryptoTransactionModal inherits Rectangle {
                             }
                         }
                     }
+                    if root.selected-type == "move" && CryptoAdapter.wallet-list.length < 2: Rectangle {
+                        height: 40px;
+                        background: #2d1515;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: #4d2525;
+
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+                            spacing: 8px;
+
+                            Text {
+                                text: "⚠";
+                                color: Palette.danger;
+                                font-size: 14px;
+                                vertical-alignment: center;
+                            }
+
+                            Text {
+                                text: "Create another wallet to move assets";
+                                color: Palette.danger;
+                                font-size: 11px;
+                                font-weight: 400;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
 	                    
                     // Amount Field
                     FormField { 
-                        label: root.selected-type == "swap" ? "FROM AMOUNT" : "AMOUNT"; 
+                        label: root.selected-type == "swap" || root.selected-type == "move" ? "FROM AMOUNT" : "AMOUNT"; 
                         placeholder: "0.00"; 
                         value <=> root.amount; 
                         large: true; 
@@ -704,10 +888,16 @@ export component AddCryptoTransactionModal inherits Rectangle {
                         value <=> root.swap-amount;
                         large: true;
                     }
+                    if root.selected-type == "move": FormField {
+                        label: "TO AMOUNT (optional)";
+                        placeholder: "Same as FROM";
+                        value <=> root.move-amount;
+                        large: true;
+                    }
 
                     HorizontalLayout {
                         spacing: 12px;
-                        if root.selected-type != "swap": FormField { 
+                        if root.selected-type != "swap" && root.selected-type != "move": FormField { 
                             label: "PRICE (USD)"; 
                             placeholder: (root.selected-type == "transfer_in" || root.selected-type == "transfer_out")
                                 ? "Optional"

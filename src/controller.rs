@@ -1660,6 +1660,143 @@ impl AppController {
         })
     }
 
+    /// Adds a transfer between two wallets as a paired outflow/inflow transaction
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_crypto_transfer(
+        &self,
+        from_wallet_id: String,
+        to_wallet_id: String,
+        coin_id: String,
+        symbol: String,
+        from_amount: f64,
+        to_amount: f64,
+        fee: Option<f64>,
+        date: String,
+        notes: Option<String>,
+    ) -> Result<String, ControllerError> {
+        self.with_db(|db| {
+            let from_wallet_id = from_wallet_id.trim().to_string();
+            let to_wallet_id = to_wallet_id.trim().to_string();
+            if from_wallet_id.is_empty() || to_wallet_id.is_empty() {
+                return Err(ControllerError::Validation(
+                    "Wallet ID cannot be empty".to_string(),
+                ));
+            }
+            if from_wallet_id == to_wallet_id {
+                return Err(ControllerError::Validation(
+                    "Source and destination wallets must be different".to_string(),
+                ));
+            }
+
+            if db
+                .get_wallet(&from_wallet_id)
+                .map_err(ControllerError::Database)?
+                .is_none()
+            {
+                return Err(ControllerError::Validation(
+                    "Source wallet not found".to_string(),
+                ));
+            }
+            if db
+                .get_wallet(&to_wallet_id)
+                .map_err(ControllerError::Database)?
+                .is_none()
+            {
+                return Err(ControllerError::Validation(
+                    "Destination wallet not found".to_string(),
+                ));
+            }
+
+            let coin_id = validate_coin_id_str(&coin_id)?;
+            let symbol = validate_symbol(&symbol)?;
+            validate_positive_amount(from_amount, "From amount")?;
+            validate_positive_amount(to_amount, "To amount")?;
+            if to_amount > from_amount {
+                return Err(ControllerError::Validation(
+                    "To amount cannot exceed from amount".to_string(),
+                ));
+            }
+
+            let fee = validate_non_negative(fee, "Fee")?;
+            let date = validate_date(&date)?;
+
+            let notes = match notes {
+                Some(n) => {
+                    let validated = validate_field_length(&n, MAX_NOTES_LENGTH, "Notes")?;
+                    Some(sanitize_string(&validated))
+                }
+                None => None,
+            };
+
+            let holdings = db
+                .get_wallet_aggregated_holdings(&from_wallet_id)
+                .map_err(ControllerError::Database)?;
+            let asset = holdings.iter().find(|h| h.coin_id == coin_id);
+            let current_balance = asset.map(|h| h.total_amount).unwrap_or(0.0);
+            if from_amount > current_balance {
+                return Err(ControllerError::Validation(format!(
+                    "Insufficient funds. Available: {:.8} {}",
+                    current_balance, symbol
+                )));
+            }
+
+            let avg_price = asset.map(|h| h.avg_buy_price).unwrap_or(0.0);
+            let transfer_price = if avg_price > 0.0 {
+                Some(avg_price)
+            } else {
+                None
+            };
+
+            log_security_event(
+                SecurityEvent::CryptoTransactionCreated,
+                Some("transfer"),
+            );
+
+            let source_id = Uuid::new_v4().to_string();
+            let target_id = Uuid::new_v4().to_string();
+
+            let source = CryptoTransaction {
+                id: source_id.clone(),
+                wallet_id: from_wallet_id,
+                coin_id: coin_id.clone(),
+                symbol: symbol.clone(),
+                transaction_type: "transfer_out".to_string(),
+                amount: from_amount,
+                price_per_coin: None,
+                fee: None,
+                fee_coin_id: None,
+                fee_amount: None,
+                date: date.clone(),
+                notes: notes.clone(),
+                related_tx_id: Some(target_id.clone()),
+            };
+
+            let target = CryptoTransaction {
+                id: target_id.clone(),
+                wallet_id: to_wallet_id,
+                coin_id,
+                symbol,
+                transaction_type: "transfer_in".to_string(),
+                amount: to_amount,
+                price_per_coin: transfer_price,
+                fee,
+                fee_coin_id: None,
+                fee_amount: None,
+                date,
+                notes,
+                related_tx_id: Some(source_id.clone()),
+            };
+
+            db.create_crypto_transaction(&source)?;
+            if let Err(err) = db.create_crypto_transaction(&target) {
+                let _ = db.delete_crypto_transaction(&source_id);
+                return Err(ControllerError::Database(err));
+            }
+
+            Ok(source_id)
+        })
+    }
+
     /// Adds a swap as a paired outflow/inflow transaction with shared cost basis
     #[allow(clippy::too_many_arguments)]
     pub fn add_crypto_swap(
@@ -1835,7 +1972,7 @@ impl AppController {
 
             if existing.transaction_type == "swap" || existing.related_tx_id.is_some() {
                 return Err(ControllerError::Validation(
-                    "Editing swap transactions is not supported".to_string(),
+                    "Editing paired transactions is not supported".to_string(),
                 ));
             }
 

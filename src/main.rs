@@ -1889,6 +1889,90 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
+    // Add Transfer Callback (between wallets)
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = show_notification.clone();
+
+        // (from_wallet_id, to_wallet_id, coin_id, symbol, from_amount, to_amount, fee, date, notes)
+        ui.global::<CryptoAdapter>().on_add_transfer(
+            move |from_wallet_id,
+                  to_wallet_id,
+                  coin_id,
+                  symbol,
+                  from_amount_str,
+                  to_amount_str,
+                  fee_str,
+                  date,
+                  notes_str|
+                  -> SharedString {
+                let parse_amount = |raw: SharedString, label: &str| -> Result<f64, SharedString> {
+                    let cleaned = raw
+                        .replace(",", "")
+                        .replace("$", "")
+                        .trim()
+                        .to_string();
+                    cleaned
+                        .parse()
+                        .map_err(|_| SharedString::from(format!("Invalid {} format", label)))
+                };
+
+                let from_amount = match parse_amount(from_amount_str, "from amount") {
+                    Ok(v) => v,
+                    Err(e) => return e,
+                };
+
+                let to_amount = if to_amount_str.trim().is_empty() {
+                    from_amount
+                } else {
+                    match parse_amount(to_amount_str, "to amount") {
+                        Ok(v) => v,
+                        Err(e) => return e,
+                    }
+                };
+
+                let fee_clean = fee_str.replace(",", "").replace("$", "").trim().to_string();
+                let fee: Option<f64> = if fee_clean.is_empty() {
+                    None
+                } else {
+                    match fee_clean.parse() {
+                        Ok(v) => Some(v),
+                        Err(_) => return SharedString::from("Invalid fee format"),
+                    }
+                };
+
+                let notes = if notes_str.is_empty() {
+                    None
+                } else {
+                    Some(notes_str.to_string())
+                };
+
+                let result = controller.add_crypto_transfer(
+                    from_wallet_id.to_string(),
+                    to_wallet_id.to_string(),
+                    coin_id.to_string(),
+                    symbol.to_string(),
+                    from_amount,
+                    to_amount,
+                    fee,
+                    date.to_string(),
+                    notes,
+                );
+
+                match result {
+                    Ok(_) => {
+                        reload_portfolio(&ui_weak, &controller);
+                        reload_wallets(&ui_weak, &controller);
+                        notify("Transfer added successfully".into(), false);
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            },
+        );
+    }
+
     // Add Swap Callback
     {
         let controller = controller.clone();
@@ -1983,7 +2067,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 };
 
                 if tx.transaction_type == "swap" || tx.related_tx_id.is_some() {
-                    return SharedString::from("Editing swap transactions is not supported");
+                    return SharedString::from("Editing paired transactions is not supported");
                 }
 
                 let wallet_name = controller
@@ -2192,6 +2276,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let history = controller
                         .get_wallet_transactions(wallet_id_str.clone())
                         .unwrap_or_default();
+                    let history_type_map: HashMap<String, String> = history
+                        .iter()
+                        .map(|tx| (tx.id.clone(), tx.transaction_type.clone()))
+                        .collect();
                     let history_mapped: Vec<AssetTransaction> = history
                         .iter()
                         .map(|tx| {
@@ -2212,7 +2300,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             let notes = tx.notes.clone().unwrap_or_default();
                             let is_swap = tx.transaction_type == "swap"
                                 || (tx.transaction_type == "transfer_in"
-                                    && tx.related_tx_id.is_some());
+                                    && tx
+                                        .related_tx_id
+                                        .as_ref()
+                                        .and_then(|id| history_type_map.get(id))
+                                        .map(|t| t == "swap")
+                                        .unwrap_or(false));
 
                             AssetTransaction {
                                 id: SharedString::from(&tx.id),
@@ -2666,6 +2759,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let history = controller
                         .get_crypto_transactions_by_coin(coin_id_str)
                         .unwrap_or_default();
+                    let history_type_map: HashMap<String, String> = history
+                        .iter()
+                        .map(|tx| (tx.id.clone(), tx.transaction_type.clone()))
+                        .collect();
                     let history_mapped: Vec<AssetTransaction> = history
                         .iter()
                         .map(|tx| {
@@ -2686,7 +2783,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             let notes = tx.notes.clone().unwrap_or_default();
                             let is_swap = tx.transaction_type == "swap"
                                 || (tx.transaction_type == "transfer_in"
-                                    && tx.related_tx_id.is_some());
+                                    && tx
+                                        .related_tx_id
+                                        .as_ref()
+                                        .and_then(|id| history_type_map.get(id))
+                                        .map(|t| t == "swap")
+                                        .unwrap_or(false));
 
                             AssetTransaction {
                                 id: SharedString::from(&tx.id),

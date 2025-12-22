@@ -392,6 +392,8 @@ export global CryptoAdapter {
     
     // (wallet_id, coin_id, symbol, type, amount, price, fee, date, notes)
     callback add-transaction(string, string, string, string, string, string, string, string, string) -> string;
+    // (from_wallet_id, to_wallet_id, coin_id, symbol, from_amount, to_amount, fee, date, notes)
+    callback add-transfer(string, string, string, string, string, string, string, string, string) -> string;
     // (wallet_id, from_coin_id, from_symbol, from_amount, to_coin_id, to_symbol, to_amount, fee, date, notes)
     callback add-swap(string, string, string, string, string, string, string, string, string, string) -> string;
     // (tx_id, amount, price, fee, date, notes)
