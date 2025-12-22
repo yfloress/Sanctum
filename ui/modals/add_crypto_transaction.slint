@@ -421,6 +421,13 @@ component CoinSelector inherits Rectangle {
         drop-shadow-color: #00000066;
         clip: true;
 
+        TouchArea {
+            clicked => {
+                root.popup-open = false;
+                root.reset-search();
+            }
+        }
+
         VerticalLayout {
             width: parent.width;
             height: parent.height;
