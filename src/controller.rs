@@ -133,6 +133,8 @@ pub const SETTING_CRYPTO_LAST_UPDATED: &str = "crypto_last_updated";
 pub const SETTING_CRYPTO_CUSTOM_COINS: &str = "crypto_custom_coins";
 pub const SETTING_CRYPTO_HIDDEN_COINS: &str = "crypto_hidden_coins";
 pub const SETTING_CRYPTO_FAVORITE_COINS: &str = "crypto_favorite_coins";
+pub const SETTING_CRYPTO_LAST_WALLET_ID: &str = "crypto_last_wallet_id";
+pub const SETTING_CRYPTO_LAST_COIN_ID: &str = "crypto_last_coin_id";
 
 // ==================== Helper Functions ====================
 

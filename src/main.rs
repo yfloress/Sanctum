@@ -10,7 +10,8 @@ use plotters::series::{AreaSeries, LineSeries};
 use rand::Rng; // For title animation
 use sanctum::crypto;
 use sanctum::controller::{
-    AppController, MonthlyTrendPoint, SETTING_AUTO_FETCH, SETTING_CRYPTO_LAST_UPDATED,
+    AppController, MonthlyTrendPoint, SETTING_AUTO_FETCH, SETTING_CRYPTO_LAST_COIN_ID,
+    SETTING_CRYPTO_LAST_UPDATED, SETTING_CRYPTO_LAST_WALLET_ID,
 };
 use sanctum::models::CryptoAsset;
 use sanctum::security_log::init_security_logger;
@@ -1491,10 +1492,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             if let Some(ui) = ui_weak.upgrade() {
+                let last_wallet_id = controller
+                    .get_app_setting(SETTING_CRYPTO_LAST_WALLET_ID)
+                    .ok()
+                    .filter(|val| !val.is_empty());
+                let last_wallet_index = last_wallet_id
+                    .as_ref()
+                    .and_then(|id| {
+                        wallet_simple
+                            .iter()
+                            .position(|wallet| wallet.id.as_str() == id)
+                    })
+                    .unwrap_or(0) as i32;
+
                 ui.global::<CryptoAdapter>()
                     .set_wallets(ModelRc::new(VecModel::from(wallet_data)));
                 ui.global::<CryptoAdapter>()
                     .set_wallet_list(ModelRc::new(VecModel::from(wallet_simple)));
+                ui.global::<CryptoAdapter>()
+                    .set_default_wallet_index(last_wallet_index);
             }
         }
     }
@@ -1888,6 +1904,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 match result {
                     Ok(_) => {
+                        let _ = controller.set_app_setting(
+                            SETTING_CRYPTO_LAST_WALLET_ID,
+                            &wallet_id_raw.to_string(),
+                        );
+                        let _ = controller
+                            .set_app_setting(SETTING_CRYPTO_LAST_COIN_ID, &coin_id.to_string());
                         reload_portfolio(&ui_weak, &controller);
                         notify("Asset added successfully".into(), false);
                         SharedString::from("")
@@ -1971,6 +1993,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 match result {
                     Ok(_) => {
+                        let _ = controller.set_app_setting(
+                            SETTING_CRYPTO_LAST_WALLET_ID,
+                            &from_wallet_id.to_string(),
+                        );
+                        let _ = controller
+                            .set_app_setting(SETTING_CRYPTO_LAST_COIN_ID, &coin_id.to_string());
                         reload_portfolio(&ui_weak, &controller);
                         reload_wallets(&ui_weak, &controller);
                         notify("Transfer added successfully".into(), false);
@@ -2052,6 +2080,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 match result {
                     Ok(_) => {
+                        let _ = controller.set_app_setting(
+                            SETTING_CRYPTO_LAST_WALLET_ID,
+                            &wallet_id_raw.to_string(),
+                        );
+                        let _ = controller
+                            .set_app_setting(SETTING_CRYPTO_LAST_COIN_ID, &from_coin_id.to_string());
                         reload_portfolio(&ui_weak, &controller);
                         reload_wallets(&ui_weak, &controller);
                         notify("Swap added successfully".into(), false);
@@ -2424,6 +2458,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let catalog = controller
                     .get_coin_catalog()
                     .unwrap_or_else(|_| crypto::default_coin_catalog());
+                let last_coin_id = controller
+                    .get_app_setting(SETTING_CRYPTO_LAST_COIN_ID)
+                    .ok()
+                    .filter(|val| !val.is_empty());
+                let last_coin_index = last_coin_id
+                    .as_ref()
+                    .and_then(|id| catalog.iter().position(|coin| coin.id == *id))
+                    .unwrap_or(0) as i32;
                 let favorites: HashSet<String> = controller
                     .get_favorite_coin_ids()
                     .into_iter()
@@ -2448,6 +2490,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if let Some(ui) = ui_weak.upgrade() {
                     ui.global::<CryptoAdapter>()
                         .set_coin_catalog(ModelRc::new(VecModel::from(options)));
+                    ui.global::<CryptoAdapter>()
+                        .set_default_coin_index(last_coin_index);
                 }
             });
     }

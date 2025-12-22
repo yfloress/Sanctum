@@ -683,6 +683,8 @@ export component AddCryptoTransactionModal inherits Rectangle {
     init => {
         CryptoAdapter.load-coin-catalog();
         CryptoAdapter.filter-coin-catalog("");
+        wallet-index = CryptoAdapter.default-wallet-index;
+        coin-index = CryptoAdapter.default-coin-index;
     }
 
     function reset() {
@@ -692,9 +694,9 @@ export component AddCryptoTransactionModal inherits Rectangle {
         notes = "";
         date = AppState.current-date;
         selected-type = "buy";
-        wallet-index = 0;
+        wallet-index = CryptoAdapter.default-wallet-index;
         wallet-index-to = 0;
-        coin-index = 0;
+        coin-index = CryptoAdapter.default-coin-index;
         swap-amount = "";
         swap-coin-index = 0;
         move-amount = "";
