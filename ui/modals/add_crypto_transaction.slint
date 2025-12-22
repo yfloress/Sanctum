@@ -488,15 +488,15 @@ component CoinSelector inherits Rectangle {
                             spacing: 8px;
 
                             Rectangle {
-                                width: 20px;
-                                height: 20px;
-                                border-radius: 4px;
+                                width: 24px;
+                                height: 24px;
+                                border-radius: 6px;
                                 background: favorite-touch-fav.has-hover ? Palette.surface-hover : transparent;
 
                                 Text {
                                     text: coin.favorite ? "★" : "☆";
                                     color: coin.favorite ? Palette.accent : Palette.text-muted;
-                                    font-size: 11px;
+                                    font-size: 13px;
                                     font-weight: 600;
                                     horizontal-alignment: center;
                                     vertical-alignment: center;
@@ -516,30 +516,37 @@ component CoinSelector inherits Rectangle {
                                 }
                             }
 
-                            Text {
-                                text: coin.name + " (" + coin.symbol + ")" + (coin.custom ? " *" : "");
-                                color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
-                                font-size: 13px;
-                                font-weight: index == selected-index ? 500 : 400;
-                                vertical-alignment: center;
+                            Rectangle {
                                 horizontal-stretch: 1;
-                            }
+                                background: transparent;
 
-                            if index == selected-index: Text {
-                                text: "✓";
-                                color: Palette.accent;
-                                font-size: 12px;
-                                vertical-alignment: center;
-                            }
-                        }
+                                HorizontalLayout {
+                                    Text {
+                                        text: coin.name + " (" + coin.symbol + ")" + (coin.custom ? " *" : "");
+                                        color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
+                                        font-size: 13px;
+                                        font-weight: index == selected-index ? 500 : 400;
+                                        vertical-alignment: center;
+                                        horizontal-stretch: 1;
+                                    }
 
-                        option-touch-fav := TouchArea {
-                            mouse-cursor: pointer;
-                            clicked => { 
-                                root.selected-index = index; 
-                                root.selected(index, coin.name);
-                                root.popup-open = false;
-                                root.reset-search();
+                                    if index == selected-index: Text {
+                                        text: "✓";
+                                        color: Palette.accent;
+                                        font-size: 12px;
+                                        vertical-alignment: center;
+                                    }
+                                }
+
+                                option-touch-fav := TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => { 
+                                        root.selected-index = index; 
+                                        root.selected(index, coin.name);
+                                        root.popup-open = false;
+                                        root.reset-search();
+                                    }
+                                }
                             }
                         }
                     }
@@ -556,15 +563,15 @@ component CoinSelector inherits Rectangle {
                             spacing: 8px;
 
                             Rectangle {
-                                width: 20px;
-                                height: 20px;
-                                border-radius: 4px;
+                                width: 24px;
+                                height: 24px;
+                                border-radius: 6px;
                                 background: favorite-touch-all.has-hover ? Palette.surface-hover : transparent;
 
                                 Text {
                                     text: coin.favorite ? "★" : "☆";
                                     color: coin.favorite ? Palette.accent : Palette.text-muted;
-                                    font-size: 11px;
+                                    font-size: 13px;
                                     font-weight: 600;
                                     horizontal-alignment: center;
                                     vertical-alignment: center;
@@ -584,30 +591,37 @@ component CoinSelector inherits Rectangle {
                                 }
                             }
 
-                            Text {
-                                text: coin.name + " (" + coin.symbol + ")" + (coin.custom ? " *" : "");
-                                color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
-                                font-size: 13px;
-                                font-weight: index == selected-index ? 500 : 400;
-                                vertical-alignment: center;
+                            Rectangle {
                                 horizontal-stretch: 1;
-                            }
+                                background: transparent;
 
-                            if index == selected-index: Text {
-                                text: "✓";
-                                color: Palette.accent;
-                                font-size: 12px;
-                                vertical-alignment: center;
-                            }
-                        }
+                                HorizontalLayout {
+                                    Text {
+                                        text: coin.name + " (" + coin.symbol + ")" + (coin.custom ? " *" : "");
+                                        color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
+                                        font-size: 13px;
+                                        font-weight: index == selected-index ? 500 : 400;
+                                        vertical-alignment: center;
+                                        horizontal-stretch: 1;
+                                    }
 
-                        option-touch-all := TouchArea {
-                            mouse-cursor: pointer;
-                            clicked => { 
-                                root.selected-index = index; 
-                                root.selected(index, coin.name);
-                                root.popup-open = false;
-                                root.reset-search();
+                                    if index == selected-index: Text {
+                                        text: "✓";
+                                        color: Palette.accent;
+                                        font-size: 12px;
+                                        vertical-alignment: center;
+                                    }
+                                }
+
+                                option-touch-all := TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => { 
+                                        root.selected-index = index; 
+                                        root.selected(index, coin.name);
+                                        root.popup-open = false;
+                                        root.reset-search();
+                                    }
+                                }
                             }
                         }
                     }
