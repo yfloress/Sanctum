@@ -10,17 +10,24 @@ use plotters::series::{AreaSeries, LineSeries};
 use rand::Rng; // For title animation
 use sanctum::crypto;
 use sanctum::controller::{
-    AppController, MonthlyTrendPoint, SETTING_AUTO_FETCH, SETTING_CRYPTO_LAST_UPDATED,
+    AppController, MonthlyTrendPoint, SETTING_AUTO_FETCH, SETTING_CRYPTO_LAST_COIN_ID,
+    SETTING_CRYPTO_LAST_UPDATED, SETTING_CRYPTO_LAST_WALLET_ID,
 };
 use sanctum::models::CryptoAsset;
 use sanctum::security_log::init_security_logger;
 use slint::SharedString;
 use slint::{Image, Model, ModelRc, VecModel, Weak};
-use std::cell::Cell;
-use std::collections::HashMap;
-use std::sync::Arc; // Added for CryptoAdapter logic
+use std::cell::{Cell, RefCell};
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 slint::include_modules!();
+
+const CRYPTO_ICON_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/ui/assets/crypto-icons");
+
+thread_local! {
+    static CRYPTO_ICON_CACHE: RefCell<HashMap<String, Image>> = RefCell::new(HashMap::new());
+}
 
 fn get_app_data_dir() -> std::path::PathBuf {
     // Use directories crate to get platform-appropriate data directory
@@ -251,6 +258,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
+    // Callback: check_password_strength
+    // Returns warning message for weak passwords ("" if ok)
+    {
+        let controller_clone = controller.clone();
+        auth_adapter.on_check_password_strength(move |password: SharedString| {
+            SharedString::from(controller_clone.check_password_strength(password.to_string()))
+        });
+    }
+
     // Callback: unlock_vault
     // Attempts to unlock an existing vault with the given password
     // Returns empty string on success, error message on failure
@@ -371,6 +387,60 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             return slint::Color::from_rgb_u8(r, g, b);
         }
         slint::Color::from_rgb_u8(139, 92, 246)
+    }
+
+    fn fallback_chart_color(index: usize) -> (u8, u8, u8) {
+        match index % 6 {
+            0 => (139, 92, 246),
+            1 => (236, 72, 153),
+            2 => (56, 189, 248),
+            3 => (34, 197, 94),
+            4 => (245, 158, 11),
+            _ => (168, 85, 247),
+        }
+    }
+
+    fn symbol_chart_color(symbol: &str, index: usize) -> (u8, u8, u8) {
+        match symbol.to_uppercase().as_str() {
+            "BTC" => (247, 147, 26),
+            "ETH" => (98, 126, 234),
+            "USDT" => (38, 161, 123),
+            "USDC" => (39, 117, 202),
+            "BNB" => (243, 186, 47),
+            "SOL" => (20, 241, 149),
+            "XMR" => (255, 102, 0),
+            "LTC" => (191, 191, 191),
+            "ADA" => (0, 51, 173),
+            "DOGE" => (194, 166, 51),
+            "XRP" => (0, 136, 204),
+            "MATIC" => (130, 71, 229),
+            "DOT" => (230, 0, 122),
+            "AVAX" => (232, 65, 66),
+            _ => fallback_chart_color(index),
+        }
+    }
+
+    fn crypto_icon_for_symbol(symbol: &str) -> Image {
+        let key = symbol.trim().to_lowercase();
+        if let Some(icon) = CRYPTO_ICON_CACHE.with(|cache| cache.borrow().get(&key).cloned()) {
+            return icon;
+        }
+
+        let base_dir = std::path::Path::new(CRYPTO_ICON_DIR);
+        let icon_path = if key.is_empty() {
+            base_dir.join("generic.svg")
+        } else {
+            base_dir.join(format!("{key}.svg"))
+        };
+        let fallback_path = base_dir.join("generic.svg");
+        let icon = Image::load_from_path(&icon_path)
+            .or_else(|_| Image::load_from_path(&fallback_path))
+            .unwrap_or_default();
+
+        CRYPTO_ICON_CACHE.with(|cache| {
+            cache.borrow_mut().insert(key, icon.clone());
+        });
+        icon
     }
 
     fn parse_amount_input(value: &str) -> Option<i64> {
@@ -1235,6 +1305,131 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Image::load_from_path(&final_svg).ok()
     }
 
+    fn render_portfolio_distribution_chart(data: &[(String, f64)]) -> Option<Image> {
+        if data.is_empty() {
+            return None;
+        }
+
+        let total: f64 = data.iter().map(|(_, value)| *value).sum();
+        if total <= 0.0 {
+            return None;
+        }
+
+        let temp_svg = std::env::temp_dir().join("sanctum_portfolio_dist_temp.svg");
+        let root = SVGBackend::new(&temp_svg, (600, 600)).into_drawing_area();
+
+        let sizes: Vec<f64> = data.iter().map(|(_, value)| *value).collect();
+        let labels_empty: Vec<String> = vec![String::new(); data.len()];
+        let colors: Vec<RGBColor> = data
+            .iter()
+            .enumerate()
+            .map(|(idx, (label, _))| {
+                let (r, g, b) = symbol_chart_color(label, idx);
+                RGBColor(r, g, b)
+            })
+            .collect();
+
+        let center = (300, 300);
+        let radius = 220.0;
+        let mut pie = Pie::new(&center, &radius, &sizes, &colors, &labels_empty);
+        pie.start_angle(-90.0);
+        pie.donut_hole(radius * 0.6);
+
+        root.draw(&pie).ok()?;
+
+        root.present().ok()?;
+
+        Image::load_from_path(&temp_svg).ok()
+    }
+
+    fn render_portfolio_trend_chart(data: &[(String, f64, f64)]) -> Option<Image> {
+        if data.len() < 2 {
+            return None;
+        }
+
+        let mut min_val = f64::MAX;
+        let mut max_val = 0.0_f64;
+
+        for (_, total_value, total_cost) in data {
+            if *total_value > max_val {
+                max_val = *total_value;
+            }
+            if *total_cost > max_val {
+                max_val = *total_cost;
+            }
+            if *total_value < min_val {
+                min_val = *total_value;
+            }
+            if *total_cost < min_val {
+                min_val = *total_cost;
+            }
+        }
+
+        if max_val <= 0.0 {
+            return None;
+        }
+
+        let padding = ((max_val - min_val) * 0.1).max(max_val * 0.05);
+        let lower = (min_val - padding).max(0.0);
+        let upper = max_val + padding;
+
+        let temp_svg = std::env::temp_dir().join("sanctum_portfolio_trend.svg");
+        let root = SVGBackend::new(&temp_svg, (1800, 520)).into_drawing_area();
+        root.fill(&RGBColor(10, 10, 15)).ok()?;
+
+        let x_max = (data.len() - 1) as i32;
+        let mut chart = ChartBuilder::on(&root)
+            .margin(18)
+            .build_cartesian_2d(0..x_max, lower..upper)
+            .ok()?;
+
+        chart
+            .configure_mesh()
+            .disable_mesh()
+            .disable_x_axis()
+            .disable_y_axis()
+            .draw()
+            .ok()?;
+
+        let value_points: Vec<(i32, f64)> = data
+            .iter()
+            .enumerate()
+            .map(|(i, (_, total_value, _))| (i as i32, *total_value))
+            .collect();
+        let cost_points: Vec<(i32, f64)> = data
+            .iter()
+            .enumerate()
+            .map(|(i, (_, _, total_cost))| (i as i32, *total_cost))
+            .collect();
+
+        chart
+            .draw_series(AreaSeries::new(
+                value_points.iter().copied(),
+                lower,
+                RGBColor(139, 92, 246).mix(0.2),
+            ))
+            .ok()?;
+
+        chart
+            .draw_series(LineSeries::new(
+                value_points.iter().copied(),
+                ShapeStyle::from(&RGBColor(139, 92, 246)).stroke_width(4),
+            ))
+            .ok()?;
+
+        chart
+            .draw_series(LineSeries::new(
+                cost_points.iter().copied(),
+                ShapeStyle::from(&RGBColor(148, 163, 184)).stroke_width(2),
+            ))
+            .ok()?;
+
+        root.present().ok()?;
+
+        Image::load_from_path(&temp_svg).ok()
+    }
+
+
     fn refresh_habit_analytics(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>) {
         if let Ok(analytics) = controller.get_habit_analytics(365) {
             let monthly_image = render_monthly_chart_image(&analytics.monthly_data);
@@ -1491,10 +1686,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             if let Some(ui) = ui_weak.upgrade() {
+                let last_wallet_id = controller
+                    .get_app_setting(SETTING_CRYPTO_LAST_WALLET_ID)
+                    .ok()
+                    .filter(|val| !val.is_empty());
+                let last_wallet_index = last_wallet_id
+                    .as_ref()
+                    .and_then(|id| {
+                        wallet_simple
+                            .iter()
+                            .position(|wallet| wallet.id.as_str() == id)
+                    })
+                    .unwrap_or(0) as i32;
+
                 ui.global::<CryptoAdapter>()
                     .set_wallets(ModelRc::new(VecModel::from(wallet_data)));
                 ui.global::<CryptoAdapter>()
                     .set_wallet_list(ModelRc::new(VecModel::from(wallet_simple)));
+                ui.global::<CryptoAdapter>()
+                    .set_default_wallet_index(last_wallet_index);
             }
         }
     }
@@ -1507,6 +1717,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .clone()
                 .into_iter()
                 .map(|p| (p.id.clone(), p))
+                .collect();
+            let catalog = controller
+                .get_coin_catalog()
+                .unwrap_or_else(|_| crypto::default_coin_catalog());
+            let catalog_map: HashMap<String, (String, String)> = catalog
+                .into_iter()
+                .map(|coin| (coin.id, (coin.name, coin.symbol)))
                 .collect();
 
             // Update assets with current prices
@@ -1523,16 +1740,62 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .unwrap_or(std::cmp::Ordering::Equal)
             });
 
+            let mut chart_assets: Vec<(String, f64)> = assets
+                .iter()
+                .filter(|asset| price_map.contains_key(&asset.coin_id) && asset.current_value > 0.0)
+                .map(|asset| (asset.symbol.clone(), asset.current_value))
+                .collect();
+            chart_assets.sort_by(|a, b| {
+                b.1.partial_cmp(&a.1)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
+
+            let chart_assets = if chart_assets.len() > 6 {
+                let mut trimmed = chart_assets[..6].to_vec();
+                let other_sum: f64 = chart_assets[6..].iter().map(|(_, v)| *v).sum();
+                if other_sum > 0.0 {
+                    trimmed.push(("OTHER".to_string(), other_sum));
+                }
+                trimmed
+            } else {
+                chart_assets
+            };
+            let chart_total: f64 = chart_assets.iter().map(|(_, value)| *value).sum();
+            let distribution: Vec<CryptoDistributionSlice> = if chart_total > 0.0 {
+                chart_assets
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, (label, value))| {
+                        let percent = (*value / chart_total) * 100.0;
+                        let (r, g, b) = symbol_chart_color(label, idx);
+                        CryptoDistributionSlice {
+                            label: SharedString::from(label),
+                            value: SharedString::from(format_money((value * 100.0) as i64, "USD")),
+                            percent: SharedString::from(format!("{:.1}%", percent)),
+                            color: slint::Color::from_rgb_u8(r, g, b),
+                        }
+                    })
+                    .collect()
+            } else {
+                Vec::new()
+            };
+
+            let chart_image = render_portfolio_distribution_chart(&chart_assets);
+            let chart_ready = chart_image.is_some();
+
             let mut total_val = 0.0;
             let mut total_cost = 0.0;
+            let mut priced_assets = 0;
 
             let mapped_assets: Vec<CryptoAssetData> = assets
                 .iter()
                 .map(|a| {
-                    total_val += a.current_value;
-                    total_cost += a.total_cost_basis;
-
                     let price_data = price_map.get(&a.coin_id);
+                    if price_data.is_some() {
+                        total_val += a.current_value;
+                        total_cost += a.total_cost_basis;
+                        priced_assets += 1;
+                    }
 
                     let change_percent = price_data
                         .map(|p| p.price_change_percentage_24h)
@@ -1567,6 +1830,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     CryptoAssetData {
                         id: SharedString::from(&a.coin_id),
                         symbol: SharedString::from(&a.symbol),
+                        icon: crypto_icon_for_symbol(&a.symbol),
                         name: SharedString::from(asset_name),
                         price: SharedString::from(price_fmt),
                         amount: SharedString::from(format!("{:.4} {}", a.total_amount, a.symbol)),
@@ -1583,7 +1847,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut tickers: Vec<CryptoAssetData> = Vec::new();
 
             for id in ticker_ids {
-                if let Some(data) = prices.iter().find(|p| p.id == id) {
+                if let Some(data) = price_map.get(&id) {
                     let change_str = if data.price_change_percentage_24h >= 0.0 {
                         format!("+ {:.2}%", data.price_change_percentage_24h)
                     } else {
@@ -1596,8 +1860,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     };
 
                     tickers.push(CryptoAssetData {
-                        id: SharedString::from(id),
+                        id: SharedString::from(&id),
                         symbol: SharedString::from(&data.symbol),
+                        icon: crypto_icon_for_symbol(&data.symbol),
                         name: SharedString::from(&data.name),
                         price: SharedString::from(price_fmt),
                         amount: "".into(),
@@ -1606,11 +1871,58 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         is_positive: data.price_change_percentage_24h >= 0.0,
                         allocation: 0.0,
                     });
+                } else {
+                    let (name, symbol) = catalog_map
+                        .get(&id)
+                        .cloned()
+                        .unwrap_or_else(|| (id.clone(), id.to_uppercase()));
+                    let icon = crypto_icon_for_symbol(&symbol);
+
+                    tickers.push(CryptoAssetData {
+                        id: SharedString::from(&id),
+                        symbol: SharedString::from(symbol.as_str()),
+                        icon,
+                        name: SharedString::from(name),
+                        price: "N/A".into(),
+                        amount: "".into(),
+                        value: "".into(),
+                        change_24h: "N/A".into(),
+                        is_positive: true,
+                        allocation: 0.0,
+                    });
                 }
             }
 
-            let total_pnl_val = total_val - total_cost;
-            let pnl_sign = if total_pnl_val >= 0.0 { "+" } else { "-" };
+            let (total_value_label, total_pnl_label, total_pnl_positive) = if priced_assets > 0 {
+                let total_pnl_val = total_val - total_cost;
+                let pnl_sign = if total_pnl_val >= 0.0 { "+" } else { "-" };
+                (
+                    format_money((total_val * 100.0) as i64, "USD"),
+                    format!(
+                        "{} {}",
+                        pnl_sign,
+                        format_money((total_pnl_val.abs() * 100.0) as i64, "USD")
+                    ),
+                    total_pnl_val >= 0.0,
+                )
+            } else {
+                ("N/A".to_string(), "N/A".to_string(), true)
+            };
+
+            let mut trend_image = None;
+            let mut trend_ready = false;
+            if priced_assets > 0 {
+                let _ = controller.save_crypto_portfolio_snapshot(total_val, total_cost);
+                let snapshots = controller
+                    .get_crypto_portfolio_snapshots(180)
+                    .unwrap_or_default();
+                let trend_points: Vec<(String, f64, f64)> = snapshots
+                    .into_iter()
+                    .filter(|(_, value, cost)| *value > 0.0 || *cost > 0.0)
+                    .collect();
+                trend_image = render_portfolio_trend_chart(&trend_points);
+                trend_ready = trend_image.is_some();
+            }
 
             // Try to load CLP rate
             let clp_cached = controller
@@ -1654,17 +1966,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let adapter = ui.global::<CryptoAdapter>();
                 adapter.set_portfolio(ModelRc::new(VecModel::from(mapped_assets)));
                 adapter.set_market_tickers(ModelRc::new(VecModel::from(tickers)));
-                adapter.set_total_value(SharedString::from(format_money(
-                    (total_val * 100.0) as i64,
-                    "USD",
-                )));
-                adapter.set_total_pnl_positive(total_pnl_val >= 0.0);
-                adapter.set_total_pnl(SharedString::from(format!(
-                    "{} {}",
-                    pnl_sign,
-                    format_money((total_pnl_val.abs() * 100.0) as i64, "USD")
-                )));
+                adapter.set_total_value(SharedString::from(total_value_label));
+                adapter.set_total_pnl_positive(total_pnl_positive);
+                adapter.set_total_pnl(SharedString::from(total_pnl_label));
                 adapter.set_clp_rate(SharedString::from(clp_display));
+                adapter.set_portfolio_trend_image(trend_image.unwrap_or_default());
+                adapter.set_portfolio_trend_ready(trend_ready);
+                adapter.set_portfolio_chart_image(chart_image.unwrap_or_default());
+                adapter.set_portfolio_chart_ready(chart_ready);
+                adapter.set_portfolio_distribution(ModelRc::new(VecModel::from(distribution)));
                 if let Some(label) = last_updated_label {
                     adapter.set_last_updated(label.into());
                 }
@@ -1855,8 +2165,104 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 match result {
                     Ok(_) => {
+                        let _ = controller.set_app_setting(
+                            SETTING_CRYPTO_LAST_WALLET_ID,
+                            wallet_id_raw.as_ref(),
+                        );
+                        let _ = controller
+                            .set_app_setting(SETTING_CRYPTO_LAST_COIN_ID, coin_id.as_ref());
                         reload_portfolio(&ui_weak, &controller);
                         notify("Asset added successfully".into(), false);
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            },
+        );
+    }
+
+    // Add Transfer Callback (between wallets)
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = show_notification.clone();
+
+        // (from_wallet_id, to_wallet_id, coin_id, symbol, from_amount, to_amount, fee, date, notes)
+        ui.global::<CryptoAdapter>().on_add_transfer(
+            move |from_wallet_id,
+                  to_wallet_id,
+                  coin_id,
+                  symbol,
+                  from_amount_str,
+                  to_amount_str,
+                  fee_str,
+                  date,
+                  notes_str|
+                  -> SharedString {
+                let parse_amount = |raw: SharedString, label: &str| -> Result<f64, SharedString> {
+                    let cleaned = raw
+                        .replace(",", "")
+                        .replace("$", "")
+                        .trim()
+                        .to_string();
+                    cleaned
+                        .parse()
+                        .map_err(|_| SharedString::from(format!("Invalid {} format", label)))
+                };
+
+                let from_amount = match parse_amount(from_amount_str, "from amount") {
+                    Ok(v) => v,
+                    Err(e) => return e,
+                };
+
+                let to_amount = if to_amount_str.trim().is_empty() {
+                    from_amount
+                } else {
+                    match parse_amount(to_amount_str, "to amount") {
+                        Ok(v) => v,
+                        Err(e) => return e,
+                    }
+                };
+
+                let fee_clean = fee_str.replace(",", "").replace("$", "").trim().to_string();
+                let fee: Option<f64> = if fee_clean.is_empty() {
+                    None
+                } else {
+                    match fee_clean.parse() {
+                        Ok(v) => Some(v),
+                        Err(_) => return SharedString::from("Invalid fee format"),
+                    }
+                };
+
+                let notes = if notes_str.is_empty() {
+                    None
+                } else {
+                    Some(notes_str.to_string())
+                };
+
+                let result = controller.add_crypto_transfer(
+                    from_wallet_id.to_string(),
+                    to_wallet_id.to_string(),
+                    coin_id.to_string(),
+                    symbol.to_string(),
+                    from_amount,
+                    to_amount,
+                    fee,
+                    date.to_string(),
+                    notes,
+                );
+
+                match result {
+                    Ok(_) => {
+                        let _ = controller.set_app_setting(
+                            SETTING_CRYPTO_LAST_WALLET_ID,
+                            from_wallet_id.as_ref(),
+                        );
+                        let _ = controller
+                            .set_app_setting(SETTING_CRYPTO_LAST_COIN_ID, coin_id.as_ref());
+                        reload_portfolio(&ui_weak, &controller);
+                        reload_wallets(&ui_weak, &controller);
+                        notify("Transfer added successfully".into(), false);
                         SharedString::from("")
                     }
                     Err(e) => SharedString::from(e.to_string()),
@@ -1935,6 +2341,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 match result {
                     Ok(_) => {
+                        let _ = controller.set_app_setting(
+                            SETTING_CRYPTO_LAST_WALLET_ID,
+                            wallet_id_raw.as_ref(),
+                        );
+                        let _ = controller
+                            .set_app_setting(SETTING_CRYPTO_LAST_COIN_ID, from_coin_id.as_ref());
                         reload_portfolio(&ui_weak, &controller);
                         reload_wallets(&ui_weak, &controller);
                         notify("Swap added successfully".into(), false);
@@ -1959,7 +2371,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 };
 
                 if tx.transaction_type == "swap" || tx.related_tx_id.is_some() {
-                    return SharedString::from("Editing swap transactions is not supported");
+                    return SharedString::from("Editing paired transactions is not supported");
                 }
 
                 let wallet_name = controller
@@ -2151,6 +2563,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             CryptoAssetData {
                                 id: SharedString::from(&asset.coin_id),
                                 symbol: SharedString::from(&asset.symbol),
+                                icon: crypto_icon_for_symbol(&asset.symbol),
                                 name: SharedString::from(asset_name),
                                 price: SharedString::from(price_fmt),
                                 amount: SharedString::from(format!(
@@ -2168,6 +2581,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let history = controller
                         .get_wallet_transactions(wallet_id_str.clone())
                         .unwrap_or_default();
+                    let history_type_map: HashMap<String, String> = history
+                        .iter()
+                        .map(|tx| (tx.id.clone(), tx.transaction_type.clone()))
+                        .collect();
                     let history_mapped: Vec<AssetTransaction> = history
                         .iter()
                         .map(|tx| {
@@ -2188,7 +2605,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             let notes = tx.notes.clone().unwrap_or_default();
                             let is_swap = tx.transaction_type == "swap"
                                 || (tx.transaction_type == "transfer_in"
-                                    && tx.related_tx_id.is_some());
+                                    && tx
+                                        .related_tx_id
+                                        .as_ref()
+                                        .and_then(|id| history_type_map.get(id))
+                                        .map(|t| t == "swap")
+                                        .unwrap_or(false));
 
                             AssetTransaction {
                                 id: SharedString::from(&tx.id),
@@ -2298,21 +2720,40 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let catalog = controller
                     .get_coin_catalog()
                     .unwrap_or_else(|_| crypto::default_coin_catalog());
+                let last_coin_id = controller
+                    .get_app_setting(SETTING_CRYPTO_LAST_COIN_ID)
+                    .ok()
+                    .filter(|val| !val.is_empty());
+                let last_coin_index = last_coin_id
+                    .as_ref()
+                    .and_then(|id| catalog.iter().position(|coin| coin.id == *id))
+                    .unwrap_or(0) as i32;
+                let favorites: HashSet<String> = controller
+                    .get_favorite_coin_ids()
+                    .into_iter()
+                    .collect();
 
                 let options: Vec<CatalogCoin> = catalog
                     .into_iter()
-                    .map(|coin| CatalogCoin {
-                        id: SharedString::from(coin.id),
-                        name: SharedString::from(coin.name),
-                        symbol: SharedString::from(coin.symbol),
-                        custom: coin.custom,
-                        visible: true,
+                    .map(|coin| {
+                        let is_favorite = favorites.contains(&coin.id);
+                        CatalogCoin {
+                            id: SharedString::from(coin.id),
+                            name: SharedString::from(coin.name),
+                            symbol: SharedString::from(coin.symbol),
+                            custom: coin.custom,
+                            favorite: is_favorite,
+                            visible: true,
+                            selected: false,
+                        }
                     })
                     .collect();
 
                 if let Some(ui) = ui_weak.upgrade() {
                     ui.global::<CryptoAdapter>()
                         .set_coin_catalog(ModelRc::new(VecModel::from(options)));
+                    ui.global::<CryptoAdapter>()
+                        .set_default_coin_index(last_coin_index);
                 }
             });
     }
@@ -2339,6 +2780,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         return;
                     }
 
+                    reload_portfolio(&ui_weak, &controller);
                     notify("Configuration saved".into(), false);
                 }
             });
@@ -2361,6 +2803,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         notify("Coin added".into(), false);
                         SharedString::from("")
                     }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            });
+    }
+
+    {
+        let controller = controller.clone();
+
+        ui.global::<CryptoAdapter>()
+            .on_set_favorite_coin(move |id, favorite| -> SharedString {
+                match controller.set_favorite_coin(id.to_string(), favorite) {
+                    Ok(_) => SharedString::from(""),
                     Err(e) => SharedString::from(e.to_string()),
                 }
             });
@@ -2437,6 +2891,85 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
     }
 
+    {
+        let ui_weak = ui_weak.clone();
+        ui.global::<CryptoAdapter>()
+            .on_select_all_coins(move || {
+                if let Some(ui) = ui_weak.upgrade() {
+                    let options = ui.global::<CryptoAdapter>().get_coin_catalog();
+                    let mut options: Vec<CatalogCoin> = options.iter().collect();
+
+                    for opt in options.iter_mut() {
+                        if opt.visible {
+                            opt.selected = true;
+                        }
+                    }
+
+                    ui.global::<CryptoAdapter>()
+                        .set_coin_catalog(ModelRc::new(VecModel::from(options)));
+                }
+            });
+    }
+
+    {
+        let ui_weak = ui_weak.clone();
+        ui.global::<CryptoAdapter>()
+            .on_clear_coin_selection(move || {
+                if let Some(ui) = ui_weak.upgrade() {
+                    let options = ui.global::<CryptoAdapter>().get_coin_catalog();
+                    let mut options: Vec<CatalogCoin> = options.iter().collect();
+
+                    for opt in options.iter_mut() {
+                        opt.selected = false;
+                    }
+
+                    ui.global::<CryptoAdapter>()
+                        .set_coin_catalog(ModelRc::new(VecModel::from(options)));
+                }
+            });
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = show_notification.clone();
+
+        ui.global::<CryptoAdapter>()
+            .on_delete_selected_coins(move || -> SharedString {
+                if let Some(ui) = ui_weak.upgrade() {
+                    let options = ui.global::<CryptoAdapter>().get_coin_catalog();
+                    let selected: Vec<String> = options
+                        .iter()
+                        .filter(|coin| coin.selected)
+                        .map(|coin| coin.id.to_string())
+                        .collect();
+
+                    if selected.is_empty() {
+                        return SharedString::from("No coins selected");
+                    }
+
+                    let mut error: Option<String> = None;
+                    for id in selected {
+                        if let Err(e) = controller.delete_custom_coin(id) {
+                            error = Some(e.to_string());
+                        }
+                    }
+
+                    ui.global::<CryptoAdapter>().invoke_load_coin_catalog();
+                    ui.global::<CryptoAdapter>().invoke_load_ticker_options();
+
+                    if let Some(err) = error {
+                        return SharedString::from(err);
+                    }
+
+                    notify("Coins removed".into(), false);
+                    SharedString::from("")
+                } else {
+                    SharedString::from("")
+                }
+            });
+    }
+
     // Initial Load
     if let Ok(Some((rate, _))) = controller.load_exchange_rate_allow_stale("CLP_USD".to_string())
     {
@@ -2463,6 +2996,49 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 } else {
                     "".into()
                 }
+            });
+    }
+
+    {
+        let controller = controller.clone();
+        ui.global::<CryptoAdapter>()
+            .on_get_swap_quote(move |from_coin_id, to_coin_id, amount_str| {
+                let amount_clean = amount_str
+                    .replace(",", "")
+                    .replace("$", "")
+                    .trim()
+                    .to_string();
+                let amount: f64 = match amount_clean.parse() {
+                    Ok(value) if value > 0.0 => value,
+                    _ => return SharedString::from(""),
+                };
+
+                let prices = controller.load_crypto_prices().unwrap_or_default();
+                let from_price = prices
+                    .iter()
+                    .find(|p| p.id == from_coin_id.as_str())
+                    .map(|p| p.current_price)
+                    .unwrap_or(0.0);
+                let to_price = prices
+                    .iter()
+                    .find(|p| p.id == to_coin_id.as_str())
+                    .map(|p| p.current_price)
+                    .unwrap_or(0.0);
+
+                if from_price <= 0.0 || to_price <= 0.0 {
+                    return SharedString::from("");
+                }
+
+                let to_amount = amount * (from_price / to_price);
+                let mut formatted = format!("{:.8}", to_amount);
+                while formatted.contains('.') && formatted.ends_with('0') {
+                    formatted.pop();
+                }
+                if formatted.ends_with('.') {
+                    formatted.pop();
+                }
+
+                SharedString::from(formatted)
             });
     }
 
@@ -2522,6 +3098,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let selected = CryptoAssetData {
                         id: SharedString::from(&updated_asset.coin_id),
                         symbol: SharedString::from(&updated_asset.symbol),
+                        icon: crypto_icon_for_symbol(&updated_asset.symbol),
                         name: SharedString::from(asset_name),
                         price: SharedString::from(price_fmt),
                         amount: SharedString::from(format!(
@@ -2561,6 +3138,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let history = controller
                         .get_crypto_transactions_by_coin(coin_id_str)
                         .unwrap_or_default();
+                    let history_type_map: HashMap<String, String> = history
+                        .iter()
+                        .map(|tx| (tx.id.clone(), tx.transaction_type.clone()))
+                        .collect();
                     let history_mapped: Vec<AssetTransaction> = history
                         .iter()
                         .map(|tx| {
@@ -2581,7 +3162,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             let notes = tx.notes.clone().unwrap_or_default();
                             let is_swap = tx.transaction_type == "swap"
                                 || (tx.transaction_type == "transfer_in"
-                                    && tx.related_tx_id.is_some());
+                                    && tx
+                                        .related_tx_id
+                                        .as_ref()
+                                        .and_then(|id| history_type_map.get(id))
+                                        .map(|t| t == "swap")
+                                        .unwrap_or(false));
 
                             AssetTransaction {
                                 id: SharedString::from(&tx.id),

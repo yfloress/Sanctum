@@ -3,50 +3,30 @@
 
 import { Palette } from "../globals.slint";
 
-// ==================== Animated Glow Effect ====================
-component GlowDot inherits Rectangle {
-    in property <color> glow-color: Palette.success;
-    in property <bool> animated: true;
-    
-    width: 8px;
-    height: 8px;
-    border-radius: 4px;
-    background: glow-color;
-    
-    // Outer glow
-    Rectangle {
-        x: -4px;
-        y: -4px;
-        width: 16px;
-        height: 16px;
-        border-radius: 8px;
-        background: glow-color.with-alpha(animated ? 0.3 : 0.1);
-        animate background { duration: 1500ms; }
-    }
-}
-
 // ==================== Crypto Icon ====================
-component CryptoIcon inherits Rectangle {
+export component CryptoIcon inherits Rectangle {
     in property <string> symbol;
+    in property <image> icon: @image-url("../assets/crypto-icons/generic.svg");
     in property <bool> large: false;
+    property <length> icon-size: large ? 32px : 24px;
     
     width: large ? 48px : 36px;
     height: large ? 48px : 36px;
     border-radius: large ? 24px : 18px;
+    clip: true;
     
     // Gradient background based on symbol
     background: @linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
     border-width: 1px;
     border-color: Palette.border-subtle;
     
-    Text { 
-        text: symbol; 
-        color: Palette.text-primary; 
-        font-size: large ? 14px : 11px; 
-        font-weight: 700; 
-        letter-spacing: 0.5px;
-        vertical-alignment: center; 
-        horizontal-alignment: center; 
+    Image {
+        source: root.icon;
+        width: root.icon-size;
+        height: root.icon-size;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        image-fit: contain;
     }
 }
 
@@ -88,6 +68,7 @@ export component CryptoRow inherits Rectangle {
     in property <bool> is-last: false;
     in property <string> name;
     in property <string> symbol;
+    in property <image> icon;
     in property <string> price;
     in property <string> amount;
     in property <string> value;
@@ -117,6 +98,7 @@ export component CryptoRow inherits Rectangle {
             
             CryptoIcon {
                 symbol: root.symbol;
+                icon: root.icon;
                 y: (parent.height - self.height) / 2;
             }
             
@@ -364,6 +346,7 @@ export component WalletRow inherits Rectangle {
 // ==================== Ticker Item ====================
 export component TickerItem inherits Rectangle {
     in property <string> symbol;
+    in property <image> icon;
     in property <string> price;
     in property <string> change;
     in property <bool> is-positive;
@@ -382,9 +365,10 @@ export component TickerItem inherits Rectangle {
         HorizontalLayout {
             spacing: 8px;
             alignment: start;
-            
-            GlowDot {
-                glow-color: root.is-positive ? Palette.success : Palette.danger;
+
+            CryptoIcon {
+                symbol: root.symbol;
+                icon: root.icon;
                 y: (parent.height - self.height) / 2;
             }
             
@@ -435,6 +419,7 @@ export component TickerItem inherits Rectangle {
 export component CryptoCard inherits Rectangle {
     in property <string> name;
     in property <string> symbol;
+    in property <image> icon;
     in property <string> price;
     in property <string> amount;
     in property <string> value;
@@ -490,6 +475,7 @@ export component CryptoCard inherits Rectangle {
                 
                 CryptoIcon {
                     symbol: root.symbol;
+                    icon: root.icon;
                     large: true;
                 }
                 

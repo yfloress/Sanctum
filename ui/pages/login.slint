@@ -119,12 +119,23 @@ export component LoginPage inherits Rectangle {
     // Internal state
     in-out property <string> password-text: "";
     in-out property <bool> vault-exists: false;
+    property <string> weak-warning: "";
+    property <bool> weak-confirmed: false;
     in-out property <bool> is-loading: false;
     in property <string> title-text: "SANCTUM";
 
     // Check vault status on init
     init => {
         vault-exists = AuthAdapter.check-vault-exists();
+    }
+
+    changed password-text => {
+        weak-confirmed = false;
+        if (!vault-exists && password-text != "") {
+            weak-warning = AuthAdapter.check-password-strength(password-text);
+        } else {
+            weak-warning = "";
+        }
     }
 
     // Full screen centered layout
@@ -203,15 +214,36 @@ export component LoginPage inherits Rectangle {
                     }
 
                     // Password hint for new vault
-                    if !vault-exists: Text {
-                        text: password-text.character-count < 8 ? "minimum 8 characters" : "";
-                        color: Palette.text-muted;
-                        font-size: 11px;
-                        font-weight: 300;
-                        horizontal-alignment: left;
-                        opacity: password-text.character-count > 0 && password-text.character-count < 8 ? 1.0 : 0.0;
+                    if !vault-exists && weak-warning != "": Rectangle {
+                        height: 32px;
+                        background: Palette.warning.with-alpha(0.12);
+                        border-radius: 6px;
+                        border-width: 1px;
+                        border-color: Palette.warning.with-alpha(0.35);
 
-                        animate opacity { duration: 150ms; }
+                        HorizontalLayout {
+                            padding-left: 10px;
+                            padding-right: 10px;
+                            spacing: 8px;
+
+                            Rectangle {
+                                width: 4px;
+                                height: 16px;
+                                border-radius: 2px;
+                                background: Palette.warning;
+                                y: (parent.height - self.height) / 2;
+                            }
+
+                            Text {
+                                text: weak-confirmed
+                                    ? "Weak password: click create again to confirm."
+                                    : weak-warning;
+                                color: Palette.warning;
+                                font-size: 10px;
+                                font-weight: 500;
+                                vertical-alignment: center;
+                            }
+                        }
                     }
 
                     // Spacer
@@ -222,7 +254,7 @@ export component LoginPage inherits Rectangle {
                     // Action button
                     TextButton {
                         text: vault-exists ? (is-loading ? "UNLOCKING..." : "UNLOCK VAULT") : (is-loading ? "CREATING..." : "CREATE VAULT");
-                        enabled: password-text != "" && (!vault-exists ? password-text.character-count >= 8 : true) && !is-loading;
+                        enabled: password-text != "" && !is-loading;
 
                         clicked => {
                             if (vault-exists) {
@@ -264,8 +296,12 @@ export component LoginPage inherits Rectangle {
             NotificationAdapter.show("Password required", true);
             return;
         }
-        if (password-text.character-count < 8) {
-            NotificationAdapter.show("Password too short", true);
+        if (weak-warning != "" && !weak-confirmed) {
+            weak-confirmed = true;
+            NotificationAdapter.show(
+                weak-warning + ". Click create again to confirm.",
+                true
+            );
             return;
         }
         is-loading = true;
@@ -277,6 +313,7 @@ export component LoginPage inherits Rectangle {
             NotificationAdapter.show(result, true);
         }
         is-loading = false;
+        weak-confirmed = false;
     }
 
     // Handler: Unlock existing vault

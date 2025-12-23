@@ -11,7 +11,7 @@ use crate::models::{
 };
 use crate::security_log::{SecurityEvent, log_auth_failure, log_security_event};
 use crate::services::habit::HabitService;
-use chrono::{Datelike, NaiveDate, Utc};
+use chrono::{Datelike, Local, NaiveDate, Utc};
 use regex::Regex;
 use rusqlite::Connection;
 use secrecy::SecretString;
@@ -123,6 +123,7 @@ const MAX_SYMBOL_LENGTH: usize = 16;
 const MAX_ICON_LENGTH: usize = 32;
 const MAX_PASSWORD_LENGTH: usize = 128;
 const MIN_PASSWORD_LENGTH: usize = 8;
+const PASSWORD_PASSPHRASE_LENGTH: usize = 16;
 const MAX_ACCOUNT_NAME_LENGTH: usize = 64;
 const MAX_CURRENCY_LENGTH: usize = 8;
 const MAX_COIN_NAME_LENGTH: usize = 64;
@@ -132,6 +133,9 @@ pub const SETTING_TICKER_COINS: &str = "ticker_coins";
 pub const SETTING_CRYPTO_LAST_UPDATED: &str = "crypto_last_updated";
 pub const SETTING_CRYPTO_CUSTOM_COINS: &str = "crypto_custom_coins";
 pub const SETTING_CRYPTO_HIDDEN_COINS: &str = "crypto_hidden_coins";
+pub const SETTING_CRYPTO_FAVORITE_COINS: &str = "crypto_favorite_coins";
+pub const SETTING_CRYPTO_LAST_WALLET_ID: &str = "crypto_last_wallet_id";
+pub const SETTING_CRYPTO_LAST_COIN_ID: &str = "crypto_last_coin_id";
 
 // ==================== Helper Functions ====================
 
@@ -293,31 +297,17 @@ fn validate_password_basic(password: String) -> Result<SecretString, ControllerE
     Ok(SecretString::from(trimmed.to_string()))
 }
 
-/// Valida la contraseña con requisitos estrictos para crear una nueva bóveda
-fn validate_password_strict(password: String) -> Result<SecretString, ControllerError> {
+/// Returns a warning message if the password is weak (empty string means ok)
+fn password_strength_warning(password: &str) -> Option<String> {
     let trimmed = password.trim();
-
     if trimmed.is_empty() {
-        return Err(ControllerError::Validation(
-            "Password cannot be empty".to_string(),
-        ));
+        return None;
     }
 
-    if trimmed.len() < MIN_PASSWORD_LENGTH {
-        return Err(ControllerError::Validation(format!(
-            "Password must be at least {} characters",
-            MIN_PASSWORD_LENGTH
-        )));
+    if trimmed.len() >= PASSWORD_PASSPHRASE_LENGTH {
+        return None;
     }
 
-    if trimmed.len() > MAX_PASSWORD_LENGTH {
-        return Err(ControllerError::Validation(format!(
-            "Password cannot exceed {} characters",
-            MAX_PASSWORD_LENGTH
-        )));
-    }
-
-    // Verificar complejidad de contraseña
     let has_uppercase = trimmed.chars().any(|c| c.is_ascii_uppercase());
     let has_lowercase = trimmed.chars().any(|c| c.is_ascii_lowercase());
     let has_digit = trimmed.chars().any(|c| c.is_ascii_digit());
@@ -357,31 +347,16 @@ fn validate_password_strict(password: String) -> Result<SecretString, Controller
         )
     });
 
-    if !has_uppercase {
-        return Err(ControllerError::Validation(
-            "Password must contain at least one uppercase letter".to_string(),
-        ));
+    if trimmed.len() < MIN_PASSWORD_LENGTH
+        || !has_uppercase
+        || !has_lowercase
+        || !has_digit
+        || !has_special
+    {
+        return Some("Weak password: use 16+ chars or add variety".to_string());
     }
 
-    if !has_lowercase {
-        return Err(ControllerError::Validation(
-            "Password must contain at least one lowercase letter".to_string(),
-        ));
-    }
-
-    if !has_digit {
-        return Err(ControllerError::Validation(
-            "Password must contain at least one number".to_string(),
-        ));
-    }
-
-    if !has_special {
-        return Err(ControllerError::Validation(
-            "Password must contain at least one special character (!@#$%^&*...)".to_string(),
-        ));
-    }
-
-    Ok(SecretString::from(trimmed.to_string()))
+    None
 }
 
 /// Valida que una fecha esté en formato ISO-8601 (YYYY-MM-DD)
@@ -711,7 +686,7 @@ impl AppController {
         password: String,
         path: Option<String>,
     ) -> Result<String, ControllerError> {
-        let password = validate_password_strict(password)?;
+        let password = validate_password_basic(password)?;
         self.ensure_no_connection()?;
 
         let db_path_raw = if let Some(p) = path {
@@ -743,6 +718,11 @@ impl AppController {
         log_security_event(SecurityEvent::VaultCreated, None);
 
         Ok("Vault created successfully".to_string())
+    }
+
+    /// Returns a warning string for weak passwords (empty if strong/ok)
+    pub fn check_password_strength(&self, password: String) -> String {
+        password_strength_warning(&password).unwrap_or_default()
     }
 
     /// Opens an existing vault with the provided password
@@ -854,7 +834,7 @@ impl AppController {
             .ok()
             .filter(|val| !val.is_empty())
             .and_then(|val| serde_json::from_str::<Vec<String>>(&val).ok())
-            .unwrap_or_else(crypto::default_price_allowlist)
+            .unwrap_or_else(crypto::default_ticker_ids)
     }
 
     /// Saves active ticker IDs to settings
@@ -888,6 +868,15 @@ impl AppController {
             .unwrap_or_default()
     }
 
+    /// Loads favorite coin IDs for the catalog UI
+    pub fn get_favorite_coin_ids(&self) -> Vec<String> {
+        self.get_app_setting(SETTING_CRYPTO_FAVORITE_COINS)
+            .ok()
+            .filter(|val| !val.is_empty())
+            .and_then(|val| serde_json::from_str::<Vec<String>>(&val).ok())
+            .unwrap_or_default()
+    }
+
     /// Saves custom coins to settings
     fn save_custom_coin_catalog(
         &self,
@@ -903,6 +892,32 @@ impl AppController {
         let json =
             serde_json::to_string(&ids).map_err(|e| ControllerError::Validation(e.to_string()))?;
         self.set_app_setting(SETTING_CRYPTO_HIDDEN_COINS, &json)
+    }
+
+    /// Saves favorite coin IDs to settings
+    fn save_favorite_coin_ids(&self, ids: Vec<String>) -> Result<(), ControllerError> {
+        let json =
+            serde_json::to_string(&ids).map_err(|e| ControllerError::Validation(e.to_string()))?;
+        self.set_app_setting(SETTING_CRYPTO_FAVORITE_COINS, &json)
+    }
+
+    /// Marks or unmarks a coin as favorite
+    pub fn set_favorite_coin(&self, id: String, favorite: bool) -> Result<(), ControllerError> {
+        let id = validate_coin_id_str(&id)?;
+        let mut favorites = self.get_favorite_coin_ids();
+        let had_id = favorites.iter().any(|coin| coin == &id);
+
+        if favorite && !had_id {
+            favorites.push(id);
+            favorites.sort();
+            favorites.dedup();
+            self.save_favorite_coin_ids(favorites)?;
+        } else if !favorite && had_id {
+            favorites.retain(|coin| coin != &id);
+            self.save_favorite_coin_ids(favorites)?;
+        }
+
+        Ok(())
     }
 
     /// Returns the full coin catalog (defaults + custom)
@@ -1001,6 +1016,12 @@ impl AppController {
         if active.iter().any(|coin| coin == &id) {
             active.retain(|coin| coin != &id);
             let _ = self.save_active_ticker_ids(active);
+        }
+
+        let mut favorites = self.get_favorite_coin_ids();
+        if favorites.iter().any(|coin| coin == &id) {
+            favorites.retain(|coin| coin != &id);
+            let _ = self.save_favorite_coin_ids(favorites);
         }
 
         Ok(())
@@ -1492,6 +1513,37 @@ impl AppController {
         })
     }
 
+    /// Saves a daily portfolio snapshot (upsert by date)
+    pub fn save_crypto_portfolio_snapshot(
+        &self,
+        total_value: f64,
+        total_cost: f64,
+    ) -> Result<(), ControllerError> {
+        let date = Local::now().format("%Y-%m-%d").to_string();
+        self.with_db(|db| {
+            db.save_crypto_portfolio_snapshot(&date, total_value, total_cost)
+                .map_err(ControllerError::Database)
+        })
+    }
+
+    /// Loads portfolio snapshots for the last N days (inclusive)
+    pub fn get_crypto_portfolio_snapshots(
+        &self,
+        days: i64,
+    ) -> Result<Vec<(String, f64, f64)>, ControllerError> {
+        let days = days.max(1);
+        let start_date = Local::now()
+            .date_naive()
+            .checked_sub_signed(chrono::Duration::days(days - 1))
+            .unwrap_or_else(|| Local::now().date_naive())
+            .format("%Y-%m-%d")
+            .to_string();
+        self.with_db(|db| {
+            db.load_crypto_portfolio_snapshots(&start_date)
+                .map_err(ControllerError::Database)
+        })
+    }
+
     // ==================== Crypto Wallet Methods ====================
 
     /// Creates a new crypto wallet
@@ -1583,13 +1635,7 @@ impl AppController {
             };
 
             validate_positive_amount(amount, "Amount")?;
-            
-            // 1. Validate Price (Mandatory)
-            let price = match price_per_coin {
-                Some(p) if p > 0.0 => p,
-                _ => return Err(ControllerError::Validation("Price per coin is required and must be greater than zero".to_string())),
-            };
-            
+
             let fee = validate_non_negative(fee, "Fee")?;
             let date = validate_date(&date)?;
 
@@ -1606,6 +1652,22 @@ impl AppController {
                     "Swap requires paired transactions. Use the swap flow.".to_string(),
                 ));
             }
+
+            let price = if transaction_type == "buy" || transaction_type == "sell" {
+                match price_per_coin {
+                    Some(p) => Some(validate_positive_amount(p, "Price per coin")?),
+                    None => {
+                        return Err(ControllerError::Validation(
+                            "Price per coin is required and must be greater than zero".to_string(),
+                        ))
+                    }
+                }
+            } else {
+                match price_per_coin {
+                    Some(p) => Some(validate_positive_amount(p, "Price per coin")?),
+                    None => None,
+                }
+            };
 
             // 2. Validate Sufficient Funds (Prevent Negative Balance)
             if transaction_type == "sell"
@@ -1639,7 +1701,7 @@ impl AppController {
                 symbol.to_uppercase(),
                 transaction_type,
                 amount,
-                Some(price), // Always store the validated price
+                price,
                 fee,
                 date,
                 notes,
@@ -1647,6 +1709,143 @@ impl AppController {
 
             db.create_crypto_transaction(&transaction)?;
             Ok(id)
+        })
+    }
+
+    /// Adds a transfer between two wallets as a paired outflow/inflow transaction
+    #[allow(clippy::too_many_arguments)]
+    pub fn add_crypto_transfer(
+        &self,
+        from_wallet_id: String,
+        to_wallet_id: String,
+        coin_id: String,
+        symbol: String,
+        from_amount: f64,
+        to_amount: f64,
+        fee: Option<f64>,
+        date: String,
+        notes: Option<String>,
+    ) -> Result<String, ControllerError> {
+        self.with_db(|db| {
+            let from_wallet_id = from_wallet_id.trim().to_string();
+            let to_wallet_id = to_wallet_id.trim().to_string();
+            if from_wallet_id.is_empty() || to_wallet_id.is_empty() {
+                return Err(ControllerError::Validation(
+                    "Wallet ID cannot be empty".to_string(),
+                ));
+            }
+            if from_wallet_id == to_wallet_id {
+                return Err(ControllerError::Validation(
+                    "Source and destination wallets must be different".to_string(),
+                ));
+            }
+
+            if db
+                .get_wallet(&from_wallet_id)
+                .map_err(ControllerError::Database)?
+                .is_none()
+            {
+                return Err(ControllerError::Validation(
+                    "Source wallet not found".to_string(),
+                ));
+            }
+            if db
+                .get_wallet(&to_wallet_id)
+                .map_err(ControllerError::Database)?
+                .is_none()
+            {
+                return Err(ControllerError::Validation(
+                    "Destination wallet not found".to_string(),
+                ));
+            }
+
+            let coin_id = validate_coin_id_str(&coin_id)?;
+            let symbol = validate_symbol(&symbol)?;
+            validate_positive_amount(from_amount, "From amount")?;
+            validate_positive_amount(to_amount, "To amount")?;
+            if to_amount > from_amount {
+                return Err(ControllerError::Validation(
+                    "To amount cannot exceed from amount".to_string(),
+                ));
+            }
+
+            let fee = validate_non_negative(fee, "Fee")?;
+            let date = validate_date(&date)?;
+
+            let notes = match notes {
+                Some(n) => {
+                    let validated = validate_field_length(&n, MAX_NOTES_LENGTH, "Notes")?;
+                    Some(sanitize_string(&validated))
+                }
+                None => None,
+            };
+
+            let holdings = db
+                .get_wallet_aggregated_holdings(&from_wallet_id)
+                .map_err(ControllerError::Database)?;
+            let asset = holdings.iter().find(|h| h.coin_id == coin_id);
+            let current_balance = asset.map(|h| h.total_amount).unwrap_or(0.0);
+            if from_amount > current_balance {
+                return Err(ControllerError::Validation(format!(
+                    "Insufficient funds. Available: {:.8} {}",
+                    current_balance, symbol
+                )));
+            }
+
+            let avg_price = asset.map(|h| h.avg_buy_price).unwrap_or(0.0);
+            let transfer_price = if avg_price > 0.0 {
+                Some(avg_price)
+            } else {
+                None
+            };
+
+            log_security_event(
+                SecurityEvent::CryptoTransactionCreated,
+                Some("transfer"),
+            );
+
+            let source_id = Uuid::new_v4().to_string();
+            let target_id = Uuid::new_v4().to_string();
+
+            let source = CryptoTransaction {
+                id: source_id.clone(),
+                wallet_id: from_wallet_id,
+                coin_id: coin_id.clone(),
+                symbol: symbol.clone(),
+                transaction_type: "transfer_out".to_string(),
+                amount: from_amount,
+                price_per_coin: None,
+                fee: None,
+                fee_coin_id: None,
+                fee_amount: None,
+                date: date.clone(),
+                notes: notes.clone(),
+                related_tx_id: Some(target_id.clone()),
+            };
+
+            let target = CryptoTransaction {
+                id: target_id.clone(),
+                wallet_id: to_wallet_id,
+                coin_id,
+                symbol,
+                transaction_type: "transfer_in".to_string(),
+                amount: to_amount,
+                price_per_coin: transfer_price,
+                fee,
+                fee_coin_id: None,
+                fee_amount: None,
+                date,
+                notes,
+                related_tx_id: Some(source_id.clone()),
+            };
+
+            db.create_crypto_transaction(&source)?;
+            if let Err(err) = db.create_crypto_transaction(&target) {
+                let _ = db.delete_crypto_transaction(&source_id);
+                return Err(ControllerError::Database(err));
+            }
+
+            Ok(source_id)
         })
     }
 
@@ -1825,17 +2024,26 @@ impl AppController {
 
             if existing.transaction_type == "swap" || existing.related_tx_id.is_some() {
                 return Err(ControllerError::Validation(
-                    "Editing swap transactions is not supported".to_string(),
+                    "Editing paired transactions is not supported".to_string(),
                 ));
             }
 
             validate_positive_amount(amount, "Amount")?;
-            let price = match price_per_coin {
-                Some(p) if p > 0.0 => p,
-                _ => {
-                    return Err(ControllerError::Validation(
-                        "Price per coin is required and must be greater than zero".to_string(),
-                    ))
+            let price = if existing.transaction_type == "buy"
+                || existing.transaction_type == "sell"
+            {
+                match price_per_coin {
+                    Some(p) => Some(validate_positive_amount(p, "Price per coin")?),
+                    None => {
+                        return Err(ControllerError::Validation(
+                            "Price per coin is required and must be greater than zero".to_string(),
+                        ))
+                    }
+                }
+            } else {
+                match price_per_coin {
+                    Some(p) => Some(validate_positive_amount(p, "Price per coin")?),
+                    None => None,
                 }
             };
             let fee = validate_non_negative(fee, "Fee")?;
@@ -1871,7 +2079,7 @@ impl AppController {
             db.update_crypto_transaction_fields(
                 &validated_id,
                 amount,
-                Some(price),
+                price,
                 fee,
                 &date,
                 notes.as_deref(),
@@ -2682,13 +2890,6 @@ mod tests {
         let result = validate_password_basic("simple".to_string());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().expose_secret(), "simple");
-    }
-
-    #[test]
-    fn test_validate_password_strict_valid() {
-        let result = validate_password_strict("Password1!".to_string());
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap().expose_secret(), "Password1!");
     }
 
     #[test]

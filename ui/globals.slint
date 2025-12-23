@@ -220,6 +220,9 @@ export global AuthAdapter {
     // Create new vault - returns "" on success, error message on failure
     callback create-vault(string) -> string;
 
+    // Returns warning message for weak passwords ("" if strong/ok)
+    callback check-password-strength(string) -> string;
+
     // Unlock vault - returns "" on success, error message on failure
     callback unlock-vault(string) -> string;
 
@@ -267,6 +270,7 @@ export global SettingsAdapter {
 export struct CryptoAssetData {
     id: string,
     symbol: string,
+    icon: image,
     name: string,
     price: string,          // Formatted "$ 65,000.00"
     amount: string,         // Formatted "0.5 BTC"
@@ -274,6 +278,13 @@ export struct CryptoAssetData {
     change-24h: string,     // Formatted "+ 2.5%"
     is-positive: bool,      // For coloring change
     allocation: float,      // 0.0 to 1.0
+}
+
+export struct CryptoDistributionSlice {
+    label: string,
+    value: string,
+    percent: string,
+    color: color,
 }
 
 export struct CryptoWalletData {
@@ -321,7 +332,9 @@ export struct CatalogCoin {
     name: string,
     symbol: string,
     custom: bool,
+    favorite: bool,
     visible: bool,
+    selected: bool,
 }
 
 export global CryptoAdapter {
@@ -330,6 +343,8 @@ export global CryptoAdapter {
     in-out property <[CryptoWalletData]> wallets: [];
     in-out property <[WalletSimple]> wallet-list: []; // For dropdowns
     in-out property <[CatalogCoin]> coin-catalog: [];
+    in-out property <int> default-wallet-index: 0;
+    in-out property <int> default-coin-index: 0;
     
     // Config
     in-out property <[TickerOption]> ticker-options: [];
@@ -340,6 +355,10 @@ export global CryptoAdapter {
     callback filter-coin-catalog(string);
     callback add-custom-coin(string, string, string) -> string; // id, name, symbol
     callback delete-custom-coin(string) -> string; // id
+    callback set-favorite-coin(string, bool) -> string; // id, favorite
+    callback select-all-coins();
+    callback clear-coin-selection();
+    callback delete-selected-coins() -> string;
 
     // Asset Detail View Data
     in-out property <CryptoAssetData> selected-asset;
@@ -361,6 +380,11 @@ export global CryptoAdapter {
     in-out property <bool> total-pnl-positive: true;
     in-out property <string> clp-rate: "...";
     in-out property <string> last-updated: "Never";
+    in-out property <image> portfolio-trend-image;
+    in-out property <bool> portfolio-trend-ready: false;
+    in-out property <image> portfolio-chart-image;
+    in-out property <bool> portfolio-chart-ready: false;
+    in-out property <[CryptoDistributionSlice]> portfolio-distribution: [];
     in-out property <bool> limit-reached: false;
     in-out property <string> limit-excluded: "";
 
@@ -384,10 +408,13 @@ export global CryptoAdapter {
     callback refresh-prices();
     callback fetch-asset-details(string); // coin_id
     callback get-last-price(string) -> string; // coin_id -> price string
+    callback get-swap-quote(string, string, string) -> string; // from_coin_id, to_coin_id, from_amount -> to_amount
     callback load-edit-transaction(string) -> string; // tx_id -> "" or error
     
     // (wallet_id, coin_id, symbol, type, amount, price, fee, date, notes)
     callback add-transaction(string, string, string, string, string, string, string, string, string) -> string;
+    // (from_wallet_id, to_wallet_id, coin_id, symbol, from_amount, to_amount, fee, date, notes)
+    callback add-transfer(string, string, string, string, string, string, string, string, string) -> string;
     // (wallet_id, from_coin_id, from_symbol, from_amount, to_coin_id, to_symbol, to_amount, fee, date, notes)
     callback add-swap(string, string, string, string, string, string, string, string, string, string) -> string;
     // (tx_id, amount, price, fee, date, notes)

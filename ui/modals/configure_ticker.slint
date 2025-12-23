@@ -213,8 +213,10 @@ component CatalogRow inherits Rectangle {
     in property <string> name;
     in property <bool> is-custom: false;
     in property <bool> deletable: false;
+    in-out property <bool> selected: false;
 
     callback delete;
+    callback toggled;
 
     height: 48px;
     background: transparent;
@@ -225,18 +227,51 @@ component CatalogRow inherits Rectangle {
         spacing: 16px;
         alignment: space-between;
 
-        VerticalLayout {
-            alignment: center;
-            Text {
-                text: root.symbol + (root.is-custom ? " *" : "");
-                color: root.is-custom ? Palette.accent : Palette.text-primary;
-                font-size: 12px;
-                font-weight: 600;
+        Rectangle {
+            background: transparent;
+            horizontal-stretch: 1;
+
+            HorizontalLayout {
+                spacing: 12px;
+                alignment: start;
+
+                Rectangle {
+                    width: 16px;
+                    height: 16px;
+                    border-radius: 4px;
+                    background: root.selected ? Palette.accent : transparent;
+                    border-width: 1px;
+                    border-color: root.selected ? Palette.accent : Palette.border-subtle;
+                    y: (parent.height - self.height) / 2;
+
+                    Text {
+                        text: root.selected ? "✓" : "";
+                        color: #ffffff;
+                        font-size: 10px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+
+                VerticalLayout {
+                    alignment: center;
+                    Text {
+                        text: root.symbol + (root.is-custom ? " *" : "");
+                        color: root.is-custom ? Palette.accent : Palette.text-primary;
+                        font-size: 12px;
+                        font-weight: 600;
+                    }
+                    Text {
+                        text: root.name;
+                        color: root.is-custom ? Palette.text-secondary : Palette.text-muted;
+                        font-size: 10px;
+                    }
+                }
             }
-            Text {
-                text: root.name;
-                color: root.is-custom ? Palette.text-secondary : Palette.text-muted;
-                font-size: 10px;
+
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => { root.toggled(); }
             }
         }
 
@@ -448,6 +483,41 @@ export component ConfigureTickerModal inherits Rectangle {
                         horizontal-alignment: center;
                     }
 
+                    HorizontalLayout {
+                        alignment: space-between;
+                        spacing: 8px;
+
+                        HorizontalLayout {
+                            spacing: 8px;
+
+                            ActionButton {
+                                text: "SELECT ALL";
+                                primary: false;
+                                min-width: 96px;
+                                clicked => { CryptoAdapter.select-all-coins(); }
+                            }
+
+                            ActionButton {
+                                text: "CLEAR";
+                                primary: false;
+                                min-width: 72px;
+                                clicked => { CryptoAdapter.clear-coin-selection(); }
+                            }
+                        }
+
+                        ActionButton {
+                            text: "REMOVE SELECTED";
+                            primary: false;
+                            min-width: 140px;
+                            clicked => {
+                                let res = CryptoAdapter.delete-selected-coins();
+                                if (res != "") {
+                                    NotificationAdapter.show(res, true);
+                                }
+                            }
+                        }
+                    }
+
                     Rectangle {
                         vertical-stretch: 1;
                         background: Palette.surface;
@@ -489,11 +559,16 @@ export component ConfigureTickerModal inherits Rectangle {
                                         name: coin.name;
                                         is-custom: coin.custom;
                                         deletable: true;
+                                        selected: coin.selected;
                                         delete => {
                                             let res = CryptoAdapter.delete-custom-coin(coin.id);
                                             if (res != "") {
                                                 NotificationAdapter.show(res, true);
                                             }
+                                        }
+                                        toggled => {
+                                            CryptoAdapter.coin-catalog[index].selected =
+                                                !CryptoAdapter.coin-catalog[index].selected;
                                         }
                                     }
                                 }

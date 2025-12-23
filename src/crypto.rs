@@ -51,6 +51,9 @@ const PRIVACY_PRESERVING_PRICE_IDS: &[&str] = &[
     "dogecoin", "ripple",
 ];
 
+/// Default tickers shown in the UI when no user selection exists.
+const DEFAULT_TICKER_IDS: &[&str] = &["bitcoin", "litecoin", "monero", "ethereum", "tether"];
+
 /// Internal struct to deserialize CoinGecko API response
 #[derive(Debug, Deserialize)]
 struct CoinGeckoMarketData {
@@ -338,6 +341,14 @@ pub async fn fetch_crypto_prices(coin_ids: Vec<String>) -> Result<Vec<CryptoAsse
 /// Returns the padding list used for default tickers and privacy obfuscation.
 pub fn default_price_allowlist() -> Vec<String> {
     PRIVACY_PRESERVING_PRICE_IDS
+        .iter()
+        .map(|s| s.to_string())
+        .collect()
+}
+
+/// Returns the default ticker IDs shown in the UI.
+pub fn default_ticker_ids() -> Vec<String> {
+    DEFAULT_TICKER_IDS
         .iter()
         .map(|s| s.to_string())
         .collect()

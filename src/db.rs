@@ -491,6 +491,17 @@ impl Database {
             [],
         )?;
 
+        // Daily crypto portfolio snapshots (for trend chart)
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS crypto_portfolio_snapshots (
+                snapshot_date TEXT PRIMARY KEY NOT NULL,
+                total_value_usd REAL NOT NULL,
+                total_cost_usd REAL NOT NULL,
+                created_at TEXT NOT NULL
+            )",
+            [],
+        )?;
+
         Ok(())
     }
 
@@ -579,6 +590,52 @@ impl Database {
             Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
             Err(e) => Err(DbError::Sqlite(e)),
         }
+    }
+
+    /// Saves a daily crypto portfolio snapshot (upsert by date)
+    pub fn save_crypto_portfolio_snapshot(
+        &self,
+        snapshot_date: &str,
+        total_value_usd: f64,
+        total_cost_usd: f64,
+    ) -> Result<(), DbError> {
+        let now = Utc::now().to_rfc3339();
+        self.conn.execute(
+            "INSERT INTO crypto_portfolio_snapshots
+             (snapshot_date, total_value_usd, total_cost_usd, created_at)
+             VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(snapshot_date) DO UPDATE SET
+                total_value_usd = ?2,
+                total_cost_usd = ?3,
+                created_at = ?4",
+            params![snapshot_date, total_value_usd, total_cost_usd, now],
+        )?;
+        Ok(())
+    }
+
+    /// Loads crypto portfolio snapshots from a starting date (inclusive)
+    pub fn load_crypto_portfolio_snapshots(
+        &self,
+        start_date: &str,
+    ) -> Result<Vec<(String, f64, f64)>, DbError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT snapshot_date, total_value_usd, total_cost_usd
+             FROM crypto_portfolio_snapshots
+             WHERE snapshot_date >= ?1
+             ORDER BY snapshot_date ASC",
+        )?;
+
+        let snapshots = stmt.query_map(params![start_date], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, f64>(1)?,
+                row.get::<_, f64>(2)?,
+            ))
+        })?;
+
+        snapshots
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(DbError::Sqlite)
     }
 
     // ==================== Rate Limiting Functions ====================
@@ -1619,6 +1676,40 @@ impl Database {
         target_entry.total_cost_basis += cost_transferred.max(0.0);
     }
 
+    /// Applies a transfer pair for the same asset, reducing cost basis only for fee losses
+    fn apply_transfer_pair(
+        assets: &mut HashMap<String, AggregatedAsset>,
+        source: &CryptoTransaction,
+        target: &CryptoTransaction,
+    ) -> bool {
+        if source.coin_id != target.coin_id {
+            return false;
+        }
+
+        let entry = assets
+            .entry(source.coin_id.clone())
+            .or_insert_with(|| AggregatedAsset::new(source.coin_id.clone(), source.symbol.clone()));
+
+        let prev_amount = entry.total_amount;
+        let prev_cost = entry.total_cost_basis;
+        if prev_amount <= 0.0 {
+            entry.total_amount = (entry.total_amount - source.amount).max(0.0) + target.amount;
+            entry.total_cost_basis += target.fee.unwrap_or(0.0);
+            return true;
+        }
+
+        let unit_cost = prev_cost / prev_amount;
+        let cost_out = unit_cost * source.amount;
+
+        entry.total_amount = (entry.total_amount - source.amount).max(0.0);
+        entry.total_cost_basis = (entry.total_cost_basis - cost_out).max(0.0);
+
+        entry.total_amount += target.amount;
+        entry.total_cost_basis += unit_cost * target.amount;
+        entry.total_cost_basis += target.fee.unwrap_or(0.0);
+        true
+    }
+
     /// Calculates aggregated portfolio from all transactions across all wallets
     /// This is the CRITICAL function that computes total holdings per coin
     pub fn get_aggregated_portfolio(&self) -> Result<Vec<AggregatedAsset>, DbError> {
@@ -1643,13 +1734,35 @@ impl Database {
                 continue;
             }
 
-            // Handle swap pairs to carry over cost basis to the acquired asset
+            // Handle swap/transfer pairs to carry over cost basis
             if let Some(rel_id) = &tx.related_tx_id {
                 if let Some(counter) = tx_map.get(rel_id) {
+                    let is_transfer_pair = (tx.transaction_type == "transfer_out"
+                        && counter.transaction_type == "transfer_in")
+                        || (tx.transaction_type == "transfer_in"
+                            && counter.transaction_type == "transfer_out");
                     let is_swap_pair = (tx.transaction_type == "swap"
                         && counter.transaction_type == "transfer_in")
                         || (tx.transaction_type == "transfer_in"
                             && counter.transaction_type == "swap");
+
+                    if is_transfer_pair {
+                        if processed.contains(rel_id) || processed.contains(&tx.id) {
+                            continue;
+                        }
+
+                        let applied = if tx.transaction_type == "transfer_out" {
+                            Self::apply_transfer_pair(&mut assets, &tx, counter)
+                        } else {
+                            Self::apply_transfer_pair(&mut assets, counter, &tx)
+                        };
+
+                        if applied {
+                            processed.insert(tx.id.clone());
+                            processed.insert(rel_id.clone());
+                            continue;
+                        }
+                    }
 
                     if is_swap_pair {
                         if processed.contains(rel_id) || processed.contains(&tx.id) {
@@ -1688,6 +1801,10 @@ impl Database {
                 }
                 CryptoTransactionType::TransferIn => {
                     entry.total_amount += tx.amount;
+                    if let Some(price) = tx.price_per_coin {
+                        let fee = tx.fee.unwrap_or(0.0);
+                        entry.total_cost_basis += (tx.amount * price) + fee;
+                    }
                 }
                 CryptoTransactionType::Sell
                 | CryptoTransactionType::TransferOut
@@ -1748,10 +1865,32 @@ impl Database {
 
             if let Some(rel_id) = &tx.related_tx_id {
                 if let Some(counter) = tx_map.get(rel_id) {
+                    let is_transfer_pair = (tx.transaction_type == "transfer_out"
+                        && counter.transaction_type == "transfer_in")
+                        || (tx.transaction_type == "transfer_in"
+                            && counter.transaction_type == "transfer_out");
                     let is_swap_pair = (tx.transaction_type == "swap"
                         && counter.transaction_type == "transfer_in")
                         || (tx.transaction_type == "transfer_in"
                             && counter.transaction_type == "swap");
+
+                    if is_transfer_pair {
+                        if processed.contains(rel_id) || processed.contains(&tx.id) {
+                            continue;
+                        }
+
+                        let applied = if tx.transaction_type == "transfer_out" {
+                            Self::apply_transfer_pair(&mut assets, &tx, counter)
+                        } else {
+                            Self::apply_transfer_pair(&mut assets, counter, &tx)
+                        };
+
+                        if applied {
+                            processed.insert(tx.id.clone());
+                            processed.insert(rel_id.clone());
+                            continue;
+                        }
+                    }
 
                     if is_swap_pair {
                         if processed.contains(rel_id) || processed.contains(&tx.id) {
@@ -1786,6 +1925,10 @@ impl Database {
                 entry.total_cost_basis += cost + tx.fee.unwrap_or(0.0);
             } else if matches!(tx_type, CryptoTransactionType::TransferIn) {
                 entry.total_amount += tx.amount;
+                if let Some(price) = tx.price_per_coin {
+                    let fee = tx.fee.unwrap_or(0.0);
+                    entry.total_cost_basis += (tx.amount * price) + fee;
+                }
             } else if tx_type.is_outflow() || matches!(tx_type, CryptoTransactionType::Swap) {
                 let prev_amount = entry.total_amount;
                 entry.total_amount -= tx.amount;

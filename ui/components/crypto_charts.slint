@@ -1,0 +1,225 @@
+import { Palette, CryptoDistributionSlice } from "../globals.slint";
+
+// ==================== Portfolio Distribution Chart ====================
+export component PortfolioDistributionChart inherits Rectangle {
+    in property <image> image;
+    in property <bool> has-data: false;
+    in property <[CryptoDistributionSlice]> slices: [];
+
+    background: Palette.surface;
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: Palette.border-subtle;
+
+    VerticalLayout {
+        padding: 20px;
+        spacing: 14px;
+
+        Text {
+            text: "PORTFOLIO DISTRIBUTION";
+            color: Palette.text-secondary;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        Rectangle {
+            height: 300px;
+            border-radius: 14px;
+            background: @linear-gradient(180deg, #0a0a0a, #0f0f0f);
+            border-width: 1px;
+            border-color: Palette.border-subtle;
+            clip: true;
+
+            if root.has-data: HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+                spacing: 24px;
+
+                Rectangle {
+                    width: parent.width * 0.48;
+                    height: parent.height;
+                    background: transparent;
+
+                    if root.has-data: Image {
+                        source: root.image;
+                        width: 100%;
+                        height: 100%;
+                        image-fit: contain;
+                    }
+
+                }
+
+                Rectangle {
+                    width: parent.width * 0.52;
+                    height: parent.height;
+                    background: transparent;
+
+                    Flickable {
+                        width: 100%;
+                        height: 100%;
+                        property <length> legend-content-height: (root.slices.length * 36px) + 20px;
+                        property <length> legend-padding: max(4px, (self.height - legend-content-height) / 2);
+                        viewport-height: max(self.height, legend-content-height + 8px);
+
+                        VerticalLayout {
+                            alignment: start;
+                            spacing: 10px;
+                            padding-top: legend-padding;
+                            padding-bottom: legend-padding;
+
+                            Text {
+                                text: "ASSETS";
+                                color: Palette.text-secondary;
+                                font-size: 10px;
+                                font-weight: 700;
+                                letter-spacing: 2px;
+                            }
+
+                            for slice[index] in root.slices: HorizontalLayout {
+                                spacing: 10px;
+
+                                Rectangle {
+                                    width: 10px;
+                                    height: 10px;
+                                    border-radius: 3px;
+                                    background: slice.color;
+                                    y: 5px;
+                                }
+
+                                Text {
+                                    text: slice.label;
+                                    color: Palette.text-primary;
+                                    font-size: 12px;
+                                    font-weight: 600;
+                                    width: 80px;
+                                    horizontal-alignment: left;
+                                }
+
+                                Text {
+                                    text: slice.percent;
+                                    color: Palette.text-secondary;
+                                    font-size: 11px;
+                                    horizontal-alignment: left;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if !root.has-data: VerticalLayout {
+                alignment: center;
+                spacing: 6px;
+                Text {
+                    text: "No priced assets yet";
+                    color: Palette.text-secondary;
+                    font-size: 12px;
+                    font-weight: 600;
+                    horizontal-alignment: center;
+                }
+                Text {
+                    text: "Sync prices to see the distribution";
+                    color: Palette.text-muted;
+                    font-size: 11px;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+    }
+}
+
+// ==================== Portfolio Trend Chart ====================
+export component PortfolioTrendChart inherits Rectangle {
+    in property <image> image;
+    in property <bool> has-data: false;
+
+    background: Palette.surface;
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: Palette.border-subtle;
+
+    VerticalLayout {
+        padding: 20px;
+        spacing: 14px;
+
+        HorizontalLayout {
+            spacing: 12px;
+
+            Text {
+                text: "PORTFOLIO TREND (180 DAYS)";
+                color: Palette.text-secondary;
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 2px;
+                horizontal-stretch: 1;
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+                Rectangle {
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 4px;
+                    background: #8b5cf6;
+                    y: 6px;
+                }
+                Text {
+                    text: "VALUE";
+                    color: Palette.text-secondary;
+                    font-size: 9px;
+                    letter-spacing: 1px;
+                    vertical-alignment: center;
+                }
+                Rectangle {
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 4px;
+                    background: #94a3b8;
+                    y: 6px;
+                }
+                Text {
+                    text: "COST";
+                    color: Palette.text-secondary;
+                    font-size: 9px;
+                    letter-spacing: 1px;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        Rectangle {
+            height: 240px;
+            border-radius: 14px;
+            background: @linear-gradient(180deg, #0a0a0a, #0f0f0f);
+            border-width: 1px;
+            border-color: Palette.border-subtle;
+            clip: true;
+
+            if root.has-data: Image {
+                source: root.image;
+                width: 100%;
+                height: 100%;
+                image-fit: contain;
+            }
+
+            if !root.has-data: VerticalLayout {
+                alignment: center;
+                spacing: 6px;
+                Text {
+                    text: "No trend data yet";
+                    color: Palette.text-secondary;
+                    font-size: 12px;
+                    font-weight: 600;
+                    horizontal-alignment: center;
+                }
+                Text {
+                    text: "Sync prices daily to build history";
+                    color: Palette.text-muted;
+                    font-size: 11px;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+    }
+}
