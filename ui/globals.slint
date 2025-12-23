@@ -276,6 +276,13 @@ export struct CryptoAssetData {
     allocation: float,      // 0.0 to 1.0
 }
 
+export struct CryptoDistributionSlice {
+    label: string,
+    value: string,
+    percent: string,
+    color: color,
+}
+
 export struct CryptoWalletData {
     id: string,
     name: string,
@@ -371,6 +378,7 @@ export global CryptoAdapter {
     in-out property <string> last-updated: "Never";
     in-out property <image> portfolio-chart-image;
     in-out property <bool> portfolio-chart-ready: false;
+    in-out property <[CryptoDistributionSlice]> portfolio-distribution: [];
     in-out property <bool> limit-reached: false;
     in-out property <string> limit-excluded: "";
 

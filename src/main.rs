@@ -7,7 +7,6 @@ use directories::ProjectDirs;
 use log::error;
 use plotters::prelude::*;
 use plotters::series::{AreaSeries, LineSeries};
-use plotters::style::text_anchor::{HPos, Pos, VPos};
 use rand::Rng; // For title animation
 use sanctum::crypto;
 use sanctum::controller::{
@@ -1248,8 +1247,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         let temp_svg = std::env::temp_dir().join("sanctum_portfolio_dist_temp.svg");
-        let root = SVGBackend::new(&temp_svg, (1800, 560)).into_drawing_area();
-        root.fill(&RGBColor(10, 10, 15)).ok()?;
+        let root = SVGBackend::new(&temp_svg, (600, 600)).into_drawing_area();
 
         let palette = [
             RGBColor(139, 92, 246),
@@ -1268,107 +1266,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .map(|(idx, _)| palette[idx % palette.len()])
             .collect();
 
-        let center = (420, 280);
-        let radius = 190.0;
+        let center = (300, 300);
+        let radius = 220.0;
         let mut pie = Pie::new(&center, &radius, &sizes, &colors, &labels_empty);
         pie.start_angle(-90.0);
         pie.donut_hole(radius * 0.6);
-        pie.label_style(
-            ("sans-serif", 1)
-                .into_font()
-                .color(&RGBColor(10, 10, 15)),
-        );
 
         root.draw(&pie).ok()?;
 
-        let legend_style = ("sans-serif", 26)
-            .into_font()
-            .color(&RGBColor(203, 213, 225))
-            .pos(Pos::new(HPos::Left, VPos::Center));
-        let legend_title_style = ("sans-serif", 20)
-            .into_font()
-            .color(&RGBColor(148, 163, 184))
-            .pos(Pos::new(HPos::Left, VPos::Center));
-        let total_style = ("sans-serif", 32)
-            .into_font()
-            .color(&RGBColor(226, 232, 240))
-            .pos(Pos::new(HPos::Center, VPos::Center));
-        let total_label_style = ("sans-serif", 18)
-            .into_font()
-            .color(&RGBColor(148, 163, 184))
-            .pos(Pos::new(HPos::Center, VPos::Center));
-
-        root.draw(&Text::new("TOTAL", (center.0, center.1 - 16), total_label_style))
-            .ok()?;
-        root.draw(&Text::new(
-            format_money((total * 100.0) as i64, "USD"),
-            (center.0, center.1 + 16),
-            total_style,
-        ))
-        .ok()?;
-
-        let legend_x = 860;
-        let row_height = 48;
-        let height = 560i32;
-        let legend_start_y =
-            ((height - (data.len() as i32 * row_height)) / 2).max(96);
-
-        root.draw(&Text::new(
-            "ASSETS",
-            (legend_x, legend_start_y - 32),
-            legend_title_style,
-        ))
-        .ok()?;
-
-        for (idx, (label, value)) in data.iter().enumerate() {
-            let y = legend_start_y + (idx as i32 * row_height);
-            let color = colors[idx % colors.len()];
-            let percent = (*value / total) * 100.0;
-            let value_label = format!(
-                "{} · {:.1}% · {}",
-                label,
-                percent,
-                format_money((value * 100.0) as i64, "USD")
-            );
-
-            root.draw(&Rectangle::new(
-                [(legend_x, y - 10), (legend_x + 20, y + 10)],
-                ShapeStyle::from(&color).filled(),
-            ))
-            .ok()?;
-            root.draw(&Text::new(
-                value_label,
-                (legend_x + 32, y),
-                legend_style.clone(),
-            ))
-            .ok()?;
-        }
-
         root.present().ok()?;
 
-        let mut fontdb = fontdb::Database::new();
-        let font_path = std::path::PathBuf::from("ui/fonts/DejaVuSans.ttf");
-        if font_path.exists() {
-            fontdb.load_font_file(&font_path).ok()?;
-        } else {
-            fontdb.load_system_fonts();
-        }
-
-        fontdb.set_serif_family("DejaVu Sans");
-        fontdb.set_sans_serif_family("DejaVu Sans");
-        fontdb.set_monospace_family("DejaVu Sans");
-
-        let svg_data = std::fs::read_to_string(&temp_svg).ok()?;
-        let opt = usvg::Options {
-            fontdb: std::sync::Arc::new(fontdb),
-            ..Default::default()
-        };
-        let tree = usvg::Tree::from_str(&svg_data, &opt).ok()?;
-
-        let final_svg = std::env::temp_dir().join("sanctum_portfolio_dist.svg");
-        std::fs::write(&final_svg, tree.to_string(&usvg::WriteOptions::default())).ok()?;
-
-        Image::load_from_path(&final_svg).ok()
+        Image::load_from_path(&temp_svg).ok()
     }
 
     fn refresh_habit_analytics(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>) {
@@ -1701,6 +1609,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             } else {
                 chart_assets
             };
+            let chart_total: f64 = chart_assets.iter().map(|(_, value)| *value).sum();
+            let palette = [
+                slint::Color::from_rgb_u8(139, 92, 246),
+                slint::Color::from_rgb_u8(236, 72, 153),
+                slint::Color::from_rgb_u8(56, 189, 248),
+                slint::Color::from_rgb_u8(34, 197, 94),
+                slint::Color::from_rgb_u8(245, 158, 11),
+                slint::Color::from_rgb_u8(168, 85, 247),
+            ];
+            let distribution: Vec<CryptoDistributionSlice> = if chart_total > 0.0 {
+                chart_assets
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, (label, value))| {
+                        let percent = (*value / chart_total) * 100.0;
+                        CryptoDistributionSlice {
+                            label: SharedString::from(label),
+                            value: SharedString::from(format_money((value * 100.0) as i64, "USD")),
+                            percent: SharedString::from(format!("{:.1}%", percent)),
+                            color: palette[idx % palette.len()],
+                        }
+                    })
+                    .collect()
+            } else {
+                Vec::new()
+            };
+
             let chart_image = render_portfolio_distribution_chart(&chart_assets);
             let chart_ready = chart_image.is_some();
 
@@ -1874,6 +1809,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 adapter.set_clp_rate(SharedString::from(clp_display));
                 adapter.set_portfolio_chart_image(chart_image.unwrap_or_default());
                 adapter.set_portfolio_chart_ready(chart_ready);
+                adapter.set_portfolio_distribution(ModelRc::new(VecModel::from(distribution)));
                 if let Some(label) = last_updated_label {
                     adapter.set_last_updated(label.into());
                 }

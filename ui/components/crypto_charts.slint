@@ -1,9 +1,11 @@
-import { Palette } from "../globals.slint";
+import { Palette, CryptoDistributionSlice } from "../globals.slint";
 
 // ==================== Portfolio Distribution Chart ====================
 export component PortfolioDistributionChart inherits Rectangle {
     in property <image> image;
     in property <bool> has-data: false;
+    in property <[CryptoDistributionSlice]> slices: [];
+    in property <string> total-label: "";
 
     background: Palette.surface;
     border-radius: 12px;
@@ -30,11 +32,106 @@ export component PortfolioDistributionChart inherits Rectangle {
             border-color: Palette.border-subtle;
             clip: true;
 
-            if root.has-data: Image {
-                source: root.image;
-                width: 100%;
-                height: 100%;
-                image-fit: contain;
+            if root.has-data: HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+                spacing: 24px;
+
+                Rectangle {
+                    width: parent.width * 0.48;
+                    height: parent.height;
+                    background: transparent;
+
+                    if root.has-data: Image {
+                        source: root.image;
+                        width: 100%;
+                        height: 100%;
+                        image-fit: contain;
+                    }
+
+                    VerticalLayout {
+                        alignment: center;
+                        spacing: 4px;
+                        Text {
+                            text: "TOTAL";
+                            color: Palette.text-muted;
+                            font-size: 10px;
+                            font-weight: 600;
+                            letter-spacing: 2px;
+                            horizontal-alignment: center;
+                        }
+                        Text {
+                            text: root.total-label;
+                            color: Palette.text-primary;
+                            font-size: 18px;
+                            font-weight: 700;
+                            horizontal-alignment: center;
+                        }
+                    }
+                }
+
+                Rectangle {
+                    width: parent.width * 0.52;
+                    height: parent.height;
+                    background: transparent;
+
+                    Flickable {
+                        width: 100%;
+                        height: 100%;
+                        viewport-height: max(self.height, (root.slices.length * 36px) + 12px);
+
+                        VerticalLayout {
+                            spacing: 10px;
+                            padding-top: 10px;
+                            padding-bottom: 10px;
+
+                            Text {
+                                text: "ASSETS";
+                                color: Palette.text-secondary;
+                                font-size: 10px;
+                                font-weight: 700;
+                                letter-spacing: 2px;
+                            }
+
+                            for slice[index] in root.slices: HorizontalLayout {
+                                spacing: 10px;
+
+                                Rectangle {
+                                    width: 10px;
+                                    height: 10px;
+                                    border-radius: 3px;
+                                    background: slice.color;
+                                    y: 5px;
+                                }
+
+                                Text {
+                                    text: slice.label;
+                                    color: Palette.text-primary;
+                                    font-size: 12px;
+                                    font-weight: 600;
+                                    width: 64px;
+                                    horizontal-alignment: left;
+                                }
+
+                                Text {
+                                    text: slice.percent;
+                                    color: Palette.text-secondary;
+                                    font-size: 11px;
+                                    width: 56px;
+                                    horizontal-alignment: left;
+                                }
+
+                                Text {
+                                    text: slice.value;
+                                    color: Palette.text-secondary;
+                                    font-size: 11px;
+                                    horizontal-alignment: right;
+                                    horizontal-stretch: 1;
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             if !root.has-data: VerticalLayout {
