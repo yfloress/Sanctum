@@ -220,6 +220,9 @@ export global AuthAdapter {
     // Create new vault - returns "" on success, error message on failure
     callback create-vault(string) -> string;
 
+    // Returns warning message for weak passwords ("" if strong/ok)
+    callback check-password-strength(string) -> string;
+
     // Unlock vault - returns "" on success, error message on failure
     callback unlock-vault(string) -> string;
 

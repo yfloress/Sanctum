@@ -296,6 +296,68 @@ fn validate_password_basic(password: String) -> Result<SecretString, ControllerE
     Ok(SecretString::from(trimmed.to_string()))
 }
 
+/// Returns a warning message if the password is weak (empty string means ok)
+fn password_strength_warning(password: &str) -> Option<String> {
+    let trimmed = password.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    if trimmed.len() < MIN_PASSWORD_LENGTH {
+        return Some(format!(
+            "Weak password: use at least {} characters",
+            MIN_PASSWORD_LENGTH
+        ));
+    }
+
+    let has_uppercase = trimmed.chars().any(|c| c.is_ascii_uppercase());
+    let has_lowercase = trimmed.chars().any(|c| c.is_ascii_lowercase());
+    let has_digit = trimmed.chars().any(|c| c.is_ascii_digit());
+    let has_special = trimmed.chars().any(|c| {
+        matches!(
+            c,
+            '!' | '@'
+                | '#'
+                | '$'
+                | '%'
+                | '^'
+                | '&'
+                | '*'
+                | '('
+                | ')'
+                | '-'
+                | '_'
+                | '='
+                | '+'
+                | '['
+                | ']'
+                | '{'
+                | '}'
+                | '|'
+                | ';'
+                | ':'
+                | '\''
+                | '"'
+                | ','
+                | '.'
+                | '<'
+                | '>'
+                | '?'
+                | '/'
+                | '`'
+                | '~'
+        )
+    });
+
+    if !has_uppercase || !has_lowercase || !has_digit || !has_special {
+        return Some(
+            "Weak password: add uppercase, lowercase, number, and symbol".to_string(),
+        );
+    }
+
+    None
+}
+
 /// Valida la contraseña con requisitos estrictos para crear una nueva bóveda
 fn validate_password_strict(password: String) -> Result<SecretString, ControllerError> {
     let trimmed = password.trim();
@@ -714,7 +776,7 @@ impl AppController {
         password: String,
         path: Option<String>,
     ) -> Result<String, ControllerError> {
-        let password = validate_password_strict(password)?;
+        let password = validate_password_basic(password)?;
         self.ensure_no_connection()?;
 
         let db_path_raw = if let Some(p) = path {
@@ -746,6 +808,11 @@ impl AppController {
         log_security_event(SecurityEvent::VaultCreated, None);
 
         Ok("Vault created successfully".to_string())
+    }
+
+    /// Returns a warning string for weak passwords (empty if strong/ok)
+    pub fn check_password_strength(&self, password: String) -> String {
+        password_strength_warning(&password).unwrap_or_default()
     }
 
     /// Opens an existing vault with the provided password

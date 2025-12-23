@@ -252,6 +252,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
+    // Callback: check_password_strength
+    // Returns warning message for weak passwords ("" if ok)
+    {
+        let controller_clone = controller.clone();
+        auth_adapter.on_check_password_strength(move |password: SharedString| {
+            SharedString::from(controller_clone.check_password_strength(password.to_string()))
+        });
+    }
+
     // Callback: unlock_vault
     // Attempts to unlock an existing vault with the given password
     // Returns empty string on success, error message on failure
