@@ -2124,10 +2124,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Ok(_) => {
                         let _ = controller.set_app_setting(
                             SETTING_CRYPTO_LAST_WALLET_ID,
-                            &wallet_id_raw.to_string(),
+                            wallet_id_raw.as_ref(),
                         );
                         let _ = controller
-                            .set_app_setting(SETTING_CRYPTO_LAST_COIN_ID, &coin_id.to_string());
+                            .set_app_setting(SETTING_CRYPTO_LAST_COIN_ID, coin_id.as_ref());
                         reload_portfolio(&ui_weak, &controller);
                         notify("Asset added successfully".into(), false);
                         SharedString::from("")
@@ -2213,10 +2213,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Ok(_) => {
                         let _ = controller.set_app_setting(
                             SETTING_CRYPTO_LAST_WALLET_ID,
-                            &from_wallet_id.to_string(),
+                            from_wallet_id.as_ref(),
                         );
                         let _ = controller
-                            .set_app_setting(SETTING_CRYPTO_LAST_COIN_ID, &coin_id.to_string());
+                            .set_app_setting(SETTING_CRYPTO_LAST_COIN_ID, coin_id.as_ref());
                         reload_portfolio(&ui_weak, &controller);
                         reload_wallets(&ui_weak, &controller);
                         notify("Transfer added successfully".into(), false);
@@ -2300,10 +2300,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Ok(_) => {
                         let _ = controller.set_app_setting(
                             SETTING_CRYPTO_LAST_WALLET_ID,
-                            &wallet_id_raw.to_string(),
+                            wallet_id_raw.as_ref(),
                         );
                         let _ = controller
-                            .set_app_setting(SETTING_CRYPTO_LAST_COIN_ID, &from_coin_id.to_string());
+                            .set_app_setting(SETTING_CRYPTO_LAST_COIN_ID, from_coin_id.as_ref());
                         reload_portfolio(&ui_weak, &controller);
                         reload_wallets(&ui_weak, &controller);
                         notify("Swap added successfully".into(), false);
