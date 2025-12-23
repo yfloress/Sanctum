@@ -64,7 +64,10 @@ export component CryptoPage inherits Rectangle {
             background: @linear-gradient(90deg, #0a0a0f 0%, #0d0d14 50%, #0a0a0f 100%);
             
             HorizontalLayout {
+                width: parent.width;
+                height: parent.height;
                 spacing: 0px;
+                padding-right: 52px;
 
                 // CLP Rate Badge
                 Rectangle {
@@ -137,42 +140,45 @@ export component CryptoPage inherits Rectangle {
                         }
                     }
                 }
+            }
 
-                // Settings Button
+            // Settings Button (pinned to top-right)
+            Rectangle {
+                width: 52px;
+                height: parent.height;
+                x: parent.width - self.width;
+                y: 0;
+                background: Palette.surface;
+                
+                Rectangle { 
+                    width: 1px; 
+                    height: 32px; 
+                    background: Palette.border-subtle; 
+                    x: 0; 
+                    y: (parent.height - self.height) / 2;
+                }
+
                 Rectangle {
-                    width: 52px;
-                    background: Palette.surface;
+                    width: 32px;
+                    height: 32px;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                    border-radius: 8px;
+                    background: settings-touch.has-hover ? Palette.surface-hover : transparent;
                     
-                    Rectangle { 
-                        width: 1px; 
-                        height: 32px; 
-                        background: Palette.border-subtle; 
-                        x: 0; 
-                        y: (parent.height - self.height) / 2;
+                    Text {
+                        text: "⚙";
+                        color: settings-touch.has-hover ? Palette.text-primary : Palette.text-muted;
+                        font-size: 16px;
+                        vertical-alignment: center; 
+                        horizontal-alignment: center;
+                        animate color { duration: 150ms; }
                     }
+                }
 
-                    Rectangle {
-                        width: 32px;
-                        height: 32px;
-                        x: (parent.width - self.width) / 2;
-                        y: (parent.height - self.height) / 2;
-                        border-radius: 8px;
-                        background: settings-touch.has-hover ? Palette.surface-hover : transparent;
-                        
-                        Text {
-                            text: "⚙";
-                            color: settings-touch.has-hover ? Palette.text-primary : Palette.text-muted;
-                            font-size: 16px;
-                            vertical-alignment: center; 
-                            horizontal-alignment: center;
-                            animate color { duration: 150ms; }
-                        }
-                    }
-
-                    settings-touch := TouchArea {
-                        mouse-cursor: pointer;
-                        clicked => { AppState.show-configure-ticker = true; }
-                    }
+                settings-touch := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { AppState.show-configure-ticker = true; }
                 }
             }
             

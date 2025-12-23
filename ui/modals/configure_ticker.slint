@@ -242,6 +242,7 @@ component CatalogRow inherits Rectangle {
                     background: root.selected ? Palette.accent : transparent;
                     border-width: 1px;
                     border-color: root.selected ? Palette.accent : Palette.border-subtle;
+                    y: (parent.height - self.height) / 2;
 
                     Text {
                         text: root.selected ? "✓" : "";

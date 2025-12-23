@@ -8,6 +8,7 @@ export component CryptoIcon inherits Rectangle {
     in property <string> symbol;
     in property <image> icon: @image-url("../assets/crypto-icons/generic.svg");
     in property <bool> large: false;
+    property <length> icon-size: large ? 32px : 24px;
     
     width: large ? 48px : 36px;
     height: large ? 48px : 36px;
@@ -21,8 +22,8 @@ export component CryptoIcon inherits Rectangle {
     
     Image {
         source: root.icon;
-        width: parent.width * 0.7;
-        height: parent.height * 0.7;
+        width: root.icon-size;
+        height: root.icon-size;
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
         image-fit: contain;

@@ -834,7 +834,7 @@ impl AppController {
             .ok()
             .filter(|val| !val.is_empty())
             .and_then(|val| serde_json::from_str::<Vec<String>>(&val).ok())
-            .unwrap_or_else(crypto::default_price_allowlist)
+            .unwrap_or_else(crypto::default_ticker_ids)
     }
 
     /// Saves active ticker IDs to settings
