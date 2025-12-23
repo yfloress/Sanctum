@@ -1220,16 +1220,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Generate SVG with plotters (high resolution for crisp rendering)
         let temp_svg = std::env::temp_dir().join("sanctum_monthly_chart_temp.svg");
         let root = SVGBackend::new(&temp_svg, (2400, 720)).into_drawing_area();
-        root.fill(&RGBColor(10, 10, 10)).ok()?;
+        root.fill(&RGBAColor(0, 0, 0, 0.0)).ok()?;
 
         let max_val = data.iter().map(|d| d.avg_per_day).fold(0.0_f32, f32::max);
         let upper = if max_val <= 0.0 { 1.0 } else { (max_val * 1.2).ceil() };
         let x_max = data.len().max(1) as i32;
 
         let mut chart = ChartBuilder::on(&root)
-            .margin(40)
-            .x_label_area_size(80)
-            .y_label_area_size(90)
+            .margin(28)
+            .x_label_area_size(70)
+            .y_label_area_size(24)
             .build_cartesian_2d(0..x_max, 0f32..upper)
             .ok()?;
 
@@ -1243,8 +1243,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .map(|d| d.month_name.clone())
                     .unwrap_or_default()
             })
-            .label_style(("sans-serif", 28).into_font().color(&RGBColor(163, 163, 163)))
-            .axis_style(ShapeStyle::from(&RGBColor(51, 51, 51)).stroke_width(1))
+            .label_style(("sans-serif", 22).into_font().color(&RGBColor(148, 163, 184)))
+            .axis_style(ShapeStyle::from(&RGBColor(46, 46, 60)).stroke_width(1))
             .draw()
             .ok()?;
 
@@ -1258,20 +1258,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .draw_series(AreaSeries::new(
                 area_points.iter().copied(),
                 0.0,
-                RGBColor(139, 92, 246).mix(0.2),
+                RGBColor(139, 92, 246).mix(0.18),
             ))
             .ok()?;
 
         chart
             .draw_series(LineSeries::new(
                 area_points.iter().copied(),
-                ShapeStyle::from(&RGBColor(139, 92, 246)).stroke_width(5),
+                ShapeStyle::from(&RGBColor(139, 92, 246)).stroke_width(4),
             ))
             .ok()?;
 
         chart
             .draw_series(area_points.iter().map(|&(x, y)| {
-                Circle::new((x, y), 8, ShapeStyle::from(&RGBColor(236, 72, 153)).filled())
+                Circle::new(
+                    (x, y),
+                    6,
+                    ShapeStyle::from(&RGBColor(167, 139, 250)).filled(),
+                )
             }))
             .ok()?;
 
