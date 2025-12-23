@@ -263,13 +263,8 @@ fn validate_uuid(id: &str) -> Result<String, ControllerError> {
         ));
     }
 
-    // Check if it's a valid UUID or a legacy ID format
+    // Check if it's a valid UUID
     if Uuid::parse_str(trimmed).is_ok() {
-        return Ok(trimmed.to_string());
-    }
-
-    // Allow legacy IDs that start with "migrated_" or "legacy_"
-    if trimmed.starts_with("migrated_") || trimmed.starts_with("legacy_") {
         return Ok(trimmed.to_string());
     }
 
@@ -2868,8 +2863,6 @@ mod tests {
     #[test]
     fn test_validate_uuid_valid() {
         assert!(validate_uuid("550e8400-e29b-41d4-a716-446655440000").is_ok());
-        assert!(validate_uuid("migrated_test").is_ok());
-        assert!(validate_uuid("legacy_portfolio").is_ok());
     }
 
     #[test]

@@ -330,8 +330,8 @@ impl Database {
             [],
         )?;
 
-        // ==================== Crypto Ledger System Migration ====================
-        self.migrate_crypto_ledger()?;
+        // ==================== Crypto Ledger System ====================
+        self.create_crypto_ledger_tables()?;
 
         // ==================== Habits System ====================
         self.migrate_habits_tables()?;
@@ -823,151 +823,61 @@ impl Database {
         Ok(SESSION_TIMEOUT_SECS)
     }
 
-    /// Migrates from old crypto_holdings to new ledger system
-    fn migrate_crypto_ledger(&self) -> Result<(), DbError> {
-        // Check if old crypto_holdings table exists
-        let old_table_exists: bool = self
-            .conn
-            .query_row(
-                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='crypto_holdings'",
-                [],
-                |row| row.get(0),
-            )
-            .unwrap_or(0)
-            > 0;
+    fn create_crypto_ledger_tables(&self) -> Result<(), DbError> {
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS crypto_wallets (
+                id TEXT PRIMARY KEY NOT NULL,
+                name TEXT NOT NULL,
+                category TEXT NOT NULL,
+                icon TEXT
+            )",
+            [],
+        )?;
 
-        // Check if new tables exist
-        let wallets_exist: bool = self
-            .conn
-            .query_row(
-                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='crypto_wallets'",
-                [],
-                |row| row.get(0),
-            )
-            .unwrap_or(0)
-            > 0;
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS crypto_transactions (
+                id TEXT PRIMARY KEY NOT NULL,
+                wallet_id TEXT NOT NULL,
+                coin_id TEXT NOT NULL,
+                symbol TEXT NOT NULL,
+                type TEXT NOT NULL,
+                amount REAL NOT NULL,
+                price_per_coin REAL,
+                fee REAL,
+                fee_coin_id TEXT,
+                fee_amount REAL,
+                date TEXT NOT NULL,
+                notes TEXT,
+                related_tx_id TEXT,
+                FOREIGN KEY (wallet_id) REFERENCES crypto_wallets(id) ON DELETE CASCADE
+            )",
+            [],
+        )?;
 
-        // Create new tables if they don't exist
-        if !wallets_exist {
-            // Create crypto_wallets table
-            self.conn.execute(
-                "CREATE TABLE crypto_wallets (
-                    id TEXT PRIMARY KEY NOT NULL,
-                    name TEXT NOT NULL,
-                    category TEXT NOT NULL,
-                    icon TEXT
-                )",
-                [],
-            )?;
-
-            // Create crypto_transactions table
-            self.conn.execute(
-                "CREATE TABLE crypto_transactions (
-                    id TEXT PRIMARY KEY NOT NULL,
-                    wallet_id TEXT NOT NULL,
-                    coin_id TEXT NOT NULL,
-                    symbol TEXT NOT NULL,
-                    type TEXT NOT NULL,
-                    amount REAL NOT NULL,
-                    price_per_coin REAL,
-                    fee REAL,
-                    fee_coin_id TEXT,
-                    fee_amount REAL,
-                    date TEXT NOT NULL,
-                    notes TEXT,
-                    related_tx_id TEXT,
-                    FOREIGN KEY (wallet_id) REFERENCES crypto_wallets(id) ON DELETE CASCADE
-                )",
-                [],
-            )?;
-
-            // Create indexes for crypto tables
-            self.conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_crypto_wallets_category ON crypto_wallets(category)",
-                [],
-            )?;
-
-            self.conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_crypto_tx_wallet ON crypto_transactions(wallet_id)",
-                [],
-            )?;
-
-            self.conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_crypto_tx_coin ON crypto_transactions(coin_id)",
-                [],
-            )?;
-
-            self.conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_crypto_tx_date ON crypto_transactions(date)",
-                [],
-            )?;
-
-            self.conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_crypto_tx_type ON crypto_transactions(type)",
-                [],
-            )?;
-
-            // Index for related_tx_id lookups (used in swap/transfer deletions)
-            self.conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_crypto_tx_related ON crypto_transactions(related_tx_id)",
-                [],
-            )?;
-        }
-
-        // Migrate old data if exists
-        if old_table_exists && wallets_exist {
-            // Check if we have already migrated (by checking for legacy wallet)
-            let legacy_wallet_exists: bool = self
-                .conn
-                .query_row(
-                    "SELECT COUNT(*) FROM crypto_wallets WHERE id = 'legacy_portfolio'",
-                    [],
-                    |row| row.get::<_, i32>(0),
-                )
-                .unwrap_or(0)
-                > 0;
-
-            if !legacy_wallet_exists {
-                // Check if there are holdings to migrate
-                let holdings_count: i32 = self
-                    .conn
-                    .query_row("SELECT COUNT(*) FROM crypto_holdings", [], |row| row.get(0))
-                    .unwrap_or(0);
-
-                if holdings_count > 0 {
-                    // Create a legacy wallet for migrated holdings
-                    self.conn.execute(
-                        "INSERT INTO crypto_wallets (id, name, category, icon) VALUES (?1, ?2, ?3, ?4)",
-                        params!["legacy_portfolio", "Legacy Portfolio", "wallet_multi", "📦"],
-                    )?;
-
-                    // Migrate holdings as buy transactions
-                    self.conn.execute(
-                        "INSERT INTO crypto_transactions (id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, date, notes)
-                         SELECT
-                            'migrated_' || id,
-                            'legacy_portfolio',
-                            coin_id,
-                            symbol,
-                            'buy',
-                            amount,
-                            purchase_price,
-                            NULL,
-                            purchase_date,
-                            'Migrated from legacy holdings'
-                         FROM crypto_holdings",
-                        [],
-                    )?;
-                }
-
-                // Rename old table as backup
-                self.conn.execute(
-                    "ALTER TABLE crypto_holdings RENAME TO crypto_holdings_backup",
-                    [],
-                )?;
-            }
-        }
-
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_crypto_wallets_category ON crypto_wallets(category)",
+            [],
+        )?;
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_crypto_tx_wallet ON crypto_transactions(wallet_id)",
+            [],
+        )?;
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_crypto_tx_coin ON crypto_transactions(coin_id)",
+            [],
+        )?;
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_crypto_tx_date ON crypto_transactions(date)",
+            [],
+        )?;
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_crypto_tx_type ON crypto_transactions(type)",
+            [],
+        )?;
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_crypto_tx_related ON crypto_transactions(related_tx_id)",
+            [],
+        )?;
         Ok(())
     }
 
