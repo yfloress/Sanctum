@@ -2,6 +2,7 @@
 // Noir Fintech - Premium asset details drawer
 
 import { Palette, CryptoAdapter, AppState, NotificationAdapter } from "../globals.slint";
+import { CryptoIcon } from "./crypto_widgets.slint";
 
 // ==================== Section Header ====================
 component SectionHeader inherits Rectangle {
@@ -320,24 +321,11 @@ export component AssetDetailPanel inherits Rectangle {
                 spacing: 16px;
                 
                 // Asset Icon
-                Rectangle {
-                    width: 52px;
-                    height: 52px;
-                    border-radius: 26px;
-                    background: @linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-                    border-width: 1px;
-                    border-color: Palette.border-subtle;
+                CryptoIcon {
+                    symbol: CryptoAdapter.selected-asset.symbol;
+                    icon: CryptoAdapter.selected-asset.icon;
+                    large: true;
                     y: (parent.height - self.height) / 2;
-                    
-                    Text { 
-                        text: CryptoAdapter.selected-asset.symbol; 
-                        color: Palette.text-primary; 
-                        font-size: 16px; 
-                        font-weight: 600;
-                        letter-spacing: 0.5px;
-                        vertical-alignment: center; 
-                        horizontal-alignment: center; 
-                    }
                 }
                 
                 // Asset Info

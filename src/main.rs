@@ -17,11 +17,17 @@ use sanctum::models::CryptoAsset;
 use sanctum::security_log::init_security_logger;
 use slint::SharedString;
 use slint::{Image, Model, ModelRc, VecModel, Weak};
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc; // Added for CryptoAdapter logic
+use std::sync::Arc;
 
 slint::include_modules!();
+
+const CRYPTO_ICON_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/ui/assets/crypto-icons");
+
+thread_local! {
+    static CRYPTO_ICON_CACHE: RefCell<HashMap<String, Image>> = RefCell::new(HashMap::new());
+}
 
 fn get_app_data_dir() -> std::path::PathBuf {
     // Use directories crate to get platform-appropriate data directory
@@ -412,6 +418,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "AVAX" => (232, 65, 66),
             _ => fallback_chart_color(index),
         }
+    }
+
+    fn crypto_icon_for_symbol(symbol: &str) -> Image {
+        let key = symbol.trim().to_lowercase();
+        if let Some(icon) = CRYPTO_ICON_CACHE.with(|cache| cache.borrow().get(&key).cloned()) {
+            return icon;
+        }
+
+        let base_dir = std::path::Path::new(CRYPTO_ICON_DIR);
+        let icon_path = if key.is_empty() {
+            base_dir.join("generic.svg")
+        } else {
+            base_dir.join(format!("{key}.svg"))
+        };
+        let fallback_path = base_dir.join("generic.svg");
+        let icon = Image::load_from_path(&icon_path)
+            .or_else(|_| Image::load_from_path(&fallback_path))
+            .unwrap_or_default();
+
+        CRYPTO_ICON_CACHE.with(|cache| {
+            cache.borrow_mut().insert(key, icon.clone());
+        });
+        icon
     }
 
     fn parse_amount_input(value: &str) -> Option<i64> {
@@ -1801,6 +1830,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     CryptoAssetData {
                         id: SharedString::from(&a.coin_id),
                         symbol: SharedString::from(&a.symbol),
+                        icon: crypto_icon_for_symbol(&a.symbol),
                         name: SharedString::from(asset_name),
                         price: SharedString::from(price_fmt),
                         amount: SharedString::from(format!("{:.4} {}", a.total_amount, a.symbol)),
@@ -1832,6 +1862,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     tickers.push(CryptoAssetData {
                         id: SharedString::from(&id),
                         symbol: SharedString::from(&data.symbol),
+                        icon: crypto_icon_for_symbol(&data.symbol),
                         name: SharedString::from(&data.name),
                         price: SharedString::from(price_fmt),
                         amount: "".into(),
@@ -1845,10 +1876,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         .get(&id)
                         .cloned()
                         .unwrap_or_else(|| (id.clone(), id.to_uppercase()));
+                    let icon = crypto_icon_for_symbol(&symbol);
 
                     tickers.push(CryptoAssetData {
                         id: SharedString::from(&id),
-                        symbol: SharedString::from(symbol),
+                        symbol: SharedString::from(symbol.as_str()),
+                        icon,
                         name: SharedString::from(name),
                         price: "N/A".into(),
                         amount: "".into(),
@@ -2530,6 +2563,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             CryptoAssetData {
                                 id: SharedString::from(&asset.coin_id),
                                 symbol: SharedString::from(&asset.symbol),
+                                icon: crypto_icon_for_symbol(&asset.symbol),
                                 name: SharedString::from(asset_name),
                                 price: SharedString::from(price_fmt),
                                 amount: SharedString::from(format!(
@@ -3064,6 +3098,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let selected = CryptoAssetData {
                         id: SharedString::from(&updated_asset.coin_id),
                         symbol: SharedString::from(&updated_asset.symbol),
+                        icon: crypto_icon_for_symbol(&updated_asset.symbol),
                         name: SharedString::from(asset_name),
                         price: SharedString::from(price_fmt),
                         amount: SharedString::from(format!(

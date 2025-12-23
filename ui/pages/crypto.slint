@@ -128,6 +128,7 @@ export component CryptoPage inherits Rectangle {
                         HorizontalLayout {
                             padding-left: 16px;
                             for ticker in CryptoAdapter.market-tickers: TickerItem {
+                                icon: ticker.icon;
                                 symbol: ticker.symbol;
                                 price: ticker.price;
                                 change: ticker.change-24h;
@@ -457,6 +458,7 @@ export component CryptoPage inherits Rectangle {
                                 for asset[index] in CryptoAdapter.portfolio: CryptoCard {
                                     name: asset.name;
                                     symbol: asset.symbol;
+                                    icon: asset.icon;
                                     price: asset.price;
                                     amount: asset.amount;
                                     value: asset.value;
@@ -480,6 +482,7 @@ export component CryptoPage inherits Rectangle {
                                     y: Math.mod(index, 2) * 196px;
                                     name: asset.name;
                                     symbol: asset.symbol;
+                                    icon: asset.icon;
                                     price: asset.price;
                                     amount: asset.amount;
                                     value: asset.value;

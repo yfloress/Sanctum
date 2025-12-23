@@ -2,6 +2,7 @@
 // Noir Fintech - Wallet details drawer
 
 import { Palette, CryptoAdapter } from "../globals.slint";
+import { CryptoIcon } from "./crypto_widgets.slint";
 
 // ==================== Section Header ====================
 component SectionHeader inherits Rectangle {
@@ -35,6 +36,7 @@ component SectionHeader inherits Rectangle {
 // ==================== Holding Row ====================
 component WalletHoldingRow inherits Rectangle {
     in property <string> symbol;
+    in property <image> icon;
     in property <string> name;
     in property <string> amount;
     in property <string> value;
@@ -50,11 +52,21 @@ component WalletHoldingRow inherits Rectangle {
         padding-right: 16px;
         alignment: space-between;
         
-        VerticalLayout {
+        HorizontalLayout {
+            spacing: 12px;
             alignment: center;
-            spacing: 2px;
-            Text { text: root.symbol; color: Palette.text-primary; font-size: 13px; font-weight: 600; }
-            Text { text: root.name; color: Palette.text-muted; font-size: 10px; }
+
+            CryptoIcon {
+                symbol: root.symbol;
+                icon: root.icon;
+            }
+
+            VerticalLayout {
+                alignment: center;
+                spacing: 2px;
+                Text { text: root.symbol; color: Palette.text-primary; font-size: 13px; font-weight: 600; }
+                Text { text: root.name; color: Palette.text-muted; font-size: 10px; }
+            }
         }
         
         VerticalLayout {
@@ -336,6 +348,7 @@ export component WalletDetailPanel inherits Rectangle {
 
                         for item in CryptoAdapter.wallet-holdings: WalletHoldingRow {
                             symbol: item.symbol;
+                            icon: item.icon;
                             name: item.name;
                             amount: item.amount;
                             value: item.value;
