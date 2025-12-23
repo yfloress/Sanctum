@@ -214,15 +214,36 @@ export component LoginPage inherits Rectangle {
                     }
 
                     // Password hint for new vault
-                    if !vault-exists: Text {
-                        text: weak-warning;
-                        color: Palette.warning;
-                        font-size: 11px;
-                        font-weight: 400;
-                        horizontal-alignment: left;
-                        opacity: weak-warning != "" ? 1.0 : 0.0;
+                    if !vault-exists && weak-warning != "": Rectangle {
+                        height: 32px;
+                        background: Palette.warning.with-alpha(0.12);
+                        border-radius: 6px;
+                        border-width: 1px;
+                        border-color: Palette.warning.with-alpha(0.35);
 
-                        animate opacity { duration: 150ms; }
+                        HorizontalLayout {
+                            padding-left: 10px;
+                            padding-right: 10px;
+                            spacing: 8px;
+
+                            Rectangle {
+                                width: 4px;
+                                height: 16px;
+                                border-radius: 2px;
+                                background: Palette.warning;
+                                y: (parent.height - self.height) / 2;
+                            }
+
+                            Text {
+                                text: weak-confirmed
+                                    ? (weak-warning + ". Click create again to confirm.")
+                                    : weak-warning;
+                                color: Palette.warning;
+                                font-size: 10px;
+                                font-weight: 500;
+                                vertical-alignment: center;
+                            }
+                        }
                     }
 
                     // Spacer

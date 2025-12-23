@@ -358,97 +358,6 @@ fn password_strength_warning(password: &str) -> Option<String> {
     None
 }
 
-/// Valida la contraseña con requisitos estrictos para crear una nueva bóveda
-fn validate_password_strict(password: String) -> Result<SecretString, ControllerError> {
-    let trimmed = password.trim();
-
-    if trimmed.is_empty() {
-        return Err(ControllerError::Validation(
-            "Password cannot be empty".to_string(),
-        ));
-    }
-
-    if trimmed.len() < MIN_PASSWORD_LENGTH {
-        return Err(ControllerError::Validation(format!(
-            "Password must be at least {} characters",
-            MIN_PASSWORD_LENGTH
-        )));
-    }
-
-    if trimmed.len() > MAX_PASSWORD_LENGTH {
-        return Err(ControllerError::Validation(format!(
-            "Password cannot exceed {} characters",
-            MAX_PASSWORD_LENGTH
-        )));
-    }
-
-    // Verificar complejidad de contraseña
-    let has_uppercase = trimmed.chars().any(|c| c.is_ascii_uppercase());
-    let has_lowercase = trimmed.chars().any(|c| c.is_ascii_lowercase());
-    let has_digit = trimmed.chars().any(|c| c.is_ascii_digit());
-    let has_special = trimmed.chars().any(|c| {
-        matches!(
-            c,
-            '!' | '@'
-                | '#'
-                | '$'
-                | '%'
-                | '^'
-                | '&'
-                | '*'
-                | '('
-                | ')'
-                | '-'
-                | '_'
-                | '='
-                | '+'
-                | '['
-                | ']'
-                | '{'
-                | '}'
-                | '|'
-                | ';'
-                | ':'
-                | '\''
-                | '"'
-                | ','
-                | '.'
-                | '<'
-                | '>'
-                | '?'
-                | '/'
-                | '`'
-                | '~'
-        )
-    });
-
-    if !has_uppercase {
-        return Err(ControllerError::Validation(
-            "Password must contain at least one uppercase letter".to_string(),
-        ));
-    }
-
-    if !has_lowercase {
-        return Err(ControllerError::Validation(
-            "Password must contain at least one lowercase letter".to_string(),
-        ));
-    }
-
-    if !has_digit {
-        return Err(ControllerError::Validation(
-            "Password must contain at least one number".to_string(),
-        ));
-    }
-
-    if !has_special {
-        return Err(ControllerError::Validation(
-            "Password must contain at least one special character (!@#$%^&*...)".to_string(),
-        ));
-    }
-
-    Ok(SecretString::from(trimmed.to_string()))
-}
-
 /// Valida que una fecha esté en formato ISO-8601 (YYYY-MM-DD)
 fn validate_date(date: &str) -> Result<String, ControllerError> {
     let trimmed = date.trim();
@@ -2980,13 +2889,6 @@ mod tests {
         let result = validate_password_basic("simple".to_string());
         assert!(result.is_ok());
         assert_eq!(result.unwrap().expose_secret(), "simple");
-    }
-
-    #[test]
-    fn test_validate_password_strict_valid() {
-        let result = validate_password_strict("Password1!".to_string());
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap().expose_secret(), "Password1!");
     }
 
     #[test]
