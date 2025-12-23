@@ -131,6 +131,7 @@ export component HabitsPage inherits Rectangle {
     background: Palette.background;
 
     init => {
+        HabitAdapter.auto-scroll-habits = true;
         HabitAdapter.load-initial-data();
         HabitAdapter.fetch-heatmap-data();
         HabitAdapter.fetch-habit-analytics();

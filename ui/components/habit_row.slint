@@ -89,9 +89,34 @@ export component HabitRow inherits Rectangle {
     
     // State para mostrar/ocultar botón de eliminar
     property <bool> show-delete: false;
+    property <length> scroll-x: 0px;
+    property <int> current_day_int: HabitAdapter.current-day-int;
+    property <bool> is_viewing_current_month: HabitAdapter.is-viewing-current-month;
+    property <bool> auto_scroll_habits <=> HabitAdapter.auto-scroll-habits;
+
+    function auto-scroll-target() -> length {
+        if !is_viewing_current_month {
+            return 0px;
+        }
+
+        return min(0px, max(grid-scroll.width - grid-scroll.viewport-width, (grid-scroll.width / 2) - ((current_day_int * 30px) - 15px)));
+    }
+
+    function update-auto-scroll() {
+        if auto_scroll_habits && is_viewing_current_month {
+            scroll-x = auto-scroll-target();
+        } else if !is_viewing_current_month {
+            scroll-x = 0px;
+        }
+    }
 
     height: 72px;
     background: transparent;
+
+    init => { update-auto-scroll(); }
+    changed current_day_int => { update-auto-scroll(); }
+    changed is_viewing_current_month => { update-auto-scroll(); }
+    changed auto_scroll_habits => { update-auto-scroll(); }
     
     HorizontalLayout {
         spacing: 16px;
@@ -179,10 +204,9 @@ export component HabitRow inherits Rectangle {
                 y: (parent.height - self.height - 8px) / 2;
                 viewport-width: habit.days.length * (26px + 4px);
                 interactive: true;
-
-                viewport-x: HabitAdapter.is-viewing-current-month 
-                    ? min(0px, max(parent.width - self.viewport-width, (parent.width / 2) - ((HabitAdapter.current-day-int * 30px) - 15px)))
-                    : 0px;
+                viewport-x <=> scroll-x;
+                changed width => { root.update-auto-scroll(); }
+                changed viewport-width => { root.update-auto-scroll(); }
                     
                 HorizontalLayout {
                     spacing: 4px;
@@ -191,7 +215,10 @@ export component HabitRow inherits Rectangle {
                     for day in habit.days: DayCell {
                         day: day;
                         habit-color: habit.color;
-                        clicked => { root.toggle(day.date); }
+                        clicked => {
+                            auto_scroll_habits = false;
+                            root.toggle(day.date);
+                        }
                     }
                 }
             }
