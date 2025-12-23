@@ -728,6 +728,19 @@ export component AddCryptoTransactionModal inherits Rectangle {
         swap-amount = quote;
     }
 
+    function refresh-price-from-coin() {
+        if (selected-type != "buy" && selected-type != "sell") {
+            return;
+        }
+        if (CryptoAdapter.coin-catalog.length == 0) {
+            price = "";
+            return;
+        }
+
+        let safe-index = coin-index >= CryptoAdapter.coin-catalog.length ? 0 : coin-index;
+        price = CryptoAdapter.get-last-price(CryptoAdapter.coin-catalog[safe-index].id);
+    }
+
     function refresh-swap-quote() {
         CryptoAdapter.refresh-prices();
         root.update-swap-quote();
@@ -744,6 +757,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
         CryptoAdapter.filter-coin-catalog("");
         wallet-index = CryptoAdapter.default-wallet-index;
         coin-index = CryptoAdapter.default-coin-index;
+        root.refresh-price-from-coin();
     }
 
     function reset() {
@@ -760,15 +774,20 @@ export component AddCryptoTransactionModal inherits Rectangle {
         swap-coin-index = 0;
         move-amount = "";
         CryptoAdapter.filter-coin-catalog("");
+        root.refresh-price-from-coin();
     }
 
     changed selected-type => {
         if (selected-type == "swap") {
             root.update-swap-quote();
         }
+        root.refresh-price-from-coin();
     }
 
-    changed coin-index => { root.update-swap-quote(); }
+    changed coin-index => {
+        root.update-swap-quote();
+        root.refresh-price-from-coin();
+    }
     changed swap-coin-index => { root.update-swap-quote(); }
 
     function submit() {
@@ -1000,13 +1019,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
                         label: root.selected-type == "swap" ? "FROM ASSET" : "CRYPTOCURRENCY";
                         selected-index <=> root.coin-index; 
                         selected(idx, name) => {
-                            if (idx < CryptoAdapter.coin-catalog.length) {
-                                root.price = CryptoAdapter.get-last-price(
-                                    CryptoAdapter.coin-catalog[idx].id
-                                );
-                            } else {
-                                root.price = "";
-                            }
+                            root.refresh-price-from-coin();
                         }
                     }
 

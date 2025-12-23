@@ -58,13 +58,15 @@ export component PortfolioDistributionChart inherits Rectangle {
                     Flickable {
                         width: 100%;
                         height: 100%;
-                        viewport-height: max(self.height, (root.slices.length * 36px) + 12px);
+                        property <length> legend-content-height: (root.slices.length * 36px) + 20px;
+                        property <length> legend-padding: max(4px, (self.height - legend-content-height) / 2);
+                        viewport-height: max(self.height, legend-content-height + 8px);
 
                         VerticalLayout {
                             alignment: start;
                             spacing: 10px;
-                            padding-top: 4px;
-                            padding-bottom: 0px;
+                            padding-top: legend-padding;
+                            padding-bottom: legend-padding;
 
                             Text {
                                 text: "ASSETS";
