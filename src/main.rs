@@ -1304,6 +1304,93 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Image::load_from_path(&temp_svg).ok()
     }
 
+    fn render_portfolio_trend_chart(data: &[(String, f64, f64)]) -> Option<Image> {
+        if data.len() < 2 {
+            return None;
+        }
+
+        let mut min_val = f64::MAX;
+        let mut max_val = 0.0_f64;
+
+        for (_, total_value, total_cost) in data {
+            if *total_value > max_val {
+                max_val = *total_value;
+            }
+            if *total_cost > max_val {
+                max_val = *total_cost;
+            }
+            if *total_value < min_val {
+                min_val = *total_value;
+            }
+            if *total_cost < min_val {
+                min_val = *total_cost;
+            }
+        }
+
+        if max_val <= 0.0 {
+            return None;
+        }
+
+        let padding = ((max_val - min_val) * 0.1).max(max_val * 0.05);
+        let lower = (min_val - padding).max(0.0);
+        let upper = max_val + padding;
+
+        let temp_svg = std::env::temp_dir().join("sanctum_portfolio_trend.svg");
+        let root = SVGBackend::new(&temp_svg, (1800, 520)).into_drawing_area();
+        root.fill(&RGBColor(10, 10, 15)).ok()?;
+
+        let x_max = (data.len() - 1) as i32;
+        let mut chart = ChartBuilder::on(&root)
+            .margin(18)
+            .build_cartesian_2d(0..x_max, lower..upper)
+            .ok()?;
+
+        chart
+            .configure_mesh()
+            .disable_mesh()
+            .disable_x_axis()
+            .disable_y_axis()
+            .draw()
+            .ok()?;
+
+        let value_points: Vec<(i32, f64)> = data
+            .iter()
+            .enumerate()
+            .map(|(i, (_, total_value, _))| (i as i32, *total_value))
+            .collect();
+        let cost_points: Vec<(i32, f64)> = data
+            .iter()
+            .enumerate()
+            .map(|(i, (_, _, total_cost))| (i as i32, *total_cost))
+            .collect();
+
+        chart
+            .draw_series(AreaSeries::new(
+                value_points.iter().copied(),
+                lower,
+                RGBColor(139, 92, 246).mix(0.2),
+            ))
+            .ok()?;
+
+        chart
+            .draw_series(LineSeries::new(
+                value_points.iter().copied(),
+                ShapeStyle::from(&RGBColor(139, 92, 246)).stroke_width(4),
+            ))
+            .ok()?;
+
+        chart
+            .draw_series(LineSeries::new(
+                cost_points.iter().copied(),
+                ShapeStyle::from(&RGBColor(148, 163, 184)).stroke_width(2),
+            ))
+            .ok()?;
+
+        root.present().ok()?;
+
+        Image::load_from_path(&temp_svg).ok()
+    }
+
     fn refresh_habit_analytics(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>) {
         if let Ok(analytics) = controller.get_habit_analytics(365) {
             let monthly_image = render_monthly_chart_image(&analytics.monthly_data);
@@ -1779,6 +1866,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("N/A".to_string(), "N/A".to_string(), true)
             };
 
+            let mut trend_image = None;
+            let mut trend_ready = false;
+            if priced_assets > 0 {
+                let _ = controller.save_crypto_portfolio_snapshot(total_val, total_cost);
+                let snapshots = controller
+                    .get_crypto_portfolio_snapshots(180)
+                    .unwrap_or_default();
+                let trend_points: Vec<(String, f64, f64)> = snapshots
+                    .into_iter()
+                    .filter(|(_, value, cost)| *value > 0.0 || *cost > 0.0)
+                    .collect();
+                trend_image = render_portfolio_trend_chart(&trend_points);
+                trend_ready = trend_image.is_some();
+            }
+
             // Try to load CLP rate
             let clp_cached = controller
                 .load_exchange_rate_allow_stale("CLP_USD".to_string())
@@ -1825,6 +1927,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 adapter.set_total_pnl_positive(total_pnl_positive);
                 adapter.set_total_pnl(SharedString::from(total_pnl_label));
                 adapter.set_clp_rate(SharedString::from(clp_display));
+                adapter.set_portfolio_trend_image(trend_image.unwrap_or_default());
+                adapter.set_portfolio_trend_ready(trend_ready);
                 adapter.set_portfolio_chart_image(chart_image.unwrap_or_default());
                 adapter.set_portfolio_chart_ready(chart_ready);
                 adapter.set_portfolio_distribution(ModelRc::new(VecModel::from(distribution)));

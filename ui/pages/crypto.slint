@@ -9,7 +9,7 @@ import {
 import { CryptoRow, WalletRow, TickerItem, CryptoCard, GhostButton } from "../components/crypto_widgets.slint";
 import { AssetDetailPanel } from "../components/asset_detail.slint";
 import { WalletDetailPanel } from "../components/wallet_detail.slint";
-import { PortfolioDistributionChart } from "../components/crypto_charts.slint";
+import { PortfolioDistributionChart, PortfolioTrendChart } from "../components/crypto_charts.slint";
 import { TextButton, BorderButton, ActionButton, CustomVScrollbar } from "../widgets.slint";
 
 // ==================== Tab Button ====================
@@ -372,7 +372,7 @@ export component CryptoPage inherits Rectangle {
                 height: 100%;
                 property <length> cards-height: CryptoAdapter.portfolio.length > 4 ? 388px : 200px;
                 property <length> content-height: CryptoAdapter.portfolio.length > 0
-                    ? cards-height + 520px
+                    ? cards-height + 760px
                     : 520px;
 
                 portfolio-content := VerticalLayout {
@@ -492,6 +492,12 @@ export component CryptoPage inherits Rectangle {
                                     }
                                 }
                             }
+                        }
+
+                        PortfolioTrendChart {
+                            horizontal-stretch: 1;
+                            has-data: CryptoAdapter.portfolio-trend-ready;
+                            image: CryptoAdapter.portfolio-trend-image;
                         }
 
                         PortfolioDistributionChart {

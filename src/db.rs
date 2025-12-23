@@ -491,6 +491,17 @@ impl Database {
             [],
         )?;
 
+        // Daily crypto portfolio snapshots (for trend chart)
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS crypto_portfolio_snapshots (
+                snapshot_date TEXT PRIMARY KEY NOT NULL,
+                total_value_usd REAL NOT NULL,
+                total_cost_usd REAL NOT NULL,
+                created_at TEXT NOT NULL
+            )",
+            [],
+        )?;
+
         Ok(())
     }
 
@@ -579,6 +590,52 @@ impl Database {
             Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
             Err(e) => Err(DbError::Sqlite(e)),
         }
+    }
+
+    /// Saves a daily crypto portfolio snapshot (upsert by date)
+    pub fn save_crypto_portfolio_snapshot(
+        &self,
+        snapshot_date: &str,
+        total_value_usd: f64,
+        total_cost_usd: f64,
+    ) -> Result<(), DbError> {
+        let now = Utc::now().to_rfc3339();
+        self.conn.execute(
+            "INSERT INTO crypto_portfolio_snapshots
+             (snapshot_date, total_value_usd, total_cost_usd, created_at)
+             VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT(snapshot_date) DO UPDATE SET
+                total_value_usd = ?2,
+                total_cost_usd = ?3,
+                created_at = ?4",
+            params![snapshot_date, total_value_usd, total_cost_usd, now],
+        )?;
+        Ok(())
+    }
+
+    /// Loads crypto portfolio snapshots from a starting date (inclusive)
+    pub fn load_crypto_portfolio_snapshots(
+        &self,
+        start_date: &str,
+    ) -> Result<Vec<(String, f64, f64)>, DbError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT snapshot_date, total_value_usd, total_cost_usd
+             FROM crypto_portfolio_snapshots
+             WHERE snapshot_date >= ?1
+             ORDER BY snapshot_date ASC",
+        )?;
+
+        let snapshots = stmt.query_map(params![start_date], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, f64>(1)?,
+                row.get::<_, f64>(2)?,
+            ))
+        })?;
+
+        snapshots
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(DbError::Sqlite)
     }
 
     // ==================== Rate Limiting Functions ====================

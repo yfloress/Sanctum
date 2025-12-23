@@ -126,3 +126,98 @@ export component PortfolioDistributionChart inherits Rectangle {
         }
     }
 }
+
+// ==================== Portfolio Trend Chart ====================
+export component PortfolioTrendChart inherits Rectangle {
+    in property <image> image;
+    in property <bool> has-data: false;
+
+    background: Palette.surface;
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: Palette.border-subtle;
+
+    VerticalLayout {
+        padding: 20px;
+        spacing: 14px;
+
+        HorizontalLayout {
+            spacing: 12px;
+
+            Text {
+                text: "PORTFOLIO TREND (180 DAYS)";
+                color: Palette.text-secondary;
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 2px;
+                horizontal-stretch: 1;
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+                Rectangle {
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 4px;
+                    background: #8b5cf6;
+                    y: 6px;
+                }
+                Text {
+                    text: "VALUE";
+                    color: Palette.text-secondary;
+                    font-size: 9px;
+                    letter-spacing: 1px;
+                    vertical-alignment: center;
+                }
+                Rectangle {
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 4px;
+                    background: #94a3b8;
+                    y: 6px;
+                }
+                Text {
+                    text: "COST";
+                    color: Palette.text-secondary;
+                    font-size: 9px;
+                    letter-spacing: 1px;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        Rectangle {
+            height: 240px;
+            border-radius: 14px;
+            background: @linear-gradient(180deg, #0a0a0a, #0f0f0f);
+            border-width: 1px;
+            border-color: Palette.border-subtle;
+            clip: true;
+
+            if root.has-data: Image {
+                source: root.image;
+                width: 100%;
+                height: 100%;
+                image-fit: contain;
+            }
+
+            if !root.has-data: VerticalLayout {
+                alignment: center;
+                spacing: 6px;
+                Text {
+                    text: "No trend data yet";
+                    color: Palette.text-secondary;
+                    font-size: 12px;
+                    font-weight: 600;
+                    horizontal-alignment: center;
+                }
+                Text {
+                    text: "Sync prices daily to build history";
+                    color: Palette.text-muted;
+                    font-size: 11px;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+    }
+}

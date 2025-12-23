@@ -11,7 +11,7 @@ use crate::models::{
 };
 use crate::security_log::{SecurityEvent, log_auth_failure, log_security_event};
 use crate::services::habit::HabitService;
-use chrono::{Datelike, NaiveDate, Utc};
+use chrono::{Datelike, Local, NaiveDate, Utc};
 use regex::Regex;
 use rusqlite::Connection;
 use secrecy::SecretString;
@@ -1533,6 +1533,37 @@ impl AppController {
                     last_updated: updated,
                 })
                 .collect())
+        })
+    }
+
+    /// Saves a daily portfolio snapshot (upsert by date)
+    pub fn save_crypto_portfolio_snapshot(
+        &self,
+        total_value: f64,
+        total_cost: f64,
+    ) -> Result<(), ControllerError> {
+        let date = Local::now().format("%Y-%m-%d").to_string();
+        self.with_db(|db| {
+            db.save_crypto_portfolio_snapshot(&date, total_value, total_cost)
+                .map_err(ControllerError::Database)
+        })
+    }
+
+    /// Loads portfolio snapshots for the last N days (inclusive)
+    pub fn get_crypto_portfolio_snapshots(
+        &self,
+        days: i64,
+    ) -> Result<Vec<(String, f64, f64)>, ControllerError> {
+        let days = days.max(1);
+        let start_date = Local::now()
+            .date_naive()
+            .checked_sub_signed(chrono::Duration::days(days - 1))
+            .unwrap_or_else(|| Local::now().date_naive())
+            .format("%Y-%m-%d")
+            .to_string();
+        self.with_db(|db| {
+            db.load_crypto_portfolio_snapshots(&start_date)
+                .map_err(ControllerError::Database)
         })
     }
 
