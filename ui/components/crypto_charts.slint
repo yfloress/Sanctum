@@ -61,9 +61,10 @@ export component PortfolioDistributionChart inherits Rectangle {
                         viewport-height: max(self.height, (root.slices.length * 36px) + 12px);
 
                         VerticalLayout {
+                            alignment: start;
                             spacing: 10px;
-                            padding-top: 10px;
-                            padding-bottom: 10px;
+                            padding-top: 4px;
+                            padding-bottom: 0px;
 
                             Text {
                                 text: "ASSETS";
