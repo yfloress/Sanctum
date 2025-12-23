@@ -1509,6 +1509,101 @@ impl Database {
         Ok(transactions)
     }
 
+    /// Gets the wallet balance for a coin at (or before) a given date.
+    pub fn get_wallet_coin_balance_at(
+        &self,
+        wallet_id: &str,
+        coin_id: &str,
+        date: &str,
+        exclude_tx_id: Option<&str>,
+    ) -> Result<f64, DbError> {
+        let mut balance = 0.0;
+        if let Some(exclude) = exclude_tx_id {
+            let mut stmt = self.conn.prepare(
+                "SELECT coin_id, type, amount, fee_coin_id, fee_amount
+                 FROM crypto_transactions
+                 WHERE wallet_id = ?1
+                   AND date <= ?2
+                   AND id != ?3
+                   AND (coin_id = ?4 OR fee_coin_id = ?4)",
+            )?;
+            let rows = stmt.query_map(params![wallet_id, date, exclude, coin_id], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, f64>(2)?,
+                    row.get::<_, Option<String>>(3)?,
+                    row.get::<_, Option<f64>>(4)?,
+                ))
+            })?;
+            for row in rows {
+                let (row_coin_id, tx_type, amount, fee_coin_id, fee_amount) = row?;
+                if row_coin_id == coin_id {
+                    if let Ok(kind) = tx_type.parse::<CryptoTransactionType>() {
+                        match kind {
+                            CryptoTransactionType::Buy | CryptoTransactionType::TransferIn => {
+                                balance += amount
+                            }
+                            CryptoTransactionType::Sell
+                            | CryptoTransactionType::TransferOut
+                            | CryptoTransactionType::Swap => balance -= amount,
+                        }
+                    }
+                }
+
+                if let Some(fee_coin_id) = fee_coin_id {
+                    if fee_coin_id == coin_id {
+                        if let Some(fee_amount) = fee_amount {
+                            balance -= fee_amount;
+                        }
+                    }
+                }
+            }
+        } else {
+            let mut stmt = self.conn.prepare(
+                "SELECT coin_id, type, amount, fee_coin_id, fee_amount
+                 FROM crypto_transactions
+                 WHERE wallet_id = ?1
+                   AND date <= ?2
+                   AND (coin_id = ?3 OR fee_coin_id = ?3)",
+            )?;
+            let rows = stmt.query_map(params![wallet_id, date, coin_id], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, f64>(2)?,
+                    row.get::<_, Option<String>>(3)?,
+                    row.get::<_, Option<f64>>(4)?,
+                ))
+            })?;
+            for row in rows {
+                let (row_coin_id, tx_type, amount, fee_coin_id, fee_amount) = row?;
+                if row_coin_id == coin_id {
+                    if let Ok(kind) = tx_type.parse::<CryptoTransactionType>() {
+                        match kind {
+                            CryptoTransactionType::Buy | CryptoTransactionType::TransferIn => {
+                                balance += amount
+                            }
+                            CryptoTransactionType::Sell
+                            | CryptoTransactionType::TransferOut
+                            | CryptoTransactionType::Swap => balance -= amount,
+                        }
+                    }
+                }
+
+                if let Some(fee_coin_id) = fee_coin_id {
+                    if fee_coin_id == coin_id {
+                        if let Some(fee_amount) = fee_amount {
+                            balance -= fee_amount;
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(balance)
+    }
+
     /// Gets all crypto transactions across all wallets
     pub fn get_all_crypto_transactions(&self) -> Result<Vec<CryptoTransaction>, DbError> {
         let mut stmt = self.conn.prepare(
@@ -1674,6 +1769,58 @@ impl Database {
             .or_insert_with(|| AggregatedAsset::new(target.coin_id.clone(), target.symbol.clone()));
         target_entry.total_amount += target.amount;
         target_entry.total_cost_basis += cost_transferred.max(0.0);
+
+        if let (Some(fee_coin_id), Some(fee_amount)) =
+            (source.fee_coin_id.as_deref(), source.fee_amount)
+        {
+            let fee_symbol = if fee_coin_id == source.coin_id {
+                Some(source.symbol.as_str())
+            } else {
+                None
+            };
+            Self::apply_fee_coin_outflow(assets, fee_coin_id, fee_amount, fee_symbol);
+        }
+
+        if let (Some(fee_coin_id), Some(fee_amount)) =
+            (target.fee_coin_id.as_deref(), target.fee_amount)
+        {
+            let fee_symbol = if fee_coin_id == target.coin_id {
+                Some(target.symbol.as_str())
+            } else {
+                None
+            };
+            Self::apply_fee_coin_outflow(assets, fee_coin_id, fee_amount, fee_symbol);
+        }
+    }
+
+    fn apply_fee_coin_outflow(
+        assets: &mut HashMap<String, AggregatedAsset>,
+        fee_coin_id: &str,
+        fee_amount: f64,
+        fee_symbol: Option<&str>,
+    ) {
+        if fee_amount <= 0.0 {
+            return;
+        }
+
+        let entry = assets.entry(fee_coin_id.to_string()).or_insert_with(|| {
+            AggregatedAsset::new(
+                fee_coin_id.to_string(),
+                fee_symbol.unwrap_or(fee_coin_id).to_uppercase(),
+            )
+        });
+
+        let prev_amount = entry.total_amount;
+        entry.total_amount -= fee_amount;
+        if entry.total_amount < 0.0 {
+            entry.total_amount = 0.0;
+        }
+
+        if prev_amount > 0.0 {
+            let ratio = (fee_amount / prev_amount).min(1.0);
+            entry.total_cost_basis *= 1.0 - ratio;
+            entry.total_cost_basis = entry.total_cost_basis.max(0.0);
+        }
     }
 
     /// Applies a transfer pair for the same asset, reducing cost basis only for fee losses
@@ -1707,6 +1854,28 @@ impl Database {
         entry.total_amount += target.amount;
         entry.total_cost_basis += unit_cost * target.amount;
         entry.total_cost_basis += target.fee.unwrap_or(0.0);
+
+        if let (Some(fee_coin_id), Some(fee_amount)) =
+            (source.fee_coin_id.as_deref(), source.fee_amount)
+        {
+            let fee_symbol = if fee_coin_id == source.coin_id {
+                Some(source.symbol.as_str())
+            } else {
+                None
+            };
+            Self::apply_fee_coin_outflow(assets, fee_coin_id, fee_amount, fee_symbol);
+        }
+
+        if let (Some(fee_coin_id), Some(fee_amount)) =
+            (target.fee_coin_id.as_deref(), target.fee_amount)
+        {
+            let fee_symbol = if fee_coin_id == target.coin_id {
+                Some(target.symbol.as_str())
+            } else {
+                None
+            };
+            Self::apply_fee_coin_outflow(assets, fee_coin_id, fee_amount, fee_symbol);
+        }
         true
     }
 
@@ -1820,6 +1989,17 @@ impl Database {
                         entry.total_cost_basis = entry.total_cost_basis.max(0.0);
                     }
                 }
+            }
+
+            if let (Some(fee_coin_id), Some(fee_amount)) =
+                (tx.fee_coin_id.as_deref(), tx.fee_amount)
+            {
+                let fee_symbol = if fee_coin_id == tx.coin_id {
+                    Some(tx.symbol.as_str())
+                } else {
+                    None
+                };
+                Self::apply_fee_coin_outflow(&mut assets, fee_coin_id, fee_amount, fee_symbol);
             }
         }
 
@@ -1940,6 +2120,17 @@ impl Database {
                     entry.total_cost_basis *= 1.0 - ratio;
                     entry.total_cost_basis = entry.total_cost_basis.max(0.0);
                 }
+            }
+
+            if let (Some(fee_coin_id), Some(fee_amount)) =
+                (tx.fee_coin_id.as_deref(), tx.fee_amount)
+            {
+                let fee_symbol = if fee_coin_id == tx.coin_id {
+                    Some(tx.symbol.as_str())
+                } else {
+                    None
+                };
+                Self::apply_fee_coin_outflow(&mut assets, fee_coin_id, fee_amount, fee_symbol);
             }
         }
 

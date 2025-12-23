@@ -251,31 +251,41 @@ export component CryptoPage inherits Rectangle {
                         
                         // PnL Badge
                         Rectangle {
+                            property <bool> pnl_available: CryptoAdapter.total-pnl != "N/A";
+
                             y: (parent.height - self.height) / 2 + 8px;
                             height: 28px;
                             width: 110px;
                             border-radius: 6px;
-                            background: CryptoAdapter.total-pnl-positive ? 
-                                Palette.success.with-alpha(0.12) : 
-                                Palette.danger.with-alpha(0.12);
+                            background: pnl_available
+                                ? (CryptoAdapter.total-pnl-positive ?
+                                    Palette.success.with-alpha(0.12) :
+                                    Palette.danger.with-alpha(0.12))
+                                : Palette.surface;
                             border-width: 1px;
-                            border-color: CryptoAdapter.total-pnl-positive ?
-                                Palette.success.with-alpha(0.2) :
-                                Palette.danger.with-alpha(0.2);
+                            border-color: pnl_available
+                                ? (CryptoAdapter.total-pnl-positive ?
+                                    Palette.success.with-alpha(0.2) :
+                                    Palette.danger.with-alpha(0.2))
+                                : Palette.border;
                             
                             HorizontalLayout {
                                 alignment: center;
                                 spacing: 4px;
                                 
                                 Text { 
-                                    text: CryptoAdapter.total-pnl-positive ? "▲" : "▼"; 
-                                    color: CryptoAdapter.total-pnl-positive ? Palette.success : Palette.danger; 
+                                    text: pnl_available ? (CryptoAdapter.total-pnl-positive ? "▲" : "▼") : "•"; 
+                                    color: pnl_available
+                                        ? (CryptoAdapter.total-pnl-positive ? Palette.success : Palette.danger)
+                                        : Palette.text-muted; 
                                     font-size: 10px;
                                     vertical-alignment: center;
                                 }
                                 Text { 
                                     text: CryptoAdapter.total-pnl; 
-                                    color: CryptoAdapter.total-pnl-positive ? Palette.success : Palette.danger; 
+                                    color: pnl_available
+                                        ? (CryptoAdapter.total-pnl-positive ? Palette.success : Palette.danger)
+                                        : Palette.text-muted; 
                                     font-size: 12px; 
                                     font-weight: 600;
                                     vertical-alignment: center;

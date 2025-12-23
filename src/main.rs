@@ -1790,15 +1790,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut total_val = 0.0;
             let mut total_cost = 0.0;
             let mut priced_assets = 0;
+            let mut missing_price_assets = 0;
 
             let mapped_assets: Vec<CryptoAssetData> = assets
                 .iter()
                 .map(|a| {
                     let price_data = price_map.get(&a.coin_id);
+                    total_cost += a.total_cost_basis;
                     if price_data.is_some() {
                         total_val += a.current_value;
-                        total_cost += a.total_cost_basis;
                         priced_assets += 1;
+                    } else {
+                        missing_price_assets += 1;
                     }
 
                     let change_percent = price_data
@@ -1897,29 +1900,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
 
-            let (total_value_label, total_pnl_label, total_pnl_positive) = if priced_assets > 0 {
-                let total_pnl_val = total_val - total_cost;
-                let pnl_sign = if total_pnl_val >= 0.0 { "+" } else { "-" };
-                (
-                    format_money((total_val * 100.0) as i64, "USD"),
-                    format!(
-                        "{} {}",
-                        pnl_sign,
-                        format_money((total_pnl_val.abs() * 100.0) as i64, "USD")
-                    ),
-                    total_pnl_val >= 0.0,
-                )
+            let total_value_label = if priced_assets > 0 {
+                format_money((total_val * 100.0) as i64, "USD")
             } else {
-                ("N/A".to_string(), "N/A".to_string(), true)
+                "N/A".to_string()
             };
+
+            let (total_pnl_label, total_pnl_positive) =
+                if priced_assets > 0 && missing_price_assets == 0 {
+                    let total_pnl_val = total_val - total_cost;
+                    let pnl_sign = if total_pnl_val >= 0.0 { "+" } else { "-" };
+                    (
+                        format!(
+                            "{} {}",
+                            pnl_sign,
+                            format_money((total_pnl_val.abs() * 100.0) as i64, "USD")
+                        ),
+                        total_pnl_val >= 0.0,
+                    )
+                } else {
+                    ("N/A".to_string(), true)
+                };
 
             let mut trend_image = None;
             let mut trend_ready = false;
-            if priced_assets > 0 {
+            if priced_assets > 0 && missing_price_assets == 0 {
                 let _ = controller.save_crypto_portfolio_snapshot(total_val, total_cost);
-                let snapshots = controller
-                    .get_crypto_portfolio_snapshots(180)
-                    .unwrap_or_default();
+            }
+
+            let snapshots = controller
+                .get_crypto_portfolio_snapshots(180)
+                .unwrap_or_default();
+            if !snapshots.is_empty() {
                 let trend_points: Vec<(String, f64, f64)> = snapshots
                     .into_iter()
                     .filter(|(_, value, cost)| *value > 0.0 || *cost > 0.0)

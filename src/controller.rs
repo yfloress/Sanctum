@@ -217,6 +217,7 @@ fn validate_symbol(symbol: &str) -> Result<String, ControllerError> {
     Ok(trimmed.to_uppercase())
 }
 
+
 /// Validates that a floating point value is finite and positive
 fn validate_positive_amount(value: f64, field: &str) -> Result<f64, ControllerError> {
     if !value.is_finite() {
@@ -1617,7 +1618,8 @@ impl AppController {
         notes: Option<String>,
     ) -> Result<String, ControllerError> {
         self.with_db(|db| {
-            if wallet_id.trim().is_empty() {
+            let wallet_id = wallet_id.trim().to_string();
+            if wallet_id.is_empty() {
                 return Err(ControllerError::Validation(
                     "Wallet ID cannot be empty".to_string(),
                 ));
@@ -1674,12 +1676,10 @@ impl AppController {
                 || transaction_type == "transfer_out"
                 || transaction_type == "swap"
             {
-                let holdings = db.get_wallet_aggregated_holdings(&wallet_id).map_err(ControllerError::Database)?;
-                let current_balance = holdings.iter()
-                    .find(|h| h.coin_id == coin_id.trim().to_lowercase())
-                    .map(|h| h.total_amount)
-                    .unwrap_or(0.0);
-                
+                let current_balance = db
+                    .get_wallet_coin_balance_at(&wallet_id, &coin_id, &date, None)
+                    .map_err(ControllerError::Database)?;
+
                 if amount > current_balance {
                     return Err(ControllerError::Validation(format!(
                         "Insufficient funds. Available: {:.8} {}",
@@ -1696,7 +1696,7 @@ impl AppController {
             let id = Uuid::new_v4().to_string();
             let transaction = CryptoTransaction::new(
                 id.clone(),
-                wallet_id.trim().to_string(),
+                wallet_id,
                 coin_id.to_lowercase(),
                 symbol.to_uppercase(),
                 transaction_type,
@@ -1780,11 +1780,9 @@ impl AppController {
                 None => None,
             };
 
-            let holdings = db
-                .get_wallet_aggregated_holdings(&from_wallet_id)
+            let current_balance = db
+                .get_wallet_coin_balance_at(&from_wallet_id, &coin_id, &date, None)
                 .map_err(ControllerError::Database)?;
-            let asset = holdings.iter().find(|h| h.coin_id == coin_id);
-            let current_balance = asset.map(|h| h.total_amount).unwrap_or(0.0);
             if from_amount > current_balance {
                 return Err(ControllerError::Validation(format!(
                     "Insufficient funds. Available: {:.8} {}",
@@ -1792,7 +1790,14 @@ impl AppController {
                 )));
             }
 
-            let avg_price = asset.map(|h| h.avg_buy_price).unwrap_or(0.0);
+            let holdings = db
+                .get_wallet_aggregated_holdings(&from_wallet_id)
+                .map_err(ControllerError::Database)?;
+            let avg_price = holdings
+                .iter()
+                .find(|h| h.coin_id == coin_id)
+                .map(|h| h.avg_buy_price)
+                .unwrap_or(0.0);
             let transfer_price = if avg_price > 0.0 {
                 Some(avg_price)
             } else {
@@ -1865,7 +1870,8 @@ impl AppController {
         notes: Option<String>,
     ) -> Result<String, ControllerError> {
         self.with_db(|db| {
-            if wallet_id.trim().is_empty() {
+            let wallet_id = wallet_id.trim().to_string();
+            if wallet_id.is_empty() {
                 return Err(ControllerError::Validation(
                     "Wallet ID cannot be empty".to_string(),
                 ));
@@ -1896,14 +1902,9 @@ impl AppController {
             };
 
             // Validate sufficient funds for the source asset
-            let holdings = db
-                .get_wallet_aggregated_holdings(&wallet_id)
+            let current_balance = db
+                .get_wallet_coin_balance_at(&wallet_id, &from_coin_id, &date, None)
                 .map_err(ControllerError::Database)?;
-            let current_balance = holdings
-                .iter()
-                .find(|h| h.coin_id == from_coin_id)
-                .map(|h| h.total_amount)
-                .unwrap_or(0.0);
 
             if from_amount > current_balance {
                 return Err(ControllerError::Validation(format!(
@@ -2059,15 +2060,14 @@ impl AppController {
 
             if existing.transaction_type == "sell" || existing.transaction_type == "transfer_out"
             {
-                let holdings = db
-                    .get_wallet_aggregated_holdings(&existing.wallet_id)
+                let available = db
+                    .get_wallet_coin_balance_at(
+                        &existing.wallet_id,
+                        &existing.coin_id,
+                        &date,
+                        Some(&validated_id),
+                    )
                     .map_err(ControllerError::Database)?;
-                let current_balance = holdings
-                    .iter()
-                    .find(|h| h.coin_id == existing.coin_id)
-                    .map(|h| h.total_amount)
-                    .unwrap_or(0.0);
-                let available = current_balance + existing.amount;
                 if amount > available {
                     return Err(ControllerError::Validation(format!(
                         "Insufficient funds. Available: {:.8} {}",
