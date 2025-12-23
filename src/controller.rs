@@ -1790,14 +1790,14 @@ impl AppController {
                 )));
             }
 
-            let holdings = db
-                .get_wallet_aggregated_holdings(&from_wallet_id)
+            let (total_amount, total_cost) = db
+                .get_wallet_coin_state_at(&from_wallet_id, &coin_id, &date)
                 .map_err(ControllerError::Database)?;
-            let avg_price = holdings
-                .iter()
-                .find(|h| h.coin_id == coin_id)
-                .map(|h| h.avg_buy_price)
-                .unwrap_or(0.0);
+            let avg_price = if total_amount > 0.0 {
+                total_cost / total_amount
+            } else {
+                0.0
+            };
             let transfer_price = if avg_price > 0.0 {
                 Some(avg_price)
             } else {

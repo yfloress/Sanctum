@@ -1604,6 +1604,91 @@ impl Database {
         Ok(balance)
     }
 
+    /// Gets the wallet balance and cost basis for a coin at (or before) a given date.
+    pub fn get_wallet_coin_state_at(
+        &self,
+        wallet_id: &str,
+        coin_id: &str,
+        date: &str,
+    ) -> Result<(f64, f64), DbError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT coin_id, type, amount, price_per_coin, fee, fee_coin_id, fee_amount
+             FROM crypto_transactions
+             WHERE wallet_id = ?1
+               AND date <= ?2
+               AND (coin_id = ?3 OR fee_coin_id = ?3)
+             ORDER BY date ASC, rowid ASC",
+        )?;
+
+        let rows = stmt.query_map(params![wallet_id, date, coin_id], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, f64>(2)?,
+                row.get::<_, Option<f64>>(3)?,
+                row.get::<_, Option<f64>>(4)?,
+                row.get::<_, Option<String>>(5)?,
+                row.get::<_, Option<f64>>(6)?,
+            ))
+        })?;
+
+        let mut total_amount = 0.0;
+        let mut total_cost = 0.0;
+
+        fn apply_outflow(total_amount: &mut f64, total_cost: &mut f64, out_amount: f64) {
+            if out_amount <= 0.0 {
+                return;
+            }
+            let prev_amount = *total_amount;
+            *total_amount = (*total_amount - out_amount).max(0.0);
+            if prev_amount > 0.0 {
+                let ratio = (out_amount / prev_amount).min(1.0);
+                *total_cost *= 1.0 - ratio;
+                if *total_cost < 0.0 {
+                    *total_cost = 0.0;
+                }
+            }
+        }
+
+        for row in rows {
+            let (row_coin_id, tx_type, amount, price_per_coin, fee, fee_coin_id, fee_amount) =
+                row?;
+            if row_coin_id == coin_id {
+                if let Ok(kind) = tx_type.parse::<CryptoTransactionType>() {
+                    match kind {
+                        CryptoTransactionType::Buy => {
+                            total_amount += amount;
+                            total_cost += amount * price_per_coin.unwrap_or(0.0);
+                            total_cost += fee.unwrap_or(0.0);
+                        }
+                        CryptoTransactionType::TransferIn => {
+                            total_amount += amount;
+                            if let Some(price) = price_per_coin {
+                                total_cost += amount * price;
+                                total_cost += fee.unwrap_or(0.0);
+                            }
+                        }
+                        CryptoTransactionType::Sell
+                        | CryptoTransactionType::TransferOut
+                        | CryptoTransactionType::Swap => {
+                            apply_outflow(&mut total_amount, &mut total_cost, amount);
+                        }
+                    }
+                }
+            }
+
+            if let Some(fee_coin_id) = fee_coin_id {
+                if fee_coin_id == coin_id {
+                    if let Some(fee_amount) = fee_amount {
+                        apply_outflow(&mut total_amount, &mut total_cost, fee_amount);
+                    }
+                }
+            }
+        }
+
+        Ok((total_amount, total_cost))
+    }
+
     /// Gets all crypto transactions across all wallets
     pub fn get_all_crypto_transactions(&self) -> Result<Vec<CryptoTransaction>, DbError> {
         let mut stmt = self.conn.prepare(
