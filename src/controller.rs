@@ -123,6 +123,7 @@ const MAX_SYMBOL_LENGTH: usize = 16;
 const MAX_ICON_LENGTH: usize = 32;
 const MAX_PASSWORD_LENGTH: usize = 128;
 const MIN_PASSWORD_LENGTH: usize = 8;
+const PASSWORD_PASSPHRASE_LENGTH: usize = 16;
 const MAX_ACCOUNT_NAME_LENGTH: usize = 64;
 const MAX_CURRENCY_LENGTH: usize = 8;
 const MAX_COIN_NAME_LENGTH: usize = 64;
@@ -303,11 +304,8 @@ fn password_strength_warning(password: &str) -> Option<String> {
         return None;
     }
 
-    if trimmed.len() < MIN_PASSWORD_LENGTH {
-        return Some(format!(
-            "Weak password: use at least {} characters",
-            MIN_PASSWORD_LENGTH
-        ));
+    if trimmed.len() >= PASSWORD_PASSPHRASE_LENGTH {
+        return None;
     }
 
     let has_uppercase = trimmed.chars().any(|c| c.is_ascii_uppercase());
@@ -349,10 +347,13 @@ fn password_strength_warning(password: &str) -> Option<String> {
         )
     });
 
-    if !has_uppercase || !has_lowercase || !has_digit || !has_special {
-        return Some(
-            "Weak password: add uppercase, lowercase, number, and symbol".to_string(),
-        );
+    if trimmed.len() < MIN_PASSWORD_LENGTH
+        || !has_uppercase
+        || !has_lowercase
+        || !has_digit
+        || !has_special
+    {
+        return Some("Weak password: use 16+ chars or add variety".to_string());
     }
 
     None

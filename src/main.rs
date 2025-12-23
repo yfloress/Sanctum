@@ -1400,6 +1400,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Image::load_from_path(&temp_svg).ok()
     }
 
+    // TODO(remove-demo): temporary mock data for trend chart preview.
+    fn build_mock_portfolio_trend(total_value: f64, total_cost: f64) -> Vec<(String, f64, f64)> {
+        let base_value = if total_value > 0.0 {
+            total_value
+        } else if total_cost > 0.0 {
+            total_cost
+        } else {
+            1000.0
+        };
+        let base_cost = if total_cost > 0.0 {
+            total_cost
+        } else {
+            base_value * 0.85
+        };
+
+        let points = 36usize;
+        let today = chrono::Local::now().date_naive();
+        let mut data = Vec::with_capacity(points);
+
+        for i in 0..points {
+            let t = i as f64;
+            let drift = t / (points as f64 - 1.0) * 0.08;
+            let wave = (t / 3.0).sin() * 0.05 + (t / 7.0).cos() * 0.02;
+            let value = (base_value * (1.0 + drift + wave)).max(0.01);
+
+            let cost_wave = (t / 5.0).sin() * 0.01;
+            let cost = (base_cost * (1.0 + drift * 0.4 + cost_wave)).max(0.01);
+
+            let date = today - chrono::Duration::days((points - 1 - i) as i64);
+            data.push((date.format("%Y-%m-%d").to_string(), value, cost));
+        }
+
+        data
+    }
+
     fn refresh_habit_analytics(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>) {
         if let Ok(analytics) = controller.get_habit_analytics(365) {
             let monthly_image = render_monthly_chart_image(&analytics.monthly_data);
@@ -1882,10 +1917,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let snapshots = controller
                     .get_crypto_portfolio_snapshots(180)
                     .unwrap_or_default();
-                let trend_points: Vec<(String, f64, f64)> = snapshots
+                let mut trend_points: Vec<(String, f64, f64)> = snapshots
                     .into_iter()
                     .filter(|(_, value, cost)| *value > 0.0 || *cost > 0.0)
                     .collect();
+                if trend_points.len() < 2 {
+                    trend_points = build_mock_portfolio_trend(total_val, total_cost);
+                }
                 trend_image = render_portfolio_trend_chart(&trend_points);
                 trend_ready = trend_image.is_some();
             }
