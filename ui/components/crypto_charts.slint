@@ -5,7 +5,6 @@ export component PortfolioDistributionChart inherits Rectangle {
     in property <image> image;
     in property <bool> has-data: false;
     in property <[CryptoDistributionSlice]> slices: [];
-    in property <string> total-label: "";
 
     background: Palette.surface;
     border-radius: 12px;
@@ -49,25 +48,6 @@ export component PortfolioDistributionChart inherits Rectangle {
                         image-fit: contain;
                     }
 
-                    VerticalLayout {
-                        alignment: center;
-                        spacing: 4px;
-                        Text {
-                            text: "TOTAL";
-                            color: Palette.text-muted;
-                            font-size: 10px;
-                            font-weight: 600;
-                            letter-spacing: 2px;
-                            horizontal-alignment: center;
-                        }
-                        Text {
-                            text: root.total-label;
-                            color: Palette.text-primary;
-                            font-size: 18px;
-                            font-weight: 700;
-                            horizontal-alignment: center;
-                        }
-                    }
                 }
 
                 Rectangle {
@@ -109,7 +89,7 @@ export component PortfolioDistributionChart inherits Rectangle {
                                     color: Palette.text-primary;
                                     font-size: 12px;
                                     font-weight: 600;
-                                    width: 64px;
+                                    width: 80px;
                                     horizontal-alignment: left;
                                 }
 
@@ -117,16 +97,7 @@ export component PortfolioDistributionChart inherits Rectangle {
                                     text: slice.percent;
                                     color: Palette.text-secondary;
                                     font-size: 11px;
-                                    width: 56px;
                                     horizontal-alignment: left;
-                                }
-
-                                Text {
-                                    text: slice.value;
-                                    color: Palette.text-secondary;
-                                    font-size: 11px;
-                                    horizontal-alignment: right;
-                                    horizontal-stretch: 1;
                                 }
                             }
                         }

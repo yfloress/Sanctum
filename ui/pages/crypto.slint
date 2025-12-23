@@ -372,7 +372,7 @@ export component CryptoPage inherits Rectangle {
                 height: 100%;
                 property <length> cards-height: CryptoAdapter.portfolio.length > 4 ? 388px : 200px;
                 property <length> content-height: CryptoAdapter.portfolio.length > 0
-                    ? cards-height + 420px
+                    ? cards-height + 520px
                     : 520px;
 
                 portfolio-content := VerticalLayout {
@@ -381,6 +381,7 @@ export component CryptoPage inherits Rectangle {
                     padding-bottom: 32px;
                     spacing: 0px;
                     width: parent.width;
+                    height: content-height;
 
                     Rectangle { height: 12px; }
 
@@ -498,7 +499,6 @@ export component CryptoPage inherits Rectangle {
                             has-data: CryptoAdapter.portfolio-chart-ready;
                             image: CryptoAdapter.portfolio-chart-image;
                             slices: CryptoAdapter.portfolio-distribution;
-                            total-label: CryptoAdapter.total-value;
                         }
                     }
                     

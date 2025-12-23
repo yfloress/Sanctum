@@ -374,6 +374,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         slint::Color::from_rgb_u8(139, 92, 246)
     }
 
+    fn fallback_chart_color(index: usize) -> (u8, u8, u8) {
+        match index % 6 {
+            0 => (139, 92, 246),
+            1 => (236, 72, 153),
+            2 => (56, 189, 248),
+            3 => (34, 197, 94),
+            4 => (245, 158, 11),
+            _ => (168, 85, 247),
+        }
+    }
+
+    fn symbol_chart_color(symbol: &str, index: usize) -> (u8, u8, u8) {
+        match symbol.to_uppercase().as_str() {
+            "BTC" => (247, 147, 26),
+            "ETH" => (98, 126, 234),
+            "USDT" => (38, 161, 123),
+            "USDC" => (39, 117, 202),
+            "BNB" => (243, 186, 47),
+            "SOL" => (20, 241, 149),
+            "XMR" => (255, 102, 0),
+            "LTC" => (191, 191, 191),
+            "ADA" => (0, 51, 173),
+            "DOGE" => (194, 166, 51),
+            "XRP" => (0, 136, 204),
+            "MATIC" => (130, 71, 229),
+            "DOT" => (230, 0, 122),
+            "AVAX" => (232, 65, 66),
+            _ => fallback_chart_color(index),
+        }
+    }
+
     fn parse_amount_input(value: &str) -> Option<i64> {
         let cleaned = value.trim().replace(',', "");
         if cleaned.is_empty() {
@@ -1249,21 +1280,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let temp_svg = std::env::temp_dir().join("sanctum_portfolio_dist_temp.svg");
         let root = SVGBackend::new(&temp_svg, (600, 600)).into_drawing_area();
 
-        let palette = [
-            RGBColor(139, 92, 246),
-            RGBColor(236, 72, 153),
-            RGBColor(56, 189, 248),
-            RGBColor(34, 197, 94),
-            RGBColor(245, 158, 11),
-            RGBColor(168, 85, 247),
-        ];
-
         let sizes: Vec<f64> = data.iter().map(|(_, value)| *value).collect();
         let labels_empty: Vec<String> = vec![String::new(); data.len()];
         let colors: Vec<RGBColor> = data
             .iter()
             .enumerate()
-            .map(|(idx, _)| palette[idx % palette.len()])
+            .map(|(idx, (label, _))| {
+                let (r, g, b) = symbol_chart_color(label, idx);
+                RGBColor(r, g, b)
+            })
             .collect();
 
         let center = (300, 300);
@@ -1610,25 +1635,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 chart_assets
             };
             let chart_total: f64 = chart_assets.iter().map(|(_, value)| *value).sum();
-            let palette = [
-                slint::Color::from_rgb_u8(139, 92, 246),
-                slint::Color::from_rgb_u8(236, 72, 153),
-                slint::Color::from_rgb_u8(56, 189, 248),
-                slint::Color::from_rgb_u8(34, 197, 94),
-                slint::Color::from_rgb_u8(245, 158, 11),
-                slint::Color::from_rgb_u8(168, 85, 247),
-            ];
             let distribution: Vec<CryptoDistributionSlice> = if chart_total > 0.0 {
                 chart_assets
                     .iter()
                     .enumerate()
                     .map(|(idx, (label, value))| {
                         let percent = (*value / chart_total) * 100.0;
+                        let (r, g, b) = symbol_chart_color(label, idx);
                         CryptoDistributionSlice {
                             label: SharedString::from(label),
                             value: SharedString::from(format_money((value * 100.0) as i64, "USD")),
                             percent: SharedString::from(format!("{:.1}%", percent)),
-                            color: palette[idx % palette.len()],
+                            color: slint::Color::from_rgb_u8(r, g, b),
                         }
                     })
                     .collect()
