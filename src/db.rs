@@ -1981,10 +1981,12 @@ impl Database {
         true
     }
 
-    /// Calculates aggregated portfolio from all transactions across all wallets
-    /// This is the CRITICAL function that computes total holdings per coin
-    pub fn get_aggregated_portfolio(&self) -> Result<Vec<AggregatedAsset>, DbError> {
-        let mut transactions = self.get_all_crypto_transactions()?;
+    fn aggregate_crypto_transactions(
+        mut transactions: Vec<CryptoTransaction>,
+    ) -> Vec<AggregatedAsset> {
+        if transactions.is_empty() {
+            return Vec::new();
+        }
 
         // Process transactions chronologically to keep cost basis adjustments consistent
         transactions.sort_by(|a, b| a.date.cmp(&b.date).then(a.id.cmp(&b.id)));
@@ -1996,8 +1998,6 @@ impl Database {
             .collect();
 
         let mut processed: HashSet<String> = HashSet::new();
-
-        // Group transactions by coin_id and calculate totals
         let mut assets: HashMap<String, AggregatedAsset> = HashMap::new();
 
         for tx in transactions {
@@ -2105,8 +2105,7 @@ impl Database {
             }
         }
 
-        // Calculate average buy prices and filter out zero/negative balances
-        let result: Vec<AggregatedAsset> = assets
+        assets
             .into_values()
             .filter_map(|mut asset| {
                 if asset.total_amount > 0.0001 {
@@ -2116,9 +2115,14 @@ impl Database {
                     None
                 }
             })
-            .collect();
+            .collect()
+    }
 
-        Ok(result)
+    /// Calculates aggregated portfolio from all transactions across all wallets
+    /// This is the CRITICAL function that computes total holdings per coin
+    pub fn get_aggregated_portfolio(&self) -> Result<Vec<AggregatedAsset>, DbError> {
+        let transactions = self.get_all_crypto_transactions()?;
+        Ok(Self::aggregate_crypto_transactions(transactions))
     }
 
     /// Gets aggregated holdings for a specific wallet
@@ -2126,129 +2130,8 @@ impl Database {
         &self,
         wallet_id: &str,
     ) -> Result<Vec<AggregatedAsset>, DbError> {
-        let mut transactions = self.get_wallet_transactions(wallet_id)?;
-
-        // Process chronologically
-        transactions.sort_by(|a, b| a.date.cmp(&b.date).then(a.id.cmp(&b.id)));
-
-        let tx_map: HashMap<String, CryptoTransaction> = transactions
-            .iter()
-            .cloned()
-            .map(|tx| (tx.id.clone(), tx))
-            .collect();
-        let mut processed: HashSet<String> = HashSet::new();
-
-        let mut assets: HashMap<String, AggregatedAsset> = HashMap::new();
-
-        for tx in transactions {
-            if processed.contains(&tx.id) {
-                continue;
-            }
-
-            if let Some(rel_id) = &tx.related_tx_id {
-                if let Some(counter) = tx_map.get(rel_id) {
-                    let is_transfer_pair = (tx.transaction_type == "transfer_out"
-                        && counter.transaction_type == "transfer_in")
-                        || (tx.transaction_type == "transfer_in"
-                            && counter.transaction_type == "transfer_out");
-                    let is_swap_pair = (tx.transaction_type == "swap"
-                        && counter.transaction_type == "transfer_in")
-                        || (tx.transaction_type == "transfer_in"
-                            && counter.transaction_type == "swap");
-
-                    if is_transfer_pair {
-                        if processed.contains(rel_id) || processed.contains(&tx.id) {
-                            continue;
-                        }
-
-                        let applied = if tx.transaction_type == "transfer_out" {
-                            Self::apply_transfer_pair(&mut assets, &tx, counter)
-                        } else {
-                            Self::apply_transfer_pair(&mut assets, counter, &tx)
-                        };
-
-                        if applied {
-                            processed.insert(tx.id.clone());
-                            processed.insert(rel_id.clone());
-                            continue;
-                        }
-                    }
-
-                    if is_swap_pair {
-                        if processed.contains(rel_id) || processed.contains(&tx.id) {
-                            continue;
-                        }
-
-                        processed.insert(tx.id.clone());
-                        processed.insert(rel_id.clone());
-
-                        if tx.transaction_type == "swap" {
-                            Self::apply_swap_pair(&mut assets, &tx, counter);
-                        } else {
-                            Self::apply_swap_pair(&mut assets, counter, &tx);
-                        }
-                        continue;
-                    }
-                }
-            }
-
-            let tx_type = match tx.transaction_type.parse::<CryptoTransactionType>() {
-                Ok(t) => t,
-                Err(_) => continue,
-            };
-
-            let entry = assets
-                .entry(tx.coin_id.clone())
-                .or_insert_with(|| AggregatedAsset::new(tx.coin_id.clone(), tx.symbol.clone()));
-
-            if matches!(tx_type, CryptoTransactionType::Buy) {
-                entry.total_amount += tx.amount;
-                let cost = tx.amount * tx.price_per_coin.unwrap_or(0.0);
-                entry.total_cost_basis += cost + tx.fee.unwrap_or(0.0);
-            } else if matches!(tx_type, CryptoTransactionType::TransferIn) {
-                entry.total_amount += tx.amount;
-                if let Some(price) = tx.price_per_coin {
-                    let fee = tx.fee.unwrap_or(0.0);
-                    entry.total_cost_basis += (tx.amount * price) + fee;
-                }
-            } else if tx_type.is_outflow() || matches!(tx_type, CryptoTransactionType::Swap) {
-                let prev_amount = entry.total_amount;
-                entry.total_amount -= tx.amount;
-                if entry.total_amount < 0.0 {
-                    entry.total_amount = 0.0;
-                }
-                if prev_amount > 0.0 {
-                    let ratio = (tx.amount / prev_amount).min(1.0);
-                    entry.total_cost_basis *= 1.0 - ratio;
-                    entry.total_cost_basis = entry.total_cost_basis.max(0.0);
-                }
-            }
-
-            if let (Some(fee_coin_id), Some(fee_amount)) =
-                (tx.fee_coin_id.as_deref(), tx.fee_amount)
-            {
-                let fee_symbol = if fee_coin_id == tx.coin_id {
-                    Some(tx.symbol.as_str())
-                } else {
-                    None
-                };
-                Self::apply_fee_coin_outflow(&mut assets, fee_coin_id, fee_amount, fee_symbol);
-            }
-        }
-
-        let result: Vec<AggregatedAsset> = assets
-            .into_values()
-            .filter_map(|mut asset| {
-                if asset.total_amount > 0.0001 {
-                    asset.calculate_avg_price();
-                    Some(asset)
-                } else {
-                    None
-                }
-            })
-            .collect();
-
-        Ok(result)
+        let transactions = self.get_wallet_transactions(wallet_id)?;
+        Ok(Self::aggregate_crypto_transactions(transactions))
     }
 
     // ==================== Balance Summary ====================

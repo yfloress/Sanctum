@@ -228,7 +228,8 @@ export component CryptoPage inherits Rectangle {
                         }
                         
                         GhostButton {
-                            text: "↻ SYNC";
+                            text: CryptoAdapter.is-refreshing ? "SYNCING..." : "↻ SYNC";
+                            enabled: !CryptoAdapter.is-refreshing;
                             clicked => { CryptoAdapter.refresh-prices(); }
                         }
 

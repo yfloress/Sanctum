@@ -685,21 +685,23 @@ export component CryptoCard inherits Rectangle {
 export component GhostButton inherits Rectangle {
     in property <string> text;
     in property <bool> icon-mode: false;
+    in property <bool> enabled: true;
     callback clicked;
 
-    width: icon-mode ? 32px : 80px;
+    width: icon-mode ? 32px : 96px;
     height: 28px;
-    background: touch.has-hover ? Palette.surface : transparent;
+    background: enabled ? (touch.has-hover ? Palette.surface : transparent) : Palette.surface;
     border-radius: 6px;
     border-width: 1px;
-    border-color: touch.has-hover ? Palette.border-subtle : transparent;
+    border-color: enabled ? (touch.has-hover ? Palette.border-subtle : transparent) : Palette.border-subtle;
+    opacity: enabled ? 1 : 0.6;
     
     animate background { duration: 150ms; }
     animate border-color { duration: 150ms; }
 
     Text {
         text: root.text;
-        color: touch.has-hover ? Palette.text-primary : Palette.text-muted;
+        color: enabled ? (touch.has-hover ? Palette.text-primary : Palette.text-muted) : Palette.text-muted;
         font-size: 10px;
         font-weight: 600;
         letter-spacing: 1px;
@@ -710,7 +712,11 @@ export component GhostButton inherits Rectangle {
     }
 
     touch := TouchArea {
-        mouse-cursor: pointer;
-        clicked => { root.clicked(); }
+        mouse-cursor: enabled ? pointer : default;
+        clicked => {
+            if (enabled) {
+                root.clicked();
+            }
+        }
     }
 }

@@ -2534,6 +2534,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ui.global::<CryptoAdapter>().on_refresh_prices(move || {
             let controller_async = controller.clone();
             let ui_weak_async = ui_weak.clone();
+            if let Some(ui) = ui_weak.upgrade() {
+                ui.global::<CryptoAdapter>().set_is_refreshing(true);
+            }
             let notify_start = show_notification_clone_for_refresh.clone();
             notify_start("Fetching prices...".into(), false);
 
@@ -2607,6 +2610,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
 
                 let _ = ui_weak_async.upgrade_in_event_loop(move |ui| {
+                    ui.global::<CryptoAdapter>().set_is_refreshing(false);
                     ui.global::<CryptoAdapter>().invoke_fetch_portfolio();
                     ui.global::<CryptoAdapter>()
                         .set_clp_rate(SharedString::from(clp_display));
