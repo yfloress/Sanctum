@@ -7,13 +7,14 @@ use directories::ProjectDirs;
 use log::error;
 use plotters::prelude::*;
 use plotters::series::{AreaSeries, LineSeries};
+use plotters::style::text_anchor::{HPos, Pos, VPos};
 use rand::Rng; // For title animation
 use sanctum::crypto;
 use sanctum::controller::{
     AppController, MonthlyTrendPoint, SETTING_AUTO_FETCH, SETTING_CRYPTO_LAST_COIN_ID,
     SETTING_CRYPTO_LAST_UPDATED, SETTING_CRYPTO_LAST_WALLET_ID,
 };
-use sanctum::models::CryptoAsset;
+use sanctum::models::{CryptoAsset, CryptoTransaction};
 use sanctum::security_log::init_security_logger;
 use slint::SharedString;
 use slint::{Image, Model, ModelRc, VecModel, Weak};
@@ -373,6 +374,40 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let formatted = format!("{digits}{grouped}");
         format!("$ {formatted}")
+    }
+
+    fn format_crypto_amount(amount: f64) -> String {
+        let mut formatted = format!("{:.8}", amount);
+        while formatted.contains('.') && formatted.ends_with('0') {
+            formatted.pop();
+        }
+        if formatted.ends_with('.') {
+            formatted.pop();
+        }
+        formatted
+    }
+
+    fn format_fee_display(
+        tx: &CryptoTransaction,
+        symbol_map: &HashMap<String, String>,
+    ) -> String {
+        let mut parts = Vec::new();
+        if let Some(fee) = tx.fee
+            && fee > 0.0
+        {
+            parts.push(format_money((fee * 100.0) as i64, "USD"));
+        }
+        if let (Some(fee_coin_id), Some(fee_amount)) =
+            (tx.fee_coin_id.as_ref(), tx.fee_amount)
+            && fee_amount > 0.0
+        {
+            let symbol = symbol_map
+                .get(fee_coin_id.as_str())
+                .cloned()
+                .unwrap_or_else(|| fee_coin_id.to_uppercase());
+            parts.push(format!("{} {}", format_crypto_amount(fee_amount), symbol));
+        }
+        parts.join(" + ")
     }
 
     fn color_from_hex(hex: &str) -> slint::Color {
@@ -960,10 +995,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             // OPTIMIZATION: Fetch ALL historical logs once for streak calculations
             // Instead of querying per habit inside the loop (N+1 problem), we query once.
-            // "1970-01-01" to "2100-01-01" covers all reasonable dates.
-            let all_history_logs = controller
-                .get_habit_logs("1970-01-01".to_string(), "2100-01-01".to_string())
-                .unwrap_or_default();
+            let all_history_logs = controller.get_all_habit_logs().unwrap_or_default();
 
             // Group history logs by habit_id -> Sorted Vec of NaiveDates
             let mut history_map: HashMap<String, Vec<chrono::NaiveDate>> = HashMap::new();
@@ -1077,6 +1109,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         name: SharedString::from(h.name),
                         description: SharedString::from(h.description.unwrap_or_default()),
                         color,
+                        category: SharedString::from(h.category),
                         streak: current_streak,
                         best_streak,
                         completion_rate,
@@ -1212,6 +1245,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    #[allow(dead_code)]
     fn render_monthly_chart_image(data: &[MonthlyTrendPoint]) -> Option<Image> {
         if data.is_empty() {
             return None;
@@ -1220,16 +1254,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Generate SVG with plotters (high resolution for crisp rendering)
         let temp_svg = std::env::temp_dir().join("sanctum_monthly_chart_temp.svg");
         let root = SVGBackend::new(&temp_svg, (2400, 720)).into_drawing_area();
-        root.fill(&RGBColor(10, 10, 10)).ok()?;
+        root.fill(&RGBAColor(0, 0, 0, 0.0)).ok()?;
 
         let max_val = data.iter().map(|d| d.avg_per_day).fold(0.0_f32, f32::max);
         let upper = if max_val <= 0.0 { 1.0 } else { (max_val * 1.2).ceil() };
         let x_max = data.len().max(1) as i32;
 
         let mut chart = ChartBuilder::on(&root)
-            .margin(40)
-            .x_label_area_size(80)
-            .y_label_area_size(90)
+            .margin(28)
+            .x_label_area_size(70)
+            .y_label_area_size(24)
             .build_cartesian_2d(0..x_max, 0f32..upper)
             .ok()?;
 
@@ -1243,8 +1277,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .map(|d| d.month_name.clone())
                     .unwrap_or_default()
             })
-            .label_style(("sans-serif", 28).into_font().color(&RGBColor(163, 163, 163)))
-            .axis_style(ShapeStyle::from(&RGBColor(51, 51, 51)).stroke_width(1))
+            .label_style(("sans-serif", 22).into_font().color(&RGBColor(148, 163, 184)))
+            .axis_style(ShapeStyle::from(&RGBColor(46, 46, 60)).stroke_width(1))
             .draw()
             .ok()?;
 
@@ -1258,20 +1292,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .draw_series(AreaSeries::new(
                 area_points.iter().copied(),
                 0.0,
-                RGBColor(139, 92, 246).mix(0.2),
+                RGBColor(139, 92, 246).mix(0.18),
             ))
             .ok()?;
 
         chart
             .draw_series(LineSeries::new(
                 area_points.iter().copied(),
-                ShapeStyle::from(&RGBColor(139, 92, 246)).stroke_width(5),
+                ShapeStyle::from(&RGBColor(139, 92, 246)).stroke_width(4),
             ))
             .ok()?;
 
         chart
             .draw_series(area_points.iter().map(|&(x, y)| {
-                Circle::new((x, y), 8, ShapeStyle::from(&RGBColor(236, 72, 153)).filled())
+                Circle::new(
+                    (x, y),
+                    6,
+                    ShapeStyle::from(&RGBColor(167, 139, 250)).filled(),
+                )
             }))
             .ok()?;
 
@@ -1303,6 +1341,256 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::fs::write(&final_svg, tree.to_string(&usvg::WriteOptions::default())).ok()?;
 
         Image::load_from_path(&final_svg).ok()
+    }
+
+    fn rgb_from_hex(hex: &str) -> RGBColor {
+        if let Some(stripped) = hex.strip_prefix('#')
+            && stripped.len() == 6
+            && let (Ok(r), Ok(g), Ok(b)) = (
+                u8::from_str_radix(&stripped[0..2], 16),
+                u8::from_str_radix(&stripped[2..4], 16),
+                u8::from_str_radix(&stripped[4..6], 16),
+            )
+        {
+            return RGBColor(r, g, b);
+        }
+        RGBColor(139, 92, 246)
+    }
+
+    fn render_svg_image(temp_svg: &std::path::Path, final_name: &str) -> Option<Image> {
+        let mut fontdb = fontdb::Database::new();
+        let font_path = std::path::PathBuf::from("ui/fonts/DejaVuSans.ttf");
+        if font_path.exists() {
+            fontdb.load_font_file(&font_path).ok()?;
+        } else {
+            fontdb.load_system_fonts();
+        }
+
+        fontdb.set_serif_family("DejaVu Sans");
+        fontdb.set_sans_serif_family("DejaVu Sans");
+        fontdb.set_monospace_family("DejaVu Sans");
+
+        let svg_data = std::fs::read_to_string(temp_svg).ok()?;
+        let opt = usvg::Options {
+            fontdb: std::sync::Arc::new(fontdb),
+            ..Default::default()
+        };
+        let tree = usvg::Tree::from_str(&svg_data, &opt).ok()?;
+        let final_svg = std::env::temp_dir().join(final_name);
+        std::fs::write(&final_svg, tree.to_string(&usvg::WriteOptions::default())).ok()?;
+        Image::load_from_path(&final_svg).ok()
+    }
+
+    fn render_habit_radar_chart(categories: &[(String, String, f32)]) -> Option<Image> {
+        if categories.is_empty() {
+            return None;
+        }
+
+        let temp_svg = std::env::temp_dir().join("sanctum_habits_radar_temp.svg");
+        let root = SVGBackend::new(&temp_svg, (1400, 900)).into_drawing_area();
+        root.fill(&RGBAColor(0, 0, 0, 0.0)).ok()?;
+
+        let (root_w, root_h) = root.dim_in_pixel();
+        let center = (root_w as i32 / 2, root_h as i32 / 2);
+        let radius = (root_w.min(root_h) as f64) * 0.32;
+        let axis_count = categories.len() as f64;
+        let base_angle = -std::f64::consts::FRAC_PI_2;
+
+        let grid_color = RGBColor(46, 46, 60);
+        let axis_color = RGBColor(72, 84, 102);
+
+        for level in 1..=4 {
+            let r = radius * level as f64 / 4.0;
+            let mut points: Vec<(i32, i32)> = Vec::new();
+            for idx in 0..categories.len() {
+                let angle = base_angle + (idx as f64) * (2.0 * std::f64::consts::PI / axis_count);
+                let x = center.0 as f64 + r * angle.cos();
+                let y = center.1 as f64 + r * angle.sin();
+                points.push((x.round() as i32, y.round() as i32));
+            }
+            if let Some(first) = points.first().copied() {
+                points.push(first);
+            }
+            root.draw(&PathElement::new(
+                points,
+                ShapeStyle::from(&grid_color).stroke_width(1),
+            ))
+            .ok()?;
+        }
+
+        for idx in 0..categories.len() {
+            let angle = base_angle + (idx as f64) * (2.0 * std::f64::consts::PI / axis_count);
+            let x = center.0 as f64 + radius * angle.cos();
+            let y = center.1 as f64 + radius * angle.sin();
+            root.draw(&PathElement::new(
+                vec![center, (x.round() as i32, y.round() as i32)],
+                ShapeStyle::from(&axis_color).stroke_width(2),
+            ))
+            .ok()?;
+        }
+
+        let mut data_points: Vec<(i32, i32)> = Vec::new();
+        for (idx, (_, _, value)) in categories.iter().enumerate() {
+            let angle = base_angle + (idx as f64) * (2.0 * std::f64::consts::PI / axis_count);
+            let v = value.clamp(0.0, 1.0) as f64;
+            let x = center.0 as f64 + radius * v * angle.cos();
+            let y = center.1 as f64 + radius * v * angle.sin();
+            data_points.push((x.round() as i32, y.round() as i32));
+        }
+
+        if data_points.len() >= 3 {
+            let mut filled_points = data_points.clone();
+            if let Some(first) = filled_points.first().copied() {
+                filled_points.push(first);
+            }
+            root.draw(&Polygon::new(
+                filled_points.clone(),
+                RGBAColor(139, 92, 246, 0.25).filled(),
+            ))
+            .ok()?;
+            root.draw(&PathElement::new(
+                filled_points,
+                ShapeStyle::from(&RGBColor(139, 92, 246)).stroke_width(3),
+            ))
+            .ok()?;
+        }
+
+        for ((_, color, _), point) in categories.iter().zip(data_points.iter()) {
+            let rgb = rgb_from_hex(color);
+            root.draw(&Circle::new(*point, 8, rgb.filled())).ok()?;
+        }
+
+        let label_color = RGBColor(148, 163, 184);
+        for (idx, (label, _, _)) in categories.iter().enumerate() {
+            let angle = base_angle + (idx as f64) * (2.0 * std::f64::consts::PI / axis_count);
+            let x = center.0 as f64 + radius * 1.15 * angle.cos();
+            let y = center.1 as f64 + radius * 1.15 * angle.sin();
+            let cos = angle.cos();
+            let sin = angle.sin();
+            let hpos = if cos > 0.2 {
+                HPos::Left
+            } else if cos < -0.2 {
+                HPos::Right
+            } else {
+                HPos::Center
+            };
+            let vpos = if sin > 0.2 {
+                VPos::Top
+            } else if sin < -0.2 {
+                VPos::Bottom
+            } else {
+                VPos::Center
+            };
+            let style = ("sans-serif", 48)
+                .into_font()
+                .color(&label_color)
+                .pos(Pos::new(hpos, vpos));
+            root.draw(&Text::new(
+                label.clone(),
+                (x.round() as i32, y.round() as i32),
+                style,
+            ))
+            .ok()?;
+        }
+
+        root.present().ok()?;
+        render_svg_image(&temp_svg, "sanctum_habits_radar.svg")
+    }
+
+    fn render_weekday_efficiency_chart(weekdays: &[(String, f32, bool)]) -> Option<Image> {
+        if weekdays.is_empty() {
+            return None;
+        }
+
+        let temp_svg = std::env::temp_dir().join("sanctum_weekday_efficiency_temp.svg");
+        let root = SVGBackend::new(&temp_svg, (1400, 600)).into_drawing_area();
+        root.fill(&RGBAColor(0, 0, 0, 0.0)).ok()?;
+
+        let padding: i32 = 80;
+        let chart_width: i32 = 1400 - (padding * 2);
+        let chart_height: i32 = 600 - (padding * 2);
+        let bar_spacing: i32 = 20;
+        let num_bars = weekdays.len() as i32;
+        let bar_width: i32 = (chart_width - (bar_spacing * (num_bars - 1))) / num_bars;
+
+        // Find max value for scaling
+        let max_avg = weekdays.iter().map(|(_, avg, _)| *avg).fold(0.0_f32, f32::max);
+        if max_avg <= 0.0 {
+            return None;
+        }
+
+        // Colors
+        let accent_color = RGBColor(139, 92, 246); // Purple accent
+        let gray_color = RGBColor(72, 84, 102); // Muted gray
+        let text_color = RGBColor(148, 163, 184);
+        let grid_color = RGBColor(46, 46, 60);
+
+        // Draw horizontal grid lines
+        for i in 0..5 {
+            let y = padding + (chart_height * i / 4);
+            root.draw(&PathElement::new(
+                vec![(padding, y), (padding + chart_width, y)],
+                ShapeStyle::from(&grid_color).stroke_width(1),
+            ))
+            .ok()?;
+        }
+
+        // Draw bars and labels
+        for (idx, (day_label, avg_count, is_best)) in weekdays.iter().enumerate() {
+            let x = padding + (idx as i32 * (bar_width + bar_spacing));
+            let bar_height = ((*avg_count / max_avg) * chart_height as f32) as i32;
+            let y = padding + chart_height - bar_height;
+
+            // Choose color based on whether it's the best day
+            let bar_color = if *is_best { accent_color } else { gray_color };
+
+            // Draw bar
+            root.draw(&Rectangle::new(
+                [(x, y), (x + bar_width, padding + chart_height)],
+                bar_color.filled(),
+            ))
+            .ok()?;
+
+            // Draw glow effect for best day
+            if *is_best {
+                root.draw(&Rectangle::new(
+                    [(x - 2, y - 2), (x + bar_width + 2, padding + chart_height + 2)],
+                    RGBAColor(139, 92, 246, 0.3).filled(),
+                ))
+                .ok()?;
+            }
+
+            // Draw day label below bar
+            let label_y = padding + chart_height + 35;
+            let label_x = x + bar_width / 2;
+            let label_style = ("sans-serif", 42)
+                .into_font()
+                .color(&text_color)
+                .pos(Pos::new(HPos::Center, VPos::Top));
+            root.draw(&Text::new(
+                day_label.clone(),
+                (label_x, label_y),
+                label_style,
+            ))
+            .ok()?;
+
+            // Draw value above bar
+            let value_text = format!("{:.1}", avg_count);
+            let value_y = y - 12;
+            let value_style = ("sans-serif", 36)
+                .into_font()
+                .color(if *is_best { &accent_color } else { &text_color })
+                .pos(Pos::new(HPos::Center, VPos::Bottom));
+            root.draw(&Text::new(
+                value_text,
+                (label_x, value_y),
+                value_style,
+            ))
+            .ok()?;
+        }
+
+        root.present().ok()?;
+        render_svg_image(&temp_svg, "sanctum_weekday_efficiency.svg")
     }
 
     fn render_portfolio_distribution_chart(data: &[(String, f64)]) -> Option<Image> {
@@ -1431,38 +1719,270 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
     fn refresh_habit_analytics(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>) {
-        if let Ok(analytics) = controller.get_habit_analytics(365) {
-            let monthly_image = render_monthly_chart_image(&analytics.monthly_data);
+        let today = chrono::Local::now().date_naive();
+        let days_window: i64 = 30;
+        let start_date = today
+            .checked_sub_signed(chrono::Duration::days(days_window - 1))
+            .unwrap_or(today);
 
-            let weekday_data: Vec<WeekdayEfficiencyData> = analytics
-                .weekday_data
-                .iter()
-                .map(|w| WeekdayEfficiencyData {
-                    day_name: SharedString::from(&w.day_name),
-                    day_short: SharedString::from(&w.day_short),
-                    avg_count: w.avg_count,
-                    is_best: w.is_best,
-                    bar_height_percent: w.bar_height_percent,
-                })
-                .collect();
+        let logs = controller
+            .get_habit_logs(
+                start_date.format("%Y-%m-%d").to_string(),
+                today.format("%Y-%m-%d").to_string(),
+            )
+            .unwrap_or_default();
+        let habits = controller.get_habits().unwrap_or_default();
 
-            let monthly_data: Vec<MonthlyTrendData> = analytics
-                .monthly_data
-                .iter()
-                .map(|m| MonthlyTrendData {
-                    month_name: SharedString::from(&m.month_name),
-                    avg_per_day: m.avg_per_day,
-                    x_percent: m.x_percent,
-                    y_percent: m.y_percent,
-                })
-                .collect();
-
+        if habits.is_empty() {
             if let Some(ui) = ui_weak.upgrade() {
                 let adapter = ui.global::<HabitAdapter>();
-                adapter.set_weekday_efficiency(ModelRc::new(VecModel::from(weekday_data)));
-                adapter.set_monthly_trend(ModelRc::new(VecModel::from(monthly_data)));
-                adapter.set_monthly_chart_image(monthly_image.unwrap_or_default());
+                adapter.set_habits_radar_chart_image(Image::default());
+                adapter.set_habits_radar_has_data(false);
+                adapter.set_habits_weekly_primary("Create your first habit to get started.".into());
+                adapter.set_habits_weekly_secondary("".into());
+                adapter.set_habits_insight_primary(
+                    "Your insights will appear here once you have data.".into(),
+                );
+                adapter.set_habits_insight_secondary("".into());
             }
+            return;
+        }
+
+        let mut habit_categories: HashMap<String, String> = HashMap::new();
+        let mut category_counts: HashMap<String, i32> = HashMap::new();
+        for habit in &habits {
+            let category = habit.category.trim().to_lowercase();
+            let category = match category.as_str() {
+                "body" | "mind" | "spirit" => category,
+                _ => "mind".to_string(),
+            };
+            habit_categories.insert(habit.id.clone(), category.clone());
+            *category_counts.entry(category).or_insert(0) += 1;
+        }
+
+        let mut category_completions: HashMap<String, i32> = HashMap::new();
+        let mut daily_counts: HashMap<chrono::NaiveDate, i32> = HashMap::new();
+        let mut habit_week_counts: HashMap<String, i32> = HashMap::new();
+        let mut total_completed = 0i32;
+
+        let week_start = today
+            .checked_sub_signed(chrono::Duration::days(6))
+            .unwrap_or(today);
+        let prev_week_start = week_start
+            .checked_sub_signed(chrono::Duration::days(7))
+            .unwrap_or(week_start);
+        let prev_week_end = week_start
+            .checked_sub_signed(chrono::Duration::days(1))
+            .unwrap_or(week_start);
+
+        for log in &logs {
+            let Ok(date) = chrono::NaiveDate::parse_from_str(&log.completed_date, "%Y-%m-%d")
+            else {
+                continue;
+            };
+            total_completed += 1;
+            *daily_counts.entry(date).or_insert(0) += 1;
+
+            if let Some(category) = habit_categories.get(&log.habit_id) {
+                *category_completions.entry(category.clone()).or_insert(0) += 1;
+            }
+
+            if date >= week_start && date <= today {
+                *habit_week_counts.entry(log.habit_id.clone()).or_insert(0) += 1;
+            }
+        }
+
+        let total_days = (today - start_date).num_days().max(0) as f32 + 1.0;
+        let categories = [
+            ("mind", "MIND", "#38bdf8"),
+            ("body", "BODY", "#22c55e"),
+            ("spirit", "SPIRIT", "#a855f7"),
+        ];
+
+        let radar_data: Vec<(String, String, f32)> = categories
+            .iter()
+            .map(|(key, label, color)| {
+                let count = *category_counts.get(*key).unwrap_or(&0) as f32;
+                let max_total = count * total_days;
+                let completed = *category_completions.get(*key).unwrap_or(&0) as f32;
+                let ratio = if max_total > 0.0 { completed / max_total } else { 0.0 };
+                (label.to_string(), (*color).to_string(), ratio)
+            })
+            .collect();
+
+        let radar_image = if total_completed > 0 {
+            render_habit_radar_chart(&radar_data)
+        } else {
+            None
+        };
+
+        let max_week_total = habits.len() as f32 * 7.0;
+        let mut current_week_total = 0f32;
+        let mut prev_week_total = 0f32;
+
+        for (date, count) in &daily_counts {
+            if *date >= week_start && *date <= today {
+                current_week_total += *count as f32;
+            } else if *date >= prev_week_start && *date <= prev_week_end {
+                prev_week_total += *count as f32;
+            }
+        }
+
+        let current_rate = if max_week_total > 0.0 {
+            current_week_total / max_week_total
+        } else {
+            0.0
+        };
+        let prev_rate = if max_week_total > 0.0 {
+            prev_week_total / max_week_total
+        } else {
+            0.0
+        };
+
+        let weekly_primary = if total_completed == 0 {
+            "Start today: complete your first habit.".to_string()
+        } else if prev_rate > 0.0 {
+            let diff = ((current_rate - prev_rate) / prev_rate) * 100.0;
+            if diff >= 1.0 {
+                format!(
+                    "Week Close: Your consistency is up {:.0}% vs last week.",
+                    diff
+                )
+            } else if diff <= -1.0 {
+                format!(
+                    "Week Close: Your consistency is down {:.0}% vs last week.",
+                    diff.abs()
+                )
+            } else {
+                "Week Close: Your consistency is stable.".to_string()
+            }
+        } else {
+            "Week Close: First week logged. Good start.".to_string()
+        };
+
+        let weekly_secondary = if total_completed == 0 {
+            "".to_string()
+        } else if let Some((habit_id, count)) =
+            habit_week_counts.iter().max_by_key(|(_, count)| *count)
+        {
+            let habit_name = habits
+                .iter()
+                .find(|habit| habit.id == *habit_id)
+                .map(|habit| habit.name.clone())
+                .unwrap_or_else(|| "Habit".to_string());
+            format!("Star Habit: {}. {}/7 days completed.", habit_name, count)
+        } else {
+            "Star Habit: No data yet this week.".to_string()
+        };
+
+        let mut weekday_counts = [0f32; 7];
+        let mut weekday_occurrences = [0f32; 7];
+        let mut cursor = start_date;
+        while cursor <= today {
+            let idx = cursor.weekday().num_days_from_monday() as usize;
+            weekday_occurrences[idx] += 1.0;
+            if let Some(count) = daily_counts.get(&cursor) {
+                weekday_counts[idx] += *count as f32;
+            }
+            if let Some(next) = cursor.succ_opt() {
+                cursor = next;
+            } else {
+                break;
+            }
+        }
+
+        let weekday_names = [
+            "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
+        ];
+        let mut worst_idx = 0usize;
+        let mut worst_avg = f32::MAX;
+        for idx in 0..7 {
+            let avg = if weekday_occurrences[idx] > 0.0 {
+                weekday_counts[idx] / weekday_occurrences[idx]
+            } else {
+                0.0
+            };
+            if avg < worst_avg {
+                worst_avg = avg;
+                worst_idx = idx;
+            }
+        }
+
+        let today_idx = today.weekday().num_days_from_monday() as usize;
+        let today_count = *daily_counts.get(&today).unwrap_or(&0) as f32;
+        let today_avg = if weekday_occurrences[today_idx] > 0.0 {
+            weekday_counts[today_idx] / weekday_occurrences[today_idx]
+        } else {
+            0.0
+        };
+
+        let insight_primary = if total_completed == 0 {
+            "Complete your first habit to unlock insights.".to_string()
+        } else {
+            format!(
+                "Watch out: Your stats tend to drop on {}s.",
+                weekday_names[worst_idx]
+            )
+        };
+
+        let insight_secondary = if total_completed == 0 {
+            "".to_string()
+        } else if today_count > today_avg + 1.0 {
+            format!(
+                "Today you're above your {} average.",
+                weekday_names[today_idx]
+            )
+        } else if today_count + 1.0 < today_avg {
+            format!(
+                "Today you're below your {} average.",
+                weekday_names[today_idx]
+            )
+        } else {
+            "Today you're at your usual average.".to_string()
+        };
+
+        // Generate weekday efficiency bar chart
+        let weekday_short_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+        let mut weekday_data: Vec<(String, f32, bool)> = Vec::new();
+        let mut max_weekday_avg = 0.0f32;
+
+        for idx in 0..7 {
+            let avg = if weekday_occurrences[idx] > 0.0 {
+                weekday_counts[idx] / weekday_occurrences[idx]
+            } else {
+                0.0
+            };
+            if avg > max_weekday_avg {
+                max_weekday_avg = avg;
+            }
+            weekday_data.push((weekday_short_names[idx].to_string(), avg, false));
+        }
+
+        // Mark the best day(s)
+        if max_weekday_avg > 0.0 {
+            for (_, avg, is_best) in &mut weekday_data {
+                if (*avg - max_weekday_avg).abs() < 0.001 {
+                    *is_best = true;
+                }
+            }
+        }
+
+        let weekday_chart_image = if total_completed > 0 && max_weekday_avg > 0.0 {
+            render_weekday_efficiency_chart(&weekday_data)
+        } else {
+            None
+        };
+
+        if let Some(ui) = ui_weak.upgrade() {
+            let adapter = ui.global::<HabitAdapter>();
+            adapter.set_habits_radar_chart_image(radar_image.unwrap_or_default());
+            adapter.set_habits_radar_has_data(total_completed > 0);
+            adapter.set_habits_weekday_chart_image(weekday_chart_image.unwrap_or_default());
+            adapter.set_habits_weekday_has_data(total_completed > 0 && max_weekday_avg > 0.0);
+            adapter.set_habits_weekly_primary(weekly_primary.into());
+            adapter.set_habits_weekly_secondary(weekly_secondary.into());
+            adapter.set_habits_insight_primary(insight_primary.into());
+            adapter.set_habits_insight_secondary(insight_secondary.into());
         }
     }
 
@@ -1500,11 +2020,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let year_lock = current_heatmap_year.clone();
         let notify = show_notification.clone();
         ui.global::<HabitAdapter>()
-            .on_create_habit(move |name, desc, color| -> SharedString {
+            .on_create_habit(move |name, desc, color, category| -> SharedString {
                 let result = controller.create_habit(
                     name.to_string(),
                     Some(desc.to_string()),
                     color.to_string(),
+                    category.to_string(),
                 );
                 match result {
                     Ok(_) => {
@@ -1550,17 +2071,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_weak = ui_weak.clone();
         let date_lock = current_habit_date.clone();
         let year_lock = current_heatmap_year.clone();
+        let notify = show_notification.clone();
         ui.global::<HabitAdapter>()
             .on_toggle_habit(move |id, date| {
-                if controller
-                    .toggle_habit_completion(id.to_string(), date.to_string())
-                    .is_ok()
-                {
-                    let d = *date_lock.lock().unwrap();
-                    let y = *year_lock.lock().unwrap();
-                    reload_habits(&ui_weak, &controller, d);
-                    reload_heatmap(&ui_weak, &controller, y); // Refresh heatmap
-                    refresh_habit_analytics(&ui_weak, &controller);
+                match controller.toggle_habit_completion(id.to_string(), date.to_string()) {
+                    Ok(_) => {
+                        let d = *date_lock.lock().unwrap();
+                        let y = *year_lock.lock().unwrap();
+                        reload_habits(&ui_weak, &controller, d);
+                        reload_heatmap(&ui_weak, &controller, y); // Refresh heatmap
+                        refresh_habit_analytics(&ui_weak, &controller);
+                    }
+                    Err(e) => {
+                        notify(format!("Failed to toggle habit: {}", e), true);
+                    }
                 }
             });
     }
@@ -1786,15 +2310,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut total_val = 0.0;
             let mut total_cost = 0.0;
             let mut priced_assets = 0;
+            let mut missing_price_assets = 0;
 
             let mapped_assets: Vec<CryptoAssetData> = assets
                 .iter()
                 .map(|a| {
                     let price_data = price_map.get(&a.coin_id);
+                    total_cost += a.total_cost_basis;
                     if price_data.is_some() {
                         total_val += a.current_value;
-                        total_cost += a.total_cost_basis;
                         priced_assets += 1;
+                    } else {
+                        missing_price_assets += 1;
                     }
 
                     let change_percent = price_data
@@ -1893,29 +2420,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
 
-            let (total_value_label, total_pnl_label, total_pnl_positive) = if priced_assets > 0 {
-                let total_pnl_val = total_val - total_cost;
-                let pnl_sign = if total_pnl_val >= 0.0 { "+" } else { "-" };
-                (
-                    format_money((total_val * 100.0) as i64, "USD"),
-                    format!(
-                        "{} {}",
-                        pnl_sign,
-                        format_money((total_pnl_val.abs() * 100.0) as i64, "USD")
-                    ),
-                    total_pnl_val >= 0.0,
-                )
+            let total_value_label = if priced_assets > 0 && missing_price_assets == 0 {
+                format_money((total_val * 100.0) as i64, "USD")
             } else {
-                ("N/A".to_string(), "N/A".to_string(), true)
+                "N/A".to_string()
             };
+
+            let (total_pnl_label, total_pnl_positive) =
+                if priced_assets > 0 && missing_price_assets == 0 {
+                    let total_pnl_val = total_val - total_cost;
+                    let pnl_sign = if total_pnl_val >= 0.0 { "+" } else { "-" };
+                    (
+                        format!(
+                            "{} {}",
+                            pnl_sign,
+                            format_money((total_pnl_val.abs() * 100.0) as i64, "USD")
+                        ),
+                        total_pnl_val >= 0.0,
+                    )
+                } else {
+                    ("N/A".to_string(), true)
+                };
 
             let mut trend_image = None;
             let mut trend_ready = false;
-            if priced_assets > 0 {
+            if priced_assets > 0 && missing_price_assets == 0 {
                 let _ = controller.save_crypto_portfolio_snapshot(total_val, total_cost);
-                let snapshots = controller
-                    .get_crypto_portfolio_snapshots(180)
-                    .unwrap_or_default();
+            }
+
+            let snapshots = controller
+                .get_crypto_portfolio_snapshots(180)
+                .unwrap_or_default();
+            if !snapshots.is_empty() {
                 let trend_points: Vec<(String, f64, f64)> = snapshots
                     .into_iter()
                     .filter(|(_, value, cost)| *value > 0.0 || *cost > 0.0)
@@ -1998,6 +2534,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ui.global::<CryptoAdapter>().on_refresh_prices(move || {
             let controller_async = controller.clone();
             let ui_weak_async = ui_weak.clone();
+            if let Some(ui) = ui_weak.upgrade() {
+                ui.global::<CryptoAdapter>().set_is_refreshing(true);
+            }
             let notify_start = show_notification_clone_for_refresh.clone();
             notify_start("Fetching prices...".into(), false);
 
@@ -2071,6 +2610,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
 
                 let _ = ui_weak_async.upgrade_in_event_loop(move |ui| {
+                    ui.global::<CryptoAdapter>().set_is_refreshing(false);
                     ui.global::<CryptoAdapter>().invoke_fetch_portfolio();
                     ui.global::<CryptoAdapter>()
                         .set_clp_rate(SharedString::from(clp_display));
@@ -2097,7 +2637,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let notify = show_notification.clone();
 
         // (wallet_id, coin_id, symbol, type, amount, price, fee, date)
-        // (wallet_id, coin_id, symbol, type, amount, price, fee, date, notes)
+        // (wallet_id, coin_id, symbol, type, amount, price, fee, fee_coin_id, fee_coin_amount, date, notes)
         ui.global::<CryptoAdapter>().on_add_transaction(
             move |wallet_id_raw,
                   coin_id,
@@ -2106,6 +2646,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                   amount_str,
                   price_str,
                   fee_str,
+                  fee_coin_id_str,
+                  fee_coin_amount_str,
                   date,
                   notes_str|
                   -> SharedString {
@@ -2144,6 +2686,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 };
 
+                let fee_coin_amount_clean = fee_coin_amount_str
+                    .replace(",", "")
+                    .replace("$", "")
+                    .trim()
+                    .to_string();
+                let fee_coin_amount: Option<f64> = if fee_coin_amount_clean.is_empty() {
+                    None
+                } else {
+                    match fee_coin_amount_clean.parse() {
+                        Ok(v) if v > 0.0 => Some(v),
+                        Ok(0.0) => None,
+                        Ok(_) => {
+                            return SharedString::from("Fee amount cannot be negative");
+                        }
+                        Err(_) => return SharedString::from("Invalid fee amount format"),
+                    }
+                };
+                let fee_coin_id = if fee_coin_id_str.trim().is_empty() {
+                    None
+                } else {
+                    Some(fee_coin_id_str.to_string())
+                };
+
                 let notes = if notes_str.is_empty() {
                     None
                 } else {
@@ -2159,6 +2724,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     amount,
                     price_per_coin,
                     fee,
+                    fee_coin_id,
+                    fee_coin_amount,
                     date.to_string(),
                     notes,
                 );
@@ -2187,7 +2754,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_weak = ui_weak.clone();
         let notify = show_notification.clone();
 
-        // (from_wallet_id, to_wallet_id, coin_id, symbol, from_amount, to_amount, fee, date, notes)
+        // (from_wallet_id, to_wallet_id, coin_id, symbol, from_amount, to_amount, fee, fee_coin_id, fee_coin_amount, date, notes)
         ui.global::<CryptoAdapter>().on_add_transfer(
             move |from_wallet_id,
                   to_wallet_id,
@@ -2196,6 +2763,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                   from_amount_str,
                   to_amount_str,
                   fee_str,
+                  fee_coin_id_str,
+                  fee_coin_amount_str,
                   date,
                   notes_str|
                   -> SharedString {
@@ -2234,6 +2803,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 };
 
+                let fee_coin_amount_clean = fee_coin_amount_str
+                    .replace(",", "")
+                    .replace("$", "")
+                    .trim()
+                    .to_string();
+                let fee_coin_amount: Option<f64> = if fee_coin_amount_clean.is_empty() {
+                    None
+                } else {
+                    match fee_coin_amount_clean.parse() {
+                        Ok(v) if v > 0.0 => Some(v),
+                        Ok(0.0) => None,
+                        Ok(_) => {
+                            return SharedString::from("Fee amount cannot be negative");
+                        }
+                        Err(_) => return SharedString::from("Invalid fee amount format"),
+                    }
+                };
+                let fee_coin_id = if fee_coin_id_str.trim().is_empty() {
+                    None
+                } else {
+                    Some(fee_coin_id_str.to_string())
+                };
+
                 let notes = if notes_str.is_empty() {
                     None
                 } else {
@@ -2248,6 +2840,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     from_amount,
                     to_amount,
                     fee,
+                    fee_coin_id,
+                    fee_coin_amount,
                     date.to_string(),
                     notes,
                 );
@@ -2286,6 +2880,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                   to_symbol,
                   to_amount_str,
                   fee_str,
+                  fee_coin_id_str,
+                  fee_coin_amount_str,
                   date,
                   notes_str|
                   -> SharedString {
@@ -2320,6 +2916,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 };
 
+                let fee_coin_amount_clean = fee_coin_amount_str
+                    .replace(",", "")
+                    .replace("$", "")
+                    .trim()
+                    .to_string();
+                let fee_coin_amount: Option<f64> = if fee_coin_amount_clean.is_empty() {
+                    None
+                } else {
+                    match fee_coin_amount_clean.parse() {
+                        Ok(v) if v > 0.0 => Some(v),
+                        Ok(0.0) => None,
+                        Ok(_) => {
+                            return SharedString::from("Fee amount cannot be negative");
+                        }
+                        Err(_) => return SharedString::from("Invalid fee amount format"),
+                    }
+                };
+                let fee_coin_id = if fee_coin_id_str.trim().is_empty() {
+                    None
+                } else {
+                    Some(fee_coin_id_str.to_string())
+                };
+
                 let notes = if notes_str.is_empty() {
                     None
                 } else {
@@ -2335,6 +2954,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     to_symbol.to_string(),
                     to_amount,
                     fee,
+                    fee_coin_id,
+                    fee_coin_amount,
                     date.to_string(),
                     notes,
                 );
@@ -2390,6 +3011,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .map(|p| format!("{:.4}", p))
                     .unwrap_or_default();
                 let fee_str = tx.fee.map(|f| format!("{:.4}", f)).unwrap_or_default();
+                let fee_coin_id = tx.fee_coin_id.clone().unwrap_or_default();
+                let fee_coin_amount = tx
+                    .fee_amount
+                    .map(format_crypto_amount)
+                    .unwrap_or_default();
                 let amount_str = format!("{:.4}", tx.amount);
                 let notes_str = tx.notes.unwrap_or_default();
 
@@ -2413,6 +3039,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ui.global::<CryptoAdapter>()
                         .set_edit_fee(SharedString::from(fee_str));
                     ui.global::<CryptoAdapter>()
+                        .set_edit_fee_coin_id(SharedString::from(fee_coin_id));
+                    ui.global::<CryptoAdapter>()
+                        .set_edit_fee_coin_amount(SharedString::from(fee_coin_amount));
+                    ui.global::<CryptoAdapter>()
                         .set_edit_date(SharedString::from(&tx.date));
                     ui.global::<CryptoAdapter>()
                         .set_edit_notes(SharedString::from(notes_str));
@@ -2426,7 +3056,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let controller = controller.clone();
         ui.global::<CryptoAdapter>()
-            .on_update_transaction(move |id, amount_str, price_str, fee_str, date, notes_str| {
+            .on_update_transaction(move |id,
+                                        amount_str,
+                                        price_str,
+                                        fee_str,
+                                        fee_coin_id_str,
+                                        fee_coin_amount_str,
+                                        date,
+                                        notes_str| {
                 let amount_clean = amount_str
                     .replace(",", "")
                     .replace("$", "")
@@ -2461,6 +3098,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 };
 
+                let fee_coin_amount_clean = fee_coin_amount_str
+                    .replace(",", "")
+                    .replace("$", "")
+                    .trim()
+                    .to_string();
+                let fee_coin_amount: Option<f64> = if fee_coin_amount_clean.is_empty() {
+                    None
+                } else {
+                    match fee_coin_amount_clean.parse() {
+                        Ok(v) if v > 0.0 => Some(v),
+                        Ok(0.0) => None,
+                        Ok(_) => {
+                            return SharedString::from("Fee amount cannot be negative");
+                        }
+                        Err(_) => return SharedString::from("Invalid fee amount format"),
+                    }
+                };
+                let fee_coin_id = if fee_coin_id_str.trim().is_empty() {
+                    None
+                } else {
+                    Some(fee_coin_id_str.to_string())
+                };
+
                 let notes = if notes_str.is_empty() {
                     None
                 } else {
@@ -2472,6 +3132,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     amount,
                     price_per_coin,
                     fee,
+                    fee_coin_id,
+                    fee_coin_amount,
                     date.to_string(),
                     notes,
                 ) {
@@ -2581,6 +3243,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let history = controller
                         .get_wallet_transactions(wallet_id_str.clone())
                         .unwrap_or_default();
+                    let symbol_map: HashMap<String, String> = controller
+                        .get_coin_catalog()
+                        .unwrap_or_else(|_| crypto::default_coin_catalog())
+                        .into_iter()
+                        .map(|coin| (coin.id, coin.symbol))
+                        .collect();
                     let history_type_map: HashMap<String, String> = history
                         .iter()
                         .map(|tx| (tx.id.clone(), tx.transaction_type.clone()))
@@ -2596,12 +3264,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             } else {
                                 "N/A".to_string()
                             };
-                            let fee_val = tx.fee.unwrap_or(0.0);
-                            let fee_fmt = if fee_val > 0.0 {
-                                format_money((fee_val * 100.0) as i64, "USD")
-                            } else {
-                                "".to_string()
-                            };
+                            let fee_fmt = format_fee_display(tx, &symbol_map);
                             let notes = tx.notes.clone().unwrap_or_default();
                             let is_swap = tx.transaction_type == "swap"
                                 || (tx.transaction_type == "transfer_in"
@@ -3138,6 +3801,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let history = controller
                         .get_crypto_transactions_by_coin(coin_id_str)
                         .unwrap_or_default();
+                    let symbol_map: HashMap<String, String> = controller
+                        .get_coin_catalog()
+                        .unwrap_or_else(|_| crypto::default_coin_catalog())
+                        .into_iter()
+                        .map(|coin| (coin.id, coin.symbol))
+                        .collect();
                     let history_type_map: HashMap<String, String> = history
                         .iter()
                         .map(|tx| (tx.id.clone(), tx.transaction_type.clone()))
@@ -3153,12 +3822,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             } else {
                                 "N/A".to_string()
                             };
-                            let fee_val = tx.fee.unwrap_or(0.0);
-                            let fee_fmt = if fee_val > 0.0 {
-                                format_money((fee_val * 100.0) as i64, "USD")
-                            } else {
-                                "".to_string()
-                            };
+                            let fee_fmt = format_fee_display(tx, &symbol_map);
                             let notes = tx.notes.clone().unwrap_or_default();
                             let is_swap = tx.transaction_type == "swap"
                                 || (tx.transaction_type == "transfer_in"

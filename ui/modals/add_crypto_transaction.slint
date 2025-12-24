@@ -313,7 +313,7 @@ component WalletSelector inherits Rectangle {
             border-color: Palette.border-light;
             height: min(CryptoAdapter.wallet-list.length * 40px + 8px, 200px);
             drop-shadow-blur: 16px;
-            drop-shadow-color: #00000066;
+            drop-shadow-color: Palette.shadow-color;
             
             Flickable {
                 viewport-height: CryptoAdapter.wallet-list.length * 40px + 8px;
@@ -448,7 +448,7 @@ component CoinSelector inherits Rectangle {
         border-width: 1px;
         border-color: Palette.border-light;
         drop-shadow-blur: 16px;
-        drop-shadow-color: #00000066;
+        drop-shadow-color: Palette.shadow-color;
         clip: true;
 
         TouchArea {
@@ -706,6 +706,8 @@ export component AddCryptoTransactionModal inherits Rectangle {
     property <int> wallet-index: 0;
     property <int> wallet-index-to: 0;
     property <int> coin-index: 0;
+    property <int> fee-coin-index: 0;
+    property <string> fee-coin-amount: "";
     property <string> swap-amount: "";
     property <int> swap-coin-index: 0;
     property <string> move-amount: "";
@@ -757,6 +759,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
         CryptoAdapter.filter-coin-catalog("");
         wallet-index = CryptoAdapter.default-wallet-index;
         coin-index = CryptoAdapter.default-coin-index;
+        fee-coin-index = coin-index;
         root.refresh-price-from-coin();
     }
 
@@ -764,12 +767,14 @@ export component AddCryptoTransactionModal inherits Rectangle {
         amount = "";
         price = "";
         fee = "0";
+        fee-coin-amount = "";
         notes = "";
         date = AppState.current-date;
         selected-type = "buy";
         wallet-index = CryptoAdapter.default-wallet-index;
         wallet-index-to = 0;
         coin-index = CryptoAdapter.default-coin-index;
+        fee-coin-index = coin-index;
         swap-amount = "";
         swap-coin-index = 0;
         move-amount = "";
@@ -785,6 +790,9 @@ export component AddCryptoTransactionModal inherits Rectangle {
     }
 
     changed coin-index => {
+        if (fee-coin-amount == "") {
+            fee-coin-index = coin-index;
+        }
         root.update-swap-quote();
         root.refresh-price-from-coin();
     }
@@ -812,6 +820,11 @@ export component AddCryptoTransactionModal inherits Rectangle {
             wallet-index = 0;
         }
         let wallet-id = CryptoAdapter.wallet-list[wallet-index].id;
+        let safe-index = coin-index >= CryptoAdapter.coin-catalog.length ? 0 : coin-index;
+        let from-coin-id = CryptoAdapter.coin-catalog[safe-index].id;
+        let from-symbol = CryptoAdapter.coin-catalog[safe-index].symbol;
+        let fee-safe-index = fee-coin-index >= CryptoAdapter.coin-catalog.length ? 0 : fee-coin-index;
+        let fee-coin-id = CryptoAdapter.coin-catalog[fee-safe-index].id;
 
         if (selected-type == "move") {
             if (wallet-index-to >= CryptoAdapter.wallet-list.length) {
@@ -825,10 +838,6 @@ export component AddCryptoTransactionModal inherits Rectangle {
 
             let to-amount = move-amount == "" ? amount : move-amount;
 
-            let safe-index = coin-index >= CryptoAdapter.coin-catalog.length ? 0 : coin-index;
-            let from-coin-id = CryptoAdapter.coin-catalog[safe-index].id;
-            let from-symbol = CryptoAdapter.coin-catalog[safe-index].symbol;
-
             let result = CryptoAdapter.add-transfer(
                 wallet-id,
                 to-wallet-id,
@@ -837,6 +846,8 @@ export component AddCryptoTransactionModal inherits Rectangle {
                 amount,
                 to-amount,
                 fee,
+                fee-coin-id,
+                fee-coin-amount,
                 date,
                 notes
             );
@@ -851,10 +862,6 @@ export component AddCryptoTransactionModal inherits Rectangle {
             }
             return;
         }
-        
-        let safe-index = coin-index >= CryptoAdapter.coin-catalog.length ? 0 : coin-index;
-        let from-coin-id = CryptoAdapter.coin-catalog[safe-index].id;
-        let from-symbol = CryptoAdapter.coin-catalog[safe-index].symbol;
 
         if (selected-type == "swap") {
             if (swap-amount == "") {
@@ -880,6 +887,8 @@ export component AddCryptoTransactionModal inherits Rectangle {
                 to-symbol,
                 swap-amount,
                 fee,
+                fee-coin-id,
+                fee-coin-amount,
                 date,
                 notes
             );
@@ -903,6 +912,8 @@ export component AddCryptoTransactionModal inherits Rectangle {
             amount, 
             price, 
             fee, 
+            fee-coin-id,
+            fee-coin-amount,
             date,
             notes
         );
@@ -925,7 +936,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
     Rectangle {
         width: 100%;
         height: 100%;
-        background: #000000cc;
+        background: Palette.overlay-bg;
         
         TouchArea {
             clicked => {
@@ -939,14 +950,14 @@ export component AddCryptoTransactionModal inherits Rectangle {
     Rectangle {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
-        width: max(320px, min(440px, parent.width - 48px));
-        height: max(520px, min(720px, parent.height - 48px));
-        background: @linear-gradient(180deg, Palette.sidebar-bg 0%, #0f0f1a 100%);
+        width: min(Palette.modal-width-md, parent.width - 40px);
+        height: min(Palette.modal-height-lg, parent.height - 40px);
+        background: @linear-gradient(180deg, Palette.sidebar-bg 0%, Palette.crypto-modal-gradient-end 100%);
         border-radius: 16px;
         border-width: 1px;
         border-color: Palette.border-light;
         drop-shadow-blur: 40px;
-        drop-shadow-color: #00000088;
+        drop-shadow-color: Palette.shadow-strong;
 
         TouchArea { }
 
@@ -1048,10 +1059,10 @@ export component AddCryptoTransactionModal inherits Rectangle {
                     // Warning if no wallets
                     if CryptoAdapter.wallet-list.length == 0: Rectangle {
                         height: 40px;
-                        background: #2d1515;
+                        background: Palette.warning-bg;
                         border-radius: 8px;
                         border-width: 1px;
-                        border-color: #4d2525;
+                        border-color: Palette.warning-border;
 
                         HorizontalLayout {
                             padding-left: 12px;
@@ -1076,10 +1087,10 @@ export component AddCryptoTransactionModal inherits Rectangle {
                     }
                     if root.selected-type == "move" && CryptoAdapter.wallet-list.length < 2: Rectangle {
                         height: 40px;
-                        background: #2d1515;
+                        background: Palette.warning-bg;
                         border-radius: 8px;
                         border-width: 1px;
-                        border-color: #4d2525;
+                        border-color: Palette.warning-border;
 
                         HorizontalLayout {
                             padding-left: 12px;
@@ -1149,6 +1160,21 @@ export component AddCryptoTransactionModal inherits Rectangle {
                         }
                     }
 
+                    HorizontalLayout {
+                        spacing: 12px;
+                        CoinSelector {
+                            label: "FEE COIN (OPTIONAL)";
+                            selected-index <=> root.fee-coin-index;
+                            horizontal-stretch: 1;
+                        }
+                        FormField {
+                            label: "FEE AMOUNT";
+                            placeholder: "0.00";
+                            value <=> root.fee-coin-amount;
+                            width: 140px;
+                        }
+                    }
+
                         // Notes Field
                         FormField { 
                             label: "NOTES"; 
@@ -1175,7 +1201,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
 	                
                 Text {
                     text: "SAVE TRANSACTION";
-                    color: #ffffff;
+                    color: Palette.text-primary;
                     font-size: 12px;
                     font-weight: 600;
                     letter-spacing: 2px;

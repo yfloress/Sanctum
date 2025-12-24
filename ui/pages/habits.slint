@@ -4,7 +4,7 @@
 import { Palette, HabitAdapter, AppState } from "../globals.slint";
 import { HabitRow } from "../components/habit_row.slint";
 import { HabitHeatmap } from "../components/habit_heatmap.slint";
-import { MonthlyLineChart } from "../components/analytics_charts.slint";
+import { HabitRadarChart, WeekdayEfficiencyChart, InsightCard } from "../components/analytics_charts.slint";
 import { TextButton, ActionButton } from "../widgets.slint";
 import { AddHabitModal } from "../modals/add_habit.slint";
 
@@ -131,6 +131,7 @@ export component HabitsPage inherits Rectangle {
     background: Palette.background;
 
     init => {
+        HabitAdapter.auto-scroll-habits = true;
         HabitAdapter.load-initial-data();
         HabitAdapter.fetch-heatmap-data();
         HabitAdapter.fetch-habit-analytics();
@@ -299,7 +300,7 @@ export component HabitsPage inherits Rectangle {
                     }
 
                     if HabitAdapter.habits.length > 0: Rectangle {
-                        height: HabitAdapter.habits.length * 72px;
+                        height: HabitAdapter.habits.length * Palette.habit-row-height;
                         background: Palette.surface;
                         border-radius: 12px;
                         border-width: 1px;
@@ -325,18 +326,41 @@ export component HabitsPage inherits Rectangle {
                 }
 
                 // Analytics Section
-                if HabitAdapter.monthly-trend.length > 0: VerticalLayout {
+                if HabitAdapter.habits.length > 0: VerticalLayout {
                     spacing: 16px;
 
                     SectionHeader {
                         title: "ANALYTICS";
                     }
 
-                    // Monthly Trend Chart (Annual view)
-                    MonthlyLineChart {
+                    HorizontalLayout {
+                        spacing: 16px;
+
+                        HabitRadarChart {
+                            horizontal-stretch: 1;
+                            image: HabitAdapter.habits-radar-chart-image;
+                            has-data: HabitAdapter.habits-radar-has-data;
+                        }
+
+                        WeekdayEfficiencyChart {
+                            horizontal-stretch: 1;
+                            image: HabitAdapter.habits-weekday-chart-image;
+                            has-data: HabitAdapter.habits-weekday-has-data;
+                        }
+                    }
+
+                    InsightCard {
                         horizontal-stretch: 1;
-                        data: HabitAdapter.monthly-trend;
-                        image: HabitAdapter.monthly-chart-image;
+                        title: "WEEKLY REPORT";
+                        line1: HabitAdapter.habits-weekly-primary;
+                        line2: HabitAdapter.habits-weekly-secondary;
+                    }
+
+                    InsightCard {
+                        horizontal-stretch: 1;
+                        title: "INSIGHTS";
+                        line1: HabitAdapter.habits-insight-primary;
+                        line2: HabitAdapter.habits-insight-secondary;
                     }
                 }
 

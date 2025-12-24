@@ -39,8 +39,8 @@ component DayCell inherits Rectangle {
     in property <color> habit-color;
     callback clicked;
 
-    width: 26px;
-    height: 26px;
+    width: Palette.day-cell-size;
+    height: Palette.day-cell-size;
     border-radius: 6px;
     background: day.completed 
         ? habit-color 
@@ -86,12 +86,44 @@ export component HabitRow inherits Rectangle {
     in property <HabitData> habit;
     callback toggle(string);
     callback delete(string);
-    
-    // State para mostrar/ocultar botón de eliminar
-    property <bool> show-delete: false;
 
-    height: 72px;
+    // State to show/hide delete button
+    property <bool> show-delete: false;
+    property <bool> show-confirm-delete: false;
+    property <length> scroll-x: 0px;
+    property <int> currentDayInt: HabitAdapter.current-day-int;
+    property <bool> isViewingCurrentMonth: HabitAdapter.is-viewing-current-month;
+    property <bool> autoScrollHabits <=> HabitAdapter.auto-scroll-habits;
+    property <length> savedScrollX <=> HabitAdapter.habits-scroll-x;
+
+    function auto-scroll-target() -> length {
+        if !isViewingCurrentMonth {
+            return 0px;
+        }
+
+        return min(0px, max(grid-scroll.width - grid-scroll.viewport-width, (grid-scroll.width / 2) - ((currentDayInt * 30px) - 15px)));
+    }
+
+    function update-auto-scroll() {
+        if autoScrollHabits && isViewingCurrentMonth {
+            let target = auto-scroll-target();
+            scroll-x = target;
+            savedScrollX = target;
+        } else if !isViewingCurrentMonth {
+            scroll-x = 0px;
+            savedScrollX = 0px;
+        } else if !autoScrollHabits {
+            scroll-x = savedScrollX;
+        }
+    }
+
+    height: Palette.habit-row-height;
     background: transparent;
+
+    init => { update-auto-scroll(); }
+    changed currentDayInt => { update-auto-scroll(); }
+    changed isViewingCurrentMonth => { update-auto-scroll(); }
+    changed autoScrollHabits => { update-auto-scroll(); }
     
     HorizontalLayout {
         spacing: 16px;
@@ -179,10 +211,14 @@ export component HabitRow inherits Rectangle {
                 y: (parent.height - self.height - 8px) / 2;
                 viewport-width: habit.days.length * (26px + 4px);
                 interactive: true;
-
-                viewport-x: HabitAdapter.is-viewing-current-month 
-                    ? min(0px, max(parent.width - self.viewport-width, (parent.width / 2) - ((HabitAdapter.current-day-int * 30px) - 15px)))
-                    : 0px;
+                viewport-x <=> scroll-x;
+                changed width => { root.update-auto-scroll(); }
+                changed viewport-width => { root.update-auto-scroll(); }
+                changed viewport-x => {
+                    if !autoScrollHabits {
+                        savedScrollX = grid-scroll.viewport-x;
+                    }
+                }
                     
                 HorizontalLayout {
                     spacing: 4px;
@@ -191,7 +227,10 @@ export component HabitRow inherits Rectangle {
                     for day in habit.days: DayCell {
                         day: day;
                         habit-color: habit.color;
-                        clicked => { root.toggle(day.date); }
+                        clicked => {
+                            autoScrollHabits = false;
+                            root.toggle(day.date);
+                        }
                     }
                 }
             }
@@ -210,18 +249,18 @@ export component HabitRow inherits Rectangle {
         Rectangle {
             width: root.show-delete ? 48px : 0px;
             clip: true;
-            
+
             animate width { duration: 250ms; easing: ease-in-out; }
-            
+
             if root.show-delete: Rectangle {
                 width: 36px;
                 height: 36px;
                 x: 6px;
                 y: (parent.height - self.height) / 2;
                 border-radius: 8px;
-                background: delete-touch.has-hover ? #5a2020 : #3d2020;
+                background: delete-touch.has-hover ? Palette.delete-bg-hover : Palette.delete-bg;
                 border-width: 1px;
-                border-color: delete-touch.has-hover ? #ff4444 : #5a2020;
+                border-color: delete-touch.has-hover ? Palette.delete-border : Palette.delete-bg-hover;
                 
                 animate background { duration: 150ms; }
                 animate border-color { duration: 150ms; }
@@ -235,12 +274,111 @@ export component HabitRow inherits Rectangle {
 
                 delete-touch := TouchArea {
                     mouse-cursor: pointer;
-                    clicked => { 
-                        root.delete(habit.id);
+                    clicked => {
+                        root.show-confirm-delete = true;
                         root.show-delete = false;
                     }
                 }
             }
+        }
+    }
+
+    // Delete confirmation dialog
+    if root.show-confirm-delete: Rectangle {
+        width: 100%;
+        height: 100%;
+        z: 1000;
+        background: #00000088;
+
+        Rectangle {
+            width: min(320px, parent.width - 40px);
+            height: min(160px, parent.height - 40px);
+            background: Palette.sidebar-bg;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: Palette.border-light;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            drop-shadow-blur: 20px;
+            drop-shadow-color: #00000066;
+
+            VerticalLayout {
+                padding: 24px;
+                spacing: 16px;
+
+                Text {
+                    text: "Delete Habit?";
+                    color: Palette.text-primary;
+                    font-size: 14px;
+                    font-weight: 600;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: "This will permanently delete \"" + habit.name + "\" and all its logs.";
+                    color: Palette.text-muted;
+                    font-size: 11px;
+                    wrap: word-wrap;
+                    horizontal-alignment: center;
+                }
+
+                HorizontalLayout {
+                    spacing: 12px;
+
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        height: 36px;
+                        background: cancel-touch.has-hover ? Palette.surface-hover : Palette.surface;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: Palette.border;
+
+                        Text {
+                            text: "Cancel";
+                            color: Palette.text-secondary;
+                            font-size: 11px;
+                            font-weight: 600;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        cancel-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.show-confirm-delete = false; }
+                        }
+                    }
+
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        height: 36px;
+                        background: confirm-touch.has-hover ? Palette.delete-bg-active : Palette.delete-bg-hover;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: Palette.delete-border;
+
+                        Text {
+                            text: "Delete";
+                            color: #ffffff;
+                            font-size: 11px;
+                            font-weight: 600;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        confirm-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                root.delete(habit.id);
+                                root.show-confirm-delete = false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        TouchArea {
+            clicked => { root.show-confirm-delete = false; }
         }
     }
 }

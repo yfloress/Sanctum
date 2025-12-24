@@ -20,7 +20,7 @@ use thiserror::Error;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 
-/// Errores personalizados para operaciones de base de datos
+/// Custom errors for database operations
 #[derive(Error, Debug)]
 pub enum DbError {
     #[error("Database error")]
@@ -86,21 +86,21 @@ pub const SESSION_TIMEOUT_SECS: i64 = 900;
 /// KDF iterations for PBKDF2-HMAC-SHA512 (OWASP 2024 recommendation)
 pub const KDF_ITERATIONS: i64 = 600_000;
 
-/// Struct principal que envuelve la conexión a la base de datos
+/// Main struct wrapping the database connection
 pub struct Database {
     conn: Connection,
     path: PathBuf,
 }
 
 impl Database {
-    /// Inicializa la base de datos con encriptación SQLCipher
-    /// Usa SecretString para manejar la contraseña de forma segura
+    /// Initializes the database with SQLCipher encryption
+    /// Uses SecretString to handle password securely
     ///
     /// # Arguments
-    /// * `db_path` - Ruta obligatoria al archivo de base de datos
-    /// * `password` - Contraseña para encriptar/desencriptar la base de datos
+    /// * `db_path` - Required path to database file
+    /// * `password` - Password to encrypt/decrypt the database
     pub fn init(db_path: PathBuf, password: &SecretString) -> Result<Self, DbError> {
-        // Crear el directorio si no existe
+        // Create directory if it doesn't exist
         if let Some(parent) = db_path.parent() {
             if !parent.exists() {
                 fs::create_dir_all(parent).map_err(|_| DbError::DirectoryCreation)?;
@@ -112,7 +112,7 @@ impl Database {
 
         let is_new_db = !db_path.exists();
 
-        // Abrir conexión a la base de datos
+        // Open database connection
         let conn = Connection::open(&db_path)?;
 
         // Ensure restrictive permissions on the vault file
@@ -123,53 +123,53 @@ impl Database {
         conn.pragma_update(None, "foreign_keys", true)
             .map_err(DbError::Sqlite)?;
 
-        // --- ZONA DE SEGURIDAD Y CONFIGURACIÓN ---
-        // 1. Establecer la contraseña (Encriptación)
-        // Usamos pragma_update para evitar SQL Injection de forma segura
-        // ExposeSecret permite acceder al valor interno de forma controlada
+        // --- SECURITY AND CONFIGURATION ZONE ---
+        // 1. Set password (Encryption)
+        // Use pragma_update to avoid SQL Injection safely
+        // ExposeSecret allows controlled access to internal value
         conn.pragma_update(None, "key", password.expose_secret())
             .map_err(|_| DbError::InvalidPassword)?;
 
-        // 1.0 Endurecer la configuración de SQLCipher una vez aplicada la clave
+        // 1.0 Harden SQLCipher configuration once key is applied
         Self::apply_sqlcipher_hardening(&conn, is_new_db)?;
 
-        // 1.1 Validar contraseña con integrity check para fallar rápido en caso de clave incorrecta
+        // 1.1 Validate password with integrity check to fail fast on incorrect key
         if !is_new_db {
             Self::verify_key(&conn)?;
         }
 
-        // 2. Activar modo WAL (Rendimiento)
-        // Usamos pragma_update porque WAL retorna string "wal" y execute fallaría
+        // 2. Enable WAL mode (Performance)
+        // Use pragma_update because WAL returns string "wal" and execute would fail
         conn.pragma_update(None, "journal_mode", "WAL")
             .map_err(DbError::Sqlite)?;
 
         // -----------------------------------------
 
-        // Crear instancia de Database
+        // Create Database instance
         let db = Database {
             conn,
             path: db_path,
         };
 
-        // Ejecutar migraciones
+        // Run migrations
         db.run_migrations()?;
 
-        // Verificar y mostrar configuración de seguridad
+        // Verify and display security settings
         db.verify_encryption_settings()?;
 
         Ok(db)
     }
 
-    /// Ajusta PRAGMAs defensivos de SQLCipher para la conexión
-    /// IMPORTANTE: Los parámetros de algoritmo deben aplicarse ANTES de intentar desencriptar
-    /// tanto para DBs nuevas como existentes, ya que definen cómo interpretar la clave.
+    /// Adjusts defensive SQLCipher PRAGMAs for the connection
+    /// IMPORTANT: Algorithm parameters must be applied BEFORE attempting to decrypt
+    /// for both new and existing DBs, as they define how to interpret the key.
     fn apply_sqlcipher_hardening(conn: &Connection, is_new_db: bool) -> Result<(), DbError> {
-        // Asegurar limpieza de buffers sensibles
+        // Ensure cleanup of sensitive buffers
         conn.pragma_update(None, "cipher_memory_security", true)
             .map_err(DbError::Sqlite)?;
 
-        // Algoritmos de cifrado - SIEMPRE deben coincidir con los usados al crear la DB
-        // Estos parámetros afectan cómo se deriva la clave y se verifica el HMAC
+        // Encryption algorithms - MUST always match those used when creating the DB
+        // These parameters affect how the key is derived and HMAC is verified
         conn.pragma_update(None, "cipher_hmac_algorithm", "HMAC_SHA512")
             .map_err(DbError::Sqlite)?;
         conn.pragma_update(None, "cipher_kdf_algorithm", "PBKDF2_HMAC_SHA512")
@@ -179,7 +179,7 @@ impl Database {
         conn.pragma_update(None, "cipher_page_size", 4096i64)
             .map_err(DbError::Sqlite)?;
 
-        // Log solo en creación de nueva DB
+        // Log only on new DB creation
         if is_new_db {
             log_security_event(SecurityEvent::VaultCreated, Some("SQLCipher hardened"));
         }
@@ -187,8 +187,8 @@ impl Database {
         Ok(())
     }
 
-    /// Verifica los parámetros de cifrado actuales de SQLCipher
-    /// Solo disponible en builds de debug para auditoría
+    /// Verifies current SQLCipher encryption parameters
+    /// Only available in debug builds for auditing
     #[cfg(debug_assertions)]
     pub fn verify_encryption_settings(&self) -> Result<(), DbError> {
         use log::debug;
@@ -220,15 +220,15 @@ impl Database {
         Ok(())
     }
 
-    /// Valida que la clave sea correcta intentando leer de la base de datos
+    /// Validates that the key is correct by attempting to read from database
     fn verify_key(conn: &Connection) -> Result<(), DbError> {
-        // Si la clave es incorrecta, SQLCipher retornará "file is not a database"
+        // If key is incorrect, SQLCipher will return "file is not a database"
         match conn.query_row("SELECT count(*) FROM sqlite_master", [], |row| {
             row.get::<_, i32>(0)
         }) {
             Ok(_) => Ok(()),
             Err(e) => {
-                // Cualquier error al leer sqlite_master indica clave incorrecta o DB corrupta
+                // Any error reading sqlite_master indicates incorrect key or corrupt DB
                 match e {
                     RusqliteError::SqliteFailure(ref code, _) => {
                         if matches!(
@@ -246,12 +246,12 @@ impl Database {
         }
     }
 
-    /// Ruta actual de la conexión
+    /// Current path of the connection
     pub fn path(&self) -> &PathBuf {
         &self.path
     }
 
-    /// Ejecuta las migraciones necesarias para crear las tablas
+    /// Executes necessary migrations to create tables
     fn run_migrations(&self) -> Result<(), DbError> {
         // ==================== FIAT Accounts Table ====================
         self.conn.execute(
@@ -269,7 +269,7 @@ impl Database {
             [],
         )?;
 
-        // Índices para cuentas
+        // Indices for accounts
         self.conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_accounts_archived ON accounts(is_archived)",
             [],
@@ -309,7 +309,7 @@ impl Database {
             [],
         )?;
 
-        // Índices para transacciones
+        // Indices for transactions
         self.conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_transactions_account ON transactions(account_id)",
             [],
@@ -330,8 +330,8 @@ impl Database {
             [],
         )?;
 
-        // ==================== Crypto Ledger System Migration ====================
-        self.migrate_crypto_ledger()?;
+        // ==================== Crypto Ledger System ====================
+        self.create_crypto_ledger_tables()?;
 
         // ==================== Habits System ====================
         self.migrate_habits_tables()?;
@@ -390,6 +390,7 @@ impl Database {
                 name TEXT NOT NULL,
                 description TEXT,
                 color TEXT NOT NULL DEFAULT '#8b5cf6',
+                category TEXT NOT NULL DEFAULT 'mind',
                 created_at TEXT NOT NULL,
                 archived INTEGER NOT NULL DEFAULT 0
             )",
@@ -429,6 +430,23 @@ impl Database {
             "CREATE INDEX IF NOT EXISTS idx_habit_logs_habit_date ON habit_logs(habit_id, completed_date)",
             [],
         )?;
+
+        let has_category: bool = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM pragma_table_info('habits') WHERE name='category'",
+                [],
+                |row| row.get::<_, i32>(0),
+            )
+            .unwrap_or(0)
+            > 0;
+
+        if !has_category {
+            self.conn.execute(
+                "ALTER TABLE habits ADD COLUMN category TEXT NOT NULL DEFAULT 'mind'",
+                [],
+            )?;
+        }
 
         Ok(())
     }
@@ -823,155 +841,65 @@ impl Database {
         Ok(SESSION_TIMEOUT_SECS)
     }
 
-    /// Migrates from old crypto_holdings to new ledger system
-    fn migrate_crypto_ledger(&self) -> Result<(), DbError> {
-        // Check if old crypto_holdings table exists
-        let old_table_exists: bool = self
-            .conn
-            .query_row(
-                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='crypto_holdings'",
-                [],
-                |row| row.get(0),
-            )
-            .unwrap_or(0)
-            > 0;
+    fn create_crypto_ledger_tables(&self) -> Result<(), DbError> {
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS crypto_wallets (
+                id TEXT PRIMARY KEY NOT NULL,
+                name TEXT NOT NULL,
+                category TEXT NOT NULL,
+                icon TEXT
+            )",
+            [],
+        )?;
 
-        // Check if new tables exist
-        let wallets_exist: bool = self
-            .conn
-            .query_row(
-                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='crypto_wallets'",
-                [],
-                |row| row.get(0),
-            )
-            .unwrap_or(0)
-            > 0;
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS crypto_transactions (
+                id TEXT PRIMARY KEY NOT NULL,
+                wallet_id TEXT NOT NULL,
+                coin_id TEXT NOT NULL,
+                symbol TEXT NOT NULL,
+                type TEXT NOT NULL,
+                amount REAL NOT NULL,
+                price_per_coin REAL,
+                fee REAL,
+                fee_coin_id TEXT,
+                fee_amount REAL,
+                date TEXT NOT NULL,
+                notes TEXT,
+                related_tx_id TEXT,
+                FOREIGN KEY (wallet_id) REFERENCES crypto_wallets(id) ON DELETE CASCADE
+            )",
+            [],
+        )?;
 
-        // Create new tables if they don't exist
-        if !wallets_exist {
-            // Create crypto_wallets table
-            self.conn.execute(
-                "CREATE TABLE crypto_wallets (
-                    id TEXT PRIMARY KEY NOT NULL,
-                    name TEXT NOT NULL,
-                    category TEXT NOT NULL,
-                    icon TEXT
-                )",
-                [],
-            )?;
-
-            // Create crypto_transactions table
-            self.conn.execute(
-                "CREATE TABLE crypto_transactions (
-                    id TEXT PRIMARY KEY NOT NULL,
-                    wallet_id TEXT NOT NULL,
-                    coin_id TEXT NOT NULL,
-                    symbol TEXT NOT NULL,
-                    type TEXT NOT NULL,
-                    amount REAL NOT NULL,
-                    price_per_coin REAL,
-                    fee REAL,
-                    fee_coin_id TEXT,
-                    fee_amount REAL,
-                    date TEXT NOT NULL,
-                    notes TEXT,
-                    related_tx_id TEXT,
-                    FOREIGN KEY (wallet_id) REFERENCES crypto_wallets(id) ON DELETE CASCADE
-                )",
-                [],
-            )?;
-
-            // Create indexes for crypto tables
-            self.conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_crypto_wallets_category ON crypto_wallets(category)",
-                [],
-            )?;
-
-            self.conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_crypto_tx_wallet ON crypto_transactions(wallet_id)",
-                [],
-            )?;
-
-            self.conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_crypto_tx_coin ON crypto_transactions(coin_id)",
-                [],
-            )?;
-
-            self.conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_crypto_tx_date ON crypto_transactions(date)",
-                [],
-            )?;
-
-            self.conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_crypto_tx_type ON crypto_transactions(type)",
-                [],
-            )?;
-
-            // Index for related_tx_id lookups (used in swap/transfer deletions)
-            self.conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_crypto_tx_related ON crypto_transactions(related_tx_id)",
-                [],
-            )?;
-        }
-
-        // Migrate old data if exists
-        if old_table_exists && wallets_exist {
-            // Check if we have already migrated (by checking for legacy wallet)
-            let legacy_wallet_exists: bool = self
-                .conn
-                .query_row(
-                    "SELECT COUNT(*) FROM crypto_wallets WHERE id = 'legacy_portfolio'",
-                    [],
-                    |row| row.get::<_, i32>(0),
-                )
-                .unwrap_or(0)
-                > 0;
-
-            if !legacy_wallet_exists {
-                // Check if there are holdings to migrate
-                let holdings_count: i32 = self
-                    .conn
-                    .query_row("SELECT COUNT(*) FROM crypto_holdings", [], |row| row.get(0))
-                    .unwrap_or(0);
-
-                if holdings_count > 0 {
-                    // Create a legacy wallet for migrated holdings
-                    self.conn.execute(
-                        "INSERT INTO crypto_wallets (id, name, category, icon) VALUES (?1, ?2, ?3, ?4)",
-                        params!["legacy_portfolio", "Legacy Portfolio", "wallet_multi", "📦"],
-                    )?;
-
-                    // Migrate holdings as buy transactions
-                    self.conn.execute(
-                        "INSERT INTO crypto_transactions (id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, date, notes)
-                         SELECT
-                            'migrated_' || id,
-                            'legacy_portfolio',
-                            coin_id,
-                            symbol,
-                            'buy',
-                            amount,
-                            purchase_price,
-                            NULL,
-                            purchase_date,
-                            'Migrated from legacy holdings'
-                         FROM crypto_holdings",
-                        [],
-                    )?;
-                }
-
-                // Rename old table as backup
-                self.conn.execute(
-                    "ALTER TABLE crypto_holdings RENAME TO crypto_holdings_backup",
-                    [],
-                )?;
-            }
-        }
-
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_crypto_wallets_category ON crypto_wallets(category)",
+            [],
+        )?;
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_crypto_tx_wallet ON crypto_transactions(wallet_id)",
+            [],
+        )?;
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_crypto_tx_coin ON crypto_transactions(coin_id)",
+            [],
+        )?;
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_crypto_tx_date ON crypto_transactions(date)",
+            [],
+        )?;
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_crypto_tx_type ON crypto_transactions(type)",
+            [],
+        )?;
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_crypto_tx_related ON crypto_transactions(related_tx_id)",
+            [],
+        )?;
         Ok(())
     }
 
-    /// Verifica que la base de datos esté correctamente configurada y accesible
+    /// Verifies that the database is correctly configured and accessible
     pub fn health_check(&self) -> Result<(), DbError> {
         self.conn
             .query_row("SELECT 1", [], |_| Ok(()))
@@ -1189,9 +1117,9 @@ impl Database {
 
     // ==================== Financial Transactions CRUD ====================
 
-    /// Crea una nueva transacción en la base de datos
+    /// Creates a new transaction in the database
     pub fn create_transaction(&self, transaction: &Transaction) -> Result<(), DbError> {
-        // Validar transacción
+        // Validate transaction
         if !transaction.validate() {
             return Err(DbError::InvalidTransactionType);
         }
@@ -1261,7 +1189,7 @@ impl Database {
         Ok(tx_id)
     }
 
-    /// Obtiene todas las transacciones ordenadas por fecha descendente
+    /// Gets all transactions ordered by descending date
     pub fn get_transactions(&self) -> Result<Vec<Transaction>, DbError> {
         let mut stmt = self.conn.prepare(
             "SELECT id, account_id, amount, category, description, date, type, transfer_account_id
@@ -1509,6 +1437,261 @@ impl Database {
         Ok(transactions)
     }
 
+    /// Gets wallet transactions up to a given date (inclusive), ordered ascending.
+    pub fn get_wallet_transactions_up_to_date(
+        &self,
+        wallet_id: &str,
+        date: &str,
+    ) -> Result<Vec<CryptoTransaction>, DbError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, fee_coin_id, fee_amount, date, notes, related_tx_id
+             FROM crypto_transactions
+             WHERE wallet_id = ?1
+               AND date <= ?2
+             ORDER BY date ASC, rowid ASC",
+        )?;
+
+        let transactions = stmt
+            .query_map(params![wallet_id, date], |row| {
+                Ok(CryptoTransaction {
+                    id: row.get(0)?,
+                    wallet_id: row.get(1)?,
+                    coin_id: row.get(2)?,
+                    symbol: row.get(3)?,
+                    transaction_type: row.get(4)?,
+                    amount: row.get(5)?,
+                    price_per_coin: row.get(6)?,
+                    fee: row.get(7)?,
+                    fee_coin_id: row.get(8)?,
+                    fee_amount: row.get(9)?,
+                    date: row.get(10)?,
+                    notes: row.get(11)?,
+                    related_tx_id: row.get(12)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(transactions)
+    }
+
+    /// Gets the wallet balance for a coin at (or before) a given date.
+    pub fn get_wallet_coin_balance_at(
+        &self,
+        wallet_id: &str,
+        coin_id: &str,
+        date: &str,
+        exclude_tx_id: Option<&str>,
+    ) -> Result<f64, DbError> {
+        let mut balance = 0.0;
+        if let Some(exclude) = exclude_tx_id {
+            let mut stmt = self.conn.prepare(
+                "SELECT coin_id, type, amount, fee_coin_id, fee_amount
+                 FROM crypto_transactions
+                 WHERE wallet_id = ?1
+                   AND date <= ?2
+                   AND id != ?3
+                   AND (coin_id = ?4 OR fee_coin_id = ?4)",
+            )?;
+            let rows = stmt.query_map(params![wallet_id, date, exclude, coin_id], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, f64>(2)?,
+                    row.get::<_, Option<String>>(3)?,
+                    row.get::<_, Option<f64>>(4)?,
+                ))
+            })?;
+            for row in rows {
+                let (row_coin_id, tx_type, amount, fee_coin_id, fee_amount) = row?;
+                if row_coin_id == coin_id {
+                    if let Ok(kind) = tx_type.parse::<CryptoTransactionType>() {
+                        match kind {
+                            CryptoTransactionType::Buy | CryptoTransactionType::TransferIn => {
+                                balance += amount
+                            }
+                            CryptoTransactionType::Sell
+                            | CryptoTransactionType::TransferOut
+                            | CryptoTransactionType::Swap => balance -= amount,
+                        }
+                    }
+                }
+
+                if let Some(fee_coin_id) = fee_coin_id {
+                    if fee_coin_id == coin_id {
+                        if let Some(fee_amount) = fee_amount {
+                            balance -= fee_amount;
+                        }
+                    }
+                }
+            }
+        } else {
+            let mut stmt = self.conn.prepare(
+                "SELECT coin_id, type, amount, fee_coin_id, fee_amount
+                 FROM crypto_transactions
+                 WHERE wallet_id = ?1
+                   AND date <= ?2
+                   AND (coin_id = ?3 OR fee_coin_id = ?3)",
+            )?;
+            let rows = stmt.query_map(params![wallet_id, date, coin_id], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, f64>(2)?,
+                    row.get::<_, Option<String>>(3)?,
+                    row.get::<_, Option<f64>>(4)?,
+                ))
+            })?;
+            for row in rows {
+                let (row_coin_id, tx_type, amount, fee_coin_id, fee_amount) = row?;
+                if row_coin_id == coin_id {
+                    if let Ok(kind) = tx_type.parse::<CryptoTransactionType>() {
+                        match kind {
+                            CryptoTransactionType::Buy | CryptoTransactionType::TransferIn => {
+                                balance += amount
+                            }
+                            CryptoTransactionType::Sell
+                            | CryptoTransactionType::TransferOut
+                            | CryptoTransactionType::Swap => balance -= amount,
+                        }
+                    }
+                }
+
+                if let Some(fee_coin_id) = fee_coin_id {
+                    if fee_coin_id == coin_id {
+                        if let Some(fee_amount) = fee_amount {
+                            balance -= fee_amount;
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(balance)
+    }
+
+    /// Gets the wallet balance and cost basis for a coin at (or before) a given date.
+    pub fn get_wallet_coin_state_at(
+        &self,
+        wallet_id: &str,
+        coin_id: &str,
+        date: &str,
+    ) -> Result<(f64, f64), DbError> {
+        let mut transactions = self.get_wallet_transactions_up_to_date(wallet_id, date)?;
+
+        transactions.sort_by(|a, b| a.date.cmp(&b.date).then(a.id.cmp(&b.id)));
+
+        let tx_map: HashMap<String, CryptoTransaction> = transactions
+            .iter()
+            .cloned()
+            .map(|tx| (tx.id.clone(), tx))
+            .collect();
+        let mut processed: HashSet<String> = HashSet::new();
+
+        let mut assets: HashMap<String, AggregatedAsset> = HashMap::new();
+
+        for tx in transactions {
+            if processed.contains(&tx.id) {
+                continue;
+            }
+
+            if let Some(rel_id) = &tx.related_tx_id {
+                if let Some(counter) = tx_map.get(rel_id) {
+                    let is_transfer_pair = (tx.transaction_type == "transfer_out"
+                        && counter.transaction_type == "transfer_in")
+                        || (tx.transaction_type == "transfer_in"
+                            && counter.transaction_type == "transfer_out");
+                    let is_swap_pair = (tx.transaction_type == "swap"
+                        && counter.transaction_type == "transfer_in")
+                        || (tx.transaction_type == "transfer_in"
+                            && counter.transaction_type == "swap");
+
+                    if is_transfer_pair {
+                        if processed.contains(rel_id) || processed.contains(&tx.id) {
+                            continue;
+                        }
+
+                        let applied = if tx.transaction_type == "transfer_out" {
+                            Self::apply_transfer_pair(&mut assets, &tx, counter)
+                        } else {
+                            Self::apply_transfer_pair(&mut assets, counter, &tx)
+                        };
+
+                        if applied {
+                            processed.insert(tx.id.clone());
+                            processed.insert(rel_id.clone());
+                            continue;
+                        }
+                    }
+
+                    if is_swap_pair {
+                        if processed.contains(rel_id) || processed.contains(&tx.id) {
+                            continue;
+                        }
+
+                        processed.insert(tx.id.clone());
+                        processed.insert(rel_id.clone());
+
+                        if tx.transaction_type == "swap" {
+                            Self::apply_swap_pair(&mut assets, &tx, counter);
+                        } else {
+                            Self::apply_swap_pair(&mut assets, counter, &tx);
+                        }
+                        continue;
+                    }
+                }
+            }
+
+            let tx_type = match tx.transaction_type.parse::<CryptoTransactionType>() {
+                Ok(t) => t,
+                Err(_) => continue,
+            };
+
+            let entry = assets
+                .entry(tx.coin_id.clone())
+                .or_insert_with(|| AggregatedAsset::new(tx.coin_id.clone(), tx.symbol.clone()));
+
+            if matches!(tx_type, CryptoTransactionType::Buy) {
+                entry.total_amount += tx.amount;
+                let cost = tx.amount * tx.price_per_coin.unwrap_or(0.0);
+                entry.total_cost_basis += cost + tx.fee.unwrap_or(0.0);
+            } else if matches!(tx_type, CryptoTransactionType::TransferIn) {
+                entry.total_amount += tx.amount;
+                if let Some(price) = tx.price_per_coin {
+                    let fee = tx.fee.unwrap_or(0.0);
+                    entry.total_cost_basis += (tx.amount * price) + fee;
+                }
+            } else if tx_type.is_outflow() || matches!(tx_type, CryptoTransactionType::Swap) {
+                let prev_amount = entry.total_amount;
+                entry.total_amount -= tx.amount;
+                if entry.total_amount < 0.0 {
+                    entry.total_amount = 0.0;
+                }
+                if prev_amount > 0.0 {
+                    let ratio = (tx.amount / prev_amount).min(1.0);
+                    entry.total_cost_basis *= 1.0 - ratio;
+                    entry.total_cost_basis = entry.total_cost_basis.max(0.0);
+                }
+            }
+
+            if let (Some(fee_coin_id), Some(fee_amount)) =
+                (tx.fee_coin_id.as_deref(), tx.fee_amount)
+            {
+                let fee_symbol = if fee_coin_id == tx.coin_id {
+                    Some(tx.symbol.as_str())
+                } else {
+                    None
+                };
+                Self::apply_fee_coin_outflow(&mut assets, fee_coin_id, fee_amount, fee_symbol);
+            }
+        }
+
+        if let Some(asset) = assets.get(coin_id) {
+            return Ok((asset.total_amount, asset.total_cost_basis));
+        }
+
+        Ok((0.0, 0.0))
+    }
+
     /// Gets all crypto transactions across all wallets
     pub fn get_all_crypto_transactions(&self) -> Result<Vec<CryptoTransaction>, DbError> {
         let mut stmt = self.conn.prepare(
@@ -1615,12 +1798,15 @@ impl Database {
     }
 
     /// Updates editable fields of a crypto transaction
+    #[allow(clippy::too_many_arguments)]
     pub fn update_crypto_transaction_fields(
         &self,
         id: &str,
         amount: f64,
         price_per_coin: Option<f64>,
         fee: Option<f64>,
+        fee_coin_id: Option<&str>,
+        fee_amount: Option<f64>,
         date: &str,
         notes: Option<&str>,
     ) -> Result<(), DbError> {
@@ -1629,10 +1815,21 @@ impl Database {
              SET amount = ?1,
                  price_per_coin = ?2,
                  fee = ?3,
-                 date = ?4,
-                 notes = ?5
-             WHERE id = ?6",
-            params![amount, price_per_coin, fee, date, notes, id],
+                 fee_coin_id = ?4,
+                 fee_amount = ?5,
+                 date = ?6,
+                 notes = ?7
+             WHERE id = ?8",
+            params![
+                amount,
+                price_per_coin,
+                fee,
+                fee_coin_id,
+                fee_amount,
+                date,
+                notes,
+                id
+            ],
         )?;
         Ok(())
     }
@@ -1674,6 +1871,58 @@ impl Database {
             .or_insert_with(|| AggregatedAsset::new(target.coin_id.clone(), target.symbol.clone()));
         target_entry.total_amount += target.amount;
         target_entry.total_cost_basis += cost_transferred.max(0.0);
+
+        if let (Some(fee_coin_id), Some(fee_amount)) =
+            (source.fee_coin_id.as_deref(), source.fee_amount)
+        {
+            let fee_symbol = if fee_coin_id == source.coin_id {
+                Some(source.symbol.as_str())
+            } else {
+                None
+            };
+            Self::apply_fee_coin_outflow(assets, fee_coin_id, fee_amount, fee_symbol);
+        }
+
+        if let (Some(fee_coin_id), Some(fee_amount)) =
+            (target.fee_coin_id.as_deref(), target.fee_amount)
+        {
+            let fee_symbol = if fee_coin_id == target.coin_id {
+                Some(target.symbol.as_str())
+            } else {
+                None
+            };
+            Self::apply_fee_coin_outflow(assets, fee_coin_id, fee_amount, fee_symbol);
+        }
+    }
+
+    fn apply_fee_coin_outflow(
+        assets: &mut HashMap<String, AggregatedAsset>,
+        fee_coin_id: &str,
+        fee_amount: f64,
+        fee_symbol: Option<&str>,
+    ) {
+        if fee_amount <= 0.0 {
+            return;
+        }
+
+        let entry = assets.entry(fee_coin_id.to_string()).or_insert_with(|| {
+            AggregatedAsset::new(
+                fee_coin_id.to_string(),
+                fee_symbol.unwrap_or(fee_coin_id).to_uppercase(),
+            )
+        });
+
+        let prev_amount = entry.total_amount;
+        entry.total_amount -= fee_amount;
+        if entry.total_amount < 0.0 {
+            entry.total_amount = 0.0;
+        }
+
+        if prev_amount > 0.0 {
+            let ratio = (fee_amount / prev_amount).min(1.0);
+            entry.total_cost_basis *= 1.0 - ratio;
+            entry.total_cost_basis = entry.total_cost_basis.max(0.0);
+        }
     }
 
     /// Applies a transfer pair for the same asset, reducing cost basis only for fee losses
@@ -1707,13 +1956,37 @@ impl Database {
         entry.total_amount += target.amount;
         entry.total_cost_basis += unit_cost * target.amount;
         entry.total_cost_basis += target.fee.unwrap_or(0.0);
+
+        if let (Some(fee_coin_id), Some(fee_amount)) =
+            (source.fee_coin_id.as_deref(), source.fee_amount)
+        {
+            let fee_symbol = if fee_coin_id == source.coin_id {
+                Some(source.symbol.as_str())
+            } else {
+                None
+            };
+            Self::apply_fee_coin_outflow(assets, fee_coin_id, fee_amount, fee_symbol);
+        }
+
+        if let (Some(fee_coin_id), Some(fee_amount)) =
+            (target.fee_coin_id.as_deref(), target.fee_amount)
+        {
+            let fee_symbol = if fee_coin_id == target.coin_id {
+                Some(target.symbol.as_str())
+            } else {
+                None
+            };
+            Self::apply_fee_coin_outflow(assets, fee_coin_id, fee_amount, fee_symbol);
+        }
         true
     }
 
-    /// Calculates aggregated portfolio from all transactions across all wallets
-    /// This is the CRITICAL function that computes total holdings per coin
-    pub fn get_aggregated_portfolio(&self) -> Result<Vec<AggregatedAsset>, DbError> {
-        let mut transactions = self.get_all_crypto_transactions()?;
+    fn aggregate_crypto_transactions(
+        mut transactions: Vec<CryptoTransaction>,
+    ) -> Vec<AggregatedAsset> {
+        if transactions.is_empty() {
+            return Vec::new();
+        }
 
         // Process transactions chronologically to keep cost basis adjustments consistent
         transactions.sort_by(|a, b| a.date.cmp(&b.date).then(a.id.cmp(&b.id)));
@@ -1725,8 +1998,6 @@ impl Database {
             .collect();
 
         let mut processed: HashSet<String> = HashSet::new();
-
-        // Group transactions by coin_id and calculate totals
         let mut assets: HashMap<String, AggregatedAsset> = HashMap::new();
 
         for tx in transactions {
@@ -1821,10 +2092,20 @@ impl Database {
                     }
                 }
             }
+
+            if let (Some(fee_coin_id), Some(fee_amount)) =
+                (tx.fee_coin_id.as_deref(), tx.fee_amount)
+            {
+                let fee_symbol = if fee_coin_id == tx.coin_id {
+                    Some(tx.symbol.as_str())
+                } else {
+                    None
+                };
+                Self::apply_fee_coin_outflow(&mut assets, fee_coin_id, fee_amount, fee_symbol);
+            }
         }
 
-        // Calculate average buy prices and filter out zero/negative balances
-        let result: Vec<AggregatedAsset> = assets
+        assets
             .into_values()
             .filter_map(|mut asset| {
                 if asset.total_amount > 0.0001 {
@@ -1834,9 +2115,14 @@ impl Database {
                     None
                 }
             })
-            .collect();
+            .collect()
+    }
 
-        Ok(result)
+    /// Calculates aggregated portfolio from all transactions across all wallets
+    /// This is the CRITICAL function that computes total holdings per coin
+    pub fn get_aggregated_portfolio(&self) -> Result<Vec<AggregatedAsset>, DbError> {
+        let transactions = self.get_all_crypto_transactions()?;
+        Ok(Self::aggregate_crypto_transactions(transactions))
     }
 
     /// Gets aggregated holdings for a specific wallet
@@ -1844,118 +2130,8 @@ impl Database {
         &self,
         wallet_id: &str,
     ) -> Result<Vec<AggregatedAsset>, DbError> {
-        let mut transactions = self.get_wallet_transactions(wallet_id)?;
-
-        // Process chronologically
-        transactions.sort_by(|a, b| a.date.cmp(&b.date).then(a.id.cmp(&b.id)));
-
-        let tx_map: HashMap<String, CryptoTransaction> = transactions
-            .iter()
-            .cloned()
-            .map(|tx| (tx.id.clone(), tx))
-            .collect();
-        let mut processed: HashSet<String> = HashSet::new();
-
-        let mut assets: HashMap<String, AggregatedAsset> = HashMap::new();
-
-        for tx in transactions {
-            if processed.contains(&tx.id) {
-                continue;
-            }
-
-            if let Some(rel_id) = &tx.related_tx_id {
-                if let Some(counter) = tx_map.get(rel_id) {
-                    let is_transfer_pair = (tx.transaction_type == "transfer_out"
-                        && counter.transaction_type == "transfer_in")
-                        || (tx.transaction_type == "transfer_in"
-                            && counter.transaction_type == "transfer_out");
-                    let is_swap_pair = (tx.transaction_type == "swap"
-                        && counter.transaction_type == "transfer_in")
-                        || (tx.transaction_type == "transfer_in"
-                            && counter.transaction_type == "swap");
-
-                    if is_transfer_pair {
-                        if processed.contains(rel_id) || processed.contains(&tx.id) {
-                            continue;
-                        }
-
-                        let applied = if tx.transaction_type == "transfer_out" {
-                            Self::apply_transfer_pair(&mut assets, &tx, counter)
-                        } else {
-                            Self::apply_transfer_pair(&mut assets, counter, &tx)
-                        };
-
-                        if applied {
-                            processed.insert(tx.id.clone());
-                            processed.insert(rel_id.clone());
-                            continue;
-                        }
-                    }
-
-                    if is_swap_pair {
-                        if processed.contains(rel_id) || processed.contains(&tx.id) {
-                            continue;
-                        }
-
-                        processed.insert(tx.id.clone());
-                        processed.insert(rel_id.clone());
-
-                        if tx.transaction_type == "swap" {
-                            Self::apply_swap_pair(&mut assets, &tx, counter);
-                        } else {
-                            Self::apply_swap_pair(&mut assets, counter, &tx);
-                        }
-                        continue;
-                    }
-                }
-            }
-
-            let tx_type = match tx.transaction_type.parse::<CryptoTransactionType>() {
-                Ok(t) => t,
-                Err(_) => continue,
-            };
-
-            let entry = assets
-                .entry(tx.coin_id.clone())
-                .or_insert_with(|| AggregatedAsset::new(tx.coin_id.clone(), tx.symbol.clone()));
-
-            if matches!(tx_type, CryptoTransactionType::Buy) {
-                entry.total_amount += tx.amount;
-                let cost = tx.amount * tx.price_per_coin.unwrap_or(0.0);
-                entry.total_cost_basis += cost + tx.fee.unwrap_or(0.0);
-            } else if matches!(tx_type, CryptoTransactionType::TransferIn) {
-                entry.total_amount += tx.amount;
-                if let Some(price) = tx.price_per_coin {
-                    let fee = tx.fee.unwrap_or(0.0);
-                    entry.total_cost_basis += (tx.amount * price) + fee;
-                }
-            } else if tx_type.is_outflow() || matches!(tx_type, CryptoTransactionType::Swap) {
-                let prev_amount = entry.total_amount;
-                entry.total_amount -= tx.amount;
-                if entry.total_amount < 0.0 {
-                    entry.total_amount = 0.0;
-                }
-                if prev_amount > 0.0 {
-                    let ratio = (tx.amount / prev_amount).min(1.0);
-                    entry.total_cost_basis *= 1.0 - ratio;
-                    entry.total_cost_basis = entry.total_cost_basis.max(0.0);
-                }
-            }
-        }
-
-        let result: Vec<AggregatedAsset> = assets
-            .into_values()
-            .filter_map(|mut asset| {
-                if asset.total_amount > 0.0001 {
-                    asset.calculate_avg_price();
-                    Some(asset)
-                } else {
-                    None
-                }
-            })
-            .collect();
-
-        Ok(result)
+        let transactions = self.get_wallet_transactions(wallet_id)?;
+        Ok(Self::aggregate_crypto_transactions(transactions))
     }
 
     // ==================== Balance Summary ====================
@@ -2000,13 +2176,14 @@ impl Database {
     /// Creates a new habit
     pub fn create_habit(&self, habit: &Habit) -> Result<(), DbError> {
         self.conn.execute(
-            "INSERT INTO habits (id, name, description, color, created_at, archived)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            "INSERT INTO habits (id, name, description, color, category, created_at, archived)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 &habit.id,
                 &habit.name,
                 &habit.description,
                 &habit.color,
+                &habit.category,
                 &habit.created_at,
                 habit.archived as i32,
             ],
@@ -2017,7 +2194,7 @@ impl Database {
     /// Gets all active (non-archived) habits
     pub fn get_habits(&self) -> Result<Vec<Habit>, DbError> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, name, description, color, created_at, archived
+            "SELECT id, name, description, color, category, created_at, archived
              FROM habits
              WHERE archived = 0
              ORDER BY created_at ASC",
@@ -2030,8 +2207,9 @@ impl Database {
                     name: row.get(1)?,
                     description: row.get(2)?,
                     color: row.get(3)?,
-                    created_at: row.get(4)?,
-                    archived: row.get::<_, i32>(5)? != 0,
+                    category: row.get(4)?,
+                    created_at: row.get(5)?,
+                    archived: row.get::<_, i32>(6)? != 0,
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;
@@ -2042,7 +2220,7 @@ impl Database {
     /// Gets a single habit by ID
     pub fn get_habit(&self, id: &str) -> Result<Option<Habit>, DbError> {
         let result = self.conn.query_row(
-            "SELECT id, name, description, color, created_at, archived
+            "SELECT id, name, description, color, category, created_at, archived
              FROM habits WHERE id = ?1",
             params![id],
             |row| {
@@ -2051,8 +2229,9 @@ impl Database {
                     name: row.get(1)?,
                     description: row.get(2)?,
                     color: row.get(3)?,
-                    created_at: row.get(4)?,
-                    archived: row.get::<_, i32>(5)? != 0,
+                    category: row.get(4)?,
+                    created_at: row.get(5)?,
+                    archived: row.get::<_, i32>(6)? != 0,
                 })
             },
         );
@@ -2067,8 +2246,14 @@ impl Database {
     /// Updates an existing habit
     pub fn update_habit(&self, habit: &Habit) -> Result<(), DbError> {
         self.conn.execute(
-            "UPDATE habits SET name = ?1, description = ?2, color = ?3 WHERE id = ?4",
-            params![&habit.name, &habit.description, &habit.color, &habit.id],
+            "UPDATE habits SET name = ?1, description = ?2, color = ?3, category = ?4 WHERE id = ?5",
+            params![
+                &habit.name,
+                &habit.description,
+                &habit.color,
+                &habit.category,
+                &habit.id
+            ],
         )?;
         Ok(())
     }

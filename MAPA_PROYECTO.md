@@ -35,7 +35,7 @@
 - **Finanzas:** `create_account`, `get_accounts`, `create_transaction`, `get_balance_summary`.
 - **Cripto:** `create_wallet`, `add_crypto_transaction`, `migrate_crypto_ledger`, `get_aggregated_portfolio`.
 - **Caché:** `save_exchange_rate`, `load_crypto_prices` (Soporte offline).
-- **Migraciones:** `run_migrations`, `migrate_habits_tables`.
+- **Migraciones:** `run_migrations`, `migrate_habits_tables` (incluye columna `category` en habits).
 **Dependencias:** `rusqlite`, `secrecy`, `uuid`, `chrono`
 ---
 ## src/models.rs
@@ -46,7 +46,7 @@
 - `struct Transaction`, `struct BalanceSummary`: Transacciones y resumen financiero.
 - `struct CryptoAsset`, `struct AggregatedAsset`: Datos de mercado y portafolio calculado.
 - `struct CryptoTransaction`, `struct CryptoWallet`: Ledger cripto.
-- `struct Habit`, `struct HabitLog`: Seguimiento de hábitos.
+- `struct Habit`, `struct HabitLog`: Seguimiento de hábitos (incluye `category` para Mind/Body/Spirit).
 **Dependencias:** `serde`
 ---
 ## src/controller.rs
@@ -58,6 +58,7 @@
 - `get_analytics_summary`, `get_net_worth_history`: Lógica de análisis financiero.
 - `get_aggregated_portfolio`: Cálculo de portafolio cripto.
 - `check_persistent_rate_limit`: Verificación de seguridad persistente.
+- Validación de hábitos: normaliza `category` (mind/body/spirit).
 **Dependencias:** `crate::db`, `crate::models`, `crate::crypto`
 ---
 ## src/crypto.rs
@@ -89,7 +90,7 @@
 **Resumen:** Lógica específica para la gestión de hábitos.
 **Estructura Clave:**
 - `struct HabitService`: Servicio de hábitos.
-- `create_habit`, `toggle_habit_completion`: Lógica de negocio de hábitos.
+- `create_habit`, `toggle_habit_completion`: Lógica de negocio de hábitos (incluye `category`).
 **Dependencias:** `crate::db`
 ---
 ## ui/app.slint
@@ -109,6 +110,7 @@
 - `global AppState`: Estado de navegación y sesión.
 - `global AuthAdapter`: Callbacks (`unlock-vault`, `create-vault`).
 - `global AccountAdapter`, `TransactionAdapter`, `CryptoAdapter`, `HabitAdapter`: Estructuras de datos y callbacks para comunicación con Rust.
+- `HabitAdapter`: Propiedades para radar e insights de hábitos (ventana 30 dias).
 **Dependencias:** N/A
 ---
 ## ui/widgets.slint
@@ -132,8 +134,8 @@
 **Tipo:** Slint UI
 **Resumen:** Gráficos especializados para estadísticas de hábitos.
 **Estructura Clave:**
-- `export component DayEfficiencyChart`: Gráfico de barras para eficiencia diaria (últimos 90 días).
-- `export component MonthEfficiencyChart`: Gráfico de línea para tendencia mensual.
+- `export component HabitRadarChart`: Radar para balance Mind/Body/Spirit.
+- `export component InsightCard`: Tarjeta de resumen para reportes e insights.
 **Dependencias:** `globals.slint`
 ---
 ## ui/components/asset_detail.slint
@@ -238,7 +240,7 @@
 **Tipo:** Slint UI
 **Resumen:** Formulario modal para crear nuevos hábitos.
 **Estructura Clave:**
-- `export component AddHabitModal`: Nombre, descripción y selector de color.
+- `export component AddHabitModal`: Nombre, descripción, categoría (Mind/Body/Spirit) y selector de color.
 - Llama a `HabitAdapter.create-habit`.
 **Dependencias:** `globals.slint`
 ---
@@ -291,7 +293,7 @@
 **Tipo:** Slint UI
 **Resumen:** Página de seguimiento de hábitos.
 **Estructura Clave:**
-- `export component HabitsPage`: Muestra lista de hábitos, heatmap anual y gráfico mensual.
+- `export component HabitsPage`: Muestra lista de hábitos, heatmap anual, radar de balance y tarjetas de insights.
 **Dependencias:** `globals.slint`, `components/habit_*.slint`, `components/analytics_charts.slint`
 ---
 ## ui/pages/login.slint

@@ -208,7 +208,11 @@ component WalletTransactionRow inherits Rectangle {
 export component WalletDetailPanel inherits Rectangle {
     width: 420px;
     height: 100%;
-    background: @linear-gradient(180deg, #0a0a10 0%, #080810 100%);
+    background: @linear-gradient(
+        180deg,
+        Palette.crypto-panel-gradient-start 0%,
+        Palette.crypto-panel-gradient-end 100%
+    );
     
     // Left border accent
     Rectangle {
@@ -237,7 +241,11 @@ export component WalletDetailPanel inherits Rectangle {
                     width: 52px;
                     height: 52px;
                     border-radius: 26px;
-                    background: @linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                    background: @linear-gradient(
+                        135deg,
+                        Palette.crypto-icon-gradient-start 0%,
+                        Palette.crypto-icon-gradient-end 100%
+                    );
                     border-width: 1px;
                     border-color: Palette.border-subtle;
                     y: (parent.height - self.height) / 2;

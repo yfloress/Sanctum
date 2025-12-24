@@ -25,6 +25,7 @@ Sanctum incluye un entorno reproducible con Nix, pero también puedes compilarlo
    ```bash
    cargo build --release   # o: cargo run
    ```
+   Nota: ejecuta los comandos de cargo dentro del shell de Nix salvo que uses dependencias manuales.
 
 ### Opción B: Dependencias manuales (sin Nix)
 Requisitos generales: Rust (`rustup`), `pkg-config`, `cmake`, `ninja`, headers de OpenSSL, SQLCipher y SQLite, fontconfig, X11/Wayland + GL/EGL.

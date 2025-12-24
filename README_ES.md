@@ -8,6 +8,8 @@
     Privado. Encriptado. Local.
   </p>
 
+[English Version](README.md)
+
 <div align="center">
     <a href="">
       <img src="https://img.shields.io/badge/Core-Rust-orange?style=for-the-badge&logo=rust" alt="Rust" />
@@ -117,7 +119,7 @@ Este es un proyecto Open Source moderno que abraza la evolución del desarrollo 
 
 ## Licencia
 
-Este proyecto es de código abierto y está disponible bajo la **Licencia Pública General GNU v3.0**. Consulta el archivo [LICENSE](https://www.google.com/search?q=LICENSE) para más información.
+Este proyecto es de código abierto y está disponible bajo la **Licencia Pública General GNU v3.0**. Consulta el archivo [LICENSE](LICENSE) para más información.
 
 -----
 

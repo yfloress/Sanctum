@@ -25,6 +25,7 @@ Sanctum ships with a reproducible Nix environment, but you can also build manual
    ```bash
    cargo build --release   # or: cargo run
    ```
+   Note: run all cargo commands inside the Nix shell unless you installed the manual dependencies.
 
 ### Option B: Manual dependencies (no Nix)
 General requirements: Rust (via `rustup`), `pkg-config`, `cmake`, `ninja`, OpenSSL dev headers, SQLCipher dev headers, SQLite dev headers, fontconfig, X11/Wayland + GL/EGL headers.

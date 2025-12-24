@@ -407,7 +407,7 @@ impl fmt::Display for FinancialTransactionType {
 
 // ==================== Financial Transactions ====================
 
-/// Representa una transacción financiera
+/// Represents a financial transaction
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Transaction {
     pub id: String,
@@ -421,7 +421,7 @@ pub struct Transaction {
     pub transfer_account_id: Option<String>, // Only for transfers: destination account
 }
 
-/// Resumen de balance financiero
+/// Financial balance summary
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BalanceSummary {
     pub total_balance: i64,
@@ -440,7 +440,7 @@ pub struct AccountBalance {
 }
 
 impl Transaction {
-    /// Crea una nueva transacción
+    /// Creates a new transaction
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         id: String,
@@ -464,14 +464,14 @@ impl Transaction {
         }
     }
 
-    /// Valida que el tipo de transacción sea válido
+    /// Validates that the transaction type is valid
     pub fn validate_type(&self) -> bool {
         self.transaction_type
             .parse::<FinancialTransactionType>()
             .is_ok()
     }
 
-    /// Valida que la transacción sea coherente
+    /// Validates that the transaction is consistent
     pub fn validate(&self) -> bool {
         if !self.validate_type() {
             return false;
@@ -506,6 +506,7 @@ pub struct Habit {
     pub name: String,
     pub description: Option<String>,
     pub color: String,      // Hex color code (e.g., "#8b5cf6")
+    pub category: String,   // mind, body, spirit
     pub created_at: String, // ISO-8601 datetime
     pub archived: bool,     // Soft delete flag
 }
@@ -516,6 +517,7 @@ impl Habit {
         name: String,
         description: Option<String>,
         color: String,
+        category: String,
         created_at: String,
     ) -> Self {
         Self {
@@ -523,13 +525,17 @@ impl Habit {
             name,
             description,
             color,
+            category,
             created_at,
             archived: false,
         }
     }
 
     pub fn validate(&self) -> bool {
-        !self.name.trim().is_empty() && self.color.starts_with('#') && self.color.len() == 7
+        !self.name.trim().is_empty()
+            && self.color.starts_with('#')
+            && self.color.len() == 7
+            && !self.category.trim().is_empty()
     }
 }
 
