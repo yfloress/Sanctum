@@ -706,6 +706,8 @@ export component AddCryptoTransactionModal inherits Rectangle {
     property <int> wallet-index: 0;
     property <int> wallet-index-to: 0;
     property <int> coin-index: 0;
+    property <int> fee-coin-index: 0;
+    property <string> fee-coin-amount: "";
     property <string> swap-amount: "";
     property <int> swap-coin-index: 0;
     property <string> move-amount: "";
@@ -757,6 +759,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
         CryptoAdapter.filter-coin-catalog("");
         wallet-index = CryptoAdapter.default-wallet-index;
         coin-index = CryptoAdapter.default-coin-index;
+        fee-coin-index = coin-index;
         root.refresh-price-from-coin();
     }
 
@@ -764,12 +767,14 @@ export component AddCryptoTransactionModal inherits Rectangle {
         amount = "";
         price = "";
         fee = "0";
+        fee-coin-amount = "";
         notes = "";
         date = AppState.current-date;
         selected-type = "buy";
         wallet-index = CryptoAdapter.default-wallet-index;
         wallet-index-to = 0;
         coin-index = CryptoAdapter.default-coin-index;
+        fee-coin-index = coin-index;
         swap-amount = "";
         swap-coin-index = 0;
         move-amount = "";
@@ -785,6 +790,9 @@ export component AddCryptoTransactionModal inherits Rectangle {
     }
 
     changed coin-index => {
+        if (fee-coin-amount == "") {
+            fee-coin-index = coin-index;
+        }
         root.update-swap-quote();
         root.refresh-price-from-coin();
     }
@@ -812,6 +820,11 @@ export component AddCryptoTransactionModal inherits Rectangle {
             wallet-index = 0;
         }
         let wallet-id = CryptoAdapter.wallet-list[wallet-index].id;
+        let safe-index = coin-index >= CryptoAdapter.coin-catalog.length ? 0 : coin-index;
+        let from-coin-id = CryptoAdapter.coin-catalog[safe-index].id;
+        let from-symbol = CryptoAdapter.coin-catalog[safe-index].symbol;
+        let fee-safe-index = fee-coin-index >= CryptoAdapter.coin-catalog.length ? 0 : fee-coin-index;
+        let fee-coin-id = CryptoAdapter.coin-catalog[fee-safe-index].id;
 
         if (selected-type == "move") {
             if (wallet-index-to >= CryptoAdapter.wallet-list.length) {
@@ -825,10 +838,6 @@ export component AddCryptoTransactionModal inherits Rectangle {
 
             let to-amount = move-amount == "" ? amount : move-amount;
 
-            let safe-index = coin-index >= CryptoAdapter.coin-catalog.length ? 0 : coin-index;
-            let from-coin-id = CryptoAdapter.coin-catalog[safe-index].id;
-            let from-symbol = CryptoAdapter.coin-catalog[safe-index].symbol;
-
             let result = CryptoAdapter.add-transfer(
                 wallet-id,
                 to-wallet-id,
@@ -837,6 +846,8 @@ export component AddCryptoTransactionModal inherits Rectangle {
                 amount,
                 to-amount,
                 fee,
+                fee-coin-id,
+                fee-coin-amount,
                 date,
                 notes
             );
@@ -851,10 +862,6 @@ export component AddCryptoTransactionModal inherits Rectangle {
             }
             return;
         }
-        
-        let safe-index = coin-index >= CryptoAdapter.coin-catalog.length ? 0 : coin-index;
-        let from-coin-id = CryptoAdapter.coin-catalog[safe-index].id;
-        let from-symbol = CryptoAdapter.coin-catalog[safe-index].symbol;
 
         if (selected-type == "swap") {
             if (swap-amount == "") {
@@ -880,6 +887,8 @@ export component AddCryptoTransactionModal inherits Rectangle {
                 to-symbol,
                 swap-amount,
                 fee,
+                fee-coin-id,
+                fee-coin-amount,
                 date,
                 notes
             );
@@ -903,6 +912,8 @@ export component AddCryptoTransactionModal inherits Rectangle {
             amount, 
             price, 
             fee, 
+            fee-coin-id,
+            fee-coin-amount,
             date,
             notes
         );
@@ -1146,6 +1157,21 @@ export component AddCryptoTransactionModal inherits Rectangle {
                             placeholder: "0.00"; 
                             value <=> root.fee; 
                             width: root.selected-type == "swap" ? 160px : 120px;
+                        }
+                    }
+
+                    HorizontalLayout {
+                        spacing: 12px;
+                        CoinSelector {
+                            label: "FEE COIN (OPTIONAL)";
+                            selected-index <=> root.fee-coin-index;
+                            horizontal-stretch: 1;
+                        }
+                        FormField {
+                            label: "FEE AMOUNT";
+                            placeholder: "0.00";
+                            value <=> root.fee-coin-amount;
+                            width: 140px;
                         }
                     }
 

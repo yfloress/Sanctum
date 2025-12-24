@@ -121,6 +121,8 @@ export component EditCryptoTransactionModal inherits Rectangle {
         CryptoAdapter.edit-amount = "";
         CryptoAdapter.edit-price = "";
         CryptoAdapter.edit-fee = "";
+        CryptoAdapter.edit-fee-coin-id = "";
+        CryptoAdapter.edit-fee-coin-amount = "";
         CryptoAdapter.edit-date = AppState.current-date;
         CryptoAdapter.edit-notes = "";
     }
@@ -142,6 +144,8 @@ export component EditCryptoTransactionModal inherits Rectangle {
             CryptoAdapter.edit-amount,
             CryptoAdapter.edit-price,
             CryptoAdapter.edit-fee,
+            CryptoAdapter.edit-fee-coin-id,
+            CryptoAdapter.edit-fee-coin-amount,
             CryptoAdapter.edit-date,
             CryptoAdapter.edit-notes
         );
@@ -276,6 +280,22 @@ export component EditCryptoTransactionModal inherits Rectangle {
                             placeholder: "0.00"; 
                             value <=> CryptoAdapter.edit-fee; 
                             width: 120px;
+                        }
+                    }
+
+                    HorizontalLayout {
+                        spacing: 12px;
+                        FormField {
+                            label: "FEE COIN ID (OPTIONAL)";
+                            placeholder: "e.g. ethereum";
+                            value <=> CryptoAdapter.edit-fee-coin-id;
+                            horizontal-stretch: 1;
+                        }
+                        FormField {
+                            label: "FEE AMOUNT";
+                            placeholder: "0.00";
+                            value <=> CryptoAdapter.edit-fee-coin-amount;
+                            width: 140px;
                         }
                     }
 

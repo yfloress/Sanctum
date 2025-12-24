@@ -13,7 +13,7 @@ use sanctum::controller::{
     AppController, MonthlyTrendPoint, SETTING_AUTO_FETCH, SETTING_CRYPTO_LAST_COIN_ID,
     SETTING_CRYPTO_LAST_UPDATED, SETTING_CRYPTO_LAST_WALLET_ID,
 };
-use sanctum::models::CryptoAsset;
+use sanctum::models::{CryptoAsset, CryptoTransaction};
 use sanctum::security_log::init_security_logger;
 use slint::SharedString;
 use slint::{Image, Model, ModelRc, VecModel, Weak};
@@ -373,6 +373,40 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let formatted = format!("{digits}{grouped}");
         format!("$ {formatted}")
+    }
+
+    fn format_crypto_amount(amount: f64) -> String {
+        let mut formatted = format!("{:.8}", amount);
+        while formatted.contains('.') && formatted.ends_with('0') {
+            formatted.pop();
+        }
+        if formatted.ends_with('.') {
+            formatted.pop();
+        }
+        formatted
+    }
+
+    fn format_fee_display(
+        tx: &CryptoTransaction,
+        symbol_map: &HashMap<String, String>,
+    ) -> String {
+        let mut parts = Vec::new();
+        if let Some(fee) = tx.fee
+            && fee > 0.0
+        {
+            parts.push(format_money((fee * 100.0) as i64, "USD"));
+        }
+        if let (Some(fee_coin_id), Some(fee_amount)) =
+            (tx.fee_coin_id.as_ref(), tx.fee_amount)
+            && fee_amount > 0.0
+        {
+            let symbol = symbol_map
+                .get(fee_coin_id.as_str())
+                .cloned()
+                .unwrap_or_else(|| fee_coin_id.to_uppercase());
+            parts.push(format!("{} {}", format_crypto_amount(fee_amount), symbol));
+        }
+        parts.join(" + ")
     }
 
     fn color_from_hex(hex: &str) -> slint::Color {
@@ -2113,7 +2147,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let notify = show_notification.clone();
 
         // (wallet_id, coin_id, symbol, type, amount, price, fee, date)
-        // (wallet_id, coin_id, symbol, type, amount, price, fee, date, notes)
+        // (wallet_id, coin_id, symbol, type, amount, price, fee, fee_coin_id, fee_coin_amount, date, notes)
         ui.global::<CryptoAdapter>().on_add_transaction(
             move |wallet_id_raw,
                   coin_id,
@@ -2122,6 +2156,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                   amount_str,
                   price_str,
                   fee_str,
+                  fee_coin_id_str,
+                  fee_coin_amount_str,
                   date,
                   notes_str|
                   -> SharedString {
@@ -2160,6 +2196,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 };
 
+                let fee_coin_amount_clean = fee_coin_amount_str
+                    .replace(",", "")
+                    .replace("$", "")
+                    .trim()
+                    .to_string();
+                let fee_coin_amount: Option<f64> = if fee_coin_amount_clean.is_empty() {
+                    None
+                } else {
+                    match fee_coin_amount_clean.parse() {
+                        Ok(v) if v > 0.0 => Some(v),
+                        Ok(0.0) => None,
+                        Ok(_) => {
+                            return SharedString::from("Fee amount cannot be negative");
+                        }
+                        Err(_) => return SharedString::from("Invalid fee amount format"),
+                    }
+                };
+                let fee_coin_id = if fee_coin_id_str.trim().is_empty() {
+                    None
+                } else {
+                    Some(fee_coin_id_str.to_string())
+                };
+
                 let notes = if notes_str.is_empty() {
                     None
                 } else {
@@ -2175,6 +2234,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     amount,
                     price_per_coin,
                     fee,
+                    fee_coin_id,
+                    fee_coin_amount,
                     date.to_string(),
                     notes,
                 );
@@ -2203,7 +2264,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_weak = ui_weak.clone();
         let notify = show_notification.clone();
 
-        // (from_wallet_id, to_wallet_id, coin_id, symbol, from_amount, to_amount, fee, date, notes)
+        // (from_wallet_id, to_wallet_id, coin_id, symbol, from_amount, to_amount, fee, fee_coin_id, fee_coin_amount, date, notes)
         ui.global::<CryptoAdapter>().on_add_transfer(
             move |from_wallet_id,
                   to_wallet_id,
@@ -2212,6 +2273,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                   from_amount_str,
                   to_amount_str,
                   fee_str,
+                  fee_coin_id_str,
+                  fee_coin_amount_str,
                   date,
                   notes_str|
                   -> SharedString {
@@ -2250,6 +2313,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 };
 
+                let fee_coin_amount_clean = fee_coin_amount_str
+                    .replace(",", "")
+                    .replace("$", "")
+                    .trim()
+                    .to_string();
+                let fee_coin_amount: Option<f64> = if fee_coin_amount_clean.is_empty() {
+                    None
+                } else {
+                    match fee_coin_amount_clean.parse() {
+                        Ok(v) if v > 0.0 => Some(v),
+                        Ok(0.0) => None,
+                        Ok(_) => {
+                            return SharedString::from("Fee amount cannot be negative");
+                        }
+                        Err(_) => return SharedString::from("Invalid fee amount format"),
+                    }
+                };
+                let fee_coin_id = if fee_coin_id_str.trim().is_empty() {
+                    None
+                } else {
+                    Some(fee_coin_id_str.to_string())
+                };
+
                 let notes = if notes_str.is_empty() {
                     None
                 } else {
@@ -2264,6 +2350,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     from_amount,
                     to_amount,
                     fee,
+                    fee_coin_id,
+                    fee_coin_amount,
                     date.to_string(),
                     notes,
                 );
@@ -2302,6 +2390,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                   to_symbol,
                   to_amount_str,
                   fee_str,
+                  fee_coin_id_str,
+                  fee_coin_amount_str,
                   date,
                   notes_str|
                   -> SharedString {
@@ -2336,6 +2426,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 };
 
+                let fee_coin_amount_clean = fee_coin_amount_str
+                    .replace(",", "")
+                    .replace("$", "")
+                    .trim()
+                    .to_string();
+                let fee_coin_amount: Option<f64> = if fee_coin_amount_clean.is_empty() {
+                    None
+                } else {
+                    match fee_coin_amount_clean.parse() {
+                        Ok(v) if v > 0.0 => Some(v),
+                        Ok(0.0) => None,
+                        Ok(_) => {
+                            return SharedString::from("Fee amount cannot be negative");
+                        }
+                        Err(_) => return SharedString::from("Invalid fee amount format"),
+                    }
+                };
+                let fee_coin_id = if fee_coin_id_str.trim().is_empty() {
+                    None
+                } else {
+                    Some(fee_coin_id_str.to_string())
+                };
+
                 let notes = if notes_str.is_empty() {
                     None
                 } else {
@@ -2351,6 +2464,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     to_symbol.to_string(),
                     to_amount,
                     fee,
+                    fee_coin_id,
+                    fee_coin_amount,
                     date.to_string(),
                     notes,
                 );
@@ -2406,6 +2521,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .map(|p| format!("{:.4}", p))
                     .unwrap_or_default();
                 let fee_str = tx.fee.map(|f| format!("{:.4}", f)).unwrap_or_default();
+                let fee_coin_id = tx.fee_coin_id.clone().unwrap_or_default();
+                let fee_coin_amount = tx
+                    .fee_amount
+                    .map(format_crypto_amount)
+                    .unwrap_or_default();
                 let amount_str = format!("{:.4}", tx.amount);
                 let notes_str = tx.notes.unwrap_or_default();
 
@@ -2429,6 +2549,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     ui.global::<CryptoAdapter>()
                         .set_edit_fee(SharedString::from(fee_str));
                     ui.global::<CryptoAdapter>()
+                        .set_edit_fee_coin_id(SharedString::from(fee_coin_id));
+                    ui.global::<CryptoAdapter>()
+                        .set_edit_fee_coin_amount(SharedString::from(fee_coin_amount));
+                    ui.global::<CryptoAdapter>()
                         .set_edit_date(SharedString::from(&tx.date));
                     ui.global::<CryptoAdapter>()
                         .set_edit_notes(SharedString::from(notes_str));
@@ -2442,7 +2566,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let controller = controller.clone();
         ui.global::<CryptoAdapter>()
-            .on_update_transaction(move |id, amount_str, price_str, fee_str, date, notes_str| {
+            .on_update_transaction(move |id,
+                                        amount_str,
+                                        price_str,
+                                        fee_str,
+                                        fee_coin_id_str,
+                                        fee_coin_amount_str,
+                                        date,
+                                        notes_str| {
                 let amount_clean = amount_str
                     .replace(",", "")
                     .replace("$", "")
@@ -2477,6 +2608,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 };
 
+                let fee_coin_amount_clean = fee_coin_amount_str
+                    .replace(",", "")
+                    .replace("$", "")
+                    .trim()
+                    .to_string();
+                let fee_coin_amount: Option<f64> = if fee_coin_amount_clean.is_empty() {
+                    None
+                } else {
+                    match fee_coin_amount_clean.parse() {
+                        Ok(v) if v > 0.0 => Some(v),
+                        Ok(0.0) => None,
+                        Ok(_) => {
+                            return SharedString::from("Fee amount cannot be negative");
+                        }
+                        Err(_) => return SharedString::from("Invalid fee amount format"),
+                    }
+                };
+                let fee_coin_id = if fee_coin_id_str.trim().is_empty() {
+                    None
+                } else {
+                    Some(fee_coin_id_str.to_string())
+                };
+
                 let notes = if notes_str.is_empty() {
                     None
                 } else {
@@ -2488,6 +2642,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     amount,
                     price_per_coin,
                     fee,
+                    fee_coin_id,
+                    fee_coin_amount,
                     date.to_string(),
                     notes,
                 ) {
@@ -2597,6 +2753,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let history = controller
                         .get_wallet_transactions(wallet_id_str.clone())
                         .unwrap_or_default();
+                    let symbol_map: HashMap<String, String> = controller
+                        .get_coin_catalog()
+                        .unwrap_or_else(|_| crypto::default_coin_catalog())
+                        .into_iter()
+                        .map(|coin| (coin.id, coin.symbol))
+                        .collect();
                     let history_type_map: HashMap<String, String> = history
                         .iter()
                         .map(|tx| (tx.id.clone(), tx.transaction_type.clone()))
@@ -2612,12 +2774,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             } else {
                                 "N/A".to_string()
                             };
-                            let fee_val = tx.fee.unwrap_or(0.0);
-                            let fee_fmt = if fee_val > 0.0 {
-                                format_money((fee_val * 100.0) as i64, "USD")
-                            } else {
-                                "".to_string()
-                            };
+                            let fee_fmt = format_fee_display(tx, &symbol_map);
                             let notes = tx.notes.clone().unwrap_or_default();
                             let is_swap = tx.transaction_type == "swap"
                                 || (tx.transaction_type == "transfer_in"
@@ -3154,6 +3311,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let history = controller
                         .get_crypto_transactions_by_coin(coin_id_str)
                         .unwrap_or_default();
+                    let symbol_map: HashMap<String, String> = controller
+                        .get_coin_catalog()
+                        .unwrap_or_else(|_| crypto::default_coin_catalog())
+                        .into_iter()
+                        .map(|coin| (coin.id, coin.symbol))
+                        .collect();
                     let history_type_map: HashMap<String, String> = history
                         .iter()
                         .map(|tx| (tx.id.clone(), tx.transaction_type.clone()))
@@ -3169,12 +3332,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             } else {
                                 "N/A".to_string()
                             };
-                            let fee_val = tx.fee.unwrap_or(0.0);
-                            let fee_fmt = if fee_val > 0.0 {
-                                format_money((fee_val * 100.0) as i64, "USD")
-                            } else {
-                                "".to_string()
-                            };
+                            let fee_fmt = format_fee_display(tx, &symbol_map);
                             let notes = tx.notes.clone().unwrap_or_default();
                             let is_swap = tx.transaction_type == "swap"
                                 || (tx.transaction_type == "transfer_in"
