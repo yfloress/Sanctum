@@ -141,7 +141,7 @@ of your recovery keys.
 ## License
 
 This project is open-source and available under the **GNU General Public License
-v3.0**. See the [LICENSE](https://www.google.com/search?q=LICENSE) file for more info.
+v3.0**. See the [LICENSE](LICENSE) file for more info.
 
 -----
 
