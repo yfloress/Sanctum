@@ -1393,56 +1393,56 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         root.fill(&RGBAColor(0, 0, 0, 0.0)).ok()?;
 
         let mut chart_data = data.to_vec();
-        chart_data.reverse();
-        let rows = chart_data.len().max(1) as f32;
+        chart_data.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap_or(Ordering::Equal));
 
-        let mut chart = ChartBuilder::on(&root)
-            .margin(30)
-            .x_label_area_size(60)
-            .y_label_area_size(360)
-            .build_cartesian_2d(0f32..100f32, 0f32..rows)
-            .ok()?;
+        let values: Vec<f64> = chart_data
+            .iter()
+            .map(|(_, _, rate)| (rate * 100.0).clamp(0.0, 100.0) as f64)
+            .collect();
+        let total: f64 = values.iter().sum();
+        if total <= 0.0 {
+            return None;
+        }
 
-        chart
-            .configure_mesh()
-            .disable_mesh()
-            .x_labels(5)
-            .y_labels(chart_data.len())
-            .x_label_formatter(&|v| format!("{:.0}%", v))
-            .y_label_formatter(&|v| {
-                let idx = (*v).floor() as usize;
-                chart_data
-                    .get(idx)
-                    .map(|row| row.0.clone())
-                    .unwrap_or_default()
-            })
-            .label_style(("sans-serif", 22).into_font().color(&RGBColor(148, 163, 184)))
-            .axis_style(ShapeStyle::from(&RGBColor(46, 46, 60)).stroke_width(1))
-            .draw()
-            .ok()?;
+        let colors: Vec<RGBColor> = chart_data
+            .iter()
+            .map(|(_, color, _)| rgb_from_hex(color))
+            .collect();
+        let labels: Vec<String> = vec![String::new(); chart_data.len()];
 
-        for (idx, (_, color, rate)) in chart_data.iter().enumerate() {
-            let value = (rate * 100.0).clamp(0.0, 100.0);
-            let y0 = idx as f32;
-            let y1 = y0 + 1.0;
-            let fill = rgb_from_hex(color).mix(0.85);
-            chart
-                .draw_series(std::iter::once(Rectangle::new(
-                    [(0.0, y0), (value, y1)],
-                    fill.filled(),
-                )))
+        let (left, right) = root.split_horizontally(1400);
+        let (left_w, left_h) = left.dim_in_pixel();
+        let center = (left_w as i32 / 2, left_h as i32 / 2);
+        let radius = (left_h as f64 * 0.38).min(left_w as f64 * 0.35);
+        let mut pie = Pie::new(&center, &radius, &values, &colors, &labels);
+        pie.start_angle(-90.0);
+        pie.donut_hole(radius * 0.55);
+        left.draw(&pie).ok()?;
+
+        let (_, right_h) = right.dim_in_pixel();
+        let line_height = 52;
+        let total_height = chart_data.len() as i32 * line_height;
+        let start_y = ((right_h as i32 - total_height) / 2).max(30);
+        let label_color = RGBColor(148, 163, 184);
+
+        for (idx, (name, color, rate)) in chart_data.iter().enumerate() {
+            let y = start_y + idx as i32 * line_height;
+            let swatch = rgb_from_hex(color);
+            let swatch_x = 24;
+            right
+                .draw(&Rectangle::new(
+                    [(swatch_x, y - 12), (swatch_x + 22, y + 12)],
+                    swatch.filled(),
+                ))
                 .ok()?;
 
-            let label = format!("{:.0}%", value);
-            let label_x = if value > 92.0 { value - 6.0 } else { value + 1.5 };
-            chart
-                .draw_series(std::iter::once(Text::new(
+            let label = format!("{}  {:.0}%", name, rate * 100.0);
+            right
+                .draw(&Text::new(
                     label,
-                    (label_x, y0 + 0.5),
-                    ("sans-serif", 20)
-                        .into_font()
-                        .color(&RGBColor(148, 163, 184)),
-                )))
+                    (swatch_x + 34, y + 8),
+                    ("sans-serif", 28).into_font().color(&label_color),
+                ))
                 .ok()?;
         }
 
@@ -1474,8 +1474,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let mut chart = ChartBuilder::on(&root)
             .margin(28)
-            .x_label_area_size(70)
-            .y_label_area_size(50)
+            .x_label_area_size(90)
+            .y_label_area_size(70)
             .build_cartesian_2d(0..x_max, 0f32..upper)
             .ok()?;
 
@@ -1485,7 +1485,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .x_labels(weeks.min(6))
             .y_labels(5)
             .x_label_formatter(&|v| format!("W{}", v + 1))
-            .label_style(("sans-serif", 22).into_font().color(&RGBColor(148, 163, 184)))
+            .label_style(("sans-serif", 28).into_font().color(&RGBColor(148, 163, 184)))
             .axis_style(ShapeStyle::from(&RGBColor(46, 46, 60)).stroke_width(1))
             .draw()
             .ok()?;
@@ -1522,7 +1522,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .configure_series_labels()
             .border_style(ShapeStyle::from(&RGBColor(46, 46, 60)).stroke_width(1))
             .background_style(RGBAColor(0, 0, 0, 0.0))
-            .label_font(("sans-serif", 20).into_font().color(&RGBColor(148, 163, 184)))
+            .label_font(("sans-serif", 26).into_font().color(&RGBColor(148, 163, 184)))
             .position(SeriesLabelPosition::UpperRight)
             .draw()
             .ok()?;
