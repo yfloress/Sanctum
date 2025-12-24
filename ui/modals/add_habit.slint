@@ -189,8 +189,8 @@ export component AddHabitModal inherits Rectangle {
 
     // Modal panel
     Rectangle {
-        width: 440px;
-        height: 600px;
+        width: min(Palette.modal-width-md, parent.width - 40px);
+        height: min(Palette.modal-height-md, parent.height - 40px);
         background: @linear-gradient(180deg, Palette.sidebar-bg 0%, #0f0f1a 100%);
         border-radius: 16px;
         border-width: 1px;

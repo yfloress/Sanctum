@@ -27,6 +27,19 @@ export global Palette {
     out property <color> danger: #ef4444;          // Red
     out property <color> warning: #f59e0b;         // Amber
 
+    // Delete button colors
+    out property <color> delete-bg: #3d2020;       // Dark red background
+    out property <color> delete-bg-hover: #5a2020; // Hover state
+    out property <color> delete-bg-active: #7a2020; // Active/pressed state
+    out property <color> delete-border: #ff4444;   // Red border
+
+    // Heatmap intensity levels
+    out property <color> heatmap-level-0: surface-hover; // No activity
+    out property <color> heatmap-level-1: #3b2f5f; // Low activity
+    out property <color> heatmap-level-2: #6b4f9f; // Medium activity
+    out property <color> heatmap-level-3: #8b5cf6; // High activity
+    out property <color> heatmap-level-4: #a78bfa; // Max activity
+
     // Text colors
     out property <color> text-primary: #ffffff;    // Pure white - Titles
     out property <color> text-secondary: #a3a3a3;  // Gray - Body text
@@ -46,6 +59,14 @@ export global Palette {
     out property <length> spacing-lg: 24px;
     out property <length> spacing-xl: 32px;
     out property <length> spacing-2xl: 48px;
+
+    // Component dimensions
+    out property <length> habit-row-height: 72px;
+    out property <length> day-cell-size: 26px;
+    out property <length> chart-min-height-sm: 200px;
+    out property <length> chart-min-height-md: 280px;
+    out property <length> modal-width-md: 440px;
+    out property <length> modal-height-md: 600px;
 
     // Border radius
     out property <length> radius-sm: 2px;

@@ -2463,6 +2463,13 @@ impl AppController {
             .map_err(ControllerError::Database)
     }
 
+    /// Gets all habit logs (optimized for bulk operations like streak calculation)
+    /// This avoids N+1 query problems by fetching all logs at once
+    pub fn get_all_habit_logs(&self) -> std::result::Result<Vec<HabitLog>, ControllerError> {
+        // Use a wide date range to cover all reasonable dates
+        self.get_habit_logs("1970-01-01".to_string(), "2100-01-01".to_string())
+    }
+
     /// Gets habit analytics: weekday efficiency and monthly trend
     pub fn get_habit_analytics(&self, days: i32) -> Result<HabitAnalytics, ControllerError> {
         let today = chrono::Local::now().date_naive();

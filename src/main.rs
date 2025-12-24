@@ -995,10 +995,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             // OPTIMIZATION: Fetch ALL historical logs once for streak calculations
             // Instead of querying per habit inside the loop (N+1 problem), we query once.
-            // "1970-01-01" to "2100-01-01" covers all reasonable dates.
-            let all_history_logs = controller
-                .get_habit_logs("1970-01-01".to_string(), "2100-01-01".to_string())
-                .unwrap_or_default();
+            let all_history_logs = controller.get_all_habit_logs().unwrap_or_default();
 
             // Group history logs by habit_id -> Sorted Vec of NaiveDates
             let mut history_map: HashMap<String, Vec<chrono::NaiveDate>> = HashMap::new();

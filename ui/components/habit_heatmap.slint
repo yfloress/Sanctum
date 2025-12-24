@@ -46,11 +46,11 @@ component HeatmapCell inherits Rectangle {
     // Elevate when hovered to show tooltip above neighbors
     z: ta.has-hover ? 1000 : 1;
 
-    background: level == 0 ? Palette.surface-hover :
-                level == 1 ? #3b2f5f :
-                level == 2 ? #6b4f9f :
-                level == 3 ? #8b5cf6 :
-                level == 4 ? #a78bfa : Palette.surface-hover;
+    background: level == 0 ? Palette.heatmap-level-0 :
+                level == 1 ? Palette.heatmap-level-1 :
+                level == 2 ? Palette.heatmap-level-2 :
+                level == 3 ? Palette.heatmap-level-3 :
+                level == 4 ? Palette.heatmap-level-4 : Palette.heatmap-level-0;
     border-width: level > 0 ? 0px : 1px;
     border-color: Palette.border;
 
@@ -61,7 +61,7 @@ component HeatmapCell inherits Rectangle {
         width: parent.width + 2px;
         height: parent.height + 2px;
         border-radius: 4px;
-        background: level == 3 ? #8b5cf6 : #a78bfa;
+        background: level == 3 ? Palette.heatmap-level-3 : Palette.heatmap-level-4;
         opacity: 0.3;
     }
 
@@ -77,7 +77,7 @@ component HeatmapCell inherits Rectangle {
 
 export component HabitHeatmap inherits Rectangle {
     width: 100%;
-    height: 100%; // Toma toda la altura del contenedor padre
+    height: 100%; // Takes full height of parent container
     background: transparent;
 
     VerticalLayout {
@@ -85,11 +85,11 @@ export component HabitHeatmap inherits Rectangle {
         padding-right: 12px;
         padding-top: 8px;
         padding-bottom: 20px;
-        spacing: 12px; // Espacio entre legend y heatmap
+        spacing: 12px; // Space between legend and heatmap
 
         // Legend
         HorizontalLayout {
-            height: 16px; // Altura fija para la leyenda
+            height: 16px; // Fixed height for legend
             alignment: end;
             spacing: 6px;
             
@@ -116,15 +116,15 @@ export component HabitHeatmap inherits Rectangle {
 
         // Heatmap Grid Container
         grid-container := Rectangle {
-            vertical-stretch: 1; // Ocupa el espacio restante
+            vertical-stretch: 1; // Takes remaining space
             clip: false; // Allow tooltip to overflow container
 
             // Heatmap Grid
             heatmap-scroll := Flickable {
-                // Altura del contenido: 7 filas * 14px + 6 espacios * 4px = 122px
+                // Content height: 7 rows * 14px + 6 spaces * 4px = 122px
                 // + 30px padding top = 152px minimum
                 height: 160px;
-                // Centrado vertical
+                // Vertically centered
                 y: (parent.height - self.height) / 2;
                 width: parent.width;
                 interactive: true;
