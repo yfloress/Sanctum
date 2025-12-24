@@ -1495,7 +1495,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let (_, root_h) = root.dim_in_pixel();
         let legend_line_height = 56;
         let legend_height = ((series.len() as i32) * legend_line_height + 24)
-            .min((root_h as i32 * 0.5) as i32)
+            .min((root_h as i32) / 2)
             .max(120);
         let plot_height = (root_h as i32 - legend_height).max(240);
         let (plot_area, legend_area) = root.split_vertically(plot_height as u32);
