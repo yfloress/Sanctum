@@ -1500,6 +1500,102 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         render_svg_image(&temp_svg, "sanctum_habits_radar.svg")
     }
 
+    fn render_weekday_efficiency_chart(weekdays: &[(String, f32, bool)]) -> Option<Image> {
+        if weekdays.is_empty() {
+            return None;
+        }
+
+        let temp_svg = std::env::temp_dir().join("sanctum_weekday_efficiency_temp.svg");
+        let root = SVGBackend::new(&temp_svg, (1400, 600)).into_drawing_area();
+        root.fill(&RGBAColor(0, 0, 0, 0.0)).ok()?;
+
+        let padding: i32 = 80;
+        let chart_width: i32 = 1400 - (padding * 2);
+        let chart_height: i32 = 600 - (padding * 2);
+        let bar_spacing: i32 = 20;
+        let num_bars = weekdays.len() as i32;
+        let bar_width: i32 = (chart_width - (bar_spacing * (num_bars - 1))) / num_bars;
+
+        // Find max value for scaling
+        let max_avg = weekdays.iter().map(|(_, avg, _)| *avg).fold(0.0_f32, f32::max);
+        if max_avg <= 0.0 {
+            return None;
+        }
+
+        // Colors
+        let accent_color = RGBColor(139, 92, 246); // Purple accent
+        let gray_color = RGBColor(72, 84, 102); // Muted gray
+        let text_color = RGBColor(148, 163, 184);
+        let grid_color = RGBColor(46, 46, 60);
+
+        // Draw horizontal grid lines
+        for i in 0..5 {
+            let y = padding + (chart_height * i / 4);
+            root.draw(&PathElement::new(
+                vec![(padding, y), (padding + chart_width, y)],
+                ShapeStyle::from(&grid_color).stroke_width(1),
+            ))
+            .ok()?;
+        }
+
+        // Draw bars and labels
+        for (idx, (day_label, avg_count, is_best)) in weekdays.iter().enumerate() {
+            let x = padding + (idx as i32 * (bar_width + bar_spacing));
+            let bar_height = ((*avg_count / max_avg) * chart_height as f32) as i32;
+            let y = padding + chart_height - bar_height;
+
+            // Choose color based on whether it's the best day
+            let bar_color = if *is_best { accent_color } else { gray_color };
+
+            // Draw bar
+            root.draw(&Rectangle::new(
+                [(x, y), (x + bar_width, padding + chart_height)],
+                bar_color.filled(),
+            ))
+            .ok()?;
+
+            // Draw glow effect for best day
+            if *is_best {
+                root.draw(&Rectangle::new(
+                    [(x - 2, y - 2), (x + bar_width + 2, padding + chart_height + 2)],
+                    RGBAColor(139, 92, 246, 0.3).filled(),
+                ))
+                .ok()?;
+            }
+
+            // Draw day label below bar
+            let label_y = padding + chart_height + 35;
+            let label_x = x + bar_width / 2;
+            let label_style = ("sans-serif", 42)
+                .into_font()
+                .color(&text_color)
+                .pos(Pos::new(HPos::Center, VPos::Top));
+            root.draw(&Text::new(
+                day_label.clone(),
+                (label_x, label_y),
+                label_style,
+            ))
+            .ok()?;
+
+            // Draw value above bar
+            let value_text = format!("{:.1}", avg_count);
+            let value_y = y - 12;
+            let value_style = ("sans-serif", 36)
+                .into_font()
+                .color(if *is_best { &accent_color } else { &text_color })
+                .pos(Pos::new(HPos::Center, VPos::Bottom));
+            root.draw(&Text::new(
+                value_text,
+                (label_x, value_y),
+                value_style,
+            ))
+            .ok()?;
+        }
+
+        root.present().ok()?;
+        render_svg_image(&temp_svg, "sanctum_weekday_efficiency.svg")
+    }
+
     fn render_portfolio_distribution_chart(data: &[(String, f64)]) -> Option<Image> {
         if data.is_empty() {
             return None;
@@ -1848,10 +1944,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "Hoy estas en tu promedio habitual.".to_string()
         };
 
+        // Generate weekday efficiency bar chart
+        let weekday_short_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+        let mut weekday_data: Vec<(String, f32, bool)> = Vec::new();
+        let mut max_weekday_avg = 0.0f32;
+
+        for idx in 0..7 {
+            let avg = if weekday_occurrences[idx] > 0.0 {
+                weekday_counts[idx] / weekday_occurrences[idx]
+            } else {
+                0.0
+            };
+            if avg > max_weekday_avg {
+                max_weekday_avg = avg;
+            }
+            weekday_data.push((weekday_short_names[idx].to_string(), avg, false));
+        }
+
+        // Mark the best day(s)
+        if max_weekday_avg > 0.0 {
+            for (_, avg, is_best) in &mut weekday_data {
+                if (*avg - max_weekday_avg).abs() < 0.001 {
+                    *is_best = true;
+                }
+            }
+        }
+
+        let weekday_chart_image = if total_completed > 0 && max_weekday_avg > 0.0 {
+            render_weekday_efficiency_chart(&weekday_data)
+        } else {
+            None
+        };
+
         if let Some(ui) = ui_weak.upgrade() {
             let adapter = ui.global::<HabitAdapter>();
             adapter.set_habits_radar_chart_image(radar_image.unwrap_or_default());
             adapter.set_habits_radar_has_data(total_completed > 0);
+            adapter.set_habits_weekday_chart_image(weekday_chart_image.unwrap_or_default());
+            adapter.set_habits_weekday_has_data(total_completed > 0 && max_weekday_avg > 0.0);
             adapter.set_habits_weekly_primary(weekly_primary.into());
             adapter.set_habits_weekly_secondary(weekly_secondary.into());
             adapter.set_habits_insight_primary(insight_primary.into());

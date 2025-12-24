@@ -4,7 +4,7 @@
 import { Palette, HabitAdapter, AppState } from "../globals.slint";
 import { HabitRow } from "../components/habit_row.slint";
 import { HabitHeatmap } from "../components/habit_heatmap.slint";
-import { HabitRadarChart, InsightCard } from "../components/analytics_charts.slint";
+import { HabitRadarChart, WeekdayEfficiencyChart, InsightCard } from "../components/analytics_charts.slint";
 import { TextButton, ActionButton } from "../widgets.slint";
 import { AddHabitModal } from "../modals/add_habit.slint";
 
@@ -337,6 +337,12 @@ export component HabitsPage inherits Rectangle {
                         horizontal-stretch: 1;
                         image: HabitAdapter.habits-radar-chart-image;
                         has-data: HabitAdapter.habits-radar-has-data;
+                    }
+
+                    WeekdayEfficiencyChart {
+                        horizontal-stretch: 1;
+                        image: HabitAdapter.habits-weekday-chart-image;
+                        has-data: HabitAdapter.habits-weekday-has-data;
                     }
 
                     InsightCard {
