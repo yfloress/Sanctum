@@ -333,16 +333,20 @@ export component HabitsPage inherits Rectangle {
                         title: "ANALYTICS";
                     }
 
-                    HabitRadarChart {
-                        horizontal-stretch: 1;
-                        image: HabitAdapter.habits-radar-chart-image;
-                        has-data: HabitAdapter.habits-radar-has-data;
-                    }
+                    HorizontalLayout {
+                        spacing: 16px;
 
-                    WeekdayEfficiencyChart {
-                        horizontal-stretch: 1;
-                        image: HabitAdapter.habits-weekday-chart-image;
-                        has-data: HabitAdapter.habits-weekday-has-data;
+                        HabitRadarChart {
+                            horizontal-stretch: 1;
+                            image: HabitAdapter.habits-radar-chart-image;
+                            has-data: HabitAdapter.habits-radar-has-data;
+                        }
+
+                        WeekdayEfficiencyChart {
+                            horizontal-stretch: 1;
+                            image: HabitAdapter.habits-weekday-chart-image;
+                            has-data: HabitAdapter.habits-weekday-has-data;
+                        }
                     }
 
                     InsightCard {
