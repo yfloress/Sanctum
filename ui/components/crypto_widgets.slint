@@ -16,7 +16,11 @@ export component CryptoIcon inherits Rectangle {
     clip: true;
     
     // Gradient background based on symbol
-    background: @linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    background: @linear-gradient(
+        135deg,
+        Palette.crypto-icon-gradient-start 0%,
+        Palette.crypto-icon-gradient-end 100%
+    );
     border-width: 1px;
     border-color: Palette.border-subtle;
     
@@ -200,7 +204,8 @@ export component WalletRow inherits Rectangle {
     callback delete;
     callback clicked;
 
-    property <bool> confirm-mode: false;
+    property <bool> show-delete-button: false;
+    property <bool> show-confirm-delete: false;
 
     horizontal-stretch: 1;
     height: 72px;
@@ -211,14 +216,9 @@ export component WalletRow inherits Rectangle {
         width: parent.width;
         height: parent.height;
         mouse-cursor: pointer;
-        clicked => { 
+        clicked => {
             if (!del-area.has-hover) {
-                root.clicked(); 
-            }
-        }
-        pointer-event(event) => {
-            if (event.kind == PointerEventKind.down && !del-area.has-hover) {
-                root.confirm-mode = false;
+                root.clicked();
             }
         }
     }
@@ -231,7 +231,7 @@ export component WalletRow inherits Rectangle {
 
         // Wallet Info
         HorizontalLayout {
-            width: 300px;
+            width: Palette.wallet-info-width;
             spacing: 16px;
             alignment: start;
             
@@ -240,7 +240,11 @@ export component WalletRow inherits Rectangle {
                 width: 44px; 
                 height: 44px; 
                 border-radius: 10px; 
-                background: @linear-gradient(135deg, #1f1f2e 0%, #2a2a3e 100%);
+                background: @linear-gradient(
+                    135deg,
+                    Palette.crypto-wallet-icon-gradient-start 0%,
+                    Palette.crypto-wallet-icon-gradient-end 100%
+                );
                 border-width: 1px;
                 border-color: Palette.border-subtle;
                 y: (parent.height - self.height) / 2;
@@ -308,37 +312,130 @@ export component WalletRow inherits Rectangle {
             horizontal-alignment: right; 
         }
         
-        // Delete button / Confirm
+        // Delete button
         Rectangle {
-            width: root.confirm-mode ? 80px : 40px; 
+            width: 40px;
             height: 40px;
             y: (parent.height - self.height) / 2;
             border-radius: 8px;
-            background: root.confirm-mode ? Palette.danger : (del-area.has-hover ? Palette.danger.with-alpha(0.1) : transparent);
-            
-            animate width { duration: 150ms; }
+            background: del-area.has-hover ? Palette.danger.with-alpha(0.1) : transparent;
+
             animate background { duration: 150ms; }
-            
-            Text { 
-                text: root.confirm-mode ? "SURE?" : "✕"; 
-                color: root.confirm-mode ? #ffffff : (del-area.has-hover ? Palette.danger : Palette.text-muted);
-                font-size: root.confirm-mode ? 10px : 14px; 
+
+            Text {
+                text: "✕";
+                color: del-area.has-hover ? Palette.danger : Palette.text-muted;
+                font-size: 14px;
                 font-weight: 700;
-                letter-spacing: root.confirm-mode ? 1px : 0px;
-                vertical-alignment: center; 
+                vertical-alignment: center;
                 horizontal-alignment: center;
                 animate color { duration: 150ms; }
             }
-            del-area := TouchArea { 
+            del-area := TouchArea {
                 mouse-cursor: pointer;
-                clicked => { 
-                    if (root.confirm-mode) {
-                        root.delete();
-                    } else {
-                        root.confirm-mode = true;
+                clicked => {
+                    root.show-confirm-delete = true;
+                }
+            }
+        }
+    }
+
+    // Delete confirmation dialog
+    if root.show-confirm-delete: Rectangle {
+        width: 100%;
+        height: 100%;
+        z: 1000;
+        background: Palette.overlay-bg-soft;
+
+        Rectangle {
+            width: min(320px, parent.width - 40px);
+            height: min(160px, parent.height - 40px);
+            background: Palette.sidebar-bg;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: Palette.border-light;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            drop-shadow-blur: 20px;
+            drop-shadow-color: Palette.shadow-color;
+
+            VerticalLayout {
+                padding: 24px;
+                spacing: 16px;
+
+                Text {
+                    text: "Delete Wallet?";
+                    color: Palette.text-primary;
+                    font-size: 14px;
+                    font-weight: 600;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: "This will permanently delete \"" + root.name + "\" and all its transaction history.";
+                    color: Palette.text-muted;
+                    font-size: 11px;
+                    wrap: word-wrap;
+                    horizontal-alignment: center;
+                }
+
+                HorizontalLayout {
+                    spacing: 12px;
+
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        height: 36px;
+                        background: cancel-touch.has-hover ? Palette.surface-hover : Palette.surface;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: Palette.border;
+
+                        Text {
+                            text: "Cancel";
+                            color: Palette.text-secondary;
+                            font-size: 11px;
+                            font-weight: 600;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        cancel-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.show-confirm-delete = false; }
+                        }
+                    }
+
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        height: 36px;
+                        background: confirm-touch.has-hover ? Palette.delete-bg-active : Palette.delete-bg-hover;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: Palette.delete-border;
+
+                        Text {
+                            text: "Delete";
+                            color: Palette.text-primary;
+                            font-size: 11px;
+                            font-weight: 600;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        confirm-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                root.delete();
+                                root.show-confirm-delete = false;
+                            }
+                        }
                     }
                 }
             }
+        }
+
+        TouchArea {
+            clicked => { root.show-confirm-delete = false; }
         }
     }
 }
@@ -351,7 +448,7 @@ export component TickerItem inherits Rectangle {
     in property <string> change;
     in property <bool> is-positive;
 
-    width: 180px;
+    width: Palette.crypto-ticker-width;
     height: 48px;
     background: transparent;
 
@@ -425,11 +522,11 @@ export component CryptoCard inherits Rectangle {
     in property <string> value;
     in property <string> change;
     in property <bool> is-positive;
-    
+
     callback clicked();
 
-    width: 240px;
-    height: 180px;
+    width: Palette.crypto-card-width;
+    height: Palette.crypto-card-height;
     border-radius: 12px;
     clip: true;
     
@@ -437,7 +534,12 @@ export component CryptoCard inherits Rectangle {
     Rectangle {
         width: 100%;
         height: 100%;
-        background: @linear-gradient(145deg, #0d0d14 0%, #111118 50%, #0a0a10 100%);
+        background: @linear-gradient(
+            145deg,
+            Palette.crypto-card-gradient-start 0%,
+            Palette.crypto-card-gradient-mid 50%,
+            Palette.crypto-card-gradient-end 100%
+        );
         border-width: 1px;
         border-color: touch.has-hover ? Palette.border-light.with-alpha(0.3) : Palette.border-subtle;
         border-radius: 12px;

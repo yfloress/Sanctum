@@ -169,7 +169,7 @@ export component EditCryptoTransactionModal inherits Rectangle {
     Rectangle {
         width: 100%;
         height: 100%;
-        background: #000000cc;
+        background: Palette.overlay-bg;
         
         TouchArea {
             clicked => {
@@ -183,14 +183,14 @@ export component EditCryptoTransactionModal inherits Rectangle {
     Rectangle {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
-        width: max(320px, min(440px, parent.width - 48px));
-        height: max(480px, min(640px, parent.height - 48px));
-        background: @linear-gradient(180deg, Palette.sidebar-bg 0%, #0f0f1a 100%);
+        width: min(Palette.modal-width-md, parent.width - 40px);
+        height: min(Palette.modal-height-compact, parent.height - 40px);
+        background: @linear-gradient(180deg, Palette.sidebar-bg 0%, Palette.crypto-modal-gradient-end 100%);
         border-radius: 16px;
         border-width: 1px;
         border-color: Palette.border-light;
         drop-shadow-blur: 40px;
-        drop-shadow-color: #00000088;
+        drop-shadow-color: Palette.shadow-strong;
 
         TouchArea { }
 
@@ -323,7 +323,7 @@ export component EditCryptoTransactionModal inherits Rectangle {
                 
                 Text {
                     text: "SAVE CHANGES";
-                    color: #ffffff;
+                    color: Palette.text-primary;
                     font-size: 12px;
                     font-weight: 600;
                     letter-spacing: 2px;

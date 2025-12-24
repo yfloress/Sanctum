@@ -20,7 +20,7 @@ use thiserror::Error;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 
-/// Errores personalizados para operaciones de base de datos
+/// Custom errors for database operations
 #[derive(Error, Debug)]
 pub enum DbError {
     #[error("Database error")]
@@ -86,21 +86,21 @@ pub const SESSION_TIMEOUT_SECS: i64 = 900;
 /// KDF iterations for PBKDF2-HMAC-SHA512 (OWASP 2024 recommendation)
 pub const KDF_ITERATIONS: i64 = 600_000;
 
-/// Struct principal que envuelve la conexión a la base de datos
+/// Main struct wrapping the database connection
 pub struct Database {
     conn: Connection,
     path: PathBuf,
 }
 
 impl Database {
-    /// Inicializa la base de datos con encriptación SQLCipher
-    /// Usa SecretString para manejar la contraseña de forma segura
+    /// Initializes the database with SQLCipher encryption
+    /// Uses SecretString to handle password securely
     ///
     /// # Arguments
-    /// * `db_path` - Ruta obligatoria al archivo de base de datos
-    /// * `password` - Contraseña para encriptar/desencriptar la base de datos
+    /// * `db_path` - Required path to database file
+    /// * `password` - Password to encrypt/decrypt the database
     pub fn init(db_path: PathBuf, password: &SecretString) -> Result<Self, DbError> {
-        // Crear el directorio si no existe
+        // Create directory if it doesn't exist
         if let Some(parent) = db_path.parent() {
             if !parent.exists() {
                 fs::create_dir_all(parent).map_err(|_| DbError::DirectoryCreation)?;
@@ -112,7 +112,7 @@ impl Database {
 
         let is_new_db = !db_path.exists();
 
-        // Abrir conexión a la base de datos
+        // Open database connection
         let conn = Connection::open(&db_path)?;
 
         // Ensure restrictive permissions on the vault file
@@ -123,53 +123,53 @@ impl Database {
         conn.pragma_update(None, "foreign_keys", true)
             .map_err(DbError::Sqlite)?;
 
-        // --- ZONA DE SEGURIDAD Y CONFIGURACIÓN ---
-        // 1. Establecer la contraseña (Encriptación)
-        // Usamos pragma_update para evitar SQL Injection de forma segura
-        // ExposeSecret permite acceder al valor interno de forma controlada
+        // --- SECURITY AND CONFIGURATION ZONE ---
+        // 1. Set password (Encryption)
+        // Use pragma_update to avoid SQL Injection safely
+        // ExposeSecret allows controlled access to internal value
         conn.pragma_update(None, "key", password.expose_secret())
             .map_err(|_| DbError::InvalidPassword)?;
 
-        // 1.0 Endurecer la configuración de SQLCipher una vez aplicada la clave
+        // 1.0 Harden SQLCipher configuration once key is applied
         Self::apply_sqlcipher_hardening(&conn, is_new_db)?;
 
-        // 1.1 Validar contraseña con integrity check para fallar rápido en caso de clave incorrecta
+        // 1.1 Validate password with integrity check to fail fast on incorrect key
         if !is_new_db {
             Self::verify_key(&conn)?;
         }
 
-        // 2. Activar modo WAL (Rendimiento)
-        // Usamos pragma_update porque WAL retorna string "wal" y execute fallaría
+        // 2. Enable WAL mode (Performance)
+        // Use pragma_update because WAL returns string "wal" and execute would fail
         conn.pragma_update(None, "journal_mode", "WAL")
             .map_err(DbError::Sqlite)?;
 
         // -----------------------------------------
 
-        // Crear instancia de Database
+        // Create Database instance
         let db = Database {
             conn,
             path: db_path,
         };
 
-        // Ejecutar migraciones
+        // Run migrations
         db.run_migrations()?;
 
-        // Verificar y mostrar configuración de seguridad
+        // Verify and display security settings
         db.verify_encryption_settings()?;
 
         Ok(db)
     }
 
-    /// Ajusta PRAGMAs defensivos de SQLCipher para la conexión
-    /// IMPORTANTE: Los parámetros de algoritmo deben aplicarse ANTES de intentar desencriptar
-    /// tanto para DBs nuevas como existentes, ya que definen cómo interpretar la clave.
+    /// Adjusts defensive SQLCipher PRAGMAs for the connection
+    /// IMPORTANT: Algorithm parameters must be applied BEFORE attempting to decrypt
+    /// for both new and existing DBs, as they define how to interpret the key.
     fn apply_sqlcipher_hardening(conn: &Connection, is_new_db: bool) -> Result<(), DbError> {
-        // Asegurar limpieza de buffers sensibles
+        // Ensure cleanup of sensitive buffers
         conn.pragma_update(None, "cipher_memory_security", true)
             .map_err(DbError::Sqlite)?;
 
-        // Algoritmos de cifrado - SIEMPRE deben coincidir con los usados al crear la DB
-        // Estos parámetros afectan cómo se deriva la clave y se verifica el HMAC
+        // Encryption algorithms - MUST always match those used when creating the DB
+        // These parameters affect how the key is derived and HMAC is verified
         conn.pragma_update(None, "cipher_hmac_algorithm", "HMAC_SHA512")
             .map_err(DbError::Sqlite)?;
         conn.pragma_update(None, "cipher_kdf_algorithm", "PBKDF2_HMAC_SHA512")
@@ -179,7 +179,7 @@ impl Database {
         conn.pragma_update(None, "cipher_page_size", 4096i64)
             .map_err(DbError::Sqlite)?;
 
-        // Log solo en creación de nueva DB
+        // Log only on new DB creation
         if is_new_db {
             log_security_event(SecurityEvent::VaultCreated, Some("SQLCipher hardened"));
         }
@@ -187,8 +187,8 @@ impl Database {
         Ok(())
     }
 
-    /// Verifica los parámetros de cifrado actuales de SQLCipher
-    /// Solo disponible en builds de debug para auditoría
+    /// Verifies current SQLCipher encryption parameters
+    /// Only available in debug builds for auditing
     #[cfg(debug_assertions)]
     pub fn verify_encryption_settings(&self) -> Result<(), DbError> {
         use log::debug;
@@ -220,15 +220,15 @@ impl Database {
         Ok(())
     }
 
-    /// Valida que la clave sea correcta intentando leer de la base de datos
+    /// Validates that the key is correct by attempting to read from database
     fn verify_key(conn: &Connection) -> Result<(), DbError> {
-        // Si la clave es incorrecta, SQLCipher retornará "file is not a database"
+        // If key is incorrect, SQLCipher will return "file is not a database"
         match conn.query_row("SELECT count(*) FROM sqlite_master", [], |row| {
             row.get::<_, i32>(0)
         }) {
             Ok(_) => Ok(()),
             Err(e) => {
-                // Cualquier error al leer sqlite_master indica clave incorrecta o DB corrupta
+                // Any error reading sqlite_master indicates incorrect key or corrupt DB
                 match e {
                     RusqliteError::SqliteFailure(ref code, _) => {
                         if matches!(
@@ -246,12 +246,12 @@ impl Database {
         }
     }
 
-    /// Ruta actual de la conexión
+    /// Current path of the connection
     pub fn path(&self) -> &PathBuf {
         &self.path
     }
 
-    /// Ejecuta las migraciones necesarias para crear las tablas
+    /// Executes necessary migrations to create tables
     fn run_migrations(&self) -> Result<(), DbError> {
         // ==================== FIAT Accounts Table ====================
         self.conn.execute(
@@ -269,7 +269,7 @@ impl Database {
             [],
         )?;
 
-        // Índices para cuentas
+        // Indices for accounts
         self.conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_accounts_archived ON accounts(is_archived)",
             [],
@@ -309,7 +309,7 @@ impl Database {
             [],
         )?;
 
-        // Índices para transacciones
+        // Indices for transactions
         self.conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_transactions_account ON transactions(account_id)",
             [],
@@ -899,7 +899,7 @@ impl Database {
         Ok(())
     }
 
-    /// Verifica que la base de datos esté correctamente configurada y accesible
+    /// Verifies that the database is correctly configured and accessible
     pub fn health_check(&self) -> Result<(), DbError> {
         self.conn
             .query_row("SELECT 1", [], |_| Ok(()))
@@ -1117,9 +1117,9 @@ impl Database {
 
     // ==================== Financial Transactions CRUD ====================
 
-    /// Crea una nueva transacción en la base de datos
+    /// Creates a new transaction in the database
     pub fn create_transaction(&self, transaction: &Transaction) -> Result<(), DbError> {
-        // Validar transacción
+        // Validate transaction
         if !transaction.validate() {
             return Err(DbError::InvalidTransactionType);
         }
@@ -1189,7 +1189,7 @@ impl Database {
         Ok(tx_id)
     }
 
-    /// Obtiene todas las transacciones ordenadas por fecha descendente
+    /// Gets all transactions ordered by descending date
     pub fn get_transactions(&self) -> Result<Vec<Transaction>, DbError> {
         let mut stmt = self.conn.prepare(
             "SELECT id, account_id, amount, category, description, date, type, transfer_account_id

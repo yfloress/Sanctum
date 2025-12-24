@@ -308,8 +308,8 @@ fn normalize_habit_category(category: &str) -> Option<String> {
     }
 }
 
-/// Valida la contraseña básica para abrir una bóveda existente
-/// Solo verifica que no esté vacía y no exceda el límite
+/// Validates basic password for opening an existing vault
+/// Only verifies it's not empty and doesn't exceed limit
 fn validate_password_basic(password: String) -> Result<SecretString, ControllerError> {
     let trimmed = password.trim();
 
@@ -326,7 +326,7 @@ fn validate_password_basic(password: String) -> Result<SecretString, ControllerE
         )));
     }
 
-    // Crear SecretString que limpiará la memoria automáticamente
+    // Create SecretString that clears memory automatically
     Ok(SecretString::from(trimmed.to_string()))
 }
 
@@ -392,7 +392,7 @@ fn password_strength_warning(password: &str) -> Option<String> {
     None
 }
 
-/// Valida que una fecha esté en formato ISO-8601 (YYYY-MM-DD)
+/// Validates that a date is in ISO-8601 format (YYYY-MM-DD)
 fn validate_date(date: &str) -> Result<String, ControllerError> {
     let trimmed = date.trim();
     if trimmed.is_empty() {
@@ -401,12 +401,12 @@ fn validate_date(date: &str) -> Result<String, ControllerError> {
         ));
     }
 
-    // Intento 1: Formato DD-MM-YYYY (Preferido por el usuario)
+    // Attempt 1: DD-MM-YYYY format (preferred by the user)
     if let Ok(parsed) = NaiveDate::parse_from_str(trimmed, "%d-%m-%Y") {
         return Ok(parsed.format("%Y-%m-%d").to_string()); // NORMALIZAR A ISO
     }
 
-    // Intento 2: Formato ISO (Estándar DB y fallback)
+    // Attempt 2: ISO format (DB standard and fallback)
     if let Ok(parsed) = NaiveDate::parse_from_str(trimmed, "%Y-%m-%d") {
         return Ok(parsed.format("%Y-%m-%d").to_string());
     }

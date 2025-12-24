@@ -26,7 +26,7 @@ export component PortfolioDistributionChart inherits Rectangle {
         Rectangle {
             height: 300px;
             border-radius: 14px;
-            background: @linear-gradient(180deg, #0a0a0a, #0f0f0f);
+            background: @linear-gradient(180deg, Palette.crypto-chart-bg-start, Palette.crypto-chart-bg-end);
             border-width: 1px;
             border-color: Palette.border-subtle;
             clip: true;
@@ -161,7 +161,7 @@ export component PortfolioTrendChart inherits Rectangle {
                     width: 8px;
                     height: 8px;
                     border-radius: 4px;
-                    background: #8b5cf6;
+                    background: Palette.crypto-chart-value;
                     y: 6px;
                 }
                 Text {
@@ -175,7 +175,7 @@ export component PortfolioTrendChart inherits Rectangle {
                     width: 8px;
                     height: 8px;
                     border-radius: 4px;
-                    background: #94a3b8;
+                    background: Palette.crypto-chart-cost;
                     y: 6px;
                 }
                 Text {
@@ -191,7 +191,7 @@ export component PortfolioTrendChart inherits Rectangle {
         Rectangle {
             height: 240px;
             border-radius: 14px;
-            background: @linear-gradient(180deg, #0a0a0a, #0f0f0f);
+            background: @linear-gradient(180deg, Palette.crypto-chart-bg-start, Palette.crypto-chart-bg-end);
             border-width: 1px;
             border-color: Palette.border-subtle;
             clip: true;

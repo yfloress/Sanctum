@@ -263,7 +263,7 @@ component TransactionRow inherits Rectangle {
 
                 Text {
                     text: root.confirm-mode ? "SURE?" : "×";
-                    color: root.confirm-mode ? #ffffff : (del-touch.has-hover ? Palette.danger : Palette.text-muted);
+                    color: root.confirm-mode ? Palette.text-primary : (del-touch.has-hover ? Palette.danger : Palette.text-muted);
                     font-size: root.confirm-mode ? 9px : 16px;
                     font-weight: root.confirm-mode ? 700 : 400;
                     vertical-alignment: center;
@@ -296,7 +296,11 @@ component TransactionRow inherits Rectangle {
 export component AssetDetailPanel inherits Rectangle {
     width: 420px;
     height: 100%;
-    background: @linear-gradient(180deg, #0a0a10 0%, #080810 100%);
+    background: @linear-gradient(
+        180deg,
+        Palette.crypto-panel-gradient-start 0%,
+        Palette.crypto-panel-gradient-end 100%
+    );
     
     // Left border accent
     Rectangle {
@@ -413,7 +417,11 @@ export component AssetDetailPanel inherits Rectangle {
             // Holdings Card
             Rectangle {
                 height: 120px;
-                background: @linear-gradient(135deg, #111118 0%, #0d0d14 100%);
+                background: @linear-gradient(
+                    135deg,
+                    Palette.crypto-card-gradient-mid 0%,
+                    Palette.crypto-card-gradient-start 100%
+                );
                 border-radius: 12px;
                 border-width: 1px;
                 border-color: Palette.border-subtle;
