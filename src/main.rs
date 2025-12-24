@@ -1389,7 +1389,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         let temp_svg = std::env::temp_dir().join("sanctum_habits_top_temp.svg");
-        let root = SVGBackend::new(&temp_svg, (2400, 720)).into_drawing_area();
+        let root = SVGBackend::new(&temp_svg, (1400, 720)).into_drawing_area();
         root.fill(&RGBAColor(0, 0, 0, 0.0)).ok()?;
 
         let mut chart_data = data.to_vec();
@@ -1410,7 +1410,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .collect();
         let labels: Vec<String> = vec![String::new(); chart_data.len()];
 
-        let (left, right) = root.split_horizontally(1400);
+        let (root_w, _) = root.dim_in_pixel();
+        let left_width = ((root_w as f64) * 0.58).round() as i32;
+        let (left, right) = root.split_horizontally(left_width);
         let (left_w, left_h) = left.dim_in_pixel();
         let center = (left_w as i32 / 2, left_h as i32 / 2);
         let radius = (left_h as f64 * 0.38).min(left_w as f64 * 0.35);
@@ -1420,7 +1422,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         left.draw(&pie).ok()?;
 
         let (_, right_h) = right.dim_in_pixel();
-        let line_height = 52;
+        let line_height = 68;
         let total_height = chart_data.len() as i32 * line_height;
         let start_y = ((right_h as i32 - total_height) / 2).max(30);
         let label_color = RGBColor(148, 163, 184);
@@ -1461,7 +1463,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         let temp_svg = std::env::temp_dir().join("sanctum_habits_trend_temp.svg");
-        let root = SVGBackend::new(&temp_svg, (2400, 720)).into_drawing_area();
+        let root = SVGBackend::new(&temp_svg, (1400, 720)).into_drawing_area();
         root.fill(&RGBAColor(0, 0, 0, 0.0)).ok()?;
 
         let max_val = series
