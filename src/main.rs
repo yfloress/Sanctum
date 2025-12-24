@@ -1741,10 +1741,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let adapter = ui.global::<HabitAdapter>();
                 adapter.set_habits_radar_chart_image(Image::default());
                 adapter.set_habits_radar_has_data(false);
-                adapter.set_habits_weekly_primary("Crea tu primer habito para empezar.".into());
+                adapter.set_habits_weekly_primary("Create your first habit to get started.".into());
                 adapter.set_habits_weekly_secondary("".into());
                 adapter.set_habits_insight_primary(
-                    "Aqui apareceran tus insights cuando tengas datos.".into(),
+                    "Your insights will appear here once you have data.".into(),
                 );
                 adapter.set_habits_insight_secondary("".into());
             }
@@ -1843,24 +1843,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
 
         let weekly_primary = if total_completed == 0 {
-            "Empieza hoy: completa tu primer habito.".to_string()
+            "Start today: complete your first habit.".to_string()
         } else if prev_rate > 0.0 {
             let diff = ((current_rate - prev_rate) / prev_rate) * 100.0;
             if diff >= 1.0 {
                 format!(
-                    "Cierre de Semana: Tu consistencia subio {:.0}% vs la semana anterior.",
+                    "Week Close: Your consistency is up {:.0}% vs last week.",
                     diff
                 )
             } else if diff <= -1.0 {
                 format!(
-                    "Cierre de Semana: Tu consistencia bajo {:.0}% vs la semana anterior.",
+                    "Week Close: Your consistency is down {:.0}% vs last week.",
                     diff.abs()
                 )
             } else {
-                "Cierre de Semana: Mantienes tu consistencia estable.".to_string()
+                "Week Close: Your consistency is stable.".to_string()
             }
         } else {
-            "Cierre de Semana: Primera semana registrada. Buen inicio.".to_string()
+            "Week Close: First week logged. Good start.".to_string()
         };
 
         let weekly_secondary = if total_completed == 0 {
@@ -1872,10 +1872,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .iter()
                 .find(|habit| habit.id == *habit_id)
                 .map(|habit| habit.name.clone())
-                .unwrap_or_else(|| "Habito".to_string());
-            format!("Habito Estrella: {}. {}/7 dias completados.", habit_name, count)
+                .unwrap_or_else(|| "Habit".to_string());
+            format!("Star Habit: {}. {}/7 days completed.", habit_name, count)
         } else {
-            "Habito Estrella: Aun no hay datos esta semana.".to_string()
+            "Star Habit: No data yet this week.".to_string()
         };
 
         let mut weekday_counts = [0f32; 7];
@@ -1895,7 +1895,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         let weekday_names = [
-            "lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo",
+            "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
         ];
         let mut worst_idx = 0usize;
         let mut worst_avg = f32::MAX;
@@ -1920,10 +1920,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
 
         let insight_primary = if total_completed == 0 {
-            "Completa tu primer habito para desbloquear insights.".to_string()
+            "Complete your first habit to unlock insights.".to_string()
         } else {
             format!(
-                "Ojo al dato: Tus estadisticas suelen caer los {}.",
+                "Watch out: Your stats tend to drop on {}s.",
                 weekday_names[worst_idx]
             )
         };
@@ -1932,16 +1932,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "".to_string()
         } else if today_count > today_avg + 1.0 {
             format!(
-                "Hoy estas por encima de tu promedio de {}.",
+                "Today you're above your {} average.",
                 weekday_names[today_idx]
             )
         } else if today_count + 1.0 < today_avg {
             format!(
-                "Hoy estas por debajo de tu promedio de {}.",
+                "Today you're below your {} average.",
                 weekday_names[today_idx]
             )
         } else {
-            "Hoy estas en tu promedio habitual.".to_string()
+            "Today you're at your usual average.".to_string()
         };
 
         // Generate weekday efficiency bar chart
