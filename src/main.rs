@@ -2074,17 +2074,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_weak = ui_weak.clone();
         let date_lock = current_habit_date.clone();
         let year_lock = current_heatmap_year.clone();
+        let notify = show_notification.clone();
         ui.global::<HabitAdapter>()
             .on_toggle_habit(move |id, date| {
-                if controller
-                    .toggle_habit_completion(id.to_string(), date.to_string())
-                    .is_ok()
-                {
-                    let d = *date_lock.lock().unwrap();
-                    let y = *year_lock.lock().unwrap();
-                    reload_habits(&ui_weak, &controller, d);
-                    reload_heatmap(&ui_weak, &controller, y); // Refresh heatmap
-                    refresh_habit_analytics(&ui_weak, &controller);
+                match controller.toggle_habit_completion(id.to_string(), date.to_string()) {
+                    Ok(_) => {
+                        let d = *date_lock.lock().unwrap();
+                        let y = *year_lock.lock().unwrap();
+                        reload_habits(&ui_weak, &controller, d);
+                        reload_heatmap(&ui_weak, &controller, y); // Refresh heatmap
+                        refresh_habit_analytics(&ui_weak, &controller);
+                    }
+                    Err(e) => {
+                        notify(format!("Failed to toggle habit: {}", e), true);
+                    }
                 }
             });
     }

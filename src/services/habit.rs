@@ -66,20 +66,21 @@ impl HabitService {
         is_archived: bool,
     ) -> Result<(), DbError> {
         self.get_db(|db| {
-            if let Some(mut habit) = db.get_habit(&id)? {
-                habit.name = name.clone();
-                habit.description = description.clone();
-                habit.color = color.clone();
-                // habit.archived = is_archived; // DB update doesn't support this
+            match db.get_habit(&id)? {
+                Some(mut habit) => {
+                    habit.name = name.clone();
+                    habit.description = description.clone();
+                    habit.color = color.clone();
+                    // habit.archived = is_archived; // DB update doesn't support this
 
-                db.update_habit(&habit)?;
+                    db.update_habit(&habit)?;
 
-                if is_archived {
-                    db.archive_habit(&id)?;
+                    if is_archived {
+                        db.archive_habit(&id)?;
+                    }
+                    Ok(())
                 }
-                Ok(())
-            } else {
-                Ok(())
+                None => Err(DbError::Sqlite(rusqlite::Error::QueryReturnedNoRows)),
             }
         })
     }

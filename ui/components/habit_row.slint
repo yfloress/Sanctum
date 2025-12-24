@@ -86,9 +86,10 @@ export component HabitRow inherits Rectangle {
     in property <HabitData> habit;
     callback toggle(string);
     callback delete(string);
-    
+
     // State para mostrar/ocultar botón de eliminar
     property <bool> show-delete: false;
+    property <bool> show-confirm-delete: false;
     property <length> scroll-x: 0px;
     property <int> current_day_int: HabitAdapter.current-day-int;
     property <bool> is_viewing_current_month: HabitAdapter.is-viewing-current-month;
@@ -273,12 +274,111 @@ export component HabitRow inherits Rectangle {
 
                 delete-touch := TouchArea {
                     mouse-cursor: pointer;
-                    clicked => { 
-                        root.delete(habit.id);
+                    clicked => {
+                        root.show-confirm-delete = true;
                         root.show-delete = false;
                     }
                 }
             }
+        }
+    }
+
+    // Delete confirmation dialog
+    if root.show-confirm-delete: Rectangle {
+        width: 100%;
+        height: 100%;
+        z: 1000;
+        background: #00000088;
+
+        Rectangle {
+            width: 320px;
+            height: 160px;
+            background: Palette.sidebar-bg;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: Palette.border-light;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            drop-shadow-blur: 20px;
+            drop-shadow-color: #00000066;
+
+            VerticalLayout {
+                padding: 24px;
+                spacing: 16px;
+
+                Text {
+                    text: "Delete Habit?";
+                    color: Palette.text-primary;
+                    font-size: 14px;
+                    font-weight: 600;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: "This will permanently delete \"" + habit.name + "\" and all its logs.";
+                    color: Palette.text-muted;
+                    font-size: 11px;
+                    wrap: word-wrap;
+                    horizontal-alignment: center;
+                }
+
+                HorizontalLayout {
+                    spacing: 12px;
+
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        height: 36px;
+                        background: cancel-touch.has-hover ? Palette.surface-hover : Palette.surface;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: Palette.border;
+
+                        Text {
+                            text: "Cancel";
+                            color: Palette.text-secondary;
+                            font-size: 11px;
+                            font-weight: 600;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        cancel-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.show-confirm-delete = false; }
+                        }
+                    }
+
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        height: 36px;
+                        background: confirm-touch.has-hover ? #7a2020 : #5a2020;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: #ff4444;
+
+                        Text {
+                            text: "Delete";
+                            color: #ffffff;
+                            font-size: 11px;
+                            font-weight: 600;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        confirm-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                root.delete(habit.id);
+                                root.show-confirm-delete = false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        TouchArea {
+            clicked => { root.show-confirm-delete = false; }
         }
     }
 }
