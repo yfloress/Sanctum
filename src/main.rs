@@ -1441,7 +1441,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .draw(&Text::new(
                     label,
                     (swatch_x + 34, y + 8),
-                    ("sans-serif", 28).into_font().color(&label_color),
+                    ("sans-serif", 34).into_font().color(&label_color),
                 ))
                 .ok()?;
         }
@@ -1474,8 +1474,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let mut chart = ChartBuilder::on(&root)
             .margin(28)
-            .x_label_area_size(90)
-            .y_label_area_size(70)
+            .x_label_area_size(110)
+            .y_label_area_size(90)
             .build_cartesian_2d(0..x_max, 0f32..upper)
             .ok()?;
 
@@ -1485,7 +1485,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .x_labels(weeks.min(6))
             .y_labels(5)
             .x_label_formatter(&|v| format!("W{}", v + 1))
-            .label_style(("sans-serif", 28).into_font().color(&RGBColor(148, 163, 184)))
+            .label_style(("sans-serif", 34).into_font().color(&RGBColor(148, 163, 184)))
             .axis_style(ShapeStyle::from(&RGBColor(46, 46, 60)).stroke_width(1))
             .draw()
             .ok()?;
@@ -1522,7 +1522,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .configure_series_labels()
             .border_style(ShapeStyle::from(&RGBColor(46, 46, 60)).stroke_width(1))
             .background_style(RGBAColor(0, 0, 0, 0.0))
-            .label_font(("sans-serif", 26).into_font().color(&RGBColor(148, 163, 184)))
+            .label_font(("sans-serif", 32).into_font().color(&RGBColor(148, 163, 184)))
             .position(SeriesLabelPosition::UpperRight)
             .draw()
             .ok()?;
