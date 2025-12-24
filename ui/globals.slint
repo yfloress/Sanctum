@@ -138,6 +138,7 @@ export struct HabitData {
     name: string,
     description: string,
     color: color,
+    category: string,
     streak: int,
     best-streak: int,
     completion-rate: int,
@@ -174,7 +175,7 @@ export global HabitAdapter {
     callback fetch-habits(int, int); // month (1-12), year
     callback fetch-heatmap-data(); // Load last 365 days
     callback load-initial-data(); // Load current month on startup
-    callback create-habit(string, string, string) -> string; // name, desc, color -> error or ""
+    callback create-habit(string, string, string, string) -> string; // name, desc, color, category -> error or ""
     callback toggle-habit(string, string); // id, date
     callback delete-habit(string) -> string;
     
@@ -194,12 +195,12 @@ export global HabitAdapter {
     callback next-heatmap-year();
 
     // Habit Analytics
-    in-out property <[WeekdayEfficiencyData]> weekday-efficiency: [];
-    in-out property <[MonthlyTrendData]> monthly-trend: [];
-    in-out property <image> weekly-chart-image;
-    in-out property <image> monthly-chart-image;
-    in-out property <image> habits-top-chart-image;
-    in-out property <image> habits-trend-chart-image;
+    in-out property <image> habits-radar-chart-image;
+    in-out property <bool> habits-radar-has-data: false;
+    in-out property <string> habits-weekly-primary: "";
+    in-out property <string> habits-weekly-secondary: "";
+    in-out property <string> habits-insight-primary: "";
+    in-out property <string> habits-insight-secondary: "";
     callback fetch-habit-analytics();
 }
 

@@ -1,145 +1,11 @@
 // ==================== Habit Analytics Charts ====================
-// Bar chart for weekday efficiency and line chart for monthly trend
+// Radar chart + insight cards
 
-import { Palette, MonthlyTrendData } from "../globals.slint";
+import { Palette } from "../globals.slint";
 
-// ==================== Weekly Efficiency Bar Chart ====================
-// Shows average habits completed per day of the week
-
-export component WeeklyBarChart inherits Rectangle {
+export component HabitRadarChart inherits Rectangle {
     in property <image> image;
-
-    background: Palette.surface;
-    border-radius: 12px;
-    border-width: 1px;
-    border-color: Palette.border;
-
-    VerticalLayout {
-        padding: 20px;
-        spacing: 14px;
-
-        // Title
-        Text {
-            text: "WEEKLY EFFICIENCY";
-            color: Palette.text-secondary;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 2px;
-        }
-
-        // Chart area
-        Rectangle {
-            vertical-stretch: 1;
-            min-height: 220px;
-            border-radius: 16px;
-            background: @linear-gradient(180deg, #0a0a0a, #0f0f0f);
-            border-width: 1px;
-            border-color: Palette.border-subtle;
-            clip: true;
-
-            Image {
-                source: root.image;
-                width: 100%;
-                height: 100%;
-                image-fit: contain;
-            }
-        }
-
-        // Range note
-        HorizontalLayout {
-            spacing: 6px;
-            alignment: start;
-
-            Rectangle {
-                width: 2px;
-                height: 12px;
-                border-radius: 1px;
-                background: Palette.border-subtle;
-                y: (parent.height - self.height) / 2;
-            }
-
-            Text {
-                text: "Data window: last 365 days";
-                color: Palette.text-muted;
-                font-size: 9px;
-                font-weight: 500;
-                vertical-alignment: center;
-            }
-        }
-    }
-}
-
-// ==================== Monthly Trend Line Chart ====================
-// Shows habit trend over the last months
-
-export component MonthlyLineChart inherits Rectangle {
-    in property <[MonthlyTrendData]> data;
-    in property <image> image;
-
-    background: Palette.surface;
-    border-radius: 12px;
-    border-width: 1px;
-    border-color: Palette.border;
-
-    VerticalLayout {
-        padding: 20px;
-        spacing: 14px;
-
-        // Title
-        Text {
-            text: "MONTHLY TREND (LAST 12 MONTHS)";
-            color: Palette.text-secondary;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 2px;
-        }
-
-        // Chart area
-        chart-area := Rectangle {
-            vertical-stretch: 1;
-            min-height: 240px;
-            border-radius: 16px;
-            background: @linear-gradient(180deg, #0a0a0a, #0f0f0f);
-            border-width: 1px;
-            border-color: Palette.border-subtle;
-
-            Image {
-                source: root.image;
-                width: 100%;
-                height: 100%;
-                image-fit: contain;
-            }
-        }
-
-        // Range note
-        HorizontalLayout {
-            spacing: 6px;
-            alignment: start;
-
-            Rectangle {
-                width: 2px;
-                height: 12px;
-                border-radius: 1px;
-                background: Palette.border-subtle;
-                y: (parent.height - self.height) / 2;
-            }
-
-            Text {
-                text: "Data window: last 365 days";
-                color: Palette.text-muted;
-                font-size: 9px;
-                font-weight: 500;
-                vertical-alignment: center;
-            }
-        }
-    }
-}
-
-// ==================== Top Habits Bar Chart ====================
-// Shows completion rate per habit
-
-export component TopHabitsBarChart inherits Rectangle {
-    in property <image> image;
+    in property <bool> has-data: false;
 
     background: Palette.surface;
     border-radius: 12px;
@@ -151,7 +17,7 @@ export component TopHabitsBarChart inherits Rectangle {
         spacing: 14px;
 
         Text {
-            text: "TOP HABITS (LAST 90 DAYS)";
+            text: "LIFE BALANCE (LAST 30 DAYS)";
             color: Palette.text-secondary;
             font-size: 11px;
             font-weight: 700;
@@ -160,49 +26,47 @@ export component TopHabitsBarChart inherits Rectangle {
 
         Rectangle {
             vertical-stretch: 1;
-            min-height: 240px;
+            min-height: 280px;
             border-radius: 16px;
             background: @linear-gradient(180deg, #0a0a0a, #0f0f0f);
             border-width: 1px;
             border-color: Palette.border-subtle;
             clip: true;
 
-            Image {
+            if root.has-data: Image {
                 source: root.image;
                 width: 100%;
                 height: 100%;
                 image-fit: contain;
             }
-        }
 
-        HorizontalLayout {
-            spacing: 6px;
-            alignment: start;
+            if !root.has-data: VerticalLayout {
+                alignment: center;
+                spacing: 8px;
 
-            Rectangle {
-                width: 2px;
-                height: 12px;
-                border-radius: 1px;
-                background: Palette.border-subtle;
-                y: (parent.height - self.height) / 2;
-            }
+                Text {
+                    text: "El grafico esta vacio, pero tu potencial esta lleno.";
+                    color: Palette.text-secondary;
+                    font-size: 12px;
+                    font-weight: 600;
+                    horizontal-alignment: center;
+                }
 
-            Text {
-                text: "Data window: last 90 days";
-                color: Palette.text-muted;
-                font-size: 9px;
-                font-weight: 500;
-                vertical-alignment: center;
+                Text {
+                    text: "Aqui aparecera tu leyenda. Empieza hoy a escribirla.";
+                    color: Palette.text-muted;
+                    font-size: 11px;
+                    horizontal-alignment: center;
+                }
             }
         }
     }
 }
 
-// ==================== Habit Trends Line Chart ====================
-// Shows weekly completion trend per habit
-
-export component HabitTrendChart inherits Rectangle {
-    in property <image> image;
+export component InsightCard inherits Rectangle {
+    in property <string> title;
+    in property <string> line1;
+    in property <string> line2;
 
     background: Palette.surface;
     border-radius: 12px;
@@ -211,52 +75,29 @@ export component HabitTrendChart inherits Rectangle {
 
     VerticalLayout {
         padding: 20px;
-        spacing: 14px;
+        spacing: 10px;
 
         Text {
-            text: "HABIT TRENDS (LAST 12 WEEKS)";
+            text: root.title;
             color: Palette.text-secondary;
             font-size: 11px;
             font-weight: 700;
             letter-spacing: 2px;
         }
 
-        Rectangle {
-            vertical-stretch: 1;
-            min-height: 240px;
-            border-radius: 16px;
-            background: @linear-gradient(180deg, #0a0a0a, #0f0f0f);
-            border-width: 1px;
-            border-color: Palette.border-subtle;
-            clip: true;
-
-            Image {
-                source: root.image;
-                width: 100%;
-                height: 100%;
-                image-fit: contain;
-            }
+        if root.line1 != "": Text {
+            text: root.line1;
+            color: Palette.text-primary;
+            font-size: 13px;
+            font-weight: 600;
+            wrap: word-wrap;
         }
 
-        HorizontalLayout {
-            spacing: 6px;
-            alignment: start;
-
-            Rectangle {
-                width: 2px;
-                height: 12px;
-                border-radius: 1px;
-                background: Palette.border-subtle;
-                y: (parent.height - self.height) / 2;
-            }
-
-            Text {
-                text: "Data window: last 12 weeks";
-                color: Palette.text-muted;
-                font-size: 9px;
-                font-weight: 500;
-                vertical-alignment: center;
-            }
+        if root.line2 != "": Text {
+            text: root.line2;
+            color: Palette.text-muted;
+            font-size: 12px;
+            wrap: word-wrap;
         }
     }
 }

@@ -298,6 +298,16 @@ fn validate_uuid(id: &str) -> Result<String, ControllerError> {
     Err(ControllerError::Validation("Invalid ID format".to_string()))
 }
 
+fn normalize_habit_category(category: &str) -> Option<String> {
+    let normalized = category.trim().to_lowercase();
+    match normalized.as_str() {
+        "mind" => Some("mind".to_string()),
+        "body" => Some("body".to_string()),
+        "spirit" => Some("spirit".to_string()),
+        _ => None,
+    }
+}
+
 /// Valida la contraseña básica para abrir una bóveda existente
 /// Solo verifica que no esté vacía y no exceda el límite
 fn validate_password_basic(password: String) -> Result<SecretString, ControllerError> {
@@ -2330,6 +2340,7 @@ impl AppController {
         name: String,
         description: Option<String>,
         color: String,
+        category: String,
     ) -> std::result::Result<String, ControllerError> {
         if name.trim().is_empty() {
             return Err(ControllerError::Validation(
@@ -2345,8 +2356,12 @@ impl AppController {
             ));
         }
 
+        let category = normalize_habit_category(&category).ok_or_else(|| {
+            ControllerError::Validation("Invalid habit category".to_string())
+        })?;
+
         self.habit_service
-            .create_habit(name, description, color)
+            .create_habit(name, description, color, category)
             .map_err(ControllerError::Database)
     }
 

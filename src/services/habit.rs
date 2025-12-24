@@ -30,6 +30,7 @@ impl HabitService {
         name: String,
         description: Option<String>,
         color: String,
+        category: String,
     ) -> Result<String, DbError> {
         let id = Uuid::new_v4().to_string();
         let now = chrono::Local::now().to_rfc3339();
@@ -39,6 +40,7 @@ impl HabitService {
             name,
             description,
             color,
+            category,
             created_at: now,
             archived: false,
         };

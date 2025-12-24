@@ -390,6 +390,7 @@ impl Database {
                 name TEXT NOT NULL,
                 description TEXT,
                 color TEXT NOT NULL DEFAULT '#8b5cf6',
+                category TEXT NOT NULL DEFAULT 'mind',
                 created_at TEXT NOT NULL,
                 archived INTEGER NOT NULL DEFAULT 0
             )",
@@ -429,6 +430,23 @@ impl Database {
             "CREATE INDEX IF NOT EXISTS idx_habit_logs_habit_date ON habit_logs(habit_id, completed_date)",
             [],
         )?;
+
+        let has_category: bool = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM pragma_table_info('habits') WHERE name='category'",
+                [],
+                |row| row.get::<_, i32>(0),
+            )
+            .unwrap_or(0)
+            > 0;
+
+        if !has_category {
+            self.conn.execute(
+                "ALTER TABLE habits ADD COLUMN category TEXT NOT NULL DEFAULT 'mind'",
+                [],
+            )?;
+        }
 
         Ok(())
     }
@@ -2275,13 +2293,14 @@ impl Database {
     /// Creates a new habit
     pub fn create_habit(&self, habit: &Habit) -> Result<(), DbError> {
         self.conn.execute(
-            "INSERT INTO habits (id, name, description, color, created_at, archived)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            "INSERT INTO habits (id, name, description, color, category, created_at, archived)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 &habit.id,
                 &habit.name,
                 &habit.description,
                 &habit.color,
+                &habit.category,
                 &habit.created_at,
                 habit.archived as i32,
             ],
@@ -2292,7 +2311,7 @@ impl Database {
     /// Gets all active (non-archived) habits
     pub fn get_habits(&self) -> Result<Vec<Habit>, DbError> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, name, description, color, created_at, archived
+            "SELECT id, name, description, color, category, created_at, archived
              FROM habits
              WHERE archived = 0
              ORDER BY created_at ASC",
@@ -2305,8 +2324,9 @@ impl Database {
                     name: row.get(1)?,
                     description: row.get(2)?,
                     color: row.get(3)?,
-                    created_at: row.get(4)?,
-                    archived: row.get::<_, i32>(5)? != 0,
+                    category: row.get(4)?,
+                    created_at: row.get(5)?,
+                    archived: row.get::<_, i32>(6)? != 0,
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;
@@ -2317,7 +2337,7 @@ impl Database {
     /// Gets a single habit by ID
     pub fn get_habit(&self, id: &str) -> Result<Option<Habit>, DbError> {
         let result = self.conn.query_row(
-            "SELECT id, name, description, color, created_at, archived
+            "SELECT id, name, description, color, category, created_at, archived
              FROM habits WHERE id = ?1",
             params![id],
             |row| {
@@ -2326,8 +2346,9 @@ impl Database {
                     name: row.get(1)?,
                     description: row.get(2)?,
                     color: row.get(3)?,
-                    created_at: row.get(4)?,
-                    archived: row.get::<_, i32>(5)? != 0,
+                    category: row.get(4)?,
+                    created_at: row.get(5)?,
+                    archived: row.get::<_, i32>(6)? != 0,
                 })
             },
         );
@@ -2342,8 +2363,14 @@ impl Database {
     /// Updates an existing habit
     pub fn update_habit(&self, habit: &Habit) -> Result<(), DbError> {
         self.conn.execute(
-            "UPDATE habits SET name = ?1, description = ?2, color = ?3 WHERE id = ?4",
-            params![&habit.name, &habit.description, &habit.color, &habit.id],
+            "UPDATE habits SET name = ?1, description = ?2, color = ?3, category = ?4 WHERE id = ?5",
+            params![
+                &habit.name,
+                &habit.description,
+                &habit.color,
+                &habit.category,
+                &habit.id
+            ],
         )?;
         Ok(())
     }

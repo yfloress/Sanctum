@@ -100,11 +100,40 @@ component ColorOption inherits Rectangle {
     }
 }
 
+component CategoryOption inherits Rectangle {
+    in property <string> label;
+    in property <bool> selected: false;
+    callback clicked();
+
+    width: 110px;
+    height: 34px;
+    border-radius: 8px;
+    background: selected ? Palette.surface-hover : Palette.surface;
+    border-width: 1px;
+    border-color: selected ? Palette.accent : Palette.border;
+
+    Text {
+        text: root.label;
+        color: selected ? Palette.text-primary : Palette.text-secondary;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
 // ==================== AddHabitModal ====================
 export component AddHabitModal inherits Rectangle {
     property <string> name: "";
     property <string> description: "";
     property <int> selected-color-index: 0;
+    property <int> selected-category-index: 0;
 
     property <[color]> color-options: [
         #8b5cf6, #ec4899, #ef4444, #f97316, #f59e0b, #eab308, #84cc16, #22c55e,
@@ -116,6 +145,8 @@ export component AddHabitModal inherits Rectangle {
     ];
     property <[int]> color-row1: [0, 1, 2, 3, 4, 5, 6, 7];
     property <[int]> color-row2: [8, 9, 10, 11, 12, 13, 14, 15];
+    property <[string]> category-labels: ["MIND", "BODY", "SPIRIT"];
+    property <[string]> category-values: ["mind", "body", "spirit"];
     
     callback close();
 
@@ -123,6 +154,7 @@ export component AddHabitModal inherits Rectangle {
         name = "";
         description = "";
         selected-color-index = 0;
+        selected-category-index = 0;
     }
 
     function submit() {
@@ -132,7 +164,8 @@ export component AddHabitModal inherits Rectangle {
         }
         
         let habit-color = color-strings[selected-color-index];
-        let result = HabitAdapter.create-habit(name, description, habit-color);
+        let habit-category = category-values[selected-category-index];
+        let result = HabitAdapter.create-habit(name, description, habit-color, habit-category);
         
         if (result == "") {
             reset();
@@ -157,7 +190,7 @@ export component AddHabitModal inherits Rectangle {
     // Modal panel
     Rectangle {
         width: 440px;
-        height: 480px;
+        height: 520px;
         background: @linear-gradient(180deg, Palette.sidebar-bg 0%, #0f0f1a 100%);
         border-radius: 16px;
         border-width: 1px;
@@ -231,6 +264,28 @@ export component AddHabitModal inherits Rectangle {
                 label: "DESCRIPTION (OPTIONAL)";
                 placeholder: "Why this habit matters";
                 value <=> description;
+            }
+
+            // Category Picker
+            VerticalLayout {
+                spacing: 12px;
+
+                Text {
+                    text: "CATEGORY";
+                    color: Palette.text-muted;
+                    font-size: 10px;
+                    font-weight: 500;
+                    letter-spacing: 1.5px;
+                }
+
+                HorizontalLayout {
+                    spacing: 12px;
+                    for idx in [0, 1, 2]: CategoryOption {
+                        label: category-labels[idx];
+                        selected: selected-category-index == idx;
+                        clicked => { selected-category-index = idx; }
+                    }
+                }
             }
             
             // Color Picker

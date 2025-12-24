@@ -19,7 +19,6 @@ use sanctum::security_log::init_security_logger;
 use slint::SharedString;
 use slint::{Image, Model, ModelRc, VecModel, Weak};
 use std::cell::{Cell, RefCell};
-use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -1113,6 +1112,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         name: SharedString::from(h.name),
                         description: SharedString::from(h.description.unwrap_or_default()),
                         color,
+                        category: SharedString::from(h.category),
                         streak: current_streak,
                         best_streak,
                         completion_rate,
@@ -1360,23 +1360,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         RGBColor(139, 92, 246)
     }
 
-    fn adjust_rgb(color: RGBColor, factor: f32) -> RGBColor {
-        let (r, g, b) = color.rgb();
-        let scale = |value: u8| ((value as f32 * factor).round().clamp(0.0, 255.0)) as u8;
-        RGBColor(scale(r), scale(g), scale(b))
-    }
-
-    fn variant_color(color: RGBColor, index: usize) -> RGBColor {
-        if index == 0 {
-            return color;
-        }
-        let step = 0.18_f32;
-        let magnitude = (index / 2 + 1) as f32;
-        let direction = if index % 2 == 0 { -1.0 } else { 1.0 };
-        let factor = (1.0 + direction * step * magnitude).clamp(0.55, 1.45);
-        adjust_rgb(color, factor)
-    }
-
     fn render_svg_image(temp_svg: &std::path::Path, final_name: &str) -> Option<Image> {
         let mut fontdb = fontdb::Database::new();
         let font_path = std::path::PathBuf::from("ui/fonts/DejaVuSans.ttf");
@@ -1401,188 +1384,120 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Image::load_from_path(&final_svg).ok()
     }
 
-    fn render_habit_top_chart(data: &[(String, String, f32)]) -> Option<Image> {
-        if data.is_empty() {
+    fn render_habit_radar_chart(categories: &[(String, String, f32)]) -> Option<Image> {
+        if categories.is_empty() {
             return None;
         }
 
-        let temp_svg = std::env::temp_dir().join("sanctum_habits_top_temp.svg");
-        let root = SVGBackend::new(&temp_svg, (1400, 720)).into_drawing_area();
+        let temp_svg = std::env::temp_dir().join("sanctum_habits_radar_temp.svg");
+        let root = SVGBackend::new(&temp_svg, (1400, 900)).into_drawing_area();
         root.fill(&RGBAColor(0, 0, 0, 0.0)).ok()?;
 
-        let mut chart_data = data.to_vec();
-        chart_data.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap_or(Ordering::Equal));
+        let (root_w, root_h) = root.dim_in_pixel();
+        let center = (root_w as i32 / 2, root_h as i32 / 2);
+        let radius = (root_w.min(root_h) as f64) * 0.32;
+        let axis_count = categories.len() as f64;
+        let base_angle = -std::f64::consts::FRAC_PI_2;
 
-        let values: Vec<f64> = chart_data
-            .iter()
-            .map(|(_, _, rate)| (rate * 100.0).clamp(0.0, 100.0) as f64)
-            .collect();
-        let total: f64 = values.iter().sum();
-        if total <= 0.0 {
-            return None;
-        }
+        let grid_color = RGBColor(46, 46, 60);
+        let axis_color = RGBColor(72, 84, 102);
 
-        let mut color_counts: HashMap<String, usize> = HashMap::new();
-        let colors: Vec<RGBColor> = chart_data
-            .iter()
-            .map(|(_, color, _)| {
-                let count = color_counts.entry(color.clone()).or_insert(0);
-                let variant = variant_color(rgb_from_hex(color), *count);
-                *count += 1;
-                variant
-            })
-            .collect();
-        let labels: Vec<String> = vec![String::new(); chart_data.len()];
-
-        let (root_w, _) = root.dim_in_pixel();
-        let left_width = ((root_w as f64) * 0.58).round() as i32;
-        let (left, right) = root.split_horizontally(left_width);
-        let (left_w, left_h) = left.dim_in_pixel();
-        let center = (left_w as i32 / 2, left_h as i32 / 2);
-        let radius = (left_h as f64 * 0.38).min(left_w as f64 * 0.35);
-        let mut pie = Pie::new(&center, &radius, &values, &colors, &labels);
-        pie.start_angle(-90.0);
-        pie.donut_hole(radius * 0.55);
-        left.draw(&pie).ok()?;
-
-        let (_, right_h) = right.dim_in_pixel();
-        let line_height = 68;
-        let total_height = chart_data.len() as i32 * line_height;
-        let start_y = ((right_h as i32 - total_height) / 2).max(30);
-        let label_color = RGBColor(148, 163, 184);
-        let label_style =
-            ("sans-serif", 52).into_font().color(&label_color).pos(Pos::new(HPos::Left, VPos::Center));
-
-        for (idx, (name, color, rate)) in chart_data.iter().enumerate() {
-            let y = start_y + idx as i32 * line_height;
-            let swatch = colors.get(idx).copied().unwrap_or_else(|| rgb_from_hex(color));
-            let swatch_x = 24;
-            right
-                .draw(&Rectangle::new(
-                    [(swatch_x, y - 12), (swatch_x + 22, y + 12)],
-                    swatch.filled(),
-                ))
-                .ok()?;
-
-            let label = format!("{}  {:.0}%", name, rate * 100.0);
-            right
-                .draw(&Text::new(
-                    label,
-                    (swatch_x + 34, y),
-                    label_style.clone(),
-                ))
-                .ok()?;
-        }
-
-        root.present().ok()?;
-        render_svg_image(&temp_svg, "sanctum_habits_top.svg")
-    }
-
-    fn render_habit_trend_chart(series: &[(String, String, Vec<f32>)]) -> Option<Image> {
-        if series.is_empty() {
-            return None;
-        }
-
-        let weeks = series.first().map(|item| item.2.len()).unwrap_or(0);
-        if weeks == 0 {
-            return None;
-        }
-
-        let temp_svg = std::env::temp_dir().join("sanctum_habits_trend_temp.svg");
-        let root = SVGBackend::new(&temp_svg, (1400, 720)).into_drawing_area();
-        root.fill(&RGBAColor(0, 0, 0, 0.0)).ok()?;
-
-        let (_, root_h) = root.dim_in_pixel();
-        let legend_line_height = 56;
-        let legend_height = ((series.len() as i32) * legend_line_height + 24)
-            .min((root_h as i32) / 2)
-            .max(120);
-        let plot_height = (root_h as i32 - legend_height).max(240);
-        let (plot_area, legend_area) = root.split_vertically(plot_height as u32);
-
-        let max_val = series
-            .iter()
-            .flat_map(|item| item.2.iter())
-            .cloned()
-            .fold(0.0_f32, f32::max);
-        let upper = (max_val + 1.0).max(4.0);
-        let x_max = weeks as i32;
-
-        let mut chart = ChartBuilder::on(&plot_area)
-            .margin(28)
-            .x_label_area_size(180)
-            .y_label_area_size(140)
-            .build_cartesian_2d(0..x_max, 0f32..upper)
+        for level in 1..=4 {
+            let r = radius * level as f64 / 4.0;
+            let mut points: Vec<(i32, i32)> = Vec::new();
+            for idx in 0..categories.len() {
+                let angle = base_angle + (idx as f64) * (2.0 * std::f64::consts::PI / axis_count);
+                let x = center.0 as f64 + r * angle.cos();
+                let y = center.1 as f64 + r * angle.sin();
+                points.push((x.round() as i32, y.round() as i32));
+            }
+            if let Some(first) = points.first().copied() {
+                points.push(first);
+            }
+            root.draw(&PathElement::new(
+                points,
+                ShapeStyle::from(&grid_color).stroke_width(1),
+            ))
             .ok()?;
+        }
 
-        chart
-            .configure_mesh()
-            .disable_mesh()
-            .x_labels(weeks.min(6))
-            .y_labels(5)
-            .x_label_formatter(&|v| format!("W{}", v + 1))
-            .label_style(("sans-serif", 52).into_font().color(&RGBColor(148, 163, 184)))
-            .axis_style(ShapeStyle::from(&RGBColor(46, 46, 60)).stroke_width(1))
-            .draw()
+        for idx in 0..categories.len() {
+            let angle = base_angle + (idx as f64) * (2.0 * std::f64::consts::PI / axis_count);
+            let x = center.0 as f64 + radius * angle.cos();
+            let y = center.1 as f64 + radius * angle.sin();
+            root.draw(&PathElement::new(
+                vec![center, (x.round() as i32, y.round() as i32)],
+                ShapeStyle::from(&axis_color).stroke_width(2),
+            ))
             .ok()?;
+        }
 
-        let mut color_counts: HashMap<String, usize> = HashMap::new();
-        let mut legend_entries: Vec<(String, RGBColor)> = Vec::new();
+        let mut data_points: Vec<(i32, i32)> = Vec::new();
+        for (idx, (_, _, value)) in categories.iter().enumerate() {
+            let angle = base_angle + (idx as f64) * (2.0 * std::f64::consts::PI / axis_count);
+            let v = value.clamp(0.0, 1.0) as f64;
+            let x = center.0 as f64 + radius * v * angle.cos();
+            let y = center.1 as f64 + radius * v * angle.sin();
+            data_points.push((x.round() as i32, y.round() as i32));
+        }
 
-        for (name, color, points) in series {
-            let count = color_counts.entry(color.clone()).or_insert(0);
-            let line_color = variant_color(rgb_from_hex(color), *count);
-            *count += 1;
-            legend_entries.push((name.clone(), line_color));
-            let stroke = ShapeStyle::from(&line_color).stroke_width(3);
-            let line_points: Vec<(i32, f32)> = points
-                .iter()
-                .enumerate()
-                .map(|(idx, value)| (idx as i32, *value))
-                .collect();
+        if data_points.len() >= 3 {
+            let mut filled_points = data_points.clone();
+            if let Some(first) = filled_points.first().copied() {
+                filled_points.push(first);
+            }
+            root.draw(&Polygon::new(
+                filled_points.clone(),
+                RGBAColor(139, 92, 246, 0.25).filled(),
+            ))
+            .ok()?;
+            root.draw(&PathElement::new(
+                filled_points,
+                ShapeStyle::from(&RGBColor(139, 92, 246)).stroke_width(3),
+            ))
+            .ok()?;
+        }
 
-            chart
-                .draw_series(LineSeries::new(line_points.iter().copied(), stroke))
-                .ok()?;
-
-            chart
-                .draw_series(line_points.iter().map(|(x, y)| {
-                    Circle::new(
-                        (*x, *y),
-                        4,
-                        ShapeStyle::from(&line_color).filled(),
-                    )
-                }))
-                .ok()?;
+        for ((_, color, _), point) in categories.iter().zip(data_points.iter()) {
+            let rgb = rgb_from_hex(color);
+            root.draw(&Circle::new(*point, 8, rgb.filled())).ok()?;
         }
 
         let label_color = RGBColor(148, 163, 184);
-        let label_style =
-            ("sans-serif", 48).into_font().color(&label_color).pos(Pos::new(HPos::Left, VPos::Center));
-        let (_, legend_h) = legend_area.dim_in_pixel();
-        let total_height = legend_entries.len() as i32 * legend_line_height;
-        let start_y = ((legend_h as i32 - total_height) / 2).max(24);
-        let swatch_x = 24;
-
-        for (idx, (name, color)) in legend_entries.iter().enumerate() {
-            let y = start_y + idx as i32 * legend_line_height;
-            legend_area
-                .draw(&Rectangle::new(
-                    [(swatch_x, y - 12), (swatch_x + 22, y + 12)],
-                    color.filled(),
-                ))
-                .ok()?;
-            legend_area
-                .draw(&Text::new(
-                    name.clone(),
-                    (swatch_x + 34, y),
-                    label_style.clone(),
-                ))
-                .ok()?;
+        for (idx, (label, _, _)) in categories.iter().enumerate() {
+            let angle = base_angle + (idx as f64) * (2.0 * std::f64::consts::PI / axis_count);
+            let x = center.0 as f64 + radius * 1.15 * angle.cos();
+            let y = center.1 as f64 + radius * 1.15 * angle.sin();
+            let cos = angle.cos();
+            let sin = angle.sin();
+            let hpos = if cos > 0.2 {
+                HPos::Left
+            } else if cos < -0.2 {
+                HPos::Right
+            } else {
+                HPos::Center
+            };
+            let vpos = if sin > 0.2 {
+                VPos::Top
+            } else if sin < -0.2 {
+                VPos::Bottom
+            } else {
+                VPos::Center
+            };
+            let style = ("sans-serif", 48)
+                .into_font()
+                .color(&label_color)
+                .pos(Pos::new(hpos, vpos));
+            root.draw(&Text::new(
+                label.clone(),
+                (x.round() as i32, y.round() as i32),
+                style,
+            ))
+            .ok()?;
         }
 
         root.present().ok()?;
-        render_svg_image(&temp_svg, "sanctum_habits_trend.svg")
+        render_svg_image(&temp_svg, "sanctum_habits_radar.svg")
     }
 
     fn render_portfolio_distribution_chart(data: &[(String, f64)]) -> Option<Image> {
@@ -1712,7 +1627,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     fn refresh_habit_analytics(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>) {
         let today = chrono::Local::now().date_naive();
-        let days_window: i64 = 90;
+        let days_window: i64 = 30;
         let start_date = today
             .checked_sub_signed(chrono::Duration::days(days_window - 1))
             .unwrap_or(today);
@@ -1728,91 +1643,219 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         if habits.is_empty() {
             if let Some(ui) = ui_weak.upgrade() {
                 let adapter = ui.global::<HabitAdapter>();
-                adapter.set_habits_top_chart_image(Image::default());
-                adapter.set_habits_trend_chart_image(Image::default());
+                adapter.set_habits_radar_chart_image(Image::default());
+                adapter.set_habits_radar_has_data(false);
+                adapter.set_habits_weekly_primary("Crea tu primer habito para empezar.".into());
+                adapter.set_habits_weekly_secondary("".into());
+                adapter.set_habits_insight_primary(
+                    "Aqui apareceran tus insights cuando tengas datos.".into(),
+                );
+                adapter.set_habits_insight_secondary("".into());
             }
             return;
         }
 
-        let total_days = (today - start_date).num_days().max(0) as f32 + 1.0;
-        let mut completion_counts: HashMap<String, i32> = HashMap::new();
-        for log in &logs {
-            *completion_counts.entry(log.habit_id.clone()).or_insert(0) += 1;
+        let mut habit_categories: HashMap<String, String> = HashMap::new();
+        let mut category_counts: HashMap<String, i32> = HashMap::new();
+        for habit in &habits {
+            let category = habit.category.trim().to_lowercase();
+            let category = match category.as_str() {
+                "body" | "mind" | "spirit" => category,
+                _ => "mind".to_string(),
+            };
+            habit_categories.insert(habit.id.clone(), category.clone());
+            *category_counts.entry(category).or_insert(0) += 1;
         }
 
-        let mut habit_stats: Vec<(String, String, String, f32)> = habits
-            .iter()
-            .map(|habit| {
-                let count = *completion_counts.get(&habit.id).unwrap_or(&0) as f32;
-                let rate = if total_days > 0.0 { count / total_days } else { 0.0 };
-                (
-                    habit.id.clone(),
-                    habit.name.clone(),
-                    habit.color.clone(),
-                    rate,
-                )
-            })
-            .collect();
+        let mut category_completions: HashMap<String, i32> = HashMap::new();
+        let mut daily_counts: HashMap<chrono::NaiveDate, i32> = HashMap::new();
+        let mut habit_week_counts: HashMap<String, i32> = HashMap::new();
+        let mut total_completed = 0i32;
 
-        habit_stats.sort_by(|a, b| {
-            b.3.partial_cmp(&a.3)
-                .unwrap_or(Ordering::Equal)
-                .then_with(|| a.1.cmp(&b.1))
-        });
-
-        let top_limit = 8usize;
-        let top_stats: Vec<(String, String, String, f32)> =
-            habit_stats.into_iter().take(top_limit).collect();
-        let top_chart_data: Vec<(String, String, f32)> = top_stats
-            .iter()
-            .map(|(_, name, color, rate)| (name.clone(), color.clone(), *rate))
-            .collect();
-
-        let top_chart_image = render_habit_top_chart(&top_chart_data);
-
-        let trend_limit = 6usize;
-        let trend_stats: Vec<(String, String, String, f32)> =
-            top_stats.iter().take(trend_limit).cloned().collect();
-        let weeks = 12usize;
-        let trend_start = today
-            .checked_sub_signed(chrono::Duration::days(weeks as i64 * 7 - 1))
+        let week_start = today
+            .checked_sub_signed(chrono::Duration::days(6))
             .unwrap_or(today);
-        let mut trend_map: HashMap<String, Vec<i32>> = HashMap::new();
-        for (id, _, _, _) in &trend_stats {
-            trend_map.insert(id.clone(), vec![0; weeks]);
-        }
+        let prev_week_start = week_start
+            .checked_sub_signed(chrono::Duration::days(7))
+            .unwrap_or(week_start);
+        let prev_week_end = week_start
+            .checked_sub_signed(chrono::Duration::days(1))
+            .unwrap_or(week_start);
 
         for log in &logs {
             let Ok(date) = chrono::NaiveDate::parse_from_str(&log.completed_date, "%Y-%m-%d")
             else {
                 continue;
             };
-            if date < trend_start || date > today {
-                continue;
+            total_completed += 1;
+            *daily_counts.entry(date).or_insert(0) += 1;
+
+            if let Some(category) = habit_categories.get(&log.habit_id) {
+                *category_completions.entry(category.clone()).or_insert(0) += 1;
             }
-            let idx = ((date - trend_start).num_days() / 7) as usize;
-            if let Some(series) = trend_map.get_mut(&log.habit_id)
-                && idx < weeks
-            {
-                series[idx] += 1;
+
+            if date >= week_start && date <= today {
+                *habit_week_counts.entry(log.habit_id.clone()).or_insert(0) += 1;
             }
         }
 
-        let trend_series: Vec<(String, String, Vec<f32>)> = trend_stats
+        let total_days = (today - start_date).num_days().max(0) as f32 + 1.0;
+        let categories = [
+            ("mind", "MIND", "#38bdf8"),
+            ("body", "BODY", "#22c55e"),
+            ("spirit", "SPIRIT", "#a855f7"),
+        ];
+
+        let radar_data: Vec<(String, String, f32)> = categories
             .iter()
-            .filter_map(|(id, name, color, _)| {
-                trend_map
-                    .get(id)
-                    .map(|series| (name.clone(), color.clone(), series.iter().map(|v| *v as f32).collect()))
+            .map(|(key, label, color)| {
+                let count = *category_counts.get(*key).unwrap_or(&0) as f32;
+                let max_total = count * total_days;
+                let completed = *category_completions.get(*key).unwrap_or(&0) as f32;
+                let ratio = if max_total > 0.0 { completed / max_total } else { 0.0 };
+                (label.to_string(), (*color).to_string(), ratio)
             })
             .collect();
 
-        let trend_chart_image = render_habit_trend_chart(&trend_series);
+        let radar_image = if total_completed > 0 {
+            render_habit_radar_chart(&radar_data)
+        } else {
+            None
+        };
+
+        let max_week_total = habits.len() as f32 * 7.0;
+        let mut current_week_total = 0f32;
+        let mut prev_week_total = 0f32;
+
+        for (date, count) in &daily_counts {
+            if *date >= week_start && *date <= today {
+                current_week_total += *count as f32;
+            } else if *date >= prev_week_start && *date <= prev_week_end {
+                prev_week_total += *count as f32;
+            }
+        }
+
+        let current_rate = if max_week_total > 0.0 {
+            current_week_total / max_week_total
+        } else {
+            0.0
+        };
+        let prev_rate = if max_week_total > 0.0 {
+            prev_week_total / max_week_total
+        } else {
+            0.0
+        };
+
+        let weekly_primary = if total_completed == 0 {
+            "Empieza hoy: completa tu primer habito.".to_string()
+        } else if prev_rate > 0.0 {
+            let diff = ((current_rate - prev_rate) / prev_rate) * 100.0;
+            if diff >= 1.0 {
+                format!(
+                    "Cierre de Semana: Tu consistencia subio {:.0}% vs la semana anterior.",
+                    diff
+                )
+            } else if diff <= -1.0 {
+                format!(
+                    "Cierre de Semana: Tu consistencia bajo {:.0}% vs la semana anterior.",
+                    diff.abs()
+                )
+            } else {
+                "Cierre de Semana: Mantienes tu consistencia estable.".to_string()
+            }
+        } else {
+            "Cierre de Semana: Primera semana registrada. Buen inicio.".to_string()
+        };
+
+        let weekly_secondary = if total_completed == 0 {
+            "".to_string()
+        } else if let Some((habit_id, count)) =
+            habit_week_counts.iter().max_by_key(|(_, count)| *count)
+        {
+            let habit_name = habits
+                .iter()
+                .find(|habit| habit.id == *habit_id)
+                .map(|habit| habit.name.clone())
+                .unwrap_or_else(|| "Habito".to_string());
+            format!("Habito Estrella: {}. {}/7 dias completados.", habit_name, count)
+        } else {
+            "Habito Estrella: Aun no hay datos esta semana.".to_string()
+        };
+
+        let mut weekday_counts = [0f32; 7];
+        let mut weekday_occurrences = [0f32; 7];
+        let mut cursor = start_date;
+        while cursor <= today {
+            let idx = cursor.weekday().num_days_from_monday() as usize;
+            weekday_occurrences[idx] += 1.0;
+            if let Some(count) = daily_counts.get(&cursor) {
+                weekday_counts[idx] += *count as f32;
+            }
+            if let Some(next) = cursor.succ_opt() {
+                cursor = next;
+            } else {
+                break;
+            }
+        }
+
+        let weekday_names = [
+            "lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo",
+        ];
+        let mut worst_idx = 0usize;
+        let mut worst_avg = f32::MAX;
+        for idx in 0..7 {
+            let avg = if weekday_occurrences[idx] > 0.0 {
+                weekday_counts[idx] / weekday_occurrences[idx]
+            } else {
+                0.0
+            };
+            if avg < worst_avg {
+                worst_avg = avg;
+                worst_idx = idx;
+            }
+        }
+
+        let today_idx = today.weekday().num_days_from_monday() as usize;
+        let today_count = *daily_counts.get(&today).unwrap_or(&0) as f32;
+        let today_avg = if weekday_occurrences[today_idx] > 0.0 {
+            weekday_counts[today_idx] / weekday_occurrences[today_idx]
+        } else {
+            0.0
+        };
+
+        let insight_primary = if total_completed == 0 {
+            "Completa tu primer habito para desbloquear insights.".to_string()
+        } else {
+            format!(
+                "Ojo al dato: Tus estadisticas suelen caer los {}.",
+                weekday_names[worst_idx]
+            )
+        };
+
+        let insight_secondary = if total_completed == 0 {
+            "".to_string()
+        } else if today_count > today_avg + 1.0 {
+            format!(
+                "Hoy estas por encima de tu promedio de {}.",
+                weekday_names[today_idx]
+            )
+        } else if today_count + 1.0 < today_avg {
+            format!(
+                "Hoy estas por debajo de tu promedio de {}.",
+                weekday_names[today_idx]
+            )
+        } else {
+            "Hoy estas en tu promedio habitual.".to_string()
+        };
 
         if let Some(ui) = ui_weak.upgrade() {
             let adapter = ui.global::<HabitAdapter>();
-            adapter.set_habits_top_chart_image(top_chart_image.unwrap_or_default());
-            adapter.set_habits_trend_chart_image(trend_chart_image.unwrap_or_default());
+            adapter.set_habits_radar_chart_image(radar_image.unwrap_or_default());
+            adapter.set_habits_radar_has_data(total_completed > 0);
+            adapter.set_habits_weekly_primary(weekly_primary.into());
+            adapter.set_habits_weekly_secondary(weekly_secondary.into());
+            adapter.set_habits_insight_primary(insight_primary.into());
+            adapter.set_habits_insight_secondary(insight_secondary.into());
         }
     }
 
@@ -1850,11 +1893,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let year_lock = current_heatmap_year.clone();
         let notify = show_notification.clone();
         ui.global::<HabitAdapter>()
-            .on_create_habit(move |name, desc, color| -> SharedString {
+            .on_create_habit(move |name, desc, color, category| -> SharedString {
                 let result = controller.create_habit(
                     name.to_string(),
                     Some(desc.to_string()),
                     color.to_string(),
+                    category.to_string(),
                 );
                 match result {
                     Ok(_) => {

@@ -506,6 +506,7 @@ pub struct Habit {
     pub name: String,
     pub description: Option<String>,
     pub color: String,      // Hex color code (e.g., "#8b5cf6")
+    pub category: String,   // mind, body, spirit
     pub created_at: String, // ISO-8601 datetime
     pub archived: bool,     // Soft delete flag
 }
@@ -516,6 +517,7 @@ impl Habit {
         name: String,
         description: Option<String>,
         color: String,
+        category: String,
         created_at: String,
     ) -> Self {
         Self {
@@ -523,13 +525,17 @@ impl Habit {
             name,
             description,
             color,
+            category,
             created_at,
             archived: false,
         }
     }
 
     pub fn validate(&self) -> bool {
-        !self.name.trim().is_empty() && self.color.starts_with('#') && self.color.len() == 7
+        !self.name.trim().is_empty()
+            && self.color.starts_with('#')
+            && self.color.len() == 7
+            && !self.category.trim().is_empty()
     }
 }
 
