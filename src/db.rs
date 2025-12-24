@@ -1419,6 +1419,43 @@ impl Database {
         Ok(transactions)
     }
 
+    /// Gets wallet transactions up to a given date (inclusive), ordered ascending.
+    pub fn get_wallet_transactions_up_to_date(
+        &self,
+        wallet_id: &str,
+        date: &str,
+    ) -> Result<Vec<CryptoTransaction>, DbError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, fee_coin_id, fee_amount, date, notes, related_tx_id
+             FROM crypto_transactions
+             WHERE wallet_id = ?1
+               AND date <= ?2
+             ORDER BY date ASC, rowid ASC",
+        )?;
+
+        let transactions = stmt
+            .query_map(params![wallet_id, date], |row| {
+                Ok(CryptoTransaction {
+                    id: row.get(0)?,
+                    wallet_id: row.get(1)?,
+                    coin_id: row.get(2)?,
+                    symbol: row.get(3)?,
+                    transaction_type: row.get(4)?,
+                    amount: row.get(5)?,
+                    price_per_coin: row.get(6)?,
+                    fee: row.get(7)?,
+                    fee_coin_id: row.get(8)?,
+                    fee_amount: row.get(9)?,
+                    date: row.get(10)?,
+                    notes: row.get(11)?,
+                    related_tx_id: row.get(12)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(transactions)
+    }
+
     /// Gets the wallet balance for a coin at (or before) a given date.
     pub fn get_wallet_coin_balance_at(
         &self,
@@ -1521,82 +1558,120 @@ impl Database {
         coin_id: &str,
         date: &str,
     ) -> Result<(f64, f64), DbError> {
-        let mut stmt = self.conn.prepare(
-            "SELECT coin_id, type, amount, price_per_coin, fee, fee_coin_id, fee_amount
-             FROM crypto_transactions
-             WHERE wallet_id = ?1
-               AND date <= ?2
-               AND (coin_id = ?3 OR fee_coin_id = ?3)
-             ORDER BY date ASC, rowid ASC",
-        )?;
+        let mut transactions = self.get_wallet_transactions_up_to_date(wallet_id, date)?;
 
-        let rows = stmt.query_map(params![wallet_id, date, coin_id], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, String>(1)?,
-                row.get::<_, f64>(2)?,
-                row.get::<_, Option<f64>>(3)?,
-                row.get::<_, Option<f64>>(4)?,
-                row.get::<_, Option<String>>(5)?,
-                row.get::<_, Option<f64>>(6)?,
-            ))
-        })?;
+        transactions.sort_by(|a, b| a.date.cmp(&b.date).then(a.id.cmp(&b.id)));
 
-        let mut total_amount = 0.0;
-        let mut total_cost = 0.0;
+        let tx_map: HashMap<String, CryptoTransaction> = transactions
+            .iter()
+            .cloned()
+            .map(|tx| (tx.id.clone(), tx))
+            .collect();
+        let mut processed: HashSet<String> = HashSet::new();
 
-        fn apply_outflow(total_amount: &mut f64, total_cost: &mut f64, out_amount: f64) {
-            if out_amount <= 0.0 {
-                return;
+        let mut assets: HashMap<String, AggregatedAsset> = HashMap::new();
+
+        for tx in transactions {
+            if processed.contains(&tx.id) {
+                continue;
             }
-            let prev_amount = *total_amount;
-            *total_amount = (*total_amount - out_amount).max(0.0);
-            if prev_amount > 0.0 {
-                let ratio = (out_amount / prev_amount).min(1.0);
-                *total_cost *= 1.0 - ratio;
-                if *total_cost < 0.0 {
-                    *total_cost = 0.0;
-                }
-            }
-        }
 
-        for row in rows {
-            let (row_coin_id, tx_type, amount, price_per_coin, fee, fee_coin_id, fee_amount) =
-                row?;
-            if row_coin_id == coin_id {
-                if let Ok(kind) = tx_type.parse::<CryptoTransactionType>() {
-                    match kind {
-                        CryptoTransactionType::Buy => {
-                            total_amount += amount;
-                            total_cost += amount * price_per_coin.unwrap_or(0.0);
-                            total_cost += fee.unwrap_or(0.0);
+            if let Some(rel_id) = &tx.related_tx_id {
+                if let Some(counter) = tx_map.get(rel_id) {
+                    let is_transfer_pair = (tx.transaction_type == "transfer_out"
+                        && counter.transaction_type == "transfer_in")
+                        || (tx.transaction_type == "transfer_in"
+                            && counter.transaction_type == "transfer_out");
+                    let is_swap_pair = (tx.transaction_type == "swap"
+                        && counter.transaction_type == "transfer_in")
+                        || (tx.transaction_type == "transfer_in"
+                            && counter.transaction_type == "swap");
+
+                    if is_transfer_pair {
+                        if processed.contains(rel_id) || processed.contains(&tx.id) {
+                            continue;
                         }
-                        CryptoTransactionType::TransferIn => {
-                            total_amount += amount;
-                            if let Some(price) = price_per_coin {
-                                total_cost += amount * price;
-                                total_cost += fee.unwrap_or(0.0);
-                            }
+
+                        let applied = if tx.transaction_type == "transfer_out" {
+                            Self::apply_transfer_pair(&mut assets, &tx, counter)
+                        } else {
+                            Self::apply_transfer_pair(&mut assets, counter, &tx)
+                        };
+
+                        if applied {
+                            processed.insert(tx.id.clone());
+                            processed.insert(rel_id.clone());
+                            continue;
                         }
-                        CryptoTransactionType::Sell
-                        | CryptoTransactionType::TransferOut
-                        | CryptoTransactionType::Swap => {
-                            apply_outflow(&mut total_amount, &mut total_cost, amount);
+                    }
+
+                    if is_swap_pair {
+                        if processed.contains(rel_id) || processed.contains(&tx.id) {
+                            continue;
                         }
+
+                        processed.insert(tx.id.clone());
+                        processed.insert(rel_id.clone());
+
+                        if tx.transaction_type == "swap" {
+                            Self::apply_swap_pair(&mut assets, &tx, counter);
+                        } else {
+                            Self::apply_swap_pair(&mut assets, counter, &tx);
+                        }
+                        continue;
                     }
                 }
             }
 
-            if let Some(fee_coin_id) = fee_coin_id {
-                if fee_coin_id == coin_id {
-                    if let Some(fee_amount) = fee_amount {
-                        apply_outflow(&mut total_amount, &mut total_cost, fee_amount);
-                    }
+            let tx_type = match tx.transaction_type.parse::<CryptoTransactionType>() {
+                Ok(t) => t,
+                Err(_) => continue,
+            };
+
+            let entry = assets
+                .entry(tx.coin_id.clone())
+                .or_insert_with(|| AggregatedAsset::new(tx.coin_id.clone(), tx.symbol.clone()));
+
+            if matches!(tx_type, CryptoTransactionType::Buy) {
+                entry.total_amount += tx.amount;
+                let cost = tx.amount * tx.price_per_coin.unwrap_or(0.0);
+                entry.total_cost_basis += cost + tx.fee.unwrap_or(0.0);
+            } else if matches!(tx_type, CryptoTransactionType::TransferIn) {
+                entry.total_amount += tx.amount;
+                if let Some(price) = tx.price_per_coin {
+                    let fee = tx.fee.unwrap_or(0.0);
+                    entry.total_cost_basis += (tx.amount * price) + fee;
                 }
+            } else if tx_type.is_outflow() || matches!(tx_type, CryptoTransactionType::Swap) {
+                let prev_amount = entry.total_amount;
+                entry.total_amount -= tx.amount;
+                if entry.total_amount < 0.0 {
+                    entry.total_amount = 0.0;
+                }
+                if prev_amount > 0.0 {
+                    let ratio = (tx.amount / prev_amount).min(1.0);
+                    entry.total_cost_basis *= 1.0 - ratio;
+                    entry.total_cost_basis = entry.total_cost_basis.max(0.0);
+                }
+            }
+
+            if let (Some(fee_coin_id), Some(fee_amount)) =
+                (tx.fee_coin_id.as_deref(), tx.fee_amount)
+            {
+                let fee_symbol = if fee_coin_id == tx.coin_id {
+                    Some(tx.symbol.as_str())
+                } else {
+                    None
+                };
+                Self::apply_fee_coin_outflow(&mut assets, fee_coin_id, fee_amount, fee_symbol);
             }
         }
 
-        Ok((total_amount, total_cost))
+        if let Some(asset) = assets.get(coin_id) {
+            return Ok((asset.total_amount, asset.total_cost_basis));
+        }
+
+        Ok((0.0, 0.0))
     }
 
     /// Gets all crypto transactions across all wallets

@@ -1900,7 +1900,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
 
-            let total_value_label = if priced_assets > 0 {
+            let total_value_label = if priced_assets > 0 && missing_price_assets == 0 {
                 format_money((total_val * 100.0) as i64, "USD")
             } else {
                 "N/A".to_string()
