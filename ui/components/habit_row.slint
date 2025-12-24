@@ -93,6 +93,7 @@ export component HabitRow inherits Rectangle {
     property <int> current_day_int: HabitAdapter.current-day-int;
     property <bool> is_viewing_current_month: HabitAdapter.is-viewing-current-month;
     property <bool> auto_scroll_habits <=> HabitAdapter.auto-scroll-habits;
+    property <length> saved_scroll_x <=> HabitAdapter.habits-scroll-x;
 
     function auto-scroll-target() -> length {
         if !is_viewing_current_month {
@@ -104,9 +105,14 @@ export component HabitRow inherits Rectangle {
 
     function update-auto-scroll() {
         if auto_scroll_habits && is_viewing_current_month {
-            scroll-x = auto-scroll-target();
+            let target = auto-scroll-target();
+            scroll-x = target;
+            saved_scroll_x = target;
         } else if !is_viewing_current_month {
             scroll-x = 0px;
+            saved_scroll_x = 0px;
+        } else if !auto_scroll_habits {
+            scroll-x = saved_scroll_x;
         }
     }
 
@@ -207,6 +213,11 @@ export component HabitRow inherits Rectangle {
                 viewport-x <=> scroll-x;
                 changed width => { root.update-auto-scroll(); }
                 changed viewport-width => { root.update-auto-scroll(); }
+                changed viewport-x => {
+                    if !auto_scroll_habits {
+                        saved_scroll_x = grid-scroll.viewport-x;
+                    }
+                }
                     
                 HorizontalLayout {
                     spacing: 4px;

@@ -187,6 +187,7 @@ export global HabitAdapter {
     in-out property <int> current-week-int: 1; // 1-52 (Real current week)
     in-out property <bool> is-viewing-current-month: true; // True if navigating actual current month
     in-out property <bool> auto-scroll-habits: true; // Only auto-center when entering Habits
+    in-out property <length> habits-scroll-x: 0px;
 
     // Heatmap Navigation
     callback prev-heatmap-year();
