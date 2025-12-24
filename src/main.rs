@@ -18,6 +18,7 @@ use sanctum::security_log::init_security_logger;
 use slint::SharedString;
 use slint::{Image, Model, ModelRc, VecModel, Weak};
 use std::cell::{Cell, RefCell};
+use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -1246,6 +1247,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    #[allow(dead_code)]
     fn render_monthly_chart_image(data: &[MonthlyTrendPoint]) -> Option<Image> {
         if data.is_empty() {
             return None;
@@ -1341,6 +1343,192 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::fs::write(&final_svg, tree.to_string(&usvg::WriteOptions::default())).ok()?;
 
         Image::load_from_path(&final_svg).ok()
+    }
+
+    fn rgb_from_hex(hex: &str) -> RGBColor {
+        if let Some(stripped) = hex.strip_prefix('#')
+            && stripped.len() == 6
+            && let (Ok(r), Ok(g), Ok(b)) = (
+                u8::from_str_radix(&stripped[0..2], 16),
+                u8::from_str_radix(&stripped[2..4], 16),
+                u8::from_str_radix(&stripped[4..6], 16),
+            )
+        {
+            return RGBColor(r, g, b);
+        }
+        RGBColor(139, 92, 246)
+    }
+
+    fn render_svg_image(temp_svg: &std::path::Path, final_name: &str) -> Option<Image> {
+        let mut fontdb = fontdb::Database::new();
+        let font_path = std::path::PathBuf::from("ui/fonts/DejaVuSans.ttf");
+        if font_path.exists() {
+            fontdb.load_font_file(&font_path).ok()?;
+        } else {
+            fontdb.load_system_fonts();
+        }
+
+        fontdb.set_serif_family("DejaVu Sans");
+        fontdb.set_sans_serif_family("DejaVu Sans");
+        fontdb.set_monospace_family("DejaVu Sans");
+
+        let svg_data = std::fs::read_to_string(temp_svg).ok()?;
+        let opt = usvg::Options {
+            fontdb: std::sync::Arc::new(fontdb),
+            ..Default::default()
+        };
+        let tree = usvg::Tree::from_str(&svg_data, &opt).ok()?;
+        let final_svg = std::env::temp_dir().join(final_name);
+        std::fs::write(&final_svg, tree.to_string(&usvg::WriteOptions::default())).ok()?;
+        Image::load_from_path(&final_svg).ok()
+    }
+
+    fn render_habit_top_chart(data: &[(String, String, f32)]) -> Option<Image> {
+        if data.is_empty() {
+            return None;
+        }
+
+        let temp_svg = std::env::temp_dir().join("sanctum_habits_top_temp.svg");
+        let root = SVGBackend::new(&temp_svg, (2400, 720)).into_drawing_area();
+        root.fill(&RGBAColor(0, 0, 0, 0.0)).ok()?;
+
+        let mut chart_data = data.to_vec();
+        chart_data.reverse();
+        let rows = chart_data.len().max(1) as f32;
+
+        let mut chart = ChartBuilder::on(&root)
+            .margin(30)
+            .x_label_area_size(60)
+            .y_label_area_size(360)
+            .build_cartesian_2d(0f32..100f32, 0f32..rows)
+            .ok()?;
+
+        chart
+            .configure_mesh()
+            .disable_mesh()
+            .x_labels(5)
+            .y_labels(chart_data.len())
+            .x_label_formatter(&|v| format!("{:.0}%", v))
+            .y_label_formatter(&|v| {
+                let idx = (*v).floor() as usize;
+                chart_data
+                    .get(idx)
+                    .map(|row| row.0.clone())
+                    .unwrap_or_default()
+            })
+            .label_style(("sans-serif", 22).into_font().color(&RGBColor(148, 163, 184)))
+            .axis_style(ShapeStyle::from(&RGBColor(46, 46, 60)).stroke_width(1))
+            .draw()
+            .ok()?;
+
+        for (idx, (_, color, rate)) in chart_data.iter().enumerate() {
+            let value = (rate * 100.0).clamp(0.0, 100.0);
+            let y0 = idx as f32;
+            let y1 = y0 + 1.0;
+            let fill = rgb_from_hex(color).mix(0.85);
+            chart
+                .draw_series(std::iter::once(Rectangle::new(
+                    [(0.0, y0), (value, y1)],
+                    fill.filled(),
+                )))
+                .ok()?;
+
+            let label = format!("{:.0}%", value);
+            let label_x = if value > 92.0 { value - 6.0 } else { value + 1.5 };
+            chart
+                .draw_series(std::iter::once(Text::new(
+                    label,
+                    (label_x, y0 + 0.5),
+                    ("sans-serif", 20)
+                        .into_font()
+                        .color(&RGBColor(148, 163, 184)),
+                )))
+                .ok()?;
+        }
+
+        root.present().ok()?;
+        render_svg_image(&temp_svg, "sanctum_habits_top.svg")
+    }
+
+    fn render_habit_trend_chart(series: &[(String, String, Vec<f32>)]) -> Option<Image> {
+        if series.is_empty() {
+            return None;
+        }
+
+        let weeks = series.first().map(|item| item.2.len()).unwrap_or(0);
+        if weeks == 0 {
+            return None;
+        }
+
+        let temp_svg = std::env::temp_dir().join("sanctum_habits_trend_temp.svg");
+        let root = SVGBackend::new(&temp_svg, (2400, 720)).into_drawing_area();
+        root.fill(&RGBAColor(0, 0, 0, 0.0)).ok()?;
+
+        let max_val = series
+            .iter()
+            .flat_map(|item| item.2.iter())
+            .cloned()
+            .fold(0.0_f32, f32::max);
+        let upper = (max_val + 1.0).max(4.0);
+        let x_max = weeks as i32;
+
+        let mut chart = ChartBuilder::on(&root)
+            .margin(28)
+            .x_label_area_size(70)
+            .y_label_area_size(50)
+            .build_cartesian_2d(0..x_max, 0f32..upper)
+            .ok()?;
+
+        chart
+            .configure_mesh()
+            .disable_mesh()
+            .x_labels(weeks.min(6))
+            .y_labels(5)
+            .x_label_formatter(&|v| format!("W{}", v + 1))
+            .label_style(("sans-serif", 22).into_font().color(&RGBColor(148, 163, 184)))
+            .axis_style(ShapeStyle::from(&RGBColor(46, 46, 60)).stroke_width(1))
+            .draw()
+            .ok()?;
+
+        for (name, color, points) in series {
+            let line_color = rgb_from_hex(color);
+            let stroke = ShapeStyle::from(&line_color).stroke_width(3);
+            let line_points: Vec<(i32, f32)> = points
+                .iter()
+                .enumerate()
+                .map(|(idx, value)| (idx as i32, *value))
+                .collect();
+
+            chart
+                .draw_series(LineSeries::new(line_points.iter().copied(), stroke))
+                .ok()?
+                .label(name.clone())
+                .legend(move |(x, y)| {
+                    PathElement::new(vec![(x, y), (x + 20, y)], stroke)
+                });
+
+            chart
+                .draw_series(line_points.iter().map(|(x, y)| {
+                    Circle::new(
+                        (*x, *y),
+                        4,
+                        ShapeStyle::from(&line_color).filled(),
+                    )
+                }))
+                .ok()?;
+        }
+
+        chart
+            .configure_series_labels()
+            .border_style(ShapeStyle::from(&RGBColor(46, 46, 60)).stroke_width(1))
+            .background_style(RGBAColor(0, 0, 0, 0.0))
+            .label_font(("sans-serif", 20).into_font().color(&RGBColor(148, 163, 184)))
+            .position(SeriesLabelPosition::UpperRight)
+            .draw()
+            .ok()?;
+
+        root.present().ok()?;
+        render_svg_image(&temp_svg, "sanctum_habits_trend.svg")
     }
 
     fn render_portfolio_distribution_chart(data: &[(String, f64)]) -> Option<Image> {
@@ -1469,38 +1657,108 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
     fn refresh_habit_analytics(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>) {
-        if let Ok(analytics) = controller.get_habit_analytics(365) {
-            let monthly_image = render_monthly_chart_image(&analytics.monthly_data);
+        let today = chrono::Local::now().date_naive();
+        let days_window: i64 = 90;
+        let start_date = today
+            .checked_sub_signed(chrono::Duration::days(days_window - 1))
+            .unwrap_or(today);
 
-            let weekday_data: Vec<WeekdayEfficiencyData> = analytics
-                .weekday_data
-                .iter()
-                .map(|w| WeekdayEfficiencyData {
-                    day_name: SharedString::from(&w.day_name),
-                    day_short: SharedString::from(&w.day_short),
-                    avg_count: w.avg_count,
-                    is_best: w.is_best,
-                    bar_height_percent: w.bar_height_percent,
-                })
-                .collect();
+        let logs = controller
+            .get_habit_logs(
+                start_date.format("%Y-%m-%d").to_string(),
+                today.format("%Y-%m-%d").to_string(),
+            )
+            .unwrap_or_default();
+        let habits = controller.get_habits().unwrap_or_default();
 
-            let monthly_data: Vec<MonthlyTrendData> = analytics
-                .monthly_data
-                .iter()
-                .map(|m| MonthlyTrendData {
-                    month_name: SharedString::from(&m.month_name),
-                    avg_per_day: m.avg_per_day,
-                    x_percent: m.x_percent,
-                    y_percent: m.y_percent,
-                })
-                .collect();
-
+        if habits.is_empty() {
             if let Some(ui) = ui_weak.upgrade() {
                 let adapter = ui.global::<HabitAdapter>();
-                adapter.set_weekday_efficiency(ModelRc::new(VecModel::from(weekday_data)));
-                adapter.set_monthly_trend(ModelRc::new(VecModel::from(monthly_data)));
-                adapter.set_monthly_chart_image(monthly_image.unwrap_or_default());
+                adapter.set_habits_top_chart_image(Image::default());
+                adapter.set_habits_trend_chart_image(Image::default());
             }
+            return;
+        }
+
+        let total_days = (today - start_date).num_days().max(0) as f32 + 1.0;
+        let mut completion_counts: HashMap<String, i32> = HashMap::new();
+        for log in &logs {
+            *completion_counts.entry(log.habit_id.clone()).or_insert(0) += 1;
+        }
+
+        let mut habit_stats: Vec<(String, String, String, f32)> = habits
+            .iter()
+            .map(|habit| {
+                let count = *completion_counts.get(&habit.id).unwrap_or(&0) as f32;
+                let rate = if total_days > 0.0 { count / total_days } else { 0.0 };
+                (
+                    habit.id.clone(),
+                    habit.name.clone(),
+                    habit.color.clone(),
+                    rate,
+                )
+            })
+            .collect();
+
+        habit_stats.sort_by(|a, b| {
+            b.3.partial_cmp(&a.3)
+                .unwrap_or(Ordering::Equal)
+                .then_with(|| a.1.cmp(&b.1))
+        });
+
+        let top_limit = 8usize;
+        let top_stats: Vec<(String, String, String, f32)> =
+            habit_stats.into_iter().take(top_limit).collect();
+        let top_chart_data: Vec<(String, String, f32)> = top_stats
+            .iter()
+            .map(|(_, name, color, rate)| (name.clone(), color.clone(), *rate))
+            .collect();
+
+        let top_chart_image = render_habit_top_chart(&top_chart_data);
+
+        let trend_limit = 6usize;
+        let trend_stats: Vec<(String, String, String, f32)> =
+            top_stats.iter().take(trend_limit).cloned().collect();
+        let weeks = 12usize;
+        let trend_start = today
+            .checked_sub_signed(chrono::Duration::days(weeks as i64 * 7 - 1))
+            .unwrap_or(today);
+        let mut trend_map: HashMap<String, Vec<i32>> = HashMap::new();
+        for (id, _, _, _) in &trend_stats {
+            trend_map.insert(id.clone(), vec![0; weeks]);
+        }
+
+        for log in &logs {
+            let Ok(date) = chrono::NaiveDate::parse_from_str(&log.completed_date, "%Y-%m-%d")
+            else {
+                continue;
+            };
+            if date < trend_start || date > today {
+                continue;
+            }
+            let idx = ((date - trend_start).num_days() / 7) as usize;
+            if let Some(series) = trend_map.get_mut(&log.habit_id)
+                && idx < weeks
+            {
+                series[idx] += 1;
+            }
+        }
+
+        let trend_series: Vec<(String, String, Vec<f32>)> = trend_stats
+            .iter()
+            .filter_map(|(id, name, color, _)| {
+                trend_map
+                    .get(id)
+                    .map(|series| (name.clone(), color.clone(), series.iter().map(|v| *v as f32).collect()))
+            })
+            .collect();
+
+        let trend_chart_image = render_habit_trend_chart(&trend_series);
+
+        if let Some(ui) = ui_weak.upgrade() {
+            let adapter = ui.global::<HabitAdapter>();
+            adapter.set_habits_top_chart_image(top_chart_image.unwrap_or_default());
+            adapter.set_habits_trend_chart_image(trend_chart_image.unwrap_or_default());
         }
     }
 

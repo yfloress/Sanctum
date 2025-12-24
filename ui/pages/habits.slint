@@ -4,7 +4,7 @@
 import { Palette, HabitAdapter, AppState } from "../globals.slint";
 import { HabitRow } from "../components/habit_row.slint";
 import { HabitHeatmap } from "../components/habit_heatmap.slint";
-import { MonthlyLineChart } from "../components/analytics_charts.slint";
+import { TopHabitsBarChart, HabitTrendChart } from "../components/analytics_charts.slint";
 import { TextButton, ActionButton } from "../widgets.slint";
 import { AddHabitModal } from "../modals/add_habit.slint";
 
@@ -326,18 +326,21 @@ export component HabitsPage inherits Rectangle {
                 }
 
                 // Analytics Section
-                if HabitAdapter.monthly-trend.length > 0: VerticalLayout {
+                if HabitAdapter.habits.length > 0: VerticalLayout {
                     spacing: 16px;
 
                     SectionHeader {
                         title: "ANALYTICS";
                     }
 
-                    // Monthly Trend Chart (Annual view)
-                    MonthlyLineChart {
+                    TopHabitsBarChart {
                         horizontal-stretch: 1;
-                        data: HabitAdapter.monthly-trend;
-                        image: HabitAdapter.monthly-chart-image;
+                        image: HabitAdapter.habits-top-chart-image;
+                    }
+
+                    HabitTrendChart {
+                        horizontal-stretch: 1;
+                        image: HabitAdapter.habits-trend-chart-image;
                     }
                 }
 

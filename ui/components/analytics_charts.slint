@@ -134,3 +134,129 @@ export component MonthlyLineChart inherits Rectangle {
         }
     }
 }
+
+// ==================== Top Habits Bar Chart ====================
+// Shows completion rate per habit
+
+export component TopHabitsBarChart inherits Rectangle {
+    in property <image> image;
+
+    background: Palette.surface;
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: Palette.border;
+
+    VerticalLayout {
+        padding: 20px;
+        spacing: 14px;
+
+        Text {
+            text: "TOP HABITS (LAST 90 DAYS)";
+            color: Palette.text-secondary;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        Rectangle {
+            vertical-stretch: 1;
+            min-height: 240px;
+            border-radius: 16px;
+            background: @linear-gradient(180deg, #0a0a0a, #0f0f0f);
+            border-width: 1px;
+            border-color: Palette.border-subtle;
+            clip: true;
+
+            Image {
+                source: root.image;
+                width: 100%;
+                height: 100%;
+                image-fit: contain;
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 6px;
+            alignment: start;
+
+            Rectangle {
+                width: 2px;
+                height: 12px;
+                border-radius: 1px;
+                background: Palette.border-subtle;
+                y: (parent.height - self.height) / 2;
+            }
+
+            Text {
+                text: "Data window: last 90 days";
+                color: Palette.text-muted;
+                font-size: 9px;
+                font-weight: 500;
+                vertical-alignment: center;
+            }
+        }
+    }
+}
+
+// ==================== Habit Trends Line Chart ====================
+// Shows weekly completion trend per habit
+
+export component HabitTrendChart inherits Rectangle {
+    in property <image> image;
+
+    background: Palette.surface;
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: Palette.border;
+
+    VerticalLayout {
+        padding: 20px;
+        spacing: 14px;
+
+        Text {
+            text: "HABIT TRENDS (LAST 12 WEEKS)";
+            color: Palette.text-secondary;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        Rectangle {
+            vertical-stretch: 1;
+            min-height: 240px;
+            border-radius: 16px;
+            background: @linear-gradient(180deg, #0a0a0a, #0f0f0f);
+            border-width: 1px;
+            border-color: Palette.border-subtle;
+            clip: true;
+
+            Image {
+                source: root.image;
+                width: 100%;
+                height: 100%;
+                image-fit: contain;
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 6px;
+            alignment: start;
+
+            Rectangle {
+                width: 2px;
+                height: 12px;
+                border-radius: 1px;
+                background: Palette.border-subtle;
+                y: (parent.height - self.height) / 2;
+            }
+
+            Text {
+                text: "Data window: last 12 weeks";
+                color: Palette.text-muted;
+                font-size: 9px;
+                font-weight: 500;
+                vertical-alignment: center;
+            }
+        }
+    }
+}
