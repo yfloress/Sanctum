@@ -7,6 +7,7 @@ use directories::ProjectDirs;
 use log::error;
 use plotters::prelude::*;
 use plotters::series::{AreaSeries, LineSeries};
+use plotters::style::text_anchor::{HPos, Pos, VPos};
 use rand::Rng; // For title animation
 use sanctum::crypto;
 use sanctum::controller::{
@@ -1359,6 +1360,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         RGBColor(139, 92, 246)
     }
 
+    fn adjust_rgb(color: RGBColor, factor: f32) -> RGBColor {
+        let (r, g, b) = color.rgb();
+        let scale = |value: u8| ((value as f32 * factor).round().clamp(0.0, 255.0)) as u8;
+        RGBColor(scale(r), scale(g), scale(b))
+    }
+
+    fn variant_color(color: RGBColor, index: usize) -> RGBColor {
+        if index == 0 {
+            return color;
+        }
+        let step = 0.18_f32;
+        let magnitude = (index / 2 + 1) as f32;
+        let direction = if index % 2 == 0 { -1.0 } else { 1.0 };
+        let factor = (1.0 + direction * step * magnitude).clamp(0.55, 1.45);
+        adjust_rgb(color, factor)
+    }
+
     fn render_svg_image(temp_svg: &std::path::Path, final_name: &str) -> Option<Image> {
         let mut fontdb = fontdb::Database::new();
         let font_path = std::path::PathBuf::from("ui/fonts/DejaVuSans.ttf");
@@ -1404,9 +1422,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             return None;
         }
 
+        let mut color_counts: HashMap<String, usize> = HashMap::new();
         let colors: Vec<RGBColor> = chart_data
             .iter()
-            .map(|(_, color, _)| rgb_from_hex(color))
+            .map(|(_, color, _)| {
+                let count = color_counts.entry(color.clone()).or_insert(0);
+                let variant = variant_color(rgb_from_hex(color), *count);
+                *count += 1;
+                variant
+            })
             .collect();
         let labels: Vec<String> = vec![String::new(); chart_data.len()];
 
@@ -1426,10 +1450,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let total_height = chart_data.len() as i32 * line_height;
         let start_y = ((right_h as i32 - total_height) / 2).max(30);
         let label_color = RGBColor(148, 163, 184);
+        let label_style =
+            ("sans-serif", 52).into_font().color(&label_color).pos(Pos::new(HPos::Left, VPos::Center));
 
         for (idx, (name, color, rate)) in chart_data.iter().enumerate() {
             let y = start_y + idx as i32 * line_height;
-            let swatch = rgb_from_hex(color);
+            let swatch = colors.get(idx).copied().unwrap_or_else(|| rgb_from_hex(color));
             let swatch_x = 24;
             right
                 .draw(&Rectangle::new(
@@ -1442,8 +1468,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             right
                 .draw(&Text::new(
                     label,
-                    (swatch_x + 34, y + 8),
-                    ("sans-serif", 52).into_font().color(&label_color),
+                    (swatch_x + 34, y),
+                    label_style.clone(),
                 ))
                 .ok()?;
         }
@@ -1466,6 +1492,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let root = SVGBackend::new(&temp_svg, (1400, 720)).into_drawing_area();
         root.fill(&RGBAColor(0, 0, 0, 0.0)).ok()?;
 
+        let (_, root_h) = root.dim_in_pixel();
+        let legend_line_height = 56;
+        let legend_height = ((series.len() as i32) * legend_line_height + 24)
+            .min((root_h as i32 * 0.5) as i32)
+            .max(120);
+        let plot_height = (root_h as i32 - legend_height).max(240);
+        let (plot_area, legend_area) = root.split_vertically(plot_height as u32);
+
         let max_val = series
             .iter()
             .flat_map(|item| item.2.iter())
@@ -1474,7 +1508,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let upper = (max_val + 1.0).max(4.0);
         let x_max = weeks as i32;
 
-        let mut chart = ChartBuilder::on(&root)
+        let mut chart = ChartBuilder::on(&plot_area)
             .margin(28)
             .x_label_area_size(180)
             .y_label_area_size(140)
@@ -1492,8 +1526,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .draw()
             .ok()?;
 
+        let mut color_counts: HashMap<String, usize> = HashMap::new();
+        let mut legend_entries: Vec<(String, RGBColor)> = Vec::new();
+
         for (name, color, points) in series {
-            let line_color = rgb_from_hex(color);
+            let count = color_counts.entry(color.clone()).or_insert(0);
+            let line_color = variant_color(rgb_from_hex(color), *count);
+            *count += 1;
+            legend_entries.push((name.clone(), line_color));
             let stroke = ShapeStyle::from(&line_color).stroke_width(3);
             let line_points: Vec<(i32, f32)> = points
                 .iter()
@@ -1503,11 +1543,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             chart
                 .draw_series(LineSeries::new(line_points.iter().copied(), stroke))
-                .ok()?
-                .label(name.clone())
-                .legend(move |(x, y)| {
-                    PathElement::new(vec![(x, y), (x + 20, y)], stroke)
-                });
+                .ok()?;
 
             chart
                 .draw_series(line_points.iter().map(|(x, y)| {
@@ -1520,14 +1556,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .ok()?;
         }
 
-        chart
-            .configure_series_labels()
-            .border_style(ShapeStyle::from(&RGBColor(46, 46, 60)).stroke_width(1))
-            .background_style(RGBAColor(0, 0, 0, 0.0))
-            .label_font(("sans-serif", 48).into_font().color(&RGBColor(148, 163, 184)))
-            .position(SeriesLabelPosition::UpperRight)
-            .draw()
-            .ok()?;
+        let label_color = RGBColor(148, 163, 184);
+        let label_style =
+            ("sans-serif", 48).into_font().color(&label_color).pos(Pos::new(HPos::Left, VPos::Center));
+        let (_, legend_h) = legend_area.dim_in_pixel();
+        let total_height = legend_entries.len() as i32 * legend_line_height;
+        let start_y = ((legend_h as i32 - total_height) / 2).max(24);
+        let swatch_x = 24;
+
+        for (idx, (name, color)) in legend_entries.iter().enumerate() {
+            let y = start_y + idx as i32 * legend_line_height;
+            legend_area
+                .draw(&Rectangle::new(
+                    [(swatch_x, y - 12), (swatch_x + 22, y + 12)],
+                    color.filled(),
+                ))
+                .ok()?;
+            legend_area
+                .draw(&Text::new(
+                    name.clone(),
+                    (swatch_x + 34, y),
+                    label_style.clone(),
+                ))
+                .ok()?;
+        }
 
         root.present().ok()?;
         render_svg_image(&temp_svg, "sanctum_habits_trend.svg")
