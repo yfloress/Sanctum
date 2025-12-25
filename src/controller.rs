@@ -2394,6 +2394,34 @@ impl AppController {
         })
     }
 
+    /// Gets the available balance for a specific coin in a wallet at a given date
+    pub fn get_available_balance(
+        &self,
+        wallet_id: String,
+        coin_id: String,
+        date: String,
+    ) -> Result<f64, ControllerError> {
+        // Validate date format
+        if NaiveDate::parse_from_str(&date, "%Y-%m-%d").is_err() {
+            return Err(ControllerError::Validation(
+                "Invalid date format. Use YYYY-MM-DD".to_string(),
+            ));
+        }
+
+        self.with_db(|db| {
+            let validated_wallet_id = validate_uuid(&wallet_id)?;
+            let validated_coin_id = validate_uuid(&coin_id)?;
+
+            db.get_wallet_coin_balance_at(
+                &validated_wallet_id,
+                &validated_coin_id,
+                &date,
+                None, // Don't exclude any transactions
+            )
+            .map_err(ControllerError::Database)
+        })
+    }
+
     // ==================== Habits Methods ====================
 
     // ==================== Habit Management ====================

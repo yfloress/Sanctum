@@ -482,8 +482,21 @@ export component AddCryptoTransactionModal inherits Rectangle {
                             }
                         }
                         all-clicked => {
-                            // TODO: Get available balance from backend
-                            NotificationAdapter.show("All button - balance logic pending", false);
+                            if (CryptoAdapter.wallet-list.length == 0 || CryptoAdapter.coin-catalog.length == 0) {
+                                return;
+                            }
+
+                            let safe-wallet-idx = wallet-index >= CryptoAdapter.wallet-list.length ? 0 : wallet-index;
+                            let safe-coin-idx = coin-index >= CryptoAdapter.coin-catalog.length ? 0 : coin-index;
+                            let wallet-id = CryptoAdapter.wallet-list[safe-wallet-idx].id;
+                            let coin-id = CryptoAdapter.coin-catalog[safe-coin-idx].id;
+
+                            let balance = CryptoAdapter.get-available-balance(wallet-id, coin-id, date);
+                            root.amount = balance;
+
+                            if (root.selected-type == "swap") {
+                                root.update-swap-quote();
+                            }
                         }
                         submit-shortcut => { root.submit(); }
                     }

@@ -3801,6 +3801,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     {
         let controller = controller.clone();
+        ui.global::<CryptoAdapter>()
+            .on_get_available_balance(move |wallet_id, coin_id, date| {
+                match controller.get_available_balance(
+                    wallet_id.to_string(),
+                    coin_id.to_string(),
+                    date.to_string(),
+                ) {
+                    Ok(balance) => {
+                        let mut formatted = format!("{:.8}", balance);
+                        // Remove trailing zeros
+                        while formatted.contains('.') && formatted.ends_with('0') {
+                            formatted.pop();
+                        }
+                        if formatted.ends_with('.') {
+                            formatted.pop();
+                        }
+                        SharedString::from(formatted)
+                    }
+                    Err(_) => SharedString::from("0"),
+                }
+            });
+    }
+
+    {
+        let controller = controller.clone();
         let ui_weak = ui_weak.clone();
 
         ui.global::<CryptoAdapter>()
