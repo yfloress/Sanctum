@@ -155,7 +155,9 @@ export component EditCryptoTransactionModal inherits Rectangle {
         drop-shadow-color: Palette.shadow-strong;
         opacity: 1.0;
 
-        TouchArea { }
+        TouchArea {
+            clicked => { key-scope.focus(); }
+        }
 
         VerticalLayout {
             padding: 32px;
@@ -221,28 +223,31 @@ export component EditCryptoTransactionModal inherits Rectangle {
                     ReadonlyField { label: "ASSET"; value: CryptoAdapter.edit-symbol; }
                     ReadonlyField { label: "TYPE"; value: CryptoAdapter.edit-type; }
 
-                    FormField { 
-                        label: "AMOUNT"; 
-                        placeholder: "0.00"; 
-                        value <=> CryptoAdapter.edit-amount; 
-                        large: true; 
+                    FormField {
+                        label: "AMOUNT";
+                        placeholder: "0.00";
+                        value <=> CryptoAdapter.edit-amount;
+                        large: true;
+                        submit-shortcut => { root.submit(); }
                     }
 
                     HorizontalLayout {
                         spacing: 12px;
-                        FormField { 
-                            label: "PRICE (USD)"; 
+                        FormField {
+                            label: "PRICE (USD)";
                             placeholder: (CryptoAdapter.edit-type == "transfer_in" || CryptoAdapter.edit-type == "transfer_out")
                                 ? "Optional"
-                                : "Required"; 
-                            value <=> CryptoAdapter.edit-price; 
+                                : "Required";
+                            value <=> CryptoAdapter.edit-price;
                             horizontal-stretch: 1;
+                            submit-shortcut => { root.submit(); }
                         }
-                        FormField { 
-                            label: "FEE (USD)"; 
-                            placeholder: "0.00"; 
-                            value <=> CryptoAdapter.edit-fee; 
+                        FormField {
+                            label: "FEE (USD)";
+                            placeholder: "0.00";
+                            value <=> CryptoAdapter.edit-fee;
                             width: 120px;
+                            submit-shortcut => { root.submit(); }
                         }
                     }
 
@@ -253,25 +258,29 @@ export component EditCryptoTransactionModal inherits Rectangle {
                             placeholder: "e.g. ethereum";
                             value <=> CryptoAdapter.edit-fee-coin-id;
                             horizontal-stretch: 1;
+                            submit-shortcut => { root.submit(); }
                         }
                         FormField {
                             label: "FEE AMOUNT";
                             placeholder: "0.00";
                             value <=> CryptoAdapter.edit-fee-coin-amount;
                             width: 140px;
+                            submit-shortcut => { root.submit(); }
                         }
                     }
 
-                    FormField { 
-                        label: "NOTES"; 
-                        placeholder: "Transaction details..."; 
-                        value <=> CryptoAdapter.edit-notes; 
+                    FormField {
+                        label: "NOTES";
+                        placeholder: "Transaction details...";
+                        value <=> CryptoAdapter.edit-notes;
+                        submit-shortcut => { root.submit(); }
                     }
 
-                    FormField { 
-                        label: "DATE"; 
+                    FormField {
+                        label: "DATE";
                         placeholder: "YYYY-MM-DD";
-                        value <=> CryptoAdapter.edit-date; 
+                        value <=> CryptoAdapter.edit-date;
+                        submit-shortcut => { root.submit(); }
                     }
 
                     Rectangle { height: 8px; }

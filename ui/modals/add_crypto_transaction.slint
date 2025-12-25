@@ -293,7 +293,9 @@ export component AddCryptoTransactionModal inherits Rectangle {
         drop-shadow-color: Palette.shadow-strong;
         opacity: 1.0;
 
-        TouchArea { }
+        TouchArea {
+            clicked => { key-scope.focus(); }
+        }
 
         VerticalLayout {
             padding: 32px;
@@ -449,16 +451,17 @@ export component AddCryptoTransactionModal inherits Rectangle {
                     }
 	                    
                     // Amount Field
-                    FormField { 
-                        label: root.selected-type == "swap" || root.selected-type == "move" ? "FROM AMOUNT" : "AMOUNT"; 
-                        placeholder: "0.00"; 
-                        value <=> root.amount; 
-                        large: true; 
+                    FormField {
+                        label: root.selected-type == "swap" || root.selected-type == "move" ? "FROM AMOUNT" : "AMOUNT";
+                        placeholder: "0.00";
+                        value <=> root.amount;
+                        large: true;
                         edited => {
                             if (root.selected-type == "swap") {
                                 root.update-swap-quote();
                             }
                         }
+                        submit-shortcut => { root.submit(); }
                     }
 
                     if root.selected-type == "swap": FormField {
@@ -468,29 +471,33 @@ export component AddCryptoTransactionModal inherits Rectangle {
                         large: true;
                         show-refresh: true;
                         refresh => { root.refresh-swap-quote(); }
+                        submit-shortcut => { root.submit(); }
                     }
                     if root.selected-type == "move": FormField {
                         label: "TO AMOUNT (optional)";
                         placeholder: "Same as FROM";
                         value <=> root.move-amount;
                         large: true;
+                        submit-shortcut => { root.submit(); }
                     }
 
                     HorizontalLayout {
                         spacing: 12px;
-                        if root.selected-type != "swap" && root.selected-type != "move": FormField { 
-                            label: "PRICE (USD)"; 
+                        if root.selected-type != "swap" && root.selected-type != "move": FormField {
+                            label: "PRICE (USD)";
                             placeholder: (root.selected-type == "transfer_in" || root.selected-type == "transfer_out")
                                 ? "Optional"
-                                : "Required"; 
-                            value <=> root.price; 
+                                : "Required";
+                            value <=> root.price;
                             horizontal-stretch: 1;
+                            submit-shortcut => { root.submit(); }
                         }
-                        FormField { 
-                            label: "FEE (USD)"; 
-                            placeholder: "0.00"; 
-                            value <=> root.fee; 
+                        FormField {
+                            label: "FEE (USD)";
+                            placeholder: "0.00";
+                            value <=> root.fee;
                             width: root.selected-type == "swap" ? 160px : 120px;
+                            submit-shortcut => { root.submit(); }
                         }
                     }
 
@@ -506,21 +513,24 @@ export component AddCryptoTransactionModal inherits Rectangle {
                             placeholder: "0.00";
                             value <=> root.fee-coin-amount;
                             width: 140px;
+                            submit-shortcut => { root.submit(); }
                         }
                     }
 
                         // Notes Field
-                        FormField { 
-                            label: "NOTES"; 
-                            placeholder: "Transaction details..."; 
-                            value <=> root.notes; 
+                        FormField {
+                            label: "NOTES";
+                            placeholder: "Transaction details...";
+                            value <=> root.notes;
+                            submit-shortcut => { root.submit(); }
                         }
-	                    
+
 	                    // Date Field
-	                    FormField { 
-	                        label: "DATE"; 
+	                    FormField {
+	                        label: "DATE";
 	                        placeholder: "YYYY-MM-DD";
-	                        value <=> root.date; 
+	                        value <=> root.date;
+	                        submit-shortcut => { root.submit(); }
 	                    }
 	
 	                    Rectangle { height: 8px; }

@@ -186,7 +186,9 @@ export component AddCryptoWalletModal inherits Rectangle {
         drop-shadow-color: Palette.shadow-strong;
         opacity: 1.0;
 
-        TouchArea { }
+        TouchArea {
+            clicked => { key-scope.focus(); }
+        }
 
 	        VerticalLayout {
 	            padding: 32px;
@@ -249,10 +251,11 @@ export component AddCryptoWalletModal inherits Rectangle {
 	                    spacing: 24px;
 
 	                    // Name Field
-	                    FormField { 
-	                        label: "WALLET NAME"; 
-	                        placeholder: "e.g. Ledger Nano X"; 
-	                        value <=> root.wallet-name; 
+	                    FormField {
+	                        label: "WALLET NAME";
+	                        placeholder: "e.g. Ledger Nano X";
+	                        value <=> root.wallet-name;
+	                        submit-shortcut => { root.submit(); }
 	                    }
 
 	                    // Category Label
