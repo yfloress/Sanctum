@@ -21,6 +21,7 @@ use slint::{Image, Model, ModelRc, VecModel, Weak};
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
+use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 slint::include_modules!();
@@ -91,7 +92,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create the Slint UI
     let ui = AppWindow::new()?;
-    let habit_analytics_cache = Arc::new(Mutex::new(HabitAnalyticsCache::default()));
+    let habit_analytics_cache = Rc::new(RefCell::new(HabitAnalyticsCache::default()));
 
     // Title Animation: Decryption Effect
     {
@@ -1065,8 +1066,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // ==================== HabitAdapter Logic ====================
 
-    let current_habit_date = Arc::new(std::sync::Mutex::new(chrono::Local::now().date_naive()));
-    let current_heatmap_year = Arc::new(std::sync::Mutex::new(chrono::Local::now().year()));
+    let current_habit_date = Arc::new(Mutex::new(chrono::Local::now().date_naive()));
+    let current_heatmap_year = Arc::new(Mutex::new(chrono::Local::now().year()));
 
     fn reload_habits(
         ui_weak: &Weak<AppWindow>,
@@ -1836,7 +1837,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     fn refresh_habit_analytics<F: Fn(String, bool)>(
         ui_weak: &Weak<AppWindow>,
         controller: &Arc<AppController>,
-        cache: &Arc<Mutex<HabitAnalyticsCache>>,
+        cache: &Rc<RefCell<HabitAnalyticsCache>>,
         notify: &F,
     ) {
         let today = chrono::Local::now().date_naive();
@@ -1877,7 +1878,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             habit_hash,
         };
 
-        if let Ok(cache_guard) = cache.lock() {
+        {
+            let cache_guard = cache.borrow();
             if cache_guard.key.as_ref() == Some(&key) {
                 let snapshot = cache_guard.snapshot.clone();
                 drop(cache_guard);
@@ -1907,10 +1909,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 insight_primary: "Your insights will appear here once you have data.".to_string(),
                 insight_secondary: "".to_string(),
             };
-            if let Ok(mut cache_guard) = cache.lock() {
-                cache_guard.key = Some(key);
-                cache_guard.snapshot = snapshot.clone();
-            }
+            let mut cache_guard = cache.borrow_mut();
+            cache_guard.key = Some(key);
+            cache_guard.snapshot = snapshot.clone();
             if let Some(ui) = ui_weak.upgrade() {
                 let adapter = ui.global::<HabitAdapter>();
                 adapter.set_habits_radar_chart_image(snapshot.radar_image);
@@ -2161,7 +2162,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             insight_secondary,
         };
 
-        if let Ok(mut cache_guard) = cache.lock() {
+        {
+            let mut cache_guard = cache.borrow_mut();
             cache_guard.key = Some(key);
             cache_guard.snapshot = snapshot.clone();
         }
