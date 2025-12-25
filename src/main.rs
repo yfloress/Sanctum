@@ -20,11 +20,38 @@ use slint::SharedString;
 use slint::{Image, Model, ModelRc, VecModel, Weak};
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
+use std::hash::{Hash, Hasher};
+use std::sync::{Arc, Mutex};
 
 slint::include_modules!();
 
 const CRYPTO_ICON_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/ui/assets/crypto-icons");
+
+#[derive(Clone, Default)]
+struct HabitAnalyticsSnapshot {
+    radar_image: Image,
+    radar_has_data: bool,
+    weekday_image: Image,
+    weekday_has_data: bool,
+    weekly_primary: String,
+    weekly_secondary: String,
+    insight_primary: String,
+    insight_secondary: String,
+}
+
+#[derive(Clone, PartialEq, Eq)]
+struct HabitAnalyticsKey {
+    habits_len: usize,
+    logs_len: usize,
+    last_log_date: Option<String>,
+    habit_hash: u64,
+}
+
+#[derive(Default)]
+struct HabitAnalyticsCache {
+    key: Option<HabitAnalyticsKey>,
+    snapshot: HabitAnalyticsSnapshot,
+}
 
 thread_local! {
     static CRYPTO_ICON_CACHE: RefCell<HashMap<String, Image>> = RefCell::new(HashMap::new());
@@ -64,6 +91,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create the Slint UI
     let ui = AppWindow::new()?;
+    let habit_analytics_cache = Arc::new(Mutex::new(HabitAnalyticsCache::default()));
 
     // Title Animation: Decryption Effect
     {
@@ -1805,32 +1833,94 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
 
-    fn refresh_habit_analytics(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>) {
+    fn refresh_habit_analytics<F: Fn(String, bool)>(
+        ui_weak: &Weak<AppWindow>,
+        controller: &Arc<AppController>,
+        cache: &Arc<Mutex<HabitAnalyticsCache>>,
+        notify: &F,
+    ) {
         let today = chrono::Local::now().date_naive();
         let days_window: i64 = 30;
         let start_date = today
             .checked_sub_signed(chrono::Duration::days(days_window - 1))
             .unwrap_or(today);
 
-        let logs = controller
-            .get_habit_logs(
-                start_date.format("%Y-%m-%d").to_string(),
-                today.format("%Y-%m-%d").to_string(),
-            )
-            .unwrap_or_default();
-        let habits = controller.get_habits().unwrap_or_default();
+        let logs = match controller.get_habit_logs(
+            start_date.format("%Y-%m-%d").to_string(),
+            today.format("%Y-%m-%d").to_string(),
+        ) {
+            Ok(data) => data,
+            Err(e) => {
+                notify(format!("Failed to load habit analytics: {}", e), true);
+                return;
+            }
+        };
+        let habits = match controller.get_habits() {
+            Ok(data) => data,
+            Err(e) => {
+                notify(format!("Failed to load habits: {}", e), true);
+                return;
+            }
+        };
+
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        for habit in &habits {
+            habit.id.hash(&mut hasher);
+            habit.name.hash(&mut hasher);
+            habit.category.hash(&mut hasher);
+        }
+        let habit_hash = hasher.finish();
+        let key = HabitAnalyticsKey {
+            habits_len: habits.len(),
+            logs_len: logs.len(),
+            last_log_date: logs.last().map(|log| log.completed_date.clone()),
+            habit_hash,
+        };
+
+        if let Ok(cache_guard) = cache.lock() {
+            if cache_guard.key.as_ref() == Some(&key) {
+                let snapshot = cache_guard.snapshot.clone();
+                drop(cache_guard);
+                if let Some(ui) = ui_weak.upgrade() {
+                    let adapter = ui.global::<HabitAdapter>();
+                    adapter.set_habits_radar_chart_image(snapshot.radar_image);
+                    adapter.set_habits_radar_has_data(snapshot.radar_has_data);
+                    adapter.set_habits_weekday_chart_image(snapshot.weekday_image);
+                    adapter.set_habits_weekday_has_data(snapshot.weekday_has_data);
+                    adapter.set_habits_weekly_primary(snapshot.weekly_primary.into());
+                    adapter.set_habits_weekly_secondary(snapshot.weekly_secondary.into());
+                    adapter.set_habits_insight_primary(snapshot.insight_primary.into());
+                    adapter.set_habits_insight_secondary(snapshot.insight_secondary.into());
+                }
+                return;
+            }
+        }
 
         if habits.is_empty() {
+            let snapshot = HabitAnalyticsSnapshot {
+                radar_image: Image::default(),
+                radar_has_data: false,
+                weekday_image: Image::default(),
+                weekday_has_data: false,
+                weekly_primary: "Create your first habit to get started.".to_string(),
+                weekly_secondary: "".to_string(),
+                insight_primary: "Your insights will appear here once you have data.".to_string(),
+                insight_secondary: "".to_string(),
+            };
+            if let Ok(mut cache_guard) = cache.lock() {
+                cache_guard.key = Some(key);
+                cache_guard.snapshot = snapshot.clone();
+            }
             if let Some(ui) = ui_weak.upgrade() {
                 let adapter = ui.global::<HabitAdapter>();
-                adapter.set_habits_radar_chart_image(Image::default());
-                adapter.set_habits_radar_has_data(false);
-                adapter.set_habits_weekly_primary("Create your first habit to get started.".into());
-                adapter.set_habits_weekly_secondary("".into());
-                adapter.set_habits_insight_primary(
-                    "Your insights will appear here once you have data.".into(),
-                );
-                adapter.set_habits_insight_secondary("".into());
+                adapter.set_habits_radar_chart_image(snapshot.radar_image);
+                adapter.set_habits_radar_has_data(snapshot.radar_has_data);
+                adapter.set_habits_weekday_chart_image(snapshot.weekday_image);
+                adapter.set_habits_weekday_has_data(snapshot.weekday_has_data);
+                adapter.set_habits_weekly_primary(snapshot.weekly_primary.into());
+                adapter.set_habits_weekly_secondary(snapshot.weekly_secondary.into());
+                adapter.set_habits_insight_primary(snapshot.insight_primary.into());
+                adapter.set_habits_insight_secondary(snapshot.insight_secondary.into());
             }
             return;
         }
@@ -1883,7 +1973,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let categories = [
             ("mind", "MIND", "#38bdf8"),
             ("body", "BODY", "#22c55e"),
-            ("spirit", "SPIRIT", "#a855f7"),
+            ("spirit", "DISCIPLINE", "#a855f7"),
         ];
 
         let radar_data: Vec<(String, String, f32)> = categories
@@ -2060,16 +2150,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             None
         };
 
+        let snapshot = HabitAnalyticsSnapshot {
+            radar_image: radar_image.unwrap_or_default(),
+            radar_has_data: total_completed > 0,
+            weekday_image: weekday_chart_image.unwrap_or_default(),
+            weekday_has_data: total_completed > 0 && max_weekday_avg > 0.0,
+            weekly_primary,
+            weekly_secondary,
+            insight_primary,
+            insight_secondary,
+        };
+
+        if let Ok(mut cache_guard) = cache.lock() {
+            cache_guard.key = Some(key);
+            cache_guard.snapshot = snapshot.clone();
+        }
+
         if let Some(ui) = ui_weak.upgrade() {
             let adapter = ui.global::<HabitAdapter>();
-            adapter.set_habits_radar_chart_image(radar_image.unwrap_or_default());
-            adapter.set_habits_radar_has_data(total_completed > 0);
-            adapter.set_habits_weekday_chart_image(weekday_chart_image.unwrap_or_default());
-            adapter.set_habits_weekday_has_data(total_completed > 0 && max_weekday_avg > 0.0);
-            adapter.set_habits_weekly_primary(weekly_primary.into());
-            adapter.set_habits_weekly_secondary(weekly_secondary.into());
-            adapter.set_habits_insight_primary(insight_primary.into());
-            adapter.set_habits_insight_secondary(insight_secondary.into());
+            adapter.set_habits_radar_chart_image(snapshot.radar_image);
+            adapter.set_habits_radar_has_data(snapshot.radar_has_data);
+            adapter.set_habits_weekday_chart_image(snapshot.weekday_image);
+            adapter.set_habits_weekday_has_data(snapshot.weekday_has_data);
+            adapter.set_habits_weekly_primary(snapshot.weekly_primary.into());
+            adapter.set_habits_weekly_secondary(snapshot.weekly_secondary.into());
+            adapter.set_habits_insight_primary(snapshot.insight_primary.into());
+            adapter.set_habits_insight_secondary(snapshot.insight_secondary.into());
         }
     }
 
@@ -2105,6 +2211,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_weak = ui_weak.clone();
         let date_lock = current_habit_date.clone();
         let year_lock = current_heatmap_year.clone();
+        let analytics_cache = habit_analytics_cache.clone();
         let notify = show_notification.clone();
         ui.global::<HabitAdapter>()
             .on_create_habit(move |name, desc, color, category| -> SharedString {
@@ -2125,7 +2232,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let y = *year_lock.lock().unwrap();
                         reload_habits(&ui_weak, &controller, d);
                         reload_heatmap(&ui_weak, &controller, y); // Refresh heatmap
-                        refresh_habit_analytics(&ui_weak, &controller);
+                        refresh_habit_analytics(&ui_weak, &controller, &analytics_cache, &notify);
                         notify("Habit created".into(), false);
                         SharedString::from("")
                     }
@@ -2139,6 +2246,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_weak = ui_weak.clone();
         let date_lock = current_habit_date.clone();
         let year_lock = current_heatmap_year.clone();
+        let analytics_cache = habit_analytics_cache.clone();
         let notify = show_notification.clone();
         ui.global::<HabitAdapter>()
             .on_update_habit(move |id, name, desc, color, category| -> SharedString {
@@ -2161,7 +2269,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let y = *year_lock.lock().unwrap();
                         reload_habits(&ui_weak, &controller, d);
                         reload_heatmap(&ui_weak, &controller, y);
-                        refresh_habit_analytics(&ui_weak, &controller);
+                        refresh_habit_analytics(&ui_weak, &controller, &analytics_cache, &notify);
                         notify("Habit updated".into(), false);
                         SharedString::from("")
                     }
@@ -2175,6 +2283,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_weak = ui_weak.clone();
         let date_lock = current_habit_date.clone();
         let year_lock = current_heatmap_year.clone();
+        let analytics_cache = habit_analytics_cache.clone();
         let notify = show_notification.clone();
         ui.global::<HabitAdapter>()
             .on_delete_habit(move |id| -> SharedString {
@@ -2185,7 +2294,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let y = *year_lock.lock().unwrap();
                         reload_habits(&ui_weak, &controller, d);
                         reload_heatmap(&ui_weak, &controller, y); // Refresh heatmap
-                        refresh_habit_analytics(&ui_weak, &controller);
+                        refresh_habit_analytics(&ui_weak, &controller, &analytics_cache, &notify);
                         notify("Habit deleted".into(), false);
                         SharedString::from("")
                     }
@@ -2199,6 +2308,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_weak = ui_weak.clone();
         let date_lock = current_habit_date.clone();
         let year_lock = current_heatmap_year.clone();
+        let analytics_cache = habit_analytics_cache.clone();
         let notify = show_notification.clone();
         ui.global::<HabitAdapter>()
             .on_toggle_habit(move |id, date| {
@@ -2208,7 +2318,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let y = *year_lock.lock().unwrap();
                         reload_habits(&ui_weak, &controller, d);
                         reload_heatmap(&ui_weak, &controller, y); // Refresh heatmap
-                        refresh_habit_analytics(&ui_weak, &controller);
+                        refresh_habit_analytics(&ui_weak, &controller, &analytics_cache, &notify);
                     }
                     Err(e) => {
                         notify(format!("Failed to toggle habit: {}", e), true);
@@ -2290,9 +2400,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
+        let analytics_cache = habit_analytics_cache.clone();
+        let notify = show_notification.clone();
         ui.global::<HabitAdapter>()
             .on_fetch_habit_analytics(move || {
-                refresh_habit_analytics(&ui_weak, &controller);
+                refresh_habit_analytics(&ui_weak, &controller, &analytics_cache, &notify);
             });
     }
 
