@@ -3819,7 +3819,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         }
                         SharedString::from(formatted)
                     }
-                    Err(_) => SharedString::from("0"),
+                    Err(e) => {
+                        log::error!("Error getting available balance: {:?}", e);
+                        SharedString::from("0")
+                    }
                 }
             });
     }

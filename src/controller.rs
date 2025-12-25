@@ -2412,10 +2412,11 @@ impl AppController {
             let validated_wallet_id = validate_uuid(&wallet_id)?;
             let validated_coin_id = validate_uuid(&coin_id)?;
 
+            // Use a far future date to get current balance (all transactions)
             db.get_wallet_coin_balance_at(
                 &validated_wallet_id,
                 &validated_coin_id,
-                &date,
+                "9999-12-31",
                 None, // Don't exclude any transactions
             )
             .map_err(ControllerError::Database)

@@ -491,7 +491,8 @@ export component AddCryptoTransactionModal inherits Rectangle {
                             let wallet-id = CryptoAdapter.wallet-list[safe-wallet-idx].id;
                             let coin-id = CryptoAdapter.coin-catalog[safe-coin-idx].id;
 
-                            let balance = CryptoAdapter.get-available-balance(wallet-id, coin-id, date);
+                            // Use AppState.current-date for today's balance
+                            let balance = CryptoAdapter.get-available-balance(wallet-id, coin-id, AppState.current-date);
                             root.amount = balance;
 
                             if (root.selected-type == "swap") {
