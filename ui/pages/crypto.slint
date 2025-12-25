@@ -255,6 +255,10 @@ export component CryptoPage inherits Rectangle {
                         letter-spacing: -1px;
                     }
 
+                    Rectangle {
+                        height: 0px;
+                    }
+
                     // PnL Badge
                     Rectangle {
                         property <bool> pnl_available: CryptoAdapter.total-pnl != "N/A";
