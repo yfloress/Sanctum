@@ -2500,6 +2500,7 @@ impl AppController {
         name: String,
         description: Option<String>,
         color: String,
+        category: String,
         is_archived: bool,
     ) -> std::result::Result<(), ControllerError> {
         if validate_uuid(&id).is_err() {
@@ -2520,8 +2521,12 @@ impl AppController {
             ));
         }
 
+        let category = normalize_habit_category(&category).ok_or_else(|| {
+            ControllerError::Validation("Invalid habit category".to_string())
+        })?;
+
         self.habit_service
-            .update_habit(id, name, description, color, is_archived)
+            .update_habit(id, name, description, color, category, is_archived)
             .map_err(ControllerError::Database)
     }
 

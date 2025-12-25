@@ -206,6 +206,8 @@ export struct HabitData {
     name: string,
     description: string,
     color: color,
+    color-hex: string,
+    color-index: int,
     category: string,
     streak: int,
     best-streak: int,
@@ -244,8 +246,16 @@ export global HabitAdapter {
     callback fetch-heatmap-data(); // Load last 365 days
     callback load-initial-data(); // Load current month on startup
     callback create-habit(string, string, string, string) -> string; // name, desc, color, category -> error or ""
+    callback update-habit(string, string, string, string, string) -> string; // id, name, desc, color, category -> error or ""
     callback toggle-habit(string, string); // id, date
     callback delete-habit(string) -> string;
+    // Edit state
+    in-out property <string> edit-id: "";
+    in-out property <string> edit-name: "";
+    in-out property <string> edit-description: "";
+    in-out property <string> edit-color-hex: "";
+    in-out property <int> edit-color-index: 0;
+    in-out property <string> edit-category: "";
     
     // Navigation
     callback prev-month();
@@ -574,6 +584,7 @@ export global AppState {
     in-out property <int> selected-account-index: 0;
     in-out property <bool> show-transfer-modal: false;
     in-out property <bool> show-add-habit: false;
+    in-out property <bool> show-edit-habit: false;
     in-out property <bool> show-add-crypto: false;
     in-out property <bool> show-edit-crypto: false;
     in-out property <bool> show-add-wallet: false;

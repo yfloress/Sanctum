@@ -63,6 +63,7 @@ impl HabitService {
         name: String,
         description: Option<String>,
         color: String,
+        category: String,
         is_archived: bool,
     ) -> Result<(), DbError> {
         self.get_db(|db| {
@@ -71,6 +72,7 @@ impl HabitService {
                     habit.name = name.clone();
                     habit.description = description.clone();
                     habit.color = color.clone();
+                    habit.category = category.clone();
                     // habit.archived = is_archived; // DB update doesn't support this
 
                     db.update_habit(&habit)?;

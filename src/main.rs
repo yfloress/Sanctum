@@ -387,6 +387,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         formatted
     }
 
+    const HABIT_COLOR_CHOICES: [&str; 16] = [
+        "#8b5cf6", "#ec4899", "#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16", "#22c55e",
+        "#10b981", "#14b8a6", "#06b6d4", "#0ea5e9", "#3b82f6", "#6366f1", "#a16207", "#64748b",
+    ];
+
+    fn habit_color_index(color_hex: &str) -> i32 {
+        let target = color_hex.trim();
+        HABIT_COLOR_CHOICES
+            .iter()
+            .position(|hex| hex.eq_ignore_ascii_case(target))
+            .map(|idx| idx as i32)
+            .unwrap_or(0)
+    }
+
     fn format_fee_display(
         tx: &CryptoTransaction,
         symbol_map: &HashMap<String, String>,
@@ -1173,11 +1187,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         slint::Color::from_rgb_u8(139, 92, 246)
                     };
 
+                    let color_hex = h.color.clone();
+
                     HabitData {
                         id: SharedString::from(h.id),
                         name: SharedString::from(h.name),
                         description: SharedString::from(h.description.unwrap_or_default()),
                         color,
+                        color_hex: SharedString::from(color_hex.clone()),
+                        color_index: habit_color_index(&color_hex),
                         category: SharedString::from(h.category),
                         streak: current_streak,
                         best_streak,
@@ -2090,9 +2108,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let notify = show_notification.clone();
         ui.global::<HabitAdapter>()
             .on_create_habit(move |name, desc, color, category| -> SharedString {
+                let description = if desc.is_empty() {
+                    None
+                } else {
+                    Some(desc.to_string())
+                };
                 let result = controller.create_habit(
                     name.to_string(),
-                    Some(desc.to_string()),
+                    description,
                     color.to_string(),
                     category.to_string(),
                 );
@@ -2104,6 +2127,42 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         reload_heatmap(&ui_weak, &controller, y); // Refresh heatmap
                         refresh_habit_analytics(&ui_weak, &controller);
                         notify("Habit created".into(), false);
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            });
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let date_lock = current_habit_date.clone();
+        let year_lock = current_heatmap_year.clone();
+        let notify = show_notification.clone();
+        ui.global::<HabitAdapter>()
+            .on_update_habit(move |id, name, desc, color, category| -> SharedString {
+                let description = if desc.is_empty() {
+                    None
+                } else {
+                    Some(desc.to_string())
+                };
+                let result = controller.update_habit(
+                    id.to_string(),
+                    name.to_string(),
+                    description,
+                    color.to_string(),
+                    category.to_string(),
+                    false,
+                );
+                match result {
+                    Ok(_) => {
+                        let d = *date_lock.lock().unwrap();
+                        let y = *year_lock.lock().unwrap();
+                        reload_habits(&ui_weak, &controller, d);
+                        reload_heatmap(&ui_weak, &controller, y);
+                        refresh_habit_analytics(&ui_weak, &controller);
+                        notify("Habit updated".into(), false);
                         SharedString::from("")
                     }
                     Err(e) => SharedString::from(e.to_string()),

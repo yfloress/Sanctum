@@ -1,7 +1,7 @@
 // ==================== Habits Page ====================
 // Premium Fintech UI - Habit tracking with visual analytics
 
-import { Palette, HabitAdapter, AppState } from "../globals.slint";
+import { Palette, HabitAdapter, AppState, NotificationAdapter } from "../globals.slint";
 import { HabitRow } from "../components/habit_row.slint";
 import { HabitHeatmap } from "../components/habit_heatmap.slint";
 import { HabitRadarChart, WeekdayEfficiencyChart, InsightCard } from "../components/analytics_charts.slint";
@@ -313,7 +313,21 @@ export component HabitsPage inherits Rectangle {
                             for habit in HabitAdapter.habits: HabitRow {
                                 habit: habit;
                                 toggle(date) => { HabitAdapter.toggle-habit(habit.id, date); }
-                                delete(id) => { HabitAdapter.delete-habit(id); }
+                                delete(id) => {
+                                    let result = HabitAdapter.delete-habit(id);
+                                    if (result != "") {
+                                        NotificationAdapter.show(result, true);
+                                    }
+                                }
+                                edit(id) => {
+                                    HabitAdapter.edit-id = habit.id;
+                                    HabitAdapter.edit-name = habit.name;
+                                    HabitAdapter.edit-description = habit.description;
+                                    HabitAdapter.edit-color-hex = habit.color-hex;
+                                    HabitAdapter.edit-color-index = habit.color-index;
+                                    HabitAdapter.edit-category = habit.category;
+                                    AppState.show-edit-habit = true;
+                                }
                             }
                         }
                     }
@@ -372,5 +386,10 @@ export component HabitsPage inherits Rectangle {
     
     if AppState.show-add-habit: AddHabitModal {
         close => { AppState.show-add-habit = false; }
+    }
+
+    if AppState.show-edit-habit: AddHabitModal {
+        editing: true;
+        close => { AppState.show-edit-habit = false; }
     }
 }
