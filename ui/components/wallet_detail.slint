@@ -59,6 +59,7 @@ component WalletHoldingRow inherits Rectangle {
             CryptoIcon {
                 symbol: root.symbol;
                 icon: root.icon;
+                y: (parent.height - self.height) / 2;
             }
 
             VerticalLayout {
@@ -101,11 +102,12 @@ component WalletTransactionRow inherits Rectangle {
     in property <bool> tx-is-swap: false;
     in property <bool> is-last: false;
 
-    property <bool> show-confirm-delete: false;
     callback delete-clicked(string);
     callback edit-clicked(string);
 
-    property <bool> show-swap: root.tx-is-swap || root.tx-type == "SWAP";
+    property <bool> show-swap: root.tx-is-swap;
+    property <bool> is-inflow: root.tx-type == "BUY" || root.tx-type == "IN";
+    property <bool> is-outflow: root.tx-type == "SELL" || root.tx-type == "OUT";
 
     height: 64px;
     background: transparent;
@@ -129,26 +131,26 @@ component WalletTransactionRow inherits Rectangle {
                 height: 32px;
                 border-radius: 8px;
                 background: 
-                    root.tx-type == "BUY" ? Palette.success.with-alpha(0.1) : 
-                    root.tx-type == "SELL" ? Palette.danger.with-alpha(0.1) :
+                    root.is-inflow ? Palette.success.with-alpha(0.1) : 
+                    root.is-outflow ? Palette.danger.with-alpha(0.1) :
                     root.show-swap ? Palette.primary.with-alpha(0.1) :
                     Palette.text-muted.with-alpha(0.1);
                 border-width: 1px;
                 border-color: 
-                    root.tx-type == "BUY" ? Palette.success.with-alpha(0.2) : 
-                    root.tx-type == "SELL" ? Palette.danger.with-alpha(0.2) :
+                    root.is-inflow ? Palette.success.with-alpha(0.2) : 
+                    root.is-outflow ? Palette.danger.with-alpha(0.2) :
                     root.show-swap ? Palette.primary.with-alpha(0.2) :
                     Palette.border;
                 y: (parent.height - self.height) / 2;
                 
                 Text {
                     text: 
-                        root.tx-type == "BUY" ? "▲" : 
-                        root.tx-type == "SELL" ? "▼" :
+                        root.is-inflow ? "▲" : 
+                        root.is-outflow ? "▼" :
                         root.show-swap ? "⇄" : "•";
                     color: 
-                        root.tx-type == "BUY" ? Palette.success : 
-                        root.tx-type == "SELL" ? Palette.danger :
+                        root.is-inflow ? Palette.success : 
+                        root.is-outflow ? Palette.danger :
                         root.show-swap ? Palette.primary :
                         Palette.text-muted;
                     font-size: 10px;
@@ -162,7 +164,7 @@ component WalletTransactionRow inherits Rectangle {
                 spacing: 2px;
                 
                 Text { 
-                    text: root.show-swap ? "SWAP" : root.tx-type; 
+                    text: root.tx-type; 
                     color: Palette.text-primary; 
                     font-size: 12px; 
                     font-weight: 500; 
@@ -195,7 +197,7 @@ component WalletTransactionRow inherits Rectangle {
                     font-weight: 500;
                     horizontal-alignment: right;
                 }
-                Text {
+                if root.tx-price != "" && root.tx-price != "N/A": Text {
                     text: "@ " + root.tx-price;
                     color: Palette.text-muted;
                     font-size: 10px;
@@ -254,9 +256,7 @@ component WalletTransactionRow inherits Rectangle {
 
                 del-touch := TouchArea {
                     mouse-cursor: pointer;
-                    clicked => {
-                        root.show-confirm-delete = true;
-                    }
+                    clicked => { root.delete-clicked(root.tx-id); }
                 }
             }
         }
@@ -269,110 +269,15 @@ component WalletTransactionRow inherits Rectangle {
         y: parent.height - 1px;
     }
 
-    // Delete confirmation dialog
-    if root.show-confirm-delete: Rectangle {
-        width: 100%;
-        height: 100%;
-        z: 1000;
-        background: Palette.overlay-bg-soft;
-
-        Rectangle {
-            width: min(340px, parent.width - 40px);
-            height: min(180px, parent.height - 40px);
-            background: Palette.sidebar-bg;
-            border-radius: 12px;
-            border-width: 1px;
-            border-color: Palette.border-light;
-            x: (parent.width - self.width) / 2;
-            y: (parent.height - self.height) / 2;
-            drop-shadow-blur: 20px;
-            drop-shadow-color: Palette.shadow-color;
-
-            VerticalLayout {
-                padding: 24px;
-                spacing: 16px;
-
-                Text {
-                    text: "Delete Transaction?";
-                    color: Palette.text-primary;
-                    font-size: 14px;
-                    font-weight: 600;
-                    horizontal-alignment: center;
-                }
-
-                Text {
-                    text: "This will permanently delete this " + root.tx-type + " transaction (" + root.tx-amount + "). This action cannot be undone.";
-                    color: Palette.text-muted;
-                    font-size: 11px;
-                    wrap: word-wrap;
-                    horizontal-alignment: center;
-                }
-
-                HorizontalLayout {
-                    spacing: 12px;
-
-                    Rectangle {
-                        horizontal-stretch: 1;
-                        height: 36px;
-                        background: cancel-touch.has-hover ? Palette.surface-hover : Palette.surface;
-                        border-radius: 8px;
-                        border-width: 1px;
-                        border-color: Palette.border;
-
-                        Text {
-                            text: "Cancel";
-                            color: Palette.text-secondary;
-                            font-size: 11px;
-                            font-weight: 600;
-                            horizontal-alignment: center;
-                            vertical-alignment: center;
-                        }
-
-                        cancel-touch := TouchArea {
-                            mouse-cursor: pointer;
-                            clicked => { root.show-confirm-delete = false; }
-                        }
-                    }
-
-                    Rectangle {
-                        horizontal-stretch: 1;
-                        height: 36px;
-                        background: confirm-touch.has-hover ? Palette.delete-bg-active : Palette.delete-bg-hover;
-                        border-radius: 8px;
-                        border-width: 1px;
-                        border-color: Palette.delete-border;
-
-                        Text {
-                            text: "Delete";
-                            color: Palette.text-primary;
-                            font-size: 11px;
-                            font-weight: 600;
-                            horizontal-alignment: center;
-                            vertical-alignment: center;
-                        }
-
-                        confirm-touch := TouchArea {
-                            mouse-cursor: pointer;
-                            clicked => {
-                                root.delete-clicked(root.tx-id);
-                                root.show-confirm-delete = false;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        TouchArea {
-            clicked => { root.show-confirm-delete = false; }
-        }
-    }
 }
 
 // ==================== Main Panel ====================
 export component WalletDetailPanel inherits Rectangle {
     width: 420px;
     height: 100%;
+    property <bool> show-delete-transaction: false;
+    property <string> delete-transaction-id: "";
+    property <string> delete-transaction-label: "";
     background: @linear-gradient(
         180deg,
         Palette.crypto-panel-gradient-start 0%,
@@ -568,7 +473,9 @@ export component WalletDetailPanel inherits Rectangle {
                             is-last: index == CryptoAdapter.wallet-history.length - 1;
 
                             delete-clicked(id) => {
-                                CryptoAdapter.delete-crypto-transaction(id);
+                                root.delete-transaction-id = id;
+                                root.delete-transaction-label = tx.type + " " + tx.amount;
+                                root.show-delete-transaction = true;
                             }
                             edit-clicked(id) => {
                                 let result = CryptoAdapter.load-edit-transaction(id);
@@ -581,6 +488,121 @@ export component WalletDetailPanel inherits Rectangle {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    if root.show-delete-transaction: Rectangle {
+        x: 0; y: 0; width: 100%; height: 100%;
+        z: 1200;
+
+        Rectangle {
+            background: Palette.overlay-bg-strong;
+        }
+
+        Rectangle {
+            width: min(360px, parent.width - 40px);
+            height: min(180px, parent.height - 40px);
+            background: Palette.sidebar-bg;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: Palette.border-light;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            drop-shadow-blur: 20px;
+            drop-shadow-color: Palette.shadow-color;
+
+            VerticalLayout {
+                padding: 24px;
+                spacing: 16px;
+
+                Text {
+                    text: "Delete Transaction?";
+                    color: Palette.text-primary;
+                    font-size: 14px;
+                    font-weight: 600;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: "This will permanently delete " + root.delete-transaction-label + ". This action cannot be undone.";
+                    color: Palette.text-muted;
+                    font-size: 11px;
+                    wrap: word-wrap;
+                    horizontal-alignment: center;
+                }
+
+                HorizontalLayout {
+                    spacing: 12px;
+
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        height: 36px;
+                        background: cancel-touch.has-hover ? Palette.surface-hover : Palette.surface;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: Palette.border;
+
+                        Text {
+                            text: "Cancel";
+                            color: Palette.text-secondary;
+                            font-size: 11px;
+                            font-weight: 600;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        cancel-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                root.show-delete-transaction = false;
+                                root.delete-transaction-id = "";
+                                root.delete-transaction-label = "";
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        height: 36px;
+                        background: confirm-touch.has-hover ? Palette.delete-bg-active : Palette.delete-bg-hover;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: Palette.delete-border;
+
+                        Text {
+                            text: "Delete";
+                            color: Palette.text-primary;
+                            font-size: 11px;
+                            font-weight: 600;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        confirm-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                let result = CryptoAdapter.delete-crypto-transaction(root.delete-transaction-id);
+                                if (result == "") {
+                                    CryptoAdapter.fetch-wallet-details(CryptoAdapter.selected-wallet-id);
+                                    root.show-delete-transaction = false;
+                                    root.delete-transaction-id = "";
+                                    root.delete-transaction-label = "";
+                                } else {
+                                    NotificationAdapter.show(result, true);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        TouchArea {
+            clicked => {
+                root.show-delete-transaction = false;
+                root.delete-transaction-id = "";
+                root.delete-transaction-label = "";
             }
         }
     }

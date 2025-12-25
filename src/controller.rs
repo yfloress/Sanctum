@@ -7,7 +7,7 @@ use crate::crypto;
 use crate::db::{Database, DbError};
 use crate::models::{
     Account, AccountBalance, AggregatedAsset, BalanceSummary, CryptoAsset, CryptoCatalogCoin,
-    CryptoTransaction, CryptoWallet, Habit, HabitLog, Transaction,
+    CryptoTransaction, CryptoTransactionType, CryptoWallet, Habit, HabitLog, Transaction,
 };
 use crate::security_log::{SecurityEvent, log_auth_failure, log_security_event};
 use crate::services::habit::HabitService;
@@ -307,39 +307,49 @@ fn validate_sufficient_balance(
 
 /// Validates sufficient balance for transaction fee
 /// Handles both same-coin fees and different-coin fees
-fn validate_fee_balance(
-    db: &Database,
-    wallet_id: &str,
-    main_coin_id: &str,
-    main_symbol: &str,
+struct FeeBalanceContext<'a> {
+    db: &'a Database,
+    wallet_id: &'a str,
+    main_coin_id: &'a str,
+    main_symbol: &'a str,
     main_amount: f64,
+    is_outflow: bool,
+    date: &'a str,
+    exclude_tx_id: Option<&'a str>,
+}
+
+fn validate_fee_balance(
+    ctx: FeeBalanceContext<'_>,
     fee_coin_id: Option<&str>,
     fee_amount: Option<f64>,
-    is_outflow: bool,
-    date: &str,
-    exclude_tx_id: Option<&str>,
 ) -> Result<(), ControllerError> {
     if let (Some(fee_coin), Some(fee_amt)) = (fee_coin_id, fee_amount) {
-        if fee_coin == main_coin_id {
+        if fee_coin == ctx.main_coin_id {
             // Same coin fee
-            if is_outflow {
+            if ctx.is_outflow {
                 // For outflows, validate main_amount + fee <= balance
-                let total_required = main_amount + fee_amt;
+                let total_required = ctx.main_amount + fee_amt;
                 validate_sufficient_balance(
-                    db,
-                    wallet_id,
-                    main_coin_id,
-                    main_symbol,
+                    ctx.db,
+                    ctx.wallet_id,
+                    ctx.main_coin_id,
+                    ctx.main_symbol,
                     total_required,
-                    date,
-                    exclude_tx_id,
+                    ctx.date,
+                    ctx.exclude_tx_id,
                 )?;
             } else {
                 // For inflows, validate fee <= (incoming + existing balance)
-                let existing = db
-                    .get_wallet_coin_balance_at(wallet_id, main_coin_id, date, exclude_tx_id)
+                let existing = ctx
+                    .db
+                    .get_wallet_coin_balance_at(
+                        ctx.wallet_id,
+                        ctx.main_coin_id,
+                        ctx.date,
+                        ctx.exclude_tx_id,
+                    )
                     .map_err(ControllerError::Database)?;
-                if fee_amt > main_amount + existing {
+                if fee_amt > ctx.main_amount + existing {
                     return Err(ControllerError::Validation(
                         "Fee amount exceeds the available balance for this asset".to_string(),
                     ));
@@ -348,13 +358,13 @@ fn validate_fee_balance(
         } else {
             // Different coin fee
             validate_sufficient_balance(
-                db,
-                wallet_id,
+                ctx.db,
+                ctx.wallet_id,
                 fee_coin,
                 fee_coin, // Using coin_id as symbol fallback
                 fee_amt,
-                date,
-                exclude_tx_id,
+                ctx.date,
+                ctx.exclude_tx_id,
             )?;
         }
     }
@@ -1817,18 +1827,17 @@ impl AppController {
             }
 
             // Validate fee balance
-            validate_fee_balance(
+            let fee_context = FeeBalanceContext {
                 db,
-                &wallet_id,
-                &coin_id,
-                &symbol,
-                amount,
-                fee_coin_id.as_deref(),
-                fee_amount,
+                wallet_id: &wallet_id,
+                main_coin_id: &coin_id,
+                main_symbol: &symbol,
+                main_amount: amount,
                 is_outflow,
-                &date,
-                None,
-            )?;
+                date: &date,
+                exclude_tx_id: None,
+            };
+            validate_fee_balance(fee_context, fee_coin_id.as_deref(), fee_amount)?;
 
             log_security_event(
                 SecurityEvent::CryptoTransactionCreated,
@@ -1938,26 +1947,26 @@ impl AppController {
             }
 
             // Validate fee balance
-            validate_fee_balance(
+            let fee_context = FeeBalanceContext {
                 db,
-                &from_wallet_id,
-                &coin_id,
-                &symbol,
-                from_amount,
-                fee_coin_id.as_deref(),
-                fee_amount,
-                true, // transfer_out is always outflow
-                &date,
-                None,
-            )?;
+                wallet_id: &from_wallet_id,
+                main_coin_id: &coin_id,
+                main_symbol: &symbol,
+                main_amount: from_amount,
+                is_outflow: true, // transfer_out is always outflow
+                date: &date,
+                exclude_tx_id: None,
+            };
+            validate_fee_balance(fee_context, fee_coin_id.as_deref(), fee_amount)?;
 
             // Specific validation for transfer: TO amount should match FROM when using same-coin fee
-            if let (Some(fee_coin), Some(_)) = (fee_coin_id.as_deref(), fee_amount) {
-                if fee_coin == coin_id && to_amount < from_amount {
-                    return Err(ControllerError::Validation(
-                        "When using a same-coin network fee, keep the TO amount equal to FROM (the fee is recorded separately)".to_string(),
-                    ));
-                }
+            if let (Some(fee_coin), Some(_)) = (fee_coin_id.as_deref(), fee_amount)
+                && fee_coin == coin_id
+                && to_amount < from_amount
+            {
+                return Err(ControllerError::Validation(
+                    "When using a same-coin network fee, keep the TO amount equal to FROM (the fee is recorded separately)".to_string(),
+                ));
             }
 
             let (total_amount, total_cost) = db
@@ -2263,32 +2272,72 @@ impl AppController {
             let is_outflow = existing.transaction_type == "sell"
                 || existing.transaction_type == "transfer_out";
 
-            // Validate sufficient balance (excluding this transaction)
-            if is_outflow {
-                validate_sufficient_balance(
-                    db,
-                    &existing.wallet_id,
-                    &existing.coin_id,
-                    &existing.symbol,
-                    amount,
-                    &date,
-                    Some(&validated_id),
-                )?;
+            let existing_type = existing.get_type().unwrap_or(CryptoTransactionType::Buy);
+
+            let mut balance_excluding = db
+                .get_wallet_coin_balance_at(&existing.wallet_id, &existing.coin_id, &date, None)
+                .map_err(ControllerError::Database)?;
+            match existing_type {
+                CryptoTransactionType::Buy | CryptoTransactionType::TransferIn => {
+                    balance_excluding -= existing.amount;
+                }
+                CryptoTransactionType::Sell
+                | CryptoTransactionType::TransferOut
+                | CryptoTransactionType::Swap => {
+                    balance_excluding += existing.amount;
+                }
+            }
+            if existing.fee_coin_id.as_deref() == Some(existing.coin_id.as_str())
+                && let Some(fee_amt) = existing.fee_amount
+            {
+                balance_excluding += fee_amt;
+            }
+
+            // Validate sufficient balance for outflows
+            if is_outflow && amount > balance_excluding {
+                return Err(ControllerError::Validation(format!(
+                    "Insufficient funds. Available: {:.8} {}",
+                    balance_excluding, existing.symbol
+                )));
             }
 
             // Validate fee balance (excluding this transaction)
-            validate_fee_balance(
-                db,
-                &existing.wallet_id,
-                &existing.coin_id,
-                &existing.symbol,
-                amount,
-                fee_coin_id.as_deref(),
-                fee_amount,
-                is_outflow,
-                &date,
-                Some(&validated_id),
-            )?;
+            if let (Some(fee_coin), Some(fee_amt)) = (fee_coin_id.as_deref(), fee_amount) {
+                let mut fee_balance_excluding = if fee_coin == existing.coin_id {
+                    balance_excluding
+                } else {
+                    db.get_wallet_coin_balance_at(&existing.wallet_id, fee_coin, &date, None)
+                        .map_err(ControllerError::Database)?
+                };
+                if existing.fee_coin_id.as_deref() == Some(fee_coin)
+                    && let Some(existing_fee_amt) = existing.fee_amount
+                {
+                    fee_balance_excluding += existing_fee_amt;
+                }
+                if fee_coin == existing.coin_id {
+                    if is_outflow {
+                        let total_required = amount + fee_amt;
+                        if total_required > fee_balance_excluding {
+                            return Err(ControllerError::Validation(format!(
+                                "Insufficient funds for fee. Available: {:.8} {}",
+                                fee_balance_excluding, existing.symbol
+                            )));
+                        }
+                    } else {
+                        let total_available = fee_balance_excluding + amount;
+                        if fee_amt > total_available {
+                            return Err(ControllerError::Validation(
+                                "Fee amount exceeds available balance".to_string(),
+                            ));
+                        }
+                    }
+                } else if fee_amt > fee_balance_excluding {
+                    return Err(ControllerError::Validation(format!(
+                        "Insufficient funds for fee. Available: {:.8} {}",
+                        fee_balance_excluding, fee_coin
+                    )));
+                }
+            }
 
             db.update_crypto_transaction_fields(
                 &validated_id,

@@ -410,6 +410,75 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         parts.join(" + ")
     }
 
+    fn format_price_display(price: Option<f64>) -> String {
+        let price_val = price.unwrap_or(0.0);
+        if price_val < 1.0 && price_val > 0.0 {
+            format!("$ {:.4}", price_val)
+        } else if price_val > 0.0 {
+            format_money((price_val * 100.0) as i64, "USD")
+        } else {
+            String::new()
+        }
+    }
+
+    fn format_crypto_tx_display(
+        tx: &CryptoTransaction,
+        related: Option<&CryptoTransaction>,
+    ) -> (String, String, String, bool) {
+        let related_is_swap = related
+            .map(|counter| counter.transaction_type == "swap")
+            .unwrap_or(false);
+        let is_swap = tx.transaction_type == "swap" || related_is_swap;
+
+        let label = match tx.transaction_type.as_str() {
+            "buy" => "BUY".to_string(),
+            "sell" => "SELL".to_string(),
+            "transfer_in" => {
+                if related_is_swap {
+                    "SWAP IN".to_string()
+                } else {
+                    "IN".to_string()
+                }
+            }
+            "transfer_out" => "OUT".to_string(),
+            "swap" => "SWAP OUT".to_string(),
+            _ => tx.transaction_type.to_uppercase(),
+        };
+
+        let amount_display = if is_swap {
+            if let Some(counter) = related {
+                if tx.transaction_type == "swap" {
+                    format!(
+                        "{} {} → {} {}",
+                        format_crypto_amount(tx.amount),
+                        tx.symbol,
+                        format_crypto_amount(counter.amount),
+                        counter.symbol
+                    )
+                } else {
+                    format!(
+                        "{} {} ← {} {}",
+                        format_crypto_amount(tx.amount),
+                        tx.symbol,
+                        format_crypto_amount(counter.amount),
+                        counter.symbol
+                    )
+                }
+            } else {
+                format!("{} {}", format_crypto_amount(tx.amount), tx.symbol)
+            }
+        } else {
+            format!("{} {}", format_crypto_amount(tx.amount), tx.symbol)
+        };
+
+        let price_display = match tx.transaction_type.as_str() {
+            "buy" | "sell" => format_price_display(tx.price_per_coin),
+            _ => String::new(),
+        };
+
+        (label, amount_display, price_display, is_swap)
+    }
+
     fn color_from_hex(hex: &str) -> slint::Color {
         if let Some(stripped) = hex.strip_prefix('#')
             && stripped.len() == 6
@@ -3274,38 +3343,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         .into_iter()
                         .map(|coin| (coin.id, coin.symbol))
                         .collect();
-                    let history_type_map: HashMap<String, String> = history
+                    let history_map: HashMap<String, CryptoTransaction> = history
                         .iter()
-                        .map(|tx| (tx.id.clone(), tx.transaction_type.clone()))
+                        .cloned()
+                        .map(|tx| (tx.id.clone(), tx))
                         .collect();
                     let history_mapped: Vec<AssetTransaction> = history
                         .iter()
                         .map(|tx| {
-                            let price_val = tx.price_per_coin.unwrap_or(0.0);
-                            let p_fmt = if price_val < 1.0 && price_val > 0.0 {
-                                format!("$ {:.4}", price_val)
-                            } else if price_val > 0.0 {
-                                format_money((price_val * 100.0) as i64, "USD")
-                            } else {
-                                "N/A".to_string()
-                            };
+                            let related = tx
+                                .related_tx_id
+                                .as_ref()
+                                .and_then(|id| history_map.get(id));
+                            let (label, amount_display, price_display, is_swap) =
+                                format_crypto_tx_display(tx, related);
                             let fee_fmt = format_fee_display(tx, &symbol_map);
                             let notes = tx.notes.clone().unwrap_or_default();
-                            let is_swap = tx.transaction_type == "swap"
-                                || (tx.transaction_type == "transfer_in"
-                                    && tx
-                                        .related_tx_id
-                                        .as_ref()
-                                        .and_then(|id| history_type_map.get(id))
-                                        .map(|t| t == "swap")
-                                        .unwrap_or(false));
 
                             AssetTransaction {
                                 id: SharedString::from(&tx.id),
                                 date: SharedString::from(&tx.date),
-                                r#type: SharedString::from(tx.transaction_type.to_uppercase()),
-                                amount: SharedString::from(format!("{:.4}", tx.amount)),
-                                price: SharedString::from(p_fmt),
+                                r#type: SharedString::from(label),
+                                amount: SharedString::from(amount_display),
+                                price: SharedString::from(price_display),
                                 fee: SharedString::from(fee_fmt),
                                 notes: SharedString::from(notes),
                                 is_swap,
@@ -3832,38 +3892,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         .into_iter()
                         .map(|coin| (coin.id, coin.symbol))
                         .collect();
-                    let history_type_map: HashMap<String, String> = history
+                    let history_map: HashMap<String, CryptoTransaction> = history
                         .iter()
-                        .map(|tx| (tx.id.clone(), tx.transaction_type.clone()))
+                        .cloned()
+                        .map(|tx| (tx.id.clone(), tx))
                         .collect();
                     let history_mapped: Vec<AssetTransaction> = history
                         .iter()
                         .map(|tx| {
-                            let price_val = tx.price_per_coin.unwrap_or(0.0);
-                            let p_fmt = if price_val < 1.0 && price_val > 0.0 {
-                                format!("$ {:.4}", price_val)
-                            } else if price_val > 0.0 {
-                                format_money((price_val * 100.0) as i64, "USD")
-                            } else {
-                                "N/A".to_string()
-                            };
+                            let related = tx
+                                .related_tx_id
+                                .as_ref()
+                                .and_then(|id| history_map.get(id));
+                            let (label, amount_display, price_display, is_swap) =
+                                format_crypto_tx_display(tx, related);
                             let fee_fmt = format_fee_display(tx, &symbol_map);
                             let notes = tx.notes.clone().unwrap_or_default();
-                            let is_swap = tx.transaction_type == "swap"
-                                || (tx.transaction_type == "transfer_in"
-                                    && tx
-                                        .related_tx_id
-                                        .as_ref()
-                                        .and_then(|id| history_type_map.get(id))
-                                        .map(|t| t == "swap")
-                                        .unwrap_or(false));
 
                             AssetTransaction {
                                 id: SharedString::from(&tx.id),
                                 date: SharedString::from(&tx.date),
-                                r#type: SharedString::from(tx.transaction_type.to_uppercase()),
-                                amount: SharedString::from(format!("{:.4}", tx.amount)),
-                                price: SharedString::from(p_fmt),
+                                r#type: SharedString::from(label),
+                                amount: SharedString::from(amount_display),
+                                price: SharedString::from(price_display),
                                 fee: SharedString::from(fee_fmt),
                                 notes: SharedString::from(notes),
                                 is_swap,

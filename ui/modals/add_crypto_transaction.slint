@@ -25,6 +25,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
     property <string> swap-amount: "";
     property <int> swap-coin-index: 0;
     property <string> move-amount: "";
+    property <bool> is-open: false;
 
     function update-swap-quote() {
         if (selected-type != "swap") {
@@ -75,6 +76,8 @@ export component AddCryptoTransactionModal inherits Rectangle {
         coin-index = CryptoAdapter.default-coin-index;
         fee-coin-index = coin-index;
         root.refresh-price-from-coin();
+        is-open = true;
+        key-scope.focus();
     }
 
     function reset() {
@@ -251,7 +254,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
         width: 100%;
         height: 100%;
         background: Palette.overlay-bg;
-        opacity: 1.0;
+        opacity: root.is-open ? 1.0 : 0.0;
 
         animate opacity { duration: 150ms; easing: ease-out; }
 
@@ -263,7 +266,9 @@ export component AddCryptoTransactionModal inherits Rectangle {
         }
     }
 
-    FocusScope {
+    key-scope := FocusScope {
+        width: parent.width;
+        height: parent.height;
         key-pressed(event) => {
             if (event.text == Key.Escape) {
                 root.reset();
@@ -290,7 +295,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
         border-color: Palette.border-light;
         drop-shadow-blur: 40px;
         drop-shadow-color: Palette.shadow-strong;
-        opacity: 1.0;
+        opacity: root.is-open ? 1.0 : 0.0;
 
         animate opacity { duration: 200ms; easing: ease-out; }
 
