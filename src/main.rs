@@ -2480,6 +2480,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .get_app_setting(SETTING_CRYPTO_LAST_UPDATED)
                 .ok()
                 .filter(|val| !val.is_empty())
+                .and_then(|saved| {
+                    // Try to parse as ISO timestamp (new format)
+                    chrono::DateTime::parse_from_rfc3339(&saved)
+                        .ok()
+                        .map(|dt| {
+                            let local = dt.with_timezone(&chrono::Local);
+                            let now = chrono::Local::now();
+                            if local.date_naive() == now.date_naive() {
+                                format!("Today at {}", local.format("%H:%M"))
+                            } else {
+                                local.format("%Y-%m-%d %H:%M").to_string()
+                            }
+                        })
+                        .or(Some(saved)) // Fallback: use old format as-is
+                })
                 .or_else(|| {
                     prices
                         .iter()
@@ -2602,12 +2617,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 // 3. Reload UI on main thread
                 let notify_success = notify_for_async_block.clone(); // Clone for success message
-                let now = chrono::Local::now().format("%H:%M").to_string();
-                let last_updated_label =
-                    if prices_updated { Some(format!("Today at {}", now)) } else { None };
+                let now = chrono::Local::now();
+                // Save ISO timestamp, format will be applied when displaying
+                let timestamp_to_save = if prices_updated {
+                    Some(now.to_rfc3339())
+                } else {
+                    None
+                };
+                let last_updated_label = if prices_updated {
+                    Some(format!("Today at {}", now.format("%H:%M")))
+                } else {
+                    None
+                };
 
-                if let Some(label) = last_updated_label.as_ref() {
-                    let _ = controller_async.set_app_setting(SETTING_CRYPTO_LAST_UPDATED, label);
+                if let Some(ts) = timestamp_to_save.as_ref() {
+                    let _ = controller_async.set_app_setting(SETTING_CRYPTO_LAST_UPDATED, ts);
                 }
 
                 let _ = ui_weak_async.upgrade_in_event_loop(move |ui| {
