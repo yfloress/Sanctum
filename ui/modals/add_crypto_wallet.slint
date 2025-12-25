@@ -44,16 +44,16 @@ component CategoryCard inherits Rectangle {
 	    HorizontalLayout {
 	        padding: 16px;
 	        spacing: 14px;
-        
+
         // Icon
 	            Rectangle {
 	                width: 44px;
 	                height: 44px;
 	                border-radius: 10px;
-	                background: selected 
+	                background: selected
 	                ? @linear-gradient(135deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%)
 	                : Palette.surface-hover;
-            
+
             Text {
                 text: root.icon;
                 font-size: 20px;
@@ -61,20 +61,20 @@ component CategoryCard inherits Rectangle {
                 horizontal-alignment: center;
             }
         }
-        
+
         // Text
         VerticalLayout {
             alignment: center;
             spacing: 4px;
             horizontal-stretch: 1;
-            
+
             Text {
                 text: root.title;
                 color: selected ? Palette.text-primary : Palette.text-secondary;
                 font-size: 13px;
                 font-weight: selected ? 600 : 400;
             }
-            
+
             Text {
                 text: root.subtitle;
                 color: Palette.text-muted;
@@ -82,15 +82,14 @@ component CategoryCard inherits Rectangle {
                 font-weight: 400;
             }
         }
-        
+
         // Checkmark
         if selected: Rectangle {
             width: 24px;
             height: 24px;
             border-radius: 12px;
             background: Palette.accent;
-            y: (parent.height - self.height) / 2;
-            
+
             Text {
                 text: "✓";
                 color: Palette.text-primary;

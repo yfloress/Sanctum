@@ -101,7 +101,20 @@ export component AddCryptoTransactionModal inherits Rectangle {
         if (selected-type == "swap") {
             root.update-swap-quote();
         }
+        if (selected-type == "move") {
+            // Ensure TO wallet is different from FROM wallet
+            if (CryptoAdapter.wallet-list.length > 1) {
+                wallet-index-to = wallet-index == 0 ? 1 : 0;
+            }
+        }
         root.refresh-price-from-coin();
+    }
+
+    changed wallet-index => {
+        // If in move mode, ensure TO wallet doesn't match FROM wallet
+        if (selected-type == "move" && wallet-index == wallet-index-to && CryptoAdapter.wallet-list.length > 1) {
+            wallet-index-to = wallet-index == 0 ? 1 : 0;
+        }
     }
 
     changed coin-index => {
