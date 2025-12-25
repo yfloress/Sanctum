@@ -281,6 +281,86 @@ fn normalize_fee_coin(
     }
 }
 
+/// Validates sufficient balance for a transaction
+/// Returns error if required_amount exceeds available balance
+fn validate_sufficient_balance(
+    db: &Database,
+    wallet_id: &str,
+    coin_id: &str,
+    symbol: &str,
+    required_amount: f64,
+    date: &str,
+    exclude_tx_id: Option<&str>,
+) -> Result<(), ControllerError> {
+    let balance = db
+        .get_wallet_coin_balance_at(wallet_id, coin_id, date, exclude_tx_id)
+        .map_err(ControllerError::Database)?;
+
+    if required_amount > balance {
+        return Err(ControllerError::Validation(format!(
+            "Insufficient funds. Available: {:.8} {}",
+            balance, symbol
+        )));
+    }
+    Ok(())
+}
+
+/// Validates sufficient balance for transaction fee
+/// Handles both same-coin fees and different-coin fees
+fn validate_fee_balance(
+    db: &Database,
+    wallet_id: &str,
+    main_coin_id: &str,
+    main_symbol: &str,
+    main_amount: f64,
+    fee_coin_id: Option<&str>,
+    fee_amount: Option<f64>,
+    is_outflow: bool,
+    date: &str,
+    exclude_tx_id: Option<&str>,
+) -> Result<(), ControllerError> {
+    if let (Some(fee_coin), Some(fee_amt)) = (fee_coin_id, fee_amount) {
+        if fee_coin == main_coin_id {
+            // Same coin fee
+            if is_outflow {
+                // For outflows, validate main_amount + fee <= balance
+                let total_required = main_amount + fee_amt;
+                validate_sufficient_balance(
+                    db,
+                    wallet_id,
+                    main_coin_id,
+                    main_symbol,
+                    total_required,
+                    date,
+                    exclude_tx_id,
+                )?;
+            } else {
+                // For inflows, validate fee <= (incoming + existing balance)
+                let existing = db
+                    .get_wallet_coin_balance_at(wallet_id, main_coin_id, date, exclude_tx_id)
+                    .map_err(ControllerError::Database)?;
+                if fee_amt > main_amount + existing {
+                    return Err(ControllerError::Validation(
+                        "Fee amount exceeds the available balance for this asset".to_string(),
+                    ));
+                }
+            }
+        } else {
+            // Different coin fee
+            validate_sufficient_balance(
+                db,
+                wallet_id,
+                fee_coin,
+                fee_coin, // Using coin_id as symbol fallback
+                fee_amt,
+                date,
+                exclude_tx_id,
+            )?;
+        }
+    }
+    Ok(())
+}
+
 /// Validates a UUID string format
 fn validate_uuid(id: &str) -> Result<String, ControllerError> {
     let trimmed = id.trim();
@@ -1731,57 +1811,24 @@ impl AppController {
             let is_outflow = transaction_type == "sell"
                 || transaction_type == "transfer_out"
                 || transaction_type == "swap";
-            let current_balance = if is_outflow {
-                let balance = db
-                    .get_wallet_coin_balance_at(&wallet_id, &coin_id, &date, None)
-                    .map_err(ControllerError::Database)?;
-                if amount > balance {
-                    return Err(ControllerError::Validation(format!(
-                        "Insufficient funds. Available: {:.8} {}",
-                        balance, symbol
-                    )));
-                }
-                Some(balance)
-            } else {
-                None
-            };
 
-            if let (Some(fee_coin_id), Some(fee_amount)) =
-                (fee_coin_id.as_deref(), fee_amount)
-            {
-                if fee_coin_id == coin_id {
-                    if is_outflow {
-                        if let Some(balance) = current_balance
-                            && amount + fee_amount > balance
-                        {
-                            return Err(ControllerError::Validation(format!(
-                                "Insufficient funds for fee. Available: {:.8} {}",
-                                balance, symbol
-                            )));
-                        }
-                    } else {
-                        let pre_balance = db
-                            .get_wallet_coin_balance_at(&wallet_id, &coin_id, &date, None)
-                            .map_err(ControllerError::Database)?;
-                        if fee_amount > amount + pre_balance {
-                            return Err(ControllerError::Validation(
-                                "Fee amount exceeds the available balance for this asset"
-                                    .to_string(),
-                            ));
-                        }
-                    }
-                } else {
-                    let fee_balance = db
-                        .get_wallet_coin_balance_at(&wallet_id, fee_coin_id, &date, None)
-                        .map_err(ControllerError::Database)?;
-                    if fee_amount > fee_balance {
-                        return Err(ControllerError::Validation(format!(
-                            "Insufficient fee balance. Available: {:.8} {}",
-                            fee_balance, fee_coin_id
-                        )));
-                    }
-                }
+            if is_outflow {
+                validate_sufficient_balance(db, &wallet_id, &coin_id, &symbol, amount, &date, None)?;
             }
+
+            // Validate fee balance
+            validate_fee_balance(
+                db,
+                &wallet_id,
+                &coin_id,
+                &symbol,
+                amount,
+                fee_coin_id.as_deref(),
+                fee_amount,
+                is_outflow,
+                &date,
+                None,
+            )?;
 
             log_security_event(
                 SecurityEvent::CryptoTransactionCreated,
@@ -1890,31 +1937,26 @@ impl AppController {
                 )));
             }
 
-            if let (Some(fee_coin_id), Some(fee_amount)) =
-                (fee_coin_id.as_deref(), fee_amount)
-            {
-                if fee_coin_id == coin_id {
-                    if from_amount + fee_amount > current_balance {
-                        return Err(ControllerError::Validation(format!(
-                            "Insufficient funds for fee. Available: {:.8} {}",
-                            current_balance, symbol
-                        )));
-                    }
-                    if to_amount < from_amount {
-                        return Err(ControllerError::Validation(
-                            "When using a same-coin network fee, keep the TO amount equal to FROM (the fee is recorded separately)".to_string(),
-                        ));
-                    }
-                } else {
-                    let fee_balance = db
-                        .get_wallet_coin_balance_at(&from_wallet_id, fee_coin_id, &date, None)
-                        .map_err(ControllerError::Database)?;
-                    if fee_amount > fee_balance {
-                        return Err(ControllerError::Validation(format!(
-                            "Insufficient fee balance. Available: {:.8} {}",
-                            fee_balance, fee_coin_id
-                        )));
-                    }
+            // Validate fee balance
+            validate_fee_balance(
+                db,
+                &from_wallet_id,
+                &coin_id,
+                &symbol,
+                from_amount,
+                fee_coin_id.as_deref(),
+                fee_amount,
+                true, // transfer_out is always outflow
+                &date,
+                None,
+            )?;
+
+            // Specific validation for transfer: TO amount should match FROM when using same-coin fee
+            if let (Some(fee_coin), Some(_)) = (fee_coin_id.as_deref(), fee_amount) {
+                if fee_coin == coin_id && to_amount < from_amount {
+                    return Err(ControllerError::Validation(
+                        "When using a same-coin network fee, keep the TO amount equal to FROM (the fee is recorded separately)".to_string(),
+                    ));
                 }
             }
 
@@ -1974,7 +2016,13 @@ impl AppController {
 
             db.create_crypto_transaction(&source)?;
             if let Err(err) = db.create_crypto_transaction(&target) {
-                let _ = db.delete_crypto_transaction(&source_id);
+                // Attempt rollback
+                if let Err(rollback_err) = db.delete_crypto_transaction(&source_id) {
+                    log::error!(
+                        "Failed to rollback transfer source transaction {}: {:?}",
+                        source_id, rollback_err
+                    );
+                }
                 return Err(ControllerError::Database(err));
             }
 
@@ -2033,46 +2081,27 @@ impl AppController {
             };
 
             // Validate sufficient funds for the source asset
-            let current_balance = db
-                .get_wallet_coin_balance_at(&wallet_id, &from_coin_id, &date, None)
-                .map_err(ControllerError::Database)?;
+            validate_sufficient_balance(db, &wallet_id, &from_coin_id, &from_symbol, from_amount, &date, None)?;
 
-            if from_amount > current_balance {
-                return Err(ControllerError::Validation(format!(
-                    "Insufficient funds. Available: {:.8} {}",
-                    current_balance, from_symbol
-                )));
-            }
-
-            if let (Some(fee_coin_id), Some(fee_amount)) =
-                (fee_coin_id.as_deref(), fee_amount)
-            {
-                if fee_coin_id == from_coin_id {
-                    if from_amount + fee_amount > current_balance {
-                        return Err(ControllerError::Validation(format!(
-                            "Insufficient funds for fee. Available: {:.8} {}",
-                            current_balance, from_symbol
-                        )));
-                    }
-                } else if fee_coin_id == to_coin_id {
+            // Validate fee balance (swap has special logic for fee_coin == to_coin)
+            if let (Some(fee_coin), Some(fee_amt)) = (fee_coin_id.as_deref(), fee_amount) {
+                if fee_coin == from_coin_id {
+                    // Fee in source coin: validate from_amount + fee <= from_balance
+                    let total_required = from_amount + fee_amt;
+                    validate_sufficient_balance(db, &wallet_id, &from_coin_id, &from_symbol, total_required, &date, None)?;
+                } else if fee_coin == to_coin_id {
+                    // Fee in target coin: validate fee <= to_amount + existing_to_balance
                     let to_balance = db
-                        .get_wallet_coin_balance_at(&wallet_id, fee_coin_id, &date, None)
+                        .get_wallet_coin_balance_at(&wallet_id, fee_coin, &date, None)
                         .map_err(ControllerError::Database)?;
-                    if fee_amount > to_amount + to_balance {
+                    if fee_amt > to_amount + to_balance {
                         return Err(ControllerError::Validation(
                             "Fee amount exceeds available output balance".to_string(),
                         ));
                     }
                 } else {
-                    let fee_balance = db
-                        .get_wallet_coin_balance_at(&wallet_id, fee_coin_id, &date, None)
-                        .map_err(ControllerError::Database)?;
-                    if fee_amount > fee_balance {
-                        return Err(ControllerError::Validation(format!(
-                            "Insufficient fee balance. Available: {:.8} {}",
-                            fee_balance, fee_coin_id
-                        )));
-                    }
+                    // Fee in different coin: validate fee <= fee_balance
+                    validate_sufficient_balance(db, &wallet_id, fee_coin, fee_coin, fee_amt, &date, None)?;
                 }
             }
 
@@ -2118,7 +2147,13 @@ impl AppController {
 
             db.create_crypto_transaction(&source)?;
             if let Err(err) = db.create_crypto_transaction(&target) {
-                let _ = db.delete_crypto_transaction(&source_id);
+                // Attempt rollback
+                if let Err(rollback_err) = db.delete_crypto_transaction(&source_id) {
+                    log::error!(
+                        "Failed to rollback swap source transaction {}: {:?}",
+                        source_id, rollback_err
+                    );
+                }
                 return Err(ControllerError::Database(err));
             }
 
@@ -2227,75 +2262,33 @@ impl AppController {
 
             let is_outflow = existing.transaction_type == "sell"
                 || existing.transaction_type == "transfer_out";
+
+            // Validate sufficient balance (excluding this transaction)
             if is_outflow {
-                let available = db
-                    .get_wallet_coin_balance_at(
-                        &existing.wallet_id,
-                        &existing.coin_id,
-                        &date,
-                        Some(&validated_id),
-                    )
-                    .map_err(ControllerError::Database)?;
-                if amount > available {
-                    return Err(ControllerError::Validation(format!(
-                        "Insufficient funds. Available: {:.8} {}",
-                        available, existing.symbol
-                    )));
-                }
+                validate_sufficient_balance(
+                    db,
+                    &existing.wallet_id,
+                    &existing.coin_id,
+                    &existing.symbol,
+                    amount,
+                    &date,
+                    Some(&validated_id),
+                )?;
             }
 
-            if let (Some(fee_coin_id), Some(fee_amount)) =
-                (fee_coin_id.as_deref(), fee_amount)
-            {
-                if fee_coin_id == existing.coin_id {
-                    if is_outflow {
-                        let available = db
-                            .get_wallet_coin_balance_at(
-                                &existing.wallet_id,
-                                &existing.coin_id,
-                                &date,
-                                Some(&validated_id),
-                            )
-                            .map_err(ControllerError::Database)?;
-                        if amount + fee_amount > available {
-                            return Err(ControllerError::Validation(format!(
-                                "Insufficient funds for fee. Available: {:.8} {}",
-                                available, existing.symbol
-                            )));
-                        }
-                    } else {
-                        let available = db
-                            .get_wallet_coin_balance_at(
-                                &existing.wallet_id,
-                                &existing.coin_id,
-                                &date,
-                                Some(&validated_id),
-                            )
-                            .map_err(ControllerError::Database)?;
-                        if fee_amount > amount + available {
-                            return Err(ControllerError::Validation(
-                                "Fee amount exceeds the available balance for this asset"
-                                    .to_string(),
-                            ));
-                        }
-                    }
-                } else {
-                    let fee_balance = db
-                        .get_wallet_coin_balance_at(
-                            &existing.wallet_id,
-                            fee_coin_id,
-                            &date,
-                            Some(&validated_id),
-                        )
-                        .map_err(ControllerError::Database)?;
-                    if fee_amount > fee_balance {
-                        return Err(ControllerError::Validation(format!(
-                            "Insufficient fee balance. Available: {:.8} {}",
-                            fee_balance, fee_coin_id
-                        )));
-                    }
-                }
-            }
+            // Validate fee balance (excluding this transaction)
+            validate_fee_balance(
+                db,
+                &existing.wallet_id,
+                &existing.coin_id,
+                &existing.symbol,
+                amount,
+                fee_coin_id.as_deref(),
+                fee_amount,
+                is_outflow,
+                &date,
+                Some(&validated_id),
+            )?;
 
             db.update_crypto_transaction_fields(
                 &validated_id,
