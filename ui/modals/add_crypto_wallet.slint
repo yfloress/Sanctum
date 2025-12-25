@@ -83,22 +83,6 @@ component CategoryCard inherits Rectangle {
             }
         }
 
-        // Checkmark
-        if selected: Rectangle {
-            width: 24px;
-            height: 24px;
-            border-radius: 12px;
-            background: Palette.accent;
-
-            Text {
-                text: "✓";
-                color: Palette.text-primary;
-                font-size: 12px;
-                font-weight: 700;
-                vertical-alignment: center;
-                horizontal-alignment: center;
-            }
-        }
     }
 
     touch := TouchArea { 
@@ -244,6 +228,12 @@ export component AddCryptoWalletModal inherits Rectangle {
 	            body := Flickable {
 	                horizontal-stretch: 1;
 	                vertical-stretch: 1;
+
+	                TouchArea {
+	                    width: parent.width;
+	                    height: parent.height;
+	                    clicked => { key-scope.focus(); }
+	                }
 
 	                VerticalLayout {
 	                    width: parent.width;
