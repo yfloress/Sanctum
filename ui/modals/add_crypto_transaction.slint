@@ -475,10 +475,15 @@ export component AddCryptoTransactionModal inherits Rectangle {
                         placeholder: "0.00";
                         value <=> root.amount;
                         large: true;
+                        show-all-button: root.selected-type == "sell" || root.selected-type == "swap" || root.selected-type == "move";
                         edited => {
                             if (root.selected-type == "swap") {
                                 root.update-swap-quote();
                             }
+                        }
+                        all-clicked => {
+                            // TODO: Get available balance from backend
+                            NotificationAdapter.show("All button - balance logic pending", false);
                         }
                         submit-shortcut => { root.submit(); }
                     }
