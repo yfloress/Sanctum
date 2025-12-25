@@ -208,7 +208,10 @@ export component WalletRow inherits Rectangle {
 
     horizontal-stretch: 1;
     height: 72px;
-    background: transparent;
+    background: area.has-hover ? Palette.surface-hover : transparent;
+    border-radius: 10px;
+
+    animate background { duration: 150ms; }
 
     // Row click behind interactive controls
     area := TouchArea {
