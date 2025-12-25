@@ -2514,6 +2514,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if let Some(label) = last_updated_label {
                     adapter.set_last_updated(label.into());
                 }
+                adapter.set_is_loading(false);
             }
         }
     }

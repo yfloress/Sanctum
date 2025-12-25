@@ -51,6 +51,7 @@ export component CryptoPage inherits Rectangle {
     in-out property <string> active-tab: "portfolio";
 
     init => {
+        CryptoAdapter.is-loading = true;
         CryptoAdapter.fetch-portfolio();
         CryptoAdapter.fetch-wallets();
     }
@@ -748,6 +749,116 @@ export component CryptoPage inherits Rectangle {
             WalletDetailPanel {
                 width: min(420px, parent.width);
                 height: parent.height;
+            }
+        }
+    }
+
+    // ==================== LOADING OVERLAY ====================
+    if CryptoAdapter.is-loading: Rectangle {
+        width: 100%;
+        height: 100%;
+        background: Palette.background.with-alpha(0.95);
+        z: 999;
+
+        VerticalLayout {
+            alignment: center;
+            spacing: 20px;
+
+            Rectangle {
+                width: 60px;
+                height: 60px;
+                border-radius: 30px;
+                background: Palette.surface;
+                border-width: 3px;
+                border-color: Palette.accent;
+
+                animate border-color {
+                    duration: 1s;
+                    iteration-count: -1;
+                    easing: ease-in-out;
+                }
+
+                Text {
+                    text: "💰";
+                    font-size: 28px;
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
+                }
+            }
+
+            Text {
+                text: "Loading portfolio...";
+                color: Palette.text-secondary;
+                font-size: 14px;
+                font-weight: 500;
+            }
+        }
+    }
+
+    // ==================== SYNCING OVERLAY ====================
+    if CryptoAdapter.is-refreshing && !CryptoAdapter.is-loading: Rectangle {
+        width: 100%;
+        height: 100%;
+        background: Palette.overlay-bg-soft;
+        z: 998;
+
+        Rectangle {
+            width: 300px;
+            height: 100px;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            background: Palette.sidebar-bg;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: Palette.border-light;
+            drop-shadow-blur: 20px;
+            drop-shadow-color: Palette.shadow-color;
+
+            HorizontalLayout {
+                padding: 24px;
+                spacing: 16px;
+                alignment: center;
+
+                Rectangle {
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 20px;
+                    background: Palette.accent.with-alpha(0.1);
+                    border-width: 2px;
+                    border-color: Palette.accent;
+
+                    animate border-color {
+                        duration: 1.5s;
+                        iteration-count: -1;
+                        easing: ease-in-out;
+                    }
+
+                    Text {
+                        text: "↻";
+                        color: Palette.accent;
+                        font-size: 20px;
+                        vertical-alignment: center;
+                        horizontal-alignment: center;
+                    }
+                }
+
+                VerticalLayout {
+                    spacing: 4px;
+                    alignment: center;
+
+                    Text {
+                        text: "Syncing prices...";
+                        color: Palette.text-primary;
+                        font-size: 13px;
+                        font-weight: 600;
+                    }
+
+                    Text {
+                        text: "This may take a few seconds";
+                        color: Palette.text-muted;
+                        font-size: 10px;
+                    }
+                }
             }
         }
     }
