@@ -2833,6 +2833,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let _ = controller
                             .set_app_setting(SETTING_CRYPTO_LAST_COIN_ID, coin_id.as_ref());
                         reload_portfolio(&ui_weak, &controller);
+                        reload_wallets(&ui_weak, &controller);
                         notify("Asset added successfully".into(), false);
                         SharedString::from("")
                     }
@@ -3149,6 +3150,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Update Transaction Callback
     {
         let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
         ui.global::<CryptoAdapter>()
             .on_update_transaction(move |id,
                                         amount_str,
@@ -3231,7 +3233,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     date.to_string(),
                     notes,
                 ) {
-                    Ok(_) => SharedString::from(""),
+                    Ok(_) => {
+                        if let Some(ui) = ui_weak.upgrade() {
+                            ui.global::<CryptoAdapter>().invoke_fetch_portfolio();
+                            ui.global::<CryptoAdapter>().invoke_fetch_wallets();
+                        }
+                        SharedString::from("")
+                    }
                     Err(e) => SharedString::from(e.to_string()),
                 }
             });
@@ -3249,6 +3257,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             let coin_id = ui.global::<CryptoAdapter>().get_selected_asset().id;
                             ui.global::<CryptoAdapter>().invoke_fetch_asset_details(coin_id);
                             ui.global::<CryptoAdapter>().invoke_fetch_portfolio();
+                            ui.global::<CryptoAdapter>().invoke_fetch_wallets();
                         }
                         notify("Transaction deleted".into(), false);
                         SharedString::from("")
