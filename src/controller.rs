@@ -1609,6 +1609,15 @@ impl AppController {
                 None => None,
             };
 
+            // Check for duplicate wallet names
+            let existing_wallets = db.get_wallets()?;
+            if existing_wallets.iter().any(|w| w.name.eq_ignore_ascii_case(&name)) {
+                return Err(ControllerError::Validation(format!(
+                    "A wallet named '{}' already exists. Please choose a different name.",
+                    name
+                )));
+            }
+
             let id = Uuid::new_v4().to_string();
             log_security_event(SecurityEvent::WalletCreated, Some(&category));
 
@@ -1624,9 +1633,21 @@ impl AppController {
     }
 
     /// Deletes a wallet
+    /// Returns an error if the wallet has transactions
     pub fn delete_wallet(&self, id: String) -> Result<(), ControllerError> {
         self.with_db(|db| {
             let validated_id = validate_uuid(&id)?;
+
+            // Check if wallet has transactions
+            let transactions = db.get_wallet_transactions(&validated_id)?;
+            if !transactions.is_empty() {
+                return Err(ControllerError::Validation(format!(
+                    "Cannot delete wallet with {} transaction{}. Please delete all transactions first.",
+                    transactions.len(),
+                    if transactions.len() == 1 { "" } else { "s" }
+                )));
+            }
+
             db.delete_wallet(&validated_id)?;
             log_security_event(SecurityEvent::WalletDeleted, None);
             Ok(())

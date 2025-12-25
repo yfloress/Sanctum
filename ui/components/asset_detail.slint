@@ -112,8 +112,8 @@ component TransactionRow inherits Rectangle {
     in property <string> tx-notes;
     in property <bool> tx-is-swap: false;
     in property <bool> is-last: false;
-    in-out property <bool> confirm-mode: false;
 
+    property <bool> show-confirm-delete: false;
     callback delete-clicked(string);
     callback edit-clicked(string);
 
@@ -122,15 +122,9 @@ component TransactionRow inherits Rectangle {
     height: 64px;
     background: transparent;
 
-    // Reset delete confirm when clicking away from the delete button.
     touch-area := TouchArea {
         width: parent.width;
         height: parent.height;
-        pointer-event(event) => {
-            if (event.kind == PointerEventKind.down && !del-touch.has-hover) {
-                root.confirm-mode = false;
-            }
-        }
     }
     
     HorizontalLayout {
@@ -252,43 +246,137 @@ component TransactionRow inherits Rectangle {
             }
 
             Rectangle {
-                width: root.confirm-mode ? 52px : 28px;
+                width: 28px;
                 height: 28px;
                 border-radius: 6px;
-                background: root.confirm-mode ? Palette.danger : (del-touch.has-hover ? Palette.danger.with-alpha(0.1) : transparent);
+                background: del-touch.has-hover ? Palette.danger.with-alpha(0.1) : transparent;
                 y: (parent.height - self.height) / 2;
 
                 animate background { duration: 150ms; }
-                animate width { duration: 150ms; }
 
                 Text {
-                    text: root.confirm-mode ? "SURE?" : "×";
-                    color: root.confirm-mode ? Palette.text-primary : (del-touch.has-hover ? Palette.danger : Palette.text-muted);
-                    font-size: root.confirm-mode ? 9px : 16px;
-                    font-weight: root.confirm-mode ? 700 : 400;
+                    text: "×";
+                    color: del-touch.has-hover ? Palette.danger : Palette.text-muted;
+                    font-size: 16px;
+                    font-weight: 400;
                     vertical-alignment: center;
                     horizontal-alignment: center;
                 }
 
                 del-touch := TouchArea {
                     mouse-cursor: pointer;
-                    clicked => { 
-                        if (root.confirm-mode) {
-                            root.delete-clicked(root.tx-id);
-                        } else {
-                            root.confirm-mode = true;
-                        }
+                    clicked => {
+                        root.show-confirm-delete = true;
                     }
                 }
             }
         }
     }
     
-    if !root.is-last: Rectangle { 
-        height: 1px; 
-        width: parent.width; 
-        background: Palette.border-subtle; 
-        y: parent.height - 1px; 
+    if !root.is-last: Rectangle {
+        height: 1px;
+        width: parent.width;
+        background: Palette.border-subtle;
+        y: parent.height - 1px;
+    }
+
+    // Delete confirmation dialog
+    if root.show-confirm-delete: Rectangle {
+        width: 100%;
+        height: 100%;
+        z: 1000;
+        background: Palette.overlay-bg-soft;
+
+        Rectangle {
+            width: min(340px, parent.width - 40px);
+            height: min(180px, parent.height - 40px);
+            background: Palette.sidebar-bg;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: Palette.border-light;
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            drop-shadow-blur: 20px;
+            drop-shadow-color: Palette.shadow-color;
+
+            VerticalLayout {
+                padding: 24px;
+                spacing: 16px;
+
+                Text {
+                    text: "Delete Transaction?";
+                    color: Palette.text-primary;
+                    font-size: 14px;
+                    font-weight: 600;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: "This will permanently delete this " + root.tx-type + " transaction (" + root.tx-amount + "). This action cannot be undone.";
+                    color: Palette.text-muted;
+                    font-size: 11px;
+                    wrap: word-wrap;
+                    horizontal-alignment: center;
+                }
+
+                HorizontalLayout {
+                    spacing: 12px;
+
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        height: 36px;
+                        background: cancel-touch.has-hover ? Palette.surface-hover : Palette.surface;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: Palette.border;
+
+                        Text {
+                            text: "Cancel";
+                            color: Palette.text-secondary;
+                            font-size: 11px;
+                            font-weight: 600;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        cancel-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.show-confirm-delete = false; }
+                        }
+                    }
+
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        height: 36px;
+                        background: confirm-touch.has-hover ? Palette.delete-bg-active : Palette.delete-bg-hover;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: Palette.delete-border;
+
+                        Text {
+                            text: "Delete";
+                            color: Palette.text-primary;
+                            font-size: 11px;
+                            font-weight: 600;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        confirm-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                root.delete-clicked(root.tx-id);
+                                root.show-confirm-delete = false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        TouchArea {
+            clicked => { root.show-confirm-delete = false; }
+        }
     }
 }
 
