@@ -759,6 +759,9 @@ export component CryptoPage inherits Rectangle {
         height: 100%;
         background: Palette.background.with-alpha(0.95);
         z: 999;
+        opacity: 1.0;
+
+        animate opacity { duration: 200ms; easing: ease-out; }
 
         VerticalLayout {
             alignment: center;
@@ -801,6 +804,9 @@ export component CryptoPage inherits Rectangle {
         height: 100%;
         background: Palette.overlay-bg-soft;
         z: 998;
+        opacity: 1.0;
+
+        animate opacity { duration: 150ms; easing: ease-out; }
 
         Rectangle {
             width: 300px;
@@ -813,6 +819,9 @@ export component CryptoPage inherits Rectangle {
             border-color: Palette.border-light;
             drop-shadow-blur: 20px;
             drop-shadow-color: Palette.shadow-color;
+            opacity: 1.0;
+
+            animate opacity { duration: 200ms; easing: ease-out; }
 
             HorizontalLayout {
                 padding: 24px;

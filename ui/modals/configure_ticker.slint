@@ -355,12 +355,21 @@ export component ConfigureTickerModal inherits Rectangle {
     // Backdrop
     Rectangle {
         background: #000000cc;
+        opacity: 1.0;
+
+        animate opacity { duration: 150ms; easing: ease-out; }
+
         TouchArea { clicked => { AppState.show-configure-ticker = false; } }
     }
 
     FocusScope {
         key-pressed(event) => {
             if (event.text == Key.Escape) {
+                AppState.show-configure-ticker = false;
+                return accept;
+            }
+            if (event.text == Key.Return && (event.modifiers.control || event.modifiers.meta)) {
+                CryptoAdapter.save-ticker-options();
                 AppState.show-configure-ticker = false;
                 return accept;
             }
@@ -376,7 +385,10 @@ export component ConfigureTickerModal inherits Rectangle {
         border-radius: 12px;
         border-width: 1px;
         border-color: Palette.border;
-        
+        opacity: 1.0;
+
+        animate opacity { duration: 200ms; easing: ease-out; }
+
         // Prevent click-through
         TouchArea {}
 
