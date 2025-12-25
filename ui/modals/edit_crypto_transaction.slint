@@ -53,8 +53,6 @@ component ReadonlyField inherits Rectangle {
 
 // ==================== Main Modal ====================
 export component EditCryptoTransactionModal inherits Rectangle {
-    property <bool> is-open: false;
-
     function reset() {
         CryptoAdapter.edit-tx-id = "";
         CryptoAdapter.edit-wallet-id = "";
@@ -71,10 +69,7 @@ export component EditCryptoTransactionModal inherits Rectangle {
         CryptoAdapter.edit-notes = "";
     }
 
-    init => {
-        is-open = true;
-        key-scope.focus();
-    }
+    init => { key-scope.focus(); }
 
     function submit() {
         if (CryptoAdapter.edit-amount == "") {
@@ -119,9 +114,7 @@ export component EditCryptoTransactionModal inherits Rectangle {
         width: 100%;
         height: 100%;
         background: Palette.overlay-bg;
-        opacity: root.is-open ? 1.0 : 0.0;
-
-        animate opacity { duration: 150ms; easing: ease-out; }
+        opacity: 1.0;
 
         TouchArea {
             clicked => {
@@ -160,9 +153,7 @@ export component EditCryptoTransactionModal inherits Rectangle {
         border-color: Palette.border-light;
         drop-shadow-blur: 40px;
         drop-shadow-color: Palette.shadow-strong;
-        opacity: root.is-open ? 1.0 : 0.0;
-
-        animate opacity { duration: 200ms; easing: ease-out; }
+        opacity: 1.0;
 
         TouchArea { }
 

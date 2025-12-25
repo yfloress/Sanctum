@@ -112,12 +112,7 @@ component CategoryCard inherits Rectangle {
 export component AddCryptoWalletModal inherits Rectangle {
     property <string> wallet-name: "";
     property <string> category: "wallet_single";
-    property <bool> is-open: false;
-
-    init => {
-        is-open = true;
-        key-scope.focus();
-    }
+    init => { key-scope.focus(); }
 
     function reset() {
         wallet-name = "";
@@ -150,9 +145,7 @@ export component AddCryptoWalletModal inherits Rectangle {
         width: 100%;
         height: 100%;
         background: Palette.overlay-bg;
-        opacity: root.is-open ? 1.0 : 0.0;
-
-        animate opacity { duration: 150ms; easing: ease-out; }
+        opacity: 1.0;
 
         TouchArea {
             clicked => {
@@ -191,9 +184,7 @@ export component AddCryptoWalletModal inherits Rectangle {
         border-color: Palette.border-light;
         drop-shadow-blur: 40px;
         drop-shadow-color: Palette.shadow-strong;
-        opacity: root.is-open ? 1.0 : 0.0;
-
-        animate opacity { duration: 200ms; easing: ease-out; }
+        opacity: 1.0;
 
         TouchArea { }
 

@@ -540,6 +540,13 @@ export component AssetDetailPanel inherits Rectangle {
 
         Rectangle {
             background: Palette.overlay-bg-strong;
+            TouchArea {
+                clicked => {
+                    root.show-delete-transaction = false;
+                    root.delete-transaction-id = "";
+                    root.delete-transaction-label = "";
+                }
+            }
         }
 
         Rectangle {
@@ -636,14 +643,6 @@ export component AssetDetailPanel inherits Rectangle {
                         }
                     }
                 }
-            }
-        }
-
-        TouchArea {
-            clicked => {
-                root.show-delete-transaction = false;
-                root.delete-transaction-id = "";
-                root.delete-transaction-label = "";
             }
         }
     }

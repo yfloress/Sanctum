@@ -766,6 +766,13 @@ export component CryptoPage inherits Rectangle {
 
         Rectangle {
             background: Palette.overlay-bg-strong;
+            TouchArea {
+                clicked => {
+                    root.show-delete-wallet-confirm = false;
+                    root.delete-wallet-id = "";
+                    root.delete-wallet-name = "";
+                }
+            }
         }
 
         Rectangle {
@@ -862,14 +869,6 @@ export component CryptoPage inherits Rectangle {
                         }
                     }
                 }
-            }
-        }
-
-        TouchArea {
-            clicked => {
-                root.show-delete-wallet-confirm = false;
-                root.delete-wallet-id = "";
-                root.delete-wallet-name = "";
             }
         }
     }
