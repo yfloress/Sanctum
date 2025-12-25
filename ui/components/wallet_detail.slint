@@ -278,6 +278,8 @@ export component WalletDetailPanel inherits Rectangle {
     property <bool> show-delete-transaction: false;
     property <string> delete-transaction-id: "";
     property <string> delete-transaction-label: "";
+    property <bool> editing-name: false;
+    property <string> edit-name-value: "";
     background: @linear-gradient(
         180deg,
         Palette.crypto-panel-gradient-start 0%,
@@ -334,25 +336,96 @@ export component WalletDetailPanel inherits Rectangle {
                     alignment: center;
                     spacing: 4px;
                     horizontal-stretch: 1;
-                    
-                    Text { 
-                        text: CryptoAdapter.selected-wallet-name; 
-                        color: Palette.text-primary; 
-                        font-size: 18px; 
-                        font-weight: 400; 
-                        letter-spacing: 0.5px; 
+
+                    if !root.editing-name: Text {
+                        text: CryptoAdapter.selected-wallet-name;
+                        color: Palette.text-primary;
+                        font-size: 18px;
+                        font-weight: 400;
+                        letter-spacing: 0.5px;
                     }
-                    
-                    Text { 
-                        text: CryptoAdapter.selected-wallet-category; 
-                        color: Palette.text-muted; 
-                        font-size: 11px; 
+
+                    if root.editing-name: Rectangle {
+                        height: 32px;
+                        background: Palette.surface;
+                        border-radius: 6px;
+                        border-width: name-input.has-focus ? 2px : 1px;
+                        border-color: name-input.has-focus ? Palette.accent : Palette.border;
+
+                        animate border-color { duration: 150ms; }
+
+                        HorizontalLayout {
+                            padding-left: 10px;
+                            padding-right: 10px;
+
+                            name-input := TextInput {
+                                text <=> root.edit-name-value;
+                                color: Palette.text-primary;
+                                font-size: 14px;
+                                vertical-alignment: center;
+
+                                accepted => {
+                                    let result = CryptoAdapter.update-wallet-name(CryptoAdapter.selected-wallet-id, root.edit-name-value);
+                                    if (result == "") {
+                                        root.editing-name = false;
+                                        root.edit-name-value = "";
+                                    } else {
+                                        NotificationAdapter.show(result, true);
+                                    }
+                                }
+                            }
+                        }
                     }
-                    
-                    Text { 
-                        text: CryptoAdapter.selected-wallet-balance; 
-                        color: Palette.text-secondary; 
-                        font-size: 13px; 
+
+                    Text {
+                        text: CryptoAdapter.selected-wallet-category;
+                        color: Palette.text-muted;
+                        font-size: 11px;
+                    }
+
+                    Text {
+                        text: CryptoAdapter.selected-wallet-balance;
+                        color: Palette.text-secondary;
+                        font-size: 13px;
+                    }
+                }
+
+                // Edit Button
+                Rectangle {
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 8px;
+                    background: edit-name-touch.has-hover ? Palette.surface-hover : transparent;
+                    y: (parent.height - self.height) / 2;
+
+                    animate background { duration: 150ms; }
+
+                    Text {
+                        text: root.editing-name ? "✓" : "✎";
+                        color: edit-name-touch.has-hover ? Palette.text-primary : Palette.text-muted;
+                        font-size: 14px;
+                        vertical-alignment: center;
+                        horizontal-alignment: center;
+                    }
+
+                    edit-name-touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            if (root.editing-name) {
+                                // Save
+                                let result = CryptoAdapter.update-wallet-name(CryptoAdapter.selected-wallet-id, root.edit-name-value);
+                                if (result == "") {
+                                    root.editing-name = false;
+                                    root.edit-name-value = "";
+                                } else {
+                                    NotificationAdapter.show(result, true);
+                                }
+                            } else {
+                                // Start editing
+                                root.edit-name-value = CryptoAdapter.selected-wallet-name;
+                                root.editing-name = true;
+                            }
+                        }
                     }
                 }
                 

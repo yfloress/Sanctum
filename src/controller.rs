@@ -1744,6 +1744,41 @@ impl AppController {
         })
     }
 
+    /// Updates a wallet's name
+    pub fn update_wallet_name(&self, id: String, new_name: String) -> Result<(), ControllerError> {
+        self.with_db(|db| {
+            let validated_id = validate_uuid(&id)?;
+            let validated_name = validate_field_length(&new_name, MAX_WALLET_NAME_LENGTH, "Wallet name")?;
+            let sanitized_name = sanitize_string(&validated_name);
+
+            if sanitized_name.is_empty() {
+                return Err(ControllerError::Validation(
+                    "Wallet name cannot be empty".to_string(),
+                ));
+            }
+
+            // Check for duplicate names
+            let existing_wallets = db.get_wallets()?;
+            for wallet in existing_wallets {
+                if wallet.id != validated_id && wallet.name.eq_ignore_ascii_case(&sanitized_name) {
+                    return Err(ControllerError::Validation(
+                        "A wallet with this name already exists".to_string(),
+                    ));
+                }
+            }
+
+            // Get current wallet to preserve other fields
+            let mut wallet = db.get_wallet(&validated_id)?
+                .ok_or_else(|| ControllerError::Validation("Wallet not found".to_string()))?;
+
+            // Update only the name
+            wallet.name = sanitized_name;
+
+            db.update_wallet(&wallet)?;
+            Ok(())
+        })
+    }
+
     // ==================== Crypto Transaction Methods ====================
 
     /// Adds a crypto transaction

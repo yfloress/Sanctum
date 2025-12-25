@@ -503,6 +503,7 @@ export global CryptoAdapter {
     // (name, category) -> id or error
     callback create-wallet(string, string) -> string;
     callback delete-wallet(string) -> string;
+    callback update-wallet-name(string, string) -> string; // (wallet_id, new_name) -> "" or error
     callback delete-crypto-transaction(string) -> string;
 }
 

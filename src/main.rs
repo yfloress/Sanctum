@@ -3437,6 +3437,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
     }
 
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = show_notification.clone();
+        ui.global::<CryptoAdapter>()
+            .on_update_wallet_name(move |id, new_name| -> SharedString {
+                match controller.update_wallet_name(id.to_string(), new_name.to_string()) {
+                    Ok(_) => {
+                        reload_wallets(&ui_weak, &controller);
+                        // Refresh wallet detail if it's open
+                        if let Some(ui) = ui_weak.upgrade() {
+                            if ui.global::<CryptoAdapter>().get_show_wallet_detail() {
+                                ui.global::<CryptoAdapter>().invoke_fetch_wallet_details(id);
+                            }
+                        }
+                        notify("Wallet renamed successfully".into(), false);
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            });
+    }
+
     // Ticker Config
     {
         let controller = controller.clone();
