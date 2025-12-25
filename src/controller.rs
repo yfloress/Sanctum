@@ -2403,7 +2403,7 @@ impl AppController {
     ) -> Result<f64, ControllerError> {
         self.with_db(|db| {
             let validated_wallet_id = validate_uuid(&wallet_id)?;
-            let validated_coin_id = validate_uuid(&coin_id)?;
+            let validated_coin_id = validate_coin_id_str(&coin_id)?; // coin_id is NOT a UUID
 
             // Use current date to get balance up to today
             let today = chrono::Local::now().format("%Y-%m-%d").to_string();
