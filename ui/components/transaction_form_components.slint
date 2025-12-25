@@ -15,9 +15,11 @@ export component FormField inherits Rectangle {
     in-out property <string> value: "";
     in property <bool> large: false;
     in property <bool> show-refresh: false;
+    in property <bool> show-all-button: false;
     callback edited(string);
     callback refresh();
     callback submit-shortcut();
+    callback all-clicked();
 
     height: large ? 88px : 64px;
     background: transparent;
@@ -55,6 +57,38 @@ export component FormField inherits Rectangle {
                 TouchArea {
                     mouse-cursor: pointer;
                     clicked => { root.refresh(); }
+                }
+            }
+
+            if root.show-all-button: Rectangle {
+                height: 20px;
+                border-radius: 6px;
+                background: all-touch.has-hover
+                    ? Palette.accent.with-alpha(0.2)
+                    : Palette.surface-hover;
+                border-width: 1px;
+                border-color: Palette.accent;
+
+                animate background { duration: 150ms; }
+
+                HorizontalLayout {
+                    padding-left: 8px;
+                    padding-right: 8px;
+
+                    Text {
+                        text: "ALL";
+                        color: Palette.accent;
+                        font-size: 9px;
+                        font-weight: 700;
+                        letter-spacing: 0.5px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+
+                all-touch := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { root.all-clicked(); }
                 }
             }
         }
