@@ -129,6 +129,9 @@ component EmptyState inherits Rectangle {
 
 export component HabitsPage inherits Rectangle {
     background: Palette.background;
+    property <bool> show-delete-habit-confirm: false;
+    property <string> delete-habit-id: "";
+    property <string> delete-habit-name: "";
 
     init => {
         HabitAdapter.auto-scroll-habits = true;
@@ -313,11 +316,10 @@ export component HabitsPage inherits Rectangle {
                             for habit in HabitAdapter.habits: HabitRow {
                                 habit: habit;
                                 toggle(date) => { HabitAdapter.toggle-habit(habit.id, date); }
-                                delete(id) => {
-                                    let result = HabitAdapter.delete-habit(id);
-                                    if (result != "") {
-                                        NotificationAdapter.show(result, true);
-                                    }
+                                delete(id, name) => {
+                                    root.delete-habit-id = id;
+                                    root.delete-habit-name = name;
+                                    root.show-delete-habit-confirm = true;
                                 }
                                 edit(id) => {
                                     HabitAdapter.edit-id = habit.id;
@@ -391,5 +393,118 @@ export component HabitsPage inherits Rectangle {
     if AppState.show-edit-habit: AddHabitModal {
         editing: true;
         close => { AppState.show-edit-habit = false; }
+    }
+
+    if root.show-delete-habit-confirm: Rectangle {
+        x: 0; y: 0; width: 100%; height: 100%;
+        z: 1200;
+
+        Rectangle {
+            background: Palette.overlay-bg-strong;
+            TouchArea {
+                clicked => {
+                    root.show-delete-habit-confirm = false;
+                    root.delete-habit-id = "";
+                    root.delete-habit-name = "";
+                }
+            }
+        }
+
+        Rectangle {
+            width: min(360px, parent.width - 40px);
+            height: min(180px, parent.height - 40px);
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            background: Palette.sidebar-bg;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: Palette.border-light;
+            drop-shadow-blur: 20px;
+            drop-shadow-color: Palette.shadow-color;
+
+            VerticalLayout {
+                padding: 24px;
+                spacing: 16px;
+
+                Text {
+                    text: "Delete Habit?";
+                    color: Palette.text-primary;
+                    font-size: 14px;
+                    font-weight: 600;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: "This will permanently delete \"" + root.delete-habit-name + "\" and all its logs.";
+                    color: Palette.text-muted;
+                    font-size: 11px;
+                    wrap: word-wrap;
+                    horizontal-alignment: center;
+                }
+
+                HorizontalLayout {
+                    spacing: 12px;
+
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        height: 36px;
+                        background: cancel-touch.has-hover ? Palette.surface-hover : Palette.surface;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: Palette.border;
+
+                        Text {
+                            text: "Cancel";
+                            color: Palette.text-secondary;
+                            font-size: 11px;
+                            font-weight: 600;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        cancel-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                root.show-delete-habit-confirm = false;
+                                root.delete-habit-id = "";
+                                root.delete-habit-name = "";
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        height: 36px;
+                        background: confirm-touch.has-hover ? Palette.delete-bg-active : Palette.delete-bg-hover;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: Palette.delete-border;
+
+                        Text {
+                            text: "Delete";
+                            color: Palette.text-primary;
+                            font-size: 11px;
+                            font-weight: 600;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        confirm-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                let result = HabitAdapter.delete-habit(root.delete-habit-id);
+                                if (result == "") {
+                                    root.show-delete-habit-confirm = false;
+                                    root.delete-habit-id = "";
+                                    root.delete-habit-name = "";
+                                } else {
+                                    NotificationAdapter.show(result, true);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
