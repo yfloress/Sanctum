@@ -260,12 +260,21 @@ export component AddCryptoTransactionModal inherits Rectangle {
     height: 100%;
     background: transparent;
 
-    // Backdrop
+    // Backdrop - captures all events to prevent scroll propagation
     Rectangle {
         width: 100%;
         height: 100%;
         background: Palette.overlay-bg;
         opacity: 1.0;
+
+        // Flickable with no scrolling blocks scroll events from propagating
+        Flickable {
+            width: 100%;
+            height: 100%;
+            interactive: false;
+            viewport-width: parent.width;
+            viewport-height: parent.height;
+        }
 
         TouchArea {
             clicked => {
@@ -306,7 +315,10 @@ export component AddCryptoTransactionModal inherits Rectangle {
         drop-shadow-color: Palette.shadow-strong;
         opacity: 1.0;
 
+        // Block all pointer events from propagating to backdrop
         TouchArea {
+            width: parent.width;
+            height: parent.height;
             clicked => { key-scope.focus(); }
         }
 

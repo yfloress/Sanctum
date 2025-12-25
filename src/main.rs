@@ -3447,10 +3447,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Ok(_) => {
                         reload_wallets(&ui_weak, &controller);
                         // Refresh wallet detail if it's open
-                        if let Some(ui) = ui_weak.upgrade() {
-                            if ui.global::<CryptoAdapter>().get_show_wallet_detail() {
-                                ui.global::<CryptoAdapter>().invoke_fetch_wallet_details(id);
-                            }
+                        if let Some(ui) = ui_weak.upgrade()
+                            && ui.global::<CryptoAdapter>().get_show_wallet_detail()
+                        {
+                            ui.global::<CryptoAdapter>().invoke_fetch_wallet_details(id);
                         }
                         notify("Wallet renamed successfully".into(), false);
                         SharedString::from("")
