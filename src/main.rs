@@ -1657,23 +1657,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let bar_height = ((*avg_count / max_avg) * chart_height as f32) as i32;
             let y = padding + chart_height - bar_height;
 
-            // Choose color based on whether it's the best day
-            let bar_color = if *is_best { accent_color } else { gray_color };
+            if bar_height > 0 {
+                // Choose color based on whether it's the best day
+                let bar_color = if *is_best { accent_color } else { gray_color };
 
-            // Draw bar
-            root.draw(&Rectangle::new(
-                [(x, y), (x + bar_width, padding + chart_height)],
-                bar_color.filled(),
-            ))
-            .ok()?;
-
-            // Draw glow effect for best day
-            if *is_best {
+                // Draw bar
                 root.draw(&Rectangle::new(
-                    [(x - 2, y - 2), (x + bar_width + 2, padding + chart_height + 2)],
-                    RGBAColor(139, 92, 246, 0.3).filled(),
+                    [(x, y), (x + bar_width, padding + chart_height)],
+                    bar_color.filled(),
                 ))
                 .ok()?;
+
+                // Draw glow effect for best day
+                if *is_best {
+                    root.draw(&Rectangle::new(
+                        [(x - 2, y - 2), (x + bar_width + 2, padding + chart_height + 2)],
+                        RGBAColor(139, 92, 246, 0.3).filled(),
+                    ))
+                    .ok()?;
+                }
             }
 
             // Draw day label below bar
