@@ -253,6 +253,7 @@ export component CryptoPage inherits Rectangle {
                             background: Palette.surface;
                             border-width: 1px;
                             border-color: Palette.border-subtle;
+                            y: (parent.height - self.height) / 2;
 
                             HorizontalLayout {
                                 padding-left: 8px;
@@ -270,60 +271,60 @@ export component CryptoPage inherits Rectangle {
                         }
                     }
 
-                    // Total Value
-                    Text {
-                        text: CryptoAdapter.total-value;
-                        color: Palette.text-primary;
-                        font-size: 48px;
-                        font-weight: 300;
-                        letter-spacing: -1px;
-                    }
+                    VerticalLayout {
+                        spacing: 6px;
 
-                    Rectangle {
-                        height: 0px;
-                    }
+                        // Total Value
+                        Text {
+                            text: CryptoAdapter.total-value;
+                            color: Palette.text-primary;
+                            font-size: 48px;
+                            font-weight: 300;
+                            letter-spacing: -1px;
+                        }
 
-                    // PnL Badge
-                    Rectangle {
-                        property <bool> pnl_available: CryptoAdapter.total-pnl != "N/A";
+                        // PnL Badge
+                        Rectangle {
+                            property <bool> pnl_available: CryptoAdapter.total-pnl != "N/A";
 
-                        height: 28px;
-                        min-width: 90px;
-                        border-radius: 6px;
-                        background: pnl_available
-                            ? (CryptoAdapter.total-pnl-positive ?
-                                Palette.success.with-alpha(0.12) :
-                                Palette.danger.with-alpha(0.12))
-                            : Palette.surface;
-                        border-width: 1px;
-                        border-color: pnl_available
-                            ? (CryptoAdapter.total-pnl-positive ?
-                                Palette.success.with-alpha(0.2) :
-                                Palette.danger.with-alpha(0.2))
-                            : Palette.border;
+                            height: 28px;
+                            min-width: 90px;
+                            border-radius: 6px;
+                            background: pnl_available
+                                ? (CryptoAdapter.total-pnl-positive ?
+                                    Palette.success.with-alpha(0.12) :
+                                    Palette.danger.with-alpha(0.12))
+                                : Palette.surface;
+                            border-width: 1px;
+                            border-color: pnl_available
+                                ? (CryptoAdapter.total-pnl-positive ?
+                                    Palette.success.with-alpha(0.2) :
+                                    Palette.danger.with-alpha(0.2))
+                                : Palette.border;
 
-                        HorizontalLayout {
-                            padding-left: 12px;
-                            padding-right: 12px;
-                            alignment: center;
-                            spacing: 4px;
+                            HorizontalLayout {
+                                padding-left: 12px;
+                                padding-right: 12px;
+                                alignment: center;
+                                spacing: 4px;
 
-                            Text {
-                                text: pnl_available ? (CryptoAdapter.total-pnl-positive ? "▲" : "▼") : "•";
-                                color: pnl_available
-                                    ? (CryptoAdapter.total-pnl-positive ? Palette.success : Palette.danger)
-                                    : Palette.text-muted;
-                                font-size: 10px;
-                                vertical-alignment: center;
-                            }
-                            Text {
-                                text: CryptoAdapter.total-pnl;
-                                color: pnl_available
-                                    ? (CryptoAdapter.total-pnl-positive ? Palette.success : Palette.danger)
-                                    : Palette.text-muted;
-                                font-size: 12px;
-                                font-weight: 600;
-                                vertical-alignment: center;
+                                Text {
+                                    text: pnl_available ? (CryptoAdapter.total-pnl-positive ? "▲" : "▼") : "•";
+                                    color: pnl_available
+                                        ? (CryptoAdapter.total-pnl-positive ? Palette.success : Palette.danger)
+                                        : Palette.text-muted;
+                                    font-size: 10px;
+                                    vertical-alignment: center;
+                                }
+                                Text {
+                                    text: CryptoAdapter.total-pnl;
+                                    color: pnl_available
+                                        ? (CryptoAdapter.total-pnl-positive ? Palette.success : Palette.danger)
+                                        : Palette.text-muted;
+                                    font-size: 12px;
+                                    font-weight: 600;
+                                    vertical-alignment: center;
+                                }
                             }
                         }
                     }
