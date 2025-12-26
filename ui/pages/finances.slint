@@ -57,42 +57,30 @@ component TabButton inherits Rectangle {
 
 component SectionHeader inherits Rectangle {
     in property <string> title;
-    in property <string> subtitle: "";
-    
-    height: 48px;
+
+    height: 32px;
     background: transparent;
 
     HorizontalLayout {
-        spacing: 12px;
+        spacing: 10px;
         alignment: start;
 
         // Accent line
         Rectangle {
             width: 3px;
-            height: 24px;
+            height: 20px;
             border-radius: 2px;
             background: @linear-gradient(180deg, Palette.accent 0%, #6366f1 100%);
             y: (parent.height - self.height) / 2;
         }
 
-        VerticalLayout {
-            alignment: center;
-            spacing: 2px;
-
-            Text {
-                text: root.title;
-                color: Palette.text-primary;
-                font-size: 14px;
-                font-weight: 600;
-                letter-spacing: 0.5px;
-            }
-
-            if subtitle != "": Text {
-                text: root.subtitle;
-                color: Palette.text-muted;
-                font-size: 10px;
-                font-weight: 400;
-            }
+        Text {
+            text: root.title;
+            color: Palette.text-secondary;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            vertical-alignment: center;
         }
     }
 }
@@ -102,7 +90,7 @@ component EmptyState inherits Rectangle {
     in property <string> title: "No data";
     in property <string> description: "Get started by adding your first entry";
 
-    height: 200px;
+    height: 160px;
     background: @linear-gradient(135deg, Palette.surface 0%, #1a1a2e 100%);
     border-radius: 12px;
     border-width: 1px;
@@ -110,30 +98,28 @@ component EmptyState inherits Rectangle {
 
     VerticalLayout {
         alignment: center;
-        spacing: 16px;
+        spacing: 12px;
 
-        // Icon container with glow
         Rectangle {
-            width: 64px;
-            height: 64px;
-            border-radius: 32px;
+            width: 48px;
+            height: 48px;
+            border-radius: 24px;
             background: Palette.surface-hover;
             x: (parent.width - self.width) / 2;
 
-            // Glow
             Rectangle {
-                x: -4px;
-                y: -4px;
-                width: parent.width + 8px;
-                height: parent.height + 8px;
-                border-radius: 36px;
+                x: -3px;
+                y: -3px;
+                width: parent.width + 6px;
+                height: parent.height + 6px;
+                border-radius: 27px;
                 background: Palette.accent;
-                opacity: 0.15;
+                opacity: 0.2;
             }
 
             Text {
                 text: root.icon;
-                font-size: 28px;
+                font-size: 22px;
                 horizontal-alignment: center;
                 vertical-alignment: center;
             }
@@ -142,7 +128,7 @@ component EmptyState inherits Rectangle {
         Text {
             text: root.title;
             color: Palette.text-secondary;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 500;
             horizontal-alignment: center;
         }
@@ -150,7 +136,7 @@ component EmptyState inherits Rectangle {
         Text {
             text: root.description;
             color: Palette.text-muted;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 400;
             horizontal-alignment: center;
         }
@@ -307,12 +293,11 @@ export component FinancesPage inherits Rectangle {
 
                 // Header section
                 HorizontalLayout {
-                    height: 48px;
+                    height: 32px;
                     alignment: space-between;
 
                     SectionHeader {
-                        title: "Recent Transactions";
-                        subtitle: TransactionAdapter.transactions.length == 1 ? "1 entry" : TransactionAdapter.transactions.length + " entries";
+                        title: "RECENT TRANSACTIONS";
                     }
 
                     ActionButton {
@@ -384,12 +369,11 @@ export component FinancesPage inherits Rectangle {
 
                     // Header actions
                     HorizontalLayout {
-                        height: 48px;
+                        height: 32px;
                         alignment: space-between;
 
                         SectionHeader {
-                            title: "My Accounts";
-                            subtitle: AccountAdapter.accounts.length == 1 ? "1 account" : AccountAdapter.accounts.length + " accounts";
+                            title: "MY ACCOUNTS";
                         }
 
                         HorizontalLayout {
