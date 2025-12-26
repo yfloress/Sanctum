@@ -362,7 +362,10 @@ export component ConfigureTickerModal inherits Rectangle {
         TouchArea { clicked => { AppState.show-configure-ticker = false; } }
     }
 
-    FocusScope {
+    key-scope := FocusScope {
+        width: parent.width;
+        height: parent.height;
+
         key-pressed(event) => {
             if (event.text == Key.Escape) {
                 AppState.show-configure-ticker = false;
@@ -389,8 +392,9 @@ export component ConfigureTickerModal inherits Rectangle {
 
         animate opacity { duration: 200ms; easing: ease-out; }
 
-        // Prevent click-through
-        TouchArea {}
+        TouchArea {
+            clicked => { key-scope.focus(); }
+        }
 
         VerticalLayout {
             padding: 32px;
