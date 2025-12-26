@@ -17,11 +17,11 @@ impl HabitService {
     where
         F: FnOnce(&Database) -> Result<T, DbError>,
     {
-        let guard = self.db.lock().map_err(|_| DbError::InvalidPassword)?; // Reuse existing error for "vault not open/usable"
+        let guard = self.db.lock().map_err(|_| DbError::InvalidPassword)?;
         if let Some(db) = guard.as_ref() {
             f(db)
         } else {
-            Err(DbError::InvalidPassword) // TODO: Use better error "Vault not open"
+            Err(DbError::InvalidPassword)
         }
     }
 

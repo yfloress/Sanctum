@@ -11,8 +11,8 @@ use plotters::style::text_anchor::{HPos, Pos, VPos};
 use rand::Rng; // For title animation
 use sanctum::crypto;
 use sanctum::controller::{
-    AppController, MonthlyTrendPoint, SETTING_AUTO_FETCH, SETTING_CRYPTO_LAST_COIN_ID,
-    SETTING_CRYPTO_LAST_UPDATED, SETTING_CRYPTO_LAST_WALLET_ID,
+    AppController, SETTING_AUTO_FETCH, SETTING_CRYPTO_LAST_COIN_ID, SETTING_CRYPTO_LAST_UPDATED,
+    SETTING_CRYPTO_LAST_WALLET_ID,
 };
 use sanctum::models::{CryptoAsset, CryptoTransaction};
 use sanctum::security_log::init_security_logger;
@@ -1368,104 +1368,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             };
             adapter.set_current_week_int(current_week);
         }
-    }
-
-    #[allow(dead_code)]
-    fn render_monthly_chart_image(data: &[MonthlyTrendPoint]) -> Option<Image> {
-        if data.is_empty() {
-            return None;
-        }
-
-        // Generate SVG with plotters (high resolution for crisp rendering)
-        let temp_svg = std::env::temp_dir().join("sanctum_monthly_chart_temp.svg");
-        let root = SVGBackend::new(&temp_svg, (2400, 720)).into_drawing_area();
-        root.fill(&RGBAColor(0, 0, 0, 0.0)).ok()?;
-
-        let max_val = data.iter().map(|d| d.avg_per_day).fold(0.0_f32, f32::max);
-        let upper = if max_val <= 0.0 { 1.0 } else { (max_val * 1.2).ceil() };
-        let x_max = data.len().max(1) as i32;
-
-        let mut chart = ChartBuilder::on(&root)
-            .margin(28)
-            .x_label_area_size(70)
-            .y_label_area_size(24)
-            .build_cartesian_2d(0..x_max, 0f32..upper)
-            .ok()?;
-
-        chart
-            .configure_mesh()
-            .disable_mesh()
-            .disable_y_axis()
-            .x_labels(data.len())
-            .x_label_formatter(&|v| {
-                data.get(*v as usize)
-                    .map(|d| d.month_name.clone())
-                    .unwrap_or_default()
-            })
-            .label_style(("sans-serif", 22).into_font().color(&RGBColor(148, 163, 184)))
-            .axis_style(ShapeStyle::from(&RGBColor(46, 46, 60)).stroke_width(1))
-            .draw()
-            .ok()?;
-
-        let area_points: Vec<(i32, f32)> = data
-            .iter()
-            .enumerate()
-            .map(|(i, d)| (i as i32, d.avg_per_day))
-            .collect();
-
-        chart
-            .draw_series(AreaSeries::new(
-                area_points.iter().copied(),
-                0.0,
-                RGBColor(139, 92, 246).mix(0.18),
-            ))
-            .ok()?;
-
-        chart
-            .draw_series(LineSeries::new(
-                area_points.iter().copied(),
-                ShapeStyle::from(&RGBColor(139, 92, 246)).stroke_width(4),
-            ))
-            .ok()?;
-
-        chart
-            .draw_series(area_points.iter().map(|&(x, y)| {
-                Circle::new(
-                    (x, y),
-                    6,
-                    ShapeStyle::from(&RGBColor(167, 139, 250)).filled(),
-                )
-            }))
-            .ok()?;
-
-        root.present().ok()?;
-
-        // Configure fontdb with DejaVu Sans
-        let mut fontdb = fontdb::Database::new();
-        let font_path = std::path::PathBuf::from("ui/fonts/DejaVuSans.ttf");
-        if font_path.exists() {
-            fontdb.load_font_file(&font_path).ok()?;
-        } else {
-            fontdb.load_system_fonts();
-        }
-
-        fontdb.set_serif_family("DejaVu Sans");
-        fontdb.set_sans_serif_family("DejaVu Sans");
-        fontdb.set_monospace_family("DejaVu Sans");
-
-        // Convert SVG text to paths
-        let svg_data = std::fs::read_to_string(&temp_svg).ok()?;
-        let opt = usvg::Options {
-            fontdb: std::sync::Arc::new(fontdb),
-            ..Default::default()
-        };
-        let tree = usvg::Tree::from_str(&svg_data, &opt).ok()?;
-
-        // Write final SVG with text as paths
-        let final_svg = std::env::temp_dir().join("sanctum_monthly_chart.svg");
-        std::fs::write(&final_svg, tree.to_string(&usvg::WriteOptions::default())).ok()?;
-
-        Image::load_from_path(&final_svg).ok()
     }
 
     fn rgb_from_hex(hex: &str) -> RGBColor {
