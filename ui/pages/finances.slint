@@ -823,8 +823,28 @@ export component FinancesPage inherits Rectangle {
                     height: 32px;
                     alignment: space-between;
 
-                    SectionHeader {
-                        title: "RECENT TRANSACTIONS";
+                    HorizontalLayout {
+                        spacing: 12px;
+
+                        SectionHeader {
+                            title: "RECENT TRANSACTIONS";
+                        }
+
+                        if has-active-filters(): Rectangle {
+                            width: 24px;
+                            height: 24px;
+                            border-radius: 12px;
+                            background: Palette.accent;
+
+                            Text {
+                                text: (filter-query != "" ? 1 : 0) + (filter-account-index > 0 ? 1 : 0) + (filter-category-index > 0 ? 1 : 0);
+                                color: #ffffff;
+                                font-size: 11px;
+                                font-weight: 700;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
                     }
 
                     ActionButton {
@@ -853,19 +873,50 @@ export component FinancesPage inherits Rectangle {
                     }
 
                     AccountFilterSelect {
-                        width: 180px;
+                        width: 160px;
                         selected-index <=> root.filter-account-index;
                     }
 
                     CategoryFilterSelect {
-                        width: 180px;
+                        width: 160px;
                         selected-index <=> root.filter-category-index;
                     }
 
-                    ActionButton {
-                        text: "CLEAR";
-                        primary: false;
-                        clicked => { root.clear-filters(); }
+                    if has-active-filters(): Rectangle {
+                        width: 72px;
+                        height: 56px;
+
+                        VerticalLayout {
+                            spacing: 6px;
+
+                            Rectangle {
+                                height: 14px;
+                            }
+
+                            Rectangle {
+                                height: 40px;
+                                border-radius: 8px;
+                                background: touch.has-hover ? Palette.surface-hover : Palette.surface;
+                                border-width: 1px;
+                                border-color: Palette.border-light;
+
+                                animate background { duration: 200ms; easing: ease-out; }
+
+                                Text {
+                                    text: "✕";
+                                    color: Palette.text-primary;
+                                    font-size: 16px;
+                                    font-weight: 600;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+
+                                touch := TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => { root.clear-filters(); }
+                                }
+                            }
+                        }
                     }
                 }
 

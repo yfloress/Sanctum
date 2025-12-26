@@ -796,14 +796,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     return None;
                 }
 
-                if !category_filter.is_empty() {
-                    if (is_transfer && category_filter_upper != "TRANSFER")
+                if !category_filter.is_empty()
+                    && ((is_transfer && category_filter_upper != "TRANSFER")
                         || (!is_transfer
                             && (category_filter_upper == "TRANSFER"
-                                || !tx.category.eq_ignore_ascii_case(category_filter)))
-                    {
-                        return None;
-                    }
+                                || !tx.category.eq_ignore_ascii_case(category_filter))))
+                {
+                    return None;
                 }
 
                 let transfer_label = tx
