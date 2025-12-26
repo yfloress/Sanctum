@@ -4,6 +4,7 @@
 import {
     Palette,
     TransactionAdapter,
+    CategoryAdapter,
     AccountAdapter,
     AccountData,
     AppState
@@ -265,6 +266,12 @@ export component FinancesPage inherits Rectangle {
                                 active: root.active-tab == "accounts";
                                 clicked => { root.active-tab = "accounts"; }
                             }
+
+                            TabButton {
+                                text: "SETTINGS";
+                                active: root.active-tab == "settings";
+                                clicked => { root.active-tab = "settings"; }
+                            }
                         }
                     }
                 }
@@ -414,6 +421,66 @@ export component FinancesPage inherits Rectangle {
                         icon: "🏦";
                         title: "No accounts configured";
                         description: "Create an account to manage your funds";
+                    }
+                }
+            }
+
+            // TAB: SETTINGS
+            if root.active-tab == "settings": VerticalLayout {
+                padding: 32px;
+                padding-left: 64px;
+                padding-right: 64px;
+                spacing: 24px;
+
+                // Header section
+                HorizontalLayout {
+                    height: 32px;
+                    alignment: space-between;
+
+                    SectionHeader {
+                        title: "FINANCE SETTINGS";
+                    }
+                }
+
+                // Categories Section
+                Rectangle {
+                    height: 120px;
+                    background: Palette.surface;
+                    border-radius: 12px;
+                    border-width: 1px;
+                    border-color: Palette.border;
+
+                    HorizontalLayout {
+                        padding: 24px;
+                        spacing: 24px;
+                        alignment: space-between;
+
+                        VerticalLayout {
+                            spacing: 8px;
+                            alignment: center;
+
+                            Text {
+                                text: "Transaction Categories";
+                                color: Palette.text-primary;
+                                font-size: 14px;
+                                font-weight: 600;
+                            }
+
+                            Text {
+                                text: "Manage income and expense categories";
+                                color: Palette.text-muted;
+                                font-size: 12px;
+                            }
+                        }
+
+                        ActionButton {
+                            text: "CONFIGURE";
+                            primary: false;
+                            clicked => {
+                                CategoryAdapter.load-categories();
+                                AppState.show-configure-categories = true;
+                            }
+                        }
                     }
                 }
             }

@@ -421,6 +421,17 @@ pub struct Transaction {
     pub transfer_account_id: Option<String>, // Only for transfers: destination account
 }
 
+/// Represents a transaction category (income or expense)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionCategory {
+    pub id: String,
+    pub name: String,
+    pub category_type: String, // "income" or "expense"
+    pub sort_order: i32,
+    pub is_default: bool,
+    pub created_at: String,
+}
+
 /// Financial balance summary
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BalanceSummary {

@@ -6,7 +6,7 @@
 
 use crate::models::{
     Account, AccountBalance, AggregatedAsset, BalanceSummary, CryptoTransaction,
-    CryptoTransactionType, CryptoWallet, Habit, HabitLog, Transaction,
+    CryptoTransactionType, CryptoWallet, Habit, HabitLog, Transaction, TransactionCategory,
 };
 use crate::security_log::{SecurityEvent, log_security_event};
 use chrono::{DateTime, Duration, Utc};
@@ -342,6 +342,28 @@ impl Database {
         // ==================== Price Cache Tables ====================
         self.create_price_cache_tables()?;
 
+        // ==================== Transaction Categories Table ====================
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS transaction_categories (
+                id TEXT PRIMARY KEY NOT NULL,
+                name TEXT NOT NULL,
+                category_type TEXT NOT NULL CHECK(category_type IN ('expense', 'income')),
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                is_default INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL
+            )",
+            [],
+        )?;
+
+        // Index for category type queries
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_transaction_categories_type ON transaction_categories(category_type, sort_order)",
+            [],
+        )?;
+
+        // Initialize default categories if table is empty
+        self.initialize_default_categories()?;
+
         // ==================== Settings Table ====================
         self.conn.execute(
             "CREATE TABLE IF NOT EXISTS settings (
@@ -350,6 +372,56 @@ impl Database {
             )",
             [],
         )?;
+
+        Ok(())
+    }
+
+    fn initialize_default_categories(&self) -> Result<(), DbError> {
+        // Check if categories already exist
+        let count: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM transaction_categories",
+            [],
+            |row| row.get(0),
+        )?;
+
+        if count > 0 {
+            return Ok(()); // Already initialized
+        }
+
+        let now = chrono::Utc::now().to_rfc3339();
+
+        // Default expense categories
+        let expense_categories = [
+            "FOOD",
+            "TRANSPORT",
+            "UTILITIES",
+            "ENTERTAINMENT",
+            "HEALTH",
+            "SHOPPING",
+            "EDUCATION",
+            "OTHER",
+        ];
+
+        for (idx, name) in expense_categories.iter().enumerate() {
+            let id = format!("exp_{}", uuid::Uuid::new_v4());
+            self.conn.execute(
+                "INSERT INTO transaction_categories (id, name, category_type, sort_order, is_default, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                params![id, name, "expense", idx as i32, 1, now],
+            )?;
+        }
+
+        // Default income categories
+        let income_categories = ["SALARY", "FREELANCE", "INVESTMENT", "GIFT", "OTHER"];
+
+        for (idx, name) in income_categories.iter().enumerate() {
+            let id = format!("inc_{}", uuid::Uuid::new_v4());
+            self.conn.execute(
+                "INSERT INTO transaction_categories (id, name, category_type, sort_order, is_default, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                params![id, name, "income", idx as i32, 1, now],
+            )?;
+        }
 
         Ok(())
     }
@@ -1249,6 +1321,126 @@ impl Database {
     pub fn delete_transaction(&self, id: &str) -> Result<(), DbError> {
         self.conn
             .execute("DELETE FROM transactions WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
+    // ==================== Transaction Categories CRUD ====================
+
+    /// Gets all categories of a specific type (expense or income)
+    pub fn get_transaction_categories(
+        &self,
+        category_type: &str,
+    ) -> Result<Vec<TransactionCategory>, DbError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, name, category_type, sort_order, is_default, created_at
+             FROM transaction_categories
+             WHERE category_type = ?1
+             ORDER BY sort_order, name",
+        )?;
+
+        let categories = stmt
+            .query_map(params![category_type], |row| {
+                Ok(TransactionCategory {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    category_type: row.get(2)?,
+                    sort_order: row.get(3)?,
+                    is_default: row.get::<_, i32>(4)? != 0,
+                    created_at: row.get(5)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(categories)
+    }
+
+    /// Adds a new transaction category
+    pub fn add_transaction_category(
+        &self,
+        name: &str,
+        category_type: &str,
+    ) -> Result<String, DbError> {
+        // Validate category type
+        if category_type != "expense" && category_type != "income" {
+            return Err(DbError::InvalidTransactionType);
+        }
+
+        // Check for duplicate names within the same type
+        let exists: bool = self.conn.query_row(
+            "SELECT EXISTS(SELECT 1 FROM transaction_categories WHERE name = ?1 AND category_type = ?2)",
+            params![name, category_type],
+            |row| row.get(0),
+        )?;
+
+        if exists {
+            return Err(DbError::Sqlite(RusqliteError::ExecuteReturnedResults));
+        }
+
+        // Get max sort order for this type
+        let max_sort: i32 = self.conn.query_row(
+            "SELECT COALESCE(MAX(sort_order), -1) FROM transaction_categories WHERE category_type = ?1",
+            params![category_type],
+            |row| row.get(0),
+        )?;
+
+        let id = uuid::Uuid::new_v4().to_string();
+        let now = chrono::Utc::now().to_rfc3339();
+
+        self.conn.execute(
+            "INSERT INTO transaction_categories (id, name, category_type, sort_order, is_default, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![id, name, category_type, max_sort + 1, 0, now],
+        )?;
+
+        Ok(id)
+    }
+
+    /// Updates a category name
+    pub fn update_transaction_category(&self, id: &str, new_name: &str) -> Result<(), DbError> {
+        // Check if category exists and get its type
+        let category_type: String = self.conn.query_row(
+            "SELECT category_type FROM transaction_categories WHERE id = ?1",
+            params![id],
+            |row| row.get(0),
+        )?;
+
+        // Check for duplicate names within the same type (excluding current category)
+        let exists: bool = self.conn.query_row(
+            "SELECT EXISTS(SELECT 1 FROM transaction_categories WHERE name = ?1 AND category_type = ?2 AND id != ?3)",
+            params![new_name, category_type, id],
+            |row| row.get(0),
+        )?;
+
+        if exists {
+            return Err(DbError::Sqlite(RusqliteError::ExecuteReturnedResults));
+        }
+
+        self.conn.execute(
+            "UPDATE transaction_categories SET name = ?1 WHERE id = ?2",
+            params![new_name, id],
+        )?;
+
+        Ok(())
+    }
+
+    /// Deletes a category (only if not default)
+    pub fn delete_transaction_category(&self, id: &str) -> Result<(), DbError> {
+        // Check if it's a default category
+        let is_default: i32 = self.conn.query_row(
+            "SELECT is_default FROM transaction_categories WHERE id = ?1",
+            params![id],
+            |row| row.get(0),
+        )?;
+
+        if is_default != 0 {
+            return Err(DbError::Sqlite(RusqliteError::ExecuteReturnedResults));
+        }
+
+        self.conn.execute(
+            "DELETE FROM transaction_categories WHERE id = ?1",
+            params![id],
+        )?;
+
         Ok(())
     }
 

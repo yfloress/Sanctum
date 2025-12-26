@@ -522,22 +522,23 @@ export global CryptoAdapter {
 // ==================== Transaction Adapter ====================
 // Bridge for transaction management
 
-// ==================== Categories ====================
-// Predefined list of transaction categories
+// ==================== Transaction Categories ====================
+// Dynamic category management system
 
-export global Categories {
-    out property <[string]> expense-categories: [
-        "FOOD",
-        "TRANSPORT",
-        "UTILITIES",
-        "ENTERTAINMENT",
-        "HEALTH",
-        "SHOPPING",
-        "EDUCATION",
-        "OTHER"
-    ];
+export struct TransactionCategoryData {
+    id: string,
+    name: string,
+    is-default: bool,
+}
 
-    out property <[string]> income-categories: ["SALARY", "FREELANCE", "INVESTMENT", "GIFT", "OTHER"];
+export global CategoryAdapter {
+    in-out property <[TransactionCategoryData]> expense-categories: [];
+    in-out property <[TransactionCategoryData]> income-categories: [];
+
+    callback load-categories();
+    callback add-category(string, string) -> string; // (name, type) -> "" or error
+    callback update-category(string, string) -> string; // (id, name) -> "" or error
+    callback delete-category(string) -> string; // (id) -> "" or error
 }
 
 export global TransactionAdapter {
@@ -586,6 +587,7 @@ export global AppState {
     in-out property <int> selected-account-index: 0;
     in-out property <bool> show-transfer-modal: false;
     in-out property <bool> show-add-habit: false;
+    in-out property <bool> show-configure-categories: false;
     in-out property <bool> show-edit-habit: false;
     in-out property <bool> show-add-crypto: false;
     in-out property <bool> show-edit-crypto: false;

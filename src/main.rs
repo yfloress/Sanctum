@@ -275,6 +275,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     session_monitor();
                     if let Some(ui) = ui_weak.upgrade() {
                         ui.global::<SettingsAdapter>().invoke_load_settings();
+                        ui.global::<CategoryAdapter>().invoke_load_categories();
                     }
                     SharedString::from("")
                 }
@@ -317,6 +318,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     session_monitor();
                     if let Some(ui) = ui_weak.upgrade() {
                         ui.global::<SettingsAdapter>().invoke_load_settings();
+                        ui.global::<CategoryAdapter>().invoke_load_categories();
                     }
                     SharedString::from("")
                 }
@@ -766,6 +768,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
 
+    fn reload_categories(
+        ui_weak: &Weak<AppWindow>,
+        controller: &Arc<AppController>,
+    ) -> Result<(), sanctum::controller::ControllerError> {
+        // Load expense categories
+        let expense_cats = controller.get_transaction_categories("expense".to_string())?;
+        let expense_mapped: Vec<TransactionCategoryData> = expense_cats
+            .iter()
+            .map(|cat| TransactionCategoryData {
+                id: cat.id.clone().into(),
+                name: cat.name.clone().into(),
+                is_default: cat.is_default,
+            })
+            .collect();
+
+        // Load income categories
+        let income_cats = controller.get_transaction_categories("income".to_string())?;
+        let income_mapped: Vec<TransactionCategoryData> = income_cats
+            .iter()
+            .map(|cat| TransactionCategoryData {
+                id: cat.id.clone().into(),
+                name: cat.name.clone().into(),
+                is_default: cat.is_default,
+            })
+            .collect();
+
+        if let Some(ui) = ui_weak.upgrade() {
+            let adapter = ui.global::<CategoryAdapter>();
+            adapter.set_expense_categories(ModelRc::new(VecModel::from(expense_mapped)));
+            adapter.set_income_categories(ModelRc::new(VecModel::from(income_mapped)));
+        }
+
+        Ok(())
+    }
+
     fn reload_recent(
         ui_weak: &Weak<AppWindow>,
         controller: &Arc<AppController>,
@@ -1161,6 +1198,76 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 .invoke_fetch_analytics(ui.global::<AnalyticsAdapter>().get_active_range());
                         }
                         notify("Transaction deleted".into(), false);
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            });
+    }
+
+    // ==================== CategoryAdapter Callbacks ====================
+
+    // Load categories
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        ui.global::<CategoryAdapter>().on_load_categories(move || {
+            let _ = reload_categories(&ui_weak, &controller);
+        });
+    }
+
+    // Add category
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = show_notification.clone();
+        ui.global::<CategoryAdapter>()
+            .on_add_category(move |name, category_type| -> SharedString {
+                let result =
+                    controller.add_transaction_category(name.to_string(), category_type.to_string());
+                match result {
+                    Ok(_) => {
+                        let _ = reload_categories(&ui_weak, &controller);
+                        notify("Category added".into(), false);
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            });
+    }
+
+    // Update category
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = show_notification.clone();
+        ui.global::<CategoryAdapter>()
+            .on_update_category(move |id, new_name| -> SharedString {
+                let result =
+                    controller.update_transaction_category(id.to_string(), new_name.to_string());
+                match result {
+                    Ok(_) => {
+                        let _ = reload_categories(&ui_weak, &controller);
+                        notify("Category updated".into(), false);
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            });
+    }
+
+    // Delete category
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = show_notification.clone();
+        ui.global::<CategoryAdapter>()
+            .on_delete_category(move |id| -> SharedString {
+                let result = controller.delete_transaction_category(id.to_string());
+                match result {
+                    Ok(_) => {
+                        let _ = reload_categories(&ui_weak, &controller);
+                        notify("Category deleted".into(), false);
                         SharedString::from("")
                     }
                     Err(e) => SharedString::from(e.to_string()),

@@ -8,12 +8,13 @@ use crate::db::{Database, DbError};
 use crate::models::{
     Account, AccountBalance, AggregatedAsset, BalanceSummary, CryptoAsset, CryptoCatalogCoin,
     CryptoTransaction, CryptoTransactionType, CryptoWallet, Habit, HabitLog, Transaction,
+    TransactionCategory,
 };
 use crate::security_log::{SecurityEvent, log_auth_failure, log_security_event};
 use crate::services::habit::HabitService;
 use chrono::{Datelike, Local, NaiveDate, Utc};
 use regex::Regex;
-use rusqlite::Connection;
+use rusqlite::{Connection, Error as RusqliteError};
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -1477,6 +1478,103 @@ impl AppController {
             db.delete_transaction(&validated_id)?;
             log_security_event(SecurityEvent::TransactionDeleted, None);
             Ok(())
+        })
+    }
+
+    // ==================== Transaction Category Methods ====================
+
+    /// Gets all categories of a specific type (expense or income)
+    pub fn get_transaction_categories(
+        &self,
+        category_type: String,
+    ) -> Result<Vec<TransactionCategory>, ControllerError> {
+        if category_type != "expense" && category_type != "income" {
+            return Err(ControllerError::Validation(
+                "Category type must be 'expense' or 'income'".to_string(),
+            ));
+        }
+
+        self.with_db(|db| {
+            db.get_transaction_categories(&category_type)
+                .map_err(ControllerError::Database)
+        })
+    }
+
+    /// Adds a new transaction category
+    pub fn add_transaction_category(
+        &self,
+        name: String,
+        category_type: String,
+    ) -> Result<String, ControllerError> {
+        let validated_name = validate_field_length(&name, MAX_CATEGORY_LENGTH, "Category name")?;
+
+        if validated_name.is_empty() {
+            return Err(ControllerError::Validation(
+                "Category name cannot be empty".to_string(),
+            ));
+        }
+
+        if category_type != "expense" && category_type != "income" {
+            return Err(ControllerError::Validation(
+                "Category type must be 'expense' or 'income'".to_string(),
+            ));
+        }
+
+        self.with_db(|db| {
+            db.add_transaction_category(&validated_name, &category_type)
+                .map_err(|e| match e {
+                    DbError::Sqlite(RusqliteError::ExecuteReturnedResults) => {
+                        ControllerError::Validation(
+                            "Category with this name already exists".to_string(),
+                        )
+                    }
+                    _ => ControllerError::Database(e),
+                })
+        })
+    }
+
+    /// Updates a category name
+    pub fn update_transaction_category(
+        &self,
+        id: String,
+        new_name: String,
+    ) -> Result<(), ControllerError> {
+        let validated_id = validate_uuid(&id)?;
+        let validated_name = validate_field_length(&new_name, MAX_CATEGORY_LENGTH, "Category name")?;
+
+        if validated_name.is_empty() {
+            return Err(ControllerError::Validation(
+                "Category name cannot be empty".to_string(),
+            ));
+        }
+
+        self.with_db(|db| {
+            db.update_transaction_category(&validated_id, &validated_name)
+                .map_err(|e| match e {
+                    DbError::Sqlite(RusqliteError::ExecuteReturnedResults) => {
+                        ControllerError::Validation(
+                            "Category with this name already exists".to_string(),
+                        )
+                    }
+                    _ => ControllerError::Database(e),
+                })
+        })
+    }
+
+    /// Deletes a category (only if not default)
+    pub fn delete_transaction_category(&self, id: String) -> Result<(), ControllerError> {
+        let validated_id = validate_uuid(&id)?;
+
+        self.with_db(|db| {
+            db.delete_transaction_category(&validated_id)
+                .map_err(|e| match e {
+                    DbError::Sqlite(RusqliteError::ExecuteReturnedResults) => {
+                        ControllerError::Validation(
+                            "Cannot delete default category".to_string(),
+                        )
+                    }
+                    _ => ControllerError::Database(e),
+                })
         })
     }
 

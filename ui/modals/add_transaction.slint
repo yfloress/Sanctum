@@ -5,7 +5,8 @@ import {
     Palette,
     AppState,
     TransactionAdapter,
-    Categories,
+    CategoryAdapter,
+    TransactionCategoryData,
     AccountAdapter,
     NotificationAdapter,
 } from "../globals.slint";
@@ -75,7 +76,7 @@ component FormField inherits Rectangle {
 // ==================== CategorySelector ====================
 component CategorySelector inherits Rectangle {
     in property <string> label: "CATEGORY";
-    in property <[string]> categories: [];
+    in property <[TransactionCategoryData]> categories: [];
     in-out property <int> selected-index: 0;
 
     height: 64px;
@@ -104,7 +105,7 @@ component CategorySelector inherits Rectangle {
                 padding-right: 16px;
 
                 Text {
-                    text: categories.length > 0 ? categories[selected-index] : "Select...";
+                    text: categories.length > 0 ? categories[selected-index].name : "Select...";
                     color: Palette.text-primary;
                     font-size: 14px;
                     font-weight: 400;
@@ -131,7 +132,7 @@ component CategorySelector inherits Rectangle {
         x: 0;
         y: 64px;
         width: root.width;
-        
+
         Rectangle {
             background: Palette.sidebar-bg;
             border-radius: 8px;
@@ -143,7 +144,7 @@ component CategorySelector inherits Rectangle {
 
             Flickable {
                 viewport-height: categories.length * 40px + 8px;
-                
+
                 VerticalLayout {
                     padding: 4px;
                     spacing: 0px;
@@ -158,7 +159,7 @@ component CategorySelector inherits Rectangle {
                             padding-right: 12px;
 
                             Text {
-                                text: category;
+                                text: category.name;
                                 color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
                                 font-size: 13px;
                                 font-weight: index == selected-index ? 500 : 400;
@@ -381,7 +382,7 @@ export component AddTransactionModal inherits Rectangle {
     property <bool> is-expense: true;
     property <int> account-index: 0;
 
-    property <[string]> current-categories: is-expense ? Categories.expense-categories : Categories.income-categories;
+    property <[TransactionCategoryData]> current-categories: is-expense ? CategoryAdapter.expense-categories : CategoryAdapter.income-categories;
 
     function reset-form() {
         amount-value = "";
@@ -410,7 +411,7 @@ export component AddTransactionModal inherits Rectangle {
         let result = TransactionAdapter.add-transaction(
             account-id,
             amount-value,
-            current-categories[category-index],
+            current-categories[category-index].name,
             description-value,
             date-value,
             is-expense);
