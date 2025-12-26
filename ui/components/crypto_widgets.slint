@@ -279,25 +279,35 @@ export component WalletRow inherits Rectangle {
         
         // Asset count
         Rectangle {
-            width: 100px;
             VerticalLayout {
                 alignment: center;
-                HorizontalLayout {
-                    alignment: center;
-                    spacing: 6px;
-                    Rectangle {
-                        width: 6px;
-                        height: 6px;
-                        border-radius: 3px;
-                        background: root.count > 0 ? Palette.success : Palette.text-subtle;
-                        y: (parent.height - self.height) / 2;
-                    }
-                    Text { 
-                        text: root.count + " Assets"; 
-                        color: Palette.text-secondary; 
-                        font-size: 12px; 
-                        font-weight: 500;
-                        vertical-alignment: center;
+                Rectangle {
+                    height: 24px;
+                    border-radius: 12px;
+                    background: Palette.surface;
+                    border-width: 1px;
+                    border-color: Palette.border;
+
+                    HorizontalLayout {
+                        padding-left: 10px;
+                        padding-right: 10px;
+                        alignment: center;
+                        spacing: 6px;
+
+                        Rectangle {
+                            width: 6px;
+                            height: 6px;
+                            border-radius: 3px;
+                            background: root.count > 0 ? Palette.success : Palette.text-subtle;
+                            y: (parent.height - self.height) / 2;
+                        }
+                        Text { 
+                            text: root.count + " Assets"; 
+                            color: Palette.text-secondary; 
+                            font-size: 11px; 
+                            font-weight: 600;
+                            vertical-alignment: center;
+                        }
                     }
                 }
             }

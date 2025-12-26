@@ -247,11 +247,26 @@ export component CryptoPage inherits Rectangle {
                             clicked => { CryptoAdapter.refresh-prices(); }
                         }
 
-                        Text { 
-                            text: "Last updated: " + CryptoAdapter.last-updated; 
-                            color: Palette.text-subtle; 
-                            font-size: 10px; 
-                            vertical-alignment: center;
+                        Rectangle {
+                            height: 20px;
+                            border-radius: 10px;
+                            background: Palette.surface;
+                            border-width: 1px;
+                            border-color: Palette.border-subtle;
+
+                            HorizontalLayout {
+                                padding-left: 8px;
+                                padding-right: 8px;
+                                alignment: center;
+
+                                Text {
+                                    text: "Last updated: " + CryptoAdapter.last-updated;
+                                    color: Palette.text-subtle;
+                                    font-size: 10px;
+                                    font-weight: 500;
+                                    vertical-alignment: center;
+                                }
+                            }
                         }
                     }
 
@@ -403,6 +418,12 @@ export component CryptoPage inherits Rectangle {
                     }
                 }
             }
+        }
+
+        // Gradient divider
+        Rectangle {
+            height: 1px;
+            background: @linear-gradient(90deg, transparent 0%, Palette.border-light 50%, transparent 100%);
         }
 
         // ==================== CONTENT AREA ====================
