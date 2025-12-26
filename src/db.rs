@@ -1225,6 +1225,40 @@ impl Database {
         Ok(())
     }
 
+    /// Updates an existing transaction
+    pub fn update_transaction(&self, transaction: &Transaction) -> Result<(), DbError> {
+        if !transaction.validate() {
+            return Err(DbError::InvalidTransactionType);
+        }
+
+        self.get_account(&transaction.account_id)?;
+
+        if let Some(ref transfer_id) = transaction.transfer_account_id {
+            if transfer_id == &transaction.account_id {
+                return Err(DbError::SameAccountTransfer);
+            }
+            self.get_account(transfer_id)?;
+        }
+
+        self.conn.execute(
+            "UPDATE transactions
+             SET account_id = ?2, amount = ?3, category = ?4, description = ?5, date = ?6, type = ?7, transfer_account_id = ?8
+             WHERE id = ?1",
+            params![
+                &transaction.id,
+                &transaction.account_id,
+                &transaction.amount,
+                &transaction.category,
+                &transaction.description,
+                &transaction.date,
+                &transaction.transaction_type,
+                &transaction.transfer_account_id,
+            ],
+        )?;
+
+        Ok(())
+    }
+
     /// Creates a transfer between two accounts (atomic operation)
     pub fn create_transfer(
         &self,

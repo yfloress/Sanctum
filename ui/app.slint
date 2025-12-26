@@ -101,6 +101,8 @@ export component AppWindow inherits Window {
     if AppState.show-add-transaction: AddTransactionModal {
         width: 100%;
         height: 100%;
+        editing: AppState.transaction-edit-mode;
+        selected-index: AppState.selected-transaction-index;
     }
 
     // Add Account Modal

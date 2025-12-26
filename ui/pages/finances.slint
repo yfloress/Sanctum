@@ -7,7 +7,8 @@ import {
     CategoryAdapter,
     AccountAdapter,
     AccountData,
-    AppState
+    AppState,
+    NotificationAdapter
 } from "../globals.slint";
 import { TransactionItem } from "../components/transaction_item.slint";
 import { AccountItem } from "../components/account_item.slint";
@@ -311,6 +312,9 @@ export component FinancesPage inherits Rectangle {
 
                         clicked => {
                             AccountAdapter.fetch-accounts();
+                            CategoryAdapter.load-categories();
+                            AppState.transaction-edit-mode = false;
+                            AppState.selected-transaction-index = 0;
                             AppState.show-add-transaction = true;
                         }
                     }
@@ -335,6 +339,16 @@ export component FinancesPage inherits Rectangle {
                                 transaction: transaction;
                                 is-last: index == TransactionAdapter.transactions.length - 1;
                                 show-delete: true;
+
+                                clicked => {
+                                    if (transaction.is-transfer) {
+                                        NotificationAdapter.show("Transfers must be edited from the transfer flow", true);
+                                    } else {
+                                        AppState.transaction-edit-mode = true;
+                                        AppState.selected-transaction-index = index;
+                                        AppState.show-add-transaction = true;
+                                    }
+                                }
 
                                 delete-clicked => {
                                     root.delete-transaction-id = transaction.id;
@@ -551,6 +565,8 @@ export component FinancesPage inherits Rectangle {
                             if (result == "") {
                                 TransactionAdapter.fetch-transactions();
                                 AccountAdapter.fetch-accounts();
+                            } else {
+                                NotificationAdapter.show(result, true);
                             }
                             root.show-delete-confirm = false;
                         }

@@ -78,6 +78,7 @@ component CategorySelector inherits Rectangle {
     in property <string> label: "CATEGORY";
     in property <[TransactionCategoryData]> categories: [];
     in-out property <int> selected-index: 0;
+    property <int> safe-index: selected-index < categories.length ? selected-index : 0;
 
     height: 64px;
     background: transparent;
@@ -105,7 +106,7 @@ component CategorySelector inherits Rectangle {
                 padding-right: 16px;
 
                 Text {
-                    text: categories.length > 0 ? categories[selected-index].name : "Select...";
+                    text: categories.length > 0 ? categories[safe-index].name : "Select...";
                     color: Palette.text-primary;
                     font-size: 14px;
                     font-weight: 400;
@@ -160,14 +161,14 @@ component CategorySelector inherits Rectangle {
 
                             Text {
                                 text: category.name;
-                                color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
+                                color: index == safe-index ? Palette.text-primary : Palette.text-secondary;
                                 font-size: 13px;
-                                font-weight: index == selected-index ? 500 : 400;
+                                font-weight: index == safe-index ? 500 : 400;
                                 vertical-alignment: center;
                                 horizontal-stretch: 1;
                             }
 
-                            if index == selected-index: Text {
+                            if index == safe-index: Text {
                                 text: "✓";
                                 color: Palette.accent;
                                 font-size: 12px;
@@ -189,6 +190,7 @@ component CategorySelector inherits Rectangle {
 // ==================== AccountSelector ====================
 component AccountSelector inherits Rectangle {
     in-out property <int> selected-index: 0;
+    property <int> safe-index: selected-index < AccountAdapter.accounts.length ? selected-index : 0;
 
     height: 64px;
     background: transparent;
@@ -216,7 +218,7 @@ component AccountSelector inherits Rectangle {
                 padding-right: 16px;
 
                 Text {
-                    text: AccountAdapter.accounts.length > 0 ? AccountAdapter.accounts[selected-index].name : "No accounts";
+                    text: AccountAdapter.accounts.length > 0 ? AccountAdapter.accounts[safe-index].name : "No accounts";
                     color: Palette.text-primary;
                     font-size: 14px;
                     font-weight: 400;
@@ -271,14 +273,14 @@ component AccountSelector inherits Rectangle {
 
                             Text {
                                 text: account.name + " (" + account.currency + ")";
-                                color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
+                                color: index == safe-index ? Palette.text-primary : Palette.text-secondary;
                                 font-size: 13px;
-                                font-weight: index == selected-index ? 500 : 400;
+                                font-weight: index == safe-index ? 500 : 400;
                                 vertical-alignment: center;
                                 horizontal-stretch: 1;
                             }
 
-                            if index == selected-index: Text {
+                            if index == safe-index: Text {
                                 text: "✓";
                                 color: Palette.accent;
                                 font-size: 12px;
@@ -375,14 +377,25 @@ component TypeToggle inherits Rectangle {
 
 // ==================== AddTransactionModal ====================
 export component AddTransactionModal inherits Rectangle {
-    property <string> amount-value: "";
-    property <string> description-value: "";
-    property <int> category-index: 0;
-    property <string> date-value: AppState.current-date;
-    property <bool> is-expense: true;
-    property <int> account-index: 0;
+    in property <bool> editing: false;
+    in property <int> selected-index: 0;
+
+    property <string> amount-value: editing && TransactionAdapter.transactions.length > selected-index ? TransactionAdapter.transactions[selected-index].amount-raw : "";
+    property <string> description-value: editing && TransactionAdapter.transactions.length > selected-index ? TransactionAdapter.transactions[selected-index].description : "";
+    property <int> category-index: editing && TransactionAdapter.transactions.length > selected-index ? TransactionAdapter.transactions[selected-index].category-index : 0;
+    property <string> date-value: editing && TransactionAdapter.transactions.length > selected-index ? TransactionAdapter.transactions[selected-index].date : AppState.current-date;
+    property <bool> is-expense: editing && TransactionAdapter.transactions.length > selected-index ? TransactionAdapter.transactions[selected-index].is-expense : true;
+    property <int> account-index: editing && TransactionAdapter.transactions.length > selected-index ? TransactionAdapter.transactions[selected-index].account-index : 0;
 
     property <[TransactionCategoryData]> current-categories: is-expense ? CategoryAdapter.expense-categories : CategoryAdapter.income-categories;
+
+    init => {
+        CategoryAdapter.load-categories();
+        AccountAdapter.fetch-accounts();
+        key-scope.focus();
+    }
+
+    changed is-expense => { category-index = 0; }
 
     function reset-form() {
         amount-value = "";
@@ -391,11 +404,17 @@ export component AddTransactionModal inherits Rectangle {
         date-value = AppState.current-date;
         is-expense = true;
         account-index = 0;
+        AppState.transaction-edit-mode = false;
+        AppState.selected-transaction-index = 0;
     }
 
     function submit() {
         if (AccountAdapter.accounts.length == 0) {
             NotificationAdapter.show("Create an account first", true);
+            return;
+        }
+        if (current-categories.length == 0) {
+            NotificationAdapter.show("Add a category first", true);
             return;
         }
         if (amount-value == "") {
@@ -407,11 +426,27 @@ export component AddTransactionModal inherits Rectangle {
             account-index = 0;
         }
         let account-id = AccountAdapter.accounts[account-index].id;
+        let safe-category-index = category-index >= current-categories.length ? 0 : category-index;
+        let category-name = current-categories[safe-category-index].name;
 
-        let result = TransactionAdapter.add-transaction(
+        let safe-index = selected-index >= TransactionAdapter.transactions.length ? 0 : selected-index;
+        let edit-id = TransactionAdapter.transactions.length > 0 ? TransactionAdapter.transactions[safe-index].id : "";
+        if (editing && edit-id == "") {
+            NotificationAdapter.show("Transaction no longer available", true);
+            return;
+        }
+
+        let result = editing ? TransactionAdapter.update-transaction(
+            edit-id,
             account-id,
             amount-value,
-            current-categories[category-index].name,
+            category-name,
+            description-value,
+            date-value,
+            is-expense) : TransactionAdapter.add-transaction(
+            account-id,
+            amount-value,
+            category-name,
             description-value,
             date-value,
             is-expense);
@@ -447,14 +482,26 @@ export component AddTransactionModal inherits Rectangle {
     key-scope := FocusScope {
         width: parent.width;
         height: parent.height;
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                root.reset-form();
+                AppState.show-add-transaction = false;
+                return accept;
+            }
+            if (event.text == Key.Return && (event.modifiers.control || event.modifiers.meta)) {
+                root.submit();
+                return accept;
+            }
+            return reject;
+        }
     }
 
     // Modal panel
     Rectangle {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
-        width: 440px;
-        height: 640px;
+        width: min(Palette.modal-width-md, parent.width - 40px);
+        height: min(Palette.modal-height-compact, parent.height - 40px);
         background: @linear-gradient(180deg, Palette.sidebar-bg 0%, #0f0f1a 100%);
         border-radius: 16px;
         border-width: 1px;
@@ -487,7 +534,7 @@ export component AddTransactionModal inherits Rectangle {
 	                    }
 
                     Text {
-                        text: "NEW ENTRY";
+                        text: editing ? "EDIT ENTRY" : "NEW ENTRY";
                         color: Palette.text-primary;
                         font-size: 16px;
                         font-weight: 500;
@@ -536,9 +583,9 @@ export component AddTransactionModal inherits Rectangle {
 	                    spacing: 20px;
 	
 	                    // Type toggle
-	                    TypeToggle {
-	                        is-expense <=> root.is-expense;
-	                    }
+                    TypeToggle {
+                        is-expense <=> root.is-expense;
+                    }
 	
 	                    // Account selector
 	                    if AccountAdapter.accounts.length > 0: AccountSelector {
@@ -570,11 +617,11 @@ export component AddTransactionModal inherits Rectangle {
 	                    }
 	
 	                    // Category selector
-	                    CategorySelector {
-	                        label: "CATEGORY";
-	                        categories: current-categories;
-	                        selected-index <=> category-index;
-	                    }
+                    CategorySelector {
+                        label: "CATEGORY";
+                        categories: current-categories;
+                        selected-index <=> category-index;
+                    }
 	
 	                    // Description field
 	                    FormField {
@@ -603,7 +650,7 @@ export component AddTransactionModal inherits Rectangle {
                 animate background { duration: 150ms; }
 
                 Text {
-                    text: "SAVE ENTRY";
+                    text: editing ? "SAVE CHANGES" : "SAVE ENTRY";
                     color: #ffffff;
                     font-size: 12px;
                     font-weight: 600;

@@ -180,6 +180,8 @@ export component TransferFundsModal inherits Rectangle {
     property <string> description-value: "";
     property <string> date-value: AppState.current-date;
 
+    init => { key-scope.focus(); }
+
     function reset-form() {
         from-index = 0;
         to-index = AccountAdapter.accounts.length > 1 ? 1 : 0;
@@ -238,14 +240,26 @@ export component TransferFundsModal inherits Rectangle {
     key-scope := FocusScope {
         width: parent.width;
         height: parent.height;
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                root.reset-form();
+                AppState.show-transfer-modal = false;
+                return accept;
+            }
+            if (event.text == Key.Return && (event.modifiers.control || event.modifiers.meta)) {
+                root.submit();
+                return accept;
+            }
+            return reject;
+        }
     }
 
     // Modal panel
     Rectangle {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
-        width: 440px;
-        height: 560px;
+        width: min(Palette.modal-width-md, parent.width - 40px);
+        height: min(Palette.modal-height-md, parent.height - 40px);
         background: @linear-gradient(180deg, Palette.sidebar-bg 0%, #0f0f1a 100%);
         border-radius: 16px;
         border-width: 1px;

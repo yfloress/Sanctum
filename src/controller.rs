@@ -1418,6 +1418,58 @@ impl AppController {
         })
     }
 
+    /// Updates a transaction
+    pub fn update_transaction(
+        &self,
+        id: String,
+        account_id: String,
+        amount: i64,
+        category: String,
+        description: String,
+        date: String,
+        is_expense: bool,
+    ) -> Result<(), ControllerError> {
+        self.with_db(|db| {
+            let id = validate_uuid(&id)?;
+            let account_id = validate_uuid(&account_id)?;
+            let category = validate_field_length(&category, MAX_CATEGORY_LENGTH, "Category")?;
+            let category = sanitize_string(&category);
+
+            if category.is_empty() {
+                return Err(ControllerError::Validation(
+                    "Category cannot be empty".to_string(),
+                ));
+            }
+
+            let description =
+                validate_field_length(&description, MAX_DESCRIPTION_LENGTH, "Description")?;
+            let description = sanitize_string(&description);
+            let date = validate_date(&date)?;
+
+            if amount <= 0 {
+                return Err(ControllerError::Validation(
+                    "Amount must be greater than zero".to_string(),
+                ));
+            }
+
+            let transaction_type = if is_expense { "expense" } else { "income" };
+
+            let transaction = Transaction::new(
+                id,
+                account_id,
+                amount,
+                category,
+                description,
+                date,
+                transaction_type.to_string(),
+                None,
+            );
+
+            db.update_transaction(&transaction)?;
+            Ok(())
+        })
+    }
+
     /// Gets all transactions
     pub fn get_transactions(&self) -> Result<Vec<Transaction>, ControllerError> {
         self.with_db(|db| db.get_transactions().map_err(ControllerError::Database))

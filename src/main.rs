@@ -388,6 +388,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         format!("{formatted_units}.{cents:02}")
     }
 
+    fn format_decimal_from_cents(value: i64) -> String {
+        let units = value / 100;
+        let cents = value.abs() % 100;
+        format!("{units}.{cents:02}")
+    }
+
     fn format_money(amount_cents: i64, currency: &str) -> String {
         let code = currency.to_uppercase();
         format!("{code} {}", format_amount(amount_cents))
@@ -661,12 +667,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        fn format_decimal_from_cents(value: i64) -> String {
-            let units = value / 100;
-            let cents = value.abs() % 100;
-            format!("{units}.{cents:02}")
-        }
-
         let mapped: Vec<AccountData> = accounts
             .iter()
             .map(|acc| {
@@ -711,9 +711,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         controller: &Arc<AppController>,
     ) -> Result<(), sanctum::controller::ControllerError> {
         let accounts = controller.get_accounts()?;
-        let account_lookup: HashMap<String, (String, String)> = accounts
+        let mut account_lookup: HashMap<String, (String, String)> = HashMap::new();
+        let mut account_index_map: HashMap<String, i32> = HashMap::new();
+        for (idx, account) in accounts.iter().enumerate() {
+            account_lookup.insert(
+                account.id.clone(),
+                (account.currency.clone(), account.name.clone()),
+            );
+            account_index_map.insert(account.id.clone(), idx as i32);
+        }
+
+        let expense_categories = controller.get_transaction_categories("expense".to_string())?;
+        let income_categories = controller.get_transaction_categories("income".to_string())?;
+
+        let expense_index_map: HashMap<String, i32> = expense_categories
             .iter()
-            .map(|a| (a.id.clone(), (a.currency.clone(), a.name.clone())))
+            .enumerate()
+            .map(|(idx, cat)| (cat.name.clone(), idx as i32))
+            .collect();
+        let income_index_map: HashMap<String, i32> = income_categories
+            .iter()
+            .enumerate()
+            .map(|(idx, cat)| (cat.name.clone(), idx as i32))
             .collect();
 
         let transactions = controller.get_transactions()?;
@@ -747,13 +766,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 } else {
                     tx.category.to_uppercase()
                 };
+                let category_index = if is_expense {
+                    expense_index_map
+                        .get(&tx.category)
+                        .cloned()
+                        .unwrap_or(0)
+                } else if is_transfer {
+                    0
+                } else {
+                    income_index_map.get(&tx.category).cloned().unwrap_or(0)
+                };
 
                 TransactionData {
                     id: tx.id.clone().into(),
+                    account_id: tx.account_id.clone().into(),
+                    account_index: account_index_map
+                        .get(&tx.account_id)
+                        .cloned()
+                        .unwrap_or(0),
                     date: tx.date.clone().into(),
                     description: description.into(),
                     category: category.into(),
+                    category_raw: tx.category.clone().into(),
+                    category_index,
                     amount: amount_str.into(),
+                    amount_raw: format_decimal_from_cents(tx.amount).into(),
                     is_expense,
                     is_transfer,
                 }
@@ -808,9 +845,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         controller: &Arc<AppController>,
     ) -> Result<(), sanctum::controller::ControllerError> {
         let accounts = controller.get_accounts()?;
-        let account_lookup: HashMap<String, (String, String)> = accounts
+        let mut account_lookup: HashMap<String, (String, String)> = HashMap::new();
+        let mut account_index_map: HashMap<String, i32> = HashMap::new();
+        for (idx, account) in accounts.iter().enumerate() {
+            account_lookup.insert(
+                account.id.clone(),
+                (account.currency.clone(), account.name.clone()),
+            );
+            account_index_map.insert(account.id.clone(), idx as i32);
+        }
+
+        let expense_categories = controller.get_transaction_categories("expense".to_string())?;
+        let income_categories = controller.get_transaction_categories("income".to_string())?;
+
+        let expense_index_map: HashMap<String, i32> = expense_categories
             .iter()
-            .map(|a| (a.id.clone(), (a.currency.clone(), a.name.clone())))
+            .enumerate()
+            .map(|(idx, cat)| (cat.name.clone(), idx as i32))
+            .collect();
+        let income_index_map: HashMap<String, i32> = income_categories
+            .iter()
+            .enumerate()
+            .map(|(idx, cat)| (cat.name.clone(), idx as i32))
             .collect();
 
         let mut transactions = controller.get_transactions()?;
@@ -846,13 +902,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 } else {
                     tx.category.to_uppercase()
                 };
+                let category_index = if is_expense {
+                    expense_index_map
+                        .get(&tx.category)
+                        .cloned()
+                        .unwrap_or(0)
+                } else if is_transfer {
+                    0
+                } else {
+                    income_index_map.get(&tx.category).cloned().unwrap_or(0)
+                };
 
                 TransactionData {
                     id: tx.id.clone().into(),
+                    account_id: tx.account_id.clone().into(),
+                    account_index: account_index_map
+                        .get(&tx.account_id)
+                        .cloned()
+                        .unwrap_or(0),
                     date: tx.date.clone().into(),
                     description: description.into(),
                     category: category.into(),
+                    category_raw: tx.category.clone().into(),
+                    category_index,
                     amount: amount_str.into(),
+                    amount_raw: format_decimal_from_cents(tx.amount).into(),
                     is_expense,
                     is_transfer,
                 }
@@ -1050,6 +1124,48 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 .invoke_fetch_analytics(ui.global::<AnalyticsAdapter>().get_active_range());
                         }
                         notify("Transaction added".into(), false);
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            },
+        );
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = show_notification.clone();
+        ui.global::<TransactionAdapter>().on_update_transaction(
+            move |id, account_id, amount, category, description, date, is_expense| -> SharedString {
+                let amount_cents = match parse_amount_input(&amount) {
+                    Some(v) if v > 0 => v,
+                    _ => return SharedString::from("Amount must be greater than zero"),
+                };
+
+                let result = controller.update_transaction(
+                    id.to_string(),
+                    account_id.to_string(),
+                    amount_cents,
+                    category.to_string(),
+                    description.to_string(),
+                    date.to_string(),
+                    is_expense,
+                );
+
+                match result {
+                    Ok(_) => {
+                        let _ = reload_transactions(&ui_weak, &controller);
+                        let _ = reload_accounts(&ui_weak, &controller);
+                        let _ = reload_recent(&ui_weak, &controller);
+
+                        if let Some(ui) = ui_weak.upgrade() {
+                            ui.global::<AppState>().set_show_add_transaction(false);
+                            ui.global::<DashboardAdapter>().invoke_fetch_balance();
+                            ui.global::<AnalyticsAdapter>()
+                                .invoke_fetch_analytics(ui.global::<AnalyticsAdapter>().get_active_range());
+                        }
+                        notify("Transaction updated".into(), false);
                         SharedString::from("")
                     }
                     Err(e) => SharedString::from(e.to_string()),

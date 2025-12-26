@@ -145,10 +145,15 @@ export struct AccountData {
 
 export struct TransactionData {
     id: string,
+    account-id: string,
+    account-index: int,
     date: string,           // Formatted date e.g. "2024-01-15"
     description: string,
     category: string,
+    category-raw: string,
+    category-index: int,
     amount: string,         // Pre-formatted e.g. "- $ 50.00" or "+ $ 100.00"
+    amount-raw: string,
     is-expense: bool,
     is-transfer: bool,
 }
@@ -552,6 +557,10 @@ export global TransactionAdapter {
     // (account_id, amount, category, description, date, is_expense) -> "" or error
     callback add-transaction(string, string, string, string, string, bool) -> string;
 
+    // Callback to update a transaction
+    // (id, account_id, amount, category, description, date, is_expense) -> "" or error
+    callback update-transaction(string, string, string, string, string, string, bool) -> string;
+
     // Callback to delete a transaction
     callback delete-transaction(string) -> string; // id -> "" or error
 }
@@ -582,6 +591,8 @@ export global AppState {
 
     // Modal states
     in-out property <bool> show-add-transaction: false;
+    in-out property <bool> transaction-edit-mode: false;
+    in-out property <int> selected-transaction-index: 0;
     in-out property <bool> show-add-account: false;
     in-out property <bool> account-edit-mode: false;
     in-out property <int> selected-account-index: 0;
