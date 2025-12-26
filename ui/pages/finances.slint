@@ -165,8 +165,9 @@ component FilterInput inherits Rectangle {
             letter-spacing: 1.5px;
         }
 
-        Rectangle {
+        input-box := Rectangle {
             height: 40px;
+            horizontal-stretch: 1;
             background: Palette.surface;
             border-radius: 8px;
             border-width: 1px;
@@ -244,12 +245,14 @@ component AccountFilterSelect inherits Rectangle {
 
         input-box := Rectangle {
             height: 40px;
+            width: root.width;
             background: Palette.surface;
             border-radius: 8px;
             border-width: 1px;
             border-color: Palette.border;
 
             HorizontalLayout {
+                width: parent.width;
                 padding-left: 12px;
                 padding-right: 12px;
 
@@ -278,7 +281,7 @@ component AccountFilterSelect inherits Rectangle {
 
     popup := PopupWindow {
         x: 0;
-        y: input-box.y + input-box.height;
+        y: root.height - 4px;
         width: root.width;
 
         Rectangle {
@@ -405,12 +408,14 @@ component CategoryFilterSelect inherits Rectangle {
 
         input-box := Rectangle {
             height: 40px;
+            width: root.width;
             background: Palette.surface;
             border-radius: 8px;
             border-width: 1px;
             border-color: Palette.border;
 
             HorizontalLayout {
+                width: parent.width;
                 padding-left: 12px;
                 padding-right: 12px;
 
@@ -439,7 +444,7 @@ component CategoryFilterSelect inherits Rectangle {
 
     popup := PopupWindow {
         x: 0;
-        y: input-box.y + input-box.height;
+        y: root.height - 4px;
         width: root.width;
 
         Rectangle {
