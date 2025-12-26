@@ -430,6 +430,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .unwrap_or(0)
     }
 
+    fn normalize_habit_category_value(category: &str) -> String {
+        match category.trim().to_lowercase().as_str() {
+            "mind" => "mind".to_string(),
+            "body" => "body".to_string(),
+            "spirit" | "discipline" => "spirit".to_string(),
+            _ => "mind".to_string(),
+        }
+    }
+
     fn format_fee_display(
         tx: &CryptoTransaction,
         symbol_map: &HashMap<String, String>,
@@ -1225,7 +1234,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         color,
                         color_hex: SharedString::from(color_hex.clone()),
                         color_index: habit_color_index(&color_hex),
-                        category: SharedString::from(h.category),
+                        category: SharedString::from(normalize_habit_category_value(&h.category)),
                         streak: current_streak,
                         best_streak,
                         completion_rate,
@@ -1931,11 +1940,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut habit_categories: HashMap<String, String> = HashMap::new();
         let mut category_counts: HashMap<String, i32> = HashMap::new();
         for habit in &habits {
-            let category = habit.category.trim().to_lowercase();
-            let category = match category.as_str() {
-                "body" | "mind" | "spirit" => category,
-                _ => "mind".to_string(),
-            };
+            let category = normalize_habit_category_value(&habit.category);
             habit_categories.insert(habit.id.clone(), category.clone());
             *category_counts.entry(category).or_insert(0) += 1;
         }

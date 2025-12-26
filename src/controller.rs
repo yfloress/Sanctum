@@ -393,7 +393,7 @@ fn normalize_habit_category(category: &str) -> Option<String> {
     match normalized.as_str() {
         "mind" => Some("mind".to_string()),
         "body" => Some("body".to_string()),
-        "spirit" => Some("spirit".to_string()),
+        "spirit" | "discipline" => Some("spirit".to_string()),
         _ => None,
     }
 }

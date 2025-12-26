@@ -215,6 +215,7 @@ export component AddHabitModal inherits Rectangle {
     }
 
     init => {
+        key-scope.focus();
         if (editing) {
             load-edit();
         }
@@ -238,6 +239,22 @@ export component AddHabitModal inherits Rectangle {
         TouchArea { clicked => { close-modal(); } }
     }
 
+    key-scope := FocusScope {
+        width: parent.width;
+        height: parent.height;
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                close-modal();
+                return accept;
+            }
+            if (event.text == Key.Return && (event.modifiers.control || event.modifiers.meta)) {
+                root.submit();
+                return accept;
+            }
+            return reject;
+        }
+    }
+
     // Modal panel
     Rectangle {
         width: min(Palette.modal-width-md, parent.width - 40px);
@@ -251,7 +268,7 @@ export component AddHabitModal inherits Rectangle {
         drop-shadow-blur: 40px;
         drop-shadow-color: #00000088;
 
-        TouchArea { }
+        TouchArea { clicked => { key-scope.focus(); } }
 
         VerticalLayout {
             padding: 32px;
