@@ -443,6 +443,11 @@ export component AddTransactionModal inherits Rectangle {
         }
     }
 
+    key-scope := FocusScope {
+        width: parent.width;
+        height: parent.height;
+    }
+
     // Modal panel
     Rectangle {
         x: (parent.width - self.width) / 2;
@@ -456,7 +461,9 @@ export component AddTransactionModal inherits Rectangle {
         drop-shadow-blur: 40px;
         drop-shadow-color: #00000088;
 
-        TouchArea { }
+        TouchArea {
+            clicked => { key-scope.focus(); }
+        }
 
 	        VerticalLayout {
 	            padding: 32px;
