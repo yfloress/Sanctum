@@ -771,9 +771,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         controller: &Arc<AppController>,
     ) -> Result<(), sanctum::controller::ControllerError> {
         let accounts = controller.get_accounts()?;
-        let account_lookup: HashMap<String, String> = accounts
+        let account_lookup: HashMap<String, (String, String)> = accounts
             .iter()
-            .map(|a| (a.id.clone(), a.currency.clone()))
+            .map(|a| (a.id.clone(), (a.currency.clone(), a.name.clone())))
             .collect();
 
         let mut transactions = controller.get_transactions()?;
@@ -783,18 +783,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mapped: Vec<TransactionData> = transactions
             .iter()
             .map(|tx| {
-                let currency = account_lookup
+                let (currency, _name) = account_lookup
                     .get(&tx.account_id)
                     .cloned()
-                    .unwrap_or_else(|| "USD".to_string());
+                    .unwrap_or_else(|| ("USD".to_string(), "Unknown".to_string()));
 
                 let is_transfer = tx.transaction_type == "transfer";
                 let is_expense = tx.transaction_type == "expense";
                 let sign = if is_transfer { "↔" } else if is_expense { "-" } else { "+" };
                 let amount_str = format!("{sign} {}", format_money(tx.amount, &currency));
 
+                let transfer_label = tx
+                    .transfer_account_id
+                    .as_ref()
+                    .and_then(|id| account_lookup.get(id))
+                    .map(|(_, name)| name.as_str())
+                    .unwrap_or("Account");
                 let description = if tx.description.is_empty() && is_transfer {
-                    "Transfer".to_string()
+                    format!("Transfer to {transfer_label}")
                 } else {
                     tx.description.clone()
                 };
@@ -990,6 +996,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Ok(_) => {
                         let _ = reload_transactions(&ui_weak, &controller);
                         let _ = reload_accounts(&ui_weak, &controller);
+                        let _ = reload_recent(&ui_weak, &controller);
 
                         if let Some(ui) = ui_weak.upgrade() {
                             ui.global::<AppState>().set_show_add_transaction(false);
@@ -1135,6 +1142,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Ok(_) => {
                         let _ = reload_transactions(&ui_weak, &controller);
                         let _ = reload_accounts(&ui_weak, &controller);
+                        let _ = reload_recent(&ui_weak, &controller);
                         notify("Transaction deleted".into(), false);
                         SharedString::from("")
                     }
