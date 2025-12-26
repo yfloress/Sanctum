@@ -168,11 +168,10 @@ component FilterInput inherits Rectangle {
             height: 40px;
             background: Palette.surface;
             border-radius: 8px;
-            border-width: input.has-focus ? 2px : 1px;
+            border-width: 1px;
             border-color: input.has-focus ? Palette.accent : Palette.border;
 
             animate border-color { duration: 150ms; }
-            animate border-width { duration: 150ms; }
 
             HorizontalLayout {
                 padding-left: 12px;
@@ -206,6 +205,7 @@ component FilterInput inherits Rectangle {
             }
         }
     }
+
 }
 
 component AccountFilterSelect inherits Rectangle {
@@ -823,28 +823,8 @@ export component FinancesPage inherits Rectangle {
                     height: 32px;
                     alignment: space-between;
 
-                    HorizontalLayout {
-                        spacing: 12px;
-
-                        SectionHeader {
-                            title: "RECENT TRANSACTIONS";
-                        }
-
-                        if has-active-filters(): Rectangle {
-                            width: 24px;
-                            height: 24px;
-                            border-radius: 12px;
-                            background: Palette.accent;
-
-                            Text {
-                                text: (filter-query != "" ? 1 : 0) + (filter-account-index > 0 ? 1 : 0) + (filter-category-index > 0 ? 1 : 0);
-                                color: #ffffff;
-                                font-size: 11px;
-                                font-weight: 700;
-                                horizontal-alignment: center;
-                                vertical-alignment: center;
-                            }
-                        }
+                    SectionHeader {
+                        title: "RECENT TRANSACTIONS";
                     }
 
                     ActionButton {
