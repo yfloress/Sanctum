@@ -155,6 +155,7 @@ component FilterInput inherits Rectangle {
 
     VerticalLayout {
         spacing: 6px;
+        alignment: start;
 
         Text {
             text: root.label;
@@ -197,6 +198,7 @@ component FilterInput inherits Rectangle {
                     color: Palette.text-primary;
                     font-size: 12px;
                     vertical-alignment: center;
+                    horizontal-stretch: 1;
                 }
             }
 
@@ -230,6 +232,7 @@ component AccountFilterSelect inherits Rectangle {
 
     VerticalLayout {
         spacing: 6px;
+        alignment: start;
 
         Text {
             text: "ACCOUNT";
@@ -275,7 +278,7 @@ component AccountFilterSelect inherits Rectangle {
 
     popup := PopupWindow {
         x: 0;
-        y: 56px;
+        y: root.height - 4px;
         width: root.width;
 
         Rectangle {
@@ -390,6 +393,7 @@ component CategoryFilterSelect inherits Rectangle {
 
     VerticalLayout {
         spacing: 6px;
+        alignment: start;
 
         Text {
             text: "CATEGORY";
@@ -435,7 +439,7 @@ component CategoryFilterSelect inherits Rectangle {
 
     popup := PopupWindow {
         x: 0;
-        y: 56px;
+        y: root.height - 4px;
         width: root.width;
 
         Rectangle {
@@ -598,6 +602,11 @@ export component FinancesPage inherits Rectangle {
     property <int> filter-category-index: 0;
     property <bool> filters-ready: false;
 
+    defocus-scope := FocusScope {
+        width: 0px;
+        height: 0px;
+    }
+
     init => {
         TransactionAdapter.is-loading = true;
         AccountAdapter.is-loading = true;
@@ -720,24 +729,6 @@ export component FinancesPage inherits Rectangle {
                             vertical-alignment: center;
                         }
 
-                        // Status badge
-                        Rectangle {
-                            width: 8px;
-                            height: 8px;
-                            border-radius: 4px;
-                            background: Palette.success;
-                            y: (parent.height - self.height) / 2;
-
-                            Rectangle {
-                                x: -4px;
-                                y: -4px;
-                                width: 16px;
-                                height: 16px;
-                                border-radius: 8px;
-                                background: Palette.success;
-                                opacity: 0.3;
-                            }
-                        }
                     }
 
                     VerticalLayout {
@@ -811,6 +802,12 @@ export component FinancesPage inherits Rectangle {
             vertical-stretch: 1;
             background: transparent;
 
+            TouchArea {
+                width: parent.width;
+                height: parent.height;
+                clicked => { defocus-scope.focus(); }
+            }
+
             // TAB: ACTIVITY
             if root.active-tab == "activity": VerticalLayout {
                 padding: 32px;
@@ -862,7 +859,7 @@ export component FinancesPage inherits Rectangle {
                         selected-index <=> root.filter-category-index;
                     }
 
-                    if has-active-filters(): Rectangle {
+                    Rectangle {
                         width: 72px;
                         height: 56px;
 
@@ -876,11 +873,15 @@ export component FinancesPage inherits Rectangle {
                             Rectangle {
                                 height: 40px;
                                 border-radius: 8px;
-                                background: touch.has-hover ? Palette.surface-hover : Palette.surface;
-                                border-width: 1px;
-                                border-color: Palette.border-light;
+                                background: has-active-filters()
+                                    ? (touch.has-hover ? Palette.surface-hover : Palette.surface)
+                                    : transparent;
+                                border-width: has-active-filters() ? 1px : 0px;
+                                border-color: has-active-filters() ? Palette.border-light : transparent;
+                                opacity: has-active-filters() ? 1.0 : 0.0;
 
                                 animate background { duration: 200ms; easing: ease-out; }
+                                animate opacity { duration: 150ms; easing: ease-out; }
 
                                 Text {
                                     text: "✕";
@@ -889,11 +890,16 @@ export component FinancesPage inherits Rectangle {
                                     font-weight: 600;
                                     horizontal-alignment: center;
                                     vertical-alignment: center;
+                                    opacity: has-active-filters() ? 1.0 : 0.0;
                                 }
 
                                 touch := TouchArea {
-                                    mouse-cursor: pointer;
-                                    clicked => { root.clear-filters(); }
+                                    mouse-cursor: has-active-filters() ? pointer : default;
+                                    clicked => {
+                                        if has-active-filters() {
+                                            root.clear-filters();
+                                        }
+                                    }
                                 }
                             }
                         }
