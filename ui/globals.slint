@@ -555,6 +555,11 @@ export global TransactionAdapter {
     // List of transactions (populated from Rust backend)
     in-out property <[TransactionData]> transactions: [];
     in-out property <bool> is-loading: false;
+    in-out property <string> filter-query: "";
+    in-out property <string> filter-account-id: "";
+    in-out property <string> filter-category: "";
+    in-out property <int> display-limit: 100;
+    in-out property <bool> has-more: false;
 
     // Callback to fetch/refresh transactions from Rust backend
     callback fetch-transactions();

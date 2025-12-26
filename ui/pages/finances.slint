@@ -145,19 +145,538 @@ component EmptyState inherits Rectangle {
     }
 }
 
+component FilterInput inherits Rectangle {
+    in property <string> label: "SEARCH";
+    in property <string> placeholder: "Search...";
+    in-out property <string> value: "";
+
+    height: 56px;
+    background: transparent;
+
+    VerticalLayout {
+        spacing: 6px;
+
+        Text {
+            text: root.label;
+            color: Palette.text-muted;
+            font-size: 10px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
+        }
+
+        Rectangle {
+            height: 40px;
+            background: Palette.surface;
+            border-radius: 8px;
+            border-width: input.has-focus ? 2px : 1px;
+            border-color: input.has-focus ? Palette.accent : Palette.border;
+
+            animate border-color { duration: 150ms; }
+            animate border-width { duration: 150ms; }
+
+            HorizontalLayout {
+                padding-left: 12px;
+                padding-right: 12px;
+                spacing: 8px;
+
+                Text {
+                    text: "🔎";
+                    color: Palette.text-muted;
+                    font-size: 12px;
+                    vertical-alignment: center;
+                }
+
+                if root.value == "" && !input.has-focus: Text {
+                    text: root.placeholder;
+                    color: Palette.text-subtle;
+                    font-size: 12px;
+                    vertical-alignment: center;
+                }
+
+                input := TextInput {
+                    text <=> root.value;
+                    color: Palette.text-primary;
+                    font-size: 12px;
+                    vertical-alignment: center;
+                }
+            }
+
+            TouchArea {
+                clicked => { input.focus(); }
+            }
+        }
+    }
+}
+
+component AccountFilterSelect inherits Rectangle {
+    in-out property <int> selected-index: 0;
+
+    height: 56px;
+    background: transparent;
+
+    function selected_label() -> string {
+        if selected-index == 0 {
+            return "All accounts";
+        }
+        if AccountAdapter.accounts.length == 0 {
+            return "All accounts";
+        }
+        let safe_index = selected-index - 1;
+        if safe_index >= 0 && safe_index < AccountAdapter.accounts.length {
+            return AccountAdapter.accounts[safe_index].name;
+        }
+        return "All accounts";
+    }
+
+    VerticalLayout {
+        spacing: 6px;
+
+        Text {
+            text: "ACCOUNT";
+            color: Palette.text-muted;
+            font-size: 10px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
+        }
+
+        Rectangle {
+            height: 40px;
+            background: Palette.surface;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: Palette.border;
+
+            HorizontalLayout {
+                padding-left: 12px;
+                padding-right: 12px;
+
+                Text {
+                    text: selected_label();
+                    color: Palette.text-primary;
+                    font-size: 12px;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+
+                Text {
+                    text: "▼";
+                    color: Palette.text-muted;
+                    font-size: 10px;
+                    vertical-alignment: center;
+                }
+            }
+
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => { popup.show(); }
+            }
+        }
+    }
+
+    popup := PopupWindow {
+        x: 0;
+        y: 56px;
+        width: root.width;
+
+        Rectangle {
+            background: Palette.sidebar-bg;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: Palette.border-light;
+            height: min((AccountAdapter.accounts.length + 1) * 40px + 8px, 240px);
+            drop-shadow-blur: 16px;
+            drop-shadow-color: #00000066;
+
+            Flickable {
+                viewport-height: (AccountAdapter.accounts.length + 1) * 40px + 8px;
+
+                VerticalLayout {
+                    padding: 4px;
+                    spacing: 0px;
+
+                    Rectangle {
+                        height: 40px;
+                        background: option-touch-all.has-hover ? Palette.surface-hover : transparent;
+                        border-radius: 6px;
+
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+
+                            Text {
+                                text: "All accounts";
+                                color: selected-index == 0 ? Palette.text-primary : Palette.text-secondary;
+                                font-size: 12px;
+                                font-weight: selected-index == 0 ? 500 : 400;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+
+                            if selected-index == 0: Text {
+                                text: "✓";
+                                color: Palette.accent;
+                                font-size: 12px;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        option-touch-all := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.selected-index = 0; }
+                        }
+                    }
+
+                    for account[index] in AccountAdapter.accounts: Rectangle {
+                        height: 40px;
+                        background: option-touch.has-hover ? Palette.surface-hover : transparent;
+                        border-radius: 6px;
+
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+
+                            Text {
+                                text: account.name;
+                                color: selected-index == index + 1 ? Palette.text-primary : Palette.text-secondary;
+                                font-size: 12px;
+                                font-weight: selected-index == index + 1 ? 500 : 400;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+
+                            if selected-index == index + 1: Text {
+                                text: "✓";
+                                color: Palette.accent;
+                                font-size: 12px;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        option-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.selected-index = index + 1; }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+component CategoryFilterSelect inherits Rectangle {
+    in-out property <int> selected-index: 0;
+
+    height: 56px;
+    background: transparent;
+
+    function selected_label() -> string {
+        if selected-index == 0 {
+            return "All categories";
+        }
+        if selected-index == 1 {
+            return "Transfers";
+        }
+        let expense_len = CategoryAdapter.expense-categories.length;
+        let idx = selected-index - 2;
+        if idx >= 0 && idx < expense_len {
+            return CategoryAdapter.expense-categories[idx].name;
+        }
+        let income_idx = idx - expense_len;
+        if income_idx >= 0 && income_idx < CategoryAdapter.income-categories.length {
+            return CategoryAdapter.income-categories[income_idx].name;
+        }
+        return "All categories";
+    }
+
+    VerticalLayout {
+        spacing: 6px;
+
+        Text {
+            text: "CATEGORY";
+            color: Palette.text-muted;
+            font-size: 10px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
+        }
+
+        Rectangle {
+            height: 40px;
+            background: Palette.surface;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: Palette.border;
+
+            HorizontalLayout {
+                padding-left: 12px;
+                padding-right: 12px;
+
+                Text {
+                    text: selected_label();
+                    color: Palette.text-primary;
+                    font-size: 12px;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+
+                Text {
+                    text: "▼";
+                    color: Palette.text-muted;
+                    font-size: 10px;
+                    vertical-alignment: center;
+                }
+            }
+
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => { popup.show(); }
+            }
+        }
+    }
+
+    popup := PopupWindow {
+        x: 0;
+        y: 56px;
+        width: root.width;
+
+        Rectangle {
+            background: Palette.sidebar-bg;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: Palette.border-light;
+            height: min((CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length + 2) * 40px + 8px, 280px);
+            drop-shadow-blur: 16px;
+            drop-shadow-color: #00000066;
+
+            Flickable {
+                viewport-height: (CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length + 2) * 40px + 8px;
+
+                VerticalLayout {
+                    padding: 4px;
+                    spacing: 0px;
+
+                    Rectangle {
+                        height: 40px;
+                        background: option-touch-all.has-hover ? Palette.surface-hover : transparent;
+                        border-radius: 6px;
+
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+
+                            Text {
+                                text: "All categories";
+                                color: selected-index == 0 ? Palette.text-primary : Palette.text-secondary;
+                                font-size: 12px;
+                                font-weight: selected-index == 0 ? 500 : 400;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+
+                            if selected-index == 0: Text {
+                                text: "✓";
+                                color: Palette.accent;
+                                font-size: 12px;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        option-touch-all := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.selected-index = 0; }
+                        }
+                    }
+
+                    Rectangle {
+                        height: 40px;
+                        background: option-touch-transfer.has-hover ? Palette.surface-hover : transparent;
+                        border-radius: 6px;
+
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+
+                            Text {
+                                text: "Transfers";
+                                color: selected-index == 1 ? Palette.text-primary : Palette.text-secondary;
+                                font-size: 12px;
+                                font-weight: selected-index == 1 ? 500 : 400;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+
+                            if selected-index == 1: Text {
+                                text: "✓";
+                                color: Palette.accent;
+                                font-size: 12px;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        option-touch-transfer := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.selected-index = 1; }
+                        }
+                    }
+
+                    for cat[index] in CategoryAdapter.expense-categories: Rectangle {
+                        height: 40px;
+                        background: option-touch-expense.has-hover ? Palette.surface-hover : transparent;
+                        border-radius: 6px;
+
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+
+                            Text {
+                                text: cat.name;
+                                color: selected-index == index + 2 ? Palette.text-primary : Palette.text-secondary;
+                                font-size: 12px;
+                                font-weight: selected-index == index + 2 ? 500 : 400;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+
+                            if selected-index == index + 2: Text {
+                                text: "✓";
+                                color: Palette.accent;
+                                font-size: 12px;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        option-touch-expense := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.selected-index = index + 2; }
+                        }
+                    }
+
+                    for cat[index] in CategoryAdapter.income-categories: Rectangle {
+                        height: 40px;
+                        background: option-touch-income.has-hover ? Palette.surface-hover : transparent;
+                        border-radius: 6px;
+
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+
+                            Text {
+                                text: cat.name;
+                                color: selected-index == index + 2 + CategoryAdapter.expense-categories.length ? Palette.text-primary : Palette.text-secondary;
+                                font-size: 12px;
+                                font-weight: selected-index == index + 2 + CategoryAdapter.expense-categories.length ? 500 : 400;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+
+                            if selected-index == index + 2 + CategoryAdapter.expense-categories.length: Text {
+                                text: "✓";
+                                color: Palette.accent;
+                                font-size: 12px;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        option-touch-income := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.selected-index = index + 2 + CategoryAdapter.expense-categories.length; }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 export component FinancesPage inherits Rectangle {
     background: Palette.background;
     in-out property <string> active-tab: "activity";
     property <bool> show-delete-confirm: false;
     property <string> delete-transaction-id: "";
     property <string> delete-transaction-desc: "";
+    property <string> filter-query: "";
+    property <int> filter-account-index: 0;
+    property <int> filter-category-index: 0;
+    property <bool> filters-ready: false;
 
     init => {
         TransactionAdapter.is-loading = true;
         AccountAdapter.is-loading = true;
+        CategoryAdapter.load-categories();
+        TransactionAdapter.filter-query = filter-query;
+        TransactionAdapter.filter-account-id = "";
+        TransactionAdapter.filter-category = "";
+        TransactionAdapter.display-limit = 100;
         TransactionAdapter.fetch-transactions();
         AccountAdapter.fetch-accounts();
+        filters-ready = true;
     }
+
+    function account_filter_id() -> string {
+        if filter-account-index <= 0 {
+            return "";
+        }
+        if AccountAdapter.accounts.length == 0 {
+            return "";
+        }
+        let idx = filter-account-index - 1;
+        if idx >= 0 && idx < AccountAdapter.accounts.length {
+            return AccountAdapter.accounts[idx].id;
+        }
+        return "";
+    }
+
+    function category_filter_name() -> string {
+        if filter-category-index == 0 {
+            return "";
+        }
+        if filter-category-index == 1 {
+            return "TRANSFER";
+        }
+        let expense_len = CategoryAdapter.expense-categories.length;
+        let idx = filter-category-index - 2;
+        if idx >= 0 && idx < expense_len {
+            return CategoryAdapter.expense-categories[idx].name;
+        }
+        let income_idx = idx - expense_len;
+        if income_idx >= 0 && income_idx < CategoryAdapter.income-categories.length {
+            return CategoryAdapter.income-categories[income_idx].name;
+        }
+        return "";
+    }
+
+    function apply-filters() {
+        if !filters-ready {
+            return;
+        }
+        if filter-account-index > AccountAdapter.accounts.length {
+            filter-account-index = 0;
+        }
+        let max-category-index = 1 + CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length;
+        if filter-category-index > max-category-index {
+            filter-category-index = 0;
+        }
+        TransactionAdapter.filter-query = filter-query;
+        TransactionAdapter.filter-account-id = account_filter_id();
+        TransactionAdapter.filter-category = category_filter_name();
+        TransactionAdapter.display-limit = 100;
+        TransactionAdapter.is-loading = true;
+        TransactionAdapter.fetch-transactions();
+    }
+
+    function clear-filters() {
+        filter-query = "";
+        filter-account-index = 0;
+        filter-category-index = 0;
+        apply-filters();
+    }
+
+    function has-active-filters() -> bool {
+        return filter-query != "" || filter-account-index > 0 || filter-category-index > 0;
+    }
+
+    changed filter-query => { apply-filters(); }
+    changed filter-account-index => { apply-filters(); }
+    changed filter-category-index => { apply-filters(); }
 
     VerticalLayout {
         spacing: 0px;
@@ -322,6 +841,34 @@ export component FinancesPage inherits Rectangle {
                     }
                 }
 
+                HorizontalLayout {
+                    spacing: 12px;
+                    alignment: start;
+
+                    FilterInput {
+                        horizontal-stretch: 1;
+                        label: "SEARCH";
+                        placeholder: "Search by description, category, date...";
+                        value <=> root.filter-query;
+                    }
+
+                    AccountFilterSelect {
+                        width: 180px;
+                        selected-index <=> root.filter-account-index;
+                    }
+
+                    CategoryFilterSelect {
+                        width: 180px;
+                        selected-index <=> root.filter-category-index;
+                    }
+
+                    ActionButton {
+                        text: "CLEAR";
+                        primary: false;
+                        clicked => { root.clear-filters(); }
+                    }
+                }
+
                 // Transaction list
                 if TransactionAdapter.transactions.length > 0: Rectangle {
                     vertical-stretch: 1;
@@ -331,7 +878,8 @@ export component FinancesPage inherits Rectangle {
                     border-color: Palette.border;
 
                     Flickable {
-                        viewport-height: TransactionAdapter.transactions.length * 64px;
+                        viewport-height: TransactionAdapter.transactions.length * 64px
+                            + (TransactionAdapter.has-more ? 56px : 0px);
 
                         VerticalLayout {
                             spacing: 0px;
@@ -363,6 +911,25 @@ export component FinancesPage inherits Rectangle {
                                     root.show-delete-confirm = true;
                                 }
                             }
+
+                            if TransactionAdapter.has-more: Rectangle {
+                                height: 48px;
+                                background: transparent;
+
+                                HorizontalLayout {
+                                    alignment: center;
+
+                                    ActionButton {
+                                        text: "LOAD MORE";
+                                        primary: false;
+                                        clicked => {
+                                            TransactionAdapter.display-limit += 100;
+                                            TransactionAdapter.is-loading = true;
+                                            TransactionAdapter.fetch-transactions();
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -370,8 +937,8 @@ export component FinancesPage inherits Rectangle {
                 // Empty state
                 if TransactionAdapter.transactions.length == 0: EmptyState {
                     icon: "📝";
-                    title: "No transactions yet";
-                    description: "Add your first entry to start tracking your finances";
+                    title: has-active-filters() ? "No matching transactions" : "No transactions yet";
+                    description: has-active-filters() ? "Try clearing or adjusting your filters" : "Add your first entry to start tracking your finances";
                 }
             }
 

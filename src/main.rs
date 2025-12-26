@@ -711,6 +711,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ui_weak: &Weak<AppWindow>,
         controller: &Arc<AppController>,
     ) -> Result<(), sanctum::controller::ControllerError> {
+        let (query, account_filter, category_filter) = if let Some(ui) = ui_weak.upgrade() {
+            let adapter = ui.global::<TransactionAdapter>();
+            (
+                adapter.get_filter_query().to_string(),
+                adapter.get_filter_account_id().to_string(),
+                adapter.get_filter_category().to_string(),
+            )
+        } else {
+            (String::new(), String::new(), String::new())
+        };
+
+        reload_transactions_filtered(
+            ui_weak,
+            controller,
+            query.as_str(),
+            account_filter.as_str(),
+            category_filter.as_str(),
+        )
+    }
+
+    fn reload_transactions_filtered(
+        ui_weak: &Weak<AppWindow>,
+        controller: &Arc<AppController>,
+        query: &str,
+        account_filter: &str,
+        category_filter: &str,
+    ) -> Result<(), sanctum::controller::ControllerError> {
         let accounts = controller.get_accounts()?;
         let mut account_lookup: HashMap<String, (String, String)> = HashMap::new();
         let mut account_index_map: HashMap<String, i32> = HashMap::new();
@@ -736,11 +763,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .map(|(idx, cat)| (cat.name.clone(), idx as i32))
             .collect();
 
+        let query = query.trim().to_lowercase();
+        let account_filter = account_filter.trim();
+        let category_filter = category_filter.trim();
+        let category_filter_upper = category_filter.to_uppercase();
+        let display_limit = if let Some(ui) = ui_weak.upgrade() {
+            ui.global::<TransactionAdapter>().get_display_limit() as usize
+        } else {
+            usize::MAX
+        };
+        let mut matched_count: usize = 0;
+
         let transactions = controller.get_transactions()?;
 
         let mapped: Vec<TransactionData> = transactions
-            .iter()
-            .map(|tx| {
+            .into_iter()
+            .filter_map(|tx| {
                 let (currency, from_name) = account_lookup
                     .get(&tx.account_id)
                     .cloned()
@@ -750,6 +788,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let is_expense = tx.transaction_type == "expense";
                 let sign = if is_transfer { "↔" } else if is_expense { "-" } else { "+" };
                 let amount_str = format!("{sign} {}", format_money(tx.amount, &currency));
+
+                if !account_filter.is_empty()
+                    && tx.account_id != account_filter
+                    && tx.transfer_account_id.as_deref() != Some(account_filter)
+                {
+                    return None;
+                }
+
+                if !category_filter.is_empty() {
+                    if (is_transfer && category_filter_upper != "TRANSFER")
+                        || (!is_transfer
+                            && (category_filter_upper == "TRANSFER"
+                                || !tx.category.eq_ignore_ascii_case(category_filter)))
+                    {
+                        return None;
+                    }
+                }
 
                 let transfer_label = tx
                     .transfer_account_id
@@ -766,6 +821,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 } else {
                     tx.description.clone()
                 };
+
+                if !query.is_empty() {
+                    let mut haystack = String::new();
+                    haystack.push_str(&tx.description);
+                    haystack.push(' ');
+                    haystack.push_str(&tx.category);
+                    haystack.push(' ');
+                    haystack.push_str(&tx.date);
+                    haystack.push(' ');
+                    haystack.push_str(&from_name);
+                    if is_transfer {
+                        haystack.push(' ');
+                        haystack.push_str(transfer_label);
+                    }
+                    let haystack = haystack.to_lowercase();
+                    if !haystack.contains(&query) {
+                        return None;
+                    }
+                }
+
+                matched_count += 1;
+                if matched_count > display_limit {
+                    return None;
+                }
+
                 let category = if is_transfer {
                     "TRANSFER".to_string()
                 } else {
@@ -782,7 +862,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     income_index_map.get(&tx.category).cloned().unwrap_or(0)
                 };
 
-                TransactionData {
+                Some(TransactionData {
                     id: tx.id.clone().into(),
                     account_id: tx.account_id.clone().into(),
                     account_index: account_index_map
@@ -809,13 +889,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     amount_raw: format_decimal_from_cents(tx.amount).into(),
                     is_expense,
                     is_transfer,
-                }
+                })
             })
             .collect();
 
         if let Some(ui) = ui_weak.upgrade() {
             let transaction_adapter = ui.global::<TransactionAdapter>();
             transaction_adapter.set_transactions(ModelRc::new(VecModel::from(mapped)));
+            transaction_adapter.set_has_more(matched_count > display_limit);
             transaction_adapter.set_is_loading(false);
         }
 
