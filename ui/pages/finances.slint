@@ -242,7 +242,7 @@ component AccountFilterSelect inherits Rectangle {
             letter-spacing: 1.5px;
         }
 
-        Rectangle {
+        input-box := Rectangle {
             height: 40px;
             background: Palette.surface;
             border-radius: 8px;
@@ -278,7 +278,7 @@ component AccountFilterSelect inherits Rectangle {
 
     popup := PopupWindow {
         x: 0;
-        y: root.height - 4px;
+        y: input-box.y + input-box.height;
         width: root.width;
 
         Rectangle {
@@ -403,7 +403,7 @@ component CategoryFilterSelect inherits Rectangle {
             letter-spacing: 1.5px;
         }
 
-        Rectangle {
+        input-box := Rectangle {
             height: 40px;
             background: Palette.surface;
             border-radius: 8px;
@@ -439,7 +439,7 @@ component CategoryFilterSelect inherits Rectangle {
 
     popup := PopupWindow {
         x: 0;
-        y: root.height - 4px;
+        y: input-box.y + input-box.height;
         width: root.width;
 
         Rectangle {
@@ -839,6 +839,7 @@ export component FinancesPage inherits Rectangle {
                 }
 
                 HorizontalLayout {
+                    horizontal-stretch: 1;
                     spacing: 12px;
                     alignment: start;
 
