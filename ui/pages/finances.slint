@@ -157,38 +157,40 @@ export component FinancesPage inherits Rectangle {
 
         // ==================== HERO HEADER ====================
         Rectangle {
-            height: 100px;
+            height: 160px;
             background: @linear-gradient(180deg, #0f0f1a 0%, Palette.background 100%);
-            
-            // Decorative accent
-            Rectangle {
-                width: 100%;
-                height: 2px;
-                y: parent.height - 2px;
-                background: @linear-gradient(90deg, transparent 0%, Palette.accent 20%, Palette.accent 80%, transparent 100%);
-                opacity: 0.1;
-            }
 
             HorizontalLayout {
                 padding-left: 64px;
                 padding-right: 64px;
+                padding-top: 24px;
+                padding-bottom: 16px;
                 alignment: space-between;
-                
-                // Left: Title & Status
-                VerticalLayout {
-                    alignment: center;
-                    spacing: 8px;
 
+                // Left: Portfolio Value
+                VerticalLayout {
+                    alignment: start;
+                    spacing: 16px;
+
+                    // Header
                     HorizontalLayout {
                         spacing: 12px;
                         alignment: start;
 
-                        Text { 
-                            text: "FINANCES"; 
-                            color: Palette.text-primary; 
-                            font-size: 24px; 
-                            font-weight: 300; 
-                            letter-spacing: 6px;
+                        Rectangle {
+                            width: 3px;
+                            height: 18px;
+                            border-radius: 2px;
+                            background: @linear-gradient(180deg, Palette.accent 0%, #6366f1 100%);
+                            y: (parent.height - self.height) / 2;
+                        }
+
+                        Text {
+                            text: "FINANCES";
+                            color: Palette.text-muted;
+                            font-size: 11px;
+                            font-weight: 600;
+                            letter-spacing: 3px;
                             vertical-alignment: center;
                         }
 
@@ -200,7 +202,6 @@ export component FinancesPage inherits Rectangle {
                             background: Palette.success;
                             y: (parent.height - self.height) / 2;
 
-                            // Pulse animation
                             Rectangle {
                                 x: -4px;
                                 y: -4px;
@@ -213,29 +214,23 @@ export component FinancesPage inherits Rectangle {
                         }
                     }
 
-                    Text {
-                        text: "Manage your accounts and transactions";
-                        color: Palette.text-muted;
-                        font-size: 11px;
-                        font-weight: 400;
-                        letter-spacing: 0.5px;
-                    }
-
                     VerticalLayout {
-                        spacing: 4px;
+                        spacing: 6px;
 
-                        Text {
-                            text: "TOTAL BALANCE";
-                            color: Palette.text-subtle;
-                            font-size: 10px;
-                            font-weight: 600;
-                            letter-spacing: 2px;
-                        }
-
+                        // Total Value
                         Text {
                             text: AccountAdapter.total-balance;
                             color: Palette.text-primary;
-                            font-size: 26px;
+                            font-size: 48px;
+                            font-weight: 300;
+                            letter-spacing: -1px;
+                        }
+
+                        // Subtitle
+                        Text {
+                            text: "Total Balance";
+                            color: Palette.text-muted;
+                            font-size: 12px;
                             font-weight: 400;
                         }
                     }
@@ -244,7 +239,7 @@ export component FinancesPage inherits Rectangle {
                 // Right: Navigation Tabs
                 VerticalLayout {
                     alignment: center;
-                    
+
                     Rectangle {
                         height: 44px;
                         background: Palette.surface;
@@ -255,7 +250,7 @@ export component FinancesPage inherits Rectangle {
                         HorizontalLayout {
                             padding: 4px;
                             spacing: 4px;
-                            
+
                             TabButton {
                                 text: "ACTIVITY";
                                 active: root.active-tab == "activity";
