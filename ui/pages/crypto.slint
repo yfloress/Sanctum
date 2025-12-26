@@ -21,13 +21,23 @@ component TabButton inherits Rectangle {
 
     width: 110px;
     height: 36px;
-    border-radius: 8px;
-    background: active ? Palette.surface : transparent;
+    border-radius: 18px;
+    background: active ? @linear-gradient(135deg, Palette.surface-hover 0%, Palette.surface 100%) : transparent;
     border-width: 1px;
-    border-color: active ? Palette.border-subtle : transparent;
+    border-color: active ? Palette.border-light : transparent;
 
-    animate background { duration: 200ms; easing: ease-out; }
-    animate border-color { duration: 200ms; easing: ease-out; }
+    animate background { duration: 250ms; easing: ease-out; }
+    animate border-color { duration: 250ms; easing: ease-out; }
+
+    if active: Rectangle {
+        x: -2px;
+        y: -2px;
+        width: parent.width + 4px;
+        height: parent.height + 4px;
+        border-radius: 20px;
+        background: Palette.accent;
+        opacity: 0.1;
+    }
 
     Text {
         text: root.text;
@@ -192,13 +202,12 @@ export component CryptoPage inherits Rectangle {
                 }
             }
             
-            // Bottom border
-            Rectangle {
-                y: parent.height - 1px;
-                height: 1px;
-                width: 100%;
-                background: Palette.border-subtle;
-            }
+        }
+
+        // Gradient divider
+        Rectangle {
+            height: 1px;
+            background: @linear-gradient(90deg, transparent 0%, Palette.border-light 50%, transparent 100%);
         }
 
         // ==================== HERO SECTION ====================
@@ -350,20 +359,29 @@ export component CryptoPage inherits Rectangle {
                     spacing: 20px;
                     
                     // Tabs
-                    HorizontalLayout {
-                        spacing: 8px;
-                        alignment: end;
-                        
-                        TabButton {
-                            text: "ASSETS";
-                            active: root.active-tab == "portfolio";
-                            clicked => { root.active-tab = "portfolio"; }
-                        }
+                    Rectangle {
+                        height: 44px;
+                        background: Palette.surface;
+                        border-radius: 22px;
+                        border-width: 1px;
+                        border-color: Palette.border;
 
-                        TabButton {
-                            text: "WALLETS";
-                            active: root.active-tab == "wallets";
-                            clicked => { root.active-tab = "wallets"; }
+                        HorizontalLayout {
+                            padding: 4px;
+                            spacing: 4px;
+                            alignment: end;
+
+                            TabButton {
+                                text: "ASSETS";
+                                active: root.active-tab == "portfolio";
+                                clicked => { root.active-tab = "portfolio"; }
+                            }
+
+                            TabButton {
+                                text: "WALLETS";
+                                active: root.active-tab == "wallets";
+                                clicked => { root.active-tab = "wallets"; }
+                            }
                         }
                     }
                     
