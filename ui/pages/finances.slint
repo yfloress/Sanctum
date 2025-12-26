@@ -187,19 +187,28 @@ component FilterInput inherits Rectangle {
                     vertical-alignment: center;
                 }
 
-                if root.value == "" && !input.has-focus: Text {
-                    text: root.placeholder;
-                    color: Palette.text-subtle;
-                    font-size: 12px;
-                    vertical-alignment: center;
-                }
-
-                input := TextInput {
-                    text <=> root.value;
-                    color: Palette.text-primary;
-                    font-size: 12px;
-                    vertical-alignment: center;
+                input-area := Rectangle {
                     horizontal-stretch: 1;
+                    height: parent.height;
+                    background: transparent;
+
+                    input := TextInput {
+                        text <=> root.value;
+                        color: Palette.text-primary;
+                        font-size: 12px;
+                        vertical-alignment: center;
+                        width: parent.width;
+                        height: parent.height;
+                    }
+
+                    if root.value == "" && !input.has-focus: Text {
+                        text: root.placeholder;
+                        color: Palette.text-subtle;
+                        font-size: 12px;
+                        vertical-alignment: center;
+                        width: parent.width;
+                        height: parent.height;
+                    }
                 }
             }
 
@@ -281,7 +290,7 @@ component AccountFilterSelect inherits Rectangle {
 
     popup := PopupWindow {
         x: 0;
-        y: root.height - 4px;
+        y: input-box.y + input-box.height - 4px;
         width: root.width;
 
         Rectangle {
@@ -379,17 +388,17 @@ component CategoryFilterSelect inherits Rectangle {
         if selected-index == 0 {
             return "All categories";
         }
-        if selected-index == 1 {
+        let expense_len = CategoryAdapter.expense-categories.length;
+        let income_len = CategoryAdapter.income-categories.length;
+        let transfer_index = 1 + expense_len + income_len;
+        if selected-index == transfer_index {
             return "Transfers";
         }
-        let expense_len = CategoryAdapter.expense-categories.length;
-        let idx = selected-index - 2;
-        if idx >= 0 && idx < expense_len {
-            return CategoryAdapter.expense-categories[idx].name;
+        if selected-index > 0 && selected-index <= expense_len {
+            return CategoryAdapter.expense-categories[selected-index - 1].name;
         }
-        let income_idx = idx - expense_len;
-        if income_idx >= 0 && income_idx < CategoryAdapter.income-categories.length {
-            return CategoryAdapter.income-categories[income_idx].name;
+        if selected-index > expense_len && selected-index < transfer_index {
+            return CategoryAdapter.income-categories[selected-index - 1 - expense_len].name;
         }
         return "All categories";
     }
@@ -444,7 +453,7 @@ component CategoryFilterSelect inherits Rectangle {
 
     popup := PopupWindow {
         x: 0;
-        y: root.height - 4px;
+        y: input-box.y + input-box.height - 4px;
         width: root.width;
 
         Rectangle {
@@ -495,38 +504,6 @@ component CategoryFilterSelect inherits Rectangle {
                         }
                     }
 
-                    Rectangle {
-                        height: 40px;
-                        background: option-touch-transfer.has-hover ? Palette.surface-hover : transparent;
-                        border-radius: 6px;
-
-                        HorizontalLayout {
-                            padding-left: 12px;
-                            padding-right: 12px;
-
-                            Text {
-                                text: "Transfers";
-                                color: selected-index == 1 ? Palette.text-primary : Palette.text-secondary;
-                                font-size: 12px;
-                                font-weight: selected-index == 1 ? 500 : 400;
-                                vertical-alignment: center;
-                                horizontal-stretch: 1;
-                            }
-
-                            if selected-index == 1: Text {
-                                text: "✓";
-                                color: Palette.accent;
-                                font-size: 12px;
-                                vertical-alignment: center;
-                            }
-                        }
-
-                        option-touch-transfer := TouchArea {
-                            mouse-cursor: pointer;
-                            clicked => { root.selected-index = 1; }
-                        }
-                    }
-
                     for cat[index] in CategoryAdapter.expense-categories: Rectangle {
                         height: 40px;
                         background: option-touch-expense.has-hover ? Palette.surface-hover : transparent;
@@ -538,14 +515,14 @@ component CategoryFilterSelect inherits Rectangle {
 
                             Text {
                                 text: cat.name;
-                                color: selected-index == index + 2 ? Palette.text-primary : Palette.text-secondary;
+                                color: selected-index == index + 1 ? Palette.text-primary : Palette.text-secondary;
                                 font-size: 12px;
-                                font-weight: selected-index == index + 2 ? 500 : 400;
+                                font-weight: selected-index == index + 1 ? 500 : 400;
                                 vertical-alignment: center;
                                 horizontal-stretch: 1;
                             }
 
-                            if selected-index == index + 2: Text {
+                            if selected-index == index + 1: Text {
                                 text: "✓";
                                 color: Palette.accent;
                                 font-size: 12px;
@@ -555,7 +532,7 @@ component CategoryFilterSelect inherits Rectangle {
 
                         option-touch-expense := TouchArea {
                             mouse-cursor: pointer;
-                            clicked => { root.selected-index = index + 2; }
+                            clicked => { root.selected-index = index + 1; }
                         }
                     }
 
@@ -570,14 +547,14 @@ component CategoryFilterSelect inherits Rectangle {
 
                             Text {
                                 text: cat.name;
-                                color: selected-index == index + 2 + CategoryAdapter.expense-categories.length ? Palette.text-primary : Palette.text-secondary;
+                                color: selected-index == index + 1 + CategoryAdapter.expense-categories.length ? Palette.text-primary : Palette.text-secondary;
                                 font-size: 12px;
-                                font-weight: selected-index == index + 2 + CategoryAdapter.expense-categories.length ? 500 : 400;
+                                font-weight: selected-index == index + 1 + CategoryAdapter.expense-categories.length ? 500 : 400;
                                 vertical-alignment: center;
                                 horizontal-stretch: 1;
                             }
 
-                            if selected-index == index + 2 + CategoryAdapter.expense-categories.length: Text {
+                            if selected-index == index + 1 + CategoryAdapter.expense-categories.length: Text {
                                 text: "✓";
                                 color: Palette.accent;
                                 font-size: 12px;
@@ -587,7 +564,45 @@ component CategoryFilterSelect inherits Rectangle {
 
                         option-touch-income := TouchArea {
                             mouse-cursor: pointer;
-                            clicked => { root.selected-index = index + 2 + CategoryAdapter.expense-categories.length; }
+                            clicked => { root.selected-index = index + 1 + CategoryAdapter.expense-categories.length; }
+                        }
+                    }
+
+                    Rectangle {
+                        height: 40px;
+                        background: option-touch-transfer.has-hover ? Palette.surface-hover : transparent;
+                        border-radius: 6px;
+
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+
+                            Text {
+                                text: "Transfers";
+                                color: selected-index == 1 + CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length
+                                    ? Palette.text-primary
+                                    : Palette.text-secondary;
+                                font-size: 12px;
+                                font-weight: selected-index == 1 + CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length
+                                    ? 500
+                                    : 400;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+
+                            if selected-index == 1 + CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length: Text {
+                                text: "✓";
+                                color: Palette.accent;
+                                font-size: 12px;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        option-touch-transfer := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                root.selected-index = 1 + CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length;
+                            }
                         }
                     }
                 }
@@ -643,17 +658,17 @@ export component FinancesPage inherits Rectangle {
         if filter-category-index == 0 {
             return "";
         }
-        if filter-category-index == 1 {
+        let expense_len = CategoryAdapter.expense-categories.length;
+        let income_len = CategoryAdapter.income-categories.length;
+        let transfer_index = 1 + expense_len + income_len;
+        if filter-category-index == transfer_index {
             return "TRANSFER";
         }
-        let expense_len = CategoryAdapter.expense-categories.length;
-        let idx = filter-category-index - 2;
-        if idx >= 0 && idx < expense_len {
-            return CategoryAdapter.expense-categories[idx].name;
+        if filter-category-index > 0 && filter-category-index <= expense_len {
+            return CategoryAdapter.expense-categories[filter-category-index - 1].name;
         }
-        let income_idx = idx - expense_len;
-        if income_idx >= 0 && income_idx < CategoryAdapter.income-categories.length {
-            return CategoryAdapter.income-categories[income_idx].name;
+        if filter-category-index > expense_len && filter-category-index < transfer_index {
+            return CategoryAdapter.income-categories[filter-category-index - 1 - expense_len].name;
         }
         return "";
     }
