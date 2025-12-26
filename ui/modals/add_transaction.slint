@@ -523,7 +523,13 @@ export component AddTransactionModal inherits Rectangle {
 	            body := Flickable {
 	                horizontal-stretch: 1;
 	                vertical-stretch: 1;
-	
+
+	                TouchArea {
+	                    width: parent.width;
+	                    height: parent.height;
+	                    clicked => { key-scope.focus(); }
+	                }
+
 	                VerticalLayout {
 	                    width: parent.width;
 	                    spacing: 20px;
