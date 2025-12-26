@@ -150,6 +150,7 @@ export struct TransactionData {
     category: string,
     amount: string,         // Pre-formatted e.g. "- $ 50.00" or "+ $ 100.00"
     is-expense: bool,
+    is-transfer: bool,
 }
 
 export struct BalanceData {
@@ -321,6 +322,7 @@ export global AuthAdapter {
 export global AccountAdapter {
     // List of accounts (populated from Rust backend)
     in-out property <[AccountData]> accounts: [];
+    in-out property <string> total-balance: "$ 0.00";
 
     // Callback to fetch/refresh accounts from Rust backend
     callback fetch-accounts();

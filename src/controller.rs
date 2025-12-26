@@ -1344,6 +1344,14 @@ impl AppController {
                 ));
             }
 
+            let from_account = db.get_account(&from_id)?;
+            let to_account = db.get_account(&to_id)?;
+            if from_account.currency.to_uppercase() != to_account.currency.to_uppercase() {
+                return Err(ControllerError::Validation(
+                    "Transfers require both accounts to use the same currency".to_string(),
+                ));
+            }
+
             let description =
                 validate_field_length(&description, MAX_DESCRIPTION_LENGTH, "Description")?;
             let description = sanitize_string(&description);

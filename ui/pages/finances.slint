@@ -234,6 +234,25 @@ export component FinancesPage inherits Rectangle {
                         font-weight: 400;
                         letter-spacing: 0.5px;
                     }
+
+                    VerticalLayout {
+                        spacing: 4px;
+
+                        Text {
+                            text: "TOTAL BALANCE";
+                            color: Palette.text-subtle;
+                            font-size: 10px;
+                            font-weight: 600;
+                            letter-spacing: 2px;
+                        }
+
+                        Text {
+                            text: AccountAdapter.total-balance;
+                            color: Palette.text-primary;
+                            font-size: 26px;
+                            font-weight: 400;
+                        }
+                    }
                 }
 
                 // Right: Navigation Tabs

@@ -180,10 +180,10 @@ export component AddAccountModal inherits Rectangle {
 
     property <string> name-value: editing && AccountAdapter.accounts.length > selected-index ? AccountAdapter.accounts[selected-index].name : "";
     property <string> initial-balance: editing && AccountAdapter.accounts.length > selected-index ? AccountAdapter.accounts[selected-index].initial-balance : "";
-    property <int> type-index: editing && AccountAdapter.accounts.length > selected-index ? (AccountAdapter.accounts[selected-index].account-type-key == "cash" ? 1 : AccountAdapter.accounts[selected-index].account-type-key == "savings" ? 2 : AccountAdapter.accounts[selected-index].account-type-key == "credit_card" ? 3 : 0) : 0;
+    property <int> type-index: editing && AccountAdapter.accounts.length > selected-index ? (AccountAdapter.accounts[selected-index].account-type-key == "cash" ? 1 : AccountAdapter.accounts[selected-index].account-type-key == "savings" ? 2 : AccountAdapter.accounts[selected-index].account-type-key == "credit_card" ? 3 : AccountAdapter.accounts[selected-index].account-type-key == "other" ? 4 : 0) : 0;
     property <int> currency-index: editing && AccountAdapter.accounts.length > selected-index ? (AccountAdapter.accounts[selected-index].currency == "CLP" ? 1 : 0) : 0;
 
-    property <[string]> type-options: ["Bank", "Cash", "Savings", "Credit"];
+    property <[string]> type-options: ["Bank", "Cash", "Savings", "Credit Card", "Other"];
     property <[string]> currency-options: ["USD", "CLP"];
 
     function reset-form() {

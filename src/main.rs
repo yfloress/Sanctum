@@ -611,6 +611,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Some((parsed * 100.0).round() as i64)
     }
 
+    fn normalize_account_type(value: &str) -> String {
+        let normalized = value.trim().to_lowercase();
+        match normalized.as_str() {
+            "bank" => "bank".to_string(),
+            "cash" => "cash".to_string(),
+            "savings" => "savings".to_string(),
+            "credit" | "credit card" | "credit_card" => "credit_card".to_string(),
+            "other" => "other".to_string(),
+            _ => normalized,
+        }
+    }
+
     fn reload_accounts(
         ui_weak: &Weak<AppWindow>,
         controller: &Arc<AppController>,
@@ -619,8 +631,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let balances = controller.get_account_balances()?;
 
         let mut balance_map: HashMap<String, i64> = HashMap::new();
-        for bal in balances {
+        for bal in &balances {
             balance_map.insert(bal.account_id.clone(), bal.current_balance);
+        }
+
+        let currency_map: HashMap<String, String> = accounts
+            .iter()
+            .map(|acc| (acc.id.clone(), acc.currency.to_uppercase()))
+            .collect();
+        let clp_rate = controller
+            .load_exchange_rate_allow_stale("CLP_USD".to_string())
+            .ok()
+            .and_then(|rate| rate.map(|(r, _)| r))
+            .unwrap_or(0.0);
+        let mut total_usd_cents: i64 = 0;
+        for bal in &balances {
+            let currency = currency_map
+                .get(&bal.account_id)
+                .map(|s| s.as_str())
+                .unwrap_or("USD");
+            if currency == "CLP" {
+                if clp_rate > 0.0 {
+                    total_usd_cents += (bal.current_balance as f64 / clp_rate).round() as i64;
+                }
+            } else {
+                total_usd_cents += bal.current_balance;
+            }
         }
 
         fn format_decimal_from_cents(value: i64) -> String {
@@ -641,7 +677,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     "bank" | "Bank" => "Bank",
                     "cash" | "Cash" => "Cash",
                     "savings" | "Savings" => "Savings",
-                    "credit_card" | "CreditCard" => "Credit",
+                    "credit_card" | "CreditCard" => "Credit Card",
+                    "other" | "Other" => "Other",
                     _ => acc.account_type.as_str(),
                 };
 
@@ -661,6 +698,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(ui) = ui_weak.upgrade() {
             let account_adapter = ui.global::<AccountAdapter>();
             account_adapter.set_accounts(ModelRc::new(VecModel::from(mapped)));
+            account_adapter.set_total_balance(format_money(total_usd_cents, "USD").into());
         }
 
         Ok(())
@@ -686,17 +724,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .cloned()
                     .unwrap_or_else(|| ("USD".to_string(), "Unknown".to_string()));
 
+                let is_transfer = tx.transaction_type == "transfer";
                 let is_expense = tx.transaction_type == "expense";
-                let sign = if is_expense { "-" } else { "+" };
+                let sign = if is_transfer { "↔" } else if is_expense { "-" } else { "+" };
                 let amount_str = format!("{sign} {}", format_money(tx.amount, &currency));
+
+                let transfer_label = tx
+                    .transfer_account_id
+                    .as_ref()
+                    .and_then(|id| account_lookup.get(id))
+                    .map(|(_, name)| name.as_str())
+                    .unwrap_or("Account");
+                let description = if tx.description.is_empty() && is_transfer {
+                    format!("Transfer to {transfer_label}")
+                } else {
+                    tx.description.clone()
+                };
+                let category = if is_transfer {
+                    "TRANSFER".to_string()
+                } else {
+                    tx.category.to_uppercase()
+                };
 
                 TransactionData {
                     id: tx.id.clone().into(),
                     date: tx.date.clone().into(),
-                    description: tx.description.clone().into(),
-                    category: tx.category.to_uppercase().into(),
+                    description: description.into(),
+                    category: category.into(),
                     amount: amount_str.into(),
                     is_expense,
+                    is_transfer,
                 }
             })
             .collect();
@@ -731,17 +788,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .cloned()
                     .unwrap_or_else(|| "USD".to_string());
 
+                let is_transfer = tx.transaction_type == "transfer";
                 let is_expense = tx.transaction_type == "expense";
-                let sign = if is_expense { "-" } else { "+" };
+                let sign = if is_transfer { "↔" } else if is_expense { "-" } else { "+" };
                 let amount_str = format!("{sign} {}", format_money(tx.amount, &currency));
+
+                let description = if tx.description.is_empty() && is_transfer {
+                    "Transfer".to_string()
+                } else {
+                    tx.description.clone()
+                };
+                let category = if is_transfer {
+                    "TRANSFER".to_string()
+                } else {
+                    tx.category.to_uppercase()
+                };
 
                 TransactionData {
                     id: tx.id.clone().into(),
                     date: tx.date.clone().into(),
-                    description: tx.description.clone().into(),
-                    category: tx.category.to_uppercase().into(),
+                    description: description.into(),
+                    category: category.into(),
                     amount: amount_str.into(),
                     is_expense,
+                    is_transfer,
                 }
             })
             .collect();
@@ -773,7 +843,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let result = controller.create_account(
                     name.to_string(),
-                    account_type.to_string().to_lowercase(),
+                    normalize_account_type(&account_type),
                     currency.to_string().to_uppercase(),
                     amount_cents,
                     "#8b5cf6".to_string(), // Default accent color
@@ -808,7 +878,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let result = controller.update_account(
                     id.to_string(),
                     name.to_string(),
-                    account_type.to_string().to_lowercase(),
+                    normalize_account_type(&account_type),
                     currency.to_string().to_uppercase(),
                     amount_cents,
                     "#8b5cf6".to_string(),
