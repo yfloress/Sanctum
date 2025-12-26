@@ -894,8 +894,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 match result {
                     Ok(_) => {
                         let _ = reload_accounts(&ui_weak, &controller);
+                        let _ = reload_recent(&ui_weak, &controller);
+
                         if let Some(ui) = ui_weak.upgrade() {
                             ui.global::<AppState>().set_show_add_account(false);
+                            ui.global::<DashboardAdapter>().invoke_fetch_balance();
                             ui.global::<AnalyticsAdapter>()
                                 .invoke_fetch_analytics("ALL".into());
                         }
@@ -931,8 +934,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Ok(_) => {
                         let _ = reload_accounts(&ui_weak, &controller);
                         let _ = reload_transactions(&ui_weak, &controller);
+                        let _ = reload_recent(&ui_weak, &controller);
+
                         if let Some(ui) = ui_weak.upgrade() {
                             ui.global::<AppState>().set_show_transfer_modal(false);
+                            ui.global::<DashboardAdapter>().invoke_fetch_balance();
+                            ui.global::<AnalyticsAdapter>()
+                                .invoke_fetch_analytics(ui.global::<AnalyticsAdapter>().get_active_range());
                         }
                         notify("Transfer successful".into(), false);
                         SharedString::from("")
@@ -1000,6 +1008,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                         if let Some(ui) = ui_weak.upgrade() {
                             ui.global::<AppState>().set_show_add_transaction(false);
+                            ui.global::<DashboardAdapter>().invoke_fetch_balance();
+                            ui.global::<AnalyticsAdapter>()
+                                .invoke_fetch_analytics(ui.global::<AnalyticsAdapter>().get_active_range());
                         }
                         notify("Transaction added".into(), false);
                         SharedString::from("")
@@ -1143,6 +1154,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let _ = reload_transactions(&ui_weak, &controller);
                         let _ = reload_accounts(&ui_weak, &controller);
                         let _ = reload_recent(&ui_weak, &controller);
+
+                        if let Some(ui) = ui_weak.upgrade() {
+                            ui.global::<DashboardAdapter>().invoke_fetch_balance();
+                            ui.global::<AnalyticsAdapter>()
+                                .invoke_fetch_analytics(ui.global::<AnalyticsAdapter>().get_active_range());
+                        }
                         notify("Transaction deleted".into(), false);
                         SharedString::from("")
                     }
