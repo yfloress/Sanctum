@@ -701,6 +701,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let account_adapter = ui.global::<AccountAdapter>();
             account_adapter.set_accounts(ModelRc::new(VecModel::from(mapped)));
             account_adapter.set_total_balance(format_money(total_usd_cents, "USD").into());
+            account_adapter.set_is_loading(false);
         }
 
         Ok(())
@@ -740,7 +741,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mapped: Vec<TransactionData> = transactions
             .iter()
             .map(|tx| {
-                let (currency, _name) = account_lookup
+                let (currency, from_name) = account_lookup
                     .get(&tx.account_id)
                     .cloned()
                     .unwrap_or_else(|| ("USD".to_string(), "Unknown".to_string()));
@@ -756,8 +757,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .and_then(|id| account_lookup.get(id))
                     .map(|(_, name)| name.as_str())
                     .unwrap_or("Account");
-                let description = if tx.description.is_empty() && is_transfer {
-                    format!("Transfer to {transfer_label}")
+                let description = if is_transfer {
+                    if tx.description.is_empty() {
+                        format!("{from_name} → {transfer_label}")
+                    } else {
+                        format!("{} ({from_name} → {transfer_label})", tx.description)
+                    }
                 } else {
                     tx.description.clone()
                 };
@@ -784,8 +789,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         .get(&tx.account_id)
                         .cloned()
                         .unwrap_or(0),
+                    transfer_account_id: tx
+                        .transfer_account_id
+                        .clone()
+                        .unwrap_or_default()
+                        .into(),
+                    transfer_account_index: tx
+                        .transfer_account_id
+                        .as_ref()
+                        .and_then(|id| account_index_map.get(id).cloned())
+                        .unwrap_or(0),
                     date: tx.date.clone().into(),
                     description: description.into(),
+                    description_raw: tx.description.clone().into(),
                     category: category.into(),
                     category_raw: tx.category.clone().into(),
                     category_index,
@@ -800,6 +816,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(ui) = ui_weak.upgrade() {
             let transaction_adapter = ui.global::<TransactionAdapter>();
             transaction_adapter.set_transactions(ModelRc::new(VecModel::from(mapped)));
+            transaction_adapter.set_is_loading(false);
         }
 
         Ok(())
@@ -876,7 +893,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mapped: Vec<TransactionData> = transactions
             .iter()
             .map(|tx| {
-                let (currency, _name) = account_lookup
+                let (currency, from_name) = account_lookup
                     .get(&tx.account_id)
                     .cloned()
                     .unwrap_or_else(|| ("USD".to_string(), "Unknown".to_string()));
@@ -892,8 +909,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .and_then(|id| account_lookup.get(id))
                     .map(|(_, name)| name.as_str())
                     .unwrap_or("Account");
-                let description = if tx.description.is_empty() && is_transfer {
-                    format!("Transfer to {transfer_label}")
+                let description = if is_transfer {
+                    if tx.description.is_empty() {
+                        format!("{from_name} → {transfer_label}")
+                    } else {
+                        format!("{} ({from_name} → {transfer_label})", tx.description)
+                    }
                 } else {
                     tx.description.clone()
                 };
@@ -920,8 +941,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         .get(&tx.account_id)
                         .cloned()
                         .unwrap_or(0),
+                    transfer_account_id: tx
+                        .transfer_account_id
+                        .clone()
+                        .unwrap_or_default()
+                        .into(),
+                    transfer_account_index: tx
+                        .transfer_account_id
+                        .as_ref()
+                        .and_then(|id| account_index_map.get(id).cloned())
+                        .unwrap_or(0),
                     date: tx.date.clone().into(),
                     description: description.into(),
+                    description_raw: tx.description.clone().into(),
                     category: category.into(),
                     category_raw: tx.category.clone().into(),
                     category_index,
@@ -946,7 +978,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         ui.global::<AccountAdapter>().on_fetch_accounts(move || {
-            let _ = reload_accounts(&ui_weak, &controller);
+            if reload_accounts(&ui_weak, &controller).is_err()
+                && let Some(ui) = ui_weak.upgrade()
+            {
+                ui.global::<AccountAdapter>().set_is_loading(false);
+            }
         });
     }
 
@@ -1066,6 +1102,47 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         let notify = show_notification.clone();
+        ui.global::<AccountAdapter>().on_update_transfer(
+            move |id, from_id, to_id, amount, description, date| -> SharedString {
+                let amount_cents = match parse_amount_input(&amount) {
+                    Some(v) if v > 0 => v,
+                    _ => return SharedString::from("Amount must be greater than zero"),
+                };
+
+                let result = controller.update_transfer(
+                    id.to_string(),
+                    from_id.to_string(),
+                    to_id.to_string(),
+                    amount_cents,
+                    description.to_string(),
+                    date.to_string(),
+                );
+
+                match result {
+                    Ok(_) => {
+                        let _ = reload_accounts(&ui_weak, &controller);
+                        let _ = reload_transactions(&ui_weak, &controller);
+                        let _ = reload_recent(&ui_weak, &controller);
+
+                        if let Some(ui) = ui_weak.upgrade() {
+                            ui.global::<AppState>().set_show_transfer_modal(false);
+                            ui.global::<DashboardAdapter>().invoke_fetch_balance();
+                            ui.global::<AnalyticsAdapter>()
+                                .invoke_fetch_analytics(ui.global::<AnalyticsAdapter>().get_active_range());
+                        }
+                        notify("Transfer updated".into(), false);
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            },
+        );
+    }
+
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = show_notification.clone();
         ui.global::<AccountAdapter>()
             .on_delete_account(move |id| -> SharedString {
                 let result = controller.archive_account(id.to_string());
@@ -1086,8 +1163,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_weak = ui_weak.clone();
         ui.global::<TransactionAdapter>()
             .on_fetch_transactions(move || {
-                let _ = reload_transactions(&ui_weak, &controller);
-                let _ = reload_recent(&ui_weak, &controller);
+                let tx_result = reload_transactions(&ui_weak, &controller);
+                let recent_result = reload_recent(&ui_weak, &controller);
+                if (tx_result.is_err() || recent_result.is_err())
+                    && let Some(ui) = ui_weak.upgrade()
+                {
+                    ui.global::<TransactionAdapter>().set_is_loading(false);
+                }
             });
     }
 

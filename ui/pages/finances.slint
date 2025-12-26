@@ -153,6 +153,8 @@ export component FinancesPage inherits Rectangle {
     property <string> delete-transaction-desc: "";
 
     init => {
+        TransactionAdapter.is-loading = true;
+        AccountAdapter.is-loading = true;
         TransactionAdapter.fetch-transactions();
         AccountAdapter.fetch-accounts();
     }
@@ -342,8 +344,13 @@ export component FinancesPage inherits Rectangle {
 
                                 clicked => {
                                     if (transaction.is-transfer) {
-                                        NotificationAdapter.show("Transfers must be edited from the transfer flow", true);
+                                        AccountAdapter.fetch-accounts();
+                                        AppState.transfer-edit-mode = true;
+                                        AppState.selected-transfer-index = index;
+                                        AppState.show-transfer-modal = true;
                                     } else {
+                                        CategoryAdapter.load-categories();
+                                        AccountAdapter.fetch-accounts();
                                         AppState.transaction-edit-mode = true;
                                         AppState.selected-transaction-index = index;
                                         AppState.show-add-transaction = true;
@@ -563,6 +570,8 @@ export component FinancesPage inherits Rectangle {
                         clicked => {
                             let result = TransactionAdapter.delete-transaction(root.delete-transaction-id);
                             if (result == "") {
+                                TransactionAdapter.is-loading = true;
+                                AccountAdapter.is-loading = true;
                                 TransactionAdapter.fetch-transactions();
                                 AccountAdapter.fetch-accounts();
                             } else {
@@ -575,6 +584,51 @@ export component FinancesPage inherits Rectangle {
             }
 
             TouchArea {} // Prevent click-through
+        }
+    }
+
+    // ==================== LOADING OVERLAY ====================
+    if TransactionAdapter.is-loading || AccountAdapter.is-loading: Rectangle {
+        width: 100%;
+        height: 100%;
+        background: Palette.background.with-alpha(0.95);
+        z: 999;
+        opacity: 1.0;
+
+        animate opacity { duration: 200ms; easing: ease-out; }
+
+        VerticalLayout {
+            alignment: center;
+            spacing: 20px;
+
+            Rectangle {
+                width: 60px;
+                height: 60px;
+                border-radius: 30px;
+                background: Palette.surface;
+                border-width: 3px;
+                border-color: Palette.accent;
+
+                animate border-color {
+                    duration: 1s;
+                    iteration-count: -1;
+                    easing: ease-in-out;
+                }
+
+                Text {
+                    text: "💳";
+                    font-size: 28px;
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
+                }
+            }
+
+            Text {
+                text: "Loading finances...";
+                color: Palette.text-secondary;
+                font-size: 14px;
+                font-weight: 500;
+            }
         }
     }
 }

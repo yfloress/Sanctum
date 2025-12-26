@@ -186,6 +186,8 @@ export component AddAccountModal inherits Rectangle {
     property <[string]> type-options: ["Bank", "Cash", "Savings", "Credit Card", "Other"];
     property <[string]> currency-options: ["USD", "CLP"];
 
+    init => { key-scope.focus(); }
+
     function reset-form() {
         name-value = "";
         initial-balance = "";
@@ -213,6 +215,7 @@ export component AddAccountModal inherits Rectangle {
         if (result == "") {
             root.reset-form();
             AppState.show-add-account = false;
+            AccountAdapter.is-loading = true;
             AccountAdapter.fetch-accounts();
         } else {
             NotificationAdapter.show(result, true);
@@ -240,6 +243,18 @@ export component AddAccountModal inherits Rectangle {
     key-scope := FocusScope {
         width: parent.width;
         height: parent.height;
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                root.reset-form();
+                AppState.show-add-account = false;
+                return accept;
+            }
+            if (event.text == Key.Return && (event.modifiers.control || event.modifiers.meta)) {
+                root.submit();
+                return accept;
+            }
+            return reject;
+        }
     }
 
     // Modal panel

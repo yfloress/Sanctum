@@ -1364,6 +1364,45 @@ impl AppController {
         })
     }
 
+    /// Updates an existing transfer between accounts
+    pub fn update_transfer(
+        &self,
+        id: String,
+        from_account_id: String,
+        to_account_id: String,
+        amount: i64,
+        description: String,
+        date: String,
+    ) -> Result<(), ControllerError> {
+        self.with_db(|db| {
+            let id = validate_uuid(&id)?;
+            let from_id = validate_uuid(&from_account_id)?;
+            let to_id = validate_uuid(&to_account_id)?;
+
+            if amount <= 0 {
+                return Err(ControllerError::Validation(
+                    "Transfer amount must be greater than zero".to_string(),
+                ));
+            }
+
+            let from_account = db.get_account(&from_id)?;
+            let to_account = db.get_account(&to_id)?;
+            if from_account.currency.to_uppercase() != to_account.currency.to_uppercase() {
+                return Err(ControllerError::Validation(
+                    "Transfers require both accounts to use the same currency".to_string(),
+                ));
+            }
+
+            let description =
+                validate_field_length(&description, MAX_DESCRIPTION_LENGTH, "Description")?;
+            let description = sanitize_string(&description);
+            let date = validate_date(&date)?;
+
+            db.update_transfer(&id, &from_id, &to_id, amount, &description, &date)?;
+            Ok(())
+        })
+    }
+
     // ==================== Financial Transaction Methods ====================
 
     /// Adds a transaction
@@ -1419,6 +1458,7 @@ impl AppController {
     }
 
     /// Updates a transaction
+    #[allow(clippy::too_many_arguments)]
     pub fn update_transaction(
         &self,
         id: String,

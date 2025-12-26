@@ -67,6 +67,9 @@ pub enum DbError {
 
     #[error("Cannot transfer to the same account")]
     SameAccountTransfer,
+
+    #[error("Transaction not found")]
+    TransactionNotFound,
 }
 
 // ==================== Security Constants ====================
@@ -1293,6 +1296,37 @@ impl Database {
         )?;
 
         Ok(tx_id)
+    }
+
+    /// Updates an existing transfer transaction
+    pub fn update_transfer(
+        &self,
+        id: &str,
+        from_account_id: &str,
+        to_account_id: &str,
+        amount: i64,
+        description: &str,
+        date: &str,
+    ) -> Result<(), DbError> {
+        if from_account_id == to_account_id {
+            return Err(DbError::SameAccountTransfer);
+        }
+
+        self.get_account(from_account_id)?;
+        self.get_account(to_account_id)?;
+
+        let changed = self.conn.execute(
+            "UPDATE transactions
+             SET account_id = ?2, amount = ?3, description = ?4, date = ?5, transfer_account_id = ?6
+             WHERE id = ?1 AND type = 'transfer'",
+            params![id, from_account_id, amount, description, date, to_account_id],
+        )?;
+
+        if changed == 0 {
+            return Err(DbError::TransactionNotFound);
+        }
+
+        Ok(())
     }
 
     /// Gets all transactions ordered by descending date

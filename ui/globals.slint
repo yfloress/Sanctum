@@ -147,8 +147,11 @@ export struct TransactionData {
     id: string,
     account-id: string,
     account-index: int,
+    transfer-account-id: string,
+    transfer-account-index: int,
     date: string,           // Formatted date e.g. "2024-01-15"
     description: string,
+    description-raw: string,
     category: string,
     category-raw: string,
     category-index: int,
@@ -328,6 +331,7 @@ export global AccountAdapter {
     // List of accounts (populated from Rust backend)
     in-out property <[AccountData]> accounts: [];
     in-out property <string> total-balance: "$ 0.00";
+    in-out property <bool> is-loading: false;
 
     // Callback to fetch/refresh accounts from Rust backend
     callback fetch-accounts();
@@ -343,6 +347,7 @@ export global AccountAdapter {
 
     // Transfer funds between accounts
     callback transfer-funds(string, string, string, string, string) -> string; // from, to, amount, description, date
+    callback update-transfer(string, string, string, string, string, string) -> string; // id, from, to, amount, description, date
 }
 
 // ==================== Settings Adapter ====================
@@ -549,6 +554,7 @@ export global CategoryAdapter {
 export global TransactionAdapter {
     // List of transactions (populated from Rust backend)
     in-out property <[TransactionData]> transactions: [];
+    in-out property <bool> is-loading: false;
 
     // Callback to fetch/refresh transactions from Rust backend
     callback fetch-transactions();
@@ -597,6 +603,8 @@ export global AppState {
     in-out property <bool> account-edit-mode: false;
     in-out property <int> selected-account-index: 0;
     in-out property <bool> show-transfer-modal: false;
+    in-out property <bool> transfer-edit-mode: false;
+    in-out property <int> selected-transfer-index: 0;
     in-out property <bool> show-add-habit: false;
     in-out property <bool> show-configure-categories: false;
     in-out property <bool> show-edit-habit: false;

@@ -380,6 +380,8 @@ export component AddTransactionModal inherits Rectangle {
     in property <bool> editing: false;
     in property <int> selected-index: 0;
 
+    property <bool> did-init: false;
+
     property <string> amount-value: editing && TransactionAdapter.transactions.length > selected-index ? TransactionAdapter.transactions[selected-index].amount-raw : "";
     property <string> description-value: editing && TransactionAdapter.transactions.length > selected-index ? TransactionAdapter.transactions[selected-index].description : "";
     property <int> category-index: editing && TransactionAdapter.transactions.length > selected-index ? TransactionAdapter.transactions[selected-index].category-index : 0;
@@ -393,9 +395,14 @@ export component AddTransactionModal inherits Rectangle {
         CategoryAdapter.load-categories();
         AccountAdapter.fetch-accounts();
         key-scope.focus();
+        did-init = true;
     }
 
-    changed is-expense => { category-index = 0; }
+    changed is-expense => {
+        if (did-init) {
+            category-index = 0;
+        }
+    }
 
     function reset-form() {
         amount-value = "";
@@ -454,6 +461,8 @@ export component AddTransactionModal inherits Rectangle {
         if (result == "") {
             root.reset-form();
             AppState.show-add-transaction = false;
+            TransactionAdapter.is-loading = true;
+            AccountAdapter.is-loading = true;
             TransactionAdapter.fetch-transactions();
             AccountAdapter.fetch-accounts();
         } else {
