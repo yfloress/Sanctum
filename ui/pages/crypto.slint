@@ -229,9 +229,17 @@ export component CryptoPage inherits Rectangle {
                     
                     // Header
                     HorizontalLayout {
-                        spacing: 16px;
+                        spacing: 12px;
                         alignment: start;
-                        
+
+                        Rectangle {
+                            width: 3px;
+                            height: 18px;
+                            border-radius: 2px;
+                            background: @linear-gradient(180deg, Palette.accent 0%, #6366f1 100%);
+                            y: (parent.height - self.height) / 2;
+                        }
+
                         Text { 
                             text: "CRYPTO PORTFOLIO"; 
                             color: Palette.text-muted; 
@@ -501,12 +509,26 @@ export component CryptoPage inherits Rectangle {
                         spacing: 24px;
                         
                         // Section title
-                        Text {
-                            text: "YOUR HOLDINGS";
-                            color: Palette.text-muted;
-                            font-size: 10px;
-                            font-weight: 600;
-                            letter-spacing: 2px;
+                        HorizontalLayout {
+                            spacing: 10px;
+                            alignment: start;
+
+                            Rectangle {
+                                width: 3px;
+                                height: 18px;
+                                border-radius: 2px;
+                                background: @linear-gradient(180deg, Palette.accent 0%, #6366f1 100%);
+                                y: (parent.height - self.height) / 2;
+                            }
+
+                            Text {
+                                text: "YOUR HOLDINGS";
+                                color: Palette.text-muted;
+                                font-size: 10px;
+                                font-weight: 600;
+                                letter-spacing: 2px;
+                                vertical-alignment: center;
+                            }
                         }
                         
                         // Cards horizontal scroll
