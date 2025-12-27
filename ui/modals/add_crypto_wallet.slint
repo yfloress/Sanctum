@@ -7,61 +7,7 @@ import {
     CryptoAdapter,
     NotificationAdapter,
 } from "../globals.slint";
-
-// ==================== FormField ====================
-component FormField inherits Rectangle {
-    in property <string> label: "";
-    in property <string> placeholder: "";
-    in-out property <string> value: "";
-
-    height: 64px;
-    background: transparent;
-
-    VerticalLayout {
-        spacing: 8px;
-        
-        Text {
-            text: root.label;
-            color: Palette.text-muted;
-            font-size: 10px;
-            font-weight: 500;
-            letter-spacing: 1.5px;
-        }
-        
-        Rectangle {
-            height: 40px;
-            background: Palette.surface;
-            border-radius: 8px;
-            border-width: input.has-focus ? 2px : 1px;
-            border-color: input.has-focus ? Palette.accent : Palette.border;
-            
-            animate border-color { duration: 150ms; }
-
-            HorizontalLayout {
-                padding-left: 16px;
-                padding-right: 16px;
-                
-                if root.value == "" && !input.has-focus: Text {
-                    text: root.placeholder;
-                    color: Palette.text-subtle;
-                    font-size: 14px;
-                    font-weight: 300;
-                    vertical-alignment: center;
-                }
-
-                input := TextInput {
-                    text <=> root.value;
-                    color: Palette.text-primary;
-                    font-size: 14px;
-                    font-weight: 400;
-                    vertical-alignment: center;
-                }
-            }
-
-            TouchArea { clicked => { input.focus(); } }
-        }
-    }
-}
+import { FormField } from "../components/transaction_form_components.slint";
 
 // ==================== CategoryCard ====================
 component CategoryCard inherits Rectangle {
@@ -98,16 +44,16 @@ component CategoryCard inherits Rectangle {
 	    HorizontalLayout {
 	        padding: 16px;
 	        spacing: 14px;
-        
+
         // Icon
 	            Rectangle {
 	                width: 44px;
 	                height: 44px;
 	                border-radius: 10px;
-	                background: selected 
+	                background: selected
 	                ? @linear-gradient(135deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%)
 	                : Palette.surface-hover;
-            
+
             Text {
                 text: root.icon;
                 font-size: 20px;
@@ -115,20 +61,20 @@ component CategoryCard inherits Rectangle {
                 horizontal-alignment: center;
             }
         }
-        
+
         // Text
         VerticalLayout {
             alignment: center;
             spacing: 4px;
             horizontal-stretch: 1;
-            
+
             Text {
                 text: root.title;
                 color: selected ? Palette.text-primary : Palette.text-secondary;
                 font-size: 13px;
                 font-weight: selected ? 600 : 400;
             }
-            
+
             Text {
                 text: root.subtitle;
                 color: Palette.text-muted;
@@ -136,24 +82,7 @@ component CategoryCard inherits Rectangle {
                 font-weight: 400;
             }
         }
-        
-        // Checkmark
-        if selected: Rectangle {
-            width: 24px;
-            height: 24px;
-            border-radius: 12px;
-            background: Palette.accent;
-            y: (parent.height - self.height) / 2;
-            
-            Text {
-                text: "✓";
-                color: Palette.text-primary;
-                font-size: 12px;
-                font-weight: 700;
-                vertical-alignment: center;
-                horizontal-alignment: center;
-            }
-        }
+
     }
 
     touch := TouchArea { 
@@ -166,6 +95,7 @@ component CategoryCard inherits Rectangle {
 export component AddCryptoWalletModal inherits Rectangle {
     property <string> wallet-name: "";
     property <string> category: "wallet_single";
+    init => { key-scope.focus(); }
 
     function reset() {
         wallet-name = "";
@@ -193,17 +123,44 @@ export component AddCryptoWalletModal inherits Rectangle {
     height: 100%;
     background: transparent;
 
-    // Backdrop
+    // Backdrop - captures all events to prevent scroll propagation
     Rectangle {
         width: 100%;
         height: 100%;
         background: Palette.overlay-bg;
-        
+        opacity: 1.0;
+
+        // Flickable with no scrolling blocks scroll events from propagating
+        Flickable {
+            width: 100%;
+            height: 100%;
+            interactive: false;
+            viewport-width: parent.width;
+            viewport-height: parent.height;
+        }
+
         TouchArea {
             clicked => {
                 root.reset();
                 AppState.show-add-wallet = false;
             }
+        }
+    }
+
+    key-scope := FocusScope {
+        width: parent.width;
+        height: parent.height;
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                root.reset();
+                AppState.show-add-wallet = false;
+                return accept;
+            }
+            if (event.text == Key.Return && (event.modifiers.control || event.modifiers.meta)) {
+                root.submit();
+                return accept;
+            }
+            return reject;
         }
     }
 
@@ -219,8 +176,11 @@ export component AddCryptoWalletModal inherits Rectangle {
         border-color: Palette.border-light;
         drop-shadow-blur: 40px;
         drop-shadow-color: Palette.shadow-strong;
+        opacity: 1.0;
 
-        TouchArea { }
+        TouchArea {
+            clicked => { key-scope.focus(); }
+        }
 
 	        VerticalLayout {
 	            padding: 32px;
@@ -278,15 +238,22 @@ export component AddCryptoWalletModal inherits Rectangle {
 	                horizontal-stretch: 1;
 	                vertical-stretch: 1;
 
+	                TouchArea {
+	                    width: parent.width;
+	                    height: parent.height;
+	                    clicked => { key-scope.focus(); }
+	                }
+
 	                VerticalLayout {
 	                    width: parent.width;
 	                    spacing: 24px;
 
 	                    // Name Field
-	                    FormField { 
-	                        label: "WALLET NAME"; 
-	                        placeholder: "e.g. Ledger Nano X"; 
-	                        value <=> root.wallet-name; 
+	                    FormField {
+	                        label: "WALLET NAME";
+	                        placeholder: "e.g. Ledger Nano X";
+	                        value <=> root.wallet-name;
+	                        submit-shortcut => { root.submit(); }
 	                    }
 
 	                    // Category Label

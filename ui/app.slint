@@ -7,6 +7,7 @@ import {
     AppState,
     AccountAdapter,
     TransactionAdapter,
+    CategoryAdapter,
     DashboardAdapter,
     AnalyticsAdapter,
     NotificationAdapter,
@@ -28,6 +29,7 @@ import { AddCryptoTransactionModal } from "modals/add_crypto_transaction.slint";
 import { AddCryptoWalletModal } from "modals/add_crypto_wallet.slint";
 import { EditCryptoTransactionModal } from "modals/edit_crypto_transaction.slint";
 import { ConfigureTickerModal } from "modals/configure_ticker.slint";
+import { ConfigureCategoriesModal } from "modals/configure_categories.slint";
 import { NotificationToast } from "components/notification.slint";
 
 // ==================== Main Application Window ====================
@@ -99,6 +101,8 @@ export component AppWindow inherits Window {
     if AppState.show-add-transaction: AddTransactionModal {
         width: 100%;
         height: 100%;
+        editing: AppState.transaction-edit-mode;
+        selected-index: AppState.selected-transaction-index;
     }
 
     // Add Account Modal
@@ -111,6 +115,14 @@ export component AppWindow inherits Window {
 
     // Transfer Modal
     if AppState.show-transfer-modal: TransferFundsModal {
+        width: 100%;
+        height: 100%;
+        editing: AppState.transfer-edit-mode;
+        selected-index: AppState.selected-transfer-index;
+    }
+
+    // Configure Categories Modal
+    if AppState.show-configure-categories: ConfigureCategoriesModal {
         width: 100%;
         height: 100%;
     }
@@ -150,4 +162,4 @@ export component AppWindow inherits Window {
 }
 
 // Re-export adapters for main.rs
-export { AuthAdapter, AccountAdapter, TransactionAdapter, DashboardAdapter, AnalyticsAdapter, NotificationAdapter, HabitAdapter, CryptoAdapter, AppState, SettingsAdapter }
+export { AuthAdapter, AccountAdapter, TransactionAdapter, CategoryAdapter, DashboardAdapter, AnalyticsAdapter, NotificationAdapter, HabitAdapter, CryptoAdapter, AppState, SettingsAdapter }

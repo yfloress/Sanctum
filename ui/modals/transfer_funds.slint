@@ -1,7 +1,7 @@
 // ==================== Transfer Funds Modal ====================
 // Premium Fintech UI - Overlay form for transferring between accounts
 
-import { Palette, AppState, AccountAdapter, NotificationAdapter } from "../globals.slint";
+import { Palette, AppState, AccountAdapter, TransactionAdapter, NotificationAdapter } from "../globals.slint";
 
 // ==================== FormField ====================
 component FormField inherits Rectangle {
@@ -64,6 +64,7 @@ component FormField inherits Rectangle {
 component AccountSelector inherits Rectangle {
     in property <string> label: "ACCOUNT";
     in-out property <int> selected-index: 0;
+    property <int> safe-index: selected-index < AccountAdapter.accounts.length ? selected-index : 0;
 
     height: 64px;
     background: transparent;
@@ -91,7 +92,7 @@ component AccountSelector inherits Rectangle {
                 padding-right: 16px;
 
                 Text {
-                    text: AccountAdapter.accounts.length > 0 ? AccountAdapter.accounts[selected-index].name + " (" + AccountAdapter.accounts[selected-index].currency + ")" : "No accounts";
+                    text: AccountAdapter.accounts.length > 0 ? AccountAdapter.accounts[safe-index].name + " (" + AccountAdapter.accounts[safe-index].currency + ")" : "No accounts";
                     color: Palette.text-primary;
                     font-size: 14px;
                     font-weight: 400;
@@ -146,14 +147,14 @@ component AccountSelector inherits Rectangle {
 
                             Text {
                                 text: account.name + " (" + account.currency + ")";
-                                color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
+                                color: index == safe-index ? Palette.text-primary : Palette.text-secondary;
                                 font-size: 13px;
-                                font-weight: index == selected-index ? 500 : 400;
+                                font-weight: index == safe-index ? 500 : 400;
                                 vertical-alignment: center;
                                 horizontal-stretch: 1;
                             }
 
-                            if index == selected-index: Text {
+                            if index == safe-index: Text {
                                 text: "✓";
                                 color: Palette.accent;
                                 font-size: 12px;
@@ -174,11 +175,16 @@ component AccountSelector inherits Rectangle {
 
 // ==================== TransferFundsModal ====================
 export component TransferFundsModal inherits Rectangle {
-    property <int> from-index: 0;
-    property <int> to-index: AccountAdapter.accounts.length > 1 ? 1 : 0;
-    property <string> amount-value: "";
-    property <string> description-value: "";
-    property <string> date-value: AppState.current-date;
+    in property <bool> editing: false;
+    in property <int> selected-index: 0;
+
+    property <int> from-index: editing && TransactionAdapter.transactions.length > selected-index ? TransactionAdapter.transactions[selected-index].account-index : 0;
+    property <int> to-index: editing && TransactionAdapter.transactions.length > selected-index ? TransactionAdapter.transactions[selected-index].transfer-account-index : AccountAdapter.accounts.length > 1 ? 1 : 0;
+    property <string> amount-value: editing && TransactionAdapter.transactions.length > selected-index ? TransactionAdapter.transactions[selected-index].amount-raw : "";
+    property <string> description-value: editing && TransactionAdapter.transactions.length > selected-index ? TransactionAdapter.transactions[selected-index].description-raw : "";
+    property <string> date-value: editing && TransactionAdapter.transactions.length > selected-index ? TransactionAdapter.transactions[selected-index].date : AppState.current-date;
+
+    init => { key-scope.focus(); }
 
     function reset-form() {
         from-index = 0;
@@ -186,12 +192,20 @@ export component TransferFundsModal inherits Rectangle {
         amount-value = "";
         description-value = "";
         date-value = AppState.current-date;
+        AppState.transfer-edit-mode = false;
+        AppState.selected-transfer-index = 0;
     }
 
     function submit() {
         if (AccountAdapter.accounts.length < 2) {
             NotificationAdapter.show("Need at least two accounts", true);
             return;
+        }
+        if (from-index >= AccountAdapter.accounts.length) {
+            from-index = 0;
+        }
+        if (to-index >= AccountAdapter.accounts.length) {
+            to-index = AccountAdapter.accounts.length > 1 ? 1 : 0;
         }
         if (from-index == to-index) {
             NotificationAdapter.show("Select different accounts", true);
@@ -201,7 +215,20 @@ export component TransferFundsModal inherits Rectangle {
             NotificationAdapter.show("Amount is required", true);
             return;
         }
-        let result = AccountAdapter.transfer-funds(
+        let safe-index = selected-index >= TransactionAdapter.transactions.length ? 0 : selected-index;
+        let edit-id = TransactionAdapter.transactions.length > 0 ? TransactionAdapter.transactions[safe-index].id : "";
+        if (editing && edit-id == "") {
+            NotificationAdapter.show("Transfer no longer available", true);
+            return;
+        }
+
+        let result = editing ? AccountAdapter.update-transfer(
+            edit-id,
+            AccountAdapter.accounts[from-index].id,
+            AccountAdapter.accounts[to-index].id,
+            amount-value,
+            description-value,
+            date-value) : AccountAdapter.transfer-funds(
             AccountAdapter.accounts[from-index].id,
             AccountAdapter.accounts[to-index].id,
             amount-value,
@@ -211,6 +238,7 @@ export component TransferFundsModal inherits Rectangle {
         if (result == "") {
             root.reset-form();
             AppState.show-transfer-modal = false;
+            AccountAdapter.is-loading = true;
             AccountAdapter.fetch-accounts();
         } else {
             NotificationAdapter.show(result, true);
@@ -235,12 +263,29 @@ export component TransferFundsModal inherits Rectangle {
         }
     }
 
+    key-scope := FocusScope {
+        width: parent.width;
+        height: parent.height;
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                root.reset-form();
+                AppState.show-transfer-modal = false;
+                return accept;
+            }
+            if (event.text == Key.Return && (event.modifiers.control || event.modifiers.meta)) {
+                root.submit();
+                return accept;
+            }
+            return reject;
+        }
+    }
+
     // Modal panel
     Rectangle {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
-        width: 440px;
-        height: 560px;
+        width: min(Palette.modal-width-md, parent.width - 40px);
+        height: min(Palette.modal-height-md, parent.height - 40px);
         background: @linear-gradient(180deg, Palette.sidebar-bg 0%, #0f0f1a 100%);
         border-radius: 16px;
         border-width: 1px;
@@ -248,7 +293,9 @@ export component TransferFundsModal inherits Rectangle {
         drop-shadow-blur: 40px;
         drop-shadow-color: #00000088;
 
-        TouchArea { }
+        TouchArea {
+            clicked => { key-scope.focus(); }
+        }
 
 	        VerticalLayout {
 	            padding: 32px;
@@ -271,7 +318,7 @@ export component TransferFundsModal inherits Rectangle {
 	                    }
 
                     Text {
-                        text: "TRANSFER FUNDS";
+                        text: editing ? "EDIT TRANSFER" : "TRANSFER FUNDS";
                         color: Palette.text-primary;
                         font-size: 16px;
                         font-weight: 500;
@@ -308,7 +355,13 @@ export component TransferFundsModal inherits Rectangle {
 	            body := Flickable {
 	                horizontal-stretch: 1;
 	                vertical-stretch: 1;
-	
+
+	                TouchArea {
+	                    width: parent.width;
+	                    height: parent.height;
+	                    clicked => { key-scope.focus(); }
+	                }
+
 	                VerticalLayout {
 	                    width: parent.width;
 	                    spacing: 16px;

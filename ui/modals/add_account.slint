@@ -180,17 +180,21 @@ export component AddAccountModal inherits Rectangle {
 
     property <string> name-value: editing && AccountAdapter.accounts.length > selected-index ? AccountAdapter.accounts[selected-index].name : "";
     property <string> initial-balance: editing && AccountAdapter.accounts.length > selected-index ? AccountAdapter.accounts[selected-index].initial-balance : "";
-    property <int> type-index: editing && AccountAdapter.accounts.length > selected-index ? (AccountAdapter.accounts[selected-index].account-type-key == "cash" ? 1 : AccountAdapter.accounts[selected-index].account-type-key == "savings" ? 2 : AccountAdapter.accounts[selected-index].account-type-key == "credit_card" ? 3 : 0) : 0;
+    property <int> type-index: editing && AccountAdapter.accounts.length > selected-index ? (AccountAdapter.accounts[selected-index].account-type-key == "cash" ? 1 : AccountAdapter.accounts[selected-index].account-type-key == "savings" ? 2 : AccountAdapter.accounts[selected-index].account-type-key == "credit_card" ? 3 : AccountAdapter.accounts[selected-index].account-type-key == "other" ? 4 : 0) : 0;
     property <int> currency-index: editing && AccountAdapter.accounts.length > selected-index ? (AccountAdapter.accounts[selected-index].currency == "CLP" ? 1 : 0) : 0;
+    property <bool> show-archive-confirm: false;
 
-    property <[string]> type-options: ["Bank", "Cash", "Savings", "Credit"];
+    property <[string]> type-options: ["Bank", "Cash", "Savings", "Credit Card", "Other"];
     property <[string]> currency-options: ["USD", "CLP"];
+
+    init => { key-scope.focus(); }
 
     function reset-form() {
         name-value = "";
         initial-balance = "";
         type-index = 0;
         currency-index = 0;
+        show-archive-confirm = false;
     }
 
     function submit() {
@@ -213,6 +217,7 @@ export component AddAccountModal inherits Rectangle {
         if (result == "") {
             root.reset-form();
             AppState.show-add-account = false;
+            AccountAdapter.is-loading = true;
             AccountAdapter.fetch-accounts();
         } else {
             NotificationAdapter.show(result, true);
@@ -237,6 +242,23 @@ export component AddAccountModal inherits Rectangle {
         }
     }
 
+    key-scope := FocusScope {
+        width: parent.width;
+        height: parent.height;
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                root.reset-form();
+                AppState.show-add-account = false;
+                return accept;
+            }
+            if (event.text == Key.Return && (event.modifiers.control || event.modifiers.meta)) {
+                root.submit();
+                return accept;
+            }
+            return reject;
+        }
+    }
+
     // Modal panel
     Rectangle {
         x: (parent.width - self.width) / 2;
@@ -250,7 +272,9 @@ export component AddAccountModal inherits Rectangle {
         drop-shadow-blur: 40px;
         drop-shadow-color: #00000088;
 
-        TouchArea { }
+        TouchArea {
+            clicked => { key-scope.focus(); }
+        }
 
         VerticalLayout {
             padding: 32px;
@@ -338,6 +362,95 @@ export component AddAccountModal inherits Rectangle {
             }
 
             Rectangle { vertical-stretch: 1; }
+
+            if editing: Rectangle {
+                height: 44px;
+                background: show-archive-confirm ? Palette.surface : Palette.delete-bg;
+                border-radius: 10px;
+                border-width: 1px;
+                border-color: Palette.delete-border;
+
+                if !show-archive-confirm: Text {
+                    text: "ARCHIVE ACCOUNT";
+                    color: Palette.text-primary;
+                    font-size: 11px;
+                    font-weight: 600;
+                    letter-spacing: 1.5px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+
+                if show-archive-confirm: HorizontalLayout {
+                    padding-left: 10px;
+                    padding-right: 10px;
+                    spacing: 10px;
+
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        height: 32px;
+                        border-radius: 8px;
+                        background: Palette.surface-hover;
+                        border-width: 1px;
+                        border-color: Palette.border-light;
+
+                        Text {
+                            text: "CANCEL";
+                            color: Palette.text-primary;
+                            font-size: 10px;
+                            font-weight: 600;
+                            letter-spacing: 1px;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        cancel-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { show-archive-confirm = false; }
+                        }
+                    }
+
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        height: 32px;
+                        border-radius: 8px;
+                        background: Palette.delete-bg-hover;
+                        border-width: 1px;
+                        border-color: Palette.delete-border;
+
+                        Text {
+                            text: "ARCHIVE";
+                            color: Palette.text-primary;
+                            font-size: 10px;
+                            font-weight: 600;
+                            letter-spacing: 1px;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        confirm-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                let safe-index = selected-index >= AccountAdapter.accounts.length ? 0 : selected-index;
+                                AccountAdapter.is-loading = true;
+                                let result = AccountAdapter.delete-account(AccountAdapter.accounts[safe-index].id);
+                                if (result == "") {
+                                    root.reset-form();
+                                    AppState.show-add-account = false;
+                                } else {
+                                    NotificationAdapter.show(result, true);
+                                    AccountAdapter.is-loading = false;
+                                    show-archive-confirm = false;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if !show-archive-confirm: TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { show-archive-confirm = true; }
+                }
+            }
 
             // Submit button
             Rectangle {

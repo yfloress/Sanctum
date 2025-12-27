@@ -211,6 +211,7 @@ export component DashboardPage inherits Rectangle {
 
     init => {
         DashboardAdapter.fetch-balance();
+        DashboardAdapter.fetch-recent();
         TransactionAdapter.fetch-transactions();
         AnalyticsAdapter.fetch-analytics("1M");
     }

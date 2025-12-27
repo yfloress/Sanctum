@@ -145,11 +145,20 @@ export struct AccountData {
 
 export struct TransactionData {
     id: string,
+    account-id: string,
+    account-index: int,
+    transfer-account-id: string,
+    transfer-account-index: int,
     date: string,           // Formatted date e.g. "2024-01-15"
     description: string,
+    description-raw: string,
     category: string,
+    category-raw: string,
+    category-index: int,
     amount: string,         // Pre-formatted e.g. "- $ 50.00" or "+ $ 100.00"
+    amount-raw: string,
     is-expense: bool,
+    is-transfer: bool,
 }
 
 export struct BalanceData {
@@ -206,6 +215,8 @@ export struct HabitData {
     name: string,
     description: string,
     color: color,
+    color-hex: string,
+    color-index: int,
     category: string,
     streak: int,
     best-streak: int,
@@ -244,8 +255,16 @@ export global HabitAdapter {
     callback fetch-heatmap-data(); // Load last 365 days
     callback load-initial-data(); // Load current month on startup
     callback create-habit(string, string, string, string) -> string; // name, desc, color, category -> error or ""
+    callback update-habit(string, string, string, string, string) -> string; // id, name, desc, color, category -> error or ""
     callback toggle-habit(string, string); // id, date
     callback delete-habit(string) -> string;
+    // Edit state
+    in-out property <string> edit-id: "";
+    in-out property <string> edit-name: "";
+    in-out property <string> edit-description: "";
+    in-out property <string> edit-color-hex: "";
+    in-out property <int> edit-color-index: 0;
+    in-out property <string> edit-category: "";
     
     // Navigation
     callback prev-month();
@@ -311,6 +330,8 @@ export global AuthAdapter {
 export global AccountAdapter {
     // List of accounts (populated from Rust backend)
     in-out property <[AccountData]> accounts: [];
+    in-out property <string> total-balance: "$ 0.00";
+    in-out property <bool> is-loading: false;
 
     // Callback to fetch/refresh accounts from Rust backend
     callback fetch-accounts();
@@ -326,6 +347,7 @@ export global AccountAdapter {
 
     // Transfer funds between accounts
     callback transfer-funds(string, string, string, string, string) -> string; // from, to, amount, description, date
+    callback update-transfer(string, string, string, string, string, string) -> string; // id, from, to, amount, description, date
 }
 
 // ==================== Settings Adapter ====================
@@ -456,6 +478,7 @@ export global CryptoAdapter {
     in-out property <string> clp-rate: "...";
     in-out property <string> last-updated: "Never";
     in-out property <bool> is-refreshing: false;
+    in-out property <bool> is-loading: false;
     in-out property <image> portfolio-trend-image;
     in-out property <bool> portfolio-trend-ready: false;
     in-out property <image> portfolio-chart-image;
@@ -487,8 +510,9 @@ export global CryptoAdapter {
     callback fetch-asset-details(string); // coin_id
     callback get-last-price(string) -> string; // coin_id -> price string
     callback get-swap-quote(string, string, string) -> string; // from_coin_id, to_coin_id, from_amount -> to_amount
+    callback get-available-balance(string, string, string) -> string; // wallet_id, coin_id, date -> balance string
     callback load-edit-transaction(string) -> string; // tx_id -> "" or error
-    
+
     // (wallet_id, coin_id, symbol, type, amount, price, fee, fee_coin_id, fee_coin_amount, date, notes)
     callback add-transaction(string, string, string, string, string, string, string, string, string, string, string) -> string;
     // (from_wallet_id, to_wallet_id, coin_id, symbol, from_amount, to_amount, fee, fee_coin_id, fee_coin_amount, date, notes)
@@ -501,33 +525,41 @@ export global CryptoAdapter {
     // (name, category) -> id or error
     callback create-wallet(string, string) -> string;
     callback delete-wallet(string) -> string;
+    callback update-wallet-name(string, string) -> string; // (wallet_id, new_name) -> "" or error
     callback delete-crypto-transaction(string) -> string;
 }
 
 // ==================== Transaction Adapter ====================
 // Bridge for transaction management
 
-// ==================== Categories ====================
-// Predefined list of transaction categories
+// ==================== Transaction Categories ====================
+// Dynamic category management system
 
-export global Categories {
-    out property <[string]> expense-categories: [
-        "FOOD",
-        "TRANSPORT",
-        "UTILITIES",
-        "ENTERTAINMENT",
-        "HEALTH",
-        "SHOPPING",
-        "EDUCATION",
-        "OTHER"
-    ];
+export struct TransactionCategoryData {
+    id: string,
+    name: string,
+    is-default: bool,
+}
 
-    out property <[string]> income-categories: ["SALARY", "FREELANCE", "INVESTMENT", "GIFT", "OTHER"];
+export global CategoryAdapter {
+    in-out property <[TransactionCategoryData]> expense-categories: [];
+    in-out property <[TransactionCategoryData]> income-categories: [];
+
+    callback load-categories();
+    callback add-category(string, string) -> string; // (name, type) -> "" or error
+    callback update-category(string, string) -> string; // (id, name) -> "" or error
+    callback delete-category(string) -> string; // (id) -> "" or error
 }
 
 export global TransactionAdapter {
     // List of transactions (populated from Rust backend)
     in-out property <[TransactionData]> transactions: [];
+    in-out property <bool> is-loading: false;
+    in-out property <string> filter-query: "";
+    in-out property <string> filter-account-id: "";
+    in-out property <string> filter-category: "";
+    in-out property <int> display-limit: 100;
+    in-out property <bool> has-more: false;
 
     // Callback to fetch/refresh transactions from Rust backend
     callback fetch-transactions();
@@ -535,6 +567,10 @@ export global TransactionAdapter {
     // Callback to add a new transaction
     // (account_id, amount, category, description, date, is_expense) -> "" or error
     callback add-transaction(string, string, string, string, string, bool) -> string;
+
+    // Callback to update a transaction
+    // (id, account_id, amount, category, description, date, is_expense) -> "" or error
+    callback update-transaction(string, string, string, string, string, string, bool) -> string;
 
     // Callback to delete a transaction
     callback delete-transaction(string) -> string; // id -> "" or error
@@ -566,11 +602,17 @@ export global AppState {
 
     // Modal states
     in-out property <bool> show-add-transaction: false;
+    in-out property <bool> transaction-edit-mode: false;
+    in-out property <int> selected-transaction-index: 0;
     in-out property <bool> show-add-account: false;
     in-out property <bool> account-edit-mode: false;
     in-out property <int> selected-account-index: 0;
     in-out property <bool> show-transfer-modal: false;
+    in-out property <bool> transfer-edit-mode: false;
+    in-out property <int> selected-transfer-index: 0;
     in-out property <bool> show-add-habit: false;
+    in-out property <bool> show-configure-categories: false;
+    in-out property <bool> show-edit-habit: false;
     in-out property <bool> show-add-crypto: false;
     in-out property <bool> show-edit-crypto: false;
     in-out property <bool> show-add-wallet: false;

@@ -7,31 +7,33 @@ import { Palette, TransactionData } from "../globals.slint";
 component CategoryIcon inherits Rectangle {
     in property <string> category;
     in property <bool> is-expense;
+    in property <bool> is-transfer;
 
     width: 36px;
     height: 36px;
     border-radius: 10px;
     background: @linear-gradient(135deg, 
-        is-expense ? #1a1a2e : #0f2922,
-        is-expense ? #2d1f3d : #1a3d2e
+        is-transfer ? Palette.surface : (is-expense ? #1a1a2e : #0f2922),
+        is-transfer ? Palette.surface-hover : (is-expense ? #2d1f3d : #1a3d2e)
     );
     border-width: 1px;
-    border-color: is-expense ? #3d2953 : #2d5a4a;
+    border-color: is-transfer ? Palette.border : (is-expense ? #3d2953 : #2d5a4a);
 
     Text {
-        text: root.category == "Food" ? "🍽" :
-              root.category == "Transport" ? "🚗" :
-              root.category == "Shopping" ? "🛍" :
-              root.category == "Entertainment" ? "🎬" :
-              root.category == "Health" ? "💊" :
-              root.category == "Bills" ? "📄" :
-              root.category == "Education" ? "📚" :
-              root.category == "Travel" ? "✈" :
-              root.category == "Salary" ? "💰" :
-              root.category == "Investment" ? "📈" :
-              root.category == "Freelance" ? "💼" :
-              root.category == "Gift" ? "🎁" :
-              root.category == "Other" ? "📌" : "•";
+        text: root.category == "TRANSFER" ? "↔" :
+              root.category == "FOOD" ? "🍽" :
+              root.category == "TRANSPORT" ? "🚗" :
+              root.category == "SHOPPING" ? "🛍" :
+              root.category == "ENTERTAINMENT" ? "🎬" :
+              root.category == "HEALTH" ? "💊" :
+              root.category == "UTILITIES" ? "📄" :
+              root.category == "EDUCATION" ? "📚" :
+              root.category == "TRAVEL" ? "✈" :
+              root.category == "SALARY" ? "💰" :
+              root.category == "INVESTMENT" ? "📈" :
+              root.category == "FREELANCE" ? "💼" :
+              root.category == "GIFT" ? "🎁" :
+              root.category == "OTHER" ? "📌" : "•";
         font-size: 16px;
         horizontal-alignment: center;
         vertical-alignment: center;
@@ -76,6 +78,7 @@ export component TransactionItem inherits Rectangle {
             CategoryIcon {
                 category: transaction.category;
                 is-expense: transaction.is-expense;
+                is-transfer: transaction.is-transfer;
             }
         }
 
@@ -130,9 +133,9 @@ export component TransactionItem inherits Rectangle {
                 height: 28px;
                 min-width: 80px;
                 border-radius: 6px;
-                background: transaction.is-expense ? #2d1f2f : #0f2922;
+                background: transaction.is-transfer ? Palette.surface : (transaction.is-expense ? #2d1f2f : #0f2922);
                 border-width: 1px;
-                border-color: transaction.is-expense ? #3d2953 : #2d5a4a;
+                border-color: transaction.is-transfer ? Palette.border : (transaction.is-expense ? #3d2953 : #2d5a4a);
 
                 HorizontalLayout {
                     padding-left: 10px;
@@ -140,7 +143,7 @@ export component TransactionItem inherits Rectangle {
 
                     Text {
                         text: transaction.amount;
-                        color: transaction.is-expense ? Palette.danger : Palette.success;
+                        color: transaction.is-transfer ? Palette.text-secondary : (transaction.is-expense ? Palette.danger : Palette.success);
                         font-size: 12px;
                         font-weight: 600;
                         letter-spacing: 0.3px;

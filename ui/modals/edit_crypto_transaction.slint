@@ -7,65 +7,7 @@ import {
     CryptoAdapter,
     NotificationAdapter,
 } from "../globals.slint";
-
-// ==================== FormField ====================
-component FormField inherits Rectangle {
-    in property <string> label: "";
-    in property <string> placeholder: "";
-    in-out property <string> value: "";
-    in property <bool> large: false;
-
-    height: large ? 88px : 64px;
-    background: transparent;
-
-    VerticalLayout {
-        spacing: 8px;
-
-        Text {
-            text: root.label;
-            color: Palette.text-muted;
-            font-size: 10px;
-            font-weight: 500;
-            letter-spacing: 1.5px;
-        }
-
-        Rectangle {
-            height: large ? 56px : 40px;
-            background: Palette.surface;
-            border-radius: 8px;
-            border-width: input.has-focus ? 2px : 1px;
-            border-color: input.has-focus ? Palette.accent : Palette.border;
-
-            animate border-color { duration: 150ms; }
-            animate border-width { duration: 150ms; }
-
-            HorizontalLayout {
-                padding-left: 16px;
-                padding-right: 16px;
-
-                if root.value == "" && !input.has-focus: Text {
-                    text: root.placeholder;
-                    color: Palette.text-subtle;
-                    font-size: large ? 24px : 14px;
-                    font-weight: 300;
-                    vertical-alignment: center;
-                }
-
-                input := TextInput {
-                    text <=> root.value;
-                    color: Palette.text-primary;
-                    font-size: large ? 24px : 14px;
-                    font-weight: large ? 500 : 400;
-                    vertical-alignment: center;
-                }
-            }
-
-            TouchArea {
-                clicked => { input.focus(); }
-            }
-        }
-    }
-}
+import { FormField } from "../components/transaction_form_components.slint";
 
 // ==================== ReadonlyField ====================
 component ReadonlyField inherits Rectangle {
@@ -127,6 +69,8 @@ export component EditCryptoTransactionModal inherits Rectangle {
         CryptoAdapter.edit-notes = "";
     }
 
+    init => { key-scope.focus(); }
+
     function submit() {
         if (CryptoAdapter.edit-amount == "") {
             NotificationAdapter.show("Amount is required", true);
@@ -165,17 +109,44 @@ export component EditCryptoTransactionModal inherits Rectangle {
     height: 100%;
     background: transparent;
 
-    // Backdrop
+    // Backdrop - captures all events to prevent scroll propagation
     Rectangle {
         width: 100%;
         height: 100%;
         background: Palette.overlay-bg;
-        
+        opacity: 1.0;
+
+        // Flickable with no scrolling blocks scroll events from propagating
+        Flickable {
+            width: 100%;
+            height: 100%;
+            interactive: false;
+            viewport-width: parent.width;
+            viewport-height: parent.height;
+        }
+
         TouchArea {
             clicked => {
                 root.reset();
                 AppState.show-edit-crypto = false;
             }
+        }
+    }
+
+    key-scope := FocusScope {
+        width: parent.width;
+        height: parent.height;
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                root.reset();
+                AppState.show-edit-crypto = false;
+                return accept;
+            }
+            if (event.text == Key.Return && (event.modifiers.control || event.modifiers.meta)) {
+                root.submit();
+                return accept;
+            }
+            return reject;
         }
     }
 
@@ -191,8 +162,11 @@ export component EditCryptoTransactionModal inherits Rectangle {
         border-color: Palette.border-light;
         drop-shadow-blur: 40px;
         drop-shadow-color: Palette.shadow-strong;
+        opacity: 1.0;
 
-        TouchArea { }
+        TouchArea {
+            clicked => { key-scope.focus(); }
+        }
 
         VerticalLayout {
             padding: 32px;
@@ -250,6 +224,12 @@ export component EditCryptoTransactionModal inherits Rectangle {
                 horizontal-stretch: 1;
                 vertical-stretch: 1;
 
+                TouchArea {
+                    width: parent.width;
+                    height: parent.height;
+                    clicked => { key-scope.focus(); }
+                }
+
                 VerticalLayout {
                     width: parent.width;
                     spacing: 20px;
@@ -258,28 +238,31 @@ export component EditCryptoTransactionModal inherits Rectangle {
                     ReadonlyField { label: "ASSET"; value: CryptoAdapter.edit-symbol; }
                     ReadonlyField { label: "TYPE"; value: CryptoAdapter.edit-type; }
 
-                    FormField { 
-                        label: "AMOUNT"; 
-                        placeholder: "0.00"; 
-                        value <=> CryptoAdapter.edit-amount; 
-                        large: true; 
+                    FormField {
+                        label: "AMOUNT";
+                        placeholder: "0.00";
+                        value <=> CryptoAdapter.edit-amount;
+                        large: true;
+                        submit-shortcut => { root.submit(); }
                     }
 
                     HorizontalLayout {
                         spacing: 12px;
-                        FormField { 
-                            label: "PRICE (USD)"; 
+                        FormField {
+                            label: "PRICE (USD)";
                             placeholder: (CryptoAdapter.edit-type == "transfer_in" || CryptoAdapter.edit-type == "transfer_out")
                                 ? "Optional"
-                                : "Required"; 
-                            value <=> CryptoAdapter.edit-price; 
+                                : "Required";
+                            value <=> CryptoAdapter.edit-price;
                             horizontal-stretch: 1;
+                            submit-shortcut => { root.submit(); }
                         }
-                        FormField { 
-                            label: "FEE (USD)"; 
-                            placeholder: "0.00"; 
-                            value <=> CryptoAdapter.edit-fee; 
+                        FormField {
+                            label: "FEE (USD)";
+                            placeholder: "0.00";
+                            value <=> CryptoAdapter.edit-fee;
                             width: 120px;
+                            submit-shortcut => { root.submit(); }
                         }
                     }
 
@@ -290,25 +273,29 @@ export component EditCryptoTransactionModal inherits Rectangle {
                             placeholder: "e.g. ethereum";
                             value <=> CryptoAdapter.edit-fee-coin-id;
                             horizontal-stretch: 1;
+                            submit-shortcut => { root.submit(); }
                         }
                         FormField {
                             label: "FEE AMOUNT";
                             placeholder: "0.00";
                             value <=> CryptoAdapter.edit-fee-coin-amount;
                             width: 140px;
+                            submit-shortcut => { root.submit(); }
                         }
                     }
 
-                    FormField { 
-                        label: "NOTES"; 
-                        placeholder: "Transaction details..."; 
-                        value <=> CryptoAdapter.edit-notes; 
+                    FormField {
+                        label: "NOTES";
+                        placeholder: "Transaction details...";
+                        value <=> CryptoAdapter.edit-notes;
+                        submit-shortcut => { root.submit(); }
                     }
 
-                    FormField { 
-                        label: "DATE"; 
+                    FormField {
+                        label: "DATE";
                         placeholder: "YYYY-MM-DD";
-                        value <=> CryptoAdapter.edit-date; 
+                        value <=> CryptoAdapter.edit-date;
+                        submit-shortcut => { root.submit(); }
                     }
 
                     Rectangle { height: 8px; }

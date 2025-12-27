@@ -15,7 +15,7 @@ export component NotificationToast inherits Rectangle {
     in property <bool> active: false;
 
     width: 360px;
-    height: active ? 64px : 0px;
+    height: active ? max(64px, message-text.height + 36px) : 0px;
     opacity: active ? 1.0 : 0.0;
 
     background: @linear-gradient(135deg, 
@@ -86,6 +86,7 @@ export component NotificationToast inherits Rectangle {
         VerticalLayout {
             alignment: center;
             horizontal-stretch: 1;
+            spacing: 4px;
 
             Text {
                 text: is-error ? "Error" : "Success";
@@ -95,12 +96,14 @@ export component NotificationToast inherits Rectangle {
                 letter-spacing: 1px;
             }
 
-            Text {
+            message-text := Text {
                 text: root.message;
                 color: Palette.text-primary;
                 font-size: 13px;
                 font-weight: 400;
-                overflow: elide;
+                wrap: word-wrap;
+                horizontal-stretch: 1;
+                height: self.preferred-height;
             }
         }
     }

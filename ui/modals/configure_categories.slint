@@ -1,0 +1,521 @@
+// ==================== Configure Categories Modal ====================
+// Manage transaction categories for income and expenses
+
+import { Palette, AppState, CategoryAdapter, NotificationAdapter } from "../globals.slint";
+import { ActionButton, TextButton } from "../widgets.slint";
+
+component CategoryRow inherits Rectangle {
+    in property <string> id;
+    in property <string> name;
+    in property <bool> is-default: false;
+    in property <bool> is-editing: false;
+    in-out property <string> edit-value: "";
+
+    callback edit-clicked;
+    callback save-clicked(string);
+    callback cancel-clicked;
+    callback delete-clicked;
+
+    height: 56px;
+    background: transparent;
+
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        spacing: 12px;
+        alignment: space-between;
+
+        // Category name or edit field
+        if !root.is-editing: Text {
+            text: root.name;
+            color: root.is-default ? Palette.text-secondary : Palette.text-primary;
+            font-size: 13px;
+            font-weight: 500;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+
+        if root.is-editing: Rectangle {
+            horizontal-stretch: 1;
+            height: 36px;
+            background: Palette.surface;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: Palette.accent;
+
+            HorizontalLayout {
+                padding-left: 12px;
+                padding-right: 12px;
+
+                edit-input := TextInput {
+                    text <=> root.edit-value;
+                    color: Palette.text-primary;
+                    font-size: 13px;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+            }
+
+            TouchArea {
+                clicked => { edit-input.focus(); }
+            }
+        }
+
+        // Actions
+        HorizontalLayout {
+            spacing: 8px;
+
+            if root.is-editing: ActionButton {
+                text: "SAVE";
+                primary: true;
+                height: 32px;
+                min-width: 72px;
+                clicked => { root.save-clicked(root.edit-value); }
+            }
+
+            if root.is-editing: ActionButton {
+                text: "CANCEL";
+                primary: false;
+                height: 32px;
+                min-width: 72px;
+                clicked => { root.cancel-clicked(); }
+            }
+
+            if !root.is-editing && !root.is-default: ActionButton {
+                text: "EDIT";
+                primary: false;
+                height: 32px;
+                min-width: 64px;
+                clicked => { root.edit-clicked(); }
+            }
+
+            if !root.is-editing && !root.is-default: ActionButton {
+                text: "DELETE";
+                primary: false;
+                height: 32px;
+                min-width: 72px;
+                clicked => { root.delete-clicked(); }
+            }
+
+            if root.is-default: Text {
+                text: "DEFAULT";
+                color: Palette.text-subtle;
+                font-size: 9px;
+                font-weight: 600;
+                letter-spacing: 1px;
+                vertical-alignment: center;
+            }
+        }
+    }
+
+    // Bottom divider
+    Rectangle {
+        y: parent.height - 1px;
+        height: 1px;
+        background: Palette.border-subtle;
+        opacity: 0.5;
+    }
+}
+
+component ConfigTabButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> active: false;
+    callback clicked;
+
+    width: 180px;
+    height: 32px;
+    border-radius: 8px;
+    background: active ? Palette.surface : transparent;
+    border-width: 1px;
+    border-color: active ? Palette.border-subtle : transparent;
+
+    animate background { duration: 150ms; }
+    animate border-color { duration: 150ms; }
+
+    Text {
+        text: root.text;
+        color: active ? Palette.text-primary : Palette.text-muted;
+        font-size: 10px;
+        font-weight: active ? 600 : 500;
+        letter-spacing: 1.5px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+component AddCategoryForm inherits Rectangle {
+    in property <string> category-type: "expense";
+    in-out property <string> new-name: "";
+    callback add-clicked;
+
+    height: 120px;
+    background: Palette.surface;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: Palette.border-subtle;
+
+    VerticalLayout {
+        padding: 16px;
+        spacing: 12px;
+
+        Text {
+            text: "ADD NEW CATEGORY";
+            color: Palette.text-muted;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 2px;
+        }
+
+        HorizontalLayout {
+            spacing: 12px;
+            alignment: space-between;
+
+            Rectangle {
+                horizontal-stretch: 1;
+                height: 40px;
+                background: Palette.background;
+                border-radius: 8px;
+                border-width: input.has-focus ? 2px : 1px;
+                border-color: input.has-focus ? Palette.accent : Palette.border;
+
+                animate border-color { duration: 150ms; }
+                animate border-width { duration: 150ms; }
+
+                HorizontalLayout {
+                    padding-left: 12px;
+                    padding-right: 12px;
+
+                    if root.new-name == "" && !input.has-focus: Text {
+                        text: "Category name";
+                        color: Palette.text-subtle;
+                        font-size: 13px;
+                        vertical-alignment: center;
+                    }
+
+                    input := TextInput {
+                        text <=> root.new-name;
+                        color: Palette.text-primary;
+                        font-size: 13px;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                    }
+                }
+
+                TouchArea {
+                    clicked => { input.focus(); }
+                }
+            }
+
+            ActionButton {
+                text: "ADD";
+                primary: true;
+                height: 40px;
+                min-width: 88px;
+                clicked => { root.add-clicked(); }
+            }
+        }
+    }
+}
+
+export component ConfigureCategoriesModal inherits Rectangle {
+    width: 100%;
+    height: 100%;
+    background: transparent;
+
+    property <string> active-tab: "expense";
+    property <string> editing-id: "";
+    property <string> new-expense-name: "";
+    property <string> new-income-name: "";
+
+    init => {
+        CategoryAdapter.load-categories();
+    }
+
+    // Backdrop
+    Rectangle {
+        background: #000000cc;
+        opacity: 1.0;
+        animate opacity { duration: 150ms; easing: ease-out; }
+        TouchArea { clicked => { AppState.show-configure-categories = false; } }
+    }
+
+    key-scope := FocusScope {
+        width: parent.width;
+        height: parent.height;
+
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                AppState.show-configure-categories = false;
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    // Modal Panel
+    Rectangle {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        width: 520px;
+        height: 600px;
+        background: @linear-gradient(180deg, Palette.sidebar-bg 0%, #0f0f1a 100%);
+        border-radius: 16px;
+        border-width: 1px;
+        border-color: Palette.border-light;
+        drop-shadow-blur: 40px;
+        drop-shadow-color: #00000088;
+
+        TouchArea {
+            clicked => { key-scope.focus(); }
+        }
+
+        VerticalLayout {
+            padding: 32px;
+            spacing: 20px;
+
+            // Header
+            HorizontalLayout {
+                height: 32px;
+
+                HorizontalLayout {
+                    spacing: 12px;
+                    horizontal-stretch: 1;
+
+                    Rectangle {
+                        width: 4px;
+                        height: 20px;
+                        border-radius: 2px;
+                        background: @linear-gradient(180deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%);
+                        y: (parent.height - self.height) / 2;
+                    }
+
+                    Text {
+                        text: "CATEGORY SETTINGS";
+                        color: Palette.text-primary;
+                        font-size: 16px;
+                        font-weight: 500;
+                        letter-spacing: 2px;
+                        vertical-alignment: center;
+                    }
+                }
+
+                Rectangle {
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 8px;
+                    background: close-touch.has-hover ? Palette.surface-hover : transparent;
+
+                    Text {
+                        text: "×";
+                        color: close-touch.has-hover ? Palette.text-primary : Palette.text-muted;
+                        font-size: 20px;
+                        font-weight: 300;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    close-touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { AppState.show-configure-categories = false; }
+                    }
+                }
+            }
+
+            Text {
+                text: "Manage income and expense categories for transactions.";
+                color: Palette.text-muted;
+                font-size: 11px;
+                horizontal-alignment: center;
+            }
+
+            // Tabs
+            HorizontalLayout {
+                alignment: center;
+                spacing: 8px;
+
+                ConfigTabButton {
+                    text: "EXPENSE CATEGORIES";
+                    active: root.active-tab == "expense";
+                    clicked => { root.active-tab = "expense"; root.editing-id = ""; }
+                }
+
+                ConfigTabButton {
+                    text: "INCOME CATEGORIES";
+                    active: root.active-tab == "income";
+                    clicked => { root.active-tab = "income"; root.editing-id = ""; }
+                }
+            }
+
+            // Content
+            VerticalLayout {
+                vertical-stretch: 1;
+                spacing: 16px;
+
+                // Add new category form
+                if root.active-tab == "expense": AddCategoryForm {
+                    category-type: "expense";
+                    new-name <=> root.new-expense-name;
+                    add-clicked => {
+                        if (root.new-expense-name != "") {
+                            let result = CategoryAdapter.add-category(root.new-expense-name, "expense");
+                            if (result == "") {
+                                root.new-expense-name = "";
+                            } else {
+                                NotificationAdapter.show(result, true);
+                            }
+                        }
+                    }
+                }
+
+                if root.active-tab == "income": AddCategoryForm {
+                    category-type: "income";
+                    new-name <=> root.new-income-name;
+                    add-clicked => {
+                        if (root.new-income-name != "") {
+                            let result = CategoryAdapter.add-category(root.new-income-name, "income");
+                            if (result == "") {
+                                root.new-income-name = "";
+                            } else {
+                                NotificationAdapter.show(result, true);
+                            }
+                        }
+                    }
+                }
+
+                // Category list
+                Rectangle {
+                    vertical-stretch: 1;
+                    background: Palette.surface;
+                    border-radius: 8px;
+                    border-width: 1px;
+                    border-color: Palette.border-subtle;
+                    clip: true;
+
+                    if root.active-tab == "expense": Flickable {
+                        vertical-stretch: 1;
+                        horizontal-stretch: 1;
+                        viewport-height: CategoryAdapter.expense-categories.length * 56px;
+
+                        VerticalLayout {
+                            spacing: 0px;
+                            padding: 4px;
+
+                            for cat[index] in CategoryAdapter.expense-categories: CategoryRow {
+                                id: cat.id;
+                                name: cat.name;
+                                is-default: cat.is-default;
+                                is-editing: root.editing-id == cat.id;
+                                edit-value: cat.name;
+
+                                edit-clicked => {
+                                    root.editing-id = cat.id;
+                                }
+
+                                save-clicked(new-name) => {
+                                    if (new-name != "" && new-name != cat.name) {
+                                        let result = CategoryAdapter.update-category(cat.id, new-name);
+                                        if (result == "") {
+                                            root.editing-id = "";
+                                        } else {
+                                            NotificationAdapter.show(result, true);
+                                        }
+                                    } else {
+                                        root.editing-id = "";
+                                    }
+                                }
+
+                                cancel-clicked => {
+                                    root.editing-id = "";
+                                }
+
+                                delete-clicked => {
+                                    let result = CategoryAdapter.delete-category(cat.id);
+                                    if (result != "") {
+                                        NotificationAdapter.show(result, true);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if root.active-tab == "income": Flickable {
+                        vertical-stretch: 1;
+                        horizontal-stretch: 1;
+                        viewport-height: CategoryAdapter.income-categories.length * 56px;
+
+                        VerticalLayout {
+                            spacing: 0px;
+                            padding: 4px;
+
+                            for cat[index] in CategoryAdapter.income-categories: CategoryRow {
+                                id: cat.id;
+                                name: cat.name;
+                                is-default: cat.is-default;
+                                is-editing: root.editing-id == cat.id;
+                                edit-value: cat.name;
+
+                                edit-clicked => {
+                                    root.editing-id = cat.id;
+                                }
+
+                                save-clicked(new-name) => {
+                                    if (new-name != "" && new-name != cat.name) {
+                                        let result = CategoryAdapter.update-category(cat.id, new-name);
+                                        if (result == "") {
+                                            root.editing-id = "";
+                                        } else {
+                                            NotificationAdapter.show(result, true);
+                                        }
+                                    } else {
+                                        root.editing-id = "";
+                                    }
+                                }
+
+                                cancel-clicked => {
+                                    root.editing-id = "";
+                                }
+
+                                delete-clicked => {
+                                    let result = CategoryAdapter.delete-category(cat.id);
+                                    if (result != "") {
+                                        NotificationAdapter.show(result, true);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Empty state
+                    if root.active-tab == "expense" && CategoryAdapter.expense-categories.length == 0: Rectangle {
+                        background: transparent;
+
+                        Text {
+                            text: "No expense categories";
+                            color: Palette.text-muted;
+                            font-size: 12px;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    if root.active-tab == "income" && CategoryAdapter.income-categories.length == 0: Rectangle {
+                        background: transparent;
+
+                        Text {
+                            text: "No income categories";
+                            color: Palette.text-muted;
+                            font-size: 12px;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

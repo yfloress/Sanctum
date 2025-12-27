@@ -145,6 +145,30 @@ component SearchInput inherits Rectangle {
 
             edited => { root.edited(root.text); }
         }
+
+        if root.text != "": Rectangle {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            background: clear-touch.has-hover ? Palette.surface-hover : transparent;
+
+            Text {
+                text: "×";
+                color: clear-touch.has-hover ? Palette.text-primary : Palette.text-muted;
+                font-size: 14px;
+                font-weight: 600;
+                vertical-alignment: center;
+                horizontal-alignment: center;
+            }
+
+            clear-touch := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.text = "";
+                    root.edited("");
+                }
+            }
+        }
     }
 
     TouchArea {
@@ -331,7 +355,29 @@ export component ConfigureTickerModal inherits Rectangle {
     // Backdrop
     Rectangle {
         background: #000000cc;
+        opacity: 1.0;
+
+        animate opacity { duration: 150ms; easing: ease-out; }
+
         TouchArea { clicked => { AppState.show-configure-ticker = false; } }
+    }
+
+    key-scope := FocusScope {
+        width: parent.width;
+        height: parent.height;
+
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                AppState.show-configure-ticker = false;
+                return accept;
+            }
+            if (event.text == Key.Return && (event.modifiers.control || event.modifiers.meta)) {
+                CryptoAdapter.save-ticker-options();
+                AppState.show-configure-ticker = false;
+                return accept;
+            }
+            return reject;
+        }
     }
 
     // Modal Panel
@@ -342,9 +388,13 @@ export component ConfigureTickerModal inherits Rectangle {
         border-radius: 12px;
         border-width: 1px;
         border-color: Palette.border;
-        
-        // Prevent click-through
-        TouchArea {}
+        opacity: 1.0;
+
+        animate opacity { duration: 200ms; easing: ease-out; }
+
+        TouchArea {
+            clicked => { key-scope.focus(); }
+        }
 
         VerticalLayout {
             padding: 32px;
