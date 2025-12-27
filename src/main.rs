@@ -447,6 +447,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    fn format_category_label(name: &str) -> String {
+        let trimmed = name.trim();
+        if trimmed.is_empty() {
+            return String::new();
+        }
+        if trimmed.chars().any(|c| c.is_lowercase()) {
+            return trimmed.to_string();
+        }
+        let mut parts = Vec::new();
+        for word in trimmed.split_whitespace() {
+            let mut chars = word.chars();
+            let first = chars.next().unwrap_or_default();
+            let rest: String = chars.collect();
+            let mut formatted = String::new();
+            formatted.extend(first.to_uppercase());
+            formatted.push_str(&rest.to_lowercase());
+            parts.push(formatted);
+        }
+        parts.join(" ")
+    }
+
     fn format_fee_display(tx: &CryptoTransaction, symbol_map: &HashMap<String, String>) -> String {
         let mut parts = Vec::new();
         if let Some(fee) = tx.fee
@@ -751,12 +772,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let expense_index_map: HashMap<String, i32> = expense_categories
             .iter()
             .enumerate()
-            .map(|(idx, cat)| (cat.name.clone(), idx as i32))
+            .map(|(idx, cat)| (cat.name.to_uppercase(), idx as i32))
             .collect();
         let income_index_map: HashMap<String, i32> = income_categories
             .iter()
             .enumerate()
-            .map(|(idx, cat)| (cat.name.clone(), idx as i32))
+            .map(|(idx, cat)| (cat.name.to_uppercase(), idx as i32))
             .collect();
 
         let query = query.trim().to_lowercase();
@@ -847,17 +868,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     return None;
                 }
 
-                let category = if is_transfer {
+                let category_raw = if is_transfer {
                     "TRANSFER".to_string()
                 } else {
                     tx.category.to_uppercase()
                 };
+                let category = format_category_label(&category_raw);
+                let category_key = tx.category.to_uppercase();
                 let category_index = if is_expense {
-                    expense_index_map.get(&tx.category).cloned().unwrap_or(0)
+                    expense_index_map.get(&category_key).cloned().unwrap_or(0)
                 } else if is_transfer {
                     0
                 } else {
-                    income_index_map.get(&tx.category).cloned().unwrap_or(0)
+                    income_index_map.get(&category_key).cloned().unwrap_or(0)
                 };
 
                 Some(TransactionData {
@@ -874,7 +897,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     description: description.into(),
                     description_raw: tx.description.clone().into(),
                     category: category.into(),
-                    category_raw: tx.category.clone().into(),
+                    category_raw: category_raw.into(),
                     category_index,
                     amount: amount_str.into(),
                     amount_raw: format_decimal_from_cents(tx.amount).into(),
@@ -904,7 +927,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .iter()
             .map(|cat| TransactionCategoryData {
                 id: cat.id.clone().into(),
-                name: cat.name.clone().into(),
+                name: format_category_label(&cat.name).into(),
                 is_default: cat.is_default,
             })
             .collect();
@@ -915,7 +938,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .iter()
             .map(|cat| TransactionCategoryData {
                 id: cat.id.clone().into(),
-                name: cat.name.clone().into(),
+                name: format_category_label(&cat.name).into(),
                 is_default: cat.is_default,
             })
             .collect();
@@ -950,12 +973,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let expense_index_map: HashMap<String, i32> = expense_categories
             .iter()
             .enumerate()
-            .map(|(idx, cat)| (cat.name.clone(), idx as i32))
+            .map(|(idx, cat)| (cat.name.to_uppercase(), idx as i32))
             .collect();
         let income_index_map: HashMap<String, i32> = income_categories
             .iter()
             .enumerate()
-            .map(|(idx, cat)| (cat.name.clone(), idx as i32))
+            .map(|(idx, cat)| (cat.name.to_uppercase(), idx as i32))
             .collect();
 
         let mut transactions = controller.get_transactions()?;
@@ -996,17 +1019,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 } else {
                     tx.description.clone()
                 };
-                let category = if is_transfer {
+                let category_raw = if is_transfer {
                     "TRANSFER".to_string()
                 } else {
                     tx.category.to_uppercase()
                 };
+                let category = format_category_label(&category_raw);
+                let category_key = tx.category.to_uppercase();
                 let category_index = if is_expense {
-                    expense_index_map.get(&tx.category).cloned().unwrap_or(0)
+                    expense_index_map.get(&category_key).cloned().unwrap_or(0)
                 } else if is_transfer {
                     0
                 } else {
-                    income_index_map.get(&tx.category).cloned().unwrap_or(0)
+                    income_index_map.get(&category_key).cloned().unwrap_or(0)
                 };
 
                 TransactionData {
@@ -1023,7 +1048,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     description: description.into(),
                     description_raw: tx.description.clone().into(),
                     category: category.into(),
-                    category_raw: tx.category.clone().into(),
+                    category_raw: category_raw.into(),
                     category_index,
                     amount: amount_str.into(),
                     amount_raw: format_decimal_from_cents(tx.amount).into(),

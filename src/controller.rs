@@ -1653,20 +1653,13 @@ impl AppController {
         })
     }
 
-    /// Deletes a category (only if not default)
+    /// Deletes a category
     pub fn delete_transaction_category(&self, id: String) -> Result<(), ControllerError> {
         let validated_id = validate_uuid(&id)?;
 
         self.with_db(|db| {
             db.delete_transaction_category(&validated_id)
-                .map_err(|e| match e {
-                    DbError::Sqlite(RusqliteError::ExecuteReturnedResults) => {
-                        ControllerError::Validation(
-                            "Cannot delete default category".to_string(),
-                        )
-                    }
-                    _ => ControllerError::Database(e),
-                })
+                .map_err(ControllerError::Database)
         })
     }
 

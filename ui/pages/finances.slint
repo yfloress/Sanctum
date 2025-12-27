@@ -861,6 +861,7 @@ export component FinancesPage inherits Rectangle {
 
                 HorizontalLayout {
                     horizontal-stretch: 1;
+                    width: parent.width;
                     spacing: 12px;
                     alignment: start;
 
@@ -1123,6 +1124,7 @@ export component FinancesPage inherits Rectangle {
                         ActionButton {
                             text: "CONFIGURE";
                             primary: false;
+                            y: (parent.height - self.height) / 2;
                             clicked => {
                                 CategoryAdapter.load-categories();
                                 AppState.show-configure-categories = true;

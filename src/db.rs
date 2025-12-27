@@ -1498,19 +1498,8 @@ impl Database {
         Ok(())
     }
 
-    /// Deletes a category (only if not default)
+    /// Deletes a category
     pub fn delete_transaction_category(&self, id: &str) -> Result<(), DbError> {
-        // Check if it's a default category
-        let is_default: i32 = self.conn.query_row(
-            "SELECT is_default FROM transaction_categories WHERE id = ?1",
-            params![id],
-            |row| row.get(0),
-        )?;
-
-        if is_default != 0 {
-            return Err(DbError::Sqlite(RusqliteError::ExecuteReturnedResults));
-        }
-
         self.conn.execute(
             "DELETE FROM transaction_categories WHERE id = ?1",
             params![id],
