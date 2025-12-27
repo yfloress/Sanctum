@@ -381,11 +381,11 @@ impl Database {
 
     fn initialize_default_categories(&self) -> Result<(), DbError> {
         // Check if categories already exist
-        let count: i64 = self.conn.query_row(
-            "SELECT COUNT(*) FROM transaction_categories",
-            [],
-            |row| row.get(0),
-        )?;
+        let count: i64 =
+            self.conn
+                .query_row("SELECT COUNT(*) FROM transaction_categories", [], |row| {
+                    row.get(0)
+                })?;
 
         if count > 0 {
             return Ok(()); // Already initialized
@@ -1319,7 +1319,14 @@ impl Database {
             "UPDATE transactions
              SET account_id = ?2, amount = ?3, description = ?4, date = ?5, transfer_account_id = ?6
              WHERE id = ?1 AND type = 'transfer'",
-            params![id, from_account_id, amount, description, date, to_account_id],
+            params![
+                id,
+                from_account_id,
+                amount,
+                description,
+                date,
+                to_account_id
+            ],
         )?;
 
         if changed == 0 {

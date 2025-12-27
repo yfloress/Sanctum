@@ -9,11 +9,11 @@ use plotters::prelude::*;
 use plotters::series::{AreaSeries, LineSeries};
 use plotters::style::text_anchor::{HPos, Pos, VPos};
 use rand::Rng; // For title animation
-use sanctum::crypto;
 use sanctum::controller::{
     AppController, SETTING_AUTO_FETCH, SETTING_CRYPTO_LAST_COIN_ID, SETTING_CRYPTO_LAST_UPDATED,
     SETTING_CRYPTO_LAST_WALLET_ID,
 };
+use sanctum::crypto;
 use sanctum::models::{CryptoAsset, CryptoTransaction};
 use sanctum::security_log::init_security_logger;
 use slint::SharedString;
@@ -447,18 +447,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    fn format_fee_display(
-        tx: &CryptoTransaction,
-        symbol_map: &HashMap<String, String>,
-    ) -> String {
+    fn format_fee_display(tx: &CryptoTransaction, symbol_map: &HashMap<String, String>) -> String {
         let mut parts = Vec::new();
         if let Some(fee) = tx.fee
             && fee > 0.0
         {
             parts.push(format_money((fee * 100.0) as i64, "USD"));
         }
-        if let (Some(fee_coin_id), Some(fee_amount)) =
-            (tx.fee_coin_id.as_ref(), tx.fee_amount)
+        if let (Some(fee_coin_id), Some(fee_amount)) = (tx.fee_coin_id.as_ref(), tx.fee_amount)
             && fee_amount > 0.0
         {
             let symbol = symbol_map
@@ -786,7 +782,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let is_transfer = tx.transaction_type == "transfer";
                 let is_expense = tx.transaction_type == "expense";
-                let sign = if is_transfer { "↔" } else if is_expense { "-" } else { "+" };
+                let sign = if is_transfer {
+                    "↔"
+                } else if is_expense {
+                    "-"
+                } else {
+                    "+"
+                };
                 let amount_str = format!("{sign} {}", format_money(tx.amount, &currency));
 
                 if !account_filter.is_empty()
@@ -851,10 +853,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     tx.category.to_uppercase()
                 };
                 let category_index = if is_expense {
-                    expense_index_map
-                        .get(&tx.category)
-                        .cloned()
-                        .unwrap_or(0)
+                    expense_index_map.get(&tx.category).cloned().unwrap_or(0)
                 } else if is_transfer {
                     0
                 } else {
@@ -864,15 +863,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Some(TransactionData {
                     id: tx.id.clone().into(),
                     account_id: tx.account_id.clone().into(),
-                    account_index: account_index_map
-                        .get(&tx.account_id)
-                        .cloned()
-                        .unwrap_or(0),
-                    transfer_account_id: tx
-                        .transfer_account_id
-                        .clone()
-                        .unwrap_or_default()
-                        .into(),
+                    account_index: account_index_map.get(&tx.account_id).cloned().unwrap_or(0),
+                    transfer_account_id: tx.transfer_account_id.clone().unwrap_or_default().into(),
                     transfer_account_index: tx
                         .transfer_account_id
                         .as_ref()
@@ -980,7 +972,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let is_transfer = tx.transaction_type == "transfer";
                 let is_expense = tx.transaction_type == "expense";
-                let sign = if is_transfer { "↔" } else if is_expense { "-" } else { "+" };
+                let sign = if is_transfer {
+                    "↔"
+                } else if is_expense {
+                    "-"
+                } else {
+                    "+"
+                };
                 let amount_str = format!("{sign} {}", format_money(tx.amount, &currency));
 
                 let transfer_label = tx
@@ -1004,10 +1002,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     tx.category.to_uppercase()
                 };
                 let category_index = if is_expense {
-                    expense_index_map
-                        .get(&tx.category)
-                        .cloned()
-                        .unwrap_or(0)
+                    expense_index_map.get(&tx.category).cloned().unwrap_or(0)
                 } else if is_transfer {
                     0
                 } else {
@@ -1017,15 +1012,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 TransactionData {
                     id: tx.id.clone().into(),
                     account_id: tx.account_id.clone().into(),
-                    account_index: account_index_map
-                        .get(&tx.account_id)
-                        .cloned()
-                        .unwrap_or(0),
-                    transfer_account_id: tx
-                        .transfer_account_id
-                        .clone()
-                        .unwrap_or_default()
-                        .into(),
+                    account_index: account_index_map.get(&tx.account_id).cloned().unwrap_or(0),
+                    transfer_account_id: tx.transfer_account_id.clone().unwrap_or_default().into(),
                     transfer_account_index: tx
                         .transfer_account_id
                         .as_ref()
@@ -1166,8 +1154,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(ui) = ui_weak.upgrade() {
                             ui.global::<AppState>().set_show_transfer_modal(false);
                             ui.global::<DashboardAdapter>().invoke_fetch_balance();
-                            ui.global::<AnalyticsAdapter>()
-                                .invoke_fetch_analytics(ui.global::<AnalyticsAdapter>().get_active_range());
+                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics(
+                                ui.global::<AnalyticsAdapter>().get_active_range(),
+                            );
                         }
                         notify("Transfer successful".into(), false);
                         SharedString::from("")
@@ -1207,8 +1196,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(ui) = ui_weak.upgrade() {
                             ui.global::<AppState>().set_show_transfer_modal(false);
                             ui.global::<DashboardAdapter>().invoke_fetch_balance();
-                            ui.global::<AnalyticsAdapter>()
-                                .invoke_fetch_analytics(ui.global::<AnalyticsAdapter>().get_active_range());
+                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics(
+                                ui.global::<AnalyticsAdapter>().get_active_range(),
+                            );
                         }
                         notify("Transfer updated".into(), false);
                         SharedString::from("")
@@ -1282,8 +1272,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(ui) = ui_weak.upgrade() {
                             ui.global::<AppState>().set_show_add_transaction(false);
                             ui.global::<DashboardAdapter>().invoke_fetch_balance();
-                            ui.global::<AnalyticsAdapter>()
-                                .invoke_fetch_analytics(ui.global::<AnalyticsAdapter>().get_active_range());
+                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics(
+                                ui.global::<AnalyticsAdapter>().get_active_range(),
+                            );
                         }
                         notify("Transaction added".into(), false);
                         SharedString::from("")
@@ -1299,7 +1290,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_weak = ui_weak.clone();
         let notify = show_notification.clone();
         ui.global::<TransactionAdapter>().on_update_transaction(
-            move |id, account_id, amount, category, description, date, is_expense| -> SharedString {
+            move |id,
+                  account_id,
+                  amount,
+                  category,
+                  description,
+                  date,
+                  is_expense|
+                  -> SharedString {
                 let amount_cents = match parse_amount_input(&amount) {
                     Some(v) if v > 0 => v,
                     _ => return SharedString::from("Amount must be greater than zero"),
@@ -1324,8 +1322,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         if let Some(ui) = ui_weak.upgrade() {
                             ui.global::<AppState>().set_show_add_transaction(false);
                             ui.global::<DashboardAdapter>().invoke_fetch_balance();
-                            ui.global::<AnalyticsAdapter>()
-                                .invoke_fetch_analytics(ui.global::<AnalyticsAdapter>().get_active_range());
+                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics(
+                                ui.global::<AnalyticsAdapter>().get_active_range(),
+                            );
                         }
                         notify("Transaction updated".into(), false);
                         SharedString::from("")
@@ -1342,8 +1341,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ui_weak = ui_weak.clone();
         ui.global::<DashboardAdapter>().on_fetch_balance(move || {
             // 1. Load Exchange Rate (CLP -> USD)
-            let clp_rate = match controller.load_exchange_rate_allow_stale("CLP_USD".to_string())
-            {
+            let clp_rate = match controller.load_exchange_rate_allow_stale("CLP_USD".to_string()) {
                 Ok(Some((r, _))) => r,
                 _ => 0.0,
             };
@@ -1472,8 +1470,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                         if let Some(ui) = ui_weak.upgrade() {
                             ui.global::<DashboardAdapter>().invoke_fetch_balance();
-                            ui.global::<AnalyticsAdapter>()
-                                .invoke_fetch_analytics(ui.global::<AnalyticsAdapter>().get_active_range());
+                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics(
+                                ui.global::<AnalyticsAdapter>().get_active_range(),
+                            );
                         }
                         notify("Transaction deleted".into(), false);
                         SharedString::from("")
@@ -1499,10 +1498,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         let notify = show_notification.clone();
-        ui.global::<CategoryAdapter>()
-            .on_add_category(move |name, category_type| -> SharedString {
-                let result =
-                    controller.add_transaction_category(name.to_string(), category_type.to_string());
+        ui.global::<CategoryAdapter>().on_add_category(
+            move |name, category_type| -> SharedString {
+                let result = controller
+                    .add_transaction_category(name.to_string(), category_type.to_string());
                 match result {
                     Ok(_) => {
                         let _ = reload_categories(&ui_weak, &controller);
@@ -1511,7 +1510,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                     Err(e) => SharedString::from(e.to_string()),
                 }
-            });
+            },
+        );
     }
 
     // Update category
@@ -2021,7 +2021,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let bar_width: i32 = (chart_width - (bar_spacing * (num_bars - 1))) / num_bars;
 
         // Find max value for scaling
-        let max_avg = weekdays.iter().map(|(_, avg, _)| *avg).fold(0.0_f32, f32::max);
+        let max_avg = weekdays
+            .iter()
+            .map(|(_, avg, _)| *avg)
+            .fold(0.0_f32, f32::max);
         if max_avg <= 0.0 {
             return None;
         }
@@ -2062,7 +2065,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 // Draw glow effect for best day
                 if *is_best {
                     root.draw(&Rectangle::new(
-                        [(x - 2, y - 2), (x + bar_width + 2, padding + chart_height + 2)],
+                        [
+                            (x - 2, y - 2),
+                            (x + bar_width + 2, padding + chart_height + 2),
+                        ],
                         RGBAColor(139, 92, 246, 0.3).filled(),
                     ))
                     .ok()?;
@@ -2090,12 +2096,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .into_font()
                 .color(if *is_best { &accent_color } else { &text_color })
                 .pos(Pos::new(HPos::Center, VPos::Bottom));
-            root.draw(&Text::new(
-                value_text,
-                (label_x, value_y),
-                value_style,
-            ))
-            .ok()?;
+            root.draw(&Text::new(value_text, (label_x, value_y), value_style))
+                .ok()?;
         }
 
         root.present().ok()?;
@@ -2225,7 +2227,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         Image::load_from_path(&temp_svg).ok()
     }
-
 
     fn refresh_habit_analytics<F: Fn(String, bool)>(
         ui_weak: &Weak<AppWindow>,
@@ -2372,7 +2373,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let count = *category_counts.get(*key).unwrap_or(&0) as f32;
                 let max_total = count * total_days;
                 let completed = *category_completions.get(*key).unwrap_or(&0) as f32;
-                let ratio = if max_total > 0.0 { completed / max_total } else { 0.0 };
+                let ratio = if max_total > 0.0 {
+                    completed / max_total
+                } else {
+                    0.0
+                };
                 (label.to_string(), (*color).to_string(), ratio)
             })
             .collect();
@@ -2459,7 +2464,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         let weekday_names = [
-            "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday",
         ];
         let mut worst_idx = 0usize;
         let mut worst_avg = f32::MAX;
@@ -2604,8 +2615,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let year_lock = current_heatmap_year.clone();
         let analytics_cache = habit_analytics_cache.clone();
         let notify = show_notification.clone();
-        ui.global::<HabitAdapter>()
-            .on_create_habit(move |name, desc, color, category| -> SharedString {
+        ui.global::<HabitAdapter>().on_create_habit(
+            move |name, desc, color, category| -> SharedString {
                 let description = if desc.is_empty() {
                     None
                 } else {
@@ -2629,7 +2640,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                     Err(e) => SharedString::from(e.to_string()),
                 }
-            });
+            },
+        );
     }
 
     {
@@ -2639,8 +2651,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let year_lock = current_heatmap_year.clone();
         let analytics_cache = habit_analytics_cache.clone();
         let notify = show_notification.clone();
-        ui.global::<HabitAdapter>()
-            .on_update_habit(move |id, name, desc, color, category| -> SharedString {
+        ui.global::<HabitAdapter>().on_update_habit(
+            move |id, name, desc, color, category| -> SharedString {
                 let description = if desc.is_empty() {
                     None
                 } else {
@@ -2666,7 +2678,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                     Err(e) => SharedString::from(e.to_string()),
                 }
-            });
+            },
+        );
     }
 
     {
@@ -2900,10 +2913,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .filter(|asset| price_map.contains_key(&asset.coin_id) && asset.current_value > 0.0)
                 .map(|asset| (asset.symbol.clone(), asset.current_value))
                 .collect();
-            chart_assets.sort_by(|a, b| {
-                b.1.partial_cmp(&a.1)
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            });
+            chart_assets.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
             let chart_assets = if chart_assets.len() > 6 {
                 let mut trimmed = chart_assets[..6].to_vec();
@@ -3194,16 +3204,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let coins = controller_async
                     .get_monitored_coin_ids()
                     .unwrap_or_default();
-                
+
                 let limit_reached = coins.len() > 50;
                 let limit_excluded = if limit_reached {
                     let extra_count = coins.len().saturating_sub(50);
-                    let preview: Vec<String> =
-                        coins.iter().skip(50).take(3).cloned().collect();
+                    let preview: Vec<String> = coins.iter().skip(50).take(3).cloned().collect();
                     if preview.is_empty() {
                         String::new()
                     } else if extra_count > preview.len() {
-                        format!("{} +{} more", preview.join(", "), extra_count - preview.len())
+                        format!(
+                            "{} +{} more",
+                            preview.join(", "),
+                            extra_count - preview.len()
+                        )
                     } else {
                         preview.join(", ")
                     }
@@ -3273,7 +3286,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if let Some(label) = last_updated_label {
                         ui.global::<CryptoAdapter>().set_last_updated(label.into());
                     }
-                    ui.global::<CryptoAdapter>().set_limit_reached(limit_reached);
+                    ui.global::<CryptoAdapter>()
+                        .set_limit_reached(limit_reached);
                     ui.global::<CryptoAdapter>()
                         .set_limit_excluded(limit_excluded.into());
                     if prices_updated {
@@ -3388,10 +3402,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 match result {
                     Ok(_) => {
-                        let _ = controller.set_app_setting(
-                            SETTING_CRYPTO_LAST_WALLET_ID,
-                            wallet_id_raw.as_ref(),
-                        );
+                        let _ = controller
+                            .set_app_setting(SETTING_CRYPTO_LAST_WALLET_ID, wallet_id_raw.as_ref());
                         let _ = controller
                             .set_app_setting(SETTING_CRYPTO_LAST_COIN_ID, coin_id.as_ref());
                         reload_portfolio(&ui_weak, &controller);
@@ -3426,11 +3438,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                   notes_str|
                   -> SharedString {
                 let parse_amount = |raw: SharedString, label: &str| -> Result<f64, SharedString> {
-                    let cleaned = raw
-                        .replace(",", "")
-                        .replace("$", "")
-                        .trim()
-                        .to_string();
+                    let cleaned = raw.replace(",", "").replace("$", "").trim().to_string();
                     cleaned
                         .parse()
                         .map_err(|_| SharedString::from(format!("Invalid {} format", label)))
@@ -3543,11 +3551,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                   notes_str|
                   -> SharedString {
                 let parse_amount = |raw: SharedString, label: &str| -> Result<f64, SharedString> {
-                    let cleaned = raw
-                        .replace(",", "")
-                        .replace("$", "")
-                        .trim()
-                        .to_string();
+                    let cleaned = raw.replace(",", "").replace("$", "").trim().to_string();
                     cleaned
                         .parse()
                         .map_err(|_| SharedString::from(format!("Invalid {} format", label)))
@@ -3619,10 +3623,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 match result {
                     Ok(_) => {
-                        let _ = controller.set_app_setting(
-                            SETTING_CRYPTO_LAST_WALLET_ID,
-                            wallet_id_raw.as_ref(),
-                        );
+                        let _ = controller
+                            .set_app_setting(SETTING_CRYPTO_LAST_WALLET_ID, wallet_id_raw.as_ref());
                         let _ = controller
                             .set_app_setting(SETTING_CRYPTO_LAST_COIN_ID, from_coin_id.as_ref());
                         reload_portfolio(&ui_weak, &controller);
@@ -3669,10 +3671,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .unwrap_or_default();
                 let fee_str = tx.fee.map(|f| format!("{:.4}", f)).unwrap_or_default();
                 let fee_coin_id = tx.fee_coin_id.clone().unwrap_or_default();
-                let fee_coin_amount = tx
-                    .fee_amount
-                    .map(format_crypto_amount)
-                    .unwrap_or_default();
+                let fee_coin_amount = tx.fee_amount.map(format_crypto_amount).unwrap_or_default();
                 let amount_str = format!("{:.4}", tx.amount);
                 let notes_str = tx.notes.unwrap_or_default();
 
@@ -3713,15 +3712,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
-        ui.global::<CryptoAdapter>()
-            .on_update_transaction(move |id,
-                                        amount_str,
-                                        price_str,
-                                        fee_str,
-                                        fee_coin_id_str,
-                                        fee_coin_amount_str,
-                                        date,
-                                        notes_str| {
+        ui.global::<CryptoAdapter>().on_update_transaction(
+            move |id,
+                  amount_str,
+                  price_str,
+                  fee_str,
+                  fee_coin_id_str,
+                  fee_coin_amount_str,
+                  date,
+                  notes_str| {
                 let amount_clean = amount_str
                     .replace(",", "")
                     .replace("$", "")
@@ -3804,7 +3803,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                     Err(e) => SharedString::from(e.to_string()),
                 }
-            });
+            },
+        );
     }
 
     {
@@ -3817,7 +3817,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Ok(_) => {
                         if let Some(ui) = ui_weak.upgrade() {
                             let coin_id = ui.global::<CryptoAdapter>().get_selected_asset().id;
-                            ui.global::<CryptoAdapter>().invoke_fetch_asset_details(coin_id);
+                            ui.global::<CryptoAdapter>()
+                                .invoke_fetch_asset_details(coin_id);
                             ui.global::<CryptoAdapter>().invoke_fetch_portfolio();
                             ui.global::<CryptoAdapter>().invoke_fetch_wallets();
                         }
@@ -3853,10 +3854,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         .unwrap_or_default();
 
                     let prices = controller.load_crypto_prices().unwrap_or_default();
-                    let price_map: HashMap<String, CryptoAsset> = prices
-                        .into_iter()
-                        .map(|p| (p.id.clone(), p))
-                        .collect();
+                    let price_map: HashMap<String, CryptoAsset> =
+                        prices.into_iter().map(|p| (p.id.clone(), p)).collect();
 
                     let mut total_value = 0.0;
                     let holdings_data: Vec<CryptoAssetData> = holdings
@@ -3922,10 +3921,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let history_mapped: Vec<AssetTransaction> = history
                         .iter()
                         .map(|tx| {
-                            let related = tx
-                                .related_tx_id
-                                .as_ref()
-                                .and_then(|id| history_map.get(id));
+                            let related =
+                                tx.related_tx_id.as_ref().and_then(|id| history_map.get(id));
                             let (label, amount_display, price_display, is_swap) =
                                 format_crypto_tx_display(tx, related);
                             let fee_fmt = format_fee_display(tx, &symbol_map);
@@ -4057,47 +4054,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
 
-        ui.global::<CryptoAdapter>()
-            .on_load_coin_catalog(move || {
-                let catalog = controller
-                    .get_coin_catalog()
-                    .unwrap_or_else(|_| crypto::default_coin_catalog());
-                let last_coin_id = controller
-                    .get_app_setting(SETTING_CRYPTO_LAST_COIN_ID)
-                    .ok()
-                    .filter(|val| !val.is_empty());
-                let last_coin_index = last_coin_id
-                    .as_ref()
-                    .and_then(|id| catalog.iter().position(|coin| coin.id == *id))
-                    .unwrap_or(0) as i32;
-                let favorites: HashSet<String> = controller
-                    .get_favorite_coin_ids()
-                    .into_iter()
-                    .collect();
+        ui.global::<CryptoAdapter>().on_load_coin_catalog(move || {
+            let catalog = controller
+                .get_coin_catalog()
+                .unwrap_or_else(|_| crypto::default_coin_catalog());
+            let last_coin_id = controller
+                .get_app_setting(SETTING_CRYPTO_LAST_COIN_ID)
+                .ok()
+                .filter(|val| !val.is_empty());
+            let last_coin_index = last_coin_id
+                .as_ref()
+                .and_then(|id| catalog.iter().position(|coin| coin.id == *id))
+                .unwrap_or(0) as i32;
+            let favorites: HashSet<String> =
+                controller.get_favorite_coin_ids().into_iter().collect();
 
-                let options: Vec<CatalogCoin> = catalog
-                    .into_iter()
-                    .map(|coin| {
-                        let is_favorite = favorites.contains(&coin.id);
-                        CatalogCoin {
-                            id: SharedString::from(coin.id),
-                            name: SharedString::from(coin.name),
-                            symbol: SharedString::from(coin.symbol),
-                            custom: coin.custom,
-                            favorite: is_favorite,
-                            visible: true,
-                            selected: false,
-                        }
-                    })
-                    .collect();
+            let options: Vec<CatalogCoin> = catalog
+                .into_iter()
+                .map(|coin| {
+                    let is_favorite = favorites.contains(&coin.id);
+                    CatalogCoin {
+                        id: SharedString::from(coin.id),
+                        name: SharedString::from(coin.name),
+                        symbol: SharedString::from(coin.symbol),
+                        custom: coin.custom,
+                        favorite: is_favorite,
+                        visible: true,
+                        selected: false,
+                    }
+                })
+                .collect();
 
-                if let Some(ui) = ui_weak.upgrade() {
-                    ui.global::<CryptoAdapter>()
-                        .set_coin_catalog(ModelRc::new(VecModel::from(options)));
-                    ui.global::<CryptoAdapter>()
-                        .set_default_coin_index(last_coin_index);
-                }
-            });
+            if let Some(ui) = ui_weak.upgrade() {
+                ui.global::<CryptoAdapter>()
+                    .set_coin_catalog(ModelRc::new(VecModel::from(options)));
+                ui.global::<CryptoAdapter>()
+                    .set_default_coin_index(last_coin_index);
+            }
+        });
     }
 
     {
@@ -4135,8 +4129,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         ui.global::<CryptoAdapter>()
             .on_add_custom_coin(move |id, name, symbol| -> SharedString {
-                match controller.add_custom_coin(id.to_string(), name.to_string(), symbol.to_string())
-                {
+                match controller.add_custom_coin(
+                    id.to_string(),
+                    name.to_string(),
+                    symbol.to_string(),
+                ) {
                     Ok(_) => {
                         if let Some(ui) = ui_weak.upgrade() {
                             ui.global::<CryptoAdapter>().invoke_load_coin_catalog();
@@ -4235,22 +4232,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     {
         let ui_weak = ui_weak.clone();
-        ui.global::<CryptoAdapter>()
-            .on_select_all_coins(move || {
-                if let Some(ui) = ui_weak.upgrade() {
-                    let options = ui.global::<CryptoAdapter>().get_coin_catalog();
-                    let mut options: Vec<CatalogCoin> = options.iter().collect();
+        ui.global::<CryptoAdapter>().on_select_all_coins(move || {
+            if let Some(ui) = ui_weak.upgrade() {
+                let options = ui.global::<CryptoAdapter>().get_coin_catalog();
+                let mut options: Vec<CatalogCoin> = options.iter().collect();
 
-                    for opt in options.iter_mut() {
-                        if opt.visible {
-                            opt.selected = true;
-                        }
+                for opt in options.iter_mut() {
+                    if opt.visible {
+                        opt.selected = true;
                     }
-
-                    ui.global::<CryptoAdapter>()
-                        .set_coin_catalog(ModelRc::new(VecModel::from(options)));
                 }
-            });
+
+                ui.global::<CryptoAdapter>()
+                    .set_coin_catalog(ModelRc::new(VecModel::from(options)));
+            }
+        });
     }
 
     {
@@ -4313,8 +4309,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Initial Load
-    if let Ok(Some((rate, _))) = controller.load_exchange_rate_allow_stale("CLP_USD".to_string())
-    {
+    if let Ok(Some((rate, _))) = controller.load_exchange_rate_allow_stale("CLP_USD".to_string()) {
         ui.global::<CryptoAdapter>()
             .set_clp_rate(SharedString::from(format_clp_rate(rate)));
     } else {
@@ -4343,8 +4338,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     {
         let controller = controller.clone();
-        ui.global::<CryptoAdapter>()
-            .on_get_swap_quote(move |from_coin_id, to_coin_id, amount_str| {
+        ui.global::<CryptoAdapter>().on_get_swap_quote(
+            move |from_coin_id, to_coin_id, amount_str| {
                 let amount_clean = amount_str
                     .replace(",", "")
                     .replace("$", "")
@@ -4381,7 +4376,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
 
                 SharedString::from(formatted)
-            });
+            },
+        );
     }
 
     {
@@ -4459,10 +4455,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let value_fmt = if missing_price {
                         "N/A".to_string()
                     } else {
-                        format_money(
-                            (updated_asset.current_value * 100.0) as i64,
-                            "USD",
-                        )
+                        format_money((updated_asset.current_value * 100.0) as i64, "USD")
                     };
 
                     let selected = CryptoAssetData {
@@ -4522,10 +4515,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let history_mapped: Vec<AssetTransaction> = history
                         .iter()
                         .map(|tx| {
-                            let related = tx
-                                .related_tx_id
-                                .as_ref()
-                                .and_then(|id| history_map.get(id));
+                            let related =
+                                tx.related_tx_id.as_ref().and_then(|id| history_map.get(id));
                             let (label, amount_display, price_display, is_swap) =
                                 format_crypto_tx_display(tx, related);
                             let fee_fmt = format_fee_display(tx, &symbol_map);
@@ -4573,8 +4564,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if enabled {
                         // Check if we have recent prices. We check a benchmark coin (e.g. bitcoin)
                         // Or simply check the CLP rate timestamp as a proxy for all prices
-                        let needs_update = if let Ok(Some((_, updated_at))) = controller
-                            .load_exchange_rate_allow_stale("CLP_USD".to_string())
+                        let needs_update = if let Ok(Some((_, updated_at))) =
+                            controller.load_exchange_rate_allow_stale("CLP_USD".to_string())
                         {
                             // Check age
                             if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(&updated_at) {
