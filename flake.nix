@@ -40,7 +40,7 @@
           sqlite
           cargo-audit
           slint-lsp
-          bacon
+          cargo-modules
         ];
       in
       {
