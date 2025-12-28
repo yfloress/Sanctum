@@ -180,10 +180,8 @@ src/
 ├── ui/                        # NEW: UI layer (placeholder)
 │   └── mod.rs
 │
-├── services/                  # LEGACY: Minimal shared services
-│   ├── analytics.rs           # Shared analytics (to review)
-│   ├── charts.rs              # Shared chart generation
-│   └── system.rs              # System utilities (to review)
+├── services/                  # Shared services (cross-cutting concerns)
+│   └── charts.rs              # Chart generation (shared by features)
 │
 ├── controller.rs              # LEGACY: Needs refactor
 ├── db.rs                      # LEGACY: Being split into repositories
@@ -219,8 +217,9 @@ src/
 - Removed duplicate service files:
   - Deleted `services/finance.rs` (logic already in features/finance/service.rs)
   - Deleted `services/habit.rs` (logic already in features/habits/service.rs)
+  - Deleted empty `services/analytics.rs` and `services/system.rs`
 - Updated controller.rs imports to use features modules exclusively
-- Cleaned up services/mod.rs (now only analytics, charts, system)
+- Cleaned up services/mod.rs (now only charts.rs remains)
 
 ### Next Steps
 1. Move DB operations from db.rs to respective repositories
