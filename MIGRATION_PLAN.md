@@ -105,7 +105,7 @@ Each file < 400 lines, each module has one clear purpose.
 - [x] Create crypto models in `features/crypto/models.rs`
 - [x] Create `features/crypto/repository.rs` (delegates to db.rs)
 - [x] Extract API client from `services/crypto.rs` → `features/crypto/api.rs`
-- [ ] Create `features/crypto/service.rs` (move CryptoService from services/)
+- [x] Create `features/crypto/service.rs` (move CryptoService from services/)
 - [ ] Gradually move DB operations from `db.rs` to repository
 
 ### Phase 4: Habits Feature
@@ -166,7 +166,8 @@ src/
 │   │   ├── mod.rs
 │   │   ├── api.rs             # CoinGecko API client (~460 lines)
 │   │   ├── models.rs          # Crypto domain models
-│   │   └── repository.rs      # Delegates to db.rs
+│   │   ├── repository.rs      # Delegates to db.rs
+│   │   └── service.rs         # CryptoService (~1500 lines)
 │   └── habits/
 │       ├── mod.rs
 │       ├── models.rs          # Habits domain models
@@ -204,12 +205,12 @@ src/
 ### Session 2 - 2024-12-28
 - Fixed cargo clippy warnings (type complexity, collapsible if, redundant closure, missing Default)
 - Extracted CoinGecko API client to `features/crypto/api.rs` (~460 lines)
-- Reduced `services/crypto.rs` from ~1960 to ~1480 lines
+- Extracted CryptoService to `features/crypto/service.rs` (~1500 lines)
+- Reduced `services/crypto.rs` to ~17 lines (re-exports only)
 - Added CryptoPriceEntry type alias in repository for cleaner signatures
 
 ### Next Steps
-1. Create `features/crypto/service.rs` (move CryptoService from services/crypto.rs)
-2. Move DB operations from db.rs to respective repositories
-3. Remove duplicate models from models.rs
-4. Split main.rs callbacks into ui/ modules
-5. Refactor controller.rs to be thin orchestrator
+1. Move DB operations from db.rs to respective repositories
+2. Remove duplicate models from models.rs
+3. Split main.rs callbacks into ui/ modules
+4. Refactor controller.rs to be thin orchestrator
