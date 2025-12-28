@@ -127,6 +127,71 @@ pub fn normalize_habit_category_value(category: &str) -> String {
     }
 }
 
+/// Calculates current streak from a sorted list of dates
+/// Returns the number of consecutive days ending at today (or yesterday if today not complete)
+pub fn calculate_current_streak(dates: &[chrono::NaiveDate], today: chrono::NaiveDate) -> i32 {
+    if dates.is_empty() {
+        return 0;
+    }
+
+    let mut streak = 0;
+    let mut check_date = today;
+
+    // If today isn't completed, start checking from yesterday
+    if !dates.contains(&today) {
+        if let Some(prev) = today.pred_opt() {
+            check_date = prev;
+        } else {
+            return 0;
+        }
+    }
+
+    while dates.contains(&check_date) {
+        streak += 1;
+        if let Some(prev) = check_date.pred_opt() {
+            check_date = prev;
+        } else {
+            break;
+        }
+    }
+
+    streak
+}
+
+/// Calculates the best (longest) streak from a sorted list of dates
+pub fn calculate_best_streak(dates: &[chrono::NaiveDate]) -> i32 {
+    if dates.is_empty() {
+        return 0;
+    }
+
+    let mut best_streak = 0;
+    let mut current_streak = 0;
+    let mut prev_date: Option<chrono::NaiveDate> = None;
+
+    for date in dates {
+        if let Some(prev) = prev_date {
+            if let Some(next) = prev.succ_opt() {
+                if *date == next {
+                    current_streak += 1;
+                } else {
+                    current_streak = 1;
+                }
+            } else {
+                current_streak = 1;
+            }
+        } else {
+            current_streak = 1;
+        }
+
+        if current_streak > best_streak {
+            best_streak = current_streak;
+        }
+        prev_date = Some(*date);
+    }
+
+    best_streak
+}
+
 // ==================== Category Helpers ====================
 
 /// Formats category label with proper capitalization

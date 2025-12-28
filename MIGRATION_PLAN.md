@@ -202,10 +202,10 @@ src/
 ├── ui/                        # UI layer helpers
 │   ├── mod.rs                 # Module declarations
 │   ├── data.rs                # Intermediate data types for UI (~334 lines)
-│   └── helpers.rs             # Formatting, parsing utilities (~296 lines)
+│   └── helpers.rs             # Formatting, parsing, streak utils (~361 lines)
 │
 ├── models.rs                  # Single source: all domain models (~573 lines)
-├── main.rs                    # UI + callbacks (~3937 lines, partially extracted)
+├── main.rs                    # UI + callbacks (~3889 lines, partially extracted)
 └── lib.rs                     # Updated with new exports
 ```
 
@@ -281,6 +281,11 @@ src/
   - reload_categories() simplified to use load_categories()
 - main.rs reduced from 3980 to 3937 lines
 - Pattern: Intermediate data types in lib.rs, mapped to Slint types in main.rs
+- Added streak calculation helpers to ui/helpers.rs
+  - calculate_current_streak(), calculate_best_streak()
+- Refactored reload_habits to use streak helpers and color_from_hex
+- main.rs reduced from 3937 to 3889 lines
+- ui/helpers.rs now 361 lines
 
 ### Next Steps
 1. Further split main.rs callbacks into domain-specific ui/ modules

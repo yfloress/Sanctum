@@ -14,10 +14,10 @@ use sanctum::features::crypto;
 use sanctum::models::{CryptoAsset, CryptoTransaction};
 use sanctum::security_log::init_security_logger;
 use sanctum::ui::{
-    color_from_hex, crypto_icon_for_symbol, format_category_label, format_clp_rate,
-    format_crypto_amount, format_crypto_tx_display, format_decimal_from_cents, format_fee_display,
-    format_money, habit_color_index, normalize_account_type, normalize_habit_category_value,
-    parse_amount_input,
+    calculate_best_streak, calculate_current_streak, color_from_hex, crypto_icon_for_symbol,
+    format_category_label, format_clp_rate, format_crypto_amount, format_crypto_tx_display,
+    format_decimal_from_cents, format_fee_display, format_money, habit_color_index,
+    normalize_account_type, normalize_habit_category_value, parse_amount_input,
 };
 use slint::SharedString;
 use slint::{Image, Model, ModelRc, VecModel, Weak};
@@ -1355,59 +1355,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     // Retrieve pre-processed historical dates for this habit
                     let habit_dates = history_map.get(&h.id).cloned().unwrap_or_default();
 
-                    // Calculate Current Streak
-                    let mut current_streak = 0;
-                    if !habit_dates.is_empty() {
-                        let mut check_date = today;
-                        if !habit_dates.contains(&today)
-                            && let Some(prev) = today.pred_opt()
-                        {
-                            check_date = prev;
-                        }
+                    // Calculate streaks using helper functions
+                    let current_streak = calculate_current_streak(&habit_dates, today);
+                    let best_streak = calculate_best_streak(&habit_dates);
 
-                        while habit_dates.contains(&check_date) {
-                            current_streak += 1;
-                            if let Some(prev) = check_date.pred_opt() {
-                                check_date = prev;
-                            } else {
-                                break;
-                            }
-                        }
-                    }
-
-                    // Calculate Best Streak
-                    let mut best_streak = 0;
-                    let mut temp_streak = 0;
-                    let mut prev_date: Option<chrono::NaiveDate> = None;
-
-                    for date in &habit_dates {
-                        if let Some(prev) = prev_date {
-                            if let Some(next) = prev.succ_opt() {
-                                if *date == next {
-                                    temp_streak += 1;
-                                } else {
-                                    temp_streak = 1;
-                                }
-                            } else {
-                                temp_streak = 1;
-                            }
-                        } else {
-                            temp_streak = 1;
-                        }
-                        if temp_streak > best_streak {
-                            best_streak = temp_streak;
-                        }
-                        prev_date = Some(*date);
-                    }
-
-                    let color = if h.color.starts_with("#") && h.color.len() == 7 {
-                        let r = u8::from_str_radix(&h.color[1..3], 16).unwrap_or(0);
-                        let g = u8::from_str_radix(&h.color[3..5], 16).unwrap_or(0);
-                        let b = u8::from_str_radix(&h.color[5..7], 16).unwrap_or(0);
-                        slint::Color::from_rgb_u8(r, g, b)
-                    } else {
-                        slint::Color::from_rgb_u8(139, 92, 246)
-                    };
+                    let color = color_from_hex(&h.color);
 
                     let color_hex = h.color.clone();
 
