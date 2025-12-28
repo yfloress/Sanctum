@@ -13,7 +13,6 @@
 
 pub mod api;
 pub mod catalog;
-pub mod models;
 pub mod repository;
 pub mod service;
 pub mod transactions;
@@ -33,5 +32,4 @@ pub use service::{
     SETTING_CRYPTO_LAST_WALLET_ID, SETTING_TICKER_COINS,
 };
 
-pub use models::*;
 pub use repository::CryptoRepository;

@@ -159,23 +159,20 @@ src/
 │   ├── mod.rs
 │   ├── finance/
 │   │   ├── mod.rs
-│   │   ├── models.rs          # Finance domain models
 │   │   ├── repository.rs      # Delegates to db.rs
-│   │   └── service.rs         # Business logic
+│   │   └── service.rs         # Business logic (~400 lines)
 │   ├── crypto/
 │   │   ├── mod.rs
 │   │   ├── api.rs             # CoinGecko API client (~443 lines)
 │   │   ├── catalog.rs         # Coin catalog management (~203 lines)
-│   │   ├── models.rs          # Crypto domain models (~263 lines)
 │   │   ├── repository.rs      # Delegates to db.rs (~115 lines)
 │   │   ├── service.rs         # Core service (~466 lines)
 │   │   ├── transactions.rs    # Transaction operations (~626 lines)
 │   │   └── validation.rs      # Input validation (~249 lines)
 │   └── habits/
 │       ├── mod.rs
-│       ├── models.rs          # Habits domain models
 │       ├── repository.rs      # Delegates to db.rs
-│       └── service.rs         # Business logic
+│       └── service.rs         # Business logic (~100 lines)
 │
 ├── ui/                        # NEW: UI layer (placeholder)
 │   └── mod.rs
@@ -185,7 +182,7 @@ src/
 │
 ├── controller.rs              # LEGACY: Needs refactor
 ├── db.rs                      # LEGACY: Being split into repositories
-├── models.rs                  # LEGACY: Being split into features
+├── models.rs                  # Single source: all domain models (~573 lines)
 ├── main.rs                    # LEGACY: UI needs extraction
 └── lib.rs                     # Updated with new exports
 ```
@@ -220,6 +217,11 @@ src/
   - Deleted empty `services/analytics.rs` and `services/system.rs`
 - Updated controller.rs imports to use features modules exclusively
 - Cleaned up services/mod.rs (now only charts.rs remains)
+- Removed unused duplicate model files from features:
+  - Deleted `features/crypto/models.rs` (unused, all imports use crate::models)
+  - Deleted `features/finance/models.rs` (unused, all imports use crate::models)
+  - Deleted `features/habits/models.rs` (unused, all imports use crate::models)
+- Decision: Keep `models.rs` as single source of truth until db.rs is split into repositories
 
 ### Next Steps
 1. Move DB operations from db.rs to respective repositories
