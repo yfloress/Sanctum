@@ -180,10 +180,15 @@ src/
 ├── services/                  # Shared services (cross-cutting concerns)
 │   └── charts.rs              # Chart generation (shared by features)
 │
-├── controller.rs              # LEGACY: Needs refactor
-├── db.rs                      # LEGACY: Being split into repositories
+├── db/                        # Database operations (split by domain)
+│   ├── mod.rs                 # Core: init, settings, session (~864 lines)
+│   ├── crypto.rs              # Crypto DB ops (~1026 lines)
+│   ├── finance.rs             # Finance DB ops (~572 lines)
+│   └── habits.rs              # Habits DB ops (~184 lines)
+│
+├── controller.rs              # LEGACY: Needs refactor (~1706 lines)
 ├── models.rs                  # Single source: all domain models (~573 lines)
-├── main.rs                    # LEGACY: UI needs extraction
+├── main.rs                    # LEGACY: UI needs extraction (~4224 lines)
 └── lib.rs                     # Updated with new exports
 ```
 
@@ -222,9 +227,13 @@ src/
   - Deleted `features/finance/models.rs` (unused, all imports use crate::models)
   - Deleted `features/habits/models.rs` (unused, all imports use crate::models)
 - Decision: Keep `models.rs` as single source of truth until db.rs is split into repositories
+- Split `db.rs` (2633 lines) into domain-specific modules:
+  - `db/mod.rs` (~864 lines) - Core: Database struct, init, settings, session, rate limiting
+  - `db/crypto.rs` (~1026 lines) - Wallets, transactions, prices, portfolio aggregation
+  - `db/finance.rs` (~572 lines) - Accounts, transactions, categories, balance
+  - `db/habits.rs` (~184 lines) - Habits CRUD, habit logs
 
 ### Next Steps
-1. Move DB operations from db.rs to respective repositories
-2. Remove duplicate models from models.rs
-3. Split main.rs callbacks into ui/ modules
-4. Refactor controller.rs to be thin orchestrator
+1. Split main.rs callbacks into ui/ modules
+2. Refactor controller.rs to be thin orchestrator
+3. Consider splitting db/crypto.rs further if needed
