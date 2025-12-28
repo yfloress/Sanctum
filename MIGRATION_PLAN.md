@@ -290,7 +290,37 @@ src/
 - main.rs reduced from 3889 to 3885 lines
 - ui/helpers.rs now 366 lines
 
-### Next Steps
-1. Further split main.rs callbacks into domain-specific ui/ modules
-2. Extract reload_* functions to respective domain modules
-3. Consider callback setup functions pattern for cleaner separation
+### Session 6 - Callback Extraction Plan
+
+**Goal:** Reduce main.rs from ~3885 lines to ~500 lines by extracting callbacks to domain modules.
+
+**Strategy:**
+1. Move `slint::include_modules!()` to lib.rs to make Slint types available crate-wide
+2. Create `ui/callbacks/` module with domain-specific callback setup functions
+3. Each domain module exports a `setup_*_callbacks()` function
+4. main.rs only does initialization and calls setup functions
+
+**Target Structure:**
+```
+src/ui/callbacks/
+├── mod.rs              # Module declarations
+├── finance.rs          # AccountAdapter, TransactionAdapter, CategoryAdapter (~400 lines)
+├── dashboard.rs        # DashboardAdapter, AnalyticsAdapter (~300 lines)
+├── habits.rs           # HabitAdapter callbacks (~400 lines)
+└── crypto.rs           # CryptoAdapter callbacks (~800 lines)
+```
+
+**Checklist:**
+- [x] Step 1: Move `slint::include_modules!()` to lib.rs
+- [ ] Step 2: Create ui/callbacks/mod.rs structure
+- [ ] Step 3: Extract finance callbacks (AccountAdapter, TransactionAdapter, CategoryAdapter)
+- [ ] Step 4: Extract dashboard callbacks (DashboardAdapter, AnalyticsAdapter)
+- [ ] Step 5: Extract habits callbacks (HabitAdapter)
+- [ ] Step 6: Extract crypto callbacks (CryptoAdapter)
+- [ ] Step 7: Clean up main.rs and verify compilation
+- [ ] Step 8: Run tests and clippy
+
+**Progress:**
+- Step 1 complete: Moved `slint::include_modules!()` to lib.rs
+  - Added `ComponentHandle` trait import to main.rs
+  - All Slint types now accessible via `sanctum::*`

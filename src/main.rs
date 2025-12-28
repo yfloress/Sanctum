@@ -20,14 +20,22 @@ use sanctum::ui::{
     normalize_account_type, normalize_habit_category_value, parse_amount_input,
 };
 use slint::SharedString;
-use slint::{Image, Model, ModelRc, VecModel, Weak};
+use slint::{ComponentHandle, Image, Model, ModelRc, VecModel, Weak};
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
-slint::include_modules!();
+// Slint types are now generated in lib.rs and available via sanctum::*
+use sanctum::{
+    AccountAdapter, AccountData, AnalyticsAdapter, AnalyticsData, AppState, AppWindow,
+    AssetTransaction, AssetWalletBreakdown, AuthAdapter, BalanceData, CatalogCoin,
+    CategoryAdapter, CategoryData, CryptoAdapter, CryptoAssetData, CryptoDistributionSlice,
+    CryptoWalletData, DashboardAdapter, HabitAdapter, HabitData, HabitDay, HeatmapDay,
+    HeatmapWeek, NotificationAdapter, SettingsAdapter, TickerOption, TransactionAdapter,
+    TransactionCategoryData, TransactionData, WalletSimple,
+};
 
 #[derive(Clone, Default)]
 struct HabitAnalyticsSnapshot {

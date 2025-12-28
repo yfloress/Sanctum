@@ -9,7 +9,10 @@
 //! - `core/` - Shared infrastructure (database, errors, security)
 //! - `features/` - Domain modules (finance, crypto, habits)
 //! - `services/` - Legacy services (being migrated to features/)
-//! - `ui/` - UI layer (Slint callbacks)
+//! - `ui/` - UI layer (Slint helpers, data, callbacks)
+
+// Generate Slint UI types - makes them available crate-wide
+slint::include_modules!();
 
 // New modular architecture
 pub mod core;
