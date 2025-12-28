@@ -182,7 +182,12 @@ src/
 │
 ├── db/                        # Database operations (split by domain)
 │   ├── mod.rs                 # Core: init, settings, session (~864 lines)
-│   ├── crypto.rs              # Crypto DB ops (~1026 lines)
+│   ├── crypto/                # Crypto DB ops (split)
+│   │   ├── mod.rs             # Module declarations
+│   │   ├── prices.rs          # Price cache (~146 lines)
+│   │   ├── wallets.rs         # Wallet CRUD (~110 lines)
+│   │   ├── transactions.rs    # Transaction CRUD (~268 lines)
+│   │   └── portfolio.rs       # Aggregation, balance (~531 lines)
 │   ├── finance.rs             # Finance DB ops (~572 lines)
 │   └── habits.rs              # Habits DB ops (~184 lines)
 │
@@ -192,8 +197,12 @@ src/
 │   ├── finance.rs             # Finance operations (~274 lines)
 │   ├── habits.rs              # Habits operations (~352 lines)
 │   └── settings.rs            # App settings (~88 lines)
+├── ui/                        # UI layer helpers
+│   ├── mod.rs                 # Module declarations
+│   └── helpers.rs             # Formatting, parsing utilities (~296 lines)
+│
 ├── models.rs                  # Single source: all domain models (~573 lines)
-├── main.rs                    # LEGACY: UI needs extraction (~4224 lines)
+├── main.rs                    # UI + callbacks (~3980 lines, partially extracted)
 └── lib.rs                     # Updated with new exports
 ```
 
@@ -246,8 +255,18 @@ src/
   - `controller/habits.rs` (~352 lines) - Habit CRUD, logs, analytics
   - `controller/settings.rs` (~88 lines) - App settings, coin catalog
 - Pattern: Uses `impl AppController` blocks spread across files for cohesion
+- Split `db/crypto.rs` (1026 lines) into focused submodules:
+  - `db/crypto/prices.rs` (~146 lines) - Exchange rates, price cache
+  - `db/crypto/wallets.rs` (~110 lines) - Wallet CRUD
+  - `db/crypto/transactions.rs` (~268 lines) - Transaction CRUD
+  - `db/crypto/portfolio.rs` (~531 lines) - Balance calculations, aggregation
+- Extracted UI helpers from main.rs to `ui/helpers.rs` (~296 lines)
+  - Formatting functions (amounts, money, crypto)
+  - Parsing utilities
+  - Color and icon helpers
+- main.rs reduced from 4224 to 3980 lines
 
 ### Next Steps
-1. Split main.rs callbacks into ui/ modules
-2. Consider further splitting controller/mod.rs if needed
-3. Consider splitting db/crypto.rs further if needed
+1. Further split main.rs callbacks into domain-specific ui/ modules
+2. Extract reload_* functions to respective domain modules
+3. Consider callback setup functions pattern for cleaner separation
