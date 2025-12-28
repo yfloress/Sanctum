@@ -50,6 +50,11 @@ pub fn format_money(amount_cents: i64, currency: &str) -> String {
     format!("{code} {}", format_amount(amount_cents))
 }
 
+/// Formats a float amount as USD (converts dollars to cents internally)
+pub fn format_usd(amount: f64) -> String {
+    format_money((amount * 100.0) as i64, "USD")
+}
+
 /// Formats CLP exchange rate with thousand separators
 pub fn format_clp_rate(rate: f64) -> String {
     let rounded = rate.round() as i64;

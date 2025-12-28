@@ -16,7 +16,7 @@ use sanctum::security_log::init_security_logger;
 use sanctum::ui::{
     calculate_best_streak, calculate_current_streak, color_from_hex, crypto_icon_for_symbol,
     format_category_label, format_clp_rate, format_crypto_amount, format_crypto_tx_display,
-    format_decimal_from_cents, format_fee_display, format_money, habit_color_index,
+    format_decimal_from_cents, format_fee_display, format_money, format_usd, habit_color_index,
     normalize_account_type, normalize_habit_category_value, parse_amount_input,
 };
 use slint::SharedString;
@@ -1111,7 +1111,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let dash = ui.global::<DashboardAdapter>();
                 dash.set_balance(BalanceData {
-                    total_balance: format_money((net_worth * 100.0) as i64, "USD").into(),
+                    total_balance: format_usd(net_worth).into(),
                     total_income: format_money(total_income_usd as i64, "USD").into(),
                     total_expense: format_money(total_expense_usd as i64, "USD").into(),
                 });
@@ -2126,7 +2126,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     name: SharedString::from(w.name),
                     category: SharedString::from(w.category.clone()),
                     icon: SharedString::from(w.icon.unwrap_or_default()),
-                    balance: SharedString::from(format_money((total_bal * 100.0) as i64, "USD")),
+                    balance: SharedString::from(format_usd(total_bal)),
                     asset_count: holdings.len() as i32,
                 });
             }
@@ -2213,7 +2213,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let (r, g, b) = controller.chart_color_for_symbol(label, idx);
                         CryptoDistributionSlice {
                             label: SharedString::from(label),
-                            value: SharedString::from(format_money((value * 100.0) as i64, "USD")),
+                            value: SharedString::from(format_usd(*value)),
                             percent: SharedString::from(format!("{:.1}%", percent)),
                             color: slint::Color::from_rgb_u8(r, g, b),
                         }
@@ -2264,13 +2264,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     } else if a.current_price < 1.0 {
                         format!("$ {:.4}", a.current_price)
                     } else {
-                        format_money((a.current_price * 100.0) as i64, "USD")
+                        format_usd(a.current_price)
                     };
 
                     let value_fmt = if price_data.is_none() {
                         "N/A".to_string() // Explicitly N/A if no price data for value
                     } else {
-                        format_money((a.current_value * 100.0) as i64, "USD")
+                        format_usd(a.current_value)
                     };
 
                     CryptoAssetData {
@@ -2302,7 +2302,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let price_fmt = if data.current_price < 1.0 {
                         format!("$ {:.4}", data.current_price)
                     } else {
-                        format_money((data.current_price * 100.0) as i64, "USD")
+                        format_usd(data.current_price)
                     };
 
                     tickers.push(CryptoAssetData {
@@ -2340,7 +2340,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
 
             let total_value_label = if priced_assets > 0 && missing_price_assets == 0 {
-                format_money((total_val * 100.0) as i64, "USD")
+                format_usd(total_val)
             } else {
                 "N/A".to_string()
             };
@@ -2350,11 +2350,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     let total_pnl_val = total_val - total_cost;
                     let pnl_sign = if total_pnl_val >= 0.0 { "+" } else { "-" };
                     (
-                        format!(
-                            "{} {}",
-                            pnl_sign,
-                            format_money((total_pnl_val.abs() * 100.0) as i64, "USD")
-                        ),
+                        format!("{} {}", pnl_sign, format_usd(total_pnl_val.abs())),
                         total_pnl_val >= 0.0,
                     )
                 } else {
@@ -3155,13 +3151,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             } else if asset.current_price < 1.0 {
                                 format!("$ {:.4}", asset.current_price)
                             } else {
-                                format_money((asset.current_price * 100.0) as i64, "USD")
+                                format_usd(asset.current_price)
                             };
 
                             let value_fmt = if price_data.is_none() {
                                 "N/A".to_string()
                             } else {
-                                format_money((asset.current_value * 100.0) as i64, "USD")
+                                format_usd(asset.current_value)
                             };
 
                             CryptoAssetData {
@@ -3727,13 +3723,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     } else if updated_asset.current_price < 1.0 {
                         format!("$ {:.4}", updated_asset.current_price)
                     } else {
-                        format_money((updated_asset.current_price * 100.0) as i64, "USD")
+                        format_usd(updated_asset.current_price)
                     };
 
                     let value_fmt = if missing_price {
                         "N/A".to_string()
                     } else {
-                        format_money((updated_asset.current_value * 100.0) as i64, "USD")
+                        format_usd(updated_asset.current_value)
                     };
 
                     let selected = CryptoAssetData {

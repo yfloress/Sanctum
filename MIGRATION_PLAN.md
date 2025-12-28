@@ -202,10 +202,10 @@ src/
 ├── ui/                        # UI layer helpers
 │   ├── mod.rs                 # Module declarations
 │   ├── data.rs                # Intermediate data types for UI (~334 lines)
-│   └── helpers.rs             # Formatting, parsing, streak utils (~361 lines)
+│   └── helpers.rs             # Formatting, parsing, streak utils (~366 lines)
 │
 ├── models.rs                  # Single source: all domain models (~573 lines)
-├── main.rs                    # UI + callbacks (~3889 lines, partially extracted)
+├── main.rs                    # UI + callbacks (~3885 lines, partially extracted)
 └── lib.rs                     # Updated with new exports
 ```
 
@@ -285,7 +285,10 @@ src/
   - calculate_current_streak(), calculate_best_streak()
 - Refactored reload_habits to use streak helpers and color_from_hex
 - main.rs reduced from 3937 to 3889 lines
-- ui/helpers.rs now 361 lines
+- Added format_usd() helper for cleaner USD formatting
+- Replaced 12 occurrences of `format_money((x * 100.0) as i64, "USD")` with `format_usd(x)`
+- main.rs reduced from 3889 to 3885 lines
+- ui/helpers.rs now 366 lines
 
 ### Next Steps
 1. Further split main.rs callbacks into domain-specific ui/ modules
