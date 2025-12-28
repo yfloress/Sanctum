@@ -180,11 +180,10 @@ src/
 ├── ui/                        # NEW: UI layer (placeholder)
 │   └── mod.rs
 │
-├── services/                  # LEGACY: Being migrated
-│   ├── crypto.rs              # Still used (large, needs splitting)
-│   ├── finance.rs             # Migrated to features/finance/service.rs
-│   ├── habit.rs               # Migrated to features/habits/service.rs
-│   └── charts.rs              # Shared service
+├── services/                  # LEGACY: Minimal shared services
+│   ├── analytics.rs           # Shared analytics (to review)
+│   ├── charts.rs              # Shared chart generation
+│   └── system.rs              # System utilities (to review)
 │
 ├── controller.rs              # LEGACY: Needs refactor
 ├── db.rs                      # LEGACY: Being split into repositories
@@ -215,6 +214,13 @@ src/
   - `catalog.rs` (~203 lines) - Coin catalog management
   - `validation.rs` (~249 lines) - Input validation helpers
 - Added CryptoPriceEntry type alias in repository for cleaner signatures
+
+### Session 3 - 2024-12-28
+- Removed duplicate service files:
+  - Deleted `services/finance.rs` (logic already in features/finance/service.rs)
+  - Deleted `services/habit.rs` (logic already in features/habits/service.rs)
+- Updated controller.rs imports to use features modules exclusively
+- Cleaned up services/mod.rs (now only analytics, charts, system)
 
 ### Next Steps
 1. Move DB operations from db.rs to respective repositories
