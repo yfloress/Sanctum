@@ -6,6 +6,12 @@ use std::path::Path;
 
 pub struct ChartsService;
 
+impl Default for ChartsService {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ChartsService {
     pub fn new() -> Self {
         Self

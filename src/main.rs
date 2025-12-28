@@ -10,7 +10,7 @@ use sanctum::controller::{
     AppController, SETTING_AUTO_FETCH, SETTING_CRYPTO_LAST_COIN_ID, SETTING_CRYPTO_LAST_UPDATED,
     SETTING_CRYPTO_LAST_WALLET_ID,
 };
-use sanctum::crypto;
+use sanctum::services::crypto;
 use sanctum::models::{CryptoAsset, CryptoTransaction};
 use sanctum::security_log::init_security_logger;
 use slint::SharedString;
