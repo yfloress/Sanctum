@@ -164,10 +164,13 @@ src/
 │   │   └── service.rs         # Business logic
 │   ├── crypto/
 │   │   ├── mod.rs
-│   │   ├── api.rs             # CoinGecko API client (~460 lines)
-│   │   ├── models.rs          # Crypto domain models
-│   │   ├── repository.rs      # Delegates to db.rs
-│   │   └── service.rs         # CryptoService (~1500 lines)
+│   │   ├── api.rs             # CoinGecko API client (~443 lines)
+│   │   ├── catalog.rs         # Coin catalog management (~203 lines)
+│   │   ├── models.rs          # Crypto domain models (~263 lines)
+│   │   ├── repository.rs      # Delegates to db.rs (~115 lines)
+│   │   ├── service.rs         # Core service (~466 lines)
+│   │   ├── transactions.rs    # Transaction operations (~626 lines)
+│   │   └── validation.rs      # Input validation (~249 lines)
 │   └── habits/
 │       ├── mod.rs
 │       ├── models.rs          # Habits domain models
@@ -204,9 +207,13 @@ src/
 
 ### Session 2 - 2024-12-28
 - Fixed cargo clippy warnings (type complexity, collapsible if, redundant closure, missing Default)
-- Extracted CoinGecko API client to `features/crypto/api.rs` (~460 lines)
-- Extracted CryptoService to `features/crypto/service.rs` (~1500 lines)
-- Reduced `services/crypto.rs` to ~17 lines (re-exports only)
+- Extracted CoinGecko API client to `features/crypto/api.rs` (~443 lines)
+- Removed `services/crypto.rs` entirely (updated imports in controller.rs and main.rs)
+- Split crypto service into focused modules:
+  - `service.rs` (~466 lines) - Core: wallets, prices, portfolio
+  - `transactions.rs` (~626 lines) - Transaction operations
+  - `catalog.rs` (~203 lines) - Coin catalog management
+  - `validation.rs` (~249 lines) - Input validation helpers
 - Added CryptoPriceEntry type alias in repository for cleaner signatures
 
 ### Next Steps
