@@ -3,30 +3,34 @@
 //! This module provides a pure Rust API that can be consumed by any UI framework (Slint, etc.)
 //! All Tauri-specific code has been removed.
 
-use crate::crypto;
 use crate::db::{Database, DbError};
 use crate::models::{
     Account, AccountBalance, AggregatedAsset, BalanceSummary, CryptoAsset, CryptoCatalogCoin,
-    CryptoTransaction, CryptoTransactionType, CryptoWallet, Habit, HabitLog, Transaction,
-    TransactionCategory,
+    CryptoTransaction, CryptoWallet, Habit, HabitLog, Transaction, TransactionCategory,
 };
 use crate::security_log::{SecurityEvent, log_auth_failure, log_security_event};
 pub use crate::services::finance::{AnalyticsSummary, ExpenseSlice};
+pub use crate::services::crypto::{
+    SETTING_AUTO_FETCH, SETTING_CRYPTO_CUSTOM_COINS, SETTING_CRYPTO_FAVORITE_COINS,
+    SETTING_CRYPTO_HIDDEN_COINS, SETTING_CRYPTO_LAST_COIN_ID, SETTING_CRYPTO_LAST_UPDATED,
+    SETTING_CRYPTO_LAST_WALLET_ID, SETTING_TICKER_COINS,
+};
 use crate::services::charts::ChartsService;
+use crate::services::crypto::{CryptoError, CryptoService};
 use crate::services::finance::{FinanceError, FinanceService};
 use crate::services::habit::HabitService;
-use chrono::{Datelike, Local, NaiveDate};
+use chrono::{Datelike, NaiveDate};
 use regex::Regex;
 use rusqlite::Connection;
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
 use std::fs::{self, Permissions};
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Component, Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
+use slint::Image;
 
 // ==================== Error Types ====================
 
@@ -85,6 +89,19 @@ impl From<FinanceError> for ControllerError {
     }
 }
 
+impl From<CryptoError> for ControllerError {
+    fn from(err: CryptoError) -> Self {
+        match err {
+            CryptoError::Database(e) => ControllerError::Database(e),
+            CryptoError::Validation(message) => ControllerError::Validation(message),
+            CryptoError::Internal => ControllerError::Internal,
+            CryptoError::NoVaultOpen => ControllerError::NoVaultOpen,
+            CryptoError::SessionExpired => ControllerError::SessionExpired,
+            CryptoError::Api(message) => ControllerError::Api(message),
+        }
+    }
+}
+
 // ==================== Habit Analytics Types ====================
 
 #[derive(Debug, Clone)]
@@ -112,256 +129,11 @@ pub struct HabitAnalytics {
 }
 
 // ==================== Security: Field Length Limits ====================
-const MAX_NOTES_LENGTH: usize = 1024;
-const MAX_WALLET_NAME_LENGTH: usize = 128;
-const MAX_SYMBOL_LENGTH: usize = 16;
-const MAX_ICON_LENGTH: usize = 32;
 const MAX_PASSWORD_LENGTH: usize = 128;
 const MIN_PASSWORD_LENGTH: usize = 8;
 const PASSWORD_PASSPHRASE_LENGTH: usize = 16;
-const MAX_COIN_NAME_LENGTH: usize = 64;
-pub const SETTING_AUTO_FETCH: &str = "auto_fetch_crypto";
-pub const SETTING_TICKER_COINS: &str = "ticker_coins";
-pub const SETTING_CRYPTO_LAST_UPDATED: &str = "crypto_last_updated";
-pub const SETTING_CRYPTO_CUSTOM_COINS: &str = "crypto_custom_coins";
-pub const SETTING_CRYPTO_HIDDEN_COINS: &str = "crypto_hidden_coins";
-pub const SETTING_CRYPTO_FAVORITE_COINS: &str = "crypto_favorite_coins";
-pub const SETTING_CRYPTO_LAST_WALLET_ID: &str = "crypto_last_wallet_id";
-pub const SETTING_CRYPTO_LAST_COIN_ID: &str = "crypto_last_coin_id";
 
 // ==================== Helper Functions ====================
-
-/// Validates and truncates a string field to a maximum length
-fn validate_field_length(
-    value: &str,
-    max_length: usize,
-    field_name: &str,
-) -> Result<String, ControllerError> {
-    let trimmed = value.trim();
-    if trimmed.len() > max_length {
-        return Err(ControllerError::Validation(format!(
-            "{} exceeds maximum length of {} characters",
-            field_name, max_length
-        )));
-    }
-    Ok(trimmed.to_string())
-}
-
-/// Sanitizes a string by removing potentially dangerous characters
-fn sanitize_string(input: &str) -> String {
-    input
-        .chars()
-        .filter(|c| {
-            c.is_alphanumeric()
-                || c.is_whitespace()
-                || matches!(
-                    *c,
-                    '-' | '_'
-                        | '.'
-                        | ','
-                        | ':'
-                        | ';'
-                        | '!'
-                        | '?'
-                        | '('
-                        | ')'
-                        | '@'
-                        | '#'
-                        | '$'
-                        | '%'
-                        | '&'
-                        | '+'
-                        | '='
-                        | '/'
-                        | '\''
-                        | '"'
-                )
-        })
-        .collect::<String>()
-        .trim()
-        .to_string()
-}
-
-/// Validates a CoinGecko coin ID using the crypto module constraints
-fn validate_coin_id_str(coin_id: &str) -> Result<String, ControllerError> {
-    crate::crypto::validate_coin_id(coin_id).map_err(ControllerError::Validation)
-}
-
-/// Validates a ticker/symbol (alphanumeric only)
-fn validate_symbol(symbol: &str) -> Result<String, ControllerError> {
-    let trimmed = symbol.trim();
-    if trimmed.is_empty() {
-        return Err(ControllerError::Validation(
-            "Symbol cannot be empty".to_string(),
-        ));
-    }
-    if trimmed.len() > MAX_SYMBOL_LENGTH {
-        return Err(ControllerError::Validation(format!(
-            "Symbol exceeds maximum length of {} characters",
-            MAX_SYMBOL_LENGTH
-        )));
-    }
-    if !trimmed.chars().all(|c| c.is_ascii_alphanumeric()) {
-        return Err(ControllerError::Validation(
-            "Symbol must be alphanumeric".to_string(),
-        ));
-    }
-    Ok(trimmed.to_uppercase())
-}
-
-
-/// Validates that a floating point value is finite and positive
-fn validate_positive_amount(value: f64, field: &str) -> Result<f64, ControllerError> {
-    if !value.is_finite() {
-        return Err(ControllerError::Validation(format!(
-            "{} must be a finite number",
-            field
-        )));
-    }
-    if value <= 0.0 {
-        return Err(ControllerError::Validation(format!(
-            "{} must be greater than zero",
-            field
-        )));
-    }
-    Ok(value)
-}
-
-/// Validates that an optional floating point value is finite and non-negative
-fn validate_non_negative(value: Option<f64>, field: &str) -> Result<Option<f64>, ControllerError> {
-    if let Some(v) = value {
-        if !v.is_finite() {
-            return Err(ControllerError::Validation(format!(
-                "{} must be a finite number",
-                field
-            )));
-        }
-        if v < 0.0 {
-            return Err(ControllerError::Validation(format!(
-                "{} cannot be negative",
-                field
-            )));
-        }
-    }
-    Ok(value)
-}
-
-fn normalize_fee_coin(
-    fee_coin_id: Option<String>,
-    fee_amount: Option<f64>,
-) -> Result<(Option<String>, Option<f64>), ControllerError> {
-    let fee_coin_id = fee_coin_id.and_then(|id| {
-        let trimmed = id.trim().to_string();
-        if trimmed.is_empty() {
-            None
-        } else {
-            Some(trimmed)
-        }
-    });
-
-    match (fee_coin_id, fee_amount) {
-        (None, None) => Ok((None, None)),
-        (Some(id), Some(amount)) => {
-            let id = validate_coin_id_str(&id)?;
-            let amount = validate_positive_amount(amount, "Fee amount")?;
-            Ok((Some(id), Some(amount)))
-        }
-        (None, Some(_)) => Err(ControllerError::Validation(
-            "Fee coin is required when fee amount is provided".to_string(),
-        )),
-        (Some(_), None) => Ok((None, None)),
-    }
-}
-
-/// Validates sufficient balance for a transaction
-/// Returns error if required_amount exceeds available balance
-fn validate_sufficient_balance(
-    db: &Database,
-    wallet_id: &str,
-    coin_id: &str,
-    symbol: &str,
-    required_amount: f64,
-    date: &str,
-    exclude_tx_id: Option<&str>,
-) -> Result<(), ControllerError> {
-    let balance = db
-        .get_wallet_coin_balance_at(wallet_id, coin_id, date, exclude_tx_id)
-        .map_err(ControllerError::Database)?;
-
-    if required_amount > balance {
-        return Err(ControllerError::Validation(format!(
-            "Insufficient funds. Available: {:.8} {}",
-            balance, symbol
-        )));
-    }
-    Ok(())
-}
-
-/// Validates sufficient balance for transaction fee
-/// Handles both same-coin fees and different-coin fees
-struct FeeBalanceContext<'a> {
-    db: &'a Database,
-    wallet_id: &'a str,
-    main_coin_id: &'a str,
-    main_symbol: &'a str,
-    main_amount: f64,
-    is_outflow: bool,
-    date: &'a str,
-    exclude_tx_id: Option<&'a str>,
-}
-
-fn validate_fee_balance(
-    ctx: FeeBalanceContext<'_>,
-    fee_coin_id: Option<&str>,
-    fee_amount: Option<f64>,
-) -> Result<(), ControllerError> {
-    if let (Some(fee_coin), Some(fee_amt)) = (fee_coin_id, fee_amount) {
-        if fee_coin == ctx.main_coin_id {
-            // Same coin fee
-            if ctx.is_outflow {
-                // For outflows, validate main_amount + fee <= balance
-                let total_required = ctx.main_amount + fee_amt;
-                validate_sufficient_balance(
-                    ctx.db,
-                    ctx.wallet_id,
-                    ctx.main_coin_id,
-                    ctx.main_symbol,
-                    total_required,
-                    ctx.date,
-                    ctx.exclude_tx_id,
-                )?;
-            } else {
-                // For inflows, validate fee <= (incoming + existing balance)
-                let existing = ctx
-                    .db
-                    .get_wallet_coin_balance_at(
-                        ctx.wallet_id,
-                        ctx.main_coin_id,
-                        ctx.date,
-                        ctx.exclude_tx_id,
-                    )
-                    .map_err(ControllerError::Database)?;
-                if fee_amt > ctx.main_amount + existing {
-                    return Err(ControllerError::Validation(
-                        "Fee amount exceeds the available balance for this asset".to_string(),
-                    ));
-                }
-            }
-        } else {
-            // Different coin fee
-            validate_sufficient_balance(
-                ctx.db,
-                ctx.wallet_id,
-                fee_coin,
-                fee_coin, // Using coin_id as symbol fallback
-                fee_amt,
-                ctx.date,
-                ctx.exclude_tx_id,
-            )?;
-        }
-    }
-    Ok(())
-}
 
 /// Validates a UUID string format
 fn validate_uuid(id: &str) -> Result<String, ControllerError> {
@@ -474,30 +246,6 @@ fn password_strength_warning(password: &str) -> Option<String> {
     None
 }
 
-/// Validates that a date is in ISO-8601 format (YYYY-MM-DD)
-fn validate_date(date: &str) -> Result<String, ControllerError> {
-    let trimmed = date.trim();
-    if trimmed.is_empty() {
-        return Err(ControllerError::Validation(
-            "Date cannot be empty".to_string(),
-        ));
-    }
-
-    // Attempt 1: DD-MM-YYYY format (preferred by the user)
-    if let Ok(parsed) = NaiveDate::parse_from_str(trimmed, "%d-%m-%Y") {
-        return Ok(parsed.format("%Y-%m-%d").to_string()); // NORMALIZAR A ISO
-    }
-
-    // Attempt 2: ISO format (DB standard and fallback)
-    if let Ok(parsed) = NaiveDate::parse_from_str(trimmed, "%Y-%m-%d") {
-        return Ok(parsed.format("%Y-%m-%d").to_string());
-    }
-
-    Err(ControllerError::Validation(
-        "Invalid date format. Use DD-MM-YYYY or YYYY-MM-DD".to_string(),
-    ))
-}
-
 // ==================== Configuration ====================
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -508,7 +256,8 @@ struct AppConfig {
 pub struct AppController {
     db: Arc<Mutex<Option<Database>>>,
     pub finance_service: FinanceService,
-    pub charts_service: ChartsService,
+    charts_service: ChartsService,
+    crypto_service: CryptoService,
     pub habit_service: HabitService,
     app_data_dir: PathBuf,
 }
@@ -518,6 +267,7 @@ impl AppController {
         // Initialize with None as vault is locked
         let db = Arc::new(Mutex::new(None));
         let finance_service = FinanceService::new(db.clone());
+        let crypto_service = CryptoService::new(db.clone());
         // HabitService needs access to the same (potentially empty) db lock
         let habit_service = HabitService::new(db.clone());
         let charts_service = ChartsService::new();
@@ -526,6 +276,7 @@ impl AppController {
             db,
             finance_service,
             charts_service,
+            crypto_service,
             habit_service,
             app_data_dir: data_dir,
         }
@@ -722,29 +473,6 @@ impl AppController {
         Ok(())
     }
 
-    /// Helper to get database with session check
-    fn with_db<T, F>(&self, f: F) -> Result<T, ControllerError>
-    where
-        F: FnOnce(&Database) -> Result<T, ControllerError>,
-    {
-        let db_lock = self.db.lock().map_err(|_| ControllerError::Internal)?;
-        let db = db_lock.as_ref().ok_or(ControllerError::NoVaultOpen)?;
-
-        // Check session timeout
-        db.check_session_timeout().map_err(|e| match e {
-            DbError::SessionExpired => ControllerError::SessionExpired,
-            _ => ControllerError::Database(e),
-        })?;
-
-        // Run the operation
-        let result = f(db)?;
-
-        // Mark activity only after successful operations to avoid extending sessions from idle checks
-        db.touch_session().map_err(ControllerError::Database)?;
-
-        Ok(result)
-    }
-
     /// Helper that does not refresh session activity (for passive checks like countdown timers)
     fn with_db_no_touch<T, F>(&self, f: F) -> Result<T, ControllerError>
     where
@@ -899,135 +627,94 @@ impl AppController {
         })
     }
 
+    // ==================== Chart Rendering ====================
+
+    pub fn render_habit_radar_chart(
+        &self,
+        categories: &[(String, String, f32)],
+    ) -> Option<Image> {
+        self.charts_service.render_habit_radar_chart(categories)
+    }
+
+    pub fn render_weekday_efficiency_chart(
+        &self,
+        weekdays: &[(String, f32, bool)],
+    ) -> Option<Image> {
+        self.charts_service.render_weekday_efficiency_chart(weekdays)
+    }
+
+    pub fn render_portfolio_distribution_chart(&self, data: &[(String, f64)]) -> Option<Image> {
+        self.charts_service.render_portfolio_distribution_chart(data)
+    }
+
+    pub fn render_portfolio_trend_chart(
+        &self,
+        data: &[(String, f64, f64)],
+    ) -> Option<Image> {
+        self.charts_service.render_portfolio_trend_chart(data)
+    }
+
+    pub fn chart_color_for_symbol(&self, symbol: &str, index: usize) -> (u8, u8, u8) {
+        self.charts_service.chart_color_for_symbol(symbol, index)
+    }
+
     // ==================== Settings Methods ====================
 
     /// Gets an application setting
     pub fn get_app_setting(&self, key: &str) -> Result<String, ControllerError> {
-        self.with_db(|db| {
-            let val = db.get_setting(key).map_err(ControllerError::Database)?;
-            Ok(val.unwrap_or_default())
-        })
+        self.crypto_service
+            .get_app_setting(key)
+            .map_err(ControllerError::from)
     }
 
     /// Sets an application setting
     pub fn set_app_setting(&self, key: &str, value: &str) -> Result<(), ControllerError> {
-        self.with_db(|db| {
-            db.set_setting(key, value)
-                .map_err(ControllerError::Database)
-        })
+        self.crypto_service
+            .set_app_setting(key, value)
+            .map_err(ControllerError::from)
     }
 
     /// Gets active ticker IDs from settings or default
     pub fn get_active_ticker_ids(&self) -> Vec<String> {
-        self.get_app_setting(SETTING_TICKER_COINS)
-            .ok()
-            .filter(|val| !val.is_empty())
-            .and_then(|val| serde_json::from_str::<Vec<String>>(&val).ok())
-            .unwrap_or_else(crypto::default_ticker_ids)
+        self.crypto_service.get_active_ticker_ids()
     }
 
     /// Saves active ticker IDs to settings
     pub fn save_active_ticker_ids(&self, ids: Vec<String>) -> Result<(), ControllerError> {
-        let json =
-            serde_json::to_string(&ids).map_err(|e| ControllerError::Validation(e.to_string()))?;
-        self.set_app_setting(SETTING_TICKER_COINS, &json)
+        self.crypto_service
+            .save_active_ticker_ids(ids)
+            .map_err(ControllerError::from)
     }
 
     /// Loads custom coins configured by the user
     pub fn get_custom_coin_catalog(&self) -> Result<Vec<CryptoCatalogCoin>, ControllerError> {
-        let raw = self.get_app_setting(SETTING_CRYPTO_CUSTOM_COINS)?;
-        if raw.trim().is_empty() {
-            return Ok(Vec::new());
-        }
-
-        let mut coins: Vec<CryptoCatalogCoin> =
-            serde_json::from_str(&raw).map_err(|e| ControllerError::Validation(e.to_string()))?;
-        for coin in &mut coins {
-            coin.custom = true;
-        }
-        Ok(coins)
+        self.crypto_service
+            .get_custom_coin_catalog()
+            .map_err(ControllerError::from)
     }
 
     /// Loads hidden coin IDs for the catalog UI
     pub fn get_hidden_coin_ids(&self) -> Vec<String> {
-        self.get_app_setting(SETTING_CRYPTO_HIDDEN_COINS)
-            .ok()
-            .filter(|val| !val.is_empty())
-            .and_then(|val| serde_json::from_str::<Vec<String>>(&val).ok())
-            .unwrap_or_default()
+        self.crypto_service.get_hidden_coin_ids()
     }
 
     /// Loads favorite coin IDs for the catalog UI
     pub fn get_favorite_coin_ids(&self) -> Vec<String> {
-        self.get_app_setting(SETTING_CRYPTO_FAVORITE_COINS)
-            .ok()
-            .filter(|val| !val.is_empty())
-            .and_then(|val| serde_json::from_str::<Vec<String>>(&val).ok())
-            .unwrap_or_default()
-    }
-
-    /// Saves custom coins to settings
-    fn save_custom_coin_catalog(
-        &self,
-        coins: Vec<CryptoCatalogCoin>,
-    ) -> Result<(), ControllerError> {
-        let json = serde_json::to_string(&coins)
-            .map_err(|e| ControllerError::Validation(e.to_string()))?;
-        self.set_app_setting(SETTING_CRYPTO_CUSTOM_COINS, &json)
-    }
-
-    /// Saves hidden coin IDs to settings
-    fn save_hidden_coin_ids(&self, ids: Vec<String>) -> Result<(), ControllerError> {
-        let json =
-            serde_json::to_string(&ids).map_err(|e| ControllerError::Validation(e.to_string()))?;
-        self.set_app_setting(SETTING_CRYPTO_HIDDEN_COINS, &json)
-    }
-
-    /// Saves favorite coin IDs to settings
-    fn save_favorite_coin_ids(&self, ids: Vec<String>) -> Result<(), ControllerError> {
-        let json =
-            serde_json::to_string(&ids).map_err(|e| ControllerError::Validation(e.to_string()))?;
-        self.set_app_setting(SETTING_CRYPTO_FAVORITE_COINS, &json)
+        self.crypto_service.get_favorite_coin_ids()
     }
 
     /// Marks or unmarks a coin as favorite
     pub fn set_favorite_coin(&self, id: String, favorite: bool) -> Result<(), ControllerError> {
-        let id = validate_coin_id_str(&id)?;
-        let mut favorites = self.get_favorite_coin_ids();
-        let had_id = favorites.iter().any(|coin| coin == &id);
-
-        if favorite && !had_id {
-            favorites.push(id);
-            favorites.sort();
-            favorites.dedup();
-            self.save_favorite_coin_ids(favorites)?;
-        } else if !favorite && had_id {
-            favorites.retain(|coin| coin != &id);
-            self.save_favorite_coin_ids(favorites)?;
-        }
-
-        Ok(())
+        self.crypto_service
+            .set_favorite_coin(id, favorite)
+            .map_err(ControllerError::from)
     }
 
     /// Returns the full coin catalog (defaults + custom)
     pub fn get_coin_catalog(&self) -> Result<Vec<CryptoCatalogCoin>, ControllerError> {
-        let mut catalog = crypto::default_coin_catalog();
-        let custom = self.get_custom_coin_catalog()?;
-        let mut ids: HashSet<String> = catalog.iter().map(|c| c.id.clone()).collect();
-
-        for coin in custom {
-            if ids.insert(coin.id.clone()) {
-                catalog.push(coin);
-            }
-        }
-
-        let hidden = self.get_hidden_coin_ids();
-        if !hidden.is_empty() {
-            let hidden: HashSet<String> = hidden.into_iter().collect();
-            catalog.retain(|coin| !hidden.contains(&coin.id));
-        }
-
-        Ok(catalog)
+        self.crypto_service
+            .get_coin_catalog()
+            .map_err(ControllerError::from)
     }
 
     /// Adds a custom coin to the catalog
@@ -1037,83 +724,16 @@ impl AppController {
         name: String,
         symbol: String,
     ) -> Result<(), ControllerError> {
-        let id = validate_coin_id_str(&id)?;
-        let symbol = validate_symbol(&symbol)?;
-        let name = validate_field_length(&name, MAX_COIN_NAME_LENGTH, "Coin name")?;
-        let name = sanitize_string(&name);
-
-        if name.is_empty() {
-            return Err(ControllerError::Validation(
-                "Coin name cannot be empty".to_string(),
-            ));
-        }
-
-        let mut custom = self.get_custom_coin_catalog()?;
-
-        if custom.iter().any(|coin| coin.id == id)
-            || crypto::default_coin_catalog()
-                .iter()
-                .any(|coin| coin.id == id)
-        {
-            return Err(ControllerError::Validation(
-                "Coin ID already exists".to_string(),
-            ));
-        }
-
-        custom.push(CryptoCatalogCoin {
-            id,
-            name,
-            symbol,
-            custom: true,
-        });
-
-        self.save_custom_coin_catalog(custom)
+        self.crypto_service
+            .add_custom_coin(id, name, symbol)
+            .map_err(ControllerError::from)
     }
 
     /// Deletes a custom coin from the catalog
     pub fn delete_custom_coin(&self, id: String) -> Result<(), ControllerError> {
-        let id = validate_coin_id_str(&id)?;
-        let mut custom = self.get_custom_coin_catalog()?;
-        let before = custom.len();
-        custom.retain(|coin| coin.id != id);
-        let removed_custom = custom.len() != before;
-
-        if removed_custom {
-            self.save_custom_coin_catalog(custom)?;
-        }
-
-        let is_default = crypto::default_coin_catalog()
-            .iter()
-            .any(|coin| coin.id == id);
-        let mut hidden_updated = false;
-        if is_default {
-            let mut hidden = self.get_hidden_coin_ids();
-            if !hidden.iter().any(|coin| coin == &id) {
-                hidden.push(id.clone());
-                hidden.sort();
-                hidden.dedup();
-                self.save_hidden_coin_ids(hidden)?;
-                hidden_updated = true;
-            }
-        }
-
-        if !removed_custom && !hidden_updated {
-            return Err(ControllerError::Validation("Coin not found".to_string()));
-        }
-
-        let mut active = self.get_active_ticker_ids();
-        if active.iter().any(|coin| coin == &id) {
-            active.retain(|coin| coin != &id);
-            let _ = self.save_active_ticker_ids(active);
-        }
-
-        let mut favorites = self.get_favorite_coin_ids();
-        if favorites.iter().any(|coin| coin == &id) {
-            favorites.retain(|coin| coin != &id);
-            let _ = self.save_favorite_coin_ids(favorites);
-        }
-
-        Ok(())
+        self.crypto_service
+            .delete_custom_coin(id)
+            .map_err(ControllerError::from)
     }
 
     /// Checks if a vault file exists
@@ -1366,26 +986,9 @@ impl AppController {
 
     /// Gets all unique coin IDs that need monitoring (Active Tickers + Wallet Holdings)
     pub fn get_monitored_coin_ids(&self) -> Result<Vec<String>, ControllerError> {
-        // Preserve priority: tickers first, then wallets.
-        let mut ids = Vec::new();
-        let mut seen = HashSet::new();
-
-        for id in self.get_active_ticker_ids() {
-            if seen.insert(id.clone()) {
-                ids.push(id);
-            }
-        }
-
-        if let Ok(portfolio) = self.get_aggregated_portfolio() {
-            for asset in portfolio {
-                let coin_id = asset.coin_id;
-                if seen.insert(coin_id.clone()) {
-                    ids.push(coin_id);
-                }
-            }
-        }
-
-        Ok(ids)
+        self.crypto_service
+            .get_monitored_coin_ids()
+            .map_err(ControllerError::from)
     }
 
     /// Fetches cryptocurrency prices from CoinGecko
@@ -1394,54 +997,18 @@ impl AppController {
         &self,
         coins: Vec<String>,
     ) -> Result<Vec<CryptoAsset>, ControllerError> {
-        // CoinGecko limit is 50
-        const MAX_BATCH_SIZE: usize = 50;
-
-        let mut final_list = Vec::new();
-        let mut seen = HashSet::new();
-        let mut truncated = false;
-
-        for coin in coins {
-            if seen.insert(coin.clone()) {
-                if final_list.len() < MAX_BATCH_SIZE {
-                    final_list.push(coin);
-                } else {
-                    truncated = true;
-                }
-            }
-        }
-
-        if final_list.len() < MAX_BATCH_SIZE {
-            // Smart padding: fill remaining slots with privacy coins.
-            let padding = crypto::default_price_allowlist();
-
-            for privacy_coin in padding {
-                if final_list.len() >= MAX_BATCH_SIZE {
-                    break;
-                }
-                if seen.insert(privacy_coin.clone()) {
-                    final_list.push(privacy_coin);
-                }
-            }
-        }
-
-        if truncated {
-            log::warn!(
-                "Price request exceeds {} unique coins; truncating to limit",
-                MAX_BATCH_SIZE
-            );
-        }
-
-        crypto::fetch_crypto_prices(final_list)
+        self.crypto_service
+            .get_crypto_prices(coins)
             .await
-            .map_err(ControllerError::Api)
+            .map_err(ControllerError::from)
     }
 
     /// Fetches CLP to USD exchange rate
     pub async fn get_clp_usd_rate(&self) -> Result<f64, ControllerError> {
-        crypto::fetch_clp_usd_rate()
+        self.crypto_service
+            .get_clp_usd_rate()
             .await
-            .map_err(ControllerError::Api)
+            .map_err(ControllerError::from)
     }
 
     /// Saves exchange rate to cache
@@ -1473,36 +1040,16 @@ impl AppController {
 
     /// Saves crypto prices to cache
     pub fn save_crypto_prices(&self, prices: Vec<CryptoAsset>) -> Result<(), ControllerError> {
-        self.with_db(|db| {
-            for price in prices {
-                db.save_crypto_price(
-                    &price.id,
-                    &price.symbol,
-                    &price.name,
-                    price.current_price,
-                    price.price_change_percentage_24h,
-                )?;
-            }
-            Ok(())
-        })
+        self.crypto_service
+            .save_crypto_prices(prices)
+            .map_err(ControllerError::from)
     }
 
     /// Loads cached crypto prices
     pub fn load_crypto_prices(&self) -> Result<Vec<CryptoAsset>, ControllerError> {
-        self.with_db(|db| {
-            let cached = db.load_crypto_prices()?;
-            Ok(cached
-                .into_iter()
-                .map(|(id, symbol, name, price, change, updated)| CryptoAsset {
-                    id,
-                    symbol,
-                    name,
-                    current_price: price,
-                    price_change_percentage_24h: change,
-                    last_updated: updated,
-                })
-                .collect())
-        })
+        self.crypto_service
+            .load_crypto_prices()
+            .map_err(ControllerError::from)
     }
 
     /// Saves a daily portfolio snapshot (upsert by date)
@@ -1511,11 +1058,9 @@ impl AppController {
         total_value: f64,
         total_cost: f64,
     ) -> Result<(), ControllerError> {
-        let date = Local::now().format("%Y-%m-%d").to_string();
-        self.with_db(|db| {
-            db.save_crypto_portfolio_snapshot(&date, total_value, total_cost)
-                .map_err(ControllerError::Database)
-        })
+        self.crypto_service
+            .save_crypto_portfolio_snapshot(total_value, total_cost)
+            .map_err(ControllerError::from)
     }
 
     /// Loads portfolio snapshots for the last N days (inclusive)
@@ -1523,17 +1068,9 @@ impl AppController {
         &self,
         days: i64,
     ) -> Result<Vec<(String, f64, f64)>, ControllerError> {
-        let days = days.max(1);
-        let start_date = Local::now()
-            .date_naive()
-            .checked_sub_signed(chrono::Duration::days(days - 1))
-            .unwrap_or_else(|| Local::now().date_naive())
-            .format("%Y-%m-%d")
-            .to_string();
-        self.with_db(|db| {
-            db.load_crypto_portfolio_snapshots(&start_date)
-                .map_err(ControllerError::Database)
-        })
+        self.crypto_service
+            .get_crypto_portfolio_snapshots(days)
+            .map_err(ControllerError::from)
     }
 
     // ==================== Crypto Wallet Methods ====================
@@ -1545,107 +1082,31 @@ impl AppController {
         category: String,
         icon: Option<String>,
     ) -> Result<String, ControllerError> {
-        self.with_db(|db| {
-            let name = validate_field_length(&name, MAX_WALLET_NAME_LENGTH, "Wallet name")?;
-            let name = sanitize_string(&name);
-
-            if name.is_empty() {
-                return Err(ControllerError::Validation(
-                    "Wallet name cannot be empty".to_string(),
-                ));
-            }
-
-            let valid_categories = ["exchange", "wallet_single", "wallet_multi"];
-            if !valid_categories.contains(&category.as_str()) {
-                return Err(ControllerError::Validation(format!(
-                    "Invalid category. Must be one of: {}",
-                    valid_categories.join(", ")
-                )));
-            }
-
-            let icon = match icon {
-                Some(i) => Some(validate_field_length(&i, MAX_ICON_LENGTH, "Icon")?),
-                None => None,
-            };
-
-            // Check for duplicate wallet names
-            let existing_wallets = db.get_wallets()?;
-            if existing_wallets.iter().any(|w| w.name.eq_ignore_ascii_case(&name)) {
-                return Err(ControllerError::Validation(format!(
-                    "A wallet named '{}' already exists. Please choose a different name.",
-                    name
-                )));
-            }
-
-            let id = Uuid::new_v4().to_string();
-            log_security_event(SecurityEvent::WalletCreated, Some(&category));
-
-            let wallet = CryptoWallet::new(id.clone(), name, category, icon);
-            db.create_wallet(&wallet)?;
-            Ok(id)
-        })
+        self.crypto_service
+            .add_wallet(name, category, icon)
+            .map_err(ControllerError::from)
     }
 
     /// Gets all wallets
     pub fn get_wallets(&self) -> Result<Vec<CryptoWallet>, ControllerError> {
-        self.with_db(|db| db.get_wallets().map_err(ControllerError::Database))
+        self.crypto_service
+            .get_wallets()
+            .map_err(ControllerError::from)
     }
 
     /// Deletes a wallet
     /// Returns an error if the wallet has transactions
     pub fn delete_wallet(&self, id: String) -> Result<(), ControllerError> {
-        self.with_db(|db| {
-            let validated_id = validate_uuid(&id)?;
-
-            // Check if wallet has transactions
-            let transactions = db.get_wallet_transactions(&validated_id)?;
-            if !transactions.is_empty() {
-                return Err(ControllerError::Validation(format!(
-                    "Cannot delete wallet with {} transaction{}. Please delete all transactions first.",
-                    transactions.len(),
-                    if transactions.len() == 1 { "" } else { "s" }
-                )));
-            }
-
-            db.delete_wallet(&validated_id)?;
-            log_security_event(SecurityEvent::WalletDeleted, None);
-            Ok(())
-        })
+        self.crypto_service
+            .delete_wallet(id)
+            .map_err(ControllerError::from)
     }
 
     /// Updates a wallet's name
     pub fn update_wallet_name(&self, id: String, new_name: String) -> Result<(), ControllerError> {
-        self.with_db(|db| {
-            let validated_id = validate_uuid(&id)?;
-            let validated_name = validate_field_length(&new_name, MAX_WALLET_NAME_LENGTH, "Wallet name")?;
-            let sanitized_name = sanitize_string(&validated_name);
-
-            if sanitized_name.is_empty() {
-                return Err(ControllerError::Validation(
-                    "Wallet name cannot be empty".to_string(),
-                ));
-            }
-
-            // Check for duplicate names
-            let existing_wallets = db.get_wallets()?;
-            for wallet in existing_wallets {
-                if wallet.id != validated_id && wallet.name.eq_ignore_ascii_case(&sanitized_name) {
-                    return Err(ControllerError::Validation(
-                        "A wallet with this name already exists".to_string(),
-                    ));
-                }
-            }
-
-            // Get current wallet to preserve other fields
-            let mut wallet = db.get_wallet(&validated_id)?
-                .ok_or_else(|| ControllerError::Validation("Wallet not found".to_string()))?;
-
-            // Update only the name
-            wallet.name = sanitized_name;
-
-            db.update_wallet(&wallet)?;
-            Ok(())
-        })
+        self.crypto_service
+            .update_wallet_name(id, new_name)
+            .map_err(ControllerError::from)
     }
 
     // ==================== Crypto Transaction Methods ====================
@@ -1666,107 +1127,21 @@ impl AppController {
         date: String,
         notes: Option<String>,
     ) -> Result<String, ControllerError> {
-        self.with_db(|db| {
-            let wallet_id = wallet_id.trim().to_string();
-            if wallet_id.is_empty() {
-                return Err(ControllerError::Validation(
-                    "Wallet ID cannot be empty".to_string(),
-                ));
-            }
-
-            let coin_id = validate_coin_id_str(&coin_id)?;
-            let symbol = validate_symbol(&symbol)?;
-
-            let notes = match notes {
-                Some(n) => {
-                    let validated = validate_field_length(&n, MAX_NOTES_LENGTH, "Notes")?;
-                    Some(sanitize_string(&validated))
-                }
-                None => None,
-            };
-
-            validate_positive_amount(amount, "Amount")?;
-
-            let fee = validate_non_negative(fee, "Fee")?;
-            let (fee_coin_id, fee_amount) = normalize_fee_coin(fee_coin_id, fee_amount)?;
-            let date = validate_date(&date)?;
-
-            let valid_types = ["buy", "sell", "transfer_in", "transfer_out", "swap"];
-            if !valid_types.contains(&transaction_type.as_str()) {
-                return Err(ControllerError::Validation(format!(
-                    "Invalid transaction type. Must be one of: {}",
-                    valid_types.join(", ")
-                )));
-            }
-
-            if transaction_type == "swap" {
-                return Err(ControllerError::Validation(
-                    "Swap requires paired transactions. Use the swap flow.".to_string(),
-                ));
-            }
-
-            let price = if transaction_type == "buy" || transaction_type == "sell" {
-                match price_per_coin {
-                    Some(p) => Some(validate_positive_amount(p, "Price per coin")?),
-                    None => {
-                        return Err(ControllerError::Validation(
-                            "Price per coin is required and must be greater than zero".to_string(),
-                        ))
-                    }
-                }
-            } else {
-                match price_per_coin {
-                    Some(p) => Some(validate_positive_amount(p, "Price per coin")?),
-                    None => None,
-                }
-            };
-
-            // 2. Validate Sufficient Funds (Prevent Negative Balance)
-            let is_outflow = transaction_type == "sell"
-                || transaction_type == "transfer_out"
-                || transaction_type == "swap";
-
-            if is_outflow {
-                validate_sufficient_balance(db, &wallet_id, &coin_id, &symbol, amount, &date, None)?;
-            }
-
-            // Validate fee balance
-            let fee_context = FeeBalanceContext {
-                db,
-                wallet_id: &wallet_id,
-                main_coin_id: &coin_id,
-                main_symbol: &symbol,
-                main_amount: amount,
-                is_outflow,
-                date: &date,
-                exclude_tx_id: None,
-            };
-            validate_fee_balance(fee_context, fee_coin_id.as_deref(), fee_amount)?;
-
-            log_security_event(
-                SecurityEvent::CryptoTransactionCreated,
-                Some(&transaction_type),
-            );
-
-            let id = Uuid::new_v4().to_string();
-            let mut transaction = CryptoTransaction::new(
-                id.clone(),
+        self.crypto_service
+            .add_crypto_transaction(
                 wallet_id,
-                coin_id.to_lowercase(),
-                symbol.to_uppercase(),
+                coin_id,
+                symbol,
                 transaction_type,
                 amount,
-                price,
+                price_per_coin,
                 fee,
+                fee_coin_id,
+                fee_amount,
                 date,
                 notes,
-            );
-            transaction.fee_coin_id = fee_coin_id;
-            transaction.fee_amount = fee_amount;
-
-            db.create_crypto_transaction(&transaction)?;
-            Ok(id)
-        })
+            )
+            .map_err(ControllerError::from)
     }
 
     /// Adds a transfer between two wallets as a paired outflow/inflow transaction
@@ -1785,162 +1160,21 @@ impl AppController {
         date: String,
         notes: Option<String>,
     ) -> Result<String, ControllerError> {
-        self.with_db(|db| {
-            let from_wallet_id = from_wallet_id.trim().to_string();
-            let to_wallet_id = to_wallet_id.trim().to_string();
-            if from_wallet_id.is_empty() || to_wallet_id.is_empty() {
-                return Err(ControllerError::Validation(
-                    "Wallet ID cannot be empty".to_string(),
-                ));
-            }
-            if from_wallet_id == to_wallet_id {
-                return Err(ControllerError::Validation(
-                    "Source and destination wallets must be different".to_string(),
-                ));
-            }
-
-            if db
-                .get_wallet(&from_wallet_id)
-                .map_err(ControllerError::Database)?
-                .is_none()
-            {
-                return Err(ControllerError::Validation(
-                    "Source wallet not found".to_string(),
-                ));
-            }
-            if db
-                .get_wallet(&to_wallet_id)
-                .map_err(ControllerError::Database)?
-                .is_none()
-            {
-                return Err(ControllerError::Validation(
-                    "Destination wallet not found".to_string(),
-                ));
-            }
-
-            let coin_id = validate_coin_id_str(&coin_id)?;
-            let symbol = validate_symbol(&symbol)?;
-            validate_positive_amount(from_amount, "From amount")?;
-            validate_positive_amount(to_amount, "To amount")?;
-            if to_amount > from_amount {
-                return Err(ControllerError::Validation(
-                    "To amount cannot exceed from amount".to_string(),
-                ));
-            }
-
-            let fee = validate_non_negative(fee, "Fee")?;
-            let (fee_coin_id, fee_amount) = normalize_fee_coin(fee_coin_id, fee_amount)?;
-            let date = validate_date(&date)?;
-
-            let notes = match notes {
-                Some(n) => {
-                    let validated = validate_field_length(&n, MAX_NOTES_LENGTH, "Notes")?;
-                    Some(sanitize_string(&validated))
-                }
-                None => None,
-            };
-
-            let current_balance = db
-                .get_wallet_coin_balance_at(&from_wallet_id, &coin_id, &date, None)
-                .map_err(ControllerError::Database)?;
-            if from_amount > current_balance {
-                return Err(ControllerError::Validation(format!(
-                    "Insufficient funds. Available: {:.8} {}",
-                    current_balance, symbol
-                )));
-            }
-
-            // Validate fee balance
-            let fee_context = FeeBalanceContext {
-                db,
-                wallet_id: &from_wallet_id,
-                main_coin_id: &coin_id,
-                main_symbol: &symbol,
-                main_amount: from_amount,
-                is_outflow: true, // transfer_out is always outflow
-                date: &date,
-                exclude_tx_id: None,
-            };
-            validate_fee_balance(fee_context, fee_coin_id.as_deref(), fee_amount)?;
-
-            // Specific validation for transfer: TO amount should match FROM when using same-coin fee
-            if let (Some(fee_coin), Some(_)) = (fee_coin_id.as_deref(), fee_amount)
-                && fee_coin == coin_id
-                && to_amount < from_amount
-            {
-                return Err(ControllerError::Validation(
-                    "When using a same-coin network fee, keep the TO amount equal to FROM (the fee is recorded separately)".to_string(),
-                ));
-            }
-
-            let (total_amount, total_cost) = db
-                .get_wallet_coin_state_at(&from_wallet_id, &coin_id, &date)
-                .map_err(ControllerError::Database)?;
-            let avg_price = if total_amount > 0.0 {
-                total_cost / total_amount
-            } else {
-                0.0
-            };
-            let transfer_price = if avg_price > 0.0 {
-                Some(avg_price)
-            } else {
-                None
-            };
-
-            log_security_event(
-                SecurityEvent::CryptoTransactionCreated,
-                Some("transfer"),
-            );
-
-            let source_id = Uuid::new_v4().to_string();
-            let target_id = Uuid::new_v4().to_string();
-
-            let source = CryptoTransaction {
-                id: source_id.clone(),
-                wallet_id: from_wallet_id,
-                coin_id: coin_id.clone(),
-                symbol: symbol.clone(),
-                transaction_type: "transfer_out".to_string(),
-                amount: from_amount,
-                price_per_coin: None,
-                fee: None,
-                fee_coin_id: fee_coin_id.clone(),
-                fee_amount,
-                date: date.clone(),
-                notes: notes.clone(),
-                related_tx_id: Some(target_id.clone()),
-            };
-
-            let target = CryptoTransaction {
-                id: target_id.clone(),
-                wallet_id: to_wallet_id,
+        self.crypto_service
+            .add_crypto_transfer(
+                from_wallet_id,
+                to_wallet_id,
                 coin_id,
                 symbol,
-                transaction_type: "transfer_in".to_string(),
-                amount: to_amount,
-                price_per_coin: transfer_price,
+                from_amount,
+                to_amount,
                 fee,
-                fee_coin_id: None,
-                fee_amount: None,
+                fee_coin_id,
+                fee_amount,
                 date,
                 notes,
-                related_tx_id: Some(source_id.clone()),
-            };
-
-            db.create_crypto_transaction(&source)?;
-            if let Err(err) = db.create_crypto_transaction(&target) {
-                // Attempt rollback
-                if let Err(rollback_err) = db.delete_crypto_transaction(&source_id) {
-                    log::error!(
-                        "Failed to rollback transfer source transaction {}: {:?}",
-                        source_id, rollback_err
-                    );
-                }
-                return Err(ControllerError::Database(err));
-            }
-
-            Ok(source_id)
-        })
+            )
+            .map_err(ControllerError::from)
     }
 
     /// Adds a swap as a paired outflow/inflow transaction with shared cost basis
@@ -1960,118 +1194,22 @@ impl AppController {
         date: String,
         notes: Option<String>,
     ) -> Result<String, ControllerError> {
-        self.with_db(|db| {
-            let wallet_id = wallet_id.trim().to_string();
-            if wallet_id.is_empty() {
-                return Err(ControllerError::Validation(
-                    "Wallet ID cannot be empty".to_string(),
-                ));
-            }
-
-            let from_coin_id = validate_coin_id_str(&from_coin_id)?;
-            let to_coin_id = validate_coin_id_str(&to_coin_id)?;
-            if from_coin_id == to_coin_id {
-                return Err(ControllerError::Validation(
-                    "Swap requires two different assets".to_string(),
-                ));
-            }
-
-            let from_symbol = validate_symbol(&from_symbol)?;
-            let to_symbol = validate_symbol(&to_symbol)?;
-            validate_positive_amount(from_amount, "From amount")?;
-            validate_positive_amount(to_amount, "To amount")?;
-
-            let fee = validate_non_negative(fee, "Fee")?;
-            let (fee_coin_id, fee_amount) = normalize_fee_coin(fee_coin_id, fee_amount)?;
-            let date = validate_date(&date)?;
-
-            let notes = match notes {
-                Some(n) => {
-                    let validated = validate_field_length(&n, MAX_NOTES_LENGTH, "Notes")?;
-                    Some(sanitize_string(&validated))
-                }
-                None => None,
-            };
-
-            // Validate sufficient funds for the source asset
-            validate_sufficient_balance(db, &wallet_id, &from_coin_id, &from_symbol, from_amount, &date, None)?;
-
-            // Validate fee balance (swap has special logic for fee_coin == to_coin)
-            if let (Some(fee_coin), Some(fee_amt)) = (fee_coin_id.as_deref(), fee_amount) {
-                if fee_coin == from_coin_id {
-                    // Fee in source coin: validate from_amount + fee <= from_balance
-                    let total_required = from_amount + fee_amt;
-                    validate_sufficient_balance(db, &wallet_id, &from_coin_id, &from_symbol, total_required, &date, None)?;
-                } else if fee_coin == to_coin_id {
-                    // Fee in target coin: validate fee <= to_amount + existing_to_balance
-                    let to_balance = db
-                        .get_wallet_coin_balance_at(&wallet_id, fee_coin, &date, None)
-                        .map_err(ControllerError::Database)?;
-                    if fee_amt > to_amount + to_balance {
-                        return Err(ControllerError::Validation(
-                            "Fee amount exceeds available output balance".to_string(),
-                        ));
-                    }
-                } else {
-                    // Fee in different coin: validate fee <= fee_balance
-                    validate_sufficient_balance(db, &wallet_id, fee_coin, fee_coin, fee_amt, &date, None)?;
-                }
-            }
-
-            log_security_event(
-                SecurityEvent::CryptoTransactionCreated,
-                Some("swap"),
-            );
-
-            let source_id = Uuid::new_v4().to_string();
-            let target_id = Uuid::new_v4().to_string();
-
-            let source = CryptoTransaction {
-                id: source_id.clone(),
-                wallet_id: wallet_id.clone(),
-                coin_id: from_coin_id,
-                symbol: from_symbol,
-                transaction_type: "swap".to_string(),
-                amount: from_amount,
-                price_per_coin: None,
-                fee,
-                fee_coin_id: fee_coin_id.clone(),
-                fee_amount,
-                date: date.clone(),
-                notes,
-                related_tx_id: Some(target_id.clone()),
-            };
-
-            let target = CryptoTransaction {
-                id: target_id.clone(),
+        self.crypto_service
+            .add_crypto_swap(
                 wallet_id,
-                coin_id: to_coin_id,
-                symbol: to_symbol,
-                transaction_type: "transfer_in".to_string(),
-                amount: to_amount,
-                price_per_coin: None,
-                fee: None,
-                fee_coin_id: None,
-                fee_amount: None,
+                from_coin_id,
+                from_symbol,
+                from_amount,
+                to_coin_id,
+                to_symbol,
+                to_amount,
+                fee,
+                fee_coin_id,
+                fee_amount,
                 date,
-                notes: None,
-                related_tx_id: Some(source_id.clone()),
-            };
-
-            db.create_crypto_transaction(&source)?;
-            if let Err(err) = db.create_crypto_transaction(&target) {
-                // Attempt rollback
-                if let Err(rollback_err) = db.delete_crypto_transaction(&source_id) {
-                    log::error!(
-                        "Failed to rollback swap source transaction {}: {:?}",
-                        source_id, rollback_err
-                    );
-                }
-                return Err(ControllerError::Database(err));
-            }
-
-            Ok(source_id)
-        })
+                notes,
+            )
+            .map_err(ControllerError::from)
     }
 
     /// Gets wallet transactions
@@ -2079,11 +1217,9 @@ impl AppController {
         &self,
         wallet_id: String,
     ) -> Result<Vec<CryptoTransaction>, ControllerError> {
-        self.with_db(|db| {
-            let validated_id = validate_uuid(&wallet_id)?;
-            db.get_wallet_transactions(&validated_id)
-                .map_err(ControllerError::Database)
-        })
+        self.crypto_service
+            .get_wallet_transactions(wallet_id)
+            .map_err(ControllerError::from)
     }
 
     /// Gets a crypto transaction by ID
@@ -2091,11 +1227,9 @@ impl AppController {
         &self,
         id: String,
     ) -> Result<Option<CryptoTransaction>, ControllerError> {
-        self.with_db(|db| {
-            let validated_id = validate_uuid(&id)?;
-            db.get_crypto_transaction(&validated_id)
-                .map_err(ControllerError::Database)
-        })
+        self.crypto_service
+            .get_crypto_transaction(id)
+            .map_err(ControllerError::from)
     }
 
     /// Gets crypto transactions for a specific coin
@@ -2103,11 +1237,9 @@ impl AppController {
         &self,
         coin_id: String,
     ) -> Result<Vec<CryptoTransaction>, ControllerError> {
-        self.with_db(|db| {
-            let validated = validate_coin_id_str(&coin_id)?;
-            db.get_crypto_transactions_by_coin(&validated)
-                .map_err(ControllerError::Database)
-        })
+        self.crypto_service
+            .get_crypto_transactions_by_coin(coin_id)
+            .map_err(ControllerError::from)
     }
 
     /// Updates a crypto transaction's editable fields
@@ -2123,167 +1255,34 @@ impl AppController {
         date: String,
         notes: Option<String>,
     ) -> Result<(), ControllerError> {
-        self.with_db(|db| {
-            let validated_id = validate_uuid(&id)?;
-            let existing = db
-                .get_crypto_transaction(&validated_id)
-                .map_err(ControllerError::Database)?;
-            let existing = match existing {
-                Some(tx) => tx,
-                None => {
-                    return Err(ControllerError::Validation(
-                        "Transaction not found".to_string(),
-                    ))
-                }
-            };
-
-            if existing.transaction_type == "swap" || existing.related_tx_id.is_some() {
-                return Err(ControllerError::Validation(
-                    "Editing paired transactions is not supported".to_string(),
-                ));
-            }
-
-            validate_positive_amount(amount, "Amount")?;
-            let price = if existing.transaction_type == "buy"
-                || existing.transaction_type == "sell"
-            {
-                match price_per_coin {
-                    Some(p) => Some(validate_positive_amount(p, "Price per coin")?),
-                    None => {
-                        return Err(ControllerError::Validation(
-                            "Price per coin is required and must be greater than zero".to_string(),
-                        ))
-                    }
-                }
-            } else {
-                match price_per_coin {
-                    Some(p) => Some(validate_positive_amount(p, "Price per coin")?),
-                    None => None,
-                }
-            };
-            let fee = validate_non_negative(fee, "Fee")?;
-            let (fee_coin_id, fee_amount) = normalize_fee_coin(fee_coin_id, fee_amount)?;
-            let date = validate_date(&date)?;
-
-            let notes = match notes {
-                Some(n) => {
-                    let validated = validate_field_length(&n, MAX_NOTES_LENGTH, "Notes")?;
-                    Some(sanitize_string(&validated))
-                }
-                None => None,
-            };
-
-            let is_outflow = existing.transaction_type == "sell"
-                || existing.transaction_type == "transfer_out";
-
-            let existing_type = existing.get_type().unwrap_or(CryptoTransactionType::Buy);
-
-            let mut balance_excluding = db
-                .get_wallet_coin_balance_at(&existing.wallet_id, &existing.coin_id, &date, None)
-                .map_err(ControllerError::Database)?;
-            match existing_type {
-                CryptoTransactionType::Buy | CryptoTransactionType::TransferIn => {
-                    balance_excluding -= existing.amount;
-                }
-                CryptoTransactionType::Sell
-                | CryptoTransactionType::TransferOut
-                | CryptoTransactionType::Swap => {
-                    balance_excluding += existing.amount;
-                }
-            }
-            if existing.fee_coin_id.as_deref() == Some(existing.coin_id.as_str())
-                && let Some(fee_amt) = existing.fee_amount
-            {
-                balance_excluding += fee_amt;
-            }
-
-            // Validate sufficient balance for outflows
-            if is_outflow && amount > balance_excluding {
-                return Err(ControllerError::Validation(format!(
-                    "Insufficient funds. Available: {:.8} {}",
-                    balance_excluding, existing.symbol
-                )));
-            }
-
-            // Validate fee balance (excluding this transaction)
-            if let (Some(fee_coin), Some(fee_amt)) = (fee_coin_id.as_deref(), fee_amount) {
-                let mut fee_balance_excluding = if fee_coin == existing.coin_id {
-                    balance_excluding
-                } else {
-                    db.get_wallet_coin_balance_at(&existing.wallet_id, fee_coin, &date, None)
-                        .map_err(ControllerError::Database)?
-                };
-                if existing.fee_coin_id.as_deref() == Some(fee_coin)
-                    && let Some(existing_fee_amt) = existing.fee_amount
-                {
-                    fee_balance_excluding += existing_fee_amt;
-                }
-                if fee_coin == existing.coin_id {
-                    if is_outflow {
-                        let total_required = amount + fee_amt;
-                        if total_required > fee_balance_excluding {
-                            return Err(ControllerError::Validation(format!(
-                                "Insufficient funds for fee. Available: {:.8} {}",
-                                fee_balance_excluding, existing.symbol
-                            )));
-                        }
-                    } else {
-                        let total_available = fee_balance_excluding + amount;
-                        if fee_amt > total_available {
-                            return Err(ControllerError::Validation(
-                                "Fee amount exceeds available balance".to_string(),
-                            ));
-                        }
-                    }
-                } else if fee_amt > fee_balance_excluding {
-                    return Err(ControllerError::Validation(format!(
-                        "Insufficient funds for fee. Available: {:.8} {}",
-                        fee_balance_excluding, fee_coin
-                    )));
-                }
-            }
-
-            db.update_crypto_transaction_fields(
-                &validated_id,
+        self.crypto_service
+            .update_crypto_transaction(
+                id,
                 amount,
-                price,
+                price_per_coin,
                 fee,
-                fee_coin_id.as_deref(),
+                fee_coin_id,
                 fee_amount,
-                &date,
-                notes.as_deref(),
+                date,
+                notes,
             )
-            .map_err(ControllerError::Database)?;
-
-            Ok(())
-        })
+            .map_err(ControllerError::from)
     }
 
     /// Deletes a crypto transaction
     pub fn delete_crypto_transaction(&self, id: String) -> Result<(), ControllerError> {
-        self.with_db(|db| {
-            let validated_id = validate_uuid(&id)?;
-
-            // Check if this transaction has a related transaction (swap/transfer)
-            if let Ok(Some(tx)) = db.get_crypto_transaction(&validated_id)
-                && let Some(related_id) = tx.related_tx_id
-            {
-                let _ = db.delete_crypto_transaction(&related_id);
-            }
-
-            db.delete_crypto_transaction(&validated_id)?;
-            Ok(())
-        })
+        self.crypto_service
+            .delete_crypto_transaction(id)
+            .map_err(ControllerError::from)
     }
 
     // ==================== Portfolio Aggregation Methods ====================
 
     /// Gets aggregated portfolio across all wallets
     pub fn get_aggregated_portfolio(&self) -> Result<Vec<AggregatedAsset>, ControllerError> {
-        self.with_db(|db| {
-            db.get_aggregated_portfolio()
-                .map_err(ControllerError::Database)
-        })
+        self.crypto_service
+            .get_aggregated_portfolio()
+            .map_err(ControllerError::from)
     }
 
     /// Gets aggregated holdings for a specific wallet
@@ -2291,11 +1290,9 @@ impl AppController {
         &self,
         wallet_id: String,
     ) -> Result<Vec<AggregatedAsset>, ControllerError> {
-        self.with_db(|db| {
-            let validated_id = validate_uuid(&wallet_id)?;
-            db.get_wallet_aggregated_holdings(&validated_id)
-                .map_err(ControllerError::Database)
-        })
+        self.crypto_service
+            .get_wallet_holdings(wallet_id)
+            .map_err(ControllerError::from)
     }
 
     /// Gets the available balance for a specific coin in a wallet at a given date
@@ -2305,21 +1302,9 @@ impl AppController {
         coin_id: String,
         _date: String, // Ignored - always uses current date
     ) -> Result<f64, ControllerError> {
-        self.with_db(|db| {
-            let validated_wallet_id = validate_uuid(&wallet_id)?;
-            let validated_coin_id = validate_coin_id_str(&coin_id)?; // coin_id is NOT a UUID
-
-            // Use current date to get balance up to today
-            let today = chrono::Local::now().format("%Y-%m-%d").to_string();
-
-            db.get_wallet_coin_balance_at(
-                &validated_wallet_id,
-                &validated_coin_id,
-                &today,
-                None, // Don't exclude any transactions
-            )
-            .map_err(ControllerError::Database)
-        })
+        self.crypto_service
+            .get_available_balance(wallet_id, coin_id, _date)
+            .map_err(ControllerError::from)
     }
 
     // ==================== Habits Methods ====================
@@ -2718,15 +1703,4 @@ mod tests {
         assert_eq!(result.unwrap().expose_secret(), "simple");
     }
 
-    #[test]
-    fn test_validate_date_valid() {
-        assert!(validate_date("2024-01-15").is_ok());
-        assert_eq!(validate_date("15-01-2024").unwrap(), "2024-01-15");
-    }
-
-    #[test]
-    fn test_validate_date_invalid() {
-        assert!(validate_date("").is_err());
-        assert!(validate_date("not-a-date").is_err());
-    }
 }

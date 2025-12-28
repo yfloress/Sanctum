@@ -1996,9 +1996,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .collect();
 
         let radar_image = if total_completed > 0 {
-            controller
-                .charts_service
-                .render_habit_radar_chart(&radar_data)
+            controller.render_habit_radar_chart(&radar_data)
         } else {
             None
         };
@@ -2161,9 +2159,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         let weekday_chart_image = if total_completed > 0 && max_weekday_avg > 0.0 {
-            controller
-                .charts_service
-                .render_weekday_efficiency_chart(&weekday_data)
+            controller.render_weekday_efficiency_chart(&weekday_data)
         } else {
             None
         };
@@ -2549,7 +2545,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .enumerate()
                     .map(|(idx, (label, value))| {
                         let percent = (*value / chart_total) * 100.0;
-                        let (r, g, b) = controller.charts_service.chart_color_for_symbol(label, idx);
+                        let (r, g, b) = controller.chart_color_for_symbol(label, idx);
                         CryptoDistributionSlice {
                             label: SharedString::from(label),
                             value: SharedString::from(format_money((value * 100.0) as i64, "USD")),
@@ -2562,9 +2558,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Vec::new()
             };
 
-            let chart_image = controller
-                .charts_service
-                .render_portfolio_distribution_chart(&chart_assets);
+            let chart_image = controller.render_portfolio_distribution_chart(&chart_assets);
             let chart_ready = chart_image.is_some();
 
             let mut total_val = 0.0;
@@ -2716,9 +2710,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .into_iter()
                     .filter(|(_, value, cost)| *value > 0.0 || *cost > 0.0)
                     .collect();
-                trend_image = controller
-                    .charts_service
-                    .render_portfolio_trend_chart(&trend_points);
+                trend_image = controller.render_portfolio_trend_chart(&trend_points);
                 trend_ready = trend_image.is_some();
             }
 
