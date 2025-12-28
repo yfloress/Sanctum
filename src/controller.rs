@@ -10,13 +10,13 @@ use crate::models::{
 };
 use crate::security_log::{SecurityEvent, log_auth_failure, log_security_event};
 pub use crate::services::finance::{AnalyticsSummary, ExpenseSlice};
-pub use crate::services::crypto::{
+pub use crate::features::crypto::{
     SETTING_AUTO_FETCH, SETTING_CRYPTO_CUSTOM_COINS, SETTING_CRYPTO_FAVORITE_COINS,
     SETTING_CRYPTO_HIDDEN_COINS, SETTING_CRYPTO_LAST_COIN_ID, SETTING_CRYPTO_LAST_UPDATED,
     SETTING_CRYPTO_LAST_WALLET_ID, SETTING_TICKER_COINS,
 };
 use crate::services::charts::ChartsService;
-use crate::services::crypto::{CryptoError, CryptoService};
+use crate::features::crypto::{CryptoError, CryptoService};
 use crate::services::finance::{FinanceError, FinanceService};
 use crate::services::habit::HabitService;
 use chrono::{Datelike, NaiveDate};

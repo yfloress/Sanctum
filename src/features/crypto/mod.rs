@@ -1,11 +1,23 @@
 //! Crypto feature module
 //!
 //! Handles cryptocurrency wallets, transactions, portfolio tracking, and API integration.
+//!
+//! ## Module Structure
+//! - `api` - CoinGecko API client
+//! - `catalog` - Coin catalog management (custom coins, favorites, hidden)
+//! - `models` - Domain models
+//! - `repository` - Database operations
+//! - `service` - Core service (wallets, prices, portfolio)
+//! - `transactions` - Transaction operations (buy, sell, transfer, swap)
+//! - `validation` - Input validation helpers
 
 pub mod api;
+pub mod catalog;
 pub mod models;
 pub mod repository;
 pub mod service;
+pub mod transactions;
+pub mod validation;
 
 // Re-export API functions
 pub use api::{
