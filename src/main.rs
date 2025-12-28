@@ -17,7 +17,7 @@ use sanctum::ui::{
     calculate_best_streak, calculate_current_streak, color_from_hex, crypto_icon_for_symbol,
     format_category_label, format_clp_rate, format_crypto_amount, format_crypto_tx_display,
     format_decimal_from_cents, format_fee_display, format_money, format_usd, habit_color_index,
-    normalize_account_type, normalize_habit_category_value, parse_amount_input,
+    normalize_habit_category_value, parse_amount_input,
 };
 use slint::SharedString;
 use slint::{ComponentHandle, Image, Model, ModelRc, VecModel, Weak};
@@ -753,191 +753,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
 
-    // AccountAdapter callbacks
-    {
-        let controller = controller.clone();
-        let ui_weak = ui_weak.clone();
-        ui.global::<AccountAdapter>().on_fetch_accounts(move || {
-            if reload_accounts(&ui_weak, &controller).is_err()
-                && let Some(ui) = ui_weak.upgrade()
-            {
-                ui.global::<AccountAdapter>().set_is_loading(false);
-            }
-        });
-    }
-
-    {
-        let controller = controller.clone();
-        let ui_weak = ui_weak.clone();
-        let notify = show_notification.clone();
-        ui.global::<AccountAdapter>().on_create_account(
-            move |name, account_type, currency, initial_balance| -> SharedString {
-                let amount_cents = parse_amount_input(&initial_balance).unwrap_or(0);
-
-                let result = controller.create_account(
-                    name.to_string(),
-                    normalize_account_type(&account_type),
-                    currency.to_string().to_uppercase(),
-                    amount_cents,
-                    "#8b5cf6".to_string(), // Default accent color
-                    None,
-                );
-
-                match result {
-                    Ok(_) => {
-                        let _ = reload_accounts(&ui_weak, &controller);
-                        if let Some(ui) = ui_weak.upgrade() {
-                            ui.global::<AppState>().set_show_add_account(false);
-                            ui.global::<AnalyticsAdapter>()
-                                .invoke_fetch_analytics("ALL".into());
-                        }
-                        notify("Account created successfully".into(), false);
-                        SharedString::from("")
-                    }
-                    Err(e) => SharedString::from(e.to_string()),
-                }
-            },
-        );
-    }
-
-    {
-        let controller = controller.clone();
-        let ui_weak = ui_weak.clone();
-        let notify = show_notification.clone();
-        ui.global::<AccountAdapter>().on_update_account(
-            move |id, name, account_type, currency, initial_balance| -> SharedString {
-                let amount_cents = parse_amount_input(&initial_balance).unwrap_or(0);
-
-                let result = controller.update_account(
-                    id.to_string(),
-                    name.to_string(),
-                    normalize_account_type(&account_type),
-                    currency.to_string().to_uppercase(),
-                    amount_cents,
-                    "#8b5cf6".to_string(),
-                    None,
-                );
-
-                match result {
-                    Ok(_) => {
-                        let _ = reload_accounts(&ui_weak, &controller);
-                        let _ = reload_recent(&ui_weak, &controller);
-
-                        if let Some(ui) = ui_weak.upgrade() {
-                            ui.global::<AppState>().set_show_add_account(false);
-                            ui.global::<DashboardAdapter>().invoke_fetch_balance();
-                            ui.global::<AnalyticsAdapter>()
-                                .invoke_fetch_analytics("ALL".into());
-                        }
-                        notify("Account updated successfully".into(), false);
-                        SharedString::from("")
-                    }
-                    Err(e) => SharedString::from(e.to_string()),
-                }
-            },
-        );
-    }
-
-    {
-        let controller = controller.clone();
-        let ui_weak = ui_weak.clone();
-        let notify = show_notification.clone();
-        ui.global::<AccountAdapter>().on_transfer_funds(
-            move |from_id, to_id, amount, description, date| -> SharedString {
-                let amount_cents = match parse_amount_input(&amount) {
-                    Some(v) if v > 0 => v,
-                    _ => return SharedString::from("Amount must be greater than zero"),
-                };
-
-                let result = controller.transfer_funds(
-                    from_id.to_string(),
-                    to_id.to_string(),
-                    amount_cents,
-                    description.to_string(),
-                    date.to_string(),
-                );
-
-                match result {
-                    Ok(_) => {
-                        let _ = reload_accounts(&ui_weak, &controller);
-                        let _ = reload_transactions(&ui_weak, &controller);
-                        let _ = reload_recent(&ui_weak, &controller);
-
-                        if let Some(ui) = ui_weak.upgrade() {
-                            ui.global::<AppState>().set_show_transfer_modal(false);
-                            ui.global::<DashboardAdapter>().invoke_fetch_balance();
-                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics(
-                                ui.global::<AnalyticsAdapter>().get_active_range(),
-                            );
-                        }
-                        notify("Transfer successful".into(), false);
-                        SharedString::from("")
-                    }
-                    Err(e) => SharedString::from(e.to_string()),
-                }
-            },
-        );
-    }
-
-    {
-        let controller = controller.clone();
-        let ui_weak = ui_weak.clone();
-        let notify = show_notification.clone();
-        ui.global::<AccountAdapter>().on_update_transfer(
-            move |id, from_id, to_id, amount, description, date| -> SharedString {
-                let amount_cents = match parse_amount_input(&amount) {
-                    Some(v) if v > 0 => v,
-                    _ => return SharedString::from("Amount must be greater than zero"),
-                };
-
-                let result = controller.update_transfer(
-                    id.to_string(),
-                    from_id.to_string(),
-                    to_id.to_string(),
-                    amount_cents,
-                    description.to_string(),
-                    date.to_string(),
-                );
-
-                match result {
-                    Ok(_) => {
-                        let _ = reload_accounts(&ui_weak, &controller);
-                        let _ = reload_transactions(&ui_weak, &controller);
-                        let _ = reload_recent(&ui_weak, &controller);
-
-                        if let Some(ui) = ui_weak.upgrade() {
-                            ui.global::<AppState>().set_show_transfer_modal(false);
-                            ui.global::<DashboardAdapter>().invoke_fetch_balance();
-                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics(
-                                ui.global::<AnalyticsAdapter>().get_active_range(),
-                            );
-                        }
-                        notify("Transfer updated".into(), false);
-                        SharedString::from("")
-                    }
-                    Err(e) => SharedString::from(e.to_string()),
-                }
-            },
-        );
-    }
-
-    {
-        let controller = controller.clone();
-        let ui_weak = ui_weak.clone();
-        let notify = show_notification.clone();
-        ui.global::<AccountAdapter>()
-            .on_delete_account(move |id| -> SharedString {
-                let result = controller.archive_account(id.to_string());
-                match result {
-                    Ok(_) => {
-                        let _ = reload_accounts(&ui_weak, &controller);
-                        notify("Account archived".into(), false);
-                        SharedString::from("")
-                    }
-                    Err(e) => SharedString::from(e.to_string()),
-                }
-            });
-    }
+    // AccountAdapter callbacks (extracted to ui/callbacks/finance.rs)
+    sanctum::ui::setup_account_callbacks(
+        &ui,
+        &ui_weak,
+        &controller,
+        reload_accounts,
+        reload_transactions,
+        reload_recent,
+        show_notification.clone(),
+    );
 
     // TransactionAdapter callbacks
     {

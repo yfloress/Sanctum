@@ -312,8 +312,11 @@ src/ui/callbacks/
 
 **Checklist:**
 - [x] Step 1: Move `slint::include_modules!()` to lib.rs
-- [ ] Step 2: Create ui/callbacks/mod.rs structure
+- [x] Step 2: Create ui/callbacks/mod.rs structure
 - [ ] Step 3: Extract finance callbacks (AccountAdapter, TransactionAdapter, CategoryAdapter)
+  - [x] AccountAdapter callbacks extracted (~167 lines)
+  - [ ] TransactionAdapter callbacks
+  - [ ] CategoryAdapter callbacks
 - [ ] Step 4: Extract dashboard callbacks (DashboardAdapter, AnalyticsAdapter)
 - [ ] Step 5: Extract habits callbacks (HabitAdapter)
 - [ ] Step 6: Extract crypto callbacks (CryptoAdapter)
@@ -324,3 +327,7 @@ src/ui/callbacks/
 - Step 1 complete: Moved `slint::include_modules!()` to lib.rs
   - Added `ComponentHandle` trait import to main.rs
   - All Slint types now accessible via `sanctum::*`
+- Step 2 complete: Created ui/callbacks/ module structure
+- Step 3 in progress: AccountAdapter callbacks extracted
+  - main.rs: 3885 → 3718 lines (-167)
+  - ui/callbacks/finance.rs: 254 lines
