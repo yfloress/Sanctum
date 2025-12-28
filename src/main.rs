@@ -374,72 +374,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ui_weak: &Weak<AppWindow>,
         controller: &Arc<AppController>,
     ) -> Result<(), sanctum::controller::ControllerError> {
-        let accounts = controller.get_accounts()?;
-        let balances = controller.get_account_balances()?;
+        let state = sanctum::ui::load_accounts_state(controller)
+            .map_err(sanctum::controller::ControllerError::Validation)?;
 
-        let mut balance_map: HashMap<String, i64> = HashMap::new();
-        for bal in &balances {
-            balance_map.insert(bal.account_id.clone(), bal.current_balance);
-        }
-
-        let currency_map: HashMap<String, String> = accounts
-            .iter()
-            .map(|acc| (acc.id.clone(), acc.currency.to_uppercase()))
-            .collect();
-        let clp_rate = controller
-            .load_exchange_rate_allow_stale("CLP_USD".to_string())
-            .ok()
-            .and_then(|rate| rate.map(|(r, _)| r))
-            .unwrap_or(0.0);
-        let mut total_usd_cents: i64 = 0;
-        for bal in &balances {
-            let currency = currency_map
-                .get(&bal.account_id)
-                .map(|s| s.as_str())
-                .unwrap_or("USD");
-            if currency == "CLP" {
-                if clp_rate > 0.0 {
-                    total_usd_cents += (bal.current_balance as f64 / clp_rate).round() as i64;
-                }
-            } else {
-                total_usd_cents += bal.current_balance;
-            }
-        }
-
-        let mapped: Vec<AccountData> = accounts
-            .iter()
-            .map(|acc| {
-                let current_balance = balance_map
-                    .get(&acc.id)
-                    .cloned()
-                    .unwrap_or(acc.initial_balance);
-
-                let account_type = match acc.account_type.as_str() {
-                    "bank" | "Bank" => "Bank",
-                    "cash" | "Cash" => "Cash",
-                    "savings" | "Savings" => "Savings",
-                    "credit_card" | "CreditCard" => "Credit Card",
-                    "other" | "Other" => "Other",
-                    _ => acc.account_type.as_str(),
-                };
-
-                AccountData {
-                    id: acc.id.clone().into(),
-                    name: acc.name.clone().into(),
-                    account_type: account_type.into(),
-                    account_type_key: acc.account_type.clone().into(),
-                    currency: acc.currency.clone().into(),
-                    balance: format_money(current_balance, &acc.currency).into(),
-                    initial_balance: format_decimal_from_cents(acc.initial_balance).into(),
-                    is_archived: acc.is_archived,
-                }
+        let mapped: Vec<AccountData> = state
+            .accounts
+            .into_iter()
+            .map(|acc| AccountData {
+                id: acc.id.into(),
+                name: acc.name.into(),
+                account_type: acc.account_type.into(),
+                account_type_key: acc.account_type_key.into(),
+                currency: acc.currency.into(),
+                balance: acc.balance.into(),
+                initial_balance: acc.initial_balance.into(),
+                is_archived: acc.is_archived,
             })
             .collect();
 
         if let Some(ui) = ui_weak.upgrade() {
             let account_adapter = ui.global::<AccountAdapter>();
             account_adapter.set_accounts(ModelRc::new(VecModel::from(mapped)));
-            account_adapter.set_total_balance(format_money(total_usd_cents, "USD").into());
+            account_adapter.set_total_balance(state.total_balance.into());
             account_adapter.set_is_loading(false);
         }
 
@@ -643,24 +599,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ui_weak: &Weak<AppWindow>,
         controller: &Arc<AppController>,
     ) -> Result<(), sanctum::controller::ControllerError> {
-        // Load expense categories
-        let expense_cats = controller.get_transaction_categories("expense".to_string())?;
+        let expense_cats = sanctum::ui::load_categories(controller, "expense")
+            .map_err(sanctum::controller::ControllerError::Validation)?;
+        let income_cats = sanctum::ui::load_categories(controller, "income")
+            .map_err(sanctum::controller::ControllerError::Validation)?;
+
         let expense_mapped: Vec<TransactionCategoryData> = expense_cats
-            .iter()
+            .into_iter()
             .map(|cat| TransactionCategoryData {
-                id: cat.id.clone().into(),
-                name: format_category_label(&cat.name).into(),
+                id: cat.id.into(),
+                name: cat.name.into(),
                 is_default: cat.is_default,
             })
             .collect();
 
-        // Load income categories
-        let income_cats = controller.get_transaction_categories("income".to_string())?;
         let income_mapped: Vec<TransactionCategoryData> = income_cats
-            .iter()
+            .into_iter()
             .map(|cat| TransactionCategoryData {
-                id: cat.id.clone().into(),
-                name: format_category_label(&cat.name).into(),
+                id: cat.id.into(),
+                name: cat.name.into(),
                 is_default: cat.is_default,
             })
             .collect();

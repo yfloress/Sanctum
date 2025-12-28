@@ -117,6 +117,8 @@ Each file < 400 lines, each module has one clear purpose.
 
 ### Phase 5: UI Layer Separation
 - [x] Create `ui/` module structure
+- [x] Extract helpers to `ui/helpers.rs` (formatting, parsing, icons)
+- [x] Extract data loading to `ui/data.rs` (intermediate types)
 - [ ] Extract Slint callbacks from `main.rs` to `ui/callbacks.rs`
 - [ ] Split callbacks by domain: `ui/finance.rs`, `ui/crypto.rs`, `ui/habits.rs`
 - [ ] Slim down `main.rs` to initialization only
@@ -199,10 +201,11 @@ src/
 │   └── settings.rs            # App settings (~88 lines)
 ├── ui/                        # UI layer helpers
 │   ├── mod.rs                 # Module declarations
+│   ├── data.rs                # Intermediate data types for UI (~334 lines)
 │   └── helpers.rs             # Formatting, parsing utilities (~296 lines)
 │
 ├── models.rs                  # Single source: all domain models (~573 lines)
-├── main.rs                    # UI + callbacks (~3980 lines, partially extracted)
+├── main.rs                    # UI + callbacks (~3937 lines, partially extracted)
 └── lib.rs                     # Updated with new exports
 ```
 
@@ -265,6 +268,19 @@ src/
   - Parsing utilities
   - Color and icon helpers
 - main.rs reduced from 4224 to 3980 lines
+
+### Session 5 - 2024-12-28
+- Created `ui/data.rs` (~334 lines) with intermediate data structures:
+  - AccountDisplayData, AccountsState, load_accounts_state()
+  - TransactionDisplayData, TransactionsState, load_transactions_state()
+  - CategoryDisplayData, load_categories()
+  - BalanceDisplayData, load_balance_data()
+  - RecentTransactionData, load_recent_transactions()
+- Refactored main.rs reload functions to use ui/data.rs:
+  - reload_accounts() simplified from 74 to 31 lines
+  - reload_categories() simplified to use load_categories()
+- main.rs reduced from 3980 to 3937 lines
+- Pattern: Intermediate data types in lib.rs, mapped to Slint types in main.rs
 
 ### Next Steps
 1. Further split main.rs callbacks into domain-specific ui/ modules
