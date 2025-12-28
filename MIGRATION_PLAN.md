@@ -122,9 +122,9 @@ Each file < 400 lines, each module has one clear purpose.
 - [ ] Slim down `main.rs` to initialization only
 
 ### Phase 6: Controller Refactor
-- [ ] Slim down `controller.rs` → `app.rs` (thin orchestrator)
-- [ ] Each domain service handles its own logic
-- [ ] Controller only coordinates between domains
+- [x] Split `controller.rs` into domain-specific modules
+- [x] Each domain gets its own controller file
+- [ ] Consider renaming to `app.rs` (thin orchestrator) in future
 
 ### Phase 7: Cleanup
 - [x] Verify project compiles
@@ -186,7 +186,12 @@ src/
 │   ├── finance.rs             # Finance DB ops (~572 lines)
 │   └── habits.rs              # Habits DB ops (~184 lines)
 │
-├── controller.rs              # LEGACY: Needs refactor (~1706 lines)
+├── controller/                # Split by domain
+│   ├── mod.rs                 # Core: errors, types, db management (~723 lines)
+│   ├── crypto.rs              # Crypto operations (~306 lines)
+│   ├── finance.rs             # Finance operations (~274 lines)
+│   ├── habits.rs              # Habits operations (~352 lines)
+│   └── settings.rs            # App settings (~88 lines)
 ├── models.rs                  # Single source: all domain models (~573 lines)
 ├── main.rs                    # LEGACY: UI needs extraction (~4224 lines)
 └── lib.rs                     # Updated with new exports
@@ -233,7 +238,16 @@ src/
   - `db/finance.rs` (~572 lines) - Accounts, transactions, categories, balance
   - `db/habits.rs` (~184 lines) - Habits CRUD, habit logs
 
+### Session 4 - 2024-12-28
+- Split `controller.rs` (1706 lines) into domain-specific modules:
+  - `controller/mod.rs` (~723 lines) - Core: error types, analytics types, helpers, db management
+  - `controller/crypto.rs` (~306 lines) - Wallet, transaction, price, portfolio methods
+  - `controller/finance.rs` (~274 lines) - Account, transaction, category methods
+  - `controller/habits.rs` (~352 lines) - Habit CRUD, logs, analytics
+  - `controller/settings.rs` (~88 lines) - App settings, coin catalog
+- Pattern: Uses `impl AppController` blocks spread across files for cohesion
+
 ### Next Steps
 1. Split main.rs callbacks into ui/ modules
-2. Refactor controller.rs to be thin orchestrator
+2. Consider further splitting controller/mod.rs if needed
 3. Consider splitting db/crypto.rs further if needed
