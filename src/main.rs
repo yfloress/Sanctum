@@ -13,6 +13,12 @@ use sanctum::controller::{
 use sanctum::features::crypto;
 use sanctum::models::{CryptoAsset, CryptoTransaction};
 use sanctum::security_log::init_security_logger;
+use sanctum::ui::{
+    color_from_hex, crypto_icon_for_symbol, format_category_label, format_clp_rate,
+    format_crypto_amount, format_crypto_tx_display, format_decimal_from_cents, format_fee_display,
+    format_money, habit_color_index, normalize_account_type, normalize_habit_category_value,
+    parse_amount_input,
+};
 use slint::SharedString;
 use slint::{Image, Model, ModelRc, VecModel, Weak};
 use std::cell::{Cell, RefCell};
@@ -22,8 +28,6 @@ use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 slint::include_modules!();
-
-const CRYPTO_ICON_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/ui/assets/crypto-icons");
 
 #[derive(Clone, Default)]
 struct HabitAnalyticsSnapshot {
@@ -51,9 +55,6 @@ struct HabitAnalyticsCache {
     snapshot: HabitAnalyticsSnapshot,
 }
 
-thread_local! {
-    static CRYPTO_ICON_CACHE: RefCell<HashMap<String, Image>> = RefCell::new(HashMap::new());
-}
 
 fn get_app_data_dir() -> std::path::PathBuf {
     // Use directories crate to get platform-appropriate data directory
@@ -368,252 +369,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ui.global::<AppState>()
         .set_current_date(SharedString::from(today));
 
-    // Helpers to refresh UI models
-    fn format_amount(amount_cents: i64) -> String {
-        let abs = amount_cents.abs();
-        let units = abs / 100;
-        let cents = abs % 100;
-
-        let units_str = units.to_string();
-        let mut formatted_units = String::new();
-        for (count, c) in units_str.chars().rev().enumerate() {
-            if count > 0 && count % 3 == 0 {
-                formatted_units.insert(0, ',');
-            }
-            formatted_units.insert(0, c);
-        }
-        format!("{formatted_units}.{cents:02}")
-    }
-
-    fn format_decimal_from_cents(value: i64) -> String {
-        let units = value / 100;
-        let cents = value.abs() % 100;
-        format!("{units}.{cents:02}")
-    }
-
-    fn format_money(amount_cents: i64, currency: &str) -> String {
-        let code = currency.to_uppercase();
-        format!("{code} {}", format_amount(amount_cents))
-    }
-
-    fn format_clp_rate(rate: f64) -> String {
-        let rounded = rate.round() as i64;
-        let mut digits = rounded.abs().to_string();
-        let mut grouped = String::new();
-
-        while digits.len() > 3 {
-            let chunk = digits.split_off(digits.len() - 3);
-            grouped = format!(",{chunk}{grouped}");
-        }
-
-        let formatted = format!("{digits}{grouped}");
-        format!("$ {formatted}")
-    }
-
-    fn format_crypto_amount(amount: f64) -> String {
-        let mut formatted = format!("{:.8}", amount);
-        while formatted.contains('.') && formatted.ends_with('0') {
-            formatted.pop();
-        }
-        if formatted.ends_with('.') {
-            formatted.pop();
-        }
-        formatted
-    }
-
-    const HABIT_COLOR_CHOICES: [&str; 16] = [
-        "#8b5cf6", "#ec4899", "#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16", "#22c55e",
-        "#10b981", "#14b8a6", "#06b6d4", "#0ea5e9", "#3b82f6", "#6366f1", "#a16207", "#64748b",
-    ];
-
-    fn habit_color_index(color_hex: &str) -> i32 {
-        let target = color_hex.trim();
-        HABIT_COLOR_CHOICES
-            .iter()
-            .position(|hex| hex.eq_ignore_ascii_case(target))
-            .map(|idx| idx as i32)
-            .unwrap_or(0)
-    }
-
-    fn normalize_habit_category_value(category: &str) -> String {
-        match category.trim().to_lowercase().as_str() {
-            "mind" => "mind".to_string(),
-            "body" => "body".to_string(),
-            "spirit" | "discipline" => "spirit".to_string(),
-            _ => "mind".to_string(),
-        }
-    }
-
-    fn format_category_label(name: &str) -> String {
-        let trimmed = name.trim();
-        if trimmed.is_empty() {
-            return String::new();
-        }
-        if trimmed.chars().any(|c| c.is_lowercase()) {
-            return trimmed.to_string();
-        }
-        let mut parts = Vec::new();
-        for word in trimmed.split_whitespace() {
-            let mut chars = word.chars();
-            let first = chars.next().unwrap_or_default();
-            let rest: String = chars.collect();
-            let mut formatted = String::new();
-            formatted.extend(first.to_uppercase());
-            formatted.push_str(&rest.to_lowercase());
-            parts.push(formatted);
-        }
-        parts.join(" ")
-    }
-
-    fn format_fee_display(tx: &CryptoTransaction, symbol_map: &HashMap<String, String>) -> String {
-        let mut parts = Vec::new();
-        if let Some(fee) = tx.fee
-            && fee > 0.0
-        {
-            parts.push(format_money((fee * 100.0) as i64, "USD"));
-        }
-        if let (Some(fee_coin_id), Some(fee_amount)) = (tx.fee_coin_id.as_ref(), tx.fee_amount)
-            && fee_amount > 0.0
-        {
-            let symbol = symbol_map
-                .get(fee_coin_id.as_str())
-                .cloned()
-                .unwrap_or_else(|| fee_coin_id.to_uppercase());
-            parts.push(format!("{} {}", format_crypto_amount(fee_amount), symbol));
-        }
-        parts.join(" + ")
-    }
-
-    fn format_price_display(price: Option<f64>) -> String {
-        let price_val = price.unwrap_or(0.0);
-        if price_val < 1.0 && price_val > 0.0 {
-            format!("$ {:.4}", price_val)
-        } else if price_val > 0.0 {
-            format_money((price_val * 100.0) as i64, "USD")
-        } else {
-            String::new()
-        }
-    }
-
-    fn format_crypto_tx_display(
-        tx: &CryptoTransaction,
-        related: Option<&CryptoTransaction>,
-    ) -> (String, String, String, bool) {
-        let related_is_swap = related
-            .map(|counter| counter.transaction_type == "swap")
-            .unwrap_or(false);
-        let is_swap = tx.transaction_type == "swap" || related_is_swap;
-
-        let label = match tx.transaction_type.as_str() {
-            "buy" => "BUY".to_string(),
-            "sell" => "SELL".to_string(),
-            "transfer_in" => {
-                if related_is_swap {
-                    "SWAP IN".to_string()
-                } else {
-                    "IN".to_string()
-                }
-            }
-            "transfer_out" => "OUT".to_string(),
-            "swap" => "SWAP OUT".to_string(),
-            _ => tx.transaction_type.to_uppercase(),
-        };
-
-        let amount_display = if is_swap {
-            if let Some(counter) = related {
-                if tx.transaction_type == "swap" {
-                    format!(
-                        "{} {} → {} {}",
-                        format_crypto_amount(tx.amount),
-                        tx.symbol,
-                        format_crypto_amount(counter.amount),
-                        counter.symbol
-                    )
-                } else {
-                    format!(
-                        "{} {} ← {} {}",
-                        format_crypto_amount(tx.amount),
-                        tx.symbol,
-                        format_crypto_amount(counter.amount),
-                        counter.symbol
-                    )
-                }
-            } else {
-                format!("{} {}", format_crypto_amount(tx.amount), tx.symbol)
-            }
-        } else {
-            format!("{} {}", format_crypto_amount(tx.amount), tx.symbol)
-        };
-
-        let price_display = match tx.transaction_type.as_str() {
-            "buy" | "sell" => format_price_display(tx.price_per_coin),
-            _ => String::new(),
-        };
-
-        (label, amount_display, price_display, is_swap)
-    }
-
-    fn color_from_hex(hex: &str) -> slint::Color {
-        if let Some(stripped) = hex.strip_prefix('#')
-            && stripped.len() == 6
-            && let (Ok(r), Ok(g), Ok(b)) = (
-                u8::from_str_radix(&stripped[0..2], 16),
-                u8::from_str_radix(&stripped[2..4], 16),
-                u8::from_str_radix(&stripped[4..6], 16),
-            )
-        {
-            return slint::Color::from_rgb_u8(r, g, b);
-        }
-        slint::Color::from_rgb_u8(139, 92, 246)
-    }
-
-    fn crypto_icon_for_symbol(symbol: &str) -> Image {
-        let key = symbol.trim().to_lowercase();
-        if let Some(icon) = CRYPTO_ICON_CACHE.with(|cache| cache.borrow().get(&key).cloned()) {
-            return icon;
-        }
-
-        let base_dir = std::path::Path::new(CRYPTO_ICON_DIR);
-        let icon_path = if key.is_empty() {
-            base_dir.join("generic.svg")
-        } else {
-            base_dir.join(format!("{key}.svg"))
-        };
-        let fallback_path = base_dir.join("generic.svg");
-        let icon = Image::load_from_path(&icon_path)
-            .or_else(|_| Image::load_from_path(&fallback_path))
-            .unwrap_or_default();
-
-        CRYPTO_ICON_CACHE.with(|cache| {
-            cache.borrow_mut().insert(key, icon.clone());
-        });
-        icon
-    }
-
-    fn parse_amount_input(value: &str) -> Option<i64> {
-        let cleaned = value.trim().replace(',', "");
-        if cleaned.is_empty() {
-            return None;
-        }
-        let parsed: f64 = cleaned.parse().ok()?;
-        if !parsed.is_finite() {
-            return None;
-        }
-        Some((parsed * 100.0).round() as i64)
-    }
-
-    fn normalize_account_type(value: &str) -> String {
-        let normalized = value.trim().to_lowercase();
-        match normalized.as_str() {
-            "bank" => "bank".to_string(),
-            "cash" => "cash".to_string(),
-            "savings" => "savings".to_string(),
-            "credit" | "credit card" | "credit_card" => "credit_card".to_string(),
-            "other" => "other".to_string(),
-            _ => normalized,
-        }
-    }
-
+    // Reload functions for UI state
     fn reload_accounts(
         ui_weak: &Weak<AppWindow>,
         controller: &Arc<AppController>,

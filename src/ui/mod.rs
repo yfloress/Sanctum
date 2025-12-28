@@ -1,10 +1,8 @@
 //! UI layer module
 //!
-//! Contains Slint UI callbacks and view logic.
-//! TODO: Extract callbacks from main.rs here.
+//! Contains Slint UI helpers and shared utilities.
+//! Callbacks remain in main.rs but use these helpers.
 
-// UI modules will be added as main.rs is refactored
-// pub mod callbacks;
-// pub mod finance;
-// pub mod crypto;
-// pub mod habits;
+pub mod helpers;
+
+pub use helpers::*;
