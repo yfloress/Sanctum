@@ -117,7 +117,7 @@ pub fn validate_coin_id(coin_id: &str) -> Result<String, String> {
 }
 
 /// Sanitizes a string from external API to prevent XSS and other injection attacks
-fn sanitize_api_string(input: &str) -> String {
+pub fn sanitize_api_string(input: &str) -> String {
     input
         .chars()
         .filter(|c| {
@@ -133,7 +133,7 @@ fn sanitize_api_string(input: &str) -> String {
 }
 
 /// Validates that a float value is within reasonable bounds
-fn validate_price(price: f64) -> f64 {
+pub fn validate_price(price: f64) -> f64 {
     if price.is_nan() || price.is_infinite() || price < 0.0 {
         0.0
     } else if price > 1e15 {
@@ -144,7 +144,7 @@ fn validate_price(price: f64) -> f64 {
 }
 
 /// Validates percentage change is within reasonable bounds
-fn validate_percentage(pct: f64) -> f64 {
+pub fn validate_percentage(pct: f64) -> f64 {
     if pct.is_nan() || pct.is_infinite() {
         0.0
     } else {

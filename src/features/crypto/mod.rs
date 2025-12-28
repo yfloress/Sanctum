@@ -5,6 +5,7 @@
 pub mod api;
 pub mod models;
 pub mod repository;
+pub mod service;
 
 // Re-export API functions
 pub use api::{
@@ -12,9 +13,8 @@ pub use api::{
     fetch_clp_usd_rate, fetch_crypto_prices, validate_coin_id,
 };
 
-// Re-export from original service for backwards compatibility
-// TODO: Move service.rs logic here gradually
-pub use crate::services::crypto::{
+// Re-export service
+pub use service::{
     CryptoError, CryptoService,
     SETTING_AUTO_FETCH, SETTING_CRYPTO_CUSTOM_COINS, SETTING_CRYPTO_FAVORITE_COINS,
     SETTING_CRYPTO_HIDDEN_COINS, SETTING_CRYPTO_LAST_COIN_ID, SETTING_CRYPTO_LAST_UPDATED,
