@@ -4,7 +4,10 @@
 
 use crate::controller::AppController;
 use crate::ui::{normalize_account_type, parse_amount_input};
-use crate::{AccountAdapter, AnalyticsAdapter, AppState, AppWindow, DashboardAdapter};
+use crate::{
+    AccountAdapter, AnalyticsAdapter, AppState, AppWindow, CategoryAdapter, DashboardAdapter,
+    TransactionAdapter,
+};
 use slint::{ComponentHandle, SharedString, Weak};
 use std::sync::Arc;
 
@@ -245,6 +248,226 @@ pub fn setup_account_callbacks<F, G, H, N>(
                     Ok(_) => {
                         let _ = reload_accounts(&ui_weak, &controller);
                         notify("Account archived".to_string(), false);
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            });
+    }
+}
+
+/// Sets up all TransactionAdapter callbacks
+pub fn setup_transaction_callbacks<F, G, H, N>(
+    ui: &AppWindow,
+    ui_weak: &Weak<AppWindow>,
+    controller: &Arc<AppController>,
+    reload_accounts: F,
+    reload_transactions: G,
+    reload_recent: H,
+    notify: N,
+) where
+    F: Fn(&Weak<AppWindow>, &Arc<AppController>) -> Result<(), crate::controller::ControllerError>
+        + Clone
+        + 'static,
+    G: Fn(&Weak<AppWindow>, &Arc<AppController>) -> Result<(), crate::controller::ControllerError>
+        + Clone
+        + 'static,
+    H: Fn(&Weak<AppWindow>, &Arc<AppController>) -> Result<(), crate::controller::ControllerError>
+        + Clone
+        + 'static,
+    N: Fn(String, bool) + Clone + 'static,
+{
+    // on_fetch_transactions
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let reload_transactions = reload_transactions.clone();
+        let reload_recent = reload_recent.clone();
+        ui.global::<TransactionAdapter>()
+            .on_fetch_transactions(move || {
+                let tx_result = reload_transactions(&ui_weak, &controller);
+                let recent_result = reload_recent(&ui_weak, &controller);
+                if tx_result.is_err() || recent_result.is_err() {
+                    if let Some(ui) = ui_weak.upgrade() {
+                        ui.global::<TransactionAdapter>().set_is_loading(false);
+                    }
+                }
+            });
+    }
+
+    // on_add_transaction
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let reload_accounts = reload_accounts.clone();
+        let reload_transactions = reload_transactions.clone();
+        let reload_recent = reload_recent.clone();
+        let notify = notify.clone();
+        ui.global::<TransactionAdapter>().on_add_transaction(
+            move |account_id, amount, category, description, date, is_expense| -> SharedString {
+                let amount_cents = match parse_amount_input(&amount) {
+                    Some(v) if v > 0 => v,
+                    _ => return SharedString::from("Amount must be greater than zero"),
+                };
+
+                let result = controller.add_transaction(
+                    account_id.to_string(),
+                    amount_cents,
+                    category.to_string(),
+                    description.to_string(),
+                    date.to_string(),
+                    is_expense,
+                );
+
+                match result {
+                    Ok(_) => {
+                        let _ = reload_transactions(&ui_weak, &controller);
+                        let _ = reload_accounts(&ui_weak, &controller);
+                        let _ = reload_recent(&ui_weak, &controller);
+
+                        if let Some(ui) = ui_weak.upgrade() {
+                            ui.global::<AppState>().set_show_add_transaction(false);
+                            ui.global::<DashboardAdapter>().invoke_fetch_balance();
+                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics(
+                                ui.global::<AnalyticsAdapter>().get_active_range(),
+                            );
+                        }
+                        notify("Transaction added".to_string(), false);
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            },
+        );
+    }
+
+    // on_update_transaction
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let reload_accounts = reload_accounts.clone();
+        let reload_transactions = reload_transactions.clone();
+        let reload_recent = reload_recent.clone();
+        let notify = notify.clone();
+        ui.global::<TransactionAdapter>().on_update_transaction(
+            move |id, account_id, amount, category, description, date, is_expense| -> SharedString {
+                let amount_cents = match parse_amount_input(&amount) {
+                    Some(v) if v > 0 => v,
+                    _ => return SharedString::from("Amount must be greater than zero"),
+                };
+
+                let result = controller.update_transaction(
+                    id.to_string(),
+                    account_id.to_string(),
+                    amount_cents,
+                    category.to_string(),
+                    description.to_string(),
+                    date.to_string(),
+                    is_expense,
+                );
+
+                match result {
+                    Ok(_) => {
+                        let _ = reload_transactions(&ui_weak, &controller);
+                        let _ = reload_accounts(&ui_weak, &controller);
+                        let _ = reload_recent(&ui_weak, &controller);
+
+                        if let Some(ui) = ui_weak.upgrade() {
+                            ui.global::<AppState>().set_show_add_transaction(false);
+                            ui.global::<DashboardAdapter>().invoke_fetch_balance();
+                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics(
+                                ui.global::<AnalyticsAdapter>().get_active_range(),
+                            );
+                        }
+                        notify("Transaction updated".to_string(), false);
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            },
+        );
+    }
+}
+
+/// Sets up all CategoryAdapter callbacks
+pub fn setup_category_callbacks<F, N>(
+    ui: &AppWindow,
+    ui_weak: &Weak<AppWindow>,
+    controller: &Arc<AppController>,
+    reload_categories: F,
+    notify: N,
+) where
+    F: Fn(&Weak<AppWindow>, &Arc<AppController>) -> Result<(), crate::controller::ControllerError>
+        + Clone
+        + 'static,
+    N: Fn(String, bool) + Clone + 'static,
+{
+    // on_load_categories
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let reload_categories = reload_categories.clone();
+        ui.global::<CategoryAdapter>().on_load_categories(move || {
+            let _ = reload_categories(&ui_weak, &controller);
+        });
+    }
+
+    // on_add_category
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let reload_categories = reload_categories.clone();
+        let notify = notify.clone();
+        ui.global::<CategoryAdapter>().on_add_category(
+            move |name, category_type| -> SharedString {
+                let result = controller
+                    .add_transaction_category(name.to_string(), category_type.to_string());
+                match result {
+                    Ok(_) => {
+                        let _ = reload_categories(&ui_weak, &controller);
+                        notify("Category added".to_string(), false);
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            },
+        );
+    }
+
+    // on_update_category
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let reload_categories = reload_categories.clone();
+        let notify = notify.clone();
+        ui.global::<CategoryAdapter>()
+            .on_update_category(move |id, new_name| -> SharedString {
+                let result =
+                    controller.update_transaction_category(id.to_string(), new_name.to_string());
+                match result {
+                    Ok(_) => {
+                        let _ = reload_categories(&ui_weak, &controller);
+                        notify("Category updated".to_string(), false);
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            });
+    }
+
+    // on_delete_category
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let reload_categories = reload_categories.clone();
+        let notify = notify.clone();
+        ui.global::<CategoryAdapter>()
+            .on_delete_category(move |id| -> SharedString {
+                let result = controller.delete_transaction_category(id.to_string());
+                match result {
+                    Ok(_) => {
+                        let _ = reload_categories(&ui_weak, &controller);
+                        notify("Category deleted".to_string(), false);
                         SharedString::from("")
                     }
                     Err(e) => SharedString::from(e.to_string()),

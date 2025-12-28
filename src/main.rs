@@ -17,7 +17,7 @@ use sanctum::ui::{
     calculate_best_streak, calculate_current_streak, color_from_hex, crypto_icon_for_symbol,
     format_category_label, format_clp_rate, format_crypto_amount, format_crypto_tx_display,
     format_decimal_from_cents, format_fee_display, format_money, format_usd, habit_color_index,
-    normalize_habit_category_value, parse_amount_input,
+    normalize_habit_category_value,
 };
 use slint::SharedString;
 use slint::{ComponentHandle, Image, Model, ModelRc, VecModel, Weak};
@@ -764,113 +764,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         show_notification.clone(),
     );
 
-    // TransactionAdapter callbacks
-    {
-        let controller = controller.clone();
-        let ui_weak = ui_weak.clone();
-        ui.global::<TransactionAdapter>()
-            .on_fetch_transactions(move || {
-                let tx_result = reload_transactions(&ui_weak, &controller);
-                let recent_result = reload_recent(&ui_weak, &controller);
-                if (tx_result.is_err() || recent_result.is_err())
-                    && let Some(ui) = ui_weak.upgrade()
-                {
-                    ui.global::<TransactionAdapter>().set_is_loading(false);
-                }
-            });
-    }
-
-    {
-        let controller = controller.clone();
-        let ui_weak = ui_weak.clone();
-        let notify = show_notification.clone();
-        ui.global::<TransactionAdapter>().on_add_transaction(
-            move |account_id, amount, category, description, date, is_expense| -> SharedString {
-                let amount_cents = match parse_amount_input(&amount) {
-                    Some(v) if v > 0 => v,
-                    _ => return SharedString::from("Amount must be greater than zero"),
-                };
-
-                let result = controller.add_transaction(
-                    account_id.to_string(),
-                    amount_cents,
-                    category.to_string(),
-                    description.to_string(),
-                    date.to_string(),
-                    is_expense,
-                );
-
-                match result {
-                    Ok(_) => {
-                        let _ = reload_transactions(&ui_weak, &controller);
-                        let _ = reload_accounts(&ui_weak, &controller);
-                        let _ = reload_recent(&ui_weak, &controller);
-
-                        if let Some(ui) = ui_weak.upgrade() {
-                            ui.global::<AppState>().set_show_add_transaction(false);
-                            ui.global::<DashboardAdapter>().invoke_fetch_balance();
-                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics(
-                                ui.global::<AnalyticsAdapter>().get_active_range(),
-                            );
-                        }
-                        notify("Transaction added".into(), false);
-                        SharedString::from("")
-                    }
-                    Err(e) => SharedString::from(e.to_string()),
-                }
-            },
-        );
-    }
-
-    {
-        let controller = controller.clone();
-        let ui_weak = ui_weak.clone();
-        let notify = show_notification.clone();
-        ui.global::<TransactionAdapter>().on_update_transaction(
-            move |id,
-                  account_id,
-                  amount,
-                  category,
-                  description,
-                  date,
-                  is_expense|
-                  -> SharedString {
-                let amount_cents = match parse_amount_input(&amount) {
-                    Some(v) if v > 0 => v,
-                    _ => return SharedString::from("Amount must be greater than zero"),
-                };
-
-                let result = controller.update_transaction(
-                    id.to_string(),
-                    account_id.to_string(),
-                    amount_cents,
-                    category.to_string(),
-                    description.to_string(),
-                    date.to_string(),
-                    is_expense,
-                );
-
-                match result {
-                    Ok(_) => {
-                        let _ = reload_transactions(&ui_weak, &controller);
-                        let _ = reload_accounts(&ui_weak, &controller);
-                        let _ = reload_recent(&ui_weak, &controller);
-
-                        if let Some(ui) = ui_weak.upgrade() {
-                            ui.global::<AppState>().set_show_add_transaction(false);
-                            ui.global::<DashboardAdapter>().invoke_fetch_balance();
-                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics(
-                                ui.global::<AnalyticsAdapter>().get_active_range(),
-                            );
-                        }
-                        notify("Transaction updated".into(), false);
-                        SharedString::from("")
-                    }
-                    Err(e) => SharedString::from(e.to_string()),
-                }
-            },
-        );
-    }
+    // TransactionAdapter callbacks (extracted to ui/callbacks/finance.rs)
+    sanctum::ui::setup_transaction_callbacks(
+        &ui,
+        &ui_weak,
+        &controller,
+        reload_accounts,
+        reload_transactions,
+        reload_recent,
+        show_notification.clone(),
+    );
 
     // DashboardAdapter callbacks
     {
@@ -1019,76 +922,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
     }
 
-    // ==================== CategoryAdapter Callbacks ====================
-
-    // Load categories
-    {
-        let controller = controller.clone();
-        let ui_weak = ui_weak.clone();
-        ui.global::<CategoryAdapter>().on_load_categories(move || {
-            let _ = reload_categories(&ui_weak, &controller);
-        });
-    }
-
-    // Add category
-    {
-        let controller = controller.clone();
-        let ui_weak = ui_weak.clone();
-        let notify = show_notification.clone();
-        ui.global::<CategoryAdapter>().on_add_category(
-            move |name, category_type| -> SharedString {
-                let result = controller
-                    .add_transaction_category(name.to_string(), category_type.to_string());
-                match result {
-                    Ok(_) => {
-                        let _ = reload_categories(&ui_weak, &controller);
-                        notify("Category added".into(), false);
-                        SharedString::from("")
-                    }
-                    Err(e) => SharedString::from(e.to_string()),
-                }
-            },
-        );
-    }
-
-    // Update category
-    {
-        let controller = controller.clone();
-        let ui_weak = ui_weak.clone();
-        let notify = show_notification.clone();
-        ui.global::<CategoryAdapter>()
-            .on_update_category(move |id, new_name| -> SharedString {
-                let result =
-                    controller.update_transaction_category(id.to_string(), new_name.to_string());
-                match result {
-                    Ok(_) => {
-                        let _ = reload_categories(&ui_weak, &controller);
-                        notify("Category updated".into(), false);
-                        SharedString::from("")
-                    }
-                    Err(e) => SharedString::from(e.to_string()),
-                }
-            });
-    }
-
-    // Delete category
-    {
-        let controller = controller.clone();
-        let ui_weak = ui_weak.clone();
-        let notify = show_notification.clone();
-        ui.global::<CategoryAdapter>()
-            .on_delete_category(move |id| -> SharedString {
-                let result = controller.delete_transaction_category(id.to_string());
-                match result {
-                    Ok(_) => {
-                        let _ = reload_categories(&ui_weak, &controller);
-                        notify("Category deleted".into(), false);
-                        SharedString::from("")
-                    }
-                    Err(e) => SharedString::from(e.to_string()),
-                }
-            });
-    }
+    // CategoryAdapter callbacks (extracted to ui/callbacks/finance.rs)
+    sanctum::ui::setup_category_callbacks(
+        &ui,
+        &ui_weak,
+        &controller,
+        reload_categories,
+        show_notification.clone(),
+    );
 
     // ==================== HabitAdapter Logic ====================
 
