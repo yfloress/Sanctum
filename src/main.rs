@@ -235,8 +235,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let password_str = password.to_string();
 
             match controller_clone.create_db(password_str, None) {
-                Ok(msg) => {
-                    log::info!("Vault created successfully: {}", msg);
+                Ok(_) => {
+                    log::info!("Vault created successfully");
                     notify("Vault created successfully".into(), false);
                     session_monitor();
                     if let Some(ui) = ui_weak.upgrade() {
@@ -278,8 +278,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let password_str = password.to_string();
 
             match controller_clone.open_db(password_str, None) {
-                Ok(msg) => {
-                    log::info!("Vault unlocked successfully: {}", msg);
+                Ok(_) => {
+                    log::info!("Vault unlocked successfully");
                     notify("Vault unlocked successfully".into(), false);
                     session_monitor();
                     if let Some(ui) = ui_weak.upgrade() {
@@ -310,8 +310,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             log::info!("lock_vault called");
 
             match controller_clone.close_db() {
-                Ok(msg) => {
-                    log::info!("Vault locked successfully: {}", msg);
+                Ok(_) => {
+                    log::info!("Vault locked successfully");
                     notify("Vault locked".into(), false);
                     session_timer.stop();
                     session_warned.set(false);
