@@ -28,8 +28,3 @@ pub mod services;
 
 // Re-exports for backwards compatibility
 pub use core::{Database, DbError, SecurityEvent, init_security_logger, log_security_event};
-
-pub fn init_logger() {
-    // Initialize logger if needed
-    // env_logger::init();
-}
