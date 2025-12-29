@@ -6,6 +6,8 @@ import { HabitRow } from "../components/habit_row.slint";
 import { HabitHeatmap } from "../components/habit_heatmap.slint";
 import { HabitRadarChart, WeekdayEfficiencyChart, InsightCard } from "../components/analytics_charts.slint";
 import { TextButton, ActionButton } from "../widgets.slint";
+import { SectionHeader } from "../components/sections/section_header.slint";
+import { EmptyState } from "../components/sections/empty_state.slint";
 import { AddHabitModal } from "../modals/add_habit.slint";
 
 component NavButton inherits Rectangle {
@@ -35,95 +37,6 @@ component NavButton inherits Rectangle {
     touch := TouchArea {
         mouse-cursor: enabled ? pointer : default;
         clicked => { if enabled { root.clicked(); } }
-    }
-}
-
-
-component SectionHeader inherits Rectangle {
-    in property <string> title;
-    
-    height: 32px;
-    background: transparent;
-
-    HorizontalLayout {
-        spacing: 10px;
-        alignment: start;
-
-        // Accent line
-        Rectangle {
-            width: 3px;
-            height: 20px;
-            border-radius: 2px;
-            background: @linear-gradient(180deg, Palette.accent 0%, #6366f1 100%);
-            y: (parent.height - self.height) / 2;
-        }
-
-        Text {
-            text: root.title;
-            color: Palette.text-secondary;
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 1.5px;
-            vertical-alignment: center;
-        }
-    }
-}
-
-component EmptyState inherits Rectangle {
-    in property <string> icon: "✓";
-    in property <string> title: "No habits";
-    in property <string> description: "Start building better habits today";
-
-    height: 160px;
-    background: @linear-gradient(135deg, Palette.surface 0%, #1a1a2e 100%);
-    border-radius: 12px;
-    border-width: 1px;
-    border-color: Palette.border;
-
-    VerticalLayout {
-        alignment: center;
-        spacing: 12px;
-
-        Rectangle {
-            width: 48px;
-            height: 48px;
-            border-radius: 24px;
-            background: Palette.surface-hover;
-            x: (parent.width - self.width) / 2;
-
-            Rectangle {
-                x: -3px;
-                y: -3px;
-                width: parent.width + 6px;
-                height: parent.height + 6px;
-                border-radius: 27px;
-                background: #8b5cf6;
-                opacity: 0.2;
-            }
-
-            Text {
-                text: root.icon;
-                font-size: 22px;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-            }
-        }
-
-        Text {
-            text: root.title;
-            color: Palette.text-secondary;
-            font-size: 13px;
-            font-weight: 500;
-            horizontal-alignment: center;
-        }
-
-        Text {
-            text: root.description;
-            color: Palette.text-muted;
-            font-size: 11px;
-            font-weight: 400;
-            horizontal-alignment: center;
-        }
     }
 }
 

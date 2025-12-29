@@ -482,3 +482,154 @@ features/habits/     (3 files, ~260 lines total)
 - `ui/callbacks/crypto/wallets.rs` - Removed features import
 - `ui/callbacks/crypto/portfolio.rs` - Removed features import
 - `ui/callbacks/crypto/helpers.rs` - Removed features import
+
+---
+
+## Part 2: Slint UI Refactoring (CURRENT)
+
+### Analysis - Current State
+
+**Total: 33 .slint files, ~14,421 lines**
+
+#### Files Exceeding 400 Line Limit
+
+| File | Lines | Severity |
+|------|-------|----------|
+| `pages/finances.slint` | 1,262 | Critical (3x) |
+| `pages/crypto.slint` | 1,055 | Critical (2.6x) |
+| `components/transaction_form_components.slint` | 761 | High |
+| `modals/configure_ticker.slint` | 728 | High |
+| `modals/add_transaction.slint` | 684 | High |
+| `components/wallet_detail.slint` | 681 | High |
+| `components/asset_detail.slint` | 649 | High |
+| `components/crypto_widgets.slint` | 633 | High |
+| `modals/add_crypto_transaction.slint` | 619 | High |
+| `pages/habits.slint` | 511 | Medium |
+| `modals/configure_categories.slint` | 521 | Medium |
+
+#### Code Duplication Found
+
+1. **TabButton** - Exact duplicate in `finances.slint` and `crypto.slint` (~58 lines x2)
+2. **SectionHeader** - 4 different versions across files
+3. **EmptyState** - 2 similar versions in finances and crypto pages
+4. **ConfirmDelete modal** - Repeated pattern (~180 lines duplicated)
+5. **FilterInput** - Defined locally, not shared
+
+#### Structural Issues
+
+- `components/` has no subdirectories - 15 files mixed together
+- Form components scattered across modals
+- No clear atom/molecule/organism hierarchy
+- Button variations scattered (TabButton, GhostButton, ActionButton, etc.)
+
+### Refactoring Principles
+
+1. **Max 400 lines per .slint file** - Split if larger
+2. **Extract duplicates to shared components**
+3. **Organize components/ with subdirectories by type**
+4. **Keep pages thin** - Extract repeated patterns to components
+
+### Target Structure
+
+```
+ui/
+├── components/
+│   ├── buttons/          # TabButton, ActionButton, GhostButton
+│   ├── sections/         # SectionHeader, EmptyState
+│   ├── forms/            # FormField, selectors
+│   ├── cards/            # TransactionItem, AccountItem, WalletCard
+│   ├── panels/           # WalletDetail, AssetDetail
+│   ├── charts/           # Keep as-is (well organized)
+│   └── dialogs/          # ConfirmDelete
+├── modals/               # Keep structure
+├── pages/                # Slim down to <600 lines each
+├── globals.slint
+├── widgets.slint
+└── app.slint
+```
+
+### Phase 1: Extract Shared Components (Quick Wins)
+
+- [x] Step 1.1: Create `components/buttons/` directory
+- [x] Step 1.2: Extract TabButton to `components/buttons/tab_button.slint`
+  - Removed from: `pages/finances.slint`, `pages/crypto.slint`
+- [x] Step 1.3: ~~Extract GhostButton~~ - Already in `crypto_widgets.slint`, not duplicated
+
+- [x] Step 1.4: Create `components/sections/` directory
+- [x] Step 1.5: Extract SectionHeader to `components/sections/section_header.slint`
+  - Removed from: `pages/finances.slint`, `pages/habits.slint`
+- [x] Step 1.6: Extract EmptyState to `components/sections/empty_state.slint`
+  - Removed from: `pages/finances.slint`, `pages/habits.slint`
+
+- [x] Step 1.7: Create `components/filters/` directory
+- [x] Step 1.8: Extract FilterInput to `components/filters/filter_input.slint`
+  - Removed from: `pages/finances.slint`
+
+- [ ] ~~Step 1.9: Extract ConfirmDeleteDialog~~ - Skipped: too context-specific (each calls different adapters)
+
+### Phase 2: Split Large Pages
+
+- [x] Step 2.1: Reduce `pages/finances.slint` (1,262 → 1,060 lines, -16%)
+  - [x] Extract FilterInput → `components/filters/filter_input.slint`
+  - [x] Remove TabButton, SectionHeader, EmptyState (use shared)
+  - [ ] ~~AccountFilterSelect~~ - Skipped: too tightly coupled to AccountAdapter
+  - [ ] ~~CategoryFilterSelect~~ - Skipped: too tightly coupled to CategoryAdapter
+
+- [ ] Step 2.2: Reduce `pages/crypto.slint` (1,055 → 1,013 lines, -4%)
+  - [x] Remove TabButton (use shared)
+  - [ ] Extract more components if needed
+
+### Phase 3: Reorganize Components
+
+- [ ] Step 3.1: Create `components/forms/` directory
+- [ ] Step 3.2: Split `transaction_form_components.slint` (761 lines)
+  - [ ] FormField → `components/forms/form_field.slint`
+  - [ ] TypeSelector → `components/forms/type_selector.slint`
+  - [ ] WalletSelector → `components/forms/wallet_selector.slint`
+  - [ ] CoinSelector → `components/forms/coin_selector.slint`
+
+- [ ] Step 3.3: Create `components/cards/` directory (if not exists)
+- [ ] Step 3.4: Move card components to `components/cards/`
+
+- [ ] Step 3.5: Create `components/panels/` directory
+- [ ] Step 3.6: Review `wallet_detail.slint` (681 lines) - split if possible
+- [ ] Step 3.7: Review `asset_detail.slint` (649 lines) - split if possible
+
+### Phase 4: Modal Cleanup
+
+- [ ] Step 4.1: Review `configure_ticker.slint` (728 lines) - split if needed
+- [ ] Step 4.2: Review `add_transaction.slint` (684 lines) - extract form components
+- [ ] Step 4.3: Review `add_crypto_transaction.slint` (619 lines) - extract form components
+
+### Phase 5: Final Cleanup
+
+- [ ] Step 5.1: Verify all imports work after reorganization
+- [ ] Step 5.2: Run `cargo check` to ensure Slint compiles
+- [ ] Step 5.3: Test UI functionality
+- [ ] Step 5.4: Update any broken references
+
+---
+
+## Progress Log (Slint UI)
+
+### Session 1 - 2024-12-29
+**Goal:** Extract shared components and reduce code duplication in Slint UI.
+
+**Components Created:**
+- `components/buttons/tab_button.slint` (44 lines) - Shared tab navigation button
+- `components/sections/section_header.slint` (32 lines) - Section title with accent line
+- `components/sections/empty_state.slint` (58 lines) - Empty list placeholder
+- `components/filters/filter_input.slint` (71 lines) - Search/filter input field
+
+**Files Reduced:**
+| File | Before | After | Reduction |
+|------|--------|-------|-----------|
+| `pages/finances.slint` | 1,262 | 1,060 | -202 lines (-16%) |
+| `pages/crypto.slint` | 1,055 | 1,013 | -42 lines (-4%) |
+| `pages/habits.slint` | 511 | 424 | -87 lines (-17%) |
+| **Total** | 2,828 | 2,497 | **-331 lines (-12%)** |
+
+**Decisions:**
+- ConfirmDeleteDialog: Kept inline - too context-specific (each calls different adapters)
+- AccountFilterSelect/CategoryFilterSelect: Kept in finances.slint - tightly coupled to adapters
+- GhostButton: Already in crypto_widgets.slint, not duplicated
