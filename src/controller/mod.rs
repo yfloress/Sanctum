@@ -249,7 +249,6 @@ fn password_strength_warning(password: &str) -> Option<String> {
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 struct AppConfig {
-    #[serde(alias = "last_db_path")]
     last_db_rel_path: Option<String>,
 }
 
@@ -290,10 +289,6 @@ impl AppController {
     /// Returns the config file path
     fn config_path(&self) -> PathBuf {
         self.app_data_dir.join("config.toml")
-    }
-
-    fn legacy_config_path(&self) -> PathBuf {
-        self.app_data_dir.join("config.json")
     }
 
     fn app_data_base(&self) -> Result<PathBuf, ControllerError> {
@@ -360,18 +355,6 @@ impl AppController {
             if self.normalize_config(&mut config) {
                 let _ = self.save_config(&config);
             }
-            return Ok(config);
-        }
-
-        let legacy_path = self.legacy_config_path();
-        if legacy_path.exists() {
-            let data = fs::read_to_string(&legacy_path)
-                .map_err(|_| ControllerError::Config("Could not read configuration".to_string()))?;
-            let mut config: AppConfig = serde_json::from_str(&data)
-                .map_err(|_| ControllerError::Config("Could not parse configuration".to_string()))?;
-            let _ = self.normalize_config(&mut config);
-            let _ = self.save_config(&config);
-            let _ = fs::remove_file(&legacy_path);
             return Ok(config);
         }
 
