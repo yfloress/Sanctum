@@ -34,3 +34,35 @@ Use the Nix dev shell for builds:
 ## Security and Configuration Notes
 - Database uses SQLCipher; avoid logging sensitive data.
 - Crypto price fetching uses external APIs; respect privacy settings and avoid auto-fetch where not intended.
+
+## Architecture Patterns (src/)
+
+### Layer Separation
+```
+UI (callbacks/) → Controller → Features (service/repository) → DB
+```
+- **UI callbacks**: Only call controller methods, never import from `features/` directly.
+- **Controller**: Orchestrates features, provides fallback methods when needed.
+- **Features**: Domain logic with service.rs + repository.rs pattern.
+- **Core**: Shared utilities (validation.rs, error types).
+
+### File Organization
+- Keep files under ~500 lines. Split large modules into subdirectories:
+  ```
+  feature.rs (>500 lines) → feature/mod.rs + service.rs + helpers.rs + callbacks.rs
+  ```
+- Validation: Domain-specific in `features/X/validation.rs`, shared in `core/validation.rs`.
+- Domain errors: Each feature defines its own error type (e.g., `CryptoError`, `FinanceError`).
+
+### Validation Pattern
+- Core validation returns `Result<T, String>`.
+- Feature validation wraps core and converts to domain error:
+  ```rust
+  pub fn validate_uuid(id: &str) -> Result<String, FeatureError> {
+      crate::core::validation::validate_uuid(id).map_err(FeatureError::Validation)
+  }
+  ```
+
+### Callbacks Structure (ui/callbacks/)
+- One subdirectory per feature: `crypto/`, `finance/`, `habits/`, `dashboard/`.
+- Each has: `mod.rs` (coordinator), `callbacks.rs` (on_* registrations), `helpers.rs`.

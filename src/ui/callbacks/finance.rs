@@ -60,10 +60,10 @@ pub fn setup_account_callbacks<F, G, H, N>(
         let ui_weak = ui_weak.clone();
         let reload_accounts = reload_accounts.clone();
         ui.global::<AccountAdapter>().on_fetch_accounts(move || {
-            if reload_accounts(&ui_weak, &controller).is_err() {
-                if let Some(ui) = ui_weak.upgrade() {
-                    ui.global::<AccountAdapter>().set_is_loading(false);
-                }
+            if reload_accounts(&ui_weak, &controller).is_err()
+                && let Some(ui) = ui_weak.upgrade()
+            {
+                ui.global::<AccountAdapter>().set_is_loading(false);
             }
         });
     }
@@ -287,10 +287,10 @@ pub fn setup_transaction_callbacks<F, G, H, N>(
             .on_fetch_transactions(move || {
                 let tx_result = reload_transactions(&ui_weak, &controller);
                 let recent_result = reload_recent(&ui_weak, &controller);
-                if tx_result.is_err() || recent_result.is_err() {
-                    if let Some(ui) = ui_weak.upgrade() {
-                        ui.global::<TransactionAdapter>().set_is_loading(false);
-                    }
+                if (tx_result.is_err() || recent_result.is_err())
+                    && let Some(ui) = ui_weak.upgrade()
+                {
+                    ui.global::<TransactionAdapter>().set_is_loading(false);
                 }
             });
     }
@@ -386,6 +386,37 @@ pub fn setup_transaction_callbacks<F, G, H, N>(
                 }
             },
         );
+    }
+
+    // on_delete_transaction
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let reload_accounts = reload_accounts.clone();
+        let reload_transactions = reload_transactions.clone();
+        let reload_recent = reload_recent.clone();
+        let notify = notify.clone();
+        ui.global::<TransactionAdapter>()
+            .on_delete_transaction(move |id| -> SharedString {
+                let result = controller.delete_transaction(id.to_string());
+                match result {
+                    Ok(_) => {
+                        let _ = reload_transactions(&ui_weak, &controller);
+                        let _ = reload_accounts(&ui_weak, &controller);
+                        let _ = reload_recent(&ui_weak, &controller);
+
+                        if let Some(ui) = ui_weak.upgrade() {
+                            ui.global::<DashboardAdapter>().invoke_fetch_balance();
+                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics(
+                                ui.global::<AnalyticsAdapter>().get_active_range(),
+                            );
+                        }
+                        notify("Transaction deleted".to_string(), false);
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            });
     }
 }
 

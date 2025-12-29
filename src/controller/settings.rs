@@ -3,6 +3,7 @@
 //! Application settings and coin catalog management.
 
 use super::{AppController, ControllerError};
+use crate::features::crypto::default_coin_catalog;
 use crate::models::CryptoCatalogCoin;
 
 impl AppController {
@@ -65,6 +66,14 @@ impl AppController {
         self.crypto_service
             .get_coin_catalog()
             .map_err(ControllerError::from)
+    }
+
+    /// Returns coin catalog, falling back to defaults on error
+    /// Use this in UI to avoid needing to import features module
+    pub fn get_coin_catalog_or_default(&self) -> Vec<CryptoCatalogCoin> {
+        self.crypto_service
+            .get_coin_catalog()
+            .unwrap_or_else(|_| default_coin_catalog())
     }
 
     /// Adds a custom coin to the catalog

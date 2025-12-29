@@ -1,13 +1,15 @@
 //! Validation helpers for crypto operations
 //!
 //! Contains input validation, sanitization, and balance checking functions.
+//! Generic validation re-exported from core, crypto-specific validation defined here.
 
 use crate::db::Database;
-use chrono::NaiveDate;
-use uuid::Uuid;
 
 use super::api::validate_coin_id;
 use super::service::CryptoError;
+
+// Re-export sanitize_string from core (doesn't need error wrapping)
+pub use crate::core::validation::sanitize_string;
 
 // ==================== Constants ====================
 
@@ -17,7 +19,29 @@ pub const MAX_SYMBOL_LENGTH: usize = 16;
 pub const MAX_ICON_LENGTH: usize = 32;
 pub const MAX_COIN_NAME_LENGTH: usize = 64;
 
-// ==================== Validation Functions ====================
+// ==================== Wrappers for Core Validation ====================
+
+/// Validates and trims a field to max length, returning CryptoError
+pub fn validate_field_length(
+    value: &str,
+    max_length: usize,
+    field_name: &str,
+) -> Result<String, CryptoError> {
+    crate::core::validation::validate_field_length(value, max_length, field_name)
+        .map_err(CryptoError::Validation)
+}
+
+/// Validates UUID, returning CryptoError
+pub fn validate_uuid(id: &str) -> Result<String, CryptoError> {
+    crate::core::validation::validate_uuid(id).map_err(CryptoError::Validation)
+}
+
+/// Validates date, returning CryptoError
+pub fn validate_date(date: &str) -> Result<String, CryptoError> {
+    crate::core::validation::validate_date(date).map_err(CryptoError::Validation)
+}
+
+// ==================== Crypto-Specific Validation ====================
 
 pub fn validate_coin_id_str(coin_id: &str) -> Result<String, CryptoError> {
     validate_coin_id(coin_id).map_err(CryptoError::Validation)
@@ -84,7 +108,11 @@ pub fn normalize_fee_coin(
 ) -> Result<(Option<String>, Option<f64>), CryptoError> {
     let fee_coin_id = fee_coin_id.and_then(|id| {
         let trimmed = id.trim().to_string();
-        if trimmed.is_empty() { None } else { Some(trimmed) }
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed)
+        }
     });
 
     match (fee_coin_id, fee_amount) {
@@ -181,69 +209,4 @@ pub fn validate_fee_balance(
         }
     }
     Ok(())
-}
-
-pub fn validate_field_length(
-    value: &str,
-    max_length: usize,
-    field_name: &str,
-) -> Result<String, CryptoError> {
-    let trimmed = value.trim();
-    if trimmed.len() > max_length {
-        return Err(CryptoError::Validation(format!(
-            "{} exceeds maximum length of {} characters",
-            field_name, max_length
-        )));
-    }
-    Ok(trimmed.to_string())
-}
-
-pub fn sanitize_string(input: &str) -> String {
-    input
-        .chars()
-        .filter(|c| {
-            c.is_ascii_alphanumeric()
-                || c.is_whitespace()
-                || matches!(
-                    c,
-                    '!' | '@' | '#' | '$' | '%' | '^' | '&' | '*' | '(' | ')' | '-' | '_' | '+'
-                        | '=' | '{' | '}' | '[' | ']' | '|' | '\\' | ':' | '\'' | '"' | ',' | '.'
-                        | '<' | '>' | '?' | '/' | '`' | '~'
-                )
-        })
-        .collect::<String>()
-        .trim()
-        .to_string()
-}
-
-pub fn validate_uuid(id: &str) -> Result<String, CryptoError> {
-    let trimmed = id.trim();
-    if trimmed.is_empty() {
-        return Err(CryptoError::Validation("ID cannot be empty".to_string()));
-    }
-
-    if Uuid::parse_str(trimmed).is_ok() {
-        return Ok(trimmed.to_string());
-    }
-
-    Err(CryptoError::Validation("Invalid ID format".to_string()))
-}
-
-pub fn validate_date(date: &str) -> Result<String, CryptoError> {
-    let trimmed = date.trim();
-    if trimmed.is_empty() {
-        return Err(CryptoError::Validation("Date cannot be empty".to_string()));
-    }
-
-    if let Ok(parsed) = NaiveDate::parse_from_str(trimmed, "%d-%m-%Y") {
-        return Ok(parsed.format("%Y-%m-%d").to_string());
-    }
-
-    if let Ok(parsed) = NaiveDate::parse_from_str(trimmed, "%Y-%m-%d") {
-        return Ok(parsed.format("%Y-%m-%d").to_string());
-    }
-
-    Err(CryptoError::Validation(
-        "Invalid date format. Use DD-MM-YYYY or YYYY-MM-DD".to_string(),
-    ))
 }
