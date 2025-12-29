@@ -1,0 +1,362 @@
+// CoinSelector - Searchable dropdown for cryptocurrency selection
+
+import { Palette, CryptoAdapter, NotificationAdapter } from "../../globals.slint";
+import { CustomVScrollbar } from "../../widgets.slint";
+
+export component CoinSelector inherits Rectangle {
+    in-out property <int> selected-index: 0;
+    in property <string> label: "CRYPTOCURRENCY";
+    property <bool> popup-open: false;
+    property <string> search-query: "";
+    property <int> safe-index: CryptoAdapter.coin-catalog.length > 0 && selected-index < CryptoAdapter.coin-catalog.length
+        ? selected-index
+        : 0;
+
+    callback selected(int, string); // index, name
+
+    property <length> popup-height: min(CryptoAdapter.coin-catalog.length * 40px + 64px, 300px);
+
+    function reset-search() {
+        root.search-query = "";
+        CryptoAdapter.filter-coin-catalog("");
+    }
+
+    height: popup-open ? 64px + popup-height : 64px;
+    background: transparent;
+
+    VerticalLayout {
+        spacing: 8px;
+
+        Text {
+            text: root.label;
+            color: Palette.text-muted;
+            font-size: 10px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
+        }
+
+        Rectangle {
+            height: 40px;
+            background: Palette.surface;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: Palette.border;
+
+            HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+
+                Text {
+                    text: CryptoAdapter.coin-catalog.length > 0
+                        ? CryptoAdapter.coin-catalog[safe-index].name
+                            + " ("
+                            + CryptoAdapter.coin-catalog[safe-index].symbol
+                            + ")"
+                            + (CryptoAdapter.coin-catalog[safe-index].custom ? " *" : "")
+                        : "No coins available";
+                    color: CryptoAdapter.coin-catalog.length > 0 ? Palette.text-primary : Palette.text-muted;
+                    font-size: 14px;
+                    font-weight: 400;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+
+                Text {
+                    text: "▼";
+                    color: Palette.text-muted;
+                    font-size: 10px;
+                    vertical-alignment: center;
+                }
+            }
+
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    if (CryptoAdapter.coin-catalog.length > 0) {
+                        root.popup-open = !root.popup-open;
+                        root.reset-search();
+                    }
+                }
+            }
+        }
+    }
+
+    if popup-open: Rectangle {
+        x: 0;
+        y: 64px;
+        width: root.width;
+        height: popup-height;
+        z: 1000;
+        background: Palette.sidebar-bg;
+        border-radius: 8px;
+        border-width: 1px;
+        border-color: Palette.border-light;
+        drop-shadow-blur: 16px;
+        drop-shadow-color: Palette.shadow-color;
+        clip: true;
+
+        TouchArea {
+            clicked => {
+                root.popup-open = false;
+                root.reset-search();
+            }
+        }
+
+        VerticalLayout {
+            width: parent.width;
+            height: parent.height;
+            padding: 8px;
+            spacing: 8px;
+
+            Rectangle {
+                height: 32px;
+                background: Palette.surface;
+                border-radius: 6px;
+                border-width: 1px;
+                border-color: search-input.has-focus ? Palette.accent : Palette.border;
+
+                animate border-color { duration: 150ms; }
+
+                HorizontalLayout {
+                    padding-left: 10px;
+                    padding-right: 10px;
+                    spacing: 6px;
+
+                    if root.search-query == "" && !search-input.has-focus: Text {
+                        text: "Search coin...";
+                        color: Palette.text-subtle;
+                        font-size: 12px;
+                        vertical-alignment: center;
+                    }
+
+                    search-input := TextInput {
+                        text <=> root.search-query;
+                        color: Palette.text-primary;
+                        font-size: 12px;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+
+                        edited => { CryptoAdapter.filter-coin-catalog(root.search-query); }
+                    }
+
+                    if root.search-query != "": Rectangle {
+                        width: 20px;
+                        height: 20px;
+                        border-radius: 4px;
+                        background: clear-touch.has-hover ? Palette.surface-hover : transparent;
+
+                        Text {
+                            text: "×";
+                            color: clear-touch.has-hover ? Palette.text-primary : Palette.text-muted;
+                            font-size: 14px;
+                            font-weight: 600;
+                            vertical-alignment: center;
+                            horizontal-alignment: center;
+                        }
+
+                        clear-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.reset-search(); }
+                        }
+                    }
+                }
+
+                TouchArea {
+                    clicked => { search-input.focus(); }
+                }
+            }
+
+            Rectangle {
+                height: 1px;
+                background: Palette.border-subtle;
+                opacity: 0.6;
+            }
+
+            Rectangle {
+                vertical-stretch: 1;
+                horizontal-stretch: 1;
+                clip: true;
+
+                list-scroll := Flickable {
+                    width: parent.width;
+                    height: parent.height;
+                    viewport-height: CryptoAdapter.coin-catalog.length * 40px + 8px;
+
+                    background-touch := TouchArea {
+                        width: parent.width;
+                        height: parent.height;
+                        clicked => {
+                            root.popup-open = false;
+                            root.reset-search();
+                        }
+                    }
+
+                    coin-list := VerticalLayout {
+                        spacing: 0px;
+
+                        for coin[index] in CryptoAdapter.coin-catalog: Rectangle {
+                            visible: coin.visible && coin.favorite;
+                            height: coin.visible && coin.favorite ? 40px : 0px;
+                            background: option-touch-fav.has-hover ? Palette.surface-hover : transparent;
+                            border-radius: 6px;
+
+                            HorizontalLayout {
+                                padding-left: 12px;
+                                padding-right: 12px;
+                                spacing: 8px;
+
+                                Rectangle {
+                                    width: 24px;
+                                    height: 24px;
+                                    y: (parent.height - self.height) / 2;
+                                    border-radius: 6px;
+                                    background: favorite-touch-fav.has-hover ? Palette.surface-hover : transparent;
+
+                                    Text {
+                                        text: coin.favorite ? "★" : "☆";
+                                        color: coin.favorite ? Palette.accent : Palette.text-muted;
+                                        font-size: 13px;
+                                        font-weight: 600;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                    }
+
+                                    favorite-touch-fav := TouchArea {
+                                        mouse-cursor: pointer;
+                                        clicked => {
+                                            let next = !coin.favorite;
+                                            let result = CryptoAdapter.set-favorite-coin(coin.id, next);
+                                            if (result == "") {
+                                                CryptoAdapter.coin-catalog[index].favorite = next;
+                                            } else {
+                                                NotificationAdapter.show(result, true);
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Rectangle {
+                                    horizontal-stretch: 1;
+                                    background: transparent;
+
+                                    HorizontalLayout {
+                                        Text {
+                                            text: coin.name + " (" + coin.symbol + ")" + (coin.custom ? " *" : "");
+                                            color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
+                                            font-size: 13px;
+                                            font-weight: index == selected-index ? 500 : 400;
+                                            vertical-alignment: center;
+                                            horizontal-stretch: 1;
+                                        }
+
+                                        if index == selected-index: Text {
+                                            text: "✓";
+                                            color: Palette.accent;
+                                            font-size: 12px;
+                                            vertical-alignment: center;
+                                        }
+                                    }
+
+                                    option-touch-fav := TouchArea {
+                                        mouse-cursor: pointer;
+                                        clicked => {
+                                            root.selected-index = index;
+                                            root.selected(index, coin.name);
+                                            root.popup-open = false;
+                                            root.reset-search();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        for coin[index] in CryptoAdapter.coin-catalog: Rectangle {
+                            visible: coin.visible && !coin.favorite;
+                            height: coin.visible && !coin.favorite ? 40px : 0px;
+                            background: option-touch-all.has-hover ? Palette.surface-hover : transparent;
+                            border-radius: 6px;
+
+                            HorizontalLayout {
+                                padding-left: 12px;
+                                padding-right: 12px;
+                                spacing: 8px;
+
+                                Rectangle {
+                                    width: 24px;
+                                    height: 24px;
+                                    y: (parent.height - self.height) / 2;
+                                    border-radius: 6px;
+                                    background: favorite-touch-all.has-hover ? Palette.surface-hover : transparent;
+
+                                    Text {
+                                        text: coin.favorite ? "★" : "☆";
+                                        color: coin.favorite ? Palette.accent : Palette.text-muted;
+                                        font-size: 13px;
+                                        font-weight: 600;
+                                        horizontal-alignment: center;
+                                        vertical-alignment: center;
+                                    }
+
+                                    favorite-touch-all := TouchArea {
+                                        mouse-cursor: pointer;
+                                        clicked => {
+                                            let next = !coin.favorite;
+                                            let result = CryptoAdapter.set-favorite-coin(coin.id, next);
+                                            if (result == "") {
+                                                CryptoAdapter.coin-catalog[index].favorite = next;
+                                            } else {
+                                                NotificationAdapter.show(result, true);
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Rectangle {
+                                    horizontal-stretch: 1;
+                                    background: transparent;
+
+                                    HorizontalLayout {
+                                        Text {
+                                            text: coin.name + " (" + coin.symbol + ")" + (coin.custom ? " *" : "");
+                                            color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
+                                            font-size: 13px;
+                                            font-weight: index == selected-index ? 500 : 400;
+                                            vertical-alignment: center;
+                                            horizontal-stretch: 1;
+                                        }
+
+                                        if index == selected-index: Text {
+                                            text: "✓";
+                                            color: Palette.accent;
+                                            font-size: 12px;
+                                            vertical-alignment: center;
+                                        }
+                                    }
+
+                                    option-touch-all := TouchArea {
+                                        mouse-cursor: pointer;
+                                        clicked => {
+                                            root.selected-index = index;
+                                            root.selected(index, coin.name);
+                                            root.popup-open = false;
+                                            root.reset-search();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                CustomVScrollbar {
+                    x: parent.width - self.width - 4px;
+                    y: 0;
+                    height: parent.height;
+                    visible-height: parent.height;
+                    viewport-height: list-scroll.viewport-height;
+                    viewport-y: list-scroll.viewport-y;
+                }
+            }
+        }
+    }
+}

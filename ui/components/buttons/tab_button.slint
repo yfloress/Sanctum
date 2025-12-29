@@ -1,0 +1,46 @@
+// Shared TabButton component for page navigation tabs
+
+import { Palette } from "../../globals.slint";
+
+export component TabButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> active;
+    callback clicked;
+
+    width: 110px;
+    height: 36px;
+    border-radius: 18px;
+    background: active ? @linear-gradient(135deg, Palette.surface-hover 0%, Palette.surface 100%) : transparent;
+    border-width: 1px;
+    border-color: active ? Palette.border-light : transparent;
+
+    animate background { duration: 250ms; easing: ease-out; }
+    animate border-color { duration: 250ms; easing: ease-out; }
+
+    // Subtle glow when active
+    if active: Rectangle {
+        x: -2px;
+        y: -2px;
+        width: parent.width + 4px;
+        height: parent.height + 4px;
+        border-radius: 20px;
+        background: Palette.accent;
+        opacity: 0.1;
+    }
+
+    Text {
+        text: root.text;
+        color: active ? Palette.text-primary : Palette.text-muted;
+        font-size: 11px;
+        font-weight: active ? 600 : 500;
+        letter-spacing: 1.5px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        animate color { duration: 200ms; }
+    }
+
+    TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}

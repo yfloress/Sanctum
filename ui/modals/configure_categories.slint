@@ -89,7 +89,7 @@ component CategoryRow inherits Rectangle {
                 clicked => { root.edit-clicked(); }
             }
 
-            if !root.is-editing && !root.is-default: ActionButton {
+            if !root.is-editing: ActionButton {
                 text: "DELETE";
                 primary: false;
                 height: 32px;

@@ -1,4 +1,4 @@
-//! Cryptocurrency module for fetching market data from CoinGecko API
+//! CoinGecko API client for cryptocurrency market data
 //!
 //! Security considerations:
 //! - Input validation and sanitization for coin IDs
@@ -18,6 +18,8 @@ use std::collections::HashSet;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 use tokio::time::sleep;
+
+// ==================== Constants ====================
 
 /// CoinGecko API base URL (free tier, no API key required)
 const COINGECKO_API_BASE: &str = "https://api.coingecko.com/api/v3";
@@ -43,16 +45,16 @@ const MAX_SANITIZED_STRING_LENGTH: usize = 128;
 /// Last request timestamp for rate limiting (atomic for thread safety)
 static LAST_REQUEST_TIME: AtomicU64 = AtomicU64::new(0);
 
-/// List of popular tickers used for traffic padding/obfuscation.
-/// These are mixed with user requests to make it harder to fingerprint specific portfolio holdings
-/// (e.g. distinguishing if a user owns Bitcoin vs just generic market monitoring).
+/// List of popular tickers used for traffic padding/obfuscation
 const PRIVACY_PRESERVING_PRICE_IDS: &[&str] = &[
     "bitcoin", "ethereum", "litecoin", "monero", "tether", "solana", "polkadot", "cardano",
     "dogecoin", "ripple",
 ];
 
-/// Default tickers shown in the UI when no user selection exists.
+/// Default tickers shown in the UI when no user selection exists
 const DEFAULT_TICKER_IDS: &[&str] = &["bitcoin", "litecoin", "monero", "ethereum", "tether"];
+
+// ==================== Internal Structs ====================
 
 /// Internal struct to deserialize CoinGecko API response
 #[derive(Debug, Deserialize)]
@@ -76,9 +78,10 @@ struct TetherPrice {
     clp: Option<f64>,
 }
 
+// ==================== Validation Functions ====================
+
 /// Validates a coin ID to prevent injection or malformed inputs
 pub fn validate_coin_id(coin_id: &str) -> Result<String, String> {
-    // Reject any whitespace/control characters outright (prevents hidden newlines/tabs)
     if coin_id.chars().any(|c| c.is_whitespace() || c.is_control()) {
         return Err("Coin ID contains invalid characters".to_string());
     }
@@ -96,22 +99,16 @@ pub fn validate_coin_id(coin_id: &str) -> Result<String, String> {
         ));
     }
 
-    // Only allow alphanumeric characters and hyphens (CoinGecko format)
-    if !trimmed
-        .chars()
-        .all(|c| c.is_ascii_alphanumeric() || c == '-')
-    {
+    if !trimmed.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') {
         return Err("Coin ID contains invalid characters".to_string());
     }
 
-    // Additional check: must start and end with alphanumeric
     if let (Some(first), Some(last)) = (trimmed.chars().next(), trimmed.chars().last())
         && (!first.is_ascii_alphanumeric() || !last.is_ascii_alphanumeric())
     {
         return Err("Coin ID must start and end with alphanumeric characters".to_string());
     }
 
-    // Prevent consecutive hyphens
     if trimmed.contains("--") {
         return Err("Coin ID contains invalid characters".to_string());
     }
@@ -120,7 +117,7 @@ pub fn validate_coin_id(coin_id: &str) -> Result<String, String> {
 }
 
 /// Sanitizes a string from external API to prevent XSS and other injection attacks
-fn sanitize_api_string(input: &str) -> String {
+pub fn sanitize_api_string(input: &str) -> String {
     input
         .chars()
         .filter(|c| {
@@ -136,11 +133,10 @@ fn sanitize_api_string(input: &str) -> String {
 }
 
 /// Validates that a float value is within reasonable bounds
-fn validate_price(price: f64) -> f64 {
+pub fn validate_price(price: f64) -> f64 {
     if price.is_nan() || price.is_infinite() || price < 0.0 {
         0.0
     } else if price > 1e15 {
-        // Cap at 1 quadrillion (sanity check)
         1e15
     } else {
         price
@@ -148,13 +144,15 @@ fn validate_price(price: f64) -> f64 {
 }
 
 /// Validates percentage change is within reasonable bounds
-fn validate_percentage(pct: f64) -> f64 {
+pub fn validate_percentage(pct: f64) -> f64 {
     if pct.is_nan() || pct.is_infinite() {
         0.0
     } else {
-        pct.clamp(-100.0, 10000.0) // -100% to +10000%
+        pct.clamp(-100.0, 10000.0)
     }
 }
+
+// ==================== Rate Limiting ====================
 
 /// Returns current time in milliseconds since UNIX epoch
 fn now_millis() -> u64 {
@@ -177,7 +175,6 @@ async fn enforce_rate_limit() -> Result<(), String> {
             {
                 return Ok(());
             }
-            // If another thread updated the timestamp, re-evaluate
             continue;
         }
 
@@ -188,6 +185,8 @@ async fn enforce_rate_limit() -> Result<(), String> {
     }
 }
 
+// ==================== HTTP Client ====================
+
 /// Creates a secure HTTP client with appropriate settings
 fn create_secure_client() -> Result<Client, String> {
     Client::builder()
@@ -195,36 +194,32 @@ fn create_secure_client() -> Result<Client, String> {
         .connect_timeout(Duration::from_secs(10))
         .user_agent("Sanctum/1.0")
         .https_only(true)
-        .redirect(reqwest::redirect::Policy::none()) // Prevent redirect attacks
+        .redirect(reqwest::redirect::Policy::none())
         .build()
         .map_err(|_| "Failed to create HTTP client".to_string())
 }
 
+/// Handles request errors without exposing sensitive information
+fn handle_request_error(error: reqwest::Error) -> String {
+    if error.is_timeout() {
+        "Request timed out. Please check your connection.".to_string()
+    } else if error.is_connect() {
+        "Could not connect to the server. Please check your internet connection.".to_string()
+    } else if error.is_redirect() {
+        "Request was redirected unexpectedly.".to_string()
+    } else {
+        "Failed to fetch cryptocurrency data. Please try again later.".to_string()
+    }
+}
+
+// ==================== API Functions ====================
+
 /// Fetches cryptocurrency prices from CoinGecko API
-///
-/// # Arguments
-/// * `coin_ids` - Vector of coin IDs (e.g., ["bitcoin", "ethereum"])
-///
-/// # Returns
-/// * `Ok(Vec<CryptoAsset>)` - List of crypto assets with current prices
-/// * `Err(String)` - Error message if the request fails
-///
-/// # Security
-/// - Validates all coin IDs before making requests
-/// - Deduplicates input to prevent URL bloat
-/// - Limits the number of coins per request
-/// - Uses HTTPS only
-/// - Implements request timeout
-/// - Limits response size
-/// - Client-side rate limiting
-/// - Sanitizes all output from external API
 pub async fn fetch_crypto_prices(coin_ids: Vec<String>) -> Result<Vec<CryptoAsset>, String> {
-    // Validate input is not empty
     if coin_ids.is_empty() {
         return Ok(Vec::new());
     }
 
-    // Check rate limit before proceeding (waits instead of failing fast)
     enforce_rate_limit().await?;
 
     // Validate, sanitize, and deduplicate all coin IDs
@@ -238,7 +233,6 @@ pub async fn fetch_crypto_prices(coin_ids: Vec<String>) -> Result<Vec<CryptoAsse
         }
     }
 
-    // Limit number of coins to prevent abuse
     if validated_ids.len() > MAX_COINS_PER_REQUEST {
         return Err(format!(
             "Too many coins requested. Maximum is {}",
@@ -246,32 +240,20 @@ pub async fn fetch_crypto_prices(coin_ids: Vec<String>) -> Result<Vec<CryptoAsse
         ));
     }
 
-    // Build the comma-separated list of IDs
     let ids_param = validated_ids.join(",");
-
-    // Construct the API URL
     let url = format!(
         "{}/coins/markets?vs_currency=usd&ids={}&order=market_cap_desc&sparkline=false",
         COINGECKO_API_BASE, ids_param
     );
 
-    // Log API request
     log_security_event(
         SecurityEvent::ExternalApiRequest,
         Some(&format!("coins={}", validated_ids.len())),
     );
 
-    // Create secure HTTP client
     let client = create_secure_client()?;
+    let response = client.get(&url).send().await.map_err(handle_request_error)?;
 
-    // Make the request
-    let response = client
-        .get(&url)
-        .send()
-        .await
-        .map_err(handle_request_error)?;
-
-    // Check HTTP status
     let status = response.status();
     if !status.is_success() {
         if status.as_u16() == 429 {
@@ -285,14 +267,12 @@ pub async fn fetch_crypto_prices(coin_ids: Vec<String>) -> Result<Vec<CryptoAsse
         });
     }
 
-    // Check content length before downloading
     if let Some(content_length) = response.content_length()
         && content_length as usize > MAX_RESPONSE_SIZE
     {
         return Err("Response too large".to_string());
     }
 
-    // Download body with size limit (streaming to avoid loading unbounded data)
     let mut downloaded: usize = 0;
     let mut body: Vec<u8> = Vec::new();
     let mut stream = response.bytes_stream();
@@ -309,16 +289,13 @@ pub async fn fetch_crypto_prices(coin_ids: Vec<String>) -> Result<Vec<CryptoAsse
         body.extend_from_slice(&chunk);
     }
 
-    // Parse response
     let market_data: Vec<CoinGeckoMarketData> = serde_json::from_slice(&body)
         .map_err(|_| "Failed to parse cryptocurrency data".to_string())?;
 
-    // Limit number of results (defense in depth)
     if market_data.len() > MAX_COINS_PER_REQUEST * 2 {
         return Err("Unexpected response format".to_string());
     }
 
-    // Convert to our internal struct with sanitization
     let assets: Vec<CryptoAsset> = market_data
         .into_iter()
         .map(|data| CryptoAsset {
@@ -338,23 +315,78 @@ pub async fn fetch_crypto_prices(coin_ids: Vec<String>) -> Result<Vec<CryptoAsse
     Ok(assets)
 }
 
-/// Returns the padding list used for default tickers and privacy obfuscation.
+/// Fetches the current CLP to USD exchange rate using CoinGecko
+pub async fn fetch_clp_usd_rate() -> Result<f64, String> {
+    enforce_rate_limit().await?;
+
+    let url = format!(
+        "{}/simple/price?ids=tether&vs_currencies=clp",
+        COINGECKO_API_BASE
+    );
+
+    log_security_event(SecurityEvent::ExternalApiRequest, Some("clp_usd_rate"));
+
+    let client = create_secure_client()?;
+    let response = client.get(&url).send().await.map_err(handle_request_error)?;
+
+    let status = response.status();
+    if !status.is_success() {
+        if status.as_u16() == 429 {
+            log_security_event(SecurityEvent::ExternalApiRateLimited, Some("coingecko"));
+        }
+        return Err("Failed to fetch exchange rate".to_string());
+    }
+
+    if let Some(content_length) = response.content_length()
+        && content_length as usize > MAX_RESPONSE_SIZE
+    {
+        return Err("Response too large".to_string());
+    }
+
+    let mut downloaded: usize = 0;
+    let mut body: Vec<u8> = Vec::new();
+    let mut stream = response.bytes_stream();
+
+    while let Some(chunk) = stream
+        .try_next()
+        .await
+        .map_err(|_| "Failed to download response".to_string())?
+    {
+        downloaded += chunk.len();
+        if downloaded > MAX_RESPONSE_SIZE {
+            return Err("Response too large".to_string());
+        }
+        body.extend_from_slice(&chunk);
+    }
+
+    let price_data: SimplePriceResponse =
+        serde_json::from_slice(&body).map_err(|_| "Failed to parse exchange rate data")?;
+
+    let rate = price_data
+        .tether
+        .and_then(|t| t.clp)
+        .ok_or("CLP rate not available")?;
+
+    if !(100.0..=5000.0).contains(&rate) {
+        return Err("Exchange rate out of expected range".to_string());
+    }
+
+    Ok(rate)
+}
+
+// ==================== Default Data ====================
+
+/// Returns the padding list used for default tickers and privacy obfuscation
 pub fn default_price_allowlist() -> Vec<String> {
-    PRIVACY_PRESERVING_PRICE_IDS
-        .iter()
-        .map(|s| s.to_string())
-        .collect()
+    PRIVACY_PRESERVING_PRICE_IDS.iter().map(|s| s.to_string()).collect()
 }
 
-/// Returns the default ticker IDs shown in the UI.
+/// Returns the default ticker IDs shown in the UI
 pub fn default_ticker_ids() -> Vec<String> {
-    DEFAULT_TICKER_IDS
-        .iter()
-        .map(|s| s.to_string())
-        .collect()
+    DEFAULT_TICKER_IDS.iter().map(|s| s.to_string()).collect()
 }
 
-/// Returns the default coin catalog used for selection and ticker configuration.
+/// Returns the default coin catalog used for selection and ticker configuration
 pub fn default_coin_catalog() -> Vec<CryptoCatalogCoin> {
     let defaults = [
         ("bitcoin", "Bitcoin", "BTC"),
@@ -408,170 +440,4 @@ pub fn default_coin_catalog() -> Vec<CryptoCatalogCoin> {
             custom: false,
         })
         .collect()
-}
-
-/// Fetches the current CLP to USD exchange rate using CoinGecko
-/// Returns how many CLP equals 1 USD (e.g., ~950 CLP = 1 USD)
-///
-/// We use USDT/CLP as proxy since CoinGecko provides this pair.
-/// The rate returned is CLP per 1 USD.
-pub async fn fetch_clp_usd_rate() -> Result<f64, String> {
-    // Check rate limit before proceeding (waits instead of failing fast)
-    enforce_rate_limit().await?;
-
-    // Use simple/price endpoint to get USDT price in CLP
-    // USDT ≈ 1 USD, so this gives us CLP/USD rate
-    let url = format!(
-        "{}/simple/price?ids=tether&vs_currencies=clp",
-        COINGECKO_API_BASE
-    );
-
-    log_security_event(SecurityEvent::ExternalApiRequest, Some("clp_usd_rate"));
-
-    let client = create_secure_client()?;
-
-    let response = client
-        .get(&url)
-        .send()
-        .await
-        .map_err(handle_request_error)?;
-
-    let status = response.status();
-    if !status.is_success() {
-        if status.as_u16() == 429 {
-            log_security_event(SecurityEvent::ExternalApiRateLimited, Some("coingecko"));
-        }
-        return Err("Failed to fetch exchange rate".to_string());
-    }
-
-    // Limit response size to prevent abuse
-    if let Some(content_length) = response.content_length()
-        && content_length as usize > MAX_RESPONSE_SIZE
-    {
-        return Err("Response too large".to_string());
-    }
-
-    let mut downloaded: usize = 0;
-    let mut body: Vec<u8> = Vec::new();
-    let mut stream = response.bytes_stream();
-
-    while let Some(chunk) = stream
-        .try_next()
-        .await
-        .map_err(|_| "Failed to download response".to_string())?
-    {
-        downloaded += chunk.len();
-        if downloaded > MAX_RESPONSE_SIZE {
-            return Err("Response too large".to_string());
-        }
-        body.extend_from_slice(&chunk);
-    }
-
-    let price_data: SimplePriceResponse =
-        serde_json::from_slice(&body).map_err(|_| "Failed to parse exchange rate data")?;
-
-    let rate = price_data
-        .tether
-        .and_then(|t| t.clp)
-        .ok_or("CLP rate not available")?;
-
-    // Validate the rate is reasonable (between 500 and 2000 CLP per USD)
-    if !(100.0..=5000.0).contains(&rate) {
-        return Err("Exchange rate out of expected range".to_string());
-    }
-
-    Ok(rate)
-}
-
-/// Handles request errors without exposing sensitive information
-fn handle_request_error(error: reqwest::Error) -> String {
-    if error.is_timeout() {
-        "Request timed out. Please check your connection.".to_string()
-    } else if error.is_connect() {
-        "Could not connect to the server. Please check your internet connection.".to_string()
-    } else if error.is_redirect() {
-        "Request was redirected unexpectedly.".to_string()
-    } else {
-        // Generic error message to avoid leaking internal details
-        "Failed to fetch cryptocurrency data. Please try again later.".to_string()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_validate_coin_id_valid() {
-        assert!(validate_coin_id("bitcoin").is_ok());
-        assert!(validate_coin_id("ethereum").is_ok());
-        assert!(validate_coin_id("binance-coin").is_ok());
-        assert!(validate_coin_id("BITCOIN").is_ok()); // Should lowercase
-        assert!(validate_coin_id("shiba-inu").is_ok());
-    }
-
-    #[test]
-    fn test_validate_coin_id_empty() {
-        assert!(validate_coin_id("").is_err());
-        assert!(validate_coin_id("   ").is_err());
-    }
-
-    #[test]
-    fn test_validate_coin_id_invalid_chars() {
-        assert!(validate_coin_id("bitcoin<script>").is_err());
-        assert!(validate_coin_id("../etc/passwd").is_err());
-        assert!(validate_coin_id("coin;DROP TABLE").is_err());
-        assert!(validate_coin_id("coin\n").is_err());
-        assert!(validate_coin_id("coin&param=value").is_err());
-        assert!(validate_coin_id("coin?query").is_err());
-    }
-
-    #[test]
-    fn test_validate_coin_id_boundary_cases() {
-        assert!(validate_coin_id("-bitcoin").is_err()); // Starts with hyphen
-        assert!(validate_coin_id("bitcoin-").is_err()); // Ends with hyphen
-        assert!(validate_coin_id("bit--coin").is_err()); // Consecutive hyphens
-    }
-
-    #[test]
-    fn test_validate_coin_id_too_long() {
-        let long_id = "a".repeat(MAX_COIN_ID_LENGTH + 1);
-        assert!(validate_coin_id(&long_id).is_err());
-
-        let max_id = "a".repeat(MAX_COIN_ID_LENGTH);
-        assert!(validate_coin_id(&max_id).is_ok());
-    }
-
-    #[test]
-    fn test_sanitize_api_string() {
-        assert_eq!(sanitize_api_string("Bitcoin"), "Bitcoin");
-        assert_eq!(sanitize_api_string("Bitcoin <script>"), "Bitcoin script");
-        assert_eq!(sanitize_api_string("Test\n\r\t"), "Test");
-        assert_eq!(sanitize_api_string("Normal-Name.v2"), "Normal-Name.v2");
-    }
-
-    #[test]
-    fn test_sanitize_api_string_length() {
-        let long_string = "a".repeat(500);
-        let sanitized = sanitize_api_string(&long_string);
-        assert_eq!(sanitized.len(), MAX_SANITIZED_STRING_LENGTH);
-    }
-
-    #[test]
-    fn test_validate_price() {
-        assert_eq!(validate_price(100.0), 100.0);
-        assert_eq!(validate_price(-50.0), 0.0);
-        assert_eq!(validate_price(f64::NAN), 0.0);
-        assert_eq!(validate_price(f64::INFINITY), 0.0);
-        assert_eq!(validate_price(1e20), 1e15); // Capped
-    }
-
-    #[test]
-    fn test_validate_percentage() {
-        assert_eq!(validate_percentage(5.5), 5.5);
-        assert_eq!(validate_percentage(-50.0), -50.0);
-        assert_eq!(validate_percentage(-150.0), -100.0); // Clamped
-        assert_eq!(validate_percentage(50000.0), 10000.0); // Clamped
-        assert_eq!(validate_percentage(f64::NAN), 0.0);
-    }
 }

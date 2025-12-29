@@ -233,13 +233,6 @@ export struct WeekdayEfficiencyData {
     bar-height-percent: float,
 }
 
-export struct MonthlyTrendData {
-    month-name: string,
-    avg-per-day: float,
-    x-percent: float,
-    y-percent: float,
-}
-
 export global HabitAdapter {
     in-out property <[HabitData]> habits: [];
     in-out property <string> current-month-name: "";

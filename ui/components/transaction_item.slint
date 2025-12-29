@@ -76,7 +76,7 @@ export component TransactionItem inherits Rectangle {
         VerticalLayout {
             alignment: center;
             CategoryIcon {
-                category: transaction.category;
+                category: transaction.category-raw;
                 is-expense: transaction.is-expense;
                 is-transfer: transaction.is-transfer;
             }

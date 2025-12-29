@@ -1,7 +1,12 @@
+//! Habits service
+//!
+//! Business logic for habit tracking.
+
 use crate::db::{Database, DbError};
+// Use original models for compatibility
 use crate::models::{Habit, HabitLog};
-use std::sync::Arc;
-use std::sync::Mutex;
+use super::repository::HabitsRepository;
+use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
 pub struct HabitService {
@@ -13,7 +18,7 @@ impl HabitService {
         Self { db }
     }
 
-    fn get_db<F, T>(&self, f: F) -> Result<T, DbError>
+    fn with_db<F, T>(&self, f: F) -> Result<T, DbError>
     where
         F: FnOnce(&Database) -> Result<T, DbError>,
     {
@@ -45,8 +50,8 @@ impl HabitService {
             archived: false,
         };
 
-        self.get_db(|db| {
-            db.create_habit(&habit)?;
+        self.with_db(|db| {
+            HabitsRepository::create_habit(db, &habit)?;
             Ok(())
         })?;
 
@@ -54,7 +59,7 @@ impl HabitService {
     }
 
     pub fn get_habits(&self) -> Result<Vec<Habit>, DbError> {
-        self.get_db(|db| db.get_habits())
+        self.with_db(HabitsRepository::get_habits)
     }
 
     pub fn update_habit(
@@ -66,19 +71,18 @@ impl HabitService {
         category: String,
         is_archived: bool,
     ) -> Result<(), DbError> {
-        self.get_db(|db| {
-            match db.get_habit(&id)? {
+        self.with_db(|db| {
+            match HabitsRepository::get_habit(db, &id)? {
                 Some(mut habit) => {
-                    habit.name = name.clone();
-                    habit.description = description.clone();
-                    habit.color = color.clone();
-                    habit.category = category.clone();
-                    // habit.archived = is_archived; // DB update doesn't support this
+                    habit.name = name;
+                    habit.description = description;
+                    habit.color = color;
+                    habit.category = category;
 
-                    db.update_habit(&habit)?;
+                    HabitsRepository::update_habit(db, &habit)?;
 
                     if is_archived {
-                        db.archive_habit(&id)?;
+                        HabitsRepository::archive_habit(db, &id)?;
                     }
                     Ok(())
                 }
@@ -88,23 +92,19 @@ impl HabitService {
     }
 
     pub fn archive_habit(&self, id: String) -> Result<(), DbError> {
-        self.get_db(|db| db.archive_habit(&id))
+        self.with_db(|db| HabitsRepository::archive_habit(db, &id))
     }
 
     pub fn delete_habit(&self, id: String) -> Result<(), DbError> {
-        self.get_db(|db| db.delete_habit(&id))
+        self.with_db(|db| HabitsRepository::delete_habit(db, &id))
     }
 
     pub fn toggle_habit_completion(&self, habit_id: String, date: String) -> Result<bool, DbError> {
-        let (active, _) = self.get_db(|db| db.toggle_habit_log(&habit_id, &date))?;
+        let (active, _id) = self.with_db(|db| HabitsRepository::toggle_habit_log(db, &habit_id, &date))?;
         Ok(active)
     }
 
-    pub fn get_habit_logs(
-        &self,
-        start_date: String,
-        end_date: String,
-    ) -> Result<Vec<HabitLog>, DbError> {
-        self.get_db(|db| db.get_habit_logs(&start_date, &end_date))
+    pub fn get_habit_logs(&self, start_date: String, end_date: String) -> Result<Vec<HabitLog>, DbError> {
+        self.with_db(|db| HabitsRepository::get_habit_logs(db, &start_date, &end_date))
     }
 }
