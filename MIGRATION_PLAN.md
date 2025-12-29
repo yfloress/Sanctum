@@ -581,19 +581,15 @@ ui/
 
 ### Phase 3: Reorganize Components
 
-- [ ] Step 3.1: Create `components/forms/` directory
-- [ ] Step 3.2: Split `transaction_form_components.slint` (761 lines)
-  - [ ] FormField → `components/forms/form_field.slint`
-  - [ ] TypeSelector → `components/forms/type_selector.slint`
-  - [ ] WalletSelector → `components/forms/wallet_selector.slint`
-  - [ ] CoinSelector → `components/forms/coin_selector.slint`
+- [x] Step 3.1: Create `components/forms/` directory
+- [x] Step 3.2: Split `transaction_form_components.slint` (761 → 7 lines, re-exports only)
+  - [x] FormField → `components/forms/form_field.slint` (134 lines)
+  - [x] TypeSelector → `components/forms/type_selector.slint` (145 lines)
+  - [x] WalletSelector → `components/forms/wallet_selector.slint` (120 lines)
+  - [x] CoinSelector → `components/forms/coin_selector.slint` (362 lines)
 
-- [ ] Step 3.3: Create `components/cards/` directory (if not exists)
-- [ ] Step 3.4: Move card components to `components/cards/`
-
-- [ ] Step 3.5: Create `components/panels/` directory
-- [ ] Step 3.6: Review `wallet_detail.slint` (681 lines) - split if possible
-- [ ] Step 3.7: Review `asset_detail.slint` (649 lines) - split if possible
+- [ ] Step 3.3: Review `wallet_detail.slint` (681 lines) - complex panel, leave as-is
+- [ ] Step 3.4: Review `asset_detail.slint` (649 lines) - complex panel, leave as-is
 
 ### Phase 4: Modal Cleanup
 
@@ -633,3 +629,12 @@ ui/
 - ConfirmDeleteDialog: Kept inline - too context-specific (each calls different adapters)
 - AccountFilterSelect/CategoryFilterSelect: Kept in finances.slint - tightly coupled to adapters
 - GhostButton: Already in crypto_widgets.slint, not duplicated
+
+**Form Components Split:**
+- Created `components/forms/` subdirectory
+- Split `transaction_form_components.slint` (761 lines) into 4 focused files:
+  - `form_field.slint` (134 lines) - Text input with label
+  - `type_selector.slint` (145 lines) - Transaction type picker
+  - `wallet_selector.slint` (120 lines) - Wallet dropdown
+  - `coin_selector.slint` (362 lines) - Searchable coin picker
+- Original file now just re-exports for backwards compatibility (7 lines)

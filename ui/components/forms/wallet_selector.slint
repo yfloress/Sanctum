@@ -1,0 +1,120 @@
+// WalletSelector - Dropdown for crypto wallet selection
+
+import { Palette, CryptoAdapter } from "../../globals.slint";
+
+export component WalletSelector inherits Rectangle {
+    in-out property <int> selected-index: 0;
+    in property <string> label: "WALLET";
+
+    height: 64px;
+    background: transparent;
+
+    VerticalLayout {
+        spacing: 8px;
+
+        Text {
+            text: root.label;
+            color: Palette.text-muted;
+            font-size: 10px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
+        }
+
+        Rectangle {
+            height: 40px;
+            background: Palette.surface;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: Palette.border;
+
+            HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+
+                Text {
+                    text: CryptoAdapter.wallet-list.length > 0 ?
+                        CryptoAdapter.wallet-list[selected-index].name :
+                        "No wallets available";
+                    color: CryptoAdapter.wallet-list.length > 0 ? Palette.text-primary : Palette.text-muted;
+                    font-size: 14px;
+                    font-weight: 400;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+
+                Text {
+                    text: "▼";
+                    color: Palette.text-muted;
+                    font-size: 10px;
+                    vertical-alignment: center;
+                }
+            }
+
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    if (CryptoAdapter.wallet-list.length > 0) {
+                        popup.show();
+                    }
+                }
+            }
+        }
+    }
+
+    popup := PopupWindow {
+        x: 0;
+        y: 64px;
+        width: root.width;
+
+        Rectangle {
+            background: Palette.sidebar-bg;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: Palette.border-light;
+            height: min(CryptoAdapter.wallet-list.length * 40px + 8px, 200px);
+            drop-shadow-blur: 16px;
+            drop-shadow-color: Palette.shadow-color;
+
+            Flickable {
+                viewport-height: CryptoAdapter.wallet-list.length * 40px + 8px;
+
+                VerticalLayout {
+                    padding: 4px;
+                    spacing: 0px;
+
+                    for wallet[index] in CryptoAdapter.wallet-list: Rectangle {
+                        height: 40px;
+                        background: option-touch.has-hover ? Palette.surface-hover : transparent;
+                        border-radius: 6px;
+
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+
+                            Text {
+                                text: wallet.name;
+                                color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
+                                font-size: 13px;
+                                font-weight: index == selected-index ? 500 : 400;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+
+                            if index == selected-index: Text {
+                                text: "✓";
+                                color: Palette.accent;
+                                font-size: 12px;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        option-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.selected-index = index; }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

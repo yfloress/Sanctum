@@ -1,0 +1,145 @@
+// TypeSelector - Transaction type selection (buy/sell/swap/transfer)
+
+import { Palette } from "../../globals.slint";
+
+export component TypeSelector inherits Rectangle {
+    in-out property <string> selected-type: "buy";
+    property <string> active-group: (root.selected-type == "buy" || root.selected-type == "sell")
+        ? "trade"
+        : (root.selected-type == "swap" ? "swap" : "move");
+
+    height: root.active-group == "swap" ? 48px : 92px;
+    background: transparent;
+
+    VerticalLayout {
+        spacing: 6px;
+
+        Rectangle {
+            height: 36px;
+            background: Palette.surface;
+            border-radius: 10px;
+            border-width: 1px;
+            border-color: Palette.border;
+
+            HorizontalLayout {
+                padding: 4px;
+                spacing: 4px;
+
+                for group[index] in ["trade", "move", "swap"]: Rectangle {
+                    horizontal-stretch: 1;
+                    background: root.active-group == group ? Palette.primary.with-alpha(0.2) : transparent;
+                    border-radius: 8px;
+                    border-width: root.active-group == group ? 1px : 0px;
+                    border-color: Palette.primary.with-alpha(0.4);
+
+                    Text {
+                        text: group == "trade" ? "TRADE" : group == "move" ? "MOVE" : "SWAP";
+                        color: root.active-group == group ? Palette.text-primary : Palette.text-muted;
+                        font-size: 9px;
+                        font-weight: 600;
+                        letter-spacing: 1px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            if (group == "trade") {
+                                root.selected-type = "buy";
+                            } else if (group == "move") {
+                                root.selected-type = "move";
+                            } else {
+                                root.selected-type = "swap";
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if root.active-group == "trade": Rectangle {
+            height: 48px;
+            background: Palette.surface;
+            border-radius: 10px;
+            border-width: 1px;
+            border-color: Palette.border;
+
+            HorizontalLayout {
+                padding: 4px;
+                spacing: 4px;
+
+                for type[index] in ["buy", "sell"]: Rectangle {
+                    horizontal-stretch: 1;
+                    background: root.selected-type == type
+                        ? (type == "buy" ? Palette.success.with-alpha(0.2) : Palette.danger.with-alpha(0.2))
+                        : transparent;
+                    border-radius: 8px;
+                    border-width: root.selected-type == type ? 1px : 0px;
+                    border-color: type == "buy"
+                        ? Palette.success.with-alpha(0.4)
+                        : Palette.danger.with-alpha(0.4);
+
+                    Text {
+                        text: type == "buy" ? "BUY" : "SELL";
+                        color: root.selected-type == type ? Palette.text-primary : Palette.text-muted;
+                        font-size: 9px;
+                        font-weight: 600;
+                        letter-spacing: 1px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.selected-type = type; }
+                    }
+                }
+            }
+        }
+
+        if root.active-group == "move": Rectangle {
+            height: 48px;
+            background: Palette.surface;
+            border-radius: 10px;
+            border-width: 1px;
+            border-color: Palette.border;
+
+            HorizontalLayout {
+                padding: 4px;
+                spacing: 4px;
+
+                for type[index] in ["transfer_in", "transfer_out", "move"]: Rectangle {
+                    horizontal-stretch: 1;
+                    background: root.selected-type == type
+                        ? (type == "transfer_in" ? Palette.success.with-alpha(0.2) :
+                           type == "transfer_out" ? Palette.danger.with-alpha(0.2) :
+                           Palette.primary.with-alpha(0.2))
+                        : transparent;
+                    border-radius: 8px;
+                    border-width: root.selected-type == type ? 1px : 0px;
+                    border-color: type == "transfer_in"
+                        ? Palette.success.with-alpha(0.4)
+                        : type == "transfer_out"
+                            ? Palette.danger.with-alpha(0.4)
+                            : Palette.primary.with-alpha(0.4);
+
+                    Text {
+                        text: type == "transfer_in" ? "IN" : type == "transfer_out" ? "OUT" : "MOVE";
+                        color: root.selected-type == type ? Palette.text-primary : Palette.text-muted;
+                        font-size: 9px;
+                        font-weight: 600;
+                        letter-spacing: 1px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.selected-type = type; }
+                    }
+                }
+            }
+        }
+    }
+}
