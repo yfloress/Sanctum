@@ -63,6 +63,31 @@ UI (callbacks/) → Controller → Features (service/repository) → DB
   }
   ```
 
-### Callbacks Structure (ui/callbacks/)
+### Callbacks Structure (src/ui/callbacks/)
 - One subdirectory per feature: `crypto/`, `finance/`, `habits/`, `dashboard/`.
 - Each has: `mod.rs` (coordinator), `callbacks.rs` (on_* registrations), `helpers.rs`.
+
+## Architecture Patterns (ui/)
+
+### Structure
+```
+ui/
+├── pages/           # One file per page (FinancesPage, CryptoPage, etc.)
+├── modals/          # One file per modal dialog
+├── components/      # Reusable UI components
+│   ├── buttons/     # TabButton, etc.
+│   ├── sections/    # SectionHeader, EmptyState
+│   ├── filters/     # FilterInput
+│   ├── forms/       # FormField, TypeSelector, WalletSelector, CoinSelector
+│   └── *.slint      # Feature-specific components
+├── globals.slint    # Adapters (data binding) and Palette (theme)
+├── widgets.slint    # Base widgets (TextButton, ActionButton, etc.)
+└── app.slint        # Main app layout
+```
+
+### Guidelines
+- Keep files under ~500 lines. Extract repeated components to `components/`.
+- Shared components go in subdirectories by type (buttons/, sections/, forms/).
+- Use re-exports for backwards compatibility when splitting files.
+- Adapters in `globals.slint` bridge Rust ↔ Slint (set from callbacks).
+- kebab-case for properties and callbacks, PascalCase for components.
