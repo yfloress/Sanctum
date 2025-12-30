@@ -6,6 +6,7 @@ export component FormField inherits Rectangle {
     in property <string> label: "";
     in property <string> placeholder: "";
     in-out property <string> value: "";
+    in property <bool> enabled: true;
     in property <bool> large: false;
     in property <bool> show-refresh: false;
     in property <bool> show-all-button: false;
@@ -88,10 +89,10 @@ export component FormField inherits Rectangle {
 
         Rectangle {
             height: large ? 56px : 40px;
-            background: Palette.surface;
+            background: root.enabled ? Palette.surface : Palette.surface-hover;
             border-radius: 8px;
-            border-width: input.has-focus ? 2px : 1px;
-            border-color: input.has-focus ? Palette.accent : Palette.border;
+            border-width: input.has-focus && root.enabled ? 2px : 1px;
+            border-color: input.has-focus && root.enabled ? Palette.accent : Palette.border;
 
             animate border-color { duration: 150ms; }
             animate border-width { duration: 150ms; }
@@ -102,7 +103,7 @@ export component FormField inherits Rectangle {
 
                 if root.value == "" && !input.has-focus: Text {
                     text: root.placeholder;
-                    color: Palette.text-subtle;
+                    color: root.enabled ? Palette.text-subtle : Palette.text-muted;
                     font-size: large ? 24px : 14px;
                     font-weight: 300;
                     vertical-alignment: center;
@@ -110,10 +111,11 @@ export component FormField inherits Rectangle {
 
                 input := TextInput {
                     text <=> root.value;
-                    color: Palette.text-primary;
+                    color: root.enabled ? Palette.text-primary : Palette.text-muted;
                     font-size: large ? 24px : 14px;
                     font-weight: large ? 500 : 400;
                     vertical-alignment: center;
+                    enabled: root.enabled;
                     edited => { root.edited(root.value); }
 
                     key-pressed(event) => {
@@ -127,6 +129,7 @@ export component FormField inherits Rectangle {
             }
 
             TouchArea {
+                enabled: root.enabled;
                 clicked => { input.focus(); }
             }
         }

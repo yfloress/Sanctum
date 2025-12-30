@@ -268,6 +268,7 @@ export component SettingsPage inherits Rectangle {
                         label: "PROXY URL";
                         placeholder: "http://127.0.0.1:8080 or socks5h://127.0.0.1:9050";
                         value: SettingsAdapter.proxy-url;
+                        enabled: SettingsAdapter.proxy-enabled;
                         edited(value) => {
                             SettingsAdapter.set-proxy-url(value);
                             SettingsAdapter.proxy-url = value;
