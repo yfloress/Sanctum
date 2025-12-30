@@ -14,7 +14,8 @@ pub use crate::features::finance::{AnalyticsSummary, ExpenseSlice};
 pub use crate::features::crypto::{
     SETTING_AUTO_FETCH, SETTING_CRYPTO_CUSTOM_COINS, SETTING_CRYPTO_FAVORITE_COINS,
     SETTING_CRYPTO_HIDDEN_COINS, SETTING_CRYPTO_LAST_COIN_ID, SETTING_CRYPTO_LAST_UPDATED,
-    SETTING_CRYPTO_LAST_WALLET_ID, SETTING_TICKER_COINS,
+    SETTING_CRYPTO_LAST_WALLET_ID, SETTING_CRYPTO_PROXY_ENABLED, SETTING_CRYPTO_PROXY_URL,
+    SETTING_TICKER_COINS,
 };
 use crate::services::charts::ChartsService;
 use crate::features::crypto::{CryptoError, CryptoService};

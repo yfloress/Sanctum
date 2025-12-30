@@ -11,7 +11,10 @@ use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
-use super::api::{default_price_allowlist, fetch_clp_usd_rate, fetch_crypto_prices};
+use super::api::{
+    default_price_allowlist, fetch_clp_usd_rate, fetch_crypto_prices, validate_proxy_url,
+    ProxyConfig, MAX_PROXY_URL_LENGTH,
+};
 use super::validation::{
     validate_coin_id_str, validate_field_length, validate_uuid, sanitize_string,
     MAX_WALLET_NAME_LENGTH, MAX_ICON_LENGTH,
@@ -27,6 +30,8 @@ pub const SETTING_CRYPTO_HIDDEN_COINS: &str = "crypto_hidden_coins";
 pub const SETTING_CRYPTO_FAVORITE_COINS: &str = "crypto_favorite_coins";
 pub const SETTING_CRYPTO_LAST_WALLET_ID: &str = "crypto_last_wallet_id";
 pub const SETTING_CRYPTO_LAST_COIN_ID: &str = "crypto_last_coin_id";
+pub const SETTING_CRYPTO_PROXY_ENABLED: &str = "crypto_proxy_enabled";
+pub const SETTING_CRYPTO_PROXY_URL: &str = "crypto_proxy_url";
 
 // ==================== Error Types ====================
 
@@ -101,6 +106,23 @@ impl CryptoService {
         })
     }
 
+    pub fn set_proxy_enabled(&self, enabled: bool) -> Result<(), CryptoError> {
+        let value = if enabled { "true" } else { "false" };
+        self.set_app_setting(SETTING_CRYPTO_PROXY_ENABLED, value)
+    }
+
+    pub fn set_proxy_url(&self, url: String) -> Result<(), CryptoError> {
+        let trimmed = url.trim();
+        if trimmed.len() > MAX_PROXY_URL_LENGTH {
+            return Err(CryptoError::Validation("Proxy URL is too long".to_string()));
+        }
+        self.set_app_setting(SETTING_CRYPTO_PROXY_URL, trimmed)
+    }
+
+    pub fn validate_proxy_url(&self, url: &str) -> Result<String, CryptoError> {
+        validate_proxy_url(url).map_err(CryptoError::Validation)
+    }
+
     // ==================== Price Monitoring ====================
 
     pub fn get_monitored_coin_ids(&self) -> Result<Vec<String>, CryptoError> {
@@ -165,13 +187,15 @@ impl CryptoService {
             );
         }
 
-        fetch_crypto_prices(final_list)
+        let proxy = self.get_proxy_config()?;
+        fetch_crypto_prices(final_list, proxy.as_ref())
             .await
             .map_err(CryptoError::Api)
     }
 
     pub async fn get_clp_usd_rate(&self) -> Result<f64, CryptoError> {
-        fetch_clp_usd_rate().await.map_err(CryptoError::Api)
+        let proxy = self.get_proxy_config()?;
+        fetch_clp_usd_rate(proxy.as_ref()).await.map_err(CryptoError::Api)
     }
 
     pub fn save_crypto_prices(&self, prices: Vec<CryptoAsset>) -> Result<(), CryptoError> {
@@ -204,6 +228,21 @@ impl CryptoService {
                 })
                 .collect())
         })
+    }
+
+    fn get_proxy_config(&self) -> Result<Option<ProxyConfig>, CryptoError> {
+        let enabled = self
+            .get_app_setting(SETTING_CRYPTO_PROXY_ENABLED)
+            .unwrap_or_default()
+            == "true";
+
+        if !enabled {
+            return Ok(None);
+        }
+
+        let url = self.get_app_setting(SETTING_CRYPTO_PROXY_URL).unwrap_or_default();
+        let url = validate_proxy_url(&url).map_err(CryptoError::Validation)?;
+        Ok(Some(ProxyConfig { url }))
     }
 
     // ==================== Portfolio Snapshots ====================

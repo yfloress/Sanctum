@@ -347,12 +347,20 @@ export global AccountAdapter {
 
 export global SettingsAdapter {
     in-out property <bool> auto-fetch-enabled: false;
+    in-out property <bool> proxy-enabled: false;
+    in-out property <string> proxy-url: "";
     
     // Callback to load settings from backend
     callback load-settings();
     
     // Callback to toggle auto-fetch setting
     callback set-auto-fetch(bool);
+
+    // Callback to toggle proxy usage
+    callback set-proxy-enabled(bool);
+
+    // Callback to update proxy URL
+    callback set-proxy-url(string);
 }
 
 // ==================== Crypto Adapter ====================

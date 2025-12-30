@@ -2,6 +2,7 @@
 // Premium Fintech UI - Application Settings
 
 import { Palette, SettingsAdapter } from "../globals.slint";
+import { FormField } from "../components/forms/form_field.slint";
 
 component SettingCard inherits Rectangle {
     in property <string> title;
@@ -251,6 +252,34 @@ export component SettingsPage inherits Rectangle {
                             SettingsAdapter.set-auto-fetch(value);
                             SettingsAdapter.auto-fetch-enabled = value;
                         }
+                    }
+
+                    SettingCard {
+                        title: "Use Network Proxy";
+                        description: "Route crypto price requests through a proxy (optional)";
+                        toggle-value: SettingsAdapter.proxy-enabled;
+                        toggled(value) => {
+                            SettingsAdapter.set-proxy-enabled(value);
+                            SettingsAdapter.proxy-enabled = value;
+                        }
+                    }
+
+                    FormField {
+                        label: "PROXY URL";
+                        placeholder: "http://127.0.0.1:8080 or socks5h://127.0.0.1:9050";
+                        value: SettingsAdapter.proxy-url;
+                        edited(value) => {
+                            SettingsAdapter.set-proxy-url(value);
+                            SettingsAdapter.proxy-url = value;
+                        }
+                    }
+
+                    Text {
+                        text: "Tip: socks5h:// routes DNS through the proxy for better privacy.";
+                        color: Palette.text-muted;
+                        font-size: 10px;
+                        font-weight: 400;
+                        letter-spacing: 0.3px;
                     }
                 }
 

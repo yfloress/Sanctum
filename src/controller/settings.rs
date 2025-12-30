@@ -23,6 +23,27 @@ impl AppController {
             .map_err(ControllerError::from)
     }
 
+    /// Enables or disables proxy usage for crypto API calls
+    pub fn set_crypto_proxy_enabled(&self, enabled: bool) -> Result<(), ControllerError> {
+        self.crypto_service
+            .set_proxy_enabled(enabled)
+            .map_err(ControllerError::from)
+    }
+
+    /// Stores proxy URL for crypto API calls (empty clears)
+    pub fn set_crypto_proxy_url(&self, url: String) -> Result<(), ControllerError> {
+        self.crypto_service
+            .set_proxy_url(url)
+            .map_err(ControllerError::from)
+    }
+
+    /// Validates proxy URL for crypto API calls
+    pub fn validate_crypto_proxy_url(&self, url: String) -> Result<String, ControllerError> {
+        self.crypto_service
+            .validate_proxy_url(&url)
+            .map_err(ControllerError::from)
+    }
+
     /// Gets active ticker IDs from settings or default
     pub fn get_active_ticker_ids(&self) -> Vec<String> {
         self.crypto_service.get_active_ticker_ids()

@@ -6,7 +6,7 @@ use chrono::Datelike;
 use directories::ProjectDirs;
 use log::error;
 use rand::Rng; // For title animation
-use sanctum::controller::{AppController, SETTING_AUTO_FETCH};
+use sanctum::controller::AppController;
 use sanctum::security_log::init_security_logger;
 use sanctum::ui::{format_category_label, format_decimal_from_cents, format_money};
 use slint::SharedString;
@@ -18,9 +18,9 @@ use std::sync::{Arc, Mutex};
 
 // Slint types are now generated in lib.rs and available via sanctum::*
 use sanctum::{
-    AccountAdapter, AccountData, AppState, AppWindow, AuthAdapter, CategoryAdapter, CryptoAdapter,
-    DashboardAdapter, NotificationAdapter, SettingsAdapter, TransactionAdapter,
-    TransactionCategoryData, TransactionData,
+    AccountAdapter, AccountData, AppState, AppWindow, AuthAdapter, CategoryAdapter,
+    DashboardAdapter, NotificationAdapter, TransactionAdapter, TransactionCategoryData,
+    TransactionData,
 };
 
 
@@ -763,59 +763,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // CryptoAdapter callbacks (extracted to ui/callbacks/crypto.rs)
     sanctum::ui::setup_crypto_callbacks(&ui, &ui_weak, &controller, show_notification.clone());
 
-    // ==================== SettingsAdapter Logic ====================
-
-    {
-        let controller = controller.clone();
-        let ui_weak = ui_weak.clone();
-
-        ui.global::<SettingsAdapter>().on_load_settings(move || {
-            // Load auto-fetch setting
-            if let Ok(val) = controller.get_app_setting(SETTING_AUTO_FETCH) {
-                let enabled = val == "true";
-                if let Some(ui) = ui_weak.upgrade() {
-                    ui.global::<SettingsAdapter>()
-                        .set_auto_fetch_enabled(enabled);
-
-                    // SMART FETCH LOGIC
-                    // If enabled, check if we need to update prices
-                    if enabled {
-                        // Check if we have recent prices. We check a benchmark coin (e.g. bitcoin)
-                        // Or simply check the CLP rate timestamp as a proxy for all prices
-                        let needs_update = if let Ok(Some((_, updated_at))) =
-                            controller.load_exchange_rate_allow_stale("CLP_USD".to_string())
-                        {
-                            // Check age
-                            if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(&updated_at) {
-                                let now = chrono::Utc::now();
-                                let age = now
-                                    .signed_duration_since(dt.with_timezone(&chrono::Utc))
-                                    .num_minutes();
-                                age > 10 // Refresh if older than 10 minutes
-                            } else {
-                                true
-                            }
-                        } else {
-                            true // No cache, update needed
-                        };
-
-                        if needs_update {
-                            ui.global::<CryptoAdapter>().invoke_refresh_prices();
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    {
-        let controller = controller.clone();
-        ui.global::<SettingsAdapter>()
-            .on_set_auto_fetch(move |enabled| {
-                let val = if enabled { "true" } else { "false" };
-                let _ = controller.set_app_setting(SETTING_AUTO_FETCH, val);
-            });
-    }
+    // SettingsAdapter callbacks (extracted to ui/callbacks/settings.rs)
+    sanctum::ui::setup_settings_callbacks(
+        &ui,
+        &ui_weak,
+        &controller,
+        show_notification.clone(),
+    );
 
     // Run the UI event loop
     ui.run()?;
