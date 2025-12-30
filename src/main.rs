@@ -19,8 +19,8 @@ use std::sync::{Arc, Mutex};
 // Slint types are now generated in lib.rs and available via sanctum::*
 use sanctum::{
     AccountAdapter, AccountData, AppState, AppWindow, AuthAdapter, CategoryAdapter,
-    DashboardAdapter, NotificationAdapter, TransactionAdapter, TransactionCategoryData,
-    TransactionData,
+    DashboardAdapter, NotificationAdapter, SettingsAdapter, TransactionAdapter,
+    TransactionCategoryData, TransactionData,
 };
 
 
