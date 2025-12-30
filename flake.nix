@@ -39,6 +39,7 @@
           pkg-config
           sqlite
           cargo-audit
+          cargo-edit
           slint-lsp
           cargo-modules
         ];
