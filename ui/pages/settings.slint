@@ -84,7 +84,10 @@ component SettingCard inherits Rectangle {
         }
     }
 
-    touch := TouchArea { }
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.toggled(!toggle-value); }
+    }
 }
 
 component SectionHeader inherits Rectangle {
