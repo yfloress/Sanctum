@@ -242,9 +242,12 @@ pub fn reload_heatmap(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>
     if let Some(ui) = ui_weak.upgrade() {
         let adapter = ui.global::<HabitAdapter>();
 
-        // Current week for auto-scroll calculation in Slint
+        // Calculate week index in heatmap (not ISO week!)
+        // This is the column index where today falls in the heatmap grid
         let current_week = if year == today.year() {
-            today.iso_week().week() as i32
+            // Calculate days from heatmap start to today, divide by 7
+            let days_from_start = (today - start_date).num_days();
+            ((days_from_start / 7) + 1) as i32
         } else if year < today.year() {
             weeks_vec.len() as i32 // Past year: scroll to end
         } else {
