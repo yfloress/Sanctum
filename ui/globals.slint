@@ -242,6 +242,7 @@ export global HabitAdapter {
     // Heatmap
     in-out property <[HeatmapWeek]> heatmap-data: [];
     in-out property <int> heatmap-year;
+    in-out property <length> heatmap-scroll-target: 0px; // Set from Rust to trigger scroll
 
     // Actions
     callback fetch-habits(int, int); // month (1-12), year

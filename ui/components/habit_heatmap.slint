@@ -37,14 +37,14 @@ component HeatmapCell inherits Rectangle {
     in property <int> level;
     in property <string> date: "";
     in property <int> count: 0;
-    
+
     width: 14px;
     height: 14px;
     border-radius: 3px;
     clip: false; // Ensure tooltip can overflow
-    
-    // Elevate when hovered to show tooltip above neighbors
-    z: ta.has-hover ? 1000 : 1;
+
+    // Level -1 = padding day (outside year), make invisible
+    visible: level >= 0;
 
     background: level == 0 ? Palette.heatmap-level-0 :
                 level == 1 ? Palette.heatmap-level-1 :
@@ -68,7 +68,8 @@ component HeatmapCell inherits Rectangle {
     ta := TouchArea {
         mouse-cursor: pointer;
     }
-    
+
+    // Tooltip shown above cell
     if ta.has-hover && root.date != "": Tooltip {
         text: root.date;
         count: root.count;
@@ -129,9 +130,9 @@ export component HabitHeatmap inherits Rectangle {
                 width: parent.width;
                 interactive: true;
                 viewport-width: HabitAdapter.heatmap-data.length * 18px;
-                
-                // Auto-scroll logic
-                viewport-x: -1 * max(0px, ((HabitAdapter.current-week-int - 4) * 18px));
+
+                // Auto-scroll: target is set from Rust after data loads
+                viewport-x: HabitAdapter.heatmap-scroll-target;
                 
                 HorizontalLayout {
                     spacing: 4px;

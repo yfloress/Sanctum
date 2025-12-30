@@ -154,11 +154,11 @@ pub fn reload_heatmap(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>
         return;
     };
 
-    // Align start to Monday
+    // Align start to Monday (for grid alignment)
     let days_from_mon = first_day_year.weekday().num_days_from_monday();
     let start_date = first_day_year - chrono::Duration::days(days_from_mon as i64);
 
-    // Align end to Sunday
+    // Align end to Sunday (for grid alignment)
     let days_to_sun = 6 - last_day_year.weekday().num_days_from_monday();
     let end_date = last_day_year + chrono::Duration::days(days_to_sun as i64);
 
@@ -166,12 +166,12 @@ pub fn reload_heatmap(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>
     let query_end = if year == today.year() {
         today
     } else if year < today.year() {
-        end_date
+        last_day_year
     } else {
-        start_date
+        first_day_year
     };
 
-    let start_str = start_date.format("%Y-%m-%d").to_string();
+    let start_str = first_day_year.format("%Y-%m-%d").to_string();
     let end_str = query_end.format("%Y-%m-%d").to_string();
 
     let mut daily_counts: HashMap<String, i32> = HashMap::new();
@@ -192,32 +192,44 @@ pub fn reload_heatmap(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>
         let mut week_days: Vec<HeatmapDay> = Vec::new();
 
         for _ in 0..7 {
-            let date_str = current_day.format("%Y-%m-%d").to_string();
-            let count = *daily_counts.get(&date_str).unwrap_or(&0);
+            // Check if this day is within the actual year
+            let is_padding = current_day < first_day_year || current_day > last_day_year;
 
-            let is_future = if year == today.year() {
-                current_day > today
+            if is_padding {
+                // Padding day - level -1 makes it invisible
+                week_days.push(HeatmapDay {
+                    date: SharedString::default(),
+                    count: 0,
+                    level: -1,
+                });
             } else {
-                year > today.year()
-            };
+                let date_str = current_day.format("%Y-%m-%d").to_string();
+                let count = *daily_counts.get(&date_str).unwrap_or(&0);
 
-            let level = if is_future || count == 0 {
-                0
-            } else if count <= 1 {
-                1
-            } else if count <= 2 {
-                2
-            } else if count <= 4 {
-                3
-            } else {
-                4
-            };
+                let is_future = if year == today.year() {
+                    current_day > today
+                } else {
+                    year > today.year()
+                };
 
-            week_days.push(HeatmapDay {
-                date: SharedString::from(date_str),
-                count,
-                level,
-            });
+                let level = if is_future || count == 0 {
+                    0
+                } else if count <= 1 {
+                    1
+                } else if count <= 2 {
+                    2
+                } else if count <= 4 {
+                    3
+                } else {
+                    4
+                };
+
+                week_days.push(HeatmapDay {
+                    date: SharedString::from(date_str),
+                    count,
+                    level,
+                });
+            }
 
             current_day += chrono::Duration::days(1);
         }
@@ -229,14 +241,26 @@ pub fn reload_heatmap(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>
 
     if let Some(ui) = ui_weak.upgrade() {
         let adapter = ui.global::<HabitAdapter>();
-        adapter.set_heatmap_data(ModelRc::new(VecModel::from(weeks_vec)));
-        adapter.set_heatmap_year(year);
 
+        // Calculate scroll target before setting data
+        let total_weeks = weeks_vec.len() as i32;
         let current_week = if year == today.year() {
             today.iso_week().week() as i32
+        } else if year < today.year() {
+            total_weeks // Past year: scroll to end
         } else {
-            1
+            1 // Future year: scroll to start
         };
+
+        // Calculate scroll position: each column is 18px (14px cell + 4px spacing)
+        // Scroll so current week is ~4 columns from left edge
+        let scroll_target = ((current_week - 4).max(0) * 18) as f32;
+        let max_scroll = ((total_weeks - 1) * 18) as f32;
+        let clamped_scroll = scroll_target.min(max_scroll).max(0.0);
+
+        adapter.set_heatmap_data(ModelRc::new(VecModel::from(weeks_vec)));
+        adapter.set_heatmap_year(year);
         adapter.set_current_week_int(current_week);
+        adapter.set_heatmap_scroll_target(-clamped_scroll);
     }
 }
