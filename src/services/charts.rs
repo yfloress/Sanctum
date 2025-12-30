@@ -304,7 +304,7 @@ impl ChartsService {
 
         let temp_svg = create_secure_temp_svg("sanctum_portfolio_trend")?;
         let root = SVGBackend::new(&temp_svg, (1800, 520)).into_drawing_area();
-        root.fill(&RGBColor(10, 10, 15)).ok()?;
+        root.fill(&RGBAColor(0, 0, 0, 0.0)).ok()?; // Transparent - Slint handles background
 
         let x_max = (data.len() - 1) as i32;
         let mut chart = ChartBuilder::on(&root)
@@ -373,7 +373,7 @@ impl ChartsService {
 
         let temp_svg = create_secure_temp_svg("sanctum_networth")?;
         let root = SVGBackend::new(&temp_svg, (1800, 520)).into_drawing_area();
-        root.fill(&RGBColor(8, 8, 16)).ok()?;
+        root.fill(&RGBAColor(0, 0, 0, 0.0)).ok()?; // Transparent - Slint handles background
 
         let padding = ((max_val - min_val) as f64 * 0.1).max((max_val as f64) * 0.05);
         let lower = ((min_val as f64) - padding).max(0.0);
