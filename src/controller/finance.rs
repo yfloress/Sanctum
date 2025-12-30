@@ -249,26 +249,17 @@ impl AppController {
             .map_err(ControllerError::from)
     }
 
-    // ==================== Analytics Methods ====================
+    // ==================== Dashboard Methods ====================
 
-    /// Provides analytics summary (net worth history + expense breakdown)
-    pub fn get_analytics_summary(
+    /// Provides dashboard data with chart values (FIAT + Crypto combined).
+    /// Use render_net_worth_chart() to render the chart image from the values.
+    pub fn get_dashboard_data(
         &self,
+        crypto_total_usd: f64,
         range: String,
-    ) -> Result<super::AnalyticsSummary, ControllerError> {
+    ) -> Result<super::DashboardData, ControllerError> {
         self.finance_service
-            .get_analytics_summary(range)
-            .map_err(ControllerError::from)
-    }
-
-    /// Returns normalized SVG path commands (0-100 space) for net worth history and current net worth formatted
-    /// Also returns min and max values formatted for labels
-    pub fn get_net_worth_history(
-        &self,
-        range: &str,
-    ) -> Result<(String, String, String, String), ControllerError> {
-        self.finance_service
-            .get_net_worth_history(range)
+            .get_dashboard_data(crypto_total_usd, range)
             .map_err(ControllerError::from)
     }
 }

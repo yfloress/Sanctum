@@ -58,7 +58,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create the Slint UI
     let ui = AppWindow::new()?;
-    let habit_analytics_cache = Rc::new(RefCell::new(sanctum::ui::HabitAnalyticsCache::default()));
+    let habit_analytics_cache = Rc::new(RefCell::new(sanctum::ui::HabitChartsCache::default()));
 
     // Title Animation: Decryption Effect
     {

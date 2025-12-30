@@ -8,7 +8,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
-use super::analytics::{refresh_habit_analytics, HabitAnalyticsCache};
+use super::charts::{refresh_habit_analytics, HabitChartsCache};
 use super::data::{reload_habits, reload_heatmap};
 
 /// Sets up all HabitAdapter callbacks
@@ -18,7 +18,7 @@ pub fn setup_habit_callbacks<N>(
     controller: &Arc<AppController>,
     current_habit_date: Arc<Mutex<NaiveDate>>,
     current_heatmap_year: Arc<Mutex<i32>>,
-    habit_analytics_cache: Rc<RefCell<HabitAnalyticsCache>>,
+    habit_analytics_cache: Rc<RefCell<HabitChartsCache>>,
     notify: N,
 ) where
     N: Fn(String, bool) + Clone + 'static,

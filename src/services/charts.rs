@@ -361,6 +361,65 @@ impl ChartsService {
     pub fn chart_color_for_symbol(&self, symbol: &str, index: usize) -> (u8, u8, u8) {
         symbol_chart_color(symbol, index)
     }
+
+    /// Renders net worth line chart for dashboard
+    pub fn render_net_worth_chart(&self, values: &[i64]) -> Option<Image> {
+        if values.len() < 2 {
+            return None;
+        }
+
+        let min_val = *values.iter().min().unwrap_or(&0);
+        let max_val = *values.iter().max().unwrap_or(&0);
+
+        let temp_svg = create_secure_temp_svg("sanctum_networth")?;
+        let root = SVGBackend::new(&temp_svg, (1800, 520)).into_drawing_area();
+        root.fill(&RGBColor(8, 8, 16)).ok()?;
+
+        let padding = ((max_val - min_val) as f64 * 0.1).max((max_val as f64) * 0.05);
+        let lower = ((min_val as f64) - padding).max(0.0);
+        let upper = (max_val as f64) + padding;
+
+        let x_max = (values.len() - 1) as i32;
+
+        let mut chart = ChartBuilder::on(&root)
+            .margin(24)
+            .build_cartesian_2d(0..x_max, lower..upper)
+            .ok()?;
+
+        chart
+            .configure_mesh()
+            .disable_mesh()
+            .disable_x_axis()
+            .disable_y_axis()
+            .draw()
+            .ok()?;
+
+        let points: Vec<(i32, f64)> = values
+            .iter()
+            .enumerate()
+            .map(|(i, v)| (i as i32, *v as f64))
+            .collect();
+
+        // Area fill under curve
+        chart
+            .draw_series(AreaSeries::new(
+                points.iter().copied(),
+                lower,
+                RGBColor(255, 255, 255).mix(0.08),
+            ))
+            .ok()?;
+
+        // Main line
+        chart
+            .draw_series(LineSeries::new(
+                points.iter().copied(),
+                ShapeStyle::from(&RGBColor(255, 255, 255)).stroke_width(3),
+            ))
+            .ok()?;
+
+        root.present().ok()?;
+        render_svg_image(&temp_svg)
+    }
 }
 
 fn rgb_from_hex(hex: &str) -> RGBColor {

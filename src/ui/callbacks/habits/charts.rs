@@ -36,7 +36,7 @@ pub struct HabitAnalyticsKey {
 
 /// Cache for habit analytics to avoid recalculation
 #[derive(Default)]
-pub struct HabitAnalyticsCache {
+pub struct HabitChartsCache {
     pub key: Option<HabitAnalyticsKey>,
     pub snapshot: HabitAnalyticsSnapshot,
 }
@@ -45,7 +45,7 @@ pub struct HabitAnalyticsCache {
 pub fn refresh_habit_analytics<F: Fn(String, bool)>(
     ui_weak: &Weak<AppWindow>,
     controller: &Arc<AppController>,
-    cache: &Rc<RefCell<HabitAnalyticsCache>>,
+    cache: &Rc<RefCell<HabitChartsCache>>,
     notify: &F,
 ) {
     let today = chrono::Local::now().date_naive();

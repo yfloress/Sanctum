@@ -10,7 +10,7 @@ mod settings;
 
 use crate::db::{Database, DbError};
 use crate::security_log::{SecurityEvent, log_auth_failure, log_security_event};
-pub use crate::features::finance::{AnalyticsSummary, ExpenseSlice};
+pub use crate::features::finance::{DashboardData, ExpenseSlice};
 pub use crate::features::crypto::{
     SETTING_AUTO_FETCH, SETTING_CRYPTO_CUSTOM_COINS, SETTING_CRYPTO_FAVORITE_COINS,
     SETTING_CRYPTO_HIDDEN_COINS, SETTING_CRYPTO_LAST_COIN_ID, SETTING_CRYPTO_LAST_UPDATED,
@@ -701,6 +701,10 @@ impl AppController {
 
     pub fn chart_color_for_symbol(&self, symbol: &str, index: usize) -> (u8, u8, u8) {
         self.charts_service.chart_color_for_symbol(symbol, index)
+    }
+
+    pub fn render_net_worth_chart(&self, values: &[i64]) -> Option<Image> {
+        self.charts_service.render_net_worth_chart(values)
     }
 
     // ==================== Vault Path Methods ====================
