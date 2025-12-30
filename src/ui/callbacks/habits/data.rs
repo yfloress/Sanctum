@@ -242,25 +242,17 @@ pub fn reload_heatmap(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>
     if let Some(ui) = ui_weak.upgrade() {
         let adapter = ui.global::<HabitAdapter>();
 
-        // Calculate scroll target before setting data
-        let total_weeks = weeks_vec.len() as i32;
+        // Current week for auto-scroll calculation in Slint
         let current_week = if year == today.year() {
             today.iso_week().week() as i32
         } else if year < today.year() {
-            total_weeks // Past year: scroll to end
+            weeks_vec.len() as i32 // Past year: scroll to end
         } else {
             1 // Future year: scroll to start
         };
 
-        // Calculate scroll position: each column is 18px (14px cell + 4px spacing)
-        // Scroll so current week is ~4 columns from left edge
-        let scroll_target = ((current_week - 4).max(0) * 18) as f32;
-        let max_scroll = ((total_weeks - 1) * 18) as f32;
-        let clamped_scroll = scroll_target.min(max_scroll).max(0.0);
-
         adapter.set_heatmap_data(ModelRc::new(VecModel::from(weeks_vec)));
         adapter.set_heatmap_year(year);
         adapter.set_current_week_int(current_week);
-        adapter.set_heatmap_scroll_target(-clamped_scroll);
     }
 }

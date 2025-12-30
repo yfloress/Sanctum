@@ -131,8 +131,12 @@ export component HabitHeatmap inherits Rectangle {
                 interactive: true;
                 viewport-width: HabitAdapter.heatmap-data.length * 18px;
 
-                // Auto-scroll: target is set from Rust after data loads
-                viewport-x: HabitAdapter.heatmap-scroll-target;
+                // Auto-scroll based on data length and current week
+                // Re-evaluated when heatmap-data changes
+                property <length> scroll-target: HabitAdapter.heatmap-data.length > 0
+                    ? -1px * max(0, (HabitAdapter.current-week-int - 4) * 18)
+                    : 0px;
+                viewport-x: scroll-target;
                 
                 HorizontalLayout {
                     spacing: 4px;
