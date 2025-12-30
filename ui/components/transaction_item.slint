@@ -180,36 +180,37 @@ export component TransactionItem inherits Rectangle {
             }
         }
 
-    }
+        // Delete button
+        if show-delete: VerticalLayout {
+            alignment: center;
 
-    // Delete button - separate layer on top to ensure clickability
-    if show-delete: Rectangle {
-        x: parent.width - 40px;
-        y: (parent.height - 28px) / 2;
-        width: 28px;
-        height: 28px;
-        border-radius: 6px;
-        background: delete-touch.has-hover ? #3d2020 : transparent;
-        border-width: delete-touch.has-hover ? 1px : 0px;
-        border-color: Palette.danger;
+            Rectangle {
+                width: 28px;
+                height: 28px;
+                border-radius: 6px;
+                background: delete-touch.has-hover ? #3d2020 : transparent;
+                border-width: delete-touch.has-hover ? 1px : 0px;
+                border-color: Palette.danger;
 
-        animate background { duration: 150ms; }
+                animate background { duration: 150ms; }
 
-        Text {
-            text: "×";
-            color: delete-touch.has-hover ? Palette.danger : Palette.text-muted;
-            font-size: 18px;
-            font-weight: 400;
-            horizontal-alignment: center;
-            vertical-alignment: center;
+                Text {
+                    text: "×";
+                    color: delete-touch.has-hover ? Palette.danger : Palette.text-muted;
+                    font-size: 18px;
+                    font-weight: 400;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
 
-            animate color { duration: 150ms; }
-        }
+                    animate color { duration: 150ms; }
+                }
 
-        delete-touch := TouchArea {
-            mouse-cursor: pointer;
-            clicked => {
-                root.delete-clicked();
+                delete-touch := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.delete-clicked();
+                    }
+                }
             }
         }
     }

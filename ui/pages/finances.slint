@@ -956,6 +956,9 @@ export component FinancesPage inherits Rectangle {
             drop-shadow-blur: 32px;
             drop-shadow-color: #00000080;
 
+            // Block clicks on modal background from closing
+            TouchArea {}
+
             VerticalLayout {
                 padding: 32px;
                 spacing: 24px;
@@ -984,32 +987,64 @@ export component FinancesPage inherits Rectangle {
                     spacing: 12px;
                     alignment: end;
 
-                    ActionButton {
-                        text: "CANCEL";
-                        primary: false;
-                        clicked => { root.show-delete-confirm = false; }
+                    cancel-btn := Rectangle {
+                        width: 100px;
+                        height: 36px;
+                        border-radius: 8px;
+                        background: cancel-touch.has-hover ? Palette.surface-hover : Palette.surface;
+                        border-width: 1px;
+                        border-color: Palette.border;
+
+                        Text {
+                            text: "CANCEL";
+                            color: Palette.text-secondary;
+                            font-size: 11px;
+                            font-weight: 600;
+                            letter-spacing: 1px;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        cancel-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.show-delete-confirm = false; }
+                        }
                     }
 
-                    ActionButton {
-                        text: "DELETE";
-                        primary: true;
-                        clicked => {
-                            let result = TransactionAdapter.delete-transaction(root.delete-transaction-id);
-                            if (result == "") {
-                                TransactionAdapter.is-loading = true;
-                                AccountAdapter.is-loading = true;
-                                TransactionAdapter.fetch-transactions();
-                                AccountAdapter.fetch-accounts();
-                            } else {
-                                NotificationAdapter.show(result, true);
+                    delete-btn := Rectangle {
+                        width: 100px;
+                        height: 36px;
+                        border-radius: 8px;
+                        background: delete-touch.has-hover ? Palette.danger.darker(0.2) : Palette.danger;
+
+                        Text {
+                            text: "DELETE";
+                            color: Palette.text-primary;
+                            font-size: 11px;
+                            font-weight: 600;
+                            letter-spacing: 1px;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        delete-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                let result = TransactionAdapter.delete-transaction(root.delete-transaction-id);
+                                if (result == "") {
+                                    TransactionAdapter.is-loading = true;
+                                    AccountAdapter.is-loading = true;
+                                    TransactionAdapter.fetch-transactions();
+                                    AccountAdapter.fetch-accounts();
+                                } else {
+                                    NotificationAdapter.show(result, true);
+                                }
+                                root.show-delete-confirm = false;
                             }
-                            root.show-delete-confirm = false;
                         }
                     }
                 }
             }
-
-            TouchArea {} // Prevent click-through
         }
     }
 
