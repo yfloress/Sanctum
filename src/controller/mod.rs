@@ -710,12 +710,10 @@ impl AppController {
         // Check if custom path was used previously
         if let Ok(config) = self.load_config()
             && let Some(last_path) = config.last_db_rel_path
+            && let Some(path) = self.resolve_config_path(&last_path)
+            && path.exists()
         {
-            if let Some(path) = self.resolve_config_path(&last_path)
-                && path.exists()
-            {
-                return true;
-            }
+            return true;
         }
 
         // Check default path
