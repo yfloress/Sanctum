@@ -59,8 +59,11 @@ export global Palette {
     out property <color> crypto-wallet-icon-gradient-start: #1f1f2e;
     out property <color> crypto-wallet-icon-gradient-end: #2a2a3e;
     out property <color> crypto-modal-gradient-end: #0f0f1a;
-    out property <color> crypto-chart-bg-start: #0a0a0a;
-    out property <color> crypto-chart-bg-end: #0f0f0f;
+    // Chart background (unified across all charts - same as dashboard)
+    out property <color> chart-bg-start: #0d0d12;
+    out property <color> chart-bg-end: #080810;
+    out property <color> crypto-chart-bg-start: chart-bg-start;
+    out property <color> crypto-chart-bg-end: chart-bg-end;
     out property <color> crypto-chart-value: #8b5cf6;
     out property <color> crypto-chart-cost: #94a3b8;
 
