@@ -256,10 +256,11 @@ impl AppController {
     pub fn get_dashboard_data(
         &self,
         crypto_total_usd: f64,
+        crypto_snapshots: &[(String, f64, f64)],
         range: String,
     ) -> Result<super::DashboardData, ControllerError> {
         self.finance_service
-            .get_dashboard_data(crypto_total_usd, range)
+            .get_dashboard_data(crypto_total_usd, crypto_snapshots, range)
             .map_err(ControllerError::from)
     }
 }

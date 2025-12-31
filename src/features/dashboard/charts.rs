@@ -34,11 +34,16 @@ pub struct DashboardCharts;
 impl DashboardCharts {
     /// Calculates dashboard data (FIAT + Crypto combined)
     /// Returns raw values - use controller.render_net_worth_chart() for the image
+    ///
+    /// # Arguments
+    /// * `crypto_total_usd` - Current crypto portfolio value in USD
+    /// * `crypto_snapshots` - Historical snapshots: Vec<(date_str, value_usd, cost_usd)>
     pub fn calculate_dashboard_data(
         balances: &[AccountBalance],
         accounts: &[Account],
         transactions: &[Transaction],
         crypto_total_usd: f64,
+        crypto_snapshots: &[(String, f64, f64)],
         clp_rate: f64,
         range: &str,
     ) -> DashboardData {
@@ -67,11 +72,18 @@ impl DashboardCharts {
             .map(|b| normalize(b.current_balance, &b.account_id))
             .sum();
 
-        // Convert crypto to cents and add to total
+        // Convert crypto to cents
         let crypto_cents = (crypto_total_usd * 100.0) as i64;
         let total_balance = fiat_balance + crypto_cents;
 
+        // Build crypto snapshot lookup (date -> value in cents)
+        let crypto_by_date: HashMap<String, i64> = crypto_snapshots
+            .iter()
+            .map(|(date, value, _)| (date.clone(), (*value * 100.0) as i64))
+            .collect();
+
         let today = Local::now().date_naive();
+        let today_str = today.format("%Y-%m-%d").to_string();
         let start_date = match range {
             "1M" => today - chrono::Duration::days(30),
             "3M" => today - chrono::Duration::days(90),
@@ -97,16 +109,21 @@ impl DashboardCharts {
         }
 
         // Build balance history going backwards from today
-        // Note: We add crypto_cents to ALL days (assumes crypto holdings are constant,
-        // only fiat balance changes day-to-day). This prevents the chart from showing
-        // a massive spike on today that dwarfs all fiat changes.
         let mut cursor = today;
         let mut points_rev: Vec<(NaiveDate, i64)> = Vec::new();
         let mut balance = fiat_balance;
 
         loop {
-            // Add crypto to all days so the chart shows meaningful fiat variations
-            let total_at_date = balance + crypto_cents;
+            let date_str = cursor.format("%Y-%m-%d").to_string();
+
+            // Use historical crypto snapshot if available, else current value
+            let crypto_at_date = if date_str == today_str {
+                crypto_cents // Always use current value for today
+            } else {
+                crypto_by_date.get(&date_str).copied().unwrap_or(crypto_cents)
+            };
+
+            let total_at_date = balance + crypto_at_date;
             points_rev.push((cursor, total_at_date));
 
             let delta = *delta_by_day.get(&cursor).unwrap_or(&0);
@@ -315,9 +332,10 @@ mod tests {
         let balances: Vec<AccountBalance> = vec![];
         let accounts: Vec<Account> = vec![];
         let transactions: Vec<Transaction> = vec![];
+        let snapshots: Vec<(String, f64, f64)> = vec![];
 
         let result = DashboardCharts::calculate_dashboard_data(
-            &balances, &accounts, &transactions, 0.0, 1.0, "1M",
+            &balances, &accounts, &transactions, 0.0, &snapshots, 1.0, "1M",
         );
 
         assert_eq!(result.net_worth, "$ 0.00");
@@ -329,9 +347,10 @@ mod tests {
         let balances: Vec<AccountBalance> = vec![];
         let accounts: Vec<Account> = vec![];
         let transactions: Vec<Transaction> = vec![];
+        let snapshots: Vec<(String, f64, f64)> = vec![];
 
         let result = DashboardCharts::calculate_dashboard_data(
-            &balances, &accounts, &transactions, 500.0, 1.0, "1M",
+            &balances, &accounts, &transactions, 500.0, &snapshots, 1.0, "1M",
         );
 
         assert_eq!(result.net_worth, "$ 500.00");
@@ -348,10 +367,11 @@ mod tests {
         }];
         let accounts = vec![make_account("acc1", "USD", 0)];
         let transactions: Vec<Transaction> = vec![];
+        let snapshots: Vec<(String, f64, f64)> = vec![];
 
         // $100 FIAT + $200 crypto = $300
         let result = DashboardCharts::calculate_dashboard_data(
-            &balances, &accounts, &transactions, 200.0, 1.0, "1M",
+            &balances, &accounts, &transactions, 200.0, &snapshots, 1.0, "1M",
         );
 
         assert_eq!(result.net_worth, "$ 300.00");

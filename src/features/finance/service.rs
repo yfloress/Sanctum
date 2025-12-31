@@ -452,10 +452,12 @@ impl FinanceService {
 
     /// Returns dashboard data with chart values for rendering (FIAT + Crypto combined).
     /// The crypto_total_usd parameter should be calculated by the caller.
+    /// The crypto_snapshots contain historical portfolio values for accurate chart rendering.
     /// Use controller.render_net_worth_chart() to render the chart image.
     pub fn get_dashboard_data(
         &self,
         crypto_total_usd: f64,
+        crypto_snapshots: &[(String, f64, f64)],
         range: String,
     ) -> Result<DashboardData, FinanceError> {
         let balances = self.get_account_balances()?;
@@ -472,6 +474,7 @@ impl FinanceService {
             &accounts,
             &transactions,
             crypto_total_usd,
+            crypto_snapshots,
             clp_rate,
             &range,
         ))

@@ -117,7 +117,13 @@ pub fn setup_dashboard_callbacks<F>(
                 // Calculate crypto total for dashboard data
                 let crypto_total = calculate_crypto_total(&controller);
 
-                if let Ok(data) = controller.get_dashboard_data(crypto_total, range.to_string())
+                // Get crypto snapshots for historical chart data (max 2 years)
+                let crypto_snapshots = controller
+                    .get_crypto_portfolio_snapshots(730)
+                    .unwrap_or_default();
+
+                if let Ok(data) =
+                    controller.get_dashboard_data(crypto_total, &crypto_snapshots, range.to_string())
                     && let Some(ui) = ui_weak.upgrade()
                 {
                     let adapter = ui.global::<AnalyticsAdapter>();
