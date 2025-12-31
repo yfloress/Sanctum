@@ -362,27 +362,30 @@ impl ChartsService {
         symbol_chart_color(symbol, index)
     }
 
-    /// Renders net worth line chart for dashboard
+    /// Renders net worth line chart for dashboard (same style as portfolio trend)
     pub fn render_net_worth_chart(&self, values: &[i64]) -> Option<Image> {
         if values.len() < 2 {
             return None;
         }
 
-        let min_val = *values.iter().min().unwrap_or(&0);
-        let max_val = *values.iter().max().unwrap_or(&0);
+        let min_val = *values.iter().min().unwrap_or(&0) as f64;
+        let max_val = *values.iter().max().unwrap_or(&0) as f64;
+
+        if max_val <= 0.0 {
+            return None;
+        }
+
+        let padding = ((max_val - min_val) * 0.1).max(max_val * 0.05);
+        let lower = (min_val - padding).max(0.0);
+        let upper = max_val + padding;
 
         let temp_svg = create_secure_temp_svg("sanctum_networth")?;
         let root = SVGBackend::new(&temp_svg, (1800, 520)).into_drawing_area();
-        root.fill(&RGBAColor(0, 0, 0, 0.0)).ok()?; // Transparent - Slint handles background
-
-        let padding = ((max_val - min_val) as f64 * 0.1).max((max_val as f64) * 0.05);
-        let lower = ((min_val as f64) - padding).max(0.0);
-        let upper = (max_val as f64) + padding;
+        root.fill(&RGBAColor(0, 0, 0, 0.0)).ok()?;
 
         let x_max = (values.len() - 1) as i32;
-
         let mut chart = ChartBuilder::on(&root)
-            .margin(24)
+            .margin(18)
             .build_cartesian_2d(0..x_max, lower..upper)
             .ok()?;
 
@@ -405,7 +408,7 @@ impl ChartsService {
             .draw_series(AreaSeries::new(
                 points.iter().copied(),
                 lower,
-                RGBColor(255, 255, 255).mix(0.08),
+                RGBColor(139, 92, 246).mix(0.2),
             ))
             .ok()?;
 
@@ -413,7 +416,7 @@ impl ChartsService {
         chart
             .draw_series(LineSeries::new(
                 points.iter().copied(),
-                ShapeStyle::from(&RGBColor(255, 255, 255)).stroke_width(3),
+                ShapeStyle::from(&RGBColor(139, 92, 246)).stroke_width(4),
             ))
             .ok()?;
 
