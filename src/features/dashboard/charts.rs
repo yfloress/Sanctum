@@ -97,16 +97,16 @@ impl DashboardCharts {
         }
 
         // Build balance history going backwards from today
+        // Note: We add crypto_cents to ALL days (assumes crypto holdings are constant,
+        // only fiat balance changes day-to-day). This prevents the chart from showing
+        // a massive spike on today that dwarfs all fiat changes.
         let mut cursor = today;
         let mut points_rev: Vec<(NaiveDate, i64)> = Vec::new();
         let mut balance = fiat_balance;
 
         loop {
-            let total_at_date = if cursor == today {
-                balance + crypto_cents
-            } else {
-                balance
-            };
+            // Add crypto to all days so the chart shows meaningful fiat variations
+            let total_at_date = balance + crypto_cents;
             points_rev.push((cursor, total_at_date));
 
             let delta = *delta_by_day.get(&cursor).unwrap_or(&0);
