@@ -10,6 +10,7 @@ import {
     AppState,
     NotificationAdapter
 } from "../globals.slint";
+import { Theme } from "../theme.slint";
 import { TransactionItem } from "../components/transaction_item.slint";
 import { AccountItem } from "../components/account_item.slint";
 import { TabButton } from "../components/buttons/tab_button.slint";
@@ -98,7 +99,7 @@ component AccountFilterSelect inherits Rectangle {
             border-color: Palette.border-light;
             height: min((AccountAdapter.accounts.length + 1) * 40px + 8px, 240px);
             drop-shadow-blur: 16px;
-            drop-shadow-color: #00000066;
+            drop-shadow-color: Theme.shadow;
 
             Flickable {
                 viewport-height: (AccountAdapter.accounts.length + 1) * 40px + 8px;
@@ -261,7 +262,7 @@ component CategoryFilterSelect inherits Rectangle {
             border-color: Palette.border-light;
             height: min((CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length + 2) * 40px + 8px, 280px);
             drop-shadow-blur: 16px;
-            drop-shadow-color: #00000066;
+            drop-shadow-color: Theme.shadow;
 
             Flickable {
                 viewport-height: (CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length + 2) * 40px + 8px;
@@ -511,7 +512,7 @@ export component FinancesPage inherits Rectangle {
         // ==================== HERO HEADER ====================
         Rectangle {
             height: 160px;
-            background: @linear-gradient(180deg, #0f0f1a 0%, Palette.background 100%);
+            background: @linear-gradient(180deg, Theme.modal-bg-end 0%, Palette.background 100%);
 
             HorizontalLayout {
                 padding-left: 64px;
@@ -938,7 +939,7 @@ export component FinancesPage inherits Rectangle {
     if root.show-delete-confirm: Rectangle {
         width: 100%;
         height: 100%;
-        background: #000000cc;
+        background: Theme.overlay;
 
         TouchArea {
             clicked => { root.show-delete-confirm = false; }

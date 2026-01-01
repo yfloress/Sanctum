@@ -2,6 +2,7 @@
 // Premium Fintech UI - Single transaction row for list view
 
 import { Palette, TransactionData } from "../globals.slint";
+import { Theme } from "../theme.slint";
 
 // Category icon mapping
 component CategoryIcon inherits Rectangle {
@@ -9,16 +10,16 @@ component CategoryIcon inherits Rectangle {
     in property <bool> is-expense;
     in property <bool> is-transfer;
 
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
+    width: Theme.icon-xl;
+    height: Theme.icon-xl;
+    border-radius: Theme.radius-xl;
 
     // Clean, subtle backgrounds
-    background: is-transfer ? Palette.surface
-        : (is-expense ? #1c1520 : #0f1a14);
+    background: is-transfer ? Theme.tx-transfer-bg
+        : (is-expense ? Theme.tx-expense-bg : Theme.tx-income-bg);
     border-width: 1px;
-    border-color: is-transfer ? Palette.border
-        : (is-expense ? Palette.danger.with-alpha(0.2) : Palette.success.with-alpha(0.2));
+    border-color: is-transfer ? Theme.border
+        : (is-expense ? Theme.danger.with-alpha(0.2) : Theme.success.with-alpha(0.2));
 
     // Inner glow effect
     Rectangle {
@@ -188,7 +189,7 @@ export component TransactionItem inherits Rectangle {
                 width: 28px;
                 height: 28px;
                 border-radius: 6px;
-                background: delete-touch.has-hover ? #3d2020 : transparent;
+                background: delete-touch.has-hover ? Theme.notify-error-bg : transparent;
                 border-width: delete-touch.has-hover ? 1px : 0px;
                 border-color: Palette.danger;
 

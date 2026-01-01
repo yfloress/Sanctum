@@ -2,32 +2,33 @@
 // Premium Fintech UI - Single account card for list view
 
 import { Palette, AccountData } from "../globals.slint";
+import { Theme } from "../theme.slint";
 
 component AccountTypeIcon inherits Rectangle {
     in property <string> account-type;
 
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
-    background: @linear-gradient(135deg, 
-        account-type == "Bank" ? #1e3a5f : 
-        account-type == "Cash" ? #2d4a3e :
-        account-type == "Savings" ? #3d3a1e :
-        account-type == "Credit Card" ? #3d1e2e : #1a1a2e,
-        account-type == "Bank" ? #2d5a8f : 
-        account-type == "Cash" ? #3d6a5e :
-        account-type == "Savings" ? #5d5a2e :
-        account-type == "Credit Card" ? #5d2e4e : #2d2d4e
+    width: Theme.icon-xl;
+    height: Theme.icon-xl;
+    border-radius: Theme.radius-xl;
+    background: @linear-gradient(135deg,
+        account-type == "Bank" ? Theme.account-bank :
+        account-type == "Cash" ? Theme.account-cash :
+        account-type == "Savings" ? Theme.account-savings :
+        account-type == "Credit Card" ? Theme.account-credit : Theme.account-other,
+        account-type == "Bank" ? Theme.account-bank-light :
+        account-type == "Cash" ? Theme.account-cash-light :
+        account-type == "Savings" ? Theme.account-savings-light :
+        account-type == "Credit Card" ? Theme.account-credit-light : Theme.account-other-light
     );
     border-width: 1px;
-    border-color: account-type == "Bank" ? #3d6a9f : 
-                  account-type == "Cash" ? #4d8a7e :
-                  account-type == "Savings" ? #7d7a4e :
-                  account-type == "Credit Card" ? #7d4e6e : #3d3d5e;
+    border-color: account-type == "Bank" ? Theme.account-bank-light :
+                  account-type == "Cash" ? Theme.account-cash-light :
+                  account-type == "Savings" ? Theme.account-savings-light :
+                  account-type == "Credit Card" ? Theme.account-credit-light : Theme.account-other-light;
 
     Text {
-        text: account-type == "Bank" ? "🏦" : 
-              account-type == "Cash" ? "💵" : 
+        text: account-type == "Bank" ? "🏦" :
+              account-type == "Cash" ? "💵" :
               account-type == "Savings" ? "🏆" :
               account-type == "Credit Card" ? "💳" : "💰";
         font-size: 20px;
@@ -110,10 +111,10 @@ export component AccountItem inherits Rectangle {
                 Rectangle {
                     height: 20px;
                     min-width: 36px;
-                    border-radius: 4px;
-                    background: @linear-gradient(135deg, #1a2a1f 0%, #1f3a2a 100%);
+                    border-radius: Theme.radius-sm;
+                    background: @linear-gradient(135deg, Theme.tx-income-bg, Theme.account-cash);
                     border-width: 1px;
-                    border-color: #2d5a4a;
+                    border-color: Theme.account-cash-light;
 
                     HorizontalLayout {
                         padding-left: 8px;

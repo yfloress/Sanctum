@@ -2,6 +2,7 @@
 // Premium Fintech UI - Habit tracking with visual analytics
 
 import { Palette, HabitAdapter, AppState, NotificationAdapter } from "../globals.slint";
+import { Theme } from "../theme.slint";
 import { HabitRow } from "../components/habit_row.slint";
 import { HabitHeatmap } from "../components/habit_heatmap.slint";
 import { HabitRadarChart, WeekdayEfficiencyChart, InsightCard } from "../components/analytics_charts.slint";
@@ -59,7 +60,7 @@ export component HabitsPage inherits Rectangle {
         // ==================== HERO HEADER ====================
         Rectangle {
             height: 100px;
-            background: @linear-gradient(180deg, #0f0f1a 0%, Palette.background 100%);
+            background: @linear-gradient(180deg, Theme.modal-bg-end 0%, Palette.background 100%);
             
             // Decorative pattern
             Rectangle {

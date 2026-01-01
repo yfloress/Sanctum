@@ -4,6 +4,7 @@
 
 import { Palette, HabitAdapter, HeatmapWeek, HeatmapDay } from "../globals.slint";
 import { CustomScrollbar } from "../widgets.slint";
+import { Theme } from "../theme.slint";
 
 component Tooltip inherits Rectangle {
     in property <string> text; // Kept for interface compatibility, but unused
@@ -18,15 +19,15 @@ component Tooltip inherits Rectangle {
     x: -8px; 
     y: -28px;
     
-    background: #1e1e1e;
+    background: Theme.bg-surface;
     border-width: 1px;
     border-color: Palette.border;
     border-radius: 4px;
 
-    Text { 
-        text: "\{root.count}"; 
-        color: #ffffff; 
-        font-size: 10px; 
+    Text {
+        text: "\{root.count}";
+        color: Theme.text;
+        font-size: 10px;
         font-weight: 600;
         horizontal-alignment: center;
         vertical-alignment: center;

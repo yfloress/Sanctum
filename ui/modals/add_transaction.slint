@@ -10,6 +10,7 @@ import {
     AccountAdapter,
     NotificationAdapter,
 } from "../globals.slint";
+import { Theme } from "../theme.slint";
 
 // ==================== FormField ====================
 component FormField inherits Rectangle {
@@ -141,7 +142,7 @@ component CategorySelector inherits Rectangle {
             border-color: Palette.border-light;
             height: min(categories.length * 40px + 8px, 280px);
             drop-shadow-blur: 16px;
-            drop-shadow-color: #00000066;
+            drop-shadow-color: Theme.shadow;
 
             Flickable {
                 viewport-height: categories.length * 40px + 8px;
@@ -253,7 +254,7 @@ component AccountSelector inherits Rectangle {
             border-color: Palette.border-light;
             height: min(AccountAdapter.accounts.length * 40px + 8px, 240px);
             drop-shadow-blur: 16px;
-            drop-shadow-color: #00000066;
+            drop-shadow-color: Theme.shadow;
 
             Flickable {
                 viewport-height: AccountAdapter.accounts.length * 40px + 8px;
@@ -316,12 +317,12 @@ component TypeToggle inherits Rectangle {
         // Expense button
         Rectangle {
             horizontal-stretch: 1;
-            background: is-expense 
-                ? @linear-gradient(135deg, #3d1f2f 0%, #2d1520 100%)
+            background: is-expense
+                ? @linear-gradient(135deg, Theme.toggle-expense-start 0%, Theme.toggle-expense-end 100%)
                 : transparent;
             border-radius: 8px;
             border-width: is-expense ? 1px : 0px;
-            border-color: #5d2f4f;
+            border-color: Theme.toggle-expense-border;
 
             animate background { duration: 200ms; easing: ease-out; }
 
@@ -346,12 +347,12 @@ component TypeToggle inherits Rectangle {
         // Income button
         Rectangle {
             horizontal-stretch: 1;
-            background: !is-expense 
-                ? @linear-gradient(135deg, #1f3d2f 0%, #152d20 100%)
+            background: !is-expense
+                ? @linear-gradient(135deg, Theme.toggle-income-start 0%, Theme.toggle-income-end 100%)
                 : transparent;
             border-radius: 8px;
             border-width: !is-expense ? 1px : 0px;
-            border-color: #2f5d4f;
+            border-color: Theme.toggle-income-border;
 
             animate background { duration: 200ms; easing: ease-out; }
 
@@ -478,7 +479,7 @@ export component AddTransactionModal inherits Rectangle {
     Rectangle {
         width: 100%;
         height: 100%;
-        background: #000000cc;
+        background: Theme.overlay;
 
         TouchArea {
             clicked => {
@@ -511,12 +512,12 @@ export component AddTransactionModal inherits Rectangle {
         y: (parent.height - self.height) / 2;
         width: min(Palette.modal-width-md, parent.width - 40px);
         height: min(Palette.modal-height-compact, parent.height - 40px);
-        background: @linear-gradient(180deg, Palette.sidebar-bg 0%, #0f0f1a 100%);
+        background: @linear-gradient(180deg, Palette.sidebar-bg 0%, Theme.modal-bg-end 100%);
         border-radius: 16px;
         border-width: 1px;
         border-color: Palette.border-light;
         drop-shadow-blur: 40px;
-        drop-shadow-color: #00000088;
+        drop-shadow-color: Theme.overlay-soft;
 
         TouchArea {
             clicked => { key-scope.focus(); }
@@ -660,7 +661,7 @@ export component AddTransactionModal inherits Rectangle {
 
                 Text {
                     text: editing ? "SAVE CHANGES" : "SAVE ENTRY";
-                    color: #ffffff;
+                    color: Theme.text;
                     font-size: 12px;
                     font-weight: 600;
                     letter-spacing: 2px;
