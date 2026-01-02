@@ -7,6 +7,7 @@ import {
     AppState,
     NotificationAdapter
 } from "../globals.slint";
+import { Theme } from "../theme.slint";
 import { CryptoRow, WalletRow, TickerItem, CryptoCard, GhostButton } from "../components/crypto_widgets.slint";
 import { AssetDetailPanel } from "../components/asset_detail.slint";
 import { WalletDetailPanel } from "../components/wallet_detail.slint";
@@ -194,7 +195,7 @@ export component CryptoPage inherits Rectangle {
                             width: 3px;
                             height: 18px;
                             border-radius: 2px;
-                            background: @linear-gradient(180deg, Palette.accent 0%, #6366f1 100%);
+                            background: @linear-gradient(180deg, Palette.accent 0%, Theme.accent-indigo 100%);
                             y: (parent.height - self.height) / 2;
                         }
 
@@ -475,7 +476,7 @@ export component CryptoPage inherits Rectangle {
                                 width: 3px;
                                 height: 18px;
                                 border-radius: 2px;
-                                background: @linear-gradient(180deg, Palette.accent 0%, #6366f1 100%);
+                                background: @linear-gradient(180deg, Palette.accent 0%, Theme.accent-indigo 100%);
                                 y: (parent.height - self.height) / 2;
                             }
 

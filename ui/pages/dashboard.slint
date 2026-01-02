@@ -10,6 +10,7 @@ import {
     CategoryData,
     AppState,
 } from "../globals.slint";
+import { Theme } from "../theme.slint";
 import { TransactionItem } from "../components/transaction_item.slint";
 import { TextButton, ActionButton } from "../widgets.slint";
 import { CategoryBreakdown } from "../components/category_breakdown.slint";
@@ -276,7 +277,7 @@ export component DashboardPage inherits Rectangle {
             // ==================== HERO SECTION ====================
             Rectangle {
                 height: 200px;
-                background: @linear-gradient(180deg, #0a0a10 0%, Palette.background 100%);
+                background: @linear-gradient(180deg, Theme.bg-header 0%, Palette.background 100%);
                 border-radius: 20px;
                 
                 VerticalLayout {
