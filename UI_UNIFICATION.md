@@ -1,61 +1,111 @@
 # UI Unification Progress
 
+## Status: COMPLETE
+
+All hardcoded colors have been migrated to use `ui/theme.slint`.
+
 ## Steps
 
 - [x] 1. Create Theme file with all colors
 - [x] 2. Replace hardcoded colors in components
 - [x] 3. Replace hardcoded colors in modals
 - [x] 4. Replace hardcoded colors in pages
-- [ ] 5. Remaining: widgets.slint, sidebar.slint, charts.slint, settings.slint
-- [ ] 6. Final cleanup and verification
+- [x] 5. Replace hardcoded colors in remaining files
+- [x] 6. Final verification (cargo check passed)
 
 ---
 
-## Progress Log
+## Theme File Structure
 
-### Step 1: Theme File Created
-Created `ui/theme.slint` with organized color tokens:
-- Core colors (bg, bg-surface, bg-hover, bg-sidebar)
-- Text colors (text, text-secondary, text-muted, text-subtle)
-- Border colors (border, border-light, border-subtle)
-- Accent/Primary colors
-- Semantic colors (success, danger, warning)
-- Overlays and shadows (overlay, overlay-strong, overlay-soft, shadow)
-- Chart colors (chart-bg-start, chart-bg-end, chart-line)
-- Notification colors (notify-error-bg/border, notify-success-bg/border)
-- Icon backgrounds (icon-error-bg/border, icon-success-bg/border)
-- Account type colors
-- Transaction colors + toggle colors
-- Modal colors
-- Heatmap colors
-- Habit colors (16 + gradient)
-- Size tokens (radius, icons, spacing, fonts)
+`ui/theme.slint` contains:
 
-### Step 2: Components Updated
-- account_item.slint: Using Theme for icons, gradients, radius
-- transaction_item.slint: Using Theme for category icons, delete button
-- notification.slint: Using Theme for backgrounds, borders, icons
-- habit_heatmap.slint: Using Theme for tooltip
+### Core Colors
+- `bg`, `bg-surface`, `bg-hover`, `bg-sidebar`
 
-### Step 3: Modals Updated
-- add_transaction.slint: Theme for overlay, shadows, toggles, button text
-- add_habit.slint: Theme for overlay, shadows, gradients, button text
-- add_account.slint: Theme for overlay, shadows, button text
-- transfer_funds.slint: Theme for overlay, shadows, button text
-- configure_categories.slint: Theme for overlay, shadows
-- configure_ticker.slint: Theme for overlay, checkbox text
+### Text Colors
+- `text`, `text-light`, `text-secondary`, `text-muted`, `text-subtle`
 
-### Step 4: Pages Updated
-- finances.slint: Theme for shadows, overlay, gradient
-- habits.slint: Theme for gradient
+### Border Colors
+- `border`, `border-light`, `border-subtle`
 
-### Step 5: Remaining
-Still have hardcoded colors in:
-- widgets.slint (button text #ffffff)
-- sidebar.slint (text color)
-- charts.slint (gradients and strokes)
-- settings.slint (gradients)
-- category_breakdown.slint (gradient)
+### Accent Colors
+- `accent`, `accent-muted`, `accent-indigo`, `primary`, `primary-hover`
+- `card-gradient-end`
 
-### Verification
+### Semantic Colors
+- `success`, `danger`, `warning`
+
+### Overlays & Shadows
+- `overlay`, `overlay-strong`, `overlay-soft`, `shadow`
+
+### Chart Colors
+- `chart-bg-start`, `chart-bg-end`, `chart-line`, `chart-line-secondary`
+- `chart-stroke`, `chart-stroke-mid`
+
+### Notification Colors
+- `notify-error-bg`, `notify-error-border`
+- `notify-success-bg`, `notify-success-border`
+- `icon-error-bg`, `icon-error-border`
+- `icon-success-bg`, `icon-success-border`
+
+### Account Type Colors
+- `account-bank`, `account-bank-light`
+- `account-cash`, `account-cash-light`
+- `account-savings`, `account-savings-light`
+- `account-credit`, `account-credit-light`
+- `account-other`, `account-other-light`
+
+### Transaction Colors
+- `tx-expense-bg`, `tx-income-bg`, `tx-transfer-bg`
+- `toggle-expense-start`, `toggle-expense-end`, `toggle-expense-border`
+- `toggle-income-start`, `toggle-income-end`, `toggle-income-border`
+
+### Modal Colors
+- `modal-bg-end`
+
+### Heatmap Colors
+- `heat-0` through `heat-4`
+
+### Habit Colors
+- `habit-gradient-start`, `habit-gradient-end`
+- `habit-1` through `habit-16`
+
+### Size Tokens
+- Radius: `radius-sm`, `radius-md`, `radius-lg`, `radius-xl`, `radius-2xl`, `radius-pill`
+- Icons: `icon-xs`, `icon-sm`, `icon-md`, `icon-lg`, `icon-xl`
+- Spacing: `spacing-xs`, `spacing-sm`, `spacing-md`, `spacing-lg`, `spacing-xl`
+- Fonts: `font-xs`, `font-sm`, `font-md`, `font-lg`, `font-xl`
+
+---
+
+## Files Updated
+
+### Components
+- `account_item.slint`
+- `transaction_item.slint`
+- `notification.slint`
+- `habit_heatmap.slint`
+- `sidebar.slint`
+- `charts.slint`
+- `category_breakdown.slint`
+
+### Modals
+- `add_transaction.slint`
+- `add_habit.slint`
+- `add_account.slint`
+- `transfer_funds.slint`
+- `configure_categories.slint`
+- `configure_ticker.slint`
+
+### Pages
+- `finances.slint`
+- `habits.slint`
+- `settings.slint`
+
+### Widgets
+- `widgets.slint`
+
+---
+
+## Verification
 - cargo check: PASSED
