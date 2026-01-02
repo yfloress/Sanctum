@@ -1,103 +1,109 @@
 // ==================== Sanctum Theme ====================
 // All colors in one place for easy theming
+// Supports dark (default) and light (cream/gold) modes
+
+import { SettingsAdapter } from "globals.slint";
 
 export global Theme {
+    // ==================== Theme Toggle ====================
+    out property <bool> is-dark: SettingsAdapter.dark-mode;
+
     // ==================== Core ====================
-    out property <color> bg: #000000;
-    out property <color> bg-header: #0a0a10;
-    out property <color> bg-surface: #111111;
-    out property <color> bg-hover: #1a1a1a;
-    out property <color> bg-sidebar: #050505;
+    out property <color> bg: is-dark ? #000000 : #faf7f2;
+    out property <color> bg-header: is-dark ? #0a0a10 : #f5f0e8;
+    out property <color> bg-surface: is-dark ? #111111 : #f0ebe3;
+    out property <color> bg-hover: is-dark ? #1a1a1a : #e8e0d5;
+    out property <color> bg-sidebar: is-dark ? #050505 : #f8f4ed;
 
     // ==================== Text ====================
-    out property <color> text: #ffffff;
-    out property <color> text-light: #f0f0f0;
-    out property <color> text-secondary: #a3a3a3;
-    out property <color> text-muted: #666666;
-    out property <color> text-subtle: #333333;
+    out property <color> text: is-dark ? #ffffff : #2d2a26;
+    out property <color> text-light: is-dark ? #f0f0f0 : #3d3a36;
+    out property <color> text-secondary: is-dark ? #a3a3a3 : #6b6560;
+    out property <color> text-muted: is-dark ? #666666 : #8a857d;
+    out property <color> text-subtle: is-dark ? #333333 : #b5aea5;
 
     // ==================== Borders ====================
-    out property <color> border: #333333;
-    out property <color> border-light: #ffffff;
-    out property <color> border-subtle: #222222;
+    out property <color> border: is-dark ? #333333 : #e0d6c8;
+    out property <color> border-light: is-dark ? #ffffff : #c9a227;
+    out property <color> border-subtle: is-dark ? #222222 : #ebe4d8;
 
     // ==================== Accent ====================
-    out property <color> accent: #ffffff;
-    out property <color> accent-muted: #ffffff20;
-    out property <color> accent-indigo: #6366f1;
-    out property <color> primary: #8b5cf6;
-    out property <color> primary-hover: #a78bfa;
-    out property <color> card-gradient-end: #1a1a2e;
+    out property <color> accent: is-dark ? #ffffff : #c9a227;
+    out property <color> accent-muted: is-dark ? #ffffff20 : #c9a22730;
+    out property <color> accent-indigo: is-dark ? #6366f1 : #9f7b10;
+    out property <color> primary: is-dark ? #8b5cf6 : #b8860b;
+    out property <color> primary-hover: is-dark ? #a78bfa : #d4a574;
+    out property <color> card-gradient-end: is-dark ? #1a1a2e : #ede6db;
 
     // ==================== Semantic ====================
-    out property <color> success: #22c55e;
-    out property <color> danger: #ef4444;
-    out property <color> warning: #f59e0b;
+    out property <color> success: is-dark ? #22c55e : #2e7d32;
+    out property <color> danger: is-dark ? #ef4444 : #c62828;
+    out property <color> warning: is-dark ? #f59e0b : #ef6c00;
 
     // ==================== Overlays ====================
-    out property <color> overlay: #000000cc;
-    out property <color> overlay-strong: #000000d9;
-    out property <color> overlay-soft: #00000088;
-    out property <color> shadow: #00000066;
+    out property <color> overlay: is-dark ? #000000cc : #2d2a26cc;
+    out property <color> overlay-strong: is-dark ? #000000d9 : #2d2a26d9;
+    out property <color> overlay-soft: is-dark ? #00000088 : #2d2a2688;
+    out property <color> shadow: is-dark ? #00000066 : #2d2a2633;
 
     // ==================== Charts ====================
-    out property <color> chart-bg-start: #0d0d12;
-    out property <color> chart-bg-end: #080810;
-    out property <color> chart-line: #8b5cf6;
-    out property <color> chart-line-secondary: #94a3b8;
-    out property <color> chart-stroke: #ffffff;
-    out property <color> chart-stroke-mid: #a0a0a0;
+    out property <color> chart-bg-start: is-dark ? #0d0d12 : #f5f0e8;
+    out property <color> chart-bg-end: is-dark ? #080810 : #ede6db;
+    out property <color> chart-line: is-dark ? #8b5cf6 : #b8860b;
+    out property <color> chart-line-secondary: is-dark ? #94a3b8 : #8a857d;
+    out property <color> chart-stroke: is-dark ? #ffffff : #c9a227;
+    out property <color> chart-stroke-mid: is-dark ? #a0a0a0 : #d4a574;
 
     // ==================== Notifications ====================
-    out property <color> notify-error-bg: #1a1215;
-    out property <color> notify-error-border: #3d2020;
-    out property <color> notify-success-bg: #0f1a15;
-    out property <color> notify-success-border: #203d30;
+    out property <color> notify-error-bg: is-dark ? #1a1215 : #fef2f2;
+    out property <color> notify-error-border: is-dark ? #3d2020 : #fecaca;
+    out property <color> notify-success-bg: is-dark ? #0f1a15 : #f0fdf4;
+    out property <color> notify-success-border: is-dark ? #203d30 : #bbf7d0;
 
     // Icon backgrounds (for notification icons, status indicators, etc)
-    out property <color> icon-error-bg: #2d1515;
-    out property <color> icon-error-border: #3d2020;
-    out property <color> icon-success-bg: #152d20;
-    out property <color> icon-success-border: #203d30;
+    out property <color> icon-error-bg: is-dark ? #2d1515 : #fee2e2;
+    out property <color> icon-error-border: is-dark ? #3d2020 : #fca5a5;
+    out property <color> icon-success-bg: is-dark ? #152d20 : #dcfce7;
+    out property <color> icon-success-border: is-dark ? #203d30 : #86efac;
 
     // ==================== Account Types ====================
-    out property <color> account-bank: #1e3a5f;
-    out property <color> account-bank-light: #2d5a8f;
-    out property <color> account-cash: #2d4a3e;
-    out property <color> account-cash-light: #3d6a5e;
-    out property <color> account-savings: #3d3a1e;
-    out property <color> account-savings-light: #5d5a2e;
-    out property <color> account-credit: #3d1e2e;
-    out property <color> account-credit-light: #5d2e4e;
-    out property <color> account-other: #2a2a3a;
-    out property <color> account-other-light: #3a3a4a;
+    out property <color> account-bank: is-dark ? #1e3a5f : #dbeafe;
+    out property <color> account-bank-light: is-dark ? #2d5a8f : #93c5fd;
+    out property <color> account-cash: is-dark ? #2d4a3e : #d1fae5;
+    out property <color> account-cash-light: is-dark ? #3d6a5e : #6ee7b7;
+    out property <color> account-savings: is-dark ? #3d3a1e : #fef3c7;
+    out property <color> account-savings-light: is-dark ? #5d5a2e : #fcd34d;
+    out property <color> account-credit: is-dark ? #3d1e2e : #fce7f3;
+    out property <color> account-credit-light: is-dark ? #5d2e4e : #f9a8d4;
+    out property <color> account-other: is-dark ? #2a2a3a : #e5e7eb;
+    out property <color> account-other-light: is-dark ? #3a3a4a : #9ca3af;
 
     // ==================== Transactions ====================
-    out property <color> tx-expense-bg: #1c1520;
-    out property <color> tx-income-bg: #0f1a14;
-    out property <color> tx-transfer-bg: #1a1a2a;
+    out property <color> tx-expense-bg: is-dark ? #1c1520 : #fef2f2;
+    out property <color> tx-income-bg: is-dark ? #0f1a14 : #f0fdf4;
+    out property <color> tx-transfer-bg: is-dark ? #1a1a2a : #f0f9ff;
 
     // Type toggles (expense/income buttons)
-    out property <color> toggle-expense-start: #3d1f2f;
-    out property <color> toggle-expense-end: #2d1520;
-    out property <color> toggle-expense-border: #5d2f4f;
-    out property <color> toggle-income-start: #1f3d2f;
-    out property <color> toggle-income-end: #152d20;
-    out property <color> toggle-income-border: #2f5d4f;
+    out property <color> toggle-expense-start: is-dark ? #3d1f2f : #fee2e2;
+    out property <color> toggle-expense-end: is-dark ? #2d1520 : #fecaca;
+    out property <color> toggle-expense-border: is-dark ? #5d2f4f : #f87171;
+    out property <color> toggle-income-start: is-dark ? #1f3d2f : #dcfce7;
+    out property <color> toggle-income-end: is-dark ? #152d20 : #bbf7d0;
+    out property <color> toggle-income-border: is-dark ? #2f5d4f : #4ade80;
 
     // Modal
-    out property <color> modal-bg-end: #0f0f1a;
+    out property <color> modal-bg-end: is-dark ? #0f0f1a : #f0ebe3;
 
     // ==================== Heatmap ====================
-    out property <color> heat-0: #1a1a1a;
-    out property <color> heat-1: #3b2f5f;
-    out property <color> heat-2: #6b4f9f;
-    out property <color> heat-3: #8b5cf6;
-    out property <color> heat-4: #a78bfa;
+    out property <color> heat-0: is-dark ? #1a1a1a : #f0ebe3;
+    out property <color> heat-1: is-dark ? #3b2f5f : #e5d9c3;
+    out property <color> heat-2: is-dark ? #6b4f9f : #d4b896;
+    out property <color> heat-3: is-dark ? #8b5cf6 : #c9a227;
+    out property <color> heat-4: is-dark ? #a78bfa : #b8860b;
 
     // ==================== Habit Colors ====================
-    out property <color> habit-gradient-start: #8b5cf6;
-    out property <color> habit-gradient-end: #ec4899;
+    out property <color> habit-gradient-start: is-dark ? #8b5cf6 : #c9a227;
+    out property <color> habit-gradient-end: is-dark ? #ec4899 : #d4a574;
     out property <color> habit-1: #8b5cf6;
     out property <color> habit-2: #ec4899;
     out property <color> habit-3: #3b82f6;

@@ -32,6 +32,7 @@ pub const SETTING_CRYPTO_LAST_WALLET_ID: &str = "crypto_last_wallet_id";
 pub const SETTING_CRYPTO_LAST_COIN_ID: &str = "crypto_last_coin_id";
 pub const SETTING_CRYPTO_PROXY_ENABLED: &str = "crypto_proxy_enabled";
 pub const SETTING_CRYPTO_PROXY_URL: &str = "crypto_proxy_url";
+pub const SETTING_DARK_MODE: &str = "dark_mode";
 
 // ==================== Error Types ====================
 

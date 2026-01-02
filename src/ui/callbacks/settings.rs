@@ -4,6 +4,7 @@
 
 use crate::controller::{
     AppController, SETTING_AUTO_FETCH, SETTING_CRYPTO_PROXY_ENABLED, SETTING_CRYPTO_PROXY_URL,
+    SETTING_DARK_MODE,
 };
 use crate::{CryptoAdapter, SettingsAdapter, AppWindow};
 use slint::{ComponentHandle, SharedString, Weak};
@@ -62,8 +63,25 @@ pub fn setup_settings_callbacks<N>(
                     ui.global::<SettingsAdapter>()
                         .set_proxy_url(SharedString::from(val));
                 }
+
+                // Load dark mode setting (default to true if not set)
+                let dark_mode = controller
+                    .get_app_setting(SETTING_DARK_MODE)
+                    .map(|v| v != "false")
+                    .unwrap_or(true);
+                ui.global::<SettingsAdapter>().set_dark_mode(dark_mode);
             }
         });
+    }
+
+    // Dark mode toggle
+    {
+        let controller = controller.clone();
+        ui.global::<SettingsAdapter>()
+            .on_set_dark_mode(move |enabled| {
+                let val = if enabled { "true" } else { "false" };
+                let _ = controller.set_app_setting(SETTING_DARK_MODE, val);
+            });
     }
 
     // Auto-fetch toggle

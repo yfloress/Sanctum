@@ -240,6 +240,25 @@ export component SettingsPage inherits Rectangle {
                 padding-right: 64px;
                 spacing: 24px;
 
+                // Appearance Section
+                VerticalLayout {
+                    spacing: 12px;
+
+                    SectionHeader {
+                        title: "APPEARANCE";
+                    }
+
+                    SettingCard {
+                        title: "Dark Mode";
+                        description: "Switch between dark and light (cream/gold) themes";
+                        toggle-value: SettingsAdapter.dark-mode;
+                        toggled(value) => {
+                            SettingsAdapter.set-dark-mode(value);
+                            SettingsAdapter.dark-mode = value;
+                        }
+                    }
+                }
+
                 // Data Settings Section
                 VerticalLayout {
                     spacing: 12px;
