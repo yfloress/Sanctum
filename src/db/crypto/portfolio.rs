@@ -400,7 +400,24 @@ impl Database {
         }
 
         // Process transactions chronologically to keep cost basis adjustments consistent
-        transactions.sort_by(|a, b| a.date.cmp(&b.date).then(a.id.cmp(&b.id)));
+        // When dates are equal, process inflows (buy, transfer_in) before outflows (sell, transfer_out, swap)
+        // This ensures correct balance calculation when buy and sell happen on the same day
+        fn tx_type_order(tx_type: &str) -> u8 {
+            match tx_type {
+                "buy" => 0,
+                "transfer_in" => 1,
+                "sell" => 2,
+                "transfer_out" => 3,
+                "swap" => 4,
+                _ => 5,
+            }
+        }
+        transactions.sort_by(|a, b| {
+            a.date
+                .cmp(&b.date)
+                .then_with(|| tx_type_order(&a.transaction_type).cmp(&tx_type_order(&b.transaction_type)))
+                .then_with(|| a.id.cmp(&b.id))
+        });
 
         let tx_map: HashMap<String, CryptoTransaction> = transactions
             .iter()
