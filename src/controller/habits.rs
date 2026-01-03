@@ -144,11 +144,18 @@ impl AppController {
             .map_err(ControllerError::Database)
     }
 
-    /// Gets all habit logs (optimized for bulk operations like streak calculation)
-    /// This avoids N+1 query problems by fetching all logs at once
+    /// Gets habit logs for streak calculation (optimized: last 2 years)
+    /// This avoids N+1 query problems by fetching relevant logs at once.
+    /// Limited to 730 days to balance performance with practical streak tracking.
     pub fn get_all_habit_logs(&self) -> std::result::Result<Vec<HabitLog>, ControllerError> {
-        // Use a wide date range to cover all reasonable dates
-        self.get_habit_logs("1970-01-01".to_string(), "2100-01-01".to_string())
+        let today = chrono::Local::now().date_naive();
+        let start_date = today
+            .checked_sub_signed(chrono::Duration::days(730))
+            .unwrap_or(today);
+        self.get_habit_logs(
+            start_date.format("%Y-%m-%d").to_string(),
+            today.format("%Y-%m-%d").to_string(),
+        )
     }
 
     /// Gets habit analytics: weekday efficiency and monthly trend

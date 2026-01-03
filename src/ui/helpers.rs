@@ -132,8 +132,14 @@ pub fn normalize_habit_category_value(category: &str) -> String {
     }
 }
 
-/// Calculates current streak from a sorted list of dates
-/// Returns the number of consecutive days ending at today (or yesterday if today not complete)
+/// Calculates current streak from a sorted list of dates.
+/// Returns the number of consecutive days ending at today (or yesterday if today not complete).
+///
+/// # Timezone Behavior
+/// The `today` parameter should use the user's local date (`chrono::Local::now().date_naive()`).
+/// This means streak calculations are based on the user's local calendar day.
+/// **Note**: Changing timezones mid-day may affect streak counts, as a day completed in one
+/// timezone might appear as a different calendar date in another.
 pub fn calculate_current_streak(dates: &[chrono::NaiveDate], today: chrono::NaiveDate) -> i32 {
     if dates.is_empty() {
         return 0;
@@ -163,7 +169,11 @@ pub fn calculate_current_streak(dates: &[chrono::NaiveDate], today: chrono::Naiv
     streak
 }
 
-/// Calculates the best (longest) streak from a sorted list of dates
+/// Calculates the best (longest) streak from a sorted list of dates.
+///
+/// # Note
+/// Limited to logs from the last 2 years for performance reasons.
+/// Best streak is calculated from available data within this window.
 pub fn calculate_best_streak(dates: &[chrono::NaiveDate]) -> i32 {
     if dates.is_empty() {
         return 0;
