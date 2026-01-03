@@ -118,8 +118,8 @@ pub fn setup_transaction_callbacks<N>(
                             .set_app_setting(SETTING_CRYPTO_LAST_WALLET_ID, wallet_id_raw.as_ref());
                         let _ = controller
                             .set_app_setting(SETTING_CRYPTO_LAST_COIN_ID, coin_id.as_ref());
-                        reload_portfolio(&ui_weak, &controller);
-                        reload_wallets(&ui_weak, &controller);
+                        reload_portfolio(&ui_weak, &controller, Some(&notify));
+                        reload_wallets(&ui_weak, &controller, Some(&notify));
                         // Refresh dashboard analytics
                         if let Some(ui) = ui_weak.upgrade() {
                             let range = ui.global::<AnalyticsAdapter>().get_active_range();
@@ -233,8 +233,8 @@ pub fn setup_transaction_callbacks<N>(
                         );
                         let _ = controller
                             .set_app_setting(SETTING_CRYPTO_LAST_COIN_ID, coin_id.as_ref());
-                        reload_portfolio(&ui_weak, &controller);
-                        reload_wallets(&ui_weak, &controller);
+                        reload_portfolio(&ui_weak, &controller, Some(&notify));
+                        reload_wallets(&ui_weak, &controller, Some(&notify));
                         // Refresh dashboard analytics
                         if let Some(ui) = ui_weak.upgrade() {
                             let range = ui.global::<AnalyticsAdapter>().get_active_range();
@@ -344,8 +344,8 @@ pub fn setup_transaction_callbacks<N>(
                             .set_app_setting(SETTING_CRYPTO_LAST_WALLET_ID, wallet_id_raw.as_ref());
                         let _ = controller
                             .set_app_setting(SETTING_CRYPTO_LAST_COIN_ID, from_coin_id.as_ref());
-                        reload_portfolio(&ui_weak, &controller);
-                        reload_wallets(&ui_weak, &controller);
+                        reload_portfolio(&ui_weak, &controller, Some(&notify));
+                        reload_wallets(&ui_weak, &controller, Some(&notify));
                         // Refresh dashboard analytics
                         if let Some(ui) = ui_weak.upgrade() {
                             let range = ui.global::<AnalyticsAdapter>().get_active_range();
