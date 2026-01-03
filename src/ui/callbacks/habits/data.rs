@@ -10,6 +10,118 @@ use std::sync::Arc;
 
 use super::helpers::{habit_color_index, normalize_habit_category_value};
 
+struct HabitSummary {
+    current_streak: i32,
+    best_streak: i32,
+    completion_rate: i32,
+    completion_note: String,
+    last_30: i32,
+    best_day: String,
+}
+
+fn build_habit_summary(
+    habit_dates: &[NaiveDate],
+    monthly_completed: i32,
+    days_total: u32,
+    today: NaiveDate,
+    is_current_month: bool,
+) -> HabitSummary {
+    let current_streak = calculate_current_streak(habit_dates, today);
+
+    let window_start = today
+        .checked_sub_signed(chrono::Duration::days(364))
+        .unwrap_or(today);
+    let recent_dates: Vec<NaiveDate> = habit_dates
+        .iter()
+        .cloned()
+        .filter(|date| *date >= window_start)
+        .collect();
+    let best_streak = calculate_best_streak(&recent_dates);
+
+    let completion_rate = if days_total > 0 {
+        ((monthly_completed as f32 / days_total as f32) * 100.0).round() as i32
+    } else {
+        0
+    };
+
+    let completion_note = if is_current_month {
+        format!(
+            "Month-to-date: {} of {} days",
+            monthly_completed, days_total
+        )
+    } else {
+        format!(
+            "Selected month: {} of {} days",
+            monthly_completed, days_total
+        )
+    };
+
+    let last_30_start = today
+        .checked_sub_signed(chrono::Duration::days(29))
+        .unwrap_or(today);
+    let mut last_30 = 0;
+    let mut weekday_counts = [0i32; 7];
+
+    for date in habit_dates.iter().filter(|date| **date >= last_30_start) {
+        last_30 += 1;
+        let idx = date.weekday().num_days_from_monday() as usize;
+        weekday_counts[idx] += 1;
+    }
+
+    let weekday_names = [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+    ];
+    let (best_idx, best_count) = weekday_counts
+        .iter()
+        .enumerate()
+        .max_by_key(|(_, count)| *count)
+        .unwrap_or((0, &0));
+
+    let best_day = if *best_count > 0 {
+        format!("Best day (30d): {} ({})", weekday_names[best_idx], best_count)
+    } else {
+        "Best day (30d): No data yet".to_string()
+    };
+
+    HabitSummary {
+        current_streak,
+        best_streak,
+        completion_rate,
+        completion_note,
+        last_30,
+        best_day,
+    }
+}
+
+fn clear_habit_summary(adapter: &HabitAdapter) {
+    adapter.set_selected_habit_id(SharedString::default());
+    adapter.set_summary_habit_name(SharedString::default());
+    adapter.set_summary_habit_color(color_from_hex("#000000"));
+    adapter.set_summary_current_streak(0);
+    adapter.set_summary_best_streak(0);
+    adapter.set_summary_completion_rate(0);
+    adapter.set_summary_completion_note(SharedString::default());
+    adapter.set_summary_last_30(0);
+    adapter.set_summary_best_day(SharedString::default());
+}
+
+fn apply_habit_summary(adapter: &HabitAdapter, habit: &crate::models::Habit, summary: HabitSummary) {
+    adapter.set_summary_habit_name(SharedString::from(habit.name.clone()));
+    adapter.set_summary_habit_color(color_from_hex(&habit.color));
+    adapter.set_summary_current_streak(summary.current_streak);
+    adapter.set_summary_best_streak(summary.best_streak);
+    adapter.set_summary_completion_rate(summary.completion_rate);
+    adapter.set_summary_completion_note(SharedString::from(summary.completion_note));
+    adapter.set_summary_last_30(summary.last_30);
+    adapter.set_summary_best_day(SharedString::from(summary.best_day));
+}
+
 /// Reload habits for a given month
 /// Optionally accepts a notify closure to report errors
 pub fn reload_habits<N>(
@@ -82,11 +194,18 @@ pub fn reload_habits<N>(
     // and ensure consistent date across all habits in this refresh
     let today = chrono::Local::now().date_naive();
 
+    let mut monthly_completion_map: HashMap<String, i32> = HashMap::new();
+
+    // Calculate 'today' once outside the loop to avoid repeated syscalls
+    // and ensure consistent date across all habits in this refresh
+    let today = chrono::Local::now().date_naive();
+
     let mapped_habits: Vec<HabitData> = habits
-        .into_iter()
+        .iter()
         .map(|h| {
             let mut days_vec: Vec<HabitDay> = Vec::new();
             let mut completions = 0;
+            let habit_id = h.id.clone();
 
             // Build monthly view
             for d in 1..=days_in_month {
@@ -96,7 +215,7 @@ pub fn reload_habits<N>(
                 let date_str = date.format("%Y-%m-%d").to_string();
                 let is_future = date > today;
 
-                let completed = log_map.contains(&(h.id.clone(), date_str.clone()));
+                let completed = log_map.contains(&(habit_id.clone(), date_str.clone()));
                 if completed {
                     completions += 1;
                 }
@@ -109,16 +228,10 @@ pub fn reload_habits<N>(
                 });
             }
 
-            let completion_rate = if days_in_month > 0 {
-                ((completions as f32 / days_in_month as f32) * 100.0) as i32
-            } else {
-                0
-            };
-
-            // Retrieve pre-processed historical dates for this habit
-            let habit_dates = history_map.get(&h.id).cloned().unwrap_or_default();
+            monthly_completion_map.insert(habit_id.clone(), completions);
 
             // Calculate streaks using helper functions
+            let habit_dates = history_map.get(&habit_id).cloned().unwrap_or_default();
             let current_streak = calculate_current_streak(&habit_dates, today);
             let best_streak = calculate_best_streak(&habit_dates);
 
@@ -126,8 +239,8 @@ pub fn reload_habits<N>(
             let color_hex = h.color.clone();
 
             HabitData {
-                id: SharedString::from(h.id),
-                name: SharedString::from(h.name),
+                id: SharedString::from(habit_id),
+                name: SharedString::from(h.name.clone()),
                 description: SharedString::from(h.description.unwrap_or_default()),
                 color,
                 color_hex: SharedString::from(color_hex.clone()),
@@ -135,7 +248,11 @@ pub fn reload_habits<N>(
                 category: SharedString::from(normalize_habit_category_value(&h.category)),
                 streak: current_streak,
                 best_streak,
-                completion_rate,
+                completion_rate: if days_in_month > 0 {
+                    ((completions as f32 / days_in_month as f32) * 100.0) as i32
+                } else {
+                    0
+                },
                 days: ModelRc::new(VecModel::from(days_vec)),
             }
         })
@@ -151,10 +268,53 @@ pub fn reload_habits<N>(
         adapter.set_current_month_index(month as i32);
 
         // Auto-scroll context
-        let now = chrono::Local::now().date_naive();
-        let is_current = year == now.year() && month == now.month();
+        let is_current = year == today.year() && month == today.month();
         adapter.set_is_viewing_current_month(is_current);
-        adapter.set_current_day_int(now.day() as i32);
+        adapter.set_current_day_int(today.day() as i32);
+
+        if habits.is_empty() {
+            clear_habit_summary(&adapter);
+            return;
+        }
+
+        let existing_selected = adapter.get_selected_habit_id().to_string();
+        let selected_id = if !existing_selected.is_empty()
+            && habits.iter().any(|habit| habit.id == existing_selected)
+        {
+            existing_selected
+        } else {
+            habits
+                .first()
+                .map(|habit| habit.id.clone())
+                .unwrap_or_default()
+        };
+
+        adapter.set_selected_habit_id(SharedString::from(selected_id.clone()));
+
+        if let Some(selected_habit) = habits.iter().find(|habit| habit.id == selected_id) {
+            let habit_dates = history_map
+                .get(&selected_habit.id)
+                .cloned()
+                .unwrap_or_default();
+            let days_total = if is_current {
+                today.day()
+            } else {
+                days_in_month
+            };
+            let monthly_completed = *monthly_completion_map
+                .get(&selected_habit.id)
+                .unwrap_or(&0);
+            let summary = build_habit_summary(
+                &habit_dates,
+                monthly_completed,
+                days_total,
+                today,
+                is_current,
+            );
+            apply_habit_summary(&adapter, selected_habit, summary);
+        } else {
+            clear_habit_summary(&adapter);
+        }
     }
 }
 
@@ -272,5 +432,88 @@ pub fn reload_heatmap(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>
         adapter.set_heatmap_data(ModelRc::new(VecModel::from(weeks_vec)));
         adapter.set_heatmap_year(year);
         adapter.set_current_week_int(current_week);
+    }
+}
+
+/// Refreshes summary data for the selected habit when the user changes selection.
+pub fn refresh_habit_summary<N>(
+    ui_weak: &Weak<AppWindow>,
+    controller: &Arc<AppController>,
+    current_date: NaiveDate,
+    habit_id: String,
+    notify: Option<&N>,
+) where
+    N: Fn(String, bool),
+{
+    if habit_id.trim().is_empty() {
+        return;
+    }
+
+    let habits = match controller.get_habits() {
+        Ok(h) => h,
+        Err(e) => {
+            if let Some(n) = notify {
+                n(format!("Failed to load habits: {}", e), true);
+            }
+            return;
+        }
+    };
+
+    let Some(selected_habit) = habits.iter().find(|habit| habit.id == habit_id) else {
+        return;
+    };
+
+    let year = current_date.year();
+    let month = current_date.month();
+    let Some(start_date) = NaiveDate::from_ymd_opt(year, month, 1) else {
+        return;
+    };
+    let next_month = if month == 12 { 1 } else { month + 1 };
+    let next_year = if month == 12 { year + 1 } else { year };
+    let Some(end_date) =
+        NaiveDate::from_ymd_opt(next_year, next_month, 1).and_then(|d| d.pred_opt())
+    else {
+        return;
+    };
+
+    let today = chrono::Local::now().date_naive();
+    let is_current = year == today.year() && month == today.month();
+    let days_total = if is_current {
+        today.day()
+    } else {
+        end_date.day()
+    };
+
+    let start_str = start_date.format("%Y-%m-%d").to_string();
+    let end_str = end_date.format("%Y-%m-%d").to_string();
+    let monthly_logs = controller
+        .get_habit_logs(start_str, end_str)
+        .unwrap_or_default();
+    let monthly_completed = monthly_logs
+        .iter()
+        .filter(|log| log.habit_id == habit_id)
+        .count() as i32;
+
+    let all_logs = controller.get_all_habit_logs().unwrap_or_default();
+    let mut habit_dates: Vec<NaiveDate> = all_logs
+        .into_iter()
+        .filter(|log| log.habit_id == habit_id)
+        .filter_map(|log| NaiveDate::parse_from_str(&log.completed_date, "%Y-%m-%d").ok())
+        .collect();
+    habit_dates.sort();
+    habit_dates.dedup();
+
+    let summary = build_habit_summary(
+        &habit_dates,
+        monthly_completed,
+        days_total,
+        today,
+        is_current,
+    );
+
+    if let Some(ui) = ui_weak.upgrade() {
+        let adapter = ui.global::<HabitAdapter>();
+        adapter.set_selected_habit_id(SharedString::from(habit_id));
+        apply_habit_summary(&adapter, selected_habit, summary);
     }
 }

@@ -9,7 +9,7 @@ use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 use super::charts::{refresh_habit_analytics, HabitChartsCache};
-use super::data::{reload_habits, reload_heatmap};
+use super::data::{refresh_habit_summary, reload_habits, reload_heatmap};
 
 /// Sets up all HabitAdapter callbacks
 pub fn setup_habit_callbacks<N>(
@@ -263,6 +263,19 @@ pub fn setup_habit_callbacks<N>(
         ui.global::<HabitAdapter>()
             .on_fetch_habit_analytics(move || {
                 refresh_habit_analytics(&ui_weak, &controller, &analytics_cache, &notify);
+            });
+    }
+
+    // on_select_habit
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let date_lock = current_habit_date.clone();
+        let notify = notify.clone();
+        ui.global::<HabitAdapter>()
+            .on_select_habit(move |id| {
+                let date = *date_lock.lock().unwrap();
+                refresh_habit_summary(&ui_weak, &controller, date, id.to_string(), Some(&notify));
             });
     }
 }
