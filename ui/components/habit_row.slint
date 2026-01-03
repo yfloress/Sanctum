@@ -9,14 +9,14 @@ component StatBadge inherits Rectangle {
     in property <string> value;
     in property <color> accent-color: Palette.text-muted;
 
+    width: 64px;
     height: 22px;
     border-radius: 6px;
     background: Palette.surface-hover;
     border-width: 1px;
     border-color: Palette.border;
     HorizontalLayout {
-        padding-left: 8px;
-        padding-right: 8px;
+        alignment: center;
         spacing: 4px;
         Text {
             text: root.icon;
