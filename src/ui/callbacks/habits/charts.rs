@@ -49,7 +49,9 @@ pub fn refresh_habit_analytics<F: Fn(String, bool)>(
     notify: &F,
 ) {
     let today = chrono::Local::now().date_naive();
-    let days_window: i64 = 30;
+    // Use 28 days (4 complete weeks) so each weekday has equal occurrences
+    // This ensures fair comparison in weekday efficiency charts
+    let days_window: i64 = 28;
     let start_date = today
         .checked_sub_signed(chrono::Duration::days(days_window - 1))
         .unwrap_or(today);
