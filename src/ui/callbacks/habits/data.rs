@@ -190,10 +190,6 @@ pub fn reload_habits<N>(
         dates.dedup();
     }
 
-    // Calculate 'today' once outside the loop to avoid repeated syscalls
-    // and ensure consistent date across all habits in this refresh
-    let today = chrono::Local::now().date_naive();
-
     let mut monthly_completion_map: HashMap<String, i32> = HashMap::new();
 
     // Calculate 'today' once outside the loop to avoid repeated syscalls
@@ -241,7 +237,7 @@ pub fn reload_habits<N>(
             HabitData {
                 id: SharedString::from(habit_id),
                 name: SharedString::from(h.name.clone()),
-                description: SharedString::from(h.description.unwrap_or_default()),
+                description: SharedString::from(h.description.clone().unwrap_or_default()),
                 color,
                 color_hex: SharedString::from(color_hex.clone()),
                 color_index: habit_color_index(&color_hex),

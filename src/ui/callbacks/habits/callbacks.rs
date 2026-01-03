@@ -260,6 +260,7 @@ pub fn setup_habit_callbacks<N>(
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         let analytics_cache = habit_analytics_cache.clone();
+        let notify = notify.clone();
         ui.global::<HabitAdapter>()
             .on_fetch_habit_analytics(move || {
                 refresh_habit_analytics(&ui_weak, &controller, &analytics_cache, &notify);
