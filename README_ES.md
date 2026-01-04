@@ -1,11 +1,9 @@
 <div align="center">
 
-<p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=40&pause=1000&color=41106C92&vCenter=true&width=435&lines=SANCTUM" alt="Typing SVG"> 
-</p>
+<h1>SANCTUM</h1>
 
 <p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=15&pause=1000&color=0B0B0B92&vCenter=true&width=435&lines=Your+personal+financial+fortress.;Private.+;Encrypted.;Local-first." alt="Typing SVG">
+  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=25&pause=1000&color=8900A492&vCenter=true&width=435&lines=Your+personal+financial+fortress.;Private.+;Encrypted.;Local-first." alt="Typing SVG">
 </p>
 
 [English Version](README.md)
