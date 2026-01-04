@@ -3,7 +3,7 @@
 <h1>SANCTUM</h1>
 
 <p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=25&pause=1000&color=8900A492&vCenter=true&width=435&lines=Your+personal+financial+fortress.;Private.+;Encrypted.;Local-first." alt="Typing SVG">
+  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=20&pause=1000&color=8900A492&vCenter=true&width=435&lines=Your+personal+fortress.;Private.+;Encrypted.;Local-first." alt="Typing SVG">
 </p>
 
 [Versión en Español](README_ES.md)
