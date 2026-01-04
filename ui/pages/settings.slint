@@ -269,7 +269,7 @@ export component SettingsPage inherits Rectangle {
 
                     SettingCard {
                         title: "Auto-fetch Crypto Prices";
-                        description: "Automatically update prices when app starts (uses network data)";
+                        description: "Refresh prices every minute while app is running (uses network)";
                         toggle-value: SettingsAdapter.auto-fetch-enabled;
                         toggled(value) => {
                             SettingsAdapter.set-auto-fetch(value);

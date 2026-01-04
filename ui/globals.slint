@@ -574,6 +574,7 @@ export global CryptoAdapter {
     callback fetch-wallets();
     callback fetch-wallet-details(string); // wallet_id
     callback refresh-prices();
+    callback refresh-prices-silent(); // auto-fetch without notifications
     callback fetch-asset-details(string); // coin_id
     callback get-last-price(string) -> string; // coin_id -> price string
     callback get-swap-quote(string, string, string) -> string; // from_coin_id, to_coin_id, from_amount -> to_amount

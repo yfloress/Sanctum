@@ -2,11 +2,9 @@
 
 <h1>SANCTUM</h1>
 
-<p>
-    <strong>Tu fortaleza financiera personal.</strong>
-    <br />
-    Privado. Encriptado. Local.
-  </p>
+<p align="center">
+  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=25&pause=1000&color=8900A492&vCenter=true&width=435&lines=Tu+fortaleza+personal.;Privado.;Encriptado.;Local." alt="Typing SVG">
+</p>
 
 [English Version](README.md)
 

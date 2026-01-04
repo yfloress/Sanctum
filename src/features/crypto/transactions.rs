@@ -281,9 +281,13 @@ impl CryptoService {
             if let Err(err) = db.create_crypto_transaction(&target) {
                 if let Err(rollback_err) = db.delete_crypto_transaction(&source_id) {
                     log::error!(
-                        "Failed to rollback transfer source transaction {}: {:?}",
+                        "CRITICAL: Failed to rollback transfer source transaction {}: {:?}. Database may be inconsistent.",
                         source_id, rollback_err
                     );
+                    return Err(CryptoError::Validation(format!(
+                        "Transfer failed and rollback failed: {}. Please check transaction {}",
+                        err, source_id
+                    )));
                 }
                 return Err(CryptoError::Database(err));
             }
@@ -400,7 +404,7 @@ impl CryptoService {
                 fee_coin_id: fee_coin_id.clone(),
                 fee_amount,
                 date: date.clone(),
-                notes,
+                notes: notes.clone(),
                 related_tx_id: Some(target_id.clone()),
             };
 
@@ -409,14 +413,14 @@ impl CryptoService {
                 wallet_id,
                 coin_id: to_coin_id,
                 symbol: to_symbol,
-                transaction_type: "transfer_in".to_string(),
+                transaction_type: "swap".to_string(),
                 amount: to_amount,
                 price_per_coin: None,
                 fee: None,
                 fee_coin_id: None,
                 fee_amount: None,
                 date,
-                notes: None,
+                notes,
                 related_tx_id: Some(source_id.clone()),
             };
 
@@ -424,9 +428,13 @@ impl CryptoService {
             if let Err(err) = db.create_crypto_transaction(&target) {
                 if let Err(rollback_err) = db.delete_crypto_transaction(&source_id) {
                     log::error!(
-                        "Failed to rollback swap source transaction {}: {:?}",
+                        "CRITICAL: Failed to rollback swap source transaction {}: {:?}. Database may be inconsistent.",
                         source_id, rollback_err
                     );
+                    return Err(CryptoError::Validation(format!(
+                        "Swap failed and rollback failed: {}. Please check transaction {}",
+                        err, source_id
+                    )));
                 }
                 return Err(CryptoError::Database(err));
             }
