@@ -2,7 +2,7 @@
 name: Feature Request
 about: Propose a new feature for the App
 title: "[FEAT] "
-labels: ["enhancement"]
+labels: ["feat"]
 ---
 
 ## User Story
