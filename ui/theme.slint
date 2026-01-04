@@ -42,12 +42,9 @@ export global Theme {
     out property <color> border: is-dark ? #333333 : #e0d6c8;
     out property <color> border-light: is-dark ? #ffffff : #c9a227;
     out property <color> border-subtle: is-dark ? #222222 : #ebe4d8;
-    out property <color> border-focus: is-dark ? #ffffff : #c9a227;
 
     // ==================== Accent & Primary ====================
     out property <color> accent: is-dark ? #ffffff : #c9a227;
-    out property <color> accent-muted: is-dark ? #ffffff20 : #c9a22730;
-    out property <color> accent-hover: is-dark ? #ffffffcc : #b8960b;
     out property <color> primary: is-dark ? #6366f1 : #b8860b;
     out property <color> accent-indigo: primary;
     out property <color> action-gradient-start: is-dark ? #5a00f0 : #c9a227;
@@ -85,10 +82,8 @@ export global Theme {
     // ==================== Charts ====================
     out property <color> chart-bg-start: is-dark ? #0d0d12 : #f5f0e8;
     out property <color> chart-bg-end: is-dark ? #080810 : #ede6db;
-    out property <color> chart-line: is-dark ? #8b5cf6 : #b8860b;
-    out property <color> chart-line-secondary: is-dark ? #94a3b8 : #8a857d;
-    out property <color> chart-stroke: chart-line;
-    out property <color> chart-stroke-mid: chart-line-secondary;
+    out property <color> chart-stroke: is-dark ? #8b5cf6 : #b8860b;
+    out property <color> chart-stroke-mid: is-dark ? #94a3b8 : #8a857d;
 
     // ==================== Crypto Gradients ====================
     out property <color> crypto-ticker-gradient-start: is-dark ? #0a0a0f : #f5f0e8;
@@ -113,14 +108,10 @@ export global Theme {
     out property <color> card-gradient-end: surface-hover;
 
     // ==================== Notifications ====================
-    out property <color> notification-error-bg: is-dark ? #1a1215 : #fef2f2;
-    out property <color> notification-error-border: is-dark ? #3d2020 : #fecaca;
-    out property <color> notification-success-bg: is-dark ? #0f1a15 : #f0fdf4;
-    out property <color> notification-success-border: is-dark ? #203d30 : #bbf7d0;
-    out property <color> notify-error-bg: notification-error-bg;
-    out property <color> notify-error-border: notification-error-border;
-    out property <color> notify-success-bg: notification-success-bg;
-    out property <color> notify-success-border: notification-success-border;
+    out property <color> notify-error-bg: is-dark ? #1a1215 : #fef2f2;
+    out property <color> notify-error-border: is-dark ? #3d2020 : #fecaca;
+    out property <color> notify-success-bg: is-dark ? #0f1a15 : #f0fdf4;
+    out property <color> notify-success-border: is-dark ? #203d30 : #bbf7d0;
     out property <color> icon-error-bg: danger.with-alpha(0.12);
     out property <color> icon-error-border: danger.with-alpha(0.35);
     out property <color> icon-success-bg: success.with-alpha(0.12);
@@ -134,16 +125,11 @@ export global Theme {
     out property <color> heatmap-level-4: is-dark ? #a78bfa : #b8860b;
 
     // ==================== Account Types ====================
-    out property <color> account-bank-bg: is-dark ? #1e3a5f : #dbeafe;
-    out property <color> account-cash-bg: is-dark ? #2d4a3e : #d1fae5;
-    out property <color> account-savings-bg: is-dark ? #3d3a1e : #fef3c7;
-    out property <color> account-credit-bg: is-dark ? #3d1e2e : #fce7f3;
-    out property <color> account-other-bg: is-dark ? #2a2a3a : #e5e7eb;
-    out property <color> account-bank: account-bank-bg;
-    out property <color> account-cash: account-cash-bg;
-    out property <color> account-savings: account-savings-bg;
-    out property <color> account-credit: account-credit-bg;
-    out property <color> account-other: account-other-bg;
+    out property <color> account-bank: is-dark ? #1e3a5f : #dbeafe;
+    out property <color> account-cash: is-dark ? #2d4a3e : #d1fae5;
+    out property <color> account-savings: is-dark ? #3d3a1e : #fef3c7;
+    out property <color> account-credit: is-dark ? #3d1e2e : #fce7f3;
+    out property <color> account-other: is-dark ? #2a2a3a : #e5e7eb;
     out property <color> account-bank-light: is-dark ? #2b4a7a : #bfdbfe;
     out property <color> account-cash-light: is-dark ? #3a5f4a : #a7f3d0;
     out property <color> account-savings-light: is-dark ? #5a572f : #fde68a;
