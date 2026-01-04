@@ -2,6 +2,8 @@
 // Premium Fintech UI - Application Settings
 
 import { Palette, SettingsAdapter } from "../globals.slint";
+import { Theme } from "../theme.slint";
+import { FormField } from "../components/forms/form_field.slint";
 
 component SettingCard inherits Rectangle {
     in property <string> title;
@@ -65,11 +67,11 @@ component SettingCard inherits Rectangle {
                     width: 24px;
                     height: 24px;
                     border-radius: 12px;
-                    background: @linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
+                    background: @linear-gradient(135deg, Theme.text 0%, Theme.text-light 100%);
                     drop-shadow-blur: 4px;
-                    drop-shadow-color: #00000033;
+                    drop-shadow-color: Theme.bg.with-alpha(0.2);
                     drop-shadow-offset-y: 2px;
-                    
+
                     animate x { duration: 250ms; easing: ease-out; }
                 }
                 
@@ -83,7 +85,10 @@ component SettingCard inherits Rectangle {
         }
     }
 
-    touch := TouchArea { }
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.toggled(!toggle-value); }
+    }
 }
 
 component SectionHeader inherits Rectangle {
@@ -158,7 +163,7 @@ export component SettingsPage inherits Rectangle {
         // ==================== HERO HEADER ====================
         Rectangle {
             height: 100px;
-            background: @linear-gradient(180deg, #0f0f1a 0%, Palette.background 100%);
+            background: @linear-gradient(180deg, Theme.modal-bg-end 0%, Palette.background 100%);
             
             // Decorative accent
             Rectangle {
@@ -235,6 +240,25 @@ export component SettingsPage inherits Rectangle {
                 padding-right: 64px;
                 spacing: 24px;
 
+                // Appearance Section
+                VerticalLayout {
+                    spacing: 12px;
+
+                    SectionHeader {
+                        title: "APPEARANCE";
+                    }
+
+                    SettingCard {
+                        title: "Dark Mode";
+                        description: "Switch between dark and light (cream/gold) themes";
+                        toggle-value: SettingsAdapter.dark-mode;
+                        toggled(value) => {
+                            SettingsAdapter.set-dark-mode(value);
+                            SettingsAdapter.dark-mode = value;
+                        }
+                    }
+                }
+
                 // Data Settings Section
                 VerticalLayout {
                     spacing: 12px;
@@ -251,6 +275,35 @@ export component SettingsPage inherits Rectangle {
                             SettingsAdapter.set-auto-fetch(value);
                             SettingsAdapter.auto-fetch-enabled = value;
                         }
+                    }
+
+                    SettingCard {
+                        title: "Use Network Proxy";
+                        description: "Route crypto price requests through a proxy (optional)";
+                        toggle-value: SettingsAdapter.proxy-enabled;
+                        toggled(value) => {
+                            SettingsAdapter.set-proxy-enabled(value);
+                            SettingsAdapter.proxy-enabled = value;
+                        }
+                    }
+
+                    FormField {
+                        label: "PROXY URL";
+                        placeholder: "http://127.0.0.1:8080 or socks5h://127.0.0.1:9050";
+                        value: SettingsAdapter.proxy-url;
+                        enabled: SettingsAdapter.proxy-enabled;
+                        edited(value) => {
+                            SettingsAdapter.set-proxy-url(value);
+                            SettingsAdapter.proxy-url = value;
+                        }
+                    }
+
+                    Text {
+                        text: "Tip: socks5h:// routes DNS through the proxy for better privacy.";
+                        color: Palette.text-muted;
+                        font-size: 10px;
+                        font-weight: 400;
+                        letter-spacing: 0.3px;
                     }
                 }
 

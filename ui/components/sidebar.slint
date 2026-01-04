@@ -2,6 +2,7 @@
 // Premium Fintech UI - Navigation sidebar with collapse support
 
 import { Palette, AppState, AuthAdapter } from "../globals.slint";
+import { Theme } from "../theme.slint";
 
 // ==================== SidebarItem ====================
 
@@ -140,7 +141,7 @@ export component SanctumSidebar inherits Rectangle {
 
                     Text {
                         text: "S";
-                        color: #ffffff;
+                        color: Theme.text;
                         font-size: 18px;
                         font-weight: 600;
                         horizontal-alignment: center;
@@ -241,7 +242,7 @@ export component SanctumSidebar inherits Rectangle {
                     width: 28px;
                     height: 28px;
                     border-radius: 8px;
-                    background: lock-touch.has-hover ? #3d2020 : transparent;
+                    background: lock-touch.has-hover ? Theme.notify-error-bg : transparent;
                     y: (parent.height - self.height) / 2 + 2px; // Centered + slight nudge down
 
                     Text {

@@ -26,7 +26,7 @@ pub fn setup_portfolio_callbacks<N>(
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         ui.global::<CryptoAdapter>().on_fetch_portfolio(move || {
-            reload_portfolio(&ui_weak, &controller);
+            reload_portfolio::<fn(String, bool)>(&ui_weak, &controller, None);
         });
     }
 

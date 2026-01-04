@@ -10,11 +10,12 @@ mod settings;
 
 use crate::db::{Database, DbError};
 use crate::security_log::{SecurityEvent, log_auth_failure, log_security_event};
-pub use crate::features::finance::{AnalyticsSummary, ExpenseSlice};
+pub use crate::features::finance::{DashboardData, ExpenseSlice};
 pub use crate::features::crypto::{
     SETTING_AUTO_FETCH, SETTING_CRYPTO_CUSTOM_COINS, SETTING_CRYPTO_FAVORITE_COINS,
     SETTING_CRYPTO_HIDDEN_COINS, SETTING_CRYPTO_LAST_COIN_ID, SETTING_CRYPTO_LAST_UPDATED,
-    SETTING_CRYPTO_LAST_WALLET_ID, SETTING_TICKER_COINS,
+    SETTING_CRYPTO_LAST_WALLET_ID, SETTING_CRYPTO_PROXY_ENABLED, SETTING_CRYPTO_PROXY_URL,
+    SETTING_DARK_MODE, SETTING_TICKER_COINS,
 };
 use crate::services::charts::ChartsService;
 use crate::features::crypto::{CryptoError, CryptoService};
@@ -249,7 +250,7 @@ fn password_strength_warning(password: &str) -> Option<String> {
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 struct AppConfig {
-    last_db_path: Option<String>,
+    last_db_rel_path: Option<String>,
 }
 
 pub struct AppController {
@@ -288,21 +289,77 @@ impl AppController {
 
     /// Returns the config file path
     fn config_path(&self) -> PathBuf {
-        self.app_data_dir.join("config.json")
+        self.app_data_dir.join("config.toml")
+    }
+
+    fn app_data_base(&self) -> Result<PathBuf, ControllerError> {
+        fs::create_dir_all(&self.app_data_dir).map_err(|_| {
+            ControllerError::Config("Could not access application data directory".to_string())
+        })?;
+
+        Ok(self
+            .app_data_dir
+            .canonicalize()
+            .unwrap_or(self.app_data_dir.clone()))
+    }
+
+    fn normalize_config_path(&self, raw: &str) -> Option<String> {
+        let normalized = self.sanitize_db_path(raw).ok()?;
+        let base = self.app_data_base().ok()?;
+        normalized
+            .strip_prefix(&base)
+            .ok()
+            .map(|rel| rel.to_string_lossy().to_string())
+    }
+
+    fn normalize_config(&self, config: &mut AppConfig) -> bool {
+        let mut changed = false;
+        if let Some(raw) = config.last_db_rel_path.clone() {
+            match self.normalize_config_path(&raw) {
+                Some(rel) if rel != raw => {
+                    config.last_db_rel_path = Some(rel);
+                    changed = true;
+                }
+                Some(_) => {}
+                None => {
+                    config.last_db_rel_path = None;
+                    changed = true;
+                }
+            }
+        }
+        changed
+    }
+
+    fn resolve_config_path(&self, stored: &str) -> Option<PathBuf> {
+        self.sanitize_db_path(stored).ok()
+    }
+
+    fn vault_metadata_key(&self, db_path: &Path) -> String {
+        let base = self.app_data_base().unwrap_or(self.app_data_dir.clone());
+        if let Ok(rel) = db_path.strip_prefix(&base) {
+            return rel.to_string_lossy().to_string();
+        }
+        db_path
+            .file_name()
+            .map(|name| name.to_string_lossy().to_string())
+            .unwrap_or_else(|| db_path.to_string_lossy().to_string())
     }
 
     /// Loads the application configuration
     fn load_config(&self) -> Result<AppConfig, ControllerError> {
         let path = self.config_path();
-        if !path.exists() {
-            return Ok(AppConfig::default());
+        if path.exists() {
+            let data = fs::read_to_string(&path)
+                .map_err(|_| ControllerError::Config("Could not read configuration".to_string()))?;
+            let mut config: AppConfig = toml::from_str(&data)
+                .map_err(|_| ControllerError::Config("Could not parse configuration".to_string()))?;
+            if self.normalize_config(&mut config) {
+                let _ = self.save_config(&config);
+            }
+            return Ok(config);
         }
 
-        let data = fs::read_to_string(&path)
-            .map_err(|_| ControllerError::Config("Could not read configuration".to_string()))?;
-
-        serde_json::from_str(&data)
-            .map_err(|_| ControllerError::Config("Could not parse configuration".to_string()))
+        Ok(AppConfig::default())
     }
 
     /// Saves the application configuration
@@ -314,7 +371,7 @@ impl AppController {
             })?;
         }
 
-        let data = serde_json::to_string_pretty(config).map_err(|_| {
+        let data = toml::to_string_pretty(config).map_err(|_| {
             ControllerError::Config("Could not serialize configuration".to_string())
         })?;
 
@@ -335,7 +392,11 @@ impl AppController {
     /// Persists the last used database path
     fn persist_last_db_path(&self, path: &Path) -> Result<(), ControllerError> {
         let mut config = self.load_config()?;
-        config.last_db_path = Some(path.to_string_lossy().to_string());
+        config.last_db_rel_path = self.normalize_config_path(&path.to_string_lossy())
+            .or_else(|| {
+                path.file_name()
+                    .map(|name| name.to_string_lossy().to_string())
+            });
         self.save_config(&config)
     }
 
@@ -361,15 +422,7 @@ impl AppController {
 
     /// Sanitizes the requested vault path to ensure it stays inside the app data directory
     fn sanitize_db_path(&self, raw: &str) -> Result<PathBuf, ControllerError> {
-        // Ensure the base directory exists so canonicalization behaves deterministically
-        fs::create_dir_all(&self.app_data_dir).map_err(|_| {
-            ControllerError::Config("Could not access application data directory".to_string())
-        })?;
-
-        let base = self
-            .app_data_dir
-            .canonicalize()
-            .unwrap_or(self.app_data_dir.clone());
+        let base = self.app_data_base()?;
 
         let raw_trimmed = raw.trim();
         if raw_trimmed.is_empty() {
@@ -429,7 +482,7 @@ impl AppController {
         let rate_limit_path = db_path.with_extension("ratelimit");
 
         if let Ok(conn) = self.open_rate_limit_conn(&rate_limit_path) {
-            let vault_key = db_path.to_string_lossy().to_string();
+            let vault_key = self.vault_metadata_key(db_path);
             if let Err(DbError::RateLimited) = Database::check_rate_limit(&conn, &vault_key) {
                 let remaining = Database::get_lockout_remaining(&conn, &vault_key).unwrap_or(0);
                 return Err(ControllerError::RateLimited(remaining));
@@ -444,7 +497,7 @@ impl AppController {
         let rate_limit_path = db_path.with_extension("ratelimit");
 
         if let Ok(conn) = self.open_rate_limit_conn(&rate_limit_path) {
-            let vault_key = db_path.to_string_lossy().to_string();
+            let vault_key = self.vault_metadata_key(db_path);
             if let Ok((attempts, locked)) = Database::record_failed_attempt(&conn, &vault_key) {
                 log_auth_failure(attempts, locked);
             }
@@ -456,7 +509,7 @@ impl AppController {
         let rate_limit_path = db_path.with_extension("ratelimit");
 
         if let Ok(conn) = self.open_rate_limit_conn(&rate_limit_path) {
-            let vault_key = db_path.to_string_lossy().to_string();
+            let vault_key = self.vault_metadata_key(db_path);
             let _ = Database::reset_rate_limit(&conn, &vault_key);
         }
     }
@@ -650,18 +703,21 @@ impl AppController {
         self.charts_service.chart_color_for_symbol(symbol, index)
     }
 
+    pub fn render_net_worth_chart(&self, values: &[i64]) -> Option<Image> {
+        self.charts_service.render_net_worth_chart(values)
+    }
+
     // ==================== Vault Path Methods ====================
 
     /// Checks if a vault file exists
     pub fn check_vault_exists(&self) -> bool {
         // Check if custom path was used previously
         if let Ok(config) = self.load_config()
-            && let Some(last_path) = config.last_db_path
+            && let Some(last_path) = config.last_db_rel_path
+            && let Some(path) = self.resolve_config_path(&last_path)
+            && path.exists()
         {
-            let path = PathBuf::from(&last_path);
-            if path.exists() {
-                return true;
-            }
+            return true;
         }
 
         // Check default path
@@ -680,9 +736,10 @@ impl AppController {
 
         // Otherwise, return the last used path or default
         if let Ok(config) = self.load_config()
-            && let Some(last) = config.last_db_path
+            && let Some(last) = config.last_db_rel_path
+            && let Some(path) = self.resolve_config_path(&last)
         {
-            return Ok(last);
+            return Ok(path.to_string_lossy().to_string());
         }
 
         Ok(self.default_db_path().to_string_lossy().to_string())

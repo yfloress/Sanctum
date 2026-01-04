@@ -571,3 +571,298 @@ impl HabitLog {
         !self.habit_id.is_empty() && !self.completed_date.is_empty()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ==================== Account Tests ====================
+
+    #[test]
+    fn test_account_new() {
+        let account = Account::new(
+            "123".to_string(),
+            "My Bank".to_string(),
+            "bank".to_string(),
+            "USD".to_string(),
+            10000,
+            "#8b5cf6".to_string(),
+            Some("🏦".to_string()),
+            "2024-01-01T00:00:00Z".to_string(),
+        );
+
+        assert_eq!(account.id, "123");
+        assert_eq!(account.name, "My Bank");
+        assert_eq!(account.account_type, "bank");
+        assert_eq!(account.currency, "USD");
+        assert_eq!(account.initial_balance, 10000);
+        assert!(!account.is_archived);
+    }
+
+    #[test]
+    fn test_account_validate_valid() {
+        let account = Account::new(
+            "123".to_string(),
+            "My Bank".to_string(),
+            "bank".to_string(),
+            "USD".to_string(),
+            0,
+            "#8b5cf6".to_string(),
+            None,
+            "2024-01-01T00:00:00Z".to_string(),
+        );
+        assert!(account.validate());
+    }
+
+    #[test]
+    fn test_account_validate_empty_name() {
+        let account = Account::new(
+            "123".to_string(),
+            "   ".to_string(), // Empty after trim
+            "bank".to_string(),
+            "USD".to_string(),
+            0,
+            "#8b5cf6".to_string(),
+            None,
+            "2024-01-01T00:00:00Z".to_string(),
+        );
+        assert!(!account.validate());
+    }
+
+    #[test]
+    fn test_account_validate_invalid_type() {
+        let account = Account::new(
+            "123".to_string(),
+            "My Bank".to_string(),
+            "invalid_type".to_string(),
+            "USD".to_string(),
+            0,
+            "#8b5cf6".to_string(),
+            None,
+            "2024-01-01T00:00:00Z".to_string(),
+        );
+        assert!(!account.validate());
+    }
+
+    #[test]
+    fn test_account_validate_invalid_color() {
+        let account = Account::new(
+            "123".to_string(),
+            "My Bank".to_string(),
+            "bank".to_string(),
+            "USD".to_string(),
+            0,
+            "not-a-color".to_string(),
+            None,
+            "2024-01-01T00:00:00Z".to_string(),
+        );
+        assert!(!account.validate());
+    }
+
+    #[test]
+    fn test_account_type_parsing() {
+        assert_eq!(AccountType::from_str("bank").unwrap(), AccountType::Bank);
+        assert_eq!(AccountType::from_str("cash").unwrap(), AccountType::Cash);
+        assert_eq!(
+            AccountType::from_str("savings").unwrap(),
+            AccountType::Savings
+        );
+        assert_eq!(
+            AccountType::from_str("credit_card").unwrap(),
+            AccountType::CreditCard
+        );
+        assert_eq!(AccountType::from_str("other").unwrap(), AccountType::Other);
+        assert!(AccountType::from_str("invalid").is_err());
+    }
+
+    #[test]
+    fn test_account_type_as_str() {
+        assert_eq!(AccountType::Bank.as_str(), "bank");
+        assert_eq!(AccountType::Cash.as_str(), "cash");
+        assert_eq!(AccountType::Savings.as_str(), "savings");
+        assert_eq!(AccountType::CreditCard.as_str(), "credit_card");
+        assert_eq!(AccountType::Other.as_str(), "other");
+    }
+
+    // ==================== Transaction Tests ====================
+
+    #[test]
+    fn test_transaction_new() {
+        let tx = Transaction::new(
+            "tx1".to_string(),
+            "acc1".to_string(),
+            5000,
+            "Food".to_string(),
+            "Groceries".to_string(),
+            "2024-12-01".to_string(),
+            "expense".to_string(),
+            None,
+        );
+
+        assert_eq!(tx.id, "tx1");
+        assert_eq!(tx.account_id, "acc1");
+        assert_eq!(tx.amount, 5000);
+        assert_eq!(tx.category, "Food");
+        assert_eq!(tx.transaction_type, "expense");
+        assert!(tx.transfer_account_id.is_none());
+    }
+
+    #[test]
+    fn test_transaction_validate_valid_expense() {
+        let tx = Transaction::new(
+            "tx1".to_string(),
+            "acc1".to_string(),
+            5000,
+            "Food".to_string(),
+            "Test".to_string(),
+            "2024-12-01".to_string(),
+            "expense".to_string(),
+            None,
+        );
+        assert!(tx.validate());
+    }
+
+    #[test]
+    fn test_transaction_validate_valid_income() {
+        let tx = Transaction::new(
+            "tx1".to_string(),
+            "acc1".to_string(),
+            5000,
+            "Salary".to_string(),
+            "Test".to_string(),
+            "2024-12-01".to_string(),
+            "income".to_string(),
+            None,
+        );
+        assert!(tx.validate());
+    }
+
+    #[test]
+    fn test_transaction_validate_valid_transfer() {
+        let tx = Transaction::new(
+            "tx1".to_string(),
+            "acc1".to_string(),
+            5000,
+            "Transfer".to_string(),
+            "Test".to_string(),
+            "2024-12-01".to_string(),
+            "transfer".to_string(),
+            Some("acc2".to_string()),
+        );
+        assert!(tx.validate());
+    }
+
+    #[test]
+    fn test_transaction_validate_transfer_missing_destination() {
+        let tx = Transaction::new(
+            "tx1".to_string(),
+            "acc1".to_string(),
+            5000,
+            "Transfer".to_string(),
+            "Test".to_string(),
+            "2024-12-01".to_string(),
+            "transfer".to_string(),
+            None, // Missing destination
+        );
+        assert!(!tx.validate());
+    }
+
+    #[test]
+    fn test_transaction_validate_expense_with_destination() {
+        let tx = Transaction::new(
+            "tx1".to_string(),
+            "acc1".to_string(),
+            5000,
+            "Food".to_string(),
+            "Test".to_string(),
+            "2024-12-01".to_string(),
+            "expense".to_string(),
+            Some("acc2".to_string()), // Should not have destination
+        );
+        assert!(!tx.validate());
+    }
+
+    #[test]
+    fn test_transaction_validate_zero_amount() {
+        let tx = Transaction::new(
+            "tx1".to_string(),
+            "acc1".to_string(),
+            0, // Zero amount
+            "Food".to_string(),
+            "Test".to_string(),
+            "2024-12-01".to_string(),
+            "expense".to_string(),
+            None,
+        );
+        assert!(!tx.validate());
+    }
+
+    #[test]
+    fn test_transaction_validate_invalid_type() {
+        let tx = Transaction::new(
+            "tx1".to_string(),
+            "acc1".to_string(),
+            5000,
+            "Food".to_string(),
+            "Test".to_string(),
+            "2024-12-01".to_string(),
+            "invalid".to_string(),
+            None,
+        );
+        assert!(!tx.validate());
+    }
+
+    #[test]
+    fn test_transaction_validate_empty_account() {
+        let tx = Transaction::new(
+            "tx1".to_string(),
+            "".to_string(), // Empty account
+            5000,
+            "Food".to_string(),
+            "Test".to_string(),
+            "2024-12-01".to_string(),
+            "expense".to_string(),
+            None,
+        );
+        assert!(!tx.validate());
+    }
+
+    #[test]
+    fn test_transaction_type_parsing() {
+        assert_eq!(
+            FinancialTransactionType::from_str("income").unwrap(),
+            FinancialTransactionType::Income
+        );
+        assert_eq!(
+            FinancialTransactionType::from_str("expense").unwrap(),
+            FinancialTransactionType::Expense
+        );
+        assert_eq!(
+            FinancialTransactionType::from_str("transfer").unwrap(),
+            FinancialTransactionType::Transfer
+        );
+        assert!(FinancialTransactionType::from_str("invalid").is_err());
+    }
+
+    #[test]
+    fn test_transaction_type_as_str() {
+        assert_eq!(FinancialTransactionType::Income.as_str(), "income");
+        assert_eq!(FinancialTransactionType::Expense.as_str(), "expense");
+        assert_eq!(FinancialTransactionType::Transfer.as_str(), "transfer");
+    }
+
+    #[test]
+    fn test_transaction_get_type() {
+        let tx = Transaction::new(
+            "tx1".to_string(),
+            "acc1".to_string(),
+            5000,
+            "Food".to_string(),
+            "Test".to_string(),
+            "2024-12-01".to_string(),
+            "expense".to_string(),
+            None,
+        );
+        assert_eq!(tx.get_type(), Some(FinancialTransactionType::Expense));
+    }
+}

@@ -2,6 +2,7 @@
 // Premium Fintech UI - Habit tracking with visual analytics
 
 import { Palette, HabitAdapter, AppState, NotificationAdapter } from "../globals.slint";
+import { Theme } from "../theme.slint";
 import { HabitRow } from "../components/habit_row.slint";
 import { HabitHeatmap } from "../components/habit_heatmap.slint";
 import { HabitRadarChart, WeekdayEfficiencyChart, InsightCard } from "../components/analytics_charts.slint";
@@ -40,6 +41,53 @@ component NavButton inherits Rectangle {
     }
 }
 
+component SummaryItem inherits Rectangle {
+    in property <string> icon: "";
+    in property <string> label: "";
+    in property <string> value: "";
+    in property <string> note: "";
+
+    background: transparent;
+    height: 56px;
+
+    VerticalLayout {
+        spacing: 6px;
+
+        Text {
+            text: root.label;
+            color: Palette.text-muted;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        HorizontalLayout {
+            spacing: 6px;
+            alignment: start;
+
+            if root.icon != "": Text {
+                text: root.icon;
+                font-size: 14px;
+                vertical-alignment: center;
+            }
+
+            Text {
+                text: root.value;
+                color: Palette.text-primary;
+                font-size: 16px;
+                font-weight: 600;
+                vertical-alignment: center;
+            }
+        }
+
+        if root.note != "": Text {
+            text: root.note;
+            color: Palette.text-muted;
+            font-size: 11px;
+        }
+    }
+}
+
 export component HabitsPage inherits Rectangle {
     background: Palette.background;
     property <bool> show-delete-habit-confirm: false;
@@ -59,7 +107,7 @@ export component HabitsPage inherits Rectangle {
         // ==================== HERO HEADER ====================
         Rectangle {
             height: 100px;
-            background: @linear-gradient(180deg, #0f0f1a 0%, Palette.background 100%);
+            background: @linear-gradient(180deg, Theme.modal-bg-end 0%, Palette.background 100%);
             
             // Decorative pattern
             Rectangle {
@@ -244,6 +292,7 @@ export component HabitsPage inherits Rectangle {
                                     HabitAdapter.edit-category = habit.category;
                                     AppState.show-edit-habit = true;
                                 }
+                                select(id) => { HabitAdapter.select-habit(id); }
                             }
                         }
                     }
@@ -291,6 +340,94 @@ export component HabitsPage inherits Rectangle {
                         title: "INSIGHTS";
                         line1: HabitAdapter.habits-insight-primary;
                         line2: HabitAdapter.habits-insight-secondary;
+                    }
+                }
+
+                // Summary Section
+                if HabitAdapter.habits.length > 0: VerticalLayout {
+                    spacing: 12px;
+
+                    SectionHeader {
+                        title: "HABIT SUMMARY";
+                    }
+
+                    Rectangle {
+                        background: Palette.surface;
+                        border-radius: 12px;
+                        border-width: 1px;
+                        border-color: Palette.border;
+
+                        VerticalLayout {
+                            padding: 20px;
+                            spacing: 16px;
+
+                            Text {
+                                text: "SELECTED HABIT";
+                                color: Palette.text-muted;
+                                font-size: 9px;
+                                font-weight: 600;
+                                letter-spacing: 1px;
+                            }
+
+                            HorizontalLayout {
+                                spacing: 10px;
+                                alignment: start;
+
+                                Rectangle {
+                                    width: 4px;
+                                    height: 18px;
+                                    border-radius: 2px;
+                                    background: @linear-gradient(180deg, HabitAdapter.summary-habit-color 0%, HabitAdapter.summary-habit-color.darker(0.2) 100%);
+                                    y: (parent.height - self.height) / 2;
+                                }
+
+                                Text {
+                                    text: HabitAdapter.summary-habit-name;
+                                    color: Palette.text-primary;
+                                    font-size: 13px;
+                                    font-weight: 600;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            HorizontalLayout {
+                                spacing: 24px;
+
+                                SummaryItem {
+                                    horizontal-stretch: 1;
+                                    icon: "🔥";
+                                    label: "CURRENT STREAK";
+                                    value: HabitAdapter.summary-current-streak + " days";
+                                }
+
+                                SummaryItem {
+                                    horizontal-stretch: 1;
+                                    icon: "🏆";
+                                    label: "BEST STREAK (365D)";
+                                    value: HabitAdapter.summary-best-streak + " days";
+                                }
+                            }
+
+                            HorizontalLayout {
+                                spacing: 24px;
+
+                                SummaryItem {
+                                    horizontal-stretch: 1;
+                                    icon: "📊";
+                                    label: "COMPLETION RATE";
+                                    value: HabitAdapter.summary-completion-rate + "%";
+                                    note: HabitAdapter.summary-completion-note;
+                                }
+
+                                SummaryItem {
+                                    horizontal-stretch: 1;
+                                    icon: "✅";
+                                    label: "COMPLETIONS (30D)";
+                                    value: HabitAdapter.summary-last-30 + "";
+                                    note: HabitAdapter.summary-best-day;
+                                }
+                            }
+                        }
                     }
                 }
 

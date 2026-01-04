@@ -2,6 +2,7 @@
 // Premium Fintech UI - Single transaction row for list view
 
 import { Palette, TransactionData } from "../globals.slint";
+import { Theme } from "../theme.slint";
 
 // Category icon mapping
 component CategoryIcon inherits Rectangle {
@@ -9,16 +10,40 @@ component CategoryIcon inherits Rectangle {
     in property <bool> is-expense;
     in property <bool> is-transfer;
 
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    background: @linear-gradient(135deg, 
-        is-transfer ? Palette.surface : (is-expense ? #1a1a2e : #0f2922),
-        is-transfer ? Palette.surface-hover : (is-expense ? #2d1f3d : #1a3d2e)
-    );
-    border-width: 1px;
-    border-color: is-transfer ? Palette.border : (is-expense ? #3d2953 : #2d5a4a);
+    width: Theme.icon-xl;
+    height: Theme.icon-xl;
+    border-radius: Theme.radius-xl;
 
+    // Clean, subtle backgrounds
+    background: is-transfer ? Theme.tx-transfer-bg
+        : (is-expense ? Theme.tx-expense-bg : Theme.tx-income-bg);
+    border-width: 1px;
+    border-color: is-transfer ? Theme.border
+        : (is-expense ? Theme.danger.with-alpha(0.2) : Theme.success.with-alpha(0.2));
+
+    // Inner glow effect
+    Rectangle {
+        x: 0; y: 0;
+        width: 100%; height: 100%;
+        border-radius: parent.border-radius;
+        background: @radial-gradient(circle,
+            is-transfer ? transparent : (is-expense ? Palette.danger.with-alpha(0.08) : Palette.success.with-alpha(0.08)),
+            transparent
+        );
+    }
+
+    // Direction indicator
+    Text {
+        text: is-transfer ? "⇄" : (is-expense ? "↓" : "↑");
+        color: is-transfer ? Palette.text-muted
+            : (is-expense ? Palette.danger.with-alpha(0.6) : Palette.success.with-alpha(0.6));
+        font-size: 11px;
+        font-weight: 600;
+        x: 4px;
+        y: 2px;
+    }
+
+    // Category icon
     Text {
         text: root.category == "TRANSFER" ? "↔" :
               root.category == "FOOD" ? "🍽" :
@@ -129,27 +154,29 @@ export component TransactionItem inherits Rectangle {
         VerticalLayout {
             alignment: center;
 
-            Rectangle {
-                height: 28px;
-                min-width: 80px;
-                border-radius: 6px;
-                background: transaction.is-transfer ? Palette.surface : (transaction.is-expense ? #2d1f2f : #0f2922);
-                border-width: 1px;
-                border-color: transaction.is-transfer ? Palette.border : (transaction.is-expense ? #3d2953 : #2d5a4a);
+            HorizontalLayout {
+                spacing: 6px;
+                alignment: end;
 
-                HorizontalLayout {
-                    padding-left: 10px;
-                    padding-right: 10px;
+                // Sign indicator
+                Text {
+                    text: transaction.is-transfer ? "" : (transaction.is-expense ? "−" : "+");
+                    color: transaction.is-transfer ? transparent
+                        : (transaction.is-expense ? Palette.danger : Palette.success);
+                    font-size: 14px;
+                    font-weight: 500;
+                    vertical-alignment: center;
+                }
 
-                    Text {
-                        text: transaction.amount;
-                        color: transaction.is-transfer ? Palette.text-secondary : (transaction.is-expense ? Palette.danger : Palette.success);
-                        font-size: 12px;
-                        font-weight: 600;
-                        letter-spacing: 0.3px;
-                        horizontal-alignment: right;
-                        vertical-alignment: center;
-                    }
+                // Amount value
+                Text {
+                    text: transaction.amount;
+                    color: transaction.is-transfer ? Palette.text-secondary
+                        : (transaction.is-expense ? Palette.danger : Palette.success);
+                    font-size: 14px;
+                    font-weight: 600;
+                    letter-spacing: -0.3px;
+                    vertical-alignment: center;
                 }
             }
         }
@@ -162,7 +189,7 @@ export component TransactionItem inherits Rectangle {
                 width: 28px;
                 height: 28px;
                 border-radius: 6px;
-                background: delete-touch.has-hover ? #3d2020 : transparent;
+                background: delete-touch.has-hover ? Theme.notify-error-bg : transparent;
                 border-width: delete-touch.has-hover ? 1px : 0px;
                 border-color: Palette.danger;
 

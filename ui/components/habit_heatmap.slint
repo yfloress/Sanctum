@@ -4,6 +4,7 @@
 
 import { Palette, HabitAdapter, HeatmapWeek, HeatmapDay } from "../globals.slint";
 import { CustomScrollbar } from "../widgets.slint";
+import { Theme } from "../theme.slint";
 
 component Tooltip inherits Rectangle {
     in property <string> text; // Kept for interface compatibility, but unused
@@ -18,15 +19,15 @@ component Tooltip inherits Rectangle {
     x: -8px; 
     y: -28px;
     
-    background: #1e1e1e;
+    background: Theme.bg-surface;
     border-width: 1px;
     border-color: Palette.border;
     border-radius: 4px;
 
-    Text { 
-        text: "\{root.count}"; 
-        color: #ffffff; 
-        font-size: 10px; 
+    Text {
+        text: "\{root.count}";
+        color: Theme.text;
+        font-size: 10px;
         font-weight: 600;
         horizontal-alignment: center;
         vertical-alignment: center;
@@ -37,14 +38,14 @@ component HeatmapCell inherits Rectangle {
     in property <int> level;
     in property <string> date: "";
     in property <int> count: 0;
-    
+
     width: 14px;
     height: 14px;
     border-radius: 3px;
     clip: false; // Ensure tooltip can overflow
-    
-    // Elevate when hovered to show tooltip above neighbors
-    z: ta.has-hover ? 1000 : 1;
+
+    // Level -1 = padding day (outside year), make invisible
+    visible: level >= 0;
 
     background: level == 0 ? Palette.heatmap-level-0 :
                 level == 1 ? Palette.heatmap-level-1 :
@@ -68,7 +69,8 @@ component HeatmapCell inherits Rectangle {
     ta := TouchArea {
         mouse-cursor: pointer;
     }
-    
+
+    // Tooltip shown above cell
     if ta.has-hover && root.date != "": Tooltip {
         text: root.date;
         count: root.count;
@@ -79,6 +81,31 @@ export component HabitHeatmap inherits Rectangle {
     width: 100%;
     height: 100%; // Takes full height of parent container
     background: transparent;
+
+    // Auto-scroll properties
+    property <length> scroll-x: 0px;
+    property <int> current-week: HabitAdapter.current-week-int;
+    property <int> data-length: HabitAdapter.heatmap-data.length;
+
+    function calculate-scroll-target() -> length {
+        if data-length == 0 {
+            return 0px;
+        }
+        // Scroll so current week is ~4 columns from left, each column is 18px
+        let target = (current-week - 4) * 18px;
+        let max-scroll = (data-length - 1) * 18px;
+        let clamped = max(0px, min(target, max-scroll));
+        // Negate: scroll left means negative viewport-x
+        return 0px - clamped;
+    }
+
+    function update-scroll() {
+        scroll-x = calculate-scroll-target();
+    }
+
+    init => { update-scroll(); }
+    changed current-week => { update-scroll(); }
+    changed data-length => { update-scroll(); }
 
     VerticalLayout {
         padding-left: 12px;
@@ -129,9 +156,9 @@ export component HabitHeatmap inherits Rectangle {
                 width: parent.width;
                 interactive: true;
                 viewport-width: HabitAdapter.heatmap-data.length * 18px;
-                
-                // Auto-scroll logic
-                viewport-x: -1 * max(0px, ((HabitAdapter.current-week-int - 4) * 18px));
+
+                // Two-way binding for auto-scroll
+                viewport-x <=> root.scroll-x;
                 
                 HorizontalLayout {
                     spacing: 4px;

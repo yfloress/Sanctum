@@ -3,6 +3,7 @@
 
 import { Palette, AppState, CryptoAdapter, NotificationAdapter } from "../globals.slint";
 import { ActionButton, TextButton } from "../widgets.slint";
+import { Theme } from "../theme.slint";
 
 component TickerToggleRow inherits Rectangle {
     in property <string> symbol;
@@ -270,7 +271,7 @@ component CatalogRow inherits Rectangle {
 
                     Text {
                         text: root.selected ? "✓" : "";
-                        color: #ffffff;
+                        color: Theme.text;
                         font-size: 10px;
                         horizontal-alignment: center;
                         vertical-alignment: center;
@@ -354,7 +355,7 @@ export component ConfigureTickerModal inherits Rectangle {
 
     // Backdrop
     Rectangle {
-        background: #000000cc;
+        background: Theme.overlay;
         opacity: 1.0;
 
         animate opacity { duration: 150ms; easing: ease-out; }

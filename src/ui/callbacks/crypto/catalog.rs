@@ -111,7 +111,7 @@ pub fn setup_catalog_callbacks<N>(
                         return;
                     }
 
-                    reload_portfolio(&ui_weak, &controller);
+                    reload_portfolio(&ui_weak, &controller, Some(&notify));
                     notify("Configuration saved".into(), false);
                 }
             });

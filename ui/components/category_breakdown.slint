@@ -2,6 +2,7 @@
 // Noir Fintech - Premium spending visualization
 
 import { Palette, CategoryData } from "../globals.slint";
+import { Theme } from "../theme.slint";
 
 component CategoryItem inherits Rectangle {
     in property <CategoryData> category;
@@ -81,7 +82,7 @@ component CategoryItem inherits Rectangle {
                         y: 0;
                         width: 100%;
                         height: 50%;
-                        background: @linear-gradient(180deg, #ffffff20 0%, #ffffff00 100%);
+                        background: @linear-gradient(180deg, Theme.text.with-alpha(0.13) 0%, transparent 100%);
                         border-radius: 3px;
                     }
                 }

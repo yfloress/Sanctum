@@ -12,7 +12,7 @@
 use crate::models::{CryptoAsset, CryptoCatalogCoin};
 use crate::security_log::{SecurityEvent, log_rate_limit, log_security_event};
 use futures::TryStreamExt;
-use reqwest::Client;
+use reqwest::{Client, Proxy, Url};
 use serde::Deserialize;
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -41,6 +41,9 @@ const MIN_REQUEST_INTERVAL_MS: u64 = 1500;
 
 /// Maximum length for sanitized string fields from API
 const MAX_SANITIZED_STRING_LENGTH: usize = 128;
+
+/// Maximum allowed length for proxy URLs
+pub const MAX_PROXY_URL_LENGTH: usize = 2048;
 
 /// Last request timestamp for rate limiting (atomic for thread safety)
 static LAST_REQUEST_TIME: AtomicU64 = AtomicU64::new(0);
@@ -76,6 +79,13 @@ struct SimplePriceResponse {
 #[derive(Debug, Deserialize)]
 struct TetherPrice {
     clp: Option<f64>,
+}
+
+// ==================== Proxy Configuration ====================
+
+#[derive(Debug, Clone)]
+pub struct ProxyConfig {
+    pub url: String,
 }
 
 // ==================== Validation Functions ====================
@@ -152,6 +162,34 @@ pub fn validate_percentage(pct: f64) -> f64 {
     }
 }
 
+/// Validates a proxy URL and returns a normalized string
+pub fn validate_proxy_url(raw: &str) -> Result<String, String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Err("Proxy URL cannot be empty".to_string());
+    }
+
+    if trimmed.len() > MAX_PROXY_URL_LENGTH {
+        return Err("Proxy URL is too long".to_string());
+    }
+
+    let parsed = Url::parse(trimmed).map_err(|_| "Invalid proxy URL".to_string())?;
+    match parsed.scheme() {
+        "http" | "https" | "socks5" | "socks5h" => {}
+        _ => {
+            return Err(
+                "Proxy URL must use http://, https://, socks5://, or socks5h://".to_string(),
+            )
+        }
+    }
+
+    if parsed.host_str().is_none() {
+        return Err("Proxy URL must include a host".to_string());
+    }
+
+    Ok(trimmed.to_string())
+}
+
 // ==================== Rate Limiting ====================
 
 /// Returns current time in milliseconds since UNIX epoch
@@ -188,13 +226,21 @@ async fn enforce_rate_limit() -> Result<(), String> {
 // ==================== HTTP Client ====================
 
 /// Creates a secure HTTP client with appropriate settings
-fn create_secure_client() -> Result<Client, String> {
-    Client::builder()
+fn create_secure_client(proxy: Option<&ProxyConfig>) -> Result<Client, String> {
+    let mut builder = Client::builder()
         .timeout(Duration::from_secs(REQUEST_TIMEOUT_SECS))
         .connect_timeout(Duration::from_secs(10))
         .user_agent("Sanctum/1.0")
         .https_only(true)
-        .redirect(reqwest::redirect::Policy::none())
+        .redirect(reqwest::redirect::Policy::none());
+
+    if let Some(proxy_cfg) = proxy {
+        let proxy_url = validate_proxy_url(&proxy_cfg.url)?;
+        let proxy = Proxy::all(proxy_url).map_err(|_| "Invalid proxy URL".to_string())?;
+        builder = builder.proxy(proxy);
+    }
+
+    builder
         .build()
         .map_err(|_| "Failed to create HTTP client".to_string())
 }
@@ -215,7 +261,10 @@ fn handle_request_error(error: reqwest::Error) -> String {
 // ==================== API Functions ====================
 
 /// Fetches cryptocurrency prices from CoinGecko API
-pub async fn fetch_crypto_prices(coin_ids: Vec<String>) -> Result<Vec<CryptoAsset>, String> {
+pub async fn fetch_crypto_prices(
+    coin_ids: Vec<String>,
+    proxy: Option<&ProxyConfig>,
+) -> Result<Vec<CryptoAsset>, String> {
     if coin_ids.is_empty() {
         return Ok(Vec::new());
     }
@@ -251,7 +300,7 @@ pub async fn fetch_crypto_prices(coin_ids: Vec<String>) -> Result<Vec<CryptoAsse
         Some(&format!("coins={}", validated_ids.len())),
     );
 
-    let client = create_secure_client()?;
+    let client = create_secure_client(proxy)?;
     let response = client.get(&url).send().await.map_err(handle_request_error)?;
 
     let status = response.status();
@@ -316,7 +365,7 @@ pub async fn fetch_crypto_prices(coin_ids: Vec<String>) -> Result<Vec<CryptoAsse
 }
 
 /// Fetches the current CLP to USD exchange rate using CoinGecko
-pub async fn fetch_clp_usd_rate() -> Result<f64, String> {
+pub async fn fetch_clp_usd_rate(proxy: Option<&ProxyConfig>) -> Result<f64, String> {
     enforce_rate_limit().await?;
 
     let url = format!(
@@ -326,7 +375,7 @@ pub async fn fetch_clp_usd_rate() -> Result<f64, String> {
 
     log_security_event(SecurityEvent::ExternalApiRequest, Some("clp_usd_rate"));
 
-    let client = create_secure_client()?;
+    let client = create_secure_client(proxy)?;
     let response = client.get(&url).send().await.map_err(handle_request_error)?;
 
     let status = response.status();

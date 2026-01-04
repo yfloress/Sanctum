@@ -3,6 +3,7 @@
 
 import { Palette, AppState, CategoryAdapter, NotificationAdapter } from "../globals.slint";
 import { ActionButton, TextButton } from "../widgets.slint";
+import { Theme } from "../theme.slint";
 
 component CategoryRow inherits Rectangle {
     in property <string> id;
@@ -238,7 +239,7 @@ export component ConfigureCategoriesModal inherits Rectangle {
 
     // Backdrop
     Rectangle {
-        background: #000000cc;
+        background: Theme.overlay;
         opacity: 1.0;
         animate opacity { duration: 150ms; easing: ease-out; }
         TouchArea { clicked => { AppState.show-configure-categories = false; } }
@@ -263,12 +264,12 @@ export component ConfigureCategoriesModal inherits Rectangle {
         y: (parent.height - self.height) / 2;
         width: 520px;
         height: 600px;
-        background: @linear-gradient(180deg, Palette.sidebar-bg 0%, #0f0f1a 100%);
+        background: @linear-gradient(180deg, Palette.sidebar-bg 0%, Theme.modal-bg-end 100%);
         border-radius: 16px;
         border-width: 1px;
         border-color: Palette.border-light;
         drop-shadow-blur: 40px;
-        drop-shadow-color: #00000088;
+        drop-shadow-color: Theme.overlay-soft;
 
         TouchArea {
             clicked => { key-scope.focus(); }

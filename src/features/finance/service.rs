@@ -10,7 +10,7 @@ use chrono::Utc;
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
-use super::analytics::{AnalyticsSummary, FinanceAnalytics};
+use crate::features::dashboard::DashboardCharts;
 use super::repository::FinanceRepository;
 use super::transactions::{CategoryOps, TransactionOps};
 use super::validation::{
@@ -43,7 +43,7 @@ impl From<String> for FinanceError {
 }
 
 // Re-export types from submodules
-pub use super::analytics::{AnalyticsSummary as AnalyticsSummaryType, ExpenseSlice as ExpenseSliceType};
+pub use crate::features::dashboard::{DashboardData, ExpenseSlice};
 
 pub struct FinanceService {
     db: Arc<Mutex<Option<Database>>>,
@@ -443,14 +443,23 @@ impl FinanceService {
             _ => 1.0,
         };
 
-        Ok(FinanceAnalytics::get_expenses_by_category(
+        Ok(DashboardCharts::get_expenses_by_category(
             &transactions,
             &accounts,
             clp_rate,
         ))
     }
 
-    pub fn get_analytics_summary(&self, range: String) -> Result<AnalyticsSummary, FinanceError> {
+    /// Returns dashboard data with chart values for rendering (FIAT + Crypto combined).
+    /// The crypto_total_usd parameter should be calculated by the caller.
+    /// The crypto_snapshots contain historical portfolio values for accurate chart rendering.
+    /// Use controller.render_net_worth_chart() to render the chart image.
+    pub fn get_dashboard_data(
+        &self,
+        crypto_total_usd: f64,
+        crypto_snapshots: &[(String, f64, f64)],
+        range: String,
+    ) -> Result<DashboardData, FinanceError> {
         let balances = self.get_account_balances()?;
         let accounts = self.get_accounts()?;
         let transactions = self.get_transactions()?;
@@ -460,32 +469,14 @@ impl FinanceService {
             _ => 1.0,
         };
 
-        Ok(FinanceAnalytics::get_analytics_summary(
+        Ok(DashboardCharts::calculate_dashboard_data(
             &balances,
             &accounts,
             &transactions,
+            crypto_total_usd,
+            crypto_snapshots,
             clp_rate,
             &range,
-        ))
-    }
-
-    pub fn get_net_worth_history(
-        &self,
-        range: &str,
-    ) -> Result<(String, String, String, String), FinanceError> {
-        let accounts = self.get_accounts()?;
-        let transactions = self.get_transactions()?;
-
-        let clp_rate = match self.load_exchange_rate_allow_stale("CLP_USD".to_string()) {
-            Ok(Some((r, _))) => r,
-            _ => 1.0,
-        };
-
-        Ok(FinanceAnalytics::get_net_worth_history(
-            &accounts,
-            &transactions,
-            clp_rate,
-            range,
         ))
     }
 }

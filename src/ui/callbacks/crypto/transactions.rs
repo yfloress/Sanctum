@@ -5,7 +5,7 @@ use super::helpers::{
 };
 use crate::controller::AppController;
 use crate::ui::format_crypto_amount;
-use crate::{CryptoAdapter, AppWindow};
+use crate::{AnalyticsAdapter, CryptoAdapter, AppWindow};
 use slint::{ComponentHandle, SharedString, Weak};
 use std::sync::Arc;
 
@@ -118,8 +118,13 @@ pub fn setup_transaction_callbacks<N>(
                             .set_app_setting(SETTING_CRYPTO_LAST_WALLET_ID, wallet_id_raw.as_ref());
                         let _ = controller
                             .set_app_setting(SETTING_CRYPTO_LAST_COIN_ID, coin_id.as_ref());
-                        reload_portfolio(&ui_weak, &controller);
-                        reload_wallets(&ui_weak, &controller);
+                        reload_portfolio(&ui_weak, &controller, Some(&notify));
+                        reload_wallets(&ui_weak, &controller, Some(&notify));
+                        // Refresh dashboard analytics
+                        if let Some(ui) = ui_weak.upgrade() {
+                            let range = ui.global::<AnalyticsAdapter>().get_active_range();
+                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics(range);
+                        }
                         notify("Asset added successfully".into(), false);
                         SharedString::from("")
                     }
@@ -228,8 +233,13 @@ pub fn setup_transaction_callbacks<N>(
                         );
                         let _ = controller
                             .set_app_setting(SETTING_CRYPTO_LAST_COIN_ID, coin_id.as_ref());
-                        reload_portfolio(&ui_weak, &controller);
-                        reload_wallets(&ui_weak, &controller);
+                        reload_portfolio(&ui_weak, &controller, Some(&notify));
+                        reload_wallets(&ui_weak, &controller, Some(&notify));
+                        // Refresh dashboard analytics
+                        if let Some(ui) = ui_weak.upgrade() {
+                            let range = ui.global::<AnalyticsAdapter>().get_active_range();
+                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics(range);
+                        }
                         notify("Transfer added successfully".into(), false);
                         SharedString::from("")
                     }
@@ -334,8 +344,13 @@ pub fn setup_transaction_callbacks<N>(
                             .set_app_setting(SETTING_CRYPTO_LAST_WALLET_ID, wallet_id_raw.as_ref());
                         let _ = controller
                             .set_app_setting(SETTING_CRYPTO_LAST_COIN_ID, from_coin_id.as_ref());
-                        reload_portfolio(&ui_weak, &controller);
-                        reload_wallets(&ui_weak, &controller);
+                        reload_portfolio(&ui_weak, &controller, Some(&notify));
+                        reload_wallets(&ui_weak, &controller, Some(&notify));
+                        // Refresh dashboard analytics
+                        if let Some(ui) = ui_weak.upgrade() {
+                            let range = ui.global::<AnalyticsAdapter>().get_active_range();
+                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics(range);
+                        }
                         notify("Swap added successfully".into(), false);
                         SharedString::from("")
                     }
@@ -503,6 +518,9 @@ pub fn setup_transaction_callbacks<N>(
                         if let Some(ui) = ui_weak.upgrade() {
                             ui.global::<CryptoAdapter>().invoke_fetch_portfolio();
                             ui.global::<CryptoAdapter>().invoke_fetch_wallets();
+                            // Refresh dashboard analytics
+                            let range = ui.global::<AnalyticsAdapter>().get_active_range();
+                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics(range);
                         }
                         SharedString::from("")
                     }
@@ -527,6 +545,9 @@ pub fn setup_transaction_callbacks<N>(
                                 .invoke_fetch_asset_details(coin_id);
                             ui.global::<CryptoAdapter>().invoke_fetch_portfolio();
                             ui.global::<CryptoAdapter>().invoke_fetch_wallets();
+                            // Refresh dashboard analytics
+                            let range = ui.global::<AnalyticsAdapter>().get_active_range();
+                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics(range);
                         }
                         notify("Transaction deleted".into(), false);
                         SharedString::from("")

@@ -2,7 +2,12 @@ use plotters::prelude::*;
 use plotters::series::{AreaSeries, LineSeries};
 use plotters::style::text_anchor::{HPos, Pos, VPos};
 use slint::Image;
+use std::fs::{self, OpenOptions};
 use std::path::Path;
+use uuid::Uuid;
+
+#[cfg(unix)]
+use std::os::unix::fs::OpenOptionsExt;
 
 pub struct ChartsService;
 
@@ -25,7 +30,7 @@ impl ChartsService {
             return None;
         }
 
-        let temp_svg = std::env::temp_dir().join("sanctum_habits_radar_temp.svg");
+        let temp_svg = create_secure_temp_svg("sanctum_habits_radar")?;
         let root = SVGBackend::new(&temp_svg, (1400, 900)).into_drawing_area();
         root.fill(&RGBAColor(0, 0, 0, 0.0)).ok()?;
 
@@ -133,7 +138,7 @@ impl ChartsService {
         }
 
         root.present().ok()?;
-        render_svg_image(&temp_svg, "sanctum_habits_radar.svg")
+        render_svg_image(&temp_svg)
     }
 
     pub fn render_weekday_efficiency_chart(
@@ -144,7 +149,7 @@ impl ChartsService {
             return None;
         }
 
-        let temp_svg = std::env::temp_dir().join("sanctum_weekday_efficiency_temp.svg");
+        let temp_svg = create_secure_temp_svg("sanctum_weekday_efficiency")?;
         let root = SVGBackend::new(&temp_svg, (1400, 600)).into_drawing_area();
         root.fill(&RGBAColor(0, 0, 0, 0.0)).ok()?;
 
@@ -227,7 +232,7 @@ impl ChartsService {
         }
 
         root.present().ok()?;
-        render_svg_image(&temp_svg, "sanctum_weekday_efficiency.svg")
+        render_svg_image(&temp_svg)
     }
 
     pub fn render_portfolio_distribution_chart(&self, data: &[(String, f64)]) -> Option<Image> {
@@ -240,7 +245,7 @@ impl ChartsService {
             return None;
         }
 
-        let temp_svg = std::env::temp_dir().join("sanctum_portfolio_dist_temp.svg");
+        let temp_svg = create_secure_temp_svg("sanctum_portfolio_dist")?;
         let root = SVGBackend::new(&temp_svg, (600, 600)).into_drawing_area();
 
         let sizes: Vec<f64> = data.iter().map(|(_, value)| *value).collect();
@@ -263,7 +268,7 @@ impl ChartsService {
         root.draw(&pie).ok()?;
         root.present().ok()?;
 
-        Image::load_from_path(&temp_svg).ok()
+        render_svg_image(&temp_svg)
     }
 
     pub fn render_portfolio_trend_chart(&self, data: &[(String, f64, f64)]) -> Option<Image> {
@@ -297,9 +302,9 @@ impl ChartsService {
         let lower = (min_val - padding).max(0.0);
         let upper = max_val + padding;
 
-        let temp_svg = std::env::temp_dir().join("sanctum_portfolio_trend.svg");
+        let temp_svg = create_secure_temp_svg("sanctum_portfolio_trend")?;
         let root = SVGBackend::new(&temp_svg, (1800, 520)).into_drawing_area();
-        root.fill(&RGBColor(10, 10, 15)).ok()?;
+        root.fill(&RGBAColor(0, 0, 0, 0.0)).ok()?; // Transparent - Slint handles background
 
         let x_max = (data.len() - 1) as i32;
         let mut chart = ChartBuilder::on(&root)
@@ -350,11 +355,73 @@ impl ChartsService {
 
         root.present().ok()?;
 
-        Image::load_from_path(&temp_svg).ok()
+        render_svg_image(&temp_svg)
     }
 
     pub fn chart_color_for_symbol(&self, symbol: &str, index: usize) -> (u8, u8, u8) {
         symbol_chart_color(symbol, index)
+    }
+
+    /// Renders net worth line chart for dashboard (same style as portfolio trend)
+    pub fn render_net_worth_chart(&self, values: &[i64]) -> Option<Image> {
+        if values.len() < 2 {
+            return None;
+        }
+
+        let min_val = *values.iter().min().unwrap_or(&0) as f64;
+        let max_val = *values.iter().max().unwrap_or(&0) as f64;
+
+        if max_val <= 0.0 {
+            return None;
+        }
+
+        let padding = ((max_val - min_val) * 0.1).max(max_val * 0.05);
+        let lower = (min_val - padding).max(0.0);
+        let upper = max_val + padding;
+
+        let temp_svg = create_secure_temp_svg("sanctum_networth")?;
+        let root = SVGBackend::new(&temp_svg, (1800, 520)).into_drawing_area();
+        root.fill(&RGBAColor(0, 0, 0, 0.0)).ok()?;
+
+        let x_max = (values.len() - 1) as i32;
+        let mut chart = ChartBuilder::on(&root)
+            .margin(18)
+            .build_cartesian_2d(0..x_max, lower..upper)
+            .ok()?;
+
+        chart
+            .configure_mesh()
+            .disable_mesh()
+            .disable_x_axis()
+            .disable_y_axis()
+            .draw()
+            .ok()?;
+
+        let points: Vec<(i32, f64)> = values
+            .iter()
+            .enumerate()
+            .map(|(i, v)| (i as i32, *v as f64))
+            .collect();
+
+        // Area fill under curve
+        chart
+            .draw_series(AreaSeries::new(
+                points.iter().copied(),
+                lower,
+                RGBColor(139, 92, 246).mix(0.2),
+            ))
+            .ok()?;
+
+        // Main line
+        chart
+            .draw_series(LineSeries::new(
+                points.iter().copied(),
+                ShapeStyle::from(&RGBColor(139, 92, 246)).stroke_width(4),
+            ))
+            .ok()?;
+
+        root.present().ok()?;
+        render_svg_image(&temp_svg)
     }
 }
 
@@ -372,7 +439,27 @@ fn rgb_from_hex(hex: &str) -> RGBColor {
     RGBColor(139, 92, 246)
 }
 
-fn render_svg_image(temp_svg: &Path, final_name: &str) -> Option<Image> {
+fn create_secure_temp_svg(prefix: &str) -> Option<std::path::PathBuf> {
+    let temp_dir = std::env::temp_dir();
+    for _ in 0..8 {
+        let name = format!("{}_{}.svg", prefix, Uuid::new_v4());
+        let path = temp_dir.join(name);
+
+        let mut options = OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        options.mode(0o600);
+
+        match options.open(&path) {
+            Ok(_) => return Some(path),
+            Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(_) => return None,
+        }
+    }
+    None
+}
+
+fn render_svg_image(temp_svg: &Path) -> Option<Image> {
     let mut fontdb = fontdb::Database::new();
     let font_path = std::path::PathBuf::from("ui/fonts/DejaVuSans.ttf");
     if font_path.exists() {
@@ -385,15 +472,43 @@ fn render_svg_image(temp_svg: &Path, final_name: &str) -> Option<Image> {
     fontdb.set_sans_serif_family("DejaVu Sans");
     fontdb.set_monospace_family("DejaVu Sans");
 
-    let svg_data = std::fs::read_to_string(temp_svg).ok()?;
+    let svg_data = match fs::read_to_string(temp_svg) {
+        Ok(data) => data,
+        Err(_) => {
+            let _ = fs::remove_file(temp_svg);
+            return None;
+        }
+    };
     let opt = usvg::Options {
         fontdb: std::sync::Arc::new(fontdb),
         ..Default::default()
     };
-    let tree = usvg::Tree::from_str(&svg_data, &opt).ok()?;
-    let final_svg = std::env::temp_dir().join(final_name);
-    std::fs::write(&final_svg, tree.to_string(&usvg::WriteOptions::default())).ok()?;
-    Image::load_from_path(&final_svg).ok()
+    let tree = match usvg::Tree::from_str(&svg_data, &opt) {
+        Ok(tree) => tree,
+        Err(_) => {
+            let _ = fs::remove_file(temp_svg);
+            return None;
+        }
+    };
+
+    let final_svg = match create_secure_temp_svg("sanctum_chart_render") {
+        Some(path) => path,
+        None => {
+            let _ = fs::remove_file(temp_svg);
+            return None;
+        }
+    };
+
+    let write_result = fs::write(&final_svg, tree.to_string(&usvg::WriteOptions::default()));
+    let image = if write_result.is_ok() {
+        Image::load_from_path(&final_svg).ok()
+    } else {
+        None
+    };
+
+    let _ = fs::remove_file(temp_svg);
+    let _ = fs::remove_file(&final_svg);
+    image
 }
 
 fn fallback_chart_color(index: usize) -> (u8, u8, u8) {

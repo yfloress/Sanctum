@@ -2,6 +2,7 @@
 // Premium Fintech UI - Core reusable components
 
 import { Palette } from "globals.slint";
+import { Theme } from "theme.slint";
 
 // ==================== UnderlineInput ====================
 // Minimalist input with underline focus indicator
@@ -61,8 +62,8 @@ export component UnderlineInput inherits Rectangle {
         // Underline with gradient
         Rectangle {
             height: input.has-focus ? 2px : 1px;
-            background: input.has-focus 
-                ? @linear-gradient(90deg, Palette.accent 0%, #6366f1 100%)
+            background: input.has-focus
+                ? @linear-gradient(90deg, Palette.accent 0%, Theme.accent-indigo 100%)
                 : Palette.border;
 
             animate height { duration: 150ms; easing: ease-out; }
@@ -186,7 +187,7 @@ export component PrimaryButton inherits Rectangle {
 
     Text {
         text: root.text;
-        color: #ffffff;
+        color: Theme.text;
         font-size: 12px;
         font-weight: 600;
         letter-spacing: 2px;
@@ -219,7 +220,7 @@ export component Divider inherits Rectangle {
 export component SanctumCard inherits Rectangle {
     in property <length> card-padding: 24px;
 
-    background: @linear-gradient(135deg, Palette.surface 0%, #1a1a2e 100%);
+    background: @linear-gradient(135deg, Palette.surface 0%, Theme.card-gradient-end 100%);
     border-radius: 12px;
     border-width: 1px;
     border-color: Palette.border;
@@ -298,13 +299,13 @@ export component ActionButton inherits Rectangle {
             source: icon;
             width: 16px;
             height: 16px;
-            colorize: primary ? #ffffff : Palette.text-primary;
+            colorize: primary ? Theme.text : Palette.text-primary;
             vertical-alignment: center;
         }
 
         Text {
             text: root.text;
-            color: primary ? #ffffff : Palette.text-primary;
+            color: primary ? Theme.text : Palette.text-primary;
             font-size: 11px;
             font-weight: 600;
             letter-spacing: 1px;

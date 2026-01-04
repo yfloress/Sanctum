@@ -36,7 +36,7 @@ pub struct HabitAnalyticsKey {
 
 /// Cache for habit analytics to avoid recalculation
 #[derive(Default)]
-pub struct HabitAnalyticsCache {
+pub struct HabitChartsCache {
     pub key: Option<HabitAnalyticsKey>,
     pub snapshot: HabitAnalyticsSnapshot,
 }
@@ -45,11 +45,13 @@ pub struct HabitAnalyticsCache {
 pub fn refresh_habit_analytics<F: Fn(String, bool)>(
     ui_weak: &Weak<AppWindow>,
     controller: &Arc<AppController>,
-    cache: &Rc<RefCell<HabitAnalyticsCache>>,
+    cache: &Rc<RefCell<HabitChartsCache>>,
     notify: &F,
 ) {
     let today = chrono::Local::now().date_naive();
-    let days_window: i64 = 30;
+    // Use 28 days (4 complete weeks) so each weekday has equal occurrences
+    // This ensures fair comparison in weekday efficiency charts
+    let days_window: i64 = 28;
     let start_date = today
         .checked_sub_signed(chrono::Duration::days(days_window - 1))
         .unwrap_or(today);

@@ -23,7 +23,7 @@ pub fn setup_wallet_callbacks<N>(
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         ui.global::<CryptoAdapter>().on_fetch_wallets(move || {
-            reload_wallets(&ui_weak, &controller);
+            reload_wallets::<fn(String, bool)>(&ui_weak, &controller, None);
         });
     }
 
@@ -159,7 +159,7 @@ pub fn setup_wallet_callbacks<N>(
             .on_create_wallet(move |name, category| -> SharedString {
                 match controller.add_wallet(name.to_string(), category.to_string(), None) {
                     Ok(_) => {
-                        reload_wallets(&ui_weak, &controller);
+                        reload_wallets(&ui_weak, &controller, Some(&notify));
                         notify("Wallet created successfully".into(), false);
                         SharedString::from("")
                     }
@@ -177,7 +177,7 @@ pub fn setup_wallet_callbacks<N>(
             .on_delete_wallet(move |id| -> SharedString {
                 match controller.delete_wallet(id.to_string()) {
                     Ok(_) => {
-                        reload_wallets(&ui_weak, &controller);
+                        reload_wallets(&ui_weak, &controller, Some(&notify));
                         notify("Wallet deleted".into(), false);
                         SharedString::from("")
                     }
@@ -195,7 +195,7 @@ pub fn setup_wallet_callbacks<N>(
             .on_update_wallet_name(move |id, new_name| -> SharedString {
                 match controller.update_wallet_name(id.to_string(), new_name.to_string()) {
                     Ok(_) => {
-                        reload_wallets(&ui_weak, &controller);
+                        reload_wallets(&ui_weak, &controller, Some(&notify));
                         if let Some(ui) = ui_weak.upgrade()
                             && ui.global::<CryptoAdapter>().get_show_wallet_detail()
                         {

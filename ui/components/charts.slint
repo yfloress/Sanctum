@@ -2,6 +2,7 @@
 // Noir Fintech - Premium line chart visualization
 
 import { Palette } from "../globals.slint";
+import { Theme } from "../theme.slint";
 
 export component SanctumLineChart inherits Rectangle {
     in property <string> path: "M 0 50 L 100 50";
@@ -81,23 +82,23 @@ export component SanctumLineChart inherits Rectangle {
         // Gradient Fill (area under curve)
         Path {
             commands: path + " L 100 100 L 0 100 Z";
-            fill: @linear-gradient(180deg, #ffffff18 0%, #ffffff05 40%, #00000000 100%);
+            fill: @linear-gradient(180deg, Theme.chart-stroke.with-alpha(0.09) 0%, Theme.chart-stroke.with-alpha(0.02) 40%, transparent 100%);
             stroke-width: 0px;
         }
 
         // Glow effect (outer)
         Path {
             commands: path;
-            stroke: #ffffff;
+            stroke: Theme.chart-stroke;
             stroke-width: 12px;
             fill: transparent;
             opacity: 0.05;
         }
-        
+
         // Glow effect (middle)
         Path {
             commands: path;
-            stroke: #ffffff;
+            stroke: Theme.chart-stroke;
             stroke-width: 6px;
             fill: transparent;
             opacity: 0.1;
@@ -106,7 +107,7 @@ export component SanctumLineChart inherits Rectangle {
         // Main line stroke
         Path {
             commands: path;
-            stroke: @linear-gradient(90deg, #ffffff 0%, #a0a0a0 50%, #ffffff 100%);
+            stroke: @linear-gradient(90deg, Theme.chart-stroke 0%, Theme.chart-stroke-mid 50%, Theme.chart-stroke 100%);
             stroke-width: 2.5px;
             fill: transparent;
         }

@@ -114,12 +114,26 @@ pub fn setup_dashboard_callbacks<F>(
         let ui_weak = ui_weak.clone();
         ui.global::<AnalyticsAdapter>()
             .on_fetch_analytics(move |range| {
-                if let Ok(summary) = controller.get_analytics_summary(range.to_string())
+                // Calculate crypto total for dashboard data
+                let crypto_total = calculate_crypto_total(&controller);
+
+                // Get crypto snapshots for historical chart data (max 2 years)
+                let crypto_snapshots = controller
+                    .get_crypto_portfolio_snapshots(730)
+                    .unwrap_or_default();
+
+                if let Ok(data) =
+                    controller.get_dashboard_data(crypto_total, &crypto_snapshots, range.to_string())
                     && let Some(ui) = ui_weak.upgrade()
                 {
                     let adapter = ui.global::<AnalyticsAdapter>();
 
-                    let breakdown: Vec<CategoryData> = summary
+                    // Render chart image from values (following crypto/habits pattern)
+                    let chart_image = controller
+                        .render_net_worth_chart(&data.chart_values)
+                        .unwrap_or_default();
+
+                    let breakdown: Vec<CategoryData> = data
                         .expense_slices
                         .iter()
                         .map(|slice| CategoryData {
@@ -131,13 +145,35 @@ pub fn setup_dashboard_callbacks<F>(
                         .collect();
 
                     adapter.set_summary(AnalyticsData {
-                        chart_path: SharedString::from(summary.chart_path),
-                        net_worth: SharedString::from(summary.net_worth),
-                        max_value: SharedString::from(summary.max_value),
-                        min_value: SharedString::from(summary.min_value),
+                        chart_image,
+                        net_worth: SharedString::from(data.net_worth),
+                        max_value: SharedString::from(data.max_value),
+                        min_value: SharedString::from(data.min_value),
                         expense_breakdown: ModelRc::new(VecModel::from(breakdown)),
                     });
                 }
             });
     }
+}
+
+/// Calculates total crypto portfolio value in USD
+fn calculate_crypto_total(controller: &AppController) -> f64 {
+    let assets = match controller.get_aggregated_portfolio() {
+        Ok(a) => a,
+        Err(_) => return 0.0,
+    };
+
+    let prices = controller.load_crypto_prices().unwrap_or_default();
+    let price_map: HashMap<String, f64> = prices
+        .into_iter()
+        .map(|p| (p.id, p.current_price))
+        .collect();
+
+    assets
+        .iter()
+        .map(|asset| {
+            let price = price_map.get(&asset.coin_id).cloned().unwrap_or(0.0);
+            asset.total_amount * price
+        })
+        .sum()
 }

@@ -9,14 +9,14 @@ component StatBadge inherits Rectangle {
     in property <string> value;
     in property <color> accent-color: Palette.text-muted;
 
+    width: 64px;
     height: 22px;
     border-radius: 6px;
     background: Palette.surface-hover;
     border-width: 1px;
     border-color: Palette.border;
     HorizontalLayout {
-        padding-left: 8px;
-        padding-right: 8px;
+        alignment: center;
         spacing: 4px;
         Text {
             text: root.icon;
@@ -87,6 +87,7 @@ export component HabitRow inherits Rectangle {
     callback toggle(string);
     callback delete(string, string);
     callback edit(string);
+    callback select(string);
 
     // State to show/hide delete button
     property <bool> show-delete: false;
@@ -135,7 +136,7 @@ export component HabitRow inherits Rectangle {
             HorizontalLayout {
                 spacing: 12px;
                 padding-left: 8px;
-                alignment: center;
+                alignment: start;
                 
                 // Color Indicator with glow
                 Rectangle {
@@ -156,7 +157,7 @@ export component HabitRow inherits Rectangle {
                 }
                 
                 VerticalLayout {
-                    alignment: center;
+                    alignment: start;
                     spacing: 6px;
                     
                     Text {
@@ -167,26 +168,10 @@ export component HabitRow inherits Rectangle {
                         overflow: elide;
                     }
                     
-                    // Stats Row
-                    HorizontalLayout {
-                        spacing: 6px;
-                        StatBadge {
-                            icon: "🔥";
-                            value: habit.streak;
-                            accent-color: #f59e0b;
-                        }
-
-                        StatBadge {
-                            icon: "🏆";
-                            value: habit.best-streak;
-                            accent-color: #8b5cf6;
-                        }
-
-                        StatBadge {
-                            icon: "📊";
-                            value: habit.completion-rate + "%";
-                            accent-color: Palette.success;
-                        }
+                    StatBadge {
+                        icon: "🔥";
+                        value: habit.streak;
+                        accent-color: #f59e0b;
                     }
                 }
             }
@@ -194,6 +179,7 @@ export component HabitRow inherits Rectangle {
             // TouchArea para activar el modo delete
             info-touch := TouchArea {
                 clicked => {
+                    root.select(habit.id);
                     root.show-delete = !root.show-delete;
                 }
             }

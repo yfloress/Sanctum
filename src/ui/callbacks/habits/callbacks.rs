@@ -8,8 +8,8 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
-use super::analytics::{refresh_habit_analytics, HabitAnalyticsCache};
-use super::data::{reload_habits, reload_heatmap};
+use super::charts::{refresh_habit_analytics, HabitChartsCache};
+use super::data::{refresh_habit_summary, reload_habits, reload_heatmap};
 
 /// Sets up all HabitAdapter callbacks
 pub fn setup_habit_callbacks<N>(
@@ -18,7 +18,7 @@ pub fn setup_habit_callbacks<N>(
     controller: &Arc<AppController>,
     current_habit_date: Arc<Mutex<NaiveDate>>,
     current_heatmap_year: Arc<Mutex<i32>>,
-    habit_analytics_cache: Rc<RefCell<HabitAnalyticsCache>>,
+    habit_analytics_cache: Rc<RefCell<HabitChartsCache>>,
     notify: N,
 ) where
     N: Fn(String, bool) + Clone + 'static,
@@ -29,11 +29,12 @@ pub fn setup_habit_callbacks<N>(
         let ui_weak = ui_weak.clone();
         let date_lock = current_habit_date.clone();
         let year_lock = current_heatmap_year.clone();
+        let notify = notify.clone();
         ui.global::<HabitAdapter>().on_load_initial_data(move || {
             let now = chrono::Local::now().date_naive();
             *date_lock.lock().unwrap() = now;
             *year_lock.lock().unwrap() = now.year();
-            reload_habits(&ui_weak, &controller, now);
+            reload_habits(&ui_weak, &controller, now, Some(&notify));
         });
     }
 
@@ -42,11 +43,12 @@ pub fn setup_habit_callbacks<N>(
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         let date_lock = current_habit_date.clone();
+        let notify = notify.clone();
         ui.global::<HabitAdapter>()
             .on_fetch_habits(move |month, year| {
                 if let Some(date) = NaiveDate::from_ymd_opt(year, month as u32, 1) {
                     *date_lock.lock().unwrap() = date;
-                    reload_habits(&ui_weak, &controller, date);
+                    reload_habits(&ui_weak, &controller, date, Some(&notify));
                 }
             });
     }
@@ -76,7 +78,7 @@ pub fn setup_habit_callbacks<N>(
                     Ok(_) => {
                         let d = *date_lock.lock().unwrap();
                         let y = *year_lock.lock().unwrap();
-                        reload_habits(&ui_weak, &controller, d);
+                        reload_habits(&ui_weak, &controller, d, Some(&notify));
                         reload_heatmap(&ui_weak, &controller, y);
                         refresh_habit_analytics(&ui_weak, &controller, &analytics_cache, &notify);
                         notify("Habit created".into(), false);
@@ -115,7 +117,7 @@ pub fn setup_habit_callbacks<N>(
                     Ok(_) => {
                         let d = *date_lock.lock().unwrap();
                         let y = *year_lock.lock().unwrap();
-                        reload_habits(&ui_weak, &controller, d);
+                        reload_habits(&ui_weak, &controller, d, Some(&notify));
                         reload_heatmap(&ui_weak, &controller, y);
                         refresh_habit_analytics(&ui_weak, &controller, &analytics_cache, &notify);
                         notify("Habit updated".into(), false);
@@ -142,7 +144,7 @@ pub fn setup_habit_callbacks<N>(
                     Ok(_) => {
                         let d = *date_lock.lock().unwrap();
                         let y = *year_lock.lock().unwrap();
-                        reload_habits(&ui_weak, &controller, d);
+                        reload_habits(&ui_weak, &controller, d, Some(&notify));
                         reload_heatmap(&ui_weak, &controller, y);
                         refresh_habit_analytics(&ui_weak, &controller, &analytics_cache, &notify);
                         notify("Habit deleted".into(), false);
@@ -167,7 +169,7 @@ pub fn setup_habit_callbacks<N>(
                     Ok(_) => {
                         let d = *date_lock.lock().unwrap();
                         let y = *year_lock.lock().unwrap();
-                        reload_habits(&ui_weak, &controller, d);
+                        reload_habits(&ui_weak, &controller, d, Some(&notify));
                         reload_heatmap(&ui_weak, &controller, y);
                         refresh_habit_analytics(&ui_weak, &controller, &analytics_cache, &notify);
                     }
@@ -183,6 +185,7 @@ pub fn setup_habit_callbacks<N>(
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         let date_lock = current_habit_date.clone();
+        let notify = notify.clone();
         ui.global::<HabitAdapter>().on_prev_month(move || {
             let mut d = date_lock.lock().unwrap();
             let month = d.month();
@@ -193,7 +196,7 @@ pub fn setup_habit_callbacks<N>(
                 (year, month - 1)
             };
             *d = NaiveDate::from_ymd_opt(new_y, new_m, 1).unwrap();
-            reload_habits(&ui_weak, &controller, *d);
+            reload_habits(&ui_weak, &controller, *d, Some(&notify));
         });
     }
 
@@ -202,6 +205,7 @@ pub fn setup_habit_callbacks<N>(
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         let date_lock = current_habit_date.clone();
+        let notify = notify.clone();
         ui.global::<HabitAdapter>().on_next_month(move || {
             let mut d = date_lock.lock().unwrap();
             let month = d.month();
@@ -212,7 +216,7 @@ pub fn setup_habit_callbacks<N>(
                 (year, month + 1)
             };
             *d = NaiveDate::from_ymd_opt(new_y, new_m, 1).unwrap();
-            reload_habits(&ui_weak, &controller, *d);
+            reload_habits(&ui_weak, &controller, *d, Some(&notify));
         });
     }
 
@@ -256,9 +260,23 @@ pub fn setup_habit_callbacks<N>(
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         let analytics_cache = habit_analytics_cache.clone();
+        let notify = notify.clone();
         ui.global::<HabitAdapter>()
             .on_fetch_habit_analytics(move || {
                 refresh_habit_analytics(&ui_weak, &controller, &analytics_cache, &notify);
+            });
+    }
+
+    // on_select_habit
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let date_lock = current_habit_date.clone();
+        let notify = notify.clone();
+        ui.global::<HabitAdapter>()
+            .on_select_habit(move |id| {
+                let date = *date_lock.lock().unwrap();
+                refresh_habit_summary(&ui_weak, &controller, date, id.to_string(), Some(&notify));
             });
     }
 }

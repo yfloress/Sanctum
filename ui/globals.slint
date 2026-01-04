@@ -1,87 +1,94 @@
 // ==================== Sanctum Design System - Globals ====================
 // Noir Minimalist - Luxury-inspired, terminal elegance
+// Supports dark (default) and light (cream/gold) themes
 
 // ==================== Color Palette ====================
-// Near-black foundation with elegant whites and grays
+// Conditional colors based on SettingsAdapter.dark-mode
 
 export global Palette {
+    // Theme toggle reference
+    out property <bool> is-dark: SettingsAdapter.dark-mode;
+
     // Core backgrounds
-    out property <color> background: #000000;      // Pure black - Main content
-    out property <color> surface: #111111;         // Slightly lighter - Cards
-    out property <color> surface-hover: #1a1a1a;   // Hover state
+    out property <color> background: is-dark ? #000000 : #faf7f2;
+    out property <color> surface: is-dark ? #111111 : #f0ebe3;
+    out property <color> surface-hover: is-dark ? #1a1a1a : #e8e0d5;
 
     // Sidebar
-    out property <color> sidebar-bg: #050505;      // Near-black sidebar
-    out property <color> sidebar-border: #333333;  // Sidebar right border
+    out property <color> sidebar-bg: is-dark ? #050505 : #f8f4ed;
+    out property <color> sidebar-border: is-dark ? #333333 : #e0d6c8;
 
     // Accent colors
-    out property <color> accent: #ffffff;          // Pure white - Primary accent
-    out property <color> accent-muted: #ffffff20;  // Transparent white
-    out property <color> accent-hover: #ffffffcc;  // Slightly transparent white
-    out property <color> primary: #6366f1;         // Brand purple
-    out property <color> action-gradient-start: #5a00f0; // Electric purple for primary actions
-    out property <color> action-gradient-end: #ff2ac3;   // Neon pink tail for cyberpunk glow
+    out property <color> accent: is-dark ? #ffffff : #c9a227;
+    out property <color> accent-muted: is-dark ? #ffffff20 : #c9a22730;
+    out property <color> accent-hover: is-dark ? #ffffffcc : #b8960b;
+    out property <color> primary: is-dark ? #6366f1 : #b8860b;
+    out property <color> action-gradient-start: is-dark ? #5a00f0 : #c9a227;
+    out property <color> action-gradient-end: is-dark ? #ff2ac3 : #d4a574;
 
     // Semantic colors
-    out property <color> success: #22c55e;         // Green
-    out property <color> danger: #ef4444;          // Red
-    out property <color> warning: #f59e0b;         // Amber
+    out property <color> success: is-dark ? #22c55e : #2e7d32;
+    out property <color> danger: is-dark ? #ef4444 : #c62828;
+    out property <color> warning: is-dark ? #f59e0b : #ef6c00;
 
     // Delete button colors
-    out property <color> delete-bg: #3d2020;       // Dark red background
-    out property <color> delete-bg-hover: #5a2020; // Hover state
-    out property <color> delete-bg-active: #7a2020; // Active/pressed state
-    out property <color> delete-border: #ff4444;   // Red border
+    out property <color> delete-bg: is-dark ? #3d2020 : #fee2e2;
+    out property <color> delete-bg-hover: is-dark ? #5a2020 : #fecaca;
+    out property <color> delete-bg-active: is-dark ? #7a2020 : #fca5a5;
+    out property <color> delete-border: is-dark ? #ff4444 : #f87171;
 
     // Warning message colors
-    out property <color> warning-bg: #2d1515;      // Dark red warning background
-    out property <color> warning-border: #4d2525;  // Dark red warning border
+    out property <color> warning-bg: is-dark ? #2d1515 : #fef2f2;
+    out property <color> warning-border: is-dark ? #4d2525 : #fecaca;
 
     // Overlay and shadow colors
-    out property <color> overlay-bg: #000000cc;      // Modal/backdrop overlay
-    out property <color> overlay-bg-strong: #000000d9; // Stronger overlay
-    out property <color> overlay-bg-soft: #00000088; // Softer overlay
-    out property <color> shadow-color: #00000066;    // Shadow tone
-    out property <color> shadow-strong: #00000088;   // Stronger shadow tone
+    out property <color> overlay-bg: is-dark ? #000000cc : #2d2a26cc;
+    out property <color> overlay-bg-strong: is-dark ? #000000d9 : #2d2a26d9;
+    out property <color> overlay-bg-soft: is-dark ? #00000088 : #2d2a2688;
+    out property <color> shadow-color: is-dark ? #00000066 : #2d2a2633;
+    out property <color> shadow-strong: is-dark ? #00000088 : #2d2a2655;
 
     // Crypto gradients
-    out property <color> crypto-ticker-gradient-start: #0a0a0f;
-    out property <color> crypto-ticker-gradient-mid: #0d0d14;
-    out property <color> crypto-ticker-gradient-end: #0a0a0f;
-    out property <color> crypto-hero-gradient-start: #080810;
-    out property <color> crypto-panel-gradient-start: #0a0a10;
-    out property <color> crypto-panel-gradient-end: #080810;
-    out property <color> crypto-card-gradient-start: #0d0d14;
-    out property <color> crypto-card-gradient-mid: #111118;
-    out property <color> crypto-card-gradient-end: #0a0a10;
-    out property <color> crypto-icon-gradient-start: #1a1a2e;
-    out property <color> crypto-icon-gradient-end: #16213e;
-    out property <color> crypto-wallet-icon-gradient-start: #1f1f2e;
-    out property <color> crypto-wallet-icon-gradient-end: #2a2a3e;
-    out property <color> crypto-modal-gradient-end: #0f0f1a;
-    out property <color> crypto-chart-bg-start: #0a0a0a;
-    out property <color> crypto-chart-bg-end: #0f0f0f;
-    out property <color> crypto-chart-value: #8b5cf6;
-    out property <color> crypto-chart-cost: #94a3b8;
+    out property <color> crypto-ticker-gradient-start: is-dark ? #0a0a0f : #f5f0e8;
+    out property <color> crypto-ticker-gradient-mid: is-dark ? #0d0d14 : #f0ebe3;
+    out property <color> crypto-ticker-gradient-end: is-dark ? #0a0a0f : #f5f0e8;
+    out property <color> crypto-hero-gradient-start: is-dark ? #080810 : #f5f0e8;
+    out property <color> crypto-panel-gradient-start: is-dark ? #0a0a10 : #f5f0e8;
+    out property <color> crypto-panel-gradient-end: is-dark ? #080810 : #ede6db;
+    out property <color> crypto-card-gradient-start: is-dark ? #0d0d14 : #f0ebe3;
+    out property <color> crypto-card-gradient-mid: is-dark ? #111118 : #ebe4d8;
+    out property <color> crypto-card-gradient-end: is-dark ? #0a0a10 : #e5ddd0;
+    out property <color> crypto-icon-gradient-start: is-dark ? #1a1a2e : #e5ddd0;
+    out property <color> crypto-icon-gradient-end: is-dark ? #16213e : #d4c9b8;
+    out property <color> crypto-wallet-icon-gradient-start: is-dark ? #1f1f2e : #e0d6c8;
+    out property <color> crypto-wallet-icon-gradient-end: is-dark ? #2a2a3e : #d4c9b8;
+    out property <color> crypto-modal-gradient-end: is-dark ? #0f0f1a : #f0ebe3;
+    // Chart background (unified across all charts)
+    out property <color> chart-bg-start: is-dark ? #0d0d12 : #f5f0e8;
+    out property <color> chart-bg-end: is-dark ? #080810 : #ede6db;
+    out property <color> crypto-chart-bg-start: chart-bg-start;
+    out property <color> crypto-chart-bg-end: chart-bg-end;
+    out property <color> crypto-chart-value: is-dark ? #8b5cf6 : #b8860b;
+    out property <color> crypto-chart-cost: is-dark ? #94a3b8 : #8a857d;
 
     // Heatmap intensity levels
-    out property <color> heatmap-level-0: surface-hover; // No activity
-    out property <color> heatmap-level-1: #3b2f5f; // Low activity
-    out property <color> heatmap-level-2: #6b4f9f; // Medium activity
-    out property <color> heatmap-level-3: #8b5cf6; // High activity
-    out property <color> heatmap-level-4: #a78bfa; // Max activity
+    out property <color> heatmap-level-0: surface-hover;
+    out property <color> heatmap-level-1: is-dark ? #3b2f5f : #e5d9c3;
+    out property <color> heatmap-level-2: is-dark ? #6b4f9f : #d4b896;
+    out property <color> heatmap-level-3: is-dark ? #8b5cf6 : #c9a227;
+    out property <color> heatmap-level-4: is-dark ? #a78bfa : #b8860b;
 
     // Text colors
-    out property <color> text-primary: #ffffff;    // Pure white - Titles
-    out property <color> text-secondary: #a3a3a3;  // Gray - Body text
-    out property <color> text-muted: #666666;      // Dark gray - Inactive items
-    out property <color> text-subtle: #333333;     // Very dark - Footer
+    out property <color> text-primary: is-dark ? #ffffff : #2d2a26;
+    out property <color> text-secondary: is-dark ? #a3a3a3 : #6b6560;
+    out property <color> text-muted: is-dark ? #666666 : #8a857d;
+    out property <color> text-subtle: is-dark ? #333333 : #b5aea5;
 
     // Border colors
-    out property <color> border: #333333;          // Dark border
-    out property <color> border-light: #ffffff;    // White border/lines
-    out property <color> border-focus: #ffffff;    // Focus state
-    out property <color> border-subtle: #222222;   // Very subtle borders
+    out property <color> border: is-dark ? #333333 : #e0d6c8;
+    out property <color> border-light: is-dark ? #ffffff : #c9a227;
+    out property <color> border-focus: is-dark ? #ffffff : #c9a227;
+    out property <color> border-subtle: is-dark ? #222222 : #ebe4d8;
 
     // Spacing scale
     out property <length> spacing-xs: 4px;
@@ -116,9 +123,54 @@ export global Palette {
     out property <length> wallet-info-width: 300px;
 
     // Border radius
-    out property <length> radius-sm: 2px;
-    out property <length> radius-md: 4px;
-    out property <length> radius-lg: 6px;
+    out property <length> radius-sm: 4px;
+    out property <length> radius-md: 6px;
+    out property <length> radius-lg: 8px;
+    out property <length> radius-xl: 12px;
+    out property <length> radius-2xl: 16px;
+    out property <length> radius-pill: 24px;
+
+    // Icon sizes
+    out property <length> icon-xs: 24px;
+    out property <length> icon-sm: 28px;
+    out property <length> icon-md: 32px;
+    out property <length> icon-lg: 36px;
+    out property <length> icon-xl: 40px;
+
+    // Notification colors
+    out property <color> notification-error-bg: #1a1215;
+    out property <color> notification-error-border: #3d2020;
+    out property <color> notification-success-bg: #0f1a15;
+    out property <color> notification-success-border: #203d30;
+
+    // Account type colors
+    out property <color> account-bank-bg: #1e3a5f;
+    out property <color> account-cash-bg: #2d4a3e;
+    out property <color> account-savings-bg: #3d3a1e;
+    out property <color> account-credit-bg: #3d1e2e;
+    out property <color> account-other-bg: #2a2a3a;
+
+    // Transaction icon colors
+    out property <color> tx-expense-bg: #1c1520;
+    out property <color> tx-income-bg: #0f1a14;
+
+    // Habit colors (16 color palette)
+    out property <color> habit-color-1: #8b5cf6;
+    out property <color> habit-color-2: #ec4899;
+    out property <color> habit-color-3: #3b82f6;
+    out property <color> habit-color-4: #22c55e;
+    out property <color> habit-color-5: #f59e0b;
+    out property <color> habit-color-6: #06b6d4;
+    out property <color> habit-color-7: #f43f5e;
+    out property <color> habit-color-8: #a855f7;
+    out property <color> habit-color-9: #14b8a6;
+    out property <color> habit-color-10: #6366f1;
+    out property <color> habit-color-11: #84cc16;
+    out property <color> habit-color-12: #f97316;
+    out property <color> habit-color-13: #0ea5e9;
+    out property <color> habit-color-14: #d946ef;
+    out property <color> habit-color-15: #10b981;
+    out property <color> habit-color-16: #fbbf24;
 
     // Typography
     out property <length> font-size-xs: 10px;
@@ -175,7 +227,7 @@ export struct CategoryData {
 }
 
 export struct AnalyticsData {
-    chart_path: string,
+    chart_image: image,
     net_worth: string,
     max_value: string,
     min_value: string,
@@ -238,6 +290,15 @@ export global HabitAdapter {
     in-out property <string> current-month-name: "";
     in-out property <int> current-year;
     in-out property <int> current-month-index: 1;
+    in-out property <string> selected-habit-id: "";
+    in-out property <string> summary-habit-name: "";
+    in-out property <color> summary-habit-color: Palette.accent;
+    in-out property <int> summary-current-streak: 0;
+    in-out property <int> summary-best-streak: 0;
+    in-out property <int> summary-completion-rate: 0;
+    in-out property <string> summary-completion-note: "";
+    in-out property <int> summary-last-30: 0;
+    in-out property <string> summary-best-day: "";
     
     // Heatmap
     in-out property <[HeatmapWeek]> heatmap-data: [];
@@ -251,6 +312,7 @@ export global HabitAdapter {
     callback update-habit(string, string, string, string, string) -> string; // id, name, desc, color, category -> error or ""
     callback toggle-habit(string, string); // id, date
     callback delete-habit(string) -> string;
+    callback select-habit(string); // id
     // Edit state
     in-out property <string> edit-id: "";
     in-out property <string> edit-name: "";
@@ -347,12 +409,24 @@ export global AccountAdapter {
 
 export global SettingsAdapter {
     in-out property <bool> auto-fetch-enabled: false;
-    
+    in-out property <bool> proxy-enabled: false;
+    in-out property <string> proxy-url: "";
+    in-out property <bool> dark-mode: true;  // Default to dark theme
+
     // Callback to load settings from backend
     callback load-settings();
-    
+
     // Callback to toggle auto-fetch setting
     callback set-auto-fetch(bool);
+
+    // Callback to toggle proxy usage
+    callback set-proxy-enabled(bool);
+
+    // Callback to update proxy URL
+    callback set-proxy-url(string);
+
+    // Callback to toggle dark mode
+    callback set-dark-mode(bool);
 }
 
 // ==================== Crypto Adapter ====================
