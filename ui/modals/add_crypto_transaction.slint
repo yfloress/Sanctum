@@ -2,11 +2,11 @@
 // Premium Fintech UI - Asset registration flow
 
 import {
-    Palette,
     AppState,
     CryptoAdapter,
     NotificationAdapter,
 } from "../globals.slint";
+import { Theme } from "../theme.slint";
 import { FormField, TypeSelector, WalletSelector, CoinSelector } from "../components/transaction_form_components.slint";
 
 // ==================== Main Modal ====================
@@ -264,7 +264,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
     Rectangle {
         width: 100%;
         height: 100%;
-        background: Palette.overlay-bg;
+        background: Theme.overlay-bg;
         opacity: 1.0;
 
         // Flickable with no scrolling blocks scroll events from propagating
@@ -305,14 +305,14 @@ export component AddCryptoTransactionModal inherits Rectangle {
     Rectangle {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
-        width: min(Palette.modal-width-md, parent.width - 40px);
-        height: min(Palette.modal-height-lg, parent.height - 40px);
-        background: @linear-gradient(180deg, Palette.sidebar-bg 0%, Palette.crypto-modal-gradient-end 100%);
+        width: min(Theme.modal-width-md, parent.width - 40px);
+        height: min(Theme.modal-height-lg, parent.height - 40px);
+        background: @linear-gradient(180deg, Theme.sidebar-bg 0%, Theme.crypto-modal-gradient-end 100%);
         border-radius: 16px;
         border-width: 1px;
-        border-color: Palette.border-light;
+        border-color: Theme.border-light;
         drop-shadow-blur: 40px;
-        drop-shadow-color: Palette.shadow-strong;
+        drop-shadow-color: Theme.shadow-strong;
         opacity: 1.0;
 
         // Block all pointer events from propagating to backdrop
@@ -338,13 +338,13 @@ export component AddCryptoTransactionModal inherits Rectangle {
 	                        width: 4px;
 	                        height: 20px;
 	                        border-radius: 2px;
-	                        background: @linear-gradient(180deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%);
+	                        background: @linear-gradient(180deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
 	                        y: (parent.height - self.height) / 2;
 	                    }
 
                     Text {
                         text: "NEW CRYPTO TRANSACTION";
-                        color: Palette.text-primary;
+                        color: Theme.text-primary;
                         font-size: 16px;
                         font-weight: 500;
                         letter-spacing: 2px;
@@ -356,11 +356,11 @@ export component AddCryptoTransactionModal inherits Rectangle {
                     width: 32px;
                     height: 32px;
                     border-radius: 8px;
-                    background: close-touch.has-hover ? Palette.surface-hover : transparent;
+                    background: close-touch.has-hover ? Theme.surface-hover : transparent;
                     
                     Text { 
                         text: "×"; 
-                        color: close-touch.has-hover ? Palette.text-primary : Palette.text-muted;
+                        color: close-touch.has-hover ? Theme.text-primary : Theme.text-muted;
                         font-size: 20px;
                         font-weight: 300;
                         vertical-alignment: center; 
@@ -426,10 +426,10 @@ export component AddCryptoTransactionModal inherits Rectangle {
                     // Warning if no wallets
                     if CryptoAdapter.wallet-list.length == 0: Rectangle {
                         height: 40px;
-                        background: Palette.warning-bg;
+                        background: Theme.warning-bg;
                         border-radius: 8px;
                         border-width: 1px;
-                        border-color: Palette.warning-border;
+                        border-color: Theme.warning-border;
 
                         HorizontalLayout {
                             padding-left: 12px;
@@ -438,14 +438,14 @@ export component AddCryptoTransactionModal inherits Rectangle {
 
                             Text {
                                 text: "⚠";
-                                color: Palette.danger;
+                                color: Theme.danger;
                                 font-size: 14px;
                                 vertical-alignment: center;
                             }
 
                             Text { 
                                 text: "Create a wallet in the Wallets tab first"; 
-                                color: Palette.danger; 
+                                color: Theme.danger; 
                                 font-size: 11px;
                                 font-weight: 400;
                                 vertical-alignment: center; 
@@ -454,10 +454,10 @@ export component AddCryptoTransactionModal inherits Rectangle {
                     }
                     if root.selected-type == "move" && CryptoAdapter.wallet-list.length < 2: Rectangle {
                         height: 40px;
-                        background: Palette.warning-bg;
+                        background: Theme.warning-bg;
                         border-radius: 8px;
                         border-width: 1px;
-                        border-color: Palette.warning-border;
+                        border-color: Theme.warning-border;
 
                         HorizontalLayout {
                             padding-left: 12px;
@@ -466,14 +466,14 @@ export component AddCryptoTransactionModal inherits Rectangle {
 
                             Text {
                                 text: "⚠";
-                                color: Palette.danger;
+                                color: Theme.danger;
                                 font-size: 14px;
                                 vertical-alignment: center;
                             }
 
                             Text {
                                 text: "Create another wallet to move assets";
-                                color: Palette.danger;
+                                color: Theme.danger;
                                 font-size: 11px;
                                 font-weight: 400;
                                 vertical-alignment: center;
@@ -590,12 +590,12 @@ export component AddCryptoTransactionModal inherits Rectangle {
 	            // Submit Button
 	            Rectangle {
 	                height: 48px;
-	                background: @linear-gradient(135deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%);
+	                background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
 	                border-radius: 10px;
 	                
                 Text {
                     text: "SAVE TRANSACTION";
-                    color: Palette.text-primary;
+                    color: Theme.text-primary;
                     font-size: 12px;
                     font-weight: 600;
                     letter-spacing: 2px;

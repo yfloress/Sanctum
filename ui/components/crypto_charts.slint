@@ -1,4 +1,5 @@
-import { Palette, CryptoDistributionSlice } from "../globals.slint";
+import { CryptoDistributionSlice } from "../globals.slint";
+import { Theme } from "../theme.slint";
 
 // ==================== Portfolio Distribution Chart ====================
 export component PortfolioDistributionChart inherits Rectangle {
@@ -6,10 +7,10 @@ export component PortfolioDistributionChart inherits Rectangle {
     in property <bool> has-data: false;
     in property <[CryptoDistributionSlice]> slices: [];
 
-    background: Palette.surface;
+    background: Theme.surface;
     border-radius: 12px;
     border-width: 1px;
-    border-color: Palette.border-subtle;
+    border-color: Theme.border-subtle;
 
     VerticalLayout {
         padding: 20px;
@@ -17,7 +18,7 @@ export component PortfolioDistributionChart inherits Rectangle {
 
         Text {
             text: "PORTFOLIO DISTRIBUTION";
-            color: Palette.text-secondary;
+            color: Theme.text-secondary;
             font-size: 11px;
             font-weight: 700;
             letter-spacing: 2px;
@@ -26,9 +27,9 @@ export component PortfolioDistributionChart inherits Rectangle {
         Rectangle {
             height: 300px;
             border-radius: 14px;
-            background: @linear-gradient(180deg, Palette.crypto-chart-bg-start, Palette.crypto-chart-bg-end);
+            background: @linear-gradient(180deg, Theme.crypto-chart-bg-start, Theme.crypto-chart-bg-end);
             border-width: 1px;
-            border-color: Palette.border-subtle;
+            border-color: Theme.border-subtle;
             clip: true;
 
             if root.has-data: HorizontalLayout {
@@ -70,7 +71,7 @@ export component PortfolioDistributionChart inherits Rectangle {
 
                             Text {
                                 text: "ASSETS";
-                                color: Palette.text-secondary;
+                                color: Theme.text-secondary;
                                 font-size: 10px;
                                 font-weight: 700;
                                 letter-spacing: 2px;
@@ -89,7 +90,7 @@ export component PortfolioDistributionChart inherits Rectangle {
 
                                 Text {
                                     text: slice.label;
-                                    color: Palette.text-primary;
+                                    color: Theme.text-primary;
                                     font-size: 12px;
                                     font-weight: 600;
                                     width: 80px;
@@ -98,7 +99,7 @@ export component PortfolioDistributionChart inherits Rectangle {
 
                                 Text {
                                     text: slice.percent;
-                                    color: Palette.text-secondary;
+                                    color: Theme.text-secondary;
                                     font-size: 11px;
                                     horizontal-alignment: left;
                                 }
@@ -113,14 +114,14 @@ export component PortfolioDistributionChart inherits Rectangle {
                 spacing: 6px;
                 Text {
                     text: "No priced assets yet";
-                    color: Palette.text-secondary;
+                    color: Theme.text-secondary;
                     font-size: 12px;
                     font-weight: 600;
                     horizontal-alignment: center;
                 }
                 Text {
                     text: "Sync prices to see the distribution";
-                    color: Palette.text-muted;
+                    color: Theme.text-muted;
                     font-size: 11px;
                     horizontal-alignment: center;
                 }
@@ -134,10 +135,10 @@ export component PortfolioTrendChart inherits Rectangle {
     in property <image> image;
     in property <bool> has-data: false;
 
-    background: Palette.surface;
+    background: Theme.surface;
     border-radius: 12px;
     border-width: 1px;
-    border-color: Palette.border-subtle;
+    border-color: Theme.border-subtle;
 
     VerticalLayout {
         padding: 20px;
@@ -148,7 +149,7 @@ export component PortfolioTrendChart inherits Rectangle {
 
             Text {
                 text: "PORTFOLIO TREND (180 DAYS)";
-                color: Palette.text-secondary;
+                color: Theme.text-secondary;
                 font-size: 11px;
                 font-weight: 700;
                 letter-spacing: 2px;
@@ -161,12 +162,12 @@ export component PortfolioTrendChart inherits Rectangle {
                     width: 8px;
                     height: 8px;
                     border-radius: 4px;
-                    background: Palette.crypto-chart-value;
+                    background: Theme.crypto-chart-value;
                     y: 6px;
                 }
                 Text {
                     text: "VALUE";
-                    color: Palette.text-secondary;
+                    color: Theme.text-secondary;
                     font-size: 9px;
                     letter-spacing: 1px;
                     vertical-alignment: center;
@@ -175,12 +176,12 @@ export component PortfolioTrendChart inherits Rectangle {
                     width: 8px;
                     height: 8px;
                     border-radius: 4px;
-                    background: Palette.crypto-chart-cost;
+                    background: Theme.crypto-chart-cost;
                     y: 6px;
                 }
                 Text {
                     text: "COST";
-                    color: Palette.text-secondary;
+                    color: Theme.text-secondary;
                     font-size: 9px;
                     letter-spacing: 1px;
                     vertical-alignment: center;
@@ -191,9 +192,9 @@ export component PortfolioTrendChart inherits Rectangle {
         Rectangle {
             height: 240px;
             border-radius: 14px;
-            background: @linear-gradient(180deg, Palette.crypto-chart-bg-start, Palette.crypto-chart-bg-end);
+            background: @linear-gradient(180deg, Theme.crypto-chart-bg-start, Theme.crypto-chart-bg-end);
             border-width: 1px;
-            border-color: Palette.border-subtle;
+            border-color: Theme.border-subtle;
             clip: true;
 
             if root.has-data: Image {
@@ -208,14 +209,14 @@ export component PortfolioTrendChart inherits Rectangle {
                 spacing: 6px;
                 Text {
                     text: "No trend data yet";
-                    color: Palette.text-secondary;
+                    color: Theme.text-secondary;
                     font-size: 12px;
                     font-weight: 600;
                     horizontal-alignment: center;
                 }
                 Text {
                     text: "Sync prices daily to build history";
-                    color: Palette.text-muted;
+                    color: Theme.text-muted;
                     font-size: 11px;
                     horizontal-alignment: center;
                 }

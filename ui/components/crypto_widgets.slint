@@ -1,7 +1,7 @@
 // ==================== Crypto Widgets ====================
 // Noir Fintech - Premium crypto portfolio components
 
-import { Palette } from "../globals.slint";
+import { Theme } from "../theme.slint";
 
 // ==================== Crypto Icon ====================
 export component CryptoIcon inherits Rectangle {
@@ -18,11 +18,11 @@ export component CryptoIcon inherits Rectangle {
     // Gradient background based on symbol
     background: @linear-gradient(
         135deg,
-        Palette.crypto-icon-gradient-start 0%,
-        Palette.crypto-icon-gradient-end 100%
+        Theme.crypto-icon-gradient-start 0%,
+        Theme.crypto-icon-gradient-end 100%
     );
     border-width: 1px;
-    border-color: Palette.border-subtle;
+    border-color: Theme.border-subtle;
     
     Image {
         source: root.icon;
@@ -43,9 +43,9 @@ component ChangeBadge inherits Rectangle {
     width: compact ? 64px : 80px;
     height: compact ? 22px : 28px;
     border-radius: 4px;
-    background: is-positive ? Palette.success.with-alpha(0.12) : Palette.danger.with-alpha(0.12);
+    background: is-positive ? Theme.success.with-alpha(0.12) : Theme.danger.with-alpha(0.12);
     border-width: 1px;
-    border-color: is-positive ? Palette.success.with-alpha(0.2) : Palette.danger.with-alpha(0.2);
+    border-color: is-positive ? Theme.success.with-alpha(0.2) : Theme.danger.with-alpha(0.2);
     
     HorizontalLayout {
         alignment: center;
@@ -53,13 +53,13 @@ component ChangeBadge inherits Rectangle {
         
         Text { 
             text: is-positive ? "▲" : "▼"; 
-            color: is-positive ? Palette.success : Palette.danger; 
+            color: is-positive ? Theme.success : Theme.danger; 
             font-size: compact ? 8px : 9px;
             vertical-alignment: center;
         }
         Text { 
             text: change; 
-            color: is-positive ? Palette.success : Palette.danger; 
+            color: is-positive ? Theme.success : Theme.danger; 
             font-size: compact ? 10px : 11px; 
             font-weight: 600; 
             vertical-alignment: center;
@@ -83,7 +83,7 @@ export component CryptoRow inherits Rectangle {
 
     horizontal-stretch: 1;
     height: 64px;
-    background: area.has-hover ? Palette.surface-hover : transparent;
+    background: area.has-hover ? Theme.surface-hover : transparent;
     border-radius: 8px;
     
     animate background { duration: 200ms; easing: ease-out; }
@@ -111,14 +111,14 @@ export component CryptoRow inherits Rectangle {
                 spacing: 2px;
                 Text { 
                     text: root.name; 
-                    color: Palette.text-primary; 
+                    color: Theme.text-primary; 
                     font-size: 14px; 
                     font-weight: 500; 
                     overflow: elide; 
                 }
                 Text { 
                     text: root.symbol; 
-                    color: Palette.text-muted; 
+                    color: Theme.text-muted; 
                     font-size: 11px;
                     font-weight: 500;
                     letter-spacing: 0.5px;
@@ -132,7 +132,7 @@ export component CryptoRow inherits Rectangle {
             alignment: center;
             Text { 
                 text: root.price; 
-                color: Palette.text-primary; 
+                color: Theme.text-primary; 
                 font-size: 14px;
                 font-weight: 500;
                 horizontal-alignment: right; 
@@ -145,7 +145,7 @@ export component CryptoRow inherits Rectangle {
             alignment: center;
             Text { 
                 text: root.amount; 
-                color: Palette.text-secondary; 
+                color: Theme.text-secondary; 
                 font-size: 13px; 
                 horizontal-alignment: right; 
             }
@@ -157,7 +157,7 @@ export component CryptoRow inherits Rectangle {
             alignment: center;
             Text { 
                 text: root.value; 
-                color: Palette.text-primary; 
+                color: Theme.text-primary; 
                 font-size: 14px; 
                 font-weight: 600;
                 horizontal-alignment: right; 
@@ -182,7 +182,7 @@ export component CryptoRow inherits Rectangle {
         height: 1px; 
         width: parent.width - 32px; 
         x: 16px;
-        background: Palette.border-subtle; 
+        background: Theme.border-subtle; 
         y: parent.height - 1px; 
     }
     
@@ -208,7 +208,7 @@ export component WalletRow inherits Rectangle {
 
     horizontal-stretch: 1;
     height: 72px;
-    background: area.has-hover ? Palette.surface-hover : transparent;
+    background: area.has-hover ? Theme.surface-hover : transparent;
     border-radius: 10px;
 
     animate background { duration: 150ms; }
@@ -233,7 +233,7 @@ export component WalletRow inherits Rectangle {
 
         // Wallet Info
         HorizontalLayout {
-            width: Palette.wallet-info-width;
+            width: Theme.wallet-info-width;
             spacing: 16px;
             alignment: start;
             
@@ -244,11 +244,11 @@ export component WalletRow inherits Rectangle {
                 border-radius: 10px; 
                 background: @linear-gradient(
                     135deg,
-                    Palette.crypto-wallet-icon-gradient-start 0%,
-                    Palette.crypto-wallet-icon-gradient-end 100%
+                    Theme.crypto-wallet-icon-gradient-start 0%,
+                    Theme.crypto-wallet-icon-gradient-end 100%
                 );
                 border-width: 1px;
-                border-color: Palette.border-subtle;
+                border-color: Theme.border-subtle;
                 y: (parent.height - self.height) / 2;
                 
                 Text { 
@@ -264,13 +264,13 @@ export component WalletRow inherits Rectangle {
                 spacing: 4px;
                 Text { 
                     text: root.name; 
-                    color: Palette.text-primary; 
+                    color: Theme.text-primary; 
                     font-size: 14px; 
                     font-weight: 500; 
                 }
                 Text { 
                     text: root.category == "exchange" ? "Exchange" : root.category == "wallet_multi" ? "Hardware Wallet" : "Software Wallet";
-                    color: Palette.text-muted; 
+                    color: Theme.text-muted; 
                     font-size: 11px;
                     letter-spacing: 0.5px;
                 }
@@ -284,9 +284,9 @@ export component WalletRow inherits Rectangle {
                 Rectangle {
                     height: 24px;
                     border-radius: 12px;
-                    background: Palette.surface;
+                    background: Theme.surface;
                     border-width: 1px;
-                    border-color: Palette.border;
+                    border-color: Theme.border;
 
                     HorizontalLayout {
                         padding-left: 10px;
@@ -298,12 +298,12 @@ export component WalletRow inherits Rectangle {
                             width: 6px;
                             height: 6px;
                             border-radius: 3px;
-                            background: root.count > 0 ? Palette.success : Palette.text-subtle;
+                            background: root.count > 0 ? Theme.success : Theme.text-subtle;
                             y: (parent.height - self.height) / 2;
                         }
                         Text { 
                             text: root.count + " Assets"; 
-                            color: Palette.text-secondary; 
+                            color: Theme.text-secondary; 
                             font-size: 11px; 
                             font-weight: 600;
                             vertical-alignment: center;
@@ -317,7 +317,7 @@ export component WalletRow inherits Rectangle {
         Text { 
             width: 150px; 
             text: root.balance; 
-            color: Palette.text-primary; 
+            color: Theme.text-primary; 
             font-size: 15px; 
             font-weight: 600; 
             vertical-alignment: center; 
@@ -330,13 +330,13 @@ export component WalletRow inherits Rectangle {
             height: 40px;
             y: (parent.height - self.height) / 2;
             border-radius: 8px;
-            background: del-area.has-hover ? Palette.danger.with-alpha(0.1) : transparent;
+            background: del-area.has-hover ? Theme.danger.with-alpha(0.1) : transparent;
 
             animate background { duration: 150ms; }
 
             Text {
                 text: "✕";
-                color: del-area.has-hover ? Palette.danger : Palette.text-muted;
+                color: del-area.has-hover ? Theme.danger : Theme.text-muted;
                 font-size: 14px;
                 font-weight: 700;
                 vertical-alignment: center;
@@ -359,7 +359,7 @@ export component TickerItem inherits Rectangle {
     in property <string> change;
     in property <bool> is-positive;
 
-    width: Palette.crypto-ticker-width;
+    width: Theme.crypto-ticker-width;
     height: 48px;
     background: transparent;
 
@@ -382,7 +382,7 @@ export component TickerItem inherits Rectangle {
             
             Text { 
                 text: root.symbol; 
-                color: Palette.text-primary; 
+                color: Theme.text-primary; 
                 font-size: 12px; 
                 font-weight: 600;
                 letter-spacing: 0.5px;
@@ -397,7 +397,7 @@ export component TickerItem inherits Rectangle {
             
             Text { 
                 text: root.price; 
-                color: Palette.text-primary; 
+                color: Theme.text-primary; 
                 font-size: 12px;
                 font-weight: 500;
                 horizontal-alignment: right;
@@ -405,7 +405,7 @@ export component TickerItem inherits Rectangle {
             
             Text { 
                 text: root.change; 
-                color: root.is-positive ? Palette.success : Palette.danger; 
+                color: root.is-positive ? Theme.success : Theme.danger; 
                 font-size: 10px;
                 font-weight: 600;
                 horizontal-alignment: right;
@@ -417,7 +417,7 @@ export component TickerItem inherits Rectangle {
     Rectangle {
         width: 1px;
         height: 24px;
-        background: Palette.border-subtle;
+        background: Theme.border-subtle;
         x: parent.width - 1px;
         y: (parent.height - self.height) / 2;
     }
@@ -436,8 +436,8 @@ export component CryptoCard inherits Rectangle {
 
     callback clicked();
 
-    width: Palette.crypto-card-width;
-    height: Palette.crypto-card-height;
+    width: Theme.crypto-card-width;
+    height: Theme.crypto-card-height;
     border-radius: 12px;
     clip: true;
     
@@ -447,12 +447,12 @@ export component CryptoCard inherits Rectangle {
         height: 100%;
         background: @linear-gradient(
             145deg,
-            Palette.crypto-card-gradient-start 0%,
-            Palette.crypto-card-gradient-mid 50%,
-            Palette.crypto-card-gradient-end 100%
+            Theme.crypto-card-gradient-start 0%,
+            Theme.crypto-card-gradient-mid 50%,
+            Theme.crypto-card-gradient-end 100%
         );
         border-width: 1px;
-        border-color: touch.has-hover ? Palette.border-light.with-alpha(0.3) : Palette.border-subtle;
+        border-color: touch.has-hover ? Theme.border-light.with-alpha(0.3) : Theme.border-subtle;
         border-radius: 12px;
         
         animate border-color { duration: 250ms; easing: ease-out; }
@@ -464,8 +464,8 @@ export component CryptoCard inherits Rectangle {
         height: 2px;
         y: 0;
         background: is-positive ? 
-            @linear-gradient(90deg, transparent 0%, Palette.success.with-alpha(0.5) 50%, transparent 100%) :
-            @linear-gradient(90deg, transparent 0%, Palette.danger.with-alpha(0.5) 50%, transparent 100%);
+            @linear-gradient(90deg, transparent 0%, Theme.success.with-alpha(0.5) 50%, transparent 100%) :
+            @linear-gradient(90deg, transparent 0%, Theme.danger.with-alpha(0.5) 50%, transparent 100%);
     }
 
     touch := TouchArea {
@@ -497,14 +497,14 @@ export component CryptoCard inherits Rectangle {
                     spacing: 2px;
                     Text { 
                         text: root.symbol; 
-                        color: Palette.text-primary; 
+                        color: Theme.text-primary; 
                         font-size: 14px; 
                         font-weight: 700;
                         letter-spacing: 0.5px;
                     }
                     Text { 
                         text: root.name; 
-                        color: Palette.text-muted; 
+                        color: Theme.text-muted; 
                         font-size: 11px; 
                         overflow: elide;
                         max-width: 80px;
@@ -527,7 +527,7 @@ export component CryptoCard inherits Rectangle {
             
             Text {
                 text: root.value;
-                color: Palette.text-primary;
+                color: Theme.text-primary;
                 font-size: 24px;
                 font-weight: 300;
                 letter-spacing: -0.5px;
@@ -536,7 +536,7 @@ export component CryptoCard inherits Rectangle {
             
             Text {
                 text: "total value";
-                color: Palette.text-subtle;
+                color: Theme.text-subtle;
                 font-size: 10px;
                 letter-spacing: 1px;
                 horizontal-alignment: center;
@@ -546,7 +546,7 @@ export component CryptoCard inherits Rectangle {
         // Footer: Holdings
         Rectangle {
             height: 40px;
-            background: Palette.surface.with-alpha(0.5);
+            background: Theme.surface.with-alpha(0.5);
             border-radius: 6px;
             
             HorizontalLayout {
@@ -558,13 +558,13 @@ export component CryptoCard inherits Rectangle {
                     alignment: center;
                     Text { 
                         text: "Holdings"; 
-                        color: Palette.text-muted; 
+                        color: Theme.text-muted; 
                         font-size: 9px;
                         letter-spacing: 1px;
                     }
                     Text { 
                         text: root.amount; 
-                        color: Palette.text-primary; 
+                        color: Theme.text-primary; 
                         font-size: 12px;
                         font-weight: 500;
                     }
@@ -574,14 +574,14 @@ export component CryptoCard inherits Rectangle {
                     alignment: center;
                     Text { 
                         text: "Price"; 
-                        color: Palette.text-muted; 
+                        color: Theme.text-muted; 
                         font-size: 9px;
                         letter-spacing: 1px;
                         horizontal-alignment: right;
                     }
                     Text { 
                         text: root.price; 
-                        color: Palette.text-primary; 
+                        color: Theme.text-primary; 
                         font-size: 12px;
                         font-weight: 600;
                         horizontal-alignment: right;
@@ -601,10 +601,10 @@ export component GhostButton inherits Rectangle {
 
     width: icon-mode ? 32px : 96px;
     height: 28px;
-    background: enabled ? (touch.has-hover ? Palette.surface : transparent) : Palette.surface;
+    background: enabled ? (touch.has-hover ? Theme.surface : transparent) : Theme.surface;
     border-radius: 6px;
     border-width: 1px;
-    border-color: enabled ? (touch.has-hover ? Palette.border-subtle : transparent) : Palette.border-subtle;
+    border-color: enabled ? (touch.has-hover ? Theme.border-subtle : transparent) : Theme.border-subtle;
     opacity: enabled ? 1 : 0.6;
     
     animate background { duration: 150ms; }
@@ -612,7 +612,7 @@ export component GhostButton inherits Rectangle {
 
     Text {
         text: root.text;
-        color: enabled ? (touch.has-hover ? Palette.text-primary : Palette.text-muted) : Palette.text-muted;
+        color: enabled ? (touch.has-hover ? Theme.text-primary : Theme.text-muted) : Theme.text-muted;
         font-size: 10px;
         font-weight: 600;
         letter-spacing: 1px;

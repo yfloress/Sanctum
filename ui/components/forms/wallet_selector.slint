@@ -1,6 +1,7 @@
 // WalletSelector - Dropdown for crypto wallet selection
 
-import { Palette, CryptoAdapter } from "../../globals.slint";
+import { CryptoAdapter } from "../../globals.slint";
+import { Theme } from "../../theme.slint";
 
 export component WalletSelector inherits Rectangle {
     in-out property <int> selected-index: 0;
@@ -14,7 +15,7 @@ export component WalletSelector inherits Rectangle {
 
         Text {
             text: root.label;
-            color: Palette.text-muted;
+            color: Theme.text-muted;
             font-size: 10px;
             font-weight: 500;
             letter-spacing: 1.5px;
@@ -22,10 +23,10 @@ export component WalletSelector inherits Rectangle {
 
         Rectangle {
             height: 40px;
-            background: Palette.surface;
+            background: Theme.surface;
             border-radius: 8px;
             border-width: 1px;
-            border-color: Palette.border;
+            border-color: Theme.border;
 
             HorizontalLayout {
                 padding-left: 16px;
@@ -35,7 +36,7 @@ export component WalletSelector inherits Rectangle {
                     text: CryptoAdapter.wallet-list.length > 0 ?
                         CryptoAdapter.wallet-list[selected-index].name :
                         "No wallets available";
-                    color: CryptoAdapter.wallet-list.length > 0 ? Palette.text-primary : Palette.text-muted;
+                    color: CryptoAdapter.wallet-list.length > 0 ? Theme.text-primary : Theme.text-muted;
                     font-size: 14px;
                     font-weight: 400;
                     vertical-alignment: center;
@@ -44,7 +45,7 @@ export component WalletSelector inherits Rectangle {
 
                 Text {
                     text: "▼";
-                    color: Palette.text-muted;
+                    color: Theme.text-muted;
                     font-size: 10px;
                     vertical-alignment: center;
                 }
@@ -67,13 +68,13 @@ export component WalletSelector inherits Rectangle {
         width: root.width;
 
         Rectangle {
-            background: Palette.sidebar-bg;
+            background: Theme.sidebar-bg;
             border-radius: 8px;
             border-width: 1px;
-            border-color: Palette.border-light;
+            border-color: Theme.border-light;
             height: min(CryptoAdapter.wallet-list.length * 40px + 8px, 200px);
             drop-shadow-blur: 16px;
-            drop-shadow-color: Palette.shadow-color;
+            drop-shadow-color: Theme.shadow-color;
 
             Flickable {
                 viewport-height: CryptoAdapter.wallet-list.length * 40px + 8px;
@@ -84,7 +85,7 @@ export component WalletSelector inherits Rectangle {
 
                     for wallet[index] in CryptoAdapter.wallet-list: Rectangle {
                         height: 40px;
-                        background: option-touch.has-hover ? Palette.surface-hover : transparent;
+                        background: option-touch.has-hover ? Theme.surface-hover : transparent;
                         border-radius: 6px;
 
                         HorizontalLayout {
@@ -93,7 +94,7 @@ export component WalletSelector inherits Rectangle {
 
                             Text {
                                 text: wallet.name;
-                                color: index == selected-index ? Palette.text-primary : Palette.text-secondary;
+                                color: index == selected-index ? Theme.text-primary : Theme.text-secondary;
                                 font-size: 13px;
                                 font-weight: index == selected-index ? 500 : 400;
                                 vertical-alignment: center;
@@ -102,7 +103,7 @@ export component WalletSelector inherits Rectangle {
 
                             if index == selected-index: Text {
                                 text: "✓";
-                                color: Palette.accent;
+                                color: Theme.accent;
                                 font-size: 12px;
                                 vertical-alignment: center;
                             }

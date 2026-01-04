@@ -1,7 +1,6 @@
 // ==================== Sanctum Widgets ====================
 // Premium Fintech UI - Core reusable components
 
-import { Palette } from "globals.slint";
 import { Theme } from "theme.slint";
 
 // ==================== UnderlineInput ====================
@@ -30,7 +29,7 @@ export component UnderlineInput inherits Rectangle {
                 // Placeholder
                 if root.text == "" && !input.has-focus: Text {
                     text: root.placeholder;
-                    color: Palette.text-muted;
+                    color: Theme.text-muted;
                     font-size: 16px;
                     font-weight: 300;
                     vertical-alignment: center;
@@ -41,7 +40,7 @@ export component UnderlineInput inherits Rectangle {
                     text <=> root.text;
                     input-type: root.is-password ? InputType.password : InputType.text;
                     enabled: root.enabled;
-                    color: Palette.text-primary;
+                    color: Theme.text-primary;
                     font-size: 16px;
                     font-weight: 400;
                     vertical-alignment: center;
@@ -63,8 +62,8 @@ export component UnderlineInput inherits Rectangle {
         Rectangle {
             height: input.has-focus ? 2px : 1px;
             background: input.has-focus
-                ? @linear-gradient(90deg, Palette.accent 0%, Theme.accent-indigo 100%)
-                : Palette.border;
+                ? @linear-gradient(90deg, Theme.accent 0%, Theme.accent-indigo 100%)
+                : Theme.border;
 
             animate height { duration: 150ms; easing: ease-out; }
             animate background { duration: 150ms; easing: ease-out; }
@@ -94,7 +93,7 @@ export component TextButton inherits Rectangle {
 
     label := Text {
         text: root.uppercase ? root.text : root.text;
-        color: Palette.text-primary;
+        color: Theme.text-primary;
         font-size: 12px;
         font-weight: 600;
         letter-spacing: 2px;
@@ -114,7 +113,7 @@ export component TextButton inherits Rectangle {
         height: 2px;
         width: parent.width * 0.4;
         x: parent.width * 0.3;
-        background: @linear-gradient(90deg, transparent 0%, Palette.accent 50%, transparent 100%);
+        background: @linear-gradient(90deg, transparent 0%, Theme.accent 50%, transparent 100%);
         opacity: 0.5;
     }
 
@@ -139,9 +138,9 @@ export component BorderButton inherits Rectangle {
 
     height: 48px;
     min-width: 160px;
-    background: touch.has-hover ? Palette.surface : transparent;
+    background: touch.has-hover ? Theme.surface : transparent;
     border-width: 1px;
-    border-color: touch.has-hover ? Palette.border-light : Palette.border;
+    border-color: touch.has-hover ? Theme.border-light : Theme.border;
     border-radius: 8px;
 
     animate background { duration: 150ms; easing: ease-out; }
@@ -149,7 +148,7 @@ export component BorderButton inherits Rectangle {
 
     Text {
         text: root.text;
-        color: Palette.text-primary;
+        color: Theme.text-primary;
         font-size: 11px;
         font-weight: 600;
         letter-spacing: 2px;
@@ -179,7 +178,7 @@ export component PrimaryButton inherits Rectangle {
 
     height: 48px;
     min-width: 160px;
-    background: @linear-gradient(135deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%);
+    background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
     border-radius: 10px;
     opacity: enabled ? (touch.has-hover ? 0.9 : 1.0) : 0.5;
 
@@ -210,7 +209,7 @@ export component PrimaryButton inherits Rectangle {
 
 export component Divider inherits Rectangle {
     height: 1px;
-    background: @linear-gradient(90deg, transparent 0%, Palette.border 50%, transparent 100%);
+    background: @linear-gradient(90deg, transparent 0%, Theme.border 50%, transparent 100%);
     horizontal-stretch: 1;
 }
 
@@ -220,10 +219,10 @@ export component Divider inherits Rectangle {
 export component SanctumCard inherits Rectangle {
     in property <length> card-padding: 24px;
 
-    background: @linear-gradient(135deg, Palette.surface 0%, Theme.card-gradient-end 100%);
+    background: @linear-gradient(135deg, Theme.surface 0%, Theme.card-gradient-end 100%);
     border-radius: 12px;
     border-width: 1px;
-    border-color: Palette.border;
+    border-color: Theme.border;
 
     VerticalLayout {
         padding: root.card-padding;
@@ -243,16 +242,16 @@ export component IconButton inherits Rectangle {
     width: 40px;
     height: 40px;
     border-radius: 10px;
-    background: touch.has-hover ? Palette.surface-hover : Palette.surface;
+    background: touch.has-hover ? Theme.surface-hover : Theme.surface;
     border-width: 1px;
-    border-color: touch.has-hover ? Palette.border-light : Palette.border;
+    border-color: touch.has-hover ? Theme.border-light : Theme.border;
 
     animate background { duration: 150ms; }
     animate border-color { duration: 150ms; }
 
     Text {
         text: root.icon;
-        color: enabled ? Palette.text-primary : Palette.text-muted;
+        color: enabled ? Theme.text-primary : Theme.text-muted;
         font-size: 16px;
         horizontal-alignment: center;
         vertical-alignment: center;
@@ -282,10 +281,10 @@ export component ActionButton inherits Rectangle {
     min-width: 120px;
     border-radius: 8px;
     background: primary 
-        ? @linear-gradient(135deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%)
-        : (touch.has-hover ? Palette.surface-hover : Palette.surface);
+        ? @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%)
+        : (touch.has-hover ? Theme.surface-hover : Theme.surface);
     border-width: primary ? 0px : 1px;
-    border-color: Palette.border-light;
+    border-color: Theme.border-light;
 
     animate background { duration: 200ms; easing: ease-out; }
 
@@ -299,13 +298,13 @@ export component ActionButton inherits Rectangle {
             source: icon;
             width: 16px;
             height: 16px;
-            colorize: primary ? Theme.text : Palette.text-primary;
+            colorize: primary ? Theme.text : Theme.text-primary;
             vertical-alignment: center;
         }
 
         Text {
             text: root.text;
-            color: primary ? Theme.text : Palette.text-primary;
+            color: primary ? Theme.text : Theme.text-primary;
             font-size: 11px;
             font-weight: 600;
             letter-spacing: 1px;
@@ -347,7 +346,7 @@ export component CustomScrollbar inherits Rectangle {
     if viewport-width > visible-width: Rectangle {
         height: 100%;
         border-radius: 2px;
-        background: Palette.text-muted;
+        background: Theme.text-muted;
         // Show when scrolling or hovering, hide otherwise
         opacity: (root.is-scrolling || touch.has-hover) ? 0.6 : 0.0;
         
@@ -400,7 +399,7 @@ export component CustomVScrollbar inherits Rectangle {
     if viewport-height > visible-height: Rectangle {
         width: 100%;
         border-radius: 2px;
-        background: Palette.text-muted;
+        background: Theme.text-muted;
         opacity: (root.is-scrolling || touch.has-hover) ? 0.6 : 0.0;
 
         animate opacity {

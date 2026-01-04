@@ -1,7 +1,7 @@
 // ==================== Category Breakdown ====================
 // Noir Fintech - Premium spending visualization
 
-import { Palette, CategoryData } from "../globals.slint";
+import { CategoryData } from "../globals.slint";
 import { Theme } from "../theme.slint";
 
 component CategoryItem inherits Rectangle {
@@ -45,7 +45,7 @@ component CategoryItem inherits Rectangle {
                 
                 Text {
                     text: category.name;
-                    color: Palette.text-primary;
+                    color: Theme.text-primary;
                     font-size: 13px;
                     font-weight: 500;
                     letter-spacing: 0.5px;
@@ -53,7 +53,7 @@ component CategoryItem inherits Rectangle {
                 
                 Text {
                     text: category.amount;
-                    color: Palette.text-primary;
+                    color: Theme.text-primary;
                     font-size: 13px;
                     font-weight: 600;
                 }
@@ -62,7 +62,7 @@ component CategoryItem inherits Rectangle {
             // Progress bar
             Rectangle {
                 height: 6px;
-                background: Palette.background;
+                background: Theme.background;
                 border-radius: 3px;
                 clip: true;
                 
@@ -91,7 +91,7 @@ component CategoryItem inherits Rectangle {
             // Percentage text
             Text {
                 text: round(category.percentage * 100) + "% of total";
-                color: Palette.text-muted;
+                color: Theme.text-muted;
                 font-size: 10px;
                 letter-spacing: 0.5px;
             }
@@ -104,7 +104,7 @@ component CategoryItem inherits Rectangle {
         height: 1px;
         width: parent.width - 20px;
         x: 20px;
-        background: Palette.border-subtle;
+        background: Theme.border-subtle;
     }
 }
 
@@ -123,7 +123,7 @@ export component CategoryBreakdown inherits VerticalLayout {
                 width: 48px;
                 height: 48px;
                 border-radius: 24px;
-                background: Palette.surface-hover;
+                background: Theme.surface-hover;
                 x: (parent.width - self.width) / 2;
                 
                 Text {
@@ -136,7 +136,7 @@ export component CategoryBreakdown inherits VerticalLayout {
             
             Text {
                 text: "No expenses recorded";
-                color: Palette.text-muted;
+                color: Theme.text-muted;
                 font-size: 12px;
                 horizontal-alignment: center;
             }

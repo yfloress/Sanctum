@@ -1,7 +1,8 @@
 // ==================== Asset Detail Panel ====================
 // Noir Fintech - Premium asset details drawer
 
-import { Palette, CryptoAdapter, AppState, NotificationAdapter } from "../globals.slint";
+import { CryptoAdapter, AppState, NotificationAdapter } from "../globals.slint";
+import { Theme } from "../theme.slint";
 import { CryptoIcon } from "./crypto_widgets.slint";
 
 // ==================== Section Header ====================
@@ -18,13 +19,13 @@ component SectionHeader inherits Rectangle {
             width: 3px;
             height: 16px;
             border-radius: 1px;
-            background: Palette.accent;
+            background: Theme.accent;
             y: (parent.height - self.height) / 2;
         }
         
         Text { 
             text: root.title; 
-            color: Palette.text-muted; 
+            color: Theme.text-muted; 
             font-size: 10px;
             font-weight: 600;
             letter-spacing: 2px; 
@@ -40,10 +41,10 @@ component WalletBreakdownRow inherits Rectangle {
     in property <string> value;
     
     height: 56px;
-    background: Palette.surface;
+    background: Theme.surface;
     border-radius: 8px;
     border-width: 1px;
-    border-color: Palette.border-subtle;
+    border-color: Theme.border-subtle;
     
     HorizontalLayout {
         padding-left: 16px;
@@ -58,9 +59,9 @@ component WalletBreakdownRow inherits Rectangle {
                 width: 32px;
                 height: 32px;
                 border-radius: 8px;
-                background: Palette.background;
+                background: Theme.background;
                 border-width: 1px;
-                border-color: Palette.border-subtle;
+                border-color: Theme.border-subtle;
                 y: (parent.height - self.height) / 2;
                 
                 Text {
@@ -73,7 +74,7 @@ component WalletBreakdownRow inherits Rectangle {
             
             Text { 
                 text: root.wallet-name; 
-                color: Palette.text-primary; 
+                color: Theme.text-primary; 
                 font-size: 13px;
                 font-weight: 500;
                 vertical-alignment: center; 
@@ -86,14 +87,14 @@ component WalletBreakdownRow inherits Rectangle {
             
             Text { 
                 text: root.amount; 
-                color: Palette.text-primary; 
+                color: Theme.text-primary; 
                 font-size: 13px;
                 font-weight: 500;
                 horizontal-alignment: right; 
             }
             Text { 
                 text: root.value; 
-                color: Palette.text-muted; 
+                color: Theme.text-muted; 
                 font-size: 11px; 
                 horizontal-alignment: right; 
             }
@@ -147,16 +148,16 @@ component TransactionRow inherits Rectangle {
                 height: 32px;
                 border-radius: 8px;
                 background: 
-                    root.is-inflow ? Palette.success.with-alpha(0.1) : 
-                    root.is-outflow ? Palette.danger.with-alpha(0.1) :
-                    root.show-swap ? Palette.primary.with-alpha(0.1) :
-                    Palette.text-muted.with-alpha(0.1);
+                    root.is-inflow ? Theme.success.with-alpha(0.1) : 
+                    root.is-outflow ? Theme.danger.with-alpha(0.1) :
+                    root.show-swap ? Theme.primary.with-alpha(0.1) :
+                    Theme.text-muted.with-alpha(0.1);
                 border-width: 1px;
                 border-color: 
-                    root.is-inflow ? Palette.success.with-alpha(0.2) : 
-                    root.is-outflow ? Palette.danger.with-alpha(0.2) :
-                    root.show-swap ? Palette.primary.with-alpha(0.2) :
-                    Palette.border;
+                    root.is-inflow ? Theme.success.with-alpha(0.2) : 
+                    root.is-outflow ? Theme.danger.with-alpha(0.2) :
+                    root.show-swap ? Theme.primary.with-alpha(0.2) :
+                    Theme.border;
                 y: (parent.height - self.height) / 2;
                 
                 Text {
@@ -165,10 +166,10 @@ component TransactionRow inherits Rectangle {
                         root.is-outflow ? "▼" :
                         root.show-swap ? "⇄" : "•";
                     color: 
-                        root.is-inflow ? Palette.success : 
-                        root.is-outflow ? Palette.danger :
-                        root.show-swap ? Palette.primary :
-                        Palette.text-muted;
+                        root.is-inflow ? Theme.success : 
+                        root.is-outflow ? Theme.danger :
+                        root.show-swap ? Theme.primary :
+                        Theme.text-muted;
                     font-size: 10px;
                     vertical-alignment: center;
                     horizontal-alignment: center;
@@ -182,19 +183,19 @@ component TransactionRow inherits Rectangle {
                     
                     Text { 
                         text: root.tx-type; 
-                        color: Palette.text-primary; 
+                        color: Theme.text-primary; 
                         font-size: 12px; 
                         font-weight: 500;
                         overflow: elide;
                     }
                     Text { 
                         text: root.tx-date; 
-                        color: Palette.text-muted; 
+                        color: Theme.text-muted; 
                         font-size: 10px; 
                     }
                     if root.tx-notes != "": Text { 
                         text: root.tx-notes; 
-                        color: Palette.text-subtle; 
+                        color: Theme.text-subtle; 
                         font-size: 9px;
                         overflow: elide;
                     }
@@ -212,20 +213,20 @@ component TransactionRow inherits Rectangle {
                 
                 Text { 
                     text: root.tx-amount; 
-                    color: Palette.text-primary; 
+                    color: Theme.text-primary; 
                     font-size: 12px;
                     font-weight: 500;
                     horizontal-alignment: right; 
                 }
                 if root.tx-price != "" && root.tx-price != "N/A": Text { 
                     text: "@ " + root.tx-price; 
-                    color: Palette.text-muted; 
+                    color: Theme.text-muted; 
                     font-size: 10px; 
                     horizontal-alignment: right; 
                 }
                 if root.tx-fee != "": Text { 
                     text: "Fee " + root.tx-fee; 
-                    color: Palette.text-subtle; 
+                    color: Theme.text-subtle; 
                     font-size: 9px; 
                     horizontal-alignment: right; 
                 }
@@ -236,14 +237,14 @@ component TransactionRow inherits Rectangle {
                 width: 28px;
                 height: 28px;
                 border-radius: 6px;
-                background: edit-touch.has-hover ? Palette.surface-hover : transparent;
+                background: edit-touch.has-hover ? Theme.surface-hover : transparent;
                 y: (parent.height - self.height) / 2;
 
                 animate background { duration: 150ms; }
 
                 Text {
                     text: "✎";
-                    color: edit-touch.has-hover ? Palette.text-primary : Palette.text-muted;
+                    color: edit-touch.has-hover ? Theme.text-primary : Theme.text-muted;
                     font-size: 14px;
                     vertical-alignment: center;
                     horizontal-alignment: center;
@@ -259,14 +260,14 @@ component TransactionRow inherits Rectangle {
                 width: 28px;
                 height: 28px;
                 border-radius: 6px;
-                background: del-touch.has-hover ? Palette.danger.with-alpha(0.1) : transparent;
+                background: del-touch.has-hover ? Theme.danger.with-alpha(0.1) : transparent;
                 y: (parent.height - self.height) / 2;
 
                 animate background { duration: 150ms; }
 
                 Text {
                     text: "×";
-                    color: del-touch.has-hover ? Palette.danger : Palette.text-muted;
+                    color: del-touch.has-hover ? Theme.danger : Theme.text-muted;
                     font-size: 16px;
                     font-weight: 400;
                     vertical-alignment: center;
@@ -284,7 +285,7 @@ component TransactionRow inherits Rectangle {
     if !root.is-last: Rectangle {
         height: 1px;
         width: parent.width;
-        background: Palette.border-subtle;
+        background: Theme.border-subtle;
         y: parent.height - 1px;
     }
 
@@ -299,8 +300,8 @@ export component AssetDetailPanel inherits Rectangle {
     property <string> delete-transaction-label: "";
     background: @linear-gradient(
         180deg,
-        Palette.crypto-panel-gradient-start 0%,
-        Palette.crypto-panel-gradient-end 100%
+        Theme.crypto-panel-gradient-start 0%,
+        Theme.crypto-panel-gradient-end 100%
     );
     
     // Left border accent
@@ -308,7 +309,7 @@ export component AssetDetailPanel inherits Rectangle {
         width: 1px;
         height: 100%;
         x: 0;
-        background: Palette.border;
+        background: Theme.border;
     }
 
     VerticalLayout {
@@ -318,7 +319,7 @@ export component AssetDetailPanel inherits Rectangle {
         // Header
         Rectangle {
             height: 100px;
-            background: Palette.surface;
+            background: Theme.surface;
             
             HorizontalLayout {
                 padding-left: 28px;
@@ -341,7 +342,7 @@ export component AssetDetailPanel inherits Rectangle {
                     
                     Text { 
                         text: CryptoAdapter.selected-asset.name; 
-                        color: Palette.text-primary; 
+                        color: Theme.text-primary; 
                         font-size: 18px; 
                         font-weight: 400; 
                         letter-spacing: 0.5px; 
@@ -352,7 +353,7 @@ export component AssetDetailPanel inherits Rectangle {
                         
                         Text { 
                             text: CryptoAdapter.selected-asset.price == "N/A" ? "---" : CryptoAdapter.selected-asset.price; 
-                            color: Palette.text-secondary; 
+                            color: Theme.text-secondary; 
                             font-size: 13px; 
                         }
                         
@@ -362,11 +363,11 @@ export component AssetDetailPanel inherits Rectangle {
                             height: 20px;
                             border-radius: 4px;
                             background: CryptoAdapter.selected-asset.is-positive ? 
-                                Palette.success.with-alpha(0.1) : Palette.danger.with-alpha(0.1);
+                                Theme.success.with-alpha(0.1) : Theme.danger.with-alpha(0.1);
                             
                             Text {
                                 text: CryptoAdapter.selected-asset.change-24h;
-                                color: CryptoAdapter.selected-asset.is-positive ? Palette.success : Palette.danger;
+                                color: CryptoAdapter.selected-asset.is-positive ? Theme.success : Theme.danger;
                                 font-size: 10px;
                                 font-weight: 600;
                                 vertical-alignment: center;
@@ -381,14 +382,14 @@ export component AssetDetailPanel inherits Rectangle {
                     width: 40px;
                     height: 40px;
                     border-radius: 10px;
-                    background: close-touch.has-hover ? Palette.surface-hover : transparent;
+                    background: close-touch.has-hover ? Theme.surface-hover : transparent;
                     y: (parent.height - self.height) / 2;
                     
                     animate background { duration: 150ms; }
                     
                     Text { 
                         text: "✕"; 
-                        color: Palette.text-muted; 
+                        color: Theme.text-muted; 
                         font-size: 16px; 
                         vertical-alignment: center; 
                         horizontal-alignment: center; 
@@ -405,7 +406,7 @@ export component AssetDetailPanel inherits Rectangle {
             Rectangle {
                 height: 1px;
                 width: parent.width;
-                background: Palette.border;
+                background: Theme.border;
                 y: parent.height - 1px;
             }
         }
@@ -420,12 +421,12 @@ export component AssetDetailPanel inherits Rectangle {
                 height: 120px;
                 background: @linear-gradient(
                     135deg,
-                    Palette.crypto-card-gradient-mid 0%,
-                    Palette.crypto-card-gradient-start 100%
+                    Theme.crypto-card-gradient-mid 0%,
+                    Theme.crypto-card-gradient-start 100%
                 );
                 border-radius: 12px;
                 border-width: 1px;
-                border-color: Palette.border-subtle;
+                border-color: Theme.border-subtle;
                 
                 VerticalLayout {
                     padding: 20px;
@@ -434,7 +435,7 @@ export component AssetDetailPanel inherits Rectangle {
                     
                     Text { 
                         text: "TOTAL HOLDINGS"; 
-                        color: Palette.text-muted; 
+                        color: Theme.text-muted; 
                         font-size: 10px;
                         font-weight: 600;
                         letter-spacing: 2px; 
@@ -443,7 +444,7 @@ export component AssetDetailPanel inherits Rectangle {
                     
                     Text { 
                         text: CryptoAdapter.selected-asset.amount; 
-                        color: Palette.text-primary; 
+                        color: Theme.text-primary; 
                         font-size: 28px; 
                         font-weight: 300;
                         letter-spacing: -0.5px;
@@ -452,7 +453,7 @@ export component AssetDetailPanel inherits Rectangle {
                     
                     Text { 
                         text: "≈ " + (CryptoAdapter.selected-asset.price == "N/A" ? "---" : CryptoAdapter.selected-asset.value); 
-                        color: Palette.text-secondary; 
+                        color: Theme.text-secondary; 
                         font-size: 14px; 
                         horizontal-alignment: center; 
                     }
@@ -467,12 +468,12 @@ export component AssetDetailPanel inherits Rectangle {
                 
                 if CryptoAdapter.asset-wallets.length == 0: Rectangle {
                     height: 48px;
-                    background: Palette.surface.with-alpha(0.3);
+                    background: Theme.surface.with-alpha(0.3);
                     border-radius: 8px;
                     
                     Text { 
                         text: "No wallet data available"; 
-                        color: Palette.text-subtle; 
+                        color: Theme.text-subtle; 
                         font-size: 12px;
                         vertical-alignment: center;
                         horizontal-alignment: center;
@@ -495,12 +496,12 @@ export component AssetDetailPanel inherits Rectangle {
                 
                 if CryptoAdapter.asset-history.length == 0: Rectangle {
                     height: 48px;
-                    background: Palette.surface.with-alpha(0.3);
+                    background: Theme.surface.with-alpha(0.3);
                     border-radius: 8px;
                     
                     Text { 
                         text: "No transactions found"; 
-                        color: Palette.text-subtle; 
+                        color: Theme.text-subtle; 
                         font-size: 12px;
                         vertical-alignment: center;
                         horizontal-alignment: center;
@@ -548,7 +549,7 @@ export component AssetDetailPanel inherits Rectangle {
         z: 1200;
 
         Rectangle {
-            background: Palette.overlay-bg-strong;
+            background: Theme.overlay-bg-strong;
             TouchArea {
                 clicked => {
                     root.show-delete-transaction = false;
@@ -561,14 +562,14 @@ export component AssetDetailPanel inherits Rectangle {
         Rectangle {
             width: min(360px, parent.width - 40px);
             height: min(180px, parent.height - 40px);
-            background: Palette.sidebar-bg;
+            background: Theme.sidebar-bg;
             border-radius: 12px;
             border-width: 1px;
-            border-color: Palette.border-light;
+            border-color: Theme.border-light;
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
             drop-shadow-blur: 20px;
-            drop-shadow-color: Palette.shadow-color;
+            drop-shadow-color: Theme.shadow-color;
 
             VerticalLayout {
                 padding: 24px;
@@ -576,7 +577,7 @@ export component AssetDetailPanel inherits Rectangle {
 
                 Text {
                     text: "Delete Transaction?";
-                    color: Palette.text-primary;
+                    color: Theme.text-primary;
                     font-size: 14px;
                     font-weight: 600;
                     horizontal-alignment: center;
@@ -584,7 +585,7 @@ export component AssetDetailPanel inherits Rectangle {
 
                 Text {
                     text: "This will permanently delete " + root.delete-transaction-label + ". This action cannot be undone.";
-                    color: Palette.text-muted;
+                    color: Theme.text-muted;
                     font-size: 11px;
                     wrap: word-wrap;
                     horizontal-alignment: center;
@@ -596,14 +597,14 @@ export component AssetDetailPanel inherits Rectangle {
                     Rectangle {
                         horizontal-stretch: 1;
                         height: 36px;
-                        background: cancel-touch.has-hover ? Palette.surface-hover : Palette.surface;
+                        background: cancel-touch.has-hover ? Theme.surface-hover : Theme.surface;
                         border-radius: 8px;
                         border-width: 1px;
-                        border-color: Palette.border;
+                        border-color: Theme.border;
 
                         Text {
                             text: "Cancel";
-                            color: Palette.text-secondary;
+                            color: Theme.text-secondary;
                             font-size: 11px;
                             font-weight: 600;
                             horizontal-alignment: center;
@@ -623,14 +624,14 @@ export component AssetDetailPanel inherits Rectangle {
                     Rectangle {
                         horizontal-stretch: 1;
                         height: 36px;
-                        background: confirm-touch.has-hover ? Palette.delete-bg-active : Palette.delete-bg-hover;
+                        background: confirm-touch.has-hover ? Theme.delete-bg-active : Theme.delete-bg-hover;
                         border-radius: 8px;
                         border-width: 1px;
-                        border-color: Palette.delete-border;
+                        border-color: Theme.delete-border;
 
                         Text {
                             text: "Delete";
-                            color: Palette.text-primary;
+                            color: Theme.text-primary;
                             font-size: 11px;
                             font-weight: 600;
                             horizontal-alignment: center;

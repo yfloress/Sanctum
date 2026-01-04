@@ -2,7 +2,6 @@
 // Noir Fintech - Premium Net Worth Command Center
 
 import {
-    Palette,
     DashboardAdapter,
     TransactionAdapter,
     AccountAdapter,
@@ -21,10 +20,10 @@ component RangeSelector inherits Rectangle {
     callback range-selected(string);
 
     height: 36px;
-    background: Palette.surface;
+    background: Theme.surface;
     border-radius: 8px;
     border-width: 1px;
-    border-color: Palette.border-subtle;
+    border-color: Theme.border-subtle;
 
     HorizontalLayout {
         padding: 4px;
@@ -33,15 +32,15 @@ component RangeSelector inherits Rectangle {
         for range in ["1M", "3M", "6M", "1Y", "ALL"]: Rectangle {
             width: 52px;
             border-radius: 6px;
-            background: active-range == range ? Palette.background : transparent;
+            background: active-range == range ? Theme.background : transparent;
             border-width: active-range == range ? 1px : 0px;
-            border-color: Palette.border-subtle;
+            border-color: Theme.border-subtle;
             
             animate background { duration: 200ms; easing: ease-out; }
 
             Text {
                 text: range;
-                color: active-range == range ? Palette.text-primary : Palette.text-muted;
+                color: active-range == range ? Theme.text-primary : Theme.text-muted;
                 font-size: 11px;
                 font-weight: active-range == range ? 600 : 500;
                 letter-spacing: 0.5px;
@@ -67,10 +66,10 @@ component StatBadge inherits Rectangle {
     
     width: 160px;
     height: 72px;
-    background: Palette.surface;
+    background: Theme.surface;
     border-radius: 10px;
     border-width: 1px;
-    border-color: Palette.border-subtle;
+    border-color: Theme.border-subtle;
     
     HorizontalLayout {
         padding: 16px;
@@ -81,7 +80,7 @@ component StatBadge inherits Rectangle {
             width: 3px;
             height: 40px;
             border-radius: 2px;
-            background: positive ? Palette.success : Palette.danger;
+            background: positive ? Theme.success : Theme.danger;
             y: (parent.height - self.height) / 2;
         }
         
@@ -91,7 +90,7 @@ component StatBadge inherits Rectangle {
             
             Text {
                 text: label;
-                color: Palette.text-muted;
+                color: Theme.text-muted;
                 font-size: 10px;
                 font-weight: 500;
                 letter-spacing: 1.5px;
@@ -102,13 +101,13 @@ component StatBadge inherits Rectangle {
                 
                 Text { 
                     text: positive ? "▲" : "▼"; 
-                    color: positive ? Palette.success : Palette.danger; 
+                    color: positive ? Theme.success : Theme.danger; 
                     font-size: 10px; 
                     vertical-alignment: center; 
                 }
                 Text { 
                     text: value; 
-                    color: Palette.text-primary; 
+                    color: Theme.text-primary; 
                     font-size: 16px;
                     font-weight: 500;
                     vertical-alignment: center;
@@ -125,10 +124,10 @@ component ChartCard inherits Rectangle {
     in property <image> chart-image;
 
     height: 320px;
-    background: @linear-gradient(180deg, Palette.chart-bg-start, Palette.chart-bg-end);
+    background: @linear-gradient(180deg, Theme.chart-bg-start, Theme.chart-bg-end);
     border-radius: 16px;
     border-width: 1px;
-    border-color: Palette.border-subtle;
+    border-color: Theme.border-subtle;
     clip: true;
 
     // Chart image
@@ -151,13 +150,13 @@ component ChartCard inherits Rectangle {
 
         if max-label != "": Rectangle {
             height: 24px;
-            background: Palette.surface.with-alpha(0.8);
+            background: Theme.surface.with-alpha(0.8);
             border-radius: 4px;
             width: 70px;
 
             Text {
                 text: max-label;
-                color: Palette.text-secondary;
+                color: Theme.text-secondary;
                 font-size: 10px;
                 font-weight: 600;
                 letter-spacing: 0.5px;
@@ -170,13 +169,13 @@ component ChartCard inherits Rectangle {
 
         if min-label != "": Rectangle {
             height: 24px;
-            background: Palette.surface.with-alpha(0.8);
+            background: Theme.surface.with-alpha(0.8);
             border-radius: 4px;
             width: 70px;
 
             Text {
                 text: min-label;
-                color: Palette.text-secondary;
+                color: Theme.text-secondary;
                 font-size: 10px;
                 font-weight: 600;
                 letter-spacing: 0.5px;
@@ -191,7 +190,7 @@ component ChartCard inherits Rectangle {
         y: 0;
         width: 100%;
         height: 1px;
-        background: @linear-gradient(90deg, transparent 0%, Palette.border-light.with-alpha(0.2) 50%, transparent 100%);
+        background: @linear-gradient(90deg, transparent 0%, Theme.border-light.with-alpha(0.2) 50%, transparent 100%);
     }
 }
 
@@ -214,13 +213,13 @@ component SectionHeader inherits Rectangle {
                 width: 3px;
                 height: 16px;
                 border-radius: 1px;
-                background: Palette.accent;
+                background: Theme.accent;
                 y: (parent.height - self.height) / 2;
             }
             
             Text {
                 text: title;
-                color: Palette.text-muted;
+                color: Theme.text-muted;
                 font-size: 11px;
                 font-weight: 600;
                 letter-spacing: 2px;
@@ -233,7 +232,7 @@ component SectionHeader inherits Rectangle {
             
             Text {
                 text: action-text;
-                color: action-touch.has-hover ? Palette.text-primary : Palette.text-secondary;
+                color: action-touch.has-hover ? Theme.text-primary : Theme.text-secondary;
                 font-size: 10px;
                 font-weight: 500;
                 letter-spacing: 1px;
@@ -254,7 +253,7 @@ component SectionHeader inherits Rectangle {
 
 // ==================== Main Page ====================
 export component DashboardPage inherits Rectangle {
-    background: Palette.background;
+    background: Theme.background;
 
     init => {
         DashboardAdapter.fetch-balance();
@@ -277,7 +276,7 @@ export component DashboardPage inherits Rectangle {
             // ==================== HERO SECTION ====================
             Rectangle {
                 height: 200px;
-                background: @linear-gradient(180deg, Theme.bg-header 0%, Palette.background 100%);
+                background: @linear-gradient(180deg, Theme.bg-header 0%, Theme.background 100%);
                 border-radius: 20px;
                 
                 VerticalLayout {
@@ -294,7 +293,7 @@ export component DashboardPage inherits Rectangle {
                             width: 8px;
                             height: 8px;
                             border-radius: 4px;
-                            background: Palette.success;
+                            background: Theme.success;
                             y: (parent.height - self.height) / 2;
                             
                             // Pulse animation placeholder
@@ -304,13 +303,13 @@ export component DashboardPage inherits Rectangle {
                                 width: 16px;
                                 height: 16px;
                                 border-radius: 8px;
-                                background: Palette.success.with-alpha(0.3);
+                                background: Theme.success.with-alpha(0.3);
                             }
                         }
                         
                         Text {
                             text: "TOTAL NET WORTH";
-                            color: Palette.text-muted;
+                            color: Theme.text-muted;
                             font-size: 11px;
                             font-weight: 600;
                             letter-spacing: 3px;
@@ -321,7 +320,7 @@ export component DashboardPage inherits Rectangle {
                     // Big number
                     Text {
                         text: DashboardAdapter.balance.total-balance;
-                        color: Palette.text-primary;
+                        color: Theme.text-primary;
                         font-size: 56px;
                         font-weight: 300;
                         letter-spacing: -2px;
@@ -388,10 +387,10 @@ export component DashboardPage inherits Rectangle {
 
                 Rectangle {
                     height: 340px;
-                    background: Palette.surface;
+                    background: Theme.surface;
                     border-radius: 12px;
                     border-width: 1px;
-                    border-color: Palette.border-subtle;
+                    border-color: Theme.border-subtle;
                     clip: true;
 
                     Flickable {
@@ -422,10 +421,10 @@ export component DashboardPage inherits Rectangle {
                 }
 
                 Rectangle {
-                    background: Palette.surface;
+                    background: Theme.surface;
                     border-radius: 12px;
                     border-width: 1px;
-                    border-color: Palette.border-subtle;
+                    border-color: Theme.border-subtle;
                     clip: true;
 
                     VerticalLayout {

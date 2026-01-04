@@ -1,7 +1,7 @@
 // ==================== Habits Page ====================
 // Premium Fintech UI - Habit tracking with visual analytics
 
-import { Palette, HabitAdapter, AppState, NotificationAdapter } from "../globals.slint";
+import { HabitAdapter, AppState, NotificationAdapter } from "../globals.slint";
 import { Theme } from "../theme.slint";
 import { HabitRow } from "../components/habit_row.slint";
 import { HabitHeatmap } from "../components/habit_heatmap.slint";
@@ -19,9 +19,9 @@ component NavButton inherits Rectangle {
     width: 32px;
     height: 32px;
     border-radius: 8px;
-    background: touch.has-hover && enabled ? Palette.surface-hover : transparent;
+    background: touch.has-hover && enabled ? Theme.surface-hover : transparent;
     border-width: 1px;
-    border-color: touch.has-hover && enabled ? Palette.border-light : transparent;
+    border-color: touch.has-hover && enabled ? Theme.border-light : transparent;
     opacity: enabled ? 1.0 : 0.3;
 
     animate background { duration: 150ms; }
@@ -29,7 +29,7 @@ component NavButton inherits Rectangle {
 
     Text {
         text: root.icon;
-        color: Palette.text-secondary;
+        color: Theme.text-secondary;
         font-size: 14px;
         horizontal-alignment: center;
         vertical-alignment: center;
@@ -55,7 +55,7 @@ component SummaryItem inherits Rectangle {
 
         Text {
             text: root.label;
-            color: Palette.text-muted;
+            color: Theme.text-muted;
             font-size: 10px;
             font-weight: 600;
             letter-spacing: 1px;
@@ -73,7 +73,7 @@ component SummaryItem inherits Rectangle {
 
             Text {
                 text: root.value;
-                color: Palette.text-primary;
+                color: Theme.text-primary;
                 font-size: 16px;
                 font-weight: 600;
                 vertical-alignment: center;
@@ -82,14 +82,14 @@ component SummaryItem inherits Rectangle {
 
         if root.note != "": Text {
             text: root.note;
-            color: Palette.text-muted;
+            color: Theme.text-muted;
             font-size: 11px;
         }
     }
 }
 
 export component HabitsPage inherits Rectangle {
-    background: Palette.background;
+    background: Theme.background;
     property <bool> show-delete-habit-confirm: false;
     property <string> delete-habit-id: "";
     property <string> delete-habit-name: "";
@@ -107,14 +107,14 @@ export component HabitsPage inherits Rectangle {
         // ==================== HERO HEADER ====================
         Rectangle {
             height: 100px;
-            background: @linear-gradient(180deg, Theme.modal-bg-end 0%, Palette.background 100%);
+            background: @linear-gradient(180deg, Theme.modal-bg-end 0%, Theme.background 100%);
             
             // Decorative pattern
             Rectangle {
                 width: 100%;
                 height: 100%;
                 opacity: 0.02;
-                background: @linear-gradient(45deg, Palette.accent 25%, transparent 25%);
+                background: @linear-gradient(45deg, Theme.accent 25%, transparent 25%);
             }
 
             HorizontalLayout {
@@ -129,7 +129,7 @@ export component HabitsPage inherits Rectangle {
 
                     Text { 
                         text: "HABITS"; 
-                        color: Palette.text-primary; 
+                        color: Theme.text-primary; 
                         font-size: 24px; 
                         font-weight: 300; 
                         letter-spacing: 6px;
@@ -148,14 +148,14 @@ export component HabitsPage inherits Rectangle {
                         Rectangle {
                             width: 140px;
                             height: 28px;
-                            background: Palette.surface;
+                            background: Theme.surface;
                             border-radius: 6px;
                             border-width: 1px;
-                            border-color: Palette.border;
+                            border-color: Theme.border;
 
                             Text {
                                 text: HabitAdapter.current-month-name + " " + HabitAdapter.current-year;
-                                color: Palette.text-primary;
+                                color: Theme.text-primary;
                                 font-size: 12px;
                                 font-weight: 500;
                                 letter-spacing: 1px;
@@ -187,7 +187,7 @@ export component HabitsPage inherits Rectangle {
         // Gradient divider
         Rectangle {
             height: 1px;
-            background: @linear-gradient(90deg, transparent 0%, Palette.border-light 50%, transparent 100%);
+            background: @linear-gradient(90deg, transparent 0%, Theme.border-light 50%, transparent 100%);
         }
 
         // ==================== CONTENT ====================
@@ -223,12 +223,12 @@ export component HabitsPage inherits Rectangle {
                             Rectangle {
                                 width: 60px;
                                 height: 28px;
-                                background: Palette.surface;
+                                background: Theme.surface;
                                 border-radius: 6px;
 
                                 Text {
                                     text: HabitAdapter.heatmap-year;
-                                    color: Palette.text-primary;
+                                    color: Theme.text-primary;
                                     font-size: 12px;
                                     font-weight: 500;
                                     horizontal-alignment: center;
@@ -246,10 +246,10 @@ export component HabitsPage inherits Rectangle {
                     // Heatmap container
                     Rectangle {
                         height: 200px;
-                        background: Palette.surface;
+                        background: Theme.surface;
                         border-radius: 12px;
                         border-width: 1px;
-                        border-color: Palette.border;
+                        border-color: Theme.border;
 
                         HabitHeatmap {}
                     }
@@ -264,12 +264,12 @@ export component HabitsPage inherits Rectangle {
                     }
 
                     if HabitAdapter.habits.length > 0: Rectangle {
-                        height: HabitAdapter.habits.length * Palette.habit-row-height;
-                        background: Palette.surface;
+                        height: HabitAdapter.habits.length * Theme.habit-row-height;
+                        background: Theme.surface;
                         clip: true;
                         border-radius: 12px;
                         border-width: 1px;
-                        border-color: Palette.border;
+                        border-color: Theme.border;
 
                         VerticalLayout {
                             padding: 8px;
@@ -352,10 +352,10 @@ export component HabitsPage inherits Rectangle {
                     }
 
                     Rectangle {
-                        background: Palette.surface;
+                        background: Theme.surface;
                         border-radius: 12px;
                         border-width: 1px;
-                        border-color: Palette.border;
+                        border-color: Theme.border;
 
                         VerticalLayout {
                             padding: 20px;
@@ -363,7 +363,7 @@ export component HabitsPage inherits Rectangle {
 
                             Text {
                                 text: "SELECTED HABIT";
-                                color: Palette.text-muted;
+                                color: Theme.text-muted;
                                 font-size: 9px;
                                 font-weight: 600;
                                 letter-spacing: 1px;
@@ -383,7 +383,7 @@ export component HabitsPage inherits Rectangle {
 
                                 Text {
                                     text: HabitAdapter.summary-habit-name;
-                                    color: Palette.text-primary;
+                                    color: Theme.text-primary;
                                     font-size: 13px;
                                     font-weight: 600;
                                     vertical-alignment: center;
@@ -451,7 +451,7 @@ export component HabitsPage inherits Rectangle {
         z: 1200;
 
         Rectangle {
-            background: Palette.overlay-bg-strong;
+            background: Theme.overlay-bg-strong;
             TouchArea {
                 clicked => {
                     root.show-delete-habit-confirm = false;
@@ -466,12 +466,12 @@ export component HabitsPage inherits Rectangle {
             height: min(180px, parent.height - 40px);
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            background: Palette.sidebar-bg;
+            background: Theme.sidebar-bg;
             border-radius: 12px;
             border-width: 1px;
-            border-color: Palette.border-light;
+            border-color: Theme.border-light;
             drop-shadow-blur: 20px;
-            drop-shadow-color: Palette.shadow-color;
+            drop-shadow-color: Theme.shadow-color;
 
             VerticalLayout {
                 padding: 24px;
@@ -479,7 +479,7 @@ export component HabitsPage inherits Rectangle {
 
                 Text {
                     text: "Delete Habit?";
-                    color: Palette.text-primary;
+                    color: Theme.text-primary;
                     font-size: 14px;
                     font-weight: 600;
                     horizontal-alignment: center;
@@ -487,7 +487,7 @@ export component HabitsPage inherits Rectangle {
 
                 Text {
                     text: "This will permanently delete \"" + root.delete-habit-name + "\" and all its logs.";
-                    color: Palette.text-muted;
+                    color: Theme.text-muted;
                     font-size: 11px;
                     wrap: word-wrap;
                     horizontal-alignment: center;
@@ -499,14 +499,14 @@ export component HabitsPage inherits Rectangle {
                     Rectangle {
                         horizontal-stretch: 1;
                         height: 36px;
-                        background: cancel-touch.has-hover ? Palette.surface-hover : Palette.surface;
+                        background: cancel-touch.has-hover ? Theme.surface-hover : Theme.surface;
                         border-radius: 8px;
                         border-width: 1px;
-                        border-color: Palette.border;
+                        border-color: Theme.border;
 
                         Text {
                             text: "Cancel";
-                            color: Palette.text-secondary;
+                            color: Theme.text-secondary;
                             font-size: 11px;
                             font-weight: 600;
                             horizontal-alignment: center;
@@ -526,14 +526,14 @@ export component HabitsPage inherits Rectangle {
                     Rectangle {
                         horizontal-stretch: 1;
                         height: 36px;
-                        background: confirm-touch.has-hover ? Palette.delete-bg-active : Palette.delete-bg-hover;
+                        background: confirm-touch.has-hover ? Theme.delete-bg-active : Theme.delete-bg-hover;
                         border-radius: 8px;
                         border-width: 1px;
-                        border-color: Palette.delete-border;
+                        border-color: Theme.delete-border;
 
                         Text {
                             text: "Delete";
-                            color: Palette.text-primary;
+                            color: Theme.text-primary;
                             font-size: 11px;
                             font-weight: 600;
                             horizontal-alignment: center;

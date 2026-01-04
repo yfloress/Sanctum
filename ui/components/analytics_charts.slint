@@ -1,16 +1,16 @@
 // ==================== Habit Analytics Charts ====================
 // Radar chart + insight cards
 
-import { Palette } from "../globals.slint";
+import { Theme } from "../theme.slint";
 
 export component HabitRadarChart inherits Rectangle {
     in property <image> image;
     in property <bool> has-data: false;
 
-    background: Palette.surface;
+    background: Theme.surface;
     border-radius: 12px;
     border-width: 1px;
-    border-color: Palette.border;
+    border-color: Theme.border;
 
     VerticalLayout {
         padding: 20px;
@@ -18,7 +18,7 @@ export component HabitRadarChart inherits Rectangle {
 
         Text {
             text: "LIFE BALANCE (LAST 30 DAYS)";
-            color: Palette.text-secondary;
+            color: Theme.text-secondary;
             font-size: 11px;
             font-weight: 700;
             letter-spacing: 2px;
@@ -26,11 +26,11 @@ export component HabitRadarChart inherits Rectangle {
 
         Rectangle {
             vertical-stretch: 1;
-            min-height: Palette.chart-min-height-md;
+            min-height: Theme.chart-min-height-md;
             border-radius: 16px;
-            background: @linear-gradient(180deg, Palette.chart-bg-start, Palette.chart-bg-end);
+            background: @linear-gradient(180deg, Theme.chart-bg-start, Theme.chart-bg-end);
             border-width: 1px;
-            border-color: Palette.border-subtle;
+            border-color: Theme.border-subtle;
             clip: true;
 
             if root.has-data: Image {
@@ -46,7 +46,7 @@ export component HabitRadarChart inherits Rectangle {
 
                 Text {
                     text: "The chart is empty, but your potential is full.";
-                    color: Palette.text-secondary;
+                    color: Theme.text-secondary;
                     font-size: 12px;
                     font-weight: 600;
                     horizontal-alignment: center;
@@ -54,7 +54,7 @@ export component HabitRadarChart inherits Rectangle {
 
                 Text {
                     text: "Your legend will appear here. Start writing it today.";
-                    color: Palette.text-muted;
+                    color: Theme.text-muted;
                     font-size: 11px;
                     horizontal-alignment: center;
                 }
@@ -67,10 +67,10 @@ export component WeekdayEfficiencyChart inherits Rectangle {
     in property <image> image;
     in property <bool> has-data: false;
 
-    background: Palette.surface;
+    background: Theme.surface;
     border-radius: 12px;
     border-width: 1px;
-    border-color: Palette.border;
+    border-color: Theme.border;
 
     VerticalLayout {
         padding: 20px;
@@ -78,7 +78,7 @@ export component WeekdayEfficiencyChart inherits Rectangle {
 
         Text {
             text: "WEEKDAY EFFICIENCY";
-            color: Palette.text-secondary;
+            color: Theme.text-secondary;
             font-size: 11px;
             font-weight: 700;
             letter-spacing: 2px;
@@ -86,11 +86,11 @@ export component WeekdayEfficiencyChart inherits Rectangle {
 
         Rectangle {
             vertical-stretch: 1;
-            min-height: Palette.chart-min-height-sm;
+            min-height: Theme.chart-min-height-sm;
             border-radius: 16px;
-            background: @linear-gradient(180deg, Palette.chart-bg-start, Palette.chart-bg-end);
+            background: @linear-gradient(180deg, Theme.chart-bg-start, Theme.chart-bg-end);
             border-width: 1px;
-            border-color: Palette.border-subtle;
+            border-color: Theme.border-subtle;
             clip: true;
 
             if root.has-data: Image {
@@ -106,7 +106,7 @@ export component WeekdayEfficiencyChart inherits Rectangle {
 
                 Text {
                     text: "Complete habits to see your weekly pattern.";
-                    color: Palette.text-secondary;
+                    color: Theme.text-secondary;
                     font-size: 12px;
                     font-weight: 600;
                     horizontal-alignment: center;
@@ -114,7 +114,7 @@ export component WeekdayEfficiencyChart inherits Rectangle {
 
                 Text {
                     text: "Discover which days you're most consistent.";
-                    color: Palette.text-muted;
+                    color: Theme.text-muted;
                     font-size: 11px;
                     horizontal-alignment: center;
                 }
@@ -128,10 +128,10 @@ export component InsightCard inherits Rectangle {
     in property <string> line1;
     in property <string> line2;
 
-    background: Palette.surface;
+    background: Theme.surface;
     border-radius: 12px;
     border-width: 1px;
-    border-color: Palette.border;
+    border-color: Theme.border;
 
     VerticalLayout {
         padding: 20px;
@@ -139,7 +139,7 @@ export component InsightCard inherits Rectangle {
 
         Text {
             text: root.title;
-            color: Palette.text-secondary;
+            color: Theme.text-secondary;
             font-size: 11px;
             font-weight: 700;
             letter-spacing: 2px;
@@ -147,7 +147,7 @@ export component InsightCard inherits Rectangle {
 
         if root.line1 != "": Text {
             text: root.line1;
-            color: Palette.text-primary;
+            color: Theme.text-primary;
             font-size: 13px;
             font-weight: 600;
             wrap: word-wrap;
@@ -155,7 +155,7 @@ export component InsightCard inherits Rectangle {
 
         if root.line2 != "": Text {
             text: root.line2;
-            color: Palette.text-muted;
+            color: Theme.text-muted;
             font-size: 12px;
             wrap: word-wrap;
         }

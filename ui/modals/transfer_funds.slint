@@ -1,7 +1,7 @@
 // ==================== Transfer Funds Modal ====================
 // Premium Fintech UI - Overlay form for transferring between accounts
 
-import { Palette, AppState, AccountAdapter, TransactionAdapter, NotificationAdapter } from "../globals.slint";
+import { AppState, AccountAdapter, TransactionAdapter, NotificationAdapter } from "../globals.slint";
 import { Theme } from "../theme.slint";
 
 // ==================== FormField ====================
@@ -18,7 +18,7 @@ component FormField inherits Rectangle {
 
         Text {
             text: root.label;
-            color: Palette.text-muted;
+            color: Theme.text-muted;
             font-size: 10px;
             font-weight: 500;
             letter-spacing: 1.5px;
@@ -26,10 +26,10 @@ component FormField inherits Rectangle {
 
         Rectangle {
             height: 40px;
-            background: Palette.surface;
+            background: Theme.surface;
             border-radius: 8px;
             border-width: input.has-focus ? 2px : 1px;
-            border-color: input.has-focus ? Palette.accent : Palette.border;
+            border-color: input.has-focus ? Theme.accent : Theme.border;
 
             animate border-color { duration: 150ms; }
 
@@ -39,7 +39,7 @@ component FormField inherits Rectangle {
 
                 if root.value == "" && !input.has-focus: Text {
                     text: root.placeholder;
-                    color: Palette.text-subtle;
+                    color: Theme.text-subtle;
                     font-size: 14px;
                     font-weight: 300;
                     vertical-alignment: center;
@@ -47,7 +47,7 @@ component FormField inherits Rectangle {
 
                 input := TextInput {
                     text <=> root.value;
-                    color: Palette.text-primary;
+                    color: Theme.text-primary;
                     font-size: 14px;
                     font-weight: 400;
                     vertical-alignment: center;
@@ -75,7 +75,7 @@ component AccountSelector inherits Rectangle {
 
         Text {
             text: root.label;
-            color: Palette.text-muted;
+            color: Theme.text-muted;
             font-size: 10px;
             font-weight: 500;
             letter-spacing: 1.5px;
@@ -83,10 +83,10 @@ component AccountSelector inherits Rectangle {
 
         Rectangle {
             height: 40px;
-            background: Palette.surface;
+            background: Theme.surface;
             border-radius: 8px;
             border-width: 1px;
-            border-color: Palette.border;
+            border-color: Theme.border;
 
             HorizontalLayout {
                 padding-left: 16px;
@@ -94,7 +94,7 @@ component AccountSelector inherits Rectangle {
 
                 Text {
                     text: AccountAdapter.accounts.length > 0 ? AccountAdapter.accounts[safe-index].name + " (" + AccountAdapter.accounts[safe-index].currency + ")" : "No accounts";
-                    color: Palette.text-primary;
+                    color: Theme.text-primary;
                     font-size: 14px;
                     font-weight: 400;
                     vertical-alignment: center;
@@ -103,7 +103,7 @@ component AccountSelector inherits Rectangle {
 
                 Text {
                     text: "▼";
-                    color: Palette.text-muted;
+                    color: Theme.text-muted;
                     font-size: 10px;
                     vertical-alignment: center;
                 }
@@ -122,10 +122,10 @@ component AccountSelector inherits Rectangle {
         width: root.width;
         
         Rectangle {
-            background: Palette.sidebar-bg;
+            background: Theme.sidebar-bg;
             border-radius: 8px;
             border-width: 1px;
-            border-color: Palette.border-light;
+            border-color: Theme.border-light;
             height: min(AccountAdapter.accounts.length * 40px + 8px, 240px);
             drop-shadow-blur: 16px;
             drop-shadow-color: Theme.shadow;
@@ -139,7 +139,7 @@ component AccountSelector inherits Rectangle {
 
                     for account[index] in AccountAdapter.accounts: Rectangle {
                         height: 40px;
-                        background: option-touch.has-hover ? Palette.surface-hover : transparent;
+                        background: option-touch.has-hover ? Theme.surface-hover : transparent;
                         border-radius: 6px;
 
                         HorizontalLayout {
@@ -148,7 +148,7 @@ component AccountSelector inherits Rectangle {
 
                             Text {
                                 text: account.name + " (" + account.currency + ")";
-                                color: index == safe-index ? Palette.text-primary : Palette.text-secondary;
+                                color: index == safe-index ? Theme.text-primary : Theme.text-secondary;
                                 font-size: 13px;
                                 font-weight: index == safe-index ? 500 : 400;
                                 vertical-alignment: center;
@@ -157,7 +157,7 @@ component AccountSelector inherits Rectangle {
 
                             if index == safe-index: Text {
                                 text: "✓";
-                                color: Palette.accent;
+                                color: Theme.accent;
                                 font-size: 12px;
                                 vertical-alignment: center;
                             }
@@ -285,12 +285,12 @@ export component TransferFundsModal inherits Rectangle {
     Rectangle {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
-        width: min(Palette.modal-width-md, parent.width - 40px);
-        height: min(Palette.modal-height-md, parent.height - 40px);
-        background: @linear-gradient(180deg, Palette.sidebar-bg 0%, Theme.modal-bg-end 100%);
+        width: min(Theme.modal-width-md, parent.width - 40px);
+        height: min(Theme.modal-height-md, parent.height - 40px);
+        background: @linear-gradient(180deg, Theme.sidebar-bg 0%, Theme.modal-bg-end 100%);
         border-radius: 16px;
         border-width: 1px;
-        border-color: Palette.border-light;
+        border-color: Theme.border-light;
         drop-shadow-blur: 40px;
         drop-shadow-color: Theme.overlay-soft;
 
@@ -314,13 +314,13 @@ export component TransferFundsModal inherits Rectangle {
 	                        width: 4px;
 	                        height: 20px;
 	                        border-radius: 2px;
-	                        background: @linear-gradient(180deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%);
+	                        background: @linear-gradient(180deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
 	                        y: (parent.height - self.height) / 2;
 	                    }
 
                     Text {
                         text: editing ? "EDIT TRANSFER" : "TRANSFER FUNDS";
-                        color: Palette.text-primary;
+                        color: Theme.text-primary;
                         font-size: 16px;
                         font-weight: 500;
                         letter-spacing: 2px;
@@ -332,11 +332,11 @@ export component TransferFundsModal inherits Rectangle {
                     width: 32px;
                     height: 32px;
                     border-radius: 8px;
-                    background: close-touch.has-hover ? Palette.surface-hover : transparent;
+                    background: close-touch.has-hover ? Theme.surface-hover : transparent;
 
                     Text {
                         text: "×";
-                        color: close-touch.has-hover ? Palette.text-primary : Palette.text-muted;
+                        color: close-touch.has-hover ? Theme.text-primary : Theme.text-muted;
                         font-size: 20px;
                         font-weight: 300;
                         horizontal-alignment: center;
@@ -380,15 +380,15 @@ export component TransferFundsModal inherits Rectangle {
 	                            width: 40px;
 	                            height: 40px;
 	                            border-radius: 20px;
-	                            background: Palette.surface;
+	                            background: Theme.surface;
 	                            border-width: 1px;
-	                            border-color: Palette.border;
+	                            border-color: Theme.border;
 	                            x: (parent.width - self.width) / 2;
 	                            y: (parent.height - self.height) / 2;
 	
 	                            Text {
 	                                text: "↓";
-	                                color: Palette.accent;
+	                                color: Theme.accent;
 	                                font-size: 18px;
 	                                font-weight: 500;
 	                                horizontal-alignment: center;
@@ -427,7 +427,7 @@ export component TransferFundsModal inherits Rectangle {
 	            // Submit button
 	            Rectangle {
 	                height: 48px;
-	                background: @linear-gradient(135deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%);
+	                background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
 	                border-radius: 10px;
 
                 Text {

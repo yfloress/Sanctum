@@ -1,6 +1,6 @@
 // Shared FilterInput component for search/filter fields
 
-import { Palette } from "../../globals.slint";
+import { Theme } from "../../theme.slint";
 
 export component FilterInput inherits Rectangle {
     in property <string> label: "SEARCH";
@@ -16,7 +16,7 @@ export component FilterInput inherits Rectangle {
 
         Text {
             text: root.label;
-            color: Palette.text-muted;
+            color: Theme.text-muted;
             font-size: 10px;
             font-weight: 500;
             letter-spacing: 1.5px;
@@ -25,10 +25,10 @@ export component FilterInput inherits Rectangle {
         input-box := Rectangle {
             height: 40px;
             horizontal-stretch: 1;
-            background: Palette.surface;
+            background: Theme.surface;
             border-radius: 8px;
             border-width: 1px;
-            border-color: input.has-focus ? Palette.accent : Palette.border;
+            border-color: input.has-focus ? Theme.accent : Theme.border;
 
             animate border-color { duration: 150ms; }
 
@@ -39,7 +39,7 @@ export component FilterInput inherits Rectangle {
 
                 Text {
                     text: "🔎";
-                    color: Palette.text-muted;
+                    color: Theme.text-muted;
                     font-size: 12px;
                     vertical-alignment: center;
                 }
@@ -51,7 +51,7 @@ export component FilterInput inherits Rectangle {
 
                     input := TextInput {
                         text <=> root.value;
-                        color: Palette.text-primary;
+                        color: Theme.text-primary;
                         font-size: 12px;
                         vertical-alignment: center;
                         width: parent.width;
@@ -60,7 +60,7 @@ export component FilterInput inherits Rectangle {
 
                     if root.value == "" && !input.has-focus: Text {
                         text: root.placeholder;
-                        color: Palette.text-subtle;
+                        color: Theme.text-subtle;
                         font-size: 12px;
                         vertical-alignment: center;
                         width: parent.width;

@@ -2,7 +2,6 @@
 // Noir Minimalist - Elegant, luxury-inspired interface
 
 import {
-    Palette,
     AuthAdapter,
     AppState,
     AccountAdapter,
@@ -15,6 +14,7 @@ import {
     CryptoAdapter,
     SettingsAdapter,
 } from "globals.slint";
+import { Theme } from "theme.slint";
 import { LoginPage } from "pages/login.slint";
 import { DashboardPage } from "pages/dashboard.slint";
 import { FinancesPage } from "pages/finances.slint";
@@ -38,9 +38,14 @@ export component AppWindow inherits Window {
     title: "Sanctum";
     min-width: 1024px;
     min-height: 680px;
-    background: Palette.background;
+    background: Theme.background;
 
     in-out property <string> login-title: "SANCTUM";
+
+    // Sync Theme.is-dark with SettingsAdapter.dark-mode
+    property <bool> dark-mode-tracker: SettingsAdapter.dark-mode;
+    changed dark-mode-tracker => { Theme.is-dark = SettingsAdapter.dark-mode; }
+    init => { Theme.is-dark = SettingsAdapter.dark-mode; }
 
     // ==================== Conditional Rendering ====================
 
@@ -61,7 +66,7 @@ export component AppWindow inherits Window {
         // Main content area
         Rectangle {
             horizontal-stretch: 1;
-            background: Palette.background;
+            background: Theme.background;
 
             // Dashboard
             if AppState.active-page == "dashboard": DashboardPage {
