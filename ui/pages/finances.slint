@@ -2,7 +2,6 @@
 // Premium Fintech UI - Unified view for Transactions and Accounts
 
 import {
-    Palette,
     TransactionAdapter,
     CategoryAdapter,
     AccountAdapter,
@@ -45,7 +44,7 @@ component AccountFilterSelect inherits Rectangle {
 
         Text {
             text: "ACCOUNT";
-            color: Palette.text-muted;
+            color: Theme.text-muted;
             font-size: 10px;
             font-weight: 500;
             letter-spacing: 1.5px;
@@ -54,10 +53,10 @@ component AccountFilterSelect inherits Rectangle {
         input-box := Rectangle {
             height: 40px;
             width: root.width;
-            background: Palette.surface;
+            background: Theme.surface;
             border-radius: 8px;
             border-width: 1px;
-            border-color: Palette.border;
+            border-color: Theme.border;
 
             HorizontalLayout {
                 width: parent.width;
@@ -66,7 +65,7 @@ component AccountFilterSelect inherits Rectangle {
 
                 Text {
                     text: selected_label();
-                    color: Palette.text-primary;
+                    color: Theme.text-primary;
                     font-size: 12px;
                     vertical-alignment: center;
                     horizontal-stretch: 1;
@@ -74,7 +73,7 @@ component AccountFilterSelect inherits Rectangle {
 
                 Text {
                     text: "▼";
-                    color: Palette.text-muted;
+                    color: Theme.text-muted;
                     font-size: 10px;
                     vertical-alignment: center;
                 }
@@ -93,10 +92,10 @@ component AccountFilterSelect inherits Rectangle {
         width: root.width;
 
         Rectangle {
-            background: Palette.sidebar-bg;
+            background: Theme.sidebar-bg;
             border-radius: 8px;
             border-width: 1px;
-            border-color: Palette.border-light;
+            border-color: Theme.border-light;
             height: min((AccountAdapter.accounts.length + 1) * 40px + 8px, 240px);
             drop-shadow-blur: 16px;
             drop-shadow-color: Theme.shadow;
@@ -110,7 +109,7 @@ component AccountFilterSelect inherits Rectangle {
 
                     Rectangle {
                         height: 40px;
-                        background: option-touch-all.has-hover ? Palette.surface-hover : transparent;
+                        background: option-touch-all.has-hover ? Theme.surface-hover : transparent;
                         border-radius: 6px;
 
                         HorizontalLayout {
@@ -119,7 +118,7 @@ component AccountFilterSelect inherits Rectangle {
 
                             Text {
                                 text: "All accounts";
-                                color: selected-index == 0 ? Palette.text-primary : Palette.text-secondary;
+                                color: selected-index == 0 ? Theme.text-primary : Theme.text-secondary;
                                 font-size: 12px;
                                 font-weight: selected-index == 0 ? 500 : 400;
                                 vertical-alignment: center;
@@ -128,7 +127,7 @@ component AccountFilterSelect inherits Rectangle {
 
                             if selected-index == 0: Text {
                                 text: "✓";
-                                color: Palette.accent;
+                                color: Theme.accent;
                                 font-size: 12px;
                                 vertical-alignment: center;
                             }
@@ -142,7 +141,7 @@ component AccountFilterSelect inherits Rectangle {
 
                     for account[index] in AccountAdapter.accounts: Rectangle {
                         height: 40px;
-                        background: option-touch.has-hover ? Palette.surface-hover : transparent;
+                        background: option-touch.has-hover ? Theme.surface-hover : transparent;
                         border-radius: 6px;
 
                         HorizontalLayout {
@@ -151,7 +150,7 @@ component AccountFilterSelect inherits Rectangle {
 
                             Text {
                                 text: account.name;
-                                color: selected-index == index + 1 ? Palette.text-primary : Palette.text-secondary;
+                                color: selected-index == index + 1 ? Theme.text-primary : Theme.text-secondary;
                                 font-size: 12px;
                                 font-weight: selected-index == index + 1 ? 500 : 400;
                                 vertical-alignment: center;
@@ -160,7 +159,7 @@ component AccountFilterSelect inherits Rectangle {
 
                             if selected-index == index + 1: Text {
                                 text: "✓";
-                                color: Palette.accent;
+                                color: Theme.accent;
                                 font-size: 12px;
                                 vertical-alignment: center;
                             }
@@ -208,7 +207,7 @@ component CategoryFilterSelect inherits Rectangle {
 
         Text {
             text: "CATEGORY";
-            color: Palette.text-muted;
+            color: Theme.text-muted;
             font-size: 10px;
             font-weight: 500;
             letter-spacing: 1.5px;
@@ -217,10 +216,10 @@ component CategoryFilterSelect inherits Rectangle {
         input-box := Rectangle {
             height: 40px;
             width: root.width;
-            background: Palette.surface;
+            background: Theme.surface;
             border-radius: 8px;
             border-width: 1px;
-            border-color: Palette.border;
+            border-color: Theme.border;
 
             HorizontalLayout {
                 width: parent.width;
@@ -229,7 +228,7 @@ component CategoryFilterSelect inherits Rectangle {
 
                 Text {
                     text: selected_label();
-                    color: Palette.text-primary;
+                    color: Theme.text-primary;
                     font-size: 12px;
                     vertical-alignment: center;
                     horizontal-stretch: 1;
@@ -237,7 +236,7 @@ component CategoryFilterSelect inherits Rectangle {
 
                 Text {
                     text: "▼";
-                    color: Palette.text-muted;
+                    color: Theme.text-muted;
                     font-size: 10px;
                     vertical-alignment: center;
                 }
@@ -256,10 +255,10 @@ component CategoryFilterSelect inherits Rectangle {
         width: root.width;
 
         Rectangle {
-            background: Palette.sidebar-bg;
+            background: Theme.sidebar-bg;
             border-radius: 8px;
             border-width: 1px;
-            border-color: Palette.border-light;
+            border-color: Theme.border-light;
             height: min((CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length + 2) * 40px + 8px, 280px);
             drop-shadow-blur: 16px;
             drop-shadow-color: Theme.shadow;
@@ -273,7 +272,7 @@ component CategoryFilterSelect inherits Rectangle {
 
                     Rectangle {
                         height: 40px;
-                        background: option-touch-all.has-hover ? Palette.surface-hover : transparent;
+                        background: option-touch-all.has-hover ? Theme.surface-hover : transparent;
                         border-radius: 6px;
 
                         HorizontalLayout {
@@ -282,7 +281,7 @@ component CategoryFilterSelect inherits Rectangle {
 
                             Text {
                                 text: "All categories";
-                                color: selected-index == 0 ? Palette.text-primary : Palette.text-secondary;
+                                color: selected-index == 0 ? Theme.text-primary : Theme.text-secondary;
                                 font-size: 12px;
                                 font-weight: selected-index == 0 ? 500 : 400;
                                 vertical-alignment: center;
@@ -291,7 +290,7 @@ component CategoryFilterSelect inherits Rectangle {
 
                             if selected-index == 0: Text {
                                 text: "✓";
-                                color: Palette.accent;
+                                color: Theme.accent;
                                 font-size: 12px;
                                 vertical-alignment: center;
                             }
@@ -305,7 +304,7 @@ component CategoryFilterSelect inherits Rectangle {
 
                     for cat[index] in CategoryAdapter.expense-categories: Rectangle {
                         height: 40px;
-                        background: option-touch-expense.has-hover ? Palette.surface-hover : transparent;
+                        background: option-touch-expense.has-hover ? Theme.surface-hover : transparent;
                         border-radius: 6px;
 
                         HorizontalLayout {
@@ -314,7 +313,7 @@ component CategoryFilterSelect inherits Rectangle {
 
                             Text {
                                 text: cat.name;
-                                color: selected-index == index + 1 ? Palette.text-primary : Palette.text-secondary;
+                                color: selected-index == index + 1 ? Theme.text-primary : Theme.text-secondary;
                                 font-size: 12px;
                                 font-weight: selected-index == index + 1 ? 500 : 400;
                                 vertical-alignment: center;
@@ -323,7 +322,7 @@ component CategoryFilterSelect inherits Rectangle {
 
                             if selected-index == index + 1: Text {
                                 text: "✓";
-                                color: Palette.accent;
+                                color: Theme.accent;
                                 font-size: 12px;
                                 vertical-alignment: center;
                             }
@@ -337,7 +336,7 @@ component CategoryFilterSelect inherits Rectangle {
 
                     for cat[index] in CategoryAdapter.income-categories: Rectangle {
                         height: 40px;
-                        background: option-touch-income.has-hover ? Palette.surface-hover : transparent;
+                        background: option-touch-income.has-hover ? Theme.surface-hover : transparent;
                         border-radius: 6px;
 
                         HorizontalLayout {
@@ -346,7 +345,7 @@ component CategoryFilterSelect inherits Rectangle {
 
                             Text {
                                 text: cat.name;
-                                color: selected-index == index + 1 + CategoryAdapter.expense-categories.length ? Palette.text-primary : Palette.text-secondary;
+                                color: selected-index == index + 1 + CategoryAdapter.expense-categories.length ? Theme.text-primary : Theme.text-secondary;
                                 font-size: 12px;
                                 font-weight: selected-index == index + 1 + CategoryAdapter.expense-categories.length ? 500 : 400;
                                 vertical-alignment: center;
@@ -355,7 +354,7 @@ component CategoryFilterSelect inherits Rectangle {
 
                             if selected-index == index + 1 + CategoryAdapter.expense-categories.length: Text {
                                 text: "✓";
-                                color: Palette.accent;
+                                color: Theme.accent;
                                 font-size: 12px;
                                 vertical-alignment: center;
                             }
@@ -369,7 +368,7 @@ component CategoryFilterSelect inherits Rectangle {
 
                     Rectangle {
                         height: 40px;
-                        background: option-touch-transfer.has-hover ? Palette.surface-hover : transparent;
+                        background: option-touch-transfer.has-hover ? Theme.surface-hover : transparent;
                         border-radius: 6px;
 
                         HorizontalLayout {
@@ -379,8 +378,8 @@ component CategoryFilterSelect inherits Rectangle {
                             Text {
                                 text: "Transfers";
                                 color: selected-index == 1 + CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length
-                                    ? Palette.text-primary
-                                    : Palette.text-secondary;
+                                    ? Theme.text-primary
+                                    : Theme.text-secondary;
                                 font-size: 12px;
                                 font-weight: selected-index == 1 + CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length
                                     ? 500
@@ -391,7 +390,7 @@ component CategoryFilterSelect inherits Rectangle {
 
                             if selected-index == 1 + CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length: Text {
                                 text: "✓";
-                                color: Palette.accent;
+                                color: Theme.accent;
                                 font-size: 12px;
                                 vertical-alignment: center;
                             }
@@ -411,7 +410,7 @@ component CategoryFilterSelect inherits Rectangle {
 }
 
 export component FinancesPage inherits Rectangle {
-    background: Palette.background;
+    background: Theme.background;
     in-out property <string> active-tab: "activity";
     property <bool> show-delete-confirm: false;
     property <string> delete-transaction-id: "";
@@ -512,7 +511,7 @@ export component FinancesPage inherits Rectangle {
         // ==================== HERO HEADER ====================
         Rectangle {
             height: 160px;
-            background: @linear-gradient(180deg, Theme.modal-bg-end 0%, Palette.background 100%);
+            background: @linear-gradient(180deg, Theme.modal-bg-end 0%, Theme.background 100%);
 
             HorizontalLayout {
                 padding-left: 64px;
@@ -535,13 +534,13 @@ export component FinancesPage inherits Rectangle {
                             width: 3px;
                             height: 18px;
                             border-radius: 2px;
-                            background: @linear-gradient(180deg, Palette.accent 0%, #6366f1 100%);
+                            background: @linear-gradient(180deg, Theme.accent 0%, Theme.accent-indigo 100%);
                             y: (parent.height - self.height) / 2;
                         }
 
                         Text {
                             text: "FINANCES";
-                            color: Palette.text-muted;
+                            color: Theme.text-muted;
                             font-size: 11px;
                             font-weight: 600;
                             letter-spacing: 3px;
@@ -556,7 +555,7 @@ export component FinancesPage inherits Rectangle {
                         // Total Value
                         Text {
                             text: AccountAdapter.total-balance;
-                            color: Palette.text-primary;
+                            color: Theme.text-primary;
                             font-size: 48px;
                             font-weight: 300;
                             letter-spacing: -1px;
@@ -565,7 +564,7 @@ export component FinancesPage inherits Rectangle {
                         // Subtitle
                         Text {
                             text: "Total Balance";
-                            color: Palette.text-muted;
+                            color: Theme.text-muted;
                             font-size: 12px;
                             font-weight: 400;
                         }
@@ -578,10 +577,10 @@ export component FinancesPage inherits Rectangle {
 
                     Rectangle {
                         height: 44px;
-                        background: Palette.surface;
+                        background: Theme.surface;
                         border-radius: 22px;
                         border-width: 1px;
-                        border-color: Palette.border;
+                        border-color: Theme.border;
 
                         HorizontalLayout {
                             padding: 4px;
@@ -613,7 +612,7 @@ export component FinancesPage inherits Rectangle {
         // Gradient divider
         Rectangle {
             height: 1px;
-            background: @linear-gradient(90deg, transparent 0%, Palette.border-light 50%, transparent 100%);
+            background: @linear-gradient(90deg, transparent 0%, Theme.border-light 50%, transparent 100%);
         }
 
         // ==================== CONTENT AREA ====================
@@ -696,10 +695,10 @@ export component FinancesPage inherits Rectangle {
                                 height: 40px;
                                 border-radius: 8px;
                                 background: has-active-filters()
-                                    ? (touch.has-hover ? Palette.surface-hover : Palette.surface)
+                                    ? (touch.has-hover ? Theme.surface-hover : Theme.surface)
                                     : transparent;
                                 border-width: has-active-filters() ? 1px : 0px;
-                                border-color: has-active-filters() ? Palette.border-light : transparent;
+                                border-color: has-active-filters() ? Theme.border-light : transparent;
                                 opacity: has-active-filters() ? 1.0 : 0.0;
 
                                 animate background { duration: 200ms; easing: ease-out; }
@@ -707,7 +706,7 @@ export component FinancesPage inherits Rectangle {
 
                                 Text {
                                     text: "✕";
-                                    color: Palette.text-primary;
+                                    color: Theme.text-primary;
                                     font-size: 16px;
                                     font-weight: 600;
                                     horizontal-alignment: center;
@@ -731,10 +730,10 @@ export component FinancesPage inherits Rectangle {
                 // Transaction list
                 if TransactionAdapter.transactions.length > 0: Rectangle {
                     vertical-stretch: 1;
-                    background: Palette.surface;
+                    background: Theme.surface;
                     border-radius: 12px;
                     border-width: 1px;
-                    border-color: Palette.border;
+                    border-color: Theme.border;
 
                     Flickable {
                         viewport-height: TransactionAdapter.transactions.length * 64px
@@ -892,10 +891,10 @@ export component FinancesPage inherits Rectangle {
                 // Categories Section
                 Rectangle {
                     height: 120px;
-                    background: Palette.surface;
+                    background: Theme.surface;
                     border-radius: 12px;
                     border-width: 1px;
-                    border-color: Palette.border;
+                    border-color: Theme.border;
 
                     HorizontalLayout {
                         padding: 24px;
@@ -908,14 +907,14 @@ export component FinancesPage inherits Rectangle {
 
                             Text {
                                 text: "Transaction Categories";
-                                color: Palette.text-primary;
+                                color: Theme.text-primary;
                                 font-size: 14px;
                                 font-weight: 600;
                             }
 
                             Text {
                                 text: "Manage income and expense categories";
-                                color: Palette.text-muted;
+                                color: Theme.text-muted;
                                 font-size: 12px;
                             }
                         }
@@ -950,12 +949,12 @@ export component FinancesPage inherits Rectangle {
             height: 200px;
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
-            background: Palette.surface;
+            background: Theme.surface;
             border-radius: 16px;
             border-width: 1px;
-            border-color: Palette.border;
+            border-color: Theme.border;
             drop-shadow-blur: 32px;
-            drop-shadow-color: #00000080;
+            drop-shadow-color: Theme.shadow-modal;
 
             // Block clicks on modal background from closing
             TouchArea {}
@@ -970,14 +969,14 @@ export component FinancesPage inherits Rectangle {
 
                     Text {
                         text: "Delete Transaction";
-                        color: Palette.text-primary;
+                        color: Theme.text-primary;
                         font-size: 18px;
                         font-weight: 600;
                     }
 
                     Text {
                         text: "Are you sure you want to delete \"" + root.delete-transaction-desc + "\"?";
-                        color: Palette.text-muted;
+                        color: Theme.text-muted;
                         font-size: 13px;
                         wrap: word-wrap;
                     }
@@ -992,13 +991,13 @@ export component FinancesPage inherits Rectangle {
                         width: 100px;
                         height: 36px;
                         border-radius: 8px;
-                        background: cancel-touch.has-hover ? Palette.surface-hover : Palette.surface;
+                        background: cancel-touch.has-hover ? Theme.surface-hover : Theme.surface;
                         border-width: 1px;
-                        border-color: Palette.border;
+                        border-color: Theme.border;
 
                         Text {
                             text: "CANCEL";
-                            color: Palette.text-secondary;
+                            color: Theme.text-secondary;
                             font-size: 11px;
                             font-weight: 600;
                             letter-spacing: 1px;
@@ -1016,11 +1015,11 @@ export component FinancesPage inherits Rectangle {
                         width: 100px;
                         height: 36px;
                         border-radius: 8px;
-                        background: delete-touch.has-hover ? Palette.danger.darker(0.2) : Palette.danger;
+                        background: delete-touch.has-hover ? Theme.danger.darker(0.2) : Theme.danger;
 
                         Text {
                             text: "DELETE";
-                            color: Palette.text-primary;
+                            color: Theme.text-primary;
                             font-size: 11px;
                             font-weight: 600;
                             letter-spacing: 1px;
@@ -1053,7 +1052,7 @@ export component FinancesPage inherits Rectangle {
     if TransactionAdapter.is-loading || AccountAdapter.is-loading: Rectangle {
         width: 100%;
         height: 100%;
-        background: Palette.background.with-alpha(0.95);
+        background: Theme.background.with-alpha(0.95);
         z: 999;
         opacity: 1.0;
 
@@ -1067,9 +1066,9 @@ export component FinancesPage inherits Rectangle {
                 width: 60px;
                 height: 60px;
                 border-radius: 30px;
-                background: Palette.surface;
+                background: Theme.surface;
                 border-width: 3px;
-                border-color: Palette.accent;
+                border-color: Theme.accent;
 
                 animate border-color {
                     duration: 1s;
@@ -1087,7 +1086,7 @@ export component FinancesPage inherits Rectangle {
 
             Text {
                 text: "Loading finances...";
-                color: Palette.text-secondary;
+                color: Theme.text-secondary;
                 font-size: 14px;
                 font-weight: 500;
             }

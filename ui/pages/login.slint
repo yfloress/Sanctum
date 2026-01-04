@@ -1,7 +1,8 @@
 // ==================== Login Page ====================
 // Noir Minimalist - Elegant authentication with smooth gradient background and refined typography
 
-import { Palette, AuthAdapter, AppState, NotificationAdapter } from "../globals.slint";
+import { AuthAdapter, AppState, NotificationAdapter } from "../globals.slint";
+import { Theme } from "../theme.slint";
 import { TextButton } from "../widgets.slint";
 import { GradientBackground } from "../components/gradient_background.slint";
 
@@ -31,7 +32,7 @@ component PasswordInput inherits Rectangle {
             // Placeholder (shown when empty and not focused)
             if root.text == "" && !input.has-focus: Text {
                 text: root.placeholder;
-                color: Palette.text-muted;
+                color: Theme.text-muted;
                 font-size: 16px;
                 font-weight: 300;
                 vertical-alignment: center;
@@ -43,7 +44,7 @@ component PasswordInput inherits Rectangle {
                 text <=> root.text;
                 input-type: root.show-password ? InputType.text : InputType.password;
                 enabled: root.enabled;
-                color: Palette.text-primary;
+                color: Theme.text-primary;
                 font-size: 16px;
                 font-weight: 300;
                 vertical-alignment: center;
@@ -66,8 +67,8 @@ component PasswordInput inherits Rectangle {
         Rectangle {
             height: input.has-focus ? 2px : 1px;
             background: input.has-focus
-                ? @linear-gradient(90deg, transparent 0%, #6366f1 20%, #ffffff 50%, #6366f1 80%, transparent 100%)
-                : @linear-gradient(90deg, transparent 0%, Palette.border 50%, transparent 100%);
+                ? @linear-gradient(90deg, transparent 0%, Theme.accent-indigo 20%, Theme.text-primary 50%, Theme.accent-indigo 80%, transparent 100%)
+                : @linear-gradient(90deg, transparent 0%, Theme.border 50%, transparent 100%);
 
             animate height {
                 duration: 150ms;
@@ -89,7 +90,7 @@ component PasswordInput inherits Rectangle {
 
         Text {
             text: root.show-password ? "HIDE" : "SHOW";
-            color: toggle-touch.has-hover ? Palette.text-primary : Palette.text-muted;
+            color: toggle-touch.has-hover ? Theme.text-primary : Theme.text-muted;
             font-size: 10px;
             font-weight: 400;
             letter-spacing: 1.5px;
@@ -162,7 +163,7 @@ export component LoginPage inherits Rectangle {
                     // Title
                     Text {
                         text: root.title-text;
-                        color: Palette.text-primary;
+                        color: Theme.text-primary;
                         font-size: 42px;
                         font-weight: 300;
                         letter-spacing: 12px;
@@ -177,7 +178,7 @@ export component LoginPage inherits Rectangle {
                     // Subtitle with elegant styling
                     Text {
                         text: "Personal Financial Fortress";
-                        color: @linear-gradient(90deg, Palette.text-muted 0%, Palette.text-secondary 50%, Palette.text-muted 100%);
+                        color: @linear-gradient(90deg, Theme.text-muted 0%, Theme.text-secondary 50%, Theme.text-muted 100%);
                         font-size: 13px;
                         font-weight: 200;
                         font-italic: true;
@@ -216,10 +217,10 @@ export component LoginPage inherits Rectangle {
                     // Password hint for new vault
                     if !vault-exists && weak-warning != "": Rectangle {
                         height: 32px;
-                        background: Palette.warning.with-alpha(0.12);
+                        background: Theme.warning.with-alpha(0.12);
                         border-radius: 6px;
                         border-width: 1px;
-                        border-color: Palette.warning.with-alpha(0.35);
+                        border-color: Theme.warning.with-alpha(0.35);
 
                         HorizontalLayout {
                             padding-left: 10px;
@@ -230,7 +231,7 @@ export component LoginPage inherits Rectangle {
                                 width: 4px;
                                 height: 16px;
                                 border-radius: 2px;
-                                background: Palette.warning;
+                                background: Theme.warning;
                                 y: (parent.height - self.height) / 2;
                             }
 
@@ -238,7 +239,7 @@ export component LoginPage inherits Rectangle {
                                 text: weak-confirmed
                                     ? "Weak password: click create again to confirm."
                                     : weak-warning;
-                                color: Palette.warning;
+                                color: Theme.warning;
                                 font-size: 10px;
                                 font-weight: 500;
                                 vertical-alignment: center;
@@ -279,7 +280,7 @@ export component LoginPage inherits Rectangle {
 
             Text {
                 text: "AES-256 ENCRYPTED";
-                color: Palette.text-subtle;
+                color: Theme.text-subtle;
                 font-size: 9px;
                 font-weight: 500;
                 letter-spacing: 3px;

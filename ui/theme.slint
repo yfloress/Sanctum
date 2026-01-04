@@ -1,127 +1,212 @@
 // ==================== Sanctum Theme ====================
-// All colors in one place for easy theming
+// All colors, sizes, and design tokens in one place
 // Supports dark (default) and light (cream/gold) modes
-
-import { SettingsAdapter } from "globals.slint";
+// Note: is-dark is bound to SettingsAdapter.dark-mode in app.slint
 
 export global Theme {
     // ==================== Theme Toggle ====================
-    out property <bool> is-dark: SettingsAdapter.dark-mode;
+    // Default to dark mode, bound to SettingsAdapter.dark-mode in app.slint
+    in-out property <bool> is-dark: true;
 
-    // ==================== Core ====================
-    out property <color> bg: is-dark ? #000000 : #faf7f2;
-    out property <color> bg-header: is-dark ? #0a0a10 : #f5f0e8;
-    out property <color> bg-surface: is-dark ? #111111 : #f0ebe3;
-    out property <color> bg-hover: is-dark ? #1a1a1a : #e8e0d5;
-    out property <color> bg-sidebar: is-dark ? #050505 : #f8f4ed;
+    // ==================== Core Backgrounds ====================
+    out property <color> background: is-dark ? #000000 : #faf7f2;
+    out property <color> surface: is-dark ? #111111 : #f0ebe3;
+    out property <color> surface-hover: is-dark ? #1a1a1a : #e8e0d5;
+    out property <color> surface-deep: is-dark ? #1a1a2e : #e5ddd0;
+    out property <color> sidebar-bg: is-dark ? #050505 : #f8f4ed;
+    out property <color> sidebar-border: is-dark ? #333333 : #e0d6c8;
+    // Compatibility aliases
+    out property <color> bg: background;
+    out property <color> bg-surface: surface;
+    out property <color> bg-sidebar: sidebar-bg;
+    out property <color> bg-header: chart-bg-start;
+    out property <color> auth-bg-1: is-dark ? #2d1b4e : #f5f0e8;
+    out property <color> auth-bg-2: is-dark ? #261545 : #f0ebe3;
+    out property <color> auth-bg-3: is-dark ? #1f1038 : #ebe4d8;
+    out property <color> auth-bg-4: is-dark ? #180c2d : #e5ddd0;
+    out property <color> auth-bg-5: is-dark ? #110822 : #e0d6c8;
+    out property <color> auth-bg-6: is-dark ? #0a0515 : #d4c9b8;
+    out property <color> auth-bg-7: is-dark ? #050208 : #cfc7bb;
+    out property <color> auth-bg-8: background;
 
     // ==================== Text ====================
-    out property <color> text: is-dark ? #ffffff : #2d2a26;
-    out property <color> text-light: is-dark ? #f0f0f0 : #3d3a36;
+    out property <color> text-primary: is-dark ? #ffffff : #2d2a26;
     out property <color> text-secondary: is-dark ? #a3a3a3 : #6b6560;
     out property <color> text-muted: is-dark ? #666666 : #8a857d;
     out property <color> text-subtle: is-dark ? #333333 : #b5aea5;
+    // Compatibility aliases
+    out property <color> text: text-primary;
+    out property <color> text-light: is-dark ? #f5f5f5 : #ffffff;
 
     // ==================== Borders ====================
     out property <color> border: is-dark ? #333333 : #e0d6c8;
     out property <color> border-light: is-dark ? #ffffff : #c9a227;
     out property <color> border-subtle: is-dark ? #222222 : #ebe4d8;
+    out property <color> border-focus: is-dark ? #ffffff : #c9a227;
 
-    // ==================== Accent ====================
+    // ==================== Accent & Primary ====================
     out property <color> accent: is-dark ? #ffffff : #c9a227;
     out property <color> accent-muted: is-dark ? #ffffff20 : #c9a22730;
-    out property <color> accent-indigo: is-dark ? #6366f1 : #9f7b10;
-    out property <color> primary: is-dark ? #8b5cf6 : #b8860b;
-    out property <color> primary-hover: is-dark ? #a78bfa : #d4a574;
-    out property <color> card-gradient-end: is-dark ? #1a1a2e : #ede6db;
+    out property <color> accent-hover: is-dark ? #ffffffcc : #b8960b;
+    out property <color> primary: is-dark ? #6366f1 : #b8860b;
+    out property <color> accent-indigo: primary;
+    out property <color> action-gradient-start: is-dark ? #5a00f0 : #c9a227;
+    out property <color> action-gradient-end: is-dark ? #ff2ac3 : #d4a574;
 
     // ==================== Semantic ====================
     out property <color> success: is-dark ? #22c55e : #2e7d32;
     out property <color> danger: is-dark ? #ef4444 : #c62828;
     out property <color> warning: is-dark ? #f59e0b : #ef6c00;
+    out property <color> success-strong: is-dark ? #059669 : #15803d;
+    out property <color> danger-strong: is-dark ? #dc2626 : #b91c1c;
 
-    // ==================== Overlays ====================
-    out property <color> overlay: is-dark ? #000000cc : #2d2a26cc;
-    out property <color> overlay-strong: is-dark ? #000000d9 : #2d2a26d9;
-    out property <color> overlay-soft: is-dark ? #00000088 : #2d2a2688;
-    out property <color> shadow: is-dark ? #00000066 : #2d2a2633;
+    // ==================== Delete Button ====================
+    out property <color> delete-bg: is-dark ? #3d2020 : #fee2e2;
+    out property <color> delete-bg-hover: is-dark ? #5a2020 : #fecaca;
+    out property <color> delete-bg-active: is-dark ? #7a2020 : #fca5a5;
+    out property <color> delete-border: is-dark ? #ff4444 : #f87171;
+
+    // ==================== Warning ====================
+    out property <color> warning-bg: is-dark ? #2d1515 : #fef2f2;
+    out property <color> warning-border: is-dark ? #4d2525 : #fecaca;
+
+    // ==================== Overlays & Shadows ====================
+    out property <color> overlay-bg: is-dark ? #000000cc : #2d2a26cc;
+    out property <color> overlay-bg-strong: is-dark ? #000000d9 : #2d2a26d9;
+    out property <color> overlay-bg-soft: is-dark ? #00000088 : #2d2a2688;
+    // Compatibility aliases
+    out property <color> overlay: overlay-bg;
+    out property <color> overlay-soft: overlay-bg-soft;
+    out property <color> shadow-color: is-dark ? #00000066 : #2d2a2633;
+    out property <color> shadow-strong: is-dark ? #00000088 : #2d2a2655;
+    out property <color> shadow: shadow-color;
+    out property <color> shadow-modal: is-dark ? #00000080 : #2d2a2633;
 
     // ==================== Charts ====================
     out property <color> chart-bg-start: is-dark ? #0d0d12 : #f5f0e8;
     out property <color> chart-bg-end: is-dark ? #080810 : #ede6db;
     out property <color> chart-line: is-dark ? #8b5cf6 : #b8860b;
     out property <color> chart-line-secondary: is-dark ? #94a3b8 : #8a857d;
-    out property <color> chart-stroke: is-dark ? #ffffff : #c9a227;
-    out property <color> chart-stroke-mid: is-dark ? #a0a0a0 : #d4a574;
+    out property <color> chart-stroke: chart-line;
+    out property <color> chart-stroke-mid: chart-line-secondary;
+
+    // ==================== Crypto Gradients ====================
+    out property <color> crypto-ticker-gradient-start: is-dark ? #0a0a0f : #f5f0e8;
+    out property <color> crypto-ticker-gradient-mid: is-dark ? #0d0d14 : #f0ebe3;
+    out property <color> crypto-ticker-gradient-end: is-dark ? #0a0a0f : #f5f0e8;
+    out property <color> crypto-hero-gradient-start: is-dark ? #080810 : #f5f0e8;
+    out property <color> crypto-panel-gradient-start: is-dark ? #0a0a10 : #f5f0e8;
+    out property <color> crypto-panel-gradient-end: is-dark ? #080810 : #ede6db;
+    out property <color> crypto-card-gradient-start: is-dark ? #0d0d14 : #f0ebe3;
+    out property <color> crypto-card-gradient-mid: is-dark ? #111118 : #ebe4d8;
+    out property <color> crypto-card-gradient-end: is-dark ? #0a0a10 : #e5ddd0;
+    out property <color> crypto-icon-gradient-start: is-dark ? #1a1a2e : #e5ddd0;
+    out property <color> crypto-icon-gradient-end: is-dark ? #16213e : #d4c9b8;
+    out property <color> crypto-wallet-icon-gradient-start: is-dark ? #1f1f2e : #e0d6c8;
+    out property <color> crypto-wallet-icon-gradient-end: is-dark ? #2a2a3e : #d4c9b8;
+    out property <color> crypto-modal-gradient-end: is-dark ? #0f0f1a : #f0ebe3;
+    out property <color> modal-bg-end: crypto-modal-gradient-end;
+    out property <color> crypto-chart-bg-start: chart-bg-start;
+    out property <color> crypto-chart-bg-end: chart-bg-end;
+    out property <color> crypto-chart-value: is-dark ? #8b5cf6 : #b8860b;
+    out property <color> crypto-chart-cost: is-dark ? #94a3b8 : #8a857d;
+    out property <color> card-gradient-end: surface-hover;
 
     // ==================== Notifications ====================
-    out property <color> notify-error-bg: is-dark ? #1a1215 : #fef2f2;
-    out property <color> notify-error-border: is-dark ? #3d2020 : #fecaca;
-    out property <color> notify-success-bg: is-dark ? #0f1a15 : #f0fdf4;
-    out property <color> notify-success-border: is-dark ? #203d30 : #bbf7d0;
+    out property <color> notification-error-bg: is-dark ? #1a1215 : #fef2f2;
+    out property <color> notification-error-border: is-dark ? #3d2020 : #fecaca;
+    out property <color> notification-success-bg: is-dark ? #0f1a15 : #f0fdf4;
+    out property <color> notification-success-border: is-dark ? #203d30 : #bbf7d0;
+    out property <color> notify-error-bg: notification-error-bg;
+    out property <color> notify-error-border: notification-error-border;
+    out property <color> notify-success-bg: notification-success-bg;
+    out property <color> notify-success-border: notification-success-border;
+    out property <color> icon-error-bg: danger.with-alpha(0.12);
+    out property <color> icon-error-border: danger.with-alpha(0.35);
+    out property <color> icon-success-bg: success.with-alpha(0.12);
+    out property <color> icon-success-border: success.with-alpha(0.35);
 
-    // Icon backgrounds (for notification icons, status indicators, etc)
-    out property <color> icon-error-bg: is-dark ? #2d1515 : #fee2e2;
-    out property <color> icon-error-border: is-dark ? #3d2020 : #fca5a5;
-    out property <color> icon-success-bg: is-dark ? #152d20 : #dcfce7;
-    out property <color> icon-success-border: is-dark ? #203d30 : #86efac;
+    // ==================== Heatmap ====================
+    out property <color> heatmap-level-0: surface-hover;
+    out property <color> heatmap-level-1: is-dark ? #3b2f5f : #e5d9c3;
+    out property <color> heatmap-level-2: is-dark ? #6b4f9f : #d4b896;
+    out property <color> heatmap-level-3: is-dark ? #8b5cf6 : #c9a227;
+    out property <color> heatmap-level-4: is-dark ? #a78bfa : #b8860b;
 
     // ==================== Account Types ====================
-    out property <color> account-bank: is-dark ? #1e3a5f : #dbeafe;
-    out property <color> account-bank-light: is-dark ? #2d5a8f : #93c5fd;
-    out property <color> account-cash: is-dark ? #2d4a3e : #d1fae5;
-    out property <color> account-cash-light: is-dark ? #3d6a5e : #6ee7b7;
-    out property <color> account-savings: is-dark ? #3d3a1e : #fef3c7;
-    out property <color> account-savings-light: is-dark ? #5d5a2e : #fcd34d;
-    out property <color> account-credit: is-dark ? #3d1e2e : #fce7f3;
-    out property <color> account-credit-light: is-dark ? #5d2e4e : #f9a8d4;
-    out property <color> account-other: is-dark ? #2a2a3a : #e5e7eb;
-    out property <color> account-other-light: is-dark ? #3a3a4a : #9ca3af;
+    out property <color> account-bank-bg: is-dark ? #1e3a5f : #dbeafe;
+    out property <color> account-cash-bg: is-dark ? #2d4a3e : #d1fae5;
+    out property <color> account-savings-bg: is-dark ? #3d3a1e : #fef3c7;
+    out property <color> account-credit-bg: is-dark ? #3d1e2e : #fce7f3;
+    out property <color> account-other-bg: is-dark ? #2a2a3a : #e5e7eb;
+    out property <color> account-bank: account-bank-bg;
+    out property <color> account-cash: account-cash-bg;
+    out property <color> account-savings: account-savings-bg;
+    out property <color> account-credit: account-credit-bg;
+    out property <color> account-other: account-other-bg;
+    out property <color> account-bank-light: is-dark ? #2b4a7a : #bfdbfe;
+    out property <color> account-cash-light: is-dark ? #3a5f4a : #a7f3d0;
+    out property <color> account-savings-light: is-dark ? #5a572f : #fde68a;
+    out property <color> account-credit-light: is-dark ? #5a2f43 : #f9a8d4;
+    out property <color> account-other-light: is-dark ? #3a3a52 : #d1d5db;
 
     // ==================== Transactions ====================
     out property <color> tx-expense-bg: is-dark ? #1c1520 : #fef2f2;
     out property <color> tx-income-bg: is-dark ? #0f1a14 : #f0fdf4;
-    out property <color> tx-transfer-bg: is-dark ? #1a1a2a : #f0f9ff;
+    out property <color> tx-transfer-bg: surface-hover;
+    out property <color> toggle-expense-start: danger.with-alpha(0.2);
+    out property <color> toggle-expense-end: danger.with-alpha(0.1);
+    out property <color> toggle-expense-border: danger.with-alpha(0.35);
+    out property <color> toggle-income-start: success.with-alpha(0.2);
+    out property <color> toggle-income-end: success.with-alpha(0.1);
+    out property <color> toggle-income-border: success.with-alpha(0.35);
 
-    // Type toggles (expense/income buttons)
-    out property <color> toggle-expense-start: is-dark ? #3d1f2f : #fee2e2;
-    out property <color> toggle-expense-end: is-dark ? #2d1520 : #fecaca;
-    out property <color> toggle-expense-border: is-dark ? #5d2f4f : #f87171;
-    out property <color> toggle-income-start: is-dark ? #1f3d2f : #dcfce7;
-    out property <color> toggle-income-end: is-dark ? #152d20 : #bbf7d0;
-    out property <color> toggle-income-border: is-dark ? #2f5d4f : #4ade80;
+    // ==================== Habit Colors (16 palette) ====================
+    out property <color> habit-color-1: #8b5cf6;
+    out property <color> habit-color-2: #ec4899;
+    out property <color> habit-color-3: #ef4444;
+    out property <color> habit-color-4: #f97316;
+    out property <color> habit-color-5: #f59e0b;
+    out property <color> habit-color-6: #eab308;
+    out property <color> habit-color-7: #84cc16;
+    out property <color> habit-color-8: #22c55e;
+    out property <color> habit-color-9: #10b981;
+    out property <color> habit-color-10: #14b8a6;
+    out property <color> habit-color-11: #06b6d4;
+    out property <color> habit-color-12: #0ea5e9;
+    out property <color> habit-color-13: #3b82f6;
+    out property <color> habit-color-14: #6366f1;
+    out property <color> habit-color-15: #a16207;
+    out property <color> habit-color-16: #64748b;
+    out property <color> habit-gradient-start: action-gradient-start;
+    out property <color> habit-gradient-end: action-gradient-end;
+    out property <string> habit-color-1-hex: "#8b5cf6";
+    out property <string> habit-color-2-hex: "#ec4899";
+    out property <string> habit-color-3-hex: "#ef4444";
+    out property <string> habit-color-4-hex: "#f97316";
+    out property <string> habit-color-5-hex: "#f59e0b";
+    out property <string> habit-color-6-hex: "#eab308";
+    out property <string> habit-color-7-hex: "#84cc16";
+    out property <string> habit-color-8-hex: "#22c55e";
+    out property <string> habit-color-9-hex: "#10b981";
+    out property <string> habit-color-10-hex: "#14b8a6";
+    out property <string> habit-color-11-hex: "#06b6d4";
+    out property <string> habit-color-12-hex: "#0ea5e9";
+    out property <string> habit-color-13-hex: "#3b82f6";
+    out property <string> habit-color-14-hex: "#6366f1";
+    out property <string> habit-color-15-hex: "#a16207";
+    out property <string> habit-color-16-hex: "#64748b";
 
-    // Modal
-    out property <color> modal-bg-end: is-dark ? #0f0f1a : #f0ebe3;
+    // ==================== Spacing ====================
+    out property <length> spacing-xs: 4px;
+    out property <length> spacing-sm: 8px;
+    out property <length> spacing-md: 16px;
+    out property <length> spacing-lg: 24px;
+    out property <length> spacing-xl: 32px;
+    out property <length> spacing-2xl: 48px;
+    out property <length> spacing-3xl: 64px;
 
-    // ==================== Heatmap ====================
-    out property <color> heat-0: is-dark ? #1a1a1a : #f0ebe3;
-    out property <color> heat-1: is-dark ? #3b2f5f : #e5d9c3;
-    out property <color> heat-2: is-dark ? #6b4f9f : #d4b896;
-    out property <color> heat-3: is-dark ? #8b5cf6 : #c9a227;
-    out property <color> heat-4: is-dark ? #a78bfa : #b8860b;
-
-    // ==================== Habit Colors ====================
-    out property <color> habit-gradient-start: is-dark ? #8b5cf6 : #c9a227;
-    out property <color> habit-gradient-end: is-dark ? #ec4899 : #d4a574;
-    out property <color> habit-1: #8b5cf6;
-    out property <color> habit-2: #ec4899;
-    out property <color> habit-3: #3b82f6;
-    out property <color> habit-4: #22c55e;
-    out property <color> habit-5: #f59e0b;
-    out property <color> habit-6: #06b6d4;
-    out property <color> habit-7: #f43f5e;
-    out property <color> habit-8: #a855f7;
-    out property <color> habit-9: #14b8a6;
-    out property <color> habit-10: #6366f1;
-    out property <color> habit-11: #84cc16;
-    out property <color> habit-12: #f97316;
-    out property <color> habit-13: #0ea5e9;
-    out property <color> habit-14: #d946ef;
-    out property <color> habit-15: #10b981;
-    out property <color> habit-16: #fbbf24;
-
-    // ==================== Sizes ====================
+    // ==================== Border Radius ====================
     out property <length> radius-sm: 4px;
     out property <length> radius-md: 6px;
     out property <length> radius-lg: 8px;
@@ -129,21 +214,42 @@ export global Theme {
     out property <length> radius-2xl: 16px;
     out property <length> radius-pill: 24px;
 
+    // ==================== Icon Sizes ====================
     out property <length> icon-xs: 24px;
     out property <length> icon-sm: 28px;
     out property <length> icon-md: 32px;
     out property <length> icon-lg: 36px;
     out property <length> icon-xl: 40px;
 
-    out property <length> spacing-xs: 4px;
-    out property <length> spacing-sm: 8px;
-    out property <length> spacing-md: 16px;
-    out property <length> spacing-lg: 24px;
-    out property <length> spacing-xl: 32px;
+    // ==================== Typography ====================
+    out property <length> font-size-xs: 10px;
+    out property <length> font-size-sm: 12px;
+    out property <length> font-size-md: 14px;
+    out property <length> font-size-lg: 18px;
+    out property <length> font-size-xl: 24px;
+    out property <length> font-size-2xl: 32px;
+    out property <length> font-size-3xl: 48px;
 
-    out property <length> font-xs: 10px;
-    out property <length> font-sm: 12px;
-    out property <length> font-md: 14px;
-    out property <length> font-lg: 18px;
-    out property <length> font-xl: 24px;
+    // ==================== Component Dimensions ====================
+    out property <length> habit-row-height: 72px;
+    out property <length> day-cell-size: 26px;
+    out property <length> chart-min-height-sm: 200px;
+    out property <length> chart-min-height-md: 280px;
+    out property <length> modal-width-md: 440px;
+    out property <length> modal-height-sm: 520px;
+    out property <length> modal-height-md: 600px;
+    out property <length> modal-height-compact: 640px;
+    out property <length> modal-height-lg: 720px;
+    out property <length> crypto-ticker-width: 180px;
+    out property <length> crypto-ticker-height: 52px;
+    out property <length> crypto-ticker-settings-width: 52px;
+    out property <length> crypto-clp-badge-width: 150px;
+    out property <length> crypto-hero-height: 200px;
+    out property <length> crypto-card-width: 240px;
+    out property <length> crypto-card-height: 180px;
+    out property <length> crypto-card-step: 256px;
+    out property <length> crypto-card-row-step: 196px;
+    out property <length> crypto-card-grid-height: 388px;
+    out property <length> crypto-card-scroll-height: 200px;
+    out property <length> wallet-info-width: 300px;
 }

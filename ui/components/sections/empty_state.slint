@@ -1,6 +1,6 @@
 // Shared EmptyState component for empty list displays
 
-import { Palette } from "../../globals.slint";
+import { Theme } from "../../theme.slint";
 
 export component EmptyState inherits Rectangle {
     in property <string> icon: "📊";
@@ -8,10 +8,10 @@ export component EmptyState inherits Rectangle {
     in property <string> description: "Get started by adding your first entry";
 
     height: 160px;
-    background: @linear-gradient(135deg, Palette.surface 0%, #1a1a2e 100%);
+    background: @linear-gradient(135deg, Theme.surface 0%, Theme.surface-deep 100%);
     border-radius: 12px;
     border-width: 1px;
-    border-color: Palette.border;
+    border-color: Theme.border;
 
     VerticalLayout {
         alignment: center;
@@ -21,7 +21,7 @@ export component EmptyState inherits Rectangle {
             width: 48px;
             height: 48px;
             border-radius: 24px;
-            background: Palette.surface-hover;
+            background: Theme.surface-hover;
             x: (parent.width - self.width) / 2;
 
             Rectangle {
@@ -30,7 +30,7 @@ export component EmptyState inherits Rectangle {
                 width: parent.width + 6px;
                 height: parent.height + 6px;
                 border-radius: 27px;
-                background: Palette.accent;
+                background: Theme.accent;
                 opacity: 0.2;
             }
 
@@ -44,7 +44,7 @@ export component EmptyState inherits Rectangle {
 
         Text {
             text: root.title;
-            color: Palette.text-secondary;
+            color: Theme.text-secondary;
             font-size: 13px;
             font-weight: 500;
             horizontal-alignment: center;
@@ -52,7 +52,7 @@ export component EmptyState inherits Rectangle {
 
         Text {
             text: root.description;
-            color: Palette.text-muted;
+            color: Theme.text-muted;
             font-size: 11px;
             font-weight: 400;
             horizontal-alignment: center;
