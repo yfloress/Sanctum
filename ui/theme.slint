@@ -9,46 +9,46 @@ export global Theme {
     in-out property <bool> is-dark: true;
 
     // ==================== Core Backgrounds ====================
-    out property <color> background: is-dark ? #000000 : #faf7f2;
-    out property <color> surface: is-dark ? #111111 : #f0ebe3;
-    out property <color> surface-hover: is-dark ? #1a1a1a : #e8e0d5;
-    out property <color> surface-deep: is-dark ? #1a1a2e : #e5ddd0;
-    out property <color> sidebar-bg: is-dark ? #050505 : #f8f4ed;
-    out property <color> sidebar-border: is-dark ? #333333 : #e0d6c8;
+    out property <color> background: is-dark ? #000000 : #f7f1e5;
+    out property <color> surface: is-dark ? #111111 : #f1e6d6;
+    out property <color> surface-hover: is-dark ? #1a1a1a : #eadcc9;
+    out property <color> surface-deep: is-dark ? #1a1a2e : #e2d1b8;
+    out property <color> sidebar-bg: is-dark ? #050505 : #f9f4ec;
+    out property <color> sidebar-border: is-dark ? #333333 : #e2d1b8;
     // Compatibility aliases
     out property <color> bg: background;
     out property <color> bg-surface: surface;
     out property <color> bg-sidebar: sidebar-bg;
     out property <color> bg-header: chart-bg-start;
-    out property <color> auth-bg-1: is-dark ? #2d1b4e : #f5f0e8;
-    out property <color> auth-bg-2: is-dark ? #261545 : #f0ebe3;
-    out property <color> auth-bg-3: is-dark ? #1f1038 : #ebe4d8;
-    out property <color> auth-bg-4: is-dark ? #180c2d : #e5ddd0;
-    out property <color> auth-bg-5: is-dark ? #110822 : #e0d6c8;
-    out property <color> auth-bg-6: is-dark ? #0a0515 : #d4c9b8;
-    out property <color> auth-bg-7: is-dark ? #050208 : #cfc7bb;
+    out property <color> auth-bg-1: is-dark ? #2d1b4e : #f8f1e6;
+    out property <color> auth-bg-2: is-dark ? #261545 : #f3e7d6;
+    out property <color> auth-bg-3: is-dark ? #1f1038 : #eddcc7;
+    out property <color> auth-bg-4: is-dark ? #180c2d : #e5d1b8;
+    out property <color> auth-bg-5: is-dark ? #110822 : #d9c3a7;
+    out property <color> auth-bg-6: is-dark ? #0a0515 : #cdb495;
+    out property <color> auth-bg-7: is-dark ? #050208 : #c2a987;
     out property <color> auth-bg-8: background;
 
     // ==================== Text ====================
-    out property <color> text-primary: is-dark ? #ffffff : #2d2a26;
-    out property <color> text-secondary: is-dark ? #a3a3a3 : #6b6560;
-    out property <color> text-muted: is-dark ? #666666 : #8a857d;
-    out property <color> text-subtle: is-dark ? #333333 : #b5aea5;
+    out property <color> text-primary: is-dark ? #ffffff : #3b2f23;
+    out property <color> text-secondary: is-dark ? #a3a3a3 : #6b5a46;
+    out property <color> text-muted: is-dark ? #666666 : #8b7a66;
+    out property <color> text-subtle: is-dark ? #333333 : #b09a83;
     // Compatibility aliases
     out property <color> text: text-primary;
     out property <color> text-light: is-dark ? #f5f5f5 : #ffffff;
 
     // ==================== Borders ====================
-    out property <color> border: is-dark ? #333333 : #e0d6c8;
+    out property <color> border: is-dark ? #333333 : #d8c7b0;
     out property <color> border-light: is-dark ? #ffffff : #c9a227;
-    out property <color> border-subtle: is-dark ? #222222 : #ebe4d8;
+    out property <color> border-subtle: is-dark ? #222222 : #efe3d2;
 
     // ==================== Accent & Primary ====================
     out property <color> accent: is-dark ? #ffffff : #c9a227;
     out property <color> primary: is-dark ? #6366f1 : #b8860b;
     out property <color> accent-indigo: primary;
     out property <color> action-gradient-start: is-dark ? #5a00f0 : #c9a227;
-    out property <color> action-gradient-end: is-dark ? #ff2ac3 : #d4a574;
+    out property <color> action-gradient-end: is-dark ? #ff2ac3 : #e3b566;
 
     // ==================== Semantic ====================
     out property <color> success: is-dark ? #22c55e : #2e7d32;
@@ -68,38 +68,38 @@ export global Theme {
     out property <color> warning-border: is-dark ? #4d2525 : #fecaca;
 
     // ==================== Overlays & Shadows ====================
-    out property <color> overlay-bg: is-dark ? #000000cc : #2d2a26cc;
-    out property <color> overlay-bg-strong: is-dark ? #000000d9 : #2d2a26d9;
-    out property <color> overlay-bg-soft: is-dark ? #00000088 : #2d2a2688;
+    out property <color> overlay-bg: is-dark ? #000000cc : #3b2f23cc;
+    out property <color> overlay-bg-strong: is-dark ? #000000d9 : #3b2f23d9;
+    out property <color> overlay-bg-soft: is-dark ? #00000088 : #3b2f2388;
     // Compatibility aliases
     out property <color> overlay: overlay-bg;
     out property <color> overlay-soft: overlay-bg-soft;
-    out property <color> shadow-color: is-dark ? #00000066 : #2d2a2633;
-    out property <color> shadow-strong: is-dark ? #00000088 : #2d2a2655;
+    out property <color> shadow-color: is-dark ? #00000066 : #3b2f2333;
+    out property <color> shadow-strong: is-dark ? #00000088 : #3b2f2355;
     out property <color> shadow: shadow-color;
-    out property <color> shadow-modal: is-dark ? #00000080 : #2d2a2633;
+    out property <color> shadow-modal: is-dark ? #00000080 : #3b2f2380;
 
     // ==================== Charts ====================
-    out property <color> chart-bg-start: is-dark ? #0d0d12 : #f5f0e8;
-    out property <color> chart-bg-end: is-dark ? #080810 : #ede6db;
+    out property <color> chart-bg-start: is-dark ? #0d0d12 : #f6efe4;
+    out property <color> chart-bg-end: is-dark ? #080810 : #efe0ce;
     out property <color> chart-stroke: is-dark ? #8b5cf6 : #b8860b;
-    out property <color> chart-stroke-mid: is-dark ? #94a3b8 : #8a857d;
+    out property <color> chart-stroke-mid: is-dark ? #94a3b8 : #9c866c;
 
     // ==================== Crypto Gradients ====================
-    out property <color> crypto-ticker-gradient-start: is-dark ? #0a0a0f : #f5f0e8;
-    out property <color> crypto-ticker-gradient-mid: is-dark ? #0d0d14 : #f0ebe3;
-    out property <color> crypto-ticker-gradient-end: is-dark ? #0a0a0f : #f5f0e8;
-    out property <color> crypto-hero-gradient-start: is-dark ? #080810 : #f5f0e8;
-    out property <color> crypto-panel-gradient-start: is-dark ? #0a0a10 : #f5f0e8;
-    out property <color> crypto-panel-gradient-end: is-dark ? #080810 : #ede6db;
-    out property <color> crypto-card-gradient-start: is-dark ? #0d0d14 : #f0ebe3;
-    out property <color> crypto-card-gradient-mid: is-dark ? #111118 : #ebe4d8;
-    out property <color> crypto-card-gradient-end: is-dark ? #0a0a10 : #e5ddd0;
-    out property <color> crypto-icon-gradient-start: is-dark ? #1a1a2e : #e5ddd0;
-    out property <color> crypto-icon-gradient-end: is-dark ? #16213e : #d4c9b8;
-    out property <color> crypto-wallet-icon-gradient-start: is-dark ? #1f1f2e : #e0d6c8;
-    out property <color> crypto-wallet-icon-gradient-end: is-dark ? #2a2a3e : #d4c9b8;
-    out property <color> crypto-modal-gradient-end: is-dark ? #0f0f1a : #f0ebe3;
+    out property <color> crypto-ticker-gradient-start: is-dark ? #0a0a0f : #f6efe4;
+    out property <color> crypto-ticker-gradient-mid: is-dark ? #0d0d14 : #f1e6d6;
+    out property <color> crypto-ticker-gradient-end: is-dark ? #0a0a0f : #f6efe4;
+    out property <color> crypto-hero-gradient-start: is-dark ? #080810 : #f5eddc;
+    out property <color> crypto-panel-gradient-start: is-dark ? #0a0a10 : #f6efe4;
+    out property <color> crypto-panel-gradient-end: is-dark ? #080810 : #efe0ce;
+    out property <color> crypto-card-gradient-start: is-dark ? #0d0d14 : #f1e6d6;
+    out property <color> crypto-card-gradient-mid: is-dark ? #111118 : #eadcc9;
+    out property <color> crypto-card-gradient-end: is-dark ? #0a0a10 : #e2d1b8;
+    out property <color> crypto-icon-gradient-start: is-dark ? #1a1a2e : #e9dccb;
+    out property <color> crypto-icon-gradient-end: is-dark ? #16213e : #cdb99f;
+    out property <color> crypto-wallet-icon-gradient-start: is-dark ? #1f1f2e : #decdb7;
+    out property <color> crypto-wallet-icon-gradient-end: is-dark ? #2a2a3e : #cbb69a;
+    out property <color> crypto-modal-gradient-end: is-dark ? #0f0f1a : #efe3d2;
     out property <color> modal-bg-end: crypto-modal-gradient-end;
     out property <color> crypto-chart-bg-start: chart-bg-start;
     out property <color> crypto-chart-bg-end: chart-bg-end;
