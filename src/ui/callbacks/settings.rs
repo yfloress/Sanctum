@@ -20,7 +20,8 @@ fn start_auto_fetch_timer(timer: &slint::Timer, ui_weak: Weak<AppWindow>) {
             if let Some(ui) = ui_weak.upgrade() {
                 // Only refresh if user is still logged in (vault open)
                 if ui.global::<AppState>().get_is_logged_in() {
-                    ui.global::<CryptoAdapter>().invoke_refresh_prices();
+                    // Use silent refresh to avoid notification popups
+                    ui.global::<CryptoAdapter>().invoke_refresh_prices_silent();
                 }
             }
         },
@@ -72,7 +73,7 @@ pub fn setup_settings_callbacks<N>(
                         };
 
                         if needs_update {
-                            ui.global::<CryptoAdapter>().invoke_refresh_prices();
+                            ui.global::<CryptoAdapter>().invoke_refresh_prices_silent();
                         }
                     } else {
                         timer.stop();
@@ -122,10 +123,10 @@ pub fn setup_settings_callbacks<N>(
                 let _ = controller.set_app_setting(SETTING_AUTO_FETCH, val);
 
                 if enabled {
-                    // Start periodic timer and trigger immediate refresh
+                    // Start periodic timer and trigger immediate silent refresh
                     if let Some(ui) = ui_weak.upgrade() {
                         start_auto_fetch_timer(&timer, ui.as_weak());
-                        ui.global::<CryptoAdapter>().invoke_refresh_prices();
+                        ui.global::<CryptoAdapter>().invoke_refresh_prices_silent();
                     }
                 } else {
                     timer.stop();

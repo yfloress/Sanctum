@@ -30,117 +30,144 @@ pub fn setup_portfolio_callbacks<N>(
         });
     }
 
-    // on_refresh_prices
+    // Shared refresh implementation (show_loading = show the loading overlay)
+    fn do_refresh_prices<N>(
+        controller: Arc<AppController>,
+        ui_weak: Weak<AppWindow>,
+        notify: N,
+        show_loading: bool,
+    ) where
+        N: Fn(String, bool) + Clone + Send + 'static,
+    {
+        let controller_async = controller.clone();
+        let ui_weak_async = ui_weak.clone();
+
+        // Only show loading overlay for manual refresh
+        if show_loading {
+            if let Some(ui) = ui_weak.upgrade() {
+                ui.global::<CryptoAdapter>().set_is_refreshing(true);
+            }
+            notify("Fetching prices...".into(), false);
+        }
+
+        let notify_for_async = notify.clone();
+
+        tokio::spawn(async move {
+            let coins = controller_async
+                .get_monitored_coin_ids()
+                .unwrap_or_default();
+
+            let limit_reached = coins.len() > 50;
+            let limit_excluded = if limit_reached {
+                let extra_count = coins.len().saturating_sub(50);
+                let preview: Vec<String> = coins.iter().skip(50).take(3).cloned().collect();
+                if preview.is_empty() {
+                    String::new()
+                } else if extra_count > preview.len() {
+                    format!(
+                        "{} +{} more",
+                        preview.join(", "),
+                        extra_count - preview.len()
+                    )
+                } else {
+                    preview.join(", ")
+                }
+            } else {
+                String::new()
+            };
+            let has_coins = !coins.is_empty();
+
+            let mut prices_updated = false;
+            if !coins.is_empty() {
+                match controller_async.get_crypto_prices(coins).await {
+                    Ok(prices) => {
+                        let _ = controller_async.save_crypto_prices(prices);
+                        prices_updated = true;
+                    }
+                    Err(e) => {
+                        let notify_fail = notify_for_async.clone();
+                        let _ = ui_weak_async.upgrade_in_event_loop(move |_| {
+                            notify_fail(format!("Price update failed: {}", e), true);
+                        });
+                    }
+                }
+            }
+
+            let (clp_display, clp_updated) = match controller_async.get_clp_usd_rate().await {
+                Ok(rate) => {
+                    let _ = controller_async.save_exchange_rate("CLP_USD".to_string(), rate);
+                    (format_clp_rate(rate), true)
+                }
+                Err(_) => {
+                    if let Ok(Some((rate, _))) =
+                        controller_async.load_exchange_rate_allow_stale("CLP_USD".to_string())
+                    {
+                        (format_clp_rate(rate), true)
+                    } else {
+                        ("N/A".to_string(), false)
+                    }
+                }
+            };
+
+            let now = chrono::Local::now();
+            let timestamp_to_save = if prices_updated {
+                Some(now.to_rfc3339())
+            } else {
+                None
+            };
+            let last_updated_label = if prices_updated {
+                Some(format!("Today at {}", now.format("%H:%M")))
+            } else {
+                None
+            };
+
+            if let Some(ts) = timestamp_to_save.as_ref() {
+                let _ = controller_async.set_app_setting(SETTING_CRYPTO_LAST_UPDATED, ts);
+            }
+
+            let notify_success = notify_for_async.clone();
+            let _ = ui_weak_async.upgrade_in_event_loop(move |ui| {
+                ui.global::<CryptoAdapter>().set_is_refreshing(false);
+                ui.global::<CryptoAdapter>().invoke_fetch_portfolio();
+                ui.global::<CryptoAdapter>()
+                    .set_clp_rate(SharedString::from(clp_display));
+                if let Some(label) = last_updated_label {
+                    ui.global::<CryptoAdapter>().set_last_updated(label.into());
+                }
+                ui.global::<CryptoAdapter>()
+                    .set_limit_reached(limit_reached);
+                ui.global::<CryptoAdapter>()
+                    .set_limit_excluded(limit_excluded.into());
+                if prices_updated {
+                    notify_success("Prices updated".into(), false);
+                } else if !has_coins && clp_updated {
+                    notify_success("Rates updated".into(), false);
+                }
+            });
+        });
+    }
+
+    // on_refresh_prices (manual - with loading overlay)
     {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         let notify = notify.clone();
 
         ui.global::<CryptoAdapter>().on_refresh_prices(move || {
-            let controller_async = controller.clone();
-            let ui_weak_async = ui_weak.clone();
-            if let Some(ui) = ui_weak.upgrade() {
-                ui.global::<CryptoAdapter>().set_is_refreshing(true);
-            }
-            let notify_start = notify.clone();
-            notify_start("Fetching prices...".into(), false);
-
-            let notify_for_async = notify.clone();
-
-            tokio::spawn(async move {
-                let coins = controller_async
-                    .get_monitored_coin_ids()
-                    .unwrap_or_default();
-
-                let limit_reached = coins.len() > 50;
-                let limit_excluded = if limit_reached {
-                    let extra_count = coins.len().saturating_sub(50);
-                    let preview: Vec<String> = coins.iter().skip(50).take(3).cloned().collect();
-                    if preview.is_empty() {
-                        String::new()
-                    } else if extra_count > preview.len() {
-                        format!(
-                            "{} +{} more",
-                            preview.join(", "),
-                            extra_count - preview.len()
-                        )
-                    } else {
-                        preview.join(", ")
-                    }
-                } else {
-                    String::new()
-                };
-                let has_coins = !coins.is_empty();
-
-                let mut prices_updated = false;
-                if !coins.is_empty() {
-                    match controller_async.get_crypto_prices(coins).await {
-                        Ok(prices) => {
-                            let _ = controller_async.save_crypto_prices(prices);
-                            prices_updated = true;
-                        }
-                        Err(e) => {
-                            let notify_fail = notify_for_async.clone();
-                            let _ = ui_weak_async.upgrade_in_event_loop(move |_| {
-                                notify_fail(format!("Price update failed: {}", e), true);
-                            });
-                        }
-                    }
-                }
-
-                let (clp_display, clp_updated) = match controller_async.get_clp_usd_rate().await {
-                    Ok(rate) => {
-                        let _ = controller_async.save_exchange_rate("CLP_USD".to_string(), rate);
-                        (format_clp_rate(rate), true)
-                    }
-                    Err(_) => {
-                        if let Ok(Some((rate, _))) =
-                            controller_async.load_exchange_rate_allow_stale("CLP_USD".to_string())
-                        {
-                            (format_clp_rate(rate), true)
-                        } else {
-                            ("N/A".to_string(), false)
-                        }
-                    }
-                };
-
-                let notify_success = notify_for_async.clone();
-                let now = chrono::Local::now();
-                let timestamp_to_save = if prices_updated {
-                    Some(now.to_rfc3339())
-                } else {
-                    None
-                };
-                let last_updated_label = if prices_updated {
-                    Some(format!("Today at {}", now.format("%H:%M")))
-                } else {
-                    None
-                };
-
-                if let Some(ts) = timestamp_to_save.as_ref() {
-                    let _ = controller_async.set_app_setting(SETTING_CRYPTO_LAST_UPDATED, ts);
-                }
-
-                let _ = ui_weak_async.upgrade_in_event_loop(move |ui| {
-                    ui.global::<CryptoAdapter>().set_is_refreshing(false);
-                    ui.global::<CryptoAdapter>().invoke_fetch_portfolio();
-                    ui.global::<CryptoAdapter>()
-                        .set_clp_rate(SharedString::from(clp_display));
-                    if let Some(label) = last_updated_label {
-                        ui.global::<CryptoAdapter>().set_last_updated(label.into());
-                    }
-                    ui.global::<CryptoAdapter>()
-                        .set_limit_reached(limit_reached);
-                    ui.global::<CryptoAdapter>()
-                        .set_limit_excluded(limit_excluded.into());
-                    if prices_updated {
-                        notify_success("Prices updated".into(), false);
-                    } else if !has_coins && clp_updated {
-                        notify_success("Rates updated".into(), false);
-                    }
-                });
-            });
+            do_refresh_prices(controller.clone(), ui_weak.clone(), notify.clone(), true);
         });
+    }
+
+    // on_refresh_prices_silent (auto-fetch - no loading overlay, but still shows toast)
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = notify.clone();
+
+        ui.global::<CryptoAdapter>()
+            .on_refresh_prices_silent(move || {
+                do_refresh_prices(controller.clone(), ui_weak.clone(), notify.clone(), false);
+            });
     }
 
     // on_get_last_price
