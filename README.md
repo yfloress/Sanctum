@@ -1,6 +1,6 @@
 <div align="center">
 
-<h1>SANCTUM</h1>
+<h1>[![Typing SVG](https://readme-typing-svg.herokuapp.com?duration=6500&color=777777&background=00000000&width=500&height=120&lines=++SANCTUM)](https://git.io/typing-svg)</h1>
 
 <p>
     <strong>Your personal financial fortress.</strong>
