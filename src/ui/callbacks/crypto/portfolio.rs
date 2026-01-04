@@ -251,7 +251,7 @@ pub fn setup_portfolio_callbacks<N>(
                     }
                     Err(e) => {
                         log::error!("Error getting available balance: {:?}", e);
-                        SharedString::from("0")
+                        SharedString::from("")
                     }
                 }
             });

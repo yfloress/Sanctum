@@ -16,7 +16,7 @@ use super::api::{
     ProxyConfig, MAX_PROXY_URL_LENGTH,
 };
 use super::validation::{
-    validate_coin_id_str, validate_field_length, validate_uuid, sanitize_string,
+    validate_coin_id_str, validate_date, validate_field_length, validate_uuid, sanitize_string,
     MAX_WALLET_NAME_LENGTH, MAX_ICON_LENGTH,
 };
 
@@ -405,18 +405,17 @@ impl CryptoService {
         &self,
         wallet_id: String,
         coin_id: String,
-        _date: String,
+        date: String,
     ) -> Result<f64, CryptoError> {
         self.with_db(|db| {
             let validated_wallet_id = validate_uuid(&wallet_id)?;
             let validated_coin_id = validate_coin_id_str(&coin_id)?;
-
-            let today = Local::now().format("%Y-%m-%d").to_string();
+            let validated_date = validate_date(&date)?;
 
             db.get_wallet_coin_balance_at(
                 &validated_wallet_id,
                 &validated_coin_id,
-                &today,
+                &validated_date,
                 None,
             )
             .map_err(CryptoError::Database)
