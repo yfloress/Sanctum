@@ -132,12 +132,17 @@ component TransactionRow inherits Rectangle {
         alignment: space-between;
         spacing: 12px;
         
-        HorizontalLayout {
-            spacing: 12px;
-            alignment: start;
+        Rectangle {
             horizontal-stretch: 1;
-            
-            Rectangle {
+            clip: true;
+            background: transparent;
+
+            HorizontalLayout {
+                spacing: 12px;
+                alignment: start;
+                horizontal-stretch: 1;
+
+                Rectangle {
                 width: 32px;
                 height: 32px;
                 border-radius: 8px;
@@ -170,25 +175,29 @@ component TransactionRow inherits Rectangle {
                 }
             }
             
-            VerticalLayout {
-                alignment: center;
-                spacing: 2px;
-                
-                Text { 
-                    text: root.tx-type; 
-                    color: Palette.text-primary; 
-                    font-size: 12px; 
-                    font-weight: 500; 
-                }
-                Text { 
-                    text: root.tx-date; 
-                    color: Palette.text-muted; 
-                    font-size: 10px; 
-                }
-                if root.tx-notes != "": Text { 
-                    text: root.tx-notes; 
-                    color: Palette.text-subtle; 
-                    font-size: 9px; 
+                VerticalLayout {
+                    alignment: center;
+                    spacing: 2px;
+                    horizontal-stretch: 1;
+                    
+                    Text { 
+                        text: root.tx-type; 
+                        color: Palette.text-primary; 
+                        font-size: 12px; 
+                        font-weight: 500;
+                        overflow: elide;
+                    }
+                    Text { 
+                        text: root.tx-date; 
+                        color: Palette.text-muted; 
+                        font-size: 10px; 
+                    }
+                    if root.tx-notes != "": Text { 
+                        text: root.tx-notes; 
+                        color: Palette.text-subtle; 
+                        font-size: 9px;
+                        overflow: elide;
+                    }
                 }
             }
         }
