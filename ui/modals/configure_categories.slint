@@ -27,13 +27,26 @@ component CategoryRow inherits Rectangle {
         alignment: space-between;
 
         // Category name or edit field
-        if !root.is-editing: Text {
-            text: root.name;
-            color: root.is-default ? Theme.text-secondary : Theme.text-primary;
-            font-size: 13px;
-            font-weight: 500;
-            vertical-alignment: center;
+        if !root.is-editing: HorizontalLayout {
+            spacing: 8px;
             horizontal-stretch: 1;
+
+            Text {
+                text: root.name;
+                color: root.is-default ? Theme.text-secondary : Theme.text-primary;
+                font-size: 13px;
+                font-weight: 500;
+                vertical-alignment: center;
+            }
+
+            if root.is-default: Text {
+                text: "DEFAULT";
+                color: Theme.text-subtle;
+                font-size: 9px;
+                font-weight: 600;
+                letter-spacing: 1px;
+                vertical-alignment: center;
+            }
         }
 
         if root.is-editing: Rectangle {
@@ -63,48 +76,54 @@ component CategoryRow inherits Rectangle {
         }
 
         // Actions
-        HorizontalLayout {
-            spacing: 8px;
+        Rectangle {
+            height: parent.height;
+            background: transparent;
 
-            if root.is-editing: ActionButton {
-                text: "SAVE";
-                primary: true;
-                height: 32px;
-                min-width: 72px;
-                clicked => { root.save-clicked(root.edit-value); }
-            }
+            VerticalLayout {
+                alignment: center;
 
-            if root.is-editing: ActionButton {
-                text: "CANCEL";
-                primary: false;
-                height: 32px;
-                min-width: 72px;
-                clicked => { root.cancel-clicked(); }
-            }
+                HorizontalLayout {
+                    spacing: 8px;
 
-            if !root.is-editing && !root.is-default: ActionButton {
-                text: "EDIT";
-                primary: false;
-                height: 32px;
-                min-width: 64px;
-                clicked => { root.edit-clicked(); }
-            }
+                    if root.is-editing: ActionButton {
+                        text: "SAVE";
+                        primary: true;
+                        height: 32px;
+                        min-width: 72px;
+                        clicked => { root.save-clicked(root.edit-value); }
+                    }
 
-            if !root.is-editing: ActionButton {
-                text: "DELETE";
-                primary: false;
-                height: 32px;
-                min-width: 72px;
-                clicked => { root.delete-clicked(); }
-            }
+                    if root.is-editing: ActionButton {
+                        text: "CANCEL";
+                        primary: false;
+                        height: 32px;
+                        min-width: 72px;
+                        clicked => { root.cancel-clicked(); }
+                    }
 
-            if root.is-default: Text {
-                text: "DEFAULT";
-                color: Theme.text-subtle;
-                font-size: 9px;
-                font-weight: 600;
-                letter-spacing: 1px;
-                vertical-alignment: center;
+                    if !root.is-editing && root.is-default: Rectangle {
+                        width: 64px;
+                        height: 32px;
+                        background: transparent;
+                    }
+
+                    if !root.is-editing && !root.is-default: ActionButton {
+                        text: "EDIT";
+                        primary: false;
+                        height: 32px;
+                        min-width: 64px;
+                        clicked => { root.edit-clicked(); }
+                    }
+
+                    if !root.is-editing: ActionButton {
+                        text: "DELETE";
+                        primary: false;
+                        height: 32px;
+                        min-width: 72px;
+                        clicked => { root.delete-clicked(); }
+                    }
+                }
             }
         }
     }

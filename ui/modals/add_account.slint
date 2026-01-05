@@ -265,7 +265,7 @@ export component AddAccountModal inherits Rectangle {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
         width: 440px;
-        height: 460px;
+        height: editing ? 520px : 460px;
         background: @linear-gradient(180deg, Theme.sidebar-bg 0%, Theme.modal-bg-end 100%);
         border-radius: 16px;
         border-width: 1px;
@@ -372,7 +372,7 @@ export component AddAccountModal inherits Rectangle {
                 border-color: Theme.delete-border;
 
                 if !show-archive-confirm: Text {
-                    text: "ARCHIVE ACCOUNT";
+                    text: "DELETE ACCOUNT";
                     color: Theme.text-primary;
                     font-size: 11px;
                     font-weight: 600;
@@ -419,7 +419,7 @@ export component AddAccountModal inherits Rectangle {
                         border-color: Theme.delete-border;
 
                         Text {
-                            text: "ARCHIVE";
+                            text: "DELETE";
                             color: Theme.text-primary;
                             font-size: 10px;
                             font-weight: 600;
