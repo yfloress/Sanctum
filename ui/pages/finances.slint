@@ -712,12 +712,12 @@ export component FinancesPage inherits Rectangle {
                     }
 
                     AccountFilterSelect {
-                        width: 150px;
+                        width: 120px;
                         selected-index <=> root.filter-account-index;
                     }
 
                     CategoryFilterSelect {
-                        width: 150px;
+                        width: 120px;
                         selected-index <=> root.filter-category-index;
                     }
 
@@ -960,17 +960,13 @@ export component FinancesPage inherits Rectangle {
                             }
                         }
 
-                        VerticalLayout {
-                            height: parent.height;
-                            alignment: center;
-
-                            ActionButton {
-                                text: "CONFIGURE";
-                                primary: false;
-                                clicked => {
-                                    CategoryAdapter.load-categories();
-                                    AppState.show-configure-categories = true;
-                                }
+                        ActionButton {
+                            text: "CONFIGURE";
+                            primary: false;
+                            y: (parent.height - self.height) / 2;
+                            clicked => {
+                                CategoryAdapter.load-categories();
+                                AppState.show-configure-categories = true;
                             }
                         }
                     }

@@ -183,7 +183,7 @@ export component AddAccountModal inherits Rectangle {
     property <string> initial-balance: editing && AccountAdapter.accounts.length > selected-index ? AccountAdapter.accounts[selected-index].initial-balance : "";
     property <int> type-index: editing && AccountAdapter.accounts.length > selected-index ? (AccountAdapter.accounts[selected-index].account-type-key == "cash" ? 1 : AccountAdapter.accounts[selected-index].account-type-key == "savings" ? 2 : AccountAdapter.accounts[selected-index].account-type-key == "credit_card" ? 3 : AccountAdapter.accounts[selected-index].account-type-key == "other" ? 4 : 0) : 0;
     property <int> currency-index: editing && AccountAdapter.accounts.length > selected-index ? (AccountAdapter.accounts[selected-index].currency == "CLP" ? 1 : 0) : 0;
-    property <bool> show-archive-confirm: false;
+    property <bool> show-delete-confirm: false;
 
     property <[string]> type-options: ["Bank", "Cash", "Savings", "Credit Card", "Other"];
     property <[string]> currency-options: ["USD", "CLP"];
@@ -195,7 +195,7 @@ export component AddAccountModal inherits Rectangle {
         initial-balance = "";
         type-index = 0;
         currency-index = 0;
-        show-archive-confirm = false;
+        show-delete-confirm = false;
     }
 
     function submit() {
@@ -366,12 +366,12 @@ export component AddAccountModal inherits Rectangle {
 
             if editing: Rectangle {
                 height: 44px;
-                background: show-archive-confirm ? Theme.surface : Theme.delete-bg;
+                background: Theme.delete-bg;
                 border-radius: 10px;
                 border-width: 1px;
                 border-color: Theme.delete-border;
 
-                if !show-archive-confirm: Text {
+                Text {
                     text: "DELETE ACCOUNT";
                     color: Theme.text-primary;
                     font-size: 11px;
@@ -381,75 +381,9 @@ export component AddAccountModal inherits Rectangle {
                     vertical-alignment: center;
                 }
 
-                if show-archive-confirm: HorizontalLayout {
-                    padding-left: 10px;
-                    padding-right: 10px;
-                    spacing: 10px;
-
-                    Rectangle {
-                        horizontal-stretch: 1;
-                        height: 32px;
-                        border-radius: 8px;
-                        background: Theme.surface-hover;
-                        border-width: 1px;
-                        border-color: Theme.border-light;
-
-                        Text {
-                            text: "CANCEL";
-                            color: Theme.text-primary;
-                            font-size: 10px;
-                            font-weight: 600;
-                            letter-spacing: 1px;
-                            horizontal-alignment: center;
-                            vertical-alignment: center;
-                        }
-
-                        cancel-touch := TouchArea {
-                            mouse-cursor: pointer;
-                            clicked => { show-archive-confirm = false; }
-                        }
-                    }
-
-                    Rectangle {
-                        horizontal-stretch: 1;
-                        height: 32px;
-                        border-radius: 8px;
-                        background: Theme.delete-bg-hover;
-                        border-width: 1px;
-                        border-color: Theme.delete-border;
-
-                        Text {
-                            text: "DELETE";
-                            color: Theme.text-primary;
-                            font-size: 10px;
-                            font-weight: 600;
-                            letter-spacing: 1px;
-                            horizontal-alignment: center;
-                            vertical-alignment: center;
-                        }
-
-                        confirm-touch := TouchArea {
-                            mouse-cursor: pointer;
-                            clicked => {
-                                let safe-index = selected-index >= AccountAdapter.accounts.length ? 0 : selected-index;
-                                AccountAdapter.is-loading = true;
-                                let result = AccountAdapter.delete-account(AccountAdapter.accounts[safe-index].id);
-                                if (result == "") {
-                                    root.reset-form();
-                                    AppState.show-add-account = false;
-                                } else {
-                                    NotificationAdapter.show(result, true);
-                                    AccountAdapter.is-loading = false;
-                                    show-archive-confirm = false;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if !show-archive-confirm: TouchArea {
+                TouchArea {
                     mouse-cursor: pointer;
-                    clicked => { show-archive-confirm = true; }
+                    clicked => { show-delete-confirm = true; }
                 }
             }
 
@@ -479,6 +413,114 @@ export component AddAccountModal inherits Rectangle {
                         opacity: 0.9;
                     }
                 ]
+            }
+        }
+    }
+
+    if show-delete-confirm: Rectangle {
+        x: 0; y: 0; width: 100%; height: 100%;
+        z: 1200;
+
+        Rectangle {
+            background: Theme.overlay-bg-strong;
+            TouchArea {
+                clicked => { show-delete-confirm = false; }
+            }
+        }
+
+        Rectangle {
+            width: min(360px, parent.width - 40px);
+            height: min(180px, parent.height - 40px);
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            background: Theme.sidebar-bg;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: Theme.border-light;
+            drop-shadow-blur: 20px;
+            drop-shadow-color: Theme.shadow-color;
+
+            VerticalLayout {
+                padding: 24px;
+                spacing: 16px;
+
+                Text {
+                    text: "Delete Account?";
+                    color: Theme.text-primary;
+                    font-size: 14px;
+                    font-weight: 600;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: "This will permanently delete \"" + name-value + "\" and all its transaction history.";
+                    color: Theme.text-muted;
+                    font-size: 11px;
+                    wrap: word-wrap;
+                    horizontal-alignment: center;
+                }
+
+                HorizontalLayout {
+                    spacing: 12px;
+
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        height: 36px;
+                        background: cancel-touch.has-hover ? Theme.surface-hover : Theme.surface;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: Theme.border;
+
+                        Text {
+                            text: "Cancel";
+                            color: Theme.text-secondary;
+                            font-size: 11px;
+                            font-weight: 600;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        cancel-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { show-delete-confirm = false; }
+                        }
+                    }
+
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        height: 36px;
+                        background: confirm-touch.has-hover ? Theme.delete-bg-active : Theme.delete-bg-hover;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: Theme.delete-border;
+
+                        Text {
+                            text: "Delete";
+                            color: Theme.text-primary;
+                            font-size: 11px;
+                            font-weight: 600;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        confirm-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                let safe-index = selected-index >= AccountAdapter.accounts.length ? 0 : selected-index;
+                                AccountAdapter.is-loading = true;
+                                let result = AccountAdapter.delete-account(AccountAdapter.accounts[safe-index].id);
+                                if (result == "") {
+                                    root.reset-form();
+                                    AppState.show-add-account = false;
+                                } else {
+                                    NotificationAdapter.show(result, true);
+                                    AccountAdapter.is-loading = false;
+                                    show-delete-confirm = false;
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
