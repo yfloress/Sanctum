@@ -178,6 +178,7 @@ component AccountFilterSelect inherits Rectangle {
 
 component CategoryFilterSelect inherits Rectangle {
     in-out property <int> selected-index: 0;
+    property <bool> popup-open: false;
 
     height: 56px;
     background: transparent;
@@ -244,199 +245,202 @@ component CategoryFilterSelect inherits Rectangle {
 
             TouchArea {
                 mouse-cursor: pointer;
-                clicked => { popup.show(); }
+                clicked => { root.popup-open = !root.popup-open; }
             }
         }
     }
 
-    popup := PopupWindow {
+    if popup-open: Rectangle {
         x: 0;
         y: input-box.y + input-box.height - 4px;
         width: root.width;
+        height: min((CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length + 4) * 40px + 8px, 280px);
+        z: 1200;
+        background: Theme.sidebar-bg;
+        border-radius: 8px;
+        border-width: 1px;
+        border-color: Theme.border-light;
+        drop-shadow-blur: 16px;
+        drop-shadow-color: Theme.shadow;
+        clip: true;
 
-        Rectangle {
-            background: Theme.sidebar-bg;
-            border-radius: 8px;
-            border-width: 1px;
-            border-color: Theme.border-light;
-            height: min((CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length + 4) * 40px + 8px, 280px);
-            drop-shadow-blur: 16px;
-            drop-shadow-color: Theme.shadow;
+        Flickable {
+            viewport-height: (CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length + 4) * 40px + 8px;
 
-            Flickable {
-                viewport-height: (CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length + 4) * 40px + 8px;
+            VerticalLayout {
+                padding: 4px;
+                spacing: 0px;
 
-                VerticalLayout {
-                    padding: 4px;
-                    spacing: 0px;
+                Rectangle {
+                    height: 40px;
+                    background: option-touch-all.has-hover ? Theme.surface-hover : transparent;
+                    border-radius: 6px;
 
-                    Rectangle {
-                        height: 40px;
-                        background: option-touch-all.has-hover ? Theme.surface-hover : transparent;
-                        border-radius: 6px;
-
-                        HorizontalLayout {
-                            padding-left: 12px;
-                            padding-right: 12px;
-
-                            Text {
-                                text: "All categories";
-                                color: selected-index == 0 ? Theme.text-primary : Theme.text-secondary;
-                                font-size: 12px;
-                                font-weight: selected-index == 0 ? 500 : 400;
-                                vertical-alignment: center;
-                                horizontal-stretch: 1;
-                            }
-
-                            if selected-index == 0: Text {
-                                text: "✓";
-                                color: Theme.accent;
-                                font-size: 12px;
-                                vertical-alignment: center;
-                            }
-                        }
-
-                        option-touch-all := TouchArea {
-                            mouse-cursor: pointer;
-                            clicked => {
-                                root.selected-index = 0;
-                            }
-                        }
-                    }
-
-                    Rectangle {
-                        height: 40px;
-                        background: transparent;
+                    HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
 
                         Text {
-                            text: "EXPENSE";
-                            color: Theme.text-muted;
-                            font-size: 9px;
-                            font-weight: 600;
-                            letter-spacing: 1.2px;
+                            text: "All categories";
+                            color: selected-index == 0 ? Theme.text-primary : Theme.text-secondary;
+                            font-size: 12px;
+                            font-weight: selected-index == 0 ? 500 : 400;
                             vertical-alignment: center;
-                            x: 12px;
+                            horizontal-stretch: 1;
+                        }
+
+                        if selected-index == 0: Text {
+                            text: "✓";
+                            color: Theme.accent;
+                            font-size: 12px;
+                            vertical-alignment: center;
                         }
                     }
 
-                    for cat[index] in CategoryAdapter.expense-categories: Rectangle {
-                        height: 40px;
-                        background: option-touch-expense.has-hover ? Theme.surface-hover : transparent;
-                        border-radius: 6px;
-
-                        HorizontalLayout {
-                            padding-left: 12px;
-                            padding-right: 12px;
-
-                            Text {
-                                text: cat.name;
-                                color: selected-index == index + 1 ? Theme.text-primary : Theme.text-secondary;
-                                font-size: 12px;
-                                font-weight: selected-index == index + 1 ? 500 : 400;
-                                vertical-alignment: center;
-                                horizontal-stretch: 1;
-                            }
-
-                            if selected-index == index + 1: Text {
-                                text: "✓";
-                                color: Theme.accent;
-                                font-size: 12px;
-                                vertical-alignment: center;
-                            }
-                        }
-
-                        option-touch-expense := TouchArea {
-                            mouse-cursor: pointer;
-                            clicked => {
-                                root.selected-index = index + 1;
-                            }
+                    option-touch-all := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            root.selected-index = 0;
+                            root.popup-open = false;
                         }
                     }
+                }
 
-                    Rectangle {
-                        height: 40px;
-                        background: transparent;
+                Rectangle {
+                    height: 40px;
+                    background: transparent;
+
+                    Text {
+                        text: "EXPENSE";
+                        color: Theme.text-muted;
+                        font-size: 9px;
+                        font-weight: 600;
+                        letter-spacing: 1.2px;
+                        vertical-alignment: center;
+                        x: 12px;
+                    }
+                }
+
+                for cat[index] in CategoryAdapter.expense-categories: Rectangle {
+                    height: 40px;
+                    background: option-touch-expense.has-hover ? Theme.surface-hover : transparent;
+                    border-radius: 6px;
+
+                    HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
 
                         Text {
-                            text: "INCOME";
-                            color: Theme.text-muted;
-                            font-size: 9px;
-                            font-weight: 600;
-                            letter-spacing: 1.2px;
+                            text: cat.name;
+                            color: selected-index == index + 1 ? Theme.text-primary : Theme.text-secondary;
+                            font-size: 12px;
+                            font-weight: selected-index == index + 1 ? 500 : 400;
                             vertical-alignment: center;
-                            x: 12px;
+                            horizontal-stretch: 1;
+                        }
+
+                        if selected-index == index + 1: Text {
+                            text: "✓";
+                            color: Theme.accent;
+                            font-size: 12px;
+                            vertical-alignment: center;
                         }
                     }
 
-                    for cat[index] in CategoryAdapter.income-categories: Rectangle {
-                        height: 40px;
-                        background: option-touch-income.has-hover ? Theme.surface-hover : transparent;
-                        border-radius: 6px;
+                    option-touch-expense := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            root.selected-index = index + 1;
+                            root.popup-open = false;
+                        }
+                    }
+                }
 
-                        HorizontalLayout {
-                            padding-left: 12px;
-                            padding-right: 12px;
+                Rectangle {
+                    height: 40px;
+                    background: transparent;
 
-                            Text {
-                                text: cat.name;
-                                color: selected-index == index + 1 + CategoryAdapter.expense-categories.length ? Theme.text-primary : Theme.text-secondary;
-                                font-size: 12px;
-                                font-weight: selected-index == index + 1 + CategoryAdapter.expense-categories.length ? 500 : 400;
-                                vertical-alignment: center;
-                                horizontal-stretch: 1;
-                            }
+                    Text {
+                        text: "INCOME";
+                        color: Theme.text-muted;
+                        font-size: 9px;
+                        font-weight: 600;
+                        letter-spacing: 1.2px;
+                        vertical-alignment: center;
+                        x: 12px;
+                    }
+                }
 
-                            if selected-index == index + 1 + CategoryAdapter.expense-categories.length: Text {
-                                text: "✓";
-                                color: Theme.accent;
-                                font-size: 12px;
-                                vertical-alignment: center;
-                            }
+                for cat[index] in CategoryAdapter.income-categories: Rectangle {
+                    height: 40px;
+                    background: option-touch-income.has-hover ? Theme.surface-hover : transparent;
+                    border-radius: 6px;
+
+                    HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
+
+                        Text {
+                            text: cat.name;
+                            color: selected-index == index + 1 + CategoryAdapter.expense-categories.length ? Theme.text-primary : Theme.text-secondary;
+                            font-size: 12px;
+                            font-weight: selected-index == index + 1 + CategoryAdapter.expense-categories.length ? 500 : 400;
+                            vertical-alignment: center;
+                            horizontal-stretch: 1;
                         }
 
-                        option-touch-income := TouchArea {
-                            mouse-cursor: pointer;
-                            clicked => {
-                                root.selected-index = index + 1 + CategoryAdapter.expense-categories.length;
-                            }
+                        if selected-index == index + 1 + CategoryAdapter.expense-categories.length: Text {
+                            text: "✓";
+                            color: Theme.accent;
+                            font-size: 12px;
+                            vertical-alignment: center;
                         }
                     }
 
-                    Rectangle {
-                        height: 40px;
-                        background: option-touch-transfer.has-hover ? Theme.surface-hover : transparent;
-                        border-radius: 6px;
+                    option-touch-income := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            root.selected-index = index + 1 + CategoryAdapter.expense-categories.length;
+                            root.popup-open = false;
+                        }
+                    }
+                }
 
-                        HorizontalLayout {
-                            padding-left: 12px;
-                            padding-right: 12px;
+                Rectangle {
+                    height: 40px;
+                    background: option-touch-transfer.has-hover ? Theme.surface-hover : transparent;
+                    border-radius: 6px;
 
-                            Text {
-                                text: "Transfers";
-                                color: selected-index == 1 + CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length
-                                    ? Theme.text-primary
-                                    : Theme.text-secondary;
-                                font-size: 12px;
-                                font-weight: selected-index == 1 + CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length
-                                    ? 500
-                                    : 400;
-                                vertical-alignment: center;
-                                horizontal-stretch: 1;
-                            }
+                    HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
 
-                            if selected-index == 1 + CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length: Text {
-                                text: "✓";
-                                color: Theme.accent;
-                                font-size: 12px;
-                                vertical-alignment: center;
-                            }
+                        Text {
+                            text: "Transfers";
+                            color: selected-index == 1 + CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length
+                                ? Theme.text-primary
+                                : Theme.text-secondary;
+                            font-size: 12px;
+                            font-weight: selected-index == 1 + CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length
+                                ? 500
+                                : 400;
+                            vertical-alignment: center;
+                            horizontal-stretch: 1;
                         }
 
-                        option-touch-transfer := TouchArea {
-                            mouse-cursor: pointer;
-                            clicked => {
-                                root.selected-index = 1 + CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length;
-                            }
+                        if selected-index == 1 + CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length: Text {
+                            text: "✓";
+                            color: Theme.accent;
+                            font-size: 12px;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    option-touch-transfer := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            root.selected-index = 1 + CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length;
+                            root.popup-open = false;
                         }
                     }
                 }
