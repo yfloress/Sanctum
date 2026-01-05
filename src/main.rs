@@ -449,14 +449,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let is_transfer = tx.transaction_type == "transfer";
                 let is_expense = tx.transaction_type == "expense";
-                let sign = if is_transfer {
-                    "↔"
-                } else if is_expense {
-                    "-"
-                } else {
-                    "+"
-                };
-                let amount_str = format!("{sign} {}", format_money(tx.amount, &currency));
+                let amount_str = format_money(tx.amount.abs(), &currency);
 
                 if !account_filter.is_empty()
                     && tx.account_id != account_filter
@@ -642,14 +635,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let is_transfer = tx.transaction_type == "transfer";
                 let is_expense = tx.transaction_type == "expense";
-                let sign = if is_transfer {
-                    "↔"
-                } else if is_expense {
-                    "-"
-                } else {
-                    "+"
-                };
-                let amount_str = format!("{sign} {}", format_money(tx.amount, &currency));
+                let amount_str = format_money(tx.amount.abs(), &currency);
 
                 let transfer_label = tx
                     .transfer_account_id
