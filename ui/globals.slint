@@ -472,6 +472,10 @@ export global TransactionAdapter {
 export global DashboardAdapter {
     in-out property <BalanceData> balance: { total-balance: "$ 0.00", fiat-balance: "$ 0.00", crypto-value: "$ 0.00" };
     in-out property <[TransactionData]> recent: [];
+    in-out property <bool> is-loading: false;
+    in-out property <bool> has-error: false;
+    in-out property <string> error-message: "";
+    in-out property <bool> missing-exchange-rate: false;
 
     callback fetch-balance();
     callback fetch-recent();

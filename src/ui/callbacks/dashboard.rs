@@ -9,6 +9,9 @@ use slint::{ComponentHandle, ModelRc, SharedString, VecModel, Weak};
 use std::collections::HashMap;
 use std::sync::Arc;
 
+/// Maximum days for crypto portfolio snapshots (2 years)
+const MAX_SNAPSHOT_DAYS: i64 = 730;
+
 /// Sets up all DashboardAdapter and AnalyticsAdapter callbacks
 pub fn setup_dashboard_callbacks<F>(
     ui: &AppWindow,
@@ -25,11 +28,18 @@ pub fn setup_dashboard_callbacks<F>(
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         ui.global::<DashboardAdapter>().on_fetch_balance(move || {
+            // Set loading state
+            if let Some(ui) = ui_weak.upgrade() {
+                ui.global::<DashboardAdapter>().set_is_loading(true);
+                ui.global::<DashboardAdapter>().set_has_error(false);
+            }
+
             // 1. Load Exchange Rate (CLP -> USD)
-            let clp_rate = match controller.load_exchange_rate_allow_stale("CLP_USD".to_string()) {
-                Ok(Some((r, _))) => r,
-                _ => 0.0,
-            };
+            let (clp_rate, missing_rate) =
+                match controller.load_exchange_rate_allow_stale("CLP_USD".to_string()) {
+                    Ok(Some((r, _))) if r > 0.0 => (r, false),
+                    _ => (1.0, true), // Fallback to 1:1, flag as missing
+                };
 
             // 2. Fetch Accounts & Balances (for normalized calculation)
             let accounts_res = controller.get_accounts();
@@ -45,52 +55,65 @@ pub fn setup_dashboard_callbacks<F>(
                 .map(|p| (p.id, p.current_price))
                 .collect();
 
-            if let Ok(accounts) = accounts_res
-                && let Ok(balances) = balances_res
-                && let Ok(assets) = crypto_result
-                && let Some(ui) = ui_weak.upgrade()
-            {
-                // Create Currency Map (Account ID -> Currency)
-                let currency_map: HashMap<String, String> = accounts
-                    .into_iter()
-                    .map(|a| (a.id, a.currency.to_uppercase()))
-                    .collect();
+            // Handle errors
+            let Some(ui) = ui_weak.upgrade() else {
+                return;
+            };
 
-                // Calculate Normalized Fiat Total
-                let mut total_fiat_usd: f64 = 0.0;
+            let dash = ui.global::<DashboardAdapter>();
+            dash.set_is_loading(false);
 
-                for bal in balances {
-                    let currency = currency_map
-                        .get(&bal.account_id)
-                        .map(|s| s.as_str())
-                        .unwrap_or("USD");
-                    let rate = if currency == "CLP" { clp_rate } else { 1.0 };
-
-                    if rate > 0.0 {
-                        total_fiat_usd += (bal.current_balance as f64) / rate;
-                    }
-                }
-
-                // Calculate Total Crypto Value (in USD)
-                let crypto_total: f64 = assets
-                    .iter()
-                    .map(|asset| {
-                        let price = price_map.get(&asset.coin_id).cloned().unwrap_or(0.0);
-                        asset.total_amount * price
-                    })
-                    .sum();
-
-                // Net Worth (Normalized Fiat + Crypto)
-                let fiat_total_dollars = total_fiat_usd / 100.0;
-                let net_worth = fiat_total_dollars + crypto_total;
-
-                let dash = ui.global::<DashboardAdapter>();
-                dash.set_balance(BalanceData {
-                    total_balance: format_usd(net_worth).into(),
-                    fiat_balance: format_usd(fiat_total_dollars).into(),
-                    crypto_value: format_usd(crypto_total).into(),
-                });
+            // Check for errors
+            if accounts_res.is_err() || balances_res.is_err() || crypto_result.is_err() {
+                dash.set_has_error(true);
+                dash.set_error_message("Failed to load dashboard data".into());
+                return;
             }
+
+            let accounts = accounts_res.unwrap();
+            let balances = balances_res.unwrap();
+            let assets = crypto_result.unwrap();
+
+            // Flag missing exchange rate (CLP balances may be inaccurate)
+            let has_clp_accounts = accounts.iter().any(|a| a.currency.to_uppercase() == "CLP");
+            dash.set_missing_exchange_rate(missing_rate && has_clp_accounts);
+
+            // Create Currency Map (Account ID -> Currency)
+            let currency_map: HashMap<String, String> = accounts
+                .into_iter()
+                .map(|a| (a.id, a.currency.to_uppercase()))
+                .collect();
+
+            // Calculate Normalized Fiat Total
+            let mut total_fiat_usd: f64 = 0.0;
+
+            for bal in balances {
+                let currency = currency_map
+                    .get(&bal.account_id)
+                    .map(|s| s.as_str())
+                    .unwrap_or("USD");
+                let rate = if currency == "CLP" { clp_rate } else { 1.0 };
+                total_fiat_usd += (bal.current_balance as f64) / rate;
+            }
+
+            // Calculate Total Crypto Value (in USD)
+            let crypto_total: f64 = assets
+                .iter()
+                .map(|asset| {
+                    let price = price_map.get(&asset.coin_id).cloned().unwrap_or(0.0);
+                    asset.total_amount * price
+                })
+                .sum();
+
+            // Net Worth (Normalized Fiat + Crypto)
+            let fiat_total_dollars = total_fiat_usd / 100.0;
+            let net_worth = fiat_total_dollars + crypto_total;
+
+            dash.set_balance(BalanceData {
+                total_balance: format_usd(net_worth).into(),
+                fiat_balance: format_usd(fiat_total_dollars).into(),
+                crypto_value: format_usd(crypto_total).into(),
+            });
         });
     }
 
@@ -113,40 +136,47 @@ pub fn setup_dashboard_callbacks<F>(
                 // Calculate crypto total for dashboard data
                 let crypto_total = calculate_crypto_total(&controller);
 
-                // Get crypto snapshots for historical chart data (max 2 years)
+                // Get crypto snapshots for historical chart data
                 let crypto_snapshots = controller
-                    .get_crypto_portfolio_snapshots(730)
+                    .get_crypto_portfolio_snapshots(MAX_SNAPSHOT_DAYS)
                     .unwrap_or_default();
 
-                if let Ok(data) =
-                    controller.get_dashboard_data(crypto_total, &crypto_snapshots, range.to_string())
-                    && let Some(ui) = ui_weak.upgrade()
-                {
-                    let adapter = ui.global::<AnalyticsAdapter>();
+                let range_str = range.to_string();
+                match controller.get_dashboard_data(crypto_total, &crypto_snapshots, range_str) {
+                    Ok(data) => {
+                        let Some(ui) = ui_weak.upgrade() else {
+                            return;
+                        };
 
-                    // Render chart image from values (following crypto/habits pattern)
-                    let chart_image = controller
-                        .render_net_worth_chart(&data.chart_values)
-                        .unwrap_or_default();
+                        let adapter = ui.global::<AnalyticsAdapter>();
 
-                    let breakdown: Vec<CategoryData> = data
-                        .expense_slices
-                        .iter()
-                        .map(|slice| CategoryData {
-                            name: SharedString::from(&slice.category),
-                            amount: SharedString::from(format_money(slice.amount, "USD")),
-                            percentage: slice.percentage,
-                            color: color_from_hex(&slice.color),
-                        })
-                        .collect();
+                        // Render chart image from values (following crypto/habits pattern)
+                        let chart_image = controller
+                            .render_net_worth_chart(&data.chart_values)
+                            .unwrap_or_default();
 
-                    adapter.set_summary(AnalyticsData {
-                        chart_image,
-                        net_worth: SharedString::from(data.net_worth),
-                        max_value: SharedString::from(data.max_value),
-                        min_value: SharedString::from(data.min_value),
-                        expense_breakdown: ModelRc::new(VecModel::from(breakdown)),
-                    });
+                        let breakdown: Vec<CategoryData> = data
+                            .expense_slices
+                            .iter()
+                            .map(|slice| CategoryData {
+                                name: SharedString::from(&slice.category),
+                                amount: SharedString::from(format_money(slice.amount, "USD")),
+                                percentage: slice.percentage,
+                                color: color_from_hex(&slice.color),
+                            })
+                            .collect();
+
+                        adapter.set_summary(AnalyticsData {
+                            chart_image,
+                            net_worth: SharedString::from(data.net_worth),
+                            max_value: SharedString::from(data.max_value),
+                            min_value: SharedString::from(data.min_value),
+                            expense_breakdown: ModelRc::new(VecModel::from(breakdown)),
+                        });
+                    }
+                    Err(e) => {
+                        log::error!("Failed to fetch analytics: {:?}", e);
+                    }
                 }
             });
     }

@@ -6,8 +6,23 @@
 
 use crate::core::validation::format_money_display;
 use crate::models::{Account, AccountBalance, Transaction};
-use chrono::{Datelike, Local, NaiveDate};
+use chrono::{Local, NaiveDate};
 use std::collections::HashMap;
+
+/// Date format used for parsing transaction dates
+const DATE_FORMAT: &str = "%Y-%m-%d";
+
+/// Colors for expense breakdown categories (from theme)
+const CATEGORY_COLORS: [&str; 8] = [
+    "#8b5cf6", // violet
+    "#ec4899", // pink
+    "#3b82f6", // blue
+    "#10b981", // emerald
+    "#f59e0b", // amber
+    "#ef4444", // red
+    "#6366f1", // indigo
+    "#14b8a6", // teal
+];
 
 #[derive(Debug, Clone)]
 pub struct ExpenseSlice {
@@ -95,7 +110,7 @@ impl DashboardCharts {
         // Build daily balance history from transactions
         let mut delta_by_day: HashMap<NaiveDate, i64> = HashMap::new();
         for tx in transactions {
-            if let Ok(date) = NaiveDate::parse_from_str(&tx.date, "%Y-%m-%d")
+            if let Ok(date) = NaiveDate::parse_from_str(&tx.date, DATE_FORMAT)
                 && date >= start_date
             {
                 let raw_delta = match tx.transaction_type.as_str() {
@@ -149,7 +164,7 @@ impl DashboardCharts {
         let max_val = *values.iter().max().unwrap_or(&0);
 
         let expense_slices =
-            Self::calculate_expense_slices(transactions, &currency_map, rate, today);
+            Self::calculate_expense_slices(transactions, &currency_map, rate, start_date, today);
 
         DashboardData {
             chart_values: values,
@@ -203,7 +218,8 @@ impl DashboardCharts {
         transactions: &[Transaction],
         currency_map: &HashMap<String, String>,
         rate: f64,
-        today: NaiveDate,
+        start_date: NaiveDate,
+        end_date: NaiveDate,
     ) -> Vec<ExpenseSlice> {
         let normalize = |amount: i64, account_id: &str| -> i64 {
             let currency = currency_map
@@ -218,16 +234,14 @@ impl DashboardCharts {
         };
 
         let mut expenses: HashMap<String, i64> = HashMap::new();
-        let current_month = today.month();
-        let current_year = today.year();
 
         for tx in transactions {
             if tx.transaction_type != "expense" {
                 continue;
             }
-            if let Ok(date) = NaiveDate::parse_from_str(&tx.date, "%Y-%m-%d")
-                && date.year() == current_year
-                && date.month() == current_month
+            if let Ok(date) = NaiveDate::parse_from_str(&tx.date, DATE_FORMAT)
+                && date >= start_date
+                && date <= end_date
             {
                 let amount = normalize(tx.amount, &tx.account_id);
                 *expenses.entry(tx.category.to_uppercase()).or_insert(0) += amount;
@@ -241,17 +255,12 @@ impl DashboardCharts {
             let mut by_amount: Vec<(String, i64)> = expenses.into_iter().collect();
             by_amount.sort_by(|a, b| b.1.cmp(&a.1));
 
-            let colors = [
-                "#8b5cf6", "#ec4899", "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#6366f1",
-                "#14b8a6",
-            ];
-
             for (idx, (category, amount)) in by_amount.iter().enumerate() {
                 if *amount <= 0 {
                     continue;
                 }
                 let percentage = *amount as f32 / total_expense as f32;
-                let color = colors[idx % colors.len()].to_string();
+                let color = CATEGORY_COLORS[idx % CATEGORY_COLORS.len()].to_string();
 
                 expense_slices.push(ExpenseSlice {
                     category: category.clone(),
