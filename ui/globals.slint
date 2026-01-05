@@ -37,8 +37,8 @@ export struct TransactionData {
 
 export struct BalanceData {
     total-balance: string,
-    total-income: string,
-    total-expense: string,
+    fiat-balance: string,
+    crypto-value: string,
 }
 
 export struct CategoryData {
@@ -470,7 +470,7 @@ export global TransactionAdapter {
 // Balance summary and recent activity
 
 export global DashboardAdapter {
-    in-out property <BalanceData> balance: { total-balance: "$ 0.00", total-income: "$ 0.00", total-expense: "$ 0.00" };
+    in-out property <BalanceData> balance: { total-balance: "$ 0.00", fiat-balance: "$ 0.00", crypto-value: "$ 0.00" };
     in-out property <[TransactionData]> recent: [];
 
     callback fetch-balance();

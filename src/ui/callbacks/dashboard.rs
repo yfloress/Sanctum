@@ -56,10 +56,8 @@ pub fn setup_dashboard_callbacks<F>(
                     .map(|a| (a.id, a.currency.to_uppercase()))
                     .collect();
 
-                // Calculate Normalized Fiat Totals
+                // Calculate Normalized Fiat Total
                 let mut total_fiat_usd: f64 = 0.0;
-                let mut total_income_usd: f64 = 0.0;
-                let mut total_expense_usd: f64 = 0.0;
 
                 for bal in balances {
                     let currency = currency_map
@@ -70,8 +68,6 @@ pub fn setup_dashboard_callbacks<F>(
 
                     if rate > 0.0 {
                         total_fiat_usd += (bal.current_balance as f64) / rate;
-                        total_income_usd += (bal.total_income as f64) / rate;
-                        total_expense_usd += (bal.total_expense as f64) / rate;
                     }
                 }
 
@@ -91,8 +87,8 @@ pub fn setup_dashboard_callbacks<F>(
                 let dash = ui.global::<DashboardAdapter>();
                 dash.set_balance(BalanceData {
                     total_balance: format_usd(net_worth).into(),
-                    total_income: format_money(total_income_usd as i64, "USD").into(),
-                    total_expense: format_money(total_expense_usd as i64, "USD").into(),
+                    fiat_balance: format_usd(fiat_total_dollars).into(),
+                    crypto_value: format_usd(crypto_total).into(),
                 });
             }
         });

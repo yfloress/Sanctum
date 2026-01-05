@@ -706,6 +706,7 @@ export component FinancesPage inherits Rectangle {
 
                     FilterInput {
                         horizontal-stretch: 1;
+                        min-width: 300px;
                         label: "SEARCH";
                         placeholder: "Search by description, category, date...";
                         value <=> root.filter-query;
@@ -960,13 +961,16 @@ export component FinancesPage inherits Rectangle {
                             }
                         }
 
-                        ActionButton {
-                            text: "CONFIGURE";
-                            primary: false;
-                            y: (parent.height - self.height) / 2;
-                            clicked => {
-                                CategoryAdapter.load-categories();
-                                AppState.show-configure-categories = true;
+                        VerticalLayout {
+                            alignment: center;
+
+                            ActionButton {
+                                text: "CONFIGURE";
+                                primary: false;
+                                clicked => {
+                                    CategoryAdapter.load-categories();
+                                    AppState.show-configure-categories = true;
+                                }
                             }
                         }
                     }

@@ -62,8 +62,10 @@ component RangeSelector inherits Rectangle {
 component StatBadge inherits Rectangle {
     in property <string> value;
     in property <bool> positive: true;
+    in property <bool> show-arrow: false;
     in property <string> label;
-    
+    in property <color> accent-color: positive ? Theme.success : Theme.danger;
+
     width: 160px;
     height: 72px;
     background: Theme.surface;
@@ -71,24 +73,24 @@ component StatBadge inherits Rectangle {
     border-width: 1px;
     border-color: Theme.border-subtle;
     clip: true;
-    
+
     HorizontalLayout {
         padding: 16px;
         spacing: 12px;
-        
+
         // Indicator
         Rectangle {
             width: 3px;
             height: 40px;
             border-radius: 2px;
-            background: positive ? Theme.success : Theme.danger;
+            background: accent-color;
             y: (parent.height - self.height) / 2;
         }
-        
+
         VerticalLayout {
             alignment: center;
             spacing: 4px;
-            
+
             Text {
                 text: label;
                 color: Theme.text-muted;
@@ -96,20 +98,20 @@ component StatBadge inherits Rectangle {
                 font-weight: 500;
                 letter-spacing: 1.5px;
             }
-            
+
             HorizontalLayout {
                 spacing: 6px;
                 horizontal-stretch: 1;
-                
-                Text { 
-                    text: positive ? "▲" : "▼"; 
-                    color: positive ? Theme.success : Theme.danger; 
-                    font-size: 10px; 
-                    vertical-alignment: center; 
+
+                if show-arrow: Text {
+                    text: positive ? "▲" : "▼";
+                    color: accent-color;
+                    font-size: 10px;
+                    vertical-alignment: center;
                 }
-                Text { 
-                    text: value; 
-                    color: Theme.text-primary; 
+                Text {
+                    text: value;
+                    color: Theme.text-primary;
                     font-size: 16px;
                     font-weight: 500;
                     vertical-alignment: center;
@@ -337,15 +339,15 @@ export component DashboardPage inherits Rectangle {
                         spacing: 24px;
 
                         StatBadge {
-                            label: "INCOME";
-                            value: DashboardAdapter.balance.total-income;
-                            positive: true;
+                            label: "FIAT";
+                            value: DashboardAdapter.balance.fiat-balance;
+                            accent-color: Theme.primary;
                         }
 
                         StatBadge {
-                            label: "EXPENSES";
-                            value: DashboardAdapter.balance.total-expense;
-                            positive: false;
+                            label: "CRYPTO";
+                            value: DashboardAdapter.balance.crypto-value;
+                            accent-color: Theme.chart-stroke;
                         }
                     }
                 }
