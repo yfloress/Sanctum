@@ -1,7 +1,7 @@
 // ==================== Account Item ====================
 // Premium Fintech UI - Single account card for list view
 
-import { Palette, AccountData } from "../globals.slint";
+import { AccountData } from "../globals.slint";
 import { Theme } from "../theme.slint";
 
 component AccountTypeIcon inherits Rectangle {
@@ -44,10 +44,10 @@ export component AccountItem inherits Rectangle {
     callback clicked();
 
     height: 80px;
-    background: touch.has-hover ? Palette.surface-hover : Palette.surface;
+    background: touch.has-hover ? Theme.surface-hover : Theme.surface;
     border-radius: 12px;
     border-width: 1px;
-    border-color: touch.has-hover ? Palette.border-light : Palette.border;
+    border-color: touch.has-hover ? Theme.border-light : Theme.border;
 
     animate background { duration: 150ms; easing: ease-out; }
     animate border-color { duration: 150ms; easing: ease-out; }
@@ -74,7 +74,7 @@ export component AccountItem inherits Rectangle {
 
             Text {
                 text: account.name;
-                color: Palette.text-primary;
+                color: Theme.text-primary;
                 font-size: 14px;
                 font-weight: 500;
                 overflow: elide;
@@ -88,9 +88,9 @@ export component AccountItem inherits Rectangle {
                     height: 20px;
                     min-width: 50px;
                     border-radius: 4px;
-                    background: Palette.surface-hover;
+                    background: Theme.surface-hover;
                     border-width: 1px;
-                    border-color: Palette.border;
+                    border-color: Theme.border;
 
                     HorizontalLayout {
                         padding-left: 8px;
@@ -98,7 +98,7 @@ export component AccountItem inherits Rectangle {
 
                         Text {
                             text: account.account-type;
-                            color: Palette.text-muted;
+                            color: Theme.text-muted;
                             font-size: 10px;
                             font-weight: 500;
                             letter-spacing: 0.5px;
@@ -122,7 +122,7 @@ export component AccountItem inherits Rectangle {
 
                         Text {
                             text: account.currency;
-                            color: Palette.success;
+                            color: Theme.success;
                             font-size: 10px;
                             font-weight: 600;
                             letter-spacing: 0.5px;
@@ -140,7 +140,7 @@ export component AccountItem inherits Rectangle {
 
             Text {
                 text: "Balance";
-                color: Palette.text-muted;
+                color: Theme.text-muted;
                 font-size: 10px;
                 font-weight: 400;
                 letter-spacing: 0.5px;
@@ -149,7 +149,7 @@ export component AccountItem inherits Rectangle {
 
             Text {
                 text: account.balance;
-                color: Palette.text-primary;
+                color: Theme.text-primary;
                 font-size: 18px;
                 font-weight: 600;
                 letter-spacing: 0.5px;
@@ -165,13 +165,13 @@ export component AccountItem inherits Rectangle {
                 width: 28px;
                 height: 28px;
                 border-radius: 8px;
-                background: touch.has-hover ? Palette.surface : transparent;
+                background: touch.has-hover ? Theme.surface : transparent;
                 border-width: touch.has-hover ? 1px : 0px;
-                border-color: Palette.border-light;
+                border-color: Theme.border-light;
 
                 Text {
                     text: "›";
-                    color: Palette.text-muted;
+                    color: Theme.text-muted;
                     font-size: 18px;
                     font-weight: 300;
                     horizontal-alignment: center;

@@ -101,6 +101,7 @@ pub const KDF_ITERATIONS: i64 = 600_000;
 pub struct Database {
     conn: Connection,
     path: PathBuf,
+    session_timeout: i64,  // Configurable session timeout in seconds
 }
 
 impl Database {
@@ -160,6 +161,7 @@ impl Database {
         let db = Database {
             conn,
             path: db_path,
+            session_timeout: SESSION_TIMEOUT_SECS,  // Default 15 minutes
         };
 
         // Run migrations
@@ -455,7 +457,7 @@ impl Database {
         if let Ok(last) = DateTime::parse_from_rfc3339(&last_activity) {
             let now = Utc::now();
             if now.signed_duration_since(last.with_timezone(&Utc))
-                > Duration::seconds(SESSION_TIMEOUT_SECS)
+                > Duration::seconds(self.session_timeout)
             {
                 return Err(DbError::SessionExpired);
             }
@@ -476,10 +478,15 @@ impl Database {
             let elapsed = now
                 .signed_duration_since(last.with_timezone(&Utc))
                 .num_seconds();
-            return Ok((SESSION_TIMEOUT_SECS - elapsed).max(0));
+            return Ok((self.session_timeout - elapsed).max(0));
         }
 
-        Ok(SESSION_TIMEOUT_SECS)
+        Ok(self.session_timeout)
+    }
+
+    /// Sets the session timeout duration (in seconds)
+    pub fn set_session_timeout(&mut self, timeout_secs: i64) {
+        self.session_timeout = timeout_secs;
     }
 
     // ==================== Migrations ====================

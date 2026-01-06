@@ -10,8 +10,8 @@ use uuid::Uuid;
 
 use super::repository::FinanceRepository;
 use super::validation::{
-    sanitize_string, validate_date, validate_field_length, validate_uuid, MAX_CATEGORY_LENGTH,
-    MAX_DESCRIPTION_LENGTH,
+    sanitize_string, validate_category_id, validate_date, validate_field_length, validate_uuid,
+    MAX_CATEGORY_LENGTH, MAX_DESCRIPTION_LENGTH,
 };
 use super::FinanceError;
 
@@ -275,7 +275,7 @@ impl CategoryOps {
         id: &str,
         new_name: &str,
     ) -> Result<(), FinanceError> {
-        let validated_id = validate_uuid(id)?;
+        let validated_id = validate_category_id(id)?;
         let validated_name = validate_field_length(new_name, MAX_CATEGORY_LENGTH, "Category name")?;
 
         if validated_name.is_empty() {
@@ -295,7 +295,7 @@ impl CategoryOps {
     }
 
     pub fn delete_transaction_category(db: &Database, id: &str) -> Result<(), FinanceError> {
-        let validated_id = validate_uuid(id)?;
+        let validated_id = validate_category_id(id)?;
         FinanceRepository::delete_transaction_category(db, &validated_id)
             .map_err(FinanceError::Database)
     }

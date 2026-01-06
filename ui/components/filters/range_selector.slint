@@ -1,0 +1,46 @@
+// Range selector for time period filtering (1M, 3M, 6M, 1Y, ALL)
+
+import { Theme } from "../../theme.slint";
+
+export component RangeSelector inherits Rectangle {
+    in property <string> active-range;
+    callback range-selected(string);
+
+    height: 36px;
+    background: Theme.surface;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: Theme.border-subtle;
+
+    HorizontalLayout {
+        padding: 4px;
+        spacing: 4px;
+
+        for range in ["1M", "3M", "6M", "1Y", "ALL"]: Rectangle {
+            width: 52px;
+            border-radius: 6px;
+            background: active-range == range ? Theme.background : transparent;
+            border-width: active-range == range ? 1px : 0px;
+            border-color: Theme.border-subtle;
+
+            animate background { duration: 200ms; easing: ease-out; }
+
+            Text {
+                text: range;
+                color: active-range == range ? Theme.text-primary : Theme.text-muted;
+                font-size: 11px;
+                font-weight: active-range == range ? 600 : 500;
+                letter-spacing: 0.5px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+
+                animate color { duration: 200ms; }
+            }
+
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => { root.range-selected(range); }
+            }
+        }
+    }
+}

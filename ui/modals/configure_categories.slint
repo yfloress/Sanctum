@@ -1,7 +1,7 @@
 // ==================== Configure Categories Modal ====================
 // Manage transaction categories for income and expenses
 
-import { Palette, AppState, CategoryAdapter, NotificationAdapter } from "../globals.slint";
+import { AppState, CategoryAdapter, NotificationAdapter } from "../globals.slint";
 import { ActionButton, TextButton } from "../widgets.slint";
 import { Theme } from "../theme.slint";
 
@@ -27,22 +27,35 @@ component CategoryRow inherits Rectangle {
         alignment: space-between;
 
         // Category name or edit field
-        if !root.is-editing: Text {
-            text: root.name;
-            color: root.is-default ? Palette.text-secondary : Palette.text-primary;
-            font-size: 13px;
-            font-weight: 500;
-            vertical-alignment: center;
+        if !root.is-editing: HorizontalLayout {
+            spacing: 8px;
             horizontal-stretch: 1;
+
+            Text {
+                text: root.name;
+                color: root.is-default ? Theme.text-secondary : Theme.text-primary;
+                font-size: 13px;
+                font-weight: 500;
+                vertical-alignment: center;
+            }
+
+            if root.is-default: Text {
+                text: "DEFAULT";
+                color: Theme.text-subtle;
+                font-size: 9px;
+                font-weight: 600;
+                letter-spacing: 1px;
+                vertical-alignment: center;
+            }
         }
 
         if root.is-editing: Rectangle {
             horizontal-stretch: 1;
             height: 36px;
-            background: Palette.surface;
+            background: Theme.surface;
             border-radius: 8px;
             border-width: 1px;
-            border-color: Palette.accent;
+            border-color: Theme.accent;
 
             HorizontalLayout {
                 padding-left: 12px;
@@ -50,7 +63,7 @@ component CategoryRow inherits Rectangle {
 
                 edit-input := TextInput {
                     text <=> root.edit-value;
-                    color: Palette.text-primary;
+                    color: Theme.text-primary;
                     font-size: 13px;
                     vertical-alignment: center;
                     horizontal-stretch: 1;
@@ -63,48 +76,54 @@ component CategoryRow inherits Rectangle {
         }
 
         // Actions
-        HorizontalLayout {
-            spacing: 8px;
+        Rectangle {
+            height: parent.height;
+            background: transparent;
 
-            if root.is-editing: ActionButton {
-                text: "SAVE";
-                primary: true;
-                height: 32px;
-                min-width: 72px;
-                clicked => { root.save-clicked(root.edit-value); }
-            }
+            VerticalLayout {
+                alignment: center;
 
-            if root.is-editing: ActionButton {
-                text: "CANCEL";
-                primary: false;
-                height: 32px;
-                min-width: 72px;
-                clicked => { root.cancel-clicked(); }
-            }
+                HorizontalLayout {
+                    spacing: 8px;
 
-            if !root.is-editing && !root.is-default: ActionButton {
-                text: "EDIT";
-                primary: false;
-                height: 32px;
-                min-width: 64px;
-                clicked => { root.edit-clicked(); }
-            }
+                    if root.is-editing: ActionButton {
+                        text: "SAVE";
+                        primary: true;
+                        height: 32px;
+                        min-width: 72px;
+                        clicked => { root.save-clicked(root.edit-value); }
+                    }
 
-            if !root.is-editing: ActionButton {
-                text: "DELETE";
-                primary: false;
-                height: 32px;
-                min-width: 72px;
-                clicked => { root.delete-clicked(); }
-            }
+                    if root.is-editing: ActionButton {
+                        text: "CANCEL";
+                        primary: false;
+                        height: 32px;
+                        min-width: 72px;
+                        clicked => { root.cancel-clicked(); }
+                    }
 
-            if root.is-default: Text {
-                text: "DEFAULT";
-                color: Palette.text-subtle;
-                font-size: 9px;
-                font-weight: 600;
-                letter-spacing: 1px;
-                vertical-alignment: center;
+                    if !root.is-editing && root.is-default: Rectangle {
+                        width: 64px;
+                        height: 32px;
+                        background: transparent;
+                    }
+
+                    if !root.is-editing && !root.is-default: ActionButton {
+                        text: "EDIT";
+                        primary: false;
+                        height: 32px;
+                        min-width: 64px;
+                        clicked => { root.edit-clicked(); }
+                    }
+
+                    if !root.is-editing: ActionButton {
+                        text: "DELETE";
+                        primary: false;
+                        height: 32px;
+                        min-width: 72px;
+                        clicked => { root.delete-clicked(); }
+                    }
+                }
             }
         }
     }
@@ -113,7 +132,7 @@ component CategoryRow inherits Rectangle {
     Rectangle {
         y: parent.height - 1px;
         height: 1px;
-        background: Palette.border-subtle;
+        background: Theme.border-subtle;
         opacity: 0.5;
     }
 }
@@ -126,16 +145,16 @@ component ConfigTabButton inherits Rectangle {
     width: 180px;
     height: 32px;
     border-radius: 8px;
-    background: active ? Palette.surface : transparent;
+    background: active ? Theme.surface : transparent;
     border-width: 1px;
-    border-color: active ? Palette.border-subtle : transparent;
+    border-color: active ? Theme.border-subtle : transparent;
 
     animate background { duration: 150ms; }
     animate border-color { duration: 150ms; }
 
     Text {
         text: root.text;
-        color: active ? Palette.text-primary : Palette.text-muted;
+        color: active ? Theme.text-primary : Theme.text-muted;
         font-size: 10px;
         font-weight: active ? 600 : 500;
         letter-spacing: 1.5px;
@@ -155,10 +174,10 @@ component AddCategoryForm inherits Rectangle {
     callback add-clicked;
 
     height: 120px;
-    background: Palette.surface;
+    background: Theme.surface;
     border-radius: 8px;
     border-width: 1px;
-    border-color: Palette.border-subtle;
+    border-color: Theme.border-subtle;
 
     VerticalLayout {
         padding: 16px;
@@ -166,7 +185,7 @@ component AddCategoryForm inherits Rectangle {
 
         Text {
             text: "ADD NEW CATEGORY";
-            color: Palette.text-muted;
+            color: Theme.text-muted;
             font-size: 10px;
             font-weight: 600;
             letter-spacing: 2px;
@@ -179,10 +198,10 @@ component AddCategoryForm inherits Rectangle {
             Rectangle {
                 horizontal-stretch: 1;
                 height: 40px;
-                background: Palette.background;
+                background: Theme.background;
                 border-radius: 8px;
                 border-width: input.has-focus ? 2px : 1px;
-                border-color: input.has-focus ? Palette.accent : Palette.border;
+                border-color: input.has-focus ? Theme.accent : Theme.border;
 
                 animate border-color { duration: 150ms; }
                 animate border-width { duration: 150ms; }
@@ -193,14 +212,14 @@ component AddCategoryForm inherits Rectangle {
 
                     if root.new-name == "" && !input.has-focus: Text {
                         text: "Category name";
-                        color: Palette.text-subtle;
+                        color: Theme.text-subtle;
                         font-size: 13px;
                         vertical-alignment: center;
                     }
 
                     input := TextInput {
                         text <=> root.new-name;
-                        color: Palette.text-primary;
+                        color: Theme.text-primary;
                         font-size: 13px;
                         vertical-alignment: center;
                         horizontal-stretch: 1;
@@ -264,10 +283,10 @@ export component ConfigureCategoriesModal inherits Rectangle {
         y: (parent.height - self.height) / 2;
         width: 520px;
         height: 600px;
-        background: @linear-gradient(180deg, Palette.sidebar-bg 0%, Theme.modal-bg-end 100%);
+        background: @linear-gradient(180deg, Theme.sidebar-bg 0%, Theme.modal-bg-end 100%);
         border-radius: 16px;
         border-width: 1px;
-        border-color: Palette.border-light;
+        border-color: Theme.border-light;
         drop-shadow-blur: 40px;
         drop-shadow-color: Theme.overlay-soft;
 
@@ -291,13 +310,13 @@ export component ConfigureCategoriesModal inherits Rectangle {
                         width: 4px;
                         height: 20px;
                         border-radius: 2px;
-                        background: @linear-gradient(180deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%);
+                        background: @linear-gradient(180deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
                         y: (parent.height - self.height) / 2;
                     }
 
                     Text {
                         text: "CATEGORY SETTINGS";
-                        color: Palette.text-primary;
+                        color: Theme.text-primary;
                         font-size: 16px;
                         font-weight: 500;
                         letter-spacing: 2px;
@@ -309,11 +328,11 @@ export component ConfigureCategoriesModal inherits Rectangle {
                     width: 32px;
                     height: 32px;
                     border-radius: 8px;
-                    background: close-touch.has-hover ? Palette.surface-hover : transparent;
+                    background: close-touch.has-hover ? Theme.surface-hover : transparent;
 
                     Text {
                         text: "×";
-                        color: close-touch.has-hover ? Palette.text-primary : Palette.text-muted;
+                        color: close-touch.has-hover ? Theme.text-primary : Theme.text-muted;
                         font-size: 20px;
                         font-weight: 300;
                         horizontal-alignment: center;
@@ -329,7 +348,7 @@ export component ConfigureCategoriesModal inherits Rectangle {
 
             Text {
                 text: "Manage income and expense categories for transactions.";
-                color: Palette.text-muted;
+                color: Theme.text-muted;
                 font-size: 11px;
                 horizontal-alignment: center;
             }
@@ -391,10 +410,10 @@ export component ConfigureCategoriesModal inherits Rectangle {
                 // Category list
                 Rectangle {
                     vertical-stretch: 1;
-                    background: Palette.surface;
+                    background: Theme.surface;
                     border-radius: 8px;
                     border-width: 1px;
-                    border-color: Palette.border-subtle;
+                    border-color: Theme.border-subtle;
                     clip: true;
 
                     if root.active-tab == "expense": Flickable {
@@ -497,7 +516,7 @@ export component ConfigureCategoriesModal inherits Rectangle {
 
                         Text {
                             text: "No expense categories";
-                            color: Palette.text-muted;
+                            color: Theme.text-muted;
                             font-size: 12px;
                             horizontal-alignment: center;
                             vertical-alignment: center;
@@ -509,7 +528,7 @@ export component ConfigureCategoriesModal inherits Rectangle {
 
                         Text {
                             text: "No income categories";
-                            color: Palette.text-muted;
+                            color: Theme.text-muted;
                             font-size: 12px;
                             horizontal-alignment: center;
                             vertical-alignment: center;

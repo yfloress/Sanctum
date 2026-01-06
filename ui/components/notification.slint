@@ -1,7 +1,6 @@
 // ==================== Notification Toast ====================
 // Premium Fintech UI - Floating temporary message
 
-import { Palette } from "../globals.slint";
 import { Theme } from "../theme.slint";
 
 export struct NotificationData {
@@ -40,8 +39,8 @@ export component NotificationToast inherits Rectangle {
         width: 4px;
         height: 100%;
         background: is-error 
-            ? @linear-gradient(180deg, Palette.danger 0%, #dc2626 100%)
-            : @linear-gradient(180deg, Palette.success 0%, #059669 100%);
+            ? @linear-gradient(180deg, Theme.danger 0%, Theme.danger-strong 100%)
+            : @linear-gradient(180deg, Theme.success 0%, Theme.success-strong 100%);
     }
 
     HorizontalLayout {
@@ -68,13 +67,13 @@ export component NotificationToast inherits Rectangle {
                     width: parent.width + 6px;
                     height: parent.height + 6px;
                     border-radius: 13px;
-                    background: is-error ? Palette.danger : Palette.success;
+                    background: is-error ? Theme.danger : Theme.success;
                     opacity: 0.2;
                 }
 
                 Text {
                     text: is-error ? "✕" : "✓";
-                    color: is-error ? Palette.danger : Palette.success;
+                    color: is-error ? Theme.danger : Theme.success;
                     font-size: 16px;
                     font-weight: 600;
                     horizontal-alignment: center;
@@ -91,7 +90,7 @@ export component NotificationToast inherits Rectangle {
 
             Text {
                 text: is-error ? "Error" : "Success";
-                color: is-error ? Palette.danger : Palette.success;
+                color: is-error ? Theme.danger : Theme.success;
                 font-size: 10px;
                 font-weight: 600;
                 letter-spacing: 1px;
@@ -99,7 +98,7 @@ export component NotificationToast inherits Rectangle {
 
             message-text := Text {
                 text: root.message;
-                color: Palette.text-primary;
+                color: Theme.text-primary;
                 font-size: 13px;
                 font-weight: 400;
                 wrap: word-wrap;

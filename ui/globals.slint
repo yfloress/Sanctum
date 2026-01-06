@@ -1,186 +1,8 @@
-// ==================== Sanctum Design System - Globals ====================
-// Noir Minimalist - Luxury-inspired, terminal elegance
-// Supports dark (default) and light (cream/gold) themes
+// ==================== Sanctum Globals ====================
+// Data structures, adapters and application state
+// Colors and design tokens are in theme.slint
 
-// ==================== Color Palette ====================
-// Conditional colors based on SettingsAdapter.dark-mode
-
-export global Palette {
-    // Theme toggle reference
-    out property <bool> is-dark: SettingsAdapter.dark-mode;
-
-    // Core backgrounds
-    out property <color> background: is-dark ? #000000 : #faf7f2;
-    out property <color> surface: is-dark ? #111111 : #f0ebe3;
-    out property <color> surface-hover: is-dark ? #1a1a1a : #e8e0d5;
-
-    // Sidebar
-    out property <color> sidebar-bg: is-dark ? #050505 : #f8f4ed;
-    out property <color> sidebar-border: is-dark ? #333333 : #e0d6c8;
-
-    // Accent colors
-    out property <color> accent: is-dark ? #ffffff : #c9a227;
-    out property <color> accent-muted: is-dark ? #ffffff20 : #c9a22730;
-    out property <color> accent-hover: is-dark ? #ffffffcc : #b8960b;
-    out property <color> primary: is-dark ? #6366f1 : #b8860b;
-    out property <color> action-gradient-start: is-dark ? #5a00f0 : #c9a227;
-    out property <color> action-gradient-end: is-dark ? #ff2ac3 : #d4a574;
-
-    // Semantic colors
-    out property <color> success: is-dark ? #22c55e : #2e7d32;
-    out property <color> danger: is-dark ? #ef4444 : #c62828;
-    out property <color> warning: is-dark ? #f59e0b : #ef6c00;
-
-    // Delete button colors
-    out property <color> delete-bg: is-dark ? #3d2020 : #fee2e2;
-    out property <color> delete-bg-hover: is-dark ? #5a2020 : #fecaca;
-    out property <color> delete-bg-active: is-dark ? #7a2020 : #fca5a5;
-    out property <color> delete-border: is-dark ? #ff4444 : #f87171;
-
-    // Warning message colors
-    out property <color> warning-bg: is-dark ? #2d1515 : #fef2f2;
-    out property <color> warning-border: is-dark ? #4d2525 : #fecaca;
-
-    // Overlay and shadow colors
-    out property <color> overlay-bg: is-dark ? #000000cc : #2d2a26cc;
-    out property <color> overlay-bg-strong: is-dark ? #000000d9 : #2d2a26d9;
-    out property <color> overlay-bg-soft: is-dark ? #00000088 : #2d2a2688;
-    out property <color> shadow-color: is-dark ? #00000066 : #2d2a2633;
-    out property <color> shadow-strong: is-dark ? #00000088 : #2d2a2655;
-
-    // Crypto gradients
-    out property <color> crypto-ticker-gradient-start: is-dark ? #0a0a0f : #f5f0e8;
-    out property <color> crypto-ticker-gradient-mid: is-dark ? #0d0d14 : #f0ebe3;
-    out property <color> crypto-ticker-gradient-end: is-dark ? #0a0a0f : #f5f0e8;
-    out property <color> crypto-hero-gradient-start: is-dark ? #080810 : #f5f0e8;
-    out property <color> crypto-panel-gradient-start: is-dark ? #0a0a10 : #f5f0e8;
-    out property <color> crypto-panel-gradient-end: is-dark ? #080810 : #ede6db;
-    out property <color> crypto-card-gradient-start: is-dark ? #0d0d14 : #f0ebe3;
-    out property <color> crypto-card-gradient-mid: is-dark ? #111118 : #ebe4d8;
-    out property <color> crypto-card-gradient-end: is-dark ? #0a0a10 : #e5ddd0;
-    out property <color> crypto-icon-gradient-start: is-dark ? #1a1a2e : #e5ddd0;
-    out property <color> crypto-icon-gradient-end: is-dark ? #16213e : #d4c9b8;
-    out property <color> crypto-wallet-icon-gradient-start: is-dark ? #1f1f2e : #e0d6c8;
-    out property <color> crypto-wallet-icon-gradient-end: is-dark ? #2a2a3e : #d4c9b8;
-    out property <color> crypto-modal-gradient-end: is-dark ? #0f0f1a : #f0ebe3;
-    // Chart background (unified across all charts)
-    out property <color> chart-bg-start: is-dark ? #0d0d12 : #f5f0e8;
-    out property <color> chart-bg-end: is-dark ? #080810 : #ede6db;
-    out property <color> crypto-chart-bg-start: chart-bg-start;
-    out property <color> crypto-chart-bg-end: chart-bg-end;
-    out property <color> crypto-chart-value: is-dark ? #8b5cf6 : #b8860b;
-    out property <color> crypto-chart-cost: is-dark ? #94a3b8 : #8a857d;
-
-    // Heatmap intensity levels
-    out property <color> heatmap-level-0: surface-hover;
-    out property <color> heatmap-level-1: is-dark ? #3b2f5f : #e5d9c3;
-    out property <color> heatmap-level-2: is-dark ? #6b4f9f : #d4b896;
-    out property <color> heatmap-level-3: is-dark ? #8b5cf6 : #c9a227;
-    out property <color> heatmap-level-4: is-dark ? #a78bfa : #b8860b;
-
-    // Text colors
-    out property <color> text-primary: is-dark ? #ffffff : #2d2a26;
-    out property <color> text-secondary: is-dark ? #a3a3a3 : #6b6560;
-    out property <color> text-muted: is-dark ? #666666 : #8a857d;
-    out property <color> text-subtle: is-dark ? #333333 : #b5aea5;
-
-    // Border colors
-    out property <color> border: is-dark ? #333333 : #e0d6c8;
-    out property <color> border-light: is-dark ? #ffffff : #c9a227;
-    out property <color> border-focus: is-dark ? #ffffff : #c9a227;
-    out property <color> border-subtle: is-dark ? #222222 : #ebe4d8;
-
-    // Spacing scale
-    out property <length> spacing-xs: 4px;
-    out property <length> spacing-sm: 8px;
-    out property <length> spacing-md: 16px;
-    out property <length> spacing-lg: 24px;
-    out property <length> spacing-xl: 32px;
-    out property <length> spacing-2xl: 48px;
-    out property <length> spacing-3xl: 64px;
-
-    // Component dimensions
-    out property <length> habit-row-height: 72px;
-    out property <length> day-cell-size: 26px;
-    out property <length> chart-min-height-sm: 200px;
-    out property <length> chart-min-height-md: 280px;
-    out property <length> modal-width-md: 440px;
-    out property <length> modal-height-md: 600px;
-    out property <length> modal-height-compact: 640px;
-    out property <length> modal-height-lg: 720px;
-    out property <length> modal-height-sm: 520px;
-    out property <length> crypto-ticker-width: 180px;
-    out property <length> crypto-ticker-height: 52px;
-    out property <length> crypto-ticker-settings-width: 52px;
-    out property <length> crypto-clp-badge-width: 150px;
-    out property <length> crypto-hero-height: 200px;
-    out property <length> crypto-card-width: 240px;
-    out property <length> crypto-card-height: 180px;
-    out property <length> crypto-card-step: 256px;
-    out property <length> crypto-card-row-step: 196px;
-    out property <length> crypto-card-grid-height: 388px;
-    out property <length> crypto-card-scroll-height: 200px;
-    out property <length> wallet-info-width: 300px;
-
-    // Border radius
-    out property <length> radius-sm: 4px;
-    out property <length> radius-md: 6px;
-    out property <length> radius-lg: 8px;
-    out property <length> radius-xl: 12px;
-    out property <length> radius-2xl: 16px;
-    out property <length> radius-pill: 24px;
-
-    // Icon sizes
-    out property <length> icon-xs: 24px;
-    out property <length> icon-sm: 28px;
-    out property <length> icon-md: 32px;
-    out property <length> icon-lg: 36px;
-    out property <length> icon-xl: 40px;
-
-    // Notification colors
-    out property <color> notification-error-bg: #1a1215;
-    out property <color> notification-error-border: #3d2020;
-    out property <color> notification-success-bg: #0f1a15;
-    out property <color> notification-success-border: #203d30;
-
-    // Account type colors
-    out property <color> account-bank-bg: #1e3a5f;
-    out property <color> account-cash-bg: #2d4a3e;
-    out property <color> account-savings-bg: #3d3a1e;
-    out property <color> account-credit-bg: #3d1e2e;
-    out property <color> account-other-bg: #2a2a3a;
-
-    // Transaction icon colors
-    out property <color> tx-expense-bg: #1c1520;
-    out property <color> tx-income-bg: #0f1a14;
-
-    // Habit colors (16 color palette)
-    out property <color> habit-color-1: #8b5cf6;
-    out property <color> habit-color-2: #ec4899;
-    out property <color> habit-color-3: #3b82f6;
-    out property <color> habit-color-4: #22c55e;
-    out property <color> habit-color-5: #f59e0b;
-    out property <color> habit-color-6: #06b6d4;
-    out property <color> habit-color-7: #f43f5e;
-    out property <color> habit-color-8: #a855f7;
-    out property <color> habit-color-9: #14b8a6;
-    out property <color> habit-color-10: #6366f1;
-    out property <color> habit-color-11: #84cc16;
-    out property <color> habit-color-12: #f97316;
-    out property <color> habit-color-13: #0ea5e9;
-    out property <color> habit-color-14: #d946ef;
-    out property <color> habit-color-15: #10b981;
-    out property <color> habit-color-16: #fbbf24;
-
-    // Typography
-    out property <length> font-size-xs: 10px;
-    out property <length> font-size-sm: 12px;
-    out property <length> font-size-md: 14px;
-    out property <length> font-size-lg: 18px;
-    out property <length> font-size-xl: 24px;
-    out property <length> font-size-2xl: 32px;
-    out property <length> font-size-3xl: 48px;
-}
+import { Theme } from "theme.slint";
 
 // ==================== Data Structures ====================
 
@@ -215,8 +37,8 @@ export struct TransactionData {
 
 export struct BalanceData {
     total-balance: string,
-    total-income: string,
-    total-expense: string,
+    fiat-balance: string,
+    crypto-value: string,
 }
 
 export struct CategoryData {
@@ -292,7 +114,7 @@ export global HabitAdapter {
     in-out property <int> current-month-index: 1;
     in-out property <string> selected-habit-id: "";
     in-out property <string> summary-habit-name: "";
-    in-out property <color> summary-habit-color: Palette.accent;
+    in-out property <color> summary-habit-color: Theme.accent;
     in-out property <int> summary-current-streak: 0;
     in-out property <int> summary-best-streak: 0;
     in-out property <int> summary-completion-rate: 0;
@@ -412,6 +234,9 @@ export global SettingsAdapter {
     in-out property <bool> proxy-enabled: false;
     in-out property <string> proxy-url: "";
     in-out property <bool> dark-mode: true;  // Default to dark theme
+    in-out property <int> session-timeout: 900;  // Default 15 min (in seconds)
+    in-out property <string> preferred-currency: "USD";  // Default currency
+    in-out property <string> preferred-language: "en";  // Default language (en/es)
 
     // Callback to load settings from backend
     callback load-settings();
@@ -427,6 +252,18 @@ export global SettingsAdapter {
 
     // Callback to toggle dark mode
     callback set-dark-mode(bool);
+
+    // Callback to set session timeout (in seconds)
+    callback set-session-timeout(int);
+
+    // Callback to set preferred currency
+    callback set-preferred-currency(string);
+
+    // Callback to set preferred language
+    callback set-preferred-language(string);
+
+    // Callback to reset all settings to defaults
+    callback reset-settings();
 }
 
 // ==================== Crypto Adapter ====================
@@ -648,8 +485,12 @@ export global TransactionAdapter {
 // Balance summary and recent activity
 
 export global DashboardAdapter {
-    in-out property <BalanceData> balance: { total-balance: "$ 0.00", total-income: "$ 0.00", total-expense: "$ 0.00" };
+    in-out property <BalanceData> balance: { total-balance: "$ 0.00", fiat-balance: "$ 0.00", crypto-value: "$ 0.00" };
     in-out property <[TransactionData]> recent: [];
+    in-out property <bool> is-loading: false;
+    in-out property <bool> has-error: false;
+    in-out property <string> error-message: "";
+    in-out property <bool> missing-exchange-rate: false;
 
     callback fetch-balance();
     callback fetch-recent();

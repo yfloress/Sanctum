@@ -2,11 +2,11 @@
 // Premium Fintech UI - Wallet creation flow
 
 import {
-    Palette,
     AppState,
     CryptoAdapter,
     NotificationAdapter,
 } from "../globals.slint";
+import { Theme } from "../theme.slint";
 import { FormField } from "../components/transaction_form_components.slint";
 
 // ==================== CategoryCard ====================
@@ -20,11 +20,11 @@ component CategoryCard inherits Rectangle {
 
     height: 76px;
     background: selected 
-        ? @linear-gradient(135deg, Palette.surface 0%, Palette.crypto-icon-gradient-start 100%)
-        : (touch.has-hover ? Palette.surface-hover : Palette.surface);
+        ? @linear-gradient(135deg, Theme.surface 0%, Theme.crypto-icon-gradient-start 100%)
+        : (touch.has-hover ? Theme.surface-hover : Theme.surface);
     border-radius: 12px;
     border-width: selected ? 2px : 1px;
-    border-color: selected ? Palette.accent : Palette.border;
+    border-color: selected ? Theme.accent : Theme.border;
     
     animate background { duration: 200ms; }
     animate border-color { duration: 200ms; }
@@ -37,7 +37,7 @@ component CategoryCard inherits Rectangle {
         width: parent.width + 6px;
         height: parent.height + 6px;
         border-radius: 15px;
-        background: Palette.accent;
+        background: Theme.accent;
         opacity: 0.15;
     }
 
@@ -51,8 +51,8 @@ component CategoryCard inherits Rectangle {
 	                height: 44px;
 	                border-radius: 10px;
 	                background: selected
-	                ? @linear-gradient(135deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%)
-	                : Palette.surface-hover;
+	                ? @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%)
+	                : Theme.surface-hover;
 
             Text {
                 text: root.icon;
@@ -70,14 +70,14 @@ component CategoryCard inherits Rectangle {
 
             Text {
                 text: root.title;
-                color: selected ? Palette.text-primary : Palette.text-secondary;
+                color: selected ? Theme.text-primary : Theme.text-secondary;
                 font-size: 13px;
                 font-weight: selected ? 600 : 400;
             }
 
             Text {
                 text: root.subtitle;
-                color: Palette.text-muted;
+                color: Theme.text-muted;
                 font-size: 10px;
                 font-weight: 400;
             }
@@ -127,7 +127,7 @@ export component AddCryptoWalletModal inherits Rectangle {
     Rectangle {
         width: 100%;
         height: 100%;
-        background: Palette.overlay-bg;
+        background: Theme.overlay-bg;
         opacity: 1.0;
 
         // Flickable with no scrolling blocks scroll events from propagating
@@ -168,14 +168,14 @@ export component AddCryptoWalletModal inherits Rectangle {
     Rectangle {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
-        width: min(Palette.modal-width-md, parent.width - 40px);
-        height: min(Palette.modal-height-sm, parent.height - 40px);
-        background: @linear-gradient(180deg, Palette.sidebar-bg 0%, Palette.crypto-modal-gradient-end 100%);
+        width: min(Theme.modal-width-md, parent.width - 40px);
+        height: min(Theme.modal-height-sm, parent.height - 40px);
+        background: @linear-gradient(180deg, Theme.sidebar-bg 0%, Theme.crypto-modal-gradient-end 100%);
         border-radius: 16px;
         border-width: 1px;
-        border-color: Palette.border-light;
+        border-color: Theme.border-light;
         drop-shadow-blur: 40px;
-        drop-shadow-color: Palette.shadow-strong;
+        drop-shadow-color: Theme.shadow-strong;
         opacity: 1.0;
 
         TouchArea {
@@ -198,13 +198,13 @@ export component AddCryptoWalletModal inherits Rectangle {
 	                            width: 4px;
 	                            height: 20px;
 	                            border-radius: 2px;
-	                            background: @linear-gradient(180deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%);
+	                            background: @linear-gradient(180deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
 	                            y: (parent.height - self.height) / 2;
 	                        }
 
                     Text {
                         text: "NEW WALLET";
-                        color: Palette.text-primary;
+                        color: Theme.text-primary;
                         font-size: 16px;
                         font-weight: 500;
                         letter-spacing: 2px;
@@ -216,11 +216,11 @@ export component AddCryptoWalletModal inherits Rectangle {
                     width: 32px;
                     height: 32px;
                     border-radius: 8px;
-                    background: close-touch.has-hover ? Palette.surface-hover : transparent;
+                    background: close-touch.has-hover ? Theme.surface-hover : transparent;
                     
                     Text { 
                         text: "×"; 
-                        color: close-touch.has-hover ? Palette.text-primary : Palette.text-muted;
+                        color: close-touch.has-hover ? Theme.text-primary : Theme.text-muted;
                         font-size: 20px;
                         font-weight: 300;
                         vertical-alignment: center; 
@@ -262,7 +262,7 @@ export component AddCryptoWalletModal inherits Rectangle {
 
 	                        Text {
 	                            text: "WALLET TYPE";
-	                            color: Palette.text-muted;
+	                            color: Theme.text-muted;
 	                            font-size: 10px;
 	                            font-weight: 500;
 	                            letter-spacing: 1.5px;
@@ -308,7 +308,7 @@ export component AddCryptoWalletModal inherits Rectangle {
 	            // Submit Button
 	            Rectangle {
 	                height: 48px;
-	                background: @linear-gradient(135deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%);
+	                background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
 	                border-radius: 10px;
 	                
 	                HorizontalLayout {
@@ -317,14 +317,14 @@ export component AddCryptoWalletModal inherits Rectangle {
                     
                     Text {
                         text: "+";
-                        color: Palette.text-primary;
+                        color: Theme.text-primary;
                         font-size: 16px;
                         font-weight: 500;
                         vertical-alignment: center;
                     }
                     Text {
                         text: "CREATE WALLET";
-                        color: Palette.text-primary;
+                        color: Theme.text-primary;
                         font-size: 12px;
                         font-weight: 600;
                         letter-spacing: 2px;

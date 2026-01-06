@@ -1,7 +1,7 @@
 // ==================== Transaction Item ====================
 // Premium Fintech UI - Single transaction row for list view
 
-import { Palette, TransactionData } from "../globals.slint";
+import { TransactionData } from "../globals.slint";
 import { Theme } from "../theme.slint";
 
 // Category icon mapping
@@ -27,7 +27,7 @@ component CategoryIcon inherits Rectangle {
         width: 100%; height: 100%;
         border-radius: parent.border-radius;
         background: @radial-gradient(circle,
-            is-transfer ? transparent : (is-expense ? Palette.danger.with-alpha(0.08) : Palette.success.with-alpha(0.08)),
+            is-transfer ? transparent : (is-expense ? Theme.danger.with-alpha(0.08) : Theme.success.with-alpha(0.08)),
             transparent
         );
     }
@@ -35,8 +35,8 @@ component CategoryIcon inherits Rectangle {
     // Direction indicator
     Text {
         text: is-transfer ? "⇄" : (is-expense ? "↓" : "↑");
-        color: is-transfer ? Palette.text-muted
-            : (is-expense ? Palette.danger.with-alpha(0.6) : Palette.success.with-alpha(0.6));
+        color: is-transfer ? Theme.text-muted
+            : (is-expense ? Theme.danger.with-alpha(0.6) : Theme.success.with-alpha(0.6));
         font-size: 11px;
         font-weight: 600;
         x: 4px;
@@ -74,7 +74,7 @@ export component TransactionItem inherits Rectangle {
     callback delete-clicked();
 
     height: 64px;
-    background: touch.has-hover ? Palette.surface-hover : transparent;
+    background: touch.has-hover ? Theme.surface-hover : transparent;
     border-radius: 8px;
 
     animate background {
@@ -115,7 +115,7 @@ export component TransactionItem inherits Rectangle {
 
             Text {
                 text: transaction.description != "" ? transaction.description : transaction.category;
-                color: Palette.text-primary;
+                color: Theme.text-primary;
                 font-size: 13px;
                 font-weight: 500;
                 overflow: elide;
@@ -126,7 +126,7 @@ export component TransactionItem inherits Rectangle {
 
                 Text {
                     text: transaction.date;
-                    color: Palette.text-muted;
+                    color: Theme.text-muted;
                     font-size: 10px;
                     font-weight: 400;
                     letter-spacing: 0.3px;
@@ -136,13 +136,13 @@ export component TransactionItem inherits Rectangle {
                     width: 4px;
                     height: 4px;
                     border-radius: 2px;
-                    background: Palette.text-subtle;
+                    background: Theme.text-subtle;
                     y: (parent.height - self.height) / 2;
                 }
 
                 if transaction.description != "": Text {
                     text: transaction.category;
-                    color: Palette.text-subtle;
+                    color: Theme.text-subtle;
                     font-size: 10px;
                     font-weight: 400;
                     letter-spacing: 0.5px;
@@ -162,7 +162,7 @@ export component TransactionItem inherits Rectangle {
                 Text {
                     text: transaction.is-transfer ? "" : (transaction.is-expense ? "−" : "+");
                     color: transaction.is-transfer ? transparent
-                        : (transaction.is-expense ? Palette.danger : Palette.success);
+                        : (transaction.is-expense ? Theme.danger : Theme.success);
                     font-size: 14px;
                     font-weight: 500;
                     vertical-alignment: center;
@@ -171,8 +171,8 @@ export component TransactionItem inherits Rectangle {
                 // Amount value
                 Text {
                     text: transaction.amount;
-                    color: transaction.is-transfer ? Palette.text-secondary
-                        : (transaction.is-expense ? Palette.danger : Palette.success);
+                    color: transaction.is-transfer ? Theme.text-secondary
+                        : (transaction.is-expense ? Theme.danger : Theme.success);
                     font-size: 14px;
                     font-weight: 600;
                     letter-spacing: -0.3px;
@@ -191,13 +191,13 @@ export component TransactionItem inherits Rectangle {
                 border-radius: 6px;
                 background: delete-touch.has-hover ? Theme.notify-error-bg : transparent;
                 border-width: delete-touch.has-hover ? 1px : 0px;
-                border-color: Palette.danger;
+                border-color: Theme.danger;
 
                 animate background { duration: 150ms; }
 
                 Text {
                     text: "×";
-                    color: delete-touch.has-hover ? Palette.danger : Palette.text-muted;
+                    color: delete-touch.has-hover ? Theme.danger : Theme.text-muted;
                     font-size: 18px;
                     font-weight: 400;
                     horizontal-alignment: center;
@@ -222,7 +222,7 @@ export component TransactionItem inherits Rectangle {
         height: 1px;
         x: 64px;
         width: parent.width - 76px;
-        background: Palette.border-subtle;
+        background: Theme.border-subtle;
         opacity: 0.5;
     }
 }

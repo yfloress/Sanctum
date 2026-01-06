@@ -1,20 +1,21 @@
 // ==================== Habit Row ====================
 // Premium Fintech UI - Habit tracking row with day grid
 
-import { Palette, HabitData, HabitDay, HabitAdapter } from "../globals.slint";
+import { HabitData, HabitDay, HabitAdapter } from "../globals.slint";
+import { Theme } from "../theme.slint";
 import { CustomScrollbar } from "../widgets.slint";
 
 component StatBadge inherits Rectangle {
     in property <string> icon;
     in property <string> value;
-    in property <color> accent-color: Palette.text-muted;
+    in property <color> accent-color: Theme.text-muted;
 
     width: 64px;
     height: 22px;
     border-radius: 6px;
-    background: Palette.surface-hover;
+    background: Theme.surface-hover;
     border-width: 1px;
-    border-color: Palette.border;
+    border-color: Theme.border;
     HorizontalLayout {
         alignment: center;
         spacing: 4px;
@@ -39,16 +40,16 @@ component DayCell inherits Rectangle {
     in property <color> habit-color;
     callback clicked;
 
-    width: Palette.day-cell-size;
-    height: Palette.day-cell-size;
+    width: Theme.day-cell-size;
+    height: Theme.day-cell-size;
     border-radius: 6px;
     background: day.completed 
         ? habit-color 
-        : (day.is-future ? Palette.background : (touch.has-hover && !day.is-future ? Palette.surface-hover : Palette.surface));
+        : (day.is-future ? Theme.background : (touch.has-hover && !day.is-future ? Theme.surface-hover : Theme.surface));
     border-width: 1px;
     border-color: day.completed 
         ? habit-color.darker(0.2)
-        : (touch.has-hover && !day.is-future ? Palette.border-light : Palette.border);
+        : (touch.has-hover && !day.is-future ? Theme.border-light : Theme.border);
     opacity: day.is-future ? 0.3 : 1.0;
 
     animate background { duration: 150ms; }
@@ -68,7 +69,7 @@ component DayCell inherits Rectangle {
     // Day Number
     Text {
         text: day.day;
-        color: day.completed ? Palette.background : Palette.text-muted;
+        color: day.completed ? Theme.background : Theme.text-muted;
         font-size: 10px;
         font-weight: day.completed ? 600 : 400;
         x: (parent.width - self.width) / 2;
@@ -118,7 +119,7 @@ export component HabitRow inherits Rectangle {
         }
     }
 
-    height: Palette.habit-row-height;
+    height: Theme.habit-row-height;
     background: transparent;
 
     init => { update-auto-scroll(); }
@@ -162,7 +163,7 @@ export component HabitRow inherits Rectangle {
                     
                     Text {
                         text: habit.name;
-                        color: Palette.text-primary;
+                        color: Theme.text-primary;
                         font-size: 13px;
                         font-weight: 500;
                         overflow: elide;
@@ -171,7 +172,7 @@ export component HabitRow inherits Rectangle {
                     StatBadge {
                         icon: "🔥";
                         value: habit.streak;
-                        accent-color: #f59e0b;
+                        accent-color: Theme.habit-color-5;
                     }
                 }
             }
@@ -247,15 +248,15 @@ export component HabitRow inherits Rectangle {
                     width: 36px;
                     height: 36px;
                     border-radius: 8px;
-                    background: edit-touch.has-hover ? Palette.surface-hover : Palette.surface;
+                    background: edit-touch.has-hover ? Theme.surface-hover : Theme.surface;
                     border-width: 1px;
-                    border-color: Palette.border;
+                    border-color: Theme.border;
 
                     animate background { duration: 150ms; }
 
                     Text {
                         text: "✎";
-                        color: edit-touch.has-hover ? Palette.text-primary : Palette.text-muted;
+                        color: edit-touch.has-hover ? Theme.text-primary : Theme.text-muted;
                         font-size: 14px;
                         x: (parent.width - self.width) / 2;
                         y: (parent.height - self.height) / 2;
@@ -274,9 +275,9 @@ export component HabitRow inherits Rectangle {
                     width: 36px;
                     height: 36px;
                     border-radius: 8px;
-                    background: delete-touch.has-hover ? Palette.delete-bg-hover : Palette.delete-bg;
+                    background: delete-touch.has-hover ? Theme.delete-bg-hover : Theme.delete-bg;
                     border-width: 1px;
-                    border-color: delete-touch.has-hover ? Palette.delete-border : Palette.delete-bg-hover;
+                    border-color: delete-touch.has-hover ? Theme.delete-border : Theme.delete-bg-hover;
                     
                     animate background { duration: 150ms; }
                     animate border-color { duration: 150ms; }

@@ -2,7 +2,7 @@
 // Premium Fintech UI - GitHub-style yearly contribution heatmap
 // Horizontal scroll only, 7 rows for days of week
 
-import { Palette, HabitAdapter, HeatmapWeek, HeatmapDay } from "../globals.slint";
+import { HabitAdapter, HeatmapWeek, HeatmapDay } from "../globals.slint";
 import { CustomScrollbar } from "../widgets.slint";
 import { Theme } from "../theme.slint";
 
@@ -21,7 +21,7 @@ component Tooltip inherits Rectangle {
     
     background: Theme.bg-surface;
     border-width: 1px;
-    border-color: Palette.border;
+    border-color: Theme.border;
     border-radius: 4px;
 
     Text {
@@ -47,13 +47,13 @@ component HeatmapCell inherits Rectangle {
     // Level -1 = padding day (outside year), make invisible
     visible: level >= 0;
 
-    background: level == 0 ? Palette.heatmap-level-0 :
-                level == 1 ? Palette.heatmap-level-1 :
-                level == 2 ? Palette.heatmap-level-2 :
-                level == 3 ? Palette.heatmap-level-3 :
-                level == 4 ? Palette.heatmap-level-4 : Palette.heatmap-level-0;
+    background: level == 0 ? Theme.heatmap-level-0 :
+                level == 1 ? Theme.heatmap-level-1 :
+                level == 2 ? Theme.heatmap-level-2 :
+                level == 3 ? Theme.heatmap-level-3 :
+                level == 4 ? Theme.heatmap-level-4 : Theme.heatmap-level-0;
     border-width: level > 0 ? 0px : 1px;
-    border-color: Palette.border;
+    border-color: Theme.border;
 
     // Glow for high activity
     if level >= 3: Rectangle {
@@ -62,7 +62,7 @@ component HeatmapCell inherits Rectangle {
         width: parent.width + 2px;
         height: parent.height + 2px;
         border-radius: 4px;
-        background: level == 3 ? Palette.heatmap-level-3 : Palette.heatmap-level-4;
+        background: level == 3 ? Theme.heatmap-level-3 : Theme.heatmap-level-4;
         opacity: 0.3;
     }
 
@@ -122,7 +122,7 @@ export component HabitHeatmap inherits Rectangle {
             
             Text {
                 text: "Less";
-                color: Palette.text-muted;
+                color: Theme.text-muted;
                 font-size: 10px;
                 vertical-alignment: center;
             }
@@ -135,7 +135,7 @@ export component HabitHeatmap inherits Rectangle {
 
             Text {
                 text: "More";
-                color: Palette.text-muted;
+                color: Theme.text-muted;
                 font-size: 10px;
                 vertical-alignment: center;
             }

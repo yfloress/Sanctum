@@ -2,11 +2,11 @@
 // Premium Fintech UI - Transaction edit flow
 
 import {
-    Palette,
     AppState,
     CryptoAdapter,
     NotificationAdapter,
 } from "../globals.slint";
+import { Theme } from "../theme.slint";
 import { FormField } from "../components/transaction_form_components.slint";
 
 // ==================== ReadonlyField ====================
@@ -22,7 +22,7 @@ component ReadonlyField inherits Rectangle {
 
         Text {
             text: root.label;
-            color: Palette.text-muted;
+            color: Theme.text-muted;
             font-size: 10px;
             font-weight: 500;
             letter-spacing: 1.5px;
@@ -30,10 +30,10 @@ component ReadonlyField inherits Rectangle {
 
         Rectangle {
             height: 40px;
-            background: Palette.surface;
+            background: Theme.surface;
             border-radius: 8px;
             border-width: 1px;
-            border-color: Palette.border;
+            border-color: Theme.border;
 
             HorizontalLayout {
                 padding-left: 16px;
@@ -41,7 +41,7 @@ component ReadonlyField inherits Rectangle {
 
                 Text {
                     text: root.value;
-                    color: Palette.text-primary;
+                    color: Theme.text-primary;
                     font-size: 14px;
                     font-weight: 400;
                     vertical-alignment: center;
@@ -113,7 +113,7 @@ export component EditCryptoTransactionModal inherits Rectangle {
     Rectangle {
         width: 100%;
         height: 100%;
-        background: Palette.overlay-bg;
+        background: Theme.overlay-bg;
         opacity: 1.0;
 
         // Flickable with no scrolling blocks scroll events from propagating
@@ -154,14 +154,14 @@ export component EditCryptoTransactionModal inherits Rectangle {
     Rectangle {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
-        width: min(Palette.modal-width-md, parent.width - 40px);
-        height: min(Palette.modal-height-compact, parent.height - 40px);
-        background: @linear-gradient(180deg, Palette.sidebar-bg 0%, Palette.crypto-modal-gradient-end 100%);
+        width: min(Theme.modal-width-md, parent.width - 40px);
+        height: min(Theme.modal-height-compact, parent.height - 40px);
+        background: @linear-gradient(180deg, Theme.sidebar-bg 0%, Theme.crypto-modal-gradient-end 100%);
         border-radius: 16px;
         border-width: 1px;
-        border-color: Palette.border-light;
+        border-color: Theme.border-light;
         drop-shadow-blur: 40px;
-        drop-shadow-color: Palette.shadow-strong;
+        drop-shadow-color: Theme.shadow-strong;
         opacity: 1.0;
 
         TouchArea {
@@ -184,13 +184,13 @@ export component EditCryptoTransactionModal inherits Rectangle {
                         width: 4px;
                         height: 20px;
                         border-radius: 2px;
-                        background: @linear-gradient(180deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%);
+                        background: @linear-gradient(180deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
                         y: (parent.height - self.height) / 2;
                     }
 
                     Text {
                         text: "EDIT CRYPTO TRANSACTION";
-                        color: Palette.text-primary;
+                        color: Theme.text-primary;
                         font-size: 16px;
                         font-weight: 500;
                         letter-spacing: 2px;
@@ -202,11 +202,11 @@ export component EditCryptoTransactionModal inherits Rectangle {
                     width: 32px;
                     height: 32px;
                     border-radius: 8px;
-                    background: close-touch.has-hover ? Palette.surface-hover : transparent;
+                    background: close-touch.has-hover ? Theme.surface-hover : transparent;
                     
                     Text { 
                         text: "×"; 
-                        color: close-touch.has-hover ? Palette.text-primary : Palette.text-muted;
+                        color: close-touch.has-hover ? Theme.text-primary : Theme.text-muted;
                         font-size: 20px;
                         font-weight: 300;
                         vertical-alignment: center; 
@@ -305,12 +305,12 @@ export component EditCryptoTransactionModal inherits Rectangle {
             // Submit Button
             Rectangle {
                 height: 48px;
-                background: @linear-gradient(135deg, Palette.action-gradient-start 0%, Palette.action-gradient-end 100%);
+                background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
                 border-radius: 10px;
                 
                 Text {
                     text: "SAVE CHANGES";
-                    color: Palette.text-primary;
+                    color: Theme.text-primary;
                     font-size: 12px;
                     font-weight: 600;
                     letter-spacing: 2px;
