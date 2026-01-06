@@ -8,7 +8,7 @@ import { Theme } from "../theme.slint";
 
 component SidebarItem inherits Rectangle {
     in property <string> label: "ITEM";
-    in property <string> icon: "•";
+    in property <image> icon-source;
     in property <string> page-id: "";
     in property <bool> is-active: AppState.active-page == page-id;
     in property <bool> collapsed: false;
@@ -26,8 +26,8 @@ component SidebarItem inherits Rectangle {
         x: 0;
         width: 3px;
         height: 100%;
-        background: is-active 
-            ? @linear-gradient(180deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%) 
+        background: is-active
+            ? @linear-gradient(180deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%)
             : transparent;
 
         animate background { duration: 150ms; }
@@ -50,7 +50,7 @@ component SidebarItem inherits Rectangle {
         // Icon Area (always visible, centered in collapsed mode)
         Rectangle {
             width: collapsed ? parent.width : 54px;
-            
+
             Rectangle {
                 width: 32px;
                 height: 32px;
@@ -59,13 +59,14 @@ component SidebarItem inherits Rectangle {
                 x: (parent.width - self.width) / 2;
                 y: (parent.height - self.height) / 2;
 
-                Text {
-                    text: root.icon;
-                    color: is-active ? Theme.text-primary : Theme.text-muted;
-                    font-size: 14px;
+                Image {
+                    source: root.icon-source;
+                    width: 18px;
+                    height: 18px;
+                    colorize: is-active ? Theme.text-primary : Theme.text-muted;
                     horizontal-alignment: center;
                     vertical-alignment: center;
-                    animate color { duration: 150ms; }
+                    animate colorize { duration: 150ms; }
                 }
             }
         }
@@ -74,7 +75,7 @@ component SidebarItem inherits Rectangle {
         if !collapsed: Rectangle {
             horizontal-stretch: 1;
             clip: true;
-            
+
             Text {
                 text: root.label;
                 color: is-active ? Theme.text-primary : Theme.text-muted;
@@ -82,7 +83,7 @@ component SidebarItem inherits Rectangle {
                 font-weight: is-active ? 600 : 400;
                 letter-spacing: 2px;
                 vertical-alignment: center;
-                
+
                 animate color { duration: 150ms; }
             }
         }
@@ -181,35 +182,35 @@ export component SanctumSidebar inherits Rectangle {
 
             SidebarItem {
                 label: "DASHBOARD";
-                icon: "⊞";
+                icon-source: @image-url("../assets/icons/layout-dashboard.svg");
                 page-id: "dashboard";
                 collapsed: root.collapsed;
             }
 
             SidebarItem {
                 label: "FINANCES";
-                icon: "☰";
+                icon-source: @image-url("../assets/icons/wallet.svg");
                 page-id: "finances";
                 collapsed: root.collapsed;
             }
 
             SidebarItem {
                 label: "CRYPTO";
-                icon: "₿";
+                icon-source: @image-url("../assets/icons/bitcoin.svg");
                 page-id: "crypto";
                 collapsed: root.collapsed;
             }
 
             SidebarItem {
                 label: "HABITS";
-                icon: "✓";
+                icon-source: @image-url("../assets/icons/check.svg");
                 page-id: "habits";
                 collapsed: root.collapsed;
             }
 
             SidebarItem {
                 label: "SETTINGS";
-                icon: "⚙";
+                icon-source: @image-url("../assets/icons/settings.svg");
                 page-id: "settings";
                 collapsed: root.collapsed;
             }
@@ -245,9 +246,11 @@ export component SanctumSidebar inherits Rectangle {
                     background: lock-touch.has-hover ? Theme.notify-error-bg : transparent;
                     y: (parent.height - self.height) / 2 + 2px; // Centered + slight nudge down
 
-                    Text {
-                        text: "🔒";
-                        font-size: 12px;
+                    Image {
+                        source: @image-url("../assets/icons/lock.svg");
+                        width: 14px;
+                        height: 14px;
+                        colorize: lock-touch.has-hover ? Theme.danger : Theme.text-muted;
                         horizontal-alignment: center;
                         vertical-alignment: center;
                     }

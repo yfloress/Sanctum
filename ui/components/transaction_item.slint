@@ -44,22 +44,26 @@ component CategoryIcon inherits Rectangle {
     }
 
     // Category icon
-    Text {
-        text: root.category == "TRANSFER" ? "↔" :
-              root.category == "FOOD" ? "🍽" :
-              root.category == "TRANSPORT" ? "🚗" :
-              root.category == "SHOPPING" ? "🛍" :
-              root.category == "ENTERTAINMENT" ? "🎬" :
-              root.category == "HEALTH" ? "💊" :
-              root.category == "UTILITIES" ? "📄" :
-              root.category == "EDUCATION" ? "📚" :
-              root.category == "TRAVEL" ? "✈" :
-              root.category == "SALARY" ? "💰" :
-              root.category == "INVESTMENT" ? "📈" :
-              root.category == "FREELANCE" ? "💼" :
-              root.category == "GIFT" ? "🎁" :
-              root.category == "OTHER" ? "📌" : "•";
-        font-size: 16px;
+    Image {
+        source: root.category == "TRANSFER" ? @image-url("../assets/icons/arrow-left-right.svg") :
+                root.category == "FOOD" ? @image-url("../assets/icons/utensils.svg") :
+                root.category == "TRANSPORT" ? @image-url("../assets/icons/car.svg") :
+                root.category == "SHOPPING" ? @image-url("../assets/icons/shopping-bag.svg") :
+                root.category == "ENTERTAINMENT" ? @image-url("../assets/icons/film.svg") :
+                root.category == "HEALTH" ? @image-url("../assets/icons/heart-pulse.svg") :
+                root.category == "UTILITIES" ? @image-url("../assets/icons/receipt.svg") :
+                root.category == "EDUCATION" ? @image-url("../assets/icons/book-open.svg") :
+                root.category == "TRAVEL" ? @image-url("../assets/icons/plane.svg") :
+                root.category == "SALARY" ? @image-url("../assets/icons/wallet.svg") :
+                root.category == "INVESTMENT" ? @image-url("../assets/icons/trending-up.svg") :
+                root.category == "FREELANCE" ? @image-url("../assets/icons/briefcase.svg") :
+                root.category == "GIFT" ? @image-url("../assets/icons/gift.svg") :
+                root.category == "OTHER" ? @image-url("../assets/icons/circle-dot.svg") :
+                @image-url("../assets/icons/circle-dot.svg");
+        width: 18px;
+        height: 18px;
+        colorize: is-transfer ? Theme.text-muted
+            : (is-expense ? Theme.danger : Theme.success);
         horizontal-alignment: center;
         vertical-alignment: center;
     }

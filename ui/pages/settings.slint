@@ -348,9 +348,11 @@ export component SettingsPage inherits Rectangle {
                             background: Theme.surface;
                             y: (parent.height - self.height) / 2;
 
-                            Text {
-                                text: "⚙";
-                                font-size: 14px;
+                            Image {
+                                source: @image-url("../assets/icons/settings.svg");
+                                width: 16px;
+                                height: 16px;
+                                colorize: Theme.text-primary;
                                 horizontal-alignment: center;
                                 vertical-alignment: center;
                             }
@@ -594,9 +596,11 @@ export component SettingsPage inherits Rectangle {
                                 opacity: 0.2;
                             }
 
-                            Text {
-                                text: "🔐";
-                                font-size: 18px;
+                            Image {
+                                source: @image-url("../assets/icons/shield-check.svg");
+                                width: 20px;
+                                height: 20px;
+                                colorize: Theme.success;
                                 horizontal-alignment: center;
                                 vertical-alignment: center;
                             }

@@ -251,11 +251,15 @@ export component WalletRow inherits Rectangle {
                 border-color: Theme.border-subtle;
                 y: (parent.height - self.height) / 2;
                 
-                Text { 
-                    text: root.category == "exchange" ? "📊" : root.category == "wallet_multi" ? "🔐" : "💳";
-                    font-size: 20px; 
-                    vertical-alignment: center; 
-                    horizontal-alignment: center; 
+                Image {
+                    source: root.category == "exchange" ? @image-url("../assets/icons/trending-up.svg") :
+                            root.category == "wallet_multi" ? @image-url("../assets/icons/shield-check.svg") :
+                            @image-url("../assets/icons/credit-card.svg");
+                    width: 22px;
+                    height: 22px;
+                    colorize: Theme.text-primary;
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
                 }
             }
             
