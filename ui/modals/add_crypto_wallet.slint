@@ -11,7 +11,7 @@ import { FormField } from "../components/transaction_form_components.slint";
 
 // ==================== CategoryCard ====================
 component CategoryCard inherits Rectangle {
-    in property <string> icon;
+    in property <image> icon;
     in property <string> title;
     in property <string> subtitle;
     in property <string> value;
@@ -19,13 +19,13 @@ component CategoryCard inherits Rectangle {
     callback clicked;
 
     height: 76px;
-    background: selected 
+    background: selected
         ? @linear-gradient(135deg, Theme.surface 0%, Theme.crypto-icon-gradient-start 100%)
         : (touch.has-hover ? Theme.surface-hover : Theme.surface);
     border-radius: 12px;
     border-width: selected ? 2px : 1px;
     border-color: selected ? Theme.accent : Theme.border;
-    
+
     animate background { duration: 200ms; }
     animate border-color { duration: 200ms; }
     animate border-width { duration: 200ms; }
@@ -54,11 +54,13 @@ component CategoryCard inherits Rectangle {
 	                ? @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%)
 	                : Theme.surface-hover;
 
-            Text {
-                text: root.icon;
-                font-size: 20px;
-                vertical-alignment: center;
-                horizontal-alignment: center;
+            Image {
+                source: root.icon;
+                width: 20px;
+                height: 20px;
+                colorize: selected ? Theme.text-primary : Theme.text-secondary;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
             }
         }
 
@@ -272,29 +274,29 @@ export component AddCryptoWalletModal inherits Rectangle {
 	                        VerticalLayout {
 	                            spacing: 10px;
 	                            
-	                            CategoryCard { 
-	                                icon: "💳";
-	                                title: "Software Wallet"; 
+	                            CategoryCard {
+	                                icon: @image-url("../assets/icons/wallet.svg");
+	                                title: "Software Wallet";
 	                                subtitle: "MetaMask, Trust Wallet, Exodus";
-	                                value: "wallet_single"; 
+	                                value: "wallet_single";
 	                                selected: root.category == "wallet_single";
 	                                clicked => { root.category = "wallet_single"; }
 	                            }
-	                            
-	                            CategoryCard { 
-	                                icon: "🔐";
-	                                title: "Hardware Wallet"; 
+
+	                            CategoryCard {
+	                                icon: @image-url("../assets/icons/shield.svg");
+	                                title: "Hardware Wallet";
 	                                subtitle: "Ledger, Trezor, KeepKey";
-	                                value: "wallet_multi"; 
+	                                value: "wallet_multi";
 	                                selected: root.category == "wallet_multi";
 	                                clicked => { root.category = "wallet_multi"; }
 	                            }
-	                            
-	                            CategoryCard { 
-	                                icon: "📊";
-	                                title: "Exchange"; 
+
+	                            CategoryCard {
+	                                icon: @image-url("../assets/icons/trending-up.svg");
+	                                title: "Exchange";
 	                                subtitle: "Binance, Coinbase, Kraken";
-	                                value: "exchange"; 
+	                                value: "exchange";
 	                                selected: root.category == "exchange";
 	                                clicked => { root.category = "exchange"; }
 	                            }

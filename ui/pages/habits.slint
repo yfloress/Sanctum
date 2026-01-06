@@ -42,7 +42,7 @@ component NavButton inherits Rectangle {
 }
 
 component SummaryItem inherits Rectangle {
-    in property <string> icon: "";
+    in property <image> icon;
     in property <string> label: "";
     in property <string> value: "";
     in property <string> note: "";
@@ -65,9 +65,11 @@ component SummaryItem inherits Rectangle {
             spacing: 6px;
             alignment: start;
 
-            if root.icon != "": Text {
-                text: root.icon;
-                font-size: 14px;
+            Image {
+                source: root.icon;
+                width: 14px;
+                height: 14px;
+                colorize: Theme.text-primary;
                 vertical-alignment: center;
             }
 
@@ -298,7 +300,7 @@ export component HabitsPage inherits Rectangle {
                     }
                     
                     if HabitAdapter.habits.length == 0: EmptyState {
-                        icon: "✓";
+                        icon: @image-url("../assets/icons/check.svg");
                         title: "No habits tracked this month";
                         description: "Create a habit to start building consistency";
                     }
@@ -395,14 +397,14 @@ export component HabitsPage inherits Rectangle {
 
                                 SummaryItem {
                                     horizontal-stretch: 1;
-                                    icon: "🔥";
+                                    icon: @image-url("../assets/icons/trending-up.svg");
                                     label: "CURRENT STREAK";
                                     value: HabitAdapter.summary-current-streak + " days";
                                 }
 
                                 SummaryItem {
                                     horizontal-stretch: 1;
-                                    icon: "🏆";
+                                    icon: @image-url("../assets/icons/star.svg");
                                     label: "BEST STREAK (365D)";
                                     value: HabitAdapter.summary-best-streak + " days";
                                 }
@@ -413,7 +415,7 @@ export component HabitsPage inherits Rectangle {
 
                                 SummaryItem {
                                     horizontal-stretch: 1;
-                                    icon: "📊";
+                                    icon: @image-url("../assets/icons/percent.svg");
                                     label: "COMPLETION RATE";
                                     value: HabitAdapter.summary-completion-rate + "%";
                                     note: HabitAdapter.summary-completion-note;
@@ -421,7 +423,7 @@ export component HabitsPage inherits Rectangle {
 
                                 SummaryItem {
                                     horizontal-stretch: 1;
-                                    icon: "✅";
+                                    icon: @image-url("../assets/icons/check.svg");
                                     label: "COMPLETIONS (30D)";
                                     value: HabitAdapter.summary-last-30 + "";
                                     note: HabitAdapter.summary-best-day;

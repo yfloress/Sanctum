@@ -6,7 +6,7 @@ import { Theme } from "../theme.slint";
 import { CustomScrollbar } from "../widgets.slint";
 
 component StatBadge inherits Rectangle {
-    in property <string> icon;
+    in property <image> icon;
     in property <string> value;
     in property <color> accent-color: Theme.text-muted;
 
@@ -19,9 +19,11 @@ component StatBadge inherits Rectangle {
     HorizontalLayout {
         alignment: center;
         spacing: 4px;
-        Text {
-            text: root.icon;
-            font-size: 10px;
+        Image {
+            source: root.icon;
+            width: 10px;
+            height: 10px;
+            colorize: accent-color;
             vertical-alignment: center;
         }
 
@@ -170,7 +172,7 @@ export component HabitRow inherits Rectangle {
                     }
                     
                     StatBadge {
-                        icon: "🔥";
+                        icon: @image-url("../assets/icons/trending-up.svg");
                         value: habit.streak;
                         accent-color: Theme.habit-color-5;
                     }
@@ -254,10 +256,11 @@ export component HabitRow inherits Rectangle {
 
                     animate background { duration: 150ms; }
 
-                    Text {
-                        text: "✎";
-                        color: edit-touch.has-hover ? Theme.text-primary : Theme.text-muted;
-                        font-size: 14px;
+                    Image {
+                        source: @image-url("../assets/icons/file-text.svg");
+                        width: 14px;
+                        height: 14px;
+                        colorize: edit-touch.has-hover ? Theme.text-primary : Theme.text-muted;
                         x: (parent.width - self.width) / 2;
                         y: (parent.height - self.height) / 2;
                     }

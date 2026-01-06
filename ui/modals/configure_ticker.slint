@@ -269,12 +269,13 @@ component CatalogRow inherits Rectangle {
                     border-color: root.selected ? Theme.accent : Theme.border-subtle;
                     y: (parent.height - self.height) / 2;
 
-                    Text {
-                        text: root.selected ? "✓" : "";
-                        color: Theme.text;
-                        font-size: 10px;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
+                    if root.selected: Image {
+                        source: @image-url("../assets/icons/check.svg");
+                        width: 10px;
+                        height: 10px;
+                        colorize: Theme.text;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
                     }
                 }
 

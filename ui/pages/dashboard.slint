@@ -256,11 +256,13 @@ export component DashboardPage inherits Rectangle {
                 border-width: 3px;
                 border-color: Theme.accent;
 
-                Text {
-                    text: "📊";
-                    font-size: 28px;
-                    vertical-alignment: center;
-                    horizontal-alignment: center;
+                Image {
+                    source: @image-url("../assets/icons/trending-up.svg");
+                    width: 28px;
+                    height: 28px;
+                    colorize: Theme.accent;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
                 }
             }
 

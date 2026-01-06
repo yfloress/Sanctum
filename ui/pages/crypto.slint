@@ -437,11 +437,13 @@ export component CryptoPage inherits Rectangle {
                                 border-color: Theme.border-subtle;
                                 x: (parent.width - self.width) / 2;
                                 
-                                Text {
-                                    text: "📈";
-                                    font-size: 32px;
-                                    vertical-alignment: center;
-                                    horizontal-alignment: center;
+                                Image {
+                                    source: @image-url("../assets/icons/trending-up.svg");
+                                    width: 32px;
+                                    height: 32px;
+                                    colorize: Theme.text-secondary;
+                                    x: (parent.width - self.width) / 2;
+                                    y: (parent.height - self.height) / 2;
                                 }
                             }
                             
@@ -920,11 +922,13 @@ export component CryptoPage inherits Rectangle {
                     easing: ease-in-out;
                 }
 
-                Text {
-                    text: "💰";
-                    font-size: 28px;
-                    vertical-alignment: center;
-                    horizontal-alignment: center;
+                Image {
+                    source: @image-url("../assets/icons/coins.svg");
+                    width: 28px;
+                    height: 28px;
+                    colorize: Theme.accent;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
                 }
             }
 

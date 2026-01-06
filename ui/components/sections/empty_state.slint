@@ -3,7 +3,7 @@
 import { Theme } from "../../theme.slint";
 
 export component EmptyState inherits Rectangle {
-    in property <string> icon: "📊";
+    in property <image> icon: @image-url("../../assets/icons/folder.svg");
     in property <string> title: "No data";
     in property <string> description: "Get started by adding your first entry";
 
@@ -34,11 +34,13 @@ export component EmptyState inherits Rectangle {
                 opacity: 0.2;
             }
 
-            Text {
-                text: root.icon;
-                font-size: 22px;
-                horizontal-alignment: center;
-                vertical-alignment: center;
+            Image {
+                source: root.icon;
+                width: 22px;
+                height: 22px;
+                colorize: Theme.text-secondary;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
             }
         }
 

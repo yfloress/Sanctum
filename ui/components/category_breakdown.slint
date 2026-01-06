@@ -125,12 +125,14 @@ export component CategoryBreakdown inherits VerticalLayout {
                 border-radius: 24px;
                 background: Theme.surface-hover;
                 x: (parent.width - self.width) / 2;
-                
-                Text {
-                    text: "📊";
-                    font-size: 20px;
-                    vertical-alignment: center;
-                    horizontal-alignment: center;
+
+                Image {
+                    source: @image-url("../assets/icons/trending-up.svg");
+                    width: 20px;
+                    height: 20px;
+                    colorize: Theme.text-secondary;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
                 }
             }
             

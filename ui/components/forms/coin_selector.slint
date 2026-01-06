@@ -250,10 +250,11 @@ export component CoinSelector inherits Rectangle {
                                             horizontal-stretch: 1;
                                         }
 
-                                        if index == selected-index: Text {
-                                            text: "✓";
-                                            color: Theme.accent;
-                                            font-size: 12px;
+                                        if index == selected-index: Image {
+                                            source: @image-url("../../assets/icons/check.svg");
+                                            width: 12px;
+                                            height: 12px;
+                                            colorize: Theme.accent;
                                             vertical-alignment: center;
                                         }
                                     }
@@ -326,10 +327,11 @@ export component CoinSelector inherits Rectangle {
                                             horizontal-stretch: 1;
                                         }
 
-                                        if index == selected-index: Text {
-                                            text: "✓";
-                                            color: Theme.accent;
-                                            font-size: 12px;
+                                        if index == selected-index: Image {
+                                            source: @image-url("../../assets/icons/check.svg");
+                                            width: 12px;
+                                            height: 12px;
+                                            colorize: Theme.accent;
                                             vertical-alignment: center;
                                         }
                                     }

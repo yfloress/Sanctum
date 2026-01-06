@@ -125,10 +125,11 @@ component AccountFilterSelect inherits Rectangle {
                                 horizontal-stretch: 1;
                             }
 
-                            if selected-index == 0: Text {
-                                text: "✓";
-                                color: Theme.accent;
-                                font-size: 12px;
+                            if selected-index == 0: Image {
+                                source: @image-url("../assets/icons/check.svg");
+                                width: 12px;
+                                height: 12px;
+                                colorize: Theme.accent;
                                 vertical-alignment: center;
                             }
                         }
@@ -157,10 +158,11 @@ component AccountFilterSelect inherits Rectangle {
                                 horizontal-stretch: 1;
                             }
 
-                            if selected-index == index + 1: Text {
-                                text: "✓";
-                                color: Theme.accent;
-                                font-size: 12px;
+                            if selected-index == index + 1: Image {
+                                source: @image-url("../assets/icons/check.svg");
+                                width: 12px;
+                                height: 12px;
+                                colorize: Theme.accent;
                                 vertical-alignment: center;
                             }
                         }
@@ -289,10 +291,11 @@ component CategoryFilterSelect inherits Rectangle {
                             horizontal-stretch: 1;
                         }
 
-                        if selected-index == 0: Text {
-                            text: "✓";
-                            color: Theme.accent;
-                            font-size: 12px;
+                        if selected-index == 0: Image {
+                            source: @image-url("../assets/icons/check.svg");
+                            width: 12px;
+                            height: 12px;
+                            colorize: Theme.accent;
                             vertical-alignment: center;
                         }
                     }
@@ -339,10 +342,11 @@ component CategoryFilterSelect inherits Rectangle {
                             horizontal-stretch: 1;
                         }
 
-                        if selected-index == index + 1: Text {
-                            text: "✓";
-                            color: Theme.accent;
-                            font-size: 12px;
+                        if selected-index == index + 1: Image {
+                            source: @image-url("../assets/icons/check.svg");
+                            width: 12px;
+                            height: 12px;
+                            colorize: Theme.accent;
                             vertical-alignment: center;
                         }
                     }
@@ -389,10 +393,11 @@ component CategoryFilterSelect inherits Rectangle {
                             horizontal-stretch: 1;
                         }
 
-                        if selected-index == index + 1 + CategoryAdapter.expense-categories.length: Text {
-                            text: "✓";
-                            color: Theme.accent;
-                            font-size: 12px;
+                        if selected-index == index + 1 + CategoryAdapter.expense-categories.length: Image {
+                            source: @image-url("../assets/icons/check.svg");
+                            width: 12px;
+                            height: 12px;
+                            colorize: Theme.accent;
                             vertical-alignment: center;
                         }
                     }
@@ -428,10 +433,11 @@ component CategoryFilterSelect inherits Rectangle {
                             horizontal-stretch: 1;
                         }
 
-                        if selected-index == 1 + CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length: Text {
-                            text: "✓";
-                            color: Theme.accent;
-                            font-size: 12px;
+                        if selected-index == 1 + CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length: Image {
+                            source: @image-url("../assets/icons/check.svg");
+                            width: 12px;
+                            height: 12px;
+                            colorize: Theme.accent;
                             vertical-alignment: center;
                         }
                     }
@@ -746,13 +752,13 @@ export component FinancesPage inherits Rectangle {
                                 animate background { duration: 200ms; easing: ease-out; }
                                 animate opacity { duration: 150ms; easing: ease-out; }
 
-                                Text {
-                                    text: "✕";
-                                    color: Theme.text-primary;
-                                    font-size: 16px;
-                                    font-weight: 600;
-                                    horizontal-alignment: center;
-                                    vertical-alignment: center;
+                                Image {
+                                    source: @image-url("../assets/icons/x.svg");
+                                    width: 16px;
+                                    height: 16px;
+                                    colorize: Theme.text-primary;
+                                    x: (parent.width - self.width) / 2;
+                                    y: (parent.height - self.height) / 2;
                                     opacity: has-active-filters() ? 1.0 : 0.0;
                                 }
 
@@ -836,7 +842,7 @@ export component FinancesPage inherits Rectangle {
 
                 // Empty state
                 if TransactionAdapter.transactions.length == 0: EmptyState {
-                    icon: "📝";
+                    icon: @image-url("../assets/icons/file-text.svg");
                     title: has-active-filters() ? "No matching transactions" : "No transactions yet";
                     description: has-active-filters() ? "Try clearing or adjusting your filters" : "Add your first entry to start tracking your finances";
                 }
@@ -906,7 +912,7 @@ export component FinancesPage inherits Rectangle {
                     }
 
                     if AccountAdapter.accounts.length == 0: EmptyState {
-                        icon: "🏦";
+                        icon: @image-url("../assets/icons/building-2.svg");
                         title: "No accounts configured";
                         description: "Create an account to manage your funds";
                     }
@@ -1121,11 +1127,13 @@ export component FinancesPage inherits Rectangle {
                     easing: ease-in-out;
                 }
 
-                Text {
-                    text: "💳";
-                    font-size: 28px;
-                    vertical-alignment: center;
-                    horizontal-alignment: center;
+                Image {
+                    source: @image-url("../assets/icons/credit-card.svg");
+                    width: 28px;
+                    height: 28px;
+                    colorize: Theme.accent;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
                 }
             }
 

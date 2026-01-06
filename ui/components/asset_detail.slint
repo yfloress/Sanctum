@@ -242,12 +242,13 @@ component TransactionRow inherits Rectangle {
 
                 animate background { duration: 150ms; }
 
-                Text {
-                    text: "✎";
-                    color: edit-touch.has-hover ? Theme.text-primary : Theme.text-muted;
-                    font-size: 14px;
-                    vertical-alignment: center;
-                    horizontal-alignment: center;
+                Image {
+                    source: @image-url("../assets/icons/file-text.svg");
+                    width: 14px;
+                    height: 14px;
+                    colorize: edit-touch.has-hover ? Theme.text-primary : Theme.text-muted;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
                 }
 
                 edit-touch := TouchArea {
@@ -387,12 +388,13 @@ export component AssetDetailPanel inherits Rectangle {
                     
                     animate background { duration: 150ms; }
                     
-                    Text { 
-                        text: "✕"; 
-                        color: Theme.text-muted; 
-                        font-size: 16px; 
-                        vertical-alignment: center; 
-                        horizontal-alignment: center; 
+                    Image {
+                        source: @image-url("../assets/icons/x.svg");
+                        width: 16px;
+                        height: 16px;
+                        colorize: Theme.text-muted;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
                     }
                     
                     close-touch := TouchArea { 

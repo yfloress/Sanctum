@@ -71,13 +71,13 @@ export component NotificationToast inherits Rectangle {
                     opacity: 0.2;
                 }
 
-                Text {
-                    text: is-error ? "✕" : "✓";
-                    color: is-error ? Theme.danger : Theme.success;
-                    font-size: 16px;
-                    font-weight: 600;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
+                Image {
+                    source: is-error ? @image-url("../assets/icons/x.svg") : @image-url("../assets/icons/check.svg");
+                    width: 16px;
+                    height: 16px;
+                    colorize: is-error ? Theme.danger : Theme.success;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
                 }
             }
         }

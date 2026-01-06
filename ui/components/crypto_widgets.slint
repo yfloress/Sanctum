@@ -338,14 +338,14 @@ export component WalletRow inherits Rectangle {
 
             animate background { duration: 150ms; }
 
-            Text {
-                text: "✕";
-                color: del-area.has-hover ? Theme.danger : Theme.text-muted;
-                font-size: 14px;
-                font-weight: 700;
-                vertical-alignment: center;
-                horizontal-alignment: center;
-                animate color { duration: 150ms; }
+            Image {
+                source: @image-url("../assets/icons/x.svg");
+                width: 14px;
+                height: 14px;
+                colorize: del-area.has-hover ? Theme.danger : Theme.text-muted;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                animate colorize { duration: 150ms; }
             }
             del-area := TouchArea {
                 mouse-cursor: pointer;
