@@ -154,6 +154,150 @@ component InfoCard inherits Rectangle {
     }
 }
 
+component SettingSelector inherits Rectangle {
+    in property <string> title;
+    in property <string> description;
+    in property <string> selected-value;
+    in property <[string]> options;
+    in property <[string]> option-labels;
+    callback value-selected(string);
+
+    height: 72px;
+    background: Theme.surface;
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: Theme.border;
+
+    HorizontalLayout {
+        padding-left: 24px;
+        padding-right: 24px;
+        alignment: space-between;
+
+        VerticalLayout {
+            alignment: center;
+            spacing: 4px;
+
+            Text {
+                text: root.title;
+                color: Theme.text-primary;
+                font-size: 14px;
+                font-weight: 500;
+                letter-spacing: 0.3px;
+            }
+
+            Text {
+                text: root.description;
+                color: Theme.text-muted;
+                font-size: 11px;
+                font-weight: 400;
+            }
+        }
+
+        // Dropdown
+        VerticalLayout {
+            alignment: center;
+            width: 140px;
+
+            selector-box := Rectangle {
+                height: 36px;
+                background: selector-touch.has-hover ? Theme.surface-hover : Theme.surface-deep;
+                border-radius: 8px;
+                border-width: 1px;
+                border-color: Theme.border;
+
+                animate background { duration: 150ms; }
+
+                HorizontalLayout {
+                    padding-left: 12px;
+                    padding-right: 12px;
+                    spacing: 8px;
+
+                    Text {
+                        text: root.selected-value;
+                        color: Theme.text-primary;
+                        font-size: 12px;
+                        font-weight: 500;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                    }
+
+                    Text {
+                        text: "▼";
+                        color: Theme.text-muted;
+                        font-size: 8px;
+                        vertical-alignment: center;
+                    }
+                }
+
+                selector-touch := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { dropdown.show(); }
+                }
+            }
+        }
+    }
+
+    dropdown := PopupWindow {
+        x: root.width - 164px;
+        y: selector-box.y + selector-box.height + 4px;
+        width: 140px;
+
+        Rectangle {
+            background: Theme.sidebar-bg;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: Theme.border-light;
+            height: min(root.options.length * 36px + 8px, 240px);
+            drop-shadow-blur: 16px;
+            drop-shadow-color: Theme.shadow;
+
+            Flickable {
+                viewport-height: root.options.length * 36px + 8px;
+
+                VerticalLayout {
+                    padding: 4px;
+                    spacing: 0px;
+
+                    for option[index] in root.options: Rectangle {
+                        height: 36px;
+                        background: option-touch.has-hover ? Theme.surface-hover : transparent;
+                        border-radius: 6px;
+
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+
+                            Text {
+                                text: index < root.option-labels.length ? root.option-labels[index] : option;
+                                color: option == root.selected-value ? Theme.text-primary : Theme.text-secondary;
+                                font-size: 12px;
+                                font-weight: option == root.selected-value ? 500 : 400;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+
+                            if option == root.selected-value: Text {
+                                text: "✓";
+                                color: Theme.accent;
+                                font-size: 12px;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        option-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                root.value-selected(option);
+                                dropdown.close();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 export component SettingsPage inherits Rectangle {
     background: Theme.background;
 
@@ -255,6 +399,96 @@ export component SettingsPage inherits Rectangle {
                         toggled(value) => {
                             SettingsAdapter.set-dark-mode(value);
                             SettingsAdapter.dark-mode = value;
+                        }
+                    }
+                }
+
+                // Regional Settings Section
+                VerticalLayout {
+                    spacing: 12px;
+
+                    SectionHeader {
+                        title: "REGIONAL";
+                    }
+
+                    SettingSelector {
+                        title: "Preferred Currency";
+                        description: "Base currency for displaying amounts (UI only)";
+                        selected-value: SettingsAdapter.preferred-currency;
+                        options: ["USD", "CLP"];
+                        option-labels: ["USD ($)", "CLP ($)"];
+                        value-selected(value) => {
+                            SettingsAdapter.set-preferred-currency(value);
+                            SettingsAdapter.preferred-currency = value;
+                        }
+                    }
+
+                    SettingSelector {
+                        title: "Language";
+                        description: "Application interface language (UI only)";
+                        selected-value: SettingsAdapter.preferred-language;
+                        options: ["en", "es"];
+                        option-labels: ["English", "Español"];
+                        value-selected(value) => {
+                            SettingsAdapter.set-preferred-language(value);
+                            SettingsAdapter.preferred-language = value;
+                        }
+                    }
+
+                    Rectangle {
+                        height: 24px;
+
+                        HorizontalLayout {
+                            padding-left: 12px;
+
+                            Text {
+                                text: "⚠ Currency and language changes are not yet implemented. These are UI-only settings.";
+                                color: Theme.warning;
+                                font-size: 10px;
+                                font-weight: 400;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+
+                // Security Section
+                VerticalLayout {
+                    spacing: 12px;
+
+                    SectionHeader {
+                        title: "SECURITY";
+                    }
+
+                    SettingSelector {
+                        title: "Session Timeout";
+                        description: "Auto-lock vault after inactivity";
+                        selected-value: SettingsAdapter.session-timeout == 300 ? "5 min" :
+                                       SettingsAdapter.session-timeout == 900 ? "15 min" :
+                                       SettingsAdapter.session-timeout == 1800 ? "30 min" :
+                                       SettingsAdapter.session-timeout == 3600 ? "1 hour" :
+                                       SettingsAdapter.session-timeout == -1 ? "Never" : "15 min";
+                        options: ["300", "900", "1800", "3600", "-1"];
+                        option-labels: ["5 min", "15 min", "30 min", "1 hour", "Never"];
+                        value-selected(value) => {
+                            SettingsAdapter.set-session-timeout(value.to-float());
+                            SettingsAdapter.session-timeout = value.to-float();
+                        }
+                    }
+
+                    Rectangle {
+                        height: 24px;
+
+                        HorizontalLayout {
+                            padding-left: 12px;
+
+                            Text {
+                                text: "⚠ Timeout changes will apply on next vault open.";
+                                color: Theme.text-muted;
+                                font-size: 10px;
+                                font-weight: 400;
+                                vertical-alignment: center;
+                            }
                         }
                     }
                 }
@@ -384,6 +618,44 @@ export component SettingsPage inherits Rectangle {
                                 color: Theme.text-muted;
                                 font-size: 11px;
                                 font-weight: 400;
+                            }
+                        }
+                    }
+                }
+
+                // Reset Button
+                Rectangle {
+                    height: 56px;
+                    background: transparent;
+
+                    HorizontalLayout {
+                        alignment: center;
+
+                        reset-btn := Rectangle {
+                            width: 200px;
+                            height: 44px;
+                            border-radius: 8px;
+                            background: reset-touch.has-hover ? Theme.danger.darker(0.2) : Theme.danger;
+                            border-width: 1px;
+                            border-color: Theme.danger-strong;
+
+                            animate background { duration: 150ms; }
+
+                            Text {
+                                text: "RESET TO DEFAULTS";
+                                color: Theme.text-primary;
+                                font-size: 11px;
+                                font-weight: 600;
+                                letter-spacing: 1px;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+
+                            reset-touch := TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => {
+                                    SettingsAdapter.reset-settings();
+                                }
                             }
                         }
                     }

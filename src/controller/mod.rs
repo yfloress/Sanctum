@@ -15,7 +15,8 @@ pub use crate::features::crypto::{
     SETTING_AUTO_FETCH, SETTING_CRYPTO_CUSTOM_COINS, SETTING_CRYPTO_FAVORITE_COINS,
     SETTING_CRYPTO_HIDDEN_COINS, SETTING_CRYPTO_LAST_COIN_ID, SETTING_CRYPTO_LAST_UPDATED,
     SETTING_CRYPTO_LAST_WALLET_ID, SETTING_CRYPTO_PROXY_ENABLED, SETTING_CRYPTO_PROXY_URL,
-    SETTING_DARK_MODE, SETTING_TICKER_COINS,
+    SETTING_DARK_MODE, SETTING_PREFERRED_CURRENCY, SETTING_PREFERRED_LANGUAGE,
+    SETTING_SESSION_TIMEOUT, SETTING_TICKER_COINS,
 };
 use crate::services::charts::ChartsService;
 use crate::features::crypto::{CryptoError, CryptoService};
@@ -573,8 +574,15 @@ impl AppController {
         let secret = validate_password_basic(password)?;
 
         // Initialize vault
-        let db = Database::init(db_path.clone(), &secret)
+        let mut db = Database::init(db_path.clone(), &secret)
             .map_err(ControllerError::Database)?;
+
+        // Apply configured session timeout (default 15 min)
+        let timeout = self.get_app_setting(SETTING_SESSION_TIMEOUT)
+            .ok()
+            .and_then(|s| s.parse::<i64>().ok())
+            .unwrap_or(900);  // Default to 15 minutes
+        db.set_session_timeout(timeout);
 
         // Store reference
         {
@@ -623,9 +631,16 @@ impl AppController {
 
         // Attempt to open
         match Database::init(db_path.clone(), &secret) {
-            Ok(db) => {
+            Ok(mut db) => {
                 // Success - reset rate limit
                 self.reset_persistent_rate_limit(&db_path);
+
+                // Apply configured session timeout (default 15 min)
+                let timeout = self.get_app_setting(SETTING_SESSION_TIMEOUT)
+                    .ok()
+                    .and_then(|s| s.parse::<i64>().ok())
+                    .unwrap_or(900);  // Default to 15 minutes
+                db.set_session_timeout(timeout);
 
                 // Store reference
                 {
@@ -670,6 +685,13 @@ impl AppController {
             db.get_session_remaining()
                 .map_err(ControllerError::Database)
         })
+    }
+
+    /// Sets the session timeout duration (in seconds)
+    pub fn set_session_timeout(&self, timeout_secs: i64) -> Result<(), ControllerError> {
+        // Save to settings (will be applied on next vault open or can be applied now if vault is open)
+        self.set_app_setting(SETTING_SESSION_TIMEOUT, &timeout_secs.to_string())?;
+        Ok(())
     }
 
     // ==================== Chart Rendering ====================

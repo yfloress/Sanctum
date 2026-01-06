@@ -4,7 +4,8 @@
 
 use crate::controller::{
     AppController, SETTING_AUTO_FETCH, SETTING_CRYPTO_PROXY_ENABLED, SETTING_CRYPTO_PROXY_URL,
-    SETTING_DARK_MODE,
+    SETTING_DARK_MODE, SETTING_PREFERRED_CURRENCY, SETTING_PREFERRED_LANGUAGE,
+    SETTING_SESSION_TIMEOUT,
 };
 use crate::{AppState, CryptoAdapter, SettingsAdapter, AppWindow};
 use slint::{ComponentHandle, SharedString, Weak};
@@ -98,6 +99,29 @@ pub fn setup_settings_callbacks<N>(
                     .map(|v| v != "false")
                     .unwrap_or(true);
                 ui.global::<SettingsAdapter>().set_dark_mode(dark_mode);
+
+                // Load session timeout setting (default to 15 min)
+                let session_timeout = controller
+                    .get_app_setting(SETTING_SESSION_TIMEOUT)
+                    .ok()
+                    .and_then(|s| s.parse::<i32>().ok())
+                    .unwrap_or(900);
+                ui.global::<SettingsAdapter>()
+                    .set_session_timeout(session_timeout);
+
+                // Load preferred currency setting (default to USD)
+                let currency = controller
+                    .get_app_setting(SETTING_PREFERRED_CURRENCY)
+                    .unwrap_or_else(|_| "USD".to_string());
+                ui.global::<SettingsAdapter>()
+                    .set_preferred_currency(SharedString::from(currency));
+
+                // Load preferred language setting (default to English)
+                let language = controller
+                    .get_app_setting(SETTING_PREFERRED_LANGUAGE)
+                    .unwrap_or_else(|_| "en".to_string());
+                ui.global::<SettingsAdapter>()
+                    .set_preferred_language(SharedString::from(language));
             }
         });
     }
@@ -168,5 +192,62 @@ pub fn setup_settings_callbacks<N>(
                     notify(err.to_string(), true);
                 }
             });
+    }
+
+    // Session timeout update
+    {
+        let controller = controller.clone();
+        let notify = notify.clone();
+        ui.global::<SettingsAdapter>()
+            .on_set_session_timeout(move |timeout_secs| {
+                let timeout = timeout_secs as i64;
+                if let Err(err) = controller.set_session_timeout(timeout) {
+                    notify(err.to_string(), true);
+                } else {
+                    notify("Session timeout updated. Will apply on next vault open.".into(), false);
+                }
+            });
+    }
+
+    // Preferred currency update (UI only - no backend yet)
+    {
+        let controller = controller.clone();
+        ui.global::<SettingsAdapter>()
+            .on_set_preferred_currency(move |currency| {
+                let _ = controller.set_app_setting(SETTING_PREFERRED_CURRENCY, currency.as_str());
+            });
+    }
+
+    // Preferred language update (UI only - no backend yet)
+    {
+        let controller = controller.clone();
+        ui.global::<SettingsAdapter>()
+            .on_set_preferred_language(move |language| {
+                let _ = controller.set_app_setting(SETTING_PREFERRED_LANGUAGE, language.as_str());
+            });
+    }
+
+    // Reset all settings to defaults
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = notify.clone();
+        ui.global::<SettingsAdapter>().on_reset_settings(move || {
+            // Reset to defaults
+            let _ = controller.set_app_setting(SETTING_DARK_MODE, "true");
+            let _ = controller.set_app_setting(SETTING_AUTO_FETCH, "false");
+            let _ = controller.set_app_setting(SETTING_CRYPTO_PROXY_ENABLED, "false");
+            let _ = controller.set_app_setting(SETTING_CRYPTO_PROXY_URL, "");
+            let _ = controller.set_app_setting(SETTING_SESSION_TIMEOUT, "900");  // 15 min
+            let _ = controller.set_app_setting(SETTING_PREFERRED_CURRENCY, "USD");
+            let _ = controller.set_app_setting(SETTING_PREFERRED_LANGUAGE, "en");
+
+            // Reload settings
+            if let Some(ui) = ui_weak.upgrade() {
+                ui.global::<SettingsAdapter>().invoke_load_settings();
+            }
+
+            notify("Settings reset to defaults".into(), false);
+        });
     }
 }

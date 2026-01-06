@@ -33,6 +33,9 @@ pub const SETTING_CRYPTO_LAST_COIN_ID: &str = "crypto_last_coin_id";
 pub const SETTING_CRYPTO_PROXY_ENABLED: &str = "crypto_proxy_enabled";
 pub const SETTING_CRYPTO_PROXY_URL: &str = "crypto_proxy_url";
 pub const SETTING_DARK_MODE: &str = "dark_mode";
+pub const SETTING_SESSION_TIMEOUT: &str = "session_timeout";
+pub const SETTING_PREFERRED_CURRENCY: &str = "preferred_currency";
+pub const SETTING_PREFERRED_LANGUAGE: &str = "preferred_language";
 
 // ==================== Error Types ====================
 

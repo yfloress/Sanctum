@@ -234,6 +234,9 @@ export global SettingsAdapter {
     in-out property <bool> proxy-enabled: false;
     in-out property <string> proxy-url: "";
     in-out property <bool> dark-mode: true;  // Default to dark theme
+    in-out property <int> session-timeout: 900;  // Default 15 min (in seconds)
+    in-out property <string> preferred-currency: "USD";  // Default currency
+    in-out property <string> preferred-language: "en";  // Default language (en/es)
 
     // Callback to load settings from backend
     callback load-settings();
@@ -249,6 +252,18 @@ export global SettingsAdapter {
 
     // Callback to toggle dark mode
     callback set-dark-mode(bool);
+
+    // Callback to set session timeout (in seconds)
+    callback set-session-timeout(int);
+
+    // Callback to set preferred currency
+    callback set-preferred-currency(string);
+
+    // Callback to set preferred language
+    callback set-preferred-language(string);
+
+    // Callback to reset all settings to defaults
+    callback reset-settings();
 }
 
 // ==================== Crypto Adapter ====================
