@@ -198,6 +198,27 @@ impl FinanceService {
         })
     }
 
+    pub fn update_account_icon(&self, id: String, icon: Option<String>) -> Result<(), FinanceError> {
+        self.with_db(|db| {
+            let validated_id = validate_uuid(&id)?;
+            let mut account = FinanceRepository::get_account(db, &validated_id)?;
+
+            let icon = if let Some(i) = icon {
+                let i = validate_field_length(&i, MAX_ICON_LENGTH, "Icon")?;
+                if i.is_empty() {
+                    None
+                } else {
+                    Some(i)
+                }
+            } else {
+                None
+            };
+
+            account.icon = icon;
+            FinanceRepository::update_account(db, &account).map_err(FinanceError::Database)
+        })
+    }
+
     pub fn archive_account(&self, id: String) -> Result<(), FinanceError> {
         self.with_db(|db| {
             let validated_id = validate_uuid(&id)?;

@@ -27,6 +27,8 @@ import { AddAccountModal } from "modals/add_account.slint";
 import { TransferFundsModal } from "modals/transfer_funds.slint";
 import { AddCryptoTransactionModal } from "modals/add_crypto_transaction.slint";
 import { AddCryptoWalletModal } from "modals/add_crypto_wallet.slint";
+import { EditWalletIconModal } from "modals/edit_wallet_icon.slint";
+import { EditAccountIconModal } from "modals/edit_account_icon.slint";
 import { EditCryptoTransactionModal } from "modals/edit_crypto_transaction.slint";
 import { ConfigureTickerModal } from "modals/configure_ticker.slint";
 import { ConfigureCategoriesModal } from "modals/configure_categories.slint";
@@ -149,11 +151,28 @@ export component AppWindow inherits Window {
         width: 100%;
         height: 100%;
     }
+
+    // Edit Wallet Icon Modal
+    if AppState.show-edit-wallet-icon: EditWalletIconModal {
+        width: 100%;
+        height: 100%;
+        wallet-id: CryptoAdapter.icon-edit-wallet-id;
+        wallet-category: CryptoAdapter.icon-edit-wallet-category;
+        selected-icon <=> CryptoAdapter.icon-edit-wallet-icon;
+    }
     
     // Configure Ticker Modal
     if AppState.show-configure-ticker: ConfigureTickerModal {
         width: 100%;
         height: 100%;
+    }
+
+    // Edit Account Icon Modal
+    if AppState.show-edit-account-icon: EditAccountIconModal {
+        width: 100%;
+        height: 100%;
+        account-id: AccountAdapter.edit-account-id;
+        selected-icon <=> AccountAdapter.edit-account-icon;
     }
     
     // Notification Toast (Global Overlay)

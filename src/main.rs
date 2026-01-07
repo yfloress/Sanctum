@@ -8,7 +8,7 @@ use log::error;
 use rand::Rng; // For title animation
 use sanctum::controller::AppController;
 use sanctum::security_log::init_security_logger;
-use sanctum::ui::{format_category_label, format_decimal_from_cents, format_money};
+use sanctum::ui::{format_category_label, format_decimal_from_cents, format_money, load_account_icon};
 use slint::SharedString;
 use slint::{ComponentHandle, ModelRc, VecModel, Weak};
 use std::cell::{Cell, RefCell};
@@ -353,6 +353,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 name: acc.name.into(),
                 account_type: acc.account_type.into(),
                 account_type_key: acc.account_type_key.into(),
+                icon: load_account_icon(acc.icon_path.clone()),
+                icon_path: acc.icon_path.unwrap_or_default().into(),
                 currency: acc.currency.into(),
                 balance: acc.balance.into(),
                 initial_balance: acc.initial_balance.into(),

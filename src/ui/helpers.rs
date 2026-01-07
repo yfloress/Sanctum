@@ -399,3 +399,19 @@ pub fn load_wallet_icon(icon_path: Option<String>, category: &str) -> Image {
 
     Image::load_from_path(std::path::Path::new(default_path)).unwrap_or_default()
 }
+
+/// Loads account icon from a stored path (bank icons); returns empty image if invalid.
+pub fn load_account_icon(icon_path: Option<String>) -> Image {
+    if let Some(path) = icon_path
+        && !path.is_empty()
+    {
+        let full_path = std::path::Path::new("ui").join(path.trim_start_matches("../"));
+        if full_path.exists()
+            && let Ok(icon) = Image::load_from_path(&full_path)
+        {
+            return icon;
+        }
+    }
+
+    Image::default()
+}

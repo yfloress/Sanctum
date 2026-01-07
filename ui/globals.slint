@@ -11,6 +11,8 @@ export struct AccountData {
     name: string,
     account-type: string,   // "Bank", "Cash", "Credit", etc.
     account-type-key: string, // raw key: bank/cash/savings/credit_card/other
+    icon: image,
+    icon-path: string,
     currency: string,
     balance: string,        // Pre-formatted string e.g. "$ 12,500.00"
     initial-balance: string, // Raw decimal string e.g. "12500.00"
@@ -209,6 +211,8 @@ export global AccountAdapter {
     in-out property <[AccountData]> accounts: [];
     in-out property <string> total-balance: "$ 0.00";
     in-out property <bool> is-loading: false;
+    in-out property <string> edit-account-id: "";
+    in-out property <string> edit-account-icon: "";
 
     // Callback to fetch/refresh accounts from Rust backend
     callback fetch-accounts();
@@ -221,6 +225,7 @@ export global AccountAdapter {
 
     // Callback to delete an account
     callback delete-account(string) -> string; // id -> "" or error
+    callback update-account-icon(string, string) -> string; // id, icon_path -> "" or error
 
     // Transfer funds between accounts
     callback transfer-funds(string, string, string, string, string) -> string; // from, to, amount, description, date
@@ -375,6 +380,9 @@ export global CryptoAdapter {
     in-out property <[CryptoAssetData]> wallet-holdings: [];
     in-out property <[AssetTransaction]> wallet-history: [];
     in-out property <bool> show-wallet-detail: false;
+    in-out property <image> selected-wallet-icon;
+    in-out property <string> selected-wallet-category-key: "";
+    in-out property <string> selected-wallet-icon-path: "";
     
     in-out property <string> total-value: "$ 0.00";
     in-out property <string> total-pnl: "+ $ 0.00";
@@ -432,7 +440,13 @@ export global CryptoAdapter {
     callback create-wallet-with-icon(string, string, string) -> string; // (name, category, icon) -> "" or error
     callback delete-wallet(string) -> string;
     callback update-wallet-name(string, string) -> string; // (wallet_id, new_name) -> "" or error
+    callback update-wallet-icon(string, string) -> string; // (wallet_id, icon_path) -> "" or error
     callback delete-crypto-transaction(string) -> string;
+
+    // Wallet icon editor state
+    in-out property <string> icon-edit-wallet-id: "";
+    in-out property <string> icon-edit-wallet-category: "";
+    in-out property <string> icon-edit-wallet-icon: "";
 }
 
 // ==================== Transaction Adapter ====================
@@ -526,7 +540,9 @@ export global AppState {
     in-out property <bool> show-add-crypto: false;
     in-out property <bool> show-edit-crypto: false;
     in-out property <bool> show-add-wallet: false;
+    in-out property <bool> show-edit-wallet-icon: false;
     in-out property <bool> show-configure-ticker: false;
+    in-out property <bool> show-edit-account-icon: false;
 
     // Current date (YYYY-MM-DD), set from backend to avoid hardcoded defaults
     in-out property <string> current-date: "2024-01-01";

@@ -106,6 +106,13 @@ impl AppController {
             .map_err(ControllerError::from)
     }
 
+    /// Updates a wallet's icon
+    pub fn update_wallet_icon(&self, id: String, icon: Option<String>) -> Result<(), ControllerError> {
+        self.crypto_service
+            .update_wallet_icon(id, icon)
+            .map_err(ControllerError::from)
+    }
+
     // ==================== Crypto Transaction Methods ====================
 
     /// Adds a crypto transaction

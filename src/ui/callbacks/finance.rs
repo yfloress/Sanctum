@@ -77,10 +77,11 @@ pub fn setup_account_callbacks<F, G, H, N>(
         ui.global::<AccountAdapter>().on_create_account(
             move |name, account_type, currency, initial_balance| -> SharedString {
                 let amount_cents = parse_amount_input(&initial_balance).unwrap_or(0);
+                let account_type_key = normalize_account_type(&account_type);
 
                 let result = controller.create_account(
                     name.to_string(),
-                    normalize_account_type(&account_type),
+                    account_type_key.clone(),
                     currency.to_string().to_uppercase(),
                     amount_cents,
                     "#8b5cf6".to_string(),
@@ -88,8 +89,13 @@ pub fn setup_account_callbacks<F, G, H, N>(
                 );
 
                 match result {
-                    Ok(_) => {
+                    Ok(id) => {
                         let _ = reload_accounts(&ui_weak, &controller);
+                        if let Some(ui) = ui_weak.upgrade() {
+                            let adapter = ui.global::<AccountAdapter>();
+                            adapter.set_edit_account_id(SharedString::from(&id));
+                            adapter.set_edit_account_icon(SharedString::from(""));
+                        }
                         if let Some(ui) = ui_weak.upgrade() {
                             ui.global::<AppState>().set_show_add_account(false);
                             ui.global::<AnalyticsAdapter>()
@@ -114,15 +120,23 @@ pub fn setup_account_callbacks<F, G, H, N>(
         ui.global::<AccountAdapter>().on_update_account(
             move |id, name, account_type, currency, initial_balance| -> SharedString {
                 let amount_cents = parse_amount_input(&initial_balance).unwrap_or(0);
+                let id_value = id.to_string();
+                let existing_icon = match controller.get_accounts() {
+                    Ok(accounts) => accounts
+                        .iter()
+                        .find(|acc| acc.id == id_value)
+                        .and_then(|acc| acc.icon.clone()),
+                    Err(e) => return SharedString::from(e.to_string()),
+                };
 
                 let result = controller.update_account(
-                    id.to_string(),
+                    id_value,
                     name.to_string(),
                     normalize_account_type(&account_type),
                     currency.to_string().to_uppercase(),
                     amount_cents,
                     "#8b5cf6".to_string(),
-                    None,
+                    existing_icon,
                 );
 
                 match result {
@@ -248,6 +262,30 @@ pub fn setup_account_callbacks<F, G, H, N>(
                     Ok(_) => {
                         let _ = reload_accounts(&ui_weak, &controller);
                         notify("Account archived".to_string(), false);
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            });
+    }
+
+    // on_update_account_icon
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let reload_accounts = reload_accounts.clone();
+        let notify = notify.clone();
+        ui.global::<AccountAdapter>()
+            .on_update_account_icon(move |id, icon| -> SharedString {
+                let icon_path = if icon.is_empty() {
+                    None
+                } else {
+                    Some(icon.to_string())
+                };
+                match controller.update_account_icon(id.to_string(), icon_path) {
+                    Ok(_) => {
+                        let _ = reload_accounts(&ui_weak, &controller);
+                        notify("Account icon updated".to_string(), false);
                         SharedString::from("")
                     }
                     Err(e) => SharedString::from(e.to_string()),

@@ -3,7 +3,10 @@
 use super::helpers::reload_wallets;
 use crate::controller::AppController;
 use crate::models::{CryptoAsset, CryptoTransaction};
-use crate::ui::{crypto_icon_for_symbol, format_crypto_tx_display, format_fee_display, format_money, format_usd};
+use crate::ui::{
+    crypto_icon_for_symbol, format_crypto_tx_display, format_fee_display, format_money, format_usd,
+    load_wallet_icon,
+};
 use crate::{AssetTransaction, CryptoAdapter, CryptoAssetData, AppWindow};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel, Weak};
 use std::collections::HashMap;
@@ -139,6 +142,11 @@ pub fn setup_wallet_callbacks<N>(
                         adapter.set_selected_wallet_id(SharedString::from(&w.id));
                         adapter.set_selected_wallet_name(SharedString::from(&w.name));
                         adapter.set_selected_wallet_category(SharedString::from(category_label));
+                        adapter.set_selected_wallet_category_key(SharedString::from(&w.category));
+                        adapter.set_selected_wallet_icon(load_wallet_icon(w.icon.clone(), &w.category));
+                        adapter.set_selected_wallet_icon_path(SharedString::from(
+                            w.icon.clone().unwrap_or_default(),
+                        ));
                         adapter.set_selected_wallet_balance(SharedString::from(format_money(
                             (total_value * 100.0) as i64,
                             "USD",
@@ -157,8 +165,15 @@ pub fn setup_wallet_callbacks<N>(
         let notify = notify.clone();
         ui.global::<CryptoAdapter>()
             .on_create_wallet(move |name, category| -> SharedString {
-                match controller.add_wallet(name.to_string(), category.to_string(), None) {
-                    Ok(_) => {
+                let category_value = category.to_string();
+                match controller.add_wallet(name.to_string(), category_value.clone(), None) {
+                    Ok(id) => {
+                        if let Some(ui) = ui_weak.upgrade() {
+                            let adapter = ui.global::<CryptoAdapter>();
+                            adapter.set_icon_edit_wallet_id(SharedString::from(&id));
+                            adapter.set_icon_edit_wallet_category(SharedString::from(&category_value));
+                            adapter.set_icon_edit_wallet_icon(SharedString::from(""));
+                        }
                         reload_wallets(&ui_weak, &controller, Some(&notify));
                         notify("Wallet created successfully".into(), false);
                         SharedString::from("")
@@ -225,6 +240,34 @@ pub fn setup_wallet_callbacks<N>(
                             ui.global::<CryptoAdapter>().invoke_fetch_wallet_details(id);
                         }
                         notify("Wallet renamed successfully".into(), false);
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            });
+    }
+
+    // on_update_wallet_icon
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = notify.clone();
+        ui.global::<CryptoAdapter>()
+            .on_update_wallet_icon(move |id, icon| -> SharedString {
+                let icon_path = if icon.is_empty() {
+                    None
+                } else {
+                    Some(icon.to_string())
+                };
+                match controller.update_wallet_icon(id.to_string(), icon_path) {
+                    Ok(_) => {
+                        reload_wallets(&ui_weak, &controller, Some(&notify));
+                        if let Some(ui) = ui_weak.upgrade()
+                            && ui.global::<CryptoAdapter>().get_show_wallet_detail()
+                        {
+                            ui.global::<CryptoAdapter>().invoke_fetch_wallet_details(id);
+                        }
+                        notify("Wallet icon updated".into(), false);
                         SharedString::from("")
                     }
                     Err(e) => SharedString::from(e.to_string()),

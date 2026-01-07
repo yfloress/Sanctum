@@ -71,6 +71,17 @@ impl AppController {
             .map_err(ControllerError::from)
     }
 
+    /// Updates an account icon
+    pub fn update_account_icon(
+        &self,
+        id: String,
+        icon: Option<String>,
+    ) -> Result<(), ControllerError> {
+        self.finance_service
+            .update_account_icon(id, icon)
+            .map_err(ControllerError::from)
+    }
+
     /// Archives an account (soft delete)
     pub fn archive_account(&self, id: String) -> Result<(), ControllerError> {
         self.finance_service

@@ -384,6 +384,25 @@ impl CryptoService {
         })
     }
 
+    pub fn update_wallet_icon(&self, id: String, icon: Option<String>) -> Result<(), CryptoError> {
+        self.with_db(|db| {
+            let validated_id = validate_uuid(&id)?;
+
+            let mut wallet = db
+                .get_wallet(&validated_id)?
+                .ok_or_else(|| CryptoError::Validation("Wallet not found".to_string()))?;
+
+            let icon = match icon {
+                Some(i) => Some(validate_field_length(&i, MAX_ICON_LENGTH, "Icon")?),
+                None => None,
+            };
+            wallet.icon = icon.filter(|value| !value.is_empty());
+
+            db.update_wallet(&wallet)?;
+            Ok(())
+        })
+    }
+
     // ==================== Portfolio ====================
 
     pub fn get_aggregated_portfolio(&self) -> Result<Vec<AggregatedAsset>, CryptoError> {

@@ -6,6 +6,7 @@ import { Theme } from "../theme.slint";
 
 component AccountTypeIcon inherits Rectangle {
     in property <string> account-type;
+    in property <image> icon;
 
     width: Theme.icon-xl;
     height: Theme.icon-xl;
@@ -26,7 +27,15 @@ component AccountTypeIcon inherits Rectangle {
                   account-type == "Savings" ? Theme.account-savings-light :
                   account-type == "Credit Card" ? Theme.account-credit-light : Theme.account-other-light;
 
-    Image {
+    if root.icon.width > 0: Image {
+        source: root.icon;
+        width: 22px;
+        height: 22px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    if root.icon.width == 0: Image {
         source: account-type == "Bank" ? @image-url("../assets/icons/building-2.svg") :
                 account-type == "Cash" ? @image-url("../assets/icons/banknote.svg") :
                 account-type == "Savings" ? @image-url("../assets/icons/piggy-bank.svg") :
@@ -66,6 +75,7 @@ export component AccountItem inherits Rectangle {
             alignment: center;
             AccountTypeIcon {
                 account-type: account.account-type;
+                icon: account.icon;
             }
         }
 

@@ -332,13 +332,52 @@ export component WalletDetailPanel inherits Rectangle {
                     border-width: 1px;
                     border-color: Theme.border-subtle;
                     y: (parent.height - self.height) / 2;
-                    
-                    Text { 
-                        text: "💼"; 
-                        color: Theme.text-primary; 
-                        font-size: 18px; 
-                        vertical-alignment: center; 
-                        horizontal-alignment: center; 
+
+                    if CryptoAdapter.selected-wallet-icon-path == "": Image {
+                        source: CryptoAdapter.selected-wallet-icon;
+                        width: 24px;
+                        height: 24px;
+                        colorize: Theme.text-primary;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+
+                    if CryptoAdapter.selected-wallet-icon-path != "": Image {
+                        source: CryptoAdapter.selected-wallet-icon;
+                        width: 28px;
+                        height: 28px;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+
+                    if root.editing-name: Rectangle {
+                        width: 20px;
+                        height: 20px;
+                        border-radius: 6px;
+                        background: Theme.surface;
+                        border-width: 1px;
+                        border-color: Theme.border;
+                        x: parent.width - self.width - 2px;
+                        y: parent.height - self.height - 2px;
+
+                        Image {
+                            source: @image-url("../assets/icons/upload.svg");
+                            width: 10px;
+                            height: 10px;
+                            colorize: Theme.text-secondary;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                        }
+
+                        TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                CryptoAdapter.icon-edit-wallet-id = CryptoAdapter.selected-wallet-id;
+                                CryptoAdapter.icon-edit-wallet-category = CryptoAdapter.selected-wallet-category-key;
+                                CryptoAdapter.icon-edit-wallet-icon = CryptoAdapter.selected-wallet-icon-path;
+                                AppState.show-edit-wallet-icon = true;
+                            }
+                        }
                     }
                 }
                 
