@@ -374,3 +374,28 @@ pub fn crypto_icon_for_symbol(symbol: &str) -> Image {
 
     icon
 }
+
+/// Loads wallet icon from path, returns empty image if path is invalid
+pub fn load_wallet_icon(icon_path: Option<String>, category: &str) -> Image {
+    // If we have a custom icon path, try to load it
+    if let Some(path) = icon_path
+        && !path.is_empty()
+    {
+        // Try to load from ui/assets (path is relative like "../assets/icons/wallet.svg")
+        let full_path = std::path::Path::new("ui").join(path.trim_start_matches("../"));
+        if full_path.exists()
+            && let Ok(icon) = Image::load_from_path(&full_path)
+        {
+            return icon;
+        }
+    }
+
+    // Fall back to category defaults
+    let default_path = match category {
+        "exchange" => "ui/assets/icons/building-2.svg",
+        "wallet_multi" => "ui/assets/icons/shield.svg",
+        _ => "ui/assets/icons/wallet.svg",
+    };
+
+    Image::load_from_path(std::path::Path::new(default_path)).unwrap_or_default()
+}

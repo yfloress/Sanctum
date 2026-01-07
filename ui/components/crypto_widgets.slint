@@ -197,6 +197,7 @@ export component WalletRow inherits Rectangle {
     in property <bool> is-last: false;
     in property <string> name;
     in property <string> category;
+    in property <image> icon;
     in property <string> balance;
     in property <int> count;
     in property <string> id;
@@ -251,10 +252,18 @@ export component WalletRow inherits Rectangle {
                 border-color: Theme.border-subtle;
                 y: (parent.height - self.height) / 2;
                 
-                Image {
-                    source: root.category == "exchange" ? @image-url("../assets/icons/trending-up.svg") :
-                            root.category == "wallet_multi" ? @image-url("../assets/icons/shield-check.svg") :
-                            @image-url("../assets/icons/credit-card.svg");
+                if root.icon.width > 0: Image {
+                    source: root.icon;
+                    width: 22px;
+                    height: 22px;
+                    colorize: Theme.text-primary;
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
+                }
+                if root.icon.width == 0: Image {
+                    source: root.category == "exchange" ? @image-url("../assets/icons/building-2.svg") :
+                            root.category == "wallet_multi" ? @image-url("../assets/icons/shield.svg") :
+                            @image-url("../assets/icons/wallet.svg");
                     width: 22px;
                     height: 22px;
                     colorize: Theme.text-primary;

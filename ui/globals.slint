@@ -292,7 +292,7 @@ export struct CryptoWalletData {
     id: string,
     name: string,
     category: string,       // exchange, hardware, software
-    icon: string,           // path or emoji
+    icon: image,            // loaded SVG icon
     balance: string,        // Formatted total value
     asset-count: int,
 }
@@ -429,6 +429,7 @@ export global CryptoAdapter {
     
     // (name, category) -> id or error
     callback create-wallet(string, string) -> string;
+    callback create-wallet-with-icon(string, string, string) -> string; // (name, category, icon) -> "" or error
     callback delete-wallet(string) -> string;
     callback update-wallet-name(string, string) -> string; // (wallet_id, new_name) -> "" or error
     callback delete-crypto-transaction(string) -> string;

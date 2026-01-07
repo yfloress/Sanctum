@@ -8,6 +8,7 @@ import {
 } from "../globals.slint";
 import { Theme } from "../theme.slint";
 import { FormField } from "../components/transaction_form_components.slint";
+import { IconSelector } from "../components/icon_selector.slint";
 
 // ==================== CategoryCard ====================
 component CategoryCard inherits Rectangle {
@@ -97,11 +98,24 @@ component CategoryCard inherits Rectangle {
 export component AddCryptoWalletModal inherits Rectangle {
     property <string> wallet-name: "";
     property <string> category: "wallet_single";
+    property <string> selected-icon: get-default-icon();
+
     init => { key-scope.focus(); }
+
+    function get-default-icon() -> string {
+        if (category == "exchange") {
+            return "../assets/icons/building-2.svg";
+        } else if (category == "wallet_multi") {
+            return "../assets/icons/shield.svg";
+        } else {
+            return "../assets/icons/wallet.svg";
+        }
+    }
 
     function reset() {
         wallet-name = "";
         category = "wallet_single";
+        selected-icon = get-default-icon();
     }
 
     function submit() {
@@ -110,7 +124,7 @@ export component AddCryptoWalletModal inherits Rectangle {
             return;
         }
 
-        let result = CryptoAdapter.create-wallet(wallet-name, category);
+        let result = CryptoAdapter.create-wallet-with-icon(wallet-name, category, selected-icon);
 
         if (result == "") {
             root.reset();
@@ -280,7 +294,10 @@ export component AddCryptoWalletModal inherits Rectangle {
 	                                subtitle: "MetaMask, Trust Wallet, Exodus";
 	                                value: "wallet_single";
 	                                selected: root.category == "wallet_single";
-	                                clicked => { root.category = "wallet_single"; }
+	                                clicked => {
+	                                    root.category = "wallet_single";
+	                                    root.selected-icon = root.get-default-icon();
+	                                }
 	                            }
 
 	                            CategoryCard {
@@ -289,7 +306,10 @@ export component AddCryptoWalletModal inherits Rectangle {
 	                                subtitle: "Ledger, Trezor, KeepKey";
 	                                value: "wallet_multi";
 	                                selected: root.category == "wallet_multi";
-	                                clicked => { root.category = "wallet_multi"; }
+	                                clicked => {
+	                                    root.category = "wallet_multi";
+	                                    root.selected-icon = root.get-default-icon();
+	                                }
 	                            }
 
 	                            CategoryCard {
@@ -298,9 +318,18 @@ export component AddCryptoWalletModal inherits Rectangle {
 	                                subtitle: "Binance, Coinbase, Kraken";
 	                                value: "exchange";
 	                                selected: root.category == "exchange";
-	                                clicked => { root.category = "exchange"; }
+	                                clicked => {
+	                                    root.category = "exchange";
+	                                    root.selected-icon = root.get-default-icon();
+	                                }
 	                            }
 	                        }
+	                    }
+
+	                    // Icon Selector
+	                    IconSelector {
+	                        wallet-category: root.category;
+	                        selected-icon <=> root.selected-icon;
 	                    }
 
 	                    Rectangle { height: 8px; }

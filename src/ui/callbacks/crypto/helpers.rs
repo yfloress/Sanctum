@@ -2,7 +2,7 @@
 
 use crate::controller::AppController;
 use crate::models::CryptoAsset;
-use crate::ui::{crypto_icon_for_symbol, format_clp_rate, format_usd};
+use crate::ui::{crypto_icon_for_symbol, format_clp_rate, format_usd, load_wallet_icon};
 use crate::{CryptoAdapter, CryptoAssetData, CryptoDistributionSlice, CryptoWalletData, AppWindow, WalletSimple};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel, Weak};
 use std::collections::HashMap;
@@ -59,7 +59,7 @@ where
             id: SharedString::from(w.id),
             name: SharedString::from(w.name),
             category: SharedString::from(w.category.clone()),
-            icon: SharedString::from(w.icon.unwrap_or_default()),
+            icon: load_wallet_icon(w.icon.clone(), &w.category),
             balance: SharedString::from(format_usd(total_bal)),
             asset_count: holdings.len() as i32,
         });

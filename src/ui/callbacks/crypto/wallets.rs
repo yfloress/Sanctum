@@ -168,6 +168,29 @@ pub fn setup_wallet_callbacks<N>(
             });
     }
 
+    // on_create_wallet_with_icon
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = notify.clone();
+        ui.global::<CryptoAdapter>()
+            .on_create_wallet_with_icon(move |name, category, icon| -> SharedString {
+                let icon_path = if icon.is_empty() {
+                    None
+                } else {
+                    Some(icon.to_string())
+                };
+                match controller.add_wallet(name.to_string(), category.to_string(), icon_path) {
+                    Ok(_) => {
+                        reload_wallets(&ui_weak, &controller, Some(&notify));
+                        notify("Wallet created successfully".into(), false);
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            });
+    }
+
     // on_delete_wallet
     {
         let controller = controller.clone();

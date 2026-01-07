@@ -1,0 +1,258 @@
+// Icon Selector Component - Reusable icon picker for wallets/accounts
+
+import { Theme } from "../theme.slint";
+
+// Icon option item
+component IconOption inherits Rectangle {
+    in property <image> icon;
+    in property <string> icon-path;
+    in property <string> selected-path;
+    in property <string> label;
+    callback clicked;
+
+    property <bool> is-selected: icon-path == selected-path;
+
+    width: 64px;
+    height: 80px;
+    border-radius: 8px;
+    background: is-selected
+        ? Theme.surface-hover
+        : (touch.has-hover ? Theme.surface-hover.with-alpha(0.5) : transparent);
+    border-width: is-selected ? 2px : 1px;
+    border-color: is-selected ? Theme.accent : (touch.has-hover ? Theme.border : transparent);
+
+    animate background { duration: 150ms; }
+    animate border-color { duration: 150ms; }
+
+    VerticalLayout {
+        alignment: center;
+        spacing: 6px;
+        padding: 8px;
+
+        Rectangle {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            background: is-selected ? Theme.accent.with-alpha(0.1) : Theme.surface-deep;
+            x: (parent.width - self.width) / 2;
+
+            Image {
+                source: root.icon;
+                width: 20px;
+                height: 20px;
+                colorize: is-selected ? Theme.accent : Theme.text-secondary;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+            }
+        }
+
+        Text {
+            text: root.label;
+            color: is-selected ? Theme.text-primary : Theme.text-muted;
+            font-size: 9px;
+            font-weight: is-selected ? 600 : 400;
+            horizontal-alignment: center;
+            overflow: elide;
+        }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+// Main icon selector component
+export component IconSelector inherits Rectangle {
+    in property <string> wallet-category: "wallet_single"; // wallet_single, wallet_multi, exchange
+    in-out property <string> selected-icon: get-default-icon();
+
+    callback icon-changed(string);
+
+    function get-default-icon() -> string {
+        if (wallet-category == "exchange") {
+            return "../assets/icons/building-2.svg";
+        } else if (wallet-category == "wallet_multi") {
+            return "../assets/icons/shield.svg";
+        } else {
+            return "../assets/icons/wallet.svg";
+        }
+    }
+
+    height: 280px;
+    background: transparent;
+
+    VerticalLayout {
+        spacing: 12px;
+
+        Text {
+            text: "CHOOSE ICON";
+            color: Theme.text-muted;
+            font-size: 10px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
+        }
+
+        Flickable {
+            horizontal-stretch: 1;
+            vertical-stretch: 1;
+
+            VerticalLayout {
+                width: parent.width;
+                spacing: 16px;
+
+                // Exchanges Section
+                if wallet-category == "exchange": VerticalLayout {
+                    spacing: 8px;
+
+                    Text {
+                        text: "Exchanges";
+                        color: Theme.text-secondary;
+                        font-size: 11px;
+                        font-weight: 600;
+                    }
+
+                    GridLayout {
+                        spacing: 8px;
+
+                        Row {
+                            IconOption {
+                                icon: @image-url("../assets/exchange-icons/binance.svg");
+                                icon-path: "../assets/exchange-icons/binance.svg";
+                                selected-path: root.selected-icon;
+                                label: "Binance";
+                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                            }
+                            IconOption {
+                                icon: @image-url("../assets/exchange-icons/bybit.svg");
+                                icon-path: "../assets/exchange-icons/bybit.svg";
+                                selected-path: root.selected-icon;
+                                label: "Bybit";
+                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                            }
+                            IconOption {
+                                icon: @image-url("../assets/exchange-icons/kraken.svg");
+                                icon-path: "../assets/exchange-icons/kraken.svg";
+                                selected-path: root.selected-icon;
+                                label: "Kraken";
+                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                            }
+                            IconOption {
+                                icon: @image-url("../assets/exchange-icons/mexc.svg");
+                                icon-path: "../assets/exchange-icons/mexc.svg";
+                                selected-path: root.selected-icon;
+                                label: "MEXC";
+                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                            }
+                        }
+
+                        Row {
+                            IconOption {
+                                icon: @image-url("../assets/exchange-icons/buda.svg");
+                                icon-path: "../assets/exchange-icons/buda.svg";
+                                selected-path: root.selected-icon;
+                                label: "Buda";
+                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                            }
+                            IconOption {
+                                icon: @image-url("../assets/exchange-icons/uniswap.svg");
+                                icon-path: "../assets/exchange-icons/uniswap.svg";
+                                selected-path: root.selected-icon;
+                                label: "Uniswap";
+                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                            }
+                            IconOption {
+                                icon: @image-url("../assets/exchange-icons/bisq.svg");
+                                icon-path: "../assets/exchange-icons/bisq.svg";
+                                selected-path: root.selected-icon;
+                                label: "Bisq";
+                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                            }
+                            IconOption {
+                                icon: @image-url("../assets/icons/building-2.svg");
+                                icon-path: "../assets/icons/building-2.svg";
+                                selected-path: root.selected-icon;
+                                label: "Generic";
+                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                            }
+                        }
+                    }
+                }
+
+                // Wallets Section
+                if wallet-category != "exchange": VerticalLayout {
+                    spacing: 8px;
+
+                    Text {
+                        text: "Wallet Icons";
+                        color: Theme.text-secondary;
+                        font-size: 11px;
+                        font-weight: 600;
+                    }
+
+                    GridLayout {
+                        spacing: 8px;
+
+                        Row {
+                            IconOption {
+                                icon: @image-url("../assets/icons/wallet.svg");
+                                icon-path: "../assets/icons/wallet.svg";
+                                selected-path: root.selected-icon;
+                                label: "Wallet";
+                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                            }
+                            IconOption {
+                                icon: @image-url("../assets/icons/shield.svg");
+                                icon-path: "../assets/icons/shield.svg";
+                                selected-path: root.selected-icon;
+                                label: "Hardware";
+                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                            }
+                            IconOption {
+                                icon: @image-url("../assets/icons/lock.svg");
+                                icon-path: "../assets/icons/lock.svg";
+                                selected-path: root.selected-icon;
+                                label: "Secure";
+                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                            }
+                            IconOption {
+                                icon: @image-url("../assets/icons/bitcoin.svg");
+                                icon-path: "../assets/icons/bitcoin.svg";
+                                selected-path: root.selected-icon;
+                                label: "Bitcoin";
+                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                            }
+                        }
+
+                        Row {
+                            IconOption {
+                                icon: @image-url("../assets/icons/coins.svg");
+                                icon-path: "../assets/icons/coins.svg";
+                                selected-path: root.selected-icon;
+                                label: "Coins";
+                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                            }
+                            IconOption {
+                                icon: @image-url("../assets/crypto-icons/generic.svg");
+                                icon-path: "../assets/crypto-icons/generic.svg";
+                                selected-path: root.selected-icon;
+                                label: "Generic";
+                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                            }
+                            IconOption {
+                                icon: @image-url("../assets/icons/folder.svg");
+                                icon-path: "../assets/icons/folder.svg";
+                                selected-path: root.selected-icon;
+                                label: "Folder";
+                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                            }
+                            Rectangle { width: 64px; } // Spacer
+                        }
+                    }
+                }
+
+                Rectangle { height: 8px; } // Bottom spacer
+            }
+        }
+    }
+}
