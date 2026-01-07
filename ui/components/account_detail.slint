@@ -1,0 +1,314 @@
+// ==================== Account Detail Panel ====================
+// Finance account details with transaction history
+
+import { AccountAdapter, AppState } from "../globals.slint";
+import { Theme } from "../theme.slint";
+
+component SectionHeader inherits Rectangle {
+    in property <string> title;
+
+    height: 32px;
+    background: transparent;
+
+    HorizontalLayout {
+        spacing: 12px;
+
+        Rectangle {
+            width: 3px;
+            height: 16px;
+            border-radius: 1px;
+            background: Theme.accent;
+            y: (parent.height - self.height) / 2;
+        }
+
+        Text {
+            text: root.title;
+            color: Theme.text-muted;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            vertical-alignment: center;
+        }
+    }
+}
+
+component AccountTransactionRow inherits Rectangle {
+    in property <string> title;
+    in property <string> category;
+    in property <string> date;
+    in property <string> amount;
+    in property <bool> is-expense: false;
+    in property <bool> is-transfer: false;
+
+    height: 56px;
+    background: Theme.surface;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: Theme.border-subtle;
+
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        alignment: space-between;
+
+        VerticalLayout {
+            alignment: center;
+            spacing: 2px;
+            horizontal-stretch: 1;
+
+            Text {
+                text: title;
+                color: Theme.text-primary;
+                font-size: 12px;
+                font-weight: 500;
+                overflow: elide;
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+
+                Text {
+                    text: category;
+                    color: Theme.text-muted;
+                    font-size: 10px;
+                }
+
+                Text {
+                    text: date;
+                    color: Theme.text-subtle;
+                    font-size: 10px;
+                }
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 6px;
+            alignment: end;
+
+            Text {
+                text: is-transfer ? "" : (is-expense ? "−" : "+");
+                color: is-transfer ? transparent
+                    : (is-expense ? Theme.danger : Theme.success);
+                font-size: 13px;
+                font-weight: 500;
+                vertical-alignment: center;
+            }
+
+            Text {
+                text: amount;
+                color: is-transfer ? Theme.text-secondary
+                    : (is-expense ? Theme.danger : Theme.success);
+                font-size: 13px;
+                font-weight: 600;
+                vertical-alignment: center;
+            }
+        }
+    }
+}
+
+export component AccountDetailPanel inherits Rectangle {
+    width: 420px;
+    height: 100%;
+    background: @linear-gradient(
+        180deg,
+        Theme.crypto-panel-gradient-start 0%,
+        Theme.crypto-panel-gradient-end 100%
+    );
+
+    // Left border accent
+    Rectangle {
+        width: 1px;
+        height: 100%;
+        x: 0;
+        background: Theme.border;
+    }
+
+    VerticalLayout {
+        padding: 0px;
+        spacing: 0px;
+
+        // Header
+        Rectangle {
+            height: 100px;
+            background: Theme.surface;
+
+            HorizontalLayout {
+                padding-left: 28px;
+                padding-right: 28px;
+                spacing: 16px;
+
+                // Account Icon
+                Rectangle {
+                    width: 52px;
+                    height: 52px;
+                    border-radius: 26px;
+                    background: @linear-gradient(
+                        135deg,
+                        Theme.crypto-icon-gradient-start 0%,
+                        Theme.crypto-icon-gradient-end 100%
+                    );
+                    border-width: 1px;
+                    border-color: Theme.border-subtle;
+                    y: (parent.height - self.height) / 2;
+
+                    if AccountAdapter.selected-account-icon.width > 0: Image {
+                        source: AccountAdapter.selected-account-icon;
+                        width: 26px;
+                        height: 26px;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+
+                    if AccountAdapter.selected-account-icon.width == 0: Image {
+                        source: AccountAdapter.selected-account-type == "Bank"
+                            ? @image-url("../assets/icons/building-2.svg")
+                            : (AccountAdapter.selected-account-type == "Cash"
+                                ? @image-url("../assets/icons/banknote.svg")
+                                : (AccountAdapter.selected-account-type == "Savings"
+                                    ? @image-url("../assets/icons/piggy-bank.svg")
+                                    : (AccountAdapter.selected-account-type == "Credit Card"
+                                        ? @image-url("../assets/icons/credit-card.svg")
+                                        : @image-url("../assets/icons/wallet.svg"))));
+                        width: 22px;
+                        height: 22px;
+                        colorize: Theme.text-primary;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+                }
+
+                // Account Info
+                VerticalLayout {
+                    alignment: center;
+                    spacing: 4px;
+                    horizontal-stretch: 1;
+
+                    Text {
+                        text: AccountAdapter.selected-account-name;
+                        color: Theme.text-primary;
+                        font-size: 18px;
+                        font-weight: 400;
+                        letter-spacing: 0.5px;
+                    }
+
+                    Text {
+                        text: AccountAdapter.selected-account-type;
+                        color: Theme.text-muted;
+                        font-size: 11px;
+                    }
+
+                    Text {
+                        text: AccountAdapter.selected-account-balance;
+                        color: Theme.text-secondary;
+                        font-size: 13px;
+                    }
+                }
+
+                // Edit Button
+                Rectangle {
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 8px;
+                    background: edit-touch.has-hover ? Theme.surface-hover : transparent;
+                    y: (parent.height - self.height) / 2;
+
+                    animate background { duration: 150ms; }
+
+                    Image {
+                        source: @image-url("../assets/icons/file-text.svg");
+                        width: 14px;
+                        height: 14px;
+                        colorize: edit-touch.has-hover ? Theme.text-primary : Theme.text-muted;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+
+                    edit-touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            AppState.account-edit-mode = true;
+                            AppState.show-add-account = true;
+                        }
+                    }
+                }
+
+                // Close Button
+                Rectangle {
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 10px;
+                    background: close-touch.has-hover ? Theme.surface-hover : transparent;
+                    y: (parent.height - self.height) / 2;
+
+                    animate background { duration: 150ms; }
+
+                    Image {
+                        source: @image-url("../assets/icons/x.svg");
+                        width: 16px;
+                        height: 16px;
+                        colorize: Theme.text-muted;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+
+                    close-touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { AccountAdapter.show-account-detail = false; }
+                    }
+                }
+            }
+
+            Rectangle {
+                height: 1px;
+                width: parent.width;
+                background: Theme.border;
+                y: parent.height - 1px;
+            }
+        }
+
+        VerticalLayout {
+            padding: 28px;
+            spacing: 24px;
+
+            VerticalLayout {
+                spacing: 12px;
+
+                SectionHeader { title: "TRANSACTIONS"; }
+
+                if AccountAdapter.account-history.length == 0: Rectangle {
+                    height: 48px;
+                    background: Theme.surface.with-alpha(0.3);
+                    border-radius: 8px;
+
+                    Text {
+                        text: "No transactions for this account";
+                        color: Theme.text-subtle;
+                        font-size: 12px;
+                        vertical-alignment: center;
+                        horizontal-alignment: center;
+                    }
+                }
+
+                if AccountAdapter.account-history.length > 0: Flickable {
+                    height: min(360px, AccountAdapter.account-history.length * 64px);
+                    horizontal-stretch: 1;
+                    viewport-height: AccountAdapter.account-history.length * 64px;
+
+                    VerticalLayout {
+                        width: parent.width;
+                        spacing: 8px;
+
+                        for item in AccountAdapter.account-history: AccountTransactionRow {
+                            title: item.description != "" ? item.description : item.category;
+                            category: item.category;
+                            date: item.date;
+                            amount: item.amount;
+                            is-expense: item.is-expense;
+                            is-transfer: item.is-transfer;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -3,12 +3,16 @@
 //! Callback setup for AccountAdapter, TransactionAdapter, and CategoryAdapter.
 
 use crate::controller::AppController;
-use crate::ui::{normalize_account_type, parse_amount_input};
+use crate::ui::{
+    format_category_label, format_decimal_from_cents, format_money, load_account_icon,
+    normalize_account_type, parse_amount_input,
+};
 use crate::{
     AccountAdapter, AnalyticsAdapter, AppState, AppWindow, CategoryAdapter, DashboardAdapter,
-    TransactionAdapter,
+    TransactionAdapter, TransactionData,
 };
-use slint::{ComponentHandle, SharedString, Weak};
+use slint::{ComponentHandle, ModelRc, SharedString, VecModel, Weak};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 /// Context for finance callback setup
@@ -66,6 +70,190 @@ pub fn setup_account_callbacks<F, G, H, N>(
                 ui.global::<AccountAdapter>().set_is_loading(false);
             }
         });
+    }
+
+    // on_fetch_account_details
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = notify.clone();
+        ui.global::<AccountAdapter>()
+            .on_fetch_account_details(move |account_id| {
+                let account_id = account_id.to_string();
+                let accounts = match controller.get_accounts() {
+                    Ok(list) => list,
+                    Err(e) => {
+                        notify(format!("Failed to load accounts: {}", e), true);
+                        return;
+                    }
+                };
+
+                let account = match accounts.iter().find(|acc| acc.id == account_id) {
+                    Some(acc) => acc,
+                    None => {
+                        notify("Account not found".to_string(), true);
+                        return;
+                    }
+                };
+
+                let balances = match controller.get_account_balances() {
+                    Ok(list) => list,
+                    Err(e) => {
+                        notify(format!("Failed to load balances: {}", e), true);
+                        return;
+                    }
+                };
+
+                let balance_cents = balances
+                    .iter()
+                    .find(|bal| bal.account_id == account.id)
+                    .map(|bal| bal.current_balance)
+                    .unwrap_or(account.initial_balance);
+
+                let account_type = match account.account_type.as_str() {
+                    "bank" | "Bank" => "Bank",
+                    "cash" | "Cash" => "Cash",
+                    "savings" | "Savings" => "Savings",
+                    "credit_card" | "CreditCard" => "Credit Card",
+                    "other" | "Other" => "Other",
+                    _ => account.account_type.as_str(),
+                };
+
+                let mut account_lookup: HashMap<String, (String, String)> = HashMap::new();
+                let mut account_index_map: HashMap<String, i32> = HashMap::new();
+                for (idx, acc) in accounts.iter().enumerate() {
+                    account_lookup.insert(
+                        acc.id.clone(),
+                        (acc.currency.clone(), acc.name.clone()),
+                    );
+                    account_index_map.insert(acc.id.clone(), idx as i32);
+                }
+
+                let expense_categories = match controller.get_transaction_categories("expense".to_string()) {
+                    Ok(list) => list,
+                    Err(e) => {
+                        notify(format!("Failed to load categories: {}", e), true);
+                        return;
+                    }
+                };
+                let income_categories = match controller.get_transaction_categories("income".to_string()) {
+                    Ok(list) => list,
+                    Err(e) => {
+                        notify(format!("Failed to load categories: {}", e), true);
+                        return;
+                    }
+                };
+
+                let expense_index_map: HashMap<String, i32> = expense_categories
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, cat)| (cat.name.to_uppercase(), idx as i32))
+                    .collect();
+                let income_index_map: HashMap<String, i32> = income_categories
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, cat)| (cat.name.to_uppercase(), idx as i32))
+                    .collect();
+
+                let transactions = match controller.get_transactions() {
+                    Ok(list) => list,
+                    Err(e) => {
+                        notify(format!("Failed to load transactions: {}", e), true);
+                        return;
+                    }
+                };
+
+                let mapped: Vec<TransactionData> = transactions
+                    .into_iter()
+                    .filter_map(|tx| {
+                        if tx.account_id != account_id
+                            && tx.transfer_account_id.as_deref() != Some(account_id.as_str())
+                        {
+                            return None;
+                        }
+
+                        let (currency, from_name) = account_lookup
+                            .get(&tx.account_id)
+                            .cloned()
+                            .unwrap_or_else(|| ("USD".to_string(), "Unknown".to_string()));
+
+                        let is_transfer = tx.transaction_type == "transfer";
+                        let is_expense = tx.transaction_type == "expense";
+                        let amount_str = format_money(tx.amount.abs(), &currency);
+
+                        let transfer_label = tx
+                            .transfer_account_id
+                            .as_ref()
+                            .and_then(|id| account_lookup.get(id))
+                            .map(|(_, name)| name.as_str())
+                            .unwrap_or("Account");
+
+                        let description = if is_transfer {
+                            if tx.description.is_empty() {
+                                format!("{from_name} → {transfer_label}")
+                            } else {
+                                format!("{} ({from_name} → {transfer_label})", tx.description)
+                            }
+                        } else {
+                            tx.description.clone()
+                        };
+
+                        let category_raw = if is_transfer {
+                            "TRANSFER".to_string()
+                        } else {
+                            tx.category.to_uppercase()
+                        };
+                        let category = format_category_label(&category_raw);
+                        let category_key = tx.category.to_uppercase();
+                        let category_index = if is_expense {
+                            expense_index_map.get(&category_key).cloned().unwrap_or(0)
+                        } else if is_transfer {
+                            0
+                        } else {
+                            income_index_map.get(&category_key).cloned().unwrap_or(0)
+                        };
+
+                        Some(TransactionData {
+                            id: tx.id.clone().into(),
+                            account_id: tx.account_id.clone().into(),
+                            account_index: account_index_map.get(&tx.account_id).cloned().unwrap_or(0),
+                            transfer_account_id: tx.transfer_account_id.clone().unwrap_or_default().into(),
+                            transfer_account_index: tx
+                                .transfer_account_id
+                                .as_ref()
+                                .and_then(|id| account_index_map.get(id).cloned())
+                                .unwrap_or(0),
+                            date: tx.date.clone().into(),
+                            description: description.into(),
+                            description_raw: tx.description.clone().into(),
+                            category: category.into(),
+                            category_raw: category_raw.into(),
+                            category_index,
+                            amount: amount_str.into(),
+                            amount_raw: format_decimal_from_cents(tx.amount).into(),
+                            is_expense,
+                            is_transfer,
+                        })
+                    })
+                    .collect();
+
+                if let Some(ui) = ui_weak.upgrade() {
+                    let adapter = ui.global::<AccountAdapter>();
+                    adapter.set_selected_account_id(SharedString::from(&account.id));
+                    adapter.set_selected_account_name(SharedString::from(&account.name));
+                    adapter.set_selected_account_type(SharedString::from(account_type));
+                    adapter.set_selected_account_currency(SharedString::from(&account.currency));
+                    adapter.set_selected_account_balance(SharedString::from(format_money(
+                        balance_cents,
+                        &account.currency,
+                    )));
+                    adapter.set_selected_account_icon(load_account_icon(account.icon.clone()));
+                    adapter.set_selected_account_icon_path(SharedString::from(
+                        account.icon.clone().unwrap_or_default(),
+                    ));
+                    adapter.set_account_history(ModelRc::new(VecModel::from(mapped)));
+                }
+            });
     }
 
     // on_create_account

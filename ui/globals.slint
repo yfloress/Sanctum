@@ -213,9 +213,19 @@ export global AccountAdapter {
     in-out property <bool> is-loading: false;
     in-out property <string> edit-account-id: "";
     in-out property <string> edit-account-icon: "";
+    in-out property <string> selected-account-id: "";
+    in-out property <string> selected-account-name: "";
+    in-out property <string> selected-account-type: "";
+    in-out property <string> selected-account-currency: "";
+    in-out property <string> selected-account-balance: "$ 0.00";
+    in-out property <image> selected-account-icon;
+    in-out property <string> selected-account-icon-path: "";
+    in-out property <[TransactionData]> account-history: [];
+    in-out property <bool> show-account-detail: false;
 
     // Callback to fetch/refresh accounts from Rust backend
     callback fetch-accounts();
+    callback fetch-account-details(string); // account_id
 
     // Callback to create a new account
     callback create-account(string, string, string, string) -> string; // name, type, currency, initial -> "" or error

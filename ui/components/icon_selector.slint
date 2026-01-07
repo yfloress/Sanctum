@@ -8,6 +8,7 @@ component IconOption inherits Rectangle {
     in property <string> icon-path;
     in property <string> selected-path;
     in property <string> label;
+    in property <bool> colorize-icon: true;
     callback clicked;
 
     property <bool> is-selected: icon-path == selected-path;
@@ -34,13 +35,20 @@ component IconOption inherits Rectangle {
             height: 32px;
             border-radius: 6px;
             background: is-selected ? Theme.accent.with-alpha(0.1) : Theme.surface-deep;
-            x: (parent.width - self.width) / 2;
 
-            Image {
+            if root.colorize-icon: Image {
                 source: root.icon;
                 width: 20px;
                 height: 20px;
                 colorize: is-selected ? Theme.accent : Theme.text-secondary;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+            }
+
+            if !root.colorize-icon: Image {
+                source: root.icon;
+                width: 20px;
+                height: 20px;
                 x: (parent.width - self.width) / 2;
                 y: (parent.height - self.height) / 2;
             }
@@ -53,6 +61,7 @@ component IconOption inherits Rectangle {
             font-weight: is-selected ? 600 : 400;
             horizontal-alignment: center;
             overflow: elide;
+            horizontal-stretch: 1;
         }
     }
 
@@ -121,6 +130,7 @@ export component IconSelector inherits Rectangle {
                                 icon-path: "../assets/exchange-icons/binance.svg";
                                 selected-path: root.selected-icon;
                                 label: "Binance";
+                                colorize-icon: false;
                                 clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
                             }
                             IconOption {
@@ -128,6 +138,7 @@ export component IconSelector inherits Rectangle {
                                 icon-path: "../assets/exchange-icons/bybit.svg";
                                 selected-path: root.selected-icon;
                                 label: "Bybit";
+                                colorize-icon: false;
                                 clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
                             }
                             IconOption {
@@ -135,6 +146,7 @@ export component IconSelector inherits Rectangle {
                                 icon-path: "../assets/exchange-icons/kraken.svg";
                                 selected-path: root.selected-icon;
                                 label: "Kraken";
+                                colorize-icon: false;
                                 clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
                             }
                             IconOption {
@@ -142,6 +154,7 @@ export component IconSelector inherits Rectangle {
                                 icon-path: "../assets/exchange-icons/mexc.svg";
                                 selected-path: root.selected-icon;
                                 label: "MEXC";
+                                colorize-icon: false;
                                 clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
                             }
                         }
@@ -152,6 +165,7 @@ export component IconSelector inherits Rectangle {
                                 icon-path: "../assets/exchange-icons/buda.svg";
                                 selected-path: root.selected-icon;
                                 label: "Buda";
+                                colorize-icon: false;
                                 clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
                             }
                             IconOption {
@@ -159,6 +173,7 @@ export component IconSelector inherits Rectangle {
                                 icon-path: "../assets/exchange-icons/uniswap.svg";
                                 selected-path: root.selected-icon;
                                 label: "Uniswap";
+                                colorize-icon: false;
                                 clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
                             }
                             IconOption {
@@ -166,6 +181,7 @@ export component IconSelector inherits Rectangle {
                                 icon-path: "../assets/exchange-icons/bisq.svg";
                                 selected-path: root.selected-icon;
                                 label: "Bisq";
+                                colorize-icon: false;
                                 clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
                             }
                             IconOption {
@@ -173,6 +189,7 @@ export component IconSelector inherits Rectangle {
                                 icon-path: "../assets/icons/building-2.svg";
                                 selected-path: root.selected-icon;
                                 label: "Generic";
+                                colorize-icon: false;
                                 clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
                             }
                         }

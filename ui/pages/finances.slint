@@ -12,6 +12,7 @@ import {
 import { Theme } from "../theme.slint";
 import { TransactionItem } from "../components/transaction_item.slint";
 import { AccountItem } from "../components/account_item.slint";
+import { AccountDetailPanel } from "../components/account_detail.slint";
 import { TabButton } from "../components/buttons/tab_button.slint";
 import { SectionHeader } from "../components/sections/section_header.slint";
 import { EmptyState } from "../components/sections/empty_state.slint";
@@ -904,9 +905,9 @@ export component FinancesPage inherits Rectangle {
                             is-last: false;
 
                             clicked => {
-                                AppState.account-edit-mode = true;
                                 AppState.selected-account-index = index;
-                                AppState.show-add-account = true;
+                                AccountAdapter.fetch-account-details(account.id);
+                                AccountAdapter.show-account-detail = true;
                             }
                         }
                     }
@@ -981,6 +982,36 @@ export component FinancesPage inherits Rectangle {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // ==================== ACCOUNT DETAIL OVERLAY ====================
+    if AccountAdapter.show-account-detail: Rectangle {
+        x: 0; y: 0; width: 100%; height: 100%;
+
+        Rectangle {
+            background: Theme.overlay-bg-strong;
+            animate background { duration: 200ms; }
+        }
+
+        HorizontalLayout {
+            width: parent.width;
+            height: parent.height;
+            spacing: 0px;
+
+            Rectangle {
+                horizontal-stretch: 1;
+                height: parent.height;
+                TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { AccountAdapter.show-account-detail = false; }
+                }
+            }
+
+            AccountDetailPanel {
+                width: min(420px, parent.width);
+                height: parent.height;
             }
         }
     }
