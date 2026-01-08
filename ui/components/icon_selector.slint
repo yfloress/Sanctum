@@ -13,14 +13,12 @@ component IconOption inherits Rectangle {
 
     property <bool> is-selected: icon-path == selected-path;
 
-    width: 64px;
-    height: 80px;
-    border-radius: 8px;
-    background: is-selected
-        ? Theme.surface-hover
-        : (touch.has-hover ? Theme.surface-hover.with-alpha(0.5) : transparent);
+    width: 72px;
+    height: 72px;
+    border-radius: 12px;
+    background: is-selected ? Theme.surface-hover : Theme.surface;
     border-width: is-selected ? 2px : 1px;
-    border-color: is-selected ? Theme.accent : (touch.has-hover ? Theme.border : transparent);
+    border-color: is-selected ? Theme.accent : Theme.border;
 
     animate background { duration: 150ms; }
     animate border-color { duration: 150ms; }
@@ -28,20 +26,20 @@ component IconOption inherits Rectangle {
     VerticalLayout {
         alignment: center;
         spacing: 6px;
-        padding: 8px;
-        horizontal-stretch: 1;
 
         Rectangle {
-            width: 32px;
-            height: 32px;
-            border-radius: 6px;
-            background: is-selected ? Theme.accent.with-alpha(0.1) : Theme.surface-deep;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: Theme.surface;
+            border-width: 1px;
+            border-color: Theme.border-subtle;
             x: (parent.width - self.width) / 2;
 
             if root.colorize-icon: Image {
                 source: root.icon;
-                width: 20px;
-                height: 20px;
+                width: 22px;
+                height: 22px;
                 colorize: is-selected ? Theme.accent : Theme.text-secondary;
                 x: (parent.width - self.width) / 2;
                 y: (parent.height - self.height) / 2;
@@ -49,8 +47,8 @@ component IconOption inherits Rectangle {
 
             if !root.colorize-icon: Image {
                 source: root.icon;
-                width: 20px;
-                height: 20px;
+                width: 22px;
+                height: 22px;
                 x: (parent.width - self.width) / 2;
                 y: (parent.height - self.height) / 2;
             }
@@ -58,19 +56,19 @@ component IconOption inherits Rectangle {
 
         Text {
             text: root.label;
-            color: is-selected ? Theme.text-primary : Theme.text-muted;
+            color: Theme.text-muted;
             font-size: 9px;
-            font-weight: is-selected ? 600 : 400;
+            font-weight: 500;
             horizontal-alignment: center;
-            overflow: elide;
-            horizontal-stretch: 1;
             width: parent.width;
         }
     }
 
-    touch := TouchArea {
+    TouchArea {
         mouse-cursor: pointer;
-        clicked => { root.clicked(); }
+        clicked => {
+            root.clicked();
+        }
     }
 }
 
@@ -130,83 +128,113 @@ export component IconSelector inherits Rectangle {
                         HorizontalLayout {
                             spacing: 8px;
                             alignment: center;
-                            horizontal-stretch: 1;
+                            width: parent.width;
                             IconOption {
                                 icon: @image-url("../assets/exchange-icons/binance.svg");
                                 icon-path: "../assets/exchange-icons/binance.svg";
                                 selected-path: root.selected-icon;
                                 label: "Binance";
                                 colorize-icon: false;
-                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                                clicked => {
+                                    root.selected-icon = self.icon-path;
+                                    root.icon-changed(self.icon-path);
+                                }
                             }
+
                             IconOption {
                                 icon: @image-url("../assets/exchange-icons/bybit.svg");
                                 icon-path: "../assets/exchange-icons/bybit.svg";
                                 selected-path: root.selected-icon;
                                 label: "Bybit";
                                 colorize-icon: false;
-                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                                clicked => {
+                                    root.selected-icon = self.icon-path;
+                                    root.icon-changed(self.icon-path);
+                                }
                             }
+
                             IconOption {
                                 icon: @image-url("../assets/exchange-icons/kraken.svg");
                                 icon-path: "../assets/exchange-icons/kraken.svg";
                                 selected-path: root.selected-icon;
                                 label: "Kraken";
                                 colorize-icon: false;
-                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                                clicked => {
+                                    root.selected-icon = self.icon-path;
+                                    root.icon-changed(self.icon-path);
+                                }
                             }
+
                             IconOption {
                                 icon: @image-url("../assets/exchange-icons/mexc.svg");
                                 icon-path: "../assets/exchange-icons/mexc.svg";
                                 selected-path: root.selected-icon;
                                 label: "MEXC";
                                 colorize-icon: false;
-                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                                clicked => {
+                                    root.selected-icon = self.icon-path;
+                                    root.icon-changed(self.icon-path);
+                                }
                             }
                         }
 
                         HorizontalLayout {
                             spacing: 8px;
                             alignment: center;
-                            horizontal-stretch: 1;
+                            width: parent.width;
                             IconOption {
                                 icon: @image-url("../assets/exchange-icons/buda.svg");
                                 icon-path: "../assets/exchange-icons/buda.svg";
                                 selected-path: root.selected-icon;
                                 label: "Buda";
                                 colorize-icon: false;
-                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                                clicked => {
+                                    root.selected-icon = self.icon-path;
+                                    root.icon-changed(self.icon-path);
+                                }
                             }
+
                             IconOption {
                                 icon: @image-url("../assets/exchange-icons/uniswap.svg");
                                 icon-path: "../assets/exchange-icons/uniswap.svg";
                                 selected-path: root.selected-icon;
                                 label: "Uniswap";
                                 colorize-icon: false;
-                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                                clicked => {
+                                    root.selected-icon = self.icon-path;
+                                    root.icon-changed(self.icon-path);
+                                }
                             }
+
                             IconOption {
                                 icon: @image-url("../assets/exchange-icons/bisq.svg");
                                 icon-path: "../assets/exchange-icons/bisq.svg";
                                 selected-path: root.selected-icon;
                                 label: "Bisq";
                                 colorize-icon: false;
-                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                                clicked => {
+                                    root.selected-icon = self.icon-path;
+                                    root.icon-changed(self.icon-path);
+                                }
                             }
+
                             IconOption {
                                 icon: @image-url("../assets/exchange-icons/bitmart.svg");
                                 icon-path: "../assets/exchange-icons/bitmart.svg";
                                 selected-path: root.selected-icon;
                                 label: "BitMart";
                                 colorize-icon: false;
-                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                                clicked => {
+                                    root.selected-icon = self.icon-path;
+                                    root.icon-changed(self.icon-path);
+                                }
                             }
                         }
 
                         HorizontalLayout {
                             spacing: 8px;
                             alignment: center;
-                            horizontal-stretch: 1;
+                            width: parent.width;
 
                             IconOption {
                                 icon: @image-url("../assets/exchange-icons/retoswap.svg");
@@ -214,15 +242,22 @@ export component IconSelector inherits Rectangle {
                                 selected-path: root.selected-icon;
                                 label: "RetoSwap";
                                 colorize-icon: false;
-                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                                clicked => {
+                                    root.selected-icon = self.icon-path;
+                                    root.icon-changed(self.icon-path);
+                                }
                             }
+
                             IconOption {
                                 icon: @image-url("../assets/icons/building-2.svg");
                                 icon-path: "../assets/icons/building-2.svg";
                                 selected-path: root.selected-icon;
                                 label: "Generic";
                                 colorize-icon: false;
-                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                                clicked => {
+                                    root.selected-icon = self.icon-path;
+                                    root.icon-changed(self.icon-path);
+                                }
                             }
                         }
                     }
@@ -245,67 +280,95 @@ export component IconSelector inherits Rectangle {
                         HorizontalLayout {
                             spacing: 8px;
                             alignment: center;
-                            horizontal-stretch: 1;
+                            width: parent.width;
                             IconOption {
                                 icon: @image-url("../assets/icons/wallet.svg");
                                 icon-path: "../assets/icons/wallet.svg";
                                 selected-path: root.selected-icon;
                                 label: "Wallet";
-                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                                clicked => {
+                                    root.selected-icon = self.icon-path;
+                                    root.icon-changed(self.icon-path);
+                                }
                             }
+
                             IconOption {
                                 icon: @image-url("../assets/icons/shield.svg");
                                 icon-path: "../assets/icons/shield.svg";
                                 selected-path: root.selected-icon;
                                 label: "Hardware";
-                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                                clicked => {
+                                    root.selected-icon = self.icon-path;
+                                    root.icon-changed(self.icon-path);
+                                }
                             }
+
                             IconOption {
                                 icon: @image-url("../assets/icons/lock.svg");
                                 icon-path: "../assets/icons/lock.svg";
                                 selected-path: root.selected-icon;
                                 label: "Secure";
-                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                                clicked => {
+                                    root.selected-icon = self.icon-path;
+                                    root.icon-changed(self.icon-path);
+                                }
                             }
+
                             IconOption {
                                 icon: @image-url("../assets/icons/bitcoin.svg");
                                 icon-path: "../assets/icons/bitcoin.svg";
                                 selected-path: root.selected-icon;
                                 label: "Bitcoin";
-                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                                clicked => {
+                                    root.selected-icon = self.icon-path;
+                                    root.icon-changed(self.icon-path);
+                                }
                             }
                         }
 
                         HorizontalLayout {
                             spacing: 8px;
                             alignment: center;
-                            horizontal-stretch: 1;
+                            width: parent.width;
                             IconOption {
                                 icon: @image-url("../assets/icons/coins.svg");
                                 icon-path: "../assets/icons/coins.svg";
                                 selected-path: root.selected-icon;
                                 label: "Coins";
-                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                                clicked => {
+                                    root.selected-icon = self.icon-path;
+                                    root.icon-changed(self.icon-path);
+                                }
                             }
+
                             IconOption {
                                 icon: @image-url("../assets/crypto-icons/generic.svg");
                                 icon-path: "../assets/crypto-icons/generic.svg";
                                 selected-path: root.selected-icon;
                                 label: "Generic";
-                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                                clicked => {
+                                    root.selected-icon = self.icon-path;
+                                    root.icon-changed(self.icon-path);
+                                }
                             }
+
                             IconOption {
                                 icon: @image-url("../assets/icons/folder.svg");
                                 icon-path: "../assets/icons/folder.svg";
                                 selected-path: root.selected-icon;
                                 label: "Folder";
-                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                                clicked => {
+                                    root.selected-icon = self.icon-path;
+                                    root.icon-changed(self.icon-path);
+                                }
                             }
                         }
                     }
                 }
 
-                Rectangle { height: 8px; } // Bottom spacer
+                Rectangle {
+                    height: 8px;
+                } // Bottom spacer
             }
         }
     }
