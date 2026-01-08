@@ -283,9 +283,8 @@ pub fn setup_account_callbacks<F, G, H, N>(
                             let adapter = ui.global::<AccountAdapter>();
                             adapter.set_edit_account_id(SharedString::from(&id));
                             adapter.set_edit_account_icon(SharedString::from(""));
-                        }
-                        if let Some(ui) = ui_weak.upgrade() {
                             ui.global::<AppState>().set_show_add_account(false);
+                            ui.global::<AppState>().set_show_edit_account_icon(true);
                             ui.global::<AnalyticsAdapter>()
                                 .invoke_fetch_analytics("ALL".into());
                         }
@@ -470,9 +469,14 @@ pub fn setup_account_callbacks<F, G, H, N>(
                 } else {
                     Some(icon.to_string())
                 };
-                match controller.update_account_icon(id.to_string(), icon_path) {
+                match controller.update_account_icon(id.to_string(), icon_path.clone()) {
                     Ok(_) => {
                         let _ = reload_accounts(&ui_weak, &controller);
+                        if let Some(ui) = ui_weak.upgrade()
+                            && ui.global::<AccountAdapter>().get_show_account_detail()
+                        {
+                            ui.global::<AccountAdapter>().invoke_fetch_account_details(id);
+                        }
                         notify("Account icon updated".to_string(), false);
                         SharedString::from("")
                     }
