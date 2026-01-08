@@ -204,7 +204,7 @@ export component AccountDetailPanel inherits Rectangle {
                     }
                 }
 
-                // Edit Button
+                // Edit Icon Button
                 Rectangle {
                     width: 32px;
                     height: 32px;
@@ -215,7 +215,7 @@ export component AccountDetailPanel inherits Rectangle {
                     animate background { duration: 150ms; }
 
                     Image {
-                        source: @image-url("../assets/icons/file-text.svg");
+                        source: @image-url("../assets/icons/upload.svg");
                         width: 14px;
                         height: 14px;
                         colorize: edit-touch.has-hover ? Theme.text-primary : Theme.text-muted;
@@ -226,8 +226,9 @@ export component AccountDetailPanel inherits Rectangle {
                     edit-touch := TouchArea {
                         mouse-cursor: pointer;
                         clicked => {
-                            AppState.account-edit-mode = true;
-                            AppState.show-add-account = true;
+                            AccountAdapter.edit-account-id = AccountAdapter.selected-account-id;
+                            AccountAdapter.edit-account-icon = AccountAdapter.selected-account-icon-path;
+                            AppState.show-edit-account-icon = true;
                         }
                     }
                 }
