@@ -13,8 +13,8 @@ component IconOption inherits Rectangle {
 
     property <bool> is-selected: icon-path == selected-path;
 
-    width: 64px;
-    height: 80px;
+    width: 72px;
+    height: 72px;
     border-radius: 8px;
     background: is-selected
         ? Theme.surface-hover
@@ -28,15 +28,14 @@ component IconOption inherits Rectangle {
     VerticalLayout {
         alignment: center;
         spacing: 6px;
-        padding: 8px;
-        horizontal-stretch: 1;
 
         Rectangle {
-            width: 32px;
-            height: 32px;
-            border-radius: 6px;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
             background: is-selected ? Theme.accent.with-alpha(0.1) : Theme.surface-deep;
-            x: (parent.width - self.width) / 2;
+            border-width: 1px;
+            border-color: Theme.border-subtle;
 
             if root.colorize-icon: Image {
                 source: root.icon;
@@ -63,8 +62,6 @@ component IconOption inherits Rectangle {
             font-weight: is-selected ? 600 : 400;
             horizontal-alignment: center;
             overflow: elide;
-            horizontal-stretch: 1;
-            width: parent.width;
         }
     }
 
@@ -124,13 +121,12 @@ export component IconSelector inherits Rectangle {
                         font-weight: 600;
                     }
 
-                    VerticalLayout {
+                    GridLayout {
                         spacing: 8px;
+                        padding-left: 40px;
+                        padding-right: 40px;
 
-                        HorizontalLayout {
-                            spacing: 8px;
-                            alignment: center;
-                            horizontal-stretch: 1;
+                        Row {
                             IconOption {
                                 icon: @image-url("../assets/exchange-icons/binance.svg");
                                 icon-path: "../assets/exchange-icons/binance.svg";
@@ -165,10 +161,7 @@ export component IconSelector inherits Rectangle {
                             }
                         }
 
-                        HorizontalLayout {
-                            spacing: 8px;
-                            alignment: center;
-                            horizontal-stretch: 1;
+                        Row {
                             IconOption {
                                 icon: @image-url("../assets/exchange-icons/buda.svg");
                                 icon-path: "../assets/exchange-icons/buda.svg";
@@ -203,11 +196,7 @@ export component IconSelector inherits Rectangle {
                             }
                         }
 
-                        HorizontalLayout {
-                            spacing: 8px;
-                            alignment: center;
-                            horizontal-stretch: 1;
-
+                        Row {
                             IconOption {
                                 icon: @image-url("../assets/exchange-icons/retoswap.svg");
                                 icon-path: "../assets/exchange-icons/retoswap.svg";
@@ -239,13 +228,12 @@ export component IconSelector inherits Rectangle {
                         font-weight: 600;
                     }
 
-                    VerticalLayout {
+                    GridLayout {
                         spacing: 8px;
+                        padding-left: 40px;
+                        padding-right: 40px;
 
-                        HorizontalLayout {
-                            spacing: 8px;
-                            alignment: center;
-                            horizontal-stretch: 1;
+                        Row {
                             IconOption {
                                 icon: @image-url("../assets/icons/wallet.svg");
                                 icon-path: "../assets/icons/wallet.svg";
@@ -276,10 +264,7 @@ export component IconSelector inherits Rectangle {
                             }
                         }
 
-                        HorizontalLayout {
-                            spacing: 8px;
-                            alignment: center;
-                            horizontal-stretch: 1;
+                        Row {
                             IconOption {
                                 icon: @image-url("../assets/icons/coins.svg");
                                 icon-path: "../assets/icons/coins.svg";
@@ -301,6 +286,7 @@ export component IconSelector inherits Rectangle {
                                 label: "Folder";
                                 clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
                             }
+                            Rectangle { width: 72px; } // Spacer
                         }
                     }
                 }
