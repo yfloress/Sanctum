@@ -480,6 +480,34 @@ pub fn setup_account_callbacks<F, G, H, N>(
                 }
             });
     }
+
+    // on_update_account_name
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let reload_accounts = reload_accounts.clone();
+        let notify = notify.clone();
+        ui.global::<AccountAdapter>()
+            .on_update_account_name(move |id, new_name| -> SharedString {
+                match controller.update_account_name(id.to_string(), new_name.to_string()) {
+                    Ok(_) => {
+                        let _ = reload_accounts(&ui_weak, &controller);
+                        if let Some(ui) = ui_weak.upgrade()
+                            && ui.global::<AccountAdapter>().get_show_account_detail()
+                        {
+                            if let Ok(accounts) = controller.get_accounts() {
+                                if let Some(account) = accounts.iter().find(|a| a.id == id.to_string()) {
+                                    ui.global::<AccountAdapter>().set_selected_account_name(SharedString::from(&account.name));
+                                }
+                            }
+                        }
+                        notify("Account name updated".to_string(), false);
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            });
+    }
 }
 
 /// Sets up all TransactionAdapter callbacks

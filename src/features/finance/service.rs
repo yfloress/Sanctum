@@ -219,6 +219,22 @@ impl FinanceService {
         })
     }
 
+    pub fn update_account_name(&self, id: String, new_name: String) -> Result<(), FinanceError> {
+        self.with_db(|db| {
+            let validated_id = validate_uuid(&id)?;
+            let validated_name = validate_field_length(&new_name, MAX_ACCOUNT_NAME_LENGTH, "Account name")?;
+            let sanitized_name = sanitize_string(&validated_name);
+
+            if sanitized_name.is_empty() {
+                return Err(FinanceError::Validation("Account name cannot be empty".to_string()));
+            }
+
+            let mut account = FinanceRepository::get_account(db, &validated_id)?;
+            account.name = sanitized_name;
+            FinanceRepository::update_account(db, &account).map_err(FinanceError::Database)
+        })
+    }
+
     pub fn archive_account(&self, id: String) -> Result<(), FinanceError> {
         self.with_db(|db| {
             let validated_id = validate_uuid(&id)?;

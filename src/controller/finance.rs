@@ -82,6 +82,13 @@ impl AppController {
             .map_err(ControllerError::from)
     }
 
+    /// Updates an account name
+    pub fn update_account_name(&self, id: String, new_name: String) -> Result<(), ControllerError> {
+        self.finance_service
+            .update_account_name(id, new_name)
+            .map_err(ControllerError::from)
+    }
+
     /// Archives an account (soft delete)
     pub fn archive_account(&self, id: String) -> Result<(), ControllerError> {
         self.finance_service

@@ -236,6 +236,7 @@ export global AccountAdapter {
     // Callback to delete an account
     callback delete-account(string) -> string; // id -> "" or error
     callback update-account-icon(string, string) -> string; // id, icon_path -> "" or error
+    callback update-account-name(string, string) -> string; // id, new_name -> "" or error
 
     // Transfer funds between accounts
     callback transfer-funds(string, string, string, string, string) -> string; // from, to, amount, description, date

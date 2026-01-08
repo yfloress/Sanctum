@@ -1,7 +1,7 @@
 // ==================== Account Detail Panel ====================
 // Finance account details with transaction history
 
-import { AccountAdapter, AppState } from "../globals.slint";
+import { AccountAdapter, AppState, NotificationAdapter } from "../globals.slint";
 import { Theme } from "../theme.slint";
 
 component SectionHeader inherits Rectangle {
@@ -109,6 +109,8 @@ component AccountTransactionRow inherits Rectangle {
 export component AccountDetailPanel inherits Rectangle {
     width: 420px;
     height: 100%;
+    property <bool> editing-name: false;
+    property <string> edit-name-value: "";
     background: @linear-gradient(
         180deg,
         Theme.crypto-panel-gradient-start 0%,
@@ -175,6 +177,35 @@ export component AccountDetailPanel inherits Rectangle {
                         x: (parent.width - self.width) / 2;
                         y: (parent.height - self.height) / 2;
                     }
+
+                    if root.editing-name: Rectangle {
+                        width: 20px;
+                        height: 20px;
+                        border-radius: 6px;
+                        background: Theme.surface;
+                        border-width: 1px;
+                        border-color: Theme.border;
+                        x: parent.width - self.width - 2px;
+                        y: parent.height - self.height - 2px;
+
+                        Image {
+                            source: @image-url("../assets/icons/upload.svg");
+                            width: 10px;
+                            height: 10px;
+                            colorize: Theme.text-secondary;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                        }
+
+                        TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                AccountAdapter.edit-account-id = AccountAdapter.selected-account-id;
+                                AccountAdapter.edit-account-icon = AccountAdapter.selected-account-icon-path;
+                                AppState.show-edit-account-icon = true;
+                            }
+                        }
+                    }
                 }
 
                 // Account Info
@@ -183,12 +214,44 @@ export component AccountDetailPanel inherits Rectangle {
                     spacing: 4px;
                     horizontal-stretch: 1;
 
-                    Text {
+                    if !root.editing-name: Text {
                         text: AccountAdapter.selected-account-name;
                         color: Theme.text-primary;
                         font-size: 18px;
                         font-weight: 400;
                         letter-spacing: 0.5px;
+                    }
+
+                    if root.editing-name: Rectangle {
+                        height: 32px;
+                        background: Theme.surface;
+                        border-radius: 6px;
+                        border-width: name-input.has-focus ? 2px : 1px;
+                        border-color: name-input.has-focus ? Theme.accent : Theme.border;
+
+                        animate border-color { duration: 150ms; }
+
+                        HorizontalLayout {
+                            padding-left: 10px;
+                            padding-right: 10px;
+
+                            name-input := TextInput {
+                                text <=> root.edit-name-value;
+                                color: Theme.text-primary;
+                                font-size: 14px;
+                                vertical-alignment: center;
+
+                                accepted => {
+                                    let result = AccountAdapter.update-account-name(AccountAdapter.selected-account-id, root.edit-name-value);
+                                    if (result == "") {
+                                        root.editing-name = false;
+                                        root.edit-name-value = "";
+                                    } else {
+                                        NotificationAdapter.show(result, true);
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     Text {
@@ -204,31 +267,42 @@ export component AccountDetailPanel inherits Rectangle {
                     }
                 }
 
-                // Edit Icon Button
+                // Edit Name Button
                 Rectangle {
                     width: 32px;
                     height: 32px;
                     border-radius: 8px;
-                    background: edit-touch.has-hover ? Theme.surface-hover : transparent;
+                    background: edit-name-touch.has-hover ? Theme.surface-hover : transparent;
                     y: (parent.height - self.height) / 2;
 
                     animate background { duration: 150ms; }
 
                     Image {
-                        source: @image-url("../assets/icons/upload.svg");
+                        source: root.editing-name ? @image-url("../assets/icons/check.svg") : @image-url("../assets/icons/file-text.svg");
                         width: 14px;
                         height: 14px;
-                        colorize: edit-touch.has-hover ? Theme.text-primary : Theme.text-muted;
+                        colorize: edit-name-touch.has-hover ? Theme.text-primary : Theme.text-muted;
                         x: (parent.width - self.width) / 2;
                         y: (parent.height - self.height) / 2;
                     }
 
-                    edit-touch := TouchArea {
+                    edit-name-touch := TouchArea {
                         mouse-cursor: pointer;
                         clicked => {
-                            AccountAdapter.edit-account-id = AccountAdapter.selected-account-id;
-                            AccountAdapter.edit-account-icon = AccountAdapter.selected-account-icon-path;
-                            AppState.show-edit-account-icon = true;
+                            if (root.editing-name) {
+                                // Save
+                                let result = AccountAdapter.update-account-name(AccountAdapter.selected-account-id, root.edit-name-value);
+                                if (result == "") {
+                                    root.editing-name = false;
+                                    root.edit-name-value = "";
+                                } else {
+                                    NotificationAdapter.show(result, true);
+                                }
+                            } else {
+                                // Start editing
+                                root.edit-name-value = AccountAdapter.selected-account-name;
+                                root.editing-name = true;
+                            }
                         }
                     }
                 }

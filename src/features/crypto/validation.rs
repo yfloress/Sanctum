@@ -16,7 +16,7 @@ pub use crate::core::validation::sanitize_string;
 pub const MAX_NOTES_LENGTH: usize = 1024;
 pub const MAX_WALLET_NAME_LENGTH: usize = 128;
 pub const MAX_SYMBOL_LENGTH: usize = 16;
-pub const MAX_ICON_LENGTH: usize = 32;
+pub const MAX_ICON_LENGTH: usize = 256;
 pub const MAX_COIN_NAME_LENGTH: usize = 64;
 
 // ==================== Wrappers for Core Validation ====================
