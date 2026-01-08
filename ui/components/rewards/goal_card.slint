@@ -1,0 +1,279 @@
+// Goal Card Component
+// Displays a goal with checkpoints, progress bar, and deadline
+
+import { Theme } from "../../theme.slint";
+import { CheckpointData, GoalData } from "../../globals.slint";
+
+component CheckpointRow inherits Rectangle {
+    in property <CheckpointData> checkpoint;
+    callback toggle(string);
+
+    height: 28px;
+    background: transparent;
+
+    HorizontalLayout {
+        spacing: 10px;
+        alignment: start;
+
+        // Checkbox
+        Rectangle {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            background: checkpoint.completed ? Theme.success : transparent;
+            border-width: checkpoint.completed ? 0px : 1px;
+            border-color: Theme.border;
+            y: (parent.height - self.height) / 2;
+
+            if checkpoint.completed: Image {
+                source: @image-url("../../assets/icons/check.svg");
+                width: 12px;
+                height: 12px;
+                colorize: Theme.surface;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+            }
+
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.toggle(checkpoint.id);
+                }
+            }
+        }
+
+        // Description
+        Text {
+            text: checkpoint.description;
+            color: checkpoint.completed ? Theme.text-muted : Theme.text-secondary;
+            font-size: 11px;
+            font-weight: 400;
+            vertical-alignment: center;
+            // Strikethrough effect for completed
+            opacity: checkpoint.completed ? 0.7 : 1.0;
+        }
+    }
+}
+
+export component GoalCard inherits Rectangle {
+    in property <GoalData> goal;
+    callback edit(string);
+    callback delete(string);
+    callback toggle-checkpoint(string, string);  // goal-id, checkpoint-id
+
+    // Dynamic height based on checkpoints
+    height: 120px + (goal.checkpoints.length * 28px);
+    background: Theme.surface;
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: goal.is-completed ? Theme.success : Theme.border;
+
+    // Completed overlay glow
+    if goal.is-completed: Rectangle {
+        x: -1px;
+        y: -1px;
+        width: parent.width + 2px;
+        height: parent.height + 2px;
+        border-radius: 13px;
+        background: Theme.success;
+        opacity: 0.08;
+    }
+
+    VerticalLayout {
+        padding: 16px;
+        spacing: 12px;
+
+        // Header row
+        HorizontalLayout {
+            spacing: 10px;
+            alignment: space-between;
+
+            HorizontalLayout {
+                spacing: 10px;
+
+                // Goal icon
+                Rectangle {
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 8px;
+                    background: goal.is-completed ? Theme.success : Theme.accent;
+                    opacity: goal.is-completed ? 1.0 : 0.15;
+
+                    Image {
+                        source: goal.is-completed ? @image-url("../../assets/icons/trophy.svg") : @image-url("../../assets/icons/target.svg");
+                        width: 16px;
+                        height: 16px;
+                        colorize: goal.is-completed ? Theme.surface : Theme.accent;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+                }
+
+                VerticalLayout {
+                    spacing: 2px;
+                    alignment: center;
+
+                    Text {
+                        text: goal.name;
+                        color: Theme.text-primary;
+                        font-size: 13px;
+                        font-weight: 600;
+                    }
+
+                    if goal.deadline != "": HorizontalLayout {
+                        spacing: 4px;
+
+                        Image {
+                            source: @image-url("../../assets/icons/calendar.svg");
+                            width: 10px;
+                            height: 10px;
+                            colorize: Theme.text-muted;
+                            y: (parent.height - self.height) / 2;
+                        }
+
+                        Text {
+                            text: goal.deadline;
+                            color: Theme.text-muted;
+                            font-size: 10px;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+            }
+
+            // Progress badge
+            Rectangle {
+                width: progress-text.width + 16px;
+                height: 24px;
+                border-radius: 12px;
+                background: goal.is-completed ? Theme.success : Theme.surface-hover;
+
+                progress-text := Text {
+                    text: goal.is-completed ? "COMPLETED" : goal.completed-count + "/" + goal.total-count;
+                    color: goal.is-completed ? Theme.surface : Theme.text-secondary;
+                    font-size: 10px;
+                    font-weight: 600;
+                    letter-spacing: 0.5px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // Progress bar
+        Rectangle {
+            height: 6px;
+            border-radius: 3px;
+            background: Theme.surface-hover;
+
+            Rectangle {
+                width: parent.width * (goal.progress-percent / 100.0);
+                height: parent.height;
+                border-radius: 3px;
+                background: goal.is-completed ? Theme.success : @linear-gradient(90deg, Theme.accent 0%, Theme.accent-indigo 100%);
+
+                animate width {
+                    duration: 300ms;
+                    easing: ease-out;
+                }
+            }
+        }
+
+        // Checkpoints list
+        if goal.checkpoints.length > 0: VerticalLayout {
+            spacing: 4px;
+
+            for checkpoint in goal.checkpoints: CheckpointRow {
+                checkpoint: checkpoint;
+                toggle(id) => {
+                    root.toggle-checkpoint(goal.id, id);
+                }
+            }
+        }
+
+        // Reward section
+        HorizontalLayout {
+            spacing: 8px;
+            alignment: start;
+
+            Image {
+                source: @image-url("../../assets/icons/gift.svg");
+                width: 14px;
+                height: 14px;
+                colorize: goal.is-completed ? Theme.success : Theme.text-muted;
+                y: (parent.height - self.height) / 2;
+            }
+
+            Text {
+                text: goal.reward-text;
+                color: goal.is-completed ? Theme.success : Theme.text-muted;
+                font-size: 11px;
+                font-weight: goal.is-completed ? 500 : 400;
+                vertical-alignment: center;
+            }
+        }
+    }
+
+    // Hover actions
+    if touch.has-hover && !goal.is-completed: Rectangle {
+        x: parent.width - 72px;
+        y: 12px;
+        width: 60px;
+        height: 28px;
+
+        HorizontalLayout {
+            spacing: 8px;
+            alignment: end;
+
+            Rectangle {
+                width: 24px;
+                height: 24px;
+                border-radius: 6px;
+                background: edit-touch.has-hover ? Theme.surface-hover : transparent;
+
+                Image {
+                    source: @image-url("../../assets/icons/file-text.svg");
+                    width: 14px;
+                    height: 14px;
+                    colorize: Theme.text-muted;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                }
+
+                edit-touch := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.edit(goal.id);
+                    }
+                }
+            }
+
+            Rectangle {
+                width: 24px;
+                height: 24px;
+                border-radius: 6px;
+                background: delete-touch.has-hover ? Theme.delete-bg-hover : transparent;
+
+                Image {
+                    source: @image-url("../../assets/icons/trash.svg");
+                    width: 14px;
+                    height: 14px;
+                    colorize: delete-touch.has-hover ? Theme.text-primary : Theme.text-muted;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                }
+
+                delete-touch := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.delete(goal.id);
+                    }
+                }
+            }
+        }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+    }
+}

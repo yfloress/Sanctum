@@ -123,7 +123,7 @@ export global HabitAdapter {
     in-out property <string> summary-completion-note: "";
     in-out property <int> summary-last-30: 0;
     in-out property <string> summary-best-day: "";
-    
+
     // Heatmap
     in-out property <[HeatmapWeek]> heatmap-data: [];
     in-out property <int> heatmap-year;
@@ -144,11 +144,11 @@ export global HabitAdapter {
     in-out property <string> edit-color-hex: "";
     in-out property <int> edit-color-index: 0;
     in-out property <string> edit-category: "";
-    
+
     // Navigation
     callback prev-month();
     callback next-month();
-    
+
     // Auto-scroll context
     in-out property <int> current-day-int: 1; // 1-31 (Real today)
     in-out property <int> current-week-int: 1; // 1-52 (Real current week)
@@ -172,13 +172,105 @@ export global HabitAdapter {
     callback fetch-habit-analytics();
 }
 
+// ==================== Rewards Adapter ====================
+
+export struct MilestoneData {
+    id: string,
+    target-days: int,
+    reward-text: string,
+    unlocked: bool,
+    unlocked-at: string,
+}
+
+export struct StreakRewardData {
+    id: string,
+    habit-id: string,
+    habit-name: string,
+    habit-color: color,
+    is-consecutive: bool,       // true = consecutive, false = accumulative
+    target-days: int,           // For accumulative: X of Y
+    target-total: int,          // For accumulative: Y total days
+    current-progress: int,      // Current days completed
+    milestones: [MilestoneData],
+    next-milestone-days: int,
+    next-milestone-reward: string,
+    progress-percent: float,
+}
+
+export struct CheckpointData {
+    id: string,
+    description: string,
+    completed: bool,
+    completed-at: string,
+    sort-order: int,
+}
+
+export struct GoalData {
+    id: string,
+    name: string,
+    description: string,
+    reward-text: string,
+    deadline: string,           // ISO date or empty
+    checkpoints: [CheckpointData],
+    completed-count: int,
+    total-count: int,
+    progress-percent: float,
+    is-completed: bool,
+    completed-at: string,
+}
+
+export struct AchievementData {
+    id: string,
+    title: string,
+    description: string,
+    icon: image,
+    achieved-at: string,
+    achievement-type: string,   // "streak" | "goal"
+}
+
+export global RewardsAdapter {
+    // Data
+    in-out property <[StreakRewardData]> streak-rewards: [];
+    in-out property <[GoalData]> goals: [];
+    in-out property <[AchievementData]> achievements: [];
+
+    // UI State
+    in-out property <string> active-tab: "rewards";  // "rewards" | "goals" | "history"
+
+    // Streak Reward CRUD
+    callback create-streak-reward(string,     // habit-id
+        bool,       // is-consecutive
+        int,        // target-days (for accumulative)
+        int         // target-total (for accumulative)
+    ) -> string;
+    callback add-milestone(string, int, string) -> string;  // reward-id, days, reward-text
+    callback delete-streak-reward(string) -> string;
+    callback update-streak-progress(string);  // Called when habit is toggled
+
+    // Goal CRUD
+    callback create-goal(string, string, string, string) -> string;  // name, description, reward, deadline
+    callback add-checkpoint(string, string) -> string;  // goal-id, description
+    callback toggle-checkpoint(string, string) -> string;  // goal-id, checkpoint-id
+    callback delete-goal(string) -> string;
+    callback complete-goal(string) -> string;
+
+    // Data loading
+    callback fetch-rewards();
+    callback fetch-goals();
+    callback fetch-achievements();
+
+    // Edit state for modals
+    in-out property <string> edit-reward-id: "";
+    in-out property <string> edit-goal-id: "";
+}
+
 // ==================== Notification Adapter ====================
 
 export global NotificationAdapter {
     in-out property <string> message: "";
     in-out property <bool> is-error: false;
     in-out property <bool> active: false;
-    
+
     // Call this to show a message
     callback show(string, bool);
 }
@@ -362,7 +454,7 @@ export global CryptoAdapter {
     in-out property <[CatalogCoin]> coin-catalog: [];
     in-out property <int> default-wallet-index: 0;
     in-out property <int> default-coin-index: 0;
-    
+
     // Config
     in-out property <[TickerOption]> ticker-options: [];
     callback load-ticker-options();
@@ -394,7 +486,7 @@ export global CryptoAdapter {
     in-out property <image> selected-wallet-icon;
     in-out property <string> selected-wallet-category-key: "";
     in-out property <string> selected-wallet-icon-path: "";
-    
+
     in-out property <string> total-value: "$ 0.00";
     in-out property <string> total-pnl: "+ $ 0.00";
     in-out property <bool> total-pnl-positive: true;
@@ -445,7 +537,7 @@ export global CryptoAdapter {
     callback add-swap(string, string, string, string, string, string, string, string, string, string, string, string) -> string;
     // (tx_id, amount, price, fee, fee_coin_id, fee_coin_amount, date, notes)
     callback update-transaction(string, string, string, string, string, string, string, string) -> string;
-    
+
     // (name, category) -> id or error
     callback create-wallet(string, string) -> string;
     callback create-wallet-with-icon(string, string, string) -> string; // (name, category, icon) -> "" or error
@@ -554,6 +646,12 @@ export global AppState {
     in-out property <bool> show-edit-wallet-icon: false;
     in-out property <bool> show-configure-ticker: false;
     in-out property <bool> show-edit-account-icon: false;
+
+    // Rewards modals
+    in-out property <bool> show-add-reward: false;
+    in-out property <bool> show-edit-reward: false;
+    in-out property <bool> show-add-goal: false;
+    in-out property <bool> show-edit-goal: false;
 
     // Current date (YYYY-MM-DD), set from backend to avoid hardcoded defaults
     in-out property <string> current-date: "2024-01-01";

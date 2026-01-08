@@ -1,0 +1,553 @@
+// ==================== Add Reward Modal ====================
+// Modal for creating streak rewards linked to habits
+
+import {
+    HabitAdapter,
+    RewardsAdapter,
+    NotificationAdapter,
+    HabitData,
+} from "../globals.slint";
+import { Theme } from "../theme.slint";
+import { FormField, NumberField } from "../components/forms/form_fields.slint";
+import { HabitDropdown } from "../components/forms/habit_dropdown.slint";
+
+// ==================== TypeToggle ====================
+component TypeToggle inherits Rectangle {
+    in-out property <bool> is-consecutive: true;
+
+    height: 44px;
+    background: Theme.surface;
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: Theme.border;
+
+    HorizontalLayout {
+        padding: 4px;
+        spacing: 4px;
+
+        // Consecutive option
+        Rectangle {
+            horizontal-stretch: 1;
+            height: 36px;
+            border-radius: 8px;
+            background: is-consecutive ? Theme.surface-hover : transparent;
+            border-width: is-consecutive ? 1px : 0px;
+            border-color: Theme.border-light;
+
+            HorizontalLayout {
+                padding-left: 12px;
+                padding-right: 12px;
+                spacing: 8px;
+                alignment: center;
+
+                Image {
+                    source: @image-url("../assets/icons/flame.svg");
+                    width: 14px;
+                    height: 14px;
+                    colorize: is-consecutive ? Theme.warning : Theme.text-muted;
+                    y: (parent.height - self.height) / 2;
+                }
+
+                Text {
+                    text: "CONSECUTIVE";
+                    color: is-consecutive ? Theme.text-primary : Theme.text-muted;
+                    font-size: 10px;
+                    font-weight: 600;
+                    letter-spacing: 1px;
+                    vertical-alignment: center;
+                }
+            }
+
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.is-consecutive = true;
+                }
+            }
+        }
+
+        // Accumulative option
+        Rectangle {
+            horizontal-stretch: 1;
+            height: 36px;
+            border-radius: 8px;
+            background: !is-consecutive ? Theme.surface-hover : transparent;
+            border-width: !is-consecutive ? 1px : 0px;
+            border-color: Theme.border-light;
+
+            HorizontalLayout {
+                padding-left: 12px;
+                padding-right: 12px;
+                spacing: 8px;
+                alignment: center;
+
+                Image {
+                    source: @image-url("../assets/icons/target.svg");
+                    width: 14px;
+                    height: 14px;
+                    colorize: !is-consecutive ? Theme.accent : Theme.text-muted;
+                    y: (parent.height - self.height) / 2;
+                }
+
+                Text {
+                    text: "ACCUMULATIVE";
+                    color: !is-consecutive ? Theme.text-primary : Theme.text-muted;
+                    font-size: 10px;
+                    font-weight: 600;
+                    letter-spacing: 1px;
+                    vertical-alignment: center;
+                }
+            }
+
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.is-consecutive = false;
+                }
+            }
+        }
+    }
+}
+
+
+
+// ==================== MilestoneRow ====================
+component MilestoneRow inherits Rectangle {
+    in-out property <int> days: 7;
+    in-out property <string> reward: "";
+    in property <bool> can-delete: true;
+    callback delete();
+
+    height: 48px;
+    background: Theme.surface;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: Theme.border;
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 8px;
+        spacing: 12px;
+
+        Rectangle {
+            width: 70px;
+            height: 32px;
+            background: Theme.surface-hover;
+            border-radius: 6px;
+            y: (parent.height - self.height) / 2;
+
+            HorizontalLayout {
+                padding-left: 8px;
+                padding-right: 8px;
+                spacing: 4px;
+
+                TextInput {
+                    horizontal-stretch: 1;
+                    text: days;
+                    color: Theme.text-primary;
+                    font-size: 12px;
+                    font-weight: 500;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    input-type: number;
+                }
+
+                Text {
+                    text: "days";
+                    color: Theme.text-muted;
+                    font-size: 10px;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        Text {
+            text: "→";
+            color: Theme.text-muted;
+            font-size: 14px;
+            vertical-alignment: center;
+        }
+
+        Rectangle {
+            horizontal-stretch: 1;
+            height: 32px;
+            background: Theme.surface-hover;
+            border-radius: 6px;
+            y: (parent.height - self.height) / 2;
+
+            HorizontalLayout {
+                padding-left: 12px;
+                padding-right: 12px;
+
+                TextInput {
+                    text <=> root.reward;
+                    color: Theme.text-primary;
+                    font-size: 12px;
+                    vertical-alignment: center;
+                }
+            }
+
+            if reward == "": Text {
+                x: 12px;
+                text: "Reward...";
+                color: Theme.text-subtle;
+                font-size: 12px;
+                vertical-alignment: center;
+            }
+        }
+
+        if can-delete: Rectangle {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            background: del-touch.has-hover ? Theme.delete-bg-hover : transparent;
+            y: (parent.height - self.height) / 2;
+
+            Image {
+                source: @image-url("../assets/icons/trash.svg");
+                width: 14px;
+                height: 14px;
+                colorize: Theme.text-muted;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+            }
+
+            del-touch := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.delete();
+                }
+            }
+        }
+    }
+}
+
+// ==================== AddRewardModal ====================
+export component AddRewardModal inherits Rectangle {
+    in property <bool> editing: false;
+    callback close();
+
+    property <int> selected-habit-index: -1;
+    property <bool> is-consecutive: true;
+    property <int> target-days: 10;
+    property <int> target-total: 30;
+    property <int> milestone-count: 1;
+    property <int> m1-days: 7;
+    property <string> m1-reward: "";
+    property <int> m2-days: 21;
+    property <string> m2-reward: "";
+    property <int> m3-days: 50;
+    property <string> m3-reward: "";
+
+    function reset() {
+        selected-habit-index = -1;
+        is-consecutive = true;
+        target-days = 10;
+        target-total = 30;
+        milestone-count = 1;
+        m1-days = 7;
+        m1-reward = "";
+        m2-days = 21;
+        m2-reward = "";
+        m3-days = 50;
+        m3-reward = "";
+    }
+
+    function close-modal() {
+        reset();
+        root.close();
+    }
+
+    function submit() {
+        if (selected-habit-index < 0) {
+            NotificationAdapter.show("Please select a habit", true);
+            return;
+        }
+        if (m1-reward == "") {
+            NotificationAdapter.show("Add at least one milestone", true);
+            return;
+        }
+        NotificationAdapter.show("Reward created", false);
+        close-modal();
+    }
+
+    init => {
+        key-scope.focus();
+    }
+
+    width: 100%;
+    height: 100%;
+    background: transparent;
+
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        background: Theme.overlay;
+        TouchArea {
+            clicked => {
+                close-modal();
+            }
+        }
+    }
+
+    key-scope := FocusScope {
+        width: parent.width;
+        height: parent.height;
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                close-modal();
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    Rectangle {
+        width: min(480px, parent.width - 40px);
+        height: min(560px, parent.height - 40px);
+        background: @linear-gradient(180deg, Theme.sidebar-bg 0%, Theme.modal-bg-end 100%);
+        border-radius: 16px;
+        border-width: 1px;
+        border-color: Theme.border-light;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        drop-shadow-blur: 40px;
+        drop-shadow-color: Theme.overlay-soft;
+
+        TouchArea {
+            clicked => {
+                key-scope.focus();
+            }
+        }
+
+        VerticalLayout {
+            padding: 32px;
+            spacing: 20px;
+
+            // Header
+            HorizontalLayout {
+                height: 32px;
+
+                HorizontalLayout {
+                    spacing: 12px;
+                    horizontal-stretch: 1;
+
+                    Rectangle {
+                        width: 4px;
+                        height: 20px;
+                        border-radius: 2px;
+                        background: @linear-gradient(180deg, Theme.warning 0%, Theme.accent 100%);
+                        y: (parent.height - self.height) / 2;
+                    }
+
+                    Text {
+                        text: editing ? "EDIT REWARD" : "NEW STREAK REWARD";
+                        color: Theme.text-primary;
+                        font-size: 16px;
+                        font-weight: 500;
+                        letter-spacing: 2px;
+                        vertical-alignment: center;
+                    }
+                }
+
+                Rectangle {
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 8px;
+                    background: close-touch.has-hover ? Theme.surface-hover : transparent;
+
+                    Image {
+                        source: @image-url("../assets/icons/x.svg");
+                        width: 16px;
+                        height: 16px;
+                        colorize: Theme.text-muted;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+
+                    close-touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            close-modal();
+                        }
+                    }
+                }
+            }
+
+            HabitDropdown {
+                habits: HabitAdapter.habits;
+                selected-index <=> selected-habit-index;
+            }
+
+            VerticalLayout {
+                spacing: 8px;
+
+                Text {
+                    text: "TYPE";
+                    color: Theme.text-muted;
+                    font-size: 10px;
+                    font-weight: 500;
+                    letter-spacing: 1.5px;
+                }
+
+                TypeToggle {
+                    is-consecutive <=> root.is-consecutive;
+                }
+
+                Text {
+                    text: is-consecutive ? "Days must be consecutive (resets if missed)" : "Accumulate days over time";
+                    color: Theme.text-muted;
+                    font-size: 10px;
+                }
+            }
+
+            if !is-consecutive: HorizontalLayout {
+                spacing: 16px;
+
+                NumberField {
+                    horizontal-stretch: 1;
+                    label: "TARGET DAYS";
+                    value <=> target-days;
+                }
+
+                NumberField {
+                    horizontal-stretch: 1;
+                    label: "OF TOTAL DAYS";
+                    value <=> target-total;
+                }
+            }
+
+            VerticalLayout {
+                spacing: 12px;
+
+                HorizontalLayout {
+                    alignment: space-between;
+
+                    Text {
+                        text: "MILESTONES";
+                        color: Theme.text-muted;
+                        font-size: 10px;
+                        font-weight: 500;
+                        letter-spacing: 1.5px;
+                        vertical-alignment: center;
+                    }
+
+                    if milestone-count < 3: Rectangle {
+                        width: 70px;
+                        height: 28px;
+                        border-radius: 6px;
+                        background: add-touch.has-hover ? Theme.surface-hover : Theme.surface;
+                        border-width: 1px;
+                        border-color: Theme.border;
+
+                        HorizontalLayout {
+                            spacing: 4px;
+                            alignment: center;
+
+                            Image {
+                                source: @image-url("../assets/icons/plus.svg");
+                                width: 12px;
+                                height: 12px;
+                                colorize: Theme.text-muted;
+                                y: (parent.height - self.height) / 2;
+                            }
+
+                            Text {
+                                text: "ADD";
+                                color: Theme.text-muted;
+                                font-size: 10px;
+                                font-weight: 600;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        add-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                if (milestone-count < 3) {
+                                    milestone-count += 1;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                MilestoneRow {
+                    days <=> m1-days;
+                    reward <=> m1-reward;
+                    can-delete: milestone-count > 1;
+                    delete => {
+                        m1-days = m2-days;
+                        m1-reward = m2-reward;
+                        m2-days = m3-days;
+                        m2-reward = m3-reward;
+                        milestone-count -= 1;
+                    }
+                }
+
+                if milestone-count >= 2: MilestoneRow {
+                    days <=> m2-days;
+                    reward <=> m2-reward;
+                    delete => {
+                        m2-days = m3-days;
+                        m2-reward = m3-reward;
+                        milestone-count -= 1;
+                    }
+                }
+
+                if milestone-count >= 3: MilestoneRow {
+                    days <=> m3-days;
+                    reward <=> m3-reward;
+                    delete => {
+                        milestone-count -= 1;
+                    }
+                }
+            }
+
+            Rectangle {
+                vertical-stretch: 1;
+            }
+
+            Rectangle {
+                height: 48px;
+                background: @linear-gradient(135deg, Theme.warning 0%, Theme.accent 100%);
+                border-radius: 10px;
+
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: center;
+
+                    Image {
+                        source: @image-url("../assets/icons/flame.svg");
+                        width: 16px;
+                        height: 16px;
+                        colorize: Theme.text-primary;
+                        y: (parent.height - self.height) / 2;
+                    }
+
+                    Text {
+                        text: editing ? "SAVE CHANGES" : "CREATE REWARD";
+                        color: Theme.text-primary;
+                        font-size: 12px;
+                        font-weight: 600;
+                        letter-spacing: 2px;
+                        vertical-alignment: center;
+                    }
+                }
+
+                submit-touch := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.submit();
+                    }
+                }
+
+                states [
+                    hover when submit-touch.has-hover: {
+                        opacity: 0.9;
+                    }
+                ]
+            }
+        }
+    }
+}

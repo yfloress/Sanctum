@@ -1,0 +1,148 @@
+// History Tab Component
+// Shows achievements/trophies gallery of completed rewards and goals
+
+import { Theme } from "../../theme.slint";
+import { RewardsAdapter } from "../../globals.slint";
+import { AchievementCard } from "achievement_card.slint";
+import { SectionHeader } from "../sections/section_header.slint";
+import { EmptyState } from "../sections/empty_state.slint";
+
+export component HistoryTab inherits Rectangle {
+    background: transparent;
+
+    VerticalLayout {
+        spacing: 16px;
+
+        SectionHeader {
+            title: "ACHIEVEMENTS";
+        }
+
+        if RewardsAdapter.achievements.length > 0: Rectangle {
+            background: Theme.surface;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: Theme.border;
+            // Dynamic height based on grid rows (4 cards per row)
+            height: (Math.ceil(RewardsAdapter.achievements.length / 4) * 156px) + 32px;
+
+            VerticalLayout {
+                padding: 16px;
+                spacing: 16px;
+
+                // Stats summary
+                HorizontalLayout {
+                    spacing: 24px;
+                    height: 48px;
+
+                    // Total achievements
+                    HorizontalLayout {
+                        spacing: 8px;
+                        alignment: start;
+
+                        Rectangle {
+                            width: 36px;
+                            height: 36px;
+                            border-radius: 8px;
+                            background: Theme.warning;
+                            opacity: 0.15;
+
+                            Image {
+                                source: @image-url("../../assets/icons/trophy.svg");
+                                width: 18px;
+                                height: 18px;
+                                colorize: Theme.warning;
+                                x: (parent.width - self.width) / 2;
+                                y: (parent.height - self.height) / 2;
+                            }
+                        }
+
+                        VerticalLayout {
+                            spacing: 2px;
+                            alignment: center;
+
+                            Text {
+                                text: RewardsAdapter.achievements.length;
+                                color: Theme.text-primary;
+                                font-size: 18px;
+                                font-weight: 600;
+                            }
+
+                            Text {
+                                text: "TOTAL";
+                                color: Theme.text-muted;
+                                font-size: 9px;
+                                font-weight: 600;
+                                letter-spacing: 1px;
+                            }
+                        }
+                    }
+                }
+
+                // Divider
+                Rectangle {
+                    height: 1px;
+                    background: Theme.border;
+                }
+
+                // Achievement grid (wrapped flow layout simulation)
+                Flickable {
+                    vertical-stretch: 1;
+
+                    VerticalLayout {
+                        spacing: 12px;
+
+                        // Row 1
+                        HorizontalLayout {
+                            spacing: 12px;
+                            alignment: start;
+
+                            for achievement[idx] in RewardsAdapter.achievements: AchievementCard {
+                                achievement: achievement;
+                                visible: idx < 4;
+                            }
+                        }
+
+                        // Row 2
+                        if RewardsAdapter.achievements.length > 4: HorizontalLayout {
+                            spacing: 12px;
+                            alignment: start;
+
+                            for achievement[idx] in RewardsAdapter.achievements: AchievementCard {
+                                achievement: achievement;
+                                visible: idx >= 4 && idx < 8;
+                            }
+                        }
+
+                        // Row 3
+                        if RewardsAdapter.achievements.length > 8: HorizontalLayout {
+                            spacing: 12px;
+                            alignment: start;
+
+                            for achievement[idx] in RewardsAdapter.achievements: AchievementCard {
+                                achievement: achievement;
+                                visible: idx >= 8 && idx < 12;
+                            }
+                        }
+
+                        // Row 4
+                        if RewardsAdapter.achievements.length > 12: HorizontalLayout {
+                            spacing: 12px;
+                            alignment: start;
+
+                            for achievement[idx] in RewardsAdapter.achievements: AchievementCard {
+                                achievement: achievement;
+                                visible: idx >= 12 && idx < 16;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if RewardsAdapter.achievements.length == 0: EmptyState {
+            icon: @image-url("../../assets/icons/trophy.svg");
+            title: "No achievements yet";
+            description: "Complete streak milestones and goals to earn trophies";
+        }
+    }
+}

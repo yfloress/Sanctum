@@ -1,0 +1,109 @@
+// Achievement Card Component
+// Displays an unlocked achievement/trophy in the history view
+
+import { Theme } from "../../theme.slint";
+import { AchievementData } from "../../globals.slint";
+
+export component AchievementCard inherits Rectangle {
+    in property <AchievementData> achievement;
+
+    width: 140px;
+    height: 140px;
+    background: Theme.surface;
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: touch.has-hover ? Theme.border-light : Theme.border;
+
+    animate border-color { duration: 150ms; }
+
+    // Subtle shine effect on hover
+    if touch.has-hover: Rectangle {
+        x: 0;
+        y: 0;
+        width: parent.width;
+        height: parent.height;
+        border-radius: 12px;
+        background: @linear-gradient(135deg, Theme.accent 0%, transparent 50%);
+        opacity: 0.05;
+    }
+
+    VerticalLayout {
+        padding: 16px;
+        spacing: 8px;
+        alignment: center;
+
+        // Icon container
+        Rectangle {
+            width: 48px;
+            height: 48px;
+            border-radius: 24px;
+            background: achievement.achievement-type == "streak" ? Theme.warning : Theme.success;
+            opacity: 0.15;
+            x: (parent.width - self.width) / 2;
+
+            Rectangle {
+                width: parent.width;
+                height: parent.height;
+                border-radius: 24px;
+
+                Image {
+                    source: achievement.icon;
+                    width: 24px;
+                    height: 24px;
+                    colorize: achievement.achievement-type == "streak" ? Theme.warning : Theme.success;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                }
+            }
+        }
+
+        // Title
+        Text {
+            text: achievement.title;
+            color: Theme.text-primary;
+            font-size: 11px;
+            font-weight: 600;
+            horizontal-alignment: center;
+            overflow: elide;
+        }
+
+        // Description
+        Text {
+            text: achievement.description;
+            color: Theme.text-muted;
+            font-size: 9px;
+            horizontal-alignment: center;
+            overflow: elide;
+            wrap: word-wrap;
+        }
+
+        // Date achieved
+        Rectangle {
+            height: 18px;
+
+            HorizontalLayout {
+                spacing: 4px;
+                alignment: center;
+
+                Image {
+                    source: @image-url("../../assets/icons/calendar.svg");
+                    width: 10px;
+                    height: 10px;
+                    colorize: Theme.text-subtle;
+                    y: (parent.height - self.height) / 2;
+                }
+
+                Text {
+                    text: achievement.achieved-at;
+                    color: Theme.text-subtle;
+                    font-size: 9px;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+    }
+}

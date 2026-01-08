@@ -1,0 +1,129 @@
+// ==================== Habit Dropdown Component ====================
+// Dropdown selector for choosing a habit
+
+import { Theme } from "../../theme.slint";
+import { HabitData } from "../../globals.slint";
+
+export component HabitDropdown inherits Rectangle {
+    in property <[HabitData]> habits;
+    in-out property <int> selected-index: -1;
+    in-out property <bool> dropdown-open: false;
+
+    height: 64px;
+    background: transparent;
+
+    VerticalLayout {
+        spacing: 8px;
+
+        Text {
+            text: "HABIT";
+            color: Theme.text-muted;
+            font-size: 10px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
+        }
+
+        Rectangle {
+            height: 40px;
+            background: Theme.surface;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: dropdown-open ? Theme.accent : Theme.border;
+
+            HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 12px;
+                spacing: 8px;
+
+                if selected-index >= 0 && selected-index < habits.length: Rectangle {
+                    width: 12px;
+                    height: 12px;
+                    border-radius: 3px;
+                    background: habits[selected-index].color;
+                    y: (parent.height - self.height) / 2;
+                }
+
+                Text {
+                    horizontal-stretch: 1;
+                    text: selected-index >= 0 && selected-index < habits.length ? habits[selected-index].name : "Select a habit...";
+                    color: selected-index >= 0 ? Theme.text-primary : Theme.text-subtle;
+                    font-size: 14px;
+                    vertical-alignment: center;
+                    overflow: elide;
+                }
+
+                Image {
+                    source: dropdown-open ? @image-url("../../assets/icons/chevron-up.svg") : @image-url("../../assets/icons/chevron-down.svg");
+                    width: 16px;
+                    height: 16px;
+                    colorize: Theme.text-muted;
+                    y: (parent.height - self.height) / 2;
+                }
+            }
+
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    dropdown-open = !dropdown-open;
+                }
+            }
+
+            if dropdown-open: Rectangle {
+                x: 0;
+                y: parent.height + 4px;
+                width: parent.width;
+                height: min(habits.length * 40px, 160px);
+                background: Theme.surface;
+                border-radius: 8px;
+                border-width: 1px;
+                border-color: Theme.border;
+                drop-shadow-blur: 12px;
+                drop-shadow-color: Theme.shadow-color;
+
+                Flickable {
+                    width: parent.width;
+                    height: parent.height;
+
+                    VerticalLayout {
+                        padding: 4px;
+
+                        for habit[idx] in habits: Rectangle {
+                            height: 36px;
+                            background: option-touch.has-hover ? Theme.surface-hover : transparent;
+                            border-radius: 6px;
+
+                            HorizontalLayout {
+                                padding-left: 12px;
+                                padding-right: 12px;
+                                spacing: 10px;
+
+                                Rectangle {
+                                    width: 10px;
+                                    height: 10px;
+                                    border-radius: 3px;
+                                    background: habit.color;
+                                    y: (parent.height - self.height) / 2;
+                                }
+
+                                Text {
+                                    text: habit.name;
+                                    color: Theme.text-primary;
+                                    font-size: 12px;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            option-touch := TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => {
+                                    selected-index = idx;
+                                    dropdown-open = false;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

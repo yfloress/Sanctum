@@ -1,15 +1,21 @@
 // ==================== Habits Page ====================
-// Premium Fintech UI - Habit tracking with visual analytics
+// Premium Fintech UI - Habit tracking with rewards and achievements
 
-import { HabitAdapter, AppState, NotificationAdapter } from "../globals.slint";
+import {
+    HabitAdapter,
+    AppState,
+    NotificationAdapter,
+    RewardsAdapter,
+} from "../globals.slint";
 import { Theme } from "../theme.slint";
-import { HabitRow } from "../components/habit_row.slint";
-import { HabitHeatmap } from "../components/habit_heatmap.slint";
-import { HabitRadarChart, WeekdayEfficiencyChart, InsightCard } from "../components/analytics_charts.slint";
-import { TextButton, ActionButton } from "../widgets.slint";
-import { SectionHeader } from "../components/sections/section_header.slint";
-import { EmptyState } from "../components/sections/empty_state.slint";
+import { TabButton } from "../components/buttons/tab_button.slint";
+import { ActionButton } from "../widgets.slint";
 import { AddHabitModal } from "../modals/add_habit.slint";
+import { AddRewardModal } from "../modals/add_reward.slint";
+import { AddGoalModal } from "../modals/add_goal.slint";
+import { HabitsTab } from "../components/rewards/habits_tab.slint";
+import { RewardsTab } from "../components/rewards/rewards_tab.slint";
+import { HistoryTab } from "../components/rewards/history_tab.slint";
 
 component NavButton inherits Rectangle {
     in property <string> icon;
@@ -37,61 +43,17 @@ component NavButton inherits Rectangle {
 
     touch := TouchArea {
         mouse-cursor: enabled ? pointer : default;
-        clicked => { if enabled { root.clicked(); } }
-    }
-}
-
-component SummaryItem inherits Rectangle {
-    in property <image> icon;
-    in property <string> label: "";
-    in property <string> value: "";
-    in property <string> note: "";
-
-    background: transparent;
-    height: 56px;
-
-    VerticalLayout {
-        spacing: 6px;
-
-        Text {
-            text: root.label;
-            color: Theme.text-muted;
-            font-size: 10px;
-            font-weight: 600;
-            letter-spacing: 1px;
-        }
-
-        HorizontalLayout {
-            spacing: 6px;
-            alignment: start;
-
-            Image {
-                source: root.icon;
-                width: 14px;
-                height: 14px;
-                colorize: Theme.text-primary;
-                vertical-alignment: center;
+        clicked => {
+            if enabled {
+                root.clicked();
             }
-
-            Text {
-                text: root.value;
-                color: Theme.text-primary;
-                font-size: 16px;
-                font-weight: 600;
-                vertical-alignment: center;
-            }
-        }
-
-        if root.note != "": Text {
-            text: root.note;
-            color: Theme.text-muted;
-            font-size: 11px;
         }
     }
 }
 
 export component HabitsPage inherits Rectangle {
     background: Theme.background;
+    in-out property <string> active-tab: "habits";
     property <bool> show-delete-habit-confirm: false;
     property <string> delete-habit-id: "";
     property <string> delete-habit-name: "";
@@ -101,6 +63,9 @@ export component HabitsPage inherits Rectangle {
         HabitAdapter.load-initial-data();
         HabitAdapter.fetch-heatmap-data();
         HabitAdapter.fetch-habit-analytics();
+        RewardsAdapter.fetch-rewards();
+        RewardsAdapter.fetch-goals();
+        RewardsAdapter.fetch-achievements();
     }
 
     VerticalLayout {
@@ -110,7 +75,7 @@ export component HabitsPage inherits Rectangle {
         Rectangle {
             height: 100px;
             background: @linear-gradient(180deg, Theme.modal-bg-end 0%, Theme.background 100%);
-            
+
             // Decorative pattern
             Rectangle {
                 width: 100%;
@@ -123,30 +88,32 @@ export component HabitsPage inherits Rectangle {
                 padding-left: 64px;
                 padding-right: 64px;
                 alignment: space-between;
-                
+
                 // Left: Title & Month Navigation
                 VerticalLayout {
                     alignment: center;
                     spacing: 12px;
 
-                    Text { 
-                        text: "HABITS"; 
-                        color: Theme.text-primary; 
-                        font-size: 24px; 
-                        font-weight: 300; 
+                    Text {
+                        text: "HABITS";
+                        color: Theme.text-primary;
+                        font-size: 24px;
+                        font-weight: 300;
                         letter-spacing: 6px;
                     }
 
-                    // Month selector
-                    HorizontalLayout {
+                    // Month selector (only visible on habits tab)
+                    if root.active-tab == "habits": HorizontalLayout {
                         spacing: 12px;
                         alignment: start;
-                        
+
                         NavButton {
                             icon: "←";
-                            clicked => { HabitAdapter.prev-month(); }
+                            clicked => {
+                                HabitAdapter.prev-month();
+                            }
                         }
-                        
+
                         Rectangle {
                             width: 140px;
                             height: 28px;
@@ -165,22 +132,72 @@ export component HabitsPage inherits Rectangle {
                                 vertical-alignment: center;
                             }
                         }
-                        
+
                         NavButton {
                             icon: "→";
-                            clicked => { HabitAdapter.next-month(); }
+                            clicked => {
+                                HabitAdapter.next-month();
+                            }
                         }
                     }
                 }
 
-                // Right: Add button
+                // Right: Tabs and Action Button
                 VerticalLayout {
                     alignment: center;
+                    spacing: 12px;
 
-                    ActionButton {
-                        text: "+ HABIT";
-                        primary: true;
-                        clicked => { AppState.show-add-habit = true; }
+                    HorizontalLayout {
+                        alignment: center;
+                        spacing: 20px;
+
+                        // Tabs container
+                        Rectangle {
+                            height: 44px;
+                            background: Theme.surface;
+                            border-radius: 22px;
+                            border-width: 1px;
+                            border-color: Theme.border;
+
+                            HorizontalLayout {
+                                padding: 4px;
+                                spacing: 4px;
+                                alignment: center;
+
+                                TabButton {
+                                    text: "HABITS";
+                                    active: root.active-tab == "habits";
+                                    clicked => {
+                                        root.active-tab = "habits";
+                                    }
+                                }
+
+                                TabButton {
+                                    text: "REWARDS";
+                                    active: root.active-tab == "rewards";
+                                    clicked => {
+                                        root.active-tab = "rewards";
+                                    }
+                                }
+
+                                TabButton {
+                                    text: "HISTORY";
+                                    active: root.active-tab == "history";
+                                    clicked => {
+                                        root.active-tab = "history";
+                                    }
+                                }
+                            }
+                        }
+
+                        // Action Button (context-sensitive)
+                        if root.active-tab == "habits": ActionButton {
+                            text: "+ HABIT";
+                            primary: true;
+                            clicked => {
+                                AppState.show-add-habit = true;
+                            }
+                        }
                     }
                 }
             }
@@ -192,268 +209,87 @@ export component HabitsPage inherits Rectangle {
             background: @linear-gradient(90deg, transparent 0%, Theme.border-light 50%, transparent 100%);
         }
 
-        // ==================== CONTENT ====================
-        Flickable {
+        // ==================== CONTENT AREA ====================
+        Rectangle {
             vertical-stretch: 1;
+            background: Theme.background;
 
-            VerticalLayout {
-                padding: 32px;
-                padding-left: 64px;
-                padding-right: 64px;
-                spacing: 24px;
+            // TAB: HABITS
+            if root.active-tab == "habits": Flickable {
+                vertical-stretch: 1;
+                width: 100%;
+                height: 100%;
 
-                // Yearly Overview Section
                 VerticalLayout {
-                    spacing: 12px;
+                    padding: 32px;
+                    padding-left: 64px;
+                    padding-right: 64px;
 
-                    HorizontalLayout {
-                        alignment: space-between;
-
-                        SectionHeader {
-                            title: "YEARLY OVERVIEW";
-                        }
-
-                        // Year Navigation
-                        HorizontalLayout {
-                            spacing: 8px;
-                            
-                            NavButton {
-                                icon: "←";
-                                clicked => { HabitAdapter.prev-heatmap-year(); }
-                            }
-                            
-                            Rectangle {
-                                width: 60px;
-                                height: 28px;
-                                background: Theme.surface;
-                                border-radius: 6px;
-
-                                Text {
-                                    text: HabitAdapter.heatmap-year;
-                                    color: Theme.text-primary;
-                                    font-size: 12px;
-                                    font-weight: 500;
-                                    horizontal-alignment: center;
-                                    vertical-alignment: center;
-                                }
-                            }
-                            
-                            NavButton {
-                                icon: "→";
-                                clicked => { HabitAdapter.next-heatmap-year(); }
-                            }
-                        }
-                    }
-
-                    // Heatmap container
-                    Rectangle {
-                        height: 200px;
-                        background: Theme.surface;
-                        border-radius: 12px;
-                        border-width: 1px;
-                        border-color: Theme.border;
-
-                        HabitHeatmap {}
+                    habits-tab := HabitsTab {
+                        show-delete-habit-confirm <=> root.show-delete-habit-confirm;
+                        delete-habit-id <=> root.delete-habit-id;
+                        delete-habit-name <=> root.delete-habit-name;
                     }
                 }
+            }
 
-                // Habits List Section
+            // TAB: REWARDS
+            if root.active-tab == "rewards": Flickable {
+                vertical-stretch: 1;
+                width: 100%;
+                height: 100%;
+
                 VerticalLayout {
-                    spacing: 12px;
+                    padding: 32px;
+                    padding-left: 64px;
+                    padding-right: 64px;
 
-                    SectionHeader {
-                        title: "MY HABITS";
-                    }
-
-                    if HabitAdapter.habits.length > 0: Rectangle {
-                        height: HabitAdapter.habits.length * Theme.habit-row-height;
-                        background: Theme.surface;
-                        clip: true;
-                        border-radius: 12px;
-                        border-width: 1px;
-                        border-color: Theme.border;
-
-                        VerticalLayout {
-                            padding: 8px;
-                            spacing: 0px;
-
-                            for habit in HabitAdapter.habits: HabitRow {
-                                habit: habit;
-                                toggle(date) => { HabitAdapter.toggle-habit(habit.id, date); }
-                                delete(id, name) => {
-                                    root.delete-habit-id = id;
-                                    root.delete-habit-name = name;
-                                    root.show-delete-habit-confirm = true;
-                                }
-                                edit(id) => {
-                                    HabitAdapter.edit-id = habit.id;
-                                    HabitAdapter.edit-name = habit.name;
-                                    HabitAdapter.edit-description = habit.description;
-                                    HabitAdapter.edit-color-hex = habit.color-hex;
-                                    HabitAdapter.edit-color-index = habit.color-index;
-                                    HabitAdapter.edit-category = habit.category;
-                                    AppState.show-edit-habit = true;
-                                }
-                                select(id) => { HabitAdapter.select-habit(id); }
-                            }
-                        }
-                    }
-                    
-                    if HabitAdapter.habits.length == 0: EmptyState {
-                        icon: @image-url("../assets/icons/check.svg");
-                        title: "No habits tracked this month";
-                        description: "Create a habit to start building consistency";
-                    }
+                    RewardsTab { }
                 }
+            }
 
-                // Analytics Section
-                if HabitAdapter.habits.length > 0: VerticalLayout {
-                    spacing: 16px;
+            // TAB: HISTORY
+            if root.active-tab == "history": Flickable {
+                vertical-stretch: 1;
+                width: 100%;
+                height: 100%;
 
-                    SectionHeader {
-                        title: "ANALYTICS";
-                    }
+                VerticalLayout {
+                    padding: 32px;
+                    padding-left: 64px;
+                    padding-right: 64px;
 
-                    HorizontalLayout {
-                        spacing: 16px;
-
-                        HabitRadarChart {
-                            horizontal-stretch: 1;
-                            image: HabitAdapter.habits-radar-chart-image;
-                            has-data: HabitAdapter.habits-radar-has-data;
-                        }
-
-                        WeekdayEfficiencyChart {
-                            horizontal-stretch: 1;
-                            image: HabitAdapter.habits-weekday-chart-image;
-                            has-data: HabitAdapter.habits-weekday-has-data;
-                        }
-                    }
-
-                    InsightCard {
-                        horizontal-stretch: 1;
-                        title: "WEEKLY REPORT";
-                        line1: HabitAdapter.habits-weekly-primary;
-                        line2: HabitAdapter.habits-weekly-secondary;
-                    }
-
-                    InsightCard {
-                        horizontal-stretch: 1;
-                        title: "INSIGHTS";
-                        line1: HabitAdapter.habits-insight-primary;
-                        line2: HabitAdapter.habits-insight-secondary;
-                    }
+                    HistoryTab { }
                 }
-
-                // Summary Section
-                if HabitAdapter.habits.length > 0: VerticalLayout {
-                    spacing: 12px;
-
-                    SectionHeader {
-                        title: "HABIT SUMMARY";
-                    }
-
-                    Rectangle {
-                        background: Theme.surface;
-                        border-radius: 12px;
-                        border-width: 1px;
-                        border-color: Theme.border;
-
-                        VerticalLayout {
-                            padding: 20px;
-                            spacing: 16px;
-
-                            Text {
-                                text: "SELECTED HABIT";
-                                color: Theme.text-muted;
-                                font-size: 9px;
-                                font-weight: 600;
-                                letter-spacing: 1px;
-                            }
-
-                            HorizontalLayout {
-                                spacing: 10px;
-                                alignment: start;
-
-                                Rectangle {
-                                    width: 4px;
-                                    height: 18px;
-                                    border-radius: 2px;
-                                    background: @linear-gradient(180deg, HabitAdapter.summary-habit-color 0%, HabitAdapter.summary-habit-color.darker(0.2) 100%);
-                                    y: (parent.height - self.height) / 2;
-                                }
-
-                                Text {
-                                    text: HabitAdapter.summary-habit-name;
-                                    color: Theme.text-primary;
-                                    font-size: 13px;
-                                    font-weight: 600;
-                                    vertical-alignment: center;
-                                }
-                            }
-
-                            HorizontalLayout {
-                                spacing: 24px;
-
-                                SummaryItem {
-                                    horizontal-stretch: 1;
-                                    icon: @image-url("../assets/icons/trending-up.svg");
-                                    label: "CURRENT STREAK";
-                                    value: HabitAdapter.summary-current-streak + " days";
-                                }
-
-                                SummaryItem {
-                                    horizontal-stretch: 1;
-                                    icon: @image-url("../assets/icons/star.svg");
-                                    label: "BEST STREAK (365D)";
-                                    value: HabitAdapter.summary-best-streak + " days";
-                                }
-                            }
-
-                            HorizontalLayout {
-                                spacing: 24px;
-
-                                SummaryItem {
-                                    horizontal-stretch: 1;
-                                    icon: @image-url("../assets/icons/percent.svg");
-                                    label: "COMPLETION RATE";
-                                    value: HabitAdapter.summary-completion-rate + "%";
-                                    note: HabitAdapter.summary-completion-note;
-                                }
-
-                                SummaryItem {
-                                    horizontal-stretch: 1;
-                                    icon: @image-url("../assets/icons/check.svg");
-                                    label: "COMPLETIONS (30D)";
-                                    value: HabitAdapter.summary-last-30 + "";
-                                    note: HabitAdapter.summary-best-day;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Bottom spacer
-                Rectangle { height: 32px; }
             }
         }
     }
-    
+
+    // ==================== MODALS ====================
     if AppState.show-add-habit: AddHabitModal {
-        close => { AppState.show-add-habit = false; }
+        close => {
+            AppState.show-add-habit = false;
+        }
     }
 
     if AppState.show-edit-habit: AddHabitModal {
         editing: true;
-        close => { AppState.show-edit-habit = false; }
+        close => {
+            AppState.show-edit-habit = false;
+        }
     }
 
+    // Delete habit confirmation dialog
     if root.show-delete-habit-confirm: Rectangle {
-        x: 0; y: 0; width: 100%; height: 100%;
+        x: 0;
+        y: 0;
+        width: 100%;
+        height: 100%;
         z: 1200;
 
         Rectangle {
             background: Theme.overlay-bg-strong;
+
             TouchArea {
                 clicked => {
                     root.show-delete-habit-confirm = false;
@@ -545,19 +381,44 @@ export component HabitsPage inherits Rectangle {
                         confirm-touch := TouchArea {
                             mouse-cursor: pointer;
                             clicked => {
-                                let result = HabitAdapter.delete-habit(root.delete-habit-id);
-                                if (result == "") {
-                                    root.show-delete-habit-confirm = false;
-                                    root.delete-habit-id = "";
-                                    root.delete-habit-name = "";
-                                } else {
-                                    NotificationAdapter.show(result, true);
-                                }
+                                HabitAdapter.delete-habit(root.delete-habit-id);
+                                root.show-delete-habit-confirm = false;
+                                root.delete-habit-id = "";
+                                root.delete-habit-name = "";
                             }
                         }
                     }
                 }
             }
+        }
+    }
+
+    // Reward and Goal modals
+    if AppState.show-add-reward: AddRewardModal {
+        close => {
+            AppState.show-add-reward = false;
+        }
+    }
+
+    if AppState.show-edit-reward: AddRewardModal {
+        editing: true;
+        close => {
+            AppState.show-edit-reward = false;
+            RewardsAdapter.edit-reward-id = "";
+        }
+    }
+
+    if AppState.show-add-goal: AddGoalModal {
+        close => {
+            AppState.show-add-goal = false;
+        }
+    }
+
+    if AppState.show-edit-goal: AddGoalModal {
+        editing: true;
+        close => {
+            AppState.show-edit-goal = false;
+            RewardsAdapter.edit-goal-id = "";
         }
     }
 }

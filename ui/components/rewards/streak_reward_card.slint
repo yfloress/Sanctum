@@ -1,0 +1,287 @@
+// Streak Reward Card Component
+// Displays a habit-linked reward with progress bar and milestones
+
+import { Theme } from "../../theme.slint";
+import { MilestoneData, StreakRewardData } from "../../globals.slint";
+
+component MilestoneMarker inherits Rectangle {
+    in property <int> target-days;
+    in property <string> reward-text;
+    in property <bool> unlocked;
+    in property <float> position-percent;  // 0.0 to 1.0
+    in property <length> track-width;
+
+    width: 24px;
+    height: 24px;
+    x: (track-width * position-percent) - (self.width / 2);
+    y: -8px;
+    border-radius: 12px;
+    background: unlocked ? Theme.success : Theme.surface;
+    border-width: 2px;
+    border-color: unlocked ? Theme.success : Theme.border;
+
+    Image {
+        source: unlocked ? @image-url("../../assets/icons/check.svg") : @image-url("../../assets/icons/gift.svg");
+        width: 12px;
+        height: 12px;
+        colorize: unlocked ? Theme.surface : Theme.text-muted;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+    }
+
+    // Tooltip on hover
+    if touch.has-hover: Rectangle {
+        x: (parent.width - self.width) / 2;
+        y: parent.height + 4px;
+        width: 120px;
+        height: 40px;
+        background: Theme.surface;
+        border-radius: 6px;
+        border-width: 1px;
+        border-color: Theme.border;
+        drop-shadow-blur: 8px;
+        drop-shadow-color: Theme.shadow-color;
+
+        VerticalLayout {
+            padding: 6px;
+            spacing: 2px;
+            alignment: center;
+
+            Text {
+                text: target-days + " days";
+                color: Theme.text-primary;
+                font-size: 10px;
+                font-weight: 600;
+                horizontal-alignment: center;
+            }
+
+            Text {
+                text: reward-text;
+                color: Theme.text-muted;
+                font-size: 9px;
+                horizontal-alignment: center;
+                overflow: elide;
+            }
+        }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+    }
+}
+
+export component StreakRewardCard inherits Rectangle {
+    in property <StreakRewardData> reward;
+    callback edit(string);
+    callback delete(string);
+
+    height: 140px;
+    background: Theme.surface;
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: Theme.border;
+
+    VerticalLayout {
+        padding: 16px;
+        spacing: 12px;
+
+        // Header row
+        HorizontalLayout {
+            spacing: 10px;
+            alignment: space-between;
+
+            HorizontalLayout {
+                spacing: 10px;
+
+                // Habit color indicator
+                Rectangle {
+                    width: 4px;
+                    height: 32px;
+                    border-radius: 2px;
+                    background: reward.habit-color;
+                    y: (parent.height - self.height) / 2;
+                }
+
+                VerticalLayout {
+                    spacing: 2px;
+                    alignment: center;
+
+                    Text {
+                        text: reward.habit-name;
+                        color: Theme.text-primary;
+                        font-size: 13px;
+                        font-weight: 600;
+                    }
+
+                    Rectangle {
+                        width: reward.is-consecutive ? 85px : 95px;
+                        height: 18px;
+                        border-radius: 9px;
+                        background: reward.is-consecutive ? Theme.accent : Theme.warning;
+                        opacity: 0.15;
+
+                        Text {
+                            text: reward.is-consecutive ? "CONSECUTIVE" : "ACCUMULATIVE";
+                            color: reward.is-consecutive ? Theme.accent : Theme.warning;
+                            font-size: 9px;
+                            font-weight: 600;
+                            letter-spacing: 0.5px;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+            }
+
+            // Current streak/progress
+            HorizontalLayout {
+                spacing: 6px;
+                alignment: end;
+
+                Image {
+                    source: @image-url("../../assets/icons/flame.svg");
+                    width: 16px;
+                    height: 16px;
+                    colorize: Theme.warning;
+                    y: (parent.height - self.height) / 2;
+                }
+
+                Text {
+                    text: reward.is-consecutive ? reward.current-progress + " days" : reward.current-progress + "/" + reward.target-days;
+                    color: Theme.text-primary;
+                    font-size: 14px;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // Progress bar with milestones
+        Rectangle {
+            height: 32px;
+
+            // Track background
+            Rectangle {
+                width: parent.width;
+                height: 8px;
+                y: 12px;
+                border-radius: 4px;
+                background: Theme.surface-hover;
+
+                // Progress fill
+                Rectangle {
+                    width: parent.width * (reward.progress-percent / 100.0);
+                    height: parent.height;
+                    border-radius: 4px;
+                    background: @linear-gradient(90deg, reward.habit-color 0%, reward.habit-color.darker(0.1) 100%);
+
+                    animate width {
+                        duration: 300ms;
+                        easing: ease-out;
+                    }
+                }
+            }
+
+            // Milestone markers positioned along the bar
+            for milestone[idx] in reward.milestones: MilestoneMarker {
+                target-days: milestone.target-days;
+                reward-text: milestone.reward-text;
+                unlocked: milestone.unlocked;
+                track-width: parent.width;
+                position-percent: reward.is-consecutive ? (milestone.target-days / reward.milestones[reward.milestones.length - 1].target-days) : (milestone.target-days / reward.target-total);
+            }
+        }
+
+        // Next reward info
+        HorizontalLayout {
+            spacing: 8px;
+            alignment: start;
+
+            Image {
+                source: @image-url("../../assets/icons/gift.svg");
+                width: 14px;
+                height: 14px;
+                colorize: Theme.text-muted;
+                y: (parent.height - self.height) / 2;
+            }
+
+            Text {
+                text: "Next: " + reward.next-milestone-reward;
+                color: Theme.text-muted;
+                font-size: 11px;
+                vertical-alignment: center;
+            }
+
+            Text {
+                text: "in " + (reward.next-milestone-days - reward.current-progress) + " days";
+                color: Theme.text-secondary;
+                font-size: 11px;
+                font-weight: 500;
+                vertical-alignment: center;
+            }
+        }
+    }
+
+    // Hover actions
+    if touch.has-hover: Rectangle {
+        x: parent.width - 72px;
+        y: 12px;
+        width: 60px;
+        height: 28px;
+
+        HorizontalLayout {
+            spacing: 8px;
+            alignment: end;
+
+            Rectangle {
+                width: 24px;
+                height: 24px;
+                border-radius: 6px;
+                background: edit-touch.has-hover ? Theme.surface-hover : transparent;
+
+                Image {
+                    source: @image-url("../../assets/icons/file-text.svg");
+                    width: 14px;
+                    height: 14px;
+                    colorize: Theme.text-muted;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                }
+
+                edit-touch := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.edit(reward.id);
+                    }
+                }
+            }
+
+            Rectangle {
+                width: 24px;
+                height: 24px;
+                border-radius: 6px;
+                background: delete-touch.has-hover ? Theme.delete-bg-hover : transparent;
+
+                Image {
+                    source: @image-url("../../assets/icons/trash.svg");
+                    width: 14px;
+                    height: 14px;
+                    colorize: delete-touch.has-hover ? Theme.text-primary : Theme.text-muted;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                }
+
+                delete-touch := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        root.delete(reward.id);
+                    }
+                }
+            }
+        }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+    }
+}
