@@ -498,12 +498,11 @@ pub fn setup_account_callbacks<F, G, H, N>(
                         let _ = reload_accounts(&ui_weak, &controller);
                         if let Some(ui) = ui_weak.upgrade()
                             && ui.global::<AccountAdapter>().get_show_account_detail()
+                            && let Ok(accounts) = controller.get_accounts()
+                            && let Some(account) = accounts.iter().find(|a| id == a.id)
                         {
-                            if let Ok(accounts) = controller.get_accounts() {
-                                if let Some(account) = accounts.iter().find(|a| a.id == id.to_string()) {
-                                    ui.global::<AccountAdapter>().set_selected_account_name(SharedString::from(&account.name));
-                                }
-                            }
+                            ui.global::<AccountAdapter>()
+                                .set_selected_account_name(SharedString::from(&account.name));
                         }
                         notify("Account name updated".to_string(), false);
                         SharedString::from("")

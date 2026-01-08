@@ -35,6 +35,7 @@ component IconOption inherits Rectangle {
             height: 32px;
             border-radius: 6px;
             background: is-selected ? Theme.accent.with-alpha(0.1) : Theme.surface-deep;
+            x: (parent.width - self.width) / 2;
 
             if root.colorize-icon: Image {
                 source: root.icon;
@@ -62,6 +63,7 @@ component IconOption inherits Rectangle {
             horizontal-alignment: center;
             overflow: elide;
             horizontal-stretch: 1;
+            width: parent.width;
         }
     }
 
@@ -121,12 +123,13 @@ export component IconSelector inherits Rectangle {
                         font-weight: 600;
                     }
 
-                    GridLayout {
+                    VerticalLayout {
                         spacing: 8px;
-                        padding-left: 40px;
-                        padding-right: 40px;
 
-                        Row {
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: center;
+                            width: parent.width;
                             IconOption {
                                 icon: @image-url("../assets/exchange-icons/binance.svg");
                                 icon-path: "../assets/exchange-icons/binance.svg";
@@ -161,7 +164,10 @@ export component IconSelector inherits Rectangle {
                             }
                         }
 
-                        Row {
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: center;
+                            width: parent.width;
                             IconOption {
                                 icon: @image-url("../assets/exchange-icons/buda.svg");
                                 icon-path: "../assets/exchange-icons/buda.svg";
@@ -183,6 +189,29 @@ export component IconSelector inherits Rectangle {
                                 icon-path: "../assets/exchange-icons/bisq.svg";
                                 selected-path: root.selected-icon;
                                 label: "Bisq";
+                                colorize-icon: false;
+                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                            }
+                            IconOption {
+                                icon: @image-url("../assets/exchange-icons/bitmart.svg");
+                                icon-path: "../assets/exchange-icons/bitmart.svg";
+                                selected-path: root.selected-icon;
+                                label: "BitMart";
+                                colorize-icon: false;
+                                clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
+                            }
+                        }
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: center;
+                            width: parent.width;
+
+                            IconOption {
+                                icon: @image-url("../assets/exchange-icons/retoswap.svg");
+                                icon-path: "../assets/exchange-icons/retoswap.svg";
+                                selected-path: root.selected-icon;
+                                label: "RetoSwap";
                                 colorize-icon: false;
                                 clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
                             }
@@ -209,12 +238,13 @@ export component IconSelector inherits Rectangle {
                         font-weight: 600;
                     }
 
-                    GridLayout {
+                    VerticalLayout {
                         spacing: 8px;
-                        padding-left: 40px;
-                        padding-right: 40px;
 
-                        Row {
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: center;
+                            width: parent.width;
                             IconOption {
                                 icon: @image-url("../assets/icons/wallet.svg");
                                 icon-path: "../assets/icons/wallet.svg";
@@ -245,7 +275,10 @@ export component IconSelector inherits Rectangle {
                             }
                         }
 
-                        Row {
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: center;
+                            width: parent.width;
                             IconOption {
                                 icon: @image-url("../assets/icons/coins.svg");
                                 icon-path: "../assets/icons/coins.svg";
@@ -267,7 +300,6 @@ export component IconSelector inherits Rectangle {
                                 label: "Folder";
                                 clicked => { root.selected-icon = self.icon-path; root.icon-changed(self.icon-path); }
                             }
-                            Rectangle { width: 64px; } // Spacer
                         }
                     }
                 }

@@ -33,6 +33,7 @@ component BankIconOption inherits Rectangle {
             background: Theme.surface;
             border-width: 1px;
             border-color: Theme.border-subtle;
+            x: (parent.width - self.width) / 2;
 
             Image {
                 source: root.icon;
@@ -49,6 +50,7 @@ component BankIconOption inherits Rectangle {
             font-size: 9px;
             font-weight: 500;
             horizontal-alignment: center;
+            width: parent.width;
         }
     }
 
@@ -94,12 +96,13 @@ export component BankIconSelector inherits Rectangle {
                 width: parent.width;
                 spacing: 12px;
 
-                GridLayout {
+                VerticalLayout {
                     spacing: 8px;
-                    padding-left: 40px;
-                    padding-right: 40px;
 
-                    Row {
+                    HorizontalLayout {
+                        spacing: 8px;
+                        alignment: center;
+                        width: parent.width;
                         BankIconOption {
                             icon: @image-url("../assets/bank-icons/banco-chile.svg");
                             icon-path: "../assets/bank-icons/banco-chile.svg";
@@ -130,7 +133,10 @@ export component BankIconSelector inherits Rectangle {
                         }
                     }
 
-                    Row {
+                    HorizontalLayout {
+                        spacing: 8px;
+                        alignment: center;
+                        width: parent.width;
                         BankIconOption {
                             icon: @image-url("../assets/bank-icons/citibank.svg");
                             icon-path: "../assets/bank-icons/citibank.svg";
@@ -161,7 +167,10 @@ export component BankIconSelector inherits Rectangle {
                         }
                     }
 
-                    Row {
+                    HorizontalLayout {
+                        spacing: 8px;
+                        alignment: center;
+                        width: parent.width;
                         BankIconOption {
                             icon: @image-url("../assets/icons/building-2.svg");
                             icon-path: "../assets/icons/building-2.svg";
