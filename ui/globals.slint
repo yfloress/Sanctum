@@ -137,6 +137,7 @@ export global HabitAdapter {
     callback toggle-habit(string, string); // id, date
     callback delete-habit(string) -> string;
     callback select-habit(string); // id
+    callback find-habit-index(string) -> int; // habit-id -> index in habits array
     // Edit state
     in-out property <string> edit-id: "";
     in-out property <string> edit-name: "";
@@ -262,6 +263,20 @@ export global RewardsAdapter {
     // Edit state for modals
     in-out property <string> edit-reward-id: "";
     in-out property <string> edit-goal-id: "";
+
+    // Edit data for streak reward
+    in-out property <string> edit-reward-habit-id: "";
+    in-out property <int> edit-reward-habit-index: -1;
+    in-out property <bool> edit-reward-is-consecutive: true;
+    in-out property <int> edit-reward-target-days: 0;
+    in-out property <int> edit-reward-target-total: 0;
+    in-out property <int> edit-reward-m1-days: 7;
+    in-out property <string> edit-reward-m1-text: "";
+    in-out property <int> edit-reward-m2-days: 0;
+    in-out property <string> edit-reward-m2-text: "";
+    in-out property <int> edit-reward-m3-days: 0;
+    in-out property <string> edit-reward-m3-text: "";
+    in-out property <int> edit-reward-milestone-count: 1;
 }
 
 // ==================== Notification Adapter ====================

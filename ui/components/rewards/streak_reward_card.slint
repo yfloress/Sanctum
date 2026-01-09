@@ -75,7 +75,12 @@ export component StreakRewardCard inherits Rectangle {
     callback edit(string);
     callback delete(string);
 
-    height: 140px;
+    // Calculate days remaining to next milestone (min 0)
+    property <int> days-remaining: max(0, reward.next-milestone-days - reward.current-progress);
+    // Check if all milestones are unlocked
+    property <bool> all-milestones-unlocked: reward.current-progress >= reward.next-milestone-days && reward.next-milestone-reward == "";
+
+    height: 160px;
     background: Theme.surface;
     border-radius: 12px;
     border-width: 1px;
@@ -92,6 +97,7 @@ export component StreakRewardCard inherits Rectangle {
 
             HorizontalLayout {
                 spacing: 10px;
+                horizontal-stretch: 1;
 
                 // Habit color indicator
                 Rectangle {
@@ -133,25 +139,30 @@ export component StreakRewardCard inherits Rectangle {
                 }
             }
 
-            // Current streak/progress
-            HorizontalLayout {
-                spacing: 6px;
-                alignment: end;
+            // Current streak/progress - moved to separate column for clarity
+            Rectangle {
+                width: 80px;
+                height: 32px;
 
-                Image {
-                    source: @image-url("../../assets/icons/flame.svg");
-                    width: 16px;
-                    height: 16px;
-                    colorize: Theme.warning;
-                    y: (parent.height - self.height) / 2;
-                }
+                HorizontalLayout {
+                    spacing: 6px;
+                    alignment: center;
 
-                Text {
-                    text: reward.is-consecutive ? reward.current-progress + " days" : reward.current-progress + "/" + reward.target-days;
-                    color: Theme.text-primary;
-                    font-size: 14px;
-                    font-weight: 600;
-                    vertical-alignment: center;
+                    Image {
+                        source: @image-url("../../assets/icons/flame.svg");
+                        width: 16px;
+                        height: 16px;
+                        colorize: Theme.warning;
+                        y: (parent.height - self.height) / 2;
+                    }
+
+                    Text {
+                        text: reward.current-progress + " days";
+                        color: Theme.text-primary;
+                        font-size: 14px;
+                        font-weight: 600;
+                        vertical-alignment: center;
+                    }
                 }
             }
         }
@@ -192,8 +203,8 @@ export component StreakRewardCard inherits Rectangle {
             }
         }
 
-        // Next reward info
-        HorizontalLayout {
+        // Next reward info - only show if there's a next milestone
+        if reward.next-milestone-reward != "": HorizontalLayout {
             spacing: 8px;
             alignment: start;
 
@@ -213,8 +224,30 @@ export component StreakRewardCard inherits Rectangle {
             }
 
             Text {
-                text: "in " + (reward.next-milestone-days - reward.current-progress) + " days";
-                color: Theme.text-secondary;
+                text: root.days-remaining == 0 ? "Achieved!" : "in " + root.days-remaining + " days";
+                color: root.days-remaining == 0 ? Theme.success : Theme.text-secondary;
+                font-size: 11px;
+                font-weight: 500;
+                vertical-alignment: center;
+            }
+        }
+
+        // All milestones complete message
+        if reward.next-milestone-reward == "": HorizontalLayout {
+            spacing: 8px;
+            alignment: start;
+
+            Image {
+                source: @image-url("../../assets/icons/trophy.svg");
+                width: 14px;
+                height: 14px;
+                colorize: Theme.success;
+                y: (parent.height - self.height) / 2;
+            }
+
+            Text {
+                text: "All milestones unlocked!";
+                color: Theme.success;
                 font-size: 11px;
                 font-weight: 500;
                 vertical-alignment: center;
@@ -222,10 +255,10 @@ export component StreakRewardCard inherits Rectangle {
         }
     }
 
-    // Hover actions
-    if touch.has-hover: Rectangle {
-        x: parent.width - 72px;
-        y: 12px;
+    // Action buttons - always visible at bottom right, inside the card
+    Rectangle {
+        x: parent.width - 76px;
+        y: parent.height - 40px;
         width: 60px;
         height: 28px;
 
@@ -237,13 +270,15 @@ export component StreakRewardCard inherits Rectangle {
                 width: 24px;
                 height: 24px;
                 border-radius: 6px;
-                background: edit-touch.has-hover ? Theme.surface-hover : transparent;
+                background: edit-touch.has-hover ? Theme.surface-hover : Theme.surface;
+                border-width: 1px;
+                border-color: Theme.border;
 
                 Image {
                     source: @image-url("../../assets/icons/file-text.svg");
                     width: 14px;
                     height: 14px;
-                    colorize: Theme.text-muted;
+                    colorize: edit-touch.has-hover ? Theme.text-primary : Theme.text-muted;
                     x: (parent.width - self.width) / 2;
                     y: (parent.height - self.height) / 2;
                 }
@@ -260,7 +295,9 @@ export component StreakRewardCard inherits Rectangle {
                 width: 24px;
                 height: 24px;
                 border-radius: 6px;
-                background: delete-touch.has-hover ? Theme.delete-bg-hover : transparent;
+                background: delete-touch.has-hover ? Theme.delete-bg-hover : Theme.surface;
+                border-width: 1px;
+                border-color: delete-touch.has-hover ? Theme.delete-border : Theme.border;
 
                 Image {
                     source: @image-url("../../assets/icons/trash.svg");
@@ -279,9 +316,5 @@ export component StreakRewardCard inherits Rectangle {
                 }
             }
         }
-    }
-
-    touch := TouchArea {
-        mouse-cursor: pointer;
     }
 }

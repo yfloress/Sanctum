@@ -149,60 +149,46 @@ export component HabitsPage inherits Rectangle {
                     }
                 }
 
-                // Right: Tabs and Action Button
+                // Right: Tabs
                 VerticalLayout {
                     alignment: center;
                     spacing: 12px;
 
-                    HorizontalLayout {
-                        alignment: center;
-                        spacing: 20px;
+                    // Tabs container
+                    Rectangle {
+                        height: 44px;
+                        background: Theme.surface;
+                        border-radius: 22px;
+                        border-width: 1px;
+                        border-color: Theme.border;
 
-                        // Tabs container
-                        Rectangle {
-                            height: 44px;
-                            background: Theme.surface;
-                            border-radius: 22px;
-                            border-width: 1px;
-                            border-color: Theme.border;
+                        HorizontalLayout {
+                            padding: 4px;
+                            spacing: 4px;
+                            alignment: center;
 
-                            HorizontalLayout {
-                                padding: 4px;
-                                spacing: 4px;
-                                alignment: center;
-
-                                TabButton {
-                                    text: "HABITS";
-                                    active: root.active-tab == "habits";
-                                    clicked => {
-                                        root.active-tab = "habits";
-                                    }
-                                }
-
-                                TabButton {
-                                    text: "REWARDS";
-                                    active: root.active-tab == "rewards";
-                                    clicked => {
-                                        root.active-tab = "rewards";
-                                    }
-                                }
-
-                                TabButton {
-                                    text: "HISTORY";
-                                    active: root.active-tab == "history";
-                                    clicked => {
-                                        root.active-tab = "history";
-                                    }
+                            TabButton {
+                                text: "HABITS";
+                                active: root.active-tab == "habits";
+                                clicked => {
+                                    root.active-tab = "habits";
                                 }
                             }
-                        }
 
-                        // Action Button (context-sensitive)
-                        if root.active-tab == "habits": ActionButton {
-                            text: "+ HABIT";
-                            primary: true;
-                            clicked => {
-                                AppState.show-add-habit = true;
+                            TabButton {
+                                text: "REWARDS";
+                                active: root.active-tab == "rewards";
+                                clicked => {
+                                    root.active-tab = "rewards";
+                                }
+                            }
+
+                            TabButton {
+                                text: "HISTORY";
+                                active: root.active-tab == "history";
+                                clicked => {
+                                    root.active-tab = "history";
+                                }
                             }
                         }
                     }

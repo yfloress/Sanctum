@@ -3,12 +3,12 @@
 use crate::controller::AppController;
 use crate::{AppWindow, HabitAdapter};
 use chrono::{Datelike, NaiveDate};
-use slint::{ComponentHandle, SharedString, Weak};
+use slint::{ComponentHandle, Model, SharedString, Weak};
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
-use super::charts::{refresh_habit_analytics, HabitChartsCache};
+use super::charts::{HabitChartsCache, refresh_habit_analytics};
 use super::data::{refresh_habit_summary, reload_habits, reload_heatmap};
 
 /// Sets up all HabitAdapter callbacks
@@ -273,10 +273,30 @@ pub fn setup_habit_callbacks<N>(
         let ui_weak = ui_weak.clone();
         let date_lock = current_habit_date.clone();
         let notify = notify.clone();
+        ui.global::<HabitAdapter>().on_select_habit(move |id| {
+            let date = *date_lock.lock().unwrap();
+            refresh_habit_summary(&ui_weak, &controller, date, id.to_string(), Some(&notify));
+        });
+    }
+
+    // on_find_habit_index - find habit index from id
+    {
+        let ui_weak = ui_weak.clone();
         ui.global::<HabitAdapter>()
-            .on_select_habit(move |id| {
-                let date = *date_lock.lock().unwrap();
-                refresh_habit_summary(&ui_weak, &controller, date, id.to_string(), Some(&notify));
+            .on_find_habit_index(move |habit_id| {
+                let ui = match ui_weak.upgrade() {
+                    Some(ui) => ui,
+                    None => return -1,
+                };
+                let habits = ui.global::<HabitAdapter>().get_habits();
+                for i in 0..habits.row_count() {
+                    if let Some(habit) = habits.row_data(i) {
+                        if habit.id == habit_id {
+                            return i as i32;
+                        }
+                    }
+                }
+                -1
             });
     }
 }

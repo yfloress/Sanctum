@@ -583,12 +583,18 @@ where
         .iter()
         .map(|a| {
             let icon = load_achievement_icon(&a.icon_path);
+            // Format date as YYYY-MM-DD (take first 10 chars from RFC3339)
+            let short_date = if a.achieved_at.len() >= 10 {
+                &a.achieved_at[..10]
+            } else {
+                &a.achieved_at
+            };
             AchievementData {
                 id: SharedString::from(&a.id),
                 title: SharedString::from(&a.title),
                 description: SharedString::from(&a.description),
                 icon,
-                achieved_at: SharedString::from(&a.achieved_at),
+                achieved_at: SharedString::from(short_date),
                 achievement_type: SharedString::from(&a.achievement_type),
             }
         })

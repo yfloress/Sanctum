@@ -6,6 +6,7 @@ import {
     RewardsAdapter,
     AppState,
     NotificationAdapter,
+    HabitAdapter,
 } from "../../globals.slint";
 import { StreakRewardCard } from "streak_reward_card.slint";
 import { GoalCard } from "goal_card.slint";
@@ -42,10 +43,30 @@ export component RewardsTab inherits Rectangle {
             if RewardsAdapter.streak-rewards.length > 0: VerticalLayout {
                 spacing: 12px;
 
-                for reward in RewardsAdapter.streak-rewards: StreakRewardCard {
+                for reward[idx] in RewardsAdapter.streak-rewards: StreakRewardCard {
                     reward: reward;
                     edit(id) => {
+                        // Load reward data into edit properties
                         RewardsAdapter.edit-reward-id = id;
+                        RewardsAdapter.edit-reward-habit-id = reward.habit-id;
+                        RewardsAdapter.edit-reward-habit-index = HabitAdapter.find-habit-index(reward.habit-id);
+                        RewardsAdapter.edit-reward-is-consecutive = reward.is-consecutive;
+                        RewardsAdapter.edit-reward-target-days = reward.target-days;
+                        RewardsAdapter.edit-reward-target-total = reward.target-total;
+                        // Load milestones
+                        RewardsAdapter.edit-reward-milestone-count = reward.milestones.length;
+                        if reward.milestones.length >= 1 {
+                            RewardsAdapter.edit-reward-m1-days = reward.milestones[0].target-days;
+                            RewardsAdapter.edit-reward-m1-text = reward.milestones[0].reward-text;
+                        }
+                        if reward.milestones.length >= 2 {
+                            RewardsAdapter.edit-reward-m2-days = reward.milestones[1].target-days;
+                            RewardsAdapter.edit-reward-m2-text = reward.milestones[1].reward-text;
+                        }
+                        if reward.milestones.length >= 3 {
+                            RewardsAdapter.edit-reward-m3-days = reward.milestones[2].target-days;
+                            RewardsAdapter.edit-reward-m3-text = reward.milestones[2].reward-text;
+                        }
                         AppState.show-edit-reward = true;
                     }
                     delete(id) => {

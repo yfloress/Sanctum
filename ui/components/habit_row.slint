@@ -16,15 +16,19 @@ component StatBadge inherits Rectangle {
     background: Theme.surface-hover;
     border-width: 1px;
     border-color: Theme.border;
+
     HorizontalLayout {
         alignment: center;
         spacing: 4px;
+        padding-top: 4px;
+        padding-bottom: 4px;
+
         Image {
             source: root.icon;
             width: 10px;
             height: 10px;
             colorize: accent-color;
-            vertical-alignment: center;
+            y: (parent.height - self.height) / 2;
         }
 
         Text {
@@ -32,7 +36,7 @@ component StatBadge inherits Rectangle {
             color: accent-color;
             font-size: 10px;
             font-weight: 600;
-            vertical-alignment: center;
+            y: (parent.height - self.height) / 2;
         }
     }
 }

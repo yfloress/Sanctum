@@ -2,7 +2,11 @@
 // Extracted habits list content for use with tabbed interface
 
 import { Theme } from "../../theme.slint";
-import { HabitAdapter, NotificationAdapter } from "../../globals.slint";
+import {
+    HabitAdapter,
+    NotificationAdapter,
+    AppState,
+} from "../../globals.slint";
 import { HabitRow } from "../habit_row.slint";
 import { HabitHeatmap } from "../habit_heatmap.slint";
 import {
@@ -12,6 +16,7 @@ import {
 } from "../analytics_charts.slint";
 import { SectionHeader } from "../sections/section_header.slint";
 import { EmptyState } from "../sections/empty_state.slint";
+import { ActionButton } from "../../widgets.slint";
 
 component NavButton inherits Rectangle {
     in property <string> icon;
@@ -192,8 +197,20 @@ export component HabitsTab inherits Rectangle {
         VerticalLayout {
             spacing: 12px;
 
-            SectionHeader {
-                title: "MY HABITS";
+            HorizontalLayout {
+                alignment: space-between;
+
+                SectionHeader {
+                    title: "MY HABITS";
+                }
+
+                ActionButton {
+                    text: "+ HABIT";
+                    primary: true;
+                    clicked => {
+                        AppState.show-add-habit = true;
+                    }
+                }
             }
 
             if HabitAdapter.habits.length > 0: Rectangle {

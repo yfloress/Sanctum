@@ -7,8 +7,42 @@ import { AchievementCard } from "achievement_card.slint";
 import { SectionHeader } from "../sections/section_header.slint";
 import { EmptyState } from "../sections/empty_state.slint";
 
+// Grid row component to display up to 4 achievements
+component AchievementRow inherits HorizontalLayout {
+    in property <int> start-index;
+    in property <int> total-count;
+
+    spacing: 12px;
+    alignment: start;
+
+    // Card 1
+    if start-index < total-count: AchievementCard {
+        achievement: RewardsAdapter.achievements[start-index];
+    }
+
+    // Card 2
+    if start-index + 1 < total-count: AchievementCard {
+        achievement: RewardsAdapter.achievements[start-index + 1];
+    }
+
+    // Card 3
+    if start-index + 2 < total-count: AchievementCard {
+        achievement: RewardsAdapter.achievements[start-index + 2];
+    }
+
+    // Card 4
+    if start-index + 3 < total-count: AchievementCard {
+        achievement: RewardsAdapter.achievements[start-index + 3];
+    }
+}
+
 export component HistoryTab inherits Rectangle {
     background: transparent;
+
+    // Calculate number of rows needed (4 cards per row)
+    property <int> cards-per-row: 4;
+    property <int> total-achievements: RewardsAdapter.achievements.length;
+    property <int> num-rows: (total-achievements + cards-per-row - 1) / cards-per-row;
 
     VerticalLayout {
         spacing: 16px;
@@ -17,13 +51,13 @@ export component HistoryTab inherits Rectangle {
             title: "ACHIEVEMENTS";
         }
 
-        if RewardsAdapter.achievements.length > 0: Rectangle {
+        if total-achievements > 0: Rectangle {
             background: Theme.surface;
             border-radius: 12px;
             border-width: 1px;
             border-color: Theme.border;
-            // Dynamic height based on grid rows (4 cards per row)
-            height: (Math.ceil(RewardsAdapter.achievements.length / 4) * 156px) + 32px;
+            vertical-stretch: 1;
+            min-height: 300px;
 
             VerticalLayout {
                 padding: 16px;
@@ -61,14 +95,14 @@ export component HistoryTab inherits Rectangle {
                             alignment: center;
 
                             Text {
-                                text: RewardsAdapter.achievements.length;
+                                text: total-achievements;
                                 color: Theme.text-primary;
                                 font-size: 18px;
                                 font-weight: 600;
                             }
 
                             Text {
-                                text: "TOTAL";
+                                text: "TOTAL ACHIEVEMENTS";
                                 color: Theme.text-muted;
                                 font-size: 9px;
                                 font-weight: 600;
@@ -84,62 +118,68 @@ export component HistoryTab inherits Rectangle {
                     background: Theme.border;
                 }
 
-                // Achievement grid (wrapped flow layout simulation)
+                // Achievement grid - scrollable with proper row wrapping
                 Flickable {
                     vertical-stretch: 1;
+                    min-height: 160px;
 
                     VerticalLayout {
                         spacing: 12px;
+                        alignment: start;
 
-                        // Row 1
-                        HorizontalLayout {
-                            spacing: 12px;
-                            alignment: start;
-
-                            for achievement[idx] in RewardsAdapter.achievements: AchievementCard {
-                                achievement: achievement;
-                                visible: idx < 4;
-                            }
+                        // Row 1 (indices 0-3)
+                        if num-rows >= 1: AchievementRow {
+                            start-index: 0;
+                            total-count: total-achievements;
                         }
 
-                        // Row 2
-                        if RewardsAdapter.achievements.length > 4: HorizontalLayout {
-                            spacing: 12px;
-                            alignment: start;
-
-                            for achievement[idx] in RewardsAdapter.achievements: AchievementCard {
-                                achievement: achievement;
-                                visible: idx >= 4 && idx < 8;
-                            }
+                        // Row 2 (indices 4-7)
+                        if num-rows >= 2: AchievementRow {
+                            start-index: 4;
+                            total-count: total-achievements;
                         }
 
-                        // Row 3
-                        if RewardsAdapter.achievements.length > 8: HorizontalLayout {
-                            spacing: 12px;
-                            alignment: start;
-
-                            for achievement[idx] in RewardsAdapter.achievements: AchievementCard {
-                                achievement: achievement;
-                                visible: idx >= 8 && idx < 12;
-                            }
+                        // Row 3 (indices 8-11)
+                        if num-rows >= 3: AchievementRow {
+                            start-index: 8;
+                            total-count: total-achievements;
                         }
 
-                        // Row 4
-                        if RewardsAdapter.achievements.length > 12: HorizontalLayout {
-                            spacing: 12px;
-                            alignment: start;
+                        // Row 4 (indices 12-15)
+                        if num-rows >= 4: AchievementRow {
+                            start-index: 12;
+                            total-count: total-achievements;
+                        }
 
-                            for achievement[idx] in RewardsAdapter.achievements: AchievementCard {
-                                achievement: achievement;
-                                visible: idx >= 12 && idx < 16;
-                            }
+                        // Row 5 (indices 16-19)
+                        if num-rows >= 5: AchievementRow {
+                            start-index: 16;
+                            total-count: total-achievements;
+                        }
+
+                        // Row 6 (indices 20-23)
+                        if num-rows >= 6: AchievementRow {
+                            start-index: 20;
+                            total-count: total-achievements;
+                        }
+
+                        // Row 7 (indices 24-27)
+                        if num-rows >= 7: AchievementRow {
+                            start-index: 24;
+                            total-count: total-achievements;
+                        }
+
+                        // Row 8 (indices 28-31)
+                        if num-rows >= 8: AchievementRow {
+                            start-index: 28;
+                            total-count: total-achievements;
                         }
                     }
                 }
             }
         }
 
-        if RewardsAdapter.achievements.length == 0: EmptyState {
+        if total-achievements == 0: EmptyState {
             icon: @image-url("../../assets/icons/trophy.svg");
             title: "No achievements yet";
             description: "Complete streak milestones and goals to earn trophies";

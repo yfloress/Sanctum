@@ -13,6 +13,7 @@ export component AchievementCard inherits Rectangle {
     border-radius: 12px;
     border-width: 1px;
     border-color: touch.has-hover ? Theme.border-light : Theme.border;
+    clip: true;
 
     animate border-color { duration: 150ms; }
 
@@ -28,58 +29,65 @@ export component AchievementCard inherits Rectangle {
     }
 
     VerticalLayout {
-        padding: 16px;
-        spacing: 8px;
+        padding: 12px;
+        spacing: 6px;
         alignment: center;
 
-        // Icon container
+        // Icon container - fixed size circle with icon
         Rectangle {
-            width: 48px;
-            height: 48px;
-            border-radius: 24px;
-            background: achievement.achievement-type == "streak" ? Theme.warning : Theme.success;
-            opacity: 0.15;
+            width: 40px;
+            height: 40px;
             x: (parent.width - self.width) / 2;
 
             Rectangle {
-                width: parent.width;
-                height: parent.height;
-                border-radius: 24px;
+                width: 40px;
+                height: 40px;
+                border-radius: 20px;
+                background: achievement.achievement-type == "streak" ? Theme.warning : Theme.success;
+                opacity: 0.15;
+            }
 
-                Image {
-                    source: achievement.icon;
-                    width: 24px;
-                    height: 24px;
-                    colorize: achievement.achievement-type == "streak" ? Theme.warning : Theme.success;
-                    x: (parent.width - self.width) / 2;
-                    y: (parent.height - self.height) / 2;
-                }
+            // Use fallback icon (trophy for streak, target for goal) when no icon loaded
+            Image {
+                source: achievement.achievement-type == "streak" ? @image-url("../../assets/icons/trophy.svg") : @image-url("../../assets/icons/target.svg");
+                width: 20px;
+                height: 20px;
+                colorize: achievement.achievement-type == "streak" ? Theme.warning : Theme.success;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
             }
         }
 
-        // Title
+        // Title - single line with ellipsis
         Text {
             text: achievement.title;
             color: Theme.text-primary;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 600;
             horizontal-alignment: center;
             overflow: elide;
+            max-width: 116px;
         }
 
-        // Description
-        Text {
-            text: achievement.description;
-            color: Theme.text-muted;
-            font-size: 9px;
-            horizontal-alignment: center;
-            overflow: elide;
-            wrap: word-wrap;
-        }
-
-        // Date achieved
+        // Description - max 2 lines
         Rectangle {
-            height: 18px;
+            height: 24px;
+            clip: true;
+
+            Text {
+                width: 116px;
+                text: achievement.description;
+                color: Theme.text-muted;
+                font-size: 9px;
+                horizontal-alignment: center;
+                wrap: word-wrap;
+                overflow: elide;
+            }
+        }
+
+        // Date achieved - compact format
+        Rectangle {
+            height: 16px;
 
             HorizontalLayout {
                 spacing: 4px;

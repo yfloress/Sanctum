@@ -1,6 +1,3 @@
-// ==================== Add Reward Modal ====================
-// Modal for creating streak rewards linked to habits
-
 import {
     HabitAdapter,
     RewardsAdapter,
@@ -11,21 +8,16 @@ import { Theme } from "../theme.slint";
 import { FormField, NumberField } from "../components/forms/form_fields.slint";
 import { HabitDropdown } from "../components/forms/habit_dropdown.slint";
 
-// ==================== TypeToggle ====================
 component TypeToggle inherits Rectangle {
     in-out property <bool> is-consecutive: true;
-
     height: 44px;
     background: Theme.surface;
     border-radius: 10px;
     border-width: 1px;
     border-color: Theme.border;
-
     HorizontalLayout {
         padding: 4px;
         spacing: 4px;
-
-        // Consecutive option
         Rectangle {
             horizontal-stretch: 1;
             height: 36px;
@@ -33,13 +25,11 @@ component TypeToggle inherits Rectangle {
             background: is-consecutive ? Theme.surface-hover : transparent;
             border-width: is-consecutive ? 1px : 0px;
             border-color: Theme.border-light;
-
             HorizontalLayout {
                 padding-left: 12px;
                 padding-right: 12px;
                 spacing: 8px;
                 alignment: center;
-
                 Image {
                     source: @image-url("../assets/icons/flame.svg");
                     width: 14px;
@@ -66,7 +56,6 @@ component TypeToggle inherits Rectangle {
             }
         }
 
-        // Accumulative option
         Rectangle {
             horizontal-stretch: 1;
             height: 36px;
@@ -74,13 +63,11 @@ component TypeToggle inherits Rectangle {
             background: !is-consecutive ? Theme.surface-hover : transparent;
             border-width: !is-consecutive ? 1px : 0px;
             border-color: Theme.border-light;
-
             HorizontalLayout {
                 padding-left: 12px;
                 padding-right: 12px;
                 spacing: 8px;
                 alignment: center;
-
                 Image {
                     source: @image-url("../assets/icons/target.svg");
                     width: 14px;
@@ -109,47 +96,43 @@ component TypeToggle inherits Rectangle {
     }
 }
 
-
-
-// ==================== MilestoneRow ====================
 component MilestoneRow inherits Rectangle {
     in-out property <int> days: 7;
     in-out property <string> reward: "";
     in property <bool> can-delete: true;
     callback delete();
-
+    property <string> days-text: days;
     height: 48px;
     background: Theme.surface;
     border-radius: 8px;
     border-width: 1px;
     border-color: Theme.border;
-
     HorizontalLayout {
         padding-left: 12px;
         padding-right: 8px;
         spacing: 12px;
-
         Rectangle {
             width: 70px;
             height: 32px;
             background: Theme.surface-hover;
             border-radius: 6px;
             y: (parent.height - self.height) / 2;
-
             HorizontalLayout {
                 padding-left: 8px;
                 padding-right: 8px;
                 spacing: 4px;
-
-                TextInput {
+                days-input := TextInput {
                     horizontal-stretch: 1;
-                    text: days;
+                    text: root.days-text;
                     color: Theme.text-primary;
                     font-size: 12px;
                     font-weight: 500;
                     horizontal-alignment: center;
                     vertical-alignment: center;
                     input-type: number;
+                    edited => {
+                        root.days = max(1, round(self.text.to-float()));
+                    }
                 }
 
                 Text {
@@ -174,11 +157,9 @@ component MilestoneRow inherits Rectangle {
             background: Theme.surface-hover;
             border-radius: 6px;
             y: (parent.height - self.height) / 2;
-
             HorizontalLayout {
                 padding-left: 12px;
                 padding-right: 12px;
-
                 TextInput {
                     text <=> root.reward;
                     color: Theme.text-primary;
@@ -202,7 +183,6 @@ component MilestoneRow inherits Rectangle {
             border-radius: 6px;
             background: del-touch.has-hover ? Theme.delete-bg-hover : transparent;
             y: (parent.height - self.height) / 2;
-
             Image {
                 source: @image-url("../assets/icons/trash.svg");
                 width: 14px;
@@ -222,7 +202,6 @@ component MilestoneRow inherits Rectangle {
     }
 }
 
-// ==================== AddRewardModal ====================
 export component AddRewardModal inherits Rectangle {
     in property <bool> editing: false;
     callback close();
@@ -238,7 +217,20 @@ export component AddRewardModal inherits Rectangle {
     property <string> m2-reward: "";
     property <int> m3-days: 50;
     property <string> m3-reward: "";
-
+    function load-edit-data() {
+        // habit index is set via RewardsAdapter.edit-reward-habit-index
+        selected-habit-index = RewardsAdapter.edit-reward-habit-index;
+        is-consecutive = RewardsAdapter.edit-reward-is-consecutive;
+        target-days = RewardsAdapter.edit-reward-target-days;
+        target-total = RewardsAdapter.edit-reward-target-total;
+        milestone-count = max(1, RewardsAdapter.edit-reward-milestone-count);
+        m1-days = RewardsAdapter.edit-reward-m1-days;
+        m1-reward = RewardsAdapter.edit-reward-m1-text;
+        m2-days = RewardsAdapter.edit-reward-m2-days;
+        m2-reward = RewardsAdapter.edit-reward-m2-text;
+        m3-days = RewardsAdapter.edit-reward-m3-days;
+        m3-reward = RewardsAdapter.edit-reward-m3-text;
+    }
     function reset() {
         selected-habit-index = -1;
         is-consecutive = true;
@@ -252,12 +244,10 @@ export component AddRewardModal inherits Rectangle {
         m3-days = 50;
         m3-reward = "";
     }
-
     function close-modal() {
         reset();
         root.close();
     }
-
     function submit() {
         if (selected-habit-index < 0) {
             NotificationAdapter.show("Please select a habit", true);
@@ -272,6 +262,14 @@ export component AddRewardModal inherits Rectangle {
         if (selected-habit-index >= HabitAdapter.habits.length) {
             NotificationAdapter.show("Invalid habit selection", true);
             return;
+        }
+        if (editing) {
+            // Update existing reward
+            let reward-id = RewardsAdapter.edit-reward-id;
+
+            // Delete old reward and create new one with updated values
+            // (simpler than implementing full update logic)
+            RewardsAdapter.delete-streak-reward(reward-id);
         }
 
         // Create the streak reward
@@ -315,9 +313,11 @@ export component AddRewardModal inherits Rectangle {
         }
         close-modal();
     }
-
     init => {
         key-scope.focus();
+        if editing {
+            load-edit-data();
+        }
     }
 
     width: 100%;
