@@ -653,6 +653,7 @@ pub struct Goal {
     pub is_completed: bool,
     pub completed_at: Option<String>, // ISO-8601 datetime
     pub created_at: String,           // ISO-8601 datetime
+    pub archived: bool,               // Hide from active goals list
 }
 
 impl Goal {
@@ -672,6 +673,7 @@ impl Goal {
             is_completed: false,
             completed_at: None,
             created_at: chrono::Local::now().to_rfc3339(),
+            archived: false,
         }
     }
 
@@ -682,6 +684,10 @@ impl Goal {
     pub fn complete(&mut self) {
         self.is_completed = true;
         self.completed_at = Some(chrono::Local::now().to_rfc3339());
+    }
+
+    pub fn archive(&mut self) {
+        self.archived = true;
     }
 }
 
@@ -1054,5 +1060,342 @@ mod tests {
             None,
         );
         assert_eq!(tx.get_type(), Some(FinancialTransactionType::Expense));
+    }
+
+    // ==================== Rewards System Tests ====================
+
+    #[test]
+    fn test_streak_reward_new_consecutive() {
+        let reward = StreakReward::new(
+            "reward1".to_string(),
+            "habit1".to_string(),
+            true,
+            None,
+            None,
+        );
+        assert_eq!(reward.id, "reward1");
+        assert_eq!(reward.habit_id, "habit1");
+        assert!(reward.is_consecutive);
+        assert!(reward.target_days.is_none());
+        assert!(reward.target_total.is_none());
+        assert!(!reward.created_at.is_empty());
+    }
+
+    #[test]
+    fn test_streak_reward_new_accumulative() {
+        let reward = StreakReward::new(
+            "reward2".to_string(),
+            "habit2".to_string(),
+            false,
+            Some(5),
+            Some(7),
+        );
+        assert!(!reward.is_consecutive);
+        assert_eq!(reward.target_days, Some(5));
+        assert_eq!(reward.target_total, Some(7));
+    }
+
+    #[test]
+    fn test_streak_reward_validate_consecutive() {
+        let reward = StreakReward::new("r1".to_string(), "h1".to_string(), true, None, None);
+        assert!(reward.validate());
+    }
+
+    #[test]
+    fn test_streak_reward_validate_accumulative_valid() {
+        let reward = StreakReward::new("r2".to_string(), "h2".to_string(), false, Some(5), Some(7));
+        assert!(reward.validate());
+    }
+
+    #[test]
+    fn test_streak_reward_validate_accumulative_missing_fields() {
+        let reward = StreakReward::new("r3".to_string(), "h3".to_string(), false, None, None);
+        assert!(!reward.validate());
+    }
+
+    #[test]
+    fn test_streak_reward_validate_empty_habit_id() {
+        let reward = StreakReward::new("r4".to_string(), "".to_string(), true, None, None);
+        assert!(!reward.validate());
+    }
+
+    #[test]
+    fn test_milestone_new() {
+        let milestone = Milestone::new(
+            "m1".to_string(),
+            "r1".to_string(),
+            7,
+            "One week reward!".to_string(),
+        );
+        assert_eq!(milestone.id, "m1");
+        assert_eq!(milestone.reward_id, "r1");
+        assert_eq!(milestone.target_days, 7);
+        assert_eq!(milestone.reward_text, "One week reward!");
+        assert!(!milestone.unlocked);
+        assert!(milestone.unlocked_at.is_none());
+    }
+
+    #[test]
+    fn test_milestone_unlock() {
+        let mut milestone = Milestone::new(
+            "m2".to_string(),
+            "r2".to_string(),
+            30,
+            "One month reward!".to_string(),
+        );
+        assert!(!milestone.unlocked);
+
+        milestone.unlock();
+
+        assert!(milestone.unlocked);
+        assert!(milestone.unlocked_at.is_some());
+    }
+
+    #[test]
+    fn test_milestone_validate_valid() {
+        let milestone = Milestone::new(
+            "m3".to_string(),
+            "r3".to_string(),
+            14,
+            "Two weeks!".to_string(),
+        );
+        assert!(milestone.validate());
+    }
+
+    #[test]
+    fn test_milestone_validate_zero_days() {
+        let milestone =
+            Milestone::new("m4".to_string(), "r4".to_string(), 0, "Invalid".to_string());
+        assert!(!milestone.validate());
+    }
+
+    #[test]
+    fn test_milestone_validate_empty_reward_text() {
+        let milestone = Milestone::new("m5".to_string(), "r5".to_string(), 7, "   ".to_string());
+        assert!(!milestone.validate());
+    }
+
+    #[test]
+    fn test_milestone_validate_empty_reward_id() {
+        let milestone = Milestone::new("m6".to_string(), "".to_string(), 7, "Reward".to_string());
+        assert!(!milestone.validate());
+    }
+
+    #[test]
+    fn test_goal_new() {
+        let goal = Goal::new(
+            "g1".to_string(),
+            "Learn Rust".to_string(),
+            Some("Complete the Rust book".to_string()),
+            "Buy a new keyboard".to_string(),
+            Some("2025-12-31".to_string()),
+        );
+        assert_eq!(goal.id, "g1");
+        assert_eq!(goal.name, "Learn Rust");
+        assert_eq!(goal.description, Some("Complete the Rust book".to_string()));
+        assert_eq!(goal.reward_text, "Buy a new keyboard");
+        assert_eq!(goal.deadline, Some("2025-12-31".to_string()));
+        assert!(!goal.is_completed);
+        assert!(goal.completed_at.is_none());
+    }
+
+    #[test]
+    fn test_goal_complete() {
+        let mut goal = Goal::new(
+            "g2".to_string(),
+            "Exercise".to_string(),
+            None,
+            "Ice cream".to_string(),
+            None,
+        );
+        assert!(!goal.is_completed);
+
+        goal.complete();
+
+        assert!(goal.is_completed);
+        assert!(goal.completed_at.is_some());
+    }
+
+    #[test]
+    fn test_goal_validate_valid() {
+        let goal = Goal::new(
+            "g3".to_string(),
+            "Read books".to_string(),
+            None,
+            "Movie night".to_string(),
+            None,
+        );
+        assert!(goal.validate());
+    }
+
+    #[test]
+    fn test_goal_validate_empty_name() {
+        let goal = Goal::new(
+            "g4".to_string(),
+            "   ".to_string(),
+            None,
+            "Reward".to_string(),
+            None,
+        );
+        assert!(!goal.validate());
+    }
+
+    #[test]
+    fn test_goal_validate_empty_reward_text() {
+        let goal = Goal::new(
+            "g5".to_string(),
+            "Valid name".to_string(),
+            None,
+            "".to_string(),
+            None,
+        );
+        assert!(!goal.validate());
+    }
+
+    #[test]
+    fn test_checkpoint_new() {
+        let checkpoint = Checkpoint::new(
+            "c1".to_string(),
+            "g1".to_string(),
+            "Read chapter 1".to_string(),
+            0,
+        );
+        assert_eq!(checkpoint.id, "c1");
+        assert_eq!(checkpoint.goal_id, "g1");
+        assert_eq!(checkpoint.description, "Read chapter 1");
+        assert!(!checkpoint.completed);
+        assert!(checkpoint.completed_at.is_none());
+        assert_eq!(checkpoint.sort_order, 0);
+    }
+
+    #[test]
+    fn test_checkpoint_toggle() {
+        let mut checkpoint =
+            Checkpoint::new("c2".to_string(), "g2".to_string(), "Step 1".to_string(), 0);
+        assert!(!checkpoint.completed);
+
+        // Toggle on
+        let result = checkpoint.toggle();
+        assert!(result);
+        assert!(checkpoint.completed);
+        assert!(checkpoint.completed_at.is_some());
+
+        // Toggle off
+        let result = checkpoint.toggle();
+        assert!(!result);
+        assert!(!checkpoint.completed);
+        assert!(checkpoint.completed_at.is_none());
+    }
+
+    #[test]
+    fn test_checkpoint_validate_valid() {
+        let checkpoint = Checkpoint::new(
+            "c3".to_string(),
+            "g3".to_string(),
+            "Do something".to_string(),
+            1,
+        );
+        assert!(checkpoint.validate());
+    }
+
+    #[test]
+    fn test_checkpoint_validate_empty_goal_id() {
+        let checkpoint = Checkpoint::new(
+            "c4".to_string(),
+            "".to_string(),
+            "Description".to_string(),
+            0,
+        );
+        assert!(!checkpoint.validate());
+    }
+
+    #[test]
+    fn test_checkpoint_validate_empty_description() {
+        let checkpoint = Checkpoint::new("c5".to_string(), "g5".to_string(), "   ".to_string(), 0);
+        assert!(!checkpoint.validate());
+    }
+
+    #[test]
+    fn test_achievement_new() {
+        let achievement = Achievement::new(
+            "a1".to_string(),
+            "7 Day Streak".to_string(),
+            "Completed a week of exercise!".to_string(),
+            "trophy.svg".to_string(),
+            "streak".to_string(),
+            "r1".to_string(),
+        );
+        assert_eq!(achievement.id, "a1");
+        assert_eq!(achievement.title, "7 Day Streak");
+        assert_eq!(achievement.description, "Completed a week of exercise!");
+        assert_eq!(achievement.icon_path, "trophy.svg");
+        assert_eq!(achievement.achievement_type, "streak");
+        assert_eq!(achievement.source_id, "r1");
+        assert!(!achievement.achieved_at.is_empty());
+    }
+
+    #[test]
+    fn test_achievement_validate_streak_type() {
+        let achievement = Achievement::new(
+            "a2".to_string(),
+            "Title".to_string(),
+            "Desc".to_string(),
+            "icon.svg".to_string(),
+            "streak".to_string(),
+            "source1".to_string(),
+        );
+        assert!(achievement.validate());
+    }
+
+    #[test]
+    fn test_achievement_validate_goal_type() {
+        let achievement = Achievement::new(
+            "a3".to_string(),
+            "Title".to_string(),
+            "Desc".to_string(),
+            "icon.svg".to_string(),
+            "goal".to_string(),
+            "source2".to_string(),
+        );
+        assert!(achievement.validate());
+    }
+
+    #[test]
+    fn test_achievement_validate_invalid_type() {
+        let achievement = Achievement::new(
+            "a4".to_string(),
+            "Title".to_string(),
+            "Desc".to_string(),
+            "icon.svg".to_string(),
+            "invalid".to_string(),
+            "source3".to_string(),
+        );
+        assert!(!achievement.validate());
+    }
+
+    #[test]
+    fn test_achievement_validate_empty_title() {
+        let achievement = Achievement::new(
+            "a5".to_string(),
+            "   ".to_string(),
+            "Desc".to_string(),
+            "icon.svg".to_string(),
+            "streak".to_string(),
+            "source4".to_string(),
+        );
+        assert!(!achievement.validate());
+    }
+
+    #[test]
+    fn test_achievement_validate_empty_source_id() {
+        let achievement = Achievement::new(
+            "a6".to_string(),
+            "Title".to_string(),
+            "Desc".to_string(),
+            "icon.svg".to_string(),
+            "goal".to_string(),
+            "".to_string(),
+        );
+        assert!(!achievement.validate());
     }
 }

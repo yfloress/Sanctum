@@ -102,6 +102,28 @@ impl Database {
         Ok(())
     }
 
+    pub fn update_streak_reward(&self, reward: &StreakReward) -> Result<(), DbError> {
+        self.conn.execute(
+            "UPDATE streak_rewards SET habit_id = ?1, is_consecutive = ?2, target_days = ?3, target_total = ?4 WHERE id = ?5",
+            params![
+                &reward.habit_id,
+                reward.is_consecutive as i32,
+                &reward.target_days,
+                &reward.target_total,
+                &reward.id,
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn delete_milestones_by_reward(&self, reward_id: &str) -> Result<(), DbError> {
+        self.conn.execute(
+            "DELETE FROM milestones WHERE reward_id = ?1",
+            params![reward_id],
+        )?;
+        Ok(())
+    }
+
     // ==================== Milestones ====================
 
     pub fn create_milestone(&self, milestone: &Milestone) -> Result<(), DbError> {
@@ -158,8 +180,8 @@ impl Database {
 
     pub fn create_goal(&self, goal: &Goal) -> Result<(), DbError> {
         self.conn.execute(
-            "INSERT INTO goals (id, name, description, reward_text, deadline, is_completed, completed_at, created_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            "INSERT INTO goals (id, name, description, reward_text, deadline, is_completed, completed_at, created_at, archived)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
             params![
                 &goal.id,
                 &goal.name,
@@ -169,6 +191,7 @@ impl Database {
                 goal.is_completed as i32,
                 &goal.completed_at,
                 &goal.created_at,
+                goal.archived as i32,
             ],
         )?;
         Ok(())
@@ -176,8 +199,8 @@ impl Database {
 
     pub fn get_goals(&self) -> Result<Vec<Goal>, DbError> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, name, description, reward_text, deadline, is_completed, completed_at, created_at
-             FROM goals ORDER BY is_completed ASC, created_at DESC",
+            "SELECT id, name, description, reward_text, deadline, is_completed, completed_at, created_at, archived
+             FROM goals WHERE archived = 0 ORDER BY is_completed ASC, created_at DESC",
         )?;
 
         let goals = stmt
@@ -191,6 +214,7 @@ impl Database {
                     is_completed: row.get::<_, i32>(5)? != 0,
                     completed_at: row.get(6)?,
                     created_at: row.get(7)?,
+                    archived: row.get::<_, i32>(8)? != 0,
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;
@@ -200,7 +224,7 @@ impl Database {
 
     pub fn get_goal(&self, id: &str) -> Result<Option<Goal>, DbError> {
         let result = self.conn.query_row(
-            "SELECT id, name, description, reward_text, deadline, is_completed, completed_at, created_at
+            "SELECT id, name, description, reward_text, deadline, is_completed, completed_at, created_at, archived
              FROM goals WHERE id = ?1",
             params![id],
             |row| {
@@ -213,6 +237,7 @@ impl Database {
                     is_completed: row.get::<_, i32>(5)? != 0,
                     completed_at: row.get(6)?,
                     created_at: row.get(7)?,
+                    archived: row.get::<_, i32>(8)? != 0,
                 })
             },
         );
@@ -227,7 +252,7 @@ impl Database {
     pub fn update_goal(&self, goal: &Goal) -> Result<(), DbError> {
         self.conn.execute(
             "UPDATE goals SET name = ?1, description = ?2, reward_text = ?3, deadline = ?4,
-             is_completed = ?5, completed_at = ?6 WHERE id = ?7",
+             is_completed = ?5, completed_at = ?6, archived = ?7 WHERE id = ?8",
             params![
                 &goal.name,
                 &goal.description,
@@ -235,9 +260,16 @@ impl Database {
                 &goal.deadline,
                 goal.is_completed as i32,
                 &goal.completed_at,
+                goal.archived as i32,
                 &goal.id,
             ],
         )?;
+        Ok(())
+    }
+
+    pub fn archive_goal(&self, id: &str) -> Result<(), DbError> {
+        self.conn
+            .execute("UPDATE goals SET archived = 1 WHERE id = ?1", params![id])?;
         Ok(())
     }
 

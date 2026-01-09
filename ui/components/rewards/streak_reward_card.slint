@@ -77,6 +77,8 @@ export component StreakRewardCard inherits Rectangle {
 
     // Calculate days remaining to next milestone (min 0)
     property <int> days-remaining: reward.next-milestone-days - reward.current-progress;
+    // Ready to claim when progress equals or exceeds next milestone target (and milestone exists)
+    property <bool> ready-to-claim: reward.next-milestone-days > 0 && reward.current-progress >= reward.next-milestone-days;
 
     height: 160px;
     background: Theme.surface;
@@ -193,17 +195,40 @@ export component StreakRewardCard inherits Rectangle {
             }
 
             // Milestone markers positioned along the bar
+            // Guard against division by zero: use max(1, denominator) to ensure safe division
             for milestone[idx] in reward.milestones: MilestoneMarker {
                 target-days: milestone.target-days;
                 reward-text: milestone.reward-text;
                 unlocked: milestone.unlocked;
                 track-width: parent.width;
-                position-percent: reward.is-consecutive ? (milestone.target-days / reward.milestones[reward.milestones.length - 1].target-days) : (milestone.target-days / reward.target-total);
+                position-percent: reward.milestones.length > 0 ? (reward.is-consecutive ? (milestone.target-days / max(1, reward.milestones[reward.milestones.length - 1].target-days)) : (milestone.target-days / max(1, reward.target-total))) : 0.0;
             }
         }
 
-        // Next reward info - only show if there's a next milestone (next-milestone-days > 0 means there's one)
-        if reward.next-milestone-days > 0 && reward.next-milestone-reward != "": HorizontalLayout {
+        // Ready to claim state - show when progress reached the milestone but not yet unlocked
+        if root.ready-to-claim && reward.next-milestone-reward != "": HorizontalLayout {
+            spacing: 8px;
+            alignment: start;
+
+            Image {
+                source: @image-url("../../assets/icons/trophy.svg");
+                width: 14px;
+                height: 14px;
+                colorize: Theme.success;
+                y: (parent.height - self.height) / 2;
+            }
+
+            Text {
+                text: "Ready to claim: " + reward.next-milestone-reward;
+                color: Theme.success;
+                font-size: 11px;
+                font-weight: 600;
+                vertical-alignment: center;
+            }
+        }
+
+        // Next reward info - show when there's a next milestone and we haven't reached it yet
+        if !root.ready-to-claim && reward.next-milestone-days > 0 && reward.next-milestone-reward != "": HorizontalLayout {
             spacing: 8px;
             alignment: start;
 
@@ -223,8 +248,8 @@ export component StreakRewardCard inherits Rectangle {
             }
 
             Text {
-                text: root.days-remaining <= 0 ? "Ready to claim!" : "in " + root.days-remaining + " days";
-                color: root.days-remaining <= 0 ? Theme.success : Theme.text-secondary;
+                text: root.days-remaining + " days to go";
+                color: Theme.text-secondary;
                 font-size: 11px;
                 font-weight: 500;
                 vertical-alignment: center;

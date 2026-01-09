@@ -34,6 +34,14 @@ impl RewardsRepository {
         db.delete_streak_reward(id)
     }
 
+    pub fn update_streak_reward(db: &Database, reward: &StreakReward) -> Result<(), DbError> {
+        db.update_streak_reward(reward)
+    }
+
+    pub fn delete_milestones_by_reward(db: &Database, reward_id: &str) -> Result<(), DbError> {
+        db.delete_milestones_by_reward(reward_id)
+    }
+
     // ==================== Milestones ====================
 
     pub fn create_milestone(db: &Database, milestone: &Milestone) -> Result<(), DbError> {
@@ -68,6 +76,10 @@ impl RewardsRepository {
 
     pub fn delete_goal(db: &Database, id: &str) -> Result<(), DbError> {
         db.delete_goal(id)
+    }
+
+    pub fn archive_goal(db: &Database, id: &str) -> Result<(), DbError> {
+        db.archive_goal(id)
     }
 
     // ==================== Checkpoints ====================

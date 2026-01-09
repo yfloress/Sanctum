@@ -1,5 +1,6 @@
 // History Tab Component
 // Shows achievements/trophies gallery of completed rewards and goals
+// Supports up to 80 achievements (20 rows × 4 cards)
 
 import { Theme } from "../../theme.slint";
 import { RewardsAdapter } from "../../globals.slint";
@@ -119,6 +120,7 @@ export component HistoryTab inherits Rectangle {
                 }
 
                 // Achievement grid - scrollable with proper row wrapping
+                // Supports up to 80 achievements (20 rows)
                 Flickable {
                     vertical-stretch: 1;
                     min-height: 160px;
@@ -172,6 +174,78 @@ export component HistoryTab inherits Rectangle {
                         // Row 8 (indices 28-31)
                         if num-rows >= 8: AchievementRow {
                             start-index: 28;
+                            total-count: total-achievements;
+                        }
+
+                        // Row 9 (indices 32-35)
+                        if num-rows >= 9: AchievementRow {
+                            start-index: 32;
+                            total-count: total-achievements;
+                        }
+
+                        // Row 10 (indices 36-39)
+                        if num-rows >= 10: AchievementRow {
+                            start-index: 36;
+                            total-count: total-achievements;
+                        }
+
+                        // Row 11 (indices 40-43)
+                        if num-rows >= 11: AchievementRow {
+                            start-index: 40;
+                            total-count: total-achievements;
+                        }
+
+                        // Row 12 (indices 44-47)
+                        if num-rows >= 12: AchievementRow {
+                            start-index: 44;
+                            total-count: total-achievements;
+                        }
+
+                        // Row 13 (indices 48-51)
+                        if num-rows >= 13: AchievementRow {
+                            start-index: 48;
+                            total-count: total-achievements;
+                        }
+
+                        // Row 14 (indices 52-55)
+                        if num-rows >= 14: AchievementRow {
+                            start-index: 52;
+                            total-count: total-achievements;
+                        }
+
+                        // Row 15 (indices 56-59)
+                        if num-rows >= 15: AchievementRow {
+                            start-index: 56;
+                            total-count: total-achievements;
+                        }
+
+                        // Row 16 (indices 60-63)
+                        if num-rows >= 16: AchievementRow {
+                            start-index: 60;
+                            total-count: total-achievements;
+                        }
+
+                        // Row 17 (indices 64-67)
+                        if num-rows >= 17: AchievementRow {
+                            start-index: 64;
+                            total-count: total-achievements;
+                        }
+
+                        // Row 18 (indices 68-71)
+                        if num-rows >= 18: AchievementRow {
+                            start-index: 68;
+                            total-count: total-achievements;
+                        }
+
+                        // Row 19 (indices 72-75)
+                        if num-rows >= 19: AchievementRow {
+                            start-index: 72;
+                            total-count: total-achievements;
+                        }
+
+                        // Row 20 (indices 76-79)
+                        if num-rows >= 20: AchievementRow {
+                            start-index: 76;
                             total-count: total-achievements;
                         }
                     }

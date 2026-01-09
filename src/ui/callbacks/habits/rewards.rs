@@ -187,6 +187,82 @@ fn setup_streak_reward_callbacks<N>(
         );
     }
 
+    // on_update_streak_reward
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = notify.clone();
+        ui.global::<RewardsAdapter>().on_update_streak_reward(
+            move |id: SharedString,
+                  habit_id: SharedString,
+                  is_consecutive: bool,
+                  target_days: i32,
+                  target_total: i32|
+                  -> SharedString {
+                // Get milestone data from the adapter properties
+                let ui_weak_inner = ui_weak.clone();
+                let milestones = if let Some(ui) = ui_weak_inner.upgrade() {
+                    let adapter = ui.global::<RewardsAdapter>();
+                    let count = adapter.get_edit_reward_milestone_count();
+                    let mut ms = Vec::new();
+
+                    if count >= 1 {
+                        let days = adapter.get_edit_reward_m1_days();
+                        let text = adapter.get_edit_reward_m1_text().to_string();
+                        if days > 0 && !text.trim().is_empty() {
+                            ms.push((days, text));
+                        }
+                    }
+                    if count >= 2 {
+                        let days = adapter.get_edit_reward_m2_days();
+                        let text = adapter.get_edit_reward_m2_text().to_string();
+                        if days > 0 && !text.trim().is_empty() {
+                            ms.push((days, text));
+                        }
+                    }
+                    if count >= 3 {
+                        let days = adapter.get_edit_reward_m3_days();
+                        let text = adapter.get_edit_reward_m3_text().to_string();
+                        if days > 0 && !text.trim().is_empty() {
+                            ms.push((days, text));
+                        }
+                    }
+                    ms
+                } else {
+                    Vec::new()
+                };
+
+                let result = controller.update_streak_reward_with_milestones(
+                    id.to_string(),
+                    habit_id.to_string(),
+                    is_consecutive,
+                    target_days,
+                    target_total,
+                    milestones,
+                );
+                match result {
+                    Ok(_) => {
+                        // After updating, check and unlock milestones based on current progress
+                        // This ensures milestones that should be unlocked get their status restored
+                        let _ = controller.check_and_unlock_milestones(id.to_string());
+
+                        schedule_rewards_refresh(
+                            &ui_weak,
+                            &controller,
+                            &notify,
+                            "Streak reward updated",
+                        );
+                        SharedString::from("")
+                    }
+                    Err(e) => {
+                        notify(format!("Failed to update reward: {}", e), true);
+                        SharedString::from(e.to_string())
+                    }
+                }
+            },
+        );
+    }
+
     // on_update_streak_progress
     {
         let controller = controller.clone();
@@ -285,6 +361,30 @@ fn setup_goal_callbacks<N>(
                         SharedString::from("")
                     }
                     Ok(None) => SharedString::from("Goal not found or already completed"),
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            });
+    }
+
+    // on_archive_goal
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = notify.clone();
+        ui.global::<RewardsAdapter>()
+            .on_archive_goal(move |id: SharedString| -> SharedString {
+                let result = controller.archive_goal(id.to_string());
+                match result {
+                    Ok(_) => {
+                        let ui_weak = ui_weak.clone();
+                        let controller = controller.clone();
+                        let notify = notify.clone();
+                        Timer::single_shot(Duration::from_millis(UI_UPDATE_DELAY_MS), move || {
+                            load_goals_data(&ui_weak, &controller, &notify);
+                            notify("Goal archived".into(), false);
+                        });
+                        SharedString::from("")
+                    }
                     Err(e) => SharedString::from(e.to_string()),
                 }
             });
@@ -583,7 +683,8 @@ where
     let achievement_data: Vec<AchievementData> = achievements
         .iter()
         .map(|a| {
-            let icon = load_achievement_icon(&a.icon_path);
+            // Icon is handled by Slint fallbacks in achievement_card.slint
+            // We pass a default image and the component uses trophy/target based on type
             // Format date as YYYY-MM-DD (take first 10 chars from RFC3339)
             let short_date = if a.achieved_at.len() >= 10 {
                 &a.achieved_at[..10]
@@ -594,7 +695,7 @@ where
                 id: SharedString::from(&a.id),
                 title: SharedString::from(&a.title),
                 description: SharedString::from(&a.description),
-                icon,
+                icon: slint::Image::default(),
                 achieved_at: SharedString::from(short_date),
                 achievement_type: SharedString::from(&a.achievement_type),
             }
@@ -630,9 +731,4 @@ fn calculate_progress_percent(progress: i32, target: i32) -> f32 {
     } else {
         100.0
     }
-}
-
-fn load_achievement_icon(icon_path: &str) -> slint::Image {
-    let path = format!("ui/assets/icons/{}", icon_path);
-    slint::Image::load_from_path(std::path::Path::new(&path)).unwrap_or_default()
 }

@@ -59,6 +59,7 @@ export component GoalCard inherits Rectangle {
     in property <GoalData> goal;
     callback edit(string);
     callback delete(string);
+    callback archive(string);  // Archive completed goal (moves to history)
     callback toggle-checkpoint(string, string);  // goal-id, checkpoint-id
 
     // Dynamic height based on checkpoints
@@ -224,7 +225,7 @@ export component GoalCard inherits Rectangle {
         }
     }
 
-    // Hover actions
+    // Hover actions for incomplete goals
     if header-touch.has-hover && !goal.is-completed: Rectangle {
         x: parent.width - 72px;
         y: 12px;
@@ -279,6 +280,48 @@ export component GoalCard inherits Rectangle {
                         root.delete(goal.id);
                     }
                 }
+            }
+        }
+    }
+
+    // Archive button for completed goals - moves to history
+    if goal.is-completed: Rectangle {
+        x: parent.width - 100px;
+        y: 12px;
+        width: 88px;
+        height: 28px;
+        border-radius: 6px;
+        background: archive-touch.has-hover ? Theme.success : Theme.surface-hover;
+        border-width: 1px;
+        border-color: Theme.success;
+
+        HorizontalLayout {
+            spacing: 6px;
+            alignment: center;
+            padding-left: 8px;
+            padding-right: 8px;
+
+            Image {
+                source: @image-url("../../assets/icons/check.svg");
+                width: 12px;
+                height: 12px;
+                colorize: archive-touch.has-hover ? Theme.surface : Theme.success;
+                y: (parent.height - self.height) / 2;
+            }
+
+            Text {
+                text: "Archive";
+                color: archive-touch.has-hover ? Theme.surface : Theme.success;
+                font-size: 11px;
+                font-weight: 600;
+                vertical-alignment: center;
+            }
+        }
+
+        archive-touch := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                root.archive(goal.id);
             }
         }
     }

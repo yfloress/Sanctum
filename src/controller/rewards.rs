@@ -51,8 +51,70 @@ impl AppController {
         &self,
         habit_id: &str,
     ) -> Result<Vec<StreakReward>, ControllerError> {
+        if validate_uuid(habit_id).is_err() {
+            return Err(ControllerError::Validation("Invalid habit UUID".into()));
+        }
         self.rewards_service
             .get_streak_rewards_by_habit(habit_id)
+            .map_err(ControllerError::Database)
+    }
+
+    /// Update a streak reward with its milestones atomically
+    pub fn update_streak_reward_with_milestones(
+        &self,
+        id: String,
+        habit_id: String,
+        is_consecutive: bool,
+        target_days: i32,
+        target_total: i32,
+        milestones: Vec<(i32, String)>, // (target_days, reward_text)
+    ) -> Result<(), ControllerError> {
+        if validate_uuid(&id).is_err() {
+            return Err(ControllerError::Validation("Invalid reward UUID".into()));
+        }
+        if validate_uuid(&habit_id).is_err() {
+            return Err(ControllerError::Validation("Invalid habit UUID".into()));
+        }
+
+        // Validate milestones
+        for (days, text) in &milestones {
+            if *days <= 0 {
+                return Err(ControllerError::Validation(
+                    "Milestone target days must be positive".into(),
+                ));
+            }
+            if text.trim().is_empty() {
+                return Err(ControllerError::Validation(
+                    "Milestone reward text cannot be empty".into(),
+                ));
+            }
+        }
+
+        let (days_opt, total_opt) = if is_consecutive {
+            (None, None)
+        } else {
+            if target_days <= 0 || target_total <= 0 {
+                return Err(ControllerError::Validation(
+                    "Target days and total must be positive".into(),
+                ));
+            }
+            if target_days > target_total {
+                return Err(ControllerError::Validation(
+                    "Target days cannot exceed total days".into(),
+                ));
+            }
+            (Some(target_days), Some(target_total))
+        };
+
+        self.rewards_service
+            .update_streak_reward_with_milestones(
+                id,
+                habit_id,
+                is_consecutive,
+                days_opt,
+                total_opt,
+                milestones,
+            )
             .map_err(ControllerError::Database)
     }
 
@@ -192,6 +254,15 @@ impl AppController {
         }
         self.rewards_service
             .complete_goal(id)
+            .map_err(ControllerError::Database)
+    }
+
+    pub fn archive_goal(&self, id: String) -> Result<(), ControllerError> {
+        if validate_uuid(&id).is_err() {
+            return Err(ControllerError::Validation("Invalid UUID".into()));
+        }
+        self.rewards_service
+            .archive_goal(id)
             .map_err(ControllerError::Database)
     }
 

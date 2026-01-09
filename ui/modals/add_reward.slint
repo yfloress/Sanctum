@@ -264,51 +264,66 @@ export component AddRewardModal inherits Rectangle {
             return;
         }
         if (editing) {
-            // Update existing reward
-            let reward-id = RewardsAdapter.edit-reward-id;
+            // Update existing reward - preserves unlocked milestone status
+            // Set milestone data in adapter properties for the callback to read
+            RewardsAdapter.edit-reward-milestone-count = milestone-count;
+            RewardsAdapter.edit-reward-m1-days = m1-days;
+            RewardsAdapter.edit-reward-m1-text = m1-reward;
+            RewardsAdapter.edit-reward-m2-days = m2-days;
+            RewardsAdapter.edit-reward-m2-text = m2-reward;
+            RewardsAdapter.edit-reward-m3-days = m3-days;
+            RewardsAdapter.edit-reward-m3-text = m3-reward;
 
-            // Delete old reward and create new one with updated values
-            // (simpler than implementing full update logic)
-            RewardsAdapter.delete-streak-reward(reward-id);
-        }
+            let result = RewardsAdapter.update-streak-reward(
+                RewardsAdapter.edit-reward-id,
+                HabitAdapter.habits[selected-habit-index].id,
+                is-consecutive,
+                is-consecutive ? 0 : target-days,
+                is-consecutive ? 0 : target-total);
 
-        // Create the streak reward
-        // For consecutive: target-days and target-total are 0 (milestones define targets)
-        // For accumulative: use target-days and target-total values
-        let result = RewardsAdapter.create-streak-reward(
-            HabitAdapter.habits[selected-habit-index].id,
-            is-consecutive,
-            is-consecutive ? 0 : target-days,
-            is-consecutive ? 0 : target-total);
-
-        // Empty result means error (backend shows notification)
-        // Non-empty result is the reward ID
-        if (result == "") {
-            return;
-        }
-
-        // Result is the reward ID - use it to add milestones
-        let reward-id = result;
-
-        // Add milestone 1
-        let m1-result = RewardsAdapter.add-milestone(reward-id, m1-days, m1-reward);
-        if (m1-result != "") {
-            NotificationAdapter.show(m1-result, true);
-        }
-
-        // Add milestone 2 if exists
-        if (milestone-count >= 2 && m2-reward != "") {
-            let m2-result = RewardsAdapter.add-milestone(reward-id, m2-days, m2-reward);
-            if (m2-result != "") {
-                NotificationAdapter.show(m2-result, true);
+            if (result != "") {
+                // Error occurred
+                return;
             }
-        }
+        } else {
+            // Create new streak reward
+            // For consecutive: target-days and target-total are 0 (milestones define targets)
+            // For accumulative: use target-days and target-total values
+            let result = RewardsAdapter.create-streak-reward(
+                HabitAdapter.habits[selected-habit-index].id,
+                is-consecutive,
+                is-consecutive ? 0 : target-days,
+                is-consecutive ? 0 : target-total);
 
-        // Add milestone 3 if exists
-        if (milestone-count >= 3 && m3-reward != "") {
-            let m3-result = RewardsAdapter.add-milestone(reward-id, m3-days, m3-reward);
-            if (m3-result != "") {
-                NotificationAdapter.show(m3-result, true);
+            // Empty result means error (backend shows notification)
+            // Non-empty result is the reward ID
+            if (result == "") {
+                return;
+            }
+
+            // Result is the reward ID - use it to add milestones
+            let reward-id = result;
+
+            // Add milestone 1
+            let m1-result = RewardsAdapter.add-milestone(reward-id, m1-days, m1-reward);
+            if (m1-result != "") {
+                NotificationAdapter.show(m1-result, true);
+            }
+
+            // Add milestone 2 if exists
+            if (milestone-count >= 2 && m2-reward != "") {
+                let m2-result = RewardsAdapter.add-milestone(reward-id, m2-days, m2-reward);
+                if (m2-result != "") {
+                    NotificationAdapter.show(m2-result, true);
+                }
+            }
+
+            // Add milestone 3 if exists
+            if (milestone-count >= 3 && m3-reward != "") {
+                let m3-result = RewardsAdapter.add-milestone(reward-id, m3-days, m3-reward);
+                if (m3-result != "") {
+                    NotificationAdapter.show(m3-result, true);
+                }
             }
         }
         close-modal();

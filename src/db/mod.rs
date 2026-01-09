@@ -77,6 +77,12 @@ pub enum DbError {
 
     #[error("Transaction not found")]
     TransactionNotFound,
+
+    #[error("Database mutex was poisoned")]
+    MutexPoisoned,
+
+    #[error("Database not open - vault is locked")]
+    DatabaseNotOpen,
 }
 
 // ==================== Security Constants ====================
@@ -768,7 +774,8 @@ impl Database {
                 deadline TEXT,
                 is_completed INTEGER NOT NULL DEFAULT 0,
                 completed_at TEXT,
-                created_at TEXT NOT NULL
+                created_at TEXT NOT NULL,
+                archived INTEGER NOT NULL DEFAULT 0
             )",
             [],
         )?;
@@ -777,6 +784,24 @@ impl Database {
             "CREATE INDEX IF NOT EXISTS idx_goals_completed ON goals(is_completed)",
             [],
         )?;
+
+        // Migration: Add archived column if it doesn't exist
+        let has_archived = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM pragma_table_info('goals') WHERE name='archived'",
+                [],
+                |row| row.get::<_, i32>(0),
+            )
+            .unwrap_or(0)
+            > 0;
+
+        if !has_archived {
+            self.conn.execute(
+                "ALTER TABLE goals ADD COLUMN archived INTEGER NOT NULL DEFAULT 0",
+                [],
+            )?;
+        }
 
         // Checkpoints Table
         self.conn.execute(

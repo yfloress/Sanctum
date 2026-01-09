@@ -21,11 +21,11 @@ impl RewardsService {
     where
         F: FnOnce(&Database) -> Result<T, DbError>,
     {
-        let guard = self.db.lock().map_err(|_| DbError::InvalidPassword)?;
+        let guard = self.db.lock().map_err(|_| DbError::MutexPoisoned)?;
         if let Some(db) = guard.as_ref() {
             f(db)
         } else {
-            Err(DbError::InvalidPassword)
+            Err(DbError::DatabaseNotOpen)
         }
     }
 
@@ -72,6 +72,78 @@ impl RewardsService {
 
     pub fn delete_streak_reward(&self, id: String) -> Result<(), DbError> {
         self.with_db(|db| RewardsRepository::delete_streak_reward(db, &id))
+    }
+
+    /// Update a streak reward and its milestones atomically
+    /// Preserves unlocked status for milestones with matching target_days
+    pub fn update_streak_reward_with_milestones(
+        &self,
+        id: String,
+        habit_id: String,
+        is_consecutive: bool,
+        target_days: Option<i32>,
+        target_total: Option<i32>,
+        milestones: Vec<(i32, String)>, // (target_days, reward_text)
+    ) -> Result<(), DbError> {
+        self.with_db(|db| {
+            // Get existing milestones to preserve unlocked status
+            let existing_milestones = RewardsRepository::get_milestones(db, &id)?;
+
+            // Update the reward
+            let reward = StreakReward::new(
+                id.clone(),
+                habit_id,
+                is_consecutive,
+                target_days,
+                target_total,
+            );
+            RewardsRepository::update_streak_reward(db, &reward)?;
+
+            // Delete existing milestones
+            RewardsRepository::delete_milestones_by_reward(db, &id)?;
+
+            // Get current progress to determine which milestones should be unlocked
+            let progress = RewardsRepository::get_streak_progress(
+                db,
+                &reward.habit_id,
+                reward.is_consecutive,
+                reward.target_total,
+            )?;
+
+            // Create new milestones, preserving unlocked status based on:
+            // 1. Existing milestone with same target_days that was unlocked, OR
+            // 2. Current progress already exceeds the milestone target
+            for (days, text) in milestones {
+                let milestone_id = Uuid::new_v4().to_string();
+                let mut milestone = Milestone::new(milestone_id, id.clone(), days, text);
+
+                // Check if there was an existing milestone with the same target_days that was unlocked
+                let was_previously_unlocked = existing_milestones
+                    .iter()
+                    .any(|m| m.target_days == days && m.unlocked);
+
+                // Also check if current progress already exceeds this milestone
+                let should_be_unlocked = was_previously_unlocked || progress >= days;
+
+                if should_be_unlocked {
+                    // Find the original unlocked_at if it exists
+                    if let Some(existing) = existing_milestones
+                        .iter()
+                        .find(|m| m.target_days == days && m.unlocked)
+                    {
+                        milestone.unlocked = true;
+                        milestone.unlocked_at = existing.unlocked_at.clone();
+                    } else {
+                        // Progress exceeds but wasn't previously unlocked - unlock now
+                        milestone.unlock();
+                    }
+                }
+
+                RewardsRepository::create_milestone(db, &milestone)?;
+            }
+
+            Ok(())
+        })
     }
 
     pub fn get_streak_progress(&self, reward: &StreakReward) -> Result<i32, DbError> {
@@ -168,6 +240,10 @@ impl RewardsService {
 
     pub fn delete_goal(&self, id: String) -> Result<(), DbError> {
         self.with_db(|db| RewardsRepository::delete_goal(db, &id))
+    }
+
+    pub fn archive_goal(&self, id: String) -> Result<(), DbError> {
+        self.with_db(|db| RewardsRepository::archive_goal(db, &id))
     }
 
     pub fn complete_goal(&self, id: String) -> Result<Option<String>, DbError> {
