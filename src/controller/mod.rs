@@ -6,11 +6,11 @@
 mod crypto;
 mod finance;
 mod habits;
+mod rewards;
 mod settings;
 
 use crate::db::{Database, DbError};
-use crate::security_log::{SecurityEvent, log_auth_failure, log_security_event};
-pub use crate::features::finance::{DashboardData, ExpenseSlice};
+use crate::features::crypto::{CryptoError, CryptoService};
 pub use crate::features::crypto::{
     SETTING_AUTO_FETCH, SETTING_CRYPTO_CUSTOM_COINS, SETTING_CRYPTO_FAVORITE_COINS,
     SETTING_CRYPTO_HIDDEN_COINS, SETTING_CRYPTO_LAST_COIN_ID, SETTING_CRYPTO_LAST_UPDATED,
@@ -18,20 +18,21 @@ pub use crate::features::crypto::{
     SETTING_DARK_MODE, SETTING_PREFERRED_CURRENCY, SETTING_PREFERRED_LANGUAGE,
     SETTING_SESSION_TIMEOUT, SETTING_TICKER_COINS,
 };
-use crate::services::charts::ChartsService;
-use crate::features::crypto::{CryptoError, CryptoService};
+pub use crate::features::finance::{DashboardData, ExpenseSlice};
 use crate::features::finance::{FinanceError, FinanceService};
-use crate::features::habits::HabitService;
+use crate::features::habits::{HabitService, RewardsService};
+use crate::security_log::{SecurityEvent, log_auth_failure, log_security_event};
+use crate::services::charts::ChartsService;
 use rusqlite::Connection;
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
+use slint::Image;
 use std::fs::{self, Permissions};
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Component, Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
-use slint::Image;
 
 // ==================== Error Types ====================
 
@@ -260,6 +261,7 @@ pub struct AppController {
     charts_service: ChartsService,
     crypto_service: CryptoService,
     pub habit_service: HabitService,
+    pub rewards_service: RewardsService,
     app_data_dir: PathBuf,
 }
 
@@ -269,8 +271,8 @@ impl AppController {
         let db = Arc::new(Mutex::new(None));
         let finance_service = FinanceService::new(db.clone());
         let crypto_service = CryptoService::new(db.clone());
-        // HabitService needs access to the same (potentially empty) db lock
         let habit_service = HabitService::new(db.clone());
+        let rewards_service = RewardsService::new(db.clone());
         let charts_service = ChartsService::new();
 
         Self {
@@ -279,6 +281,7 @@ impl AppController {
             charts_service,
             crypto_service,
             habit_service,
+            rewards_service,
             app_data_dir: data_dir,
         }
     }
@@ -352,8 +355,9 @@ impl AppController {
         if path.exists() {
             let data = fs::read_to_string(&path)
                 .map_err(|_| ControllerError::Config("Could not read configuration".to_string()))?;
-            let mut config: AppConfig = toml::from_str(&data)
-                .map_err(|_| ControllerError::Config("Could not parse configuration".to_string()))?;
+            let mut config: AppConfig = toml::from_str(&data).map_err(|_| {
+                ControllerError::Config("Could not parse configuration".to_string())
+            })?;
             if self.normalize_config(&mut config) {
                 let _ = self.save_config(&config);
             }
@@ -393,11 +397,12 @@ impl AppController {
     /// Persists the last used database path
     fn persist_last_db_path(&self, path: &Path) -> Result<(), ControllerError> {
         let mut config = self.load_config()?;
-        config.last_db_rel_path = self.normalize_config_path(&path.to_string_lossy())
-            .or_else(|| {
-                path.file_name()
-                    .map(|name| name.to_string_lossy().to_string())
-            });
+        config.last_db_rel_path =
+            self.normalize_config_path(&path.to_string_lossy())
+                .or_else(|| {
+                    path.file_name()
+                        .map(|name| name.to_string_lossy().to_string())
+                });
         self.save_config(&config)
     }
 
@@ -574,14 +579,14 @@ impl AppController {
         let secret = validate_password_basic(password)?;
 
         // Initialize vault
-        let mut db = Database::init(db_path.clone(), &secret)
-            .map_err(ControllerError::Database)?;
+        let mut db = Database::init(db_path.clone(), &secret).map_err(ControllerError::Database)?;
 
         // Apply configured session timeout (default 15 min)
-        let timeout = self.get_app_setting(SETTING_SESSION_TIMEOUT)
+        let timeout = self
+            .get_app_setting(SETTING_SESSION_TIMEOUT)
             .ok()
             .and_then(|s| s.parse::<i64>().ok())
-            .unwrap_or(900);  // Default to 15 minutes
+            .unwrap_or(900); // Default to 15 minutes
         db.set_session_timeout(timeout);
 
         // Store reference
@@ -636,10 +641,11 @@ impl AppController {
                 self.reset_persistent_rate_limit(&db_path);
 
                 // Apply configured session timeout (default 15 min)
-                let timeout = self.get_app_setting(SETTING_SESSION_TIMEOUT)
+                let timeout = self
+                    .get_app_setting(SETTING_SESSION_TIMEOUT)
                     .ok()
                     .and_then(|s| s.parse::<i64>().ok())
-                    .unwrap_or(900);  // Default to 15 minutes
+                    .unwrap_or(900); // Default to 15 minutes
                 db.set_session_timeout(timeout);
 
                 // Store reference
@@ -696,28 +702,20 @@ impl AppController {
 
     // ==================== Chart Rendering ====================
 
-    pub fn render_habit_radar_chart(
-        &self,
-        data: &[(String, String, f32)],
-    ) -> Option<Image> {
+    pub fn render_habit_radar_chart(&self, data: &[(String, String, f32)]) -> Option<Image> {
         self.charts_service.render_habit_radar_chart(data)
     }
 
-    pub fn render_weekday_efficiency_chart(
-        &self,
-        data: &[(String, f32, bool)],
-    ) -> Option<Image> {
+    pub fn render_weekday_efficiency_chart(&self, data: &[(String, f32, bool)]) -> Option<Image> {
         self.charts_service.render_weekday_efficiency_chart(data)
     }
 
     pub fn render_portfolio_distribution_chart(&self, data: &[(String, f64)]) -> Option<Image> {
-        self.charts_service.render_portfolio_distribution_chart(data)
+        self.charts_service
+            .render_portfolio_distribution_chart(data)
     }
 
-    pub fn render_portfolio_trend_chart(
-        &self,
-        data: &[(String, f64, f64)],
-    ) -> Option<Image> {
+    pub fn render_portfolio_trend_chart(&self, data: &[(String, f64, f64)]) -> Option<Image> {
         self.charts_service.render_portfolio_trend_chart(data)
     }
 

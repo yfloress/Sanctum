@@ -84,79 +84,89 @@ export component GoalCard inherits Rectangle {
         spacing: 12px;
 
         // Header row
-        HorizontalLayout {
-            spacing: 10px;
-            alignment: space-between;
+        header-area := Rectangle {
+            height: 40px;
+            background: transparent;
 
             HorizontalLayout {
                 spacing: 10px;
+                alignment: space-between;
 
-                // Goal icon
-                Rectangle {
-                    width: 32px;
-                    height: 32px;
-                    border-radius: 8px;
-                    background: goal.is-completed ? Theme.success : Theme.accent;
-                    opacity: goal.is-completed ? 1.0 : 0.15;
+                HorizontalLayout {
+                    spacing: 10px;
 
-                    Image {
-                        source: goal.is-completed ? @image-url("../../assets/icons/trophy.svg") : @image-url("../../assets/icons/target.svg");
-                        width: 16px;
-                        height: 16px;
-                        colorize: goal.is-completed ? Theme.surface : Theme.accent;
-                        x: (parent.width - self.width) / 2;
-                        y: (parent.height - self.height) / 2;
+                    // Goal icon
+                    Rectangle {
+                        width: 32px;
+                        height: 32px;
+                        border-radius: 8px;
+                        background: goal.is-completed ? Theme.success : Theme.accent;
+                        opacity: goal.is-completed ? 1.0 : 0.15;
+
+                        Image {
+                            source: goal.is-completed ? @image-url("../../assets/icons/trophy.svg") : @image-url("../../assets/icons/target.svg");
+                            width: 16px;
+                            height: 16px;
+                            colorize: goal.is-completed ? Theme.surface : Theme.accent;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                        }
+                    }
+
+                    VerticalLayout {
+                        spacing: 2px;
+                        alignment: center;
+
+                        Text {
+                            text: goal.name;
+                            color: Theme.text-primary;
+                            font-size: 13px;
+                            font-weight: 600;
+                        }
+
+                        if goal.deadline != "": HorizontalLayout {
+                            spacing: 4px;
+
+                            Image {
+                                source: @image-url("../../assets/icons/calendar.svg");
+                                width: 10px;
+                                height: 10px;
+                                colorize: Theme.text-muted;
+                                y: (parent.height - self.height) / 2;
+                            }
+
+                            Text {
+                                text: goal.deadline;
+                                color: Theme.text-muted;
+                                font-size: 10px;
+                                vertical-alignment: center;
+                            }
+                        }
                     }
                 }
 
-                VerticalLayout {
-                    spacing: 2px;
-                    alignment: center;
+                // Progress badge
+            Rectangle {
+                    width: progress-text.width + 16px;
+                    height: 24px;
+                    border-radius: 12px;
+                    background: goal.is-completed ? Theme.success : Theme.surface-hover;
 
-                    Text {
-                        text: goal.name;
-                        color: Theme.text-primary;
-                        font-size: 13px;
+                    progress-text := Text {
+                        text: goal.is-completed ? "COMPLETED" : goal.completed-count + "/" + goal.total-count;
+                        color: goal.is-completed ? Theme.surface : Theme.text-secondary;
+                        font-size: 10px;
                         font-weight: 600;
-                    }
-
-                    if goal.deadline != "": HorizontalLayout {
-                        spacing: 4px;
-
-                        Image {
-                            source: @image-url("../../assets/icons/calendar.svg");
-                            width: 10px;
-                            height: 10px;
-                            colorize: Theme.text-muted;
-                            y: (parent.height - self.height) / 2;
-                        }
-
-                        Text {
-                            text: goal.deadline;
-                            color: Theme.text-muted;
-                            font-size: 10px;
-                            vertical-alignment: center;
-                        }
+                        letter-spacing: 0.5px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
                     }
                 }
             }
 
-            // Progress badge
-            Rectangle {
-                width: progress-text.width + 16px;
-                height: 24px;
-                border-radius: 12px;
-                background: goal.is-completed ? Theme.success : Theme.surface-hover;
-
-                progress-text := Text {
-                    text: goal.is-completed ? "COMPLETED" : goal.completed-count + "/" + goal.total-count;
-                    color: goal.is-completed ? Theme.surface : Theme.text-secondary;
-                    font-size: 10px;
-                    font-weight: 600;
-                    letter-spacing: 0.5px;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
+            // TouchArea only for header (hover detection)
+            header-touch := TouchArea {
+                mouse-cursor: default;
             }
         }
 
@@ -215,7 +225,7 @@ export component GoalCard inherits Rectangle {
     }
 
     // Hover actions
-    if touch.has-hover && !goal.is-completed: Rectangle {
+    if header-touch.has-hover && !goal.is-completed: Rectangle {
         x: parent.width - 72px;
         y: 12px;
         width: 60px;
@@ -271,9 +281,5 @@ export component GoalCard inherits Rectangle {
                 }
             }
         }
-    }
-
-    touch := TouchArea {
-        mouse-cursor: pointer;
     }
 }

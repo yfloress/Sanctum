@@ -102,6 +102,28 @@ export component HabitsTab inherits Rectangle {
     in-out property <string> delete-habit-name: "";
     callback delete-confirmed(string);
 
+    // Centralized scroll management - single source of truth
+    property <length> shared-scroll-x: HabitAdapter.habits-scroll-x;
+    property <bool> auto-scroll-enabled: HabitAdapter.auto-scroll-habits;
+
+    // Calculate auto-scroll target based on current day
+    function calculate-auto-scroll-target() -> length {
+        if !HabitAdapter.is-viewing-current-month {
+            return 0px;
+        }
+        // Approximate: each day cell is ~30px, center on current day
+        let day-offset = HabitAdapter.current-day-int * 30px;
+        return min(0px, -(day-offset - 200px));
+    }
+
+    // Initialize scroll position
+    init => {
+        if auto-scroll-enabled && HabitAdapter.is-viewing-current-month {
+            shared-scroll-x = calculate-auto-scroll-target();
+            HabitAdapter.habits-scroll-x = shared-scroll-x;
+        }
+    }
+
     background: transparent;
 
     VerticalLayout {
@@ -188,14 +210,28 @@ export component HabitsTab inherits Rectangle {
 
                     for habit in HabitAdapter.habits: HabitRow {
                         habit: habit;
+                        shared-scroll-x: root.shared-scroll-x;
+                        auto-scroll-enabled: root.auto-scroll-enabled;
+
                         toggle(date) => {
+                            // Disable auto-scroll when user interacts
+                            HabitAdapter.auto-scroll-habits = false;
                             HabitAdapter.toggle-habit(habit.id, date);
                         }
+
+                        scroll-changed(new-scroll-x) => {
+                            // User manually scrolled - update shared state
+                            HabitAdapter.auto-scroll-habits = false;
+                            root.shared-scroll-x = new-scroll-x;
+                            HabitAdapter.habits-scroll-x = new-scroll-x;
+                        }
+
                         delete(id, name) => {
                             root.delete-habit-id = id;
                             root.delete-habit-name = name;
                             root.show-delete-habit-confirm = true;
                         }
+
                         edit(id) => {
                             HabitAdapter.edit-id = habit.id;
                             HabitAdapter.edit-name = habit.name;
@@ -204,6 +240,7 @@ export component HabitsTab inherits Rectangle {
                             HabitAdapter.edit-color-index = habit.color-index;
                             HabitAdapter.edit-category = habit.category;
                         }
+
                         select(id) => {
                             HabitAdapter.select-habit(id);
                         }

@@ -45,13 +45,9 @@ component DayCell inherits Rectangle {
     width: Theme.day-cell-size;
     height: Theme.day-cell-size;
     border-radius: 6px;
-    background: day.completed 
-        ? habit-color 
-        : (day.is-future ? Theme.background : (touch.has-hover && !day.is-future ? Theme.surface-hover : Theme.surface));
+    background: day.completed ? habit-color : (day.is-future ? Theme.background : (touch.has-hover && !day.is-future ? Theme.surface-hover : Theme.surface));
     border-width: 1px;
-    border-color: day.completed 
-        ? habit-color.darker(0.2)
-        : (touch.has-hover && !day.is-future ? Theme.border-light : Theme.border);
+    border-color: day.completed ? habit-color.darker(0.2) : (touch.has-hover && !day.is-future ? Theme.border-light : Theme.border);
     opacity: day.is-future ? 0.3 : 1.0;
 
     animate background { duration: 150ms; }
@@ -81,73 +77,59 @@ component DayCell inherits Rectangle {
     touch := TouchArea {
         enabled: !day.is-future;
         mouse-cursor: self.enabled ? pointer : default;
-        clicked => { root.clicked(); }
+        clicked => {
+            root.clicked();
+        }
     }
 }
 
 export component HabitRow inherits Rectangle {
     in property <HabitData> habit;
+    // Scroll position is now passed in from parent to avoid recursion
+    in property <length> shared-scroll-x: 0px;
+    in property <bool> auto-scroll-enabled: true;
+
     callback toggle(string);
     callback delete(string, string);
     callback edit(string);
     callback select(string);
+    // Notify parent when user manually scrolls
+    callback scroll-changed(length);
 
     // State to show/hide delete button
     property <bool> show-delete: false;
-    property <length> scroll-x: 0px;
-    property <int> currentDayInt: HabitAdapter.current-day-int;
-    property <bool> isViewingCurrentMonth: HabitAdapter.is-viewing-current-month;
-    property <bool> autoScrollHabits <=> HabitAdapter.auto-scroll-habits;
-    property <length> savedScrollX <=> HabitAdapter.habits-scroll-x;
-
-    function auto-scroll-target() -> length {
-        if !isViewingCurrentMonth {
-            return 0px;
-        }
-
-        return min(0px, max(grid-scroll.width - grid-scroll.viewport-width, (grid-scroll.width / 2) - ((currentDayInt * 30px) - 15px)));
-    }
-
-    function update-auto-scroll() {
-        if autoScrollHabits && isViewingCurrentMonth {
-            let target = auto-scroll-target();
-            scroll-x = target;
-            savedScrollX = target;
-        } else if !isViewingCurrentMonth {
-            scroll-x = 0px;
-            savedScrollX = 0px;
-        } else if !autoScrollHabits {
-            scroll-x = savedScrollX;
-        }
-    }
+    // Local scroll state - initialized from shared but can be modified locally
+    property <length> local-scroll-x: shared-scroll-x;
 
     height: Theme.habit-row-height;
     background: transparent;
 
-    init => { update-auto-scroll(); }
-    changed currentDayInt => { update-auto-scroll(); }
-    changed isViewingCurrentMonth => { update-auto-scroll(); }
-    changed autoScrollHabits => { update-auto-scroll(); }
-    
+    // Sync from parent when auto-scroll is enabled or shared value changes
+    changed shared-scroll-x => {
+        if auto-scroll-enabled {
+            local-scroll-x = shared-scroll-x;
+        }
+    }
+
     HorizontalLayout {
         spacing: 16px;
 
         // Info Column
         Rectangle {
             width: 180px;
-            
+
             HorizontalLayout {
                 spacing: 12px;
                 padding-left: 8px;
                 alignment: start;
-                
+
                 // Color Indicator with glow
                 Rectangle {
                     width: 4px;
                     height: 32px;
                     background: @linear-gradient(180deg, habit.color 0%, habit.color.darker(0.3) 100%);
                     border-radius: 2px;
-                    
+
                     Rectangle {
                         x: -3px;
                         y: -3px;
@@ -158,11 +140,11 @@ export component HabitRow inherits Rectangle {
                         opacity: 0.3;
                     }
                 }
-                
+
                 VerticalLayout {
                     alignment: start;
                     spacing: 6px;
-                    
+
                     Text {
                         text: habit.name;
                         color: Theme.text-primary;
@@ -170,7 +152,7 @@ export component HabitRow inherits Rectangle {
                         font-weight: 500;
                         overflow: elide;
                     }
-                    
+
                     StatBadge {
                         icon: @image-url("../assets/icons/trending-up.svg");
                         value: habit.streak;
@@ -178,7 +160,7 @@ export component HabitRow inherits Rectangle {
                     }
                 }
             }
-            
+
             // TouchArea para activar el modo delete
             info-touch := TouchArea {
                 clicked => {
@@ -200,24 +182,24 @@ export component HabitRow inherits Rectangle {
                 y: (parent.height - self.height - 8px) / 2;
                 viewport-width: habit.days.length * (26px + 4px);
                 interactive: true;
-                viewport-x <=> scroll-x;
-                changed width => { root.update-auto-scroll(); }
-                changed viewport-width => { root.update-auto-scroll(); }
+                viewport-x: local-scroll-x;
+
                 changed viewport-x => {
-                    if !autoScrollHabits {
-                        savedScrollX = grid-scroll.viewport-x;
+                    // Only notify parent if user is manually scrolling (not auto-scroll)
+                    if !auto-scroll-enabled && grid-scroll.viewport-x != local-scroll-x {
+                        local-scroll-x = grid-scroll.viewport-x;
+                        root.scroll-changed(grid-scroll.viewport-x);
                     }
                 }
-                    
+
                 HorizontalLayout {
                     spacing: 4px;
                     alignment: start;
-                    
+
                     for day in habit.days: DayCell {
                         day: day;
                         habit-color: habit.color;
                         clicked => {
-                            autoScrollHabits = false;
                             root.toggle(day.date);
                         }
                     }
@@ -239,7 +221,10 @@ export component HabitRow inherits Rectangle {
             width: root.show-delete ? 92px : 0px;
             clip: true;
 
-            animate width { duration: 250ms; easing: ease-in-out; }
+            animate width {
+                duration: 250ms;
+                easing: ease-in-out;
+            }
 
             if root.show-delete: HorizontalLayout {
                 spacing: 8px;
@@ -281,10 +266,10 @@ export component HabitRow inherits Rectangle {
                     background: delete-touch.has-hover ? Theme.delete-bg-hover : Theme.delete-bg;
                     border-width: 1px;
                     border-color: delete-touch.has-hover ? Theme.delete-border : Theme.delete-bg-hover;
-                    
+
                     animate background { duration: 150ms; }
                     animate border-color { duration: 150ms; }
-                    
+
                     Text {
                         text: "🗑";
                         font-size: 16px;

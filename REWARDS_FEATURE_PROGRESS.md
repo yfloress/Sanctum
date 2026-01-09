@@ -1,6 +1,6 @@
 # Rewards Feature Progress
 
-## Estado Actual: UI Completada ✅
+## Estado Actual: Backend Completado ✅
 
 Este documento rastrea el progreso de la implementación del sistema de recompensas en Sanctum.
 
@@ -30,43 +30,104 @@ El sistema de recompensas tiene **dos tipos principales**:
 
 ---
 
-## Archivos Creados (UI - Slint)
+## ✅ Archivos Creados - UI (Slint)
 
 ### Componentes (`ui/components/rewards/`)
-| Archivo | Líneas | Descripción |
-|---------|--------|-------------|
-| `streak_reward_card.slint` | 287 | Card con barra de progreso y milestones |
-| `goal_card.slint` | 279 | Card con checkpoints y progreso |
-| `achievement_card.slint` | 109 | Card de trofeo para historial |
-| `habits_tab.slint` | 353 | Tab de hábitos extraído |
-| `rewards_tab.slint` | 112 | Tab de rewards y goals |
-| `history_tab.slint` | 148 | Tab de logros desbloqueados |
+| Archivo | Descripción |
+|---------|-------------|
+| `streak_reward_card.slint` | Card con barra de progreso y milestones |
+| `goal_card.slint` | Card con checkpoints y progreso |
+| `achievement_card.slint` | Card de trofeo para historial |
+| `habits_tab.slint` | Tab de hábitos extraído |
+| `rewards_tab.slint` | Tab de rewards y goals |
+| `history_tab.slint` | Tab de logros desbloqueados |
 
 ### Formularios (`ui/components/forms/`)
-| Archivo | Líneas | Descripción |
-|---------|--------|-------------|
-| `form_fields.slint` | 233 | FormField, NumberField, DateField |
-| `habit_dropdown.slint` | 129 | Selector de hábitos |
+| Archivo | Descripción |
+|---------|-------------|
+| `form_fields.slint` | FormField, NumberField, DateField |
+| `habit_dropdown.slint` | Selector de hábitos |
 
 ### Modales (`ui/modals/`)
-| Archivo | Líneas | Descripción |
-|---------|--------|-------------|
-| `add_reward.slint` | 553 | Modal crear streak reward |
-| `add_goal.slint` | 418 | Modal crear goal con checkpoints |
+| Archivo | Descripción |
+|---------|-------------|
+| `add_reward.slint` | Modal crear streak reward |
+| `add_goal.slint` | Modal crear goal con checkpoints |
 
 ### Modificados
 | Archivo | Cambios |
 |---------|---------|
 | `ui/globals.slint` | RewardsAdapter, structs (MilestoneData, StreakRewardData, GoalData, etc.) |
 | `ui/pages/habits.slint` | Tabs (Habits/Rewards/History), imports de modales |
-
-### Iconos Restaurados
-- trophy.svg, medal.svg, flame.svg, target.svg, goal.svg, award.svg, crown.svg, flag.svg
+| `ui/app.slint` | Re-export de RewardsAdapter |
 
 ---
 
-## Estructuras de Datos (en globals.slint)
+## ✅ Archivos Creados - Backend (Rust)
 
+### Modelos (`src/models.rs`)
+| Struct | Descripción |
+|--------|-------------|
+| `StreakReward` | Recompensa por racha ligada a hábito |
+| `Milestone` | Hito dentro de una recompensa |
+| `Goal` | Meta independiente con checkpoints |
+| `Checkpoint` | Punto de control dentro de una meta |
+| `Achievement` | Logro/trofeo desbloqueado |
+
+### Base de Datos (`src/db/`)
+| Archivo | Descripción |
+|---------|-------------|
+| `rewards.rs` | CRUD para todas las tablas de rewards |
+| `mod.rs` | Tablas SQL agregadas en `create_rewards_tables()` |
+
+**Tablas creadas:**
+- `streak_rewards` - Recompensas por racha
+- `milestones` - Hitos de recompensas
+- `goals` - Metas independientes
+- `checkpoints` - Checkpoints de metas
+- `achievements` - Logros desbloqueados
+
+### Repository (`src/features/habits/`)
+| Archivo | Descripción |
+|---------|-------------|
+| `rewards_repository.rs` | Capa repository para rewards |
+
+### Service (`src/features/habits/`)
+| Archivo | Descripción |
+|---------|-------------|
+| `rewards_service.rs` | Lógica de negocio para rewards |
+
+**Funciones principales:**
+- `create_streak_reward()` - Crear recompensa por racha
+- `add_milestone()` - Agregar hito a recompensa
+- `check_and_unlock_milestones()` - Verificar y desbloquear hitos
+- `get_streak_progress()` - Obtener progreso actual
+- `create_goal()` - Crear meta
+- `add_checkpoint()` - Agregar checkpoint
+- `toggle_checkpoint()` - Marcar/desmarcar checkpoint
+- `complete_goal()` - Completar meta y crear achievement
+- `get_achievements()` - Obtener logros
+
+### Controller (`src/controller/`)
+| Archivo | Descripción |
+|---------|-------------|
+| `rewards.rs` | Métodos del controller para rewards |
+| `mod.rs` | Agregado `RewardsService` al `AppController` |
+
+### Callbacks UI (`src/ui/callbacks/habits/`)
+| Archivo | Descripción |
+|---------|-------------|
+| `rewards.rs` | Callbacks para RewardsAdapter |
+| `mod.rs` | Export de `setup_rewards_callbacks` |
+
+### Main (`src/main.rs`)
+- Agregada llamada a `setup_rewards_callbacks()`
+
+---
+
+## Estructuras de Datos
+
+### Slint (globals.slint)
 ```slint
 struct MilestoneData {
     id, target-days, reward-text, unlocked, unlocked-at
@@ -92,29 +153,16 @@ struct GoalData {
 struct AchievementData {
     id, title, description, icon, achieved-at, achievement-type
 }
-
-global RewardsAdapter {
-    streak-rewards[], goals[], achievements[],
-    active-tab, edit-reward-id, edit-goal-id,
-    callbacks: create-streak-reward, add-milestone, delete-streak-reward,
-               create-goal, add-checkpoint, toggle-checkpoint, delete-goal,
-               fetch-rewards, fetch-goals, fetch-achievements
-}
 ```
 
----
-
-## LO QUE FALTA: Backend (Rust)
-
-### 1. Modelos (`src/models.rs`)
-Agregar structs:
+### Rust (models.rs)
 ```rust
 pub struct StreakReward {
     pub id: String,
     pub habit_id: String,
     pub is_consecutive: bool,
-    pub target_days: Option<i32>,      // para acumulativo
-    pub target_total: Option<i32>,     // para acumulativo
+    pub target_days: Option<i32>,
+    pub target_total: Option<i32>,
     pub created_at: String,
 }
 
@@ -152,127 +200,47 @@ pub struct Achievement {
     pub title: String,
     pub description: String,
     pub icon_path: String,
-    pub achievement_type: String,  // "streak" | "goal"
-    pub source_id: String,         // reward_id o goal_id
+    pub achievement_type: String,
+    pub source_id: String,
     pub achieved_at: String,
 }
 ```
 
-### 2. Tablas SQL (`src/db/habits.rs` o nuevo archivo)
-```sql
-CREATE TABLE streak_rewards (
-    id TEXT PRIMARY KEY,
-    habit_id TEXT NOT NULL REFERENCES habits(id),
-    is_consecutive INTEGER NOT NULL DEFAULT 1,
-    target_days INTEGER,
-    target_total INTEGER,
-    created_at TEXT NOT NULL
-);
+---
 
-CREATE TABLE milestones (
-    id TEXT PRIMARY KEY,
-    reward_id TEXT NOT NULL REFERENCES streak_rewards(id),
-    target_days INTEGER NOT NULL,
-    reward_text TEXT NOT NULL,
-    unlocked INTEGER NOT NULL DEFAULT 0,
-    unlocked_at TEXT
-);
+## ⬜ Lo que Falta: Pruebas y Polish
 
-CREATE TABLE goals (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    description TEXT,
-    reward_text TEXT NOT NULL,
-    deadline TEXT,
-    is_completed INTEGER NOT NULL DEFAULT 0,
-    completed_at TEXT,
-    created_at TEXT NOT NULL
-);
+### Testing
+- [ ] Unit tests para `rewards_service.rs`
+- [ ] Tests de integración para repository
+- [ ] Tests para cálculo de streaks consecutivos/acumulativos
 
-CREATE TABLE checkpoints (
-    id TEXT PRIMARY KEY,
-    goal_id TEXT NOT NULL REFERENCES goals(id),
-    description TEXT NOT NULL,
-    completed INTEGER NOT NULL DEFAULT 0,
-    completed_at TEXT,
-    sort_order INTEGER NOT NULL DEFAULT 0
-);
+### UI Polish
+- [ ] Verificar que los modales funcionen correctamente
+- [ ] Agregar animaciones de celebración al desbloquear logros
+- [ ] Verificar responsive en diferentes tamaños de pantalla
 
-CREATE TABLE achievements (
-    id TEXT PRIMARY KEY,
-    title TEXT NOT NULL,
-    description TEXT NOT NULL,
-    icon_path TEXT NOT NULL,
-    achievement_type TEXT NOT NULL,
-    source_id TEXT NOT NULL,
-    achieved_at TEXT NOT NULL
-);
-```
-
-### 3. Repository (`src/features/habits/repository.rs`)
-- CRUD para streak_rewards, milestones, goals, checkpoints, achievements
-- Queries especiales:
-  - `get_streak_rewards_with_progress()` - calcular progreso actual
-  - `get_goals_with_checkpoints()` - cargar goals con sus checkpoints
-  - `get_achievements()` - todos los logros desbloqueados
-
-### 4. Service (`src/features/habits/service.rs`)
-Lógica de negocio:
-- `create_streak_reward(habit_id, is_consecutive, target_days, target_total)`
-- `add_milestone(reward_id, days, reward_text)`
-- `update_streak_progress(habit_id)` - llamar cuando se hace toggle de habit
-- `check_and_unlock_milestones(reward_id)` - verificar si se desbloquea algo
-- `create_goal(name, description, reward, deadline)`
-- `add_checkpoint(goal_id, description)`
-- `toggle_checkpoint(goal_id, checkpoint_id)`
-- `complete_goal(goal_id)` - cuando todos los checkpoints están completos
-- `create_achievement(...)` - crear trofeo cuando se desbloquea algo
-
-### 5. Controller (`src/controller/habits.rs`)
-Orquestar llamadas del service.
-
-### 6. Callbacks UI (`src/ui/callbacks/`)
-Conectar RewardsAdapter con el backend:
-```rust
-// En el archivo de callbacks de habits
-rewards_adapter.on_create_streak_reward(...)
-rewards_adapter.on_add_milestone(...)
-rewards_adapter.on_fetch_rewards(...)
-rewards_adapter.on_fetch_goals(...)
-rewards_adapter.on_fetch_achievements(...)
-// etc.
-```
-
-### 7. Migración de DB
-Agregar las tablas nuevas al schema de inicialización.
+### Integración
+- [ ] Llamar `update_streak_progress` cuando se hace toggle de habit
+- [ ] Mostrar notificación cuando se desbloquea un milestone
 
 ---
 
-## Orden Recomendado de Implementación
+## Build & Test Commands
 
-1. ✅ UI Slint (COMPLETADO)
-2. ⬜ Agregar modelos en `src/models.rs`
-3. ⬜ Crear tablas SQL y migración
-4. ⬜ Implementar repository
-5. ⬜ Implementar service con lógica de negocio
-6. ⬜ Conectar callbacks UI
-7. ⬜ Testing
+```bash
+nix develop -c cargo check   # Verificar compilación
+nix develop -c cargo clippy  # Linter
+nix develop -c cargo test    # Tests
+nix develop -c cargo run     # Ejecutar
+```
 
 ---
-
-## Commit Actual
-```
-13351a6 feat(habits): add rewards system UI with tabs, modals and components
-```
 
 ## Branch
 `feature/slint-migration`
 
----
-
-## Notas Importantes
-
-- **Límite de líneas**: Mantener archivos < 600 líneas
-- **Patrones del proyecto**: Seguir feature-sliced (controller → service → repository → db)
-- **SQLCipher**: La DB usa encriptación, no loguear datos sensibles
-- **Comandos**: Usar `nix develop -c cargo ...` para build/test/run
+## Commits
+- `13351a6` - feat(habits): add rewards system UI with tabs, modals and components
+- `0eabd68` - docs: add rewards feature progress tracking document
+- (pending) - feat(habits): add rewards backend with models, db, service, and callbacks

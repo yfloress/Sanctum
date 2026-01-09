@@ -8,7 +8,9 @@ use log::error;
 use rand::Rng; // For title animation
 use sanctum::controller::AppController;
 use sanctum::security_log::init_security_logger;
-use sanctum::ui::{format_category_label, format_decimal_from_cents, format_money, load_account_icon};
+use sanctum::ui::{
+    format_category_label, format_decimal_from_cents, format_money, load_account_icon,
+};
 use slint::SharedString;
 use slint::{ComponentHandle, ModelRc, VecModel, Weak};
 use std::cell::{Cell, RefCell};
@@ -22,7 +24,6 @@ use sanctum::{
     DashboardAdapter, NotificationAdapter, SettingsAdapter, TransactionAdapter,
     TransactionCategoryData, TransactionData,
 };
-
 
 fn get_app_data_dir() -> std::path::PathBuf {
     // Use directories crate to get platform-appropriate data directory
@@ -748,16 +749,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         show_notification.clone(),
     );
 
+    // RewardsAdapter callbacks (extracted to ui/callbacks/habits/rewards.rs)
+    sanctum::ui::setup_rewards_callbacks(&ui, &ui_weak, &controller, show_notification.clone());
+
     // CryptoAdapter callbacks (extracted to ui/callbacks/crypto.rs)
     sanctum::ui::setup_crypto_callbacks(&ui, &ui_weak, &controller, show_notification.clone());
 
     // SettingsAdapter callbacks (extracted to ui/callbacks/settings.rs)
-    sanctum::ui::setup_settings_callbacks(
-        &ui,
-        &ui_weak,
-        &controller,
-        show_notification.clone(),
-    );
+    sanctum::ui::setup_settings_callbacks(&ui, &ui_weak, &controller, show_notification.clone());
 
     // Run the UI event loop
     ui.run()?;

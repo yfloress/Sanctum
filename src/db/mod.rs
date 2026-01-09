@@ -12,6 +12,7 @@
 mod crypto;
 mod finance;
 mod habits;
+mod rewards;
 
 use crate::security_log::{SecurityEvent, log_security_event};
 use chrono::{DateTime, Duration, Utc};
@@ -101,7 +102,7 @@ pub const KDF_ITERATIONS: i64 = 600_000;
 pub struct Database {
     conn: Connection,
     path: PathBuf,
-    session_timeout: i64,  // Configurable session timeout in seconds
+    session_timeout: i64, // Configurable session timeout in seconds
 }
 
 impl Database {
@@ -161,7 +162,7 @@ impl Database {
         let db = Database {
             conn,
             path: db_path,
-            session_timeout: SESSION_TIMEOUT_SECS,  // Default 15 minutes
+            session_timeout: SESSION_TIMEOUT_SECS, // Default 15 minutes
         };
 
         // Run migrations
@@ -711,6 +712,109 @@ impl Database {
                 [],
             )?;
         }
+
+        // Rewards System Tables
+        self.create_rewards_tables()?;
+
+        Ok(())
+    }
+
+    fn create_rewards_tables(&self) -> Result<(), DbError> {
+        // Streak Rewards Table
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS streak_rewards (
+                id TEXT PRIMARY KEY NOT NULL,
+                habit_id TEXT NOT NULL,
+                is_consecutive INTEGER NOT NULL DEFAULT 1,
+                target_days INTEGER,
+                target_total INTEGER,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE CASCADE
+            )",
+            [],
+        )?;
+
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_streak_rewards_habit ON streak_rewards(habit_id)",
+            [],
+        )?;
+
+        // Milestones Table
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS milestones (
+                id TEXT PRIMARY KEY NOT NULL,
+                reward_id TEXT NOT NULL,
+                target_days INTEGER NOT NULL,
+                reward_text TEXT NOT NULL,
+                unlocked INTEGER NOT NULL DEFAULT 0,
+                unlocked_at TEXT,
+                FOREIGN KEY (reward_id) REFERENCES streak_rewards(id) ON DELETE CASCADE
+            )",
+            [],
+        )?;
+
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_milestones_reward ON milestones(reward_id)",
+            [],
+        )?;
+
+        // Goals Table
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS goals (
+                id TEXT PRIMARY KEY NOT NULL,
+                name TEXT NOT NULL,
+                description TEXT,
+                reward_text TEXT NOT NULL,
+                deadline TEXT,
+                is_completed INTEGER NOT NULL DEFAULT 0,
+                completed_at TEXT,
+                created_at TEXT NOT NULL
+            )",
+            [],
+        )?;
+
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_goals_completed ON goals(is_completed)",
+            [],
+        )?;
+
+        // Checkpoints Table
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS checkpoints (
+                id TEXT PRIMARY KEY NOT NULL,
+                goal_id TEXT NOT NULL,
+                description TEXT NOT NULL,
+                completed INTEGER NOT NULL DEFAULT 0,
+                completed_at TEXT,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                FOREIGN KEY (goal_id) REFERENCES goals(id) ON DELETE CASCADE
+            )",
+            [],
+        )?;
+
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_checkpoints_goal ON checkpoints(goal_id)",
+            [],
+        )?;
+
+        // Achievements Table
+        self.conn.execute(
+            "CREATE TABLE IF NOT EXISTS achievements (
+                id TEXT PRIMARY KEY NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT NOT NULL,
+                icon_path TEXT NOT NULL,
+                achievement_type TEXT NOT NULL CHECK(achievement_type IN ('streak', 'goal')),
+                source_id TEXT NOT NULL,
+                achieved_at TEXT NOT NULL
+            )",
+            [],
+        )?;
+
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_achievements_type ON achievements(achievement_type)",
+            [],
+        )?;
 
         Ok(())
     }

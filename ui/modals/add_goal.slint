@@ -137,7 +137,51 @@ export component AddGoalModal inherits Rectangle {
             NotificationAdapter.show("Add at least one checkpoint", true);
             return;
         }
-        NotificationAdapter.show("Goal created", false);
+
+        // Create the goal - returns goal ID on success, empty on error
+        let result = RewardsAdapter.create-goal(
+            goal-name,
+            goal-description,
+            goal-reward,
+            goal-deadline);
+
+        // Empty result means error (backend shows notification)
+        if (result == "") {
+            return;
+        }
+
+        // Result is the goal ID - use it to add checkpoints
+        let goal-id = result;
+
+        // Add checkpoint 1
+        let cp1-result = RewardsAdapter.add-checkpoint(goal-id, cp1);
+        if (cp1-result != "") {
+            NotificationAdapter.show(cp1-result, true);
+        }
+
+        // Add checkpoint 2 if exists
+        if (checkpoint-count >= 2 && cp2 != "") {
+            let cp2-result = RewardsAdapter.add-checkpoint(goal-id, cp2);
+            if (cp2-result != "") {
+                NotificationAdapter.show(cp2-result, true);
+            }
+        }
+
+        // Add checkpoint 3 if exists
+        if (checkpoint-count >= 3 && cp3 != "") {
+            let cp3-result = RewardsAdapter.add-checkpoint(goal-id, cp3);
+            if (cp3-result != "") {
+                NotificationAdapter.show(cp3-result, true);
+            }
+        }
+
+        // Add checkpoint 4 if exists
+        if (checkpoint-count >= 4 && cp4 != "") {
+            let cp4-result = RewardsAdapter.add-checkpoint(goal-id, cp4);
+            if (cp4-result != "") {
+                NotificationAdapter.show(cp4-result, true);
+            }
+        }
         close-modal();
     }
 

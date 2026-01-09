@@ -2,7 +2,11 @@
 // Shows streak rewards and goals sections with add buttons
 
 import { Theme } from "../../theme.slint";
-import { RewardsAdapter, AppState } from "../../globals.slint";
+import {
+    RewardsAdapter,
+    AppState,
+    NotificationAdapter,
+} from "../../globals.slint";
 import { StreakRewardCard } from "streak_reward_card.slint";
 import { GoalCard } from "goal_card.slint";
 import { SectionHeader } from "../sections/section_header.slint";
@@ -96,7 +100,10 @@ export component RewardsTab inherits Rectangle {
                         RewardsAdapter.delete-goal(id);
                     }
                     toggle-checkpoint(goal-id, checkpoint-id) => {
-                        RewardsAdapter.toggle-checkpoint(goal-id, checkpoint-id);
+                        let result = RewardsAdapter.toggle-checkpoint(goal-id, checkpoint-id);
+                        if (result != "") {
+                            NotificationAdapter.show(result, true);
+                        }
                     }
                 }
             }
@@ -109,4 +116,3 @@ export component RewardsTab inherits Rectangle {
         }
     }
 }
-

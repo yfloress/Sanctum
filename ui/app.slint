@@ -11,6 +11,7 @@ import {
     AnalyticsAdapter,
     NotificationAdapter,
     HabitAdapter,
+    RewardsAdapter,
     CryptoAdapter,
     SettingsAdapter,
 } from "globals.slint";
@@ -29,7 +30,9 @@ import { AddCryptoTransactionModal } from "modals/add_crypto_transaction.slint";
 import { AddCryptoWalletModal } from "modals/add_crypto_wallet.slint";
 import { EditWalletIconModal } from "modals/edit_wallet_icon.slint";
 import { EditAccountIconModal } from "modals/edit_account_icon.slint";
-import { EditCryptoTransactionModal } from "modals/edit_crypto_transaction.slint";
+import {
+    EditCryptoTransactionModal,
+} from "modals/edit_crypto_transaction.slint";
 import { ConfigureTickerModal } from "modals/configure_ticker.slint";
 import { ConfigureCategoriesModal } from "modals/configure_categories.slint";
 import { NotificationToast } from "components/notification.slint";
@@ -46,8 +49,12 @@ export component AppWindow inherits Window {
 
     // Sync Theme.is-dark with SettingsAdapter.dark-mode
     property <bool> dark-mode-tracker: SettingsAdapter.dark-mode;
-    changed dark-mode-tracker => { Theme.is-dark = SettingsAdapter.dark-mode; }
-    init => { Theme.is-dark = SettingsAdapter.dark-mode; }
+    changed dark-mode-tracker => {
+        Theme.is-dark = SettingsAdapter.dark-mode;
+    }
+    init => {
+        Theme.is-dark = SettingsAdapter.dark-mode;
+    }
 
     // ==================== Conditional Rendering ====================
 
@@ -133,7 +140,7 @@ export component AppWindow inherits Window {
         width: 100%;
         height: 100%;
     }
-    
+
     // Add Crypto Modal
     if AppState.show-add-crypto: AddCryptoTransactionModal {
         width: 100%;
@@ -160,7 +167,7 @@ export component AppWindow inherits Window {
         wallet-category: CryptoAdapter.icon-edit-wallet-category;
         selected-icon <=> CryptoAdapter.icon-edit-wallet-icon;
     }
-    
+
     // Configure Ticker Modal
     if AppState.show-configure-ticker: ConfigureTickerModal {
         width: 100%;
@@ -174,7 +181,7 @@ export component AppWindow inherits Window {
         account-id: AccountAdapter.edit-account-id;
         selected-icon <=> AccountAdapter.edit-account-icon;
     }
-    
+
     // Notification Toast (Global Overlay)
     NotificationToast {
         x: parent.width - self.width - 32px;
@@ -186,4 +193,4 @@ export component AppWindow inherits Window {
 }
 
 // Re-export adapters for main.rs
-export { AuthAdapter, AccountAdapter, TransactionAdapter, CategoryAdapter, DashboardAdapter, AnalyticsAdapter, NotificationAdapter, HabitAdapter, CryptoAdapter, AppState, SettingsAdapter }
+export { AuthAdapter, AccountAdapter, TransactionAdapter, CategoryAdapter, DashboardAdapter, AnalyticsAdapter, NotificationAdapter, HabitAdapter, RewardsAdapter, CryptoAdapter, AppState, SettingsAdapter }

@@ -63,9 +63,16 @@ export component HabitsPage inherits Rectangle {
         HabitAdapter.load-initial-data();
         HabitAdapter.fetch-heatmap-data();
         HabitAdapter.fetch-habit-analytics();
-        RewardsAdapter.fetch-rewards();
-        RewardsAdapter.fetch-goals();
-        RewardsAdapter.fetch-achievements();
+    }
+
+    // Load rewards data when switching to rewards/history tabs (lazy loading)
+    changed active-tab => {
+        if active-tab == "rewards" {
+            RewardsAdapter.fetch-rewards();
+            RewardsAdapter.fetch-goals();
+        } else if active-tab == "history" {
+            RewardsAdapter.fetch-achievements();
+        }
     }
 
     VerticalLayout {
