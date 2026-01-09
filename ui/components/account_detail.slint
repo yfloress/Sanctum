@@ -1,7 +1,11 @@
 // ==================== Account Detail Panel ====================
 // Finance account details with transaction history
 
-import { AccountAdapter, AppState, NotificationAdapter } from "../globals.slint";
+import {
+    AccountAdapter,
+    AppState,
+    NotificationAdapter,
+} from "../globals.slint";
 import { Theme } from "../theme.slint";
 
 component SectionHeader inherits Rectangle {
@@ -87,8 +91,7 @@ component AccountTransactionRow inherits Rectangle {
 
             Text {
                 text: is-transfer ? "" : (is-expense ? "−" : "+");
-                color: is-transfer ? transparent
-                    : (is-expense ? Theme.danger : Theme.success);
+                color: is-transfer ? transparent : (is-expense ? Theme.danger : Theme.success);
                 font-size: 13px;
                 font-weight: 500;
                 vertical-alignment: center;
@@ -96,8 +99,7 @@ component AccountTransactionRow inherits Rectangle {
 
             Text {
                 text: amount;
-                color: is-transfer ? Theme.text-secondary
-                    : (is-expense ? Theme.danger : Theme.success);
+                color: is-transfer ? Theme.text-secondary : (is-expense ? Theme.danger : Theme.success);
                 font-size: 13px;
                 font-weight: 600;
                 vertical-alignment: center;
@@ -111,11 +113,7 @@ export component AccountDetailPanel inherits Rectangle {
     height: 100%;
     property <bool> editing-name: false;
     property <string> edit-name-value: "";
-    background: @linear-gradient(
-        180deg,
-        Theme.crypto-panel-gradient-start 0%,
-        Theme.crypto-panel-gradient-end 100%
-    );
+    background: @linear-gradient(180deg, Theme.crypto-panel-gradient-start 0%, Theme.crypto-panel-gradient-end 100%);
 
     // Left border accent
     Rectangle {
@@ -144,11 +142,7 @@ export component AccountDetailPanel inherits Rectangle {
                     width: 52px;
                     height: 52px;
                     border-radius: 26px;
-                    background: @linear-gradient(
-                        135deg,
-                        Theme.crypto-icon-gradient-start 0%,
-                        Theme.crypto-icon-gradient-end 100%
-                    );
+                    background: @linear-gradient(135deg, Theme.crypto-icon-gradient-start 0%, Theme.crypto-icon-gradient-end 100%);
                     border-width: 1px;
                     border-color: Theme.border-subtle;
                     y: (parent.height - self.height) / 2;
@@ -162,15 +156,7 @@ export component AccountDetailPanel inherits Rectangle {
                     }
 
                     if AccountAdapter.selected-account-icon.width == 0: Image {
-                        source: AccountAdapter.selected-account-type == "Bank"
-                            ? @image-url("../assets/icons/building-2.svg")
-                            : (AccountAdapter.selected-account-type == "Cash"
-                                ? @image-url("../assets/icons/banknote.svg")
-                                : (AccountAdapter.selected-account-type == "Savings"
-                                    ? @image-url("../assets/icons/piggy-bank.svg")
-                                    : (AccountAdapter.selected-account-type == "Credit Card"
-                                        ? @image-url("../assets/icons/credit-card.svg")
-                                        : @image-url("../assets/icons/wallet.svg"))));
+                        source: AccountAdapter.selected-account-type == "Bank" ? @image-url("../assets/icons/building-2.svg") : (AccountAdapter.selected-account-type == "Cash" ? @image-url("../assets/icons/banknote.svg") : (AccountAdapter.selected-account-type == "Savings" ? @image-url("../assets/icons/piggy-bank.svg") : (AccountAdapter.selected-account-type == "Credit Card" ? @image-url("../assets/icons/credit-card.svg") : @image-url("../assets/icons/wallet.svg"))));
                         width: 22px;
                         height: 22px;
                         colorize: Theme.text-primary;
@@ -278,7 +264,7 @@ export component AccountDetailPanel inherits Rectangle {
                     animate background { duration: 150ms; }
 
                     Image {
-                        source: root.editing-name ? @image-url("../assets/icons/check.svg") : @image-url("../assets/icons/file-text.svg");
+                        source: root.editing-name ? @image-url("../assets/icons/check.svg") : @image-url("../assets/icons/pencil.svg");
                         width: 14px;
                         height: 14px;
                         colorize: edit-name-touch.has-hover ? Theme.text-primary : Theme.text-muted;
@@ -328,7 +314,9 @@ export component AccountDetailPanel inherits Rectangle {
 
                     close-touch := TouchArea {
                         mouse-cursor: pointer;
-                        clicked => { AccountAdapter.show-account-detail = false; }
+                        clicked => {
+                            AccountAdapter.show-account-detail = false;
+                        }
                     }
                 }
             }
@@ -348,7 +336,9 @@ export component AccountDetailPanel inherits Rectangle {
             VerticalLayout {
                 spacing: 12px;
 
-                SectionHeader { title: "TRANSACTIONS"; }
+                SectionHeader {
+                    title: "TRANSACTIONS";
+                }
 
                 if AccountAdapter.account-history.length == 0: Rectangle {
                     height: 48px;

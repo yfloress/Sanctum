@@ -8,13 +8,13 @@ import { CryptoIcon } from "./crypto_widgets.slint";
 // ==================== Section Header ====================
 component SectionHeader inherits Rectangle {
     in property <string> title;
-    
+
     height: 32px;
     background: transparent;
-    
+
     HorizontalLayout {
         spacing: 12px;
-        
+
         Rectangle {
             width: 3px;
             height: 16px;
@@ -22,13 +22,13 @@ component SectionHeader inherits Rectangle {
             background: Theme.accent;
             y: (parent.height - self.height) / 2;
         }
-        
-        Text { 
-            text: root.title; 
-            color: Theme.text-muted; 
+
+        Text {
+            text: root.title;
+            color: Theme.text-muted;
             font-size: 10px;
             font-weight: 600;
-            letter-spacing: 2px; 
+            letter-spacing: 2px;
             vertical-alignment: center;
         }
     }
@@ -39,22 +39,22 @@ component WalletBreakdownRow inherits Rectangle {
     in property <string> wallet-name;
     in property <string> amount;
     in property <string> value;
-    
+
     height: 56px;
     background: Theme.surface;
     border-radius: 8px;
     border-width: 1px;
     border-color: Theme.border-subtle;
-    
+
     HorizontalLayout {
         padding-left: 16px;
         padding-right: 16px;
         alignment: space-between;
-        
+
         HorizontalLayout {
             spacing: 12px;
             alignment: start;
-            
+
             Rectangle {
                 width: 32px;
                 height: 32px;
@@ -63,7 +63,7 @@ component WalletBreakdownRow inherits Rectangle {
                 border-width: 1px;
                 border-color: Theme.border-subtle;
                 y: (parent.height - self.height) / 2;
-                
+
                 Text {
                     text: "💼";
                     font-size: 14px;
@@ -71,32 +71,33 @@ component WalletBreakdownRow inherits Rectangle {
                     horizontal-alignment: center;
                 }
             }
-            
-            Text { 
-                text: root.wallet-name; 
-                color: Theme.text-primary; 
+
+            Text {
+                text: root.wallet-name;
+                color: Theme.text-primary;
                 font-size: 13px;
                 font-weight: 500;
-                vertical-alignment: center; 
+                vertical-alignment: center;
             }
         }
-        
+
         VerticalLayout {
             alignment: center;
             spacing: 2px;
-            
-            Text { 
-                text: root.amount; 
-                color: Theme.text-primary; 
+
+            Text {
+                text: root.amount;
+                color: Theme.text-primary;
                 font-size: 13px;
                 font-weight: 500;
-                horizontal-alignment: right; 
+                horizontal-alignment: right;
             }
-            Text { 
-                text: root.value; 
-                color: Theme.text-muted; 
-                font-size: 11px; 
-                horizontal-alignment: right; 
+
+            Text {
+                text: root.value;
+                color: Theme.text-muted;
+                font-size: 11px;
+                horizontal-alignment: right;
             }
         }
     }
@@ -128,11 +129,11 @@ component TransactionRow inherits Rectangle {
         width: parent.width;
         height: parent.height;
     }
-    
+
     HorizontalLayout {
         alignment: space-between;
         spacing: 12px;
-        
+
         Rectangle {
             horizontal-stretch: 1;
             clip: true;
@@ -144,65 +145,52 @@ component TransactionRow inherits Rectangle {
                 horizontal-stretch: 1;
 
                 Rectangle {
-                width: 32px;
-                height: 32px;
-                border-radius: 8px;
-                background: 
-                    root.is-inflow ? Theme.success.with-alpha(0.1) : 
-                    root.is-outflow ? Theme.danger.with-alpha(0.1) :
-                    root.show-swap ? Theme.primary.with-alpha(0.1) :
-                    Theme.text-muted.with-alpha(0.1);
-                border-width: 1px;
-                border-color: 
-                    root.is-inflow ? Theme.success.with-alpha(0.2) : 
-                    root.is-outflow ? Theme.danger.with-alpha(0.2) :
-                    root.show-swap ? Theme.primary.with-alpha(0.2) :
-                    Theme.border;
-                y: (parent.height - self.height) / 2;
-                
-                Text {
-                    text: 
-                        root.is-inflow ? "▲" : 
-                        root.is-outflow ? "▼" :
-                        root.show-swap ? "⇄" : "•";
-                    color: 
-                        root.is-inflow ? Theme.success : 
-                        root.is-outflow ? Theme.danger :
-                        root.show-swap ? Theme.primary :
-                        Theme.text-muted;
-                    font-size: 10px;
-                    vertical-alignment: center;
-                    horizontal-alignment: center;
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 8px;
+                    background: root.is-inflow ? Theme.success.with-alpha(0.1) : root.is-outflow ? Theme.danger.with-alpha(0.1) : root.show-swap ? Theme.primary.with-alpha(0.1) : Theme.text-muted.with-alpha(0.1);
+                    border-width: 1px;
+                    border-color: root.is-inflow ? Theme.success.with-alpha(0.2) : root.is-outflow ? Theme.danger.with-alpha(0.2) : root.show-swap ? Theme.primary.with-alpha(0.2) : Theme.border;
+                    y: (parent.height - self.height) / 2;
+
+                    Text {
+                        text: root.is-inflow ? "▲" : root.is-outflow ? "▼" : root.show-swap ? "⇄" : "•";
+                        color: root.is-inflow ? Theme.success : root.is-outflow ? Theme.danger : root.show-swap ? Theme.primary : Theme.text-muted;
+                        font-size: 10px;
+                        vertical-alignment: center;
+                        horizontal-alignment: center;
+                    }
                 }
-            }
-            
+
                 VerticalLayout {
                     alignment: center;
                     spacing: 2px;
                     horizontal-stretch: 1;
-                    
-                    Text { 
-                        text: root.tx-type; 
-                        color: Theme.text-primary; 
-                        font-size: 12px; 
+
+                    Text {
+                        text: root.tx-type;
+                        color: Theme.text-primary;
+                        font-size: 12px;
                         font-weight: 500;
                         overflow: elide;
                     }
-                    Text { 
-                        text: root.tx-date; 
-                        color: Theme.text-muted; 
-                        font-size: 10px; 
+
+                    Text {
+                        text: root.tx-date;
+                        color: Theme.text-muted;
+                        font-size: 10px;
                     }
-                    if root.tx-notes != "": Text { 
-                        text: root.tx-notes; 
-                        color: Theme.text-subtle; 
+
+                    if root.tx-notes != "": Text {
+                        text: root.tx-notes;
+                        color: Theme.text-subtle;
                         font-size: 9px;
                         overflow: elide;
                     }
                 }
             }
         }
-        
+
         HorizontalLayout {
             spacing: 16px;
             alignment: end;
@@ -210,25 +198,26 @@ component TransactionRow inherits Rectangle {
             VerticalLayout {
                 alignment: center;
                 spacing: 2px;
-                
-                Text { 
-                    text: root.tx-amount; 
-                    color: Theme.text-primary; 
+
+                Text {
+                    text: root.tx-amount;
+                    color: Theme.text-primary;
                     font-size: 12px;
                     font-weight: 500;
-                    horizontal-alignment: right; 
+                    horizontal-alignment: right;
                 }
-                if root.tx-price != "" && root.tx-price != "N/A": Text { 
-                    text: "@ " + root.tx-price; 
-                    color: Theme.text-muted; 
-                    font-size: 10px; 
-                    horizontal-alignment: right; 
+
+                if root.tx-price != "" && root.tx-price != "N/A": Text {
+                    text: "@ " + root.tx-price;
+                    color: Theme.text-muted;
+                    font-size: 10px;
+                    horizontal-alignment: right;
                 }
-                if root.tx-fee != "": Text { 
-                    text: "Fee " + root.tx-fee; 
-                    color: Theme.text-subtle; 
-                    font-size: 9px; 
-                    horizontal-alignment: right; 
+                if root.tx-fee != "": Text {
+                    text: "Fee " + root.tx-fee;
+                    color: Theme.text-subtle;
+                    font-size: 9px;
+                    horizontal-alignment: right;
                 }
             }
 
@@ -243,7 +232,7 @@ component TransactionRow inherits Rectangle {
                 animate background { duration: 150ms; }
 
                 Image {
-                    source: @image-url("../assets/icons/file-text.svg");
+                    source: @image-url("../assets/icons/pencil.svg");
                     width: 14px;
                     height: 14px;
                     colorize: edit-touch.has-hover ? Theme.text-primary : Theme.text-muted;
@@ -253,7 +242,9 @@ component TransactionRow inherits Rectangle {
 
                 edit-touch := TouchArea {
                     mouse-cursor: pointer;
-                    clicked => { root.edit-clicked(root.tx-id); }
+                    clicked => {
+                        root.edit-clicked(root.tx-id);
+                    }
                 }
             }
 
@@ -277,19 +268,20 @@ component TransactionRow inherits Rectangle {
 
                 del-touch := TouchArea {
                     mouse-cursor: pointer;
-                    clicked => { root.delete-clicked(root.tx-id); }
+                    clicked => {
+                        root.delete-clicked(root.tx-id);
+                    }
                 }
             }
         }
     }
-    
+
     if !root.is-last: Rectangle {
         height: 1px;
         width: parent.width;
         background: Theme.border-subtle;
         y: parent.height - 1px;
     }
-
 }
 
 // ==================== Main Panel ====================
@@ -299,12 +291,8 @@ export component AssetDetailPanel inherits Rectangle {
     property <bool> show-delete-transaction: false;
     property <string> delete-transaction-id: "";
     property <string> delete-transaction-label: "";
-    background: @linear-gradient(
-        180deg,
-        Theme.crypto-panel-gradient-start 0%,
-        Theme.crypto-panel-gradient-end 100%
-    );
-    
+    background: @linear-gradient(180deg, Theme.crypto-panel-gradient-start 0%, Theme.crypto-panel-gradient-end 100%);
+
     // Left border accent
     Rectangle {
         width: 1px;
@@ -321,12 +309,12 @@ export component AssetDetailPanel inherits Rectangle {
         Rectangle {
             height: 100px;
             background: Theme.surface;
-            
+
             HorizontalLayout {
                 padding-left: 28px;
                 padding-right: 28px;
                 spacing: 16px;
-                
+
                 // Asset Icon
                 CryptoIcon {
                     symbol: CryptoAdapter.selected-asset.symbol;
@@ -334,38 +322,37 @@ export component AssetDetailPanel inherits Rectangle {
                     large: true;
                     y: (parent.height - self.height) / 2;
                 }
-                
+
                 // Asset Info
                 VerticalLayout {
                     alignment: center;
                     spacing: 4px;
                     horizontal-stretch: 1;
-                    
-                    Text { 
-                        text: CryptoAdapter.selected-asset.name; 
-                        color: Theme.text-primary; 
-                        font-size: 18px; 
-                        font-weight: 400; 
-                        letter-spacing: 0.5px; 
+
+                    Text {
+                        text: CryptoAdapter.selected-asset.name;
+                        color: Theme.text-primary;
+                        font-size: 18px;
+                        font-weight: 400;
+                        letter-spacing: 0.5px;
                     }
-                    
+
                     HorizontalLayout {
                         spacing: 10px;
-                        
-                        Text { 
-                            text: CryptoAdapter.selected-asset.price == "N/A" ? "---" : CryptoAdapter.selected-asset.price; 
-                            color: Theme.text-secondary; 
-                            font-size: 13px; 
+
+                        Text {
+                            text: CryptoAdapter.selected-asset.price == "N/A" ? "---" : CryptoAdapter.selected-asset.price;
+                            color: Theme.text-secondary;
+                            font-size: 13px;
                         }
-                        
+
                         // Change badge
                         if CryptoAdapter.selected-asset.price != "N/A": Rectangle {
                             width: 60px;
                             height: 20px;
                             border-radius: 4px;
-                            background: CryptoAdapter.selected-asset.is-positive ? 
-                                Theme.success.with-alpha(0.1) : Theme.danger.with-alpha(0.1);
-                            
+                            background: CryptoAdapter.selected-asset.is-positive ? Theme.success.with-alpha(0.1) : Theme.danger.with-alpha(0.1);
+
                             Text {
                                 text: CryptoAdapter.selected-asset.change-24h;
                                 color: CryptoAdapter.selected-asset.is-positive ? Theme.success : Theme.danger;
@@ -377,7 +364,7 @@ export component AssetDetailPanel inherits Rectangle {
                         }
                     }
                 }
-                
+
                 // Close Button
                 Rectangle {
                     width: 40px;
@@ -385,9 +372,9 @@ export component AssetDetailPanel inherits Rectangle {
                     border-radius: 10px;
                     background: close-touch.has-hover ? Theme.surface-hover : transparent;
                     y: (parent.height - self.height) / 2;
-                    
+
                     animate background { duration: 150ms; }
-                    
+
                     Image {
                         source: @image-url("../assets/icons/x.svg");
                         width: 16px;
@@ -396,14 +383,16 @@ export component AssetDetailPanel inherits Rectangle {
                         x: (parent.width - self.width) / 2;
                         y: (parent.height - self.height) / 2;
                     }
-                    
-                    close-touch := TouchArea { 
+
+                    close-touch := TouchArea {
                         mouse-cursor: pointer;
-                        clicked => { CryptoAdapter.show-asset-detail = false; } 
+                        clicked => {
+                            CryptoAdapter.show-asset-detail = false;
+                        }
                     }
                 }
             }
-            
+
             // Bottom border
             Rectangle {
                 height: 1px;
@@ -412,98 +401,98 @@ export component AssetDetailPanel inherits Rectangle {
                 y: parent.height - 1px;
             }
         }
-        
+
         // Content
         VerticalLayout {
             padding: 28px;
             spacing: 24px;
-            
+
             // Holdings Card
             Rectangle {
                 height: 120px;
-                background: @linear-gradient(
-                    135deg,
-                    Theme.crypto-card-gradient-mid 0%,
-                    Theme.crypto-card-gradient-start 100%
-                );
+                background: @linear-gradient(135deg, Theme.crypto-card-gradient-mid 0%, Theme.crypto-card-gradient-start 100%);
                 border-radius: 12px;
                 border-width: 1px;
                 border-color: Theme.border-subtle;
-                
+
                 VerticalLayout {
                     padding: 20px;
                     spacing: 12px;
                     alignment: center;
-                    
-                    Text { 
-                        text: "TOTAL HOLDINGS"; 
-                        color: Theme.text-muted; 
+
+                    Text {
+                        text: "TOTAL HOLDINGS";
+                        color: Theme.text-muted;
                         font-size: 10px;
                         font-weight: 600;
-                        letter-spacing: 2px; 
-                        horizontal-alignment: center; 
+                        letter-spacing: 2px;
+                        horizontal-alignment: center;
                     }
-                    
-                    Text { 
-                        text: CryptoAdapter.selected-asset.amount; 
-                        color: Theme.text-primary; 
-                        font-size: 28px; 
+
+                    Text {
+                        text: CryptoAdapter.selected-asset.amount;
+                        color: Theme.text-primary;
+                        font-size: 28px;
                         font-weight: 300;
                         letter-spacing: -0.5px;
-                        horizontal-alignment: center; 
+                        horizontal-alignment: center;
                     }
-                    
-                    Text { 
-                        text: "≈ " + (CryptoAdapter.selected-asset.price == "N/A" ? "---" : CryptoAdapter.selected-asset.value); 
-                        color: Theme.text-secondary; 
-                        font-size: 14px; 
-                        horizontal-alignment: center; 
+
+                    Text {
+                        text: "≈ " + (CryptoAdapter.selected-asset.price == "N/A" ? "---" : CryptoAdapter.selected-asset.value);
+                        color: Theme.text-secondary;
+                        font-size: 14px;
+                        horizontal-alignment: center;
                     }
                 }
             }
-            
+
             // Wallet Breakdown Section
             VerticalLayout {
                 spacing: 12px;
-                
-                SectionHeader { title: "WALLET BREAKDOWN"; }
-                
+
+                SectionHeader {
+                    title: "WALLET BREAKDOWN";
+                }
+
                 if CryptoAdapter.asset-wallets.length == 0: Rectangle {
                     height: 48px;
                     background: Theme.surface.with-alpha(0.3);
                     border-radius: 8px;
-                    
-                    Text { 
-                        text: "No wallet data available"; 
-                        color: Theme.text-subtle; 
+
+                    Text {
+                        text: "No wallet data available";
+                        color: Theme.text-subtle;
                         font-size: 12px;
                         vertical-alignment: center;
                         horizontal-alignment: center;
                     }
                 }
-                
+
                 for item in CryptoAdapter.asset-wallets: WalletBreakdownRow {
                     wallet-name: item.wallet-name;
                     amount: item.amount;
                     value: item.value;
                 }
             }
-            
+
             // History Section
             VerticalLayout {
                 vertical-stretch: 1;
                 spacing: 12px;
-                
-                SectionHeader { title: "TRANSACTION HISTORY"; }
-                
+
+                SectionHeader {
+                    title: "TRANSACTION HISTORY";
+                }
+
                 if CryptoAdapter.asset-history.length == 0: Rectangle {
                     height: 48px;
                     background: Theme.surface.with-alpha(0.3);
                     border-radius: 8px;
-                    
-                    Text { 
-                        text: "No transactions found"; 
-                        color: Theme.text-subtle; 
+
+                    Text {
+                        text: "No transactions found";
+                        color: Theme.text-subtle;
                         font-size: 12px;
                         vertical-alignment: center;
                         horizontal-alignment: center;
@@ -513,7 +502,7 @@ export component AssetDetailPanel inherits Rectangle {
                 Flickable {
                     vertical-stretch: 1;
                     viewport-height: CryptoAdapter.asset-history.length * 64px;
-                    
+
                     VerticalLayout {
                         for tx[index] in CryptoAdapter.asset-history: TransactionRow {
                             tx-id: tx.id;
@@ -525,7 +514,7 @@ export component AssetDetailPanel inherits Rectangle {
                             tx-notes: tx.notes;
                             tx-is-swap: tx.is-swap;
                             is-last: index == CryptoAdapter.asset-history.length - 1;
-                            
+
                             delete-clicked(id) => {
                                 root.delete-transaction-id = id;
                                 root.delete-transaction-label = tx.type + " " + tx.amount;
@@ -547,7 +536,10 @@ export component AssetDetailPanel inherits Rectangle {
     }
 
     if root.show-delete-transaction: Rectangle {
-        x: 0; y: 0; width: 100%; height: 100%;
+        x: 0;
+        y: 0;
+        width: 100%;
+        height: 100%;
         z: 1200;
 
         Rectangle {

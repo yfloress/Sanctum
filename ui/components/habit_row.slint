@@ -158,7 +158,7 @@ export component HabitRow inherits Rectangle {
                     }
 
                     StatBadge {
-                        icon: @image-url("../assets/icons/trending-up.svg");
+                        icon: @image-url("../assets/icons/flame.svg");
                         value: habit.streak;
                         accent-color: Theme.habit-color-5;
                     }
@@ -246,7 +246,7 @@ export component HabitRow inherits Rectangle {
                     animate background { duration: 150ms; }
 
                     Image {
-                        source: @image-url("../assets/icons/file-text.svg");
+                        source: @image-url("../assets/icons/pencil.svg");
                         width: 14px;
                         height: 14px;
                         colorize: edit-touch.has-hover ? Theme.text-primary : Theme.text-muted;
@@ -274,9 +274,11 @@ export component HabitRow inherits Rectangle {
                     animate background { duration: 150ms; }
                     animate border-color { duration: 150ms; }
 
-                    Text {
-                        text: "🗑";
-                        font-size: 16px;
+                    Image {
+                        source: @image-url("../assets/icons/trash.svg");
+                        width: 14px;
+                        height: 14px;
+                        colorize: delete-touch.has-hover ? Theme.text-primary : Theme.text-muted;
                         x: (parent.width - self.width) / 2;
                         y: (parent.height - self.height) / 2;
                     }
