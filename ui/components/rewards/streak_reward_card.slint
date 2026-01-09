@@ -76,9 +76,7 @@ export component StreakRewardCard inherits Rectangle {
     callback delete(string);
 
     // Calculate days remaining to next milestone (min 0)
-    property <int> days-remaining: max(0, reward.next-milestone-days - reward.current-progress);
-    // Check if all milestones are unlocked
-    property <bool> all-milestones-unlocked: reward.current-progress >= reward.next-milestone-days && reward.next-milestone-reward == "";
+    property <int> days-remaining: reward.next-milestone-days - reward.current-progress;
 
     height: 160px;
     background: Theme.surface;
@@ -179,8 +177,9 @@ export component StreakRewardCard inherits Rectangle {
                 border-radius: 4px;
                 background: Theme.surface-hover;
 
-                // Progress fill
+                // Progress fill - explicitly start from left edge
                 Rectangle {
+                    x: 0;
                     width: parent.width * (reward.progress-percent / 100.0);
                     height: parent.height;
                     border-radius: 4px;
@@ -203,8 +202,8 @@ export component StreakRewardCard inherits Rectangle {
             }
         }
 
-        // Next reward info - only show if there's a next milestone
-        if reward.next-milestone-reward != "": HorizontalLayout {
+        // Next reward info - only show if there's a next milestone (next-milestone-days > 0 means there's one)
+        if reward.next-milestone-days > 0 && reward.next-milestone-reward != "": HorizontalLayout {
             spacing: 8px;
             alignment: start;
 
@@ -224,16 +223,16 @@ export component StreakRewardCard inherits Rectangle {
             }
 
             Text {
-                text: root.days-remaining == 0 ? "Achieved!" : "in " + root.days-remaining + " days";
-                color: root.days-remaining == 0 ? Theme.success : Theme.text-secondary;
+                text: root.days-remaining <= 0 ? "Ready to claim!" : "in " + root.days-remaining + " days";
+                color: root.days-remaining <= 0 ? Theme.success : Theme.text-secondary;
                 font-size: 11px;
                 font-weight: 500;
                 vertical-alignment: center;
             }
         }
 
-        // All milestones complete message
-        if reward.next-milestone-reward == "": HorizontalLayout {
+        // All milestones complete message - show when no next milestone
+        if reward.next-milestone-days == 0 || reward.next-milestone-reward == "": HorizontalLayout {
             spacing: 8px;
             alignment: start;
 

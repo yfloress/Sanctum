@@ -59,6 +59,13 @@ impl RewardsService {
         self.with_db(RewardsRepository::get_streak_rewards)
     }
 
+    pub fn get_streak_rewards_by_habit(
+        &self,
+        habit_id: &str,
+    ) -> Result<Vec<StreakReward>, DbError> {
+        self.with_db(|db| RewardsRepository::get_streak_rewards_by_habit(db, habit_id))
+    }
+
     pub fn get_streak_reward(&self, id: &str) -> Result<Option<StreakReward>, DbError> {
         self.with_db(|db| RewardsRepository::get_streak_reward(db, id))
     }

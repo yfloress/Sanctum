@@ -280,7 +280,7 @@ fn setup_goal_callbacks<N>(
                         Timer::single_shot(Duration::from_millis(UI_UPDATE_DELAY_MS), move || {
                             load_goals_data(&ui_weak, &controller, &notify);
                             load_achievements_data(&ui_weak, &controller, &notify);
-                            notify("🎉 Goal completed!".into(), false);
+                            notify("Goal completed!".into(), false);
                         });
                         SharedString::from("")
                     }
@@ -408,10 +408,7 @@ fn handle_streak_progress_update<N>(
     match controller.check_and_unlock_milestones(reward_id.to_string()) {
         Ok(unlocked) => {
             if !unlocked.is_empty() {
-                notify(
-                    format!("🎉 {} milestone(s) unlocked!", unlocked.len()),
-                    false,
-                );
+                notify(format!("{} milestone(s) unlocked!", unlocked.len()), false);
                 load_achievements_data(ui_weak, controller, notify);
             }
             load_rewards_data(ui_weak, controller, notify);
@@ -469,7 +466,11 @@ where
             .map(|m| m.reward_text.clone())
             .unwrap_or_default();
 
-        let progress_percent = calculate_progress_percent(progress, next_days);
+        // Calculate progress relative to the MAX milestone (last one), not the next one
+        // This ensures the progress bar and milestone markers use the same reference
+        let max_milestone_days = milestones.iter().map(|m| m.target_days).max().unwrap_or(1);
+
+        let progress_percent = calculate_progress_percent(progress, max_milestone_days);
 
         let milestone_data: Vec<MilestoneData> = milestones
             .iter()

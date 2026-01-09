@@ -19,6 +19,13 @@ impl RewardsRepository {
         db.get_streak_rewards()
     }
 
+    pub fn get_streak_rewards_by_habit(
+        db: &Database,
+        habit_id: &str,
+    ) -> Result<Vec<StreakReward>, DbError> {
+        db.get_streak_rewards_by_habit(habit_id)
+    }
+
     pub fn get_streak_reward(db: &Database, id: &str) -> Result<Option<StreakReward>, DbError> {
         db.get_streak_reward(id)
     }

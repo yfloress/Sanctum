@@ -47,6 +47,31 @@ impl Database {
         Ok(rewards)
     }
 
+    pub fn get_streak_rewards_by_habit(
+        &self,
+        habit_id: &str,
+    ) -> Result<Vec<StreakReward>, DbError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, habit_id, is_consecutive, target_days, target_total, created_at
+             FROM streak_rewards WHERE habit_id = ?1 ORDER BY created_at DESC",
+        )?;
+
+        let rewards = stmt
+            .query_map(params![habit_id], |row| {
+                Ok(StreakReward {
+                    id: row.get(0)?,
+                    habit_id: row.get(1)?,
+                    is_consecutive: row.get::<_, i32>(2)? != 0,
+                    target_days: row.get(3)?,
+                    target_total: row.get(4)?,
+                    created_at: row.get(5)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(rewards)
+    }
+
     pub fn get_streak_reward(&self, id: &str) -> Result<Option<StreakReward>, DbError> {
         let result = self.conn.query_row(
             "SELECT id, habit_id, is_consecutive, target_days, target_total, created_at

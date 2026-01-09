@@ -1,5 +1,6 @@
 //! Habit callback registrations
 
+use crate::RewardsAdapter;
 use crate::controller::AppController;
 use crate::{AppWindow, HabitAdapter};
 use chrono::{Datelike, NaiveDate};
@@ -165,13 +166,33 @@ pub fn setup_habit_callbacks<N>(
         let notify = notify.clone();
         ui.global::<HabitAdapter>()
             .on_toggle_habit(move |id, date| {
-                match controller.toggle_habit_completion(id.to_string(), date.to_string()) {
+                let habit_id = id.to_string();
+                match controller.toggle_habit_completion(habit_id.clone(), date.to_string()) {
                     Ok(_) => {
                         let d = *date_lock.lock().unwrap();
                         let y = *year_lock.lock().unwrap();
                         reload_habits(&ui_weak, &controller, d, Some(&notify));
                         reload_heatmap(&ui_weak, &controller, y);
                         refresh_habit_analytics(&ui_weak, &controller, &analytics_cache, &notify);
+
+                        // Check and unlock milestones for all streak rewards linked to this habit
+                        if let Ok(rewards) = controller.get_streak_rewards_by_habit(&habit_id) {
+                            for reward in rewards {
+                                if let Ok(unlocked) =
+                                    controller.check_and_unlock_milestones(reward.id.clone())
+                                    && !unlocked.is_empty()
+                                {
+                                    notify(
+                                        format!("{} milestone(s) unlocked!", unlocked.len()),
+                                        false,
+                                    );
+                                }
+                            }
+                            // Refresh rewards UI
+                            if let Some(ui) = ui_weak.upgrade() {
+                                ui.global::<RewardsAdapter>().invoke_fetch_rewards();
+                            }
+                        }
                     }
                     Err(e) => {
                         notify(format!("Failed to toggle habit: {}", e), true);
@@ -290,10 +311,10 @@ pub fn setup_habit_callbacks<N>(
                 };
                 let habits = ui.global::<HabitAdapter>().get_habits();
                 for i in 0..habits.row_count() {
-                    if let Some(habit) = habits.row_data(i) {
-                        if habit.id == habit_id {
-                            return i as i32;
-                        }
+                    if let Some(habit) = habits.row_data(i)
+                        && habit.id == habit_id
+                    {
+                        return i as i32;
                     }
                 }
                 -1

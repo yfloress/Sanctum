@@ -47,6 +47,15 @@ impl AppController {
             .map_err(ControllerError::Database)
     }
 
+    pub fn get_streak_rewards_by_habit(
+        &self,
+        habit_id: &str,
+    ) -> Result<Vec<StreakReward>, ControllerError> {
+        self.rewards_service
+            .get_streak_rewards_by_habit(habit_id)
+            .map_err(ControllerError::Database)
+    }
+
     pub fn get_streak_progress(&self, reward_id: String) -> Result<i32, ControllerError> {
         if validate_uuid(&reward_id).is_err() {
             return Err(ControllerError::Validation("Invalid UUID".into()));
