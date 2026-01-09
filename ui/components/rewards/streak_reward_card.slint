@@ -123,8 +123,7 @@ export component StreakRewardCard inherits Rectangle {
                         width: reward.is-consecutive ? 85px : 95px;
                         height: 18px;
                         border-radius: 9px;
-                        background: reward.is-consecutive ? Theme.accent : Theme.warning;
-                        opacity: 0.15;
+                        background: reward.is-consecutive ? Theme.accent.transparentize(0.85) : Theme.warning.transparentize(0.85);
 
                         Text {
                             text: reward.is-consecutive ? "CONSECUTIVE" : "ACCUMULATIVE";
