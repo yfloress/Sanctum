@@ -122,10 +122,14 @@ export component HabitRow inherits Rectangle {
         Rectangle {
             width: 180px;
 
+            // Content container - centered vertically to match days grid
             HorizontalLayout {
                 spacing: 12px;
                 padding-left: 8px;
                 alignment: start;
+                // Center vertically like the days grid does
+                y: (parent.height - self.height) / 2;
+                height: 44px;
 
                 // Color Indicator with glow
                 Rectangle {
@@ -146,8 +150,8 @@ export component HabitRow inherits Rectangle {
                 }
 
                 VerticalLayout {
-                    alignment: start;
-                    spacing: 6px;
+                    alignment: center;
+                    spacing: 4px;
 
                     Text {
                         text: habit.name;
