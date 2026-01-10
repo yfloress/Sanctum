@@ -188,6 +188,18 @@ habits-empty-chart-subtitle = Tu leyenda aparecerá aquí. Empieza a escribirla 
 habits-complete-to-see = Completa hábitos para ver tu patrón semanal.
 habits-discover-days = Descubre en qué días eres más consistente.
 
+# Habits Tab sections
+habits-add-button = + HÁBITO
+habits-yearly-overview = RESUMEN ANUAL
+habits-my-habits-section = MIS HÁBITOS
+habits-no-tracked-month = No hay hábitos registrados este mes
+habits-create-to-build = Crea un hábito para comenzar a construir consistencia
+habits-analytics-section = ANALÍTICAS
+habits-weekly-report = REPORTE SEMANAL
+habits-insights = PERSPECTIVAS
+habits-summary = RESUMEN DE HÁBITOS
+habits-select-placeholder = Selecciona un hábito...
+
 # ==================== Rewards ====================
 rewards-title = Recompensas
 rewards-goals = Metas
@@ -218,10 +230,14 @@ settings-language = Idioma
 settings-language-desc = Idioma de la interfaz
 settings-currency = Moneda
 settings-currency-desc = Moneda predeterminada
+settings-preferred-currency = Moneda Preferida
+settings-preferred-currency-desc = Moneda base para mostrar montos (solo UI)
 
 # Appearance settings
 settings-dark-mode = Modo Oscuro
 settings-dark-mode-desc = Activar tema oscuro
+settings-dark-mode-title = Modo Oscuro
+settings-dark-mode-toggle-desc = Cambiar entre temas oscuro y claro (crema/dorado)
 
 # Security settings
 settings-session-timeout = Tiempo de Sesión
@@ -231,13 +247,19 @@ settings-timeout-15min = 15 minutos
 settings-timeout-30min = 30 minutos
 settings-timeout-1hour = 1 hora
 settings-timeout-never = Nunca
+settings-timeout-warning = Los cambios de tiempo se aplicarán en la próxima apertura de bóveda.
 
 # Crypto settings
 settings-auto-fetch = Actualizar Precios
 settings-auto-fetch-desc = Actualizar precios de crypto automáticamente
+settings-auto-fetch-title = Actualizar Precios de Crypto Automáticamente
+settings-auto-fetch-toggle-desc = Actualizar precios cada minuto mientras la app está activa (usa red)
 settings-proxy = Proxy
 settings-proxy-enabled = Habilitar Proxy
 settings-proxy-url = URL del Proxy
+settings-proxy-title = Usar Proxy de Red
+settings-proxy-toggle-desc = Enrutar solicitudes de precios de crypto a través de un proxy (opcional)
+settings-proxy-placeholder = http://127.0.0.1:8080 o socks5h://127.0.0.1:9050
 
 # Data settings
 settings-reset = Restablecer Ajustes
@@ -427,6 +449,8 @@ modal-create-wallet = CREAR BILLETERA
 # Add Habit
 modal-category = CATEGORÍA
 modal-color = COLOR
+modal-habit-name-placeholder = ej. Leer 10 páginas
+modal-habit-description-placeholder = Por qué este hábito es importante
 
 # Configure Categories
 modal-category-settings = CONFIGURACIÓN DE CATEGORÍAS
@@ -570,6 +594,9 @@ section-wallet-breakdown = DESGLOSE POR BILLETERA
 section-regional = REGIONAL
 section-data-sync = DATOS Y SINCRONIZACIÓN
 section-about = ACERCA DE
+settings-version-label = Versión
+settings-encryption-label = Cifrado
+settings-database-label = Base de Datos
 settings-encryption-type = AES-256-GCM
 settings-storage-type = SQLite (Cifrado)
 

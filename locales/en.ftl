@@ -188,6 +188,18 @@ habits-empty-chart-subtitle = Your legend will appear here. Start writing it tod
 habits-complete-to-see = Complete habits to see your weekly pattern.
 habits-discover-days = Discover which days you're most consistent.
 
+# Habits Tab sections
+habits-add-button = + HABIT
+habits-yearly-overview = YEARLY OVERVIEW
+habits-my-habits-section = MY HABITS
+habits-no-tracked-month = No habits tracked this month
+habits-create-to-build = Create a habit to start building consistency
+habits-analytics-section = ANALYTICS
+habits-weekly-report = WEEKLY REPORT
+habits-insights = INSIGHTS
+habits-summary = HABIT SUMMARY
+habits-select-placeholder = Select a habit...
+
 # ==================== Rewards ====================
 rewards-title = Rewards
 rewards-goals = Goals
@@ -218,10 +230,14 @@ settings-language = Language
 settings-language-desc = Application interface language
 settings-currency = Currency
 settings-currency-desc = Default currency for display
+settings-preferred-currency = Preferred Currency
+settings-preferred-currency-desc = Base currency for displaying amounts (UI only)
 
 # Appearance settings
 settings-dark-mode = Dark Mode
 settings-dark-mode-desc = Enable dark theme
+settings-dark-mode-title = Dark Mode
+settings-dark-mode-toggle-desc = Switch between dark and light (cream/gold) themes
 
 # Security settings
 settings-session-timeout = Session Timeout
@@ -231,13 +247,19 @@ settings-timeout-15min = 15 minutes
 settings-timeout-30min = 30 minutes
 settings-timeout-1hour = 1 hour
 settings-timeout-never = Never
+settings-timeout-warning = Timeout changes will apply on next vault open.
 
 # Crypto settings
 settings-auto-fetch = Auto-fetch Prices
 settings-auto-fetch-desc = Automatically update crypto prices
+settings-auto-fetch-title = Auto-fetch Crypto Prices
+settings-auto-fetch-toggle-desc = Refresh prices every minute while app is running (uses network)
 settings-proxy = Proxy
 settings-proxy-enabled = Enable Proxy
 settings-proxy-url = Proxy URL
+settings-proxy-title = Use Network Proxy
+settings-proxy-toggle-desc = Route crypto price requests through a proxy (optional)
+settings-proxy-placeholder = http://127.0.0.1:8080 or socks5h://127.0.0.1:9050
 
 # Data settings
 settings-reset = Reset Settings
@@ -427,6 +449,8 @@ modal-create-wallet = CREATE WALLET
 # Add Habit
 modal-category = CATEGORY
 modal-color = COLOR
+modal-habit-name-placeholder = e.g. Read 10 pages
+modal-habit-description-placeholder = Why this habit matters
 
 # Configure Categories
 modal-category-settings = CATEGORY SETTINGS
@@ -570,6 +594,9 @@ section-wallet-breakdown = WALLET BREAKDOWN
 section-regional = REGIONAL
 section-data-sync = DATA & SYNC
 section-about = ABOUT
+settings-version-label = Version
+settings-encryption-label = Encryption
+settings-database-label = Database
 settings-encryption-type = AES-256-GCM
 settings-storage-type = SQLite (Encrypted)
 

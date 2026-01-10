@@ -236,11 +236,10 @@ pub fn setup_settings_callbacks<N>(
                 let _ = controller.set_app_setting(SETTING_PREFERRED_LANGUAGE, language.as_str());
 
                 // Change language in i18n service and reload translations
-                if change_language(language.as_str()) {
-                    if let Some(ui) = ui_weak.upgrade() {
+                if change_language(language.as_str())
+                    && let Some(ui) = ui_weak.upgrade() {
                         load_all_translations(&ui);
                     }
-                }
             });
     }
 

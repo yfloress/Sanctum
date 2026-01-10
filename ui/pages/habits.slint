@@ -19,7 +19,7 @@ import { RewardsTab } from "../components/rewards/rewards_tab.slint";
 import { HistoryTab } from "../components/rewards/history_tab.slint";
 
 component NavButton inherits Rectangle {
-    in property <string> icon;
+    in property <image> icon;
     in property <bool> enabled: true;
     callback clicked;
 
@@ -34,10 +34,11 @@ component NavButton inherits Rectangle {
     animate background { duration: 150ms; }
     animate border-color { duration: 150ms; }
 
-    Text {
-        text: root.icon;
-        color: Theme.text-secondary;
-        font-size: 14px;
+    Image {
+        source: root.icon;
+        width: 16px;
+        height: 16px;
+        colorize: Theme.text-secondary;
         horizontal-alignment: center;
         vertical-alignment: center;
     }
@@ -116,7 +117,7 @@ export component HabitsPage inherits Rectangle {
                         alignment: start;
 
                         NavButton {
-                            icon: "←";
+                            icon: @image-url("../assets/icons/arrow-left.svg");
                             clicked => {
                                 HabitAdapter.prev-month();
                             }
@@ -142,7 +143,7 @@ export component HabitsPage inherits Rectangle {
                         }
 
                         NavButton {
-                            icon: "→";
+                            icon: @image-url("../assets/icons/arrow-right.svg");
                             clicked => {
                                 HabitAdapter.next-month();
                             }

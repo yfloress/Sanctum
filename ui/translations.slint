@@ -190,6 +190,18 @@ export global Translations {
     in-out property <string> habits-complete-to-see: "Complete habits to see your weekly pattern.";
     in-out property <string> habits-discover-days: "Discover which days you're most consistent.";
 
+    // Habits Tab sections
+    in-out property <string> habits-add-button: "+ HABIT";
+    in-out property <string> habits-yearly-overview: "YEARLY OVERVIEW";
+    in-out property <string> habits-my-habits-section: "MY HABITS";
+    in-out property <string> habits-no-tracked-month: "No habits tracked this month";
+    in-out property <string> habits-create-to-build: "Create a habit to start building consistency";
+    in-out property <string> habits-analytics-section: "ANALYTICS";
+    in-out property <string> habits-weekly-report: "WEEKLY REPORT";
+    in-out property <string> habits-insights: "INSIGHTS";
+    in-out property <string> habits-summary: "HABIT SUMMARY";
+    in-out property <string> habits-select-placeholder: "Select a habit...";
+
     // ==================== Rewards ====================
     in-out property <string> rewards-title: "Rewards";
     in-out property <string> rewards-goals: "Goals";
@@ -220,10 +232,14 @@ export global Translations {
     in-out property <string> settings-language-desc: "Application interface language (UI only)";
     in-out property <string> settings-currency: "Currency";
     in-out property <string> settings-currency-desc: "Default currency for display";
+    in-out property <string> settings-preferred-currency: "Preferred Currency";
+    in-out property <string> settings-preferred-currency-desc: "Base currency for displaying amounts (UI only)";
 
     // Appearance settings
     in-out property <string> settings-dark-mode: "Dark Mode";
     in-out property <string> settings-dark-mode-desc: "Enable dark theme";
+    in-out property <string> settings-dark-mode-title: "Dark Mode";
+    in-out property <string> settings-dark-mode-toggle-desc: "Switch between dark and light (cream/gold) themes";
 
     // Security settings
     in-out property <string> settings-session-timeout: "Session Timeout";
@@ -233,13 +249,19 @@ export global Translations {
     in-out property <string> settings-timeout-30min: "30 minutes";
     in-out property <string> settings-timeout-1hour: "1 hour";
     in-out property <string> settings-timeout-never: "Never";
+    in-out property <string> settings-timeout-warning: "Timeout changes will apply on next vault open.";
 
     // Crypto settings
     in-out property <string> settings-auto-fetch: "Auto-fetch Prices";
     in-out property <string> settings-auto-fetch-desc: "Automatically update crypto prices";
+    in-out property <string> settings-auto-fetch-title: "Auto-fetch Crypto Prices";
+    in-out property <string> settings-auto-fetch-toggle-desc: "Refresh prices every minute while app is running (uses network)";
     in-out property <string> settings-proxy: "Proxy";
     in-out property <string> settings-proxy-enabled: "Enable Proxy";
     in-out property <string> settings-proxy-url: "Proxy URL";
+    in-out property <string> settings-proxy-title: "Use Network Proxy";
+    in-out property <string> settings-proxy-toggle-desc: "Route crypto price requests through a proxy (optional)";
+    in-out property <string> settings-proxy-placeholder: "http://127.0.0.1:8080 or socks5h://127.0.0.1:9050";
 
     // Data settings
     in-out property <string> settings-reset: "Reset Settings";
@@ -424,6 +446,8 @@ export global Translations {
     // Add Habit
     in-out property <string> modal-category: "CATEGORY";
     in-out property <string> modal-color: "COLOR";
+    in-out property <string> modal-habit-name-placeholder: "e.g. Read 10 pages";
+    in-out property <string> modal-habit-description-placeholder: "Why this habit matters";
 
     // Configure Categories
     in-out property <string> modal-category-settings: "CATEGORY SETTINGS";
@@ -563,6 +587,9 @@ export global Translations {
     in-out property <string> section-regional: "REGIONAL";
     in-out property <string> section-data-sync: "DATA & SYNC";
     in-out property <string> section-about: "ABOUT";
+    in-out property <string> settings-version-label: "Version";
+    in-out property <string> settings-encryption-label: "Encryption";
+    in-out property <string> settings-database-label: "Database";
     in-out property <string> settings-encryption-type: "AES-256-GCM";
     in-out property <string> settings-storage-type: "SQLite (Encrypted)";
 

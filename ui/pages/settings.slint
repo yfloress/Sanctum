@@ -228,10 +228,11 @@ component SettingSelector inherits Rectangle {
                         horizontal-stretch: 1;
                     }
 
-                    Text {
-                        text: "▼";
-                        color: Theme.text-muted;
-                        font-size: 8px;
+                    Image {
+                        source: @image-url("../assets/icons/chevron-down.svg");
+                        width: 12px;
+                        height: 12px;
+                        colorize: Theme.text-muted;
                         vertical-alignment: center;
                     }
                 }
@@ -370,7 +371,7 @@ export component SettingsPage inherits Rectangle {
                     }
 
                     Text {
-                        text: "Configure your Sanctum experience";
+                        text: Translations.settings-configure-experience;
                         color: Theme.text-muted;
                         font-size: 11px;
                         font-weight: 400;
@@ -405,8 +406,8 @@ export component SettingsPage inherits Rectangle {
                     }
 
                     SettingCard {
-                        title: "Dark Mode";
-                        description: "Switch between dark and light (cream/gold) themes";
+                        title: Translations.settings-dark-mode-title;
+                        description: Translations.settings-dark-mode-toggle-desc;
                         toggle-value: SettingsAdapter.dark-mode;
                         toggled(value) => {
                             SettingsAdapter.set-dark-mode(value);
@@ -424,8 +425,8 @@ export component SettingsPage inherits Rectangle {
                     }
 
                     SettingSelector {
-                        title: "Preferred Currency";
-                        description: "Base currency for displaying amounts (UI only)";
+                        title: Translations.settings-preferred-currency;
+                        description: Translations.settings-preferred-currency-desc;
                         selected-value: SettingsAdapter.preferred-currency;
                         options: ["USD", "CLP"];
                         option-labels: ["USD ($)", "CLP ($)"];
@@ -475,7 +476,7 @@ export component SettingsPage inherits Rectangle {
                             padding-left: 12px;
 
                             Text {
-                                text: "⚠ Timeout changes will apply on next vault open.";
+                                text: Translations.settings-timeout-warning;
                                 color: Theme.text-muted;
                                 font-size: 10px;
                                 font-weight: 400;
@@ -494,8 +495,8 @@ export component SettingsPage inherits Rectangle {
                     }
 
                     SettingCard {
-                        title: "Auto-fetch Crypto Prices";
-                        description: "Refresh prices every minute while app is running (uses network)";
+                        title: Translations.settings-auto-fetch-title;
+                        description: Translations.settings-auto-fetch-toggle-desc;
                         toggle-value: SettingsAdapter.auto-fetch-enabled;
                         toggled(value) => {
                             SettingsAdapter.set-auto-fetch(value);
@@ -504,8 +505,8 @@ export component SettingsPage inherits Rectangle {
                     }
 
                     SettingCard {
-                        title: "Use Network Proxy";
-                        description: "Route crypto price requests through a proxy (optional)";
+                        title: Translations.settings-proxy-title;
+                        description: Translations.settings-proxy-toggle-desc;
                         toggle-value: SettingsAdapter.proxy-enabled;
                         toggled(value) => {
                             SettingsAdapter.set-proxy-enabled(value);
@@ -515,7 +516,7 @@ export component SettingsPage inherits Rectangle {
 
                     FormField {
                         label: Translations.settings-proxy-url;
-                        placeholder: "http://127.0.0.1:8080 or socks5h://127.0.0.1:9050";
+                        placeholder: Translations.settings-proxy-placeholder;
                         value: SettingsAdapter.proxy-url;
                         enabled: SettingsAdapter.proxy-enabled;
                         edited(value) => {
@@ -525,7 +526,7 @@ export component SettingsPage inherits Rectangle {
                     }
 
                     Text {
-                        text: "Tip: socks5h:// routes DNS through the proxy for better privacy.";
+                        text: Translations.settings-proxy-tip;
                         color: Theme.text-muted;
                         font-size: 10px;
                         font-weight: 400;
@@ -542,17 +543,17 @@ export component SettingsPage inherits Rectangle {
                     }
 
                     InfoCard {
-                        label: "Version";
+                        label: Translations.settings-version-label;
                         value: "1.0.0";
                     }
 
                     InfoCard {
-                        label: "Encryption";
+                        label: Translations.settings-encryption-label;
                         value: Translations.settings-encryption-type;
                     }
 
                     InfoCard {
-                        label: "Database";
+                        label: Translations.settings-database-label;
                         value: Translations.settings-storage-type;
                     }
                 }
@@ -601,14 +602,14 @@ export component SettingsPage inherits Rectangle {
                             spacing: 4px;
 
                             Text {
-                                text: "Your data is encrypted locally";
+                                text: Translations.settings-data-encrypted;
                                 color: Theme.text-primary;
                                 font-size: 13px;
                                 font-weight: 500;
                             }
 
                             Text {
-                                text: "All sensitive information is protected with military-grade encryption";
+                                text: Translations.settings-military-grade;
                                 color: Theme.text-muted;
                                 font-size: 11px;
                                 font-weight: 400;

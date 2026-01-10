@@ -2,6 +2,7 @@
 // Dropdown selector for choosing a habit using PopupWindow
 
 import { Theme } from "../../theme.slint";
+import { Translations } from "../../translations.slint";
 import { HabitData } from "../../globals.slint";
 
 export component HabitDropdown inherits Rectangle {
@@ -15,7 +16,7 @@ export component HabitDropdown inherits Rectangle {
         spacing: 8px;
 
         Text {
-            text: "HABIT";
+            text: Translations.form-habit;
             color: Theme.text-muted;
             font-size: 10px;
             font-weight: 500;
@@ -44,17 +45,18 @@ export component HabitDropdown inherits Rectangle {
 
                 Text {
                     horizontal-stretch: 1;
-                    text: selected-index >= 0 && selected-index < habits.length ? habits[selected-index].name : "Select a habit...";
+                    text: selected-index >= 0 && selected-index < habits.length ? habits[selected-index].name : Translations.habits-select-placeholder;
                     color: selected-index >= 0 ? Theme.text-primary : Theme.text-subtle;
                     font-size: 14px;
                     vertical-alignment: center;
                     overflow: elide;
                 }
 
-                Text {
-                    text: "▼";
-                    color: Theme.text-muted;
-                    font-size: 10px;
+                Image {
+                    source: @image-url("../../assets/icons/chevron-down.svg");
+                    width: 12px;
+                    height: 12px;
+                    colorize: Theme.text-muted;
                     vertical-alignment: center;
                 }
             }

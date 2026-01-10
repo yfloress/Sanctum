@@ -128,48 +128,44 @@ pub fn set_language(lang: &str) -> bool {
         return false;
     }
 
-    if let Some(lock) = I18N_STATE.get() {
-        if let Ok(mut guard) = lock.write() {
+    if let Some(lock) = I18N_STATE.get()
+        && let Ok(mut guard) = lock.write() {
             *guard = I18nState::new(lang);
             log::info!("Language changed to: {}", lang);
             return true;
         }
-    }
     false
 }
 
 /// Gets current language code
 pub fn current_language() -> String {
-    if let Some(lock) = I18N_STATE.get() {
-        if let Ok(guard) = lock.read() {
+    if let Some(lock) = I18N_STATE.get()
+        && let Ok(guard) = lock.read() {
             return guard.lang().to_string();
         }
-    }
     DEFAULT_LANGUAGE.to_string()
 }
 
 /// Translates a message key
 pub fn t(key: &str) -> String {
-    if let Some(lock) = I18N_STATE.get() {
-        if let Ok(guard) = lock.read() {
+    if let Some(lock) = I18N_STATE.get()
+        && let Ok(guard) = lock.read() {
             return guard.get(key);
         }
-    }
     // Fallback: return key itself
     key.to_string()
 }
 
 /// Translates a message key with arguments
 pub fn t_args(key: &str, args: &[(&str, &str)]) -> String {
-    if let Some(lock) = I18N_STATE.get() {
-        if let Ok(guard) = lock.read() {
+    if let Some(lock) = I18N_STATE.get()
+        && let Ok(guard) = lock.read() {
             let mut fluent_args = FluentArgs::new();
             for (k, v) in args {
                 fluent_args.set(*k, (*v).to_string());
             }
             return guard.get_with_args(key, Some(&fluent_args));
         }
-    }
     key.to_string()
 }
 

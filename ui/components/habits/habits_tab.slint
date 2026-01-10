@@ -143,7 +143,7 @@ export component HabitsTab inherits Rectangle {
                 alignment: space-between;
 
                 SectionHeader {
-                    title: "YEARLY OVERVIEW";
+                    title: Translations.habits-yearly-overview;
                 }
 
                 // Year Navigation
@@ -202,11 +202,11 @@ export component HabitsTab inherits Rectangle {
                 alignment: space-between;
 
                 SectionHeader {
-                    title: "MY HABITS";
+                    title: Translations.habits-my-habits-section;
                 }
 
                 ActionButton {
-                    text: "+ HABIT";
+                    text: Translations.habits-add-button;
                     primary: true;
                     clicked => {
                         AppState.show-add-habit = true;
@@ -268,8 +268,8 @@ export component HabitsTab inherits Rectangle {
 
             if HabitAdapter.habits.length == 0: EmptyState {
                 icon: @image-url("../../assets/icons/check.svg");
-                title: "No habits tracked this month";
-                description: "Create a habit to start building consistency";
+                title: Translations.habits-no-tracked-month;
+                description: Translations.habits-create-to-build;
             }
         }
 
@@ -278,7 +278,7 @@ export component HabitsTab inherits Rectangle {
             spacing: 16px;
 
             SectionHeader {
-                title: "ANALYTICS";
+                title: Translations.habits-analytics-section;
             }
 
             HorizontalLayout {
@@ -299,14 +299,14 @@ export component HabitsTab inherits Rectangle {
 
             InsightCard {
                 horizontal-stretch: 1;
-                title: "WEEKLY REPORT";
+                title: Translations.habits-weekly-report;
                 line1: HabitAdapter.habits-weekly-primary;
                 line2: HabitAdapter.habits-weekly-secondary;
             }
 
             InsightCard {
                 horizontal-stretch: 1;
-                title: "INSIGHTS";
+                title: Translations.habits-insights;
                 line1: HabitAdapter.habits-insight-primary;
                 line2: HabitAdapter.habits-insight-secondary;
             }
@@ -317,7 +317,7 @@ export component HabitsTab inherits Rectangle {
             spacing: 12px;
 
             SectionHeader {
-                title: "HABIT SUMMARY";
+                title: Translations.habits-summary;
             }
 
             Rectangle {
