@@ -99,7 +99,7 @@ dashboard-add-account = Agregar Cuenta
 
 # ==================== Finances ====================
 finances-title = Finanzas
-finances-accounts = Cuentas
+finances-accounts = CUENTAS
 finances-transactions = Transacciones
 finances-add-account = Agregar Cuenta
 finances-add-transaction = Agregar Transacción
@@ -130,8 +130,8 @@ filter-custom = Personalizado
 # ==================== Crypto ====================
 crypto-title = Crypto
 crypto-portfolio = Portafolio
-crypto-wallets = Billeteras
-crypto-assets = Activos
+crypto-wallets = BILLETERAS
+crypto-assets = ACTIVOS
 crypto-add-wallet = Agregar Billetera
 crypto-add-transaction = Agregar Transacción
 crypto-no-wallets = Sin billeteras aún
@@ -157,7 +157,7 @@ crypto-tx-transfer-out = Salida
 crypto-tx-swap = Intercambio
 
 # ==================== Habits ====================
-habits-title = Hábitos
+habits-title = HÁBITOS
 habits-my-habits = Mis Hábitos
 habits-add-habit = Agregar Hábito
 habits-no-habits = Sin hábitos aún

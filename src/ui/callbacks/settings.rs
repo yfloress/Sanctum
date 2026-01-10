@@ -122,7 +122,13 @@ pub fn setup_settings_callbacks<N>(
                     .get_app_setting(SETTING_PREFERRED_LANGUAGE)
                     .unwrap_or_else(|_| "en".to_string());
                 ui.global::<SettingsAdapter>()
-                    .set_preferred_language(SharedString::from(language));
+                    .set_preferred_language(SharedString::from(language.clone()));
+
+                // Apply saved language to i18n and reload translations
+                // This ensures the UI updates to the user's saved preference after login
+                if change_language(&language) {
+                    load_all_translations(&ui);
+                }
             }
         });
     }
