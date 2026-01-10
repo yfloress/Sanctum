@@ -130,13 +130,13 @@ export component DashboardPage inherits Rectangle {
                         spacing: 24px;
 
                         StatCard {
-                            label: "FIAT";
+                            label: Translations.section-fiat;
                             value: DashboardAdapter.balance.fiat-balance;
                             accent-color: Theme.primary;
                         }
 
                         StatCard {
-                            label: "CRYPTO";
+                            label: Translations.crypto-title;
                             value: DashboardAdapter.balance.crypto-value;
                             accent-color: Theme.chart-stroke;
                         }
@@ -179,7 +179,7 @@ export component DashboardPage inherits Rectangle {
                 spacing: 16px;
 
                 SectionHeader {
-                    title: "SPENDING BREAKDOWN";
+                    title: Translations.section-spending-breakdown;
                 }
 
                 Rectangle {
@@ -212,7 +212,7 @@ export component DashboardPage inherits Rectangle {
                 spacing: 16px;
 
                 SectionHeader {
-                    title: "RECENT ACTIVITY";
+                    title: Translations.section-recent-activity;
                     action-text: Translations.action-view-all;
                     action-clicked => {
                         AppState.active-page = "finances";

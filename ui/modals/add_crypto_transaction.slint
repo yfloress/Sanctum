@@ -7,7 +7,13 @@ import {
     NotificationAdapter,
 } from "../globals.slint";
 import { Theme } from "../theme.slint";
-import { FormField, TypeSelector, WalletSelector, CoinSelector } from "../components/transaction_form_components.slint";
+import { Translations } from "../translations.slint";
+import {
+    FormField,
+    TypeSelector,
+    WalletSelector,
+    CoinSelector,
+} from "../components/transaction_form_components.slint";
 
 // ==================== Main Modal ====================
 export component AddCryptoTransactionModal inherits Rectangle {
@@ -34,7 +40,6 @@ export component AddCryptoTransactionModal inherits Rectangle {
             swap-amount = "";
             return;
         }
-
         let safe-index = coin-index >= CryptoAdapter.coin-catalog.length ? 0 : coin-index;
         let swap-safe-index = swap-coin-index >= CryptoAdapter.coin-catalog.length ? 0 : swap-coin-index;
         let from-coin-id = CryptoAdapter.coin-catalog[safe-index].id;
@@ -52,7 +57,6 @@ export component AddCryptoTransactionModal inherits Rectangle {
             price = "";
             return;
         }
-
         let safe-index = coin-index >= CryptoAdapter.coin-catalog.length ? 0 : coin-index;
         price = CryptoAdapter.get-last-price(CryptoAdapter.coin-catalog[safe-index].id);
     }
@@ -65,7 +69,9 @@ export component AddCryptoTransactionModal inherits Rectangle {
 
     swap-quote-timer := Timer {
         interval: 1200ms;
-        triggered => { root.update-swap-quote(); }
+        triggered => {
+            root.update-swap-quote();
+        }
     }
 
     init => {
@@ -124,7 +130,9 @@ export component AddCryptoTransactionModal inherits Rectangle {
         root.update-swap-quote();
         root.refresh-price-from-coin();
     }
-    changed swap-coin-index => { root.update-swap-quote(); }
+    changed swap-coin-index => {
+        root.update-swap-quote();
+    }
 
     function submit() {
         if (CryptoAdapter.wallet-list.length == 0) {
@@ -143,7 +151,6 @@ export component AddCryptoTransactionModal inherits Rectangle {
             NotificationAdapter.show("Add coins in settings first", true);
             return;
         }
-
         if (wallet-index >= CryptoAdapter.wallet-list.length) {
             wallet-index = 0;
         }
@@ -163,7 +170,6 @@ export component AddCryptoTransactionModal inherits Rectangle {
                 NotificationAdapter.show("Pick two different wallets", true);
                 return;
             }
-
             let to-amount = move-amount == "" ? amount : move-amount;
 
             let result = CryptoAdapter.add-transfer(
@@ -177,8 +183,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
                 fee-coin-id,
                 fee-coin-amount,
                 date,
-                notes
-            );
+                notes);
 
             if (result == "") {
                 root.reset();
@@ -190,13 +195,11 @@ export component AddCryptoTransactionModal inherits Rectangle {
             }
             return;
         }
-
         if (selected-type == "swap") {
             if (swap-amount == "") {
                 NotificationAdapter.show("To amount is required", true);
                 return;
             }
-
             let swap-safe-index = swap-coin-index >= CryptoAdapter.coin-catalog.length ? 0 : swap-coin-index;
             let to-coin-id = CryptoAdapter.coin-catalog[swap-safe-index].id;
             let to-symbol = CryptoAdapter.coin-catalog[swap-safe-index].symbol;
@@ -205,7 +208,6 @@ export component AddCryptoTransactionModal inherits Rectangle {
                 NotificationAdapter.show("Swap assets must be different", true);
                 return;
             }
-
             let result = CryptoAdapter.add-swap(
                 wallet-id,
                 from-coin-id,
@@ -218,8 +220,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
                 fee-coin-id,
                 fee-coin-amount,
                 date,
-                notes
-            );
+                notes);
 
             if (result == "") {
                 root.reset();
@@ -231,20 +232,18 @@ export component AddCryptoTransactionModal inherits Rectangle {
             }
             return;
         }
-
         let result = CryptoAdapter.add-transaction(
-            wallet-id, 
-            from-coin-id, 
-            from-symbol, 
-            selected-type, 
-            amount, 
-            price, 
-            fee, 
+            wallet-id,
+            from-coin-id,
+            from-symbol,
+            selected-type,
+            amount,
+            price,
+            fee,
             fee-coin-id,
             fee-coin-amount,
             date,
-            notes
-        );
+            notes);
 
         if (result == "") {
             root.reset();
@@ -319,7 +318,9 @@ export component AddCryptoTransactionModal inherits Rectangle {
         TouchArea {
             width: parent.width;
             height: parent.height;
-            clicked => { key-scope.focus(); }
+            clicked => {
+                key-scope.focus();
+            }
         }
 
         VerticalLayout {
@@ -329,21 +330,21 @@ export component AddCryptoTransactionModal inherits Rectangle {
             // Header
             HorizontalLayout {
                 height: 32px;
-                
+
                 HorizontalLayout {
                     spacing: 12px;
                     horizontal-stretch: 1;
 
-	                    Rectangle {
-	                        width: 4px;
-	                        height: 20px;
-	                        border-radius: 2px;
-	                        background: @linear-gradient(180deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
-	                        y: (parent.height - self.height) / 2;
-	                    }
+                    Rectangle {
+                        width: 4px;
+                        height: 20px;
+                        border-radius: 2px;
+                        background: @linear-gradient(180deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
+                        y: (parent.height - self.height) / 2;
+                    }
 
                     Text {
-                        text: "NEW CRYPTO TRANSACTION";
+                        text: Translations.modal-new-crypto-transaction;
                         color: Theme.text-primary;
                         font-size: 16px;
                         font-weight: 500;
@@ -351,51 +352,57 @@ export component AddCryptoTransactionModal inherits Rectangle {
                         vertical-alignment: center;
                     }
                 }
-                
+
                 Rectangle {
                     width: 32px;
                     height: 32px;
                     border-radius: 8px;
                     background: close-touch.has-hover ? Theme.surface-hover : transparent;
-                    
-                    Text { 
-                        text: "×"; 
+
+                    Text {
+                        text: "×";
                         color: close-touch.has-hover ? Theme.text-primary : Theme.text-muted;
                         font-size: 20px;
                         font-weight: 300;
-                        vertical-alignment: center; 
+                        vertical-alignment: center;
                         horizontal-alignment: center;
                     }
-                    
-                    close-touch := TouchArea { 
+
+                    close-touch := TouchArea {
                         mouse-cursor: pointer;
-                        clicked => { root.reset(); AppState.show-add-crypto = false; } 
+                        clicked => {
+                            root.reset();
+                            AppState.show-add-crypto = false;
+                        }
                     }
                 }
             }
 
-	
-	            body := Flickable {
-	                horizontal-stretch: 1;
-	                vertical-stretch: 1;
+            body := Flickable {
+                horizontal-stretch: 1;
+                vertical-stretch: 1;
 
-	                TouchArea {
-	                    width: parent.width;
-	                    height: parent.height;
-	                    clicked => { key-scope.focus(); }
-	                }
+                TouchArea {
+                    width: parent.width;
+                    height: parent.height;
+                    clicked => {
+                        key-scope.focus();
+                    }
+                }
 
-	                VerticalLayout {
-	                    width: parent.width;
-	                    spacing: 20px;
+                VerticalLayout {
+                    width: parent.width;
+                    spacing: 20px;
 
                     // Type Toggle
-                    TypeSelector { selected-type <=> root.selected-type; }
+                    TypeSelector {
+                        selected-type <=> root.selected-type;
+                    }
 
                     // Coin Selector (From)
-                    CoinSelector { 
-                        label: root.selected-type == "swap" ? "FROM ASSET" : "CRYPTOCURRENCY";
-                        selected-index <=> root.coin-index; 
+                    CoinSelector {
+                        label: root.selected-type == "swap" ? Translations.modal-from-asset : Translations.modal-cryptocurrency;
+                        selected-index <=> root.coin-index;
                         selected(idx, name) => {
                             root.refresh-price-from-coin();
                         }
@@ -403,7 +410,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
 
                     // Coin Selector (To) for swaps
                     if root.selected-type == "swap": CoinSelector {
-                        label: "TO ASSET";
+                        label: Translations.modal-to-asset;
                         selected-index <=> root.swap-coin-index;
                     }
 
@@ -411,18 +418,19 @@ export component AddCryptoTransactionModal inherits Rectangle {
                     if root.selected-type == "move": VerticalLayout {
                         spacing: 12px;
                         WalletSelector {
-                            label: "FROM WALLET";
+                            label: Translations.modal-from-wallet;
                             selected-index <=> root.wallet-index;
                         }
+
                         WalletSelector {
-                            label: "TO WALLET";
+                            label: Translations.modal-to-wallet;
                             selected-index <=> root.wallet-index-to;
                         }
                     }
                     if root.selected-type != "move": WalletSelector {
                         selected-index <=> root.wallet-index;
                     }
-                    
+
                     // Warning if no wallets
                     if CryptoAdapter.wallet-list.length == 0: Rectangle {
                         height: 40px;
@@ -443,12 +451,12 @@ export component AddCryptoTransactionModal inherits Rectangle {
                                 vertical-alignment: center;
                             }
 
-                            Text { 
-                                text: "Create a wallet in the Wallets tab first"; 
-                                color: Theme.danger; 
+                            Text {
+                                text: Translations.modal-create-wallet-first;
+                                color: Theme.danger;
                                 font-size: 11px;
                                 font-weight: 400;
-                                vertical-alignment: center; 
+                                vertical-alignment: center;
                             }
                         }
                     }
@@ -472,7 +480,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
                             }
 
                             Text {
-                                text: "Create another wallet to move assets";
+                                text: Translations.modal-create-another-wallet;
                                 color: Theme.danger;
                                 font-size: 11px;
                                 font-weight: 400;
@@ -480,10 +488,10 @@ export component AddCryptoTransactionModal inherits Rectangle {
                             }
                         }
                     }
-	                    
+
                     // Amount Field
                     FormField {
-                        label: root.selected-type == "swap" || root.selected-type == "move" ? "FROM AMOUNT" : "AMOUNT";
+                        label: root.selected-type == "swap" || root.selected-type == "move" ? Translations.modal-from-amount : Translations.label-amount;
                         placeholder: "0.00";
                         value <=> root.amount;
                         large: true;
@@ -497,7 +505,6 @@ export component AddCryptoTransactionModal inherits Rectangle {
                             if (CryptoAdapter.wallet-list.length == 0 || CryptoAdapter.coin-catalog.length == 0) {
                                 return;
                             }
-
                             let safe-wallet-idx = wallet-index >= CryptoAdapter.wallet-list.length ? 0 : wallet-index;
                             let safe-coin-idx = coin-index >= CryptoAdapter.coin-catalog.length ? 0 : coin-index;
                             let wallet-id = CryptoAdapter.wallet-list[safe-wallet-idx].id;
@@ -511,90 +518,109 @@ export component AddCryptoTransactionModal inherits Rectangle {
                                 root.update-swap-quote();
                             }
                         }
-                        submit-shortcut => { root.submit(); }
+                        submit-shortcut => {
+                            root.submit();
+                        }
                     }
 
                     if root.selected-type == "swap": FormField {
-                        label: "TO AMOUNT";
+                        label: Translations.modal-to-amount;
                         placeholder: "0.00";
                         value <=> root.swap-amount;
                         large: true;
                         show-refresh: true;
-                        refresh => { root.refresh-swap-quote(); }
-                        submit-shortcut => { root.submit(); }
+                        refresh => {
+                            root.refresh-swap-quote();
+                        }
+                        submit-shortcut => {
+                            root.submit();
+                        }
                     }
                     if root.selected-type == "move": FormField {
-                        label: "TO AMOUNT (optional)";
-                        placeholder: "Same as FROM";
+                        label: Translations.modal-to-amount-optional;
+                        placeholder: Translations.modal-same-as-from;
                         value <=> root.move-amount;
                         large: true;
-                        submit-shortcut => { root.submit(); }
+                        submit-shortcut => {
+                            root.submit();
+                        }
                     }
 
                     HorizontalLayout {
                         spacing: 12px;
                         if root.selected-type != "swap" && root.selected-type != "move": FormField {
-                            label: "PRICE (USD)";
-                            placeholder: (root.selected-type == "transfer_in" || root.selected-type == "transfer_out")
-                                ? "Optional"
-                                : "Required";
+                            label: Translations.modal-price-usd;
+                            placeholder: (root.selected-type == "transfer_in" || root.selected-type == "transfer_out") ? Translations.modal-optional : Translations.modal-required;
                             value <=> root.price;
                             horizontal-stretch: 1;
-                            submit-shortcut => { root.submit(); }
+                            submit-shortcut => {
+                                root.submit();
+                            }
                         }
                         FormField {
-                            label: "FEE (USD)";
+                            label: Translations.modal-fee-usd;
                             placeholder: "0.00";
                             value <=> root.fee;
                             width: root.selected-type == "swap" ? 160px : 120px;
-                            submit-shortcut => { root.submit(); }
+                            submit-shortcut => {
+                                root.submit();
+                            }
                         }
                     }
 
                     HorizontalLayout {
                         spacing: 12px;
                         CoinSelector {
-                            label: "FEE COIN (OPTIONAL)";
+                            label: Translations.modal-fee-coin-optional;
                             selected-index <=> root.fee-coin-index;
                             horizontal-stretch: 1;
                         }
+
                         FormField {
-                            label: "FEE AMOUNT";
+                            label: Translations.modal-fee-amount;
                             placeholder: "0.00";
                             value <=> root.fee-coin-amount;
                             width: 140px;
-                            submit-shortcut => { root.submit(); }
+                            submit-shortcut => {
+                                root.submit();
+                            }
                         }
                     }
 
-                        // Notes Field
+                    // Notes Field
                         FormField {
-                            label: "NOTES";
-                            placeholder: "Transaction details...";
-                            value <=> root.notes;
-                            submit-shortcut => { root.submit(); }
+                        label: Translations.modal-notes;
+                        placeholder: Translations.modal-transaction-details;
+                        value <=> root.notes;
+                        submit-shortcut => {
+                            root.submit();
                         }
+                    }
 
-	                    // Date Field
+                    // Date Field
 	                    FormField {
-	                        label: "DATE";
-	                        placeholder: "YYYY-MM-DD";
-	                        value <=> root.date;
-	                        submit-shortcut => { root.submit(); }
-	                    }
-	
-	                    Rectangle { height: 8px; }
-	                }
-	            }
-	
-	            // Submit Button
+                        label: Translations.modal-date;
+                        placeholder: Translations.form-date-format;
+                        value <=> root.date;
+                        submit-shortcut => {
+                            root.submit();
+                        }
+                    }
+
+                    Rectangle {
+                        height: 8px;
+                    }
+                }
+            }
+
+            // Submit Button
 	            Rectangle {
-	                height: 48px;
-	                background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
-	                border-radius: 10px;
-	                
+                height: 48px;
+                background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
+                border-radius: 10px;
+
                 Text {
-                    text: "SAVE TRANSACTION";
+                    text: Translations.modal-save-transaction;
                     color: Theme.text-primary;
                     font-size: 12px;
                     font-weight: 600;
@@ -602,10 +628,12 @@ export component AddCryptoTransactionModal inherits Rectangle {
                     horizontal-alignment: center;
                     vertical-alignment: center;
                 }
-                
-                submit-touch := TouchArea { 
+
+                submit-touch := TouchArea {
                     mouse-cursor: pointer;
-                    clicked => { root.submit(); } 
+                    clicked => {
+                        root.submit();
+                    }
                 }
 
                 states [

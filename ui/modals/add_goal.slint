@@ -6,6 +6,7 @@ import {
     NotificationAdapter,
 } from "../globals.slint";
 import { Theme } from "../theme.slint";
+import { Translations } from "../translations.slint";
 import { FormField, DateField } from "../components/forms/form_fields.slint";
 
 // ==================== CheckpointRow ====================
@@ -58,7 +59,7 @@ component CheckpointRow inherits Rectangle {
 
             if description == "": Text {
                 x: 12px;
-                text: "Checkpoint description...";
+                text: Translations.modal-checkpoint-desc;
                 color: Theme.text-subtle;
                 font-size: 12px;
                 vertical-alignment: center;
@@ -345,7 +346,7 @@ export component AddGoalModal inherits Rectangle {
                     }
 
                     Text {
-                        text: editing ? "EDIT GOAL" : "NEW GOAL";
+                        text: editing ? Translations.modal-edit-goal : Translations.modal-new-goal;
                         color: Theme.text-primary;
                         font-size: 16px;
                         font-weight: 500;
@@ -391,14 +392,14 @@ export component AddGoalModal inherits Rectangle {
                     spacing: 16px;
 
                     FormField {
-                        label: "GOAL NAME";
-                        placeholder: "e.g. Run a marathon";
+                        label: Translations.modal-goal-name;
+                        placeholder: Translations.modal-goal-name-placeholder;
                         value <=> goal-name;
                     }
 
                     FormField {
-                        label: "DESCRIPTION (OPTIONAL)";
-                        placeholder: "Why this goal matters...";
+                        label: Translations.modal-description-optional;
+                        placeholder: Translations.modal-goal-description-placeholder;
                         value <=> goal-description;
                     }
 
@@ -407,14 +408,14 @@ export component AddGoalModal inherits Rectangle {
 
                         FormField {
                             horizontal-stretch: 1;
-                            label: "REWARD";
-                            placeholder: "e.g. New sneakers";
+                            label: Translations.modal-reward;
+                            placeholder: Translations.modal-reward-placeholder-goal;
                             value <=> goal-reward;
                         }
 
                         DateField {
                             horizontal-stretch: 1;
-                            label: "DEADLINE (OPTIONAL)";
+                            label: Translations.modal-deadline-optional;
                             value <=> goal-deadline;
                         }
                     }
@@ -427,7 +428,7 @@ export component AddGoalModal inherits Rectangle {
                             alignment: space-between;
 
                             Text {
-                                text: "CHECKPOINTS";
+                                text: Translations.modal-checkpoints;
                                 color: Theme.text-muted;
                                 font-size: 10px;
                                 font-weight: 500;
@@ -456,7 +457,7 @@ export component AddGoalModal inherits Rectangle {
                                     }
 
                                     Text {
-                                        text: "ADD";
+                                        text: Translations.button-add;
                                         color: Theme.text-muted;
                                         font-size: 10px;
                                         font-weight: 600;
@@ -536,7 +537,7 @@ export component AddGoalModal inherits Rectangle {
                     }
 
                     Text {
-                        text: editing ? "SAVE CHANGES" : "CREATE GOAL";
+                        text: editing ? Translations.modal-save-changes : Translations.modal-create-goal;
                         color: Theme.text-primary;
                         font-size: 12px;
                         font-weight: 600;

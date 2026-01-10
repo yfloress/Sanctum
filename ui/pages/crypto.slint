@@ -211,7 +211,7 @@ export component CryptoPage inherits Rectangle {
                         }
 
                         Text {
-                            text: "CRYPTO PORTFOLIO";
+                            text: Translations.crypto-portfolio-title;
                             color: Theme.text-muted;
                             font-size: 11px;
                             font-weight: 600;
@@ -220,7 +220,7 @@ export component CryptoPage inherits Rectangle {
                         }
 
                         GhostButton {
-                            text: CryptoAdapter.is-refreshing ? "SYNCING..." : "↻ SYNC";
+                            text: CryptoAdapter.is-refreshing ? Translations.button-syncing : Translations.button-sync;
                             enabled: !CryptoAdapter.is-refreshing;
                             clicked => {
                                 CryptoAdapter.refresh-prices();
@@ -361,7 +361,7 @@ export component CryptoPage inherits Rectangle {
                             alignment: end;
 
                             TabButton {
-                                text: "ASSETS";
+                                text: Translations.crypto-assets;
                                 active: root.active-tab == "portfolio";
                                 clicked => {
                                     root.active-tab = "portfolio";
@@ -369,7 +369,7 @@ export component CryptoPage inherits Rectangle {
                             }
 
                             TabButton {
-                                text: "WALLETS";
+                                text: Translations.crypto-wallets;
                                 active: root.active-tab == "wallets";
                                 clicked => {
                                     root.active-tab = "wallets";
@@ -491,7 +491,7 @@ export component CryptoPage inherits Rectangle {
                             }
 
                             Text {
-                                text: "YOUR HOLDINGS";
+                                text: Translations.crypto-your-holdings;
                                 color: Theme.text-muted;
                                 font-size: 10px;
                                 font-weight: 600;
@@ -604,7 +604,7 @@ export component CryptoPage inherits Rectangle {
 
                         Text {
                             width: Theme.wallet-info-width;
-                            text: "WALLET";
+                            text: Translations.crypto-wallet;
                             color: Theme.text-subtle;
                             font-size: 10px;
                             font-weight: 600;
@@ -614,7 +614,7 @@ export component CryptoPage inherits Rectangle {
 
                         Text {
                             width: 100px;
-                            text: "ASSETS";
+                            text: Translations.crypto-assets;
                             color: Theme.text-subtle;
                             font-size: 10px;
                             font-weight: 600;
@@ -625,7 +625,7 @@ export component CryptoPage inherits Rectangle {
 
                         Text {
                             width: 150px;
-                            text: "VALUE";
+                            text: Translations.crypto-value;
                             color: Theme.text-subtle;
                             font-size: 10px;
                             font-weight: 600;

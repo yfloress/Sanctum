@@ -1,8 +1,14 @@
 // ==================== Transfer Funds Modal ====================
 // Premium Fintech UI - Overlay form for transferring between accounts
 
-import { AppState, AccountAdapter, TransactionAdapter, NotificationAdapter } from "../globals.slint";
+import {
+    AppState,
+    AccountAdapter,
+    TransactionAdapter,
+    NotificationAdapter,
+} from "../globals.slint";
 import { Theme } from "../theme.slint";
+import { Translations } from "../translations.slint";
 
 // ==================== FormField ====================
 component FormField inherits Rectangle {
@@ -55,7 +61,9 @@ component FormField inherits Rectangle {
             }
 
             TouchArea {
-                clicked => { input.focus(); }
+                clicked => {
+                    input.focus();
+                }
             }
         }
     }
@@ -63,7 +71,7 @@ component FormField inherits Rectangle {
 
 // ==================== AccountSelector ====================
 component AccountSelector inherits Rectangle {
-    in property <string> label: "ACCOUNT";
+    in property <string> label: Translations.modal-account;
     in-out property <int> selected-index: 0;
     property <int> safe-index: selected-index < AccountAdapter.accounts.length ? selected-index : 0;
 
@@ -111,7 +119,9 @@ component AccountSelector inherits Rectangle {
 
             TouchArea {
                 mouse-cursor: pointer;
-                clicked => { popup.show(); }
+                clicked => {
+                    popup.show();
+                }
             }
         }
     }
@@ -120,7 +130,7 @@ component AccountSelector inherits Rectangle {
         x: 0;
         y: 64px;
         width: root.width;
-        
+
         Rectangle {
             background: Theme.sidebar-bg;
             border-radius: 8px;
@@ -132,7 +142,7 @@ component AccountSelector inherits Rectangle {
 
             Flickable {
                 viewport-height: AccountAdapter.accounts.length * 40px + 8px;
-                
+
                 VerticalLayout {
                     padding: 4px;
                     spacing: 0px;
@@ -166,7 +176,9 @@ component AccountSelector inherits Rectangle {
 
                         option-touch := TouchArea {
                             mouse-cursor: pointer;
-                            clicked => { root.selected-index = index; }
+                            clicked => {
+                                root.selected-index = index;
+                            }
                         }
                     }
                 }
@@ -186,7 +198,9 @@ export component TransferFundsModal inherits Rectangle {
     property <string> description-value: editing && TransactionAdapter.transactions.length > selected-index ? TransactionAdapter.transactions[selected-index].description-raw : "";
     property <string> date-value: editing && TransactionAdapter.transactions.length > selected-index ? TransactionAdapter.transactions[selected-index].date : AppState.current-date;
 
-    init => { key-scope.focus(); }
+    init => {
+        key-scope.focus();
+    }
 
     function reset-form() {
         from-index = 0;
@@ -223,7 +237,6 @@ export component TransferFundsModal inherits Rectangle {
             NotificationAdapter.show("Transfer no longer available", true);
             return;
         }
-
         let result = editing ? AccountAdapter.update-transfer(
             edit-id,
             AccountAdapter.accounts[from-index].id,
@@ -296,12 +309,14 @@ export component TransferFundsModal inherits Rectangle {
         drop-shadow-color: Theme.overlay-soft;
 
         TouchArea {
-            clicked => { key-scope.focus(); }
+            clicked => {
+                key-scope.focus();
+            }
         }
 
-	        VerticalLayout {
-	            padding: 32px;
-	            spacing: 16px;
+        VerticalLayout {
+            padding: 32px;
+            spacing: 16px;
 
             // Header
             HorizontalLayout {
@@ -311,16 +326,16 @@ export component TransferFundsModal inherits Rectangle {
                     spacing: 12px;
                     horizontal-stretch: 1;
 
-	                    Rectangle {
-	                        width: 4px;
-	                        height: 20px;
-	                        border-radius: 2px;
-	                        background: @linear-gradient(180deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
-	                        y: (parent.height - self.height) / 2;
-	                    }
+                    Rectangle {
+                        width: 4px;
+                        height: 20px;
+                        border-radius: 2px;
+                        background: @linear-gradient(180deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
+                        y: (parent.height - self.height) / 2;
+                    }
 
                     Text {
-                        text: editing ? "EDIT TRANSFER" : "TRANSFER FUNDS";
+                        text: editing ? Translations.modal-edit-transfer : Translations.finances-transfer-funds;
                         color: Theme.text-primary;
                         font-size: 16px;
                         font-weight: 500;
@@ -352,87 +367,91 @@ export component TransferFundsModal inherits Rectangle {
                         }
                     }
                 }
-	            }
-	
-	            body := Flickable {
-	                horizontal-stretch: 1;
-	                vertical-stretch: 1;
+            }
 
-	                TouchArea {
-	                    width: parent.width;
-	                    height: parent.height;
-	                    clicked => { key-scope.focus(); }
-	                }
+            body := Flickable {
+                horizontal-stretch: 1;
+                vertical-stretch: 1;
 
-	                VerticalLayout {
-	                    width: parent.width;
-	                    spacing: 16px;
-	
-	                    AccountSelector {
-	                        label: "FROM";
-	                        selected-index <=> from-index;
-	                    }
-	
-	                    // Arrow indicator
+                TouchArea {
+                    width: parent.width;
+                    height: parent.height;
+                    clicked => {
+                        key-scope.focus();
+                    }
+                }
+
+                VerticalLayout {
+                    width: parent.width;
+                    spacing: 16px;
+
+                    AccountSelector {
+                        label: Translations.modal-from;
+                        selected-index <=> from-index;
+                    }
+
+                    // Arrow indicator
 	                    Rectangle {
-	                        height: 32px;
-	
-	                        Rectangle {
-	                            width: 40px;
-	                            height: 40px;
-	                            border-radius: 20px;
-	                            background: Theme.surface;
-	                            border-width: 1px;
-	                            border-color: Theme.border;
-	                            x: (parent.width - self.width) / 2;
-	                            y: (parent.height - self.height) / 2;
-	
-	                            Text {
-	                                text: "↓";
-	                                color: Theme.accent;
-	                                font-size: 18px;
-	                                font-weight: 500;
-	                                horizontal-alignment: center;
-	                                vertical-alignment: center;
-	                            }
-	                        }
-	                    }
-	
-	                    AccountSelector {
-	                        label: "TO";
-	                        selected-index <=> to-index;
-	                    }
-	
-	                    FormField {
-	                        label: "AMOUNT";
-	                        placeholder: "0.00";
-	                        value <=> amount-value;
-	                    }
-	
-	                    FormField {
-	                        label: "DESCRIPTION (OPTIONAL)";
-	                        placeholder: "Reason for transfer";
-	                        value <=> description-value;
-	                    }
-	
-	                    FormField {
-	                        label: "DATE";
-	                        placeholder: "YYYY-MM-DD";
-	                        value <=> date-value;
-	                    }
-	
-	                    Rectangle { height: 8px; }
-	                }
-	            }
-	
-	            // Submit button
+                        height: 32px;
+
+                        Rectangle {
+                            width: 40px;
+                            height: 40px;
+                            border-radius: 20px;
+                            background: Theme.surface;
+                            border-width: 1px;
+                            border-color: Theme.border;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+
+                            Text {
+                                text: "↓";
+                                color: Theme.accent;
+                                font-size: 18px;
+                                font-weight: 500;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+
+                    AccountSelector {
+                        label: Translations.modal-to;
+                        selected-index <=> to-index;
+                    }
+
+                    FormField {
+                        label: Translations.label-amount;
+                        placeholder: "0.00";
+                        value <=> amount-value;
+                    }
+
+                    FormField {
+                        label: Translations.modal-description-optional;
+                        placeholder: "Reason for transfer";
+                        value <=> description-value;
+                    }
+
+                    FormField {
+                        label: Translations.modal-date;
+                        placeholder: Translations.form-date-format;
+                        value <=> date-value;
+                    }
+
+                    Rectangle {
+                        height: 8px;
+                    }
+                }
+            }
+
+            // Submit button
 	            Rectangle {
-	                height: 48px;
-	                background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
-	                border-radius: 10px;
+                height: 48px;
+                background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
+                border-radius: 10px;
 
                 Text {
-                    text: "TRANSFER";
+                    text: Translations.modal-transfer-action;
                     color: Theme.text;
                     font-size: 12px;
                     font-weight: 600;
@@ -443,7 +462,9 @@ export component TransferFundsModal inherits Rectangle {
 
                 submit-touch := TouchArea {
                     mouse-cursor: pointer;
-                    clicked => { root.submit(); }
+                    clicked => {
+                        root.submit();
+                    }
                 }
 
                 states [

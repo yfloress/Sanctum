@@ -7,6 +7,7 @@ import {
     NotificationAdapter,
 } from "../globals.slint";
 import { Theme } from "../theme.slint";
+import { Translations } from "../translations.slint";
 import { BankIconSelector } from "../components/bank_icon_selector.slint";
 
 export component EditAccountIconModal inherits Rectangle {
@@ -33,7 +34,6 @@ export component EditAccountIconModal inherits Rectangle {
             NotificationAdapter.show("Account ID is required", true);
             return;
         }
-
         let result = AccountAdapter.update-account-icon(account-id, selected-icon);
 
         if (result == "") {
@@ -104,7 +104,9 @@ export component EditAccountIconModal inherits Rectangle {
         opacity: 1.0;
 
         TouchArea {
-            clicked => { key-scope.focus(); }
+            clicked => {
+                key-scope.focus();
+            }
         }
 
         VerticalLayout {
@@ -128,7 +130,7 @@ export component EditAccountIconModal inherits Rectangle {
                     }
 
                     Text {
-                        text: "SELECT BANK ICON";
+                        text: Translations.modal-select-bank-icon;
                         color: Theme.text-primary;
                         font-size: 16px;
                         font-weight: 500;
@@ -154,7 +156,10 @@ export component EditAccountIconModal inherits Rectangle {
 
                     close-touch := TouchArea {
                         mouse-cursor: pointer;
-                        clicked => { root.reset(); AppState.show-edit-account-icon = false; }
+                        clicked => {
+                            root.reset();
+                            AppState.show-edit-account-icon = false;
+                        }
                     }
                 }
             }
@@ -172,7 +177,7 @@ export component EditAccountIconModal inherits Rectangle {
                     alignment: center;
 
                     Text {
-                        text: "SAVE ICON";
+                        text: Translations.modal-save-icon;
                         color: Theme.text-primary;
                         font-size: 12px;
                         font-weight: 600;
@@ -183,7 +188,9 @@ export component EditAccountIconModal inherits Rectangle {
 
                 submit-touch := TouchArea {
                     mouse-cursor: pointer;
-                    clicked => { root.submit(); }
+                    clicked => {
+                        root.submit();
+                    }
                 }
 
                 states [

@@ -6,8 +6,8 @@ import {
     CryptoAdapter,
     NotificationAdapter,
 } from "../globals.slint";
-import { Translations } from "../translations.slint";
 import { Theme } from "../theme.slint";
+import { Translations } from "../translations.slint";
 import { FormField } from "../components/transaction_form_components.slint";
 
 // ==================== CategoryCard ====================
@@ -263,7 +263,7 @@ export component AddCryptoWalletModal inherits Rectangle {
 
                     // Name Field
 	                    FormField {
-                        label: "WALLET NAME";
+                        label: Translations.modal-wallet-name;
                         placeholder: "e.g. Ledger Nano X";
                         value <=> root.wallet-name;
                         submit-shortcut => {

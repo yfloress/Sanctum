@@ -328,7 +328,7 @@ crypto-no-assets-yet = Sin activos registrados aún
 crypto-create-wallet-first = Crea una billetera primero, luego agrega tus criptomonedas
 crypto-wallet = BILLETERA
 crypto-value = VALOR
-crypto-no-wallets = Sin billeteras creadas
+
 crypto-add-first-wallet = Agrega tu primera billetera para empezar a rastrear tus criptos
 crypto-delete-wallet = ¿Eliminar Billetera?
 crypto-delete-wallet-confirm = Esto eliminará permanentemente y todo su historial de transacciones.
@@ -479,15 +479,105 @@ sidebar-title = SANCTUM
 crypto-holdings-small = Tenencias
 crypto-price-small = Precio
 
-# Icon Selector
-icon-exchanges = Exchanges
-icon-wallet-icons = Íconos de Billetera
-icon-choose = ELEGIR ÍCONO
-
-# Forms
-form-search-coin = Buscar moneda...
-
-# Streak Rewards
+# Streak Rewards (with arguments)
 rewards-ready-claim-with = Listo para reclamar: { $reward }
 rewards-next-with = Siguiente: { $reward }
-rewards-all-unlocked = ¡Todos los hitos desbloqueados!
+
+# ==================== Crypto Transaction Modal ====================
+modal-from-asset = ACTIVO ORIGEN
+modal-to-asset = ACTIVO DESTINO
+modal-cryptocurrency = CRIPTOMONEDA
+modal-from-wallet = BILLETERA ORIGEN
+modal-to-wallet = BILLETERA DESTINO
+modal-from-amount = MONTO ORIGEN
+modal-to-amount = MONTO DESTINO
+modal-to-amount-optional = MONTO DESTINO (opcional)
+modal-same-as-from = Igual que ORIGEN
+modal-price-usd = PRECIO (USD)
+modal-optional = Opcional
+modal-required = Requerido
+modal-fee-usd = COMISIÓN (USD)
+modal-fee-coin-optional = MONEDA COMISIÓN (OPCIONAL)
+modal-fee-amount = MONTO COMISIÓN
+modal-notes = NOTAS
+modal-transaction-details = Detalles de la transacción...
+modal-date = FECHA
+modal-search-coins = Buscar monedas...
+
+# ==================== Goal Modal ====================
+modal-new-goal = NUEVA META
+modal-edit-goal = EDITAR META
+modal-goal-name = NOMBRE DE META
+modal-goal-name-placeholder = ej. Correr un maratón
+modal-description-optional = DESCRIPCIÓN (OPCIONAL)
+modal-goal-description-placeholder = Por qué esta meta es importante...
+modal-reward = RECOMPENSA
+modal-reward-placeholder-goal = ej. Zapatillas nuevas
+modal-deadline-optional = FECHA LÍMITE (OPCIONAL)
+modal-create-goal = CREAR META
+
+# ==================== Reward Modal ====================
+modal-new-streak-reward = NUEVA RECOMPENSA DE RACHA
+modal-edit-reward = EDITAR RECOMPENSA
+modal-consecutive-desc = Los días deben ser consecutivos (se reinicia si fallas)
+modal-accumulative-desc = Acumula días a lo largo del tiempo
+modal-target-days = DÍAS OBJETIVO
+modal-of-total-days = DE DÍAS TOTALES
+modal-days-label = días
+modal-create-reward = CREAR RECOMPENSA
+
+# ==================== Configure Ticker Extended ====================
+modal-add-custom-coin = AGREGAR MONEDA PERSONALIZADA
+modal-coingecko-hint = Usa el ID de CoinGecko (minúsculas, guiones). Ejemplo: litecoin
+modal-symbol-hint = El símbolo usa solo letras. Ejemplo: LTC
+modal-coingecko-id = ID COINGECKO
+modal-coingecko-id-placeholder = ej. litecoin
+modal-name-placeholder = ej. Litecoin
+modal-symbol = SÍMBOLO
+modal-symbol-placeholder = ej. LTC
+modal-save-configuration = GUARDAR CONFIGURACIÓN
+
+# ==================== Wallet Modal ====================
+modal-wallet-name = NOMBRE DE BILLETERA
+
+# ==================== Transfer Modal ====================
+modal-edit-transfer = EDITAR TRANSFERENCIA
+modal-from = DESDE
+modal-to = HACIA
+modal-transfer-action = TRANSFERIR
+
+# ==================== Icon Modals ====================
+modal-select-bank-icon = SELECCIONAR ÍCONO DE BANCO
+modal-select-icon = SELECCIONAR ÍCONO
+modal-save-icon = GUARDAR ÍCONO
+
+# ==================== Common Button Labels ====================
+button-add = AGREGAR
+button-sync = ↻ SINCRONIZAR
+button-syncing = SINCRONIZANDO...
+
+# ==================== Page Titles and Sections ====================
+section-fiat = FIAT
+section-spending-breakdown = DESGLOSE DE GASTOS
+section-recent-activity = ACTIVIDAD RECIENTE
+section-recent-transactions = TRANSACCIONES RECIENTES
+section-my-accounts = MIS CUENTAS
+section-finance-settings = AJUSTES DE FINANZAS
+section-transactions = TRANSACCIONES
+section-wallet-breakdown = DESGLOSE POR BILLETERA
+
+# ==================== Settings Page ====================
+section-regional = REGIONAL
+section-data-sync = DATOS Y SINCRONIZACIÓN
+section-about = ACERCA DE
+settings-encryption-type = AES-256-GCM
+settings-storage-type = SQLite (Cifrado)
+
+# ==================== Asset/Wallet Details ====================
+section-transaction-history = HISTORIAL DE TRANSACCIONES
+
+# ==================== Transaction Entry Modal ====================
+modal-new-entry = NUEVA ENTRADA
+modal-edit-entry = EDITAR ENTRADA
+modal-save-entry = GUARDAR ENTRADA
+modal-add-note = Agregar una nota...

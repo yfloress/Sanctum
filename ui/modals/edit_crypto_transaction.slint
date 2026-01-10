@@ -7,6 +7,7 @@ import {
     NotificationAdapter,
 } from "../globals.slint";
 import { Theme } from "../theme.slint";
+import { Translations } from "../translations.slint";
 import { FormField } from "../components/transaction_form_components.slint";
 
 // ==================== ReadonlyField ====================
@@ -69,20 +70,20 @@ export component EditCryptoTransactionModal inherits Rectangle {
         CryptoAdapter.edit-notes = "";
     }
 
-    init => { key-scope.focus(); }
+    init => {
+        key-scope.focus();
+    }
 
     function submit() {
         if (CryptoAdapter.edit-amount == "") {
             NotificationAdapter.show("Amount is required", true);
             return;
         }
-        let requires_price = CryptoAdapter.edit-type == "buy"
-            || CryptoAdapter.edit-type == "sell";
+        let requires_price = CryptoAdapter.edit-type == "buy" || CryptoAdapter.edit-type == "sell";
         if (requires_price && CryptoAdapter.edit-price == "") {
             NotificationAdapter.show("Price is required", true);
             return;
         }
-
         let result = CryptoAdapter.update-transaction(
             CryptoAdapter.edit-tx-id,
             CryptoAdapter.edit-amount,
@@ -91,8 +92,7 @@ export component EditCryptoTransactionModal inherits Rectangle {
             CryptoAdapter.edit-fee-coin-id,
             CryptoAdapter.edit-fee-coin-amount,
             CryptoAdapter.edit-date,
-            CryptoAdapter.edit-notes
-        );
+            CryptoAdapter.edit-notes);
 
         if (result == "") {
             AppState.show-edit-crypto = false;
@@ -165,7 +165,9 @@ export component EditCryptoTransactionModal inherits Rectangle {
         opacity: 1.0;
 
         TouchArea {
-            clicked => { key-scope.focus(); }
+            clicked => {
+                key-scope.focus();
+            }
         }
 
         VerticalLayout {
@@ -175,7 +177,7 @@ export component EditCryptoTransactionModal inherits Rectangle {
             // Header
             HorizontalLayout {
                 height: 32px;
-                
+
                 HorizontalLayout {
                     spacing: 12px;
                     horizontal-stretch: 1;
@@ -189,7 +191,7 @@ export component EditCryptoTransactionModal inherits Rectangle {
                     }
 
                     Text {
-                        text: "EDIT CRYPTO TRANSACTION";
+                        text: Translations.modal-edit-crypto-transaction;
                         color: Theme.text-primary;
                         font-size: 16px;
                         font-weight: 500;
@@ -197,25 +199,28 @@ export component EditCryptoTransactionModal inherits Rectangle {
                         vertical-alignment: center;
                     }
                 }
-                
+
                 Rectangle {
                     width: 32px;
                     height: 32px;
                     border-radius: 8px;
                     background: close-touch.has-hover ? Theme.surface-hover : transparent;
-                    
-                    Text { 
-                        text: "×"; 
+
+                    Text {
+                        text: "×";
                         color: close-touch.has-hover ? Theme.text-primary : Theme.text-muted;
                         font-size: 20px;
                         font-weight: 300;
-                        vertical-alignment: center; 
+                        vertical-alignment: center;
                         horizontal-alignment: center;
                     }
-                    
-                    close-touch := TouchArea { 
+
+                    close-touch := TouchArea {
                         mouse-cursor: pointer;
-                        clicked => { root.reset(); AppState.show-edit-crypto = false; } 
+                        clicked => {
+                            root.reset();
+                            AppState.show-edit-crypto = false;
+                        }
                     }
                 }
             }
@@ -227,78 +232,107 @@ export component EditCryptoTransactionModal inherits Rectangle {
                 TouchArea {
                     width: parent.width;
                     height: parent.height;
-                    clicked => { key-scope.focus(); }
+                    clicked => {
+                        key-scope.focus();
+                    }
                 }
 
                 VerticalLayout {
                     width: parent.width;
                     spacing: 20px;
 
-                    ReadonlyField { label: "WALLET"; value: CryptoAdapter.edit-wallet-name; }
-                    ReadonlyField { label: "ASSET"; value: CryptoAdapter.edit-symbol; }
-                    ReadonlyField { label: "TYPE"; value: CryptoAdapter.edit-type; }
+                    ReadonlyField {
+                        label: Translations.crypto-wallet;
+                        value: CryptoAdapter.edit-wallet-name;
+                    }
+
+                    ReadonlyField {
+                        label: Translations.crypto-assets;
+                        value: CryptoAdapter.edit-symbol;
+                    }
+
+                    ReadonlyField {
+                        label: Translations.label-type;
+                        value: CryptoAdapter.edit-type;
+                    }
 
                     FormField {
-                        label: "AMOUNT";
+                        label: Translations.label-amount;
                         placeholder: "0.00";
                         value <=> CryptoAdapter.edit-amount;
                         large: true;
-                        submit-shortcut => { root.submit(); }
+                        submit-shortcut => {
+                            root.submit();
+                        }
                     }
 
                     HorizontalLayout {
                         spacing: 12px;
                         FormField {
-                            label: "PRICE (USD)";
-                            placeholder: (CryptoAdapter.edit-type == "transfer_in" || CryptoAdapter.edit-type == "transfer_out")
-                                ? "Optional"
-                                : "Required";
+                            label: Translations.modal-price-usd;
+                            placeholder: (CryptoAdapter.edit-type == "transfer_in" || CryptoAdapter.edit-type == "transfer_out") ? Translations.modal-optional : Translations.modal-required;
                             value <=> CryptoAdapter.edit-price;
                             horizontal-stretch: 1;
-                            submit-shortcut => { root.submit(); }
+                            submit-shortcut => {
+                                root.submit();
+                            }
                         }
+
                         FormField {
-                            label: "FEE (USD)";
+                            label: Translations.modal-fee-usd;
                             placeholder: "0.00";
                             value <=> CryptoAdapter.edit-fee;
                             width: 120px;
-                            submit-shortcut => { root.submit(); }
+                            submit-shortcut => {
+                                root.submit();
+                            }
                         }
                     }
 
                     HorizontalLayout {
                         spacing: 12px;
                         FormField {
-                            label: "FEE COIN ID (OPTIONAL)";
-                            placeholder: "e.g. ethereum";
+                            label: Translations.modal-fee-coin-optional;
+                            placeholder: Translations.modal-coingecko-id-placeholder;
                             value <=> CryptoAdapter.edit-fee-coin-id;
                             horizontal-stretch: 1;
-                            submit-shortcut => { root.submit(); }
+                            submit-shortcut => {
+                                root.submit();
+                            }
                         }
+
                         FormField {
-                            label: "FEE AMOUNT";
+                            label: Translations.modal-fee-amount;
                             placeholder: "0.00";
                             value <=> CryptoAdapter.edit-fee-coin-amount;
                             width: 140px;
-                            submit-shortcut => { root.submit(); }
+                            submit-shortcut => {
+                                root.submit();
+                            }
                         }
                     }
 
                     FormField {
-                        label: "NOTES";
-                        placeholder: "Transaction details...";
+                        label: Translations.modal-notes;
+                        placeholder: Translations.modal-transaction-details;
                         value <=> CryptoAdapter.edit-notes;
-                        submit-shortcut => { root.submit(); }
+                        submit-shortcut => {
+                            root.submit();
+                        }
                     }
 
                     FormField {
-                        label: "DATE";
-                        placeholder: "YYYY-MM-DD";
+                        label: Translations.modal-date;
+                        placeholder: Translations.form-date-format;
                         value <=> CryptoAdapter.edit-date;
-                        submit-shortcut => { root.submit(); }
+                        submit-shortcut => {
+                            root.submit();
+                        }
                     }
 
-                    Rectangle { height: 8px; }
+                    Rectangle {
+                        height: 8px;
+                    }
                 }
             }
 
@@ -307,9 +341,9 @@ export component EditCryptoTransactionModal inherits Rectangle {
                 height: 48px;
                 background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
                 border-radius: 10px;
-                
+
                 Text {
-                    text: "SAVE CHANGES";
+                    text: Translations.modal-save-changes;
                     color: Theme.text-primary;
                     font-size: 12px;
                     font-weight: 600;
@@ -317,10 +351,12 @@ export component EditCryptoTransactionModal inherits Rectangle {
                     horizontal-alignment: center;
                     vertical-alignment: center;
                 }
-                
-                submit-touch := TouchArea { 
+
+                submit-touch := TouchArea {
                     mouse-cursor: pointer;
-                    clicked => { root.submit(); } 
+                    clicked => {
+                        root.submit();
+                    }
                 }
 
                 states [

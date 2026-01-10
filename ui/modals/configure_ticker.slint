@@ -4,13 +4,14 @@
 import { AppState, CryptoAdapter, NotificationAdapter } from "../globals.slint";
 import { ActionButton, TextButton } from "../widgets.slint";
 import { Theme } from "../theme.slint";
+import { Translations } from "../translations.slint";
 
 component TickerToggleRow inherits Rectangle {
     in property <string> symbol;
     in property <string> name;
     in property <bool> checked;
     in property <bool> is-custom: false;
-    
+
     callback toggled;
 
     height: 48px;
@@ -25,16 +26,17 @@ component TickerToggleRow inherits Rectangle {
         // Label
         VerticalLayout {
             alignment: center;
-            Text { 
-                text: root.symbol + (root.is-custom ? " *" : ""); 
-                color: root.is-custom ? Theme.accent : Theme.text-primary; 
-                font-size: 12px; 
-                font-weight: 600; 
+            Text {
+                text: root.symbol + (root.is-custom ? " *" : "");
+                color: root.is-custom ? Theme.accent : Theme.text-primary;
+                font-size: 12px;
+                font-weight: 600;
             }
-            Text { 
-                text: root.name; 
-                color: root.is-custom ? Theme.text-secondary : Theme.text-muted; 
-                font-size: 10px; 
+
+            Text {
+                text: root.name;
+                color: root.is-custom ? Theme.text-secondary : Theme.text-muted;
+                font-size: 10px;
             }
         }
 
@@ -61,17 +63,22 @@ component TickerToggleRow inherits Rectangle {
                     height: 16px;
                     border-radius: 8px;
                     background: root.checked ? Theme.background : Theme.text-secondary;
-                    
-                    animate x { duration: 150ms; easing: ease-in-out; }
+
+                    animate x {
+                        duration: 150ms;
+                        easing: ease-in-out;
+                    }
                 }
 
                 TouchArea {
-                    clicked => { root.toggled(); }
+                    clicked => {
+                        root.toggled();
+                    }
                 }
             }
         }
     }
-    
+
     // Bottom line
     Rectangle {
         y: parent.height - 1px;
@@ -108,7 +115,9 @@ component ConfigTabButton inherits Rectangle {
 
     TouchArea {
         mouse-cursor: pointer;
-        clicked => { root.clicked(); }
+        clicked => {
+            root.clicked();
+        }
     }
 }
 
@@ -144,7 +153,9 @@ component SearchInput inherits Rectangle {
             vertical-alignment: center;
             horizontal-stretch: 1;
 
-            edited => { root.edited(root.text); }
+            edited => {
+                root.edited(root.text);
+            }
         }
 
         if root.text != "": Rectangle {
@@ -173,7 +184,9 @@ component SearchInput inherits Rectangle {
     }
 
     TouchArea {
-        clicked => { input.focus(); }
+        clicked => {
+            input.focus();
+        }
     }
 }
 
@@ -227,7 +240,9 @@ component ConfigField inherits Rectangle {
             }
 
             TouchArea {
-                clicked => { input.focus(); }
+                clicked => {
+                    input.focus();
+                }
             }
         }
     }
@@ -287,6 +302,7 @@ component CatalogRow inherits Rectangle {
                         font-size: 12px;
                         font-weight: 600;
                     }
+
                     Text {
                         text: root.name;
                         color: root.is-custom ? Theme.text-secondary : Theme.text-muted;
@@ -297,20 +313,24 @@ component CatalogRow inherits Rectangle {
 
             TouchArea {
                 mouse-cursor: pointer;
-                clicked => { root.toggled(); }
+                clicked => {
+                    root.toggled();
+                }
             }
         }
 
         if root.deletable: ActionButton {
-            text: "REMOVE";
+            text: Translations.modal-remove;
             primary: false;
             height: 28px;
             min-width: 88px;
-            clicked => { root.delete(); }
+            clicked => {
+                root.delete();
+            }
         }
 
         if !root.deletable: Text {
-            text: "DEFAULT";
+            text: Translations.modal-default;
             color: Theme.text-subtle;
             font-size: 9px;
             font-weight: 600;
@@ -359,9 +379,16 @@ export component ConfigureTickerModal inherits Rectangle {
         background: Theme.overlay;
         opacity: 1.0;
 
-        animate opacity { duration: 150ms; easing: ease-out; }
+        animate opacity {
+            duration: 150ms;
+            easing: ease-out;
+        }
 
-        TouchArea { clicked => { AppState.show-configure-ticker = false; } }
+        TouchArea {
+            clicked => {
+                AppState.show-configure-ticker = false;
+            }
+        }
     }
 
     key-scope := FocusScope {
@@ -392,10 +419,15 @@ export component ConfigureTickerModal inherits Rectangle {
         border-color: Theme.border;
         opacity: 1.0;
 
-        animate opacity { duration: 200ms; easing: ease-out; }
+        animate opacity {
+            duration: 200ms;
+            easing: ease-out;
+        }
 
         TouchArea {
-            clicked => { key-scope.focus(); }
+            clicked => {
+                key-scope.focus();
+            }
         }
 
         VerticalLayout {
@@ -404,7 +436,7 @@ export component ConfigureTickerModal inherits Rectangle {
 
             // Header
             Text {
-                text: "CRYPTO SETTINGS";
+                text: Translations.modal-crypto-settings;
                 color: Theme.text-muted;
                 font-size: 11px;
                 font-weight: 600;
@@ -412,16 +444,20 @@ export component ConfigureTickerModal inherits Rectangle {
                 horizontal-alignment: center;
             }
 
-            Rectangle { height: 8px; }
+            Rectangle {
+                height: 8px;
+            }
 
             Text {
-                text: "Manage price bar and coin catalog for selection.";
+                text: Translations.modal-manage-price-bar;
                 color: Theme.text-muted;
                 font-size: 10px;
                 horizontal-alignment: center;
             }
 
-            Rectangle { height: 16px; }
+            Rectangle {
+                height: 16px;
+            }
 
             // Tabs
             HorizontalLayout {
@@ -429,26 +465,32 @@ export component ConfigureTickerModal inherits Rectangle {
                 spacing: 8px;
 
                 ConfigTabButton {
-                    text: "PRICE BAR";
+                    text: Translations.modal-price-bar;
                     active: root.active-tab == "ticker";
-                    clicked => { root.active-tab = "ticker"; }
+                    clicked => {
+                        root.active-tab = "ticker";
+                    }
                 }
 
                 ConfigTabButton {
-                    text: "COIN CATALOG";
+                    text: Translations.modal-coin-catalog;
                     active: root.active-tab == "catalog";
-                    clicked => { root.active-tab = "catalog"; }
+                    clicked => {
+                        root.active-tab = "catalog";
+                    }
                 }
             }
 
-            Rectangle { height: 16px; }
+            Rectangle {
+                height: 16px;
+            }
 
             if root.active-tab == "ticker": VerticalLayout {
                 vertical-stretch: 1;
                 spacing: 12px;
 
                 Text {
-                    text: "Max 50 active coins for price updates.";
+                    text: Translations.modal-max-coins;
                     color: Theme.text-muted;
                     font-size: 10px;
                     horizontal-alignment: center;
@@ -456,10 +498,12 @@ export component ConfigureTickerModal inherits Rectangle {
 
                 SearchInput {
                     text <=> root.ticker-search;
-                    placeholder: "Search coins...";
+                    placeholder: Translations.modal-search-coins;
                 }
 
-                Rectangle { height: 4px; }
+                Rectangle {
+                    height: 4px;
+                }
 
                 // List
                 Rectangle {
@@ -474,7 +518,7 @@ export component ConfigureTickerModal inherits Rectangle {
                         vertical-stretch: 1;
                         horizontal-stretch: 1;
                         viewport-height: CryptoAdapter.ticker-options.length * 48px;
-                        
+
                         ticker-list := VerticalLayout {
                             spacing: 0px;
 
@@ -485,7 +529,7 @@ export component ConfigureTickerModal inherits Rectangle {
                                 name: option.name;
                                 checked: option.enabled;
                                 is-custom: option.custom;
-                                
+
                                 toggled => {
                                     CryptoAdapter.ticker-options[index].enabled = !CryptoAdapter.ticker-options[index].enabled;
                                 }
@@ -493,7 +537,6 @@ export component ConfigureTickerModal inherits Rectangle {
                         }
                     }
                 }
-
             }
 
             if root.active-tab == "catalog": VerticalLayout {
@@ -501,7 +544,7 @@ export component ConfigureTickerModal inherits Rectangle {
                 spacing: 12px;
 
                 Text {
-                    text: "Catalog is used for price bar and transactions.";
+                    text: Translations.modal-catalog-info;
                     color: Theme.text-muted;
                     font-size: 10px;
                     horizontal-alignment: center;
@@ -512,15 +555,19 @@ export component ConfigureTickerModal inherits Rectangle {
                     spacing: 8px;
 
                     ConfigTabButton {
-                        text: "COIN LIST";
+                        text: Translations.modal-coin-list;
                         active: root.catalog-tab == "list";
-                        clicked => { root.catalog-tab = "list"; }
+                        clicked => {
+                            root.catalog-tab = "list";
+                        }
                     }
 
                     ConfigTabButton {
-                        text: "ADD COIN";
+                        text: Translations.modal-add-coin;
                         active: root.catalog-tab == "add";
-                        clicked => { root.catalog-tab = "add"; }
+                        clicked => {
+                            root.catalog-tab = "add";
+                        }
                     }
                 }
 
@@ -529,7 +576,7 @@ export component ConfigureTickerModal inherits Rectangle {
                     spacing: 12px;
 
                     Text {
-                        text: "Removing coins only hides them here.";
+                        text: Translations.modal-removing-info;
                         color: Theme.text-muted;
                         font-size: 9px;
                         horizontal-alignment: center;
@@ -543,22 +590,26 @@ export component ConfigureTickerModal inherits Rectangle {
                             spacing: 8px;
 
                             ActionButton {
-                                text: "SELECT ALL";
+                                text: Translations.modal-select-all;
                                 primary: false;
                                 min-width: 96px;
-                                clicked => { CryptoAdapter.select-all-coins(); }
+                                clicked => {
+                                    CryptoAdapter.select-all-coins();
+                                }
                             }
 
                             ActionButton {
-                                text: "CLEAR";
+                                text: Translations.action-clear;
                                 primary: false;
                                 min-width: 72px;
-                                clicked => { CryptoAdapter.clear-coin-selection(); }
+                                clicked => {
+                                    CryptoAdapter.clear-coin-selection();
+                                }
                             }
                         }
 
                         ActionButton {
-                            text: "REMOVE SELECTED";
+                            text: Translations.modal-remove-selected;
                             primary: false;
                             min-width: 140px;
                             clicked => {
@@ -586,7 +637,7 @@ export component ConfigureTickerModal inherits Rectangle {
 
                             SearchInput {
                                 text <=> root.catalog-search;
-                                placeholder: "Search coins...";
+                                placeholder: Translations.modal-search-coins;
                                 horizontal-stretch: 1;
                             }
 
@@ -600,7 +651,7 @@ export component ConfigureTickerModal inherits Rectangle {
                                 vertical-stretch: 1;
                                 horizontal-stretch: 1;
                                 viewport-height: CryptoAdapter.coin-catalog.length * 48px;
-                                
+
                                 catalog-list := VerticalLayout {
                                     spacing: 0px;
 
@@ -619,8 +670,7 @@ export component ConfigureTickerModal inherits Rectangle {
                                             }
                                         }
                                         toggled => {
-                                            CryptoAdapter.coin-catalog[index].selected =
-                                                !CryptoAdapter.coin-catalog[index].selected;
+                                            CryptoAdapter.coin-catalog[index].selected = !CryptoAdapter.coin-catalog[index].selected;
                                         }
                                     }
                                 }
@@ -643,7 +693,7 @@ export component ConfigureTickerModal inherits Rectangle {
                             spacing: 10px;
 
                             Text {
-                                text: "ADD CUSTOM COIN";
+                                text: Translations.modal-add-custom-coin;
                                 color: Theme.text-muted;
                                 font-size: 10px;
                                 font-weight: 600;
@@ -651,19 +701,20 @@ export component ConfigureTickerModal inherits Rectangle {
                             }
 
                             Text {
-                                text: "Use CoinGecko ID (lowercase, hyphens). Example: litecoin";
+                                text: Translations.modal-coingecko-hint;
                                 color: Theme.text-muted;
                                 font-size: 9px;
                             }
+
                             Text {
-                                text: "Symbol uses letters only. Example: LTC";
+                                text: Translations.modal-symbol-hint;
                                 color: Theme.text-muted;
                                 font-size: 9px;
                             }
 
                             ConfigField {
-                                label: "COINGECKO ID";
-                                placeholder: "e.g. litecoin";
+                                label: Translations.modal-coingecko-id;
+                                placeholder: Translations.modal-coingecko-id-placeholder;
                                 value <=> root.new-coin-id;
                             }
 
@@ -671,15 +722,15 @@ export component ConfigureTickerModal inherits Rectangle {
                                 spacing: 12px;
 
                                 ConfigField {
-                                    label: "NAME";
-                                    placeholder: "e.g. Litecoin";
+                                    label: Translations.label-name;
+                                    placeholder: Translations.modal-name-placeholder;
                                     value <=> root.new-coin-name;
                                     horizontal-stretch: 1;
                                 }
 
                                 ConfigField {
-                                    label: "SYMBOL";
-                                    placeholder: "e.g. LTC";
+                                    label: Translations.modal-symbol;
+                                    placeholder: Translations.modal-symbol-placeholder;
                                     value <=> root.new-coin-symbol;
                                     width: 120px;
                                 }
@@ -688,13 +739,12 @@ export component ConfigureTickerModal inherits Rectangle {
                             HorizontalLayout {
                                 alignment: end;
                                 TextButton {
-                                    text: "ADD COIN";
+                                    text: Translations.modal-add-coin;
                                     clicked => {
                                         let res = CryptoAdapter.add-custom-coin(
                                             root.new-coin-id,
                                             root.new-coin-name,
-                                            root.new-coin-symbol
-                                        );
+                                            root.new-coin-symbol);
                                         if (res != "") {
                                             NotificationAdapter.show(res, true);
                                         } else {
@@ -712,12 +762,14 @@ export component ConfigureTickerModal inherits Rectangle {
                 }
             }
 
-            Rectangle { height: 16px; }
+            Rectangle {
+                height: 16px;
+            }
 
             HorizontalLayout {
                 alignment: center;
                 ActionButton {
-                    text: "SAVE CONFIGURATION";
+                    text: Translations.modal-save-configuration;
                     primary: true;
                     clicked => {
                         CryptoAdapter.save-ticker-options();

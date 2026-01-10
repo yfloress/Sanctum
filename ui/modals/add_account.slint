@@ -318,7 +318,7 @@ export component AddAccountModal inherits Rectangle {
                     }
 
                     Text {
-                        text: editing ? "EDIT ACCOUNT" : "NEW ACCOUNT";
+                        text: editing ? Translations.modal-edit-account-title : Translations.modal-add-account-title;
                         color: Theme.text-primary;
                         font-size: 16px;
                         font-weight: 500;
@@ -353,7 +353,7 @@ export component AddAccountModal inherits Rectangle {
             }
 
             FormField {
-                label: "NAME";
+                label: Translations.label-name;
                 placeholder: "Main Checking";
                 value <=> name-value;
             }
@@ -363,21 +363,21 @@ export component AddAccountModal inherits Rectangle {
 
                 OptionSelector {
                     horizontal-stretch: 1;
-                    label: "TYPE";
+                    label: Translations.label-type;
                     options: type-options;
                     selected-index <=> type-index;
                 }
 
                 OptionSelector {
                     horizontal-stretch: 1;
-                    label: "CURRENCY";
+                    label: Translations.label-currency;
                     options: currency-options;
                     selected-index <=> currency-index;
                 }
             }
 
             FormField {
-                label: "INITIAL BALANCE";
+                label: Translations.label-balance;
                 placeholder: "0.00";
                 value <=> initial-balance;
             }

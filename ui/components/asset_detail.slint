@@ -453,7 +453,7 @@ export component AssetDetailPanel inherits Rectangle {
                 spacing: 12px;
 
                 SectionHeader {
-                    title: "WALLET BREAKDOWN";
+                    title: Translations.section-wallet-breakdown;
                 }
 
                 if CryptoAdapter.asset-wallets.length == 0: Rectangle {
@@ -483,7 +483,7 @@ export component AssetDetailPanel inherits Rectangle {
                 spacing: 12px;
 
                 SectionHeader {
-                    title: "TRANSACTION HISTORY";
+                    title: Translations.section-transaction-history;
                 }
 
                 if CryptoAdapter.asset-history.length == 0: Rectangle {

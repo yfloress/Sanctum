@@ -342,7 +342,7 @@ export component SettingsPage inherits Rectangle {
                         alignment: start;
 
                         Text {
-                            text: "SETTINGS";
+                            text: Translations.settings-title;
                             color: Theme.text-primary;
                             font-size: 24px;
                             font-weight: 300;
@@ -420,7 +420,7 @@ export component SettingsPage inherits Rectangle {
                     spacing: 12px;
 
                     SectionHeader {
-                        title: "REGIONAL";
+                        title: Translations.section-regional;
                     }
 
                     SettingSelector {
@@ -490,7 +490,7 @@ export component SettingsPage inherits Rectangle {
                     spacing: 12px;
 
                     SectionHeader {
-                        title: "DATA & SYNC";
+                        title: Translations.section-data-sync;
                     }
 
                     SettingCard {
@@ -514,7 +514,7 @@ export component SettingsPage inherits Rectangle {
                     }
 
                     FormField {
-                        label: "PROXY URL";
+                        label: Translations.settings-proxy-url;
                         placeholder: "http://127.0.0.1:8080 or socks5h://127.0.0.1:9050";
                         value: SettingsAdapter.proxy-url;
                         enabled: SettingsAdapter.proxy-enabled;
@@ -538,7 +538,7 @@ export component SettingsPage inherits Rectangle {
                     spacing: 12px;
 
                     SectionHeader {
-                        title: "ABOUT";
+                        title: Translations.section-about;
                     }
 
                     InfoCard {
@@ -548,12 +548,12 @@ export component SettingsPage inherits Rectangle {
 
                     InfoCard {
                         label: "Encryption";
-                        value: "AES-256-GCM";
+                        value: Translations.settings-encryption-type;
                     }
 
                     InfoCard {
                         label: "Database";
-                        value: "SQLite (Encrypted)";
+                        value: Translations.settings-storage-type;
                     }
                 }
 
@@ -636,7 +636,7 @@ export component SettingsPage inherits Rectangle {
                             animate background { duration: 150ms; }
 
                             Text {
-                                text: "RESET TO DEFAULTS";
+                                text: Translations.settings-reset-defaults;
                                 color: Theme.text-primary;
                                 font-size: 11px;
                                 font-weight: 600;

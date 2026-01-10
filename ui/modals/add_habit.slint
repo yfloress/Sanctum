@@ -3,6 +3,7 @@
 
 import { HabitAdapter, NotificationAdapter } from "../globals.slint";
 import { Theme } from "../theme.slint";
+import { Translations } from "../translations.slint";
 
 // ==================== FormField ====================
 component FormField inherits Rectangle {
@@ -55,7 +56,9 @@ component FormField inherits Rectangle {
             }
 
             TouchArea {
-                clicked => { input.focus(); }
+                clicked => {
+                    input.focus();
+                }
             }
         }
     }
@@ -97,7 +100,9 @@ component ColorOption inherits Rectangle {
 
     touch := TouchArea {
         mouse-cursor: pointer;
-        clicked => { root.clicked(); }
+        clicked => {
+            root.clicked();
+        }
     }
 }
 
@@ -125,7 +130,9 @@ component CategoryOption inherits Rectangle {
 
     touch := TouchArea {
         mouse-cursor: pointer;
-        clicked => { root.clicked(); }
+        clicked => {
+            root.clicked();
+        }
     }
 }
 
@@ -138,22 +145,50 @@ export component AddHabitModal inherits Rectangle {
     in property <bool> editing: false;
 
     property <[color]> color-options: [
-        Theme.habit-color-1, Theme.habit-color-2, Theme.habit-color-3, Theme.habit-color-4,
-        Theme.habit-color-5, Theme.habit-color-6, Theme.habit-color-7, Theme.habit-color-8,
-        Theme.habit-color-9, Theme.habit-color-10, Theme.habit-color-11, Theme.habit-color-12,
-        Theme.habit-color-13, Theme.habit-color-14, Theme.habit-color-15, Theme.habit-color-16
+        Theme.habit-color-1,
+        Theme.habit-color-2,
+        Theme.habit-color-3,
+        Theme.habit-color-4,
+        Theme.habit-color-5,
+        Theme.habit-color-6,
+        Theme.habit-color-7,
+        Theme.habit-color-8,
+        Theme.habit-color-9,
+        Theme.habit-color-10,
+        Theme.habit-color-11,
+        Theme.habit-color-12,
+        Theme.habit-color-13,
+        Theme.habit-color-14,
+        Theme.habit-color-15,
+        Theme.habit-color-16
     ];
     property <[string]> color-strings: [
-        Theme.habit-color-1-hex, Theme.habit-color-2-hex, Theme.habit-color-3-hex, Theme.habit-color-4-hex,
-        Theme.habit-color-5-hex, Theme.habit-color-6-hex, Theme.habit-color-7-hex, Theme.habit-color-8-hex,
-        Theme.habit-color-9-hex, Theme.habit-color-10-hex, Theme.habit-color-11-hex, Theme.habit-color-12-hex,
-        Theme.habit-color-13-hex, Theme.habit-color-14-hex, Theme.habit-color-15-hex, Theme.habit-color-16-hex
+        Theme.habit-color-1-hex,
+        Theme.habit-color-2-hex,
+        Theme.habit-color-3-hex,
+        Theme.habit-color-4-hex,
+        Theme.habit-color-5-hex,
+        Theme.habit-color-6-hex,
+        Theme.habit-color-7-hex,
+        Theme.habit-color-8-hex,
+        Theme.habit-color-9-hex,
+        Theme.habit-color-10-hex,
+        Theme.habit-color-11-hex,
+        Theme.habit-color-12-hex,
+        Theme.habit-color-13-hex,
+        Theme.habit-color-14-hex,
+        Theme.habit-color-15-hex,
+        Theme.habit-color-16-hex
     ];
     property <[int]> color-row1: [0, 1, 2, 3, 4, 5, 6, 7];
     property <[int]> color-row2: [8, 9, 10, 11, 12, 13, 14, 15];
-    property <[string]> category-labels: ["MIND", "BODY", "DISCIPLINE"];
+    property <[string]> category-labels: [
+        Translations.habit-category-mind,
+        Translations.habit-category-body,
+        Translations.habit-category-spirit
+    ];
     property <[string]> category-values: ["mind", "body", "spirit"];
-    
+
     callback close();
 
     function load-edit() {
@@ -199,19 +234,15 @@ export component AddHabitModal inherits Rectangle {
             NotificationAdapter.show("Name is required", true);
             return;
         }
-        
         let habit-color = color-strings[selected-color-index];
         let habit-category = category-values[selected-category-index];
-        let result = editing
-            ? HabitAdapter.update-habit(
+        let result = editing ? HabitAdapter.update-habit(
                 HabitAdapter.edit-id,
                 name,
                 description,
                 habit-color,
-                habit-category
-            )
-            : HabitAdapter.create-habit(name, description, habit-color, habit-category);
-        
+                habit-category) : HabitAdapter.create-habit(name, description, habit-color, habit-category);
+
         if (result == "") {
             close-modal();
         } else {
@@ -241,7 +272,11 @@ export component AddHabitModal inherits Rectangle {
         width: 100%;
         height: 100%;
         background: Theme.overlay;
-        TouchArea { clicked => { close-modal(); } }
+        TouchArea {
+            clicked => {
+                close-modal();
+            }
+        }
     }
 
     key-scope := FocusScope {
@@ -273,7 +308,11 @@ export component AddHabitModal inherits Rectangle {
         drop-shadow-blur: 40px;
         drop-shadow-color: Theme.overlay-soft;
 
-        TouchArea { clicked => { key-scope.focus(); } }
+        TouchArea {
+            clicked => {
+                key-scope.focus();
+            }
+        }
 
         VerticalLayout {
             padding: 32px;
@@ -296,7 +335,7 @@ export component AddHabitModal inherits Rectangle {
                     }
 
                     Text {
-                        text: editing ? "EDIT HABIT" : "NEW HABIT";
+                        text: editing ? Translations.modal-edit-habit-title : Translations.modal-add-habit-title;
                         color: Theme.text-primary;
                         font-size: 16px;
                         font-weight: 500;
@@ -322,19 +361,21 @@ export component AddHabitModal inherits Rectangle {
 
                     close-touch := TouchArea {
                         mouse-cursor: pointer;
-                        clicked => { close-modal(); }
+                        clicked => {
+                            close-modal();
+                        }
                     }
                 }
             }
 
             FormField {
-                label: "NAME";
+                label: Translations.label-name;
                 placeholder: "e.g. Read 10 pages";
                 value <=> name;
             }
 
             FormField {
-                label: "DESCRIPTION (OPTIONAL)";
+                label: Translations.modal-description-optional;
                 placeholder: "Why this habit matters";
                 value <=> description;
             }
@@ -344,7 +385,7 @@ export component AddHabitModal inherits Rectangle {
                 spacing: 12px;
 
                 Text {
-                    text: "CATEGORY";
+                    text: Translations.modal-category;
                     color: Theme.text-muted;
                     font-size: 10px;
                     font-weight: 500;
@@ -356,23 +397,25 @@ export component AddHabitModal inherits Rectangle {
                     for idx in [0, 1, 2]: CategoryOption {
                         label: category-labels[idx];
                         selected: selected-category-index == idx;
-                        clicked => { selected-category-index = idx; }
+                        clicked => {
+                            selected-category-index = idx;
+                        }
                     }
                 }
             }
-            
+
             // Color Picker
             VerticalLayout {
                 spacing: 12px;
 
                 Text {
-                    text: "COLOR";
+                    text: Translations.modal-color;
                     color: Theme.text-muted;
                     font-size: 10px;
                     font-weight: 500;
                     letter-spacing: 1.5px;
                 }
-                
+
                 VerticalLayout {
                     spacing: 12px;
 
@@ -381,7 +424,9 @@ export component AddHabitModal inherits Rectangle {
                         for idx in color-row1: ColorOption {
                             option-color: color-options[idx];
                             selected: selected-color-index == idx;
-                            clicked => { selected-color-index = idx; }
+                            clicked => {
+                                selected-color-index = idx;
+                            }
                         }
                     }
 
@@ -390,13 +435,17 @@ export component AddHabitModal inherits Rectangle {
                         for idx in color-row2: ColorOption {
                             option-color: color-options[idx];
                             selected: selected-color-index == idx;
-                            clicked => { selected-color-index = idx; }
+                            clicked => {
+                                selected-color-index = idx;
+                            }
                         }
                     }
                 }
             }
 
-            Rectangle { vertical-stretch: 1; }
+            Rectangle {
+                vertical-stretch: 1;
+            }
 
             // Submit button
             Rectangle {
@@ -405,7 +454,7 @@ export component AddHabitModal inherits Rectangle {
                 border-radius: 10px;
 
                 Text {
-                    text: editing ? "SAVE CHANGES" : "SAVE HABIT";
+                    text: editing ? Translations.modal-save-changes : Translations.action-save;
                     color: Theme.text;
                     horizontal-alignment: center;
                     vertical-alignment: center;
@@ -413,10 +462,12 @@ export component AddHabitModal inherits Rectangle {
                     font-weight: 600;
                     letter-spacing: 2px;
                 }
-                
+
                 submit-touch := TouchArea {
                     mouse-cursor: pointer;
-                    clicked => { root.submit(); }
+                    clicked => {
+                        root.submit();
+                    }
                 }
 
                 states [

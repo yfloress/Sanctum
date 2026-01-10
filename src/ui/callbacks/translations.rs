@@ -484,6 +484,105 @@ pub fn load_all_translations(ui: &AppWindow) {
     // Crypto Widgets
     tr.set_crypto_holdings_small(s(&t("crypto-holdings-small")));
     tr.set_crypto_price_small(s(&t("crypto-price-small")));
+
+    // Crypto Transaction Modal
+    tr.set_modal_from_asset(s(&t("modal-from-asset")));
+    tr.set_modal_to_asset(s(&t("modal-to-asset")));
+    tr.set_modal_cryptocurrency(s(&t("modal-cryptocurrency")));
+    tr.set_modal_from_wallet(s(&t("modal-from-wallet")));
+    tr.set_modal_to_wallet(s(&t("modal-to-wallet")));
+    tr.set_modal_from_amount(s(&t("modal-from-amount")));
+    tr.set_modal_to_amount(s(&t("modal-to-amount")));
+    tr.set_modal_to_amount_optional(s(&t("modal-to-amount-optional")));
+    tr.set_modal_same_as_from(s(&t("modal-same-as-from")));
+    tr.set_modal_price_usd(s(&t("modal-price-usd")));
+    tr.set_modal_optional(s(&t("modal-optional")));
+    tr.set_modal_required(s(&t("modal-required")));
+    tr.set_modal_fee_usd(s(&t("modal-fee-usd")));
+    tr.set_modal_fee_coin_optional(s(&t("modal-fee-coin-optional")));
+    tr.set_modal_fee_amount(s(&t("modal-fee-amount")));
+    tr.set_modal_notes(s(&t("modal-notes")));
+    tr.set_modal_transaction_details(s(&t("modal-transaction-details")));
+    tr.set_modal_date(s(&t("modal-date")));
+    tr.set_modal_search_coins(s(&t("modal-search-coins")));
+
+    // Goal Modal
+    tr.set_modal_new_goal(s(&t("modal-new-goal")));
+    tr.set_modal_edit_goal(s(&t("modal-edit-goal")));
+    tr.set_modal_goal_name(s(&t("modal-goal-name")));
+    tr.set_modal_goal_name_placeholder(s(&t("modal-goal-name-placeholder")));
+    tr.set_modal_description_optional(s(&t("modal-description-optional")));
+    tr.set_modal_goal_description_placeholder(s(&t("modal-goal-description-placeholder")));
+    tr.set_modal_reward(s(&t("modal-reward")));
+    tr.set_modal_reward_placeholder_goal(s(&t("modal-reward-placeholder-goal")));
+    tr.set_modal_deadline_optional(s(&t("modal-deadline-optional")));
+    tr.set_modal_create_goal(s(&t("modal-create-goal")));
+
+    // Reward Modal
+    tr.set_modal_new_streak_reward(s(&t("modal-new-streak-reward")));
+    tr.set_modal_edit_reward(s(&t("modal-edit-reward")));
+    tr.set_modal_consecutive_desc(s(&t("modal-consecutive-desc")));
+    tr.set_modal_accumulative_desc(s(&t("modal-accumulative-desc")));
+    tr.set_modal_target_days(s(&t("modal-target-days")));
+    tr.set_modal_of_total_days(s(&t("modal-of-total-days")));
+    tr.set_modal_days_label(s(&t("modal-days-label")));
+    tr.set_modal_create_reward(s(&t("modal-create-reward")));
+
+    // Configure Ticker Extended
+    tr.set_modal_add_custom_coin(s(&t("modal-add-custom-coin")));
+    tr.set_modal_coingecko_hint(s(&t("modal-coingecko-hint")));
+    tr.set_modal_symbol_hint(s(&t("modal-symbol-hint")));
+    tr.set_modal_coingecko_id(s(&t("modal-coingecko-id")));
+    tr.set_modal_coingecko_id_placeholder(s(&t("modal-coingecko-id-placeholder")));
+    tr.set_modal_name_placeholder(s(&t("modal-name-placeholder")));
+    tr.set_modal_symbol(s(&t("modal-symbol")));
+    tr.set_modal_symbol_placeholder(s(&t("modal-symbol-placeholder")));
+    tr.set_modal_save_configuration(s(&t("modal-save-configuration")));
+
+    // Wallet Modal
+    tr.set_modal_wallet_name(s(&t("modal-wallet-name")));
+
+    // Transfer Modal
+    tr.set_modal_edit_transfer(s(&t("modal-edit-transfer")));
+    tr.set_modal_from(s(&t("modal-from")));
+    tr.set_modal_to(s(&t("modal-to")));
+    tr.set_modal_transfer_action(s(&t("modal-transfer-action")));
+
+    // Icon Modals
+    tr.set_modal_select_bank_icon(s(&t("modal-select-bank-icon")));
+    tr.set_modal_select_icon(s(&t("modal-select-icon")));
+    tr.set_modal_save_icon(s(&t("modal-save-icon")));
+
+    // Common Button Labels
+    tr.set_button_add(s(&t("button-add")));
+    tr.set_button_sync(s(&t("button-sync")));
+    tr.set_button_syncing(s(&t("button-syncing")));
+
+    // Page Titles and Sections
+    tr.set_section_fiat(s(&t("section-fiat")));
+    tr.set_section_spending_breakdown(s(&t("section-spending-breakdown")));
+    tr.set_section_recent_activity(s(&t("section-recent-activity")));
+    tr.set_section_recent_transactions(s(&t("section-recent-transactions")));
+    tr.set_section_my_accounts(s(&t("section-my-accounts")));
+    tr.set_section_finance_settings(s(&t("section-finance-settings")));
+    tr.set_section_transactions(s(&t("section-transactions")));
+    tr.set_section_wallet_breakdown(s(&t("section-wallet-breakdown")));
+
+    // Settings Page
+    tr.set_section_regional(s(&t("section-regional")));
+    tr.set_section_data_sync(s(&t("section-data-sync")));
+    tr.set_section_about(s(&t("section-about")));
+    tr.set_settings_encryption_type(s(&t("settings-encryption-type")));
+    tr.set_settings_storage_type(s(&t("settings-storage-type")));
+
+    // Asset/Wallet Details
+    tr.set_section_transaction_history(s(&t("section-transaction-history")));
+
+    // Transaction Entry Modal
+    tr.set_modal_new_entry(s(&t("modal-new-entry")));
+    tr.set_modal_edit_entry(s(&t("modal-edit-entry")));
+    tr.set_modal_save_entry(s(&t("modal-save-entry")));
+    tr.set_modal_add_note(s(&t("modal-add-note")));
 }
 
 /// Helper to convert String to SharedString

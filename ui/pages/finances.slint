@@ -512,7 +512,7 @@ export component FinancesPage inherits Rectangle {
         let income_len = CategoryAdapter.income-categories.length;
         let transfer_index = 1 + expense_len + income_len;
         if filter-category-index == transfer_index {
-            return "TRANSFER";
+            return Translations.finances-transfer;
         }
         if filter-category-index > 0 && filter-category-index <= expense_len {
             return CategoryAdapter.expense-categories[filter-category-index - 1].name;
@@ -705,7 +705,7 @@ export component FinancesPage inherits Rectangle {
                     alignment: space-between;
 
                     SectionHeader {
-                        title: "RECENT TRANSACTIONS";
+                        title: Translations.section-recent-transactions;
                     }
 
                     ActionButton {
@@ -732,7 +732,7 @@ export component FinancesPage inherits Rectangle {
                     FilterInput {
                         horizontal-stretch: 1;
                         min-width: 300px;
-                        label: "SEARCH";
+                        label: Translations.label-search;
                         placeholder: "Search by description, category, date...";
                         value <=> root.filter-query;
                     }
@@ -888,7 +888,7 @@ export component FinancesPage inherits Rectangle {
                         alignment: space-between;
 
                         SectionHeader {
-                            title: "MY ACCOUNTS";
+                            title: Translations.section-my-accounts;
                         }
 
                         HorizontalLayout {
@@ -954,7 +954,7 @@ export component FinancesPage inherits Rectangle {
                     alignment: space-between;
 
                     SectionHeader {
-                        title: "FINANCE SETTINGS";
+                        title: Translations.section-finance-settings;
                     }
                 }
 

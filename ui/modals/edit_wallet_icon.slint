@@ -7,6 +7,7 @@ import {
     NotificationAdapter,
 } from "../globals.slint";
 import { Theme } from "../theme.slint";
+import { Translations } from "../translations.slint";
 import { IconSelector } from "../components/icon_selector.slint";
 
 export component EditWalletIconModal inherits Rectangle {
@@ -40,7 +41,6 @@ export component EditWalletIconModal inherits Rectangle {
             NotificationAdapter.show("Wallet ID is required", true);
             return;
         }
-
         let result = CryptoAdapter.update-wallet-icon(wallet-id, selected-icon);
 
         if (result == "") {
@@ -111,7 +111,9 @@ export component EditWalletIconModal inherits Rectangle {
         opacity: 1.0;
 
         TouchArea {
-            clicked => { key-scope.focus(); }
+            clicked => {
+                key-scope.focus();
+            }
         }
 
         VerticalLayout {
@@ -135,7 +137,7 @@ export component EditWalletIconModal inherits Rectangle {
                     }
 
                     Text {
-                        text: "SELECT ICON";
+                        text: Translations.modal-select-icon;
                         color: Theme.text-primary;
                         font-size: 16px;
                         font-weight: 500;
@@ -161,7 +163,10 @@ export component EditWalletIconModal inherits Rectangle {
 
                     close-touch := TouchArea {
                         mouse-cursor: pointer;
-                        clicked => { root.reset(); AppState.show-edit-wallet-icon = false; }
+                        clicked => {
+                            root.reset();
+                            AppState.show-edit-wallet-icon = false;
+                        }
                     }
                 }
             }
@@ -182,7 +187,7 @@ export component EditWalletIconModal inherits Rectangle {
                     alignment: center;
 
                     Text {
-                        text: "SAVE ICON";
+                        text: Translations.modal-save-icon;
                         color: Theme.text-primary;
                         font-size: 12px;
                         font-weight: 600;
@@ -193,7 +198,9 @@ export component EditWalletIconModal inherits Rectangle {
 
                 submit-touch := TouchArea {
                     mouse-cursor: pointer;
-                    clicked => { root.submit(); }
+                    clicked => {
+                        root.submit();
+                    }
                 }
 
                 states [

@@ -328,7 +328,7 @@ crypto-no-assets-yet = No assets tracked yet
 crypto-create-wallet-first = Create a wallet first, then add your crypto holdings
 crypto-wallet = WALLET
 crypto-value = VALUE
-crypto-no-wallets = No wallets created
+
 crypto-add-first-wallet = Add your first wallet to start tracking your crypto
 crypto-delete-wallet = Delete Wallet?
 crypto-delete-wallet-confirm = This will permanently delete and all its transaction history.
@@ -479,15 +479,105 @@ sidebar-title = SANCTUM
 crypto-holdings-small = Holdings
 crypto-price-small = Price
 
-# Icon Selector
-icon-exchanges = Exchanges
-icon-wallet-icons = Wallet Icons
-icon-choose = CHOOSE ICON
-
-# Forms
-form-search-coin = Search coin...
-
-# Streak Rewards
+# Streak Rewards (with arguments)
 rewards-ready-claim-with = Ready to claim: { $reward }
 rewards-next-with = Next: { $reward }
-rewards-all-unlocked = All milestones unlocked!
+
+# ==================== Crypto Transaction Modal ====================
+modal-from-asset = FROM ASSET
+modal-to-asset = TO ASSET
+modal-cryptocurrency = CRYPTOCURRENCY
+modal-from-wallet = FROM WALLET
+modal-to-wallet = TO WALLET
+modal-from-amount = FROM AMOUNT
+modal-to-amount = TO AMOUNT
+modal-to-amount-optional = TO AMOUNT (optional)
+modal-same-as-from = Same as FROM
+modal-price-usd = PRICE (USD)
+modal-optional = Optional
+modal-required = Required
+modal-fee-usd = FEE (USD)
+modal-fee-coin-optional = FEE COIN (OPTIONAL)
+modal-fee-amount = FEE AMOUNT
+modal-notes = NOTES
+modal-transaction-details = Transaction details...
+modal-date = DATE
+modal-search-coins = Search coins...
+
+# ==================== Goal Modal ====================
+modal-new-goal = NEW GOAL
+modal-edit-goal = EDIT GOAL
+modal-goal-name = GOAL NAME
+modal-goal-name-placeholder = e.g. Run a marathon
+modal-description-optional = DESCRIPTION (OPTIONAL)
+modal-goal-description-placeholder = Why this goal matters...
+modal-reward = REWARD
+modal-reward-placeholder-goal = e.g. New sneakers
+modal-deadline-optional = DEADLINE (OPTIONAL)
+modal-create-goal = CREATE GOAL
+
+# ==================== Reward Modal ====================
+modal-new-streak-reward = NEW STREAK REWARD
+modal-edit-reward = EDIT REWARD
+modal-consecutive-desc = Days must be consecutive (resets if missed)
+modal-accumulative-desc = Accumulate days over time
+modal-target-days = TARGET DAYS
+modal-of-total-days = OF TOTAL DAYS
+modal-days-label = days
+modal-create-reward = CREATE REWARD
+
+# ==================== Configure Ticker Extended ====================
+modal-add-custom-coin = ADD CUSTOM COIN
+modal-coingecko-hint = Use CoinGecko ID (lowercase, hyphens). Example: litecoin
+modal-symbol-hint = Symbol uses letters only. Example: LTC
+modal-coingecko-id = COINGECKO ID
+modal-coingecko-id-placeholder = e.g. litecoin
+modal-name-placeholder = e.g. Litecoin
+modal-symbol = SYMBOL
+modal-symbol-placeholder = e.g. LTC
+modal-save-configuration = SAVE CONFIGURATION
+
+# ==================== Wallet Modal ====================
+modal-wallet-name = WALLET NAME
+
+# ==================== Transfer Modal ====================
+modal-edit-transfer = EDIT TRANSFER
+modal-from = FROM
+modal-to = TO
+modal-transfer-action = TRANSFER
+
+# ==================== Icon Modals ====================
+modal-select-bank-icon = SELECT BANK ICON
+modal-select-icon = SELECT ICON
+modal-save-icon = SAVE ICON
+
+# ==================== Common Button Labels ====================
+button-add = ADD
+button-sync = ↻ SYNC
+button-syncing = SYNCING...
+
+# ==================== Page Titles and Sections ====================
+section-fiat = FIAT
+section-spending-breakdown = SPENDING BREAKDOWN
+section-recent-activity = RECENT ACTIVITY
+section-recent-transactions = RECENT TRANSACTIONS
+section-my-accounts = MY ACCOUNTS
+section-finance-settings = FINANCE SETTINGS
+section-transactions = TRANSACTIONS
+section-wallet-breakdown = WALLET BREAKDOWN
+
+# ==================== Settings Page ====================
+section-regional = REGIONAL
+section-data-sync = DATA & SYNC
+section-about = ABOUT
+settings-encryption-type = AES-256-GCM
+settings-storage-type = SQLite (Encrypted)
+
+# ==================== Asset/Wallet Details ====================
+section-transaction-history = TRANSACTION HISTORY
+
+# ==================== Transaction Entry Modal ====================
+modal-new-entry = NEW ENTRY
+modal-edit-entry = EDIT ENTRY
+modal-save-entry = SAVE ENTRY
+modal-add-note = Add a note...
