@@ -1,6 +1,31 @@
 //! Rewards data loading functions
 //!
-//! Contains functions for loading rewards, goals, and achievements data into the UI.
+//! This module handles the transformation of backend data into UI-ready formats.
+//! It serves as the bridge between the controller layer and the Slint UI adapters.
+//!
+//! ## Architecture
+//!
+//! The rewards system follows a layered pattern:
+//! - `db/rewards.rs` - Raw SQL operations
+//! - `rewards_repository.rs` - Database wrapper (consistent with project patterns)
+//! - `rewards_service.rs` - Business logic (validation, auto-completion, achievements)
+//! - `controller/rewards.rs` - Input validation and orchestration
+//! - `rewards.rs` - Callback registration (UI event handlers)
+//! - `rewards_data.rs` (this file) - Data transformation for UI
+//!
+//! ## Data Flow
+//!
+//! 1. UI triggers a callback (e.g., `fetch_rewards`)
+//! 2. Callback schedules a deferred load via `Timer::single_shot`
+//! 3. This module's functions query the controller and transform data
+//! 4. Transformed data is set on the appropriate Slint adapter
+//!
+//! ## Key Patterns
+//!
+//! - **Progress calculation**: Streak rewards calculate progress relative to the
+//!   maximum milestone, not the next one, ensuring consistent progress bar behavior.
+//! - **Color parsing**: Habit colors are stored as hex strings and parsed into
+//!   Slint `Color` values with a fallback to purple (#8b5cf6).
 
 use crate::controller::AppController;
 use crate::models::Habit;
@@ -13,7 +38,13 @@ use std::sync::Arc;
 
 // ==================== Data Loading Functions ====================
 
-/// Loads streak rewards data into the UI
+/// Loads streak rewards data into the UI.
+///
+/// This function:
+/// 1. Fetches all streak rewards from the database
+/// 2. Enriches each reward with habit name/color and milestone data
+/// 3. Calculates progress percentage relative to the maximum milestone
+/// 4. Sets the data on `RewardsAdapter.streak_rewards`
 pub fn load_rewards_data<N>(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>, notify: &N)
 where
     N: Fn(String, bool) + Clone + 'static,
@@ -96,7 +127,15 @@ where
         .set_streak_rewards(ModelRc::new(VecModel::from(reward_data)));
 }
 
-/// Loads goals data into the UI
+/// Loads goals data into the UI.
+///
+/// This function:
+/// 1. Fetches all active (non-archived) goals
+/// 2. Loads checkpoints for each goal
+/// 3. Calculates completion progress (completed_count / total_count)
+/// 4. Sets the data on `RewardsAdapter.goals`
+///
+/// Note: Archived goals are filtered out by the database query.
 pub fn load_goals_data<N>(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>, notify: &N)
 where
     N: Fn(String, bool) + Clone + 'static,
@@ -158,7 +197,13 @@ where
         .set_goals(ModelRc::new(VecModel::from(goal_data)));
 }
 
-/// Loads achievements data into the UI
+/// Loads achievements data into the UI.
+///
+/// Achievements are created automatically when:
+/// - A streak reward milestone is unlocked
+/// - A goal is completed (either manually or when all checkpoints are done)
+///
+/// The `achieved_at` timestamp is truncated to YYYY-MM-DD for display.
 pub fn load_achievements_data<N>(
     ui_weak: &Weak<AppWindow>,
     controller: &Arc<AppController>,

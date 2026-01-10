@@ -1,11 +1,29 @@
 //! Rewards repository
 //!
-//! Database operations for rewards feature.
+//! Database wrapper for rewards feature operations.
+//!
+//! ## Why This Layer Exists
+//!
+//! This repository follows the project's established pattern of separating
+//! database access from business logic. While currently a 1:1 wrapper around
+//! `db/rewards.rs`, it provides:
+//!
+//! 1. **Consistency**: Matches the architecture used by other features (finance, crypto)
+//! 2. **Testability**: Allows mocking database operations in service tests
+//! 3. **Future flexibility**: Can add caching, batching, or query optimization
+//!    without changing the service layer
+//!
+//! The service layer (`rewards_service.rs`) uses this repository rather than
+//! calling `Database` methods directly, keeping the dependency on raw SQL
+//! operations isolated.
 
 use crate::db::{Database, DbError};
 use crate::models::{Achievement, Checkpoint, Goal, Milestone, StreakReward};
 
-/// Repository for rewards-related database operations
+/// Repository for rewards-related database operations.
+///
+/// All methods are static and take a `&Database` reference, allowing the
+/// service layer to manage database access through its `with_db()` helper.
 pub struct RewardsRepository;
 
 impl RewardsRepository {

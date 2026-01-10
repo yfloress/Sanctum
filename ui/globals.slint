@@ -247,7 +247,6 @@ export global RewardsAdapter {
     ) -> string;
     callback add-milestone(string, int, string) -> string;  // reward-id, days, reward-text
     callback delete-streak-reward(string) -> string;
-    callback update-streak-progress(string);  // Called when habit is toggled
     // Update reward with milestones: id, habit-id, is-consecutive, target-days, target-total
     // Milestones passed via edit-reward-m1/m2/m3 properties
     callback update-streak-reward(string, string, bool, int, int) -> string;

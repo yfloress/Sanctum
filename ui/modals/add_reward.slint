@@ -217,6 +217,25 @@ export component AddRewardModal inherits Rectangle {
     property <string> m2-reward: "";
     property <int> m3-days: 50;
     property <string> m3-reward: "";
+
+    // Helper function to shift milestones up after deletion
+    function shift-milestones-from(position: int) {
+        if position == 1 {
+            m1-days = m2-days;
+            m1-reward = m2-reward;
+            m2-days = m3-days;
+            m2-reward = m3-reward;
+            m3-days = 50;
+            m3-reward = "";
+        } else if position == 2 {
+            m2-days = m3-days;
+            m2-reward = m3-reward;
+            m3-days = 50;
+            m3-reward = "";
+        }
+        milestone-count -= 1;
+    }
+
     function auto-select-habit() {
         // Use selected habit index from adapter if valid, otherwise default to first
         if HabitAdapter.selected-habit-index >= 0 && HabitAdapter.selected-habit-index < HabitAdapter.habits.length {
@@ -548,11 +567,7 @@ export component AddRewardModal inherits Rectangle {
                     reward <=> m1-reward;
                     can-delete: milestone-count > 1;
                     delete => {
-                        m1-days = m2-days;
-                        m1-reward = m2-reward;
-                        m2-days = m3-days;
-                        m2-reward = m3-reward;
-                        milestone-count -= 1;
+                        shift-milestones-from(1);
                     }
                 }
 
@@ -560,9 +575,7 @@ export component AddRewardModal inherits Rectangle {
                     days <=> m2-days;
                     reward <=> m2-reward;
                     delete => {
-                        m2-days = m3-days;
-                        m2-reward = m3-reward;
-                        milestone-count -= 1;
+                        shift-milestones-from(2);
                     }
                 }
 
@@ -570,7 +583,7 @@ export component AddRewardModal inherits Rectangle {
                     days <=> m3-days;
                     reward <=> m3-reward;
                     delete => {
-                        milestone-count -= 1;
+                        shift-milestones-from(3);
                     }
                 }
             }

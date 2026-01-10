@@ -1,6 +1,5 @@
 // History Tab Component
 // Shows achievements/trophies gallery of completed rewards and goals
-// Supports up to 80 achievements (20 rows × 4 cards)
 
 import { Theme } from "../../theme.slint";
 import { RewardsAdapter } from "../../globals.slint";
@@ -8,42 +7,10 @@ import { AchievementCard } from "achievement_card.slint";
 import { SectionHeader } from "../sections/section_header.slint";
 import { EmptyState } from "../sections/empty_state.slint";
 
-// Grid row component to display up to 4 achievements
-component AchievementRow inherits HorizontalLayout {
-    in property <int> start-index;
-    in property <int> total-count;
-
-    spacing: 12px;
-    alignment: start;
-
-    // Card 1
-    if start-index < total-count: AchievementCard {
-        achievement: RewardsAdapter.achievements[start-index];
-    }
-
-    // Card 2
-    if start-index + 1 < total-count: AchievementCard {
-        achievement: RewardsAdapter.achievements[start-index + 1];
-    }
-
-    // Card 3
-    if start-index + 2 < total-count: AchievementCard {
-        achievement: RewardsAdapter.achievements[start-index + 2];
-    }
-
-    // Card 4
-    if start-index + 3 < total-count: AchievementCard {
-        achievement: RewardsAdapter.achievements[start-index + 3];
-    }
-}
-
 export component HistoryTab inherits Rectangle {
     background: transparent;
 
-    // Calculate number of rows needed (4 cards per row)
-    property <int> cards-per-row: 4;
     property <int> total-achievements: RewardsAdapter.achievements.length;
-    property <int> num-rows: (total-achievements + cards-per-row - 1) / cards-per-row;
 
     VerticalLayout {
         spacing: 16px;
@@ -118,134 +85,27 @@ export component HistoryTab inherits Rectangle {
                     background: Theme.border;
                 }
 
-                // Achievement grid - scrollable with proper row wrapping
-                // Supports up to 80 achievements (20 rows)
+                // Achievement grid - using Flickable with GridBox-style layout via for loop
                 Flickable {
                     vertical-stretch: 1;
                     min-height: 160px;
 
-                    VerticalLayout {
-                        spacing: 12px;
-                        alignment: start;
+                    // Wrap content in a container that flows items
+                    Rectangle {
+                        // Calculate grid dimensions
+                        property <int> cards-per-row: 4;
+                        property <length> card-width: 140px;
+                        property <length> card-height: 140px;
+                        property <length> spacing: 12px;
+                        property <int> row-count: (total-achievements + cards-per-row - 1) / cards-per-row;
 
-                        // Row 1 (indices 0-3)
-                        if num-rows >= 1: AchievementRow {
-                            start-index: 0;
-                            total-count: total-achievements;
-                        }
+                        width: parent.width;
+                        height: row-count * (card-height + spacing);
 
-                        // Row 2 (indices 4-7)
-                        if num-rows >= 2: AchievementRow {
-                            start-index: 4;
-                            total-count: total-achievements;
-                        }
-
-                        // Row 3 (indices 8-11)
-                        if num-rows >= 3: AchievementRow {
-                            start-index: 8;
-                            total-count: total-achievements;
-                        }
-
-                        // Row 4 (indices 12-15)
-                        if num-rows >= 4: AchievementRow {
-                            start-index: 12;
-                            total-count: total-achievements;
-                        }
-
-                        // Row 5 (indices 16-19)
-                        if num-rows >= 5: AchievementRow {
-                            start-index: 16;
-                            total-count: total-achievements;
-                        }
-
-                        // Row 6 (indices 20-23)
-                        if num-rows >= 6: AchievementRow {
-                            start-index: 20;
-                            total-count: total-achievements;
-                        }
-
-                        // Row 7 (indices 24-27)
-                        if num-rows >= 7: AchievementRow {
-                            start-index: 24;
-                            total-count: total-achievements;
-                        }
-
-                        // Row 8 (indices 28-31)
-                        if num-rows >= 8: AchievementRow {
-                            start-index: 28;
-                            total-count: total-achievements;
-                        }
-
-                        // Row 9 (indices 32-35)
-                        if num-rows >= 9: AchievementRow {
-                            start-index: 32;
-                            total-count: total-achievements;
-                        }
-
-                        // Row 10 (indices 36-39)
-                        if num-rows >= 10: AchievementRow {
-                            start-index: 36;
-                            total-count: total-achievements;
-                        }
-
-                        // Row 11 (indices 40-43)
-                        if num-rows >= 11: AchievementRow {
-                            start-index: 40;
-                            total-count: total-achievements;
-                        }
-
-                        // Row 12 (indices 44-47)
-                        if num-rows >= 12: AchievementRow {
-                            start-index: 44;
-                            total-count: total-achievements;
-                        }
-
-                        // Row 13 (indices 48-51)
-                        if num-rows >= 13: AchievementRow {
-                            start-index: 48;
-                            total-count: total-achievements;
-                        }
-
-                        // Row 14 (indices 52-55)
-                        if num-rows >= 14: AchievementRow {
-                            start-index: 52;
-                            total-count: total-achievements;
-                        }
-
-                        // Row 15 (indices 56-59)
-                        if num-rows >= 15: AchievementRow {
-                            start-index: 56;
-                            total-count: total-achievements;
-                        }
-
-                        // Row 16 (indices 60-63)
-                        if num-rows >= 16: AchievementRow {
-                            start-index: 60;
-                            total-count: total-achievements;
-                        }
-
-                        // Row 17 (indices 64-67)
-                        if num-rows >= 17: AchievementRow {
-                            start-index: 64;
-                            total-count: total-achievements;
-                        }
-
-                        // Row 18 (indices 68-71)
-                        if num-rows >= 18: AchievementRow {
-                            start-index: 68;
-                            total-count: total-achievements;
-                        }
-
-                        // Row 19 (indices 72-75)
-                        if num-rows >= 19: AchievementRow {
-                            start-index: 72;
-                            total-count: total-achievements;
-                        }
-
-                        // Row 20 (indices 76-79)
-                        if num-rows >= 20: AchievementRow {
-                            start-index: 76;
-                            total-count: total-achievements;
+                        for achievement[idx] in RewardsAdapter.achievements: AchievementCard {
+                            achievement: achievement;
+                            x: mod(idx, 4) * (card-width + spacing);
+                            y: floor(idx / 4) * (card-height + spacing);
                         }
                     }
                 }

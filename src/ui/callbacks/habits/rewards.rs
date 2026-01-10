@@ -1,6 +1,27 @@
 //! Rewards callback registrations
 //!
-//! Connects RewardsAdapter callbacks to the backend controller.
+//! This module connects UI callbacks from `RewardsAdapter` to the backend controller.
+//! It handles user interactions for streak rewards, goals, checkpoints, and achievements.
+//!
+//! ## Module Organization
+//!
+//! Callbacks are organized into logical groups:
+//! - **Fetch callbacks**: Load data on demand (`fetch_rewards`, `fetch_goals`, `fetch_achievements`)
+//! - **Streak reward callbacks**: CRUD operations for streak rewards and milestones
+//! - **Goal callbacks**: CRUD operations for goals including completion and archiving
+//! - **Checkpoint callbacks**: Add, delete, and toggle checkpoint completion
+//!
+//! ## Deferred Updates Pattern
+//!
+//! All callbacks that modify data use `Timer::single_shot` to schedule UI updates.
+//! This prevents recursion issues during Slint's initialization phase and ensures
+//! the UI reflects the latest state after backend operations complete.
+//!
+//! ## Error Handling
+//!
+//! Callbacks return `SharedString` where empty string indicates success and
+//! non-empty string contains an error message. The `notify` function is used
+//! to display user-facing messages (success or error).
 
 use crate::controller::AppController;
 use crate::{AppWindow, RewardsAdapter};

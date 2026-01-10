@@ -112,6 +112,44 @@ export component AddGoalModal inherits Rectangle {
     property <string> cp3-id: "";
     property <string> cp4-id: "";
 
+    // Helper function to shift checkpoints up after deletion
+    function shift-checkpoints-from(position: int) {
+        if position == 1 {
+            cp1 = cp2;
+            cp1-id = cp2-id;
+            cp2 = cp3;
+            cp2-id = cp3-id;
+            cp3 = cp4;
+            cp3-id = cp4-id;
+            cp4 = "";
+            cp4-id = "";
+        } else if position == 2 {
+            cp2 = cp3;
+            cp2-id = cp3-id;
+            cp3 = cp4;
+            cp3-id = cp4-id;
+            cp4 = "";
+            cp4-id = "";
+        } else if position == 3 {
+            cp3 = cp4;
+            cp3-id = cp4-id;
+            cp4 = "";
+            cp4-id = "";
+        } else if position == 4 {
+            cp4 = "";
+            cp4-id = "";
+        }
+        checkpoint-count -= 1;
+    }
+
+    // Helper to delete checkpoint and shift
+    function delete-checkpoint-at(position: int, id: string) {
+        if id != "" {
+            RewardsAdapter.delete-checkpoint(id);
+        }
+        shift-checkpoints-from(position);
+    }
+
     function reset() {
         goal-name = "";
         goal-description = "";
@@ -441,61 +479,28 @@ export component AddGoalModal inherits Rectangle {
                             description <=> cp1;
                             can-delete: checkpoint-count > 1;
                             delete => {
-                                // Delete from backend if has ID
-                                if cp1-id != "" {
-                                    RewardsAdapter.delete-checkpoint(cp1-id);
-                                }
-                                cp1 = cp2;
-                                cp1-id = cp2-id;
-                                cp2 = cp3;
-                                cp2-id = cp3-id;
-                                cp3 = cp4;
-                                cp3-id = cp4-id;
-                                cp4 = "";
-                                cp4-id = "";
-                                checkpoint-count -= 1;
+                                delete-checkpoint-at(1, cp1-id);
                             }
                         }
 
                         if checkpoint-count >= 2: CheckpointRow {
                             description <=> cp2;
                             delete => {
-                                if cp2-id != "" {
-                                    RewardsAdapter.delete-checkpoint(cp2-id);
-                                }
-                                cp2 = cp3;
-                                cp2-id = cp3-id;
-                                cp3 = cp4;
-                                cp3-id = cp4-id;
-                                cp4 = "";
-                                cp4-id = "";
-                                checkpoint-count -= 1;
+                                delete-checkpoint-at(2, cp2-id);
                             }
                         }
 
                         if checkpoint-count >= 3: CheckpointRow {
                             description <=> cp3;
                             delete => {
-                                if cp3-id != "" {
-                                    RewardsAdapter.delete-checkpoint(cp3-id);
-                                }
-                                cp3 = cp4;
-                                cp3-id = cp4-id;
-                                cp4 = "";
-                                cp4-id = "";
-                                checkpoint-count -= 1;
+                                delete-checkpoint-at(3, cp3-id);
                             }
                         }
 
                         if checkpoint-count >= 4: CheckpointRow {
                             description <=> cp4;
                             delete => {
-                                if cp4-id != "" {
-                                    RewardsAdapter.delete-checkpoint(cp4-id);
-                                }
-                                cp4 = "";
-                                cp4-id = "";
-                                checkpoint-count -= 1;
+                                delete-checkpoint-at(4, cp4-id);
                             }
                         }
                     }
