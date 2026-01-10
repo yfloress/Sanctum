@@ -297,6 +297,19 @@ pub fn setup_habit_callbacks<N>(
         ui.global::<HabitAdapter>().on_select_habit(move |id| {
             let date = *date_lock.lock().unwrap();
             refresh_habit_summary(&ui_weak, &controller, date, id.to_string(), Some(&notify));
+
+            // Also update selected-habit-index for use in modals
+            if let Some(ui) = ui_weak.upgrade() {
+                let habits = ui.global::<HabitAdapter>().get_habits();
+                for i in 0..habits.row_count() {
+                    if let Some(habit) = habits.row_data(i)
+                        && habit.id == id
+                    {
+                        ui.global::<HabitAdapter>().set_selected_habit_index(i as i32);
+                        break;
+                    }
+                }
+            }
         });
     }
 

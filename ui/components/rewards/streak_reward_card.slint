@@ -185,7 +185,7 @@ export component StreakRewardCard inherits Rectangle {
                     width: parent.width * (reward.progress-percent / 100.0);
                     height: parent.height;
                     border-radius: 4px;
-                    background: @linear-gradient(90deg, reward.habit-color 0%, reward.habit-color.darker(0.1) 100%);
+                    background: @linear-gradient(90deg, #ffffff 0%, reward.habit-color 40%, reward.habit-color.darker(0.3) 100%);
 
                     animate width {
                         duration: 300ms;
