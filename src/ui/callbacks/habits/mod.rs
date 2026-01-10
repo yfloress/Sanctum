@@ -12,6 +12,7 @@ mod charts;
 mod data;
 mod helpers;
 mod rewards;
+mod rewards_data;
 
 pub use callbacks::setup_habit_callbacks;
 pub use charts::HabitChartsCache;

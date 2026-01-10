@@ -377,6 +377,12 @@ impl Database {
         Ok((total, completed))
     }
 
+    pub fn delete_checkpoint(&self, id: &str) -> Result<(), DbError> {
+        self.conn
+            .execute("DELETE FROM checkpoints WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
     // ==================== Achievements ====================
 
     pub fn create_achievement(&self, achievement: &Achievement) -> Result<(), DbError> {

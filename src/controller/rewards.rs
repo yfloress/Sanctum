@@ -248,6 +248,28 @@ impl AppController {
             .map_err(ControllerError::Database)
     }
 
+    pub fn update_goal(
+        &self,
+        id: String,
+        name: String,
+        description: String,
+        reward_text: String,
+        deadline: String,
+    ) -> Result<(), ControllerError> {
+        if validate_uuid(&id).is_err() {
+            return Err(ControllerError::Validation("Invalid UUID".into()));
+        }
+        if name.trim().is_empty() {
+            return Err(ControllerError::Validation("Goal name is required".into()));
+        }
+        if reward_text.trim().is_empty() {
+            return Err(ControllerError::Validation("Reward is required".into()));
+        }
+        self.rewards_service
+            .update_goal(id, name, description, reward_text, deadline)
+            .map_err(ControllerError::Database)
+    }
+
     pub fn complete_goal(&self, id: String) -> Result<Option<String>, ControllerError> {
         if validate_uuid(&id).is_err() {
             return Err(ControllerError::Validation("Invalid UUID".into()));
@@ -267,6 +289,15 @@ impl AppController {
     }
 
     // ==================== Checkpoints ====================
+
+    pub fn delete_checkpoint(&self, checkpoint_id: String) -> Result<(), ControllerError> {
+        if validate_uuid(&checkpoint_id).is_err() {
+            return Err(ControllerError::Validation("Invalid UUID".into()));
+        }
+        self.rewards_service
+            .delete_checkpoint(checkpoint_id)
+            .map_err(ControllerError::Database)
+    }
 
     pub fn add_checkpoint(
         &self,

@@ -108,6 +108,10 @@ impl RewardsRepository {
         db.get_checkpoint_counts(goal_id)
     }
 
+    pub fn delete_checkpoint(db: &Database, id: &str) -> Result<(), DbError> {
+        db.delete_checkpoint(id)
+    }
+
     // ==================== Achievements ====================
 
     pub fn create_achievement(db: &Database, achievement: &Achievement) -> Result<(), DbError> {

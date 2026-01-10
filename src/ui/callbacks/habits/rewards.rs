@@ -3,14 +3,13 @@
 //! Connects RewardsAdapter callbacks to the backend controller.
 
 use crate::controller::AppController;
-use crate::models::Habit;
-use crate::{
-    AchievementData, AppWindow, CheckpointData, GoalData, MilestoneData, RewardsAdapter,
-    StreakRewardData,
-};
-use slint::{ComponentHandle, ModelRc, SharedString, Timer, VecModel, Weak};
+use crate::{AppWindow, RewardsAdapter};
+use slint::{ComponentHandle, SharedString, Timer, Weak};
 use std::sync::Arc;
 use std::time::Duration;
+
+// Import data loading functions from the separate module
+use super::rewards_data::{load_achievements_data, load_goals_data, load_rewards_data};
 
 /// Delay for deferred UI updates to avoid recursion during initialization
 const UI_UPDATE_DELAY_MS: u64 = 100;
@@ -29,6 +28,8 @@ pub fn setup_rewards_callbacks<N>(
     setup_goal_callbacks(ui, ui_weak, controller, notify.clone());
     setup_checkpoint_callbacks(ui, ui_weak, controller, notify);
 }
+
+// ==================== Fetch Callbacks ====================
 
 fn setup_fetch_callbacks<N>(
     ui: &AppWindow,
@@ -91,6 +92,8 @@ fn setup_fetch_callbacks<N>(
     }
 }
 
+// ==================== Streak Reward Callbacks ====================
+
 fn setup_streak_reward_callbacks<N>(
     ui: &AppWindow,
     ui_weak: &Weak<AppWindow>,
@@ -118,20 +121,100 @@ fn setup_streak_reward_callbacks<N>(
                 );
                 match result {
                     Ok(id) => {
-                        schedule_rewards_refresh(
-                            &ui_weak,
-                            &controller,
-                            &notify,
-                            "Streak reward created",
-                        );
-                        // Return the reward ID on success
+                        schedule_rewards_refresh(&ui_weak, &controller, &notify, "Reward created");
                         SharedString::from(id)
                     }
                     Err(e) => {
-                        // Show error notification and return empty string
                         notify(format!("Failed to create reward: {}", e), true);
                         SharedString::from("")
                     }
+                }
+            },
+        );
+    }
+
+    // on_update_streak_reward
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = notify.clone();
+        let ui_weak_inner = ui_weak.clone();
+        ui.global::<RewardsAdapter>().on_update_streak_reward(
+            move |id: SharedString,
+                  habit_id: SharedString,
+                  is_consecutive: bool,
+                  target_days: i32,
+                  target_total: i32|
+                  -> SharedString {
+                // Read milestones from adapter properties
+                let milestones = if let Some(ui) = ui_weak_inner.upgrade() {
+                    let adapter = ui.global::<RewardsAdapter>();
+                    let milestone_count = adapter.get_edit_reward_milestone_count();
+                    let mut ms = Vec::new();
+
+                    if milestone_count >= 1 {
+                        let days = adapter.get_edit_reward_m1_days();
+                        let text = adapter.get_edit_reward_m1_text();
+                        if days > 0 && !text.is_empty() {
+                            ms.push((days, text.to_string()));
+                        }
+                    }
+                    if milestone_count >= 2 {
+                        let days = adapter.get_edit_reward_m2_days();
+                        let text = adapter.get_edit_reward_m2_text();
+                        if days > 0 && !text.is_empty() {
+                            ms.push((days, text.to_string()));
+                        }
+                    }
+                    if milestone_count >= 3 {
+                        let days = adapter.get_edit_reward_m3_days();
+                        let text = adapter.get_edit_reward_m3_text();
+                        if days > 0 && !text.is_empty() {
+                            ms.push((days, text.to_string()));
+                        }
+                    }
+                    ms
+                } else {
+                    Vec::new()
+                };
+
+                let result = controller.update_streak_reward_with_milestones(
+                    id.to_string(),
+                    habit_id.to_string(),
+                    is_consecutive,
+                    target_days,
+                    target_total,
+                    milestones,
+                );
+
+                match result {
+                    Ok(_) => {
+                        schedule_rewards_refresh(&ui_weak, &controller, &notify, "Reward updated");
+                        SharedString::from("")
+                    }
+                    Err(e) => {
+                        notify(format!("Failed to update reward: {}", e), true);
+                        SharedString::from(e.to_string())
+                    }
+                }
+            },
+        );
+    }
+
+    // on_delete_streak_reward
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = notify.clone();
+        ui.global::<RewardsAdapter>().on_delete_streak_reward(
+            move |id: SharedString| -> SharedString {
+                let result = controller.delete_streak_reward(id.to_string());
+                match result {
+                    Ok(_) => {
+                        schedule_rewards_refresh(&ui_weak, &controller, &notify, "Reward deleted");
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
                 }
             },
         );
@@ -162,124 +245,9 @@ fn setup_streak_reward_callbacks<N>(
             },
         );
     }
-
-    // on_delete_streak_reward
-    {
-        let controller = controller.clone();
-        let ui_weak = ui_weak.clone();
-        let notify = notify.clone();
-        ui.global::<RewardsAdapter>().on_delete_streak_reward(
-            move |id: SharedString| -> SharedString {
-                let result = controller.delete_streak_reward(id.to_string());
-                match result {
-                    Ok(_) => {
-                        schedule_rewards_refresh(
-                            &ui_weak,
-                            &controller,
-                            &notify,
-                            "Streak reward deleted",
-                        );
-                        SharedString::from("")
-                    }
-                    Err(e) => SharedString::from(e.to_string()),
-                }
-            },
-        );
-    }
-
-    // on_update_streak_reward
-    {
-        let controller = controller.clone();
-        let ui_weak = ui_weak.clone();
-        let notify = notify.clone();
-        ui.global::<RewardsAdapter>().on_update_streak_reward(
-            move |id: SharedString,
-                  habit_id: SharedString,
-                  is_consecutive: bool,
-                  target_days: i32,
-                  target_total: i32|
-                  -> SharedString {
-                // Get milestone data from the adapter properties
-                let ui_weak_inner = ui_weak.clone();
-                let milestones = if let Some(ui) = ui_weak_inner.upgrade() {
-                    let adapter = ui.global::<RewardsAdapter>();
-                    let count = adapter.get_edit_reward_milestone_count();
-                    let mut ms = Vec::new();
-
-                    if count >= 1 {
-                        let days = adapter.get_edit_reward_m1_days();
-                        let text = adapter.get_edit_reward_m1_text().to_string();
-                        if days > 0 && !text.trim().is_empty() {
-                            ms.push((days, text));
-                        }
-                    }
-                    if count >= 2 {
-                        let days = adapter.get_edit_reward_m2_days();
-                        let text = adapter.get_edit_reward_m2_text().to_string();
-                        if days > 0 && !text.trim().is_empty() {
-                            ms.push((days, text));
-                        }
-                    }
-                    if count >= 3 {
-                        let days = adapter.get_edit_reward_m3_days();
-                        let text = adapter.get_edit_reward_m3_text().to_string();
-                        if days > 0 && !text.trim().is_empty() {
-                            ms.push((days, text));
-                        }
-                    }
-                    ms
-                } else {
-                    Vec::new()
-                };
-
-                let result = controller.update_streak_reward_with_milestones(
-                    id.to_string(),
-                    habit_id.to_string(),
-                    is_consecutive,
-                    target_days,
-                    target_total,
-                    milestones,
-                );
-                match result {
-                    Ok(_) => {
-                        // After updating, check and unlock milestones based on current progress
-                        // This ensures milestones that should be unlocked get their status restored
-                        let _ = controller.check_and_unlock_milestones(id.to_string());
-
-                        schedule_rewards_refresh(
-                            &ui_weak,
-                            &controller,
-                            &notify,
-                            "Streak reward updated",
-                        );
-                        SharedString::from("")
-                    }
-                    Err(e) => {
-                        notify(format!("Failed to update reward: {}", e), true);
-                        SharedString::from(e.to_string())
-                    }
-                }
-            },
-        );
-    }
-
-    // on_update_streak_progress
-    {
-        let controller = controller.clone();
-        let ui_weak = ui_weak.clone();
-        let notify = notify.clone();
-        ui.global::<RewardsAdapter>()
-            .on_update_streak_progress(move |reward_id: SharedString| {
-                let reward_id_str = reward_id.to_string();
-                let ui_weak = ui_weak.clone();
-                let controller = controller.clone();
-                let notify = notify.clone();
-                Timer::single_shot(Duration::from_millis(UI_UPDATE_DELAY_MS), move || {
-                    handle_streak_progress_update(&ui_weak, &controller, &notify, &reward_id_str);
-                });
-            });
-    }
 }
+
+// ==================== Goal Callbacks ====================
 
 fn setup_goal_callbacks<N>(
     ui: &AppWindow,
@@ -309,13 +277,44 @@ fn setup_goal_callbacks<N>(
                 match result {
                     Ok(id) => {
                         schedule_goals_refresh(&ui_weak, &controller, &notify, "Goal created");
-                        // Return the goal ID on success
                         SharedString::from(id)
                     }
                     Err(e) => {
-                        // Show error notification and return empty string
                         notify(format!("Failed to create goal: {}", e), true);
                         SharedString::from("")
+                    }
+                }
+            },
+        );
+    }
+
+    // on_update_goal
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = notify.clone();
+        ui.global::<RewardsAdapter>().on_update_goal(
+            move |id: SharedString,
+                  name: SharedString,
+                  description: SharedString,
+                  reward_text: SharedString,
+                  deadline: SharedString|
+                  -> SharedString {
+                let result = controller.update_goal(
+                    id.to_string(),
+                    name.to_string(),
+                    description.to_string(),
+                    reward_text.to_string(),
+                    deadline.to_string(),
+                );
+                match result {
+                    Ok(_) => {
+                        schedule_goals_refresh(&ui_weak, &controller, &notify, "Goal updated");
+                        SharedString::from("")
+                    }
+                    Err(e) => {
+                        notify(format!("Failed to update goal: {}", e), true);
+                        SharedString::from(e.to_string())
                     }
                 }
             },
@@ -391,6 +390,8 @@ fn setup_goal_callbacks<N>(
     }
 }
 
+// ==================== Checkpoint Callbacks ====================
+
 fn setup_checkpoint_callbacks<N>(
     ui: &AppWindow,
     ui_weak: &Weak<AppWindow>,
@@ -399,6 +400,30 @@ fn setup_checkpoint_callbacks<N>(
 ) where
     N: Fn(String, bool) + Clone + 'static,
 {
+    // on_delete_checkpoint
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = notify.clone();
+        ui.global::<RewardsAdapter>().on_delete_checkpoint(
+            move |checkpoint_id: SharedString| -> SharedString {
+                let result = controller.delete_checkpoint(checkpoint_id.to_string());
+                match result {
+                    Ok(_) => {
+                        let ui_weak = ui_weak.clone();
+                        let controller = controller.clone();
+                        let notify = notify.clone();
+                        Timer::single_shot(Duration::from_millis(UI_UPDATE_DELAY_MS), move || {
+                            load_goals_data(&ui_weak, &controller, &notify);
+                        });
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            },
+        );
+    }
+
     // on_add_checkpoint
     {
         let controller = controller.clone();
@@ -491,244 +516,4 @@ fn schedule_goals_refresh<N>(
             notify(msg, false);
         }
     });
-}
-
-fn handle_streak_progress_update<N>(
-    ui_weak: &Weak<AppWindow>,
-    controller: &Arc<AppController>,
-    notify: &N,
-    reward_id: &str,
-) where
-    N: Fn(String, bool) + Clone + 'static,
-{
-    if ui_weak.upgrade().is_none() {
-        return;
-    }
-
-    match controller.check_and_unlock_milestones(reward_id.to_string()) {
-        Ok(unlocked) => {
-            if !unlocked.is_empty() {
-                notify(format!("{} milestone(s) unlocked!", unlocked.len()), false);
-                load_achievements_data(ui_weak, controller, notify);
-            }
-            load_rewards_data(ui_weak, controller, notify);
-        }
-        Err(e) => {
-            notify(format!("Failed to update progress: {}", e), true);
-        }
-    }
-}
-
-// ==================== Data Loading Functions ====================
-
-fn load_rewards_data<N>(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>, notify: &N)
-where
-    N: Fn(String, bool) + Clone + 'static,
-{
-    let Some(ui) = ui_weak.upgrade() else {
-        return;
-    };
-
-    let habits: Vec<Habit> = controller.get_habits().unwrap_or_default();
-
-    let rewards = match controller.get_streak_rewards() {
-        Ok(r) => r,
-        Err(e) => {
-            notify(format!("Failed to load rewards: {}", e), true);
-            return;
-        }
-    };
-
-    let mut reward_data: Vec<StreakRewardData> = Vec::with_capacity(rewards.len());
-
-    for reward in rewards {
-        let habit = habits.iter().find(|h| h.id == reward.habit_id);
-        let habit_name = habit.map(|h| h.name.clone()).unwrap_or_default();
-        let habit_color = habit
-            .map(|h| parse_hex_color(&h.color))
-            .unwrap_or_else(default_color);
-
-        let milestones = controller
-            .get_milestones(reward.id.clone())
-            .unwrap_or_default();
-
-        let progress = controller
-            .get_streak_progress(reward.id.clone())
-            .unwrap_or(0);
-
-        let next_milestone = milestones
-            .iter()
-            .filter(|m| !m.unlocked)
-            .min_by_key(|m| m.target_days);
-
-        let next_days = next_milestone.map(|m| m.target_days).unwrap_or(0);
-        let next_reward = next_milestone
-            .map(|m| m.reward_text.clone())
-            .unwrap_or_default();
-
-        // Calculate progress relative to the MAX milestone (last one), not the next one
-        // This ensures the progress bar and milestone markers use the same reference
-        let max_milestone_days = milestones.iter().map(|m| m.target_days).max().unwrap_or(1);
-
-        let progress_percent = calculate_progress_percent(progress, max_milestone_days);
-
-        let milestone_data: Vec<MilestoneData> = milestones
-            .iter()
-            .map(|m| MilestoneData {
-                id: SharedString::from(&m.id),
-                target_days: m.target_days,
-                reward_text: SharedString::from(&m.reward_text),
-                unlocked: m.unlocked,
-                unlocked_at: SharedString::from(m.unlocked_at.as_deref().unwrap_or("")),
-            })
-            .collect();
-
-        reward_data.push(StreakRewardData {
-            id: SharedString::from(&reward.id),
-            habit_id: SharedString::from(&reward.habit_id),
-            habit_name: SharedString::from(&habit_name),
-            habit_color,
-            is_consecutive: reward.is_consecutive,
-            target_days: reward.target_days.unwrap_or(0),
-            target_total: reward.target_total.unwrap_or(0),
-            current_progress: progress,
-            milestones: ModelRc::new(VecModel::from(milestone_data)),
-            next_milestone_days: next_days,
-            next_milestone_reward: SharedString::from(&next_reward),
-            progress_percent,
-        });
-    }
-
-    ui.global::<RewardsAdapter>()
-        .set_streak_rewards(ModelRc::new(VecModel::from(reward_data)));
-}
-
-fn load_goals_data<N>(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>, notify: &N)
-where
-    N: Fn(String, bool) + Clone + 'static,
-{
-    let Some(ui) = ui_weak.upgrade() else {
-        return;
-    };
-
-    let goals = match controller.get_goals() {
-        Ok(g) => g,
-        Err(e) => {
-            notify(format!("Failed to load goals: {}", e), true);
-            return;
-        }
-    };
-
-    let mut goal_data: Vec<GoalData> = Vec::with_capacity(goals.len());
-
-    for goal in goals {
-        let checkpoints = controller
-            .get_checkpoints(goal.id.clone())
-            .unwrap_or_default();
-
-        let completed_count = checkpoints.iter().filter(|c| c.completed).count() as i32;
-        let total_count = checkpoints.len() as i32;
-        let progress_percent = if total_count > 0 {
-            completed_count as f32 / total_count as f32 * 100.0
-        } else {
-            0.0
-        };
-
-        let checkpoint_data: Vec<CheckpointData> = checkpoints
-            .iter()
-            .map(|c| CheckpointData {
-                id: SharedString::from(&c.id),
-                description: SharedString::from(&c.description),
-                completed: c.completed,
-                completed_at: SharedString::from(c.completed_at.as_deref().unwrap_or("")),
-                sort_order: c.sort_order,
-            })
-            .collect();
-
-        goal_data.push(GoalData {
-            id: SharedString::from(&goal.id),
-            name: SharedString::from(&goal.name),
-            description: SharedString::from(goal.description.as_deref().unwrap_or("")),
-            reward_text: SharedString::from(&goal.reward_text),
-            deadline: SharedString::from(goal.deadline.as_deref().unwrap_or("")),
-            checkpoints: ModelRc::new(VecModel::from(checkpoint_data)),
-            completed_count,
-            total_count,
-            progress_percent,
-            is_completed: goal.is_completed,
-            completed_at: SharedString::from(goal.completed_at.as_deref().unwrap_or("")),
-        });
-    }
-
-    ui.global::<RewardsAdapter>()
-        .set_goals(ModelRc::new(VecModel::from(goal_data)));
-}
-
-fn load_achievements_data<N>(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>, notify: &N)
-where
-    N: Fn(String, bool) + Clone + 'static,
-{
-    let Some(ui) = ui_weak.upgrade() else {
-        return;
-    };
-
-    let achievements = match controller.get_achievements() {
-        Ok(a) => a,
-        Err(e) => {
-            notify(format!("Failed to load achievements: {}", e), true);
-            return;
-        }
-    };
-
-    let achievement_data: Vec<AchievementData> = achievements
-        .iter()
-        .map(|a| {
-            // Icon is handled by Slint fallbacks in achievement_card.slint
-            // We pass a default image and the component uses trophy/target based on type
-            // Format date as YYYY-MM-DD (take first 10 chars from RFC3339)
-            let short_date = if a.achieved_at.len() >= 10 {
-                &a.achieved_at[..10]
-            } else {
-                &a.achieved_at
-            };
-            AchievementData {
-                id: SharedString::from(&a.id),
-                title: SharedString::from(&a.title),
-                description: SharedString::from(&a.description),
-                icon: slint::Image::default(),
-                achieved_at: SharedString::from(short_date),
-                achievement_type: SharedString::from(&a.achievement_type),
-            }
-        })
-        .collect();
-
-    ui.global::<RewardsAdapter>()
-        .set_achievements(ModelRc::new(VecModel::from(achievement_data)));
-}
-
-// ==================== Utility Functions ====================
-
-fn parse_hex_color(hex: &str) -> slint::Color {
-    let hex = hex.trim_start_matches('#');
-    if hex.len() != 6 {
-        return default_color();
-    }
-
-    let r = u8::from_str_radix(&hex[0..2], 16).unwrap_or(139);
-    let g = u8::from_str_radix(&hex[2..4], 16).unwrap_or(92);
-    let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(246);
-
-    slint::Color::from_rgb_u8(r, g, b)
-}
-
-fn default_color() -> slint::Color {
-    slint::Color::from_rgb_u8(139, 92, 246) // Purple
-}
-
-fn calculate_progress_percent(progress: i32, target: i32) -> f32 {
-    if target > 0 {
-        (progress as f32 / target as f32 * 100.0).min(100.0)
-    } else {
-        100.0
-    }
 }

@@ -1,5 +1,5 @@
 // ==================== Add Goal Modal ====================
-// Modal for creating goals with checkpoints and deadline
+// Modal for creating and editing goals with checkpoints and deadline
 
 import {
     RewardsAdapter,
@@ -106,6 +106,11 @@ export component AddGoalModal inherits Rectangle {
     property <string> cp2: "";
     property <string> cp3: "";
     property <string> cp4: "";
+    // Track existing checkpoint IDs for editing
+    property <string> cp1-id: "";
+    property <string> cp2-id: "";
+    property <string> cp3-id: "";
+    property <string> cp4-id: "";
 
     function reset() {
         goal-name = "";
@@ -117,6 +122,30 @@ export component AddGoalModal inherits Rectangle {
         cp2 = "";
         cp3 = "";
         cp4 = "";
+        cp1-id = "";
+        cp2-id = "";
+        cp3-id = "";
+        cp4-id = "";
+    }
+
+    function load-edit-data() {
+        goal-name = RewardsAdapter.edit-goal-name;
+        goal-description = RewardsAdapter.edit-goal-description;
+        goal-reward = RewardsAdapter.edit-goal-reward;
+        goal-deadline = RewardsAdapter.edit-goal-deadline;
+        checkpoint-count = RewardsAdapter.edit-goal-checkpoint-count;
+        cp1 = RewardsAdapter.edit-goal-cp1-text;
+        cp2 = RewardsAdapter.edit-goal-cp2-text;
+        cp3 = RewardsAdapter.edit-goal-cp3-text;
+        cp4 = RewardsAdapter.edit-goal-cp4-text;
+        cp1-id = RewardsAdapter.edit-goal-cp1-id;
+        cp2-id = RewardsAdapter.edit-goal-cp2-id;
+        cp3-id = RewardsAdapter.edit-goal-cp3-id;
+        cp4-id = RewardsAdapter.edit-goal-cp4-id;
+        // Ensure at least 1 checkpoint
+        if checkpoint-count < 1 {
+            checkpoint-count = 1;
+        }
     }
 
     function close-modal() {
@@ -137,56 +166,79 @@ export component AddGoalModal inherits Rectangle {
             NotificationAdapter.show("Add at least one checkpoint", true);
             return;
         }
+        if editing {
+            // Update existing goal
+            let result = RewardsAdapter.update-goal(
+                RewardsAdapter.edit-goal-id,
+                goal-name,
+                goal-description,
+                goal-reward,
+                goal-deadline);
 
-        // Create the goal - returns goal ID on success, empty on error
-        let result = RewardsAdapter.create-goal(
-            goal-name,
-            goal-description,
-            goal-reward,
-            goal-deadline);
-
-        // Empty result means error (backend shows notification)
-        if (result == "") {
-            return;
-        }
-
-        // Result is the goal ID - use it to add checkpoints
-        let goal-id = result;
-
-        // Add checkpoint 1
-        let cp1-result = RewardsAdapter.add-checkpoint(goal-id, cp1);
-        if (cp1-result != "") {
-            NotificationAdapter.show(cp1-result, true);
-        }
-
-        // Add checkpoint 2 if exists
-        if (checkpoint-count >= 2 && cp2 != "") {
-            let cp2-result = RewardsAdapter.add-checkpoint(goal-id, cp2);
-            if (cp2-result != "") {
-                NotificationAdapter.show(cp2-result, true);
+            if (result != "") {
+                return;
             }
-        }
 
-        // Add checkpoint 3 if exists
-        if (checkpoint-count >= 3 && cp3 != "") {
-            let cp3-result = RewardsAdapter.add-checkpoint(goal-id, cp3);
-            if (cp3-result != "") {
-                NotificationAdapter.show(cp3-result, true);
-            }
-        }
+            // Handle checkpoints for existing goal
+            let goal-id = RewardsAdapter.edit-goal-id;
 
-        // Add checkpoint 4 if exists
-        if (checkpoint-count >= 4 && cp4 != "") {
-            let cp4-result = RewardsAdapter.add-checkpoint(goal-id, cp4);
-            if (cp4-result != "") {
-                NotificationAdapter.show(cp4-result, true);
+            // For existing checkpoints, we keep them. For new ones, we add them.
+            // Delete removed checkpoints
+            if checkpoint-count < 4 && cp4-id != "" {
+                RewardsAdapter.delete-checkpoint(cp4-id);
             }
+            if checkpoint-count < 3 && cp3-id != "" {
+                RewardsAdapter.delete-checkpoint(cp3-id);
+            }
+            if checkpoint-count < 2 && cp2-id != "" {
+                RewardsAdapter.delete-checkpoint(cp2-id);
+            }
+
+            // Add new checkpoints (those without IDs)
+            if checkpoint-count >= 2 && cp2 != "" && cp2-id == "" {
+                RewardsAdapter.add-checkpoint(goal-id, cp2);
+            }
+            if checkpoint-count >= 3 && cp3 != "" && cp3-id == "" {
+                RewardsAdapter.add-checkpoint(goal-id, cp3);
+            }
+            if checkpoint-count >= 4 && cp4 != "" && cp4-id == "" {
+                RewardsAdapter.add-checkpoint(goal-id, cp4);
+            }
+            close-modal();
+        } else {
+            // Create new goal
+            let result = RewardsAdapter.create-goal(
+                goal-name,
+                goal-description,
+                goal-reward,
+                goal-deadline);
+
+            if (result == "") {
+                return;
+            }
+            let goal-id = result;
+
+            // Add checkpoints
+            RewardsAdapter.add-checkpoint(goal-id, cp1);
+
+            if (checkpoint-count >= 2 && cp2 != "") {
+                RewardsAdapter.add-checkpoint(goal-id, cp2);
+            }
+            if (checkpoint-count >= 3 && cp3 != "") {
+                RewardsAdapter.add-checkpoint(goal-id, cp3);
+            }
+            if (checkpoint-count >= 4 && cp4 != "") {
+                RewardsAdapter.add-checkpoint(goal-id, cp4);
+            }
+            close-modal();
         }
-        close-modal();
     }
 
     init => {
         key-scope.focus();
+        if editing {
+            load-edit-data();
+        }
     }
 
     width: 100%;
@@ -218,7 +270,7 @@ export component AddGoalModal inherits Rectangle {
 
     Rectangle {
         width: min(480px, parent.width - 40px);
-        height: min(580px, parent.height - 40px);
+        height: min(620px, parent.height - 40px);
         background: @linear-gradient(180deg, Theme.sidebar-bg 0%, Theme.modal-bg-end 100%);
         border-radius: 16px;
         border-width: 1px;
@@ -236,9 +288,9 @@ export component AddGoalModal inherits Rectangle {
 
         VerticalLayout {
             padding: 32px;
-            spacing: 16px;
+            spacing: 0px;
 
-            // Header
+            // Header (fixed)
             HorizontalLayout {
                 height: 32px;
 
@@ -288,135 +340,179 @@ export component AddGoalModal inherits Rectangle {
                 }
             }
 
-            FormField {
-                label: "GOAL NAME";
-                placeholder: "e.g. Run a marathon";
-                value <=> goal-name;
+            // Spacer
+            Rectangle {
+                height: 16px;
             }
 
-            FormField {
-                label: "DESCRIPTION (OPTIONAL)";
-                placeholder: "Why this goal matters...";
-                value <=> goal-description;
-            }
+            // Scrollable content area
+            Flickable {
+                vertical-stretch: 1;
 
-            HorizontalLayout {
-                spacing: 16px;
+                VerticalLayout {
+                    spacing: 16px;
 
-                FormField {
-                    horizontal-stretch: 1;
-                    label: "REWARD";
-                    placeholder: "e.g. New sneakers";
-                    value <=> goal-reward;
-                }
-
-                DateField {
-                    horizontal-stretch: 1;
-                    label: "DEADLINE (OPTIONAL)";
-                    value <=> goal-deadline;
-                }
-            }
-
-            // Checkpoints section
-            VerticalLayout {
-                spacing: 10px;
-
-                HorizontalLayout {
-                    alignment: space-between;
-
-                    Text {
-                        text: "CHECKPOINTS";
-                        color: Theme.text-muted;
-                        font-size: 10px;
-                        font-weight: 500;
-                        letter-spacing: 1.5px;
-                        vertical-alignment: center;
+                    FormField {
+                        label: "GOAL NAME";
+                        placeholder: "e.g. Run a marathon";
+                        value <=> goal-name;
                     }
 
-                    if checkpoint-count < 4: Rectangle {
-                        width: 70px;
-                        height: 28px;
-                        border-radius: 6px;
-                        background: add-touch.has-hover ? Theme.surface-hover : Theme.surface;
-                        border-width: 1px;
-                        border-color: Theme.border;
+                    FormField {
+                        label: "DESCRIPTION (OPTIONAL)";
+                        placeholder: "Why this goal matters...";
+                        value <=> goal-description;
+                    }
 
-                        HorizontalLayout {
-                            spacing: 4px;
-                            alignment: center;
+                    HorizontalLayout {
+                        spacing: 16px;
 
-                            Image {
-                                source: @image-url("../assets/icons/plus.svg");
-                                width: 12px;
-                                height: 12px;
-                                colorize: Theme.text-muted;
-                                y: (parent.height - self.height) / 2;
-                            }
-
-                            Text {
-                                text: "ADD";
-                                color: Theme.text-muted;
-                                font-size: 10px;
-                                font-weight: 600;
-                                vertical-alignment: center;
-                            }
+                        FormField {
+                            horizontal-stretch: 1;
+                            label: "REWARD";
+                            placeholder: "e.g. New sneakers";
+                            value <=> goal-reward;
                         }
 
-                        add-touch := TouchArea {
-                            mouse-cursor: pointer;
-                            clicked => {
-                                if (checkpoint-count < 4) {
-                                    checkpoint-count += 1;
+                        DateField {
+                            horizontal-stretch: 1;
+                            label: "DEADLINE (OPTIONAL)";
+                            value <=> goal-deadline;
+                        }
+                    }
+
+                    // Checkpoints section
+                    VerticalLayout {
+                        spacing: 10px;
+
+                        HorizontalLayout {
+                            alignment: space-between;
+
+                            Text {
+                                text: "CHECKPOINTS";
+                                color: Theme.text-muted;
+                                font-size: 10px;
+                                font-weight: 500;
+                                letter-spacing: 1.5px;
+                                vertical-alignment: center;
+                            }
+
+                            if checkpoint-count < 4: Rectangle {
+                                width: 70px;
+                                height: 28px;
+                                border-radius: 6px;
+                                background: add-touch.has-hover ? Theme.surface-hover : Theme.surface;
+                                border-width: 1px;
+                                border-color: Theme.border;
+
+                                HorizontalLayout {
+                                    spacing: 4px;
+                                    alignment: center;
+
+                                    Image {
+                                        source: @image-url("../assets/icons/plus.svg");
+                                        width: 12px;
+                                        height: 12px;
+                                        colorize: Theme.text-muted;
+                                        y: (parent.height - self.height) / 2;
+                                    }
+
+                                    Text {
+                                        text: "ADD";
+                                        color: Theme.text-muted;
+                                        font-size: 10px;
+                                        font-weight: 600;
+                                        vertical-alignment: center;
+                                    }
+                                }
+
+                                add-touch := TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => {
+                                        if (checkpoint-count < 4) {
+                                            checkpoint-count += 1;
+                                        }
+                                    }
                                 }
                             }
                         }
-                    }
-                }
 
-                CheckpointRow {
-                    description <=> cp1;
-                    can-delete: checkpoint-count > 1;
-                    delete => {
-                        cp1 = cp2;
-                        cp2 = cp3;
-                        cp3 = cp4;
-                        cp4 = "";
-                        checkpoint-count -= 1;
-                    }
-                }
+                        CheckpointRow {
+                            description <=> cp1;
+                            can-delete: checkpoint-count > 1;
+                            delete => {
+                                // Delete from backend if has ID
+                                if cp1-id != "" {
+                                    RewardsAdapter.delete-checkpoint(cp1-id);
+                                }
+                                cp1 = cp2;
+                                cp1-id = cp2-id;
+                                cp2 = cp3;
+                                cp2-id = cp3-id;
+                                cp3 = cp4;
+                                cp3-id = cp4-id;
+                                cp4 = "";
+                                cp4-id = "";
+                                checkpoint-count -= 1;
+                            }
+                        }
 
-                if checkpoint-count >= 2: CheckpointRow {
-                    description <=> cp2;
-                    delete => {
-                        cp2 = cp3;
-                        cp3 = cp4;
-                        cp4 = "";
-                        checkpoint-count -= 1;
-                    }
-                }
+                        if checkpoint-count >= 2: CheckpointRow {
+                            description <=> cp2;
+                            delete => {
+                                if cp2-id != "" {
+                                    RewardsAdapter.delete-checkpoint(cp2-id);
+                                }
+                                cp2 = cp3;
+                                cp2-id = cp3-id;
+                                cp3 = cp4;
+                                cp3-id = cp4-id;
+                                cp4 = "";
+                                cp4-id = "";
+                                checkpoint-count -= 1;
+                            }
+                        }
 
-                if checkpoint-count >= 3: CheckpointRow {
-                    description <=> cp3;
-                    delete => {
-                        cp3 = cp4;
-                        cp4 = "";
-                        checkpoint-count -= 1;
-                    }
-                }
+                        if checkpoint-count >= 3: CheckpointRow {
+                            description <=> cp3;
+                            delete => {
+                                if cp3-id != "" {
+                                    RewardsAdapter.delete-checkpoint(cp3-id);
+                                }
+                                cp3 = cp4;
+                                cp3-id = cp4-id;
+                                cp4 = "";
+                                cp4-id = "";
+                                checkpoint-count -= 1;
+                            }
+                        }
 
-                if checkpoint-count >= 4: CheckpointRow {
-                    description <=> cp4;
-                    delete => {
-                        checkpoint-count -= 1;
+                        if checkpoint-count >= 4: CheckpointRow {
+                            description <=> cp4;
+                            delete => {
+                                if cp4-id != "" {
+                                    RewardsAdapter.delete-checkpoint(cp4-id);
+                                }
+                                cp4 = "";
+                                cp4-id = "";
+                                checkpoint-count -= 1;
+                            }
+                        }
+                    }
+
+                    // Bottom padding for scroll
+                    Rectangle {
+                        height: 8px;
                     }
                 }
             }
 
+            // Spacer
             Rectangle {
-                vertical-stretch: 1;
+                height: 16px;
             }
 
-            // Submit button
+            // Submit button (fixed at bottom)
             Rectangle {
                 height: 48px;
                 background: @linear-gradient(135deg, Theme.success 0%, Theme.accent 100%);

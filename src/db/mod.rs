@@ -78,6 +78,9 @@ pub enum DbError {
     #[error("Transaction not found")]
     TransactionNotFound,
 
+    #[error("Goal not found")]
+    GoalNotFound,
+
     #[error("Database mutex was poisoned")]
     MutexPoisoned,
 

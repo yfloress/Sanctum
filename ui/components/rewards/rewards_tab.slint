@@ -114,7 +114,30 @@ export component RewardsTab inherits Rectangle {
                 for goal in RewardsAdapter.goals: GoalCard {
                     goal: goal;
                     edit(id) => {
+                        // Load goal data into edit properties
                         RewardsAdapter.edit-goal-id = id;
+                        RewardsAdapter.edit-goal-name = goal.name;
+                        RewardsAdapter.edit-goal-description = goal.description;
+                        RewardsAdapter.edit-goal-reward = goal.reward-text;
+                        RewardsAdapter.edit-goal-deadline = goal.deadline;
+                        RewardsAdapter.edit-goal-checkpoint-count = goal.checkpoints.length;
+                        // Load checkpoints
+                        if goal.checkpoints.length >= 1 {
+                            RewardsAdapter.edit-goal-cp1-id = goal.checkpoints[0].id;
+                            RewardsAdapter.edit-goal-cp1-text = goal.checkpoints[0].description;
+                        }
+                        if goal.checkpoints.length >= 2 {
+                            RewardsAdapter.edit-goal-cp2-id = goal.checkpoints[1].id;
+                            RewardsAdapter.edit-goal-cp2-text = goal.checkpoints[1].description;
+                        }
+                        if goal.checkpoints.length >= 3 {
+                            RewardsAdapter.edit-goal-cp3-id = goal.checkpoints[2].id;
+                            RewardsAdapter.edit-goal-cp3-text = goal.checkpoints[2].description;
+                        }
+                        if goal.checkpoints.length >= 4 {
+                            RewardsAdapter.edit-goal-cp4-id = goal.checkpoints[3].id;
+                            RewardsAdapter.edit-goal-cp4-text = goal.checkpoints[3].description;
+                        }
                         AppState.show-edit-goal = true;
                     }
                     delete(id) => {

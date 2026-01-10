@@ -253,7 +253,9 @@ export global RewardsAdapter {
 
     // Goal CRUD
     callback create-goal(string, string, string, string) -> string;  // name, description, reward, deadline
+    callback update-goal(string, string, string, string, string) -> string;  // id, name, description, reward, deadline
     callback add-checkpoint(string, string) -> string;  // goal-id, description
+    callback delete-checkpoint(string) -> string;  // checkpoint-id
     callback toggle-checkpoint(string, string) -> string;  // goal-id, checkpoint-id
     callback delete-goal(string) -> string;
     callback complete-goal(string) -> string;
@@ -281,6 +283,21 @@ export global RewardsAdapter {
     in-out property <int> edit-reward-m3-days: 0;
     in-out property <string> edit-reward-m3-text: "";
     in-out property <int> edit-reward-milestone-count: 1;
+
+    // Edit data for goal
+    in-out property <string> edit-goal-name: "";
+    in-out property <string> edit-goal-description: "";
+    in-out property <string> edit-goal-reward: "";
+    in-out property <string> edit-goal-deadline: "";
+    in-out property <int> edit-goal-checkpoint-count: 0;
+    in-out property <string> edit-goal-cp1-id: "";
+    in-out property <string> edit-goal-cp1-text: "";
+    in-out property <string> edit-goal-cp2-id: "";
+    in-out property <string> edit-goal-cp2-text: "";
+    in-out property <string> edit-goal-cp3-id: "";
+    in-out property <string> edit-goal-cp3-text: "";
+    in-out property <string> edit-goal-cp4-id: "";
+    in-out property <string> edit-goal-cp4-text: "";
 }
 
 // ==================== Notification Adapter ====================

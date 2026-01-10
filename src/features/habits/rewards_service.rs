@@ -246,6 +246,37 @@ impl RewardsService {
         self.with_db(|db| RewardsRepository::archive_goal(db, &id))
     }
 
+    pub fn update_goal(
+        &self,
+        id: String,
+        name: String,
+        description: String,
+        reward_text: String,
+        deadline: String,
+    ) -> Result<(), DbError> {
+        self.with_db(|db| {
+            let mut goal = match RewardsRepository::get_goal(db, &id)? {
+                Some(g) => g,
+                None => return Err(DbError::GoalNotFound),
+            };
+
+            goal.name = name;
+            goal.description = if description.is_empty() {
+                None
+            } else {
+                Some(description)
+            };
+            goal.reward_text = reward_text;
+            goal.deadline = if deadline.is_empty() {
+                None
+            } else {
+                Some(deadline)
+            };
+
+            RewardsRepository::update_goal(db, &goal)
+        })
+    }
+
     pub fn complete_goal(&self, id: String) -> Result<Option<String>, DbError> {
         self.with_db(|db| {
             let mut goal = match RewardsRepository::get_goal(db, &id)? {
@@ -291,6 +322,10 @@ impl RewardsService {
 
     pub fn get_checkpoints(&self, goal_id: &str) -> Result<Vec<Checkpoint>, DbError> {
         self.with_db(|db| RewardsRepository::get_checkpoints(db, goal_id))
+    }
+
+    pub fn delete_checkpoint(&self, checkpoint_id: String) -> Result<(), DbError> {
+        self.with_db(|db| RewardsRepository::delete_checkpoint(db, &checkpoint_id))
     }
 
     pub fn toggle_checkpoint(
