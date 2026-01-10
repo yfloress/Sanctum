@@ -2,18 +2,19 @@
 // Noir Fintech - Premium spending visualization
 
 import { CategoryData } from "../globals.slint";
+import { Translations } from "../translations.slint";
 import { Theme } from "../theme.slint";
 
 component CategoryItem inherits Rectangle {
     in property <CategoryData> category;
     in property <bool> is-last: false;
-    
+
     height: 64px;
     background: transparent;
-    
+
     HorizontalLayout {
         spacing: 16px;
-        
+
         // Color indicator
         Rectangle {
             width: 4px;
@@ -21,7 +22,7 @@ component CategoryItem inherits Rectangle {
             border-radius: 2px;
             background: category.color;
             y: (parent.height - self.height) / 2;
-            
+
             // Glow effect
             Rectangle {
                 x: -3px;
@@ -32,17 +33,17 @@ component CategoryItem inherits Rectangle {
                 background: category.color.with-alpha(0.2);
             }
         }
-        
+
         // Content
         VerticalLayout {
             horizontal-stretch: 1;
             alignment: center;
             spacing: 8px;
-            
+
             // Header row
             HorizontalLayout {
                 alignment: space-between;
-                
+
                 Text {
                     text: category.name;
                     color: Theme.text-primary;
@@ -50,7 +51,7 @@ component CategoryItem inherits Rectangle {
                     font-weight: 500;
                     letter-spacing: 0.5px;
                 }
-                
+
                 Text {
                     text: category.amount;
                     color: Theme.text-primary;
@@ -58,14 +59,14 @@ component CategoryItem inherits Rectangle {
                     font-weight: 600;
                 }
             }
-            
+
             // Progress bar
             Rectangle {
                 height: 6px;
                 background: Theme.background;
                 border-radius: 3px;
                 clip: true;
-                
+
                 // Fill
                 Rectangle {
                     x: 0;
@@ -73,9 +74,12 @@ component CategoryItem inherits Rectangle {
                     height: 100%;
                     border-radius: 3px;
                     background: @linear-gradient(90deg, category.color.with-alpha(0.8) 0%, category.color 100%);
-                    
-                    animate width { duration: 800ms; easing: ease-out-expo; }
-                    
+
+                    animate width {
+                        duration: 800ms;
+                        easing: ease-out-expo;
+                    }
+
                     // Shine effect
                     Rectangle {
                         x: 0;
@@ -87,7 +91,7 @@ component CategoryItem inherits Rectangle {
                     }
                 }
             }
-            
+
             // Percentage text
             Text {
                 text: round(category.percentage * 100) + "% of total";
@@ -97,7 +101,7 @@ component CategoryItem inherits Rectangle {
             }
         }
     }
-    
+
     // Bottom separator
     if !is-last: Rectangle {
         y: parent.height - 1px;
@@ -111,14 +115,14 @@ component CategoryItem inherits Rectangle {
 export component CategoryBreakdown inherits VerticalLayout {
     in property <[CategoryData]> categories;
     spacing: 0px;
-    
+
     if categories.length == 0: Rectangle {
         height: 120px;
-        
+
         VerticalLayout {
             alignment: center;
             spacing: 12px;
-            
+
             Rectangle {
                 width: 48px;
                 height: 48px;
@@ -135,9 +139,9 @@ export component CategoryBreakdown inherits VerticalLayout {
                     y: (parent.height - self.height) / 2;
                 }
             }
-            
+
             Text {
-                text: "No expenses recorded";
+                text: Translations.no-expenses-recorded;
                 color: Theme.text-muted;
                 font-size: 12px;
                 horizontal-alignment: center;

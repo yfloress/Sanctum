@@ -6,6 +6,7 @@ import {
     AppState,
     NotificationAdapter,
 } from "../globals.slint";
+import { Translations } from "../translations.slint";
 import { Theme } from "../theme.slint";
 
 component SectionHeader inherits Rectangle {
@@ -346,7 +347,7 @@ export component AccountDetailPanel inherits Rectangle {
                     border-radius: 8px;
 
                     Text {
-                        text: "No transactions for this account";
+                        text: Translations.empty-no-transactions-account;
                         color: Theme.text-subtle;
                         font-size: 12px;
                         vertical-alignment: center;

@@ -2,6 +2,7 @@
 // Noir Fintech - Premium asset details drawer
 
 import { CryptoAdapter, AppState, NotificationAdapter } from "../globals.slint";
+import { Translations } from "../translations.slint";
 import { Theme } from "../theme.slint";
 import { CryptoIcon } from "./crypto_widgets.slint";
 
@@ -214,7 +215,7 @@ component TransactionRow inherits Rectangle {
                     horizontal-alignment: right;
                 }
                 if root.tx-fee != "": Text {
-                    text: "Fee " + root.tx-fee;
+                    text: Translations.fee-label + " " + root.tx-fee;
                     color: Theme.text-subtle;
                     font-size: 9px;
                     horizontal-alignment: right;
@@ -421,7 +422,7 @@ export component AssetDetailPanel inherits Rectangle {
                     alignment: center;
 
                     Text {
-                        text: "TOTAL HOLDINGS";
+                        text: Translations.crypto-total-holdings;
                         color: Theme.text-muted;
                         font-size: 10px;
                         font-weight: 600;
@@ -461,7 +462,7 @@ export component AssetDetailPanel inherits Rectangle {
                     border-radius: 8px;
 
                     Text {
-                        text: "No wallet data available";
+                        text: Translations.crypto-no-wallet-data;
                         color: Theme.text-subtle;
                         font-size: 12px;
                         vertical-alignment: center;
@@ -491,7 +492,7 @@ export component AssetDetailPanel inherits Rectangle {
                     border-radius: 8px;
 
                     Text {
-                        text: "No transactions found";
+                        text: Translations.crypto-no-transactions-found;
                         color: Theme.text-subtle;
                         font-size: 12px;
                         vertical-alignment: center;
@@ -570,7 +571,7 @@ export component AssetDetailPanel inherits Rectangle {
                 spacing: 16px;
 
                 Text {
-                    text: "Delete Transaction?";
+                    text: Translations.confirm-delete-title + "?";
                     color: Theme.text-primary;
                     font-size: 14px;
                     font-weight: 600;
@@ -578,7 +579,7 @@ export component AssetDetailPanel inherits Rectangle {
                 }
 
                 Text {
-                    text: "This will permanently delete " + root.delete-transaction-label + ". This action cannot be undone.";
+                    text: Translations.confirm-delete-generic + " " + root.delete-transaction-label + ". " + Translations.confirm-delete-message;
                     color: Theme.text-muted;
                     font-size: 11px;
                     wrap: word-wrap;
@@ -597,7 +598,7 @@ export component AssetDetailPanel inherits Rectangle {
                         border-color: Theme.border;
 
                         Text {
-                            text: "Cancel";
+                            text: Translations.action-cancel;
                             color: Theme.text-secondary;
                             font-size: 11px;
                             font-weight: 600;
@@ -624,7 +625,7 @@ export component AssetDetailPanel inherits Rectangle {
                         border-color: Theme.delete-border;
 
                         Text {
-                            text: "Delete";
+                            text: Translations.action-delete;
                             color: Theme.text-primary;
                             font-size: 11px;
                             font-weight: 600;

@@ -2,6 +2,7 @@
 // Noir Minimalist - Elegant authentication with smooth gradient background and refined typography
 
 import { AuthAdapter, AppState, NotificationAdapter } from "../globals.slint";
+import { Translations } from "../translations.slint";
 import { Theme } from "../theme.slint";
 import { TextButton } from "../widgets.slint";
 import { GradientBackground } from "../components/gradient_background.slint";
@@ -66,9 +67,7 @@ component PasswordInput inherits Rectangle {
         // Underline with gradient (full width, centered with container)
         Rectangle {
             height: input.has-focus ? 2px : 1px;
-            background: input.has-focus
-                ? @linear-gradient(90deg, transparent 0%, Theme.accent-indigo 20%, Theme.text-primary 50%, Theme.accent-indigo 80%, transparent 100%)
-                : @linear-gradient(90deg, transparent 0%, Theme.border 50%, transparent 100%);
+            background: input.has-focus ? @linear-gradient(90deg, transparent 0%, Theme.accent-indigo 20%, Theme.text-primary 50%, Theme.accent-indigo 80%, transparent 100%) : @linear-gradient(90deg, transparent 0%, Theme.border 50%, transparent 100%);
 
             animate height {
                 duration: 150ms;
@@ -89,7 +88,7 @@ component PasswordInput inherits Rectangle {
         height: 36px;
 
         Text {
-            text: root.show-password ? "HIDE" : "SHOW";
+            text: root.show-password ? Translations.login-hide : Translations.login-show;
             color: toggle-touch.has-hover ? Theme.text-primary : Theme.text-muted;
             font-size: 10px;
             font-weight: 400;
@@ -115,7 +114,7 @@ component PasswordInput inherits Rectangle {
 
 export component LoginPage inherits Rectangle {
     // Smooth gradient background
-    GradientBackground {}
+    GradientBackground { }
 
     // Internal state
     in-out property <string> password-text: "";
@@ -177,7 +176,7 @@ export component LoginPage inherits Rectangle {
 
                     // Subtitle with elegant styling
                     Text {
-                        text: "Personal Financial Fortress";
+                        text: Translations.login-subtitle;
                         color: @linear-gradient(90deg, Theme.text-muted 0%, Theme.text-secondary 50%, Theme.text-muted 100%);
                         font-size: 13px;
                         font-weight: 200;
@@ -193,7 +192,7 @@ export component LoginPage inherits Rectangle {
 
                     // Password input with toggle
                     PasswordInput {
-                        placeholder: vault-exists ? "password" : "create password";
+                        placeholder: vault-exists ? Translations.login-password-placeholder : Translations.login-password-create-placeholder;
                         text <=> password-text;
                         enabled: !is-loading;
                         horizontal-stretch: 1;
@@ -236,9 +235,7 @@ export component LoginPage inherits Rectangle {
                             }
 
                             Text {
-                                text: weak-confirmed
-                                    ? "Weak password: click create again to confirm."
-                                    : weak-warning;
+                                text: weak-confirmed ? Translations.login-weak-password-confirm : weak-warning;
                                 color: Theme.warning;
                                 font-size: 10px;
                                 font-weight: 500;
@@ -254,7 +251,7 @@ export component LoginPage inherits Rectangle {
 
                     // Action button
                     TextButton {
-                        text: vault-exists ? (is-loading ? "UNLOCKING..." : "UNLOCK VAULT") : (is-loading ? "CREATING..." : "CREATE VAULT");
+                        text: vault-exists ? (is-loading ? Translations.login-unlocking : Translations.login-unlock) : (is-loading ? Translations.login-creating : Translations.login-create);
                         enabled: password-text != "" && !is-loading;
 
                         clicked => {
@@ -279,7 +276,7 @@ export component LoginPage inherits Rectangle {
             height: 60px;
 
             Text {
-                text: "AES-256 ENCRYPTED";
+                text: Translations.login-encryption-note;
                 color: Theme.text-subtle;
                 font-size: 9px;
                 font-weight: 500;
@@ -290,19 +287,17 @@ export component LoginPage inherits Rectangle {
         }
     }
 
-
     // Handler: Create new vault
     function handle-create() {
         if (password-text == "") {
-            NotificationAdapter.show("Password required", true);
+            NotificationAdapter.show(Translations.login-password-required, true);
             return;
         }
         if (weak-warning != "" && !weak-confirmed) {
             weak-confirmed = true;
             NotificationAdapter.show(
                 weak-warning + ". Click create again to confirm.",
-                true
-            );
+                true);
             return;
         }
         is-loading = true;
@@ -320,7 +315,7 @@ export component LoginPage inherits Rectangle {
     // Handler: Unlock existing vault
     function handle-unlock() {
         if (password-text == "") {
-            NotificationAdapter.show("Password required", true);
+            NotificationAdapter.show(Translations.login-password-required, true);
             return;
         }
         is-loading = true;

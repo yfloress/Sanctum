@@ -57,6 +57,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create the application controller
     let controller = Arc::new(AppController::new(app_data_dir));
 
+    // Initialize i18n with saved language preference or detect from system
+    let initial_lang = controller
+        .get_app_setting(sanctum::controller::SETTING_PREFERRED_LANGUAGE)
+        .unwrap_or_else(|_| sanctum::ui::detect_system_language());
+    sanctum::ui::init_translations(&initial_lang);
+    log::info!("i18n initialized with language: {}", initial_lang);
+
     // Create the Slint UI
     let ui = AppWindow::new()?;
     let habit_analytics_cache = Rc::new(RefCell::new(sanctum::ui::HabitChartsCache::default()));
@@ -757,6 +764,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // SettingsAdapter callbacks (extracted to ui/callbacks/settings.rs)
     sanctum::ui::setup_settings_callbacks(&ui, &ui_weak, &controller, show_notification.clone());
+
+    // Translations setup (extracted to ui/callbacks/translations.rs)
+    sanctum::ui::setup_translation_callbacks(&ui);
 
     // Run the UI event loop
     ui.run()?;

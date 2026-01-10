@@ -2,6 +2,7 @@
 // Premium Fintech UI - Navigation sidebar with collapse support
 
 import { AppState, AuthAdapter } from "../globals.slint";
+import { Translations } from "../translations.slint";
 import { Theme } from "../theme.slint";
 
 // ==================== SidebarItem ====================
@@ -19,16 +20,17 @@ component SidebarItem inherits Rectangle {
     background: is-active ? Theme.surface : (touch.has-hover ? Theme.surface-hover : transparent);
     border-radius: collapsed ? 8px : 0px;
 
-    animate background { duration: 150ms; easing: ease-out; }
+    animate background {
+        duration: 150ms;
+        easing: ease-out;
+    }
 
     // Active indicator (left border)
     if !collapsed: Rectangle {
         x: 0;
         width: 3px;
         height: 100%;
-        background: is-active
-            ? @linear-gradient(180deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%)
-            : transparent;
+        background: is-active ? @linear-gradient(180deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%) : transparent;
 
         animate background { duration: 150ms; }
     }
@@ -102,22 +104,21 @@ component SidebarItem inherits Rectangle {
 
 export component SanctumSidebar inherits Rectangle {
     property <bool> collapsed: false;
-    
+
     width: collapsed ? 72px : 220px;
     background: Theme.sidebar-bg;
 
-    animate width { duration: 250ms; easing: ease-in-out; }
+    animate width {
+        duration: 250ms;
+        easing: ease-in-out;
+    }
 
     // Right border with gradient
     Rectangle {
         x: parent.width - 1px;
         width: 1px;
         height: 100%;
-        background: @linear-gradient(180deg, 
-            Theme.border-light 0%, 
-            Theme.sidebar-border 50%, 
-            Theme.border-light 100%
-        );
+        background: @linear-gradient(180deg, Theme.border-light 0%, Theme.sidebar-border 50%, Theme.border-light 100%);
     }
 
     VerticalLayout {
@@ -172,7 +173,9 @@ export component SanctumSidebar inherits Rectangle {
             opacity: 0.5;
         }
 
-        Rectangle { height: 16px; }
+        Rectangle {
+            height: 16px;
+        }
 
         // Navigation Items
         VerticalLayout {
@@ -181,35 +184,35 @@ export component SanctumSidebar inherits Rectangle {
             spacing: collapsed ? 8px : 0px;
 
             SidebarItem {
-                label: "DASHBOARD";
+                label: Translations.nav-dashboard;
                 icon-source: @image-url("../assets/icons/layout-dashboard.svg");
                 page-id: "dashboard";
                 collapsed: root.collapsed;
             }
 
             SidebarItem {
-                label: "FINANCES";
+                label: Translations.nav-finances;
                 icon-source: @image-url("../assets/icons/wallet.svg");
                 page-id: "finances";
                 collapsed: root.collapsed;
             }
 
             SidebarItem {
-                label: "CRYPTO";
+                label: Translations.nav-crypto;
                 icon-source: @image-url("../assets/icons/bitcoin.svg");
                 page-id: "crypto";
                 collapsed: root.collapsed;
             }
 
             SidebarItem {
-                label: "HABITS";
+                label: Translations.nav-habits;
                 icon-source: @image-url("../assets/icons/check.svg");
                 page-id: "habits";
                 collapsed: root.collapsed;
             }
 
             SidebarItem {
-                label: "SETTINGS";
+                label: Translations.nav-settings;
                 icon-source: @image-url("../assets/icons/settings.svg");
                 page-id: "settings";
                 collapsed: root.collapsed;
@@ -233,7 +236,7 @@ export component SanctumSidebar inherits Rectangle {
             background: lock-touch.has-hover ? Theme.surface-hover : transparent;
 
             animate background { duration: 150ms; }
-            
+
             HorizontalLayout {
                 padding-left: 0px;
                 alignment: center;
@@ -257,7 +260,7 @@ export component SanctumSidebar inherits Rectangle {
                 }
 
                 if !collapsed: Text {
-                    text: "LOCK VAULT";
+                    text: Translations.nav-lock;
                     color: lock-touch.has-hover ? Theme.danger : Theme.text-muted;
                     font-size: 11px;
                     font-weight: 500;
@@ -276,7 +279,7 @@ export component SanctumSidebar inherits Rectangle {
                 }
             }
         }
-        
+
         // Collapse Toggle
         Rectangle {
             height: 48px;
@@ -302,10 +305,12 @@ export component SanctumSidebar inherits Rectangle {
                     vertical-alignment: center;
                 }
             }
-            
+
             toggle-touch := TouchArea {
                 mouse-cursor: pointer;
-                clicked => { root.collapsed = !root.collapsed; }
+                clicked => {
+                    root.collapsed = !root.collapsed;
+                }
             }
         }
     }

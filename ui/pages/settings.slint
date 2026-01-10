@@ -2,6 +2,7 @@
 // Premium Fintech UI - Application Settings
 
 import { SettingsAdapter } from "../globals.slint";
+import { Translations } from "../translations.slint";
 import { Theme } from "../theme.slint";
 import { FormField } from "../components/forms/form_field.slint";
 
@@ -18,32 +19,32 @@ component SettingCard inherits Rectangle {
     border-color: Theme.border;
 
     animate background { duration: 150ms; }
-    
+
     HorizontalLayout {
         padding-left: 24px;
         padding-right: 24px;
         alignment: space-between;
-        
+
         VerticalLayout {
             alignment: center;
             spacing: 4px;
 
-            Text { 
-                text: root.title; 
-                color: Theme.text-primary; 
-                font-size: 14px; 
+            Text {
+                text: root.title;
+                color: Theme.text-primary;
+                font-size: 14px;
                 font-weight: 500;
                 letter-spacing: 0.3px;
             }
 
-            Text { 
-                text: root.description; 
-                color: Theme.text-muted; 
+            Text {
+                text: root.description;
+                color: Theme.text-muted;
                 font-size: 11px;
                 font-weight: 400;
             }
         }
-        
+
         // Toggle Switch
         VerticalLayout {
             alignment: center;
@@ -52,14 +53,15 @@ component SettingCard inherits Rectangle {
                 width: 52px;
                 height: 28px;
                 border-radius: 14px;
-                background: toggle-value 
-                    ? @linear-gradient(135deg, Theme.success 0%, Theme.success-strong 100%)
-                    : Theme.surface-hover;
+                background: toggle-value ? @linear-gradient(135deg, Theme.success 0%, Theme.success-strong 100%) : Theme.surface-hover;
                 border-width: 1px;
                 border-color: toggle-value ? transparent : Theme.border;
-                
-                animate background { duration: 250ms; easing: ease-out; }
-                
+
+                animate background {
+                    duration: 250ms;
+                    easing: ease-out;
+                }
+
                 // Knob
                 Rectangle {
                     x: toggle-value ? 26px : 2px;
@@ -72,9 +74,12 @@ component SettingCard inherits Rectangle {
                     drop-shadow-color: Theme.bg.with-alpha(0.2);
                     drop-shadow-offset-y: 2px;
 
-                    animate x { duration: 250ms; easing: ease-out; }
+                    animate x {
+                        duration: 250ms;
+                        easing: ease-out;
+                    }
                 }
-                
+
                 toggle-touch := TouchArea {
                     mouse-cursor: pointer;
                     clicked => {
@@ -87,13 +92,15 @@ component SettingCard inherits Rectangle {
 
     touch := TouchArea {
         mouse-cursor: pointer;
-        clicked => { root.toggled(!toggle-value); }
+        clicked => {
+            root.toggled(!toggle-value);
+        }
     }
 }
 
 component SectionHeader inherits Rectangle {
     in property <string> title;
-    
+
     height: 40px;
     background: transparent;
 
@@ -129,23 +136,23 @@ component InfoCard inherits Rectangle {
     border-radius: 12px;
     border-width: 1px;
     border-color: Theme.border;
-    
+
     HorizontalLayout {
         padding-left: 24px;
         padding-right: 24px;
         alignment: space-between;
-        
-        Text { 
-            text: root.label; 
-            color: Theme.text-muted; 
-            font-size: 12px; 
+
+        Text {
+            text: root.label;
+            color: Theme.text-muted;
+            font-size: 12px;
             font-weight: 400;
             vertical-alignment: center;
         }
 
-        Text { 
-            text: root.value; 
-            color: Theme.text-primary; 
+        Text {
+            text: root.value;
+            color: Theme.text-primary;
             font-size: 12px;
             font-weight: 500;
             letter-spacing: 0.5px;
@@ -231,7 +238,9 @@ component SettingSelector inherits Rectangle {
 
                 selector-touch := TouchArea {
                     mouse-cursor: pointer;
-                    clicked => { dropdown.show(); }
+                    clicked => {
+                        dropdown.show();
+                    }
                 }
             }
         }
@@ -309,7 +318,7 @@ export component SettingsPage inherits Rectangle {
         Rectangle {
             height: 100px;
             background: @linear-gradient(180deg, Theme.modal-bg-end 0%, Theme.background 100%);
-            
+
             // Decorative accent
             Rectangle {
                 width: 100%;
@@ -323,7 +332,7 @@ export component SettingsPage inherits Rectangle {
                 padding-left: 64px;
                 padding-right: 64px;
                 alignment: start;
-                
+
                 VerticalLayout {
                     alignment: center;
                     spacing: 8px;
@@ -332,11 +341,11 @@ export component SettingsPage inherits Rectangle {
                         spacing: 12px;
                         alignment: start;
 
-                        Text { 
-                            text: "SETTINGS"; 
-                            color: Theme.text-primary; 
-                            font-size: 24px; 
-                            font-weight: 300; 
+                        Text {
+                            text: "SETTINGS";
+                            color: Theme.text-primary;
+                            font-size: 24px;
+                            font-weight: 300;
                             letter-spacing: 6px;
                             vertical-alignment: center;
                         }
@@ -392,7 +401,7 @@ export component SettingsPage inherits Rectangle {
                     spacing: 12px;
 
                     SectionHeader {
-                        title: "APPEARANCE";
+                        title: Translations.settings-appearance;
                     }
 
                     SettingCard {
@@ -427,30 +436,14 @@ export component SettingsPage inherits Rectangle {
                     }
 
                     SettingSelector {
-                        title: "Language";
-                        description: "Application interface language (UI only)";
+                        title: Translations.settings-language;
+                        description: Translations.settings-language-desc;
                         selected-value: SettingsAdapter.preferred-language;
                         options: ["en", "es"];
                         option-labels: ["English", "Español"];
                         value-selected(value) => {
                             SettingsAdapter.set-preferred-language(value);
                             SettingsAdapter.preferred-language = value;
-                        }
-                    }
-
-                    Rectangle {
-                        height: 24px;
-
-                        HorizontalLayout {
-                            padding-left: 12px;
-
-                            Text {
-                                text: "⚠ Currency and language changes are not yet implemented. These are UI-only settings.";
-                                color: Theme.warning;
-                                font-size: 10px;
-                                font-weight: 400;
-                                vertical-alignment: center;
-                            }
                         }
                     }
                 }
@@ -460,17 +453,13 @@ export component SettingsPage inherits Rectangle {
                     spacing: 12px;
 
                     SectionHeader {
-                        title: "SECURITY";
+                        title: Translations.settings-security;
                     }
 
                     SettingSelector {
-                        title: "Session Timeout";
-                        description: "Auto-lock vault after inactivity";
-                        selected-value: SettingsAdapter.session-timeout == 300 ? "5 min" :
-                                       SettingsAdapter.session-timeout == 900 ? "15 min" :
-                                       SettingsAdapter.session-timeout == 1800 ? "30 min" :
-                                       SettingsAdapter.session-timeout == 3600 ? "1 hour" :
-                                       SettingsAdapter.session-timeout == -1 ? "Never" : "15 min";
+                        title: Translations.settings-session-timeout;
+                        description: Translations.settings-session-timeout-desc;
+                        selected-value: SettingsAdapter.session-timeout == 300 ? "5 min" : SettingsAdapter.session-timeout == 900 ? "15 min" : SettingsAdapter.session-timeout == 1800 ? "30 min" : SettingsAdapter.session-timeout == 3600 ? "1 hour" : SettingsAdapter.session-timeout == -1 ? "Never" : "15 min";
                         options: ["300", "900", "1800", "3600", "-1"];
                         option-labels: ["5 min", "15 min", "30 min", "1 hour", "Never"];
                         value-selected(value) => {
@@ -666,7 +655,9 @@ export component SettingsPage inherits Rectangle {
                     }
                 }
 
-                Rectangle { height: 32px; }
+                Rectangle {
+                    height: 32px;
+                }
             }
         }
     }

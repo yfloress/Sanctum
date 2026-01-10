@@ -1,4 +1,5 @@
 import { CryptoDistributionSlice } from "../globals.slint";
+import { Translations } from "../translations.slint";
 import { Theme } from "../theme.slint";
 
 // ==================== Portfolio Distribution Chart ====================
@@ -17,7 +18,7 @@ export component PortfolioDistributionChart inherits Rectangle {
         spacing: 14px;
 
         Text {
-            text: "PORTFOLIO DISTRIBUTION";
+            text: Translations.crypto-portfolio-distribution;
             color: Theme.text-secondary;
             font-size: 11px;
             font-weight: 700;
@@ -48,7 +49,6 @@ export component PortfolioDistributionChart inherits Rectangle {
                         height: 100%;
                         image-fit: contain;
                     }
-
                 }
 
                 Rectangle {
@@ -70,7 +70,7 @@ export component PortfolioDistributionChart inherits Rectangle {
                             padding-bottom: legend-padding;
 
                             Text {
-                                text: "ASSETS";
+                                text: Translations.crypto-assets;
                                 color: Theme.text-secondary;
                                 font-size: 10px;
                                 font-weight: 700;
@@ -119,6 +119,7 @@ export component PortfolioDistributionChart inherits Rectangle {
                     font-weight: 600;
                     horizontal-alignment: center;
                 }
+
                 Text {
                     text: "Sync prices to see the distribution";
                     color: Theme.text-muted;
@@ -165,6 +166,7 @@ export component PortfolioTrendChart inherits Rectangle {
                     background: Theme.crypto-chart-value;
                     y: 6px;
                 }
+
                 Text {
                     text: "VALUE";
                     color: Theme.text-secondary;
@@ -172,6 +174,7 @@ export component PortfolioTrendChart inherits Rectangle {
                     letter-spacing: 1px;
                     vertical-alignment: center;
                 }
+
                 Rectangle {
                     width: 8px;
                     height: 8px;
@@ -179,6 +182,7 @@ export component PortfolioTrendChart inherits Rectangle {
                     background: Theme.crypto-chart-cost;
                     y: 6px;
                 }
+
                 Text {
                     text: "COST";
                     color: Theme.text-secondary;
@@ -214,6 +218,7 @@ export component PortfolioTrendChart inherits Rectangle {
                     font-weight: 600;
                     horizontal-alignment: center;
                 }
+
                 Text {
                     text: "Sync prices daily to build history";
                     color: Theme.text-muted;

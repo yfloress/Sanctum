@@ -8,9 +8,11 @@ pub mod dashboard;
 pub mod finance;
 pub mod habits;
 pub mod settings;
+pub mod translations;
 
 pub use crypto::*;
 pub use dashboard::*;
 pub use finance::*;
 pub use habits::*;
 pub use settings::*;
+pub use translations::*;

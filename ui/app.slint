@@ -15,6 +15,7 @@ import {
     CryptoAdapter,
     SettingsAdapter,
 } from "globals.slint";
+import { Translations } from "translations.slint";
 import { Theme } from "theme.slint";
 import { LoginPage } from "pages/login.slint";
 import { DashboardPage } from "pages/dashboard.slint";
@@ -193,4 +194,4 @@ export component AppWindow inherits Window {
 }
 
 // Re-export adapters for main.rs
-export { AuthAdapter, AccountAdapter, TransactionAdapter, CategoryAdapter, DashboardAdapter, AnalyticsAdapter, NotificationAdapter, HabitAdapter, RewardsAdapter, CryptoAdapter, AppState, SettingsAdapter }
+export { AuthAdapter, AccountAdapter, TransactionAdapter, CategoryAdapter, DashboardAdapter, AnalyticsAdapter, NotificationAdapter, HabitAdapter, RewardsAdapter, CryptoAdapter, AppState, SettingsAdapter, Translations }

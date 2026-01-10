@@ -1,0 +1,335 @@
+//! Translations Callback Module
+//!
+//! Loads translated strings from the i18n service into Slint UI.
+//! Handles language switching and translation reloading.
+
+use crate::services::i18n::{self, t};
+use crate::{AppWindow, Translations};
+use slint::{ComponentHandle, SharedString};
+
+/// Sets up translation-related callbacks and loads initial translations
+pub fn setup_translation_callbacks(ui: &AppWindow) {
+    // Initial load of translations
+    load_all_translations(ui);
+
+    // Setup reload callback
+    let ui_weak = ui.as_weak();
+    ui.global::<Translations>().on_reload_translations(move || {
+        if let Some(ui) = ui_weak.upgrade() {
+            load_all_translations(&ui);
+        }
+    });
+}
+
+/// Loads all translations from the i18n service into the UI
+pub fn load_all_translations(ui: &AppWindow) {
+    let tr = ui.global::<Translations>();
+
+    // Common
+    tr.set_app_name(s(&t("app-name")));
+    tr.set_app_subtitle(s(&t("app-subtitle")));
+
+    // Common actions
+    tr.set_action_save(s(&t("action-save")));
+    tr.set_action_cancel(s(&t("action-cancel")));
+    tr.set_action_delete(s(&t("action-delete")));
+    tr.set_action_edit(s(&t("action-edit")));
+    tr.set_action_create(s(&t("action-create")));
+    tr.set_action_add(s(&t("action-add")));
+    tr.set_action_close(s(&t("action-close")));
+    tr.set_action_confirm(s(&t("action-confirm")));
+    tr.set_action_back(s(&t("action-back")));
+    tr.set_action_next(s(&t("action-next")));
+    tr.set_action_submit(s(&t("action-submit")));
+    tr.set_action_archive(s(&t("action-archive")));
+    tr.set_action_restore(s(&t("action-restore")));
+    tr.set_action_clear(s(&t("action-clear")));
+
+    // Common labels
+    tr.set_label_name(s(&t("label-name")));
+    tr.set_label_description(s(&t("label-description")));
+    tr.set_label_amount(s(&t("label-amount")));
+    tr.set_label_date(s(&t("label-date")));
+    tr.set_label_category(s(&t("label-category")));
+    tr.set_label_type(s(&t("label-type")));
+    tr.set_label_status(s(&t("label-status")));
+    tr.set_label_balance(s(&t("label-balance")));
+    tr.set_label_total(s(&t("label-total")));
+    tr.set_label_notes(s(&t("label-notes")));
+    tr.set_label_color(s(&t("label-color")));
+    tr.set_label_icon(s(&t("label-icon")));
+    tr.set_label_currency(s(&t("label-currency")));
+    tr.set_label_search(s(&t("label-search")));
+    tr.set_label_filter(s(&t("label-filter")));
+    tr.set_label_loading(s(&t("label-loading")));
+    tr.set_label_none(s(&t("label-none")));
+    tr.set_label_all(s(&t("label-all")));
+    tr.set_label_yes(s(&t("label-yes")));
+    tr.set_label_no(s(&t("label-no")));
+
+    // Time
+    tr.set_time_today(s(&t("time-today")));
+    tr.set_time_yesterday(s(&t("time-yesterday")));
+    tr.set_time_week(s(&t("time-week")));
+    tr.set_time_month(s(&t("time-month")));
+    tr.set_time_year(s(&t("time-year")));
+
+    // Validation
+    tr.set_validation_required(s(&t("validation-required")));
+    tr.set_validation_invalid_amount(s(&t("validation-invalid-amount")));
+    tr.set_validation_invalid_date(s(&t("validation-invalid-date")));
+
+    // Login
+    tr.set_login_subtitle(s(&t("login-subtitle")));
+    tr.set_login_password_placeholder(s(&t("login-password-placeholder")));
+    tr.set_login_password_create_placeholder(s(&t("login-password-create-placeholder")));
+    tr.set_login_unlock(s(&t("login-unlock")));
+    tr.set_login_create(s(&t("login-create")));
+    tr.set_login_unlocking(s(&t("login-unlocking")));
+    tr.set_login_creating(s(&t("login-creating")));
+    tr.set_login_password_required(s(&t("login-password-required")));
+    tr.set_login_encryption_note(s(&t("login-encryption-note")));
+    tr.set_login_weak_password_confirm(s(&t("login-weak-password-confirm")));
+    tr.set_login_show(s(&t("login-show")));
+    tr.set_login_hide(s(&t("login-hide")));
+
+    // Sidebar
+    tr.set_nav_dashboard(s(&t("nav-dashboard")));
+    tr.set_nav_finances(s(&t("nav-finances")));
+    tr.set_nav_crypto(s(&t("nav-crypto")));
+    tr.set_nav_habits(s(&t("nav-habits")));
+    tr.set_nav_settings(s(&t("nav-settings")));
+    tr.set_nav_lock(s(&t("nav-lock")));
+
+    // Dashboard
+    tr.set_dashboard_title(s(&t("dashboard-title")));
+    tr.set_dashboard_welcome(s(&t("dashboard-welcome")));
+    tr.set_dashboard_net_worth(s(&t("dashboard-net-worth")));
+    tr.set_dashboard_total_balance(s(&t("dashboard-total-balance")));
+    tr.set_dashboard_monthly_income(s(&t("dashboard-monthly-income")));
+    tr.set_dashboard_monthly_expenses(s(&t("dashboard-monthly-expenses")));
+    tr.set_dashboard_recent_transactions(s(&t("dashboard-recent-transactions")));
+    tr.set_dashboard_no_transactions(s(&t("dashboard-no-transactions")));
+    tr.set_dashboard_view_all(s(&t("dashboard-view-all")));
+    tr.set_dashboard_quick_actions(s(&t("dashboard-quick-actions")));
+    tr.set_dashboard_add_transaction(s(&t("dashboard-add-transaction")));
+    tr.set_dashboard_add_account(s(&t("dashboard-add-account")));
+
+    // Finances
+    tr.set_finances_title(s(&t("finances-title")));
+    tr.set_finances_accounts(s(&t("finances-accounts")));
+    tr.set_finances_transactions(s(&t("finances-transactions")));
+    tr.set_finances_add_account(s(&t("finances-add-account")));
+    tr.set_finances_add_transaction(s(&t("finances-add-transaction")));
+    tr.set_finances_no_accounts(s(&t("finances-no-accounts")));
+    tr.set_finances_no_transactions(s(&t("finances-no-transactions")));
+    tr.set_finances_transfer(s(&t("finances-transfer")));
+    tr.set_finances_income(s(&t("finances-income")));
+    tr.set_finances_expense(s(&t("finances-expense")));
+    tr.set_finances_transfer_funds(s(&t("finances-transfer-funds")));
+
+    // Account types
+    tr.set_account_type_bank(s(&t("account-type-bank")));
+    tr.set_account_type_cash(s(&t("account-type-cash")));
+    tr.set_account_type_savings(s(&t("account-type-savings")));
+    tr.set_account_type_credit(s(&t("account-type-credit")));
+    tr.set_account_type_other(s(&t("account-type-other")));
+
+    // Filters
+    tr.set_filter_all_accounts(s(&t("filter-all-accounts")));
+    tr.set_filter_all_types(s(&t("filter-all-types")));
+    tr.set_filter_all_categories(s(&t("filter-all-categories")));
+    tr.set_filter_date_range(s(&t("filter-date-range")));
+    tr.set_filter_this_month(s(&t("filter-this-month")));
+    tr.set_filter_last_month(s(&t("filter-last-month")));
+    tr.set_filter_this_year(s(&t("filter-this-year")));
+    tr.set_filter_custom(s(&t("filter-custom")));
+
+    // Crypto
+    tr.set_crypto_title(s(&t("crypto-title")));
+    tr.set_crypto_portfolio(s(&t("crypto-portfolio")));
+    tr.set_crypto_wallets(s(&t("crypto-wallets")));
+    tr.set_crypto_assets(s(&t("crypto-assets")));
+    tr.set_crypto_add_wallet(s(&t("crypto-add-wallet")));
+    tr.set_crypto_add_transaction(s(&t("crypto-add-transaction")));
+    tr.set_crypto_no_wallets(s(&t("crypto-no-wallets")));
+    tr.set_crypto_no_assets(s(&t("crypto-no-assets")));
+    tr.set_crypto_total_value(s(&t("crypto-total-value")));
+    tr.set_crypto_price(s(&t("crypto-price")));
+    tr.set_crypto_holdings(s(&t("crypto-holdings")));
+    tr.set_crypto_change_24h(s(&t("crypto-change-24h")));
+    tr.set_crypto_market_cap(s(&t("crypto-market-cap")));
+    tr.set_crypto_volume(s(&t("crypto-volume")));
+    tr.set_crypto_total_holdings(s(&t("crypto-total-holdings")));
+    tr.set_crypto_no_wallet_data(s(&t("crypto-no-wallet-data")));
+    tr.set_crypto_no_transactions_found(s(&t("crypto-no-transactions-found")));
+    tr.set_crypto_portfolio_distribution(s(&t("crypto-portfolio-distribution")));
+
+    // Wallet types
+    tr.set_wallet_type_exchange(s(&t("wallet-type-exchange")));
+    tr.set_wallet_type_hardware(s(&t("wallet-type-hardware")));
+    tr.set_wallet_type_software(s(&t("wallet-type-software")));
+    tr.set_wallet_type_multi(s(&t("wallet-type-multi")));
+
+    // Crypto transactions
+    tr.set_crypto_tx_buy(s(&t("crypto-tx-buy")));
+    tr.set_crypto_tx_sell(s(&t("crypto-tx-sell")));
+    tr.set_crypto_tx_transfer_in(s(&t("crypto-tx-transfer-in")));
+    tr.set_crypto_tx_transfer_out(s(&t("crypto-tx-transfer-out")));
+    tr.set_crypto_tx_swap(s(&t("crypto-tx-swap")));
+
+    // Habits
+    tr.set_habits_title(s(&t("habits-title")));
+    tr.set_habits_my_habits(s(&t("habits-my-habits")));
+    tr.set_habits_add_habit(s(&t("habits-add-habit")));
+    tr.set_habits_no_habits(s(&t("habits-no-habits")));
+    tr.set_habits_streak(s(&t("habits-streak")));
+    tr.set_habits_best_streak(s(&t("habits-best-streak")));
+    tr.set_habits_current_streak(s(&t("habits-current-streak")));
+    tr.set_habits_completion_rate(s(&t("habits-completion-rate")));
+
+    // Habit categories
+    tr.set_habit_category_mind(s(&t("habit-category-mind")));
+    tr.set_habit_category_body(s(&t("habit-category-body")));
+    tr.set_habit_category_spirit(s(&t("habit-category-spirit")));
+
+    // Habit frequency
+    tr.set_habit_frequency_daily(s(&t("habit-frequency-daily")));
+    tr.set_habit_frequency_weekly(s(&t("habit-frequency-weekly")));
+
+    // Analytics
+    tr.set_habits_analytics(s(&t("habits-analytics")));
+    tr.set_habits_life_balance(s(&t("habits-life-balance")));
+    tr.set_habits_weekday_efficiency(s(&t("habits-weekday-efficiency")));
+    tr.set_habits_empty_chart(s(&t("habits-empty-chart")));
+    tr.set_habits_empty_chart_subtitle(s(&t("habits-empty-chart-subtitle")));
+    tr.set_habits_complete_to_see(s(&t("habits-complete-to-see")));
+    tr.set_habits_discover_days(s(&t("habits-discover-days")));
+
+    // Rewards
+    tr.set_rewards_title(s(&t("rewards-title")));
+    tr.set_rewards_goals(s(&t("rewards-goals")));
+    tr.set_rewards_streak_rewards(s(&t("rewards-streak-rewards")));
+    tr.set_rewards_history(s(&t("rewards-history")));
+    tr.set_rewards_add_goal(s(&t("rewards-add-goal")));
+    tr.set_rewards_add_reward(s(&t("rewards-add-reward")));
+    tr.set_rewards_no_goals(s(&t("rewards-no-goals")));
+    tr.set_rewards_no_rewards(s(&t("rewards-no-rewards")));
+    tr.set_rewards_no_history(s(&t("rewards-no-history")));
+    tr.set_rewards_progress(s(&t("rewards-progress")));
+    tr.set_rewards_milestones(s(&t("rewards-milestones")));
+    tr.set_rewards_unlocked(s(&t("rewards-unlocked")));
+    tr.set_rewards_locked(s(&t("rewards-locked")));
+    tr.set_rewards_claim(s(&t("rewards-claim")));
+    tr.set_rewards_completed(s(&t("rewards-completed")));
+
+    // Settings
+    tr.set_settings_title(s(&t("settings-title")));
+    tr.set_settings_general(s(&t("settings-general")));
+    tr.set_settings_appearance(s(&t("settings-appearance")));
+    tr.set_settings_security(s(&t("settings-security")));
+    tr.set_settings_data(s(&t("settings-data")));
+    tr.set_settings_about(s(&t("settings-about")));
+
+    tr.set_settings_language(s(&t("settings-language")));
+    tr.set_settings_language_desc(s(&t("settings-language-desc")));
+    tr.set_settings_currency(s(&t("settings-currency")));
+    tr.set_settings_currency_desc(s(&t("settings-currency-desc")));
+
+    tr.set_settings_dark_mode(s(&t("settings-dark-mode")));
+    tr.set_settings_dark_mode_desc(s(&t("settings-dark-mode-desc")));
+
+    tr.set_settings_session_timeout(s(&t("settings-session-timeout")));
+    tr.set_settings_session_timeout_desc(s(&t("settings-session-timeout-desc")));
+    tr.set_settings_timeout_5min(s(&t("settings-timeout-5min")));
+    tr.set_settings_timeout_15min(s(&t("settings-timeout-15min")));
+    tr.set_settings_timeout_30min(s(&t("settings-timeout-30min")));
+    tr.set_settings_timeout_1hour(s(&t("settings-timeout-1hour")));
+    tr.set_settings_timeout_never(s(&t("settings-timeout-never")));
+
+    tr.set_settings_auto_fetch(s(&t("settings-auto-fetch")));
+    tr.set_settings_auto_fetch_desc(s(&t("settings-auto-fetch-desc")));
+    tr.set_settings_proxy(s(&t("settings-proxy")));
+    tr.set_settings_proxy_enabled(s(&t("settings-proxy-enabled")));
+    tr.set_settings_proxy_url(s(&t("settings-proxy-url")));
+
+    tr.set_settings_reset(s(&t("settings-reset")));
+    tr.set_settings_reset_desc(s(&t("settings-reset-desc")));
+    tr.set_settings_reset_confirm(s(&t("settings-reset-confirm")));
+
+    // Modals
+    tr.set_modal_add_account_title(s(&t("modal-add-account-title")));
+    tr.set_modal_edit_account_title(s(&t("modal-edit-account-title")));
+    tr.set_modal_add_transaction_title(s(&t("modal-add-transaction-title")));
+    tr.set_modal_edit_transaction_title(s(&t("modal-edit-transaction-title")));
+    tr.set_modal_transfer_title(s(&t("modal-transfer-title")));
+    tr.set_modal_add_wallet_title(s(&t("modal-add-wallet-title")));
+    tr.set_modal_edit_wallet_title(s(&t("modal-edit-wallet-title")));
+    tr.set_modal_add_habit_title(s(&t("modal-add-habit-title")));
+    tr.set_modal_edit_habit_title(s(&t("modal-edit-habit-title")));
+    tr.set_modal_add_goal_title(s(&t("modal-add-goal-title")));
+    tr.set_modal_edit_goal_title(s(&t("modal-edit-goal-title")));
+    tr.set_modal_add_reward_title(s(&t("modal-add-reward-title")));
+    tr.set_modal_edit_reward_title(s(&t("modal-edit-reward-title")));
+
+    // Confirmations
+    tr.set_confirm_delete_title(s(&t("confirm-delete-title")));
+    tr.set_confirm_delete_message(s(&t("confirm-delete-message")));
+    tr.set_confirm_delete_account(s(&t("confirm-delete-account")));
+    tr.set_confirm_delete_transaction(s(&t("confirm-delete-transaction")));
+    tr.set_confirm_delete_wallet(s(&t("confirm-delete-wallet")));
+    tr.set_confirm_delete_habit(s(&t("confirm-delete-habit")));
+    tr.set_confirm_delete_generic(s(&t("confirm-delete-generic")));
+
+    // Notifications
+    tr.set_notify_success(s(&t("notify-success")));
+    tr.set_notify_error(s(&t("notify-error")));
+    tr.set_notify_saved(s(&t("notify-saved")));
+    tr.set_notify_deleted(s(&t("notify-deleted")));
+    tr.set_notify_created(s(&t("notify-created")));
+    tr.set_notify_updated(s(&t("notify-updated")));
+
+    // Empty states
+    tr.set_empty_no_data(s(&t("empty-no-data")));
+    tr.set_empty_no_results(s(&t("empty-no-results")));
+    tr.set_empty_try_different(s(&t("empty-try-different")));
+    tr.set_empty_no_transactions_account(s(&t("empty-no-transactions-account")));
+
+    // Errors
+    tr.set_error_generic(s(&t("error-generic")));
+    tr.set_error_connection(s(&t("error-connection")));
+    tr.set_error_invalid_input(s(&t("error-invalid-input")));
+    tr.set_error_not_found(s(&t("error-not-found")));
+    tr.set_error_unauthorized(s(&t("error-unauthorized")));
+
+    // Misc
+    tr.set_bank_icons_title(s(&t("bank-icons-title")));
+    tr.set_no_expenses_recorded(s(&t("no-expenses-recorded")));
+    tr.set_fee_label(s(&t("fee-label")));
+}
+
+/// Helper to convert String to SharedString
+#[inline]
+fn s(text: &str) -> SharedString {
+    SharedString::from(text)
+}
+
+/// Initializes i18n with the given language
+pub fn init_translations(lang: &str) {
+    i18n::init(lang);
+}
+
+/// Changes language and returns true if successful
+pub fn change_language(lang: &str) -> bool {
+    i18n::set_language(lang)
+}
+
+/// Gets current language code
+pub fn get_current_language() -> String {
+    i18n::current_language()
+}
+
+/// Detects system language
+pub fn detect_system_language() -> String {
+    i18n::detect_system_language()
+}

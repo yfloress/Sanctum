@@ -7,7 +7,8 @@ use crate::controller::{
     SETTING_DARK_MODE, SETTING_PREFERRED_CURRENCY, SETTING_PREFERRED_LANGUAGE,
     SETTING_SESSION_TIMEOUT,
 };
-use crate::{AppState, CryptoAdapter, SettingsAdapter, AppWindow};
+use crate::ui::callbacks::translations::{change_language, load_all_translations};
+use crate::{AppState, AppWindow, CryptoAdapter, SettingsAdapter};
 use slint::{ComponentHandle, SharedString, Weak};
 use std::rc::Rc;
 use std::sync::Arc;
@@ -186,12 +187,11 @@ pub fn setup_settings_callbacks<N>(
     {
         let controller = controller.clone();
         let notify = notify.clone();
-        ui.global::<SettingsAdapter>()
-            .on_set_proxy_url(move |url| {
-                if let Err(err) = controller.set_crypto_proxy_url(url.to_string()) {
-                    notify(err.to_string(), true);
-                }
-            });
+        ui.global::<SettingsAdapter>().on_set_proxy_url(move |url| {
+            if let Err(err) = controller.set_crypto_proxy_url(url.to_string()) {
+                notify(err.to_string(), true);
+            }
+        });
     }
 
     // Session timeout update
@@ -204,7 +204,10 @@ pub fn setup_settings_callbacks<N>(
                 if let Err(err) = controller.set_session_timeout(timeout) {
                     notify(err.to_string(), true);
                 } else {
-                    notify("Session timeout updated. Will apply on next vault open.".into(), false);
+                    notify(
+                        "Session timeout updated. Will apply on next vault open.".into(),
+                        false,
+                    );
                 }
             });
     }
@@ -218,12 +221,20 @@ pub fn setup_settings_callbacks<N>(
             });
     }
 
-    // Preferred language update (UI only - no backend yet)
+    // Preferred language update - changes language and reloads translations
     {
         let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
         ui.global::<SettingsAdapter>()
             .on_set_preferred_language(move |language| {
                 let _ = controller.set_app_setting(SETTING_PREFERRED_LANGUAGE, language.as_str());
+
+                // Change language in i18n service and reload translations
+                if change_language(language.as_str()) {
+                    if let Some(ui) = ui_weak.upgrade() {
+                        load_all_translations(&ui);
+                    }
+                }
             });
     }
 
@@ -238,13 +249,17 @@ pub fn setup_settings_callbacks<N>(
             let _ = controller.set_app_setting(SETTING_AUTO_FETCH, "false");
             let _ = controller.set_app_setting(SETTING_CRYPTO_PROXY_ENABLED, "false");
             let _ = controller.set_app_setting(SETTING_CRYPTO_PROXY_URL, "");
-            let _ = controller.set_app_setting(SETTING_SESSION_TIMEOUT, "900");  // 15 min
+            let _ = controller.set_app_setting(SETTING_SESSION_TIMEOUT, "900"); // 15 min
             let _ = controller.set_app_setting(SETTING_PREFERRED_CURRENCY, "USD");
             let _ = controller.set_app_setting(SETTING_PREFERRED_LANGUAGE, "en");
 
-            // Reload settings
+            // Reset language to English
+            let _ = change_language("en");
+
+            // Reload settings and translations
             if let Some(ui) = ui_weak.upgrade() {
                 ui.global::<SettingsAdapter>().invoke_load_settings();
+                load_all_translations(&ui);
             }
 
             notify("Settings reset to defaults".into(), false);

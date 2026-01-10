@@ -1,0 +1,302 @@
+// ==================== Sanctum Translations ====================
+// Global translation strings for multi-language support
+// All UI text should reference these properties instead of hardcoded strings
+//
+// Architecture:
+// - Properties are populated from Rust via i18n service
+// - Language changes trigger reload of all properties
+// - Default values are English fallbacks
+
+// ==================== Translations Global ====================
+
+export global Translations {
+    // ==================== Common ====================
+    in-out property <string> app-name: "SANCTUM";
+    in-out property <string> app-subtitle: "Personal Financial Fortress";
+
+    // Common actions
+    in-out property <string> action-save: "Save";
+    in-out property <string> action-cancel: "Cancel";
+    in-out property <string> action-delete: "Delete";
+    in-out property <string> action-edit: "Edit";
+    in-out property <string> action-create: "Create";
+    in-out property <string> action-add: "Add";
+    in-out property <string> action-close: "Close";
+    in-out property <string> action-confirm: "Confirm";
+    in-out property <string> action-back: "Back";
+    in-out property <string> action-next: "Next";
+    in-out property <string> action-submit: "Submit";
+    in-out property <string> action-archive: "Archive";
+    in-out property <string> action-restore: "Restore";
+    in-out property <string> action-clear: "Clear";
+
+    // Common labels
+    in-out property <string> label-name: "Name";
+    in-out property <string> label-description: "Description";
+    in-out property <string> label-amount: "Amount";
+    in-out property <string> label-date: "Date";
+    in-out property <string> label-category: "Category";
+    in-out property <string> label-type: "Type";
+    in-out property <string> label-status: "Status";
+    in-out property <string> label-balance: "Balance";
+    in-out property <string> label-total: "Total";
+    in-out property <string> label-notes: "Notes";
+    in-out property <string> label-color: "Color";
+    in-out property <string> label-icon: "Icon";
+    in-out property <string> label-currency: "Currency";
+    in-out property <string> label-search: "Search";
+    in-out property <string> label-filter: "Filter";
+    in-out property <string> label-loading: "Loading...";
+    in-out property <string> label-none: "None";
+    in-out property <string> label-all: "All";
+    in-out property <string> label-yes: "Yes";
+    in-out property <string> label-no: "No";
+
+    // Time
+    in-out property <string> time-today: "Today";
+    in-out property <string> time-yesterday: "Yesterday";
+    in-out property <string> time-week: "Week";
+    in-out property <string> time-month: "Month";
+    in-out property <string> time-year: "Year";
+
+    // Validation
+    in-out property <string> validation-required: "This field is required";
+    in-out property <string> validation-invalid-amount: "Invalid amount";
+    in-out property <string> validation-invalid-date: "Invalid date";
+
+    // ==================== Login Page ====================
+    in-out property <string> login-subtitle: "Personal Financial Fortress";
+    in-out property <string> login-password-placeholder: "password";
+    in-out property <string> login-password-create-placeholder: "create password";
+    in-out property <string> login-unlock: "UNLOCK VAULT";
+    in-out property <string> login-create: "CREATE VAULT";
+    in-out property <string> login-unlocking: "UNLOCKING...";
+    in-out property <string> login-creating: "CREATING...";
+    in-out property <string> login-password-required: "Password required";
+    in-out property <string> login-encryption-note: "AES-256 ENCRYPTED";
+    in-out property <string> login-weak-password-confirm: "Weak password: click create again to confirm.";
+    in-out property <string> login-show: "SHOW";
+    in-out property <string> login-hide: "HIDE";
+
+    // ==================== Sidebar ====================
+    in-out property <string> nav-dashboard: "DASHBOARD";
+    in-out property <string> nav-finances: "FINANCES";
+    in-out property <string> nav-crypto: "CRYPTO";
+    in-out property <string> nav-habits: "HABITS";
+    in-out property <string> nav-settings: "SETTINGS";
+    in-out property <string> nav-lock: "LOCK VAULT";
+
+    // ==================== Dashboard ====================
+    in-out property <string> dashboard-title: "Dashboard";
+    in-out property <string> dashboard-welcome: "Welcome back";
+    in-out property <string> dashboard-net-worth: "Net Worth";
+    in-out property <string> dashboard-total-balance: "Total Balance";
+    in-out property <string> dashboard-monthly-income: "Monthly Income";
+    in-out property <string> dashboard-monthly-expenses: "Monthly Expenses";
+    in-out property <string> dashboard-recent-transactions: "Recent Transactions";
+    in-out property <string> dashboard-no-transactions: "No recent transactions";
+    in-out property <string> dashboard-view-all: "View All";
+    in-out property <string> dashboard-quick-actions: "Quick Actions";
+    in-out property <string> dashboard-add-transaction: "Add Transaction";
+    in-out property <string> dashboard-add-account: "Add Account";
+
+    // ==================== Finances ====================
+    in-out property <string> finances-title: "Finances";
+    in-out property <string> finances-accounts: "Accounts";
+    in-out property <string> finances-transactions: "Transactions";
+    in-out property <string> finances-add-account: "Add Account";
+    in-out property <string> finances-add-transaction: "Add Transaction";
+    in-out property <string> finances-no-accounts: "No accounts yet";
+    in-out property <string> finances-no-transactions: "No transactions found";
+    in-out property <string> finances-transfer: "Transfer";
+    in-out property <string> finances-income: "Income";
+    in-out property <string> finances-expense: "Expense";
+    in-out property <string> finances-transfer-funds: "Transfer Funds";
+
+    // Account types
+    in-out property <string> account-type-bank: "Bank";
+    in-out property <string> account-type-cash: "Cash";
+    in-out property <string> account-type-savings: "Savings";
+    in-out property <string> account-type-credit: "Credit Card";
+    in-out property <string> account-type-other: "Other";
+
+    // Transaction filters
+    in-out property <string> filter-all-accounts: "All Accounts";
+    in-out property <string> filter-all-types: "All Types";
+    in-out property <string> filter-all-categories: "All Categories";
+    in-out property <string> filter-date-range: "Date Range";
+    in-out property <string> filter-this-month: "This Month";
+    in-out property <string> filter-last-month: "Last Month";
+    in-out property <string> filter-this-year: "This Year";
+    in-out property <string> filter-custom: "Custom";
+
+    // ==================== Crypto ====================
+    in-out property <string> crypto-title: "Crypto";
+    in-out property <string> crypto-portfolio: "Portfolio";
+    in-out property <string> crypto-wallets: "Wallets";
+    in-out property <string> crypto-assets: "Assets";
+    in-out property <string> crypto-add-wallet: "Add Wallet";
+    in-out property <string> crypto-add-transaction: "Add Transaction";
+    in-out property <string> crypto-no-wallets: "No wallets yet";
+    in-out property <string> crypto-no-assets: "No assets found";
+    in-out property <string> crypto-total-value: "Total Value";
+    in-out property <string> crypto-price: "Price";
+    in-out property <string> crypto-holdings: "Holdings";
+    in-out property <string> crypto-change-24h: "24h Change";
+    in-out property <string> crypto-market-cap: "Market Cap";
+    in-out property <string> crypto-volume: "Volume";
+    in-out property <string> crypto-total-holdings: "TOTAL HOLDINGS";
+    in-out property <string> crypto-no-wallet-data: "No wallet data available";
+    in-out property <string> crypto-no-transactions-found: "No transactions found";
+    in-out property <string> crypto-portfolio-distribution: "PORTFOLIO DISTRIBUTION";
+
+    // Wallet types
+    in-out property <string> wallet-type-exchange: "Exchange";
+    in-out property <string> wallet-type-hardware: "Hardware";
+    in-out property <string> wallet-type-software: "Software";
+    in-out property <string> wallet-type-multi: "Multi-Signature";
+
+    // Transaction types
+    in-out property <string> crypto-tx-buy: "Buy";
+    in-out property <string> crypto-tx-sell: "Sell";
+    in-out property <string> crypto-tx-transfer-in: "Transfer In";
+    in-out property <string> crypto-tx-transfer-out: "Transfer Out";
+    in-out property <string> crypto-tx-swap: "Swap";
+
+    // ==================== Habits ====================
+    in-out property <string> habits-title: "Habits";
+    in-out property <string> habits-my-habits: "My Habits";
+    in-out property <string> habits-add-habit: "Add Habit";
+    in-out property <string> habits-no-habits: "No habits yet";
+    in-out property <string> habits-streak: "Streak";
+    in-out property <string> habits-best-streak: "Best";
+    in-out property <string> habits-current-streak: "Current";
+    in-out property <string> habits-completion-rate: "Completion Rate";
+
+    // Habit categories
+    in-out property <string> habit-category-mind: "Mind";
+    in-out property <string> habit-category-body: "Body";
+    in-out property <string> habit-category-spirit: "Spirit";
+
+    // Habit frequency
+    in-out property <string> habit-frequency-daily: "Daily";
+    in-out property <string> habit-frequency-weekly: "Weekly";
+
+    // Analytics
+    in-out property <string> habits-analytics: "Analytics";
+    in-out property <string> habits-life-balance: "LIFE BALANCE (LAST 30 DAYS)";
+    in-out property <string> habits-weekday-efficiency: "WEEKDAY EFFICIENCY";
+    in-out property <string> habits-empty-chart: "The chart is empty, but your potential is full.";
+    in-out property <string> habits-empty-chart-subtitle: "Your legend will appear here. Start writing it today.";
+    in-out property <string> habits-complete-to-see: "Complete habits to see your weekly pattern.";
+    in-out property <string> habits-discover-days: "Discover which days you're most consistent.";
+
+    // ==================== Rewards ====================
+    in-out property <string> rewards-title: "Rewards";
+    in-out property <string> rewards-goals: "Goals";
+    in-out property <string> rewards-streak-rewards: "Streak Rewards";
+    in-out property <string> rewards-history: "History";
+    in-out property <string> rewards-add-goal: "Add Goal";
+    in-out property <string> rewards-add-reward: "Add Streak Reward";
+    in-out property <string> rewards-no-goals: "No goals yet";
+    in-out property <string> rewards-no-rewards: "No streak rewards yet";
+    in-out property <string> rewards-no-history: "No history yet";
+    in-out property <string> rewards-progress: "Progress";
+    in-out property <string> rewards-milestones: "Milestones";
+    in-out property <string> rewards-unlocked: "Unlocked";
+    in-out property <string> rewards-locked: "Locked";
+    in-out property <string> rewards-claim: "Claim";
+    in-out property <string> rewards-completed: "Completed";
+
+    // ==================== Settings ====================
+    in-out property <string> settings-title: "Settings";
+    in-out property <string> settings-general: "General";
+    in-out property <string> settings-appearance: "Appearance";
+    in-out property <string> settings-security: "Security";
+    in-out property <string> settings-data: "Data";
+    in-out property <string> settings-about: "About";
+
+    // General settings
+    in-out property <string> settings-language: "Language";
+    in-out property <string> settings-language-desc: "Application interface language (UI only)";
+    in-out property <string> settings-currency: "Currency";
+    in-out property <string> settings-currency-desc: "Default currency for display";
+
+    // Appearance settings
+    in-out property <string> settings-dark-mode: "Dark Mode";
+    in-out property <string> settings-dark-mode-desc: "Enable dark theme";
+
+    // Security settings
+    in-out property <string> settings-session-timeout: "Session Timeout";
+    in-out property <string> settings-session-timeout-desc: "Auto-lock after inactivity";
+    in-out property <string> settings-timeout-5min: "5 minutes";
+    in-out property <string> settings-timeout-15min: "15 minutes";
+    in-out property <string> settings-timeout-30min: "30 minutes";
+    in-out property <string> settings-timeout-1hour: "1 hour";
+    in-out property <string> settings-timeout-never: "Never";
+
+    // Crypto settings
+    in-out property <string> settings-auto-fetch: "Auto-fetch Prices";
+    in-out property <string> settings-auto-fetch-desc: "Automatically update crypto prices";
+    in-out property <string> settings-proxy: "Proxy";
+    in-out property <string> settings-proxy-enabled: "Enable Proxy";
+    in-out property <string> settings-proxy-url: "Proxy URL";
+
+    // Data settings
+    in-out property <string> settings-reset: "Reset Settings";
+    in-out property <string> settings-reset-desc: "Reset all settings to defaults";
+    in-out property <string> settings-reset-confirm: "Are you sure you want to reset all settings?";
+
+    // ==================== Modals ====================
+    in-out property <string> modal-add-account-title: "Add Account";
+    in-out property <string> modal-edit-account-title: "Edit Account";
+    in-out property <string> modal-add-transaction-title: "Add Transaction";
+    in-out property <string> modal-edit-transaction-title: "Edit Transaction";
+    in-out property <string> modal-transfer-title: "Transfer Funds";
+    in-out property <string> modal-add-wallet-title: "Add Wallet";
+    in-out property <string> modal-edit-wallet-title: "Edit Wallet";
+    in-out property <string> modal-add-habit-title: "Add Habit";
+    in-out property <string> modal-edit-habit-title: "Edit Habit";
+    in-out property <string> modal-add-goal-title: "Add Goal";
+    in-out property <string> modal-edit-goal-title: "Edit Goal";
+    in-out property <string> modal-add-reward-title: "Add Streak Reward";
+    in-out property <string> modal-edit-reward-title: "Edit Streak Reward";
+
+    // Confirmation dialogs
+    in-out property <string> confirm-delete-title: "Confirm Delete";
+    in-out property <string> confirm-delete-message: "This action cannot be undone.";
+    in-out property <string> confirm-delete-account: "Are you sure you want to delete this account?";
+    in-out property <string> confirm-delete-transaction: "Are you sure you want to delete this transaction?";
+    in-out property <string> confirm-delete-wallet: "Are you sure you want to delete this wallet?";
+    in-out property <string> confirm-delete-habit: "Are you sure you want to delete this habit?";
+    in-out property <string> confirm-delete-generic: "This will permanently delete";
+
+    // ==================== Notifications ====================
+    in-out property <string> notify-success: "Success";
+    in-out property <string> notify-error: "Error";
+    in-out property <string> notify-saved: "Changes saved";
+    in-out property <string> notify-deleted: "Item deleted";
+    in-out property <string> notify-created: "Item created";
+    in-out property <string> notify-updated: "Item updated";
+
+    // ==================== Empty States ====================
+    in-out property <string> empty-no-data: "No data available";
+    in-out property <string> empty-no-results: "No results found";
+    in-out property <string> empty-try-different: "Try a different search or filter";
+    in-out property <string> empty-no-transactions-account: "No transactions for this account";
+
+    // ==================== Errors ====================
+    in-out property <string> error-generic: "Something went wrong";
+    in-out property <string> error-connection: "Connection error";
+    in-out property <string> error-invalid-input: "Invalid input";
+    in-out property <string> error-not-found: "Not found";
+    in-out property <string> error-unauthorized: "Unauthorized access";
+
+    // ==================== Misc UI Text ====================
+    in-out property <string> bank-icons-title: "BANK ICONS";
+    in-out property <string> no-expenses-recorded: "No expenses recorded";
+    in-out property <string> fee-label: "Fee";
+
+    // ==================== Callback to reload translations ====================
+    callback reload-translations();
+}
