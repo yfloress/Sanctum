@@ -3,6 +3,7 @@
 
 import { Theme } from "../../theme.slint";
 import { MilestoneData, StreakRewardData } from "../../globals.slint";
+import { ActionButtons } from "goal_card.slint";
 
 component MilestoneMarker inherits Rectangle {
     in property <int> target-days;
@@ -279,65 +280,17 @@ export component StreakRewardCard inherits Rectangle {
     }
 
     // Action buttons - always visible at bottom right, inside the card
-    Rectangle {
-        x: parent.width - 76px;
-        y: parent.height - 40px;
-        width: 60px;
-        height: 28px;
+    ActionButtons {
+        x: parent.width - self.width - 16px;
+        y: parent.height - self.height - 12px;
+        show-archive: false;
 
-        HorizontalLayout {
-            spacing: 8px;
-            alignment: end;
+        edit-clicked => {
+            root.edit(reward.id);
+        }
 
-            Rectangle {
-                width: 24px;
-                height: 24px;
-                border-radius: 6px;
-                background: edit-touch.has-hover ? Theme.surface-hover : Theme.surface;
-                border-width: 1px;
-                border-color: Theme.border;
-
-                Image {
-                    source: @image-url("../../assets/icons/pencil.svg");
-                    width: 14px;
-                    height: 14px;
-                    colorize: edit-touch.has-hover ? Theme.text-primary : Theme.text-muted;
-                    x: (parent.width - self.width) / 2;
-                    y: (parent.height - self.height) / 2;
-                }
-
-                edit-touch := TouchArea {
-                    mouse-cursor: pointer;
-                    clicked => {
-                        root.edit(reward.id);
-                    }
-                }
-            }
-
-            Rectangle {
-                width: 24px;
-                height: 24px;
-                border-radius: 6px;
-                background: delete-touch.has-hover ? Theme.delete-bg-hover : Theme.surface;
-                border-width: 1px;
-                border-color: delete-touch.has-hover ? Theme.delete-border : Theme.border;
-
-                Image {
-                    source: @image-url("../../assets/icons/trash.svg");
-                    width: 14px;
-                    height: 14px;
-                    colorize: delete-touch.has-hover ? Theme.text-primary : Theme.text-muted;
-                    x: (parent.width - self.width) / 2;
-                    y: (parent.height - self.height) / 2;
-                }
-
-                delete-touch := TouchArea {
-                    mouse-cursor: pointer;
-                    clicked => {
-                        root.delete(reward.id);
-                    }
-                }
-            }
+        delete-clicked => {
+            root.delete(reward.id);
         }
     }
 }

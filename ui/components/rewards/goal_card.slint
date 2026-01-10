@@ -4,8 +4,104 @@
 import { Theme } from "../../theme.slint";
 import { CheckpointData, GoalData } from "../../globals.slint";
 
+// Reusable action buttons component - can be used by other reward cards
+export component ActionButtons inherits Rectangle {
+    in property <bool> show-archive: false;
+    in property <bool> is-archived: false;
+    callback edit-clicked();
+    callback delete-clicked();
+    callback archive-clicked();
+
+    width: show-archive ? 120px : 60px;
+    height: 28px;
+
+    HorizontalLayout {
+        spacing: 8px;
+        alignment: end;
+
+        // Archive button (only for completed goals)
+        if show-archive: Rectangle {
+            width: 28px;
+            height: 24px;
+            border-radius: 6px;
+            background: archive-touch.has-hover ? Theme.success : Theme.surface;
+            border-width: 1px;
+            border-color: Theme.success;
+
+            Image {
+                source: @image-url("../../assets/icons/save.svg");
+                width: 14px;
+                height: 14px;
+                colorize: archive-touch.has-hover ? Theme.surface : Theme.success;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+            }
+
+            archive-touch := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.archive-clicked();
+                }
+            }
+        }
+
+        // Edit button
+        Rectangle {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            background: edit-touch.has-hover ? Theme.surface-hover : Theme.surface;
+            border-width: 1px;
+            border-color: Theme.border;
+
+            Image {
+                source: @image-url("../../assets/icons/pencil.svg");
+                width: 14px;
+                height: 14px;
+                colorize: edit-touch.has-hover ? Theme.text-primary : Theme.text-muted;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+            }
+
+            edit-touch := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.edit-clicked();
+                }
+            }
+        }
+
+        // Delete button
+        Rectangle {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            background: delete-touch.has-hover ? Theme.delete-bg-hover : Theme.surface;
+            border-width: 1px;
+            border-color: delete-touch.has-hover ? Theme.delete-border : Theme.border;
+
+            Image {
+                source: @image-url("../../assets/icons/trash.svg");
+                width: 14px;
+                height: 14px;
+                colorize: delete-touch.has-hover ? Theme.text-primary : Theme.text-muted;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+            }
+
+            delete-touch := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.delete-clicked();
+                }
+            }
+        }
+    }
+}
+
 component CheckpointRow inherits Rectangle {
     in property <CheckpointData> checkpoint;
+    in property <bool> disabled: false;
     callback toggle(string);
 
     height: 28px;
@@ -22,7 +118,8 @@ component CheckpointRow inherits Rectangle {
             border-radius: 4px;
             background: checkpoint.completed ? Theme.success : transparent;
             border-width: checkpoint.completed ? 0px : 1px;
-            border-color: Theme.border;
+            border-color: disabled ? Theme.border-subtle : Theme.border;
+            opacity: disabled ? 0.7 : 1.0;
             y: (parent.height - self.height) / 2;
 
             if checkpoint.completed: Image {
@@ -35,7 +132,8 @@ component CheckpointRow inherits Rectangle {
             }
 
             TouchArea {
-                mouse-cursor: pointer;
+                enabled: !disabled;
+                mouse-cursor: disabled ? default : pointer;
                 clicked => {
                     root.toggle(checkpoint.id);
                 }
@@ -49,7 +147,6 @@ component CheckpointRow inherits Rectangle {
             font-size: 11px;
             font-weight: 400;
             vertical-alignment: center;
-            // Strikethrough effect for completed
             opacity: checkpoint.completed ? 0.7 : 1.0;
         }
     }
@@ -59,11 +156,11 @@ export component GoalCard inherits Rectangle {
     in property <GoalData> goal;
     callback edit(string);
     callback delete(string);
-    callback archive(string);  // Archive completed goal (moves to history)
-    callback toggle-checkpoint(string, string);  // goal-id, checkpoint-id
+    callback archive(string);
+    callback toggle-checkpoint(string, string);
 
     // Dynamic height based on checkpoints
-    height: 120px + (goal.checkpoints.length * 28px);
+    height: 140px + (goal.checkpoints.length * 28px);
     background: Theme.surface;
     border-radius: 12px;
     border-width: 1px;
@@ -85,102 +182,94 @@ export component GoalCard inherits Rectangle {
         spacing: 12px;
 
         // Header row
-        header-area := Rectangle {
+        HorizontalLayout {
+            spacing: 10px;
+            alignment: space-between;
             height: 40px;
-            background: transparent;
 
             HorizontalLayout {
                 spacing: 10px;
-                alignment: space-between;
 
-                HorizontalLayout {
-                    spacing: 10px;
+                // Goal icon
+                Rectangle {
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 8px;
+                    background: goal.is-completed ? Theme.success : Theme.accent.transparentize(0.85);
 
-                    // Goal icon
-                    Rectangle {
-                        width: 32px;
-                        height: 32px;
-                        border-radius: 8px;
-                        background: goal.is-completed ? Theme.success : Theme.accent;
-                        opacity: goal.is-completed ? 1.0 : 0.15;
-
-                        Image {
-                            source: goal.is-completed ? @image-url("../../assets/icons/trophy.svg") : @image-url("../../assets/icons/target.svg");
-                            width: 16px;
-                            height: 16px;
-                            colorize: goal.is-completed ? Theme.surface : Theme.accent;
-                            x: (parent.width - self.width) / 2;
-                            y: (parent.height - self.height) / 2;
-                        }
-                    }
-
-                    VerticalLayout {
-                        spacing: 2px;
-                        alignment: center;
-
-                        Text {
-                            text: goal.name;
-                            color: Theme.text-primary;
-                            font-size: 13px;
-                            font-weight: 600;
-                        }
-
-                        if goal.deadline != "": HorizontalLayout {
-                            spacing: 4px;
-
-                            Image {
-                                source: @image-url("../../assets/icons/calendar.svg");
-                                width: 10px;
-                                height: 10px;
-                                colorize: Theme.text-muted;
-                                y: (parent.height - self.height) / 2;
-                            }
-
-                            Text {
-                                text: goal.deadline;
-                                color: Theme.text-muted;
-                                font-size: 10px;
-                                vertical-alignment: center;
-                            }
-                        }
+                    Image {
+                        source: goal.is-completed ? @image-url("../../assets/icons/trophy.svg") : @image-url("../../assets/icons/target.svg");
+                        width: 16px;
+                        height: 16px;
+                        colorize: goal.is-completed ? Theme.surface : Theme.accent;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
                     }
                 }
 
-                // Progress badge
-            Rectangle {
-                    width: progress-text.width + 16px;
-                    height: 24px;
-                    border-radius: 12px;
-                    background: goal.is-completed ? Theme.success : Theme.surface-hover;
+                VerticalLayout {
+                    spacing: 2px;
+                    alignment: center;
 
-                    progress-text := Text {
-                        text: goal.is-completed ? "COMPLETED" : goal.completed-count + "/" + goal.total-count;
-                        color: goal.is-completed ? Theme.surface : Theme.text-secondary;
-                        font-size: 10px;
+                    Text {
+                        text: goal.name;
+                        color: Theme.text-primary;
+                        font-size: 13px;
                         font-weight: 600;
-                        letter-spacing: 0.5px;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
+                    }
+
+                    if goal.deadline != "": HorizontalLayout {
+                        spacing: 4px;
+
+                        Image {
+                            source: @image-url("../../assets/icons/calendar.svg");
+                            width: 10px;
+                            height: 10px;
+                            colorize: Theme.text-muted;
+                            y: (parent.height - self.height) / 2;
+                        }
+
+                        Text {
+                            text: goal.deadline;
+                            color: Theme.text-muted;
+                            font-size: 10px;
+                            vertical-alignment: center;
+                        }
                     }
                 }
             }
 
-            // TouchArea only for header (hover detection)
-            header-touch := TouchArea {
-                mouse-cursor: default;
+            // Progress badge
+            Rectangle {
+                width: progress-text.width + 16px;
+                height: 24px;
+                border-radius: 12px;
+                background: goal.is-completed ? Theme.success : Theme.surface-hover;
+
+                progress-text := Text {
+                    text: goal.is-completed ? "COMPLETED" : goal.completed-count + "/" + goal.total-count;
+                    color: goal.is-completed ? Theme.surface : Theme.text-secondary;
+                    font-size: 10px;
+                    font-weight: 600;
+                    letter-spacing: 0.5px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
             }
         }
 
-        // Progress bar
+        // Progress bar - left to right like streak rewards
         Rectangle {
-            height: 6px;
-            border-radius: 3px;
+            height: 8px;
+            border-radius: 4px;
             background: Theme.surface-hover;
 
+            // Progress fill - starts from left edge
             Rectangle {
+                x: 0;
                 width: parent.width * (goal.progress-percent / 100.0);
                 height: parent.height;
-                border-radius: 3px;
+                border-radius: 4px;
                 background: goal.is-completed ? Theme.success : @linear-gradient(90deg, Theme.accent 0%, Theme.accent-indigo 100%);
 
                 animate width {
@@ -196,6 +285,7 @@ export component GoalCard inherits Rectangle {
 
             for checkpoint in goal.checkpoints: CheckpointRow {
                 checkpoint: checkpoint;
+                disabled: goal.is-completed;
                 toggle(id) => {
                     root.toggle-checkpoint(goal.id, id);
                 }
@@ -225,104 +315,22 @@ export component GoalCard inherits Rectangle {
         }
     }
 
-    // Hover actions for incomplete goals
-    if header-touch.has-hover && !goal.is-completed: Rectangle {
-        x: parent.width - 72px;
-        y: 12px;
-        width: 60px;
-        height: 28px;
+    // Action buttons - always visible at bottom right, same as streak_reward_card
+    ActionButtons {
+        x: parent.width - self.width - 16px;
+        y: parent.height - self.height - 12px;
+        show-archive: goal.is-completed;
 
-        HorizontalLayout {
-            spacing: 8px;
-            alignment: end;
-
-            Rectangle {
-                width: 24px;
-                height: 24px;
-                border-radius: 6px;
-                background: edit-touch.has-hover ? Theme.surface-hover : transparent;
-
-                Image {
-                    source: @image-url("../../assets/icons/pencil.svg");
-                    width: 14px;
-                    height: 14px;
-                    colorize: Theme.text-muted;
-                    x: (parent.width - self.width) / 2;
-                    y: (parent.height - self.height) / 2;
-                }
-
-                edit-touch := TouchArea {
-                    mouse-cursor: pointer;
-                    clicked => {
-                        root.edit(goal.id);
-                    }
-                }
-            }
-
-            Rectangle {
-                width: 24px;
-                height: 24px;
-                border-radius: 6px;
-                background: delete-touch.has-hover ? Theme.delete-bg-hover : transparent;
-
-                Image {
-                    source: @image-url("../../assets/icons/trash.svg");
-                    width: 14px;
-                    height: 14px;
-                    colorize: delete-touch.has-hover ? Theme.text-primary : Theme.text-muted;
-                    x: (parent.width - self.width) / 2;
-                    y: (parent.height - self.height) / 2;
-                }
-
-                delete-touch := TouchArea {
-                    mouse-cursor: pointer;
-                    clicked => {
-                        root.delete(goal.id);
-                    }
-                }
-            }
-        }
-    }
-
-    // Archive button for completed goals - moves to history
-    if goal.is-completed: Rectangle {
-        x: parent.width - 100px;
-        y: 12px;
-        width: 88px;
-        height: 28px;
-        border-radius: 6px;
-        background: archive-touch.has-hover ? Theme.success : Theme.surface-hover;
-        border-width: 1px;
-        border-color: Theme.success;
-
-        HorizontalLayout {
-            spacing: 6px;
-            alignment: center;
-            padding-left: 8px;
-            padding-right: 8px;
-
-            Image {
-                source: @image-url("../../assets/icons/check.svg");
-                width: 12px;
-                height: 12px;
-                colorize: archive-touch.has-hover ? Theme.surface : Theme.success;
-                y: (parent.height - self.height) / 2;
-            }
-
-            Text {
-                text: "Archive";
-                color: archive-touch.has-hover ? Theme.surface : Theme.success;
-                font-size: 11px;
-                font-weight: 600;
-                vertical-alignment: center;
-            }
+        edit-clicked => {
+            root.edit(goal.id);
         }
 
-        archive-touch := TouchArea {
-            mouse-cursor: pointer;
-            clicked => {
-                root.archive(goal.id);
-            }
+        delete-clicked => {
+            root.delete(goal.id);
+        }
+
+        archive-clicked => {
+            root.archive(goal.id);
         }
     }
 }
