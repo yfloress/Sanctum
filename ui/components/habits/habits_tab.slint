@@ -330,7 +330,7 @@ export component HabitsTab inherits Rectangle {
                     spacing: 16px;
 
                     Text {
-                        text: "SELECTED HABIT";
+                        text: "SELECTED HABIT · Click a habit above to view stats";
                         color: Theme.text-muted;
                         font-size: 9px;
                         font-weight: 600;
@@ -363,7 +363,7 @@ export component HabitsTab inherits Rectangle {
 
                         SummaryItem {
                             horizontal-stretch: 1;
-                            icon: @image-url("../../assets/icons/trending-up.svg");
+                            icon: @image-url("../../assets/icons/flame.svg");
                             label: "CURRENT STREAK";
                             value: HabitAdapter.summary-current-streak + " days";
                         }
