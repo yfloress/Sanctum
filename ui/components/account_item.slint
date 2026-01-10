@@ -2,6 +2,7 @@
 // Premium Fintech UI - Single account card for list view
 
 import { AccountData } from "../globals.slint";
+import { Translations } from "../translations.slint";
 import { Theme } from "../theme.slint";
 
 component AccountTypeIcon inherits Rectangle {
@@ -11,21 +12,9 @@ component AccountTypeIcon inherits Rectangle {
     width: Theme.icon-xl;
     height: Theme.icon-xl;
     border-radius: Theme.radius-xl;
-    background: @linear-gradient(135deg,
-        account-type == "Bank" ? Theme.account-bank :
-        account-type == "Cash" ? Theme.account-cash :
-        account-type == "Savings" ? Theme.account-savings :
-        account-type == "Credit Card" ? Theme.account-credit : Theme.account-other,
-        account-type == "Bank" ? Theme.account-bank-light :
-        account-type == "Cash" ? Theme.account-cash-light :
-        account-type == "Savings" ? Theme.account-savings-light :
-        account-type == "Credit Card" ? Theme.account-credit-light : Theme.account-other-light
-    );
+    background: @linear-gradient(135deg, account-type == "Bank" ? Theme.account-bank : account-type == "Cash" ? Theme.account-cash : account-type == "Savings" ? Theme.account-savings : account-type == "Credit Card" ? Theme.account-credit : Theme.account-other, account-type == "Bank" ? Theme.account-bank-light : account-type == "Cash" ? Theme.account-cash-light : account-type == "Savings" ? Theme.account-savings-light : account-type == "Credit Card" ? Theme.account-credit-light : Theme.account-other-light);
     border-width: 1px;
-    border-color: account-type == "Bank" ? Theme.account-bank-light :
-                  account-type == "Cash" ? Theme.account-cash-light :
-                  account-type == "Savings" ? Theme.account-savings-light :
-                  account-type == "Credit Card" ? Theme.account-credit-light : Theme.account-other-light;
+    border-color: account-type == "Bank" ? Theme.account-bank-light : account-type == "Cash" ? Theme.account-cash-light : account-type == "Savings" ? Theme.account-savings-light : account-type == "Credit Card" ? Theme.account-credit-light : Theme.account-other-light;
 
     if root.icon.width > 0: Image {
         source: root.icon;
@@ -36,11 +25,7 @@ component AccountTypeIcon inherits Rectangle {
     }
 
     if root.icon.width == 0: Image {
-        source: account-type == "Bank" ? @image-url("../assets/icons/building-2.svg") :
-                account-type == "Cash" ? @image-url("../assets/icons/banknote.svg") :
-                account-type == "Savings" ? @image-url("../assets/icons/piggy-bank.svg") :
-                account-type == "Credit Card" ? @image-url("../assets/icons/credit-card.svg") :
-                @image-url("../assets/icons/wallet.svg");
+        source: account-type == "Bank" ? @image-url("../assets/icons/building-2.svg") : account-type == "Cash" ? @image-url("../assets/icons/banknote.svg") : account-type == "Savings" ? @image-url("../assets/icons/piggy-bank.svg") : account-type == "Credit Card" ? @image-url("../assets/icons/credit-card.svg") : @image-url("../assets/icons/wallet.svg");
         width: 22px;
         height: 22px;
         colorize: Theme.text-primary;
@@ -61,8 +46,14 @@ export component AccountItem inherits Rectangle {
     border-width: 1px;
     border-color: touch.has-hover ? Theme.border-light : Theme.border;
 
-    animate background { duration: 150ms; easing: ease-out; }
-    animate border-color { duration: 150ms; easing: ease-out; }
+    animate background {
+        duration: 150ms;
+        easing: ease-out;
+    }
+    animate border-color {
+        duration: 150ms;
+        easing: ease-out;
+    }
 
     // Content layout
     HorizontalLayout {
@@ -152,7 +143,7 @@ export component AccountItem inherits Rectangle {
             spacing: 4px;
 
             Text {
-                text: "Balance";
+                text: Translations.account-balance;
                 color: Theme.text-muted;
                 font-size: 10px;
                 font-weight: 400;

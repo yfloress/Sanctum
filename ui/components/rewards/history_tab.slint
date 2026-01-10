@@ -2,6 +2,7 @@
 // Shows achievements/trophies gallery of completed rewards and goals
 
 import { Theme } from "../../theme.slint";
+import { Translations } from "../../translations.slint";
 import { RewardsAdapter } from "../../globals.slint";
 import { AchievementCard } from "achievement_card.slint";
 import { SectionHeader } from "../sections/section_header.slint";
@@ -69,7 +70,7 @@ export component HistoryTab inherits Rectangle {
                             }
 
                             Text {
-                                text: "TOTAL ACHIEVEMENTS";
+                                text: Translations.history-total-achievements;
                                 color: Theme.text-muted;
                                 font-size: 9px;
                                 font-weight: 600;

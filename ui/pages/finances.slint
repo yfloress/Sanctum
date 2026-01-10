@@ -7,8 +7,9 @@ import {
     AccountAdapter,
     AccountData,
     AppState,
-    NotificationAdapter
+    NotificationAdapter,
 } from "../globals.slint";
+import { Translations } from "../translations.slint";
 import { Theme } from "../theme.slint";
 import { TransactionItem } from "../components/transaction_item.slint";
 import { AccountItem } from "../components/account_item.slint";
@@ -44,7 +45,7 @@ component AccountFilterSelect inherits Rectangle {
         alignment: start;
 
         Text {
-            text: "ACCOUNT";
+            text: Translations.finances-account;
             color: Theme.text-muted;
             font-size: 10px;
             font-weight: 500;
@@ -82,7 +83,9 @@ component AccountFilterSelect inherits Rectangle {
 
             TouchArea {
                 mouse-cursor: pointer;
-                clicked => { popup.show(); }
+                clicked => {
+                    popup.show();
+                }
             }
         }
     }
@@ -118,7 +121,7 @@ component AccountFilterSelect inherits Rectangle {
                             padding-right: 12px;
 
                             Text {
-                                text: "All accounts";
+                                text: Translations.finances-all-accounts;
                                 color: selected-index == 0 ? Theme.text-primary : Theme.text-secondary;
                                 font-size: 12px;
                                 font-weight: selected-index == 0 ? 500 : 400;
@@ -137,7 +140,9 @@ component AccountFilterSelect inherits Rectangle {
 
                         option-touch-all := TouchArea {
                             mouse-cursor: pointer;
-                            clicked => { root.selected-index = 0; }
+                            clicked => {
+                                root.selected-index = 0;
+                            }
                         }
                     }
 
@@ -170,7 +175,9 @@ component AccountFilterSelect inherits Rectangle {
 
                         option-touch := TouchArea {
                             mouse-cursor: pointer;
-                            clicked => { root.selected-index = index + 1; }
+                            clicked => {
+                                root.selected-index = index + 1;
+                            }
                         }
                     }
                 }
@@ -210,7 +217,7 @@ component CategoryFilterSelect inherits Rectangle {
         alignment: start;
 
         Text {
-            text: "CATEGORY";
+            text: Translations.label-category;
             color: Theme.text-muted;
             font-size: 10px;
             font-weight: 500;
@@ -248,7 +255,9 @@ component CategoryFilterSelect inherits Rectangle {
 
             TouchArea {
                 mouse-cursor: pointer;
-                clicked => { root.popup-open = !root.popup-open; }
+                clicked => {
+                    root.popup-open = !root.popup-open;
+                }
             }
         }
     }
@@ -284,7 +293,7 @@ component CategoryFilterSelect inherits Rectangle {
                         padding-right: 12px;
 
                         Text {
-                            text: "All categories";
+                            text: Translations.finances-all-categories;
                             color: selected-index == 0 ? Theme.text-primary : Theme.text-secondary;
                             font-size: 12px;
                             font-weight: selected-index == 0 ? 500 : 400;
@@ -315,7 +324,7 @@ component CategoryFilterSelect inherits Rectangle {
                     background: transparent;
 
                     Text {
-                        text: "EXPENSE";
+                        text: Translations.finances-expense;
                         color: Theme.text-muted;
                         font-size: 9px;
                         font-weight: 600;
@@ -366,7 +375,7 @@ component CategoryFilterSelect inherits Rectangle {
                     background: transparent;
 
                     Text {
-                        text: "INCOME";
+                        text: Translations.finances-income;
                         color: Theme.text-muted;
                         font-size: 9px;
                         font-weight: 600;
@@ -422,14 +431,10 @@ component CategoryFilterSelect inherits Rectangle {
                         padding-right: 12px;
 
                         Text {
-                            text: "Transfers";
-                            color: selected-index == 1 + CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length
-                                ? Theme.text-primary
-                                : Theme.text-secondary;
+                            text: Translations.finances-transfer;
+                            color: selected-index == 1 + CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length ? Theme.text-primary : Theme.text-secondary;
                             font-size: 12px;
-                            font-weight: selected-index == 1 + CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length
-                                ? 500
-                                : 400;
+                            font-weight: selected-index == 1 + CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length ? 500 : 400;
                             vertical-alignment: center;
                             horizontal-stretch: 1;
                         }
@@ -548,9 +553,15 @@ export component FinancesPage inherits Rectangle {
         return filter-query != "" || filter-account-index > 0 || filter-category-index > 0;
     }
 
-    changed filter-query => { apply-filters(); }
-    changed filter-account-index => { apply-filters(); }
-    changed filter-category-index => { apply-filters(); }
+    changed filter-query => {
+        apply-filters();
+    }
+    changed filter-account-index => {
+        apply-filters();
+    }
+    changed filter-category-index => {
+        apply-filters();
+    }
 
     VerticalLayout {
         spacing: 0px;
@@ -586,14 +597,13 @@ export component FinancesPage inherits Rectangle {
                         }
 
                         Text {
-                            text: "FINANCES";
+                            text: Translations.finances-title;
                             color: Theme.text-muted;
                             font-size: 11px;
                             font-weight: 600;
                             letter-spacing: 3px;
                             vertical-alignment: center;
                         }
-
                     }
 
                     VerticalLayout {
@@ -610,7 +620,7 @@ export component FinancesPage inherits Rectangle {
 
                         // Subtitle
                         Text {
-                            text: "Total Balance";
+                            text: Translations.dashboard-total-balance;
                             color: Theme.text-muted;
                             font-size: 12px;
                             font-weight: 400;
@@ -634,21 +644,27 @@ export component FinancesPage inherits Rectangle {
                             spacing: 4px;
 
                             TabButton {
-                                text: "ACTIVITY";
+                                text: Translations.finances-activity;
                                 active: root.active-tab == "activity";
-                                clicked => { root.active-tab = "activity"; }
+                                clicked => {
+                                    root.active-tab = "activity";
+                                }
                             }
 
                             TabButton {
-                                text: "ACCOUNTS";
+                                text: Translations.finances-accounts;
                                 active: root.active-tab == "accounts";
-                                clicked => { root.active-tab = "accounts"; }
+                                clicked => {
+                                    root.active-tab = "accounts";
+                                }
                             }
 
                             TabButton {
-                                text: "SETTINGS";
+                                text: Translations.nav-settings;
                                 active: root.active-tab == "settings";
-                                clicked => { root.active-tab = "settings"; }
+                                clicked => {
+                                    root.active-tab = "settings";
+                                }
                             }
                         }
                     }
@@ -670,7 +686,9 @@ export component FinancesPage inherits Rectangle {
             TouchArea {
                 width: parent.width;
                 height: parent.height;
-                clicked => { defocus-scope.focus(); }
+                clicked => {
+                    defocus-scope.focus();
+                }
             }
 
             // TAB: ACTIVITY
@@ -743,15 +761,19 @@ export component FinancesPage inherits Rectangle {
                             Rectangle {
                                 height: 40px;
                                 border-radius: 8px;
-                                background: has-active-filters()
-                                    ? (touch.has-hover ? Theme.surface-hover : Theme.surface)
-                                    : transparent;
+                                background: has-active-filters() ? (touch.has-hover ? Theme.surface-hover : Theme.surface) : transparent;
                                 border-width: has-active-filters() ? 1px : 0px;
                                 border-color: has-active-filters() ? Theme.border-light : transparent;
                                 opacity: has-active-filters() ? 1.0 : 0.0;
 
-                                animate background { duration: 200ms; easing: ease-out; }
-                                animate opacity { duration: 150ms; easing: ease-out; }
+                                animate background {
+                                    duration: 200ms;
+                                    easing: ease-out;
+                                }
+                                animate opacity {
+                                    duration: 150ms;
+                                    easing: ease-out;
+                                }
 
                                 Image {
                                     source: @image-url("../assets/icons/x.svg");
@@ -785,8 +807,7 @@ export component FinancesPage inherits Rectangle {
                     border-color: Theme.border;
 
                     Flickable {
-                        viewport-height: TransactionAdapter.transactions.length * 64px
-                            + (TransactionAdapter.has-more ? 56px : 0px);
+                        viewport-height: TransactionAdapter.transactions.length * 64px + (TransactionAdapter.has-more ? 56px : 0px);
 
                         VerticalLayout {
                             spacing: 0px;
@@ -827,7 +848,7 @@ export component FinancesPage inherits Rectangle {
                                     alignment: center;
 
                                     ActionButton {
-                                        text: "LOAD MORE";
+                                        text: Translations.finances-load-more;
                                         primary: false;
                                         clicked => {
                                             TransactionAdapter.display-limit += 100;
@@ -874,7 +895,7 @@ export component FinancesPage inherits Rectangle {
                             spacing: 12px;
 
                             ActionButton {
-                                text: "TRANSFER";
+                                text: Translations.action-transfer;
                                 primary: false;
 
                                 clicked => {
@@ -955,14 +976,14 @@ export component FinancesPage inherits Rectangle {
                             alignment: center;
 
                             Text {
-                                text: "Transaction Categories";
+                                text: Translations.finances-transaction-categories;
                                 color: Theme.text-primary;
                                 font-size: 14px;
                                 font-weight: 600;
                             }
 
                             Text {
-                                text: "Manage income and expense categories";
+                                text: Translations.finances-manage-categories;
                                 color: Theme.text-muted;
                                 font-size: 12px;
                             }
@@ -972,7 +993,7 @@ export component FinancesPage inherits Rectangle {
                             alignment: center;
 
                             ActionButton {
-                                text: "CONFIGURE";
+                                text: Translations.finances-configure;
                                 primary: false;
                                 clicked => {
                                     CategoryAdapter.load-categories();
@@ -988,7 +1009,10 @@ export component FinancesPage inherits Rectangle {
 
     // ==================== ACCOUNT DETAIL OVERLAY ====================
     if AccountAdapter.show-account-detail: Rectangle {
-        x: 0; y: 0; width: 100%; height: 100%;
+        x: 0;
+        y: 0;
+        width: 100%;
+        height: 100%;
 
         Rectangle {
             background: Theme.overlay-bg-strong;
@@ -1005,7 +1029,9 @@ export component FinancesPage inherits Rectangle {
                 height: parent.height;
                 TouchArea {
                     mouse-cursor: pointer;
-                    clicked => { AccountAdapter.show-account-detail = false; }
+                    clicked => {
+                        AccountAdapter.show-account-detail = false;
+                    }
                 }
             }
 
@@ -1023,7 +1049,9 @@ export component FinancesPage inherits Rectangle {
         background: Theme.overlay;
 
         TouchArea {
-            clicked => { root.show-delete-confirm = false; }
+            clicked => {
+                root.show-delete-confirm = false;
+            }
         }
 
         Rectangle {
@@ -1039,7 +1067,7 @@ export component FinancesPage inherits Rectangle {
             drop-shadow-color: Theme.shadow-modal;
 
             // Block clicks on modal background from closing
-            TouchArea {}
+            TouchArea { }
 
             VerticalLayout {
                 padding: 32px;
@@ -1050,14 +1078,14 @@ export component FinancesPage inherits Rectangle {
                     spacing: 8px;
 
                     Text {
-                        text: "Delete Transaction";
+                        text: Translations.finances-delete-transaction;
                         color: Theme.text-primary;
                         font-size: 18px;
                         font-weight: 600;
                     }
 
                     Text {
-                        text: "Are you sure you want to delete \"" + root.delete-transaction-desc + "\"?";
+                        text: Translations.finances-delete-confirm + " \"" + root.delete-transaction-desc + "\"?";
                         color: Theme.text-muted;
                         font-size: 13px;
                         wrap: word-wrap;
@@ -1078,7 +1106,7 @@ export component FinancesPage inherits Rectangle {
                         border-color: Theme.border;
 
                         Text {
-                            text: "CANCEL";
+                            text: Translations.action-cancel;
                             color: Theme.text-secondary;
                             font-size: 11px;
                             font-weight: 600;
@@ -1089,7 +1117,9 @@ export component FinancesPage inherits Rectangle {
 
                         cancel-touch := TouchArea {
                             mouse-cursor: pointer;
-                            clicked => { root.show-delete-confirm = false; }
+                            clicked => {
+                                root.show-delete-confirm = false;
+                            }
                         }
                     }
 
@@ -1100,7 +1130,7 @@ export component FinancesPage inherits Rectangle {
                         background: delete-touch.has-hover ? Theme.danger.darker(0.2) : Theme.danger;
 
                         Text {
-                            text: "DELETE";
+                            text: Translations.action-delete;
                             color: Theme.text-primary;
                             font-size: 11px;
                             font-weight: 600;
@@ -1138,7 +1168,10 @@ export component FinancesPage inherits Rectangle {
         z: 999;
         opacity: 1.0;
 
-        animate opacity { duration: 200ms; easing: ease-out; }
+        animate opacity {
+            duration: 200ms;
+            easing: ease-out;
+        }
 
         VerticalLayout {
             alignment: center;
@@ -1169,7 +1202,7 @@ export component FinancesPage inherits Rectangle {
             }
 
             Text {
-                text: "Loading finances...";
+                text: Translations.label-loading;
                 color: Theme.text-secondary;
                 font-size: 14px;
                 font-weight: 500;

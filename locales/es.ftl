@@ -298,3 +298,104 @@ crypto-no-wallet-data = Sin datos de billetera disponibles
 crypto-no-transactions-found = Sin transacciones encontradas
 crypto-portfolio-distribution = DISTRIBUCIÓN DEL PORTAFOLIO
 confirm-delete-generic = Esto eliminará permanentemente
+
+# ==================== Dashboard Extended ====================
+dashboard-total-net-worth = PATRIMONIO NETO TOTAL
+dashboard-exchange-rate-warning = Tipo de cambio no disponible. Saldos en CLP mostrados a tasa 1:1.
+dashboard-loading = Cargando panel...
+dashboard-retry = REINTENTAR
+dashboard-usd-clp = USD/CLP
+
+# ==================== Finances Extended ====================
+finances-activity = ACTIVIDAD
+finances-account = CUENTA
+finances-all-accounts = Todas las cuentas
+finances-all-categories = Todas las categorías
+finances-load-more = CARGAR MÁS
+finances-configure = CONFIGURAR
+finances-transaction-categories = Categorías de Transacciones
+finances-manage-categories = Administrar categorías de ingresos y gastos
+finances-delete-transaction = Eliminar Transacción
+finances-delete-confirm = ¿Estás seguro de que quieres eliminar
+
+# ==================== Crypto Extended ====================
+crypto-portfolio-title = PORTAFOLIO CRYPTO
+crypto-last-updated = Última actualización
+crypto-coin-limit = Límite de monedas alcanzado (50). Algunos activos no se actualizarán.
+crypto-skipped = Omitidos
+crypto-your-holdings = TUS TENENCIAS
+crypto-no-assets-yet = Sin activos registrados aún
+crypto-create-wallet-first = Crea una billetera primero, luego agrega tus criptomonedas
+crypto-wallet = BILLETERA
+crypto-value = VALOR
+crypto-no-wallets = Sin billeteras creadas
+crypto-add-first-wallet = Agrega tu primera billetera para empezar a rastrear tus criptos
+crypto-delete-wallet = ¿Eliminar Billetera?
+crypto-delete-wallet-confirm = Esto eliminará permanentemente y todo su historial de transacciones.
+crypto-loading-portfolio = Cargando portafolio...
+crypto-syncing-prices = Sincronizando precios...
+crypto-syncing-wait = Esto puede tomar unos segundos
+
+# ==================== Habits Extended ====================
+habits-rewards = RECOMPENSAS
+habits-history = HISTORIAL
+
+# ==================== Settings Extended ====================
+settings-configure-experience = Configura tu experiencia en Sanctum
+settings-proxy-tip = Tip: socks5h:// enruta el DNS a través del proxy para mayor privacidad.
+settings-data-encrypted = Tus datos están cifrados localmente
+settings-military-grade = Toda la información sensible está protegida con cifrado de grado militar
+settings-reset-defaults = RESTABLECER VALORES
+
+# ==================== Common Actions Extended ====================
+action-view-all = VER TODO →
+action-retry = REINTENTAR
+action-load-more = CARGAR MÁS
+action-configure = CONFIGURAR
+action-transfer = TRANSFERIR
+
+# ==================== Components ====================
+# Account Item
+account-balance = Saldo
+
+# Crypto Widgets
+crypto-holdings-label = Tenencias
+crypto-price-label = Precio
+
+# Crypto Charts
+crypto-no-priced-assets = Sin activos con precio aún
+crypto-sync-to-see = Sincroniza precios para ver la distribución
+crypto-portfolio-trend = TENDENCIA DEL PORTAFOLIO (180 DÍAS)
+crypto-value-label = VALOR
+crypto-cost-label = COSTO
+crypto-no-trend = Sin datos de tendencia aún
+crypto-sync-daily = Sincroniza precios diariamente para construir historial
+
+# Habit Heatmap
+heatmap-less = Menos
+heatmap-more = Más
+
+# Habits Tab
+habits-selected-hint = HÁBITO SELECCIONADO · Haz clic en un hábito arriba para ver estadísticas
+
+# History Tab
+history-total-achievements = LOGROS TOTALES
+
+# Streak Rewards
+rewards-ready-claim = Listo para reclamar
+rewards-next = Siguiente
+rewards-all-unlocked = ¡Todos los hitos desbloqueados!
+
+# Wallet Detail
+wallet-no-holdings = Sin tenencias en esta billetera
+
+# Icon Selector
+icon-choose = ELEGIR ÍCONO
+icon-exchanges = Exchanges
+icon-wallet-icons = Íconos de Billetera
+
+# Forms
+form-search-coin = Buscar moneda...
+form-date-format = AAAA-MM-DD
+form-all = TODO
+form-habit = HÁBITO

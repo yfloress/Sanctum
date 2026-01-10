@@ -4,15 +4,30 @@
 import {
     CryptoAdapter,
     AppState,
-    NotificationAdapter
+    NotificationAdapter,
 } from "../globals.slint";
+import { Translations } from "../translations.slint";
 import { Theme } from "../theme.slint";
-import { CryptoRow, WalletRow, TickerItem, CryptoCard, GhostButton } from "../components/crypto_widgets.slint";
+import {
+    CryptoRow,
+    WalletRow,
+    TickerItem,
+    CryptoCard,
+    GhostButton,
+} from "../components/crypto_widgets.slint";
 import { AssetDetailPanel } from "../components/asset_detail.slint";
 import { WalletDetailPanel } from "../components/wallet_detail.slint";
-import { PortfolioDistributionChart, PortfolioTrendChart } from "../components/crypto_charts.slint";
+import {
+    PortfolioDistributionChart,
+    PortfolioTrendChart,
+} from "../components/crypto_charts.slint";
 import { TabButton } from "../components/buttons/tab_button.slint";
-import { TextButton, BorderButton, ActionButton, CustomVScrollbar } from "../widgets.slint";
+import {
+    TextButton,
+    BorderButton,
+    ActionButton,
+    CustomVScrollbar,
+} from "../widgets.slint";
 
 // ==================== Main Page ====================
 export component CryptoPage inherits Rectangle {
@@ -34,13 +49,8 @@ export component CryptoPage inherits Rectangle {
         // ==================== TICKER BAR ====================
         Rectangle {
             height: Theme.crypto-ticker-height;
-            background: @linear-gradient(
-                90deg,
-                Theme.crypto-ticker-gradient-start 0%,
-                Theme.crypto-ticker-gradient-mid 50%,
-                Theme.crypto-ticker-gradient-end 100%
-            );
-            
+            background: @linear-gradient(90deg, Theme.crypto-ticker-gradient-start 0%, Theme.crypto-ticker-gradient-mid 50%, Theme.crypto-ticker-gradient-end 100%);
+
             HorizontalLayout {
                 width: parent.width;
                 height: parent.height;
@@ -52,11 +62,11 @@ export component CryptoPage inherits Rectangle {
                     width: Theme.crypto-clp-badge-width;
                     background: Theme.surface;
                     border-radius: 0px;
-                    
+
                     HorizontalLayout {
                         alignment: center;
                         spacing: 10px;
-                        
+
                         Rectangle {
                             width: 6px;
                             height: 6px;
@@ -64,32 +74,33 @@ export component CryptoPage inherits Rectangle {
                             background: Theme.success;
                             y: (parent.height - self.height) / 2;
                         }
-                        
+
                         VerticalLayout {
                             alignment: center;
                             spacing: 2px;
-                            Text { 
-                                text: "USD/CLP"; 
-                                color: Theme.text-muted; 
-                                font-size: 9px; 
+                            Text {
+                                text: Translations.dashboard-usd-clp;
+                                color: Theme.text-muted;
+                                font-size: 9px;
                                 font-weight: 600;
                                 letter-spacing: 1px;
                             }
-                            Text { 
-                                text: CryptoAdapter.clp-rate; 
-                                color: Theme.text-primary; 
-                                font-size: 12px; 
+
+                            Text {
+                                text: CryptoAdapter.clp-rate;
+                                color: Theme.text-primary;
+                                font-size: 12px;
                                 font-weight: 600;
                             }
                         }
                     }
-                    
+
                     // Right separator
-                    Rectangle { 
-                        width: 1px; 
-                        height: 32px; 
-                        background: Theme.border-subtle; 
-                        x: parent.width - 1px; 
+                    Rectangle {
+                        width: 1px;
+                        height: 32px;
+                        background: Theme.border-subtle;
+                        x: parent.width - 1px;
                         y: (parent.height - self.height) / 2;
                     }
                 }
@@ -105,7 +116,7 @@ export component CryptoPage inherits Rectangle {
                         height: parent.height;
                         viewport-width: (CryptoAdapter.market-tickers.length * Theme.crypto-ticker-width) + Theme.spacing-xl;
                         interactive: true;
-                        
+
                         HorizontalLayout {
                             padding-left: 16px;
                             for ticker in CryptoAdapter.market-tickers: TickerItem {
@@ -127,12 +138,12 @@ export component CryptoPage inherits Rectangle {
                 x: parent.width - self.width;
                 y: 0;
                 background: Theme.surface;
-                
-                Rectangle { 
-                    width: 1px; 
-                    height: 32px; 
-                    background: Theme.border-subtle; 
-                    x: 0; 
+
+                Rectangle {
+                    width: 1px;
+                    height: 32px;
+                    background: Theme.border-subtle;
+                    x: 0;
                     y: (parent.height - self.height) / 2;
                 }
 
@@ -143,12 +154,12 @@ export component CryptoPage inherits Rectangle {
                     y: (parent.height - self.height) / 2;
                     border-radius: 8px;
                     background: settings-touch.has-hover ? Theme.surface-hover : transparent;
-                    
+
                     Text {
                         text: "⚙";
                         color: settings-touch.has-hover ? Theme.text-primary : Theme.text-muted;
                         font-size: 16px;
-                        vertical-alignment: center; 
+                        vertical-alignment: center;
                         horizontal-alignment: center;
                         animate color { duration: 150ms; }
                     }
@@ -156,10 +167,11 @@ export component CryptoPage inherits Rectangle {
 
                 settings-touch := TouchArea {
                     mouse-cursor: pointer;
-                    clicked => { AppState.show-configure-ticker = true; }
+                    clicked => {
+                        AppState.show-configure-ticker = true;
+                    }
                 }
             }
-            
         }
 
         // Gradient divider
@@ -172,19 +184,19 @@ export component CryptoPage inherits Rectangle {
         Rectangle {
             height: Theme.crypto-hero-height;
             background: @linear-gradient(180deg, Theme.crypto-hero-gradient-start 0%, Theme.background 100%);
-            
+
             HorizontalLayout {
                 padding-left: Theme.spacing-3xl;
                 padding-right: Theme.spacing-3xl;
                 padding-top: Theme.spacing-xl;
                 padding-bottom: Theme.spacing-lg;
                 alignment: space-between;
-                
+
                 // Left: Portfolio Value
                 VerticalLayout {
                     alignment: start;
                     spacing: 16px;
-                    
+
                     // Header
                     HorizontalLayout {
                         spacing: 12px;
@@ -198,19 +210,21 @@ export component CryptoPage inherits Rectangle {
                             y: (parent.height - self.height) / 2;
                         }
 
-                        Text { 
-                            text: "CRYPTO PORTFOLIO"; 
-                            color: Theme.text-muted; 
-                            font-size: 11px; 
-                            font-weight: 600; 
-                            letter-spacing: 3px; 
+                        Text {
+                            text: "CRYPTO PORTFOLIO";
+                            color: Theme.text-muted;
+                            font-size: 11px;
+                            font-weight: 600;
+                            letter-spacing: 3px;
                             vertical-alignment: center;
                         }
-                        
+
                         GhostButton {
                             text: CryptoAdapter.is-refreshing ? "SYNCING..." : "↻ SYNC";
                             enabled: !CryptoAdapter.is-refreshing;
-                            clicked => { CryptoAdapter.refresh-prices(); }
+                            clicked => {
+                                CryptoAdapter.refresh-prices();
+                            }
                         }
 
                         Rectangle {
@@ -256,17 +270,9 @@ export component CryptoPage inherits Rectangle {
                             height: 28px;
                             min-width: 90px;
                             border-radius: 6px;
-                            background: pnl_available
-                                ? (CryptoAdapter.total-pnl-positive ?
-                                    Theme.success.with-alpha(0.12) :
-                                    Theme.danger.with-alpha(0.12))
-                                : Theme.surface;
+                            background: pnl_available ? (CryptoAdapter.total-pnl-positive ? Theme.success.with-alpha(0.12) : Theme.danger.with-alpha(0.12)) : Theme.surface;
                             border-width: 1px;
-                            border-color: pnl_available
-                                ? (CryptoAdapter.total-pnl-positive ?
-                                    Theme.success.with-alpha(0.2) :
-                                    Theme.danger.with-alpha(0.2))
-                                : Theme.border;
+                            border-color: pnl_available ? (CryptoAdapter.total-pnl-positive ? Theme.success.with-alpha(0.2) : Theme.danger.with-alpha(0.2)) : Theme.border;
 
                             HorizontalLayout {
                                 padding-left: 12px;
@@ -276,17 +282,14 @@ export component CryptoPage inherits Rectangle {
 
                                 Text {
                                     text: pnl_available ? (CryptoAdapter.total-pnl-positive ? "▲" : "▼") : "•";
-                                    color: pnl_available
-                                        ? (CryptoAdapter.total-pnl-positive ? Theme.success : Theme.danger)
-                                        : Theme.text-muted;
+                                    color: pnl_available ? (CryptoAdapter.total-pnl-positive ? Theme.success : Theme.danger) : Theme.text-muted;
                                     font-size: 10px;
                                     vertical-alignment: center;
                                 }
+
                                 Text {
                                     text: CryptoAdapter.total-pnl;
-                                    color: pnl_available
-                                        ? (CryptoAdapter.total-pnl-positive ? Theme.success : Theme.danger)
-                                        : Theme.text-muted;
+                                    color: pnl_available ? (CryptoAdapter.total-pnl-positive ? Theme.success : Theme.danger) : Theme.text-muted;
                                     font-size: 12px;
                                     font-weight: 600;
                                     vertical-alignment: center;
@@ -294,14 +297,12 @@ export component CryptoPage inherits Rectangle {
                             }
                         }
                     }
-                    
+
                     // Subtitle Area
                     VerticalLayout {
                         spacing: 4px;
                         Text {
-                            text: CryptoAdapter.portfolio.length > 0 ? 
-                                CryptoAdapter.portfolio.length + " assets across " + CryptoAdapter.wallets.length + " wallets" :
-                                "Start by adding a wallet and your first asset";
+                            text: CryptoAdapter.portfolio.length > 0 ? CryptoAdapter.portfolio.length + " assets across " + CryptoAdapter.wallets.length + " wallets" : "Start by adding a wallet and your first asset";
                             color: Theme.text-subtle;
                             font-size: 12px;
                             font-weight: 400;
@@ -311,18 +312,24 @@ export component CryptoPage inherits Rectangle {
                             height: 20px;
                             background: Theme.danger.with-alpha(0.1);
                             border-radius: 4px;
-                            
+
                             HorizontalLayout {
                                 padding-left: 8px;
                                 padding-right: 8px;
                                 spacing: 6px;
-                                Text { text: "⚠"; color: Theme.danger; font-size: 10px; vertical-alignment: center; }
-                                Text { 
-                                    text: "Coin limit reached (50). Some assets may not update."; 
-                                    color: Theme.danger; 
-                                    font-size: 10px; 
+                                Text {
+                                    text: "⚠";
+                                    color: Theme.danger;
+                                    font-size: 10px;
+                                    vertical-alignment: center;
+                                }
+
+                                Text {
+                                    text: "Coin limit reached (50). Some assets may not update.";
+                                    color: Theme.danger;
+                                    font-size: 10px;
                                     font-weight: 600;
-                                    vertical-alignment: center; 
+                                    vertical-alignment: center;
                                 }
                             }
                         }
@@ -339,7 +346,7 @@ export component CryptoPage inherits Rectangle {
                 VerticalLayout {
                     alignment: center;
                     spacing: 20px;
-                    
+
                     // Tabs
                     Rectangle {
                         height: 44px;
@@ -356,21 +363,25 @@ export component CryptoPage inherits Rectangle {
                             TabButton {
                                 text: "ASSETS";
                                 active: root.active-tab == "portfolio";
-                                clicked => { root.active-tab = "portfolio"; }
+                                clicked => {
+                                    root.active-tab = "portfolio";
+                                }
                             }
 
                             TabButton {
                                 text: "WALLETS";
                                 active: root.active-tab == "wallets";
-                                clicked => { root.active-tab = "wallets"; }
+                                clicked => {
+                                    root.active-tab = "wallets";
+                                }
                             }
                         }
                     }
-                    
+
                     // Action Button
                     HorizontalLayout {
                         alignment: end;
-                        
+
                         ActionButton {
                             text: root.active-tab == "portfolio" ? "+ ADD TRANSACTION" : "+ NEW WALLET";
                             primary: true;
@@ -403,12 +414,8 @@ export component CryptoPage inherits Rectangle {
                 vertical-stretch: 1;
                 width: 100%;
                 height: 100%;
-                property <length> cards-height: CryptoAdapter.portfolio.length > 4
-                    ? Theme.crypto-card-grid-height
-                    : Theme.crypto-card-scroll-height;
-                property <length> content-height: CryptoAdapter.portfolio.length > 0
-                    ? cards-height + 820px
-                    : 520px;
+                property <length> cards-height: CryptoAdapter.portfolio.length > 4 ? Theme.crypto-card-grid-height : Theme.crypto-card-scroll-height;
+                property <length> content-height: CryptoAdapter.portfolio.length > 0 ? cards-height + 820px : 520px;
 
                 portfolio-content := VerticalLayout {
                     padding-left: Theme.spacing-3xl;
@@ -418,16 +425,18 @@ export component CryptoPage inherits Rectangle {
                     width: parent.width;
                     height: content-height;
 
-                    Rectangle { height: 12px; }
+                    Rectangle {
+                        height: 12px;
+                    }
 
                     // Empty State
                     if CryptoAdapter.portfolio.length == 0: Rectangle {
                         height: 360px;
-                        
+
                         VerticalLayout {
                             alignment: center;
                             spacing: 16px;
-                            
+
                             Rectangle {
                                 width: 80px;
                                 height: 80px;
@@ -436,7 +445,7 @@ export component CryptoPage inherits Rectangle {
                                 border-width: 1px;
                                 border-color: Theme.border-subtle;
                                 x: (parent.width - self.width) / 2;
-                                
+
                                 Image {
                                     source: @image-url("../assets/icons/trending-up.svg");
                                     width: 32px;
@@ -446,20 +455,20 @@ export component CryptoPage inherits Rectangle {
                                     y: (parent.height - self.height) / 2;
                                 }
                             }
-                            
-                            Text { 
-                                text: "No assets tracked yet"; 
-                                color: Theme.text-secondary; 
-                                font-size: 16px; 
+
+                            Text {
+                                text: "No assets tracked yet";
+                                color: Theme.text-secondary;
+                                font-size: 16px;
                                 font-weight: 400;
-                                horizontal-alignment: center; 
+                                horizontal-alignment: center;
                             }
-                            
-                            Text { 
-                                text: "Create a wallet first, then add your crypto holdings"; 
-                                color: Theme.text-muted; 
+
+                            Text {
+                                text: "Create a wallet first, then add your crypto holdings";
+                                color: Theme.text-muted;
                                 font-size: 13px;
-                                horizontal-alignment: center; 
+                                horizontal-alignment: center;
                             }
                         }
                     }
@@ -467,7 +476,7 @@ export component CryptoPage inherits Rectangle {
                     // Portfolio Cards
                     if CryptoAdapter.portfolio.length > 0: VerticalLayout {
                         spacing: 24px;
-                        
+
                         // Section title
                         HorizontalLayout {
                             spacing: 10px;
@@ -490,23 +499,21 @@ export component CryptoPage inherits Rectangle {
                                 vertical-alignment: center;
                             }
                         }
-                        
+
                         // Cards horizontal scroll
                         Flickable {
                             property <length> card-step: Theme.crypto-card-step;
                             property <length> row-step: Theme.crypto-card-row-step;
                             property <bool> two-rows: CryptoAdapter.portfolio.length > 4;
-                            property <int> columns: two-rows 
-                                ? ((CryptoAdapter.portfolio.length + 1) / 2) 
-                                : CryptoAdapter.portfolio.length;
+                            property <int> columns: two-rows ? ((CryptoAdapter.portfolio.length + 1) / 2) : CryptoAdapter.portfolio.length;
 
                             height: two-rows ? Theme.crypto-card-grid-height : Theme.crypto-card-scroll-height;
                             viewport-width: (columns * card-step);
-                            
+
                             if !two-rows: HorizontalLayout {
                                 spacing: 16px;
                                 alignment: start;
-                                
+
                                 for asset[index] in CryptoAdapter.portfolio: CryptoCard {
                                     name: asset.name;
                                     symbol: asset.symbol;
@@ -516,7 +523,7 @@ export component CryptoPage inherits Rectangle {
                                     value: asset.value;
                                     change: asset.change-24h;
                                     is-positive: asset.is-positive;
-                                    
+
                                     clicked => {
                                         CryptoAdapter.fetch-asset-details(asset.id);
                                         CryptoAdapter.show-asset-detail = true;
@@ -528,7 +535,7 @@ export component CryptoPage inherits Rectangle {
                                 width: columns * card-step;
                                 height: Theme.crypto-card-grid-height;
                                 background: transparent;
-                                
+
                                 for asset[index] in CryptoAdapter.portfolio: CryptoCard {
                                     x: Math.floor(index / 2) * card-step;
                                     y: Math.mod(index, 2) * row-step;
@@ -540,7 +547,7 @@ export component CryptoPage inherits Rectangle {
                                     value: asset.value;
                                     change: asset.change-24h;
                                     is-positive: asset.is-positive;
-                                    
+
                                     clicked => {
                                         CryptoAdapter.fetch-asset-details(asset.id);
                                         CryptoAdapter.show-asset-detail = true;
@@ -562,8 +569,10 @@ export component CryptoPage inherits Rectangle {
                             slices: CryptoAdapter.portfolio-distribution;
                         }
                     }
-                    
-                    Rectangle { height: 24px; }
+
+                    Rectangle {
+                        height: 24px;
+                    }
                 }
 
                 viewport-height: max(self.height, content-height);
@@ -588,43 +597,48 @@ export component CryptoPage inherits Rectangle {
                 // Headers
                 Rectangle {
                     height: 48px;
-                    
+
                     HorizontalLayout {
                         padding-left: 20px;
                         padding-right: 20px;
-                        
-                        Text { 
-                            width: Theme.wallet-info-width; 
-                            text: "WALLET"; 
-                            color: Theme.text-subtle; 
-                            font-size: 10px; 
-                            font-weight: 600; 
-                            letter-spacing: 2px; 
-                            vertical-alignment: center; 
+
+                        Text {
+                            width: Theme.wallet-info-width;
+                            text: "WALLET";
+                            color: Theme.text-subtle;
+                            font-size: 10px;
+                            font-weight: 600;
+                            letter-spacing: 2px;
+                            vertical-alignment: center;
                         }
-                        Text { 
-                            width: 100px; 
-                            text: "ASSETS"; 
-                            color: Theme.text-subtle; 
-                            font-size: 10px; 
-                            font-weight: 600; 
-                            letter-spacing: 2px; 
-                            vertical-alignment: center; 
-                            horizontal-alignment: center; 
+
+                        Text {
+                            width: 100px;
+                            text: "ASSETS";
+                            color: Theme.text-subtle;
+                            font-size: 10px;
+                            font-weight: 600;
+                            letter-spacing: 2px;
+                            vertical-alignment: center;
+                            horizontal-alignment: center;
                         }
-                        Text { 
-                            width: 150px; 
-                            text: "VALUE"; 
-                            color: Theme.text-subtle; 
-                            font-size: 10px; 
-                            font-weight: 600; 
-                            letter-spacing: 2px; 
-                            vertical-alignment: center; 
-                            horizontal-alignment: right; 
+
+                        Text {
+                            width: 150px;
+                            text: "VALUE";
+                            color: Theme.text-subtle;
+                            font-size: 10px;
+                            font-weight: 600;
+                            letter-spacing: 2px;
+                            vertical-alignment: center;
+                            horizontal-alignment: right;
                         }
-                        Rectangle { width: 40px; }
+
+                        Rectangle {
+                            width: 40px;
+                        }
                     }
-                    
+
                     // Bottom border
                     Rectangle {
                         y: parent.height - 1px;
@@ -637,11 +651,11 @@ export component CryptoPage inherits Rectangle {
                 // Empty State
                 if CryptoAdapter.wallets.length == 0: Rectangle {
                     vertical-stretch: 1;
-                    
+
                     VerticalLayout {
                         alignment: center;
                         spacing: 16px;
-                        
+
                         Rectangle {
                             width: 80px;
                             height: 80px;
@@ -650,7 +664,7 @@ export component CryptoPage inherits Rectangle {
                             border-width: 1px;
                             border-color: Theme.border-subtle;
                             x: (parent.width - self.width) / 2;
-                            
+
                             Text {
                                 text: "💼";
                                 font-size: 32px;
@@ -658,20 +672,20 @@ export component CryptoPage inherits Rectangle {
                                 horizontal-alignment: center;
                             }
                         }
-                        
-                        Text { 
-                            text: "No wallets created"; 
-                            color: Theme.text-secondary; 
-                            font-size: 16px; 
+
+                        Text {
+                            text: "No wallets created";
+                            color: Theme.text-secondary;
+                            font-size: 16px;
                             font-weight: 400;
-                            horizontal-alignment: center; 
+                            horizontal-alignment: center;
                         }
-                        
-                        Text { 
-                            text: "Add your first wallet to start tracking your crypto"; 
-                            color: Theme.text-muted; 
+
+                        Text {
+                            text: "Add your first wallet to start tracking your crypto";
+                            color: Theme.text-muted;
                             font-size: 13px;
-                            horizontal-alignment: center; 
+                            horizontal-alignment: center;
                         }
                     }
                 }
@@ -680,52 +694,55 @@ export component CryptoPage inherits Rectangle {
                 if CryptoAdapter.wallets.length > 0: Flickable {
                     vertical-stretch: 1;
                     viewport-height: CryptoAdapter.wallets.length * 80px;
-                    
+
                     VerticalLayout {
                         spacing: 8px;
                         padding-top: 8px;
-                        
+
                         for wallet[index] in CryptoAdapter.wallets: Rectangle {
                             height: 72px;
                             background: Theme.surface;
                             border-radius: 10px;
                             border-width: 1px;
                             border-color: Theme.border-subtle;
-                            
-                                WalletRow {
-                                    name: wallet.name;
-                                    category: wallet.category;
-                                    icon: wallet.icon;
-                                    balance: wallet.balance;
-                                    count: wallet.asset-count;
-                                    id: wallet.id;
-                                    is-last: index == CryptoAdapter.wallets.length - 1;
-                                    delete => {
-                                        root.delete-wallet-id = wallet.id;
-                                        root.delete-wallet-name = wallet.name;
-                                        root.show-delete-wallet-confirm = true;
-                                    }
-                                    clicked => {
-                                        CryptoAdapter.fetch-wallet-details(wallet.id);
-                                        CryptoAdapter.show-wallet-detail = true;
-                                    }
+
+                            WalletRow {
+                                name: wallet.name;
+                                category: wallet.category;
+                                icon: wallet.icon;
+                                balance: wallet.balance;
+                                count: wallet.asset-count;
+                                id: wallet.id;
+                                is-last: index == CryptoAdapter.wallets.length - 1;
+                                delete => {
+                                    root.delete-wallet-id = wallet.id;
+                                    root.delete-wallet-name = wallet.name;
+                                    root.show-delete-wallet-confirm = true;
+                                }
+                                clicked => {
+                                    CryptoAdapter.fetch-wallet-details(wallet.id);
+                                    CryptoAdapter.show-wallet-detail = true;
                                 }
                             }
                         }
                     }
                 }
+            }
         }
     }
-    
+
     // ==================== DETAIL OVERLAY ====================
     if CryptoAdapter.show-asset-detail: Rectangle {
-        x: 0; y: 0; width: 100%; height: 100%;
-        
+        x: 0;
+        y: 0;
+        width: 100%;
+        height: 100%;
+
         // Backdrop
-        Rectangle { 
+        Rectangle {
             background: Theme.overlay-bg-strong;
-            
-            animate background { duration: 200ms; } 
+
+            animate background { duration: 200ms; }
         }
 
         HorizontalLayout {
@@ -736,9 +753,11 @@ export component CryptoPage inherits Rectangle {
             Rectangle {
                 horizontal-stretch: 1;
                 height: parent.height;
-                TouchArea { 
+                TouchArea {
                     mouse-cursor: pointer;
-                    clicked => { CryptoAdapter.show-asset-detail = false; } 
+                    clicked => {
+                        CryptoAdapter.show-asset-detail = false;
+                    }
                 }
             }
 
@@ -751,13 +770,16 @@ export component CryptoPage inherits Rectangle {
 
     // ==================== WALLET DETAIL OVERLAY ====================
     if CryptoAdapter.show-wallet-detail: Rectangle {
-        x: 0; y: 0; width: 100%; height: 100%;
-        
+        x: 0;
+        y: 0;
+        width: 100%;
+        height: 100%;
+
         // Backdrop
-        Rectangle { 
+        Rectangle {
             background: Theme.overlay-bg-strong;
-            
-            animate background { duration: 200ms; } 
+
+            animate background { duration: 200ms; }
         }
 
         HorizontalLayout {
@@ -768,9 +790,11 @@ export component CryptoPage inherits Rectangle {
             Rectangle {
                 horizontal-stretch: 1;
                 height: parent.height;
-                TouchArea { 
+                TouchArea {
                     mouse-cursor: pointer;
-                    clicked => { CryptoAdapter.show-wallet-detail = false; } 
+                    clicked => {
+                        CryptoAdapter.show-wallet-detail = false;
+                    }
                 }
             }
 
@@ -783,7 +807,10 @@ export component CryptoPage inherits Rectangle {
 
     // ==================== DELETE WALLET CONFIRM ====================
     if root.show-delete-wallet-confirm: Rectangle {
-        x: 0; y: 0; width: 100%; height: 100%;
+        x: 0;
+        y: 0;
+        width: 100%;
+        height: 100%;
         z: 1200;
 
         Rectangle {
@@ -903,7 +930,10 @@ export component CryptoPage inherits Rectangle {
         z: 999;
         opacity: 1.0;
 
-        animate opacity { duration: 200ms; easing: ease-out; }
+        animate opacity {
+            duration: 200ms;
+            easing: ease-out;
+        }
 
         VerticalLayout {
             alignment: center;
@@ -950,7 +980,10 @@ export component CryptoPage inherits Rectangle {
         z: 998;
         opacity: 1.0;
 
-        animate opacity { duration: 150ms; easing: ease-out; }
+        animate opacity {
+            duration: 150ms;
+            easing: ease-out;
+        }
 
         Rectangle {
             width: 300px;
@@ -965,7 +998,10 @@ export component CryptoPage inherits Rectangle {
             drop-shadow-color: Theme.shadow-color;
             opacity: 1.0;
 
-            animate opacity { duration: 200ms; easing: ease-out; }
+            animate opacity {
+                duration: 200ms;
+                easing: ease-out;
+            }
 
             HorizontalLayout {
                 padding: 24px;

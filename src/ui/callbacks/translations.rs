@@ -306,6 +306,106 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_bank_icons_title(s(&t("bank-icons-title")));
     tr.set_no_expenses_recorded(s(&t("no-expenses-recorded")));
     tr.set_fee_label(s(&t("fee-label")));
+
+    // Dashboard Extended
+    tr.set_dashboard_total_net_worth(s(&t("dashboard-total-net-worth")));
+    tr.set_dashboard_exchange_rate_warning(s(&t("dashboard-exchange-rate-warning")));
+    tr.set_dashboard_loading(s(&t("dashboard-loading")));
+    tr.set_dashboard_retry(s(&t("dashboard-retry")));
+    tr.set_dashboard_usd_clp(s(&t("dashboard-usd-clp")));
+
+    // Finances Extended
+    tr.set_finances_activity(s(&t("finances-activity")));
+    tr.set_finances_account(s(&t("finances-account")));
+    tr.set_finances_all_accounts(s(&t("finances-all-accounts")));
+    tr.set_finances_all_categories(s(&t("finances-all-categories")));
+    tr.set_finances_load_more(s(&t("finances-load-more")));
+    tr.set_finances_configure(s(&t("finances-configure")));
+    tr.set_finances_transaction_categories(s(&t("finances-transaction-categories")));
+    tr.set_finances_manage_categories(s(&t("finances-manage-categories")));
+    tr.set_finances_delete_transaction(s(&t("finances-delete-transaction")));
+    tr.set_finances_delete_confirm(s(&t("finances-delete-confirm")));
+
+    // Crypto Extended
+    tr.set_crypto_portfolio_title(s(&t("crypto-portfolio-title")));
+    tr.set_crypto_last_updated(s(&t("crypto-last-updated")));
+    tr.set_crypto_coin_limit(s(&t("crypto-coin-limit")));
+    tr.set_crypto_skipped(s(&t("crypto-skipped")));
+    tr.set_crypto_your_holdings(s(&t("crypto-your-holdings")));
+    tr.set_crypto_no_assets_yet(s(&t("crypto-no-assets-yet")));
+    tr.set_crypto_create_wallet_first(s(&t("crypto-create-wallet-first")));
+    tr.set_crypto_wallet(s(&t("crypto-wallet")));
+    tr.set_crypto_value(s(&t("crypto-value")));
+    tr.set_crypto_no_wallets(s(&t("crypto-no-wallets")));
+    tr.set_crypto_add_first_wallet(s(&t("crypto-add-first-wallet")));
+    tr.set_crypto_delete_wallet(s(&t("crypto-delete-wallet")));
+    tr.set_crypto_delete_wallet_confirm(s(&t("crypto-delete-wallet-confirm")));
+    tr.set_crypto_loading_portfolio(s(&t("crypto-loading-portfolio")));
+    tr.set_crypto_syncing_prices(s(&t("crypto-syncing-prices")));
+    tr.set_crypto_syncing_wait(s(&t("crypto-syncing-wait")));
+
+    // Habits Extended
+    tr.set_habits_rewards(s(&t("habits-rewards")));
+    tr.set_habits_history(s(&t("habits-history")));
+
+    // Settings Extended
+    tr.set_settings_configure_experience(s(&t("settings-configure-experience")));
+    tr.set_settings_proxy_tip(s(&t("settings-proxy-tip")));
+    tr.set_settings_data_encrypted(s(&t("settings-data-encrypted")));
+    tr.set_settings_military_grade(s(&t("settings-military-grade")));
+    tr.set_settings_reset_defaults(s(&t("settings-reset-defaults")));
+
+    // Common Actions Extended
+    tr.set_action_view_all(s(&t("action-view-all")));
+    tr.set_action_retry(s(&t("action-retry")));
+    tr.set_action_load_more(s(&t("action-load-more")));
+    tr.set_action_configure(s(&t("action-configure")));
+    tr.set_action_transfer(s(&t("action-transfer")));
+
+    // Components - Account Item
+    tr.set_account_balance(s(&t("account-balance")));
+
+    // Crypto Widgets
+    tr.set_crypto_holdings_label(s(&t("crypto-holdings-label")));
+    tr.set_crypto_price_label(s(&t("crypto-price-label")));
+
+    // Crypto Charts
+    tr.set_crypto_no_priced_assets(s(&t("crypto-no-priced-assets")));
+    tr.set_crypto_sync_to_see(s(&t("crypto-sync-to-see")));
+    tr.set_crypto_portfolio_trend(s(&t("crypto-portfolio-trend")));
+    tr.set_crypto_value_label(s(&t("crypto-value-label")));
+    tr.set_crypto_cost_label(s(&t("crypto-cost-label")));
+    tr.set_crypto_no_trend(s(&t("crypto-no-trend")));
+    tr.set_crypto_sync_daily(s(&t("crypto-sync-daily")));
+
+    // Habit Heatmap
+    tr.set_heatmap_less(s(&t("heatmap-less")));
+    tr.set_heatmap_more(s(&t("heatmap-more")));
+
+    // Habits Tab
+    tr.set_habits_selected_hint(s(&t("habits-selected-hint")));
+
+    // History Tab
+    tr.set_history_total_achievements(s(&t("history-total-achievements")));
+
+    // Streak Rewards
+    tr.set_rewards_ready_claim(s(&t("rewards-ready-claim")));
+    tr.set_rewards_next(s(&t("rewards-next")));
+    tr.set_rewards_all_unlocked(s(&t("rewards-all-unlocked")));
+
+    // Wallet Detail
+    tr.set_wallet_no_holdings(s(&t("wallet-no-holdings")));
+
+    // Icon Selector
+    tr.set_icon_choose(s(&t("icon-choose")));
+    tr.set_icon_exchanges(s(&t("icon-exchanges")));
+    tr.set_icon_wallet_icons(s(&t("icon-wallet-icons")));
+
+    // Forms
+    tr.set_form_search_coin(s(&t("form-search-coin")));
+    tr.set_form_date_format(s(&t("form-date-format")));
+    tr.set_form_all(s(&t("form-all")));
+    tr.set_form_habit(s(&t("form-habit")));
 }
 
 /// Helper to convert String to SharedString

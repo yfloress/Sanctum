@@ -3,22 +3,23 @@
 // Horizontal scroll only, 7 rows for days of week
 
 import { HabitAdapter, HeatmapWeek, HeatmapDay } from "../globals.slint";
+import { Translations } from "../translations.slint";
 import { CustomScrollbar } from "../widgets.slint";
 import { Theme } from "../theme.slint";
 
 component Tooltip inherits Rectangle {
     in property <string> text; // Kept for interface compatibility, but unused
     in property <int> count;
-    
+
     width: 24px;
     height: 22px;
     z: 1000;
-    
+
     // Position relative to the cell
     // Shift left to avoid overlapping the next column (which is drawn on top)
-    x: -8px; 
+    x: -8px;
     y: -28px;
-    
+
     background: Theme.bg-surface;
     border-width: 1px;
     border-color: Theme.border;
@@ -47,11 +48,7 @@ component HeatmapCell inherits Rectangle {
     // Level -1 = padding day (outside year), make invisible
     visible: level >= 0;
 
-    background: level == 0 ? Theme.heatmap-level-0 :
-                level == 1 ? Theme.heatmap-level-1 :
-                level == 2 ? Theme.heatmap-level-2 :
-                level == 3 ? Theme.heatmap-level-3 :
-                level == 4 ? Theme.heatmap-level-4 : Theme.heatmap-level-0;
+    background: level == 0 ? Theme.heatmap-level-0 : level == 1 ? Theme.heatmap-level-1 : level == 2 ? Theme.heatmap-level-2 : level == 3 ? Theme.heatmap-level-3 : level == 4 ? Theme.heatmap-level-4 : Theme.heatmap-level-0;
     border-width: level > 0 ? 0px : 1px;
     border-color: Theme.border;
 
@@ -103,9 +100,15 @@ export component HabitHeatmap inherits Rectangle {
         scroll-x = calculate-scroll-target();
     }
 
-    init => { update-scroll(); }
-    changed current-week => { update-scroll(); }
-    changed data-length => { update-scroll(); }
+    init => {
+        update-scroll();
+    }
+    changed current-week => {
+        update-scroll();
+    }
+    changed data-length => {
+        update-scroll();
+    }
 
     VerticalLayout {
         padding-left: 12px;
@@ -119,22 +122,36 @@ export component HabitHeatmap inherits Rectangle {
             height: 16px; // Fixed height for legend
             alignment: end;
             spacing: 6px;
-            
+
             Text {
-                text: "Less";
+                text: Translations.heatmap-less;
                 color: Theme.text-muted;
                 font-size: 10px;
                 vertical-alignment: center;
             }
 
-            HeatmapCell { level: 0; }
-            HeatmapCell { level: 1; }
-            HeatmapCell { level: 2; }
-            HeatmapCell { level: 3; }
-            HeatmapCell { level: 4; }
+            HeatmapCell {
+                level: 0;
+            }
+
+            HeatmapCell {
+                level: 1;
+            }
+
+            HeatmapCell {
+                level: 2;
+            }
+
+            HeatmapCell {
+                level: 3;
+            }
+
+            HeatmapCell {
+                level: 4;
+            }
 
             Text {
-                text: "More";
+                text: Translations.heatmap-more;
                 color: Theme.text-muted;
                 font-size: 10px;
                 vertical-alignment: center;
@@ -159,7 +176,7 @@ export component HabitHeatmap inherits Rectangle {
 
                 // Two-way binding for auto-scroll
                 viewport-x <=> root.scroll-x;
-                
+
                 HorizontalLayout {
                     spacing: 4px;
                     alignment: start;

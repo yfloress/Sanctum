@@ -7,6 +7,7 @@ import {
     NotificationAdapter,
     RewardsAdapter,
 } from "../globals.slint";
+import { Translations } from "../translations.slint";
 import { Theme } from "../theme.slint";
 import { TabButton } from "../components/buttons/tab_button.slint";
 import { ActionButton } from "../widgets.slint";
@@ -102,7 +103,7 @@ export component HabitsPage inherits Rectangle {
                     spacing: 12px;
 
                     Text {
-                        text: "HABITS";
+                        text: Translations.habits-title;
                         color: Theme.text-primary;
                         font-size: 24px;
                         font-weight: 300;
@@ -168,7 +169,7 @@ export component HabitsPage inherits Rectangle {
                             alignment: center;
 
                             TabButton {
-                                text: "HABITS";
+                                text: Translations.habits-title;
                                 active: root.active-tab == "habits";
                                 clicked => {
                                     root.active-tab = "habits";
@@ -176,7 +177,7 @@ export component HabitsPage inherits Rectangle {
                             }
 
                             TabButton {
-                                text: "REWARDS";
+                                text: Translations.habits-rewards;
                                 active: root.active-tab == "rewards";
                                 clicked => {
                                     root.active-tab = "rewards";
@@ -184,7 +185,7 @@ export component HabitsPage inherits Rectangle {
                             }
 
                             TabButton {
-                                text: "HISTORY";
+                                text: Translations.habits-history;
                                 active: root.active-tab == "history";
                                 clicked => {
                                     root.active-tab = "history";
@@ -309,7 +310,7 @@ export component HabitsPage inherits Rectangle {
                 spacing: 16px;
 
                 Text {
-                    text: "Delete Habit?";
+                    text: Translations.confirm-delete-title + "?";
                     color: Theme.text-primary;
                     font-size: 14px;
                     font-weight: 600;
@@ -317,7 +318,7 @@ export component HabitsPage inherits Rectangle {
                 }
 
                 Text {
-                    text: "This will permanently delete \"" + root.delete-habit-name + "\" and all its logs.";
+                    text: Translations.confirm-delete-generic + " \"" + root.delete-habit-name + "\". " + Translations.confirm-delete-message;
                     color: Theme.text-muted;
                     font-size: 11px;
                     wrap: word-wrap;
@@ -336,7 +337,7 @@ export component HabitsPage inherits Rectangle {
                         border-color: Theme.border;
 
                         Text {
-                            text: "Cancel";
+                            text: Translations.action-cancel;
                             color: Theme.text-secondary;
                             font-size: 11px;
                             font-weight: 600;
@@ -363,7 +364,7 @@ export component HabitsPage inherits Rectangle {
                         border-color: Theme.delete-border;
 
                         Text {
-                            text: "Delete";
+                            text: Translations.action-delete;
                             color: Theme.text-primary;
                             font-size: 11px;
                             font-weight: 600;

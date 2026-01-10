@@ -8,6 +8,7 @@ import {
     AnalyticsAdapter,
     AppState,
 } from "../globals.slint";
+import { Translations } from "../translations.slint";
 import { Theme } from "../theme.slint";
 import { TransactionItem } from "../components/transaction_item.slint";
 import { ActionButton } from "../widgets.slint";
@@ -62,7 +63,7 @@ export component DashboardPage inherits Rectangle {
                     }
 
                     Text {
-                        text: "Exchange rate unavailable. CLP balances shown at 1:1 rate.";
+                        text: Translations.dashboard-exchange-rate-warning;
                         color: Theme.text-secondary;
                         font-size: 12px;
                         vertical-alignment: center;
@@ -104,7 +105,7 @@ export component DashboardPage inherits Rectangle {
                         }
 
                         Text {
-                            text: "TOTAL NET WORTH";
+                            text: Translations.dashboard-total-net-worth;
                             color: Theme.text-muted;
                             font-size: 11px;
                             font-weight: 600;
@@ -212,8 +213,10 @@ export component DashboardPage inherits Rectangle {
 
                 SectionHeader {
                     title: "RECENT ACTIVITY";
-                    action-text: "VIEW ALL →";
-                    action-clicked => { AppState.active-page = "finances"; }
+                    action-text: Translations.action-view-all;
+                    action-clicked => {
+                        AppState.active-page = "finances";
+                    }
                 }
 
                 Rectangle {
@@ -234,7 +237,9 @@ export component DashboardPage inherits Rectangle {
             }
 
             // Bottom spacer
-            Rectangle { height: 32px; }
+            Rectangle {
+                height: 32px;
+            }
         }
     }
 
@@ -267,7 +272,7 @@ export component DashboardPage inherits Rectangle {
             }
 
             Text {
-                text: "Loading dashboard...";
+                text: Translations.dashboard-loading;
                 color: Theme.text-secondary;
                 font-size: 14px;
                 font-weight: 500;
@@ -319,7 +324,7 @@ export component DashboardPage inherits Rectangle {
                 border-color: Theme.border;
 
                 Text {
-                    text: "RETRY";
+                    text: Translations.dashboard-retry;
                     color: Theme.text-primary;
                     font-size: 11px;
                     font-weight: 600;

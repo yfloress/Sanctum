@@ -298,3 +298,104 @@ crypto-no-wallet-data = No wallet data available
 crypto-no-transactions-found = No transactions found
 crypto-portfolio-distribution = PORTFOLIO DISTRIBUTION
 confirm-delete-generic = This will permanently delete
+
+# ==================== Dashboard Extended ====================
+dashboard-total-net-worth = TOTAL NET WORTH
+dashboard-exchange-rate-warning = Exchange rate unavailable. CLP balances shown at 1:1 rate.
+dashboard-loading = Loading dashboard...
+dashboard-retry = RETRY
+dashboard-usd-clp = USD/CLP
+
+# ==================== Finances Extended ====================
+finances-activity = ACTIVITY
+finances-account = ACCOUNT
+finances-all-accounts = All accounts
+finances-all-categories = All categories
+finances-load-more = LOAD MORE
+finances-configure = CONFIGURE
+finances-transaction-categories = Transaction Categories
+finances-manage-categories = Manage income and expense categories
+finances-delete-transaction = Delete Transaction
+finances-delete-confirm = Are you sure you want to delete
+
+# ==================== Crypto Extended ====================
+crypto-portfolio-title = CRYPTO PORTFOLIO
+crypto-last-updated = Last updated
+crypto-coin-limit = Coin limit reached (50). Some assets may not update.
+crypto-skipped = Skipped
+crypto-your-holdings = YOUR HOLDINGS
+crypto-no-assets-yet = No assets tracked yet
+crypto-create-wallet-first = Create a wallet first, then add your crypto holdings
+crypto-wallet = WALLET
+crypto-value = VALUE
+crypto-no-wallets = No wallets created
+crypto-add-first-wallet = Add your first wallet to start tracking your crypto
+crypto-delete-wallet = Delete Wallet?
+crypto-delete-wallet-confirm = This will permanently delete and all its transaction history.
+crypto-loading-portfolio = Loading portfolio...
+crypto-syncing-prices = Syncing prices...
+crypto-syncing-wait = This may take a few seconds
+
+# ==================== Habits Extended ====================
+habits-rewards = REWARDS
+habits-history = HISTORY
+
+# ==================== Settings Extended ====================
+settings-configure-experience = Configure your Sanctum experience
+settings-proxy-tip = Tip: socks5h:// routes DNS through the proxy for better privacy.
+settings-data-encrypted = Your data is encrypted locally
+settings-military-grade = All sensitive information is protected with military-grade encryption
+settings-reset-defaults = RESET TO DEFAULTS
+
+# ==================== Common Actions Extended ====================
+action-view-all = VIEW ALL →
+action-retry = RETRY
+action-load-more = LOAD MORE
+action-configure = CONFIGURE
+action-transfer = TRANSFER
+
+# ==================== Components ====================
+# Account Item
+account-balance = Balance
+
+# Crypto Widgets
+crypto-holdings-label = Holdings
+crypto-price-label = Price
+
+# Crypto Charts
+crypto-no-priced-assets = No priced assets yet
+crypto-sync-to-see = Sync prices to see the distribution
+crypto-portfolio-trend = PORTFOLIO TREND (180 DAYS)
+crypto-value-label = VALUE
+crypto-cost-label = COST
+crypto-no-trend = No trend data yet
+crypto-sync-daily = Sync prices daily to build history
+
+# Habit Heatmap
+heatmap-less = Less
+heatmap-more = More
+
+# Habits Tab
+habits-selected-hint = SELECTED HABIT · Click a habit above to view stats
+
+# History Tab
+history-total-achievements = TOTAL ACHIEVEMENTS
+
+# Streak Rewards
+rewards-ready-claim = Ready to claim
+rewards-next = Next
+rewards-all-unlocked = All milestones unlocked!
+
+# Wallet Detail
+wallet-no-holdings = No holdings in this wallet
+
+# Icon Selector
+icon-choose = CHOOSE ICON
+icon-exchanges = Exchanges
+icon-wallet-icons = Wallet Icons
+
+# Forms
+form-search-coin = Search coin...
+form-date-format = YYYY-MM-DD
+form-all = ALL
+form-habit = HABIT
