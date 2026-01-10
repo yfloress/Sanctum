@@ -8,7 +8,7 @@ import { Theme } from "../theme.slint";
 // ==================== SidebarItem ====================
 
 component SidebarItem inherits Rectangle {
-    in property <string> label: "ITEM";
+    in property <string> label: Translations.label-none;
     in property <image> icon-source;
     in property <string> page-id: "";
     in property <bool> is-active: AppState.active-page == page-id;
@@ -155,7 +155,7 @@ export component SanctumSidebar inherits Rectangle {
                     spacing: 12px;
 
                     Text {
-                        text: "SANCTUM";
+                        text: Translations.sidebar-title;
                         color: Theme.text-primary;
                         font-size: 14px;
                         font-weight: 500;

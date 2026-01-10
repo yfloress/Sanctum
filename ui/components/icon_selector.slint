@@ -1,6 +1,7 @@
 // Icon Selector Component - Reusable icon picker for wallets/accounts
 
 import { Theme } from "../theme.slint";
+import { Translations } from "../translations.slint";
 
 // Icon option item
 component IconOption inherits Rectangle {
@@ -96,7 +97,7 @@ export component IconSelector inherits Rectangle {
         spacing: 12px;
 
         Text {
-            text: "CHOOSE ICON";
+            text: Translations.icon-choose;
             color: Theme.text-muted;
             font-size: 10px;
             font-weight: 500;
