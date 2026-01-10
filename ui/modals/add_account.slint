@@ -1,7 +1,12 @@
 // ==================== Add Account Modal ====================
 // Premium Fintech UI - Overlay form for creating new accounts
 
-import { AppState, AccountAdapter, NotificationAdapter } from "../globals.slint";
+import {
+    AppState,
+    AccountAdapter,
+    NotificationAdapter,
+} from "../globals.slint";
+import { Translations } from "../translations.slint";
 import { Theme } from "../theme.slint";
 
 // ==================== FormField ====================
@@ -55,7 +60,9 @@ component FormField inherits Rectangle {
             }
 
             TouchArea {
-                clicked => { input.focus(); }
+                clicked => {
+                    input.focus();
+                }
             }
         }
     }
@@ -111,16 +118,18 @@ component OptionSelector inherits Rectangle {
 
             TouchArea {
                 mouse-cursor: pointer;
-                clicked => { popup.show(); }
+                clicked => {
+                    popup.show();
+                }
             }
         }
     }
 
     popup := PopupWindow {
         x: 0;
-        y: 64px; 
+        y: 64px;
         width: root.width;
-        
+
         Rectangle {
             background: Theme.sidebar-bg;
             border-radius: 8px;
@@ -132,7 +141,7 @@ component OptionSelector inherits Rectangle {
 
             Flickable {
                 viewport-height: options.length * 40px + 8px;
-                
+
                 VerticalLayout {
                     padding: 4px;
                     spacing: 0px;
@@ -166,7 +175,9 @@ component OptionSelector inherits Rectangle {
 
                         option-touch := TouchArea {
                             mouse-cursor: pointer;
-                            clicked => { root.selected-index = index; }
+                            clicked => {
+                                root.selected-index = index;
+                            }
                         }
                     }
                 }
@@ -189,7 +200,9 @@ export component AddAccountModal inherits Rectangle {
     property <[string]> type-options: ["Bank", "Cash", "Savings", "Credit Card", "Other"];
     property <[string]> currency-options: ["USD", "CLP"];
 
-    init => { key-scope.focus(); }
+    init => {
+        key-scope.focus();
+    }
 
     function reset-form() {
         name-value = "";
@@ -279,7 +292,9 @@ export component AddAccountModal inherits Rectangle {
         drop-shadow-color: Theme.overlay-soft;
 
         TouchArea {
-            clicked => { key-scope.focus(); }
+            clicked => {
+                key-scope.focus();
+            }
         }
 
         VerticalLayout {
@@ -367,7 +382,9 @@ export component AddAccountModal inherits Rectangle {
                 value <=> initial-balance;
             }
 
-            Rectangle { vertical-stretch: 1; }
+            Rectangle {
+                vertical-stretch: 1;
+            }
 
             if editing: Rectangle {
                 height: 44px;
@@ -377,7 +394,7 @@ export component AddAccountModal inherits Rectangle {
                 border-color: Theme.delete-border;
 
                 Text {
-                    text: "DELETE ACCOUNT";
+                    text: Translations.modal-delete-account;
                     color: Theme.text-primary;
                     font-size: 11px;
                     font-weight: 600;
@@ -388,7 +405,9 @@ export component AddAccountModal inherits Rectangle {
 
                 TouchArea {
                     mouse-cursor: pointer;
-                    clicked => { show-delete-confirm = true; }
+                    clicked => {
+                        show-delete-confirm = true;
+                    }
                 }
             }
 
@@ -399,7 +418,7 @@ export component AddAccountModal inherits Rectangle {
                 border-radius: 10px;
 
                 Text {
-                    text: "SAVE ACCOUNT";
+                    text: Translations.modal-save-account;
                     color: Theme.text;
                     font-size: 12px;
                     font-weight: 600;
@@ -410,7 +429,9 @@ export component AddAccountModal inherits Rectangle {
 
                 submit-touch := TouchArea {
                     mouse-cursor: pointer;
-                    clicked => { root.submit(); }
+                    clicked => {
+                        root.submit();
+                    }
                 }
 
                 states [
@@ -423,13 +444,18 @@ export component AddAccountModal inherits Rectangle {
     }
 
     if show-delete-confirm: Rectangle {
-        x: 0; y: 0; width: 100%; height: 100%;
+        x: 0;
+        y: 0;
+        width: 100%;
+        height: 100%;
         z: 1200;
 
         Rectangle {
             background: Theme.overlay-bg-strong;
             TouchArea {
-                clicked => { show-delete-confirm = false; }
+                clicked => {
+                    show-delete-confirm = false;
+                }
             }
         }
 
@@ -450,7 +476,7 @@ export component AddAccountModal inherits Rectangle {
                 spacing: 16px;
 
                 Text {
-                    text: "Delete Account?";
+                    text: Translations.confirm-delete-title + "?";
                     color: Theme.text-primary;
                     font-size: 14px;
                     font-weight: 600;
@@ -458,7 +484,7 @@ export component AddAccountModal inherits Rectangle {
                 }
 
                 Text {
-                    text: "This will permanently delete \"" + name-value + "\" and all its transaction history.";
+                    text: Translations.modal-delete-account-confirm;
                     color: Theme.text-muted;
                     font-size: 11px;
                     wrap: word-wrap;
@@ -477,7 +503,7 @@ export component AddAccountModal inherits Rectangle {
                         border-color: Theme.border;
 
                         Text {
-                            text: "Cancel";
+                            text: Translations.action-cancel;
                             color: Theme.text-secondary;
                             font-size: 11px;
                             font-weight: 600;
@@ -487,7 +513,9 @@ export component AddAccountModal inherits Rectangle {
 
                         cancel-touch := TouchArea {
                             mouse-cursor: pointer;
-                            clicked => { show-delete-confirm = false; }
+                            clicked => {
+                                show-delete-confirm = false;
+                            }
                         }
                     }
 
@@ -500,7 +528,7 @@ export component AddAccountModal inherits Rectangle {
                         border-color: Theme.delete-border;
 
                         Text {
-                            text: "Delete";
+                            text: Translations.action-delete;
                             color: Theme.text-primary;
                             font-size: 11px;
                             font-weight: 600;

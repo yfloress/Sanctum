@@ -399,3 +399,48 @@ form-search-coin = Search coin...
 form-date-format = YYYY-MM-DD
 form-all = ALL
 form-habit = HABIT
+
+# ==================== Modals ====================
+# Add Account
+modal-delete-account = DELETE ACCOUNT
+modal-save-account = SAVE ACCOUNT
+modal-delete-account-confirm = This will permanently delete and all its transaction history.
+
+# Add Transaction
+modal-no-accounts = No accounts available. Create one first.
+
+# Add Crypto Transaction
+modal-new-crypto-transaction = NEW CRYPTO TRANSACTION
+modal-save-transaction = SAVE TRANSACTION
+modal-create-wallet-first = Create a wallet in the Wallets tab first
+modal-create-another-wallet = Create another wallet to move assets
+
+# Edit Crypto Transaction
+modal-edit-crypto-transaction = EDIT CRYPTO TRANSACTION
+modal-save-changes = SAVE CHANGES
+
+# Add Wallet
+modal-new-wallet = NEW WALLET
+modal-wallet-type = WALLET TYPE
+modal-create-wallet = CREATE WALLET
+
+# Add Habit
+modal-category = CATEGORY
+modal-color = COLOR
+
+# Configure Categories
+modal-category-settings = CATEGORY SETTINGS
+modal-manage-categories = Manage income and expense categories for transactions.
+modal-expense-categories = EXPENSE CATEGORIES
+modal-income-categories = INCOME CATEGORIES
+modal-no-expense-categories = No expense categories
+modal-no-income-categories = No income categories
+modal-add-new-category = ADD NEW CATEGORY
+modal-category-name = Category name
+modal-default = DEFAULT
+
+# Configure Ticker
+modal-crypto-settings = CRYPTO SETTINGS
+modal-manage-price-bar = Manage price bar and coin catalog for selection.
+modal-price-bar = PRICE BAR
+modal-remove = REMOVE

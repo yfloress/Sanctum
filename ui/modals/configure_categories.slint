@@ -1,7 +1,12 @@
 // ==================== Configure Categories Modal ====================
 // Manage transaction categories for income and expenses
 
-import { AppState, CategoryAdapter, NotificationAdapter } from "../globals.slint";
+import {
+    AppState,
+    CategoryAdapter,
+    NotificationAdapter,
+} from "../globals.slint";
+import { Translations } from "../translations.slint";
 import { ActionButton, TextButton } from "../widgets.slint";
 import { Theme } from "../theme.slint";
 
@@ -40,7 +45,7 @@ component CategoryRow inherits Rectangle {
             }
 
             if root.is-default: Text {
-                text: "DEFAULT";
+                text: Translations.modal-default;
                 color: Theme.text-subtle;
                 font-size: 9px;
                 font-weight: 600;
@@ -71,7 +76,9 @@ component CategoryRow inherits Rectangle {
             }
 
             TouchArea {
-                clicked => { edit-input.focus(); }
+                clicked => {
+                    edit-input.focus();
+                }
             }
         }
 
@@ -87,19 +94,23 @@ component CategoryRow inherits Rectangle {
                     spacing: 8px;
 
                     if root.is-editing: ActionButton {
-                        text: "SAVE";
+                        text: Translations.action-save;
                         primary: true;
                         height: 32px;
                         min-width: 72px;
-                        clicked => { root.save-clicked(root.edit-value); }
+                        clicked => {
+                            root.save-clicked(root.edit-value);
+                        }
                     }
 
                     if root.is-editing: ActionButton {
-                        text: "CANCEL";
+                        text: Translations.action-cancel;
                         primary: false;
                         height: 32px;
                         min-width: 72px;
-                        clicked => { root.cancel-clicked(); }
+                        clicked => {
+                            root.cancel-clicked();
+                        }
                     }
 
                     if !root.is-editing && root.is-default: Rectangle {
@@ -109,19 +120,23 @@ component CategoryRow inherits Rectangle {
                     }
 
                     if !root.is-editing && !root.is-default: ActionButton {
-                        text: "EDIT";
+                        text: Translations.action-edit;
                         primary: false;
                         height: 32px;
                         min-width: 64px;
-                        clicked => { root.edit-clicked(); }
+                        clicked => {
+                            root.edit-clicked();
+                        }
                     }
 
                     if !root.is-editing: ActionButton {
-                        text: "DELETE";
+                        text: Translations.action-delete;
                         primary: false;
                         height: 32px;
                         min-width: 72px;
-                        clicked => { root.delete-clicked(); }
+                        clicked => {
+                            root.delete-clicked();
+                        }
                     }
                 }
             }
@@ -164,7 +179,9 @@ component ConfigTabButton inherits Rectangle {
 
     TouchArea {
         mouse-cursor: pointer;
-        clicked => { root.clicked(); }
+        clicked => {
+            root.clicked();
+        }
     }
 }
 
@@ -184,7 +201,7 @@ component AddCategoryForm inherits Rectangle {
         spacing: 12px;
 
         Text {
-            text: "ADD NEW CATEGORY";
+            text: Translations.modal-add-new-category;
             color: Theme.text-muted;
             font-size: 10px;
             font-weight: 600;
@@ -211,7 +228,7 @@ component AddCategoryForm inherits Rectangle {
                     padding-right: 12px;
 
                     if root.new-name == "" && !input.has-focus: Text {
-                        text: "Category name";
+                        text: Translations.modal-category-name;
                         color: Theme.text-subtle;
                         font-size: 13px;
                         vertical-alignment: center;
@@ -227,16 +244,20 @@ component AddCategoryForm inherits Rectangle {
                 }
 
                 TouchArea {
-                    clicked => { input.focus(); }
+                    clicked => {
+                        input.focus();
+                    }
                 }
             }
 
             ActionButton {
-                text: "ADD";
+                text: Translations.action-add;
                 primary: true;
                 height: 40px;
                 min-width: 88px;
-                clicked => { root.add-clicked(); }
+                clicked => {
+                    root.add-clicked();
+                }
             }
         }
     }
@@ -260,8 +281,15 @@ export component ConfigureCategoriesModal inherits Rectangle {
     Rectangle {
         background: Theme.overlay;
         opacity: 1.0;
-        animate opacity { duration: 150ms; easing: ease-out; }
-        TouchArea { clicked => { AppState.show-configure-categories = false; } }
+        animate opacity {
+            duration: 150ms;
+            easing: ease-out;
+        }
+        TouchArea {
+            clicked => {
+                AppState.show-configure-categories = false;
+            }
+        }
     }
 
     key-scope := FocusScope {
@@ -291,7 +319,9 @@ export component ConfigureCategoriesModal inherits Rectangle {
         drop-shadow-color: Theme.overlay-soft;
 
         TouchArea {
-            clicked => { key-scope.focus(); }
+            clicked => {
+                key-scope.focus();
+            }
         }
 
         VerticalLayout {
@@ -315,7 +345,7 @@ export component ConfigureCategoriesModal inherits Rectangle {
                     }
 
                     Text {
-                        text: "CATEGORY SETTINGS";
+                        text: Translations.modal-category-settings;
                         color: Theme.text-primary;
                         font-size: 16px;
                         font-weight: 500;
@@ -341,13 +371,15 @@ export component ConfigureCategoriesModal inherits Rectangle {
 
                     close-touch := TouchArea {
                         mouse-cursor: pointer;
-                        clicked => { AppState.show-configure-categories = false; }
+                        clicked => {
+                            AppState.show-configure-categories = false;
+                        }
                     }
                 }
             }
 
             Text {
-                text: "Manage income and expense categories for transactions.";
+                text: Translations.modal-manage-categories;
                 color: Theme.text-muted;
                 font-size: 11px;
                 horizontal-alignment: center;
@@ -359,15 +391,21 @@ export component ConfigureCategoriesModal inherits Rectangle {
                 spacing: 8px;
 
                 ConfigTabButton {
-                    text: "EXPENSE CATEGORIES";
+                    text: Translations.modal-expense-categories;
                     active: root.active-tab == "expense";
-                    clicked => { root.active-tab = "expense"; root.editing-id = ""; }
+                    clicked => {
+                        root.active-tab = "expense";
+                        root.editing-id = "";
+                    }
                 }
 
                 ConfigTabButton {
-                    text: "INCOME CATEGORIES";
+                    text: Translations.modal-income-categories;
                     active: root.active-tab == "income";
-                    clicked => { root.active-tab = "income"; root.editing-id = ""; }
+                    clicked => {
+                        root.active-tab = "income";
+                        root.editing-id = "";
+                    }
                 }
             }
 
@@ -515,7 +553,7 @@ export component ConfigureCategoriesModal inherits Rectangle {
                         background: transparent;
 
                         Text {
-                            text: "No expense categories";
+                            text: Translations.modal-no-expense-categories;
                             color: Theme.text-muted;
                             font-size: 12px;
                             horizontal-alignment: center;
@@ -527,7 +565,7 @@ export component ConfigureCategoriesModal inherits Rectangle {
                         background: transparent;
 
                         Text {
-                            text: "No income categories";
+                            text: Translations.modal-no-income-categories;
                             color: Theme.text-muted;
                             font-size: 12px;
                             horizontal-alignment: center;

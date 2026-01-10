@@ -399,3 +399,48 @@ form-search-coin = Buscar moneda...
 form-date-format = AAAA-MM-DD
 form-all = TODO
 form-habit = HÁBITO
+
+# ==================== Modals ====================
+# Add Account
+modal-delete-account = ELIMINAR CUENTA
+modal-save-account = GUARDAR CUENTA
+modal-delete-account-confirm = Esto eliminará permanentemente y todo su historial de transacciones.
+
+# Add Transaction
+modal-no-accounts = No hay cuentas disponibles. Crea una primero.
+
+# Add Crypto Transaction
+modal-new-crypto-transaction = NUEVA TRANSACCIÓN CRYPTO
+modal-save-transaction = GUARDAR TRANSACCIÓN
+modal-create-wallet-first = Crea una billetera en la pestaña Billeteras primero
+modal-create-another-wallet = Crea otra billetera para mover activos
+
+# Edit Crypto Transaction
+modal-edit-crypto-transaction = EDITAR TRANSACCIÓN CRYPTO
+modal-save-changes = GUARDAR CAMBIOS
+
+# Add Wallet
+modal-new-wallet = NUEVA BILLETERA
+modal-wallet-type = TIPO DE BILLETERA
+modal-create-wallet = CREAR BILLETERA
+
+# Add Habit
+modal-category = CATEGORÍA
+modal-color = COLOR
+
+# Configure Categories
+modal-category-settings = CONFIGURACIÓN DE CATEGORÍAS
+modal-manage-categories = Administrar categorías de ingresos y gastos para transacciones.
+modal-expense-categories = CATEGORÍAS DE GASTOS
+modal-income-categories = CATEGORÍAS DE INGRESOS
+modal-no-expense-categories = Sin categorías de gastos
+modal-no-income-categories = Sin categorías de ingresos
+modal-add-new-category = AGREGAR NUEVA CATEGORÍA
+modal-category-name = Nombre de categoría
+modal-default = PREDETERMINADO
+
+# Configure Ticker
+modal-crypto-settings = CONFIGURACIÓN CRYPTO
+modal-manage-price-bar = Administrar barra de precios y catálogo de monedas.
+modal-price-bar = BARRA DE PRECIOS
+modal-remove = ELIMINAR

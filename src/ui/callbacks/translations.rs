@@ -406,6 +406,50 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_form_date_format(s(&t("form-date-format")));
     tr.set_form_all(s(&t("form-all")));
     tr.set_form_habit(s(&t("form-habit")));
+
+    // Modals - Add Account
+    tr.set_modal_delete_account(s(&t("modal-delete-account")));
+    tr.set_modal_save_account(s(&t("modal-save-account")));
+    tr.set_modal_delete_account_confirm(s(&t("modal-delete-account-confirm")));
+
+    // Modals - Add Transaction
+    tr.set_modal_no_accounts(s(&t("modal-no-accounts")));
+
+    // Modals - Add Crypto Transaction
+    tr.set_modal_new_crypto_transaction(s(&t("modal-new-crypto-transaction")));
+    tr.set_modal_save_transaction(s(&t("modal-save-transaction")));
+    tr.set_modal_create_wallet_first(s(&t("modal-create-wallet-first")));
+    tr.set_modal_create_another_wallet(s(&t("modal-create-another-wallet")));
+
+    // Modals - Edit Crypto Transaction
+    tr.set_modal_edit_crypto_transaction(s(&t("modal-edit-crypto-transaction")));
+    tr.set_modal_save_changes(s(&t("modal-save-changes")));
+
+    // Modals - Add Wallet
+    tr.set_modal_new_wallet(s(&t("modal-new-wallet")));
+    tr.set_modal_wallet_type(s(&t("modal-wallet-type")));
+    tr.set_modal_create_wallet(s(&t("modal-create-wallet")));
+
+    // Modals - Add Habit
+    tr.set_modal_category(s(&t("modal-category")));
+    tr.set_modal_color(s(&t("modal-color")));
+
+    // Modals - Configure Categories
+    tr.set_modal_category_settings(s(&t("modal-category-settings")));
+    tr.set_modal_manage_categories(s(&t("modal-manage-categories")));
+    tr.set_modal_expense_categories(s(&t("modal-expense-categories")));
+    tr.set_modal_income_categories(s(&t("modal-income-categories")));
+    tr.set_modal_no_expense_categories(s(&t("modal-no-expense-categories")));
+    tr.set_modal_no_income_categories(s(&t("modal-no-income-categories")));
+    tr.set_modal_add_new_category(s(&t("modal-add-new-category")));
+    tr.set_modal_category_name(s(&t("modal-category-name")));
+    tr.set_modal_default(s(&t("modal-default")));
+
+    // Modals - Configure Ticker
+    tr.set_modal_crypto_settings(s(&t("modal-crypto-settings")));
+    tr.set_modal_manage_price_bar(s(&t("modal-manage-price-bar")));
+    tr.set_modal_price_bar(s(&t("modal-price-bar")));
+    tr.set_modal_remove(s(&t("modal-remove")));
 }
 
 /// Helper to convert String to SharedString
