@@ -9,6 +9,7 @@ import {
     AccountAdapter,
     NotificationAdapter,
 } from "../globals.slint";
+import { Translations } from "../translations.slint";
 import { Theme } from "../theme.slint";
 
 // ==================== FormField ====================
@@ -67,7 +68,9 @@ component FormField inherits Rectangle {
             }
 
             TouchArea {
-                clicked => { input.focus(); }
+                clicked => {
+                    input.focus();
+                }
             }
         }
     }
@@ -124,7 +127,9 @@ component CategorySelector inherits Rectangle {
 
             TouchArea {
                 mouse-cursor: pointer;
-                clicked => { popup.show(); }
+                clicked => {
+                    popup.show();
+                }
             }
         }
     }
@@ -179,7 +184,9 @@ component CategorySelector inherits Rectangle {
 
                         option-touch := TouchArea {
                             mouse-cursor: pointer;
-                            clicked => { root.selected-index = index; }
+                            clicked => {
+                                root.selected-index = index;
+                            }
                         }
                     }
                 }
@@ -200,7 +207,7 @@ component AccountSelector inherits Rectangle {
         spacing: 8px;
 
         Text {
-            text: "ACCOUNT";
+            text: Translations.modal-account;
             color: Theme.text-muted;
             font-size: 10px;
             font-weight: 500;
@@ -237,7 +244,9 @@ component AccountSelector inherits Rectangle {
 
             TouchArea {
                 mouse-cursor: pointer;
-                clicked => { popup.show(); }
+                clicked => {
+                    popup.show();
+                }
             }
         }
     }
@@ -246,7 +255,7 @@ component AccountSelector inherits Rectangle {
         x: 0;
         y: 64px;
         width: root.width;
-        
+
         Rectangle {
             background: Theme.sidebar-bg;
             border-radius: 8px;
@@ -258,7 +267,7 @@ component AccountSelector inherits Rectangle {
 
             Flickable {
                 viewport-height: AccountAdapter.accounts.length * 40px + 8px;
-                
+
                 VerticalLayout {
                     padding: 4px;
                     spacing: 0px;
@@ -292,7 +301,9 @@ component AccountSelector inherits Rectangle {
 
                         option-touch := TouchArea {
                             mouse-cursor: pointer;
-                            clicked => { root.selected-index = index; }
+                            clicked => {
+                                root.selected-index = index;
+                            }
                         }
                     }
                 }
@@ -318,17 +329,18 @@ component TypeToggle inherits Rectangle {
         // Expense button
         Rectangle {
             horizontal-stretch: 1;
-            background: is-expense
-                ? @linear-gradient(135deg, Theme.toggle-expense-start 0%, Theme.toggle-expense-end 100%)
-                : transparent;
+            background: is-expense ? @linear-gradient(135deg, Theme.toggle-expense-start 0%, Theme.toggle-expense-end 100%) : transparent;
             border-radius: 8px;
             border-width: is-expense ? 1px : 0px;
             border-color: Theme.toggle-expense-border;
 
-            animate background { duration: 200ms; easing: ease-out; }
+            animate background {
+                duration: 200ms;
+                easing: ease-out;
+            }
 
             Text {
-                text: "EXPENSE";
+                text: Translations.modal-expense;
                 color: is-expense ? Theme.danger : Theme.text-muted;
                 font-size: 11px;
                 font-weight: is-expense ? 600 : 400;
@@ -341,24 +353,27 @@ component TypeToggle inherits Rectangle {
 
             TouchArea {
                 mouse-cursor: pointer;
-                clicked => { root.is-expense = true; }
+                clicked => {
+                    root.is-expense = true;
+                }
             }
         }
 
         // Income button
         Rectangle {
             horizontal-stretch: 1;
-            background: !is-expense
-                ? @linear-gradient(135deg, Theme.toggle-income-start 0%, Theme.toggle-income-end 100%)
-                : transparent;
+            background: !is-expense ? @linear-gradient(135deg, Theme.toggle-income-start 0%, Theme.toggle-income-end 100%) : transparent;
             border-radius: 8px;
             border-width: !is-expense ? 1px : 0px;
             border-color: Theme.toggle-income-border;
 
-            animate background { duration: 200ms; easing: ease-out; }
+            animate background {
+                duration: 200ms;
+                easing: ease-out;
+            }
 
             Text {
-                text: "INCOME";
+                text: Translations.modal-income;
                 color: !is-expense ? Theme.success : Theme.text-muted;
                 font-size: 11px;
                 font-weight: !is-expense ? 600 : 400;
@@ -371,7 +386,9 @@ component TypeToggle inherits Rectangle {
 
             TouchArea {
                 mouse-cursor: pointer;
-                clicked => { root.is-expense = false; }
+                clicked => {
+                    root.is-expense = false;
+                }
             }
         }
     }
@@ -430,7 +447,6 @@ export component AddTransactionModal inherits Rectangle {
             NotificationAdapter.show("Amount is required", true);
             return;
         }
-
         if (account-index >= AccountAdapter.accounts.length) {
             account-index = 0;
         }
@@ -444,7 +460,6 @@ export component AddTransactionModal inherits Rectangle {
             NotificationAdapter.show("Transaction no longer available", true);
             return;
         }
-
         let result = editing ? TransactionAdapter.update-transaction(
             edit-id,
             account-id,
@@ -521,12 +536,14 @@ export component AddTransactionModal inherits Rectangle {
         drop-shadow-color: Theme.overlay-soft;
 
         TouchArea {
-            clicked => { key-scope.focus(); }
+            clicked => {
+                key-scope.focus();
+            }
         }
 
-	        VerticalLayout {
-	            padding: 32px;
-	            spacing: 20px;
+        VerticalLayout {
+            padding: 32px;
+            spacing: 20px;
 
             // Header
             HorizontalLayout {
@@ -536,13 +553,13 @@ export component AddTransactionModal inherits Rectangle {
                     spacing: 12px;
                     horizontal-stretch: 1;
 
-	                    Rectangle {
-	                        width: 4px;
-	                        height: 20px;
-	                        border-radius: 2px;
-	                        background: @linear-gradient(180deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
-	                        y: (parent.height - self.height) / 2;
-	                    }
+                    Rectangle {
+                        width: 4px;
+                        height: 20px;
+                        border-radius: 2px;
+                        background: @linear-gradient(180deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
+                        y: (parent.height - self.height) / 2;
+                    }
 
                     Text {
                         text: editing ? "EDIT ENTRY" : "NEW ENTRY";
@@ -577,86 +594,90 @@ export component AddTransactionModal inherits Rectangle {
                         }
                     }
                 }
-	            }
-	
-	            body := Flickable {
-	                horizontal-stretch: 1;
-	                vertical-stretch: 1;
+            }
 
-	                TouchArea {
-	                    width: parent.width;
-	                    height: parent.height;
-	                    clicked => { key-scope.focus(); }
-	                }
+            body := Flickable {
+                horizontal-stretch: 1;
+                vertical-stretch: 1;
 
-	                VerticalLayout {
-	                    width: parent.width;
-	                    spacing: 20px;
-	
-	                    // Type toggle
+                TouchArea {
+                    width: parent.width;
+                    height: parent.height;
+                    clicked => {
+                        key-scope.focus();
+                    }
+                }
+
+                VerticalLayout {
+                    width: parent.width;
+                    spacing: 20px;
+
+                    // Type toggle
                     TypeToggle {
                         is-expense <=> root.is-expense;
                     }
-	
-	                    // Account selector
+
+                    // Account selector
 	                    if AccountAdapter.accounts.length > 0: AccountSelector {
-	                        selected-index <=> account-index;
-	                    }
-	
-	                    if AccountAdapter.accounts.length == 0: Rectangle {
-	                        height: 48px;
-	                        background: Theme.surface;
-	                        border-radius: 8px;
-	                        border-width: 1px;
-	                        border-color: Theme.border;
-	
-	                        Text {
-	                            text: "No accounts available. Create one first.";
-	                            color: Theme.text-muted;
-	                            font-size: 12px;
-	                            horizontal-alignment: center;
-	                            vertical-alignment: center;
-	                        }
-	                    }
-	
-	                    // Amount field
+                        selected-index <=> account-index;
+                    }
+
+                    if AccountAdapter.accounts.length == 0: Rectangle {
+                        height: 48px;
+                        background: Theme.surface;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: Theme.border;
+
+                        Text {
+                            text: Translations.modal-no-accounts;
+                            color: Theme.text-muted;
+                            font-size: 12px;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    // Amount field
 	                    FormField {
-	                        label: "AMOUNT";
-	                        placeholder: "0.00";
-	                        value <=> amount-value;
-	                        large: true;
-	                    }
-	
-	                    // Category selector
+                        label: "AMOUNT";
+                        placeholder: "0.00";
+                        value <=> amount-value;
+                        large: true;
+                    }
+
+                    // Category selector
                     CategorySelector {
                         label: "CATEGORY";
                         categories: current-categories;
                         selected-index <=> category-index;
                     }
-	
-	                    // Description field
+
+                    // Description field
 	                    FormField {
-	                        label: "DESCRIPTION (OPTIONAL)";
-	                        placeholder: "Add a note...";
-	                        value <=> description-value;
-	                    }
-	
-	                    // Date field
+                        label: "DESCRIPTION (OPTIONAL)";
+                        placeholder: "Add a note...";
+                        value <=> description-value;
+                    }
+
+                    // Date field
 	                    FormField {
-	                        label: "DATE";
-	                        placeholder: "YYYY-MM-DD";
-	                        value <=> date-value;
-	                    }
-	
-	                    Rectangle { height: 8px; }
-	                }
-	            }
-	
-	            // Submit button
+                        label: "DATE";
+                        placeholder: "YYYY-MM-DD";
+                        value <=> date-value;
+                    }
+
+                    Rectangle {
+                        height: 8px;
+                    }
+                }
+            }
+
+            // Submit button
 	            Rectangle {
-	                height: 48px;
-	                background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
-	                border-radius: 10px;
+                height: 48px;
+                background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
+                border-radius: 10px;
 
                 animate background { duration: 150ms; }
 
@@ -672,7 +693,9 @@ export component AddTransactionModal inherits Rectangle {
 
                 submit-touch := TouchArea {
                     mouse-cursor: pointer;
-                    clicked => { root.submit(); }
+                    clicked => {
+                        root.submit();
+                    }
                 }
 
                 states [

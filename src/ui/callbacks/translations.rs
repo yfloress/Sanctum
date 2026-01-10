@@ -450,6 +450,40 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_modal_manage_price_bar(s(&t("modal-manage-price-bar")));
     tr.set_modal_price_bar(s(&t("modal-price-bar")));
     tr.set_modal_remove(s(&t("modal-remove")));
+
+    // Modals - Add Transaction
+    tr.set_modal_account(s(&t("modal-account")));
+    tr.set_modal_expense(s(&t("modal-expense")));
+    tr.set_modal_income(s(&t("modal-income")));
+
+    // Modals - Add Habit
+    tr.set_modal_checkpoints(s(&t("modal-checkpoints")));
+    tr.set_modal_checkpoint_desc(s(&t("modal-checkpoint-desc")));
+
+    // Modals - Add Reward
+    tr.set_modal_consecutive(s(&t("modal-consecutive")));
+    tr.set_modal_accumulative(s(&t("modal-accumulative")));
+    tr.set_modal_type(s(&t("modal-type")));
+    tr.set_modal_milestones(s(&t("modal-milestones")));
+    tr.set_modal_reward_placeholder(s(&t("modal-reward-placeholder")));
+
+    // Modals - Configure Ticker Extended
+    tr.set_modal_coin_catalog(s(&t("modal-coin-catalog")));
+    tr.set_modal_max_coins(s(&t("modal-max-coins")));
+    tr.set_modal_catalog_info(s(&t("modal-catalog-info")));
+    tr.set_modal_coin_list(s(&t("modal-coin-list")));
+    tr.set_modal_add_coin(s(&t("modal-add-coin")));
+    tr.set_modal_removing_info(s(&t("modal-removing-info")));
+    tr.set_modal_select_all(s(&t("modal-select-all")));
+    tr.set_modal_remove_selected(s(&t("modal-remove-selected")));
+
+    // Sidebar branding
+    tr.set_sidebar_logo(s(&t("sidebar-logo")));
+    tr.set_sidebar_title(s(&t("sidebar-title")));
+
+    // Crypto Widgets
+    tr.set_crypto_holdings_small(s(&t("crypto-holdings-small")));
+    tr.set_crypto_price_small(s(&t("crypto-price-small")));
 }
 
 /// Helper to convert String to SharedString

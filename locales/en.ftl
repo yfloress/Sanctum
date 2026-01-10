@@ -444,3 +444,50 @@ modal-crypto-settings = CRYPTO SETTINGS
 modal-manage-price-bar = Manage price bar and coin catalog for selection.
 modal-price-bar = PRICE BAR
 modal-remove = REMOVE
+
+# Add Transaction
+modal-account = ACCOUNT
+modal-expense = EXPENSE
+modal-income = INCOME
+
+# Add Habit
+modal-checkpoints = CHECKPOINTS
+modal-checkpoint-desc = Checkpoint description...
+
+# Add Reward
+modal-consecutive = CONSECUTIVE
+modal-accumulative = ACCUMULATIVE
+modal-type = TYPE
+modal-milestones = MILESTONES
+modal-reward-placeholder = Reward...
+
+# Configure Ticker
+modal-coin-catalog = COIN CATALOG
+modal-max-coins = Max 50 active coins for price updates.
+modal-catalog-info = Catalog is used for price bar and transactions.
+modal-coin-list = COIN LIST
+modal-add-coin = ADD COIN
+modal-removing-info = Removing coins only hides them here.
+modal-select-all = SELECT ALL
+modal-remove-selected = REMOVE SELECTED
+
+# Sidebar branding
+sidebar-logo = S
+sidebar-title = SANCTUM
+
+# Crypto Widgets
+crypto-holdings-small = Holdings
+crypto-price-small = Price
+
+# Icon Selector
+icon-exchanges = Exchanges
+icon-wallet-icons = Wallet Icons
+icon-choose = CHOOSE ICON
+
+# Forms
+form-search-coin = Search coin...
+
+# Streak Rewards
+rewards-ready-claim-with = Ready to claim: { $reward }
+rewards-next-with = Next: { $reward }
+rewards-all-unlocked = All milestones unlocked!

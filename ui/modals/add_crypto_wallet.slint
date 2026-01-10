@@ -6,6 +6,7 @@ import {
     CryptoAdapter,
     NotificationAdapter,
 } from "../globals.slint";
+import { Translations } from "../translations.slint";
 import { Theme } from "../theme.slint";
 import { FormField } from "../components/transaction_form_components.slint";
 
@@ -19,9 +20,7 @@ component CategoryCard inherits Rectangle {
     callback clicked;
 
     height: 76px;
-    background: selected
-        ? @linear-gradient(135deg, Theme.surface 0%, Theme.crypto-icon-gradient-start 100%)
-        : (touch.has-hover ? Theme.surface-hover : Theme.surface);
+    background: selected ? @linear-gradient(135deg, Theme.surface 0%, Theme.crypto-icon-gradient-start 100%) : (touch.has-hover ? Theme.surface-hover : Theme.surface);
     border-radius: 12px;
     border-width: selected ? 2px : 1px;
     border-color: selected ? Theme.accent : Theme.border;
@@ -41,18 +40,16 @@ component CategoryCard inherits Rectangle {
         opacity: 0.15;
     }
 
-	    HorizontalLayout {
-	        padding: 16px;
-	        spacing: 14px;
+    HorizontalLayout {
+        padding: 16px;
+        spacing: 14px;
 
         // Icon
 	            Rectangle {
-	                width: 44px;
-	                height: 44px;
-	                border-radius: 10px;
-	                background: selected
-	                ? @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%)
-	                : Theme.surface-hover;
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            background: selected ? @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%) : Theme.surface-hover;
 
             Image {
                 source: root.icon;
@@ -84,12 +81,13 @@ component CategoryCard inherits Rectangle {
                 font-weight: 400;
             }
         }
-
     }
 
-    touch := TouchArea { 
+    touch := TouchArea {
         mouse-cursor: pointer;
-        clicked => { root.clicked(); } 
+        clicked => {
+            root.clicked();
+        }
     }
 }
 
@@ -98,7 +96,9 @@ export component AddCryptoWalletModal inherits Rectangle {
     property <string> wallet-name: "";
     property <string> category: "wallet_single";
 
-    init => { key-scope.focus(); }
+    init => {
+        key-scope.focus();
+    }
 
     function reset() {
         wallet-name = "";
@@ -110,7 +110,6 @@ export component AddCryptoWalletModal inherits Rectangle {
             NotificationAdapter.show("Wallet name is required", true);
             return;
         }
-
         CryptoAdapter.icon-edit-wallet-category = root.category;
         CryptoAdapter.icon-edit-wallet-icon = "";
         let result = CryptoAdapter.create-wallet(wallet-name, category);
@@ -186,12 +185,14 @@ export component AddCryptoWalletModal inherits Rectangle {
         opacity: 1.0;
 
         TouchArea {
-            clicked => { key-scope.focus(); }
+            clicked => {
+                key-scope.focus();
+            }
         }
 
-	        VerticalLayout {
-	            padding: 32px;
-	            spacing: 24px;
+        VerticalLayout {
+            padding: 32px;
+            spacing: 24px;
 
             // Header
             HorizontalLayout {
@@ -201,16 +202,16 @@ export component AddCryptoWalletModal inherits Rectangle {
                     spacing: 12px;
                     horizontal-stretch: 1;
 
-	                        Rectangle {
-	                            width: 4px;
-	                            height: 20px;
-	                            border-radius: 2px;
-	                            background: @linear-gradient(180deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
-	                            y: (parent.height - self.height) / 2;
-	                        }
+                    Rectangle {
+                        width: 4px;
+                        height: 20px;
+                        border-radius: 2px;
+                        background: @linear-gradient(180deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
+                        y: (parent.height - self.height) / 2;
+                    }
 
                     Text {
-                        text: "NEW WALLET";
+                        text: Translations.modal-new-wallet;
                         color: Theme.text-primary;
                         font-size: 16px;
                         font-weight: 500;
@@ -218,110 +219,125 @@ export component AddCryptoWalletModal inherits Rectangle {
                         vertical-alignment: center;
                     }
                 }
-                
+
                 Rectangle {
                     width: 32px;
                     height: 32px;
                     border-radius: 8px;
                     background: close-touch.has-hover ? Theme.surface-hover : transparent;
-                    
-                    Text { 
-                        text: "×"; 
+
+                    Text {
+                        text: "×";
                         color: close-touch.has-hover ? Theme.text-primary : Theme.text-muted;
                         font-size: 20px;
                         font-weight: 300;
-                        vertical-alignment: center; 
+                        vertical-alignment: center;
                         horizontal-alignment: center;
                     }
-                    
-                    close-touch := TouchArea { 
+
+                    close-touch := TouchArea {
                         mouse-cursor: pointer;
-                        clicked => { root.reset(); AppState.show-add-wallet = false; } 
+                        clicked => {
+                            root.reset();
+                            AppState.show-add-wallet = false;
+                        }
                     }
                 }
-	            }
+            }
 
-	            body := Flickable {
-	                horizontal-stretch: 1;
-	                vertical-stretch: 1;
+            body := Flickable {
+                horizontal-stretch: 1;
+                vertical-stretch: 1;
 
-	                TouchArea {
-	                    width: parent.width;
-	                    height: parent.height;
-	                    clicked => { key-scope.focus(); }
-	                }
+                TouchArea {
+                    width: parent.width;
+                    height: parent.height;
+                    clicked => {
+                        key-scope.focus();
+                    }
+                }
 
-	                VerticalLayout {
-	                    width: parent.width;
-	                    spacing: 24px;
+                VerticalLayout {
+                    width: parent.width;
+                    spacing: 24px;
 
-	                    // Name Field
+                    // Name Field
 	                    FormField {
-	                        label: "WALLET NAME";
-	                        placeholder: "e.g. Ledger Nano X";
-	                        value <=> root.wallet-name;
-	                        submit-shortcut => { root.submit(); }
-	                    }
+                        label: "WALLET NAME";
+                        placeholder: "e.g. Ledger Nano X";
+                        value <=> root.wallet-name;
+                        submit-shortcut => {
+                            root.submit();
+                        }
+                    }
 
-	                    // Category Label
+                    // Category Label
 	                    VerticalLayout {
-	                        spacing: 12px;
+                        spacing: 12px;
 
-	                        Text {
-	                            text: "WALLET TYPE";
-	                            color: Theme.text-muted;
-	                            font-size: 10px;
-	                            font-weight: 500;
-	                            letter-spacing: 1.5px;
-	                        }
+                        Text {
+                            text: Translations.modal-wallet-type;
+                            color: Theme.text-muted;
+                            font-size: 10px;
+                            font-weight: 500;
+                            letter-spacing: 1.5px;
+                        }
 
-	                        // Category Options
+                        // Category Options
 	                        VerticalLayout {
-	                            spacing: 10px;
-	                            
-	                            CategoryCard {
-	                                icon: @image-url("../assets/icons/wallet.svg");
-	                                title: "Software Wallet";
-	                                subtitle: "MetaMask, Trust Wallet, Exodus";
-	                                value: "wallet_single";
-	                                selected: root.category == "wallet_single";
-	                                clicked => { root.category = "wallet_single"; }
-	                            }
+                            spacing: 10px;
 
-	                            CategoryCard {
-	                                icon: @image-url("../assets/icons/shield.svg");
-	                                title: "Hardware Wallet";
-	                                subtitle: "Ledger, Trezor, KeepKey";
-	                                value: "wallet_multi";
-	                                selected: root.category == "wallet_multi";
-	                                clicked => { root.category = "wallet_multi"; }
-	                            }
+                            CategoryCard {
+                                icon: @image-url("../assets/icons/wallet.svg");
+                                title: "Software Wallet";
+                                subtitle: "MetaMask, Trust Wallet, Exodus";
+                                value: "wallet_single";
+                                selected: root.category == "wallet_single";
+                                clicked => {
+                                    root.category = "wallet_single";
+                                }
+                            }
 
-	                            CategoryCard {
-	                                icon: @image-url("../assets/icons/trending-up.svg");
-	                                title: "Exchange";
-	                                subtitle: "Binance, Coinbase, Kraken";
-	                                value: "exchange";
-	                                selected: root.category == "exchange";
-	                                clicked => { root.category = "exchange"; }
-	                            }
-	                        }
-	                    }
+                            CategoryCard {
+                                icon: @image-url("../assets/icons/shield.svg");
+                                title: "Hardware Wallet";
+                                subtitle: "Ledger, Trezor, KeepKey";
+                                value: "wallet_multi";
+                                selected: root.category == "wallet_multi";
+                                clicked => {
+                                    root.category = "wallet_multi";
+                                }
+                            }
 
-	                    Rectangle { height: 8px; }
-	                }
-	            }
+                            CategoryCard {
+                                icon: @image-url("../assets/icons/trending-up.svg");
+                                title: "Exchange";
+                                subtitle: "Binance, Coinbase, Kraken";
+                                value: "exchange";
+                                selected: root.category == "exchange";
+                                clicked => {
+                                    root.category = "exchange";
+                                }
+                            }
+                        }
+                    }
 
-	            // Submit Button
+                    Rectangle {
+                        height: 8px;
+                    }
+                }
+            }
+
+            // Submit Button
 	            Rectangle {
-	                height: 48px;
-	                background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
-	                border-radius: 10px;
-	                
-	                HorizontalLayout {
+                height: 48px;
+                background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
+                border-radius: 10px;
+
+                HorizontalLayout {
                     alignment: center;
                     spacing: 10px;
-                    
+
                     Text {
                         text: "+";
                         color: Theme.text-primary;
@@ -329,8 +345,9 @@ export component AddCryptoWalletModal inherits Rectangle {
                         font-weight: 500;
                         vertical-alignment: center;
                     }
+
                     Text {
-                        text: "CREATE WALLET";
+                        text: Translations.modal-create-wallet;
                         color: Theme.text-primary;
                         font-size: 12px;
                         font-weight: 600;
@@ -338,10 +355,12 @@ export component AddCryptoWalletModal inherits Rectangle {
                         vertical-alignment: center;
                     }
                 }
-                
-                submit-touch := TouchArea { 
+
+                submit-touch := TouchArea {
                     mouse-cursor: pointer;
-                    clicked => { root.submit(); } 
+                    clicked => {
+                        root.submit();
+                    }
                 }
 
                 states [
