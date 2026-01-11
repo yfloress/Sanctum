@@ -9,13 +9,13 @@ impl From<VaultError> for ControllerError {
                 ControllerError::Validation("Backup file not found".to_string())
             }
             VaultError::InvalidBackupFile => {
-                ControllerError::Validation("Invalid backup file: not a SQLite database".to_string())
-            }
-            VaultError::BackupTooSmall => {
-                ControllerError::Validation("Backup file is too small (minimum 1MB)".to_string())
+                ControllerError::Validation("Invalid backup file".to_string())
             }
             VaultError::BackupTooLarge => {
                 ControllerError::Validation("Backup file is too large (maximum 1GB)".to_string())
+            }
+            VaultError::BackupEmpty => {
+                ControllerError::Validation("Backup file is empty".to_string())
             }
             VaultError::PermissionDenied => {
                 ControllerError::Validation("Permission denied accessing file".to_string())

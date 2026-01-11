@@ -1,13 +1,10 @@
-use std::fs::{self, File};
-use std::io::Read;
+use std::fs;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
-/// SQLite file format magic bytes
-const SQLITE_MAGIC: &[u8] = b"SQLite format 3\0";
-
-/// Minimum reasonable vault file size (1MB)
-const MIN_VAULT_SIZE: u64 = 1_000_000;
+// Note: SQLCipher encrypts the entire database file, including the header.
+// We cannot validate using SQLite magic bytes because they are encrypted.
+// Validation is limited to file existence and size checks.
 
 /// Maximum reasonable vault file size (1GB)
 const MAX_VAULT_SIZE: u64 = 1_000_000_000;
@@ -17,14 +14,14 @@ pub enum VaultError {
     #[error("File not found")]
     FileNotFound,
 
-    #[error("Invalid backup file: not a SQLite database")]
+    #[error("Invalid backup file")]
     InvalidBackupFile,
-
-    #[error("Backup file is too small (minimum 1MB)")]
-    BackupTooSmall,
 
     #[error("Backup file is too large (maximum 1GB)")]
     BackupTooLarge,
+
+    #[error("Backup file is empty")]
+    BackupEmpty,
 
     #[error("Permission denied accessing file")]
     PermissionDenied,
@@ -39,55 +36,50 @@ pub enum VaultError {
     Io(#[from] std::io::Error),
 }
 
-/// Validate that a file is a valid SQLite database backup
+/// Validate that a file exists and has reasonable size for import
+///
+/// Note: SQLCipher encrypts the entire database including the header,
+/// so we cannot validate using SQLite magic bytes. The actual validation
+/// of whether it's a valid encrypted database happens at login time.
 pub fn validate_backup_file(path: &Path) -> Result<(), VaultError> {
     // 1. Check file exists
     if !path.exists() {
         return Err(VaultError::FileNotFound);
     }
 
-    // 2. Check permissions
+    // 2. Check permissions and get metadata
     let metadata = fs::metadata(path).map_err(|_| VaultError::PermissionDenied)?;
 
     // 3. Check file size
     let file_size = metadata.len();
-    if file_size < MIN_VAULT_SIZE {
-        return Err(VaultError::BackupTooSmall);
+    if file_size == 0 {
+        return Err(VaultError::BackupEmpty);
     }
     if file_size > MAX_VAULT_SIZE {
         return Err(VaultError::BackupTooLarge);
-    }
-
-    // 4. Verify SQLite magic bytes
-    let mut file = File::open(path)?;
-    let mut header = [0u8; 16];
-    file.read_exact(&mut header)?;
-
-    if header != SQLITE_MAGIC {
-        return Err(VaultError::InvalidBackupFile);
     }
 
     Ok(())
 }
 
 /// Export vault to a backup location
+///
+/// Copies the encrypted database file without any decryption.
+/// The backup maintains full encryption with the original password.
 pub fn export_vault(source: &Path, destination: &Path) -> Result<(), VaultError> {
     // 1. Validate source exists
     if !source.exists() {
         return Err(VaultError::FileNotFound);
     }
 
-    // 2. Validate source is a valid SQLite file (check magic bytes only, no size limit)
-    let mut file = File::open(source)?;
-    let mut header = [0u8; 16];
-    file.read_exact(&mut header)?;
-    if header != SQLITE_MAGIC {
-        return Err(VaultError::InvalidBackupFile);
+    // 2. Check source is not empty
+    let source_size = fs::metadata(source)?.len();
+    if source_size == 0 {
+        return Err(VaultError::BackupEmpty);
     }
 
     // 3. Check if destination already exists (should be handled by file dialog)
     if destination.exists() {
-        // File dialog handles overwrite confirmation, but double-check
         log::warn!("Destination file already exists, will overwrite");
     }
 
@@ -102,7 +94,6 @@ pub fn export_vault(source: &Path, destination: &Path) -> Result<(), VaultError>
     }
 
     // 6. Verify copy integrity
-    let source_size = fs::metadata(source)?.len();
     let dest_size = fs::metadata(destination)?.len();
     if source_size != dest_size {
         // Cleanup failed copy
@@ -209,38 +200,53 @@ pub fn cleanup_pre_restore_backup(vault_path: &Path) -> Result<(), VaultError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs::File;
     use std::io::Write;
 
     #[test]
-    fn test_validate_sqlite_magic_bytes() {
+    fn test_validate_backup_file_exists() {
         let temp_dir = std::env::temp_dir();
-        let valid_file = temp_dir.join("valid.db");
-        let invalid_file = temp_dir.join("invalid.db");
+        let non_existent = temp_dir.join("non_existent_test.db");
 
-        // Create a file with valid SQLite header but small size
-        let mut file = File::create(&valid_file).unwrap();
-        file.write_all(SQLITE_MAGIC).unwrap();
-        // Pad to meet minimum size
-        file.write_all(&vec![0u8; MIN_VAULT_SIZE as usize]).unwrap();
-        drop(file);
-
-        // Create an invalid file
-        let mut file = File::create(&invalid_file).unwrap();
-        file.write_all(b"Not a SQLite file").unwrap();
-        file.write_all(&vec![0u8; MIN_VAULT_SIZE as usize]).unwrap();
-        drop(file);
-
-        // Test valid file
-        assert!(validate_backup_file(&valid_file).is_ok());
-
-        // Test invalid file
+        // Test non-existent file
         assert!(matches!(
-            validate_backup_file(&invalid_file),
-            Err(VaultError::InvalidBackupFile)
+            validate_backup_file(&non_existent),
+            Err(VaultError::FileNotFound)
+        ));
+    }
+
+    #[test]
+    fn test_validate_backup_file_empty() {
+        let temp_dir = std::env::temp_dir();
+        let empty_file = temp_dir.join("empty_test.db");
+
+        // Create an empty file
+        File::create(&empty_file).unwrap();
+
+        // Test empty file
+        assert!(matches!(
+            validate_backup_file(&empty_file),
+            Err(VaultError::BackupEmpty)
         ));
 
         // Cleanup
+        let _ = fs::remove_file(empty_file);
+    }
+
+    #[test]
+    fn test_validate_backup_file_valid() {
+        let temp_dir = std::env::temp_dir();
+        let valid_file = temp_dir.join("valid_test.db");
+
+        // Create a file with some content (simulating encrypted database)
+        let mut file = File::create(&valid_file).unwrap();
+        file.write_all(b"encrypted content here").unwrap();
+        drop(file);
+
+        // Test valid file (any non-empty file passes validation)
+        assert!(validate_backup_file(&valid_file).is_ok());
+
+        // Cleanup
         let _ = fs::remove_file(valid_file);
-        let _ = fs::remove_file(invalid_file);
     }
 }
