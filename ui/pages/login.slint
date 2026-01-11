@@ -275,59 +275,64 @@ export component LoginPage inherits Rectangle {
         Rectangle {
             height: 60px;
 
-            HorizontalLayout {
-                padding-left: 32px;
-                padding-right: 32px;
+            Text {
+                text: Translations.login-encryption-note;
+                color: Theme.text-subtle;
+                font-size: 9px;
+                font-weight: 500;
+                letter-spacing: 3px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
 
-                // Encryption note (centered)
-                Text {
-                    text: Translations.login-encryption-note;
-                    color: Theme.text-subtle;
-                    font-size: 9px;
-                    font-weight: 500;
-                    letter-spacing: 3px;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                    horizontal-stretch: 1;
-                }
+    // Restore button (floating in bottom-right corner, only when vault exists)
+    if vault-exists: Rectangle {
+        x: parent.width - self.width - 24px;
+        y: parent.height - self.height - 24px;
+        width: 160px;
+        height: 36px;
+        border-radius: 8px;
+        background: restore-touch.has-hover ? Theme.surface-hover : Theme.surface;
+        border-width: 1px;
+        border-color: Theme.border;
 
-                // Restore link (right corner, only when vault exists)
-                if vault-exists: restore-link := Rectangle {
-                    width: 160px;
-                    height: 60px;
+        HorizontalLayout {
+            padding-left: 12px;
+            padding-right: 12px;
+            spacing: 8px;
+            alignment: center;
 
-                    HorizontalLayout {
-                        alignment: end;
+            Image {
+                source: @image-url("../assets/icons/upload.svg");
+                width: 14px;
+                height: 14px;
+                colorize: Theme.text-muted;
+                vertical-alignment: center;
+            }
 
-                        Rectangle {
-                            width: 140px;
+            Text {
+                text: Translations.vault-restore-from-backup;
+                color: restore-touch.has-hover ? Theme.text-primary : Theme.text-muted;
+                font-size: 10px;
+                font-weight: 500;
+                vertical-alignment: center;
+            }
+        }
 
-                            Text {
-                                text: Translations.vault-restore-from-backup;
-                                color: restore-touch.has-hover ? Theme.accent : Theme.text-subtle;
-                                font-size: 9px;
-                                font-weight: 500;
-                                horizontal-alignment: right;
-                                vertical-alignment: center;
-                            }
+        animate background { duration: 200ms; }
 
-                            animate opacity { duration: 200ms; }
+        states [
+            hover when restore-touch.has-hover: {
+                background: Theme.surface-hover;
+            }
+        ]
 
-                            states [
-                                hover when restore-touch.has-hover: {
-                                    opacity: 0.9;
-                                }
-                            ]
-
-                            restore-touch := TouchArea {
-                                mouse-cursor: pointer;
-                                clicked => {
-                                    AppState.show-restore-vault = true;
-                                }
-                            }
-                        }
-                    }
-                }
+        restore-touch := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                VaultAdapter.restore-vault();
             }
         }
     }

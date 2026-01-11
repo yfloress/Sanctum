@@ -77,8 +77,13 @@ pub fn export_vault(source: &Path, destination: &Path) -> Result<(), VaultError>
         return Err(VaultError::FileNotFound);
     }
 
-    // 2. Validate source is a valid SQLite file
-    validate_backup_file(source)?;
+    // 2. Validate source is a valid SQLite file (check magic bytes only, no size limit)
+    let mut file = File::open(source)?;
+    let mut header = [0u8; 16];
+    file.read_exact(&mut header)?;
+    if header != SQLITE_MAGIC {
+        return Err(VaultError::InvalidBackupFile);
+    }
 
     // 3. Check if destination already exists (should be handled by file dialog)
     if destination.exists() {
