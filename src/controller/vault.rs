@@ -1,6 +1,6 @@
 use super::ControllerError;
 use crate::services::vault::{self, VaultError};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 impl From<VaultError> for ControllerError {
     fn from(err: VaultError) -> Self {

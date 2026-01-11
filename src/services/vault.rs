@@ -1,5 +1,5 @@
 use std::fs::{self, File};
-use std::io::{Read, Write};
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
@@ -63,7 +63,7 @@ pub fn validate_backup_file(path: &Path) -> Result<(), VaultError> {
     let mut header = [0u8; 16];
     file.read_exact(&mut header)?;
 
-    if &header != SQLITE_MAGIC {
+    if header != SQLITE_MAGIC {
         return Err(VaultError::InvalidBackupFile);
     }
 
@@ -102,8 +102,7 @@ pub fn export_vault(source: &Path, destination: &Path) -> Result<(), VaultError>
     if source_size != dest_size {
         // Cleanup failed copy
         let _ = fs::remove_file(destination);
-        return Err(VaultError::Io(std::io::Error::new(
-            std::io::ErrorKind::Other,
+        return Err(VaultError::Io(std::io::Error::other(
             "Copy integrity check failed",
         )));
     }
@@ -161,8 +160,7 @@ pub fn import_vault(backup: &Path, destination: &Path) -> Result<(), VaultError>
             log::error!("Restore failed, attempting rollback");
             let _ = fs::copy(&pre_restore, destination);
         }
-        return Err(VaultError::Io(std::io::Error::new(
-            std::io::ErrorKind::Other,
+        return Err(VaultError::Io(std::io::Error::other(
             "Restore integrity check failed",
         )));
     }
