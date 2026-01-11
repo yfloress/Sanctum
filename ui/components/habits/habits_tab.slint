@@ -74,11 +74,13 @@ component SummaryItem inherits Rectangle {
             font-size: 10px;
             font-weight: 600;
             letter-spacing: 1px;
+            horizontal-alignment: center;
+            horizontal-stretch: 1;
         }
 
         HorizontalLayout {
             spacing: 6px;
-            alignment: start;
+            alignment: center;
 
             Image {
                 source: root.icon;
@@ -101,6 +103,8 @@ component SummaryItem inherits Rectangle {
             text: root.note;
             color: Theme.text-muted;
             font-size: 11px;
+            horizontal-alignment: center;
+            horizontal-stretch: 1;
         }
     }
 }
@@ -363,7 +367,6 @@ export component HabitsTab inherits Rectangle {
                     }
 
                     HorizontalLayout {
-                        width: parent.width;
                         spacing: 24px;
                         horizontal-stretch: 1;
 
@@ -383,7 +386,6 @@ export component HabitsTab inherits Rectangle {
                     }
 
                     HorizontalLayout {
-                        width: parent.width;
                         spacing: 24px;
                         horizontal-stretch: 1;
 

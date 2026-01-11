@@ -33,8 +33,6 @@ component LastUpdatedBadge inherits Rectangle {
 }
 
 component HeroHeaderRow inherits Rectangle {
-    in property <bool> show-last-updated: true;
-
     HorizontalLayout {
         spacing: 12px;
         alignment: start;
@@ -63,8 +61,6 @@ component HeroHeaderRow inherits Rectangle {
                 CryptoAdapter.refresh-prices();
             }
         }
-
-        if show-last-updated: LastUpdatedBadge { }
     }
 }
 
@@ -79,16 +75,20 @@ component HeroLeft inherits Rectangle {
         if compact: VerticalLayout {
             spacing: 8px;
 
-            HeroHeaderRow {
-                show-last-updated: false;
-            }
+            HeroHeaderRow { }
 
             LastUpdatedBadge {
                 compact: true;
             }
         }
 
-        if !compact: HeroHeaderRow { }
+        if !compact: VerticalLayout {
+            spacing: 6px;
+
+            HeroHeaderRow { }
+
+            LastUpdatedBadge { }
+        }
 
         VerticalLayout {
             spacing: 6px;
@@ -106,16 +106,15 @@ component HeroLeft inherits Rectangle {
             Rectangle {
                 property <bool> pnl_available: CryptoAdapter.total-pnl != "N/A";
 
-                height: compact ? 24px : 28px;
-                min-width: compact ? 0px : 90px;
+                height: compact ? 24px : 26px;
                 border-radius: 6px;
                 background: pnl_available ? (CryptoAdapter.total-pnl-positive ? Theme.success.with-alpha(0.12) : Theme.danger.with-alpha(0.12)) : Theme.surface;
                 border-width: 1px;
                 border-color: pnl_available ? (CryptoAdapter.total-pnl-positive ? Theme.success.with-alpha(0.2) : Theme.danger.with-alpha(0.2)) : Theme.border;
 
                 HorizontalLayout {
-                    padding-left: compact ? 8px : 12px;
-                    padding-right: compact ? 8px : 12px;
+                    padding-left: compact ? 8px : 10px;
+                    padding-right: compact ? 8px : 10px;
                     alignment: center;
                     spacing: 4px;
 
@@ -129,7 +128,7 @@ component HeroLeft inherits Rectangle {
                     Text {
                         text: CryptoAdapter.total-pnl;
                         color: pnl_available ? (CryptoAdapter.total-pnl-positive ? Theme.success : Theme.danger) : Theme.text-muted;
-                        font-size: compact ? 11px : 12px;
+                        font-size: compact ? 11px : 11px;
                         font-weight: 600;
                         vertical-alignment: center;
                     }
@@ -245,10 +244,10 @@ component HeroControls inherits Rectangle {
 
 export component CryptoHeroHeader inherits Rectangle {
     in-out property <string> active-tab;
-    property <length> compact-breakpoint: 1280px;
+    property <length> compact-breakpoint: 1500px;
     property <bool> compact: root.width < compact-breakpoint;
 
-    height: compact ? 280px : Theme.crypto-hero-height;
+    height: compact ? 320px : Theme.crypto-hero-height;
     background: @linear-gradient(180deg, Theme.crypto-hero-gradient-start 0%, Theme.background 100%);
 
     VerticalLayout {
