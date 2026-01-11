@@ -9,6 +9,7 @@ pub mod finance;
 pub mod habits;
 pub mod settings;
 pub mod translations;
+pub mod vault;
 
 pub use crypto::*;
 pub use dashboard::*;
@@ -16,3 +17,4 @@ pub use finance::*;
 pub use habits::*;
 pub use settings::*;
 pub use translations::*;
+pub use vault::*;

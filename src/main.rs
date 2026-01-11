@@ -765,6 +765,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // SettingsAdapter callbacks (extracted to ui/callbacks/settings.rs)
     sanctum::ui::setup_settings_callbacks(&ui, &ui_weak, &controller, show_notification.clone());
 
+    // VaultAdapter callbacks (extracted to ui/callbacks/vault.rs)
+    sanctum::ui::setup_vault_callbacks(&ui, &ui_weak, &controller, show_notification.clone());
+
     // Translations setup (extracted to ui/callbacks/translations.rs)
     sanctum::ui::setup_translation_callbacks(&ui);
 

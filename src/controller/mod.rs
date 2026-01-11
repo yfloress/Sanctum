@@ -8,6 +8,7 @@ mod finance;
 mod habits;
 mod rewards;
 mod settings;
+mod vault;
 
 use crate::db::{Database, DbError};
 use crate::features::crypto::{CryptoError, CryptoService};

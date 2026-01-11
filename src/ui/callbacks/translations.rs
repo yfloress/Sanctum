@@ -607,6 +607,25 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_settings_encryption_type(s(&t("settings-encryption-type")));
     tr.set_settings_storage_type(s(&t("settings-storage-type")));
 
+    // Vault Backup
+    tr.set_vault_backup_section(s(&t("vault-backup-section")));
+    tr.set_vault_export_button(s(&t("vault-export-button")));
+    tr.set_vault_restore_button(s(&t("vault-restore-button")));
+    tr.set_vault_restore_from_backup(s(&t("vault-restore-from-backup")));
+    tr.set_vault_export_success(s(&t("vault-export-success")));
+    tr.set_vault_restore_success(s(&t("vault-restore-success")));
+    tr.set_vault_export_failed(s(&t("vault-export-failed")));
+    tr.set_vault_restore_failed(s(&t("vault-restore-failed")));
+    tr.set_vault_restore_warning_title(s(&t("vault-restore-warning-title")));
+    tr.set_vault_restore_warning_desc(s(&t("vault-restore-warning-desc")));
+    tr.set_vault_restore_file_label(s(&t("vault-restore-file-label")));
+    tr.set_vault_restore_cancel(s(&t("vault-restore-cancel")));
+    tr.set_vault_restore_confirm(s(&t("vault-restore-confirm")));
+    tr.set_vault_invalid_backup(s(&t("vault-invalid-backup")));
+    tr.set_vault_backup_too_large(s(&t("vault-backup-too-large")));
+    tr.set_vault_permission_denied(s(&t("vault-permission-denied")));
+    tr.set_vault_backup_encryption_note(s(&t("vault-backup-encryption-note")));
+
     // Asset/Wallet Details
     tr.set_section_transaction_history(s(&t("section-transaction-history")));
 

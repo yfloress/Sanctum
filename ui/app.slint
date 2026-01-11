@@ -14,6 +14,7 @@ import {
     RewardsAdapter,
     CryptoAdapter,
     SettingsAdapter,
+    VaultAdapter,
 } from "globals.slint";
 import { Translations } from "translations.slint";
 import { Theme } from "theme.slint";
@@ -36,6 +37,7 @@ import {
 } from "modals/edit_crypto_transaction.slint";
 import { ConfigureTickerModal } from "modals/configure_ticker.slint";
 import { ConfigureCategoriesModal } from "modals/configure_categories.slint";
+import { RestoreVaultModal } from "modals/restore_vault_modal.slint";
 import { NotificationToast } from "components/notification.slint";
 
 // ==================== Main Application Window ====================
@@ -183,6 +185,16 @@ export component AppWindow inherits Window {
         selected-icon <=> AccountAdapter.edit-account-icon;
     }
 
+    // Restore Vault Modal
+    if AppState.show-restore-vault: RestoreVaultModal {
+        width: 100%;
+        height: 100%;
+
+        close => {
+            AppState.show-restore-vault = false;
+        }
+    }
+
     // Notification Toast (Global Overlay)
     NotificationToast {
         x: parent.width - self.width - 32px;
@@ -194,4 +206,4 @@ export component AppWindow inherits Window {
 }
 
 // Re-export adapters for main.rs
-export { AuthAdapter, AccountAdapter, TransactionAdapter, CategoryAdapter, DashboardAdapter, AnalyticsAdapter, NotificationAdapter, HabitAdapter, RewardsAdapter, CryptoAdapter, AppState, SettingsAdapter, Translations }
+export { AuthAdapter, AccountAdapter, TransactionAdapter, CategoryAdapter, DashboardAdapter, AnalyticsAdapter, NotificationAdapter, HabitAdapter, RewardsAdapter, CryptoAdapter, AppState, SettingsAdapter, Translations, VaultAdapter }

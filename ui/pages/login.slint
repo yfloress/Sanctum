@@ -1,7 +1,7 @@
 // ==================== Login Page ====================
 // Noir Minimalist - Elegant authentication with smooth gradient background and refined typography
 
-import { AuthAdapter, AppState, NotificationAdapter } from "../globals.slint";
+import { AuthAdapter, AppState, NotificationAdapter, VaultAdapter } from "../globals.slint";
 import { Translations } from "../translations.slint";
 import { Theme } from "../theme.slint";
 import { TextButton } from "../widgets.slint";
@@ -259,6 +259,44 @@ export component LoginPage inherits Rectangle {
                                 root.handle-unlock();
                             } else {
                                 root.handle-create();
+                            }
+                        }
+                    }
+
+                    // Restore from backup link (only when vault exists)
+                    if vault-exists: Rectangle {
+                        height: 36px;
+
+                        HorizontalLayout {
+                            alignment: end;
+
+                            restore-link := Rectangle {
+                                width: 180px;
+                                height: 28px;
+
+                                Text {
+                                    text: Translations.vault-restore-from-backup;
+                                    color: restore-touch.has-hover ? Theme.accent.darker(0.2) : Theme.accent;
+                                    font-size: 11px;
+                                    font-weight: 500;
+                                    horizontal-alignment: right;
+                                    vertical-alignment: center;
+                                }
+
+                                animate opacity { duration: 200ms; }
+
+                                states [
+                                    hover when restore-touch.has-hover: {
+                                        opacity: 0.8;
+                                    }
+                                ]
+
+                                restore-touch := TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => {
+                                        AppState.show-restore-vault = true;
+                                    }
+                                }
                             }
                         }
                     }
