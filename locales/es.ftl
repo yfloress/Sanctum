@@ -348,12 +348,16 @@ crypto-skipped = Omitidos
 crypto-your-holdings = TUS TENENCIAS
 crypto-no-assets-yet = Sin activos registrados aún
 crypto-create-wallet-first = Crea una billetera primero, luego agrega tus criptomonedas
+crypto-start-adding = Comienza agregando una billetera y tu primer activo
+crypto-assets-across-wallets = { $assets } activos en { $wallets } billeteras
 crypto-wallet = BILLETERA
 crypto-value = VALOR
 
 crypto-add-first-wallet = Agrega tu primera billetera para empezar a rastrear tus criptos
+crypto-no-wallets-created = No hay billeteras creadas
 crypto-delete-wallet = ¿Eliminar Billetera?
-crypto-delete-wallet-confirm = Esto eliminará permanentemente y todo su historial de transacciones.
+crypto-delete-wallet-confirm-prefix = Esto eliminará permanentemente "
+crypto-delete-wallet-confirm-suffix = " y todo su historial de transacciones.
 crypto-loading-portfolio = Cargando portafolio...
 crypto-syncing-prices = Sincronizando precios...
 crypto-syncing-wait = Esto puede tomar unos segundos
@@ -579,6 +583,9 @@ modal-save-icon = GUARDAR ÍCONO
 button-add = AGREGAR
 button-sync = ↻ SINCRONIZAR
 button-syncing = SINCRONIZANDO...
+button-add-transaction = + AGREGAR TRANSACCIÓN
+button-new-entry = + NUEVA ENTRADA
+button-new-account = + NUEVA CUENTA
 
 # ==================== Page Titles and Sections ====================
 section-fiat = FIAT

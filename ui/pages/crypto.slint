@@ -155,13 +155,14 @@ export component CryptoPage inherits Rectangle {
                     border-radius: 8px;
                     background: settings-touch.has-hover ? Theme.surface-hover : transparent;
 
-                    Text {
-                        text: "⚙";
-                        color: settings-touch.has-hover ? Theme.text-primary : Theme.text-muted;
-                        font-size: 16px;
+                    Image {
+                        source: @image-url("../assets/icons/settings.svg");
+                        width: 16px;
+                        height: 16px;
+                        colorize: settings-touch.has-hover ? Theme.text-primary : Theme.text-muted;
                         vertical-alignment: center;
                         horizontal-alignment: center;
-                        animate color { duration: 150ms; }
+                        animate colorize { duration: 150ms; }
                     }
                 }
 
@@ -241,7 +242,7 @@ export component CryptoPage inherits Rectangle {
                                 alignment: center;
 
                                 Text {
-                                    text: "Last updated: " + CryptoAdapter.last-updated;
+                                    text: Translations.crypto-last-updated + ": " + CryptoAdapter.last-updated;
                                     color: Theme.text-subtle;
                                     font-size: 10px;
                                     font-weight: 500;
@@ -302,7 +303,7 @@ export component CryptoPage inherits Rectangle {
                     VerticalLayout {
                         spacing: 4px;
                         Text {
-                            text: CryptoAdapter.portfolio.length > 0 ? CryptoAdapter.portfolio.length + " assets across " + CryptoAdapter.wallets.length + " wallets" : "Start by adding a wallet and your first asset";
+                            text: CryptoAdapter.portfolio.length > 0 ? CryptoAdapter.portfolio.length + " assets across " + CryptoAdapter.wallets.length + " wallets" : Translations.crypto-start-adding;
                             color: Theme.text-subtle;
                             font-size: 12px;
                             font-weight: 400;
@@ -317,15 +318,16 @@ export component CryptoPage inherits Rectangle {
                                 padding-left: 8px;
                                 padding-right: 8px;
                                 spacing: 6px;
-                                Text {
-                                    text: "⚠";
-                                    color: Theme.danger;
-                                    font-size: 10px;
+                                Image {
+                                    source: @image-url("../assets/icons/info.svg");
+                                    width: 10px;
+                                    height: 10px;
+                                    colorize: Theme.danger;
                                     vertical-alignment: center;
                                 }
 
                                 Text {
-                                    text: "Coin limit reached (50). Some assets may not update.";
+                                    text: Translations.crypto-coin-limit;
                                     color: Theme.danger;
                                     font-size: 10px;
                                     font-weight: 600;
@@ -335,7 +337,7 @@ export component CryptoPage inherits Rectangle {
                         }
 
                         if CryptoAdapter.limit-excluded != "": Text {
-                            text: "Skipped: " + CryptoAdapter.limit-excluded;
+                            text: Translations.crypto-skipped + ": " + CryptoAdapter.limit-excluded;
                             color: Theme.text-muted;
                             font-size: 10px;
                         }
@@ -457,7 +459,7 @@ export component CryptoPage inherits Rectangle {
                             }
 
                             Text {
-                                text: "No assets tracked yet";
+                                text: Translations.crypto-no-assets-yet;
                                 color: Theme.text-secondary;
                                 font-size: 16px;
                                 font-weight: 400;
@@ -465,7 +467,7 @@ export component CryptoPage inherits Rectangle {
                             }
 
                             Text {
-                                text: "Create a wallet first, then add your crypto holdings";
+                                text: Translations.crypto-create-wallet-first;
                                 color: Theme.text-muted;
                                 font-size: 13px;
                                 horizontal-alignment: center;
@@ -665,16 +667,18 @@ export component CryptoPage inherits Rectangle {
                             border-color: Theme.border-subtle;
                             x: (parent.width - self.width) / 2;
 
-                            Text {
-                                text: "💼";
-                                font-size: 32px;
+                            Image {
+                                source: @image-url("../assets/icons/briefcase.svg");
+                                width: 32px;
+                                height: 32px;
+                                colorize: Theme.text-muted;
                                 vertical-alignment: center;
                                 horizontal-alignment: center;
                             }
                         }
 
                         Text {
-                            text: "No wallets created";
+                            text: Translations.crypto-no-wallets;
                             color: Theme.text-secondary;
                             font-size: 16px;
                             font-weight: 400;
@@ -682,7 +686,7 @@ export component CryptoPage inherits Rectangle {
                         }
 
                         Text {
-                            text: "Add your first wallet to start tracking your crypto";
+                            text: Translations.crypto-add-first-wallet;
                             color: Theme.text-muted;
                             font-size: 13px;
                             horizontal-alignment: center;
@@ -841,7 +845,7 @@ export component CryptoPage inherits Rectangle {
                 spacing: 16px;
 
                 Text {
-                    text: "Delete Wallet?";
+                    text: Translations.crypto-delete-wallet;
                     color: Theme.text-primary;
                     font-size: 14px;
                     font-weight: 600;
@@ -849,7 +853,7 @@ export component CryptoPage inherits Rectangle {
                 }
 
                 Text {
-                    text: "This will permanently delete \"" + root.delete-wallet-name + "\" and all its transaction history.";
+                    text: Translations.crypto-delete-wallet-confirm-prefix + root.delete-wallet-name + Translations.crypto-delete-wallet-confirm-suffix;
                     color: Theme.text-muted;
                     font-size: 11px;
                     wrap: word-wrap;
@@ -868,7 +872,7 @@ export component CryptoPage inherits Rectangle {
                         border-color: Theme.border;
 
                         Text {
-                            text: "Cancel";
+                            text: Translations.action-cancel;
                             color: Theme.text-secondary;
                             font-size: 11px;
                             font-weight: 600;
@@ -895,7 +899,7 @@ export component CryptoPage inherits Rectangle {
                         border-color: Theme.delete-border;
 
                         Text {
-                            text: "Delete";
+                            text: Translations.action-delete;
                             color: Theme.text-primary;
                             font-size: 11px;
                             font-weight: 600;
@@ -964,7 +968,7 @@ export component CryptoPage inherits Rectangle {
             }
 
             Text {
-                text: "Loading portfolio...";
+                text: Translations.crypto-loading-portfolio;
                 color: Theme.text-secondary;
                 font-size: 14px;
                 font-weight: 500;
@@ -1022,10 +1026,11 @@ export component CryptoPage inherits Rectangle {
                         easing: ease-in-out;
                     }
 
-                    Text {
-                        text: "↻";
-                        color: Theme.accent;
-                        font-size: 20px;
+                    Image {
+                        source: @image-url("../assets/icons/refresh-cw.svg");
+                        width: 20px;
+                        height: 20px;
+                        colorize: Theme.accent;
                         vertical-alignment: center;
                         horizontal-alignment: center;
                     }
@@ -1036,14 +1041,14 @@ export component CryptoPage inherits Rectangle {
                     alignment: center;
 
                     Text {
-                        text: "Syncing prices...";
+                        text: Translations.crypto-syncing-prices;
                         color: Theme.text-primary;
                         font-size: 13px;
                         font-weight: 600;
                     }
 
                     Text {
-                        text: "This may take a few seconds";
+                        text: Translations.crypto-syncing-wait;
                         color: Theme.text-muted;
                         font-size: 10px;
                     }

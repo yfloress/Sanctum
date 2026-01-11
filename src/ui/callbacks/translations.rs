@@ -205,6 +205,16 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_habits_empty_chart_subtitle(s(&t("habits-empty-chart-subtitle")));
     tr.set_habits_complete_to_see(s(&t("habits-complete-to-see")));
     tr.set_habits_discover_days(s(&t("habits-discover-days")));
+    tr.set_habits_add_button(s(&t("habits-add-button")));
+    tr.set_habits_yearly_overview(s(&t("habits-yearly-overview")));
+    tr.set_habits_my_habits_section(s(&t("habits-my-habits-section")));
+    tr.set_habits_no_tracked_month(s(&t("habits-no-tracked-month")));
+    tr.set_habits_create_to_build(s(&t("habits-create-to-build")));
+    tr.set_habits_analytics_section(s(&t("habits-analytics-section")));
+    tr.set_habits_weekly_report(s(&t("habits-weekly-report")));
+    tr.set_habits_insights(s(&t("habits-insights")));
+    tr.set_habits_summary(s(&t("habits-summary")));
+    tr.set_habits_select_placeholder(s(&t("habits-select-placeholder")));
 
     // Rewards
     tr.set_rewards_title(s(&t("rewards-title")));
@@ -235,9 +245,13 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_settings_language_desc(s(&t("settings-language-desc")));
     tr.set_settings_currency(s(&t("settings-currency")));
     tr.set_settings_currency_desc(s(&t("settings-currency-desc")));
+    tr.set_settings_preferred_currency(s(&t("settings-preferred-currency")));
+    tr.set_settings_preferred_currency_desc(s(&t("settings-preferred-currency-desc")));
 
     tr.set_settings_dark_mode(s(&t("settings-dark-mode")));
     tr.set_settings_dark_mode_desc(s(&t("settings-dark-mode-desc")));
+    tr.set_settings_dark_mode_title(s(&t("settings-dark-mode-title")));
+    tr.set_settings_dark_mode_toggle_desc(s(&t("settings-dark-mode-toggle-desc")));
 
     tr.set_settings_session_timeout(s(&t("settings-session-timeout")));
     tr.set_settings_session_timeout_desc(s(&t("settings-session-timeout-desc")));
@@ -246,12 +260,22 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_settings_timeout_30min(s(&t("settings-timeout-30min")));
     tr.set_settings_timeout_1hour(s(&t("settings-timeout-1hour")));
     tr.set_settings_timeout_never(s(&t("settings-timeout-never")));
+    tr.set_settings_timeout_warning(s(&t("settings-timeout-warning")));
 
     tr.set_settings_auto_fetch(s(&t("settings-auto-fetch")));
     tr.set_settings_auto_fetch_desc(s(&t("settings-auto-fetch-desc")));
+    tr.set_settings_auto_fetch_title(s(&t("settings-auto-fetch-title")));
+    tr.set_settings_auto_fetch_toggle_desc(s(&t("settings-auto-fetch-toggle-desc")));
     tr.set_settings_proxy(s(&t("settings-proxy")));
     tr.set_settings_proxy_enabled(s(&t("settings-proxy-enabled")));
     tr.set_settings_proxy_url(s(&t("settings-proxy-url")));
+    tr.set_settings_proxy_title(s(&t("settings-proxy-title")));
+    tr.set_settings_proxy_toggle_desc(s(&t("settings-proxy-toggle-desc")));
+    tr.set_settings_proxy_placeholder(s(&t("settings-proxy-placeholder")));
+
+    tr.set_settings_version_label(s(&t("settings-version-label")));
+    tr.set_settings_encryption_label(s(&t("settings-encryption-label")));
+    tr.set_settings_database_label(s(&t("settings-database-label")));
 
     tr.set_settings_reset(s(&t("settings-reset")));
     tr.set_settings_reset_desc(s(&t("settings-reset-desc")));
@@ -267,6 +291,8 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_modal_edit_wallet_title(s(&t("modal-edit-wallet-title")));
     tr.set_modal_add_habit_title(s(&t("modal-add-habit-title")));
     tr.set_modal_edit_habit_title(s(&t("modal-edit-habit-title")));
+    tr.set_modal_habit_name_placeholder(s(&t("modal-habit-name-placeholder")));
+    tr.set_modal_habit_description_placeholder(s(&t("modal-habit-description-placeholder")));
     tr.set_modal_add_goal_title(s(&t("modal-add-goal-title")));
     tr.set_modal_edit_goal_title(s(&t("modal-edit-goal-title")));
     tr.set_modal_add_reward_title(s(&t("modal-add-reward-title")));
@@ -334,12 +360,14 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_crypto_your_holdings(s(&t("crypto-your-holdings")));
     tr.set_crypto_no_assets_yet(s(&t("crypto-no-assets-yet")));
     tr.set_crypto_create_wallet_first(s(&t("crypto-create-wallet-first")));
+    tr.set_crypto_start_adding(s(&t("crypto-start-adding")));
     tr.set_crypto_wallet(s(&t("crypto-wallet")));
     tr.set_crypto_value(s(&t("crypto-value")));
     tr.set_crypto_no_wallets(s(&t("crypto-no-wallets")));
     tr.set_crypto_add_first_wallet(s(&t("crypto-add-first-wallet")));
     tr.set_crypto_delete_wallet(s(&t("crypto-delete-wallet")));
-    tr.set_crypto_delete_wallet_confirm(s(&t("crypto-delete-wallet-confirm")));
+    tr.set_crypto_delete_wallet_confirm_prefix(s(&t("crypto-delete-wallet-confirm-prefix")));
+    tr.set_crypto_delete_wallet_confirm_suffix(s(&t("crypto-delete-wallet-confirm-suffix")));
     tr.set_crypto_loading_portfolio(s(&t("crypto-loading-portfolio")));
     tr.set_crypto_syncing_prices(s(&t("crypto-syncing-prices")));
     tr.set_crypto_syncing_wait(s(&t("crypto-syncing-wait")));
@@ -557,6 +585,9 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_button_add(s(&t("button-add")));
     tr.set_button_sync(s(&t("button-sync")));
     tr.set_button_syncing(s(&t("button-syncing")));
+    tr.set_button_add_transaction(s(&t("button-add-transaction")));
+    tr.set_button_new_entry(s(&t("button-new-entry")));
+    tr.set_button_new_account(s(&t("button-new-account")));
 
     // Page Titles and Sections
     tr.set_section_fiat(s(&t("section-fiat")));

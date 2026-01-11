@@ -348,12 +348,16 @@ crypto-skipped = Skipped
 crypto-your-holdings = YOUR HOLDINGS
 crypto-no-assets-yet = No assets tracked yet
 crypto-create-wallet-first = Create a wallet first, then add your crypto holdings
+crypto-start-adding = Start by adding a wallet and your first asset
+crypto-assets-across-wallets = { $assets } assets across { $wallets } wallets
 crypto-wallet = WALLET
 crypto-value = VALUE
 
 crypto-add-first-wallet = Add your first wallet to start tracking your crypto
+crypto-no-wallets-created = No wallets created
 crypto-delete-wallet = Delete Wallet?
-crypto-delete-wallet-confirm = This will permanently delete and all its transaction history.
+crypto-delete-wallet-confirm-prefix = This will permanently delete "
+crypto-delete-wallet-confirm-suffix = " and all its transaction history.
 crypto-loading-portfolio = Loading portfolio...
 crypto-syncing-prices = Syncing prices...
 crypto-syncing-wait = This may take a few seconds
@@ -579,6 +583,9 @@ modal-save-icon = SAVE ICON
 button-add = ADD
 button-sync = ↻ SYNC
 button-syncing = SYNCING...
+button-add-transaction = + ADD TRANSACTION
+button-new-entry = + NEW ENTRY
+button-new-account = + NEW ACCOUNT
 
 # ==================== Page Titles and Sections ====================
 section-fiat = FIAT

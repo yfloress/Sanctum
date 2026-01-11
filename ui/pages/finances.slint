@@ -73,10 +73,11 @@ component AccountFilterSelect inherits Rectangle {
                     horizontal-stretch: 1;
                 }
 
-                Text {
-                    text: "▼";
-                    color: Theme.text-muted;
-                    font-size: 10px;
+                Image {
+                    source: @image-url("../assets/icons/chevron-down.svg");
+                    width: 10px;
+                    height: 10px;
+                    colorize: Theme.text-muted;
                     vertical-alignment: center;
                 }
             }
@@ -245,10 +246,11 @@ component CategoryFilterSelect inherits Rectangle {
                     horizontal-stretch: 1;
                 }
 
-                Text {
-                    text: "▼";
-                    color: Theme.text-muted;
-                    font-size: 10px;
+                Image {
+                    source: @image-url("../assets/icons/chevron-down.svg");
+                    width: 10px;
+                    height: 10px;
+                    colorize: Theme.text-muted;
                     vertical-alignment: center;
                 }
             }
@@ -709,7 +711,7 @@ export component FinancesPage inherits Rectangle {
                     }
 
                     ActionButton {
-                        text: "+ NEW ENTRY";
+                        text: Translations.button-new-entry;
                         primary: true;
 
                         clicked => {
@@ -905,7 +907,7 @@ export component FinancesPage inherits Rectangle {
                             }
 
                             ActionButton {
-                                text: "+ NEW ACCOUNT";
+                                text: Translations.button-new-account;
                                 primary: true;
 
                                 clicked => {
