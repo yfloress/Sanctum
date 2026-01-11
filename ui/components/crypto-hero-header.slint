@@ -1,0 +1,281 @@
+// ==================== Crypto Hero Header ====================
+// Responsive header for the crypto page
+
+import { CryptoAdapter, AppState } from "../globals.slint";
+import { Translations } from "../translations.slint";
+import { Theme } from "../theme.slint";
+import { TabButton } from "buttons/tab_button.slint";
+import { GhostButton } from "crypto_widgets.slint";
+import { ActionButton } from "../widgets.slint";
+
+component LastUpdatedBadge inherits Rectangle {
+    height: 20px;
+    border-radius: 10px;
+    background: Theme.surface;
+    border-width: 1px;
+    border-color: Theme.border-subtle;
+
+    HorizontalLayout {
+        padding-left: 8px;
+        padding-right: 8px;
+        alignment: center;
+
+        Text {
+            text: Translations.crypto-last-updated + ": " + CryptoAdapter.last-updated;
+            color: Theme.text-subtle;
+            font-size: 10px;
+            font-weight: 500;
+            vertical-alignment: center;
+        }
+    }
+}
+
+component HeroHeaderRow inherits Rectangle {
+    in property <bool> compact: false;
+    in property <bool> show-last-updated: true;
+
+    HorizontalLayout {
+        spacing: 12px;
+        alignment: start;
+
+        Rectangle {
+            width: 3px;
+            height: 18px;
+            border-radius: 2px;
+            background: @linear-gradient(180deg, Theme.accent 0%, Theme.accent-indigo 100%);
+            y: (parent.height - self.height) / 2;
+        }
+
+        Text {
+            text: compact ? Translations.crypto-portfolio-title-short : Translations.crypto-portfolio-title;
+            color: Theme.text-muted;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 3px;
+            vertical-alignment: center;
+        }
+
+        GhostButton {
+            text: CryptoAdapter.is-refreshing ? Translations.button-syncing : Translations.button-sync;
+            enabled: !CryptoAdapter.is-refreshing;
+            clicked => {
+                CryptoAdapter.refresh-prices();
+            }
+        }
+
+        if show-last-updated: LastUpdatedBadge { }
+    }
+}
+
+component HeroLeft inherits Rectangle {
+    in property <bool> compact: false;
+    horizontal-stretch: 1;
+
+    VerticalLayout {
+        alignment: start;
+        spacing: 16px;
+
+        if compact: VerticalLayout {
+            spacing: 8px;
+
+            HeroHeaderRow {
+                compact: true;
+                show-last-updated: false;
+            }
+
+            LastUpdatedBadge { }
+        }
+
+        if !compact: HeroHeaderRow { }
+
+        VerticalLayout {
+            spacing: 6px;
+
+            // Total Value
+            Text {
+                text: CryptoAdapter.total-value;
+                color: Theme.text-primary;
+                font-size: 48px;
+                font-weight: 300;
+                letter-spacing: -1px;
+            }
+
+            // PnL Badge
+            Rectangle {
+                property <bool> pnl_available: CryptoAdapter.total-pnl != "N/A";
+
+                height: 28px;
+                min-width: 90px;
+                border-radius: 6px;
+                background: pnl_available ? (CryptoAdapter.total-pnl-positive ? Theme.success.with-alpha(0.12) : Theme.danger.with-alpha(0.12)) : Theme.surface;
+                border-width: 1px;
+                border-color: pnl_available ? (CryptoAdapter.total-pnl-positive ? Theme.success.with-alpha(0.2) : Theme.danger.with-alpha(0.2)) : Theme.border;
+
+                HorizontalLayout {
+                    padding-left: 12px;
+                    padding-right: 12px;
+                    alignment: center;
+                    spacing: 4px;
+
+                    Text {
+                        text: pnl_available ? (CryptoAdapter.total-pnl-positive ? "▲" : "▼") : "•";
+                        color: pnl_available ? (CryptoAdapter.total-pnl-positive ? Theme.success : Theme.danger) : Theme.text-muted;
+                        font-size: 10px;
+                        vertical-alignment: center;
+                    }
+
+                    Text {
+                        text: CryptoAdapter.total-pnl;
+                        color: pnl_available ? (CryptoAdapter.total-pnl-positive ? Theme.success : Theme.danger) : Theme.text-muted;
+                        font-size: 12px;
+                        font-weight: 600;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+        }
+
+        // Subtitle Area
+        VerticalLayout {
+            spacing: 4px;
+            Text {
+                text: CryptoAdapter.portfolio.length > 0 ? CryptoAdapter.portfolio-summary : Translations.crypto-start-adding;
+                color: Theme.text-subtle;
+                font-size: 12px;
+                font-weight: 400;
+            }
+
+            if CryptoAdapter.limit-reached: Rectangle {
+                height: 20px;
+                background: Theme.danger.with-alpha(0.1);
+                border-radius: 4px;
+
+                HorizontalLayout {
+                    padding-left: 8px;
+                    padding-right: 8px;
+                    spacing: 6px;
+
+                    Image {
+                        source: @image-url("../assets/icons/info.svg");
+                        width: 10px;
+                        height: 10px;
+                        colorize: Theme.danger;
+                        vertical-alignment: center;
+                    }
+
+                    Text {
+                        text: Translations.crypto-coin-limit;
+                        color: Theme.danger;
+                        font-size: 10px;
+                        font-weight: 600;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+
+            if CryptoAdapter.limit-excluded != "": Text {
+                text: Translations.crypto-skipped + ": " + CryptoAdapter.limit-excluded;
+                color: Theme.text-muted;
+                font-size: 10px;
+            }
+        }
+    }
+}
+
+component HeroControls inherits Rectangle {
+    in-out property <string> active-tab;
+    in property <bool> compact: false;
+
+    VerticalLayout {
+        alignment: compact ? start : center;
+        spacing: compact ? 12px : 20px;
+
+        // Tabs
+        Rectangle {
+            height: 44px;
+            background: Theme.surface;
+            border-radius: 22px;
+            border-width: 1px;
+            border-color: Theme.border;
+
+            HorizontalLayout {
+                padding: 4px;
+                spacing: 4px;
+                alignment: compact ? start : end;
+
+                TabButton {
+                    text: Translations.crypto-assets;
+                    active: root.active-tab == "portfolio";
+                    clicked => {
+                        root.active-tab = "portfolio";
+                    }
+                }
+
+                TabButton {
+                    text: Translations.crypto-wallets;
+                    active: root.active-tab == "wallets";
+                    clicked => {
+                        root.active-tab = "wallets";
+                    }
+                }
+            }
+        }
+
+        // Action Button
+        HorizontalLayout {
+            alignment: compact ? start : end;
+
+            ActionButton {
+                text: root.active-tab == "portfolio" ? Translations.button-add-transaction : Translations.crypto-add-wallet-button;
+                primary: true;
+                clicked => {
+                    if (root.active-tab == "portfolio") {
+                        AppState.show-add-crypto = true;
+                    } else {
+                        AppState.show-add-wallet = true;
+                    }
+                }
+            }
+        }
+    }
+}
+
+export component CryptoHeroHeader inherits Rectangle {
+    in-out property <string> active-tab;
+    property <length> compact-breakpoint: 1160px;
+    property <bool> compact: root.width < compact-breakpoint;
+
+    height: Theme.crypto-hero-height;
+    background: @linear-gradient(180deg, Theme.crypto-hero-gradient-start 0%, Theme.background 100%);
+
+    VerticalLayout {
+        padding-left: Theme.spacing-3xl;
+        padding-right: Theme.spacing-3xl;
+        padding-top: Theme.spacing-xl;
+        padding-bottom: Theme.spacing-lg;
+        spacing: 0px;
+
+        if compact: VerticalLayout {
+            spacing: 16px;
+
+            HeroLeft {
+                compact: true;
+            }
+
+            HeroControls {
+                compact: true;
+                active-tab <=> root.active-tab;
+            }
+        }
+
+        if !compact: HorizontalLayout {
+            alignment: space-between;
+
+            HeroLeft { }
+
+            HeroControls {
+                active-tab <=> root.active-tab;
+            }
+        }
+    }
+}

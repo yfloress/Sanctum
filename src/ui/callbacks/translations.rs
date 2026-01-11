@@ -4,8 +4,8 @@
 //! Handles language switching and translation reloading.
 
 use crate::services::i18n::{self, t};
-use crate::{AppWindow, Translations};
-use slint::{ComponentHandle, SharedString};
+use crate::{AppWindow, CryptoAdapter, Translations};
+use slint::{ComponentHandle, Model, SharedString};
 
 /// Sets up translation-related callbacks and loads initial translations
 pub fn setup_translation_callbacks(ui: &AppWindow) {
@@ -354,6 +354,7 @@ pub fn load_all_translations(ui: &AppWindow) {
 
     // Crypto Extended
     tr.set_crypto_portfolio_title(s(&t("crypto-portfolio-title")));
+    tr.set_crypto_portfolio_title_short(s(&t("crypto-portfolio-title-short")));
     tr.set_crypto_last_updated(s(&t("crypto-last-updated")));
     tr.set_crypto_coin_limit(s(&t("crypto-coin-limit")));
     tr.set_crypto_skipped(s(&t("crypto-skipped")));
@@ -651,6 +652,21 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_history_achievements_section(s(&t("history-achievements-section")));
     tr.set_history_no_achievements(s(&t("history-no-achievements")));
     tr.set_history_complete_to_earn(s(&t("history-complete-to-earn")));
+
+    let crypto = ui.global::<CryptoAdapter>();
+    let asset_count = crypto.get_portfolio().row_count();
+    if asset_count == 0 {
+        crypto.set_portfolio_summary(SharedString::from(""));
+    } else {
+        let wallet_count = crypto.get_wallets().row_count();
+        let assets_str = asset_count.to_string();
+        let wallets_str = wallet_count.to_string();
+        let summary = i18n::t_args(
+            "crypto-assets-across-wallets",
+            &[("assets", assets_str.as_str()), ("wallets", wallets_str.as_str())],
+        );
+        crypto.set_portfolio_summary(SharedString::from(summary));
+    }
 }
 
 /// Helper to convert String to SharedString

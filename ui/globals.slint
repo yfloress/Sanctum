@@ -484,6 +484,7 @@ export struct CatalogCoin {
 
 export global CryptoAdapter {
     in-out property <[CryptoAssetData]> portfolio: [];
+    in-out property <string> portfolio-summary: "";
     in-out property <[CryptoAssetData]> market-tickers: [];
     in-out property <[CryptoWalletData]> wallets: [];
     in-out property <[WalletSimple]> wallet-list: []; // For dropdowns

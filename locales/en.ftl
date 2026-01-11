@@ -342,6 +342,7 @@ finances-delete-confirm = Are you sure you want to delete
 
 # ==================== Crypto Extended ====================
 crypto-portfolio-title = CRYPTO PORTFOLIO
+crypto-portfolio-title-short = PORTFOLIO
 crypto-last-updated = Last updated
 crypto-coin-limit = Coin limit reached (50). Some assets may not update.
 crypto-skipped = Skipped

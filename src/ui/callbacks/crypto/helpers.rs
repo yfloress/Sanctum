@@ -2,9 +2,10 @@
 
 use crate::controller::AppController;
 use crate::models::CryptoAsset;
+use crate::services::i18n;
 use crate::ui::{crypto_icon_for_symbol, format_clp_rate, format_usd, load_wallet_icon};
 use crate::{CryptoAdapter, CryptoAssetData, CryptoDistributionSlice, CryptoWalletData, AppWindow, WalletSimple};
-use slint::{ComponentHandle, ModelRc, SharedString, VecModel, Weak};
+use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel, Weak};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -12,6 +13,16 @@ use std::sync::Arc;
 pub const SETTING_CRYPTO_LAST_WALLET_ID: &str = "crypto_last_wallet_id";
 pub const SETTING_CRYPTO_LAST_COIN_ID: &str = "crypto_last_coin_id";
 pub const SETTING_CRYPTO_LAST_UPDATED: &str = "crypto_last_updated";
+
+fn set_portfolio_summary(adapter: &CryptoAdapter, assets: usize, wallets: usize) {
+    let assets_str = assets.to_string();
+    let wallets_str = wallets.to_string();
+    let summary = i18n::t_args(
+        "crypto-assets-across-wallets",
+        &[("assets", assets_str.as_str()), ("wallets", wallets_str.as_str())],
+    );
+    adapter.set_portfolio_summary(SharedString::from(summary));
+}
 
 /// Reload wallets list
 /// Optionally accepts a notify closure to report errors
@@ -79,12 +90,13 @@ where
             })
             .unwrap_or(0) as i32;
 
-        ui.global::<CryptoAdapter>()
-            .set_wallets(ModelRc::new(VecModel::from(wallet_data)));
-        ui.global::<CryptoAdapter>()
-            .set_wallet_list(ModelRc::new(VecModel::from(wallet_simple)));
-        ui.global::<CryptoAdapter>()
-            .set_default_wallet_index(last_wallet_index);
+        let wallet_count = wallet_data.len();
+        let adapter = ui.global::<CryptoAdapter>();
+        adapter.set_wallets(ModelRc::new(VecModel::from(wallet_data)));
+        adapter.set_wallet_list(ModelRc::new(VecModel::from(wallet_simple)));
+        adapter.set_default_wallet_index(last_wallet_index);
+        let asset_count = adapter.get_portfolio().row_count();
+        set_portfolio_summary(&adapter, asset_count, wallet_count);
     }
 }
 
@@ -370,6 +382,7 @@ where
 
     if let Some(ui) = ui_weak.upgrade() {
         let adapter = ui.global::<CryptoAdapter>();
+        let asset_count = mapped_assets.len();
         adapter.set_portfolio(ModelRc::new(VecModel::from(mapped_assets)));
         adapter.set_market_tickers(ModelRc::new(VecModel::from(tickers)));
         adapter.set_total_value(SharedString::from(total_value_label));
@@ -384,6 +397,8 @@ where
         if let Some(label) = last_updated_label {
             adapter.set_last_updated(label.into());
         }
+        let wallet_count = adapter.get_wallets().row_count();
+        set_portfolio_summary(&adapter, asset_count, wallet_count);
         adapter.set_is_loading(false);
     }
 }
