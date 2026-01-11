@@ -262,44 +262,6 @@ export component LoginPage inherits Rectangle {
                             }
                         }
                     }
-
-                    // Restore from backup link (only when vault exists)
-                    if vault-exists: Rectangle {
-                        height: 36px;
-
-                        HorizontalLayout {
-                            alignment: end;
-
-                            restore-link := Rectangle {
-                                width: 180px;
-                                height: 28px;
-
-                                Text {
-                                    text: Translations.vault-restore-from-backup;
-                                    color: restore-touch.has-hover ? Theme.accent.darker(0.2) : Theme.accent;
-                                    font-size: 11px;
-                                    font-weight: 500;
-                                    horizontal-alignment: right;
-                                    vertical-alignment: center;
-                                }
-
-                                animate opacity { duration: 200ms; }
-
-                                states [
-                                    hover when restore-touch.has-hover: {
-                                        opacity: 0.8;
-                                    }
-                                ]
-
-                                restore-touch := TouchArea {
-                                    mouse-cursor: pointer;
-                                    clicked => {
-                                        AppState.show-restore-vault = true;
-                                    }
-                                }
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -313,14 +275,59 @@ export component LoginPage inherits Rectangle {
         Rectangle {
             height: 60px;
 
-            Text {
-                text: Translations.login-encryption-note;
-                color: Theme.text-subtle;
-                font-size: 9px;
-                font-weight: 500;
-                letter-spacing: 3px;
-                horizontal-alignment: center;
-                vertical-alignment: center;
+            HorizontalLayout {
+                padding-left: 32px;
+                padding-right: 32px;
+
+                // Encryption note (centered)
+                Text {
+                    text: Translations.login-encryption-note;
+                    color: Theme.text-subtle;
+                    font-size: 9px;
+                    font-weight: 500;
+                    letter-spacing: 3px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+
+                // Restore link (right corner, only when vault exists)
+                if vault-exists: restore-link := Rectangle {
+                    width: 160px;
+                    height: 60px;
+
+                    HorizontalLayout {
+                        alignment: end;
+
+                        Rectangle {
+                            width: 140px;
+
+                            Text {
+                                text: Translations.vault-restore-from-backup;
+                                color: restore-touch.has-hover ? Theme.accent : Theme.text-subtle;
+                                font-size: 9px;
+                                font-weight: 500;
+                                horizontal-alignment: right;
+                                vertical-alignment: center;
+                            }
+
+                            animate opacity { duration: 200ms; }
+
+                            states [
+                                hover when restore-touch.has-hover: {
+                                    opacity: 0.9;
+                                }
+                            ]
+
+                            restore-touch := TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => {
+                                    AppState.show-restore-vault = true;
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
