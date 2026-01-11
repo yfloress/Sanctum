@@ -354,7 +354,6 @@ pub fn load_all_translations(ui: &AppWindow) {
 
     // Crypto Extended
     tr.set_crypto_portfolio_title(s(&t("crypto-portfolio-title")));
-    tr.set_crypto_portfolio_title_short(s(&t("crypto-portfolio-title-short")));
     tr.set_crypto_last_updated(s(&t("crypto-last-updated")));
     tr.set_crypto_coin_limit(s(&t("crypto-coin-limit")));
     tr.set_crypto_skipped(s(&t("crypto-skipped")));

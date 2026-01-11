@@ -59,6 +59,7 @@ component AccountFilterSelect inherits Rectangle {
             border-radius: 8px;
             border-width: 1px;
             border-color: Theme.border;
+            clip: true;
 
             HorizontalLayout {
                 width: parent.width;
@@ -71,6 +72,7 @@ component AccountFilterSelect inherits Rectangle {
                     font-size: 12px;
                     vertical-alignment: center;
                     horizontal-stretch: 1;
+                    overflow: elide;
                 }
 
                 Image {
@@ -128,6 +130,7 @@ component AccountFilterSelect inherits Rectangle {
                                 font-weight: selected-index == 0 ? 500 : 400;
                                 vertical-alignment: center;
                                 horizontal-stretch: 1;
+                                overflow: elide;
                             }
 
                             if selected-index == 0: Image {
@@ -163,6 +166,7 @@ component AccountFilterSelect inherits Rectangle {
                                 font-weight: selected-index == index + 1 ? 500 : 400;
                                 vertical-alignment: center;
                                 horizontal-stretch: 1;
+                                overflow: elide;
                             }
 
                             if selected-index == index + 1: Image {
@@ -232,6 +236,7 @@ component CategoryFilterSelect inherits Rectangle {
             border-radius: 8px;
             border-width: 1px;
             border-color: Theme.border;
+            clip: true;
 
             HorizontalLayout {
                 width: parent.width;
@@ -244,6 +249,7 @@ component CategoryFilterSelect inherits Rectangle {
                     font-size: 12px;
                     vertical-alignment: center;
                     horizontal-stretch: 1;
+                    overflow: elide;
                 }
 
                 Image {
@@ -301,6 +307,7 @@ component CategoryFilterSelect inherits Rectangle {
                             font-weight: selected-index == 0 ? 500 : 400;
                             vertical-alignment: center;
                             horizontal-stretch: 1;
+                            overflow: elide;
                         }
 
                         if selected-index == 0: Image {
@@ -352,6 +359,7 @@ component CategoryFilterSelect inherits Rectangle {
                             font-weight: selected-index == index + 1 ? 500 : 400;
                             vertical-alignment: center;
                             horizontal-stretch: 1;
+                            overflow: elide;
                         }
 
                         if selected-index == index + 1: Image {
@@ -403,6 +411,7 @@ component CategoryFilterSelect inherits Rectangle {
                             font-weight: selected-index == index + 1 + CategoryAdapter.expense-categories.length ? 500 : 400;
                             vertical-alignment: center;
                             horizontal-stretch: 1;
+                            overflow: elide;
                         }
 
                         if selected-index == index + 1 + CategoryAdapter.expense-categories.length: Image {
@@ -439,6 +448,7 @@ component CategoryFilterSelect inherits Rectangle {
                             font-weight: selected-index == 1 + CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length ? 500 : 400;
                             vertical-alignment: center;
                             horizontal-stretch: 1;
+                            overflow: elide;
                         }
 
                         if selected-index == 1 + CategoryAdapter.expense-categories.length + CategoryAdapter.income-categories.length: Image {

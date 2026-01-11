@@ -64,7 +64,9 @@ component SummaryItem inherits Rectangle {
     height: 56px;
 
     VerticalLayout {
+        height: parent.height;
         spacing: 6px;
+        alignment: center;
 
         Text {
             text: root.label;

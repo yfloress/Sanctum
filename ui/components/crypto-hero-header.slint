@@ -31,7 +31,6 @@ component LastUpdatedBadge inherits Rectangle {
 }
 
 component HeroHeaderRow inherits Rectangle {
-    in property <bool> compact: false;
     in property <bool> show-last-updated: true;
 
     HorizontalLayout {
@@ -47,7 +46,7 @@ component HeroHeaderRow inherits Rectangle {
         }
 
         Text {
-            text: compact ? Translations.crypto-portfolio-title-short : Translations.crypto-portfolio-title;
+            text: Translations.crypto-portfolio-title;
             color: Theme.text-muted;
             font-size: 11px;
             font-weight: 600;
@@ -79,7 +78,6 @@ component HeroLeft inherits Rectangle {
             spacing: 8px;
 
             HeroHeaderRow {
-                compact: true;
                 show-last-updated: false;
             }
 
@@ -242,15 +240,15 @@ component HeroControls inherits Rectangle {
 
 export component CryptoHeroHeader inherits Rectangle {
     in-out property <string> active-tab;
-    property <length> compact-breakpoint: 1160px;
+    property <length> compact-breakpoint: 1280px;
     property <bool> compact: root.width < compact-breakpoint;
 
     height: Theme.crypto-hero-height;
     background: @linear-gradient(180deg, Theme.crypto-hero-gradient-start 0%, Theme.background 100%);
 
     VerticalLayout {
-        padding-left: Theme.spacing-3xl;
-        padding-right: Theme.spacing-3xl;
+        padding-left: compact ? Theme.spacing-xl : Theme.spacing-3xl;
+        padding-right: compact ? Theme.spacing-xl : Theme.spacing-3xl;
         padding-top: Theme.spacing-xl;
         padding-bottom: Theme.spacing-lg;
         spacing: 0px;
