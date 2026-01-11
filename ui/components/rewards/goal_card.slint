@@ -2,6 +2,7 @@
 // Displays a goal with checkpoints, progress bar, and deadline
 
 import { Theme } from "../../theme.slint";
+import { Translations } from "../../translations.slint";
 import { CheckpointData, GoalData } from "../../globals.slint";
 
 // Reusable action buttons component - can be used by other reward cards
@@ -247,7 +248,7 @@ export component GoalCard inherits Rectangle {
                 background: goal.is-completed ? Theme.success : Theme.surface-hover;
 
                 progress-text := Text {
-                    text: goal.is-completed ? "COMPLETED" : goal.completed-count + "/" + goal.total-count;
+                    text: goal.is-completed ? Translations.rewards-completed : goal.completed-count + "/" + goal.total-count;
                     color: goal.is-completed ? Theme.surface : Theme.text-secondary;
                     font-size: 10px;
                     font-weight: 600;

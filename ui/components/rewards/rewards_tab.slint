@@ -2,6 +2,7 @@
 // Shows streak rewards and goals sections with add buttons
 
 import { Theme } from "../../theme.slint";
+import { Translations } from "../../translations.slint";
 import {
     RewardsAdapter,
     AppState,
@@ -28,11 +29,11 @@ export component RewardsTab inherits Rectangle {
                 alignment: space-between;
 
                 SectionHeader {
-                    title: "STREAK REWARDS";
+                    title: Translations.rewards-streak-rewards-section;
                 }
 
                 ActionButton {
-                    text: "+ REWARD";
+                    text: Translations.rewards-add-reward-button;
                     primary: false;
                     clicked => {
                         AppState.show-add-reward = true;
@@ -77,8 +78,8 @@ export component RewardsTab inherits Rectangle {
 
             if RewardsAdapter.streak-rewards.length == 0: EmptyState {
                 icon: @image-url("../../assets/icons/flame.svg");
-                title: "No streak rewards yet";
-                description: "Link a habit and set milestone rewards to stay motivated";
+                title: Translations.rewards-no-streak-rewards;
+                description: Translations.rewards-link-habit-desc;
             }
         }
 
@@ -96,11 +97,11 @@ export component RewardsTab inherits Rectangle {
                 alignment: space-between;
 
                 SectionHeader {
-                    title: "GOALS";
+                    title: Translations.rewards-goals-section;
                 }
 
                 ActionButton {
-                    text: "+ GOAL";
+                    text: Translations.rewards-add-goal-button;
                     primary: false;
                     clicked => {
                         AppState.show-add-goal = true;
@@ -157,8 +158,8 @@ export component RewardsTab inherits Rectangle {
 
             if RewardsAdapter.goals.length == 0: EmptyState {
                 icon: @image-url("../../assets/icons/target.svg");
-                title: "No goals set";
-                description: "Create a goal with checkpoints to track your progress";
+                title: Translations.rewards-no-goals-set;
+                description: Translations.rewards-create-goal-desc;
             }
         }
     }

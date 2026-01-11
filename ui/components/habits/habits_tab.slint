@@ -20,7 +20,7 @@ import { EmptyState } from "../sections/empty_state.slint";
 import { ActionButton } from "../../widgets.slint";
 
 component NavButton inherits Rectangle {
-    in property <string> icon;
+    in property <image> icon;
     in property <bool> enabled: true;
     callback clicked;
 
@@ -35,10 +35,11 @@ component NavButton inherits Rectangle {
     animate background { duration: 150ms; }
     animate border-color { duration: 150ms; }
 
-    Text {
-        text: root.icon;
-        color: Theme.text-secondary;
-        font-size: 14px;
+    Image {
+        source: root.icon;
+        width: 16px;
+        height: 16px;
+        colorize: Theme.text-secondary;
         horizontal-alignment: center;
         vertical-alignment: center;
     }
@@ -151,7 +152,7 @@ export component HabitsTab inherits Rectangle {
                     spacing: 8px;
 
                     NavButton {
-                        icon: "←";
+                        icon: @image-url("../../assets/icons/arrow-left.svg");
                         clicked => {
                             HabitAdapter.prev-heatmap-year();
                         }
@@ -174,7 +175,7 @@ export component HabitsTab inherits Rectangle {
                     }
 
                     NavButton {
-                        icon: "→";
+                        icon: @image-url("../../assets/icons/arrow-right.svg");
                         clicked => {
                             HabitAdapter.next-heatmap-year();
                         }
@@ -365,15 +366,15 @@ export component HabitsTab inherits Rectangle {
                         SummaryItem {
                             horizontal-stretch: 1;
                             icon: @image-url("../../assets/icons/flame.svg");
-                            label: "CURRENT STREAK";
-                            value: HabitAdapter.summary-current-streak + " days";
+                            label: Translations.habits-current-streak-label;
+                            value: HabitAdapter.summary-current-streak + " " + Translations.habits-days-label;
                         }
 
                         SummaryItem {
                             horizontal-stretch: 1;
                             icon: @image-url("../../assets/icons/star.svg");
-                            label: "BEST STREAK (365D)";
-                            value: HabitAdapter.summary-best-streak + " days";
+                            label: Translations.habits-best-streak-label;
+                            value: HabitAdapter.summary-best-streak + " " + Translations.habits-days-label;
                         }
                     }
 
@@ -383,7 +384,7 @@ export component HabitsTab inherits Rectangle {
                         SummaryItem {
                             horizontal-stretch: 1;
                             icon: @image-url("../../assets/icons/percent.svg");
-                            label: "COMPLETION RATE";
+                            label: Translations.habits-completion-rate-label;
                             value: HabitAdapter.summary-completion-rate + "%";
                             note: HabitAdapter.summary-completion-note;
                         }
@@ -391,7 +392,7 @@ export component HabitsTab inherits Rectangle {
                         SummaryItem {
                             horizontal-stretch: 1;
                             icon: @image-url("../../assets/icons/check.svg");
-                            label: "COMPLETIONS (30D)";
+                            label: Translations.habits-completions-label;
                             value: HabitAdapter.summary-last-30 + "";
                             note: HabitAdapter.summary-best-day;
                         }

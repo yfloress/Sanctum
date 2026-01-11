@@ -7,7 +7,7 @@ export component TabButton inherits Rectangle {
     in property <bool> active;
     callback clicked;
 
-    width: 110px;
+    min-width: 80px;
     height: 36px;
     border-radius: 18px;
     background: active ? @linear-gradient(135deg, Theme.surface-hover 0%, Theme.surface 100%) : transparent;
@@ -28,15 +28,20 @@ export component TabButton inherits Rectangle {
         opacity: 0.1;
     }
 
-    Text {
-        text: root.text;
-        color: active ? Theme.text-primary : Theme.text-muted;
-        font-size: 11px;
-        font-weight: active ? 600 : 500;
-        letter-spacing: 1.5px;
-        horizontal-alignment: center;
-        vertical-alignment: center;
-        animate color { duration: 200ms; }
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+
+        Text {
+            text: root.text;
+            color: active ? Theme.text-primary : Theme.text-muted;
+            font-size: 11px;
+            font-weight: active ? 600 : 500;
+            letter-spacing: 1.5px;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            animate color { duration: 200ms; }
+        }
     }
 
     TouchArea {

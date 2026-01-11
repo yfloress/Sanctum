@@ -385,7 +385,7 @@ export component CryptoPage inherits Rectangle {
                         alignment: end;
 
                         ActionButton {
-                            text: root.active-tab == "portfolio" ? "+ ADD TRANSACTION" : "+ NEW WALLET";
+                            text: root.active-tab == "portfolio" ? Translations.button-add-transaction : Translations.crypto-add-wallet-button;
                             primary: true;
                             clicked => {
                                 if (root.active-tab == "portfolio") {

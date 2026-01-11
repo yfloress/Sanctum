@@ -615,3 +615,40 @@ modal-new-entry = NEW ENTRY
 modal-edit-entry = EDIT ENTRY
 modal-save-entry = SAVE ENTRY
 modal-add-note = Add a note...
+
+# ==================== Finances Extended (Search/Empty States) ====================
+finances-search-placeholder = Search by description, category, date...
+finances-no-matching = No matching transactions
+finances-no-transactions-yet = No transactions yet
+finances-try-adjusting = Try clearing or adjusting your filters
+finances-add-first-entry = Add your first entry to start tracking your finances
+finances-no-accounts-configured = No accounts configured
+finances-create-account = Create an account to manage your funds
+
+# ==================== Crypto Extended (Buttons) ====================
+crypto-add-wallet-button = + NEW WALLET
+
+# ==================== Habits Extended (Summary Labels) ====================
+habits-current-streak-label = CURRENT STREAK
+habits-best-streak-label = BEST STREAK (365D)
+habits-days-label = days
+habits-completion-rate-label = COMPLETION RATE
+habits-completions-label = COMPLETIONS (30D)
+
+# ==================== Rewards Extended (Sections/Buttons) ====================
+rewards-streak-rewards-section = STREAK REWARDS
+rewards-add-reward-button = + REWARD
+rewards-no-streak-rewards = No streak rewards yet
+rewards-link-habit-desc = Link a habit and set milestone rewards to stay motivated
+rewards-goals-section = GOALS
+rewards-add-goal-button = + GOAL
+rewards-no-goals-set = No goals set
+rewards-create-goal-desc = Create a goal with checkpoints to track your progress
+
+# ==================== Rewards Progress ====================
+rewards-days-to-go = days to go
+
+# ==================== History Tab ====================
+history-achievements-section = ACHIEVEMENTS
+history-no-achievements = No achievements yet
+history-complete-to-earn = Complete streak milestones and goals to earn trophies

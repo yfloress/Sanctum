@@ -17,7 +17,7 @@ export component HistoryTab inherits Rectangle {
         spacing: 16px;
 
         SectionHeader {
-            title: "ACHIEVEMENTS";
+            title: Translations.history-achievements-section;
         }
 
         if total-achievements > 0: Rectangle {
@@ -115,8 +115,8 @@ export component HistoryTab inherits Rectangle {
 
         if total-achievements == 0: EmptyState {
             icon: @image-url("../../assets/icons/trophy.svg");
-            title: "No achievements yet";
-            description: "Complete streak milestones and goals to earn trophies";
+            title: Translations.history-no-achievements;
+            description: Translations.history-complete-to-earn;
         }
     }
 }

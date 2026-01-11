@@ -2,6 +2,7 @@
 // Displays a habit-linked reward with progress bar and milestones
 
 import { Theme } from "../../theme.slint";
+import { Translations } from "../../translations.slint";
 import { MilestoneData, StreakRewardData } from "../../globals.slint";
 import { ActionButtons } from "goal_card.slint";
 
@@ -49,7 +50,7 @@ component MilestoneMarker inherits Rectangle {
             alignment: center;
 
             Text {
-                text: target-days + " days";
+                text: target-days + " " + Translations.habits-days-label;
                 color: Theme.text-primary;
                 font-size: 10px;
                 font-weight: 600;
@@ -127,7 +128,7 @@ export component StreakRewardCard inherits Rectangle {
                         background: reward.is-consecutive ? Theme.accent.transparentize(0.85) : Theme.warning.transparentize(0.85);
 
                         Text {
-                            text: reward.is-consecutive ? "CONSECUTIVE" : "ACCUMULATIVE";
+                            text: reward.is-consecutive ? Translations.modal-consecutive : Translations.modal-accumulative;
                             color: reward.is-consecutive ? Theme.accent : Theme.warning;
                             font-size: 9px;
                             font-weight: 600;
@@ -157,7 +158,7 @@ export component StreakRewardCard inherits Rectangle {
                     }
 
                     Text {
-                        text: reward.current-progress + " days";
+                        text: reward.current-progress + " " + Translations.habits-days-label;
                         color: Theme.text-primary;
                         font-size: 14px;
                         font-weight: 600;
@@ -219,7 +220,7 @@ export component StreakRewardCard inherits Rectangle {
             }
 
             Text {
-                text: "Ready to claim: " + reward.next-milestone-reward;
+                text: Translations.rewards-ready-claim + ": " + reward.next-milestone-reward;
                 color: Theme.success;
                 font-size: 11px;
                 font-weight: 600;
@@ -241,14 +242,14 @@ export component StreakRewardCard inherits Rectangle {
             }
 
             Text {
-                text: "Next: " + reward.next-milestone-reward;
+                text: Translations.rewards-next + ": " + reward.next-milestone-reward;
                 color: Theme.text-muted;
                 font-size: 11px;
                 vertical-alignment: center;
             }
 
             Text {
-                text: root.days-remaining + " days to go";
+                text: root.days-remaining + " " + Translations.rewards-days-to-go;
                 color: Theme.text-secondary;
                 font-size: 11px;
                 font-weight: 500;
@@ -270,7 +271,7 @@ export component StreakRewardCard inherits Rectangle {
             }
 
             Text {
-                text: "All milestones unlocked!";
+                text: Translations.rewards-all-unlocked;
                 color: Theme.success;
                 font-size: 11px;
                 font-weight: 500;

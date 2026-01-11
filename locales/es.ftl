@@ -615,3 +615,40 @@ modal-new-entry = NUEVA ENTRADA
 modal-edit-entry = EDITAR ENTRADA
 modal-save-entry = GUARDAR ENTRADA
 modal-add-note = Agregar una nota...
+
+# ==================== Finances Extended (Search/Empty States) ====================
+finances-search-placeholder = Buscar por descripción, categoría, fecha...
+finances-no-matching = Sin transacciones coincidentes
+finances-no-transactions-yet = Sin transacciones aún
+finances-try-adjusting = Intenta limpiar o ajustar tus filtros
+finances-add-first-entry = Agrega tu primera entrada para empezar a rastrear tus finanzas
+finances-no-accounts-configured = Sin cuentas configuradas
+finances-create-account = Crea una cuenta para administrar tus fondos
+
+# ==================== Crypto Extended (Buttons) ====================
+crypto-add-wallet-button = + BILLETERA
+
+# ==================== Habits Extended (Summary Labels) ====================
+habits-current-streak-label = RACHA ACTUAL
+habits-best-streak-label = MEJOR RACHA (365D)
+habits-days-label = días
+habits-completion-rate-label = TASA DE COMPLETADO
+habits-completions-label = COMPLETADOS (30D)
+
+# ==================== Rewards Extended (Sections/Buttons) ====================
+rewards-streak-rewards-section = RECOMPENSAS DE RACHA
+rewards-add-reward-button = + RECOMPENSA
+rewards-no-streak-rewards = Sin recompensas de racha aún
+rewards-link-habit-desc = Vincula un hábito y establece recompensas por hitos
+rewards-goals-section = METAS
+rewards-add-goal-button = + META
+rewards-no-goals-set = Sin metas establecidas
+rewards-create-goal-desc = Crea una meta con puntos de control para seguir tu progreso
+
+# ==================== Rewards Progress ====================
+rewards-days-to-go = días restantes
+
+# ==================== History Tab ====================
+history-achievements-section = LOGROS
+history-no-achievements = Sin logros aún
+history-complete-to-earn = Completa hitos de racha y metas para ganar trofeos

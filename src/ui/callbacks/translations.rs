@@ -614,6 +614,43 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_modal_edit_entry(s(&t("modal-edit-entry")));
     tr.set_modal_save_entry(s(&t("modal-save-entry")));
     tr.set_modal_add_note(s(&t("modal-add-note")));
+
+    // Finances Extended (Search/Empty States)
+    tr.set_finances_search_placeholder(s(&t("finances-search-placeholder")));
+    tr.set_finances_no_matching(s(&t("finances-no-matching")));
+    tr.set_finances_no_transactions_yet(s(&t("finances-no-transactions-yet")));
+    tr.set_finances_try_adjusting(s(&t("finances-try-adjusting")));
+    tr.set_finances_add_first_entry(s(&t("finances-add-first-entry")));
+    tr.set_finances_no_accounts_configured(s(&t("finances-no-accounts-configured")));
+    tr.set_finances_create_account(s(&t("finances-create-account")));
+
+    // Crypto Extended (Buttons)
+    tr.set_crypto_add_wallet_button(s(&t("crypto-add-wallet-button")));
+
+    // Habits Extended (Summary Labels)
+    tr.set_habits_current_streak_label(s(&t("habits-current-streak-label")));
+    tr.set_habits_best_streak_label(s(&t("habits-best-streak-label")));
+    tr.set_habits_days_label(s(&t("habits-days-label")));
+    tr.set_habits_completion_rate_label(s(&t("habits-completion-rate-label")));
+    tr.set_habits_completions_label(s(&t("habits-completions-label")));
+
+    // Rewards Extended (Sections/Buttons)
+    tr.set_rewards_streak_rewards_section(s(&t("rewards-streak-rewards-section")));
+    tr.set_rewards_add_reward_button(s(&t("rewards-add-reward-button")));
+    tr.set_rewards_no_streak_rewards(s(&t("rewards-no-streak-rewards")));
+    tr.set_rewards_link_habit_desc(s(&t("rewards-link-habit-desc")));
+    tr.set_rewards_goals_section(s(&t("rewards-goals-section")));
+    tr.set_rewards_add_goal_button(s(&t("rewards-add-goal-button")));
+    tr.set_rewards_no_goals_set(s(&t("rewards-no-goals-set")));
+    tr.set_rewards_create_goal_desc(s(&t("rewards-create-goal-desc")));
+
+    // Rewards Progress
+    tr.set_rewards_days_to_go(s(&t("rewards-days-to-go")));
+
+    // History Tab
+    tr.set_history_achievements_section(s(&t("history-achievements-section")));
+    tr.set_history_no_achievements(s(&t("history-no-achievements")));
+    tr.set_history_complete_to_earn(s(&t("history-complete-to-earn")));
 }
 
 /// Helper to convert String to SharedString

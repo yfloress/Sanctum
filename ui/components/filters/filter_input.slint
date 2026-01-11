@@ -37,10 +37,11 @@ export component FilterInput inherits Rectangle {
                 padding-right: 12px;
                 spacing: 8px;
 
-                Text {
-                    text: "🔎";
-                    color: Theme.text-muted;
-                    font-size: 12px;
+                Image {
+                    source: @image-url("../../assets/icons/search.svg");
+                    width: 14px;
+                    height: 14px;
+                    colorize: Theme.text-muted;
                     vertical-alignment: center;
                 }
 
