@@ -586,6 +586,7 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_button_sync(s(&t("button-sync")));
     tr.set_button_syncing(s(&t("button-syncing")));
     tr.set_button_add_transaction(s(&t("button-add-transaction")));
+    tr.set_button_add_transaction_short(s(&t("button-add-transaction-short")));
     tr.set_button_new_entry(s(&t("button-new-entry")));
     tr.set_button_new_account(s(&t("button-new-account")));
 

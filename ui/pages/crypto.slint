@@ -220,14 +220,6 @@ export component CryptoPage inherits Rectangle {
                             vertical-alignment: center;
                         }
 
-                        GhostButton {
-                            text: CryptoAdapter.is-refreshing ? Translations.button-syncing : Translations.button-sync;
-                            enabled: !CryptoAdapter.is-refreshing;
-                            clicked => {
-                                CryptoAdapter.refresh-prices();
-                            }
-                        }
-
                         Rectangle {
                             height: 20px;
                             border-radius: 10px;
@@ -385,7 +377,7 @@ export component CryptoPage inherits Rectangle {
                         alignment: end;
 
                         ActionButton {
-                            text: root.active-tab == "portfolio" ? Translations.button-add-transaction : Translations.crypto-add-wallet-button;
+                            text: root.active-tab == "portfolio" ? Translations.button-add-transaction-short : Translations.crypto-add-wallet-button;
                             primary: true;
                             clicked => {
                                 if (root.active-tab == "portfolio") {
@@ -393,6 +385,18 @@ export component CryptoPage inherits Rectangle {
                                 } else {
                                     AppState.show-add-wallet = true;
                                 }
+                            }
+                        }
+                    }
+
+                    HorizontalLayout {
+                        alignment: end;
+
+                        GhostButton {
+                            text: CryptoAdapter.is-refreshing ? Translations.button-syncing : Translations.button-sync;
+                            enabled: !CryptoAdapter.is-refreshing;
+                            clicked => {
+                                CryptoAdapter.refresh-prices();
                             }
                         }
                     }

@@ -584,6 +584,7 @@ button-add = ADD
 button-sync = ↻ SYNC
 button-syncing = SYNCING...
 button-add-transaction = + ADD TRANSACTION
+button-add-transaction-short = + ADD TRANSACTION
 button-new-entry = + NEW ENTRY
 button-new-account = + NEW ACCOUNT
 

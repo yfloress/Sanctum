@@ -584,6 +584,7 @@ button-add = AGREGAR
 button-sync = ↻ SINCRONIZAR
 button-syncing = SINCRONIZANDO...
 button-add-transaction = + AGREGAR TRANSACCIÓN
+button-add-transaction-short = + TRANSACCIÓN
 button-new-entry = + NUEVA ENTRADA
 button-new-account = + NUEVA CUENTA
 
