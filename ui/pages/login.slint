@@ -291,43 +291,44 @@ export component LoginPage inherits Rectangle {
     if vault-exists: Rectangle {
         x: parent.width - self.width - 24px;
         y: parent.height - self.height - 24px;
-        width: 160px;
-        height: 36px;
-        border-radius: 8px;
-        background: restore-touch.has-hover ? Theme.surface-hover : Theme.surface;
+        width: 180px;
+        height: 40px;
+        border-radius: 10px;
+        background: restore-touch.has-hover
+            ? @linear-gradient(135deg, Theme.accent-indigo.with-alpha(0.25) 0%, Theme.accent.with-alpha(0.15) 100%)
+            : @linear-gradient(135deg, Theme.surface 0%, Theme.surface-deep 100%);
         border-width: 1px;
-        border-color: Theme.border;
+        border-color: restore-touch.has-hover ? Theme.accent.with-alpha(0.4) : Theme.border-light;
+        drop-shadow-blur: restore-touch.has-hover ? 12px : 6px;
+        drop-shadow-color: Theme.shadow;
 
         HorizontalLayout {
-            padding-left: 12px;
-            padding-right: 12px;
-            spacing: 8px;
+            padding-left: 14px;
+            padding-right: 14px;
+            spacing: 10px;
             alignment: center;
 
             Image {
                 source: @image-url("../assets/icons/upload.svg");
                 width: 14px;
                 height: 14px;
-                colorize: Theme.text-muted;
-                vertical-alignment: center;
+                colorize: restore-touch.has-hover ? Theme.accent : Theme.text-muted;
+                y: (parent.height - self.height) / 2;
             }
 
             Text {
                 text: Translations.vault-restore-from-backup;
-                color: restore-touch.has-hover ? Theme.text-primary : Theme.text-muted;
-                font-size: 10px;
+                color: restore-touch.has-hover ? Theme.text-primary : Theme.text-secondary;
+                font-size: 11px;
                 font-weight: 500;
+                letter-spacing: 0.5px;
                 vertical-alignment: center;
             }
         }
 
-        animate background { duration: 200ms; }
-
-        states [
-            hover when restore-touch.has-hover: {
-                background: Theme.surface-hover;
-            }
-        ]
+        animate background { duration: 250ms; easing: ease-out; }
+        animate border-color { duration: 250ms; easing: ease-out; }
+        animate drop-shadow-blur { duration: 250ms; easing: ease-out; }
 
         restore-touch := TouchArea {
             mouse-cursor: pointer;
