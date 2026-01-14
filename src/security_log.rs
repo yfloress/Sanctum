@@ -151,15 +151,21 @@ pub fn log_rate_limit(source: &str, wait_seconds: u64) {
 ///
 /// Should be called once at application startup.
 /// Uses environment variable RUST_LOG to control log level.
-/// Default level is "info" for release, "debug" for development.
+/// Default level is "warn" for external crates, "info" for sanctum.
 pub fn init_security_logger() {
     // Only initialize once
     static INIT: std::sync::Once = std::sync::Once::new();
 
     INIT.call_once(|| {
-        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
-            .format_timestamp_millis()
-            .init();
+        // Default filter: show sanctum logs at info level, external crates at warn
+        // This filters out verbose D-Bus/portal messages from rfd and other libs
+        let default_filter = "warn,sanctum=info";
+
+        env_logger::Builder::from_env(
+            env_logger::Env::default().default_filter_or(default_filter),
+        )
+        .format_timestamp_millis()
+        .init();
 
         info!(
             "[SECURITY] id=0 ts={} event=LOGGER_INITIALIZED version={}",

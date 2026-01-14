@@ -37,7 +37,7 @@ impl super::AppController {
     /// Export current vault to a backup location
     ///
     /// This copies the encrypted database file to the specified destination
-    /// without decrypting it. The vault is temporarily closed during the operation.
+    /// without decrypting it. The vault remains open during the operation.
     ///
     /// # Arguments
     /// * `destination` - Path where the backup will be saved
@@ -46,33 +46,16 @@ impl super::AppController {
     /// * `Ok(())` on success
     /// * `Err(ControllerError)` if export fails
     pub fn export_vault(&self, destination: String) -> Result<(), ControllerError> {
-        // Get the current vault path
         let vault_path = self.default_db_path();
 
         if !vault_path.exists() {
             return Err(ControllerError::VaultNotFound);
         }
 
-        // Validate and sanitize destination path
         let dest_path = PathBuf::from(destination);
 
-        // Close vault temporarily to ensure no corruption
-        let was_open = {
-            let db_lock = self.db.lock().map_err(|_| ControllerError::Internal)?;
-            db_lock.is_some()
-        };
-
-        if was_open {
-            let _ = self.close_db();
-        }
-
-        // Perform export
-        let result = vault::export_vault(&vault_path, &dest_path);
-
-        // Note: We don't reopen the vault after export
-        // User can continue their session after export
-
-        result.map_err(ControllerError::from)
+        // Export without closing - SQLite/SQLCipher handles concurrent reads fine
+        vault::export_vault(&vault_path, &dest_path).map_err(ControllerError::from)
     }
 
     /// Restore vault from a backup file
