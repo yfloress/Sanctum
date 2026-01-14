@@ -282,6 +282,20 @@ impl Database {
         Ok(())
     }
 
+    /// Forces a WAL checkpoint to write all changes to the main database file
+    ///
+    /// This is necessary before creating backups to ensure all pending
+    /// changes in the WAL file are merged into the main database file.
+    /// Uses TRUNCATE mode which writes all frames and resets the WAL file.
+    pub fn checkpoint(&self) -> Result<(), DbError> {
+        // Use query_row instead of pragma_update because wal_checkpoint
+        // is a command that returns values, not a setting pragma
+        self.conn
+            .query_row("PRAGMA wal_checkpoint(TRUNCATE)", [], |_row| Ok(()))
+            .map_err(DbError::Sqlite)?;
+        Ok(())
+    }
+
     // ==================== Settings Methods ====================
 
     /// Gets a setting value by key

@@ -37,7 +37,8 @@ impl super::AppController {
     /// Export current vault to a backup location
     ///
     /// This copies the encrypted database file to the specified destination
-    /// without decrypting it. The vault remains open during the operation.
+    /// without decrypting it. A WAL checkpoint is performed first to ensure
+    /// all pending changes are included in the backup.
     ///
     /// # Arguments
     /// * `destination` - Path where the backup will be saved
@@ -52,9 +53,12 @@ impl super::AppController {
             return Err(ControllerError::VaultNotFound);
         }
 
+        // Force WAL checkpoint to ensure all changes are in the main db file
+        // This is critical - without it, recent changes won't be in the backup
+        self.with_db_no_touch(|db| db.checkpoint().map_err(ControllerError::Database))?;
+
         let dest_path = PathBuf::from(destination);
 
-        // Export without closing - SQLite/SQLCipher handles concurrent reads fine
         vault::export_vault(&vault_path, &dest_path).map_err(ControllerError::from)
     }
 
