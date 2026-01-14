@@ -31,6 +31,7 @@
           openssl
           fontconfig
           freetype
+          dbus
         ];
 
         packages = with pkgs; [
