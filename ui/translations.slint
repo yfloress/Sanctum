@@ -599,6 +599,25 @@ export global Translations {
     in-out property <string> settings-encryption-type: "AES-256-GCM";
     in-out property <string> settings-storage-type: "SQLite (Encrypted)";
 
+    // ==================== Vault Backup ====================
+    in-out property <string> vault-backup-section: "VAULT BACKUP";
+    in-out property <string> vault-export-button: "EXPORT BACKUP";
+    in-out property <string> vault-restore-button: "RESTORE BACKUP";
+    in-out property <string> vault-restore-from-backup: "Restore from backup...";
+    in-out property <string> vault-export-success: "Vault backup created successfully";
+    in-out property <string> vault-restore-success: "Vault restored successfully. Please log in.";
+    in-out property <string> vault-export-failed: "Failed to export vault";
+    in-out property <string> vault-restore-failed: "Failed to restore vault";
+    in-out property <string> vault-restore-warning-title: "Restore Vault from Backup?";
+    in-out property <string> vault-restore-warning-desc: "This will replace your current vault with the backup file. All current data will be overwritten. This action cannot be undone.";
+    in-out property <string> vault-restore-file-label: "BACKUP FILE";
+    in-out property <string> vault-restore-cancel: "CANCEL";
+    in-out property <string> vault-restore-confirm: "RESTORE VAULT";
+    in-out property <string> vault-invalid-backup: "Invalid backup file";
+    in-out property <string> vault-backup-too-large: "Backup file is too large (max 1GB)";
+    in-out property <string> vault-permission-denied: "Permission denied accessing file";
+    in-out property <string> vault-backup-encryption-note: "Backups maintain full encryption. Never export to untrusted locations.";
+
     // ==================== Asset/Wallet Details ====================
     in-out property <string> section-transaction-history: "TRANSACTION HISTORY";
 

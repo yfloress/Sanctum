@@ -608,6 +608,28 @@ settings-database-label = Database
 settings-encryption-type = AES-256-GCM
 settings-storage-type = SQLite (Encrypted)
 
+# ==================== Vault Backup ====================
+vault-backup-section = VAULT BACKUP
+vault-export-button = EXPORT BACKUP
+vault-restore-button = RESTORE BACKUP
+vault-restore-from-backup = Restore from backup...
+
+vault-export-success = Vault backup created successfully
+vault-restore-success = Vault restored successfully. Please log in.
+vault-export-failed = Failed to export vault
+vault-restore-failed = Failed to restore vault
+
+vault-restore-warning-title = Restore Vault from Backup?
+vault-restore-warning-desc = This will replace your current vault with the backup file. All current data will be overwritten. This action cannot be undone.
+vault-restore-file-label = BACKUP FILE
+vault-restore-cancel = CANCEL
+vault-restore-confirm = RESTORE VAULT
+
+vault-invalid-backup = Invalid backup file
+vault-backup-too-large = Backup file is too large (max 1GB)
+vault-permission-denied = Permission denied accessing file
+vault-backup-encryption-note = Backups maintain full encryption. Never export to untrusted locations.
+
 # ==================== Asset/Wallet Details ====================
 section-transaction-history = TRANSACTION HISTORY
 

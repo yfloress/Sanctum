@@ -1,7 +1,7 @@
 // ==================== Login Page ====================
 // Noir Minimalist - Elegant authentication with smooth gradient background and refined typography
 
-import { AuthAdapter, AppState, NotificationAdapter } from "../globals.slint";
+import { AuthAdapter, AppState, NotificationAdapter, VaultAdapter } from "../globals.slint";
 import { Translations } from "../translations.slint";
 import { Theme } from "../theme.slint";
 import { TextButton } from "../widgets.slint";
@@ -283,6 +283,54 @@ export component LoginPage inherits Rectangle {
                 letter-spacing: 3px;
                 horizontal-alignment: center;
                 vertical-alignment: center;
+            }
+        }
+    }
+
+    // Restore button (floating in bottom-right corner, only when vault exists)
+    if vault-exists: Rectangle {
+        x: parent.width - self.width - 24px;
+        y: parent.height - self.height - 24px;
+        width: 180px;
+        height: 40px;
+        border-radius: 10px;
+        background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
+        opacity: restore-touch.has-hover ? 1.0 : 0.85;
+        drop-shadow-blur: restore-touch.has-hover ? 12px : 6px;
+        drop-shadow-color: Theme.shadow;
+
+        HorizontalLayout {
+            padding-left: 14px;
+            padding-right: 14px;
+            spacing: 8px;
+            alignment: center;
+
+            Image {
+                source: @image-url("../assets/icons/upload.svg");
+                width: 14px;
+                height: 14px;
+                colorize: Theme.text;
+                y: (parent.height - self.height) / 2;
+            }
+
+            Text {
+                text: Translations.vault-restore-from-backup;
+                color: Theme.text;
+                font-size: 10px;
+                font-weight: 600;
+                letter-spacing: 0.5px;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+        }
+
+        animate opacity { duration: 200ms; easing: ease-out; }
+        animate drop-shadow-blur { duration: 200ms; easing: ease-out; }
+
+        restore-touch := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                VaultAdapter.restore-vault();
             }
         }
     }

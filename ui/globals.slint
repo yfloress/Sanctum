@@ -410,6 +410,19 @@ export global SettingsAdapter {
     callback reset-settings();
 }
 
+// ==================== Vault Adapter ====================
+
+export global VaultAdapter {
+    in-out property <string> restore-backup-path: "";  // Path to selected backup file
+    in-out property <bool> has-pre-restore-backup: false;
+
+    // Callbacks
+    callback export-vault();        // Opens file save dialog and exports vault
+    callback restore-vault();       // Opens file picker and shows confirmation modal
+    callback confirm-restore();     // Actually performs the restore operation
+    callback rollback-restore();    // Rollback to pre-restore backup
+}
+
 // ==================== Crypto Adapter ====================
 
 export struct CryptoAssetData {
@@ -689,6 +702,9 @@ export global AppState {
     in-out property <bool> show-edit-reward: false;
     in-out property <bool> show-add-goal: false;
     in-out property <bool> show-edit-goal: false;
+
+    // Vault restore modal
+    in-out property <bool> show-restore-vault: false;
 
     // Current date (YYYY-MM-DD), set from backend to avoid hardcoded defaults
     in-out property <string> current-date: "2024-01-01";

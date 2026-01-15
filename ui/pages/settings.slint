@@ -1,7 +1,7 @@
 // ==================== Settings Page ====================
 // Premium Fintech UI - Application Settings
 
-import { SettingsAdapter } from "../globals.slint";
+import { SettingsAdapter, VaultAdapter } from "../globals.slint";
 import { Translations } from "../translations.slint";
 import { Theme } from "../theme.slint";
 import { FormField } from "../components/forms/form_field.slint";
@@ -233,7 +233,7 @@ component SettingSelector inherits Rectangle {
                         width: 12px;
                         height: 12px;
                         colorize: Theme.text-muted;
-                        vertical-alignment: center;
+                        y: (parent.height - self.height) / 2;
                     }
                 }
 
@@ -291,7 +291,7 @@ component SettingSelector inherits Rectangle {
                                 width: 12px;
                                 height: 12px;
                                 colorize: Theme.accent;
-                                vertical-alignment: center;
+                                y: (parent.height - self.height) / 2;
                             }
                         }
 
@@ -480,6 +480,153 @@ export component SettingsPage inherits Rectangle {
                                 color: Theme.text-muted;
                                 font-size: 10px;
                                 font-weight: 400;
+                                vertical-alignment: center;
+                            }
+                        }
+                    }
+                }
+
+                // Vault Backup Section
+                VerticalLayout {
+                    spacing: 12px;
+
+                    SectionHeader {
+                        title: Translations.vault-backup-section;
+                    }
+
+                    Rectangle {
+                        height: 60px;
+                        background: transparent;
+
+                        HorizontalLayout {
+                            padding: 0px;
+                            spacing: 12px;
+
+                            // Export Button
+                            export-btn := Rectangle {
+                                horizontal-stretch: 1;
+                                height: 48px;
+                                border-radius: 8px;
+                                background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
+
+                                HorizontalLayout {
+                                    padding-left: 16px;
+                                    padding-right: 16px;
+                                    spacing: 8px;
+                                    alignment: center;
+
+                                    Image {
+                                        source: @image-url("../assets/icons/download.svg");
+                                        width: 16px;
+                                        height: 16px;
+                                        colorize: Theme.text;
+                                        y: (parent.height - self.height) / 2;
+                                    }
+
+                                    Text {
+                                        text: Translations.vault-export-button;
+                                        color: Theme.text;
+                                        font-size: 11px;
+                                        font-weight: 600;
+                                        letter-spacing: 1px;
+                                        vertical-alignment: center;
+                                    }
+                                }
+
+                                TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => {
+                                        VaultAdapter.export-vault();
+                                    }
+                                }
+
+                                states [
+                                    hover when export-touch.has-hover: {
+                                        opacity: 0.9;
+                                    }
+                                ]
+
+                                export-touch := TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => {
+                                        VaultAdapter.export-vault();
+                                    }
+                                }
+                            }
+
+                            // Restore Button
+                            restore-btn := Rectangle {
+                                horizontal-stretch: 1;
+                                height: 48px;
+                                border-radius: 8px;
+                                background: restore-touch.has-hover ? Theme.surface-hover : Theme.surface;
+                                border-width: 1px;
+                                border-color: Theme.border-light;
+
+                                HorizontalLayout {
+                                    padding-left: 16px;
+                                    padding-right: 16px;
+                                    spacing: 8px;
+                                    alignment: center;
+
+                                    Image {
+                                        source: @image-url("../assets/icons/upload.svg");
+                                        width: 16px;
+                                        height: 16px;
+                                        colorize: Theme.text-secondary;
+                                        y: (parent.height - self.height) / 2;
+                                    }
+
+                                    Text {
+                                        text: Translations.vault-restore-button;
+                                        color: Theme.text-secondary;
+                                        font-size: 11px;
+                                        font-weight: 600;
+                                        letter-spacing: 1px;
+                                        vertical-alignment: center;
+                                    }
+                                }
+
+                                states [
+                                    hover when restore-touch.has-hover: {
+                                        background: Theme.surface-hover;
+                                    }
+                                ]
+
+                                restore-touch := TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => {
+                                        VaultAdapter.restore-vault();
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Security note
+                    Rectangle {
+                        height: 48px;
+                        background: transparent;
+
+                        HorizontalLayout {
+                            padding-left: 4px;
+                            padding-right: 4px;
+                            spacing: 8px;
+
+                            Image {
+                                source: @image-url("../assets/icons/shield-check.svg");
+                                width: 14px;
+                                height: 14px;
+                                colorize: Theme.accent;
+                                y: (parent.height - self.height) / 2;
+                            }
+
+                            Text {
+                                text: Translations.vault-backup-encryption-note;
+                                color: Theme.text-muted;
+                                font-size: 10px;
+                                font-weight: 400;
+                                wrap: word-wrap;
                                 vertical-alignment: center;
                             }
                         }

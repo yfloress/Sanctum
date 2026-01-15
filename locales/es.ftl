@@ -608,6 +608,28 @@ settings-database-label = Base de Datos
 settings-encryption-type = AES-256-GCM
 settings-storage-type = SQLite (Cifrado)
 
+# ==================== Vault Backup ====================
+vault-backup-section = RESPALDO DE BÓVEDA
+vault-export-button = EXPORTAR RESPALDO
+vault-restore-button = RESTAURAR RESPALDO
+vault-restore-from-backup = Restaurar desde respaldo...
+
+vault-export-success = Respaldo de bóveda creado exitosamente
+vault-restore-success = Bóveda restaurada exitosamente. Por favor inicia sesión.
+vault-export-failed = Error al exportar la bóveda
+vault-restore-failed = Error al restaurar la bóveda
+
+vault-restore-warning-title = ¿Restaurar Bóveda desde Respaldo?
+vault-restore-warning-desc = Esto reemplazará tu bóveda actual con el archivo de respaldo. Todos los datos actuales serán sobrescritos. Esta acción no se puede deshacer.
+vault-restore-file-label = ARCHIVO DE RESPALDO
+vault-restore-cancel = CANCELAR
+vault-restore-confirm = RESTAURAR BÓVEDA
+
+vault-invalid-backup = Archivo de respaldo inválido
+vault-backup-too-large = Archivo de respaldo demasiado grande (máx 1GB)
+vault-permission-denied = Permiso denegado al acceder al archivo
+vault-backup-encryption-note = Los respaldos mantienen cifrado completo. Nunca exportes a ubicaciones no confiables.
+
 # ==================== Asset/Wallet Details ====================
 section-transaction-history = HISTORIAL DE TRANSACCIONES
 

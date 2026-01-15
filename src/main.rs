@@ -288,6 +288,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             match controller_clone.open_db(password_str, None) {
                 Ok(_) => {
                     log::info!("Vault unlocked successfully");
+
+                    // Clean up pre-restore backup if it exists (after successful login post-restore)
+                    if let Err(e) = controller_clone.cleanup_pre_restore_backup() {
+                        log::warn!("Failed to cleanup pre-restore backup: {}", e);
+                    }
+
                     notify("Vault unlocked successfully".into(), false);
                     session_monitor();
                     if let Some(ui) = ui_weak.upgrade() {
@@ -764,6 +770,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // SettingsAdapter callbacks (extracted to ui/callbacks/settings.rs)
     sanctum::ui::setup_settings_callbacks(&ui, &ui_weak, &controller, show_notification.clone());
+
+    // VaultAdapter callbacks (extracted to ui/callbacks/vault.rs)
+    sanctum::ui::setup_vault_callbacks(&ui, &ui_weak, &controller, show_notification.clone());
 
     // Translations setup (extracted to ui/callbacks/translations.rs)
     sanctum::ui::setup_translation_callbacks(&ui);
