@@ -294,41 +294,38 @@ export component LoginPage inherits Rectangle {
         width: 180px;
         height: 40px;
         border-radius: 10px;
-        background: restore-touch.has-hover
-            ? @linear-gradient(135deg, Theme.accent-indigo.with-alpha(0.25) 0%, Theme.accent.with-alpha(0.15) 100%)
-            : @linear-gradient(135deg, Theme.surface 0%, Theme.surface-deep 100%);
-        border-width: 1px;
-        border-color: restore-touch.has-hover ? Theme.accent.with-alpha(0.4) : Theme.border-light;
+        background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
+        opacity: restore-touch.has-hover ? 1.0 : 0.85;
         drop-shadow-blur: restore-touch.has-hover ? 12px : 6px;
         drop-shadow-color: Theme.shadow;
 
         HorizontalLayout {
             padding-left: 14px;
             padding-right: 14px;
-            spacing: 10px;
+            spacing: 8px;
             alignment: center;
 
             Image {
                 source: @image-url("../assets/icons/upload.svg");
                 width: 14px;
                 height: 14px;
-                colorize: restore-touch.has-hover ? Theme.accent : Theme.text-muted;
+                colorize: Theme.text;
                 y: (parent.height - self.height) / 2;
             }
 
             Text {
                 text: Translations.vault-restore-from-backup;
-                color: restore-touch.has-hover ? Theme.text-primary : Theme.text-secondary;
-                font-size: 11px;
-                font-weight: 500;
+                color: Theme.text;
+                font-size: 10px;
+                font-weight: 600;
                 letter-spacing: 0.5px;
                 vertical-alignment: center;
+                overflow: elide;
             }
         }
 
-        animate background { duration: 250ms; easing: ease-out; }
-        animate border-color { duration: 250ms; easing: ease-out; }
-        animate drop-shadow-blur { duration: 250ms; easing: ease-out; }
+        animate opacity { duration: 200ms; easing: ease-out; }
+        animate drop-shadow-blur { duration: 200ms; easing: ease-out; }
 
         restore-touch := TouchArea {
             mouse-cursor: pointer;
