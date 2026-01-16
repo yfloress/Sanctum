@@ -34,21 +34,29 @@ ui/
 └── app.slint
 ```
 
+`locales/` (i18n)
+```
+locales/
+├── en.ftl       # English translations (Fluent format)
+└── es.ftl       # Spanish translations
+```
+
 ## Workflow Rules (Important)
 - UI logic lives in `src/ui/callbacks/`; keep `src/main.rs` as bootstrap + wiring only.
 - Controllers coordinate only; business logic must live in `features/*/service.rs` or `services/*`.
 - All chart rendering (`plotters`) goes in `src/services/charts.rs` only.
 - Validation: shared rules in `src/core/validation.rs`, domain wrappers in `features/*/validation.rs`.
-- Use `nix develop -c ...` for Rust commands (build/test/run).
-- UI text should remain in English for consistency.
+- Use `nix develop -c ...` for Rust commands (build/test).
+- Never run cargo run or cargo build.
+- UI text must use i18n: add keys to `locales/*.ftl` and use `Translations.*` in Slint.
 - Use `ui/globals.slint` (Palette) for colors/spacing; avoid hardcoded styling values.
 - Crypto icons live in `ui/assets/crypto-icons`; the base path is defined in `src/ui/helpers.rs`.
 
 ## Build, Test, and Development Commands
+First ask the user
 - `nix develop -c cargo check`
 - `nix develop -c cargo clippy`
 - `nix develop -c cargo test`
-- `nix develop -c cargo run`
 
 ## Coding Style and Naming Conventions
 - Rust: `rustfmt` defaults (4-space).
@@ -56,7 +64,7 @@ ui/
 - Naming: snake_case (Rust), PascalCase (types), kebab-case (files when adding new ones).
 
 ## Testing Guidelines
-- Use `cargo test` for unit tests; keep them deterministic.
+- Only when needed use `cargo test` for unit tests; keep them deterministic.
 - Avoid network calls in tests.
 
 ## Commit Guidelines
