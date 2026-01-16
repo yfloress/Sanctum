@@ -220,7 +220,13 @@ component SettingSelector inherits Rectangle {
                     spacing: 8px;
 
                     Text {
-                        text: root.selected-value;
+                        // Map selected value to its display label
+                        text: root.options.length > 0 && root.selected-value == root.options[0] ? root.option-labels[0] :
+                              root.options.length > 1 && root.selected-value == root.options[1] ? root.option-labels[1] :
+                              root.options.length > 2 && root.selected-value == root.options[2] ? root.option-labels[2] :
+                              root.options.length > 3 && root.selected-value == root.options[3] ? root.option-labels[3] :
+                              root.options.length > 4 && root.selected-value == root.options[4] ? root.option-labels[4] :
+                              root.selected-value;
                         color: Theme.text-primary;
                         font-size: 12px;
                         font-weight: 500;

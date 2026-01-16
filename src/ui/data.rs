@@ -4,9 +4,7 @@
 //! These are mapped to Slint-generated types in main.rs.
 
 use crate::controller::AppController;
-use crate::ui::helpers::{
-    convert_currency, format_category_label, format_decimal_from_cents, format_money,
-};
+use crate::ui::{convert_currency, format_category_label, format_decimal_from_cents, format_money};
 use std::collections::HashMap;
 use std::sync::Arc;
 
