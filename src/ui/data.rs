@@ -4,7 +4,9 @@
 //! These are mapped to Slint-generated types in main.rs.
 
 use crate::controller::AppController;
-use crate::ui::helpers::{format_category_label, format_decimal_from_cents, format_money};
+use crate::ui::helpers::{
+    convert_currency, format_category_label, format_decimal_from_cents, format_money,
+};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -29,7 +31,10 @@ pub struct AccountsState {
     pub total_balance: String,
 }
 
-pub fn load_accounts_state(controller: &Arc<AppController>) -> Result<AccountsState, String> {
+pub fn load_accounts_state(
+    controller: &Arc<AppController>,
+    preferred_currency: &str,
+) -> Result<AccountsState, String> {
     let accounts = controller.get_accounts().map_err(|e| e.to_string())?;
     let balances = controller
         .get_account_balances()
@@ -51,19 +56,15 @@ pub fn load_accounts_state(controller: &Arc<AppController>) -> Result<AccountsSt
         .and_then(|rate| rate.map(|(r, _)| r))
         .unwrap_or(0.0);
 
-    let mut total_usd_cents: i64 = 0;
+    // Calculate total in preferred currency
+    let mut total_preferred_cents: i64 = 0;
     for bal in &balances {
-        let currency = currency_map
+        let acc_currency = currency_map
             .get(&bal.account_id)
             .map(|s| s.as_str())
             .unwrap_or("USD");
-        if currency == "CLP" {
-            if clp_rate > 0.0 {
-                total_usd_cents += (bal.current_balance as f64 / clp_rate).round() as i64;
-            }
-        } else {
-            total_usd_cents += bal.current_balance;
-        }
+        total_preferred_cents +=
+            convert_currency(bal.current_balance, acc_currency, preferred_currency, clp_rate);
     }
 
     let mapped: Vec<AccountDisplayData> = accounts
@@ -99,7 +100,7 @@ pub fn load_accounts_state(controller: &Arc<AppController>) -> Result<AccountsSt
 
     Ok(AccountsState {
         accounts: mapped,
-        total_balance: format_money(total_usd_cents, "USD"),
+        total_balance: format_money(total_preferred_cents, preferred_currency),
     })
 }
 

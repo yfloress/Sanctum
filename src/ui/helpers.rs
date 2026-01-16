@@ -95,6 +95,59 @@ pub fn parse_amount_input(value: &str) -> Option<i64> {
     Some((parsed * 100.0).round() as i64)
 }
 
+// ==================== Currency Conversion ====================
+
+/// Converts cents from one currency to another using the CLP/USD rate.
+/// The rate represents how many CLP equals 1 USD.
+pub fn convert_currency(amount_cents: i64, from: &str, to: &str, clp_rate: f64) -> i64 {
+    if from == to || clp_rate <= 0.0 {
+        return amount_cents;
+    }
+    match (from, to) {
+        ("CLP", "USD") => (amount_cents as f64 / clp_rate).round() as i64,
+        ("USD", "CLP") => (amount_cents as f64 * clp_rate).round() as i64,
+        _ => amount_cents,
+    }
+}
+
+/// Converts a float USD amount to the preferred currency.
+pub fn convert_usd_to_preferred(amount_usd: f64, preferred: &str, clp_rate: f64) -> f64 {
+    if preferred == "CLP" && clp_rate > 0.0 {
+        amount_usd * clp_rate
+    } else {
+        amount_usd
+    }
+}
+
+/// Formats a whole number with thousand separators (no decimals).
+fn format_thousands(value: i64) -> String {
+    let abs = value.abs();
+    let digits = abs.to_string();
+    let mut result = String::new();
+    for (count, c) in digits.chars().rev().enumerate() {
+        if count > 0 && count % 3 == 0 {
+            result.insert(0, ',');
+        }
+        result.insert(0, c);
+    }
+    result
+}
+
+/// Formats a float amount in CLP (no decimals, with thousand separators).
+pub fn format_clp(amount: f64) -> String {
+    let rounded = amount.round() as i64;
+    format!("CLP {}", format_thousands(rounded))
+}
+
+/// Formats a float amount in the preferred currency.
+pub fn format_preferred(amount: f64, currency: &str) -> String {
+    if currency == "CLP" {
+        format_clp(amount)
+    } else {
+        format_usd(amount)
+    }
+}
+
 // ==================== Account Helpers ====================
 
 /// Normalizes account type to valid values

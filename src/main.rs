@@ -356,7 +356,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ui_weak: &Weak<AppWindow>,
         controller: &Arc<AppController>,
     ) -> Result<(), sanctum::controller::ControllerError> {
-        let state = sanctum::ui::load_accounts_state(controller)
+        // Load preferred currency for display
+        let preferred_currency = controller
+            .get_app_setting(sanctum::controller::SETTING_PREFERRED_CURRENCY)
+            .unwrap_or_else(|_| "USD".to_string());
+
+        let state = sanctum::ui::load_accounts_state(controller, &preferred_currency)
             .map_err(sanctum::controller::ControllerError::Validation)?;
 
         let mapped: Vec<AccountData> = state

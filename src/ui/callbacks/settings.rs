@@ -8,7 +8,7 @@ use crate::controller::{
     SETTING_SESSION_TIMEOUT,
 };
 use crate::ui::callbacks::translations::{change_language, load_all_translations};
-use crate::{AppState, AppWindow, CryptoAdapter, SettingsAdapter};
+use crate::{AccountAdapter, AppState, AppWindow, CryptoAdapter, DashboardAdapter, SettingsAdapter};
 use slint::{ComponentHandle, SharedString, Weak};
 use std::rc::Rc;
 use std::sync::Arc;
@@ -218,12 +218,20 @@ pub fn setup_settings_callbacks<N>(
             });
     }
 
-    // Preferred currency update (UI only - no backend yet)
+    // Preferred currency update - refreshes all dashboards to show new currency
     {
         let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
         ui.global::<SettingsAdapter>()
             .on_set_preferred_currency(move |currency| {
                 let _ = controller.set_app_setting(SETTING_PREFERRED_CURRENCY, currency.as_str());
+
+                // Refresh all dashboards to reflect the new currency
+                if let Some(ui) = ui_weak.upgrade() {
+                    ui.global::<DashboardAdapter>().invoke_fetch_balance();
+                    ui.global::<CryptoAdapter>().invoke_fetch_portfolio();
+                    ui.global::<AccountAdapter>().invoke_fetch_accounts();
+                }
             });
     }
 

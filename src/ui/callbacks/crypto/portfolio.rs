@@ -1,13 +1,13 @@
 //! Portfolio and price-related crypto callbacks
 
 use super::helpers::{reload_portfolio, SETTING_CRYPTO_LAST_UPDATED};
-use crate::controller::AppController;
+use crate::controller::{AppController, SETTING_PREFERRED_CURRENCY};
 use crate::models::CryptoTransaction;
 use crate::ui::{
-    crypto_icon_for_symbol, format_clp_rate, format_crypto_tx_display, format_fee_display,
-    format_money, format_usd,
+    convert_usd_to_preferred, crypto_icon_for_symbol, format_clp_rate, format_crypto_tx_display,
+    format_fee_display, format_preferred,
 };
-use crate::{AssetTransaction, AssetWalletBreakdown, CryptoAdapter, CryptoAssetData, AppWindow};
+use crate::{AssetTransaction, AssetWalletBreakdown, AppWindow, CryptoAdapter, CryptoAssetData};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel, Weak};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -266,6 +266,17 @@ pub fn setup_portfolio_callbacks<N>(
             .on_fetch_asset_details(move |coin_id| {
                 let coin_id_str = coin_id.to_string();
 
+                // Load preferred currency and exchange rate
+                let preferred_currency = controller
+                    .get_app_setting(SETTING_PREFERRED_CURRENCY)
+                    .unwrap_or_else(|_| "USD".to_string());
+
+                let clp_rate = controller
+                    .load_exchange_rate_allow_stale("CLP_USD".to_string())
+                    .ok()
+                    .and_then(|r| r.map(|(rate, _)| rate))
+                    .unwrap_or(1.0);
+
                 if let Ok(assets) = controller.get_aggregated_portfolio()
                     && let Some(asset) = assets.iter().find(|a| a.coin_id == coin_id_str)
                 {
@@ -293,18 +304,24 @@ pub fn setup_portfolio_callbacks<N>(
                         format!("{:.2}%", price_change)
                     };
 
+                    // Convert price and value to preferred currency
+                    let price_preferred =
+                        convert_usd_to_preferred(updated_asset.current_price, &preferred_currency, clp_rate);
+                    let value_preferred =
+                        convert_usd_to_preferred(updated_asset.current_value, &preferred_currency, clp_rate);
+
                     let price_fmt = if missing_price {
                         "N/A".to_string()
-                    } else if updated_asset.current_price < 1.0 {
-                        format!("$ {:.4}", updated_asset.current_price)
+                    } else if price_preferred < 1.0 {
+                        format!("$ {:.4}", price_preferred)
                     } else {
-                        format_usd(updated_asset.current_price)
+                        format_preferred(price_preferred, &preferred_currency)
                     };
 
                     let value_fmt = if missing_price {
                         "N/A".to_string()
                     } else {
-                        format_usd(updated_asset.current_value)
+                        format_preferred(value_preferred, &preferred_currency)
                     };
 
                     let selected = CryptoAssetData {
@@ -333,13 +350,15 @@ pub fn setup_portfolio_callbacks<N>(
                         if let Some(h) = holdings.iter().find(|h| h.coin_id == coin_id_str)
                             && h.total_amount > 0.0
                         {
-                            let val = h.total_amount * current_price;
+                            let val_usd = h.total_amount * current_price;
+                            let val_preferred =
+                                convert_usd_to_preferred(val_usd, &preferred_currency, clp_rate);
                             wallet_breakdown.push(AssetWalletBreakdown {
                                 wallet_name: SharedString::from(w.name),
                                 amount: SharedString::from(format!("{:.4}", h.total_amount)),
-                                value: SharedString::from(format_money(
-                                    (val * 100.0) as i64,
-                                    "USD",
+                                value: SharedString::from(format_preferred(
+                                    val_preferred,
+                                    &preferred_currency,
                                 )),
                             });
                         }

@@ -1,10 +1,16 @@
 //! Shared helpers for crypto callbacks
 
-use crate::controller::AppController;
+use crate::controller::{AppController, SETTING_PREFERRED_CURRENCY};
 use crate::models::CryptoAsset;
 use crate::services::i18n;
-use crate::ui::{crypto_icon_for_symbol, format_clp_rate, format_usd, load_wallet_icon};
-use crate::{CryptoAdapter, CryptoAssetData, CryptoDistributionSlice, CryptoWalletData, AppWindow, WalletSimple};
+use crate::ui::{
+    convert_usd_to_preferred, crypto_icon_for_symbol, format_clp_rate, format_preferred,
+    load_wallet_icon,
+};
+use crate::{
+    AppWindow, CryptoAdapter, CryptoAssetData, CryptoDistributionSlice, CryptoWalletData,
+    WalletSimple,
+};
 use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel, Weak};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -40,6 +46,17 @@ where
         }
     };
 
+    // Load preferred currency and exchange rate
+    let preferred_currency = controller
+        .get_app_setting(SETTING_PREFERRED_CURRENCY)
+        .unwrap_or_else(|_| "USD".to_string());
+
+    let clp_rate = controller
+        .load_exchange_rate_allow_stale("CLP_USD".to_string())
+        .ok()
+        .and_then(|r| r.map(|(rate, _)| rate))
+        .unwrap_or(1.0);
+
     let mut wallet_data: Vec<CryptoWalletData> = Vec::new();
     let mut wallet_simple: Vec<WalletSimple> = Vec::new();
 
@@ -58,7 +75,7 @@ where
         let holdings = controller
             .get_wallet_holdings(w.id.clone())
             .unwrap_or_default();
-        let total_bal: f64 = holdings
+        let total_bal_usd: f64 = holdings
             .iter()
             .map(|h| {
                 let price = price_map.get(&h.coin_id).cloned().unwrap_or(0.0);
@@ -66,12 +83,14 @@ where
             })
             .sum();
 
+        let total_bal = convert_usd_to_preferred(total_bal_usd, &preferred_currency, clp_rate);
+
         wallet_data.push(CryptoWalletData {
             id: SharedString::from(w.id),
             name: SharedString::from(w.name),
             category: SharedString::from(w.category.clone()),
             icon: load_wallet_icon(w.icon.clone(), &w.category),
-            balance: SharedString::from(format_usd(total_bal)),
+            balance: SharedString::from(format_preferred(total_bal, &preferred_currency)),
             asset_count: holdings.len() as i32,
         });
     }
@@ -115,6 +134,18 @@ where
             return;
         }
     };
+
+    // Load preferred currency and exchange rate
+    let preferred_currency = controller
+        .get_app_setting(SETTING_PREFERRED_CURRENCY)
+        .unwrap_or_else(|_| "USD".to_string());
+
+    let clp_rate = controller
+        .load_exchange_rate_allow_stale("CLP_USD".to_string())
+        .ok()
+        .and_then(|r| r.map(|(rate, _)| rate))
+        .unwrap_or(1.0);
+
     let prices = controller.load_crypto_prices().unwrap_or_default();
     let price_map: HashMap<String, CryptoAsset> = prices
         .clone()
@@ -164,10 +195,11 @@ where
             .enumerate()
             .map(|(idx, (label, value))| {
                 let percent = (*value / chart_total) * 100.0;
+                let value_preferred = convert_usd_to_preferred(*value, &preferred_currency, clp_rate);
                 let (r, g, b) = controller.chart_color_for_symbol(label, idx);
                 CryptoDistributionSlice {
                     label: SharedString::from(label),
-                    value: SharedString::from(format_usd(*value)),
+                    value: SharedString::from(format_preferred(value_preferred, &preferred_currency)),
                     percent: SharedString::from(format!("{:.1}%", percent)),
                     color: slint::Color::from_rgb_u8(r, g, b),
                 }
@@ -213,18 +245,22 @@ where
                 .map(|p| p.name.clone())
                 .unwrap_or_else(|| a.symbol.clone());
 
+            // Convert price and value to preferred currency
+            let price_preferred = convert_usd_to_preferred(a.current_price, &preferred_currency, clp_rate);
+            let value_preferred = convert_usd_to_preferred(a.current_value, &preferred_currency, clp_rate);
+
             let price_fmt = if price_data.is_none() {
                 "N/A".to_string()
-            } else if a.current_price < 1.0 {
-                format!("$ {:.4}", a.current_price)
+            } else if price_preferred < 1.0 {
+                format!("$ {:.4}", price_preferred)
             } else {
-                format_usd(a.current_price)
+                format_preferred(price_preferred, &preferred_currency)
             };
 
             let value_fmt = if price_data.is_none() {
                 "N/A".to_string()
             } else {
-                format_usd(a.current_value)
+                format_preferred(value_preferred, &preferred_currency)
             };
 
             CryptoAssetData {
@@ -253,10 +289,12 @@ where
             } else {
                 format!("{:.2}%", data.price_change_percentage_24h)
             };
-            let price_fmt = if data.current_price < 1.0 {
-                format!("$ {:.4}", data.current_price)
+            let price_preferred =
+                convert_usd_to_preferred(data.current_price, &preferred_currency, clp_rate);
+            let price_fmt = if price_preferred < 1.0 {
+                format!("$ {:.4}", price_preferred)
             } else {
-                format_usd(data.current_price)
+                format_preferred(price_preferred, &preferred_currency)
             };
 
             tickers.push(CryptoAssetData {
@@ -294,7 +332,8 @@ where
     }
 
     let total_value_label = if priced_assets > 0 && missing_price_assets == 0 {
-        format_usd(total_val)
+        let total_preferred = convert_usd_to_preferred(total_val, &preferred_currency, clp_rate);
+        format_preferred(total_preferred, &preferred_currency)
     } else {
         "N/A".to_string()
     };
@@ -302,9 +341,15 @@ where
     let (total_pnl_label, total_pnl_positive) =
         if priced_assets > 0 && missing_price_assets == 0 {
             let total_pnl_val = total_val - total_cost;
+            let pnl_preferred =
+                convert_usd_to_preferred(total_pnl_val.abs(), &preferred_currency, clp_rate);
             let pnl_sign = if total_pnl_val >= 0.0 { "+" } else { "-" };
             (
-                format!("{} {}", pnl_sign, format_usd(total_pnl_val.abs())),
+                format!(
+                    "{} {}",
+                    pnl_sign,
+                    format_preferred(pnl_preferred, &preferred_currency)
+                ),
                 total_pnl_val >= 0.0,
             )
         } else {

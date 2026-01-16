@@ -2,8 +2,8 @@
 //!
 //! Callback setup for DashboardAdapter and AnalyticsAdapter.
 
-use crate::controller::AppController;
-use crate::ui::{color_from_hex, format_money, format_usd};
+use crate::controller::{AppController, SETTING_PREFERRED_CURRENCY};
+use crate::ui::{color_from_hex, convert_usd_to_preferred, format_preferred};
 use crate::{AnalyticsAdapter, AnalyticsData, AppWindow, BalanceData, CategoryData, DashboardAdapter};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel, Weak};
 use std::collections::HashMap;
@@ -33,6 +33,11 @@ pub fn setup_dashboard_callbacks<F>(
                 ui.global::<DashboardAdapter>().set_is_loading(true);
                 ui.global::<DashboardAdapter>().set_has_error(false);
             }
+
+            // Load preferred currency setting
+            let preferred_currency = controller
+                .get_app_setting(SETTING_PREFERRED_CURRENCY)
+                .unwrap_or_else(|_| "USD".to_string());
 
             // 1. Load Exchange Rate (CLP -> USD)
             let (clp_rate, missing_rate) =
@@ -84,7 +89,7 @@ pub fn setup_dashboard_callbacks<F>(
                 .map(|a| (a.id, a.currency.to_uppercase()))
                 .collect();
 
-            // Calculate Normalized Fiat Total
+            // Calculate Normalized Fiat Total (always in USD first)
             let mut total_fiat_usd: f64 = 0.0;
 
             for bal in balances {
@@ -97,7 +102,7 @@ pub fn setup_dashboard_callbacks<F>(
             }
 
             // Calculate Total Crypto Value (in USD)
-            let crypto_total: f64 = assets
+            let crypto_total_usd: f64 = assets
                 .iter()
                 .map(|asset| {
                     let price = price_map.get(&asset.coin_id).cloned().unwrap_or(0.0);
@@ -105,14 +110,21 @@ pub fn setup_dashboard_callbacks<F>(
                 })
                 .sum();
 
-            // Net Worth (Normalized Fiat + Crypto)
+            // Net Worth in USD (Normalized Fiat + Crypto)
             let fiat_total_dollars = total_fiat_usd / 100.0;
-            let net_worth = fiat_total_dollars + crypto_total;
+            let net_worth_usd = fiat_total_dollars + crypto_total_usd;
+
+            // Convert to preferred currency for display
+            let net_worth = convert_usd_to_preferred(net_worth_usd, &preferred_currency, clp_rate);
+            let fiat_display =
+                convert_usd_to_preferred(fiat_total_dollars, &preferred_currency, clp_rate);
+            let crypto_display =
+                convert_usd_to_preferred(crypto_total_usd, &preferred_currency, clp_rate);
 
             dash.set_balance(BalanceData {
-                total_balance: format_usd(net_worth).into(),
-                fiat_balance: format_usd(fiat_total_dollars).into(),
-                crypto_value: format_usd(crypto_total).into(),
+                total_balance: format_preferred(net_worth, &preferred_currency).into(),
+                fiat_balance: format_preferred(fiat_display, &preferred_currency).into(),
+                crypto_value: format_preferred(crypto_display, &preferred_currency).into(),
             });
         });
     }
@@ -133,6 +145,17 @@ pub fn setup_dashboard_callbacks<F>(
         let ui_weak = ui_weak.clone();
         ui.global::<AnalyticsAdapter>()
             .on_fetch_analytics(move |range| {
+                // Load preferred currency and exchange rate
+                let preferred_currency = controller
+                    .get_app_setting(SETTING_PREFERRED_CURRENCY)
+                    .unwrap_or_else(|_| "USD".to_string());
+
+                let clp_rate = controller
+                    .load_exchange_rate_allow_stale("CLP_USD".to_string())
+                    .ok()
+                    .and_then(|r| r.map(|(rate, _)| rate))
+                    .unwrap_or(1.0);
+
                 // Calculate crypto total for dashboard data
                 let crypto_total = calculate_crypto_total(&controller);
 
@@ -158,11 +181,20 @@ pub fn setup_dashboard_callbacks<F>(
                         let breakdown: Vec<CategoryData> = data
                             .expense_slices
                             .iter()
-                            .map(|slice| CategoryData {
-                                name: SharedString::from(&slice.category),
-                                amount: SharedString::from(format_money(slice.amount, "USD")),
-                                percentage: slice.percentage,
-                                color: color_from_hex(&slice.color),
+                            .map(|slice| {
+                                // Convert expense amount to preferred currency
+                                let amount_usd = slice.amount as f64 / 100.0;
+                                let amount_display =
+                                    convert_usd_to_preferred(amount_usd, &preferred_currency, clp_rate);
+                                CategoryData {
+                                    name: SharedString::from(&slice.category),
+                                    amount: SharedString::from(format_preferred(
+                                        amount_display,
+                                        &preferred_currency,
+                                    )),
+                                    percentage: slice.percentage,
+                                    color: color_from_hex(&slice.color),
+                                }
                             })
                             .collect();
 
