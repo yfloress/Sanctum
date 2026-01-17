@@ -139,8 +139,9 @@ component ActionCard inherits Rectangle {
 
         // Action Button
         Rectangle {
-            width: 140px;
+            width: 180px;
             height: 36px;
+            y: (parent.height - self.height) / 2;
             border-radius: 8px;
             background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
 

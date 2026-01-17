@@ -218,12 +218,13 @@ rewards-claim = Reclamar
 rewards-completed = Completado
 
 # ==================== Settings ====================
+# NOTA: Los titulos de secciones de Settings deben ir en MAYUSCULAS.
 settings-title = Ajustes
-settings-general = General
-settings-appearance = Apariencia
-settings-security = Seguridad
-settings-data = Datos
-settings-about = Acerca de
+settings-general = GENERAL
+settings-appearance = APARIENCIA
+settings-security = SEGURIDAD
+settings-data = DATOS
+settings-about = ACERCA DE
 
 # General settings
 settings-language = Idioma
@@ -716,5 +717,5 @@ import-format-json = JSON (Exportación de Sanctum Web)
 import-format-csv = CSV (Excel/Sheets)
 import-format-text = Texto Plano
 
-settings-import = Importar Datos
+settings-import = IMPORTAR DATOS
 settings-import-desc = Importar transacciones y hábitos desde archivos
