@@ -98,7 +98,7 @@ dashboard-add-transaction = Add Transaction
 dashboard-add-account = Add Account
 
 # ==================== Finances ====================
-finances-title = Finances
+finances-title = FINANCES
 finances-accounts = ACCOUNTS
 finances-transactions = Transactions
 finances-add-account = Add Account
@@ -697,6 +697,13 @@ import-total-processed = Total Processed
 import-inserted = Inserted
 import-skipped = Skipped
 import-errors = Errors
+import-preview-title = IMPORT PREVIEW
+import-preview-subtitle = Review the detected changes before importing.
+import-preview-file-label = FILE
+import-preview-format-label = FORMAT
+import-preview-type-label = TYPE
+import-preview-confirm = IMPORT
+import-preview-cancel = CANCEL
 
 import-error-details = ERROR DETAILS
 import-skipped-reasons = SKIPPED REASONS

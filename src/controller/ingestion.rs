@@ -38,6 +38,17 @@ impl AppController {
             .map_err(ControllerError::from)
     }
 
+    /// Previews import results without writing to the database
+    pub fn preview_data(
+        &self,
+        content: &str,
+        filename: &str,
+    ) -> Result<ImportSummary, ControllerError> {
+        self.ingestion_service
+            .preview_from_content(content, filename)
+            .map_err(ControllerError::from)
+    }
+
     /// Returns the maximum allowed file size in bytes
     pub fn max_import_file_size(&self) -> usize {
         MAX_FILE_SIZE

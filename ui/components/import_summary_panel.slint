@@ -1,0 +1,229 @@
+// ==================== Import Summary Panel ====================
+// Shared panel for displaying import summary stats, errors, and skipped reasons
+
+import { ImportErrorData, IngestionAdapter } from "../globals.slint";
+import { Theme } from "../theme.slint";
+import { Translations } from "../translations.slint";
+import { SummaryPill } from "summary_pill.slint";
+
+// ==================== Error Row ====================
+component ErrorRow inherits Rectangle {
+    in property <ImportErrorData> error;
+
+    height: 62px;
+    background: Theme.surface-hover;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: Theme.border-subtle;
+
+    VerticalLayout {
+        padding: 10px;
+        spacing: 4px;
+
+        HorizontalLayout {
+            spacing: 8px;
+
+            if error.line-label != "": Text {
+                text: error.line-label;
+                color: Theme.text-secondary;
+                font-size: 10px;
+                font-weight: 600;
+            }
+
+            if error.field-label != "": Text {
+                text: error.field-label;
+                color: Theme.text-muted;
+                font-size: 10px;
+                font-weight: 500;
+            }
+        }
+
+        Text {
+            text: error.message;
+            color: Theme.text-primary;
+            font-size: 11px;
+            font-weight: 500;
+            wrap: word-wrap;
+        }
+
+        if error.raw-data != "": Text {
+            text: error.raw-data;
+            color: Theme.text-muted;
+            font-size: 9px;
+            font-weight: 400;
+            overflow: elide;
+        }
+    }
+}
+
+// ==================== Import Summary Panel ====================
+export component ImportSummaryPanel inherits VerticalLayout {
+    in property <bool> show-file-info: true;
+    in property <int> error-list-height: 140;
+
+    spacing: 16px;
+
+    // File details row
+    if show-file-info && IngestionAdapter.import-file-name != "": HorizontalLayout {
+        spacing: 24px;
+        alignment: center;
+
+        VerticalLayout {
+            spacing: 4px;
+            alignment: center;
+
+            Text {
+                text: Translations.import-preview-file-label;
+                color: Theme.text-muted;
+                font-size: 9px;
+                font-weight: 600;
+                letter-spacing: 1.2px;
+                horizontal-alignment: center;
+            }
+
+            Text {
+                text: IngestionAdapter.import-file-name;
+                color: Theme.text-primary;
+                font-size: 11px;
+                font-weight: 500;
+                horizontal-alignment: center;
+                overflow: elide;
+                max-width: 160px;
+            }
+        }
+
+        VerticalLayout {
+            spacing: 4px;
+            alignment: center;
+
+            Text {
+                text: Translations.import-preview-format-label;
+                color: Theme.text-muted;
+                font-size: 9px;
+                font-weight: 600;
+                letter-spacing: 1.2px;
+                horizontal-alignment: center;
+            }
+
+            Text {
+                text: IngestionAdapter.import-format;
+                color: Theme.text-primary;
+                font-size: 11px;
+                font-weight: 500;
+                horizontal-alignment: center;
+            }
+        }
+
+        VerticalLayout {
+            spacing: 4px;
+            alignment: center;
+
+            Text {
+                text: Translations.import-preview-type-label;
+                color: Theme.text-muted;
+                font-size: 9px;
+                font-weight: 600;
+                letter-spacing: 1.2px;
+                horizontal-alignment: center;
+            }
+
+            Text {
+                text: IngestionAdapter.import-data-type;
+                color: Theme.text-primary;
+                font-size: 11px;
+                font-weight: 500;
+                horizontal-alignment: center;
+            }
+        }
+    }
+
+    // Total processed
+    Text {
+        text: "\{Translations.import-total-processed}: \{IngestionAdapter.import-total-processed}";
+        color: Theme.text-secondary;
+        font-size: 12px;
+        font-weight: 500;
+        horizontal-alignment: center;
+    }
+
+    // Summary pills
+    HorizontalLayout {
+        spacing: 12px;
+        alignment: center;
+
+        SummaryPill {
+            label: Translations.import-inserted;
+            value: IngestionAdapter.import-inserted;
+            accent: Theme.success;
+        }
+
+        SummaryPill {
+            label: Translations.import-skipped;
+            value: IngestionAdapter.import-skipped;
+            accent: Theme.warning;
+        }
+
+        SummaryPill {
+            label: Translations.import-errors;
+            value: IngestionAdapter.import-errors;
+            accent: Theme.danger;
+        }
+    }
+
+    // Error list
+    if IngestionAdapter.import-errors > 0: VerticalLayout {
+        spacing: 8px;
+
+        Text {
+            text: Translations.import-error-details;
+            color: Theme.text-secondary;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+        }
+
+        Rectangle {
+            height: root.error-list-height * 1px;
+            background: Theme.surface;
+            border-radius: 10px;
+            border-width: 1px;
+            border-color: Theme.border;
+            clip: true;
+
+            Flickable {
+                width: parent.width;
+                height: parent.height;
+                viewport-height: IngestionAdapter.import-error-details.length * 70px;
+
+                VerticalLayout {
+                    padding: 8px;
+                    spacing: 6px;
+
+                    for err in IngestionAdapter.import-error-details: ErrorRow {
+                        error: err;
+                    }
+                }
+            }
+        }
+    }
+
+    // Skipped reasons
+    if IngestionAdapter.import-skipped-reasons.length > 0: VerticalLayout {
+        spacing: 6px;
+
+        Text {
+            text: Translations.import-skipped-reasons;
+            color: Theme.text-secondary;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+        }
+
+        for reason in IngestionAdapter.import-skipped-reasons: Text {
+            text: "- " + reason;
+            color: Theme.text-muted;
+            font-size: 10px;
+            font-weight: 400;
+        }
+    }
+}

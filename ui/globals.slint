@@ -422,6 +422,7 @@ export global SettingsAdapter {
 // ==================== Ingestion Adapter ====================
 
 export global IngestionAdapter {
+    in-out property <string> import-file-name: "";
     in-out property <string> import-format: "";
     in-out property <string> import-data-type: "";
     in-out property <int> import-total-processed: 0;
@@ -432,6 +433,8 @@ export global IngestionAdapter {
     in-out property <[string]> import-skipped-reasons: [];
 
     callback import-data();
+    callback confirm-import();
+    callback cancel-preview();
     callback reset-results();
 }
 
@@ -732,6 +735,7 @@ export global AppState {
     in-out property <bool> show-restore-vault: false;
 
     // Import results modal
+    in-out property <bool> show-import-preview: false;
     in-out property <bool> show-import-results: false;
 
     // Current date (YYYY-MM-DD), set from backend to avoid hardcoded defaults

@@ -1,0 +1,53 @@
+{
+  "version": "1.0",
+  "exported_at": "2026-01-17T03:22:20Z",
+  "transactions": [
+    {
+      "date": "2026-01-15",
+      "account": "Checking",
+      "type": "expense",
+      "amount": 12.50,
+      "currency": "USD",
+      "category": "Food",
+      "description": "Lunch",
+      "transfer_to_account": null
+    },
+    {
+      "date": "2026-01-16",
+      "account": "Checking",
+      "type": "income",
+      "amount": 2000.00,
+      "currency": "USD",
+      "category": "Salary",
+      "description": "Paycheck",
+      "transfer_to_account": null
+    },
+    {
+      "date": "2026-01-17",
+      "account": "Checking",
+      "type": "transfer",
+      "amount": 100.00,
+      "currency": "USD",
+      "category": "",
+      "description": "Move to savings",
+      "transfer_to_account": "Savings"
+    }
+  ],
+  "habit_logs": [
+    {
+      "habit": "Meditate",
+      "date": "2026-01-15",
+      "completed": true
+    },
+    {
+      "habit": "Exercise",
+      "date": "2026-01-16",
+      "completed": false
+    },
+    {
+      "habit": "Read",
+      "date": "2026-01-17",
+      "completed": true
+    }
+  ]
+}

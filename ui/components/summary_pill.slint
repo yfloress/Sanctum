@@ -1,0 +1,52 @@
+// ==================== Summary Pill ====================
+// Stat pill with vertical accent indicator (follows StatCard pattern)
+
+import { Theme } from "../theme.slint";
+
+export component SummaryPill inherits Rectangle {
+    in property <string> label;
+    in property <int> value;
+    in property <color> accent: Theme.text-muted;
+
+    width: 140px;
+    height: 64px;
+    background: Theme.surface;
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: Theme.border-subtle;
+    clip: true;
+
+    HorizontalLayout {
+        padding: 12px;
+        spacing: 10px;
+
+        // Vertical accent indicator (StatCard pattern)
+        Rectangle {
+            width: 3px;
+            height: 36px;
+            border-radius: 2px;
+            background: root.accent;
+            y: (parent.height - self.height) / 2;
+        }
+
+        VerticalLayout {
+            alignment: center;
+            spacing: 4px;
+
+            Text {
+                text: root.label;
+                color: Theme.text-muted;
+                font-size: 9px;
+                font-weight: 600;
+                letter-spacing: 1.2px;
+            }
+
+            Text {
+                text: "\{root.value}";
+                color: Theme.text-primary;
+                font-size: 18px;
+                font-weight: 600;
+            }
+        }
+    }
+}

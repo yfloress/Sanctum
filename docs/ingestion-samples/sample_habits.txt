@@ -1,0 +1,4 @@
+# Habit Logs (habit;date;completed)
+Meditate;2026-01-15;true
+Exercise;2026-01-16;false
+Read;2026-01-17;true

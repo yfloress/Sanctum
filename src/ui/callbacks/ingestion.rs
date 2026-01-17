@@ -7,17 +7,28 @@ use crate::features::ingestion::{ImportSummary, RowError};
 use crate::services::i18n::t_args;
 use crate::{AppState, AppWindow, ImportErrorData, IngestionAdapter};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel, Weak};
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::sync::Arc;
+
+struct PendingImport {
+    filename: String,
+    display_name: String,
+    content: String,
+}
 
 pub fn setup_ingestion_callbacks(
     ui: &AppWindow,
     ui_weak: &Weak<AppWindow>,
     controller: &Arc<AppController>,
 ) {
+    let pending_import: Rc<RefCell<Option<PendingImport>>> = Rc::new(RefCell::new(None));
+
     // Open file picker and import data
     {
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
+        let pending_import = pending_import.clone();
 
         ui.global::<IngestionAdapter>().on_import_data(move || {
             let file_path = rfd::FileDialog::new()
@@ -28,27 +39,77 @@ pub fn setup_ingestion_callbacks(
                 return;
             };
 
-            let filename = path.to_string_lossy().to_string();
+            pending_import.borrow_mut().take();
+
+            let display_name = path
+                .file_name()
+                .map(|name| name.to_string_lossy().to_string())
+                .unwrap_or_else(|| path.to_string_lossy().to_string());
+            let filename = display_name.clone();
             let content = match std::fs::read_to_string(&path) {
                 Ok(data) => data,
                 Err(err) => {
+                    pending_import.borrow_mut().take();
                     if let Some(ui) = ui_weak.upgrade() {
                         let summary = build_error_summary(format!("Failed to read file: {}", err));
-                        set_import_summary(&ui, summary);
-                        ui.global::<AppState>().set_show_import_results(true);
+                        set_import_summary(&ui, summary, Some(display_name.clone()));
+                        ui.global::<AppState>().set_show_import_preview(true);
                     }
                     return;
                 }
             };
 
-            let summary = match controller.import_data(content, filename) {
+            let summary = match controller.preview_data(&content, &filename) {
                 Ok(summary) => summary,
                 Err(err) => build_error_summary(err.to_string()),
             };
 
             if let Some(ui) = ui_weak.upgrade() {
-                set_import_summary(&ui, summary);
+                pending_import.borrow_mut().replace(PendingImport {
+                    filename,
+                    display_name: display_name.clone(),
+                    content,
+                });
+                set_import_summary(&ui, summary, Some(display_name));
+                ui.global::<AppState>().set_show_import_preview(true);
+            }
+        });
+    }
+
+    // Confirm import after preview
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let pending_import = pending_import.clone();
+
+        ui.global::<IngestionAdapter>().on_confirm_import(move || {
+            let pending = pending_import.borrow_mut().take();
+            let Some(pending) = pending else {
+                return;
+            };
+
+            let summary = match controller.import_data(pending.content, pending.filename) {
+                Ok(summary) => summary,
+                Err(err) => build_error_summary(err.to_string()),
+            };
+
+            if let Some(ui) = ui_weak.upgrade() {
+                set_import_summary(&ui, summary, Some(pending.display_name));
+                ui.global::<AppState>().set_show_import_preview(false);
                 ui.global::<AppState>().set_show_import_results(true);
+            }
+        });
+    }
+
+    // Cancel preview
+    {
+        let ui_weak = ui_weak.clone();
+        let pending_import = pending_import.clone();
+
+        ui.global::<IngestionAdapter>().on_cancel_preview(move || {
+            pending_import.borrow_mut().take();
+            if let Some(ui) = ui_weak.upgrade() {
+                clear_import_summary(&ui);
             }
         });
     }
@@ -72,6 +133,7 @@ fn build_error_summary(message: String) -> ImportSummary {
 
 fn clear_import_summary(ui: &AppWindow) {
     let adapter = ui.global::<IngestionAdapter>();
+    adapter.set_import_file_name(SharedString::from(""));
     adapter.set_import_format(SharedString::from(""));
     adapter.set_import_data_type(SharedString::from(""));
     adapter.set_import_total_processed(0);
@@ -82,8 +144,9 @@ fn clear_import_summary(ui: &AppWindow) {
     adapter.set_import_skipped_reasons(ModelRc::new(VecModel::from(Vec::<SharedString>::new())));
 }
 
-fn set_import_summary(ui: &AppWindow, summary: ImportSummary) {
+fn set_import_summary(ui: &AppWindow, summary: ImportSummary, file_name: Option<String>) {
     let adapter = ui.global::<IngestionAdapter>();
+    adapter.set_import_file_name(SharedString::from(file_name.unwrap_or_default()));
     adapter.set_import_format(SharedString::from(summary.format.clone()));
     adapter.set_import_data_type(SharedString::from(summary.data_type.clone()));
     adapter.set_import_total_processed(summary.total_processed as i32);

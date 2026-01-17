@@ -1,0 +1,4 @@
+# Transactions (date;account;type;amount;currency;category;description;transfer_to_account)
+2026-01-15;Checking;expense;45.50;USD;Food;Dinner and drinks;
+2026-01-16;Checking;income;2000.00;USD;Salary;Paycheck;
+2026-01-17;Checking;transfer;250.00;USD;;Move to savings;Savings

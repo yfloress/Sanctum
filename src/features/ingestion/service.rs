@@ -94,6 +94,30 @@ impl IngestionService {
         }
     }
 
+    /// Preview import results without writing to the database
+    pub fn preview_from_content(
+        &self,
+        content: &str,
+        filename: &str,
+    ) -> Result<ImportSummary, IngestionError> {
+        validate_file_size(content.len()).map_err(IngestionError::FileTooLarge)?;
+
+        let format = detect_format(content, filename).ok_or_else(|| {
+            IngestionError::UnsupportedFormat(
+                "Could not detect file format. Supported: JSON (.json), CSV (.csv), Text (.txt)"
+                    .to_string(),
+            )
+        })?;
+
+        match format {
+            ImportFormat::JsonV1 => self.preview_json_v1(content),
+            ImportFormat::CsvTransactions => self.preview_csv_transactions(content),
+            ImportFormat::CsvHabitLogs => self.preview_csv_habit_logs(content),
+            ImportFormat::TextTransactions => self.preview_text_transactions(content),
+            ImportFormat::TextHabitLogs => self.preview_text_habit_logs(content),
+        }
+    }
+
     /// Import JSON v1 format (can contain both transactions and habit logs)
     fn import_json_v1(&self, content: &str) -> Result<ImportSummary, IngestionError> {
         let parser = JsonV1Parser;
@@ -125,6 +149,36 @@ impl IngestionService {
         Ok(summary)
     }
 
+    /// Preview JSON v1 format (can contain both transactions and habit logs)
+    fn preview_json_v1(&self, content: &str) -> Result<ImportSummary, IngestionError> {
+        let parser = JsonV1Parser;
+        let mut summary = ImportSummary::new("JSON v1", "Mixed");
+
+        let file = parser
+            .parse_full(content)
+            .map_err(|e| IngestionError::Parse(e.message))?;
+
+        if !file.transactions.items.is_empty() || !file.transactions.errors.is_empty() {
+            let tx_summary =
+                self.preview_transactions(file.transactions.items, parser.format_name())?;
+            summary.merge(tx_summary);
+            for error in file.transactions.errors {
+                summary.record_error(error);
+            }
+        }
+
+        if !file.habit_logs.items.is_empty() || !file.habit_logs.errors.is_empty() {
+            let log_summary =
+                self.preview_habit_logs(file.habit_logs.items, parser.format_name())?;
+            summary.merge(log_summary);
+            for error in file.habit_logs.errors {
+                summary.record_error(error);
+            }
+        }
+
+        Ok(summary)
+    }
+
     /// Import CSV transactions
     fn import_csv_transactions(&self, content: &str) -> Result<ImportSummary, IngestionError> {
         let parser = CsvParser;
@@ -132,6 +186,19 @@ impl IngestionService {
             .parse_transactions(content)
             .map_err(|e| IngestionError::Parse(e.message))?;
         let mut summary = self.process_transactions(parsed.items, parser.format_name())?;
+        for error in parsed.errors {
+            summary.record_error(error);
+        }
+        Ok(summary)
+    }
+
+    /// Preview CSV transactions
+    fn preview_csv_transactions(&self, content: &str) -> Result<ImportSummary, IngestionError> {
+        let parser = CsvParser;
+        let parsed = parser
+            .parse_transactions(content)
+            .map_err(|e| IngestionError::Parse(e.message))?;
+        let mut summary = self.preview_transactions(parsed.items, parser.format_name())?;
         for error in parsed.errors {
             summary.record_error(error);
         }
@@ -151,6 +218,19 @@ impl IngestionService {
         Ok(summary)
     }
 
+    /// Preview CSV habit logs
+    fn preview_csv_habit_logs(&self, content: &str) -> Result<ImportSummary, IngestionError> {
+        let parser = CsvParser;
+        let parsed = parser
+            .parse_habit_logs(content)
+            .map_err(|e| IngestionError::Parse(e.message))?;
+        let mut summary = self.preview_habit_logs(parsed.items, parser.format_name())?;
+        for error in parsed.errors {
+            summary.record_error(error);
+        }
+        Ok(summary)
+    }
+
     /// Import text transactions
     fn import_text_transactions(&self, content: &str) -> Result<ImportSummary, IngestionError> {
         let parser = TextParser;
@@ -158,6 +238,19 @@ impl IngestionService {
             .parse_transactions(content)
             .map_err(|e| IngestionError::Parse(e.message))?;
         let mut summary = self.process_transactions(parsed.items, parser.format_name())?;
+        for error in parsed.errors {
+            summary.record_error(error);
+        }
+        Ok(summary)
+    }
+
+    /// Preview text transactions
+    fn preview_text_transactions(&self, content: &str) -> Result<ImportSummary, IngestionError> {
+        let parser = TextParser;
+        let parsed = parser
+            .parse_transactions(content)
+            .map_err(|e| IngestionError::Parse(e.message))?;
+        let mut summary = self.preview_transactions(parsed.items, parser.format_name())?;
         for error in parsed.errors {
             summary.record_error(error);
         }
@@ -177,22 +270,51 @@ impl IngestionService {
         Ok(summary)
     }
 
+    /// Preview text habit logs
+    fn preview_text_habit_logs(&self, content: &str) -> Result<ImportSummary, IngestionError> {
+        let parser = TextParser;
+        let parsed = parser
+            .parse_habit_logs(content)
+            .map_err(|e| IngestionError::Parse(e.message))?;
+        let mut summary = self.preview_habit_logs(parsed.items, parser.format_name())?;
+        for error in parsed.errors {
+            summary.record_error(error);
+        }
+        Ok(summary)
+    }
+
     /// Process and insert transactions (with validation and deduplication)
     fn process_transactions(
         &self,
         transactions: Vec<(usize, ImportTransaction)>,
         format_name: &str,
     ) -> Result<ImportSummary, IngestionError> {
+        self.process_transactions_internal(transactions, format_name, false)
+    }
+
+    /// Preview transactions (validation and deduplication without inserts)
+    fn preview_transactions(
+        &self,
+        transactions: Vec<(usize, ImportTransaction)>,
+        format_name: &str,
+    ) -> Result<ImportSummary, IngestionError> {
+        self.process_transactions_internal(transactions, format_name, true)
+    }
+
+    fn process_transactions_internal(
+        &self,
+        transactions: Vec<(usize, ImportTransaction)>,
+        format_name: &str,
+        dry_run: bool,
+    ) -> Result<ImportSummary, IngestionError> {
         self.with_db(|db| {
             let mut summary = ImportSummary::new(format_name, "Transactions");
 
-            // Build lookups for efficient processing
             let account_lookup =
                 IngestionRepository::build_account_lookup(db).map_err(IngestionError::Database)?;
             let category_lookup =
                 IngestionRepository::build_category_lookup(db).map_err(IngestionError::Database)?;
 
-            // Build deduplication set from existing transactions
             let existing =
                 IngestionRepository::get_all_transactions(db).map_err(IngestionError::Database)?;
             let mut dedup_set: HashSet<TransactionDedupKey> = existing
@@ -212,14 +334,12 @@ impl IngestionService {
                 .collect();
 
             for (line_num, import_tx) in transactions {
-                // Validate
                 if let Err(mut error) = validate_import_transaction(&import_tx, line_num) {
                     error.raw_data = Some(format!("{:?}", import_tx));
                     summary.record_error(error);
                     continue;
                 }
 
-                // Lookup account
                 let account_key = import_tx.account.trim().to_lowercase();
                 let account = match account_lookup.get(&account_key) {
                     Some(a) => a,
@@ -233,7 +353,6 @@ impl IngestionService {
                     }
                 };
 
-                // Validate currency matches account
                 let import_currency = import_tx.currency.trim().to_uppercase();
                 if account.currency.to_uppercase() != import_currency {
                     summary.record_error(RowError::new(
@@ -247,10 +366,7 @@ impl IngestionService {
                     continue;
                 }
 
-                // Determine transaction type
                 let tx_type = import_tx.transaction_type.trim().to_lowercase();
-
-                // Lookup category (for income/expense, not transfer)
                 let category_type = if tx_type == "income" { "income" } else { "expense" };
 
                 if tx_type != "transfer" {
@@ -271,7 +387,6 @@ impl IngestionService {
                     }
                 }
 
-                // Convert amount to cents
                 let amount_cents = match validate_amount(import_tx.amount) {
                     Ok(c) => c,
                     Err(e) => {
@@ -280,9 +395,7 @@ impl IngestionService {
                     }
                 };
 
-                // Handle transfers vs regular transactions
                 if tx_type == "transfer" {
-                    // For transfers, lookup destination account
                     let dest_name = import_tx.transfer_to_account.as_ref().unwrap();
                     let dest_key = dest_name.trim().to_lowercase();
                     let dest_account = match account_lookup.get(&dest_key) {
@@ -306,7 +419,6 @@ impl IngestionService {
                         continue;
                     }
 
-                    // Check for duplicate (include destination)
                     let dedup_key = TransactionDedupKey::new(
                         &import_tx.date,
                         &account.id,
@@ -324,7 +436,12 @@ impl IngestionService {
                         continue;
                     }
 
-                    // Create transfer
+                    if dry_run {
+                        dedup_set.insert(dedup_key);
+                        summary.record_inserted();
+                        continue;
+                    }
+
                     match IngestionRepository::create_transfer(
                         db,
                         &account.id,
@@ -363,7 +480,12 @@ impl IngestionService {
                         continue;
                     }
 
-                    // Create regular transaction
+                    if dry_run {
+                        dedup_set.insert(dedup_key);
+                        summary.record_inserted();
+                        continue;
+                    }
+
                     let transaction = Transaction::new(
                         Uuid::new_v4().to_string(),
                         account.id.clone(),
@@ -401,28 +523,43 @@ impl IngestionService {
         logs: Vec<(usize, ImportHabitLog)>,
         format_name: &str,
     ) -> Result<ImportSummary, IngestionError> {
+        self.process_habit_logs_internal(logs, format_name, false)
+    }
+
+    /// Preview habit logs (validation and deduplication without inserts)
+    fn preview_habit_logs(
+        &self,
+        logs: Vec<(usize, ImportHabitLog)>,
+        format_name: &str,
+    ) -> Result<ImportSummary, IngestionError> {
+        self.process_habit_logs_internal(logs, format_name, true)
+    }
+
+    fn process_habit_logs_internal(
+        &self,
+        logs: Vec<(usize, ImportHabitLog)>,
+        format_name: &str,
+        dry_run: bool,
+    ) -> Result<ImportSummary, IngestionError> {
         self.with_db(|db| {
             let mut summary = ImportSummary::new(format_name, "Habit Logs");
 
-            // Build habit lookup
             let habit_lookup =
                 IngestionRepository::build_habit_lookup(db).map_err(IngestionError::Database)?;
+            let mut seen_logs: HashSet<(String, String)> = HashSet::new();
 
             for (line_num, import_log) in logs {
-                // Skip if not completed
                 if !import_log.completed {
                     summary.record_skipped("Habit log not completed (completed=false)");
                     continue;
                 }
 
-                // Validate
                 if let Err(mut error) = validate_import_habit_log(&import_log, line_num) {
                     error.raw_data = Some(format!("{:?}", import_log));
                     summary.record_error(error);
                     continue;
                 }
 
-                // Lookup habit
                 let habit_key = import_log.habit.trim().to_lowercase();
                 let habit = match habit_lookup.get(&habit_key) {
                     Some(h) => h,
@@ -436,10 +573,16 @@ impl IngestionService {
                     }
                 };
 
-                // Check for duplicate (habit_id + date is unique constraint)
                 let date = import_log.date.trim();
+                let dedup_key = (habit.id.clone(), date.to_string());
+                if seen_logs.contains(&dedup_key) {
+                    summary.record_skipped("Habit already logged for this date");
+                    continue;
+                }
+
                 match IngestionRepository::habit_log_exists(db, &habit.id, date) {
                     Ok(true) => {
+                        seen_logs.insert(dedup_key);
                         summary.record_skipped("Habit already logged for this date");
                         continue;
                     }
@@ -454,7 +597,12 @@ impl IngestionService {
                     }
                 }
 
-                // Create habit log
+                if dry_run {
+                    seen_logs.insert(dedup_key);
+                    summary.record_inserted();
+                    continue;
+                }
+
                 let log = HabitLog::new(
                     Uuid::new_v4().to_string(),
                     habit.id.clone(),
@@ -463,6 +611,7 @@ impl IngestionService {
 
                 match IngestionRepository::create_habit_log(db, &log) {
                     Ok(_) => {
+                        seen_logs.insert(dedup_key);
                         summary.record_inserted();
                     }
                     Err(e) => {

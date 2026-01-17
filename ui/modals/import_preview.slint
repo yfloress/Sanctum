@@ -1,16 +1,21 @@
-// ==================== Import Results Modal ====================
-// Summary modal showing final import results
+// ==================== Import Preview Modal ====================
+// Review modal before data ingestion - shows dry-run results
 
 import { IngestionAdapter } from "../globals.slint";
 import { Theme } from "../theme.slint";
 import { Translations } from "../translations.slint";
 import { ImportSummaryPanel } from "../components/import_summary_panel.slint";
 
-export component ImportResultsModal inherits Rectangle {
+export component ImportPreviewModal inherits Rectangle {
     callback close();
+    callback confirm();
 
     function close-modal() {
         root.close();
+    }
+
+    function confirm-import() {
+        root.confirm();
     }
 
     init => {
@@ -41,6 +46,10 @@ export component ImportResultsModal inherits Rectangle {
                 close-modal();
                 return accept;
             }
+            if (event.text == Key.Return && (event.modifiers.control || event.modifiers.meta)) {
+                confirm-import();
+                return accept;
+            }
             return reject;
         }
     }
@@ -48,7 +57,7 @@ export component ImportResultsModal inherits Rectangle {
     // Modal panel
     Rectangle {
         width: min(540px, parent.width - 40px);
-        height: min(560px, parent.height - 40px);
+        height: min(580px, parent.height - 40px);
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
         background: @linear-gradient(180deg, Theme.sidebar-bg 0%, Theme.modal-bg-end 100%);
@@ -80,7 +89,7 @@ export component ImportResultsModal inherits Rectangle {
                     }
 
                     Text {
-                        text: Translations.import-summary-title;
+                        text: Translations.import-preview-title;
                         color: Theme.text-primary;
                         font-size: 16px;
                         font-weight: 500;
@@ -113,27 +122,19 @@ export component ImportResultsModal inherits Rectangle {
                 }
             }
 
-            // Status message
+            // Subtitle
             Text {
-                text: IngestionAdapter.import-errors > 0 && IngestionAdapter.import-inserted == 0
-                    ? Translations.import-failed
-                    : (IngestionAdapter.import-errors > 0 || IngestionAdapter.import-skipped > 0
-                        ? Translations.import-partial
-                        : Translations.import-success);
-                color: IngestionAdapter.import-errors > 0 && IngestionAdapter.import-inserted == 0
-                    ? Theme.danger
-                    : (IngestionAdapter.import-errors > 0 || IngestionAdapter.import-skipped > 0
-                        ? Theme.warning
-                        : Theme.success);
-                font-size: 13px;
-                font-weight: 600;
+                text: Translations.import-preview-subtitle;
+                color: Theme.text-muted;
+                font-size: 12px;
                 horizontal-alignment: center;
+                wrap: word-wrap;
             }
 
             // Summary panel
             ImportSummaryPanel {
-                show-file-info: false;
-                error-list-height: 150;
+                show-file-info: true;
+                error-list-height: 130;
             }
 
             // Spacer
@@ -141,29 +142,66 @@ export component ImportResultsModal inherits Rectangle {
                 vertical-stretch: 1;
             }
 
-            // Close button
-            Rectangle {
-                height: 44px;
-                border-radius: 10px;
-                background: close-btn-touch.has-hover ? Theme.surface-hover : Theme.surface;
-                border-width: 1px;
-                border-color: Theme.border-light;
+            // Action buttons
+            HorizontalLayout {
+                spacing: 12px;
 
-                Text {
-                    text: Translations.action-close;
-                    color: Theme.text-secondary;
-                    font-size: 12px;
-                    font-weight: 600;
-                    letter-spacing: 1.5px;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
+                // Cancel Button
+                cancel-btn := Rectangle {
+                    horizontal-stretch: 1;
+                    height: 44px;
+                    border-radius: 10px;
+                    background: cancel-touch.has-hover ? Theme.surface-hover : Theme.surface;
+                    border-width: 1px;
+                    border-color: Theme.border-light;
+
+                    Text {
+                        text: Translations.import-preview-cancel;
+                        color: Theme.text-secondary;
+                        font-size: 12px;
+                        font-weight: 600;
+                        letter-spacing: 1.5px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    cancel-touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            close-modal();
+                        }
+                    }
                 }
 
-                close-btn-touch := TouchArea {
-                    mouse-cursor: pointer;
-                    clicked => {
-                        close-modal();
+                // Confirm Button
+                confirm-btn := Rectangle {
+                    horizontal-stretch: 1;
+                    height: 44px;
+                    border-radius: 10px;
+                    background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
+
+                    Text {
+                        text: Translations.import-preview-confirm;
+                        color: Theme.text;
+                        font-size: 12px;
+                        font-weight: 600;
+                        letter-spacing: 1.5px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
                     }
+
+                    confirm-touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            confirm-import();
+                        }
+                    }
+
+                    states [
+                        hover when confirm-touch.has-hover: {
+                            opacity: 0.9;
+                        }
+                    ]
                 }
             }
         }

@@ -39,6 +39,7 @@ import {
 import { ConfigureTickerModal } from "modals/configure_ticker.slint";
 import { ConfigureCategoriesModal } from "modals/configure_categories.slint";
 import { RestoreVaultModal } from "modals/restore_vault_modal.slint";
+import { ImportPreviewModal } from "modals/import_preview.slint";
 import { ImportResultsModal } from "modals/import_results.slint";
 import { NotificationToast } from "components/notification.slint";
 
@@ -194,6 +195,21 @@ export component AppWindow inherits Window {
 
         close => {
             AppState.show-restore-vault = false;
+        }
+    }
+
+    // Import Preview Modal
+    if AppState.show-import-preview: ImportPreviewModal {
+        width: 100%;
+        height: 100%;
+
+        close => {
+            AppState.show-import-preview = false;
+            IngestionAdapter.cancel-preview();
+        }
+
+        confirm => {
+            IngestionAdapter.confirm-import();
         }
     }
 

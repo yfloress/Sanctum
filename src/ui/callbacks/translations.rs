@@ -299,6 +299,13 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_import_inserted(s(&t("import-inserted")));
     tr.set_import_skipped(s(&t("import-skipped")));
     tr.set_import_errors(s(&t("import-errors")));
+    tr.set_import_preview_title(s(&t("import-preview-title")));
+    tr.set_import_preview_subtitle(s(&t("import-preview-subtitle")));
+    tr.set_import_preview_file_label(s(&t("import-preview-file-label")));
+    tr.set_import_preview_format_label(s(&t("import-preview-format-label")));
+    tr.set_import_preview_type_label(s(&t("import-preview-type-label")));
+    tr.set_import_preview_confirm(s(&t("import-preview-confirm")));
+    tr.set_import_preview_cancel(s(&t("import-preview-cancel")));
     tr.set_import_error_details(s(&t("import-error-details")));
     tr.set_import_skipped_reasons(s(&t("import-skipped-reasons")));
 
