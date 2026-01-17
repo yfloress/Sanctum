@@ -37,6 +37,15 @@ export struct TransactionData {
     is-transfer: bool,
 }
 
+export struct ImportErrorData {
+    line: int,
+    field: string,
+    line-label: string,
+    field-label: string,
+    message: string,
+    raw-data: string,
+}
+
 export struct BalanceData {
     total-balance: string,
     fiat-balance: string,
@@ -410,6 +419,22 @@ export global SettingsAdapter {
     callback reset-settings();
 }
 
+// ==================== Ingestion Adapter ====================
+
+export global IngestionAdapter {
+    in-out property <string> import-format: "";
+    in-out property <string> import-data-type: "";
+    in-out property <int> import-total-processed: 0;
+    in-out property <int> import-inserted: 0;
+    in-out property <int> import-skipped: 0;
+    in-out property <int> import-errors: 0;
+    in-out property <[ImportErrorData]> import-error-details: [];
+    in-out property <[string]> import-skipped-reasons: [];
+
+    callback import-data();
+    callback reset-results();
+}
+
 // ==================== Vault Adapter ====================
 
 export global VaultAdapter {
@@ -705,6 +730,9 @@ export global AppState {
 
     // Vault restore modal
     in-out property <bool> show-restore-vault: false;
+
+    // Import results modal
+    in-out property <bool> show-import-results: false;
 
     // Current date (YYYY-MM-DD), set from backend to avoid hardcoded defaults
     in-out property <string> current-date: "2024-01-01";

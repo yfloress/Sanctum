@@ -281,6 +281,27 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_settings_reset_desc(s(&t("settings-reset-desc")));
     tr.set_settings_reset_confirm(s(&t("settings-reset-confirm")));
 
+    tr.set_settings_import(s(&t("settings-import")));
+    tr.set_settings_import_desc(s(&t("settings-import-desc")));
+    tr.set_import_title(s(&t("import-title")));
+    tr.set_import_description(s(&t("import-description")));
+    tr.set_import_select_file(s(&t("import-select-file")));
+    tr.set_import_supported_formats(s(&t("import-supported-formats")));
+    tr.set_import_max_size(s(&t("import-max-size")));
+    tr.set_import_processing(s(&t("import-processing")));
+    tr.set_import_validating(s(&t("import-validating")));
+    tr.set_import_inserting(s(&t("import-inserting")));
+    tr.set_import_success(s(&t("import-success")));
+    tr.set_import_partial(s(&t("import-partial")));
+    tr.set_import_failed(s(&t("import-failed")));
+    tr.set_import_summary_title(s(&t("import-summary-title")));
+    tr.set_import_total_processed(s(&t("import-total-processed")));
+    tr.set_import_inserted(s(&t("import-inserted")));
+    tr.set_import_skipped(s(&t("import-skipped")));
+    tr.set_import_errors(s(&t("import-errors")));
+    tr.set_import_error_details(s(&t("import-error-details")));
+    tr.set_import_skipped_reasons(s(&t("import-skipped-reasons")));
+
     // Modals
     tr.set_modal_add_account_title(s(&t("modal-add-account-title")));
     tr.set_modal_edit_account_title(s(&t("modal-edit-account-title")));

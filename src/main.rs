@@ -779,6 +779,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // VaultAdapter callbacks (extracted to ui/callbacks/vault.rs)
     sanctum::ui::setup_vault_callbacks(&ui, &ui_weak, &controller, show_notification.clone());
 
+    // IngestionAdapter callbacks (extracted to ui/callbacks/ingestion.rs)
+    sanctum::ui::setup_ingestion_callbacks(&ui, &ui_weak, &controller);
+
     // Translations setup (extracted to ui/callbacks/translations.rs)
     sanctum::ui::setup_translation_callbacks(&ui);
 

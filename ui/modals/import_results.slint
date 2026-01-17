@@ -1,0 +1,286 @@
+// ==================== Import Results Modal ====================
+// Summary modal for data ingestion results
+
+import { IngestionAdapter } from "../globals.slint";
+import { Theme } from "../theme.slint";
+import { Translations } from "../translations.slint";
+
+component SummaryPill inherits Rectangle {
+    in property <string> label;
+    in property <int> value;
+    in property <color> accent;
+
+    width: 150px;
+    height: 64px;
+    background: Theme.surface;
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: accent.with-alpha(0.35);
+
+    VerticalLayout {
+        alignment: center;
+        spacing: 6px;
+
+        Text {
+            text: root.label;
+            color: Theme.text-muted;
+            font-size: 9px;
+            font-weight: 600;
+            letter-spacing: 1.2px;
+        }
+
+        Text {
+            text: "\{root.value}";
+            color: root.accent;
+            font-size: 18px;
+            font-weight: 600;
+            horizontal-alignment: center;
+        }
+    }
+}
+
+export component ImportResultsModal inherits Rectangle {
+    callback close();
+
+    function close-modal() {
+        root.close();
+    }
+
+    init => {
+        key-scope.focus();
+    }
+
+    width: 100%;
+    height: 100%;
+    background: transparent;
+
+    // Backdrop
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        background: Theme.overlay;
+        TouchArea {
+            clicked => {
+                close-modal();
+            }
+        }
+    }
+
+    key-scope := FocusScope {
+        width: parent.width;
+        height: parent.height;
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                close-modal();
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    // Modal panel
+    Rectangle {
+        width: 560px;
+        height: 560px;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        background: @linear-gradient(180deg, Theme.sidebar-bg 0%, Theme.modal-bg-end 100%);
+        border-radius: 16px;
+        border-width: 1px;
+        border-color: Theme.border-light;
+        drop-shadow-blur: 40px;
+        drop-shadow-offset-y: 20px;
+        drop-shadow-color: #00000040;
+
+        VerticalLayout {
+            padding: 28px;
+            spacing: 16px;
+
+            Text {
+                text: Translations.import-summary-title;
+                color: Theme.text-primary;
+                font-size: 18px;
+                font-weight: 600;
+                letter-spacing: 1px;
+                horizontal-alignment: center;
+            }
+
+            Text {
+                text: IngestionAdapter.import-errors > 0 && IngestionAdapter.import-inserted == 0
+                    ? Translations.import-failed
+                    : (IngestionAdapter.import-errors > 0 || IngestionAdapter.import-skipped > 0
+                        ? Translations.import-partial
+                        : Translations.import-success);
+                color: IngestionAdapter.import-errors > 0 && IngestionAdapter.import-inserted == 0
+                    ? Theme.danger
+                    : (IngestionAdapter.import-errors > 0 || IngestionAdapter.import-skipped > 0
+                        ? Theme.warning
+                        : Theme.success);
+                font-size: 12px;
+                font-weight: 600;
+                horizontal-alignment: center;
+            }
+
+            Text {
+                text: "\{Translations.import-total-processed}: \{IngestionAdapter.import-total-processed}";
+                color: Theme.text-secondary;
+                font-size: 12px;
+                font-weight: 500;
+                horizontal-alignment: center;
+            }
+
+            HorizontalLayout {
+                spacing: 12px;
+                alignment: center;
+
+                SummaryPill {
+                    label: Translations.import-inserted;
+                    value: IngestionAdapter.import-inserted;
+                    accent: Theme.success;
+                }
+
+                SummaryPill {
+                    label: Translations.import-skipped;
+                    value: IngestionAdapter.import-skipped;
+                    accent: Theme.warning;
+                }
+
+                SummaryPill {
+                    label: Translations.import-errors;
+                    value: IngestionAdapter.import-errors;
+                    accent: Theme.danger;
+                }
+            }
+
+            // Error list
+            if IngestionAdapter.import-errors > 0: VerticalLayout {
+                spacing: 8px;
+
+                Text {
+                    text: Translations.import-error-details;
+                    color: Theme.text-secondary;
+                    font-size: 10px;
+                    font-weight: 600;
+                    letter-spacing: 1.5px;
+                }
+
+                Rectangle {
+                    height: 170px;
+                    background: Theme.surface;
+                    border-radius: 10px;
+                    border-width: 1px;
+                    border-color: Theme.border;
+                    clip: true;
+
+                    Flickable {
+                        width: parent.width;
+                        height: parent.height;
+                        viewport-height: IngestionAdapter.import-error-details.length * 72px;
+
+                        VerticalLayout {
+                            padding: 8px;
+                            spacing: 6px;
+
+                            for err[index] in IngestionAdapter.import-error-details: Rectangle {
+                                height: 66px;
+                                background: Theme.surface-hover;
+                                border-radius: 8px;
+                                border-width: 1px;
+                                border-color: Theme.border-subtle;
+
+                                VerticalLayout {
+                                    padding: 10px;
+                                    spacing: 4px;
+
+                                    HorizontalLayout {
+                                        spacing: 8px;
+
+                                        if err.line-label != "": Text {
+                                            text: err.line-label;
+                                            color: Theme.text-secondary;
+                                            font-size: 10px;
+                                            font-weight: 600;
+                                        }
+
+                                        if err.field-label != "": Text {
+                                            text: err.field-label;
+                                            color: Theme.text-muted;
+                                            font-size: 10px;
+                                            font-weight: 500;
+                                        }
+                                    }
+
+                                    Text {
+                                        text: err.message;
+                                        color: Theme.text-primary;
+                                        font-size: 11px;
+                                        font-weight: 500;
+                                        wrap: word-wrap;
+                                    }
+
+                                    if err.raw-data != "": Text {
+                                        text: err.raw-data;
+                                        color: Theme.text-muted;
+                                        font-size: 9px;
+                                        font-weight: 400;
+                                        overflow: elide;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Skipped reasons
+            if IngestionAdapter.import-skipped-reasons.length > 0: VerticalLayout {
+                spacing: 6px;
+
+                Text {
+                    text: Translations.import-skipped-reasons;
+                    color: Theme.text-secondary;
+                    font-size: 10px;
+                    font-weight: 600;
+                    letter-spacing: 1.5px;
+                }
+
+                for reason in IngestionAdapter.import-skipped-reasons: Text {
+                    text: "- " + reason;
+                    color: Theme.text-muted;
+                    font-size: 10px;
+                    font-weight: 400;
+                }
+            }
+
+            Rectangle {
+                vertical-stretch: 1;
+            }
+
+            // Close button
+            Rectangle {
+                height: 44px;
+                border-radius: 10px;
+                background: Theme.surface;
+                border-width: 1px;
+                border-color: Theme.border-light;
+
+                Text {
+                    text: Translations.action-close;
+                    color: Theme.text-secondary;
+                    font-size: 12px;
+                    font-weight: 600;
+                    letter-spacing: 1.5px;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+
+                TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        close-modal();
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,7 +1,7 @@
 // ==================== Settings Page ====================
 // Premium Fintech UI - Application Settings
 
-import { SettingsAdapter, VaultAdapter } from "../globals.slint";
+import { SettingsAdapter, VaultAdapter, IngestionAdapter } from "../globals.slint";
 import { Translations } from "../translations.slint";
 import { Theme } from "../theme.slint";
 import { FormField } from "../components/forms/form_field.slint";
@@ -94,6 +94,79 @@ component SettingCard inherits Rectangle {
         mouse-cursor: pointer;
         clicked => {
             root.toggled(!toggle-value);
+        }
+    }
+}
+
+component ActionCard inherits Rectangle {
+    in property <string> title;
+    in property <string> description;
+    in property <string> button-text;
+    callback triggered();
+
+    height: 84px;
+    background: card-touch.has-hover ? Theme.surface-hover : Theme.surface;
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: Theme.border;
+
+    animate background { duration: 150ms; }
+
+    HorizontalLayout {
+        padding-left: 24px;
+        padding-right: 20px;
+        alignment: space-between;
+
+        VerticalLayout {
+            alignment: center;
+            spacing: 4px;
+
+            Text {
+                text: root.title;
+                color: Theme.text-primary;
+                font-size: 14px;
+                font-weight: 500;
+                letter-spacing: 0.3px;
+            }
+
+            Text {
+                text: root.description;
+                color: Theme.text-muted;
+                font-size: 11px;
+                font-weight: 400;
+            }
+        }
+
+        // Action Button
+        Rectangle {
+            width: 140px;
+            height: 36px;
+            border-radius: 8px;
+            background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
+
+            Text {
+                text: root.button-text;
+                color: Theme.text;
+                font-size: 11px;
+                font-weight: 600;
+                letter-spacing: 1px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.triggered();
+                }
+            }
+        }
+    }
+
+    card-touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.triggered();
         }
     }
 }
@@ -609,10 +682,10 @@ export component SettingsPage inherits Rectangle {
                         }
                     }
 
-                    // Security note
-                    Rectangle {
-                        height: 48px;
-                        background: transparent;
+                // Security note
+                Rectangle {
+                    height: 48px;
+                    background: transparent;
 
                         HorizontalLayout {
                             padding-left: 4px;
@@ -636,6 +709,40 @@ export component SettingsPage inherits Rectangle {
                                 vertical-alignment: center;
                             }
                         }
+                    }
+                }
+
+                // Data Import Section
+                VerticalLayout {
+                    spacing: 12px;
+
+                    SectionHeader {
+                        title: Translations.settings-import;
+                    }
+
+                    ActionCard {
+                        title: Translations.import-title;
+                        description: Translations.import-description;
+                        button-text: Translations.import-select-file;
+                        triggered => {
+                            IngestionAdapter.import-data();
+                        }
+                    }
+
+                    Text {
+                        text: Translations.import-supported-formats;
+                        color: Theme.text-muted;
+                        font-size: 10px;
+                        font-weight: 400;
+                        letter-spacing: 0.3px;
+                    }
+
+                    Text {
+                        text: Translations.import-max-size;
+                        color: Theme.text-muted;
+                        font-size: 10px;
+                        font-weight: 400;
+                        letter-spacing: 0.3px;
                     }
                 }
 

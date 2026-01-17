@@ -14,6 +14,7 @@ import {
     RewardsAdapter,
     CryptoAdapter,
     SettingsAdapter,
+    IngestionAdapter,
     VaultAdapter,
 } from "globals.slint";
 import { Translations } from "translations.slint";
@@ -38,6 +39,7 @@ import {
 import { ConfigureTickerModal } from "modals/configure_ticker.slint";
 import { ConfigureCategoriesModal } from "modals/configure_categories.slint";
 import { RestoreVaultModal } from "modals/restore_vault_modal.slint";
+import { ImportResultsModal } from "modals/import_results.slint";
 import { NotificationToast } from "components/notification.slint";
 
 // ==================== Main Application Window ====================
@@ -195,6 +197,17 @@ export component AppWindow inherits Window {
         }
     }
 
+    // Import Results Modal
+    if AppState.show-import-results: ImportResultsModal {
+        width: 100%;
+        height: 100%;
+
+        close => {
+            AppState.show-import-results = false;
+            IngestionAdapter.reset-results();
+        }
+    }
+
     // Notification Toast (Global Overlay)
     NotificationToast {
         x: parent.width - self.width - 32px;
@@ -206,4 +219,4 @@ export component AppWindow inherits Window {
 }
 
 // Re-export adapters for main.rs
-export { AuthAdapter, AccountAdapter, TransactionAdapter, CategoryAdapter, DashboardAdapter, AnalyticsAdapter, NotificationAdapter, HabitAdapter, RewardsAdapter, CryptoAdapter, AppState, SettingsAdapter, Translations, VaultAdapter }
+export { AuthAdapter, AccountAdapter, TransactionAdapter, CategoryAdapter, DashboardAdapter, AnalyticsAdapter, NotificationAdapter, HabitAdapter, RewardsAdapter, CryptoAdapter, AppState, SettingsAdapter, IngestionAdapter, Translations, VaultAdapter }
