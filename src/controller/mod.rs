@@ -6,6 +6,7 @@
 mod crypto;
 mod finance;
 mod habits;
+mod ingestion;
 mod rewards;
 mod settings;
 mod vault;
@@ -22,6 +23,7 @@ pub use crate::features::crypto::{
 pub use crate::features::finance::{DashboardData, ExpenseSlice};
 use crate::features::finance::{FinanceError, FinanceService};
 use crate::features::habits::{HabitService, RewardsService};
+use crate::features::ingestion::IngestionService;
 use crate::security_log::{SecurityEvent, log_auth_failure, log_security_event};
 use crate::services::charts::ChartsService;
 use rusqlite::Connection;
@@ -263,6 +265,7 @@ pub struct AppController {
     crypto_service: CryptoService,
     pub habit_service: HabitService,
     pub rewards_service: RewardsService,
+    pub ingestion_service: IngestionService,
     app_data_dir: PathBuf,
 }
 
@@ -274,6 +277,7 @@ impl AppController {
         let crypto_service = CryptoService::new(db.clone());
         let habit_service = HabitService::new(db.clone());
         let rewards_service = RewardsService::new(db.clone());
+        let ingestion_service = IngestionService::new(db.clone());
         let charts_service = ChartsService::new();
 
         Self {
@@ -283,6 +287,7 @@ impl AppController {
             crypto_service,
             habit_service,
             rewards_service,
+            ingestion_service,
             app_data_dir: data_dir,
         }
     }

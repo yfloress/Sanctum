@@ -675,3 +675,46 @@ rewards-days-to-go = días restantes
 history-achievements-section = LOGROS
 history-no-achievements = Sin logros aún
 history-complete-to-earn = Completa hitos de racha y metas para ganar trofeos
+
+# ==================== Importación de Datos ====================
+import-title = Importar Datos
+import-description = Importar transacciones y registros de hábitos desde archivos externos
+import-select-file = SELECCIONAR ARCHIVO
+import-supported-formats = Formatos soportados: JSON, CSV, TXT
+import-max-size = Tamaño máximo de archivo: 10MB
+
+import-processing = Procesando archivo...
+import-validating = Validando datos...
+import-inserting = Insertando registros...
+
+import-success = Importación completada exitosamente
+import-partial = Importación completada con algunos problemas
+import-failed = Importación fallida
+
+import-summary-title = RESUMEN DE IMPORTACIÓN
+import-total-processed = Total Procesados
+import-inserted = Insertados
+import-skipped = Omitidos
+import-errors = Errores
+
+import-error-details = DETALLES DE ERRORES
+import-skipped-reasons = RAZONES DE OMISIÓN
+import-line = Línea { $line }
+import-field = Campo: { $field }
+
+import-error-file-too-large = Archivo muy grande. El tamaño máximo es { $maxSize }MB
+import-error-unsupported-format = Formato de archivo no soportado. Use JSON, CSV o TXT
+import-error-invalid-json = Formato JSON inválido
+import-error-no-data = No se encontraron datos en el archivo
+import-error-account-not-found = Cuenta no encontrada: { $name }
+import-error-habit-not-found = Hábito no encontrado: { $name }
+import-error-category-not-found = Categoría no encontrada: { $name }
+import-error-currency-mismatch = Moneda no coincide para la cuenta { $account }
+import-error-duplicate = Entrada duplicada omitida
+
+import-format-json = JSON (Exportación de Sanctum Web)
+import-format-csv = CSV (Excel/Sheets)
+import-format-text = Texto Plano
+
+settings-import = Importar Datos
+settings-import-desc = Importar transacciones y hábitos desde archivos

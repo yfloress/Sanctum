@@ -6,3 +6,4 @@ pub mod crypto;
 pub mod dashboard;
 pub mod finance;
 pub mod habits;
+pub mod ingestion;

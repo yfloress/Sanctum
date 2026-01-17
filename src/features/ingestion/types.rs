@@ -1,0 +1,251 @@
+//! Data types for the ingestion system
+//!
+//! Contains intermediate representations for imported data and result summaries.
+
+use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
+use std::hash::{Hash, Hasher};
+
+/// File format detection result
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ImportFormat {
+    JsonV1,
+    CsvTransactions,
+    CsvHabitLogs,
+    TextTransactions,
+    TextHabitLogs,
+}
+
+impl ImportFormat {
+    pub fn name(&self) -> &'static str {
+        match self {
+            ImportFormat::JsonV1 => "JSON v1",
+            ImportFormat::CsvTransactions => "CSV",
+            ImportFormat::CsvHabitLogs => "CSV",
+            ImportFormat::TextTransactions => "Plain Text",
+            ImportFormat::TextHabitLogs => "Plain Text",
+        }
+    }
+
+    pub fn data_type(&self) -> &'static str {
+        match self {
+            ImportFormat::JsonV1 => "Mixed",
+            ImportFormat::CsvTransactions | ImportFormat::TextTransactions => "Transactions",
+            ImportFormat::CsvHabitLogs | ImportFormat::TextHabitLogs => "Habit Logs",
+        }
+    }
+}
+
+/// Intermediate transaction representation (parsed from any format)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImportTransaction {
+    pub date: String,
+    pub account: String,
+    #[serde(rename = "type")]
+    pub transaction_type: String,
+    pub amount: f64,
+    pub currency: String,
+    pub category: String,
+    pub description: String,
+    pub transfer_to_account: Option<String>,
+}
+
+/// Intermediate habit log representation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImportHabitLog {
+    pub habit: String,
+    pub date: String,
+    pub completed: bool,
+}
+
+/// JSON v1 file structure (Sanctum Web export)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JsonV1File {
+    pub version: String,
+    pub exported_at: Option<String>,
+    #[serde(default)]
+    pub transactions: Vec<ImportTransaction>,
+    #[serde(default)]
+    pub habit_logs: Vec<ImportHabitLog>,
+}
+
+/// Error details for a single row
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RowError {
+    pub line_number: usize,
+    pub field: Option<String>,
+    pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub raw_data: Option<String>,
+}
+
+impl RowError {
+    pub fn new(line_number: usize, field: Option<&str>, message: impl Into<String>) -> Self {
+        Self {
+            line_number,
+            field: field.map(String::from),
+            message: message.into(),
+            raw_data: None,
+        }
+    }
+
+    pub fn with_raw_data(mut self, data: impl Into<String>) -> Self {
+        self.raw_data = Some(data.into());
+        self
+    }
+}
+
+/// Summary of the import operation
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ImportSummary {
+    pub format: String,
+    pub data_type: String,
+    pub total_processed: usize,
+    pub inserted: usize,
+    pub skipped: usize,
+    pub errors: usize,
+    pub error_details: Vec<RowError>,
+    pub skipped_reasons: Vec<String>,
+}
+
+impl ImportSummary {
+    pub fn new(format: &str, data_type: &str) -> Self {
+        Self {
+            format: format.to_string(),
+            data_type: data_type.to_string(),
+            ..Default::default()
+        }
+    }
+
+    pub fn record_inserted(&mut self) {
+        self.total_processed += 1;
+        self.inserted += 1;
+    }
+
+    pub fn record_skipped(&mut self, reason: &str) {
+        self.total_processed += 1;
+        self.skipped += 1;
+        if !self.skipped_reasons.contains(&reason.to_string()) {
+            self.skipped_reasons.push(reason.to_string());
+        }
+    }
+
+    pub fn record_error(&mut self, error: RowError) {
+        self.total_processed += 1;
+        self.errors += 1;
+        self.error_details.push(error);
+    }
+
+    pub fn is_success(&self) -> bool {
+        self.errors == 0 && self.inserted > 0
+    }
+
+    pub fn has_partial_success(&self) -> bool {
+        self.inserted > 0 && (self.errors > 0 || self.skipped > 0)
+    }
+
+    pub fn merge(&mut self, other: ImportSummary) {
+        self.total_processed += other.total_processed;
+        self.inserted += other.inserted;
+        self.skipped += other.skipped;
+        self.errors += other.errors;
+        self.error_details.extend(other.error_details);
+        for reason in other.skipped_reasons {
+            if !self.skipped_reasons.contains(&reason) {
+                self.skipped_reasons.push(reason);
+            }
+        }
+    }
+}
+
+/// Deduplication key for transactions
+#[derive(Debug, Clone, Eq)]
+pub struct TransactionDedupKey {
+    pub date: String,
+    pub account_id: String,
+    pub transfer_account_id: Option<String>,
+    pub currency: String,
+    pub amount_cents: i64,
+    pub transaction_type: String,
+    pub description_normalized: String,
+}
+
+impl TransactionDedupKey {
+    pub fn new(
+        date: &str,
+        account_id: &str,
+        transfer_account_id: Option<&str>,
+        currency: &str,
+        amount_cents: i64,
+        tx_type: &str,
+        description: &str,
+    ) -> Self {
+        Self {
+            date: date.to_string(),
+            account_id: account_id.to_string(),
+            transfer_account_id: transfer_account_id.map(str::to_string),
+            currency: currency.to_uppercase(),
+            amount_cents,
+            transaction_type: tx_type.to_lowercase(),
+            description_normalized: description.trim().to_lowercase(),
+        }
+    }
+}
+
+impl PartialEq for TransactionDedupKey {
+    fn eq(&self, other: &Self) -> bool {
+        self.date == other.date
+            && self.account_id == other.account_id
+            && self.transfer_account_id == other.transfer_account_id
+            && self.currency == other.currency
+            && self.amount_cents == other.amount_cents
+            && self.transaction_type == other.transaction_type
+            && self.description_normalized == other.description_normalized
+    }
+}
+
+impl Hash for TransactionDedupKey {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.date.hash(state);
+        self.account_id.hash(state);
+        self.transfer_account_id.hash(state);
+        self.currency.hash(state);
+        self.amount_cents.hash(state);
+        self.transaction_type.hash(state);
+        self.description_normalized.hash(state);
+    }
+}
+
+/// Builds a deduplication set from import transactions
+pub fn build_dedup_set(keys: impl IntoIterator<Item = TransactionDedupKey>) -> HashSet<TransactionDedupKey> {
+    keys.into_iter().collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::TransactionDedupKey;
+
+    #[test]
+    fn test_transfer_dedup_includes_destination() {
+        let base = TransactionDedupKey::new(
+            "2024-01-15",
+            "account-a",
+            Some("account-b"),
+            "USD",
+            1000,
+            "transfer",
+            "Move funds",
+        );
+        let different_dest = TransactionDedupKey::new(
+            "2024-01-15",
+            "account-a",
+            Some("account-c"),
+            "USD",
+            1000,
+            "transfer",
+            "Move funds",
+        );
+
+        assert_ne!(base, different_dest);
+    }
+}

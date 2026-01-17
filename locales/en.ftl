@@ -675,3 +675,46 @@ rewards-days-to-go = days to go
 history-achievements-section = ACHIEVEMENTS
 history-no-achievements = No achievements yet
 history-complete-to-earn = Complete streak milestones and goals to earn trophies
+
+# ==================== Data Import ====================
+import-title = Import Data
+import-description = Import transactions and habit logs from external files
+import-select-file = SELECT FILE
+import-supported-formats = Supported formats: JSON, CSV, TXT
+import-max-size = Maximum file size: 10MB
+
+import-processing = Processing file...
+import-validating = Validating data...
+import-inserting = Inserting records...
+
+import-success = Import completed successfully
+import-partial = Import completed with some issues
+import-failed = Import failed
+
+import-summary-title = IMPORT SUMMARY
+import-total-processed = Total Processed
+import-inserted = Inserted
+import-skipped = Skipped
+import-errors = Errors
+
+import-error-details = ERROR DETAILS
+import-skipped-reasons = SKIPPED REASONS
+import-line = Line { $line }
+import-field = Field: { $field }
+
+import-error-file-too-large = File too large. Maximum size is { $maxSize }MB
+import-error-unsupported-format = Unsupported file format. Use JSON, CSV, or TXT
+import-error-invalid-json = Invalid JSON format
+import-error-no-data = No data found in file
+import-error-account-not-found = Account not found: { $name }
+import-error-habit-not-found = Habit not found: { $name }
+import-error-category-not-found = Category not found: { $name }
+import-error-currency-mismatch = Currency mismatch for account { $account }
+import-error-duplicate = Duplicate entry skipped
+
+import-format-json = JSON (Sanctum Web Export)
+import-format-csv = CSV (Excel/Sheets)
+import-format-text = Plain Text
+
+settings-import = Data Import
+settings-import-desc = Import transactions and habits from files
