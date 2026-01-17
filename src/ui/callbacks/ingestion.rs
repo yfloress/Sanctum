@@ -5,7 +5,7 @@
 use crate::controller::AppController;
 use crate::features::ingestion::{ImportSummary, RowError};
 use crate::services::i18n::t_args;
-use crate::{AppState, AppWindow, ImportErrorData, IngestionAdapter};
+use crate::{AppState, AppWindow, ImportErrorData, ImportPreviewChange, IngestionAdapter};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel, Weak};
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -142,6 +142,7 @@ fn clear_import_summary(ui: &AppWindow) {
     adapter.set_import_errors(0);
     adapter.set_import_error_details(ModelRc::new(VecModel::from(Vec::<ImportErrorData>::new())));
     adapter.set_import_skipped_reasons(ModelRc::new(VecModel::from(Vec::<SharedString>::new())));
+    adapter.set_import_preview_changes(ModelRc::new(VecModel::from(Vec::<ImportPreviewChange>::new())));
 }
 
 fn set_import_summary(ui: &AppWindow, summary: ImportSummary, file_name: Option<String>) {
@@ -167,6 +168,17 @@ fn set_import_summary(ui: &AppWindow, summary: ImportSummary, file_name: Option<
         .map(SharedString::from)
         .collect();
     adapter.set_import_skipped_reasons(ModelRc::new(VecModel::from(skipped_reasons)));
+
+    let changes: Vec<ImportPreviewChange> = summary
+        .preview_changes
+        .into_iter()
+        .map(|c| ImportPreviewChange {
+            change_type: c.change_type.into(),
+            summary: c.summary.into(),
+            details: c.details.into(),
+        })
+        .collect();
+    adapter.set_import_preview_changes(ModelRc::new(VecModel::from(changes)));
 }
 
 fn map_error(err: RowError) -> ImportErrorData {

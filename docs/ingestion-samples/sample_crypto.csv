@@ -1,0 +1,6 @@
+date,wallet,symbol,type,amount,price_per_coin,fee,notes
+2026-03-01,Coinbase,ADA,buy,1000.0,0.45,1.20,Long term hold
+2026-03-02,Ledger Nano,BTC,transfer_out,0.05,,,Moving to exchange
+2026-03-03,Binance,ETH,sell,2.5,2800.00,5.00,Taking profits
+2026-03-05,Metamask,MATIC,buy,500.0,0.85,0.05,Layer 2 scaling bet
+2026-03-08,Trust Wallet,USDC,transfer_in,2000.0,,,Stablecoin deposit

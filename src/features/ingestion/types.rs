@@ -90,12 +90,11 @@ pub struct JsonV1File {
 }
 
 /// Error details for a single row
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct RowError {
     pub line_number: usize,
     pub field: Option<String>,
     pub message: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub raw_data: Option<String>,
 }
 
@@ -115,8 +114,16 @@ impl RowError {
     }
 }
 
-/// Summary of the import operation
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+/// Represents a proposed change during preview
+#[derive(Debug, Clone)]
+pub struct PreviewChange {
+    pub change_type: String, // e.g. "Transaction", "Crypto", "Habit"
+    pub summary: String,     // e.g. "+ 1000 USD (Salary)"
+    pub details: String,     // e.g. "Account: Bank -> Savings"
+}
+
+/// Summary of the import process
+#[derive(Debug, Default)]
 pub struct ImportSummary {
     pub format: String,
     pub data_type: String,
@@ -126,6 +133,7 @@ pub struct ImportSummary {
     pub errors: usize,
     pub error_details: Vec<RowError>,
     pub skipped_reasons: Vec<String>,
+    pub preview_changes: Vec<PreviewChange>,
 }
 
 impl ImportSummary {
@@ -137,44 +145,41 @@ impl ImportSummary {
         }
     }
 
-    pub fn record_inserted(&mut self) {
-        self.total_processed += 1;
-        self.inserted += 1;
-    }
-
-    pub fn record_skipped(&mut self, reason: &str) {
-        self.total_processed += 1;
-        self.skipped += 1;
-        if !self.skipped_reasons.contains(&reason.to_string()) {
-            self.skipped_reasons.push(reason.to_string());
-        }
-    }
-
-    pub fn record_error(&mut self, error: RowError) {
-        self.total_processed += 1;
-        self.errors += 1;
-        self.error_details.push(error);
-    }
-
-    pub fn is_success(&self) -> bool {
-        self.errors == 0 && self.inserted > 0
-    }
-
-    pub fn has_partial_success(&self) -> bool {
-        self.inserted > 0 && (self.errors > 0 || self.skipped > 0)
-    }
-
     pub fn merge(&mut self, other: ImportSummary) {
         self.total_processed += other.total_processed;
         self.inserted += other.inserted;
         self.skipped += other.skipped;
         self.errors += other.errors;
         self.error_details.extend(other.error_details);
-        for reason in other.skipped_reasons {
-            if !self.skipped_reasons.contains(&reason) {
-                self.skipped_reasons.push(reason);
-            }
-        }
+        self.skipped_reasons.extend(other.skipped_reasons);
+        self.preview_changes.extend(other.preview_changes);
+    }
+
+    pub fn record_error(&mut self, error: RowError) {
+        self.errors += 1;
+        self.total_processed += 1;
+        self.error_details.push(error);
+    }
+
+    pub fn record_skipped(&mut self, reason: &str) {
+        self.skipped += 1;
+        self.total_processed += 1;
+        self.skipped_reasons.push(reason.to_string());
+    }
+
+    pub fn record_inserted(&mut self) {
+        self.inserted += 1;
+        self.total_processed += 1;
+    }
+
+    pub fn record_preview_change(&mut self, change_type: &str, summary: String, details: String) {
+        self.inserted += 1; // Count as "would be inserted"
+        self.total_processed += 1;
+        self.preview_changes.push(PreviewChange {
+            change_type: change_type.to_string(),
+            summary,
+            details,
+        });
     }
 }
 

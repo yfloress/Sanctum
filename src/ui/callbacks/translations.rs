@@ -308,6 +308,7 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_import_preview_cancel(s(&t("import-preview-cancel")));
     tr.set_import_error_details(s(&t("import-error-details")));
     tr.set_import_skipped_reasons(s(&t("import-skipped-reasons")));
+    tr.set_import_preview_changes(s(&t("import-preview-changes")));
 
     // Modals
     tr.set_modal_add_account_title(s(&t("modal-add-account-title")));

@@ -724,5 +724,13 @@ import-format-json = JSON (Exportación de Sanctum Web)
 import-format-csv = CSV (Excel/Sheets)
 import-format-text = Texto Plano
 
+import-preview-change-transaction = Transacción
+import-preview-change-income = Ingreso
+import-preview-change-expense = Gasto
+import-preview-change-transfer = Transferencia
+import-preview-change-habit = Registro de Hábito
+import-preview-change-crypto = Transacción Crypto
+import-preview-changes = CAMBIOS PREVISTOS
+
 settings-import = IMPORTAR DATOS
 settings-import-desc = Importar transacciones y hábitos desde archivos

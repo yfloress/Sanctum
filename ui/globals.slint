@@ -46,6 +46,12 @@ export struct ImportErrorData {
     raw-data: string,
 }
 
+export struct ImportPreviewChange {
+    change-type: string,
+    summary: string,
+    details: string,
+}
+
 export struct BalanceData {
     total-balance: string,
     fiat-balance: string,
@@ -431,6 +437,7 @@ export global IngestionAdapter {
     in-out property <int> import-errors: 0;
     in-out property <[ImportErrorData]> import-error-details: [];
     in-out property <[string]> import-skipped-reasons: [];
+    in-out property <[ImportPreviewChange]> import-preview-changes: [];
 
     callback import-data();
     callback confirm-import();

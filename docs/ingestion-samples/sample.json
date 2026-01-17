@@ -1,53 +1,75 @@
 {
   "version": "1.0",
-  "exported_at": "2026-01-17T03:22:20Z",
+  "exported_at": "2026-02-10T14:30:00Z",
   "transactions": [
     {
-      "date": "2026-01-15",
-      "account": "Checking",
-      "type": "expense",
-      "amount": 12.50,
-      "currency": "USD",
-      "category": "Food",
-      "description": "Lunch",
-      "transfer_to_account": null
-    },
-    {
-      "date": "2026-01-16",
-      "account": "Checking",
+      "date": "2026-02-01",
+      "account": "Main Bank",
       "type": "income",
-      "amount": 2000.00,
+      "amount": 3450.75,
       "currency": "USD",
-      "category": "Salary",
-      "description": "Paycheck",
+      "category": "Freelance",
+      "description": "Project Alpha payment",
       "transfer_to_account": null
     },
     {
-      "date": "2026-01-17",
-      "account": "Checking",
+      "date": "2026-02-03",
+      "account": "Cash Wallet",
+      "type": "expense",
+      "amount": 42.00,
+      "currency": "USD",
+      "category": "Entertainment",
+      "description": "Cinema tickets",
+      "transfer_to_account": null
+    },
+    {
+      "date": "2026-02-05",
+      "account": "Main Bank",
       "type": "transfer",
-      "amount": 100.00,
+      "amount": 500.00,
       "currency": "USD",
       "category": "",
-      "description": "Move to savings",
-      "transfer_to_account": "Savings"
+      "description": "Savings allocation",
+      "transfer_to_account": "Emergency Fund"
     }
   ],
   "habit_logs": [
     {
-      "habit": "Meditate",
-      "date": "2026-01-15",
+      "habit": "Drink Water",
+      "date": "2026-02-01",
       "completed": true
     },
     {
-      "habit": "Exercise",
-      "date": "2026-01-16",
+      "habit": "Running",
+      "date": "2026-02-02",
+      "completed": true
+    },
+    {
+      "habit": "Code Practice",
+      "date": "2026-02-03",
       "completed": false
+    }
+  ],
+  "crypto_transactions": [
+    {
+      "date": "2026-02-04",
+      "wallet": "Ledger Nano",
+      "symbol": "BTC",
+      "type": "buy",
+      "amount": 0.015,
+      "price_per_coin": 45120.0,
+      "fee": 12.50,
+      "notes": "February dip buy"
     },
     {
-      "habit": "Read",
-      "date": "2026-01-17",
-      "completed": true
+      "date": "2026-02-06",
+      "wallet": "KuCoin",
+      "symbol": "DOT",
+      "type": "sell",
+      "amount": 150.0,
+      "price_per_coin": 7.85,
+      "fee": 0.1,
+      "notes": "Rebalancing portfolio"
     }
   ]
 }

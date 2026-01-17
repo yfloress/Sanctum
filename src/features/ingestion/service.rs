@@ -4,6 +4,7 @@
 
 use crate::db::{Database, DbError};
 use crate::models::{CryptoTransaction, HabitLog, Transaction};
+use crate::services::i18n::t;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
@@ -18,6 +19,11 @@ use super::validation::{
     validate_amount, validate_file_size, validate_import_crypto_transaction,
     validate_import_habit_log, validate_import_transaction,
 };
+
+fn format_currency_simple(cents: i64, currency: &str) -> String {
+    let amount = (cents.abs() as f64) / 100.0;
+    format!("{:.2} {}", amount, currency)
+}
 
 #[derive(thiserror::Error, Debug)]
 pub enum IngestionError {
@@ -517,7 +523,15 @@ impl IngestionService {
 
                     if dry_run {
                         dedup_set.insert(dedup_key);
-                        summary.record_inserted();
+                        let amount_fmt = format!("{:.2} {}", (amount_cents.abs() as f64) / 100.0, account.currency);
+                        summary.record_preview_change(
+                            &t("import-preview-change-transfer"),
+                            if amount_cents < 0 { format!("- {}", amount_fmt) } else { amount_fmt },
+                            format!(
+                                "{} -> {} ({})",
+                                account.name, dest_account.name, import_tx.description
+                            ),
+                        );
                         continue;
                     }
 
@@ -561,7 +575,21 @@ impl IngestionService {
 
                     if dry_run {
                         dedup_set.insert(dedup_key);
-                        summary.record_inserted();
+                        let amount_fmt = format_currency_simple(amount_cents, &account.currency);
+                        let type_label = if tx_type == "income" {
+                            t("import-preview-change-income")
+                        } else {
+                            t("import-preview-change-expense")
+                        };
+
+                        summary.record_preview_change(
+                            &type_label,
+                            if tx_type == "expense" { format!("- {}", amount_fmt) } else { format!("+ {}", amount_fmt) },
+                            format!(
+                                "{} - {} ({})",
+                                account.name, import_tx.category, import_tx.description
+                            ),
+                        );
                         continue;
                     }
 
@@ -678,7 +706,11 @@ impl IngestionService {
 
                 if dry_run {
                     seen_logs.insert(dedup_key);
-                    summary.record_inserted();
+                    summary.record_preview_change(
+                        &t("import-preview-change-habit"),
+                        habit.name.clone(),
+                        date.to_string(),
+                    );
                     continue;
                 }
 
@@ -809,7 +841,11 @@ impl IngestionService {
 
                 if dry_run {
                     dedup_set.insert(dedup_key);
-                    summary.record_inserted();
+                    summary.record_preview_change(
+                        &t("import-preview-change-crypto"),
+                        format!("{:.8} {} ({})", import_tx.amount, coin.symbol, tx_type),
+                        format!("{} - {}", wallet.name, import_tx.date)
+                    );
                     continue;
                 }
 

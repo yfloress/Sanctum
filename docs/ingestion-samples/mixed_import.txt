@@ -1,0 +1,23 @@
+# Random Mixed Data Import
+# T; = Fiat, H; = Habit, C; = Crypto
+
+# === Fiat Transactions ===
+T;2026-04-10;Credit Card;expense;85.50;USD;Shopping;New sneakers;
+T;2026-04-12;PayPal;income;300.00;USD;Sales;Ebay items sold;
+T;2026-04-15;Main Bank;expense;120.00;USD;Utilities;Electricity bill;
+
+# === Habits ===
+H;Meditation;2026-04-10;true
+H;Gym;2026-04-11;true
+H;Journaling;2026-04-12;false
+H;No Sugar;2026-04-13;true
+
+# === Crypto Transactions ===
+C;2026-04-11;Exodus;XRP;buy;500.0;0.62;0.01;Cross-border payment test
+C;2026-04-14;Binance;BNB;sell;10.0;350.0;1.0;Reducing exposure
+C;2026-04-16;Ledger Nano;BTC;transfer_in;0.12;;;Cold storage accumulation
+
+# === Case Sensitivity Test ===
+t;2026-04-18;Cash;expense;12.00;USD;Food;Street food;
+h;Reading;2026-04-18;true
+c;2026-04-18;Metamask;LINK;buy;50.0;15.20;0.5;Oracle accumulation

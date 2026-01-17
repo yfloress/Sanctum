@@ -1,10 +1,47 @@
-// ==================== Import Summary Panel ====================
-// Shared panel for displaying import summary stats, errors, and skipped reasons
+//Shared panel for displaying import summary stats, errors, and skipped reasons
 
-import { ImportErrorData, IngestionAdapter } from "../globals.slint";
+import { ImportErrorData, IngestionAdapter, ImportPreviewChange } from "../globals.slint";
 import { Theme } from "../theme.slint";
 import { Translations } from "../translations.slint";
 import { SummaryPill } from "summary_pill.slint";
+
+// ==================== Change Row ====================
+component ChangeRow inherits Rectangle {
+    in property <ImportPreviewChange> change;
+
+    height: 62px;
+    background: Theme.surface;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: Theme.border-subtle;
+
+    VerticalLayout {
+        padding: 10px;
+        spacing: 4px;
+
+        Text {
+            text: change.change-type;
+            color: Theme.text-secondary;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        Text {
+            text: change.summary;
+            color: Theme.text-primary;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        Text {
+            text: change.details;
+            color: Theme.text-muted;
+            font-size: 10px;
+            font-weight: 400;
+            overflow: elide;
+        }
+    }
+}
 
 // ==================== Error Row ====================
 component ErrorRow inherits Rectangle {
@@ -167,6 +204,43 @@ export component ImportSummaryPanel inherits VerticalLayout {
             label: Translations.import-errors;
             value: IngestionAdapter.import-errors;
             accent: Theme.danger;
+        }
+    }
+
+    // Preview changes list
+    if IngestionAdapter.import-preview-changes.length > 0 && IngestionAdapter.import-errors == 0: VerticalLayout {
+        spacing: 8px;
+
+        Text {
+            text: Translations.import-preview-changes;
+            color: Theme.text-secondary;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+        }
+
+        Rectangle {
+            height: root.error-list-height * 1px;
+            background: Theme.surface;
+            border-radius: 10px;
+            border-width: 1px;
+            border-color: Theme.border;
+            clip: true;
+
+            Flickable {
+                width: parent.width;
+                height: parent.height;
+                viewport-height: IngestionAdapter.import-preview-changes.length * 70px;
+
+                VerticalLayout {
+                    padding: 8px;
+                    spacing: 6px;
+
+                    for change in IngestionAdapter.import-preview-changes: ChangeRow {
+                        change: change;
+                    }
+                }
+            }
         }
     }
 
