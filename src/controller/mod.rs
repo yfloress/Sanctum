@@ -647,9 +647,10 @@ impl AppController {
                 self.reset_persistent_rate_limit(&db_path);
 
                 // Apply configured session timeout (default 15 min)
-                let timeout = self
-                    .get_app_setting(SETTING_SESSION_TIMEOUT)
+                let timeout = db
+                    .get_setting(SETTING_SESSION_TIMEOUT)
                     .ok()
+                    .flatten()
                     .and_then(|s| s.parse::<i64>().ok())
                     .unwrap_or(900); // Default to 15 minutes
                 db.set_session_timeout(timeout);

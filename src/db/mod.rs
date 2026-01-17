@@ -178,6 +178,9 @@ impl Database {
         // Run migrations
         db.run_migrations()?;
 
+        // Refresh session info to start a new active session
+        db.touch_session()?;
+
         // Verify and display security settings
         db.verify_encryption_settings()?;
 
@@ -465,7 +468,9 @@ impl Database {
     pub fn touch_session(&self) -> Result<(), DbError> {
         let now = Utc::now().to_rfc3339();
         self.conn.execute(
-            "UPDATE session_info SET last_activity = ?1 WHERE id = 1",
+            "INSERT INTO session_info (id, last_activity, created_at)
+             VALUES (1, ?1, ?1)
+             ON CONFLICT(id) DO UPDATE SET last_activity = ?1",
             params![&now],
         )?;
         Ok(())
@@ -473,11 +478,22 @@ impl Database {
 
     /// Checks if the session has expired due to inactivity
     pub fn check_session_timeout(&self) -> Result<(), DbError> {
-        let last_activity: String = self.conn.query_row(
+        if self.session_timeout < 0 {
+            return Ok(());
+        }
+
+        let last_activity: String = match self.conn.query_row(
             "SELECT last_activity FROM session_info WHERE id = 1",
             [],
             |row| row.get(0),
-        )?;
+        ) {
+            Ok(value) => value,
+            Err(RusqliteError::QueryReturnedNoRows) => {
+                self.touch_session()?;
+                return Ok(());
+            }
+            Err(e) => return Err(DbError::Sqlite(e)),
+        };
 
         if let Ok(last) = DateTime::parse_from_rfc3339(&last_activity) {
             let now = Utc::now();
@@ -492,11 +508,22 @@ impl Database {
 
     /// Gets seconds until session expires (for UI display)
     pub fn get_session_remaining(&self) -> Result<i64, DbError> {
-        let last_activity: String = self.conn.query_row(
+        if self.session_timeout < 0 {
+            return Ok(-1);
+        }
+
+        let last_activity: String = match self.conn.query_row(
             "SELECT last_activity FROM session_info WHERE id = 1",
             [],
             |row| row.get(0),
-        )?;
+        ) {
+            Ok(value) => value,
+            Err(RusqliteError::QueryReturnedNoRows) => {
+                self.touch_session()?;
+                return Ok(self.session_timeout);
+            }
+            Err(e) => return Err(DbError::Sqlite(e)),
+        };
 
         if let Ok(last) = DateTime::parse_from_rfc3339(&last_activity) {
             let now = Utc::now();
