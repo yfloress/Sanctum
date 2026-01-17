@@ -1,7 +1,9 @@
 //! JSON v1 parser for Sanctum Web exports
 
 use super::{ImportParser, ParseResult};
-use crate::features::ingestion::types::{ImportHabitLog, ImportTransaction, RowError};
+use crate::features::ingestion::types::{
+    ImportCryptoTransaction, ImportHabitLog, ImportTransaction, RowError,
+};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -11,12 +13,15 @@ struct JsonV1FileRaw {
     transactions: Vec<serde_json::Value>,
     #[serde(default)]
     habit_logs: Vec<serde_json::Value>,
+    #[serde(default)]
+    crypto_transactions: Vec<serde_json::Value>,
 }
 
 #[derive(Debug)]
 pub struct JsonV1ParseResult {
     pub transactions: ParseResult<ImportTransaction>,
     pub habit_logs: ParseResult<ImportHabitLog>,
+    pub crypto_transactions: ParseResult<ImportCryptoTransaction>,
 }
 
 pub struct JsonV1Parser;
@@ -44,13 +49,23 @@ impl ImportParser for JsonV1Parser {
 }
 
 impl JsonV1Parser {
-    /// Parses the full JSON file and returns both transactions and habit logs
+    /// Parses the full JSON file and returns transactions, habit logs, and crypto
     pub fn parse_full(&self, content: &str) -> Result<JsonV1ParseResult, RowError> {
         let file = self.parse_raw(content)?;
         Ok(JsonV1ParseResult {
             transactions: parse_json_items(file.transactions, "transaction"),
             habit_logs: parse_json_items(file.habit_logs, "habit log"),
+            crypto_transactions: parse_json_items(file.crypto_transactions, "crypto transaction"),
         })
+    }
+
+    /// Parses crypto transactions from JSON content
+    pub fn parse_crypto_transactions(
+        &self,
+        content: &str,
+    ) -> Result<ParseResult<ImportCryptoTransaction>, RowError> {
+        let file = self.parse_raw(content)?;
+        Ok(parse_json_items(file.crypto_transactions, "crypto transaction"))
     }
 
     fn parse_raw(&self, content: &str) -> Result<JsonV1FileRaw, RowError> {

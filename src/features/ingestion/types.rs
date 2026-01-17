@@ -12,8 +12,8 @@ pub enum ImportFormat {
     JsonV1,
     CsvTransactions,
     CsvHabitLogs,
-    TextTransactions,
-    TextHabitLogs,
+    CsvCrypto,
+    TextMixed, // Mixed content with prefixes (T;, H;, C;)
 }
 
 impl ImportFormat {
@@ -22,16 +22,17 @@ impl ImportFormat {
             ImportFormat::JsonV1 => "JSON v1",
             ImportFormat::CsvTransactions => "CSV",
             ImportFormat::CsvHabitLogs => "CSV",
-            ImportFormat::TextTransactions => "Plain Text",
-            ImportFormat::TextHabitLogs => "Plain Text",
+            ImportFormat::CsvCrypto => "CSV",
+            ImportFormat::TextMixed => "Plain Text",
         }
     }
 
     pub fn data_type(&self) -> &'static str {
         match self {
-            ImportFormat::JsonV1 => "Mixed",
-            ImportFormat::CsvTransactions | ImportFormat::TextTransactions => "Transactions",
-            ImportFormat::CsvHabitLogs | ImportFormat::TextHabitLogs => "Habit Logs",
+            ImportFormat::JsonV1 | ImportFormat::TextMixed => "Mixed",
+            ImportFormat::CsvTransactions => "Transactions",
+            ImportFormat::CsvHabitLogs => "Habit Logs",
+            ImportFormat::CsvCrypto => "Crypto",
         }
     }
 }
@@ -58,6 +59,23 @@ pub struct ImportHabitLog {
     pub completed: bool,
 }
 
+/// Intermediate crypto transaction representation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImportCryptoTransaction {
+    pub date: String,
+    pub wallet: String,
+    pub symbol: String, // e.g., "BTC", "ETH"
+    #[serde(rename = "type")]
+    pub transaction_type: String, // buy, sell, transfer_in, transfer_out
+    pub amount: f64,
+    #[serde(default)]
+    pub price_per_coin: Option<f64>, // USD price at transaction time
+    #[serde(default)]
+    pub fee: Option<f64>, // Fee in USD
+    #[serde(default)]
+    pub notes: Option<String>,
+}
+
 /// JSON v1 file structure (Sanctum Web export)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JsonV1File {
@@ -67,6 +85,8 @@ pub struct JsonV1File {
     pub transactions: Vec<ImportTransaction>,
     #[serde(default)]
     pub habit_logs: Vec<ImportHabitLog>,
+    #[serde(default)]
+    pub crypto_transactions: Vec<ImportCryptoTransaction>,
 }
 
 /// Error details for a single row
@@ -219,6 +239,48 @@ impl Hash for TransactionDedupKey {
 /// Builds a deduplication set from import transactions
 pub fn build_dedup_set(keys: impl IntoIterator<Item = TransactionDedupKey>) -> HashSet<TransactionDedupKey> {
     keys.into_iter().collect()
+}
+
+/// Deduplication key for crypto transactions
+#[derive(Debug, Clone, Eq)]
+pub struct CryptoDedupKey {
+    pub date: String,
+    pub wallet_id: String,
+    pub coin_id: String,
+    pub transaction_type: String,
+    pub amount_satoshis: i64, // amount * 10^8 for precision
+}
+
+impl CryptoDedupKey {
+    pub fn new(date: &str, wallet_id: &str, coin_id: &str, tx_type: &str, amount: f64) -> Self {
+        Self {
+            date: date.to_string(),
+            wallet_id: wallet_id.to_string(),
+            coin_id: coin_id.to_string(),
+            transaction_type: tx_type.to_lowercase(),
+            amount_satoshis: (amount * 100_000_000.0).round() as i64,
+        }
+    }
+}
+
+impl PartialEq for CryptoDedupKey {
+    fn eq(&self, other: &Self) -> bool {
+        self.date == other.date
+            && self.wallet_id == other.wallet_id
+            && self.coin_id == other.coin_id
+            && self.transaction_type == other.transaction_type
+            && self.amount_satoshis == other.amount_satoshis
+    }
+}
+
+impl Hash for CryptoDedupKey {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.date.hash(state);
+        self.wallet_id.hash(state);
+        self.coin_id.hash(state);
+        self.transaction_type.hash(state);
+        self.amount_satoshis.hash(state);
+    }
 }
 
 #[cfg(test)]

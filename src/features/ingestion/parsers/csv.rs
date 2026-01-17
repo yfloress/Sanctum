@@ -1,7 +1,9 @@
 //! CSV parser for spreadsheet imports
 
 use super::{ImportParser, ParseResult};
-use crate::features::ingestion::types::{ImportHabitLog, ImportTransaction, RowError};
+use crate::features::ingestion::types::{
+    ImportCryptoTransaction, ImportHabitLog, ImportTransaction, RowError,
+};
 use crate::features::ingestion::validation::parse_bool;
 use csv::{ReaderBuilder, StringRecord, Trim};
 use std::collections::HashMap;
@@ -318,6 +320,183 @@ impl ImportParser for CsvParser {
 
     fn format_name(&self) -> &'static str {
         "CSV"
+    }
+}
+
+impl CsvParser {
+    /// Parses crypto transactions from CSV content
+    pub fn parse_crypto_transactions(
+        &self,
+        content: &str,
+    ) -> Result<ParseResult<ImportCryptoTransaction>, RowError> {
+        let mut reader = ReaderBuilder::new()
+            .trim(Trim::All)
+            .flexible(true)
+            .from_reader(content.as_bytes());
+        let headers = reader
+            .headers()
+            .map_err(|e| RowError::new(1, None, format!("Invalid CSV header: {}", e)))?
+            .clone();
+        let columns = Self::parse_header(&headers);
+
+        // Validate required columns exist
+        let required = ["date", "wallet", "symbol", "type", "amount"];
+        for col in required {
+            if !columns.contains_key(col) {
+                return Err(RowError::new(
+                    1,
+                    None,
+                    format!(
+                        "Missing required column: '{}'. Expected: {}",
+                        col,
+                        required.join(", ")
+                    ),
+                ));
+            }
+        }
+
+        let mut result = ParseResult::default();
+
+        for (idx, record) in reader.records().enumerate() {
+            let record = match record {
+                Ok(record) => record,
+                Err(err) => {
+                    let line = err
+                        .position()
+                        .map(|p| p.line())
+                        .unwrap_or((idx + 2) as u64);
+                    result.errors.push(RowError::new(
+                        line as usize,
+                        None,
+                        format!("Invalid CSV record: {}", err),
+                    ));
+                    continue;
+                }
+            };
+
+            let line_number = record
+                .position()
+                .map(|p| p.line())
+                .unwrap_or((idx + 2) as u64) as usize;
+            let raw_data = record.iter().collect::<Vec<_>>().join(",");
+
+            // Skip empty lines
+            if record.iter().all(|field| field.trim().is_empty()) {
+                continue;
+            }
+
+            let date = match Self::get_field(&record, &columns, "date") {
+                Some(value) if !value.is_empty() => value,
+                _ => {
+                    result.errors.push(
+                        RowError::new(line_number, Some("date"), "Missing required field: date")
+                            .with_raw_data(raw_data),
+                    );
+                    continue;
+                }
+            };
+
+            let wallet = match Self::get_field(&record, &columns, "wallet") {
+                Some(value) if !value.is_empty() => value,
+                _ => {
+                    result.errors.push(
+                        RowError::new(
+                            line_number,
+                            Some("wallet"),
+                            "Missing required field: wallet",
+                        )
+                        .with_raw_data(raw_data),
+                    );
+                    continue;
+                }
+            };
+
+            let symbol = match Self::get_field(&record, &columns, "symbol") {
+                Some(value) if !value.is_empty() => value,
+                _ => {
+                    result.errors.push(
+                        RowError::new(
+                            line_number,
+                            Some("symbol"),
+                            "Missing required field: symbol",
+                        )
+                        .with_raw_data(raw_data),
+                    );
+                    continue;
+                }
+            };
+
+            let tx_type = match Self::get_field(&record, &columns, "type") {
+                Some(value) if !value.is_empty() => value,
+                _ => {
+                    result.errors.push(
+                        RowError::new(line_number, Some("type"), "Missing required field: type")
+                            .with_raw_data(raw_data),
+                    );
+                    continue;
+                }
+            };
+
+            let amount_str = match Self::get_field(&record, &columns, "amount") {
+                Some(value) if !value.is_empty() => value,
+                _ => {
+                    result.errors.push(
+                        RowError::new(
+                            line_number,
+                            Some("amount"),
+                            "Missing required field: amount",
+                        )
+                        .with_raw_data(raw_data),
+                    );
+                    continue;
+                }
+            };
+
+            let amount: f64 = match amount_str.replace(',', ".").parse() {
+                Ok(value) => value,
+                Err(_) => {
+                    result.errors.push(
+                        RowError::new(
+                            line_number,
+                            Some("amount"),
+                            format!("Invalid amount: '{}'", amount_str),
+                        )
+                        .with_raw_data(raw_data),
+                    );
+                    continue;
+                }
+            };
+
+            // Optional fields
+            let price_per_coin = Self::get_field(&record, &columns, "price_per_coin")
+                .or_else(|| Self::get_field(&record, &columns, "price"))
+                .filter(|s| !s.is_empty())
+                .and_then(|s| s.replace(',', ".").parse().ok());
+
+            let fee = Self::get_field(&record, &columns, "fee")
+                .filter(|s| !s.is_empty())
+                .and_then(|s| s.replace(',', ".").parse().ok());
+
+            let notes = Self::get_field(&record, &columns, "notes")
+                .filter(|s| !s.is_empty())
+                .map(String::from);
+
+            result.items.push((
+                line_number,
+                ImportCryptoTransaction {
+                    date: date.to_string(),
+                    wallet: wallet.to_string(),
+                    symbol: symbol.to_string(),
+                    transaction_type: tx_type.to_string(),
+                    amount,
+                    price_per_coin,
+                    fee,
+                    notes,
+                },
+            ));
+        }
+
+        Ok(result)
     }
 }
 

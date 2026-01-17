@@ -2,7 +2,7 @@
 //!
 //! Provides field-level validation for imported transactions and habit logs.
 
-use super::types::{ImportHabitLog, ImportTransaction, RowError};
+use super::types::{ImportCryptoTransaction, ImportHabitLog, ImportTransaction, RowError};
 use chrono::NaiveDate;
 
 /// Maximum file size (10MB)
@@ -176,6 +176,97 @@ pub fn validate_import_habit_log(log: &ImportHabitLog, line_number: usize) -> Re
 
     validate_habit_name(&log.habit).map_err(|e| make_error("habit", e))?;
     validate_date(&log.date).map_err(|e| make_error("date", e))?;
+
+    Ok(())
+}
+
+// ==================== Crypto Validation ====================
+
+/// Validates crypto transaction type
+pub fn validate_crypto_tx_type(tx_type: &str) -> Result<String, String> {
+    let normalized = tx_type.trim().to_lowercase();
+    match normalized.as_str() {
+        "buy" | "sell" | "transfer_in" | "transfer_out" => Ok(normalized),
+        _ => Err(format!(
+            "Invalid crypto transaction type: '{}'. Expected: buy, sell, transfer_in, or transfer_out",
+            tx_type
+        )),
+    }
+}
+
+/// Validates crypto symbol (1-10 uppercase letters)
+pub fn validate_crypto_symbol(symbol: &str) -> Result<String, String> {
+    let normalized = symbol.trim().to_uppercase();
+    if normalized.is_empty() {
+        return Err("Crypto symbol is required".to_string());
+    }
+    if normalized.len() > 10 {
+        return Err("Crypto symbol too long (max 10 characters)".to_string());
+    }
+    if !normalized.chars().all(|c| c.is_ascii_alphanumeric()) {
+        return Err(format!(
+            "Invalid crypto symbol: '{}'. Must contain only letters and numbers",
+            symbol
+        ));
+    }
+    Ok(normalized)
+}
+
+/// Validates wallet name
+pub fn validate_wallet_name(name: &str) -> Result<String, String> {
+    let trimmed = name.trim();
+    if trimmed.is_empty() {
+        return Err("Wallet name is required".to_string());
+    }
+    if trimmed.len() > 64 {
+        return Err("Wallet name too long (max 64 characters)".to_string());
+    }
+    Ok(trimmed.to_string())
+}
+
+/// Validates crypto amount (can be very small, like 0.00000001)
+pub fn validate_crypto_amount(amount: f64) -> Result<f64, String> {
+    if amount <= 0.0 {
+        return Err("Amount must be positive".to_string());
+    }
+    if amount > 1_000_000_000.0 {
+        return Err("Amount exceeds maximum allowed".to_string());
+    }
+    Ok(amount)
+}
+
+/// Validates optional price per coin
+pub fn validate_price_per_coin(price: Option<f64>) -> Result<Option<f64>, String> {
+    match price {
+        Some(p) if p < 0.0 => Err("Price per coin cannot be negative".to_string()),
+        Some(p) if p > 10_000_000.0 => Err("Price per coin exceeds maximum".to_string()),
+        other => Ok(other),
+    }
+}
+
+/// Validates optional fee
+pub fn validate_fee(fee: Option<f64>) -> Result<Option<f64>, String> {
+    match fee {
+        Some(f) if f < 0.0 => Err("Fee cannot be negative".to_string()),
+        Some(f) if f > 1_000_000.0 => Err("Fee exceeds maximum".to_string()),
+        other => Ok(other),
+    }
+}
+
+/// Validates an import crypto transaction
+pub fn validate_import_crypto_transaction(
+    tx: &ImportCryptoTransaction,
+    line_number: usize,
+) -> Result<(), RowError> {
+    let make_error = |field: &str, msg: String| RowError::new(line_number, Some(field), msg);
+
+    validate_date(&tx.date).map_err(|e| make_error("date", e))?;
+    validate_wallet_name(&tx.wallet).map_err(|e| make_error("wallet", e))?;
+    validate_crypto_symbol(&tx.symbol).map_err(|e| make_error("symbol", e))?;
+    validate_crypto_tx_type(&tx.transaction_type).map_err(|e| make_error("type", e))?;
+    validate_crypto_amount(tx.amount).map_err(|e| make_error("amount", e))?;
+    validate_price_per_coin(tx.price_per_coin).map_err(|e| make_error("price_per_coin", e))?;
+    validate_fee(tx.fee).map_err(|e| make_error("fee", e))?;
 
     Ok(())
 }

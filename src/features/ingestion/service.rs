@@ -3,7 +3,7 @@
 //! Orchestrates data import from various file formats.
 
 use crate::db::{Database, DbError};
-use crate::models::{HabitLog, Transaction};
+use crate::models::{CryptoTransaction, HabitLog, Transaction};
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
@@ -11,9 +11,13 @@ use uuid::Uuid;
 use super::parsers::{detect_format, CsvParser, ImportParser, JsonV1Parser, TextParser};
 use super::repository::IngestionRepository;
 use super::types::{
-    ImportFormat, ImportHabitLog, ImportSummary, ImportTransaction, RowError, TransactionDedupKey,
+    CryptoDedupKey, ImportCryptoTransaction, ImportFormat, ImportHabitLog, ImportSummary,
+    ImportTransaction, RowError, TransactionDedupKey,
 };
-use super::validation::{validate_amount, validate_file_size, validate_import_habit_log, validate_import_transaction};
+use super::validation::{
+    validate_amount, validate_file_size, validate_import_crypto_transaction,
+    validate_import_habit_log, validate_import_transaction,
+};
 
 #[derive(thiserror::Error, Debug)]
 pub enum IngestionError {
@@ -89,8 +93,8 @@ impl IngestionService {
             ImportFormat::JsonV1 => self.import_json_v1(content),
             ImportFormat::CsvTransactions => self.import_csv_transactions(content),
             ImportFormat::CsvHabitLogs => self.import_csv_habit_logs(content),
-            ImportFormat::TextTransactions => self.import_text_transactions(content),
-            ImportFormat::TextHabitLogs => self.import_text_habit_logs(content),
+            ImportFormat::CsvCrypto => self.import_csv_crypto(content),
+            ImportFormat::TextMixed => self.import_text_mixed(content),
         }
     }
 
@@ -113,24 +117,24 @@ impl IngestionService {
             ImportFormat::JsonV1 => self.preview_json_v1(content),
             ImportFormat::CsvTransactions => self.preview_csv_transactions(content),
             ImportFormat::CsvHabitLogs => self.preview_csv_habit_logs(content),
-            ImportFormat::TextTransactions => self.preview_text_transactions(content),
-            ImportFormat::TextHabitLogs => self.preview_text_habit_logs(content),
+            ImportFormat::CsvCrypto => self.preview_csv_crypto(content),
+            ImportFormat::TextMixed => self.preview_text_mixed(content),
         }
     }
 
-    /// Import JSON v1 format (can contain both transactions and habit logs)
+    /// Import JSON v1 format (can contain transactions, habit logs, and crypto)
     fn import_json_v1(&self, content: &str) -> Result<ImportSummary, IngestionError> {
         let parser = JsonV1Parser;
         let mut summary = ImportSummary::new("JSON v1", "Mixed");
 
-        // Parse full JSON to get both transactions and habit logs
         let file = parser
             .parse_full(content)
             .map_err(|e| IngestionError::Parse(e.message))?;
 
         // Import transactions
         if !file.transactions.items.is_empty() || !file.transactions.errors.is_empty() {
-            let tx_summary = self.process_transactions(file.transactions.items, parser.format_name())?;
+            let tx_summary =
+                self.process_transactions(file.transactions.items, parser.format_name())?;
             summary.merge(tx_summary);
             for error in file.transactions.errors {
                 summary.record_error(error);
@@ -139,9 +143,21 @@ impl IngestionService {
 
         // Import habit logs
         if !file.habit_logs.items.is_empty() || !file.habit_logs.errors.is_empty() {
-            let log_summary = self.process_habit_logs(file.habit_logs.items, parser.format_name())?;
+            let log_summary =
+                self.process_habit_logs(file.habit_logs.items, parser.format_name())?;
             summary.merge(log_summary);
             for error in file.habit_logs.errors {
+                summary.record_error(error);
+            }
+        }
+
+        // Import crypto transactions
+        if !file.crypto_transactions.items.is_empty() || !file.crypto_transactions.errors.is_empty()
+        {
+            let crypto_summary =
+                self.process_crypto_transactions(file.crypto_transactions.items, parser.format_name())?;
+            summary.merge(crypto_summary);
+            for error in file.crypto_transactions.errors {
                 summary.record_error(error);
             }
         }
@@ -149,7 +165,7 @@ impl IngestionService {
         Ok(summary)
     }
 
-    /// Preview JSON v1 format (can contain both transactions and habit logs)
+    /// Preview JSON v1 format (can contain transactions, habit logs, and crypto)
     fn preview_json_v1(&self, content: &str) -> Result<ImportSummary, IngestionError> {
         let parser = JsonV1Parser;
         let mut summary = ImportSummary::new("JSON v1", "Mixed");
@@ -172,6 +188,16 @@ impl IngestionService {
                 self.preview_habit_logs(file.habit_logs.items, parser.format_name())?;
             summary.merge(log_summary);
             for error in file.habit_logs.errors {
+                summary.record_error(error);
+            }
+        }
+
+        if !file.crypto_transactions.items.is_empty() || !file.crypto_transactions.errors.is_empty()
+        {
+            let crypto_summary =
+                self.preview_crypto_transactions(file.crypto_transactions.items, parser.format_name())?;
+            summary.merge(crypto_summary);
+            for error in file.crypto_transactions.errors {
                 summary.record_error(error);
             }
         }
@@ -231,55 +257,108 @@ impl IngestionService {
         Ok(summary)
     }
 
-    /// Import text transactions
-    fn import_text_transactions(&self, content: &str) -> Result<ImportSummary, IngestionError> {
-        let parser = TextParser;
+    /// Import CSV crypto transactions
+    fn import_csv_crypto(&self, content: &str) -> Result<ImportSummary, IngestionError> {
+        let parser = CsvParser;
         let parsed = parser
-            .parse_transactions(content)
+            .parse_crypto_transactions(content)
             .map_err(|e| IngestionError::Parse(e.message))?;
-        let mut summary = self.process_transactions(parsed.items, parser.format_name())?;
+        let mut summary = self.process_crypto_transactions(parsed.items, parser.format_name())?;
         for error in parsed.errors {
             summary.record_error(error);
         }
         Ok(summary)
     }
 
-    /// Preview text transactions
-    fn preview_text_transactions(&self, content: &str) -> Result<ImportSummary, IngestionError> {
-        let parser = TextParser;
+    /// Preview CSV crypto transactions
+    fn preview_csv_crypto(&self, content: &str) -> Result<ImportSummary, IngestionError> {
+        let parser = CsvParser;
         let parsed = parser
-            .parse_transactions(content)
+            .parse_crypto_transactions(content)
             .map_err(|e| IngestionError::Parse(e.message))?;
-        let mut summary = self.preview_transactions(parsed.items, parser.format_name())?;
+        let mut summary = self.preview_crypto_transactions(parsed.items, parser.format_name())?;
         for error in parsed.errors {
             summary.record_error(error);
         }
         Ok(summary)
     }
 
-    /// Import text habit logs
-    fn import_text_habit_logs(&self, content: &str) -> Result<ImportSummary, IngestionError> {
+    /// Import text mixed content (T;, H;, C; prefixes)
+    fn import_text_mixed(&self, content: &str) -> Result<ImportSummary, IngestionError> {
         let parser = TextParser;
-        let parsed = parser
-            .parse_habit_logs(content)
-            .map_err(|e| IngestionError::Parse(e.message))?;
-        let mut summary = self.process_habit_logs(parsed.items, parser.format_name())?;
-        for error in parsed.errors {
-            summary.record_error(error);
+        let mut summary = ImportSummary::new("Plain Text", "Mixed");
+        let parsed = parser.parse_mixed(content);
+
+        // Import transactions
+        if !parsed.transactions.items.is_empty() || !parsed.transactions.errors.is_empty() {
+            let tx_summary =
+                self.process_transactions(parsed.transactions.items, parser.format_name())?;
+            summary.merge(tx_summary);
+            for error in parsed.transactions.errors {
+                summary.record_error(error);
+            }
         }
+
+        // Import habit logs
+        if !parsed.habit_logs.items.is_empty() || !parsed.habit_logs.errors.is_empty() {
+            let log_summary =
+                self.process_habit_logs(parsed.habit_logs.items, parser.format_name())?;
+            summary.merge(log_summary);
+            for error in parsed.habit_logs.errors {
+                summary.record_error(error);
+            }
+        }
+
+        // Import crypto transactions
+        if !parsed.crypto_transactions.items.is_empty()
+            || !parsed.crypto_transactions.errors.is_empty()
+        {
+            let crypto_summary =
+                self.process_crypto_transactions(parsed.crypto_transactions.items, parser.format_name())?;
+            summary.merge(crypto_summary);
+            for error in parsed.crypto_transactions.errors {
+                summary.record_error(error);
+            }
+        }
+
         Ok(summary)
     }
 
-    /// Preview text habit logs
-    fn preview_text_habit_logs(&self, content: &str) -> Result<ImportSummary, IngestionError> {
+    /// Preview text mixed content
+    fn preview_text_mixed(&self, content: &str) -> Result<ImportSummary, IngestionError> {
         let parser = TextParser;
-        let parsed = parser
-            .parse_habit_logs(content)
-            .map_err(|e| IngestionError::Parse(e.message))?;
-        let mut summary = self.preview_habit_logs(parsed.items, parser.format_name())?;
-        for error in parsed.errors {
-            summary.record_error(error);
+        let mut summary = ImportSummary::new("Plain Text", "Mixed");
+        let parsed = parser.parse_mixed(content);
+
+        if !parsed.transactions.items.is_empty() || !parsed.transactions.errors.is_empty() {
+            let tx_summary =
+                self.preview_transactions(parsed.transactions.items, parser.format_name())?;
+            summary.merge(tx_summary);
+            for error in parsed.transactions.errors {
+                summary.record_error(error);
+            }
         }
+
+        if !parsed.habit_logs.items.is_empty() || !parsed.habit_logs.errors.is_empty() {
+            let log_summary =
+                self.preview_habit_logs(parsed.habit_logs.items, parser.format_name())?;
+            summary.merge(log_summary);
+            for error in parsed.habit_logs.errors {
+                summary.record_error(error);
+            }
+        }
+
+        if !parsed.crypto_transactions.items.is_empty()
+            || !parsed.crypto_transactions.errors.is_empty()
+        {
+            let crypto_summary =
+                self.preview_crypto_transactions(parsed.crypto_transactions.items, parser.format_name())?;
+            summary.merge(crypto_summary);
+            for error in parsed.crypto_transactions.errors {
+                summary.record_error(error);
+            }
+        }
+
         Ok(summary)
     }
 
@@ -612,6 +691,144 @@ impl IngestionService {
                 match IngestionRepository::create_habit_log(db, &log) {
                     Ok(_) => {
                         seen_logs.insert(dedup_key);
+                        summary.record_inserted();
+                    }
+                    Err(e) => {
+                        summary.record_error(RowError::new(
+                            line_num,
+                            None,
+                            format!("Database error: {}", e),
+                        ));
+                    }
+                }
+            }
+
+            Ok(summary)
+        })
+    }
+
+    /// Process and insert crypto transactions (with validation and deduplication)
+    fn process_crypto_transactions(
+        &self,
+        transactions: Vec<(usize, ImportCryptoTransaction)>,
+        format_name: &str,
+    ) -> Result<ImportSummary, IngestionError> {
+        self.process_crypto_transactions_internal(transactions, format_name, false)
+    }
+
+    /// Preview crypto transactions (validation and deduplication without inserts)
+    fn preview_crypto_transactions(
+        &self,
+        transactions: Vec<(usize, ImportCryptoTransaction)>,
+        format_name: &str,
+    ) -> Result<ImportSummary, IngestionError> {
+        self.process_crypto_transactions_internal(transactions, format_name, true)
+    }
+
+    fn process_crypto_transactions_internal(
+        &self,
+        transactions: Vec<(usize, ImportCryptoTransaction)>,
+        format_name: &str,
+        dry_run: bool,
+    ) -> Result<ImportSummary, IngestionError> {
+        self.with_db(|db| {
+            let mut summary = ImportSummary::new(format_name, "Crypto");
+
+            let wallet_lookup =
+                IngestionRepository::build_wallet_lookup(db).map_err(IngestionError::Database)?;
+            let coin_lookup =
+                IngestionRepository::build_coin_lookup(db).map_err(IngestionError::Database)?;
+
+            let existing = IngestionRepository::get_all_crypto_transactions(db)
+                .map_err(IngestionError::Database)?;
+            
+            let mut dedup_set: HashSet<CryptoDedupKey> = existing
+                .iter()
+                .map(|tx| {
+                    CryptoDedupKey::new(
+                        &tx.date,
+                        &tx.wallet_id,
+                        &tx.coin_id,
+                        &tx.transaction_type,
+                        tx.amount,
+                    )
+                })
+                .collect();
+
+            for (line_num, import_tx) in transactions {
+                if let Err(mut error) = validate_import_crypto_transaction(&import_tx, line_num) {
+                    error.raw_data = Some(format!("{:?}", import_tx));
+                    summary.record_error(error);
+                    continue;
+                }
+
+                // Resolve wallet
+                let wallet_key = import_tx.wallet.trim().to_lowercase();
+                let wallet = match wallet_lookup.get(&wallet_key) {
+                    Some(w) => w,
+                    None => {
+                        summary.record_error(RowError::new(
+                            line_num,
+                            Some("wallet"),
+                            format!("Wallet not found: '{}'", import_tx.wallet),
+                        ));
+                        continue;
+                    }
+                };
+
+                // Resolve coin
+                let symbol_key = import_tx.symbol.trim().to_lowercase();
+                let coin = match coin_lookup.get(&symbol_key) {
+                    Some(c) => c,
+                    None => {
+                        summary.record_error(RowError::new(
+                            line_num,
+                            Some("symbol"),
+                            format!("Crypto asset not found in catalog: '{}'", import_tx.symbol),
+                        ));
+                        continue;
+                    }
+                };
+
+                let tx_type = import_tx.transaction_type.trim().to_lowercase();
+                
+                let dedup_key = CryptoDedupKey::new(
+                    &import_tx.date,
+                    &wallet.id,
+                    &coin.id,
+                    &tx_type,
+                    import_tx.amount,
+                );
+
+                if dedup_set.contains(&dedup_key) {
+                    summary.record_skipped(
+                        "Duplicate crypto transaction (same date/wallet/coin/type/amount)",
+                    );
+                    continue;
+                }
+
+                if dry_run {
+                    dedup_set.insert(dedup_key);
+                    summary.record_inserted();
+                    continue;
+                }
+
+                let transaction = CryptoTransaction::new(
+                    Uuid::new_v4().to_string(),
+                    wallet.id.clone(),
+                    coin.id.clone(),
+                    coin.symbol.clone(),
+                    tx_type,
+                    import_tx.amount,
+                    import_tx.price_per_coin,
+                    import_tx.fee,
+                    import_tx.date.trim().to_string(),
+                    import_tx.notes.clone(),
+                );
+
+                match IngestionRepository::create_crypto_transaction(db, &transaction) {
+                    Ok(_) => {
+                        dedup_set.insert(dedup_key);
                         summary.record_inserted();
                     }
                     Err(e) => {

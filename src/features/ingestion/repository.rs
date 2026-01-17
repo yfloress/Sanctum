@@ -3,7 +3,10 @@
 //! Database operations for entity resolution and lookups during import.
 
 use crate::db::{Database, DbError};
-use crate::models::{Account, Habit, Transaction, TransactionCategory};
+use crate::models::{
+    Account, CryptoCatalogCoin, CryptoTransaction, CryptoWallet, Habit, Transaction,
+    TransactionCategory,
+};
 use std::collections::HashMap;
 
 /// Repository for ingestion-related database lookups
@@ -72,5 +75,54 @@ impl IngestionRepository {
     /// Creates a habit log
     pub fn create_habit_log(db: &Database, log: &crate::models::HabitLog) -> Result<(), DbError> {
         db.create_habit_log(log)
+    }
+
+    // ==================== Crypto Operations ====================
+
+    /// Builds a lookup map for crypto wallets (name_lowercase -> CryptoWallet)
+    pub fn build_wallet_lookup(db: &Database) -> Result<HashMap<String, CryptoWallet>, DbError> {
+        let wallets = db.get_wallets()?;
+        Ok(wallets
+            .into_iter()
+            .map(|w| (w.name.trim().to_lowercase(), w))
+            .collect())
+    }
+
+    /// Builds a lookup map for crypto coins (symbol_lowercase -> CryptoCatalogCoin)
+    pub fn build_coin_lookup(db: &Database) -> Result<HashMap<String, CryptoCatalogCoin>, DbError> {
+        // Get default coins
+        let mut coins = crate::features::crypto::api::default_coin_catalog();
+
+        // Add custom coins from settings
+        if let Ok(Some(raw)) = db.get_setting(crate::features::crypto::service::SETTING_CRYPTO_CUSTOM_COINS)
+            && !raw.trim().is_empty()
+            && let Ok(custom_coins) = serde_json::from_str::<Vec<CryptoCatalogCoin>>(&raw)
+        {
+            for mut coin in custom_coins {
+                coin.custom = true;
+                // Avoid duplicates if a custom coin has the same ID as a default one
+                if !coins.iter().any(|c| c.id == coin.id) {
+                    coins.push(coin);
+                }
+            }
+        }
+
+        Ok(coins
+            .into_iter()
+            .map(|c| (c.symbol.trim().to_lowercase(), c))
+            .collect())
+    }
+
+    /// Gets all existing crypto transactions for deduplication
+    pub fn get_all_crypto_transactions(db: &Database) -> Result<Vec<CryptoTransaction>, DbError> {
+        db.get_all_crypto_transactions()
+    }
+
+    /// Creates a crypto transaction
+    pub fn create_crypto_transaction(
+        db: &Database,
+        transaction: &CryptoTransaction,
+    ) -> Result<(), DbError> {
+        db.create_crypto_transaction(transaction)
     }
 }
