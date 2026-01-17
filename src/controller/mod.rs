@@ -167,6 +167,31 @@ fn normalize_habit_category(category: &str) -> Option<String> {
     }
 }
 
+fn ensure_default_settings(db: &Database) -> Result<(), ControllerError> {
+    let defaults = [
+        (SETTING_PREFERRED_CURRENCY, "USD"),
+        (SETTING_PREFERRED_LANGUAGE, "en"),
+        (SETTING_SESSION_TIMEOUT, "900"),
+        (SETTING_DARK_MODE, "true"),
+        (SETTING_AUTO_FETCH, "false"),
+        (SETTING_CRYPTO_PROXY_ENABLED, "false"),
+        (SETTING_CRYPTO_PROXY_URL, ""),
+    ];
+
+    for (key, value) in defaults {
+        let current = db
+            .get_setting(key)
+            .map_err(ControllerError::Database)?
+            .unwrap_or_default();
+        if current.trim().is_empty() {
+            db.set_setting(key, value)
+                .map_err(ControllerError::Database)?;
+        }
+    }
+
+    Ok(())
+}
+
 /// Validates basic password for opening an existing vault
 /// Only verifies it's not empty and doesn't exceed limit
 fn validate_password_basic(password: String) -> Result<SecretString, ControllerError> {
@@ -587,11 +612,14 @@ impl AppController {
         // Initialize vault
         let mut db = Database::init(db_path.clone(), &secret).map_err(ControllerError::Database)?;
 
+        ensure_default_settings(&db)?;
+
         // Apply configured session timeout (default 15 min)
-        let timeout = self
-            .get_app_setting(SETTING_SESSION_TIMEOUT)
-            .ok()
-            .and_then(|s| s.parse::<i64>().ok())
+        let timeout = db
+            .get_setting(SETTING_SESSION_TIMEOUT)
+            .map_err(ControllerError::Database)?
+            .unwrap_or_else(|| "900".to_string())
+            .parse::<i64>()
             .unwrap_or(900); // Default to 15 minutes
         db.set_session_timeout(timeout);
 
@@ -645,6 +673,8 @@ impl AppController {
             Ok(mut db) => {
                 // Success - reset rate limit
                 self.reset_persistent_rate_limit(&db_path);
+
+                ensure_default_settings(&db)?;
 
                 // Apply configured session timeout (default 15 min)
                 let timeout = db
