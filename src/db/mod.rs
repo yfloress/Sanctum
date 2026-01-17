@@ -509,7 +509,7 @@ impl Database {
     /// Gets seconds until session expires (for UI display)
     pub fn get_session_remaining(&self) -> Result<i64, DbError> {
         if self.session_timeout < 0 {
-            return Ok(-1);
+            return Ok(i64::MAX);
         }
 
         let last_activity: String = match self.conn.query_row(
