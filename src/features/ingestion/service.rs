@@ -9,7 +9,7 @@ use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
-use super::parsers::{detect_format, CsvParser, ImportParser, JsonV1Parser, TextParser};
+use super::parsers::{CsvParser, ImportParser, JsonV1Parser, TextParser, detect_format};
 use super::repository::IngestionRepository;
 use super::types::{
     CryptoDedupKey, ImportCryptoTransaction, ImportFormat, ImportHabitLog, ImportSummary,
@@ -181,8 +181,10 @@ impl IngestionService {
         // Import crypto transactions
         if !file.crypto_transactions.items.is_empty() || !file.crypto_transactions.errors.is_empty()
         {
-            let crypto_summary =
-                self.process_crypto_transactions(file.crypto_transactions.items, parser.format_name())?;
+            let crypto_summary = self.process_crypto_transactions(
+                file.crypto_transactions.items,
+                parser.format_name(),
+            )?;
             summary.merge(crypto_summary);
             for error in file.crypto_transactions.errors {
                 summary.record_error(error);
@@ -221,8 +223,10 @@ impl IngestionService {
 
         if !file.crypto_transactions.items.is_empty() || !file.crypto_transactions.errors.is_empty()
         {
-            let crypto_summary =
-                self.preview_crypto_transactions(file.crypto_transactions.items, parser.format_name())?;
+            let crypto_summary = self.preview_crypto_transactions(
+                file.crypto_transactions.items,
+                parser.format_name(),
+            )?;
             summary.merge(crypto_summary);
             for error in file.crypto_transactions.errors {
                 summary.record_error(error);
@@ -340,8 +344,10 @@ impl IngestionService {
         if !parsed.crypto_transactions.items.is_empty()
             || !parsed.crypto_transactions.errors.is_empty()
         {
-            let crypto_summary =
-                self.process_crypto_transactions(parsed.crypto_transactions.items, parser.format_name())?;
+            let crypto_summary = self.process_crypto_transactions(
+                parsed.crypto_transactions.items,
+                parser.format_name(),
+            )?;
             summary.merge(crypto_summary);
             for error in parsed.crypto_transactions.errors {
                 summary.record_error(error);
@@ -378,8 +384,10 @@ impl IngestionService {
         if !parsed.crypto_transactions.items.is_empty()
             || !parsed.crypto_transactions.errors.is_empty()
         {
-            let crypto_summary =
-                self.preview_crypto_transactions(parsed.crypto_transactions.items, parser.format_name())?;
+            let crypto_summary = self.preview_crypto_transactions(
+                parsed.crypto_transactions.items,
+                parser.format_name(),
+            )?;
             summary.merge(crypto_summary);
             for error in parsed.crypto_transactions.errors {
                 summary.record_error(error);
@@ -418,7 +426,9 @@ impl IngestionService {
                 self.process_transactions_with_db(db, transactions, format_name, dry_run)
             })
         } else {
-            self.with_db(|db| self.process_transactions_with_db(db, transactions, format_name, dry_run))
+            self.with_db(|db| {
+                self.process_transactions_with_db(db, transactions, format_name, dry_run)
+            })
         }
     }
 
@@ -496,7 +506,11 @@ impl IngestionService {
             }
 
             let tx_type = import_tx.transaction_type.trim().to_lowercase();
-            let category_type = if tx_type == "income" { "income" } else { "expense" };
+            let category_type = if tx_type == "income" {
+                "income"
+            } else {
+                "expense"
+            };
 
             if tx_type != "transfer" {
                 let category_key = (
@@ -509,10 +523,7 @@ impl IngestionService {
                         Some("category"),
                         t_args(
                             "import-error-category-not-found-detail",
-                            &[
-                                ("name", import_tx.category.trim()),
-                                ("type", category_type),
-                            ],
+                            &[("name", import_tx.category.trim()), ("type", category_type)],
                         ),
                     ));
                     continue;
@@ -571,8 +582,11 @@ impl IngestionService {
 
                 if dry_run {
                     dedup_set.insert(dedup_key);
-                    let amount_fmt =
-                        format!("{:.2} {}", (amount_cents.abs() as f64) / 100.0, account.currency);
+                    let amount_fmt = format!(
+                        "{:.2} {}",
+                        (amount_cents.abs() as f64) / 100.0,
+                        account.currency
+                    );
                     summary.record_preview_change(
                         &t("import-preview-change-transfer"),
                         if amount_cents < 0 {
@@ -745,7 +759,10 @@ impl IngestionService {
                     summary.record_error(RowError::new(
                         line_num,
                         Some("habit"),
-                        t_args("import-error-habit-not-found", &[("name", import_log.habit.trim())]),
+                        t_args(
+                            "import-error-habit-not-found",
+                            &[("name", import_log.habit.trim())],
+                        ),
                     ));
                     continue;
                 }
@@ -875,6 +892,11 @@ impl IngestionService {
             })
             .collect();
 
+        // Track pending balance changes for dry_run validation
+        // Key: (wallet_id, coin_id), Value: pending balance delta
+        let mut pending_balance_changes: std::collections::HashMap<(String, String), f64> =
+            std::collections::HashMap::new();
+
         for (line_num, import_tx) in transactions {
             if let Err(mut error) = validate_import_crypto_transaction(&import_tx, line_num) {
                 error.raw_data = Some(format!("{:?}", import_tx));
@@ -890,7 +912,10 @@ impl IngestionService {
                     summary.record_error(RowError::new(
                         line_num,
                         Some("wallet"),
-                        t_args("import-error-wallet-not-found", &[("name", import_tx.wallet.trim())]),
+                        t_args(
+                            "import-error-wallet-not-found",
+                            &[("name", import_tx.wallet.trim())],
+                        ),
                     ));
                     continue;
                 }
@@ -915,6 +940,51 @@ impl IngestionService {
 
             let tx_type = import_tx.transaction_type.trim().to_lowercase();
 
+            // Validate balance for sell and transfer_out operations
+            if tx_type == "sell" || tx_type == "transfer_out" {
+                let db_balance = match IngestionRepository::get_wallet_coin_balance(
+                    db,
+                    &wallet.id,
+                    &coin.id,
+                    import_tx.date.trim(),
+                ) {
+                    Ok(b) => b,
+                    Err(e) => {
+                        summary.record_error(RowError::new(
+                            line_num,
+                            None,
+                            format!("Database error checking balance: {}", e),
+                        ));
+                        continue;
+                    }
+                };
+
+                // Include pending changes from previous transactions in this import batch
+                let balance_key = (wallet.id.clone(), coin.id.clone());
+                let pending_delta = pending_balance_changes
+                    .get(&balance_key)
+                    .copied()
+                    .unwrap_or(0.0);
+                let available_balance = db_balance + pending_delta;
+
+                if available_balance < import_tx.amount {
+                    summary.record_error(RowError::new(
+                        line_num,
+                        Some("amount"),
+                        t_args(
+                            "import-error-insufficient-crypto-balance",
+                            &[
+                                ("symbol", coin.symbol.as_str()),
+                                ("wallet", wallet.name.as_str()),
+                                ("available", &format!("{:.8}", available_balance)),
+                                ("required", &format!("{:.8}", import_tx.amount)),
+                            ],
+                        ),
+                    ));
+                    continue;
+                }
+            }
+
             let dedup_key = CryptoDedupKey::new(
                 &import_tx.date,
                 &wallet.id,
@@ -927,6 +997,15 @@ impl IngestionService {
                 summary.record_skipped(&skipped_duplicate);
                 continue;
             }
+
+            // Update pending balance changes for subsequent validations
+            let balance_key = (wallet.id.clone(), coin.id.clone());
+            let delta = match tx_type.as_str() {
+                "buy" | "transfer_in" => import_tx.amount,
+                "sell" | "transfer_out" => -import_tx.amount,
+                _ => 0.0,
+            };
+            *pending_balance_changes.entry(balance_key).or_insert(0.0) += delta;
 
             if dry_run {
                 dedup_set.insert(dedup_key);

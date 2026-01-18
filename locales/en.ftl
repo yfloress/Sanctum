@@ -725,6 +725,7 @@ import-error-destination-account-not-found = Destination account not found: { $n
 import-error-same-account-transfer = Cannot transfer to the same account
 import-error-wallet-not-found = Wallet not found: { $name }
 import-error-crypto-not-found = Crypto asset not found in catalog: { $symbol }
+import-error-insufficient-crypto-balance = Insufficient { $symbol } balance in { $wallet }: have { $available }, need { $required }
 import-skipped-duplicate-transaction = Duplicate transaction (same date/account/amount/type/description)
 import-skipped-habit-not-completed = Habit not completed (completed=false)
 import-skipped-habit-already-logged = Habit already logged for this date

@@ -725,6 +725,7 @@ import-error-destination-account-not-found = Cuenta destino no encontrada: { $na
 import-error-same-account-transfer = No se puede transferir a la misma cuenta
 import-error-wallet-not-found = Wallet no encontrada: { $name }
 import-error-crypto-not-found = Activo crypto no encontrado en el catálogo: { $symbol }
+import-error-insufficient-crypto-balance = Balance insuficiente de { $symbol } en { $wallet }: tiene { $available }, necesita { $required }
 import-skipped-duplicate-transaction = Transacción duplicada (misma fecha/cuenta/monto/tipo/descripción)
 import-skipped-habit-not-completed = Hábito no completado (completed=false)
 import-skipped-habit-already-logged = Hábito ya registrado para esta fecha

@@ -94,7 +94,8 @@ impl IngestionRepository {
         let mut coins = crate::features::crypto::api::default_coin_catalog();
 
         // Add custom coins from settings
-        if let Ok(Some(raw)) = db.get_setting(crate::features::crypto::service::SETTING_CRYPTO_CUSTOM_COINS)
+        if let Ok(Some(raw)) =
+            db.get_setting(crate::features::crypto::service::SETTING_CRYPTO_CUSTOM_COINS)
             && !raw.trim().is_empty()
             && let Ok(custom_coins) = serde_json::from_str::<Vec<CryptoCatalogCoin>>(&raw)
         {
@@ -124,5 +125,15 @@ impl IngestionRepository {
         transaction: &CryptoTransaction,
     ) -> Result<(), DbError> {
         db.create_crypto_transaction(transaction)
+    }
+
+    /// Gets the balance of a coin in a wallet at a specific date
+    pub fn get_wallet_coin_balance(
+        db: &Database,
+        wallet_id: &str,
+        coin_id: &str,
+        date: &str,
+    ) -> Result<f64, DbError> {
+        db.get_wallet_coin_balance_at(wallet_id, coin_id, date, None)
     }
 }

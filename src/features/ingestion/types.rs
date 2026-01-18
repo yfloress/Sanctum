@@ -3,7 +3,6 @@
 //! Contains intermediate representations for imported data and result summaries.
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 
 /// File format detection result
@@ -74,19 +73,6 @@ pub struct ImportCryptoTransaction {
     pub fee: Option<f64>, // Fee in USD
     #[serde(default)]
     pub notes: Option<String>,
-}
-
-/// JSON v1 file structure (Sanctum Web export)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct JsonV1File {
-    pub version: String,
-    pub exported_at: Option<String>,
-    #[serde(default)]
-    pub transactions: Vec<ImportTransaction>,
-    #[serde(default)]
-    pub habit_logs: Vec<ImportHabitLog>,
-    #[serde(default)]
-    pub crypto_transactions: Vec<ImportCryptoTransaction>,
 }
 
 /// Error details for a single row
@@ -239,11 +225,6 @@ impl Hash for TransactionDedupKey {
         self.transaction_type.hash(state);
         self.description_normalized.hash(state);
     }
-}
-
-/// Builds a deduplication set from import transactions
-pub fn build_dedup_set(keys: impl IntoIterator<Item = TransactionDedupKey>) -> HashSet<TransactionDedupKey> {
-    keys.into_iter().collect()
 }
 
 /// Deduplication key for crypto transactions
