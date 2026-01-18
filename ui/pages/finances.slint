@@ -624,7 +624,7 @@ export component FinancesPage inherits Rectangle {
                         // Total Value
                         Text {
                             text: AccountAdapter.total-balance;
-                            color: Theme.text-primary;
+                            color: AccountAdapter.total-balance-negative ? Theme.danger : Theme.text-primary;
                             font-size: 48px;
                             font-weight: 300;
                             letter-spacing: -1px;

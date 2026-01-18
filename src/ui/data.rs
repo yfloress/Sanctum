@@ -4,7 +4,10 @@
 //! These are mapped to Slint-generated types in main.rs.
 
 use crate::controller::AppController;
-use crate::ui::{convert_currency, format_category_label, format_decimal_from_cents, format_money};
+use crate::ui::{
+    convert_currency, format_category_label, format_decimal_from_cents, format_money,
+    format_money_signed,
+};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -19,6 +22,7 @@ pub struct AccountDisplayData {
     pub icon_path: Option<String>,
     pub currency: String,
     pub balance: String,
+    pub balance_negative: bool,
     pub initial_balance: String,
     pub is_archived: bool,
 }
@@ -27,6 +31,7 @@ pub struct AccountDisplayData {
 pub struct AccountsState {
     pub accounts: Vec<AccountDisplayData>,
     pub total_balance: String,
+    pub total_balance_negative: bool,
 }
 
 pub fn load_accounts_state(
@@ -89,7 +94,8 @@ pub fn load_accounts_state(
                 account_type_key: acc.account_type.clone(),
                 icon_path: acc.icon.clone(),
                 currency: acc.currency.clone(),
-                balance: format_money(current_balance, &acc.currency),
+                balance: format_money_signed(current_balance, &acc.currency),
+                balance_negative: current_balance < 0,
                 initial_balance: format_decimal_from_cents(acc.initial_balance),
                 is_archived: acc.is_archived,
             }
@@ -98,7 +104,8 @@ pub fn load_accounts_state(
 
     Ok(AccountsState {
         accounts: mapped,
-        total_balance: format_money(total_preferred_cents, preferred_currency),
+        total_balance: format_money_signed(total_preferred_cents, preferred_currency),
+        total_balance_negative: total_preferred_cents < 0,
     })
 }
 

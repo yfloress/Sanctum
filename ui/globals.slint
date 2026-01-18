@@ -15,6 +15,7 @@ export struct AccountData {
     icon-path: string,
     currency: string,
     balance: string,        // Pre-formatted string e.g. "$ 12,500.00"
+    balance-negative: bool,
     initial-balance: string, // Raw decimal string e.g. "12500.00"
     is-archived: bool,
 }
@@ -353,6 +354,7 @@ export global AccountAdapter {
     // List of accounts (populated from Rust backend)
     in-out property <[AccountData]> accounts: [];
     in-out property <string> total-balance: "$ 0.00";
+    in-out property <bool> total-balance-negative: false;
     in-out property <bool> is-loading: false;
     in-out property <string> edit-account-id: "";
     in-out property <string> edit-account-icon: "";
@@ -361,6 +363,7 @@ export global AccountAdapter {
     in-out property <string> selected-account-type: "";
     in-out property <string> selected-account-currency: "";
     in-out property <string> selected-account-balance: "$ 0.00";
+    in-out property <bool> selected-account-balance-negative: false;
     in-out property <image> selected-account-icon;
     in-out property <string> selected-account-icon-path: "";
     in-out property <[TransactionData]> account-history: [];

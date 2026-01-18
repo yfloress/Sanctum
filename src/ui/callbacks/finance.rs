@@ -4,8 +4,8 @@
 
 use crate::controller::AppController;
 use crate::ui::{
-    format_category_label, format_decimal_from_cents, format_money, load_account_icon,
-    normalize_account_type, parse_amount_input,
+    format_category_label, format_decimal_from_cents, format_money, format_money_signed,
+    load_account_icon, normalize_account_type, parse_amount_input,
 };
 use crate::{
     AccountAdapter, AnalyticsAdapter, AppState, AppWindow, CategoryAdapter, DashboardAdapter,
@@ -243,10 +243,11 @@ pub fn setup_account_callbacks<F, G, H, N>(
                     adapter.set_selected_account_name(SharedString::from(&account.name));
                     adapter.set_selected_account_type(SharedString::from(account_type));
                     adapter.set_selected_account_currency(SharedString::from(&account.currency));
-                    adapter.set_selected_account_balance(SharedString::from(format_money(
+                    adapter.set_selected_account_balance(SharedString::from(format_money_signed(
                         balance_cents,
                         &account.currency,
                     )));
+                    adapter.set_selected_account_balance_negative(balance_cents < 0);
                     adapter.set_selected_account_icon(load_account_icon(account.icon.clone()));
                     adapter.set_selected_account_icon_path(SharedString::from(
                         account.icon.clone().unwrap_or_default(),

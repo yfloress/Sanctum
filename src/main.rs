@@ -376,6 +376,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 icon_path: acc.icon_path.unwrap_or_default().into(),
                 currency: acc.currency.into(),
                 balance: acc.balance.into(),
+                balance_negative: acc.balance_negative,
                 initial_balance: acc.initial_balance.into(),
                 is_archived: acc.is_archived,
             })
@@ -385,6 +386,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let account_adapter = ui.global::<AccountAdapter>();
             account_adapter.set_accounts(ModelRc::new(VecModel::from(mapped)));
             account_adapter.set_total_balance(state.total_balance.into());
+            account_adapter.set_total_balance_negative(state.total_balance_negative);
             account_adapter.set_is_loading(false);
         }
 

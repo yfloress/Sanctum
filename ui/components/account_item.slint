@@ -153,7 +153,7 @@ export component AccountItem inherits Rectangle {
 
             Text {
                 text: account.balance;
-                color: Theme.text-primary;
+                color: account.balance-negative ? Theme.danger : Theme.text-primary;
                 font-size: 18px;
                 font-weight: 600;
                 letter-spacing: 0.5px;

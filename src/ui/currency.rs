@@ -78,3 +78,12 @@ pub fn format_money(amount_cents: i64, currency: &str) -> String {
         format!("{code} {}", format_amount_usd(amount_cents))
     }
 }
+
+/// Formats cents with a leading minus sign if negative.
+pub fn format_money_signed(amount_cents: i64, currency: &str) -> String {
+    if amount_cents < 0 {
+        format!("- {}", format_money(amount_cents.abs(), currency))
+    } else {
+        format_money(amount_cents, currency)
+    }
+}

@@ -249,7 +249,7 @@ export component AccountDetailPanel inherits Rectangle {
 
                     Text {
                         text: AccountAdapter.selected-account-balance;
-                        color: Theme.text-secondary;
+                        color: AccountAdapter.selected-account-balance-negative ? Theme.danger : Theme.text-secondary;
                         font-size: 13px;
                     }
                 }
