@@ -506,6 +506,35 @@ impl Database {
         Ok(())
     }
 
+    /// Checks session timeout without mutating session_info
+    pub fn check_session_timeout_readonly(&self) -> Result<(), DbError> {
+        if self.session_timeout < 0 {
+            return Ok(());
+        }
+
+        let last_activity: String = match self.conn.query_row(
+            "SELECT last_activity FROM session_info WHERE id = 1",
+            [],
+            |row| row.get(0),
+        ) {
+            Ok(value) => value,
+            Err(RusqliteError::QueryReturnedNoRows) => {
+                return Ok(());
+            }
+            Err(e) => return Err(DbError::Sqlite(e)),
+        };
+
+        if let Ok(last) = DateTime::parse_from_rfc3339(&last_activity) {
+            let now = Utc::now();
+            if now.signed_duration_since(last.with_timezone(&Utc))
+                > Duration::seconds(self.session_timeout)
+            {
+                return Err(DbError::SessionExpired);
+            }
+        }
+        Ok(())
+    }
+
     /// Gets seconds until session expires (for UI display)
     pub fn get_session_remaining(&self) -> Result<i64, DbError> {
         if self.session_timeout < 0 {

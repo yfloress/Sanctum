@@ -4,6 +4,7 @@ import { ImportErrorData, IngestionAdapter, ImportPreviewChange } from "../globa
 import { Theme } from "../theme.slint";
 import { Translations } from "../translations.slint";
 import { SummaryPill } from "summary_pill.slint";
+import { CustomVScrollbar } from "../widgets.slint";
 
 // ==================== Change Row ====================
 component ChangeRow inherits Rectangle {
@@ -208,7 +209,7 @@ export component ImportSummaryPanel inherits VerticalLayout {
     }
 
     // Preview changes list
-    if IngestionAdapter.import-preview-changes.length > 0 && IngestionAdapter.import-errors == 0: VerticalLayout {
+    if IngestionAdapter.import-preview-changes.length > 0: VerticalLayout {
         spacing: 8px;
 
         Text {
@@ -227,7 +228,7 @@ export component ImportSummaryPanel inherits VerticalLayout {
             border-color: Theme.border;
             clip: true;
 
-            Flickable {
+            preview-scroll := Flickable {
                 width: parent.width;
                 height: parent.height;
                 viewport-height: IngestionAdapter.import-preview-changes.length * 70px;
@@ -240,6 +241,15 @@ export component ImportSummaryPanel inherits VerticalLayout {
                         change: change;
                     }
                 }
+            }
+
+            CustomVScrollbar {
+                x: parent.width - self.width - 4px;
+                y: 0;
+                height: parent.height;
+                visible-height: parent.height;
+                viewport-height: preview-scroll.viewport-height;
+                viewport-y: preview-scroll.viewport-y;
             }
         }
     }
@@ -264,7 +274,7 @@ export component ImportSummaryPanel inherits VerticalLayout {
             border-color: Theme.border;
             clip: true;
 
-            Flickable {
+            error-scroll := Flickable {
                 width: parent.width;
                 height: parent.height;
                 viewport-height: IngestionAdapter.import-error-details.length * 70px;
@@ -277,6 +287,15 @@ export component ImportSummaryPanel inherits VerticalLayout {
                         error: err;
                     }
                 }
+            }
+
+            CustomVScrollbar {
+                x: parent.width - self.width - 4px;
+                y: 0;
+                height: parent.height;
+                visible-height: parent.height;
+                viewport-height: error-scroll.viewport-height;
+                viewport-y: error-scroll.viewport-y;
             }
         }
     }

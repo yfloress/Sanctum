@@ -719,6 +719,16 @@ import-error-habit-not-found = Hábito no encontrado: { $name }
 import-error-category-not-found = Categoría no encontrada: { $name }
 import-error-currency-mismatch = Moneda no coincide para la cuenta { $account }
 import-error-duplicate = Entrada duplicada omitida
+import-error-currency-mismatch-detail = Moneda incompatible: la importación tiene { $import } pero la cuenta { $account } usa { $expected }
+import-error-category-not-found-detail = Categoría no encontrada: { $name } (tipo: { $type })
+import-error-destination-account-not-found = Cuenta destino no encontrada: { $name }
+import-error-same-account-transfer = No se puede transferir a la misma cuenta
+import-error-wallet-not-found = Wallet no encontrada: { $name }
+import-error-crypto-not-found = Activo crypto no encontrado en el catálogo: { $symbol }
+import-skipped-duplicate-transaction = Transacción duplicada (misma fecha/cuenta/monto/tipo/descripción)
+import-skipped-habit-not-completed = Hábito no completado (completed=false)
+import-skipped-habit-already-logged = Hábito ya registrado para esta fecha
+import-skipped-duplicate-crypto = Transacción crypto duplicada (misma fecha/wallet/moneda/tipo/monto)
 
 import-format-json = JSON (Exportación de Sanctum Web)
 import-format-csv = CSV (Excel/Sheets)

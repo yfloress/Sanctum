@@ -5,6 +5,7 @@ import { IngestionAdapter } from "../globals.slint";
 import { Theme } from "../theme.slint";
 import { Translations } from "../translations.slint";
 import { ImportSummaryPanel } from "../components/import_summary_panel.slint";
+import { CustomVScrollbar } from "../widgets.slint";
 
 export component ImportPreviewModal inherits Rectangle {
     callback close();
@@ -31,6 +32,15 @@ export component ImportPreviewModal inherits Rectangle {
         width: 100%;
         height: 100%;
         background: Theme.overlay;
+
+        Flickable {
+            width: 100%;
+            height: 100%;
+            interactive: false;
+            viewport-width: parent.width;
+            viewport-height: parent.height;
+        }
+
         TouchArea {
             clicked => {
                 close-modal();
@@ -56,8 +66,8 @@ export component ImportPreviewModal inherits Rectangle {
 
     // Modal panel
     Rectangle {
-        width: min(540px, parent.width - 40px);
-        height: min(580px, parent.height - 40px);
+        width: min(Theme.modal-width-lg, parent.width - 40px);
+        height: min(Theme.modal-height-lg, parent.height - 40px);
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
         background: @linear-gradient(180deg, Theme.sidebar-bg 0%, Theme.modal-bg-end 100%);
@@ -69,82 +79,115 @@ export component ImportPreviewModal inherits Rectangle {
         drop-shadow-color: #00000040;
 
         VerticalLayout {
-            padding: 28px;
-            spacing: 20px;
+            padding: 0px;
+            spacing: 0px;
 
-            // Header
-            HorizontalLayout {
-                height: 32px;
+            Rectangle {
+                horizontal-stretch: 1;
+                vertical-stretch: 1;
+                clip: true;
 
-                HorizontalLayout {
-                    spacing: 12px;
-                    horizontal-stretch: 1;
+                body := Flickable {
+                    width: parent.width;
+                    height: parent.height;
 
-                    Rectangle {
-                        width: 4px;
-                        height: 20px;
-                        border-radius: 2px;
-                        background: @linear-gradient(180deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
-                        y: (parent.height - self.height) / 2;
-                    }
+                    content-root := VerticalLayout {
+                        width: parent.width;
+                        spacing: 20px;
+                        padding-left: 28px;
+                        padding-right: 28px;
+                        padding-top: 28px;
+                        padding-bottom: 20px;
 
-                    Text {
-                        text: Translations.import-preview-title;
-                        color: Theme.text-primary;
-                        font-size: 16px;
-                        font-weight: 500;
-                        letter-spacing: 2px;
-                        vertical-alignment: center;
-                    }
-                }
+                        // Header
+                        HorizontalLayout {
+                            height: 32px;
 
-                Rectangle {
-                    width: 32px;
-                    height: 32px;
-                    border-radius: 8px;
-                    background: close-touch.has-hover ? Theme.surface-hover : transparent;
+                            HorizontalLayout {
+                                spacing: 12px;
+                                horizontal-stretch: 1;
 
-                    Image {
-                        source: @image-url("../assets/icons/x.svg");
-                        width: 16px;
-                        height: 16px;
-                        colorize: close-touch.has-hover ? Theme.text-primary : Theme.text-muted;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
-                    }
+                                Rectangle {
+                                    width: 4px;
+                                    height: 20px;
+                                    border-radius: 2px;
+                                    background: @linear-gradient(180deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
+                                    y: (parent.height - self.height) / 2;
+                                }
 
-                    close-touch := TouchArea {
-                        mouse-cursor: pointer;
-                        clicked => {
-                            close-modal();
+                                Text {
+                                    text: Translations.import-preview-title;
+                                    color: Theme.text-primary;
+                                    font-size: 16px;
+                                    font-weight: 500;
+                                    letter-spacing: 2px;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            Rectangle {
+                                width: 32px;
+                                height: 32px;
+                                border-radius: 8px;
+                                background: close-touch.has-hover ? Theme.surface-hover : transparent;
+
+                                Image {
+                                    source: @image-url("../assets/icons/x.svg");
+                                    width: 16px;
+                                    height: 16px;
+                                    colorize: close-touch.has-hover ? Theme.text-primary : Theme.text-muted;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+
+                                close-touch := TouchArea {
+                                    mouse-cursor: pointer;
+                                    clicked => {
+                                        close-modal();
+                                    }
+                                }
+                            }
+                        }
+
+                        // Subtitle
+                        Text {
+                            text: Translations.import-preview-subtitle;
+                            color: Theme.text-muted;
+                            font-size: 12px;
+                            horizontal-alignment: center;
+                            wrap: word-wrap;
+                        }
+
+                        // Summary panel
+                        ImportSummaryPanel {
+                            show-file-info: true;
+                            error-list-height: 150;
+                        }
+
+                        Rectangle {
+                            height: 8px;
                         }
                     }
                 }
-            }
 
-            // Subtitle
-            Text {
-                text: Translations.import-preview-subtitle;
-                color: Theme.text-muted;
-                font-size: 12px;
-                horizontal-alignment: center;
-                wrap: word-wrap;
-            }
-
-            // Summary panel
-            ImportSummaryPanel {
-                show-file-info: true;
-                error-list-height: 130;
-            }
-
-            // Spacer
-            Rectangle {
-                vertical-stretch: 1;
+                CustomVScrollbar {
+                    x: parent.width - self.width - 6px;
+                    y: 0;
+                    height: parent.height;
+                    visible-height: parent.height;
+                    viewport-height: body.viewport-height;
+                    viewport-y: body.viewport-y;
+                }
             }
 
             // Action buttons
             HorizontalLayout {
+                horizontal-stretch: 1;
                 spacing: 12px;
+                padding-left: 28px;
+                padding-right: 28px;
+                padding-bottom: 28px;
+                padding-top: 12px;
 
                 // Cancel Button
                 cancel-btn := Rectangle {

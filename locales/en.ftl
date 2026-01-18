@@ -719,6 +719,16 @@ import-error-habit-not-found = Habit not found: { $name }
 import-error-category-not-found = Category not found: { $name }
 import-error-currency-mismatch = Currency mismatch for account { $account }
 import-error-duplicate = Duplicate entry skipped
+import-error-currency-mismatch-detail = Currency mismatch: import has { $import } but account { $account } uses { $expected }
+import-error-category-not-found-detail = Category not found: { $name } (type: { $type })
+import-error-destination-account-not-found = Destination account not found: { $name }
+import-error-same-account-transfer = Cannot transfer to the same account
+import-error-wallet-not-found = Wallet not found: { $name }
+import-error-crypto-not-found = Crypto asset not found in catalog: { $symbol }
+import-skipped-duplicate-transaction = Duplicate transaction (same date/account/amount/type/description)
+import-skipped-habit-not-completed = Habit not completed (completed=false)
+import-skipped-habit-already-logged = Habit already logged for this date
+import-skipped-duplicate-crypto = Duplicate crypto transaction (same date/wallet/coin/type/amount)
 
 import-format-json = JSON (Sanctum Web Export)
 import-format-csv = CSV (Excel/Sheets)
