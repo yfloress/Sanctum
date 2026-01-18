@@ -9,6 +9,7 @@ component BankIconOption inherits Rectangle {
     in property <string> icon-path;
     in property <string> label: "";
     in property <string> selected-path: "";
+    in property <bool> colorize-icon: false;
     callback clicked;
 
     property <bool> is-selected: icon-path == selected-path;
@@ -36,7 +37,16 @@ component BankIconOption inherits Rectangle {
             border-color: Theme.border-subtle;
             x: (parent.width - self.width) / 2;
 
-            Image {
+            if root.colorize-icon: Image {
+                source: root.icon;
+                width: 22px;
+                height: 22px;
+                colorize: Theme.text-light;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+            }
+
+            if !root.colorize-icon: Image {
                 source: root.icon;
                 width: 22px;
                 height: 22px;
@@ -68,7 +78,7 @@ export component BankIconSelector inherits Rectangle {
     callback icon-changed(string);
 
     function get-default-icon() -> string {
-        return "../assets/icons/building-2.svg";
+        return "../assets/icons/landmark.svg";
     }
 
     init => {
@@ -205,10 +215,11 @@ export component BankIconSelector inherits Rectangle {
                         alignment: center;
                         width: parent.width;
                         BankIconOption {
-                            icon: @image-url("../assets/icons/building-2.svg");
-                            icon-path: "../assets/icons/building-2.svg";
+                            icon: @image-url("../assets/icons/landmark.svg");
+                            icon-path: "../assets/icons/landmark.svg";
                             selected-path: root.selected-icon;
                             label: "Generic";
+                            colorize-icon: true;
                             clicked => {
                                 root.selected-icon = self.icon-path;
                                 root.icon-changed(self.icon-path);

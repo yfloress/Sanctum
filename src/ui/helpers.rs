@@ -9,6 +9,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 pub const CRYPTO_ICON_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/ui/assets/crypto-icons");
+pub const GENERIC_BANK_ICON_PATH: &str = "../assets/icons/landmark.svg";
 
 pub const HABIT_COLOR_CHOICES: [&str; 16] = [
     "#8b5cf6", "#ec4899", "#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16", "#22c55e",
@@ -97,6 +98,15 @@ pub fn normalize_account_type(value: &str) -> String {
         "credit" | "credit card" | "credit_card" => "credit_card".to_string(),
         "other" => "other".to_string(),
         _ => normalized,
+    }
+}
+
+pub fn normalize_bank_icon_path(icon_path: Option<String>) -> Option<String> {
+    let path = icon_path?.trim().to_string();
+    if path.is_empty() || path == GENERIC_BANK_ICON_PATH {
+        None
+    } else {
+        Some(path)
     }
 }
 

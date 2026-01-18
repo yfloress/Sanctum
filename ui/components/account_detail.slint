@@ -143,9 +143,9 @@ export component AccountDetailPanel inherits Rectangle {
                     width: 52px;
                     height: 52px;
                     border-radius: 26px;
-                    background: @linear-gradient(135deg, Theme.crypto-icon-gradient-start 0%, Theme.crypto-icon-gradient-end 100%);
+                    background: AccountAdapter.selected-account-icon.width > 0 ? Theme.surface : @linear-gradient(135deg, Theme.crypto-icon-gradient-start 0%, Theme.crypto-icon-gradient-end 100%);
                     border-width: 1px;
-                    border-color: Theme.border-subtle;
+                    border-color: AccountAdapter.selected-account-icon.width > 0 ? Theme.border : Theme.border-subtle;
                     y: (parent.height - self.height) / 2;
 
                     if AccountAdapter.selected-account-icon.width > 0: Image {
@@ -156,8 +156,17 @@ export component AccountDetailPanel inherits Rectangle {
                         y: (parent.height - self.height) / 2;
                     }
 
-                    if AccountAdapter.selected-account-icon.width == 0: Image {
-                        source: AccountAdapter.selected-account-type == "Bank" ? @image-url("../assets/icons/building-2.svg") : (AccountAdapter.selected-account-type == "Cash" ? @image-url("../assets/icons/banknote.svg") : (AccountAdapter.selected-account-type == "Savings" ? @image-url("../assets/icons/piggy-bank.svg") : (AccountAdapter.selected-account-type == "Credit Card" ? @image-url("../assets/icons/credit-card.svg") : @image-url("../assets/icons/wallet.svg"))));
+                    if AccountAdapter.selected-account-icon.width == 0 && AccountAdapter.selected-account-type == "Bank": Image {
+                        source: @image-url("../assets/icons/landmark.svg");
+                        width: 22px;
+                        height: 22px;
+                        colorize: Theme.text-light;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+
+                    if AccountAdapter.selected-account-icon.width == 0 && AccountAdapter.selected-account-type != "Bank": Image {
+                        source: AccountAdapter.selected-account-type == "Cash" ? @image-url("../assets/icons/banknote.svg") : (AccountAdapter.selected-account-type == "Savings" ? @image-url("../assets/icons/piggy-bank.svg") : (AccountAdapter.selected-account-type == "Credit Card" ? @image-url("../assets/icons/credit-card.svg") : @image-url("../assets/icons/wallet.svg")));
                         width: 22px;
                         height: 22px;
                         colorize: Theme.text-primary;
@@ -165,7 +174,7 @@ export component AccountDetailPanel inherits Rectangle {
                         y: (parent.height - self.height) / 2;
                     }
 
-                    if root.editing-name: Rectangle {
+                    if root.editing-name && AccountAdapter.selected-account-type == "Bank": Rectangle {
                         width: 20px;
                         height: 20px;
                         border-radius: 6px;

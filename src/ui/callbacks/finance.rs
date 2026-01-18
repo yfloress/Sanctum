@@ -5,7 +5,7 @@
 use crate::controller::AppController;
 use crate::ui::{
     format_category_label, format_decimal_from_cents, format_money, format_money_signed,
-    load_account_icon, normalize_account_type, parse_amount_input,
+    load_account_icon, normalize_account_type, normalize_bank_icon_path, parse_amount_input,
 };
 use crate::{
     AccountAdapter, AnalyticsAdapter, AppState, AppWindow, CategoryAdapter, DashboardAdapter,
@@ -239,6 +239,17 @@ pub fn setup_account_callbacks<F, G, H, N>(
 
                 if let Some(ui) = ui_weak.upgrade() {
                     let adapter = ui.global::<AccountAdapter>();
+                    let is_bank = account.account_type.eq_ignore_ascii_case("bank");
+                    let icon_path = if is_bank {
+                        normalize_bank_icon_path(account.icon.clone())
+                    } else {
+                        None
+                    };
+                    let icon = if is_bank {
+                        load_account_icon(icon_path.clone())
+                    } else {
+                        load_account_icon(None)
+                    };
                     adapter.set_selected_account_id(SharedString::from(&account.id));
                     adapter.set_selected_account_name(SharedString::from(&account.name));
                     adapter.set_selected_account_type(SharedString::from(account_type));
@@ -248,9 +259,9 @@ pub fn setup_account_callbacks<F, G, H, N>(
                         &account.currency,
                     )));
                     adapter.set_selected_account_balance_negative(balance_cents < 0);
-                    adapter.set_selected_account_icon(load_account_icon(account.icon.clone()));
+                    adapter.set_selected_account_icon(icon);
                     adapter.set_selected_account_icon_path(SharedString::from(
-                        account.icon.clone().unwrap_or_default(),
+                        icon_path.unwrap_or_default(),
                     ));
                     adapter.set_account_history(ModelRc::new(VecModel::from(mapped)));
                 }
@@ -285,7 +296,9 @@ pub fn setup_account_callbacks<F, G, H, N>(
                             adapter.set_edit_account_id(SharedString::from(&id));
                             adapter.set_edit_account_icon(SharedString::from(""));
                             ui.global::<AppState>().set_show_add_account(false);
-                            ui.global::<AppState>().set_show_edit_account_icon(true);
+                            if account_type_key == "bank" {
+                                ui.global::<AppState>().set_show_edit_account_icon(true);
+                            }
                             ui.global::<AnalyticsAdapter>()
                                 .invoke_fetch_analytics("ALL".into());
                         }
@@ -465,11 +478,11 @@ pub fn setup_account_callbacks<F, G, H, N>(
         let notify = notify.clone();
         ui.global::<AccountAdapter>()
             .on_update_account_icon(move |id, icon| -> SharedString {
-                let icon_path = if icon.is_empty() {
+                let icon_path = normalize_bank_icon_path(if icon.is_empty() {
                     None
                 } else {
                     Some(icon.to_string())
-                };
+                });
                 match controller.update_account_icon(id.to_string(), icon_path.clone()) {
                     Ok(_) => {
                         let _ = reload_accounts(&ui_weak, &controller);

@@ -6,7 +6,7 @@
 use crate::controller::AppController;
 use crate::ui::{
     convert_currency, format_category_label, format_decimal_from_cents, format_money,
-    format_money_signed,
+    format_money_signed, normalize_bank_icon_path,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -87,12 +87,19 @@ pub fn load_accounts_state(
                 _ => acc.account_type.as_str(),
             };
 
+            let is_bank = acc.account_type.eq_ignore_ascii_case("bank");
+            let icon_path = if is_bank {
+                normalize_bank_icon_path(acc.icon.clone())
+            } else {
+                None
+            };
+
             AccountDisplayData {
                 id: acc.id.clone(),
                 name: acc.name.clone(),
                 account_type: account_type.to_string(),
                 account_type_key: acc.account_type.clone(),
-                icon_path: acc.icon.clone(),
+                icon_path,
                 currency: acc.currency.clone(),
                 balance: format_money_signed(current_balance, &acc.currency),
                 balance_negative: current_balance < 0,
