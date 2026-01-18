@@ -5,7 +5,7 @@
 //! - H;... = Habit Log
 //! - C;... = Crypto Transaction
 
-use super::{ImportParser, ParseResult};
+use super::ParseResult;
 use crate::features::ingestion::types::{
     ImportCryptoTransaction, ImportHabitLog, ImportTransaction, RowError,
 };
@@ -21,28 +21,11 @@ pub struct TextMixedParseResult {
     pub crypto_transactions: ParseResult<ImportCryptoTransaction>,
 }
 
-impl ImportParser for TextParser {
-    fn parse_transactions(
-        &self,
-        content: &str,
-    ) -> Result<ParseResult<ImportTransaction>, RowError> {
-        // For backwards compatibility, delegate to parse_mixed and extract transactions
-        let result = self.parse_mixed(content);
-        Ok(result.transactions)
-    }
-
-    fn parse_habit_logs(&self, content: &str) -> Result<ParseResult<ImportHabitLog>, RowError> {
-        // For backwards compatibility, delegate to parse_mixed and extract habits
-        let result = self.parse_mixed(content);
-        Ok(result.habit_logs)
-    }
-
-    fn format_name(&self) -> &'static str {
+impl TextParser {
+    pub fn format_name(&self) -> &'static str {
         "Plain Text"
     }
-}
 
-impl TextParser {
     /// Parses mixed content with prefixes (T;, H;, C;)
     pub fn parse_mixed(&self, content: &str) -> TextMixedParseResult {
         let mut result = TextMixedParseResult::default();
@@ -78,15 +61,6 @@ impl TextParser {
         }
 
         result
-    }
-
-    /// Parses crypto transactions from content (without prefix handling)
-    pub fn parse_crypto_transactions(
-        &self,
-        content: &str,
-    ) -> Result<ParseResult<ImportCryptoTransaction>, RowError> {
-        let result = self.parse_mixed(content);
-        Ok(result.crypto_transactions)
     }
 
     /// Parse a transaction line (after T; prefix is removed)
