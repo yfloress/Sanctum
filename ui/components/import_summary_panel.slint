@@ -1,4 +1,4 @@
-//Shared panel for displaying import summary stats, errors, and skipped reasons
+// Shared panel for displaying import summary stats, errors, and skipped reasons
 
 import {
     ImportErrorData,
@@ -10,41 +10,116 @@ import { Translations } from "../translations.slint";
 import { SummaryPill } from "summary_pill.slint";
 import { CustomVScrollbar } from "../widgets.slint";
 
+// ==================== Change Type Badge ====================
+component ChangeTypeBadge inherits Rectangle {
+    in property <string> change-type;
+
+    // Determine color based on change type
+    property <color> badge-color: {
+        if (change-type == "Income" || change-type == "Ingreso") {
+            Theme.success
+        } else if (change-type == "Expense" || change-type == "Gasto") {
+            Theme.danger
+        } else if (change-type == "Transfer" || change-type == "Transferencia") {
+            Theme.accent
+        } else if (change-type == "Crypto Transaction" || change-type == "Transacción Crypto") {
+            #8b5cf6 // purple for crypto
+        } else if (change-type == "Habit Log" || change-type == "Registro de Hábito") {
+            Theme.warning
+        } else {
+            Theme.text-muted
+        }
+    };
+
+    height: 18px;
+    width: badge-text.preferred-width + 12px;
+    background: badge-color.with-alpha(0.15);
+    border-radius: 4px;
+
+    badge-text := Text {
+        text: root.change-type;
+        color: root.badge-color;
+        font-size: 9px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
 // ==================== Change Row ====================
 component ChangeRow inherits Rectangle {
     in property <ImportPreviewChange> change;
 
-    height: 62px;
-    background: Theme.surface;
+    // Determine accent color based on change type
+    property <color> accent-color: {
+        if (change.change-type == "Income" || change.change-type == "Ingreso") {
+            Theme.success
+        } else if (change.change-type == "Expense" || change.change-type == "Gasto") {
+            Theme.danger
+        } else if (change.change-type == "Transfer" || change.change-type == "Transferencia") {
+            Theme.accent
+        } else if (change.change-type == "Crypto Transaction" || change.change-type == "Transacción Crypto") {
+            #8b5cf6
+        } else if (change.change-type == "Habit Log" || change.change-type == "Registro de Hábito") {
+            Theme.warning
+        } else {
+            Theme.text-muted
+        }
+    };
+
+    height: 66px;
+    background: touch.has-hover ? Theme.surface-hover : Theme.surface;
     border-radius: 8px;
     border-width: 1px;
     border-color: Theme.border-subtle;
+    clip: true;
 
-    VerticalLayout {
-        padding: 10px;
-        spacing: 4px;
+    touch := TouchArea {
+        mouse-cursor: default;
+    }
 
-        Text {
-            text: change.change-type;
-            color: Theme.text-secondary;
-            font-size: 10px;
-            font-weight: 600;
+    HorizontalLayout {
+        padding: 0px;
+        spacing: 0px;
+
+        // Colored accent bar on the left
+        Rectangle {
+            width: 4px;
+            background: root.accent-color;
         }
 
-        Text {
-            text: change.summary;
-            color: Theme.text-primary;
-            font-size: 12px;
-            font-weight: 500;
-        }
+        VerticalLayout {
+            padding-left: 12px;
+            padding-right: 12px;
+            padding-top: 10px;
+            padding-bottom: 10px;
+            spacing: 4px;
 
-        Text {
-            text: change.details;
-            color: Theme.text-muted;
-            font-size: 10px;
-            font-weight: 400;
-            overflow: elide;
+            ChangeTypeBadge {
+                change-type: root.change.change-type;
+            }
+
+            Text {
+                text: root.change.summary;
+                color: Theme.text-primary;
+                font-size: 12px;
+                font-weight: 500;
+            }
+
+            Text {
+                text: root.change.details;
+                color: Theme.text-muted;
+                font-size: 10px;
+                font-weight: 400;
+                overflow: elide;
+            }
         }
+    }
+
+    animate background {
+        duration: 120ms;
+        easing: ease-out;
     }
 }
 
@@ -52,49 +127,92 @@ component ChangeRow inherits Rectangle {
 component ErrorRow inherits Rectangle {
     in property <ImportErrorData> error;
 
-    height: 62px;
-    background: Theme.surface-hover;
+    height: 66px;
+    background: touch.has-hover ? Theme.surface-hover : Theme.surface;
     border-radius: 8px;
     border-width: 1px;
     border-color: Theme.border-subtle;
+    clip: true;
 
-    VerticalLayout {
-        padding: 10px;
-        spacing: 4px;
+    touch := TouchArea {
+        mouse-cursor: default;
+    }
 
-        HorizontalLayout {
-            spacing: 8px;
+    HorizontalLayout {
+        padding: 0px;
+        spacing: 0px;
 
-            if error.line-label != "": Text {
-                text: error.line-label;
-                color: Theme.text-secondary;
-                font-size: 10px;
-                font-weight: 600;
+        // Red accent bar on the left for errors
+        Rectangle {
+            width: 4px;
+            background: Theme.danger;
+        }
+
+        VerticalLayout {
+            padding-left: 12px;
+            padding-right: 12px;
+            padding-top: 10px;
+            padding-bottom: 10px;
+            spacing: 4px;
+
+            HorizontalLayout {
+                spacing: 8px;
+                height: 18px;
+
+                if error.line-label != "": Rectangle {
+                    height: 18px;
+                    width: line-text.preferred-width + 12px;
+                    background: Theme.danger.with-alpha(0.15);
+                    border-radius: 4px;
+
+                    line-text := Text {
+                        text: error.line-label;
+                        color: Theme.danger;
+                        font-size: 9px;
+                        font-weight: 600;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+
+                if error.field-label != "": Rectangle {
+                    height: 18px;
+                    width: field-text.preferred-width + 12px;
+                    background: Theme.warning.with-alpha(0.15);
+                    border-radius: 4px;
+
+                    field-text := Text {
+                        text: error.field-label;
+                        color: Theme.warning;
+                        font-size: 9px;
+                        font-weight: 600;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
             }
 
-            if error.field-label != "": Text {
-                text: error.field-label;
-                color: Theme.text-muted;
-                font-size: 10px;
+            Text {
+                text: error.message;
+                color: Theme.text-primary;
+                font-size: 11px;
                 font-weight: 500;
+                wrap: word-wrap;
+            }
+
+            if error.raw-data != "": Text {
+                text: error.raw-data;
+                color: Theme.text-muted;
+                font-size: 9px;
+                font-weight: 400;
+                overflow: elide;
             }
         }
+    }
 
-        Text {
-            text: error.message;
-            color: Theme.text-primary;
-            font-size: 11px;
-            font-weight: 500;
-            wrap: word-wrap;
-        }
-
-        if error.raw-data != "": Text {
-            text: error.raw-data;
-            color: Theme.text-muted;
-            font-size: 9px;
-            font-weight: 400;
-            overflow: elide;
-        }
+    animate background {
+        duration: 120ms;
+        easing: ease-out;
     }
 }
 
@@ -251,7 +369,7 @@ export component ImportSummaryPanel inherits VerticalLayout {
                 preview-scroll := Flickable {
                     width: parent.width;
                     height: parent.height;
-                    viewport-height: IngestionAdapter.import-preview-changes.length * 70px;
+                    viewport-height: IngestionAdapter.import-preview-changes.length * 74px;
 
                     VerticalLayout {
                         padding: 8px;
@@ -302,7 +420,7 @@ export component ImportSummaryPanel inherits VerticalLayout {
                 error-scroll := Flickable {
                     width: parent.width;
                     height: parent.height;
-                    viewport-height: IngestionAdapter.import-error-details.length * 70px;
+                    viewport-height: IngestionAdapter.import-error-details.length * 74px;
 
                     VerticalLayout {
                         padding: 8px;
@@ -342,11 +460,23 @@ export component ImportSummaryPanel inherits VerticalLayout {
                 letter-spacing: 1.5px;
             }
 
-            for reason in IngestionAdapter.import-skipped-reasons: Text {
-                text: "- " + reason;
-                color: Theme.text-muted;
-                font-size: 10px;
-                font-weight: 400;
+            for reason in IngestionAdapter.import-skipped-reasons: HorizontalLayout {
+                spacing: 6px;
+
+                Rectangle {
+                    width: 4px;
+                    height: 4px;
+                    border-radius: 2px;
+                    background: Theme.warning;
+                    y: (parent.height - self.height) / 2;
+                }
+
+                Text {
+                    text: reason;
+                    color: Theme.text-muted;
+                    font-size: 10px;
+                    font-weight: 400;
+                }
             }
         }
     }

@@ -140,21 +140,41 @@ export component ImportResultsModal inherits Rectangle {
                             }
                         }
 
-                        // Status message
-                        Text {
-                            text: IngestionAdapter.import-errors > 0 && IngestionAdapter.import-inserted == 0
-                                ? Translations.import-failed
-                                : (IngestionAdapter.import-errors > 0 || IngestionAdapter.import-skipped > 0
-                                    ? Translations.import-partial
-                                    : Translations.import-success);
-                            color: IngestionAdapter.import-errors > 0 && IngestionAdapter.import-inserted == 0
-                                ? Theme.danger
-                                : (IngestionAdapter.import-errors > 0 || IngestionAdapter.import-skipped > 0
-                                    ? Theme.warning
-                                    : Theme.success);
-                            font-size: 13px;
-                            font-weight: 600;
-                            horizontal-alignment: center;
+                        // Status indicator with icon
+                        HorizontalLayout {
+                            alignment: center;
+                            spacing: 10px;
+
+                            // Status icon circle
+                            Rectangle {
+                                property <bool> is-failed: IngestionAdapter.import-errors > 0 && IngestionAdapter.import-inserted == 0;
+                                property <bool> is-partial: IngestionAdapter.import-errors > 0 || IngestionAdapter.import-skipped > 0;
+                                property <color> status-color: is-failed ? Theme.danger : (is-partial ? Theme.warning : Theme.success);
+
+                                width: 32px;
+                                height: 32px;
+                                border-radius: 16px;
+                                background: status-color.with-alpha(0.15);
+                                border-width: 1px;
+                                border-color: status-color.with-alpha(0.3);
+
+                                Image {
+                                    source: parent.is-failed ? @image-url("../assets/icons/x.svg") : @image-url("../assets/icons/check.svg");
+                                    width: 16px;
+                                    height: 16px;
+                                    colorize: parent.status-color;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+                            }
+
+                            Text {
+                                text: IngestionAdapter.import-errors > 0 && IngestionAdapter.import-inserted == 0 ? Translations.import-failed : (IngestionAdapter.import-errors > 0 || IngestionAdapter.import-skipped > 0 ? Translations.import-partial : Translations.import-success);
+                                color: IngestionAdapter.import-errors > 0 && IngestionAdapter.import-inserted == 0 ? Theme.danger : (IngestionAdapter.import-errors > 0 || IngestionAdapter.import-skipped > 0 ? Theme.warning : Theme.success);
+                                font-size: 14px;
+                                font-weight: 600;
+                                vertical-alignment: center;
+                            }
                         }
 
                         // Summary panel

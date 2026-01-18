@@ -216,16 +216,21 @@ export component ImportPreviewModal inherits Rectangle {
                     }
                 }
 
-                // Confirm Button
+                // Confirm Button - disabled when no valid changes
                 confirm-btn := Rectangle {
+                    property <bool> can-confirm: IngestionAdapter.import-inserted > 0;
+
                     horizontal-stretch: 1;
                     height: 44px;
                     border-radius: 10px;
-                    background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
+                    background: can-confirm ? @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%) : Theme.surface;
+                    border-width: can-confirm ? 0px : 1px;
+                    border-color: Theme.border-light;
+                    opacity: can-confirm ? 1.0 : 0.5;
 
                     Text {
                         text: Translations.import-preview-confirm;
-                        color: Theme.text;
+                        color: confirm-btn.can-confirm ? Theme.text : Theme.text-muted;
                         font-size: 12px;
                         font-weight: 600;
                         letter-spacing: 1.5px;
@@ -234,14 +239,16 @@ export component ImportPreviewModal inherits Rectangle {
                     }
 
                     confirm-touch := TouchArea {
-                        mouse-cursor: pointer;
+                        mouse-cursor: confirm-btn.can-confirm ? pointer : not-allowed;
                         clicked => {
-                            confirm-import();
+                            if (confirm-btn.can-confirm) {
+                                confirm-import();
+                            }
                         }
                     }
 
                     states [
-                        hover when confirm-touch.has-hover: {
+                        hover when confirm-touch.has-hover && confirm-btn.can-confirm: {
                             opacity: 0.9;
                         }
                     ]
