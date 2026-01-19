@@ -8,8 +8,9 @@ Offline companion for [Sanctum](https://codeberg.org/Kyronix/Sanctum). Generates
 nix develop             # Environment
 pnpm install            # Dependencies
 pnpm approve-builds     # Enable native builds (esbuild/sharp)
-pnpm dev                # Local server
+pnpm dev                # Local server (open http://localhost:4321/Sanctum/)
 pnpm build              # Build static site
+pnpm preview            # Preview static build
 ```
 
 ## Deployment (Codeberg Pages)
@@ -24,4 +25,4 @@ git reset HEAD~1        # Clean up local commit
 ```
 
 ## Stack
-Astro 6 (Beta), React 19, Tailwind CSS, Vite PWA.
+Astro 6 (beta), React 19, Tailwind CSS 4, Motion, Vite PWA.
