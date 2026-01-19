@@ -83,12 +83,6 @@ const translations = {
       crypto: "Crypto Entries",
     },
     loaded: "Loaded",
-    tips: {
-      title: "Import Tips",
-      date: "Dates must be in YYYY-MM-DD format.",
-      currency: "Currency is USD or CLP.",
-      transfer: "Transfers require a destination account.",
-    },
     load: {
       title: "Load Existing JSON",
       description: "Upload a sanctum_export.json file to append new entries to the same log.",
@@ -208,12 +202,6 @@ const translations = {
       crypto: "Movimientos cripto",
     },
     loaded: "Cargado",
-    tips: {
-      title: "Consejos de importación",
-      date: "Las fechas deben ser YYYY-MM-DD.",
-      currency: "La moneda es USD o CLP.",
-      transfer: "Las transferencias requieren cuenta destino.",
-    },
     load: {
       title: "Cargar JSON existente",
       description: "Sube un archivo sanctum_export.json para agregar nuevas entradas al mismo registro.",
@@ -819,14 +807,6 @@ export default function Generator() {
               </div>
             )}
 
-            <div className="rounded-2xl border border-border bg-card/70 p-4 text-xs text-muted-foreground">
-              <p className="font-semibold text-foreground">{copy.tips.title}</p>
-              <ul className="mt-2 space-y-1">
-                <li>{copy.tips.date}</li>
-                <li>{copy.tips.currency}</li>
-                <li>{copy.tips.transfer}</li>
-              </ul>
-            </div>
           </div>
 
           <div className="space-y-4">
