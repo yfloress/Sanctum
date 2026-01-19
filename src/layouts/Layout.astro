@@ -23,6 +23,16 @@ const baseUrl = import.meta.env.BASE_URL;
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
     <meta name="theme-color" content="#050505" />
+    <script is:inline>
+      (() => {
+        try {
+          const theme = localStorage.getItem("sanctum-theme");
+          if (theme === "light") {
+            document.documentElement.classList.remove("dark");
+          }
+        } catch {}
+      })();
+    </script>
 
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href={`${baseUrl}favicon.svg`} />
@@ -52,6 +62,12 @@ const baseUrl = import.meta.env.BASE_URL;
   <body class="min-h-screen bg-background text-foreground antialiased">
     <slot />
     <script is:inline>
+      const themeKey = "sanctum-theme";
+      const root = document.documentElement;
+      const themeMeta = document.querySelector('meta[name="theme-color"]');
+      const toggles = Array.from(document.querySelectorAll("[data-theme-toggle]"));
+      const themeColors = { dark: "#050505", light: "#f7f1e5" };
+
       const observer = new IntersectionObserver(
         (entries) => {
           entries.forEach((entry) => {
@@ -64,6 +80,51 @@ const baseUrl = import.meta.env.BASE_URL;
       );
 
       document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
+
+      const getStoredTheme = () => {
+        try {
+          return localStorage.getItem(themeKey);
+        } catch {
+          return null;
+        }
+      };
+
+      const applyTheme = (mode) => {
+        if (mode === "light") {
+          root.classList.remove("dark");
+        } else {
+          root.classList.add("dark");
+        }
+
+        if (themeMeta) {
+          themeMeta.setAttribute("content", themeColors[mode] ?? themeColors.dark);
+        }
+
+        toggles.forEach((button) => {
+          const nextLabel = mode === "dark" ? "Light" : "Dark";
+          const label = button.querySelector("[data-theme-toggle-label]");
+          if (label) {
+            label.textContent = nextLabel;
+          }
+          button.setAttribute("aria-label", `Switch to ${nextLabel.toLowerCase()} mode`);
+          button.setAttribute("aria-pressed", String(mode === "light"));
+          button.classList.toggle("is-light", mode === "light");
+        });
+
+        try {
+          localStorage.setItem(themeKey, mode);
+        } catch {}
+      };
+
+      const stored = getStoredTheme();
+      applyTheme(stored === "light" ? "light" : "dark");
+
+      toggles.forEach((button) => {
+        button.addEventListener("click", () => {
+          const next = root.classList.contains("dark") ? "light" : "dark";
+          applyTheme(next);
+        });
+      });
     </script>
   </body>
 </html>

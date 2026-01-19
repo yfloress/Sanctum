@@ -27,13 +27,39 @@ const baseUrl = import.meta.env.BASE_URL;
           <a href="#import" class="text-muted-foreground hover:text-foreground transition-colors">Import</a>
           <a href="#generator" class="text-muted-foreground hover:text-foreground transition-colors">Sanctum Generator</a>
           <a href="#download" class="text-muted-foreground hover:text-foreground transition-colors">Download</a>
+          <button
+            type="button"
+            data-theme-toggle
+            class="theme-toggle"
+            aria-label="Switch to light mode"
+            aria-pressed="false"
+          >
+            <span class="theme-toggle__track" aria-hidden="true">
+              <span class="theme-toggle__thumb"></span>
+            </span>
+            <span class="theme-toggle__label" data-theme-toggle-label>Light</span>
+          </button>
         </div>
-        <a
-          href="#generator"
-          class="sm:hidden btn-surface rounded-full px-3 py-1 text-xs font-semibold transition-all duration-200 ease-out hover:-translate-y-0.5 hover:brightness-110 hover:shadow-md active:scale-[0.98]"
-        >
-          Sanctum Generator
-        </a>
+        <div class="flex items-center gap-2 sm:hidden">
+          <button
+            type="button"
+            data-theme-toggle
+            class="theme-toggle"
+            aria-label="Switch to light mode"
+            aria-pressed="false"
+          >
+            <span class="theme-toggle__track" aria-hidden="true">
+              <span class="theme-toggle__thumb"></span>
+            </span>
+            <span class="theme-toggle__label" data-theme-toggle-label>Light</span>
+          </button>
+          <a
+            href="#generator"
+            class="btn-surface rounded-full px-3 py-1 text-xs font-semibold transition-all duration-200 ease-out hover:-translate-y-0.5 hover:brightness-110 hover:shadow-md active:scale-[0.98]"
+          >
+            Sanctum Generator
+          </a>
+        </div>
       </div>
     </div>
   </nav>
