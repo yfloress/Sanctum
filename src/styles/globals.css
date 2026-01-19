@@ -278,6 +278,19 @@
     box-shadow: 0 0 28px color-mix(in srgb, var(--glow-primary), transparent 35%);
   }
 
+  .nav-fade-border {
+    border-bottom-color: transparent;
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--border), white 40%),
+      transparent
+    );
+    background-size: 100% 1px;
+    background-repeat: no-repeat;
+    background-position: bottom center;
+  }
+
   .text-gradient {
     background: linear-gradient(120deg, var(--grad-primary-start), var(--grad-primary-end));
     -webkit-background-clip: text;
