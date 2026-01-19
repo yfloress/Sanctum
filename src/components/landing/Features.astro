@@ -1,0 +1,78 @@
+---
+// Features section - highlights key Sanctum capabilities
+// Uses scroll reveal animations via CSS classes
+
+const features = [
+  {
+    icon: '🔒',
+    title: 'Privacy First',
+    description: 'Your data never leaves your device. SQLCipher encryption keeps everything secure.',
+  },
+  {
+    icon: '📴',
+    title: 'Fully Offline',
+    description: 'No internet required. Track finances, crypto, and habits anywhere, anytime.',
+  },
+  {
+    icon: '💰',
+    title: 'Finance Tracking',
+    description: 'Manage accounts, transactions, and budgets with powerful analytics.',
+  },
+  {
+    icon: '₿',
+    title: 'Crypto Portfolio',
+    description: 'Track your cryptocurrency holdings across multiple wallets.',
+  },
+  {
+    icon: '✅',
+    title: 'Habit Building',
+    description: 'Build positive habits with streaks, rewards, and visual progress tracking.',
+  },
+  {
+    icon: '🔓',
+    title: 'Open Source',
+    description: 'Fully transparent codebase. Audit, modify, and contribute freely.',
+  },
+];
+---
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="text-center mb-16 reveal">
+    <h2 class="text-3xl sm:text-4xl font-bold text-white mb-4">
+      Your Personal Fortress
+    </h2>
+    <p class="text-slate-400 max-w-2xl mx-auto text-lg">
+      Everything you need to take control of your finances and habits,
+      without sacrificing your privacy.
+    </p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+    {features.map((feature, index) => (
+      <div
+        class="reveal p-6 rounded-xl bg-slate-800/50 border border-slate-700 hover:border-sanctum-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-sanctum-500/10"
+        style={`transition-delay: ${index * 100}ms`}
+      >
+        <div class="text-4xl mb-4">{feature.icon}</div>
+        <h3 class="text-xl font-semibold text-white mb-2">{feature.title}</h3>
+        <p class="text-slate-400">{feature.description}</p>
+      </div>
+    ))}
+  </div>
+</div>
+
+<script>
+  // Intersection Observer for scroll reveal animations
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    },
+    { threshold: 0.1 }
+  );
+
+  document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+</script>
