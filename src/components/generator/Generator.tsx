@@ -118,6 +118,8 @@ const translations = {
         description: "Description",
         amount: "Amount",
         add: "Add Transaction",
+        required: "Required: Date, Account, Amount, Currency.",
+        transferNote: "Category is required unless this is a transfer.",
       },
       list: {
         title: "Recent Transactions",
@@ -130,6 +132,7 @@ const translations = {
         name: "Habit name",
         completed: "Completed",
         add: "Add Habit Log",
+        required: "Required: Date, Habit name.",
       },
       list: {
         title: "Habit Logs",
@@ -148,6 +151,7 @@ const translations = {
         fee: "Fee (optional)",
         notes: "Notes (optional)",
         add: "Add Crypto Entry",
+        required: "Required: Date, Wallet, Symbol, Amount.",
       },
       list: {
         title: "Crypto Entries",
@@ -173,11 +177,18 @@ const translations = {
       unsupportedVersion: "Unsupported version. Expected version 1.0.",
       parseFailed: "Failed to parse JSON.",
       pasteRequired: "Paste a JSON payload before loading.",
-      transactionRequired: "Transaction requires date, account, amount, and currency.",
-      categoryRequired: "Category is required unless this is a transfer.",
-      transferRequired: "Transfer requires a destination account.",
-      habitRequired: "Habit name and date are required.",
-      cryptoRequired: "Crypto entry requires date, wallet, symbol, and amount.",
+      transactionDateRequired: "Transaction date is required.",
+      transactionAccountRequired: "Transaction account is required.",
+      transactionAmountRequired: "Transaction amount is required.",
+      transactionCurrencyRequired: "Transaction currency is required.",
+      transactionCategoryRequired: "Category is required unless this is a transfer.",
+      transactionTransferRequired: "Transfer requires a destination account.",
+      habitDateRequired: "Habit date is required.",
+      habitNameRequired: "Habit name is required.",
+      cryptoDateRequired: "Crypto date is required.",
+      cryptoWalletRequired: "Crypto wallet is required.",
+      cryptoSymbolRequired: "Crypto symbol is required.",
+      cryptoAmountRequired: "Crypto amount is required.",
     },
   },
   es: {
@@ -232,6 +243,8 @@ const translations = {
         description: "Descripción",
         amount: "Monto",
         add: "Agregar transacción",
+        required: "Requerido: Fecha, Cuenta, Monto, Moneda.",
+        transferNote: "La categoría es obligatoria salvo que sea una transferencia.",
       },
       list: {
         title: "Transacciones recientes",
@@ -244,6 +257,7 @@ const translations = {
         name: "Nombre del hábito",
         completed: "Completado",
         add: "Agregar registro de hábito",
+        required: "Requerido: Fecha, Nombre del hábito.",
       },
       list: {
         title: "Registros de hábitos",
@@ -262,6 +276,7 @@ const translations = {
         fee: "Comisión (opcional)",
         notes: "Notas (opcional)",
         add: "Agregar movimiento cripto",
+        required: "Requerido: Fecha, Wallet, Símbolo, Monto.",
       },
       list: {
         title: "Movimientos cripto",
@@ -287,11 +302,18 @@ const translations = {
       unsupportedVersion: "Versión no compatible. Se esperaba la versión 1.0.",
       parseFailed: "No se pudo leer el JSON.",
       pasteRequired: "Pega un JSON antes de cargar.",
-      transactionRequired: "La transacción requiere fecha, cuenta, monto y moneda.",
-      categoryRequired: "La categoría es obligatoria salvo que sea una transferencia.",
-      transferRequired: "La transferencia requiere una cuenta destino.",
-      habitRequired: "El nombre del hábito y la fecha son obligatorios.",
-      cryptoRequired: "El movimiento cripto requiere fecha, wallet, símbolo y monto.",
+      transactionDateRequired: "La fecha de la transacción es obligatoria.",
+      transactionAccountRequired: "La cuenta de la transacción es obligatoria.",
+      transactionAmountRequired: "El monto de la transacción es obligatorio.",
+      transactionCurrencyRequired: "La moneda de la transacción es obligatoria.",
+      transactionCategoryRequired: "La categoría es obligatoria salvo que sea una transferencia.",
+      transactionTransferRequired: "La transferencia requiere una cuenta destino.",
+      habitDateRequired: "La fecha del hábito es obligatoria.",
+      habitNameRequired: "El nombre del hábito es obligatorio.",
+      cryptoDateRequired: "La fecha del movimiento cripto es obligatoria.",
+      cryptoWalletRequired: "La wallet es obligatoria.",
+      cryptoSymbolRequired: "El símbolo cripto es obligatorio.",
+      cryptoAmountRequired: "El monto cripto es obligatorio.",
     },
   },
 };
@@ -378,8 +400,29 @@ export default function Generator() {
   const [rawInput, setRawInput] = React.useState("");
 
   const [txForm, setTxForm] = React.useState(defaultTx);
+  const [txErrors, setTxErrors] = React.useState<{
+    date?: boolean;
+    account?: boolean;
+    amount?: boolean;
+    currency?: boolean;
+    category?: boolean;
+    transfer_to_account?: boolean;
+  }>({});
+  const [txAttempted, setTxAttempted] = React.useState(false);
   const [habitForm, setHabitForm] = React.useState(defaultHabit);
+  const [habitErrors, setHabitErrors] = React.useState<{
+    date?: boolean;
+    habit?: boolean;
+  }>({});
+  const [habitAttempted, setHabitAttempted] = React.useState(false);
   const [cryptoForm, setCryptoForm] = React.useState(defaultCrypto);
+  const [cryptoErrors, setCryptoErrors] = React.useState<{
+    date?: boolean;
+    wallet?: boolean;
+    symbol?: boolean;
+    amount?: boolean;
+  }>({});
+  const [cryptoAttempted, setCryptoAttempted] = React.useState(false);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -469,6 +512,12 @@ export default function Generator() {
         setLoadedFile(file.name);
         setRawInput("");
         setError(null);
+        setTxErrors({});
+        setHabitErrors({});
+        setCryptoErrors({});
+        setTxAttempted(false);
+        setHabitAttempted(false);
+        setCryptoAttempted(false);
       } catch (err) {
         const message =
           err instanceof SyntaxError
@@ -533,6 +582,12 @@ export default function Generator() {
       );
       setLoadedFile("pasted JSON");
       setError(null);
+      setTxErrors({});
+      setHabitErrors({});
+      setCryptoErrors({});
+      setTxAttempted(false);
+      setHabitAttempted(false);
+      setCryptoAttempted(false);
     } catch (err) {
       const message =
         err instanceof SyntaxError
@@ -562,20 +617,46 @@ export default function Generator() {
     setCryptoTx([]);
     setLoadedFile(null);
     setError(null);
+    setTxErrors({});
+    setHabitErrors({});
+    setCryptoErrors({});
+    setTxAttempted(false);
+    setHabitAttempted(false);
+    setCryptoAttempted(false);
   }
 
   function addTransaction() {
     setError(null);
-    if (!txForm.date || !txForm.account || !txForm.amount || !txForm.currency) {
-      setError(copy.errors.transactionRequired);
-      return;
+    setTxAttempted(true);
+    const nextErrors: typeof txErrors = {};
+    let message: string | null = null;
+    if (!txForm.date) {
+      nextErrors.date = true;
+      message ??= copy.errors.transactionDateRequired;
+    }
+    if (!txForm.account) {
+      nextErrors.account = true;
+      message ??= copy.errors.transactionAccountRequired;
+    }
+    if (!txForm.amount) {
+      nextErrors.amount = true;
+      message ??= copy.errors.transactionAmountRequired;
+    }
+    if (!txForm.currency) {
+      nextErrors.currency = true;
+      message ??= copy.errors.transactionCurrencyRequired;
     }
     if (txForm.transaction_type !== "transfer" && !txForm.category) {
-      setError(copy.errors.categoryRequired);
-      return;
+      nextErrors.category = true;
+      message ??= copy.errors.transactionCategoryRequired;
     }
     if (txForm.transaction_type === "transfer" && !txForm.transfer_to_account) {
-      setError(copy.errors.transferRequired);
+      nextErrors.transfer_to_account = true;
+      message ??= copy.errors.transactionTransferRequired;
+    }
+    if (Object.keys(nextErrors).length > 0) {
+      setTxErrors(nextErrors);
+      setError(message);
       return;
     }
 
@@ -594,12 +675,26 @@ export default function Generator() {
       ...prev,
     ]);
     setTxForm(defaultTx);
+    setTxErrors({});
+    setTxAttempted(false);
   }
 
   function addHabit() {
     setError(null);
-    if (!habitForm.habit || !habitForm.date) {
-      setError(copy.errors.habitRequired);
+    setHabitAttempted(true);
+    const nextErrors: typeof habitErrors = {};
+    let message: string | null = null;
+    if (!habitForm.date) {
+      nextErrors.date = true;
+      message ??= copy.errors.habitDateRequired;
+    }
+    if (!habitForm.habit) {
+      nextErrors.habit = true;
+      message ??= copy.errors.habitNameRequired;
+    }
+    if (Object.keys(nextErrors).length > 0) {
+      setHabitErrors(nextErrors);
+      setError(message);
       return;
     }
     setHabits((prev) => [
@@ -612,12 +707,34 @@ export default function Generator() {
       ...prev,
     ]);
     setHabitForm(defaultHabit);
+    setHabitErrors({});
+    setHabitAttempted(false);
   }
 
   function addCrypto() {
     setError(null);
-    if (!cryptoForm.date || !cryptoForm.wallet || !cryptoForm.symbol || !cryptoForm.amount) {
-      setError(copy.errors.cryptoRequired);
+    setCryptoAttempted(true);
+    const nextErrors: typeof cryptoErrors = {};
+    let message: string | null = null;
+    if (!cryptoForm.date) {
+      nextErrors.date = true;
+      message ??= copy.errors.cryptoDateRequired;
+    }
+    if (!cryptoForm.wallet) {
+      nextErrors.wallet = true;
+      message ??= copy.errors.cryptoWalletRequired;
+    }
+    if (!cryptoForm.symbol) {
+      nextErrors.symbol = true;
+      message ??= copy.errors.cryptoSymbolRequired;
+    }
+    if (!cryptoForm.amount) {
+      nextErrors.amount = true;
+      message ??= copy.errors.cryptoAmountRequired;
+    }
+    if (Object.keys(nextErrors).length > 0) {
+      setCryptoErrors(nextErrors);
+      setError(message);
       return;
     }
     setCryptoTx((prev) => [
@@ -635,6 +752,8 @@ export default function Generator() {
       ...prev,
     ]);
     setCryptoForm(defaultCrypto);
+    setCryptoErrors({});
+    setCryptoAttempted(false);
   }
 
   return (
@@ -788,22 +907,55 @@ export default function Generator() {
               <Input
                 type="date"
                 value={txForm.date}
-                onChange={(event) => setTxForm({ ...txForm, date: event.target.value })}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setTxForm({ ...txForm, date: value });
+                  if (value) {
+                    setTxErrors((prev) => ({ ...prev, date: false }));
+                  }
+                }}
+                aria-invalid={Boolean(txAttempted && txErrors.date)}
+                className={cn(
+                  txAttempted &&
+                    txErrors.date &&
+                    "border-destructive/60 focus-visible:ring-destructive/40"
+                )}
               />
               <div className="grid gap-4 sm:grid-cols-2">
                 <Input
                   placeholder={copy.transactions.form.account}
                   value={txForm.account}
-                  onChange={(event) =>
-                    setTxForm({ ...txForm, account: event.target.value })
-                  }
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setTxForm({ ...txForm, account: value });
+                    if (value) {
+                      setTxErrors((prev) => ({ ...prev, account: false }));
+                    }
+                  }}
+                  aria-invalid={Boolean(txAttempted && txErrors.account)}
+                  className={cn(
+                    txAttempted &&
+                      txErrors.account &&
+                      "border-destructive/60 focus-visible:ring-destructive/40"
+                  )}
                 />
                 <select
-                  className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm text-foreground"
+                  className={cn(
+                    "h-10 w-full rounded-md border border-input bg-card px-3 text-sm text-foreground",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    txAttempted &&
+                      txErrors.currency &&
+                      "border-destructive/60 focus-visible:ring-destructive/40"
+                  )}
                   value={txForm.currency}
-                  onChange={(event) =>
-                    setTxForm({ ...txForm, currency: event.target.value })
-                  }
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setTxForm({ ...txForm, currency: value });
+                    if (value) {
+                      setTxErrors((prev) => ({ ...prev, currency: false }));
+                    }
+                  }}
+                  aria-invalid={Boolean(txAttempted && txErrors.currency)}
                 >
                   <option value="USD">USD</option>
                   <option value="CLP">CLP</option>
@@ -811,14 +963,21 @@ export default function Generator() {
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <select
-                  className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm text-foreground"
+                  className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   value={txForm.transaction_type}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    const nextType = event.target.value as TransactionType;
                     setTxForm({
                       ...txForm,
-                      transaction_type: event.target.value as TransactionType,
-                    })
-                  }
+                      transaction_type: nextType,
+                    });
+                    setTxErrors((prev) => ({
+                      ...prev,
+                      category: nextType === "transfer" ? false : prev.category,
+                      transfer_to_account:
+                        nextType === "transfer" ? prev.transfer_to_account : false,
+                    }));
+                  }}
                 >
                   <option value="expense">{copy.types.expense}</option>
                   <option value="income">{copy.types.income}</option>
@@ -829,24 +988,56 @@ export default function Generator() {
                   step="0.01"
                   placeholder={copy.transactions.form.amount}
                   value={txForm.amount}
-                  onChange={(event) =>
-                    setTxForm({ ...txForm, amount: event.target.value })
-                  }
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setTxForm({ ...txForm, amount: value });
+                    if (value) {
+                      setTxErrors((prev) => ({ ...prev, amount: false }));
+                    }
+                  }}
+                  aria-invalid={Boolean(txAttempted && txErrors.amount)}
+                  className={cn(
+                    txAttempted &&
+                      txErrors.amount &&
+                      "border-destructive/60 focus-visible:ring-destructive/40"
+                  )}
                 />
               </div>
               <Input
                 placeholder={copy.transactions.form.category}
                 value={txForm.category}
-                onChange={(event) => setTxForm({ ...txForm, category: event.target.value })}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setTxForm({ ...txForm, category: value });
+                  if (value) {
+                    setTxErrors((prev) => ({ ...prev, category: false }));
+                  }
+                }}
                 disabled={txForm.transaction_type === "transfer"}
+                aria-invalid={Boolean(txAttempted && txErrors.category)}
+                className={cn(
+                  txAttempted &&
+                    txErrors.category &&
+                    "border-destructive/60 focus-visible:ring-destructive/40"
+                )}
               />
               {txForm.transaction_type === "transfer" && (
                 <Input
                   placeholder={copy.transactions.form.transferTo}
                   value={txForm.transfer_to_account}
-                  onChange={(event) =>
-                    setTxForm({ ...txForm, transfer_to_account: event.target.value })
-                  }
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setTxForm({ ...txForm, transfer_to_account: value });
+                    if (value) {
+                      setTxErrors((prev) => ({ ...prev, transfer_to_account: false }));
+                    }
+                  }}
+                  aria-invalid={Boolean(txAttempted && txErrors.transfer_to_account)}
+                  className={cn(
+                    txAttempted &&
+                      txErrors.transfer_to_account &&
+                      "border-destructive/60 focus-visible:ring-destructive/40"
+                  )}
                 />
               )}
               <Input
@@ -854,6 +1045,10 @@ export default function Generator() {
                 value={txForm.description}
                 onChange={(event) => setTxForm({ ...txForm, description: event.target.value })}
               />
+              <div className="text-xs text-muted-foreground">
+                <p>{copy.transactions.form.required}</p>
+                <p>{copy.transactions.form.transferNote}</p>
+              </div>
               <Button onClick={addTransaction}>{copy.transactions.form.add}</Button>
             </div>
 
@@ -911,12 +1106,36 @@ export default function Generator() {
               <Input
                 type="date"
                 value={habitForm.date}
-                onChange={(event) => setHabitForm({ ...habitForm, date: event.target.value })}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setHabitForm({ ...habitForm, date: value });
+                  if (value) {
+                    setHabitErrors((prev) => ({ ...prev, date: false }));
+                  }
+                }}
+                aria-invalid={Boolean(habitAttempted && habitErrors.date)}
+                className={cn(
+                  habitAttempted &&
+                    habitErrors.date &&
+                    "border-destructive/60 focus-visible:ring-destructive/40"
+                )}
               />
               <Input
                 placeholder={copy.habits.form.name}
                 value={habitForm.habit}
-                onChange={(event) => setHabitForm({ ...habitForm, habit: event.target.value })}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setHabitForm({ ...habitForm, habit: value });
+                  if (value) {
+                    setHabitErrors((prev) => ({ ...prev, habit: false }));
+                  }
+                }}
+                aria-invalid={Boolean(habitAttempted && habitErrors.habit)}
+                className={cn(
+                  habitAttempted &&
+                    habitErrors.habit &&
+                    "border-destructive/60 focus-visible:ring-destructive/40"
+                )}
               />
               <label className="flex items-center gap-2 text-sm text-muted-foreground">
                 <input
@@ -928,6 +1147,7 @@ export default function Generator() {
                 />
                 {copy.habits.form.completed}
               </label>
+              <p className="text-xs text-muted-foreground">{copy.habits.form.required}</p>
               <Button onClick={addHabit}>{copy.habits.form.add}</Button>
             </div>
 
@@ -971,22 +1191,54 @@ export default function Generator() {
               <Input
                 type="date"
                 value={cryptoForm.date}
-                onChange={(event) => setCryptoForm({ ...cryptoForm, date: event.target.value })}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setCryptoForm({ ...cryptoForm, date: value });
+                  if (value) {
+                    setCryptoErrors((prev) => ({ ...prev, date: false }));
+                  }
+                }}
+                aria-invalid={Boolean(cryptoAttempted && cryptoErrors.date)}
+                className={cn(
+                  cryptoAttempted &&
+                    cryptoErrors.date &&
+                    "border-destructive/60 focus-visible:ring-destructive/40"
+                )}
               />
               <div className="grid gap-4 sm:grid-cols-2">
                 <Input
                   placeholder={copy.crypto.form.wallet}
                   value={cryptoForm.wallet}
-                  onChange={(event) =>
-                    setCryptoForm({ ...cryptoForm, wallet: event.target.value })
-                  }
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setCryptoForm({ ...cryptoForm, wallet: value });
+                    if (value) {
+                      setCryptoErrors((prev) => ({ ...prev, wallet: false }));
+                    }
+                  }}
+                  aria-invalid={Boolean(cryptoAttempted && cryptoErrors.wallet)}
+                  className={cn(
+                    cryptoAttempted &&
+                      cryptoErrors.wallet &&
+                      "border-destructive/60 focus-visible:ring-destructive/40"
+                  )}
                 />
                 <Input
                   placeholder={copy.crypto.form.symbol}
                   value={cryptoForm.symbol}
-                  onChange={(event) =>
-                    setCryptoForm({ ...cryptoForm, symbol: event.target.value })
-                  }
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setCryptoForm({ ...cryptoForm, symbol: value });
+                    if (value) {
+                      setCryptoErrors((prev) => ({ ...prev, symbol: false }));
+                    }
+                  }}
+                  aria-invalid={Boolean(cryptoAttempted && cryptoErrors.symbol)}
+                  className={cn(
+                    cryptoAttempted &&
+                      cryptoErrors.symbol &&
+                      "border-destructive/60 focus-visible:ring-destructive/40"
+                  )}
                 />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -1010,9 +1262,19 @@ export default function Generator() {
                   step="0.00000001"
                   placeholder={copy.crypto.form.amount}
                   value={cryptoForm.amount}
-                  onChange={(event) =>
-                    setCryptoForm({ ...cryptoForm, amount: event.target.value })
-                  }
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setCryptoForm({ ...cryptoForm, amount: value });
+                    if (value) {
+                      setCryptoErrors((prev) => ({ ...prev, amount: false }));
+                    }
+                  }}
+                  aria-invalid={Boolean(cryptoAttempted && cryptoErrors.amount)}
+                  className={cn(
+                    cryptoAttempted &&
+                      cryptoErrors.amount &&
+                      "border-destructive/60 focus-visible:ring-destructive/40"
+                  )}
                 />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -1038,6 +1300,7 @@ export default function Generator() {
                 value={cryptoForm.notes}
                 onChange={(event) => setCryptoForm({ ...cryptoForm, notes: event.target.value })}
               />
+              <p className="text-xs text-muted-foreground">{copy.crypto.form.required}</p>
               <Button onClick={addCrypto}>{copy.crypto.form.add}</Button>
             </div>
 

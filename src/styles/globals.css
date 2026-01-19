@@ -356,6 +356,14 @@
     );
   }
 
+  input[aria-invalid="true"],
+  select[aria-invalid="true"],
+  textarea[aria-invalid="true"] {
+    border-color: color-mix(in srgb, var(--destructive), transparent 30%);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--destructive), transparent 70%);
+    background-color: color-mix(in srgb, var(--destructive), transparent 94%);
+  }
+
   .text-gradient {
     background: linear-gradient(120deg, var(--grad-primary-start), var(--grad-primary-end));
     -webkit-background-clip: text;

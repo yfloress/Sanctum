@@ -264,7 +264,7 @@ const baseUrl = import.meta.env.BASE_URL;
             ariaDark: "Switch to dark mode",
           },
           lang: {
-            toggle: "ES",
+            label: "EN",
             aria: "Switch to Spanish",
           },
         },
@@ -456,7 +456,7 @@ const baseUrl = import.meta.env.BASE_URL;
             ariaDark: "Cambiar a modo oscuro",
           },
           lang: {
-            toggle: "EN",
+            label: "ES",
             aria: "Cambiar a inglés",
           },
         },
@@ -501,13 +501,13 @@ const baseUrl = import.meta.env.BASE_URL;
 
       const updateThemeToggleLabels = (mode) => {
         const labels = translations[currentLang]?.theme ?? translations.en.theme;
-        const nextLabel = mode === "dark" ? labels.light : labels.dark;
+        const currentLabel = mode === "dark" ? labels.dark : labels.light;
         const nextAria = mode === "dark" ? labels.ariaLight : labels.ariaDark;
 
         themeToggles.forEach((button) => {
           const label = button.querySelector("[data-theme-toggle-label]");
           if (label) {
-            label.textContent = nextLabel;
+            label.textContent = currentLabel;
           }
           button.setAttribute("aria-label", nextAria);
           button.setAttribute("aria-pressed", String(mode === "light"));
@@ -520,7 +520,7 @@ const baseUrl = import.meta.env.BASE_URL;
         langToggles.forEach((button) => {
           const label = button.querySelector("[data-lang-toggle-label]");
           if (label) {
-            label.textContent = labels.toggle;
+            label.textContent = labels.label;
           }
           button.setAttribute("aria-label", labels.aria);
           button.setAttribute("aria-pressed", String(lang === "es"));

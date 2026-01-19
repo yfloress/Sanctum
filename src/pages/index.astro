@@ -17,8 +17,7 @@ const baseUrl = import.meta.env.BASE_URL;
   <nav class="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/80 backdrop-blur-md nav-fade-border">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-16">
-        <a href="#home" class="flex items-center gap-3 text-xl font-semibold text-foreground">
-          <img src={`${baseUrl}favicon.svg`} alt="Sanctum" class="h-8 w-8" />
+        <a href="#home" class="flex items-center text-xl font-semibold text-foreground">
           <span>Sanctum</span>
         </a>
         <div class="hidden items-center gap-6 text-sm sm:flex">
@@ -57,15 +56,15 @@ const baseUrl = import.meta.env.BASE_URL;
             <span class="theme-toggle__track" aria-hidden="true">
               <span class="theme-toggle__thumb"></span>
             </span>
-            <span class="theme-toggle__label" data-theme-toggle-label>Light</span>
+            <span class="theme-toggle__label" data-theme-toggle-label>Dark</span>
           </button>
           <button
             type="button"
             data-lang-toggle
-            class="btn-surface rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:brightness-110 hover:shadow-md active:scale-[0.98]"
+            class="btn-surface inline-flex items-center justify-center rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] leading-none text-center transition-all duration-200 ease-out hover:-translate-y-0.5 hover:brightness-110 hover:shadow-md active:scale-[0.98]"
             aria-label="Switch to Spanish"
           >
-            <span data-lang-toggle-label>ES</span>
+            <span data-lang-toggle-label>EN</span>
           </button>
         </div>
         <div class="flex items-center gap-2 sm:hidden">
@@ -79,15 +78,15 @@ const baseUrl = import.meta.env.BASE_URL;
             <span class="theme-toggle__track" aria-hidden="true">
               <span class="theme-toggle__thumb"></span>
             </span>
-            <span class="theme-toggle__label" data-theme-toggle-label>Light</span>
+            <span class="theme-toggle__label" data-theme-toggle-label>Dark</span>
           </button>
           <button
             type="button"
             data-lang-toggle
-            class="btn-surface rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:brightness-110 hover:shadow-md active:scale-[0.98]"
+            class="btn-surface inline-flex items-center justify-center rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] leading-none text-center transition-all duration-200 ease-out hover:-translate-y-0.5 hover:brightness-110 hover:shadow-md active:scale-[0.98]"
             aria-label="Switch to Spanish"
           >
-            <span data-lang-toggle-label>ES</span>
+            <span data-lang-toggle-label>EN</span>
           </button>
           <a
             href="#generator"
