@@ -2,8 +2,13 @@
 // Footer component - site footer with license and links
 ---
 
-<footer class="py-8 border-t border-slate-800">
-  <div class="max-w-7xl mx-auto px-4 text-center text-slate-500 text-sm">
-    <p>Sanctum — GPL-3.0 — All data stays in your browser</p>
+<footer class="border-t border-border">
+  <div class="max-w-7xl mx-auto px-4 py-10 text-sm text-slate-500 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <p>Sanctum — GPL-3.0 — All data stays in your browser.</p>
+    <div class="flex gap-4 text-slate-400">
+      <a href="https://codeberg.org/Kyronix/Sanctum" class="hover:text-white">Codeberg</a>
+      <a href="#privacy" class="hover:text-white">Privacy</a>
+      <a href="#generator" class="hover:text-white">Sanctum Web</a>
+    </div>
   </div>
 </footer>

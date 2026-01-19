@@ -4,75 +4,58 @@
 
 const features = [
   {
-    icon: '🔒',
-    title: 'Privacy First',
-    description: 'Your data never leaves your device. SQLCipher encryption keeps everything secure.',
+    title: 'Privacy by default',
+    description:
+      'Your vault is local, encrypted, and never leaves your machine unless you export it yourself.',
   },
   {
-    icon: '📴',
-    title: 'Fully Offline',
-    description: 'No internet required. Track finances, crypto, and habits anywhere, anytime.',
+    title: 'Offline-first workflow',
+    description:
+      'No network required. Use the desktop app at home and the web log when you are traveling.',
   },
   {
-    icon: '💰',
-    title: 'Finance Tracking',
-    description: 'Manage accounts, transactions, and budgets with powerful analytics.',
+    title: 'Unified ledger',
+    description:
+      'Track cashflow, habits, and crypto in one place with clean categorization and analytics.',
   },
   {
-    icon: '₿',
-    title: 'Crypto Portfolio',
-    description: 'Track your cryptocurrency holdings across multiple wallets.',
+    title: 'Best-effort imports',
+    description:
+      'Ingestion accepts partial files and reports clean errors so you never lose good entries.',
   },
   {
-    icon: '✅',
-    title: 'Habit Building',
-    description: 'Build positive habits with streaks, rewards, and visual progress tracking.',
+    title: 'Security mindset',
+    description:
+      'SQLCipher, session protection, and zero telemetry keep your sensitive data safe.',
   },
   {
-    icon: '🔓',
-    title: 'Open Source',
-    description: 'Fully transparent codebase. Audit, modify, and contribute freely.',
+    title: 'Open source',
+    description:
+      'The project is auditable and hackable. Build your own modules and keep full control.',
   },
 ];
 ---
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
   <div class="text-center mb-16 reveal">
-    <h2 class="text-3xl sm:text-4xl font-bold text-white mb-4">
-      Your Personal Fortress
+    <h2 class="text-3xl sm:text-4xl font-semibold text-white mb-4">
+      A security-first life OS
     </h2>
     <p class="text-slate-400 max-w-2xl mx-auto text-lg">
-      Everything you need to take control of your finances and habits,
-      without sacrificing your privacy.
+      Sanctum blends finance, habits, and crypto into one encrypted workspace—without tracking you.
     </p>
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
     {features.map((feature, index) => (
       <div
-        class="reveal p-6 rounded-xl bg-slate-800/50 border border-slate-700 hover:border-sanctum-500/50 transition-all duration-300 hover:shadow-lg hover:shadow-sanctum-500/10"
-        style={`transition-delay: ${index * 100}ms`}
+        class="reveal panel-gradient panel-hover rounded-2xl border border-border p-6"
+        style={`transition-delay: ${index * 90}ms`}
       >
-        <div class="text-4xl mb-4">{feature.icon}</div>
-        <h3 class="text-xl font-semibold text-white mb-2">{feature.title}</h3>
-        <p class="text-slate-400">{feature.description}</p>
+        <div class="h-10 w-10 rounded-full border border-border bg-background"></div>
+        <h3 class="mt-4 text-xl font-semibold text-white">{feature.title}</h3>
+        <p class="mt-2 text-slate-400">{feature.description}</p>
       </div>
     ))}
   </div>
 </div>
-
-<script>
-  // Intersection Observer for scroll reveal animations
-  const observer = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-        }
-      });
-    },
-    { threshold: 0.1 }
-  );
-
-  document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
-</script>

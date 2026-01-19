@@ -1,53 +1,60 @@
-// Astro configuration file
-// https://astro.build/config
-
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
-import tailwind from '@astrojs/tailwind';
-import { VitePWA } from 'vite-plugin-pwa';
+import AstroPWA from '@vite-pwa/astro';
+import tailwindcss from '@tailwindcss/vite';
+import { fileURLToPath } from 'node:url';
+
+const site = 'https://music-soul.codeberg.page';
+const base = '/Sanctum/';
 
 export default defineConfig({
-  site: 'https://music-soul.codeberg.page/Sanctum',
-  base: '/Sanctum',
+  site,
+  base,
+  output: 'static',
+  trailingSlash: 'always',
 
   integrations: [
     react(),
-    tailwind({
-      applyBaseStyles: false,
+    AstroPWA({
+      registerType: 'autoUpdate',
+      manifest: {
+        name: 'Sanctum Web',
+        short_name: 'Sanctum',
+        description: 'Your Personal Finance Fortress - Offline JSON Generator',
+        theme_color: '#0b1220',
+        background_color: '#0b1220',
+        display: 'standalone',
+        start_url: base,
+        scope: base,
+        icons: [
+          {
+            src: 'pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+          },
+        ],
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        navigateFallback: `${base}404.html`,
+      },
     }),
   ],
 
   vite: {
-    plugins: [
-      VitePWA({
-        registerType: 'autoUpdate',
-        includeAssets: ['favicon.svg', 'robots.txt'],
-        manifest: {
-          name: 'Sanctum Web',
-          short_name: 'Sanctum',
-          description: 'Your Personal Finance Fortress - Offline JSON Generator',
-          theme_color: '#0f172a',
-          background_color: '#0f172a',
-          display: 'standalone',
-          icons: [
-            {
-              src: 'pwa-192x192.png',
-              sizes: '192x192',
-              type: 'image/png',
-            },
-            {
-              src: 'pwa-512x512.png',
-              sizes: '512x512',
-              type: 'image/png',
-            },
-          ],
-        },
-        workbox: {
-          globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
-        },
-      }),
-    ],
+    plugins: [tailwindcss()],
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url)),
+        '@components': fileURLToPath(new URL('./src/components', import.meta.url)),
+        '@layouts': fileURLToPath(new URL('./src/layouts', import.meta.url)),
+        '@lib': fileURLToPath(new URL('./src/lib', import.meta.url)),
+      },
+    },
   },
-
-  output: 'static',
 });

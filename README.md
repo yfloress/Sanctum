@@ -1,6 +1,6 @@
 # Sanctum Web
 
-A static companion website for [Sanctum](https://codeberg.org/music-soul/Sanctum) — your personal finance, crypto, and habits fortress.
+A static companion website for [Sanctum](https://codeberg.org/Kyronix/Sanctum) — your personal finance, crypto, and habits fortress.
 
 ## Purpose
 
@@ -16,10 +16,10 @@ All data stays in your browser. Nothing is sent to any server.
 
 | Aspect | Technology | Why |
 |--------|------------|-----|
-| Core | Astro 5 | Static HTML by default, instant loading |
+| Core | Astro 6 | Static HTML by default, instant loading |
 | UI Logic | React 19 | For the form and JSON handling (as an "Island") |
 | Styling | Tailwind CSS + Shadcn/ui | Beautiful, accessible components |
-| Animation | Motion + View Transitions | Lighter than GSAP, better React integration |
+| Animation | Motion + View Transitions | Lightweight motion primitives |
 | Offline | Vite PWA | Edit JSONs without internet |
 
 ## Development
