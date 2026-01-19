@@ -1,71 +1,87 @@
 ---
-// Hero section - main landing with tagline and CTA buttons
+// Hero section - main landing with core positioning
 ---
 
-<section class="relative min-h-screen overflow-hidden bg-sanctum-section bg-radial-glow">
-  <div class="absolute inset-0 bg-grid opacity-40"></div>
-  <div class="absolute -top-32 -right-24 h-64 w-64 rounded-full bg-[#5a00f0]/20 blur-3xl"></div>
-  <div class="absolute bottom-0 left-0 h-72 w-72 rounded-full bg-[#ff2ac3]/20 blur-3xl"></div>
+<section class="relative overflow-hidden bg-hero">
+  <div class="absolute inset-0 bg-grid opacity-20"></div>
+  <div class="absolute inset-0 bg-hero-ink"></div>
+  <div class="absolute -top-20 right-10 h-64 w-64 rounded-full bg-[color-mix(in srgb,var(--glow-primary),transparent_55%)] blur-3xl float-slow"></div>
+  <div class="absolute bottom-0 left-10 h-72 w-72 rounded-full bg-[color-mix(in srgb,var(--glow-secondary),transparent_55%)] blur-3xl float-fast"></div>
 
-  <div class="relative mx-auto flex min-h-screen max-w-7xl flex-col justify-center px-6 py-24 lg:flex-row lg:items-center lg:gap-16">
-    <div class="max-w-2xl">
-      <p class="text-xs font-semibold uppercase tracking-[0.35em] text-slate-400">
-        Your Personal Fortress
-      </p>
-      <h1 class="mt-4 text-5xl font-semibold text-white sm:text-6xl">
-        Sanctum keeps your money, habits, and crypto under lock and key.
+  <div class="relative mx-auto grid min-h-screen max-w-7xl grid-cols-1 items-center gap-14 px-6 py-24 lg:grid-cols-[1.05fr_0.95fr] lg:py-32">
+    <div class="reveal space-y-6" data-reveal="left">
+      <p class="text-xs font-semibold uppercase tracking-[0.45em] text-muted-foreground">Sanctum</p>
+      <h1 class="font-display text-4xl font-semibold leading-tight text-foreground sm:text-5xl lg:text-6xl">
+        Your personal fortress for finance, crypto, and habits.
       </h1>
-      <p class="mt-6 text-lg text-slate-300">
-        Built for privacy-first tracking with offline storage, zero data leakage, and a calm,
-        cyber-clean interface. Own your ledger wherever you are.
+      <p class="max-w-xl text-lg text-muted-foreground">
+        Local-only, encrypted tracking with a cyber-clean interface. Sanctum keeps your vault private,
+        lets you work offline, and syncs your progress when you are back at your desk.
       </p>
-      <div class="mt-8 flex flex-wrap gap-4">
+      <div class="flex flex-wrap items-center gap-4">
         <a
           href="#generator"
-          class="btn-gradient shadow-glow rounded-full px-6 py-3 text-sm font-semibold transition hover:brightness-110"
+          class="btn-gradient shadow-strong rounded-full px-6 py-3 text-sm font-semibold transition hover:brightness-110"
         >
-          Start a Daily Log
+          Open Sanctum Web
         </a>
         <a
           href="#download"
-          class="rounded-full border border-slate-700 px-6 py-3 text-sm font-semibold text-slate-200 transition hover:border-[#ff2ac3]/60 hover:text-white"
+          class="rounded-full border border-border px-6 py-3 text-sm font-semibold text-foreground transition hover:border-[color-mix(in srgb,var(--accent),transparent_40%)]"
         >
-          Get the Desktop App
+          Download Desktop Vault
         </a>
       </div>
-      <div class="mt-10 flex flex-wrap gap-4 text-xs uppercase tracking-[0.2em] text-slate-500">
-        <span>Offline-first</span>
-        <span>SQLCipher</span>
-        <span>No telemetry</span>
+      <div class="flex flex-wrap gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+        <span class="rounded-full border border-border px-3 py-1">SQLCipher Vault</span>
+        <span class="rounded-full border border-border px-3 py-1">Offline-first</span>
+        <span class="rounded-full border border-border px-3 py-1">No Telemetry</span>
       </div>
     </div>
 
-    <div class="mt-12 grid w-full max-w-xl gap-4 lg:mt-0">
-      <div class="panel-gradient-strong panel-hover border-glow rounded-2xl border p-6 backdrop-blur">
-        <p class="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-          Secure Ledger
-        </p>
-        <p class="mt-3 text-sm text-slate-300">
-          Local encrypted storage. Every transaction stays inside your vault, even when you are
-          offline for weeks.
-        </p>
+    <div class="reveal space-y-5" data-reveal="right">
+      <div class="panel-glass rounded-3xl border p-6 shadow-glow">
+        <div class="flex items-center justify-between">
+          <p class="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground">
+            Vault Modules
+          </p>
+          <span class="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
+            Encrypted Local Storage
+          </span>
+        </div>
+        <div class="mt-6 space-y-4">
+          <div class="rounded-2xl border border-border bg-card/70 px-4 py-3">
+            <p class="text-sm font-semibold text-foreground">Finance Core</p>
+            <p class="text-xs text-muted-foreground">
+              Accounts, categories, transfers, and net-worth analytics.
+            </p>
+          </div>
+          <div class="rounded-2xl border border-border bg-card/70 px-4 py-3">
+            <p class="text-sm font-semibold text-foreground">Crypto Portfolio</p>
+            <p class="text-xs text-muted-foreground">
+              Wallets, trades, swaps, and price sync via CoinGecko.
+            </p>
+          </div>
+          <div class="rounded-2xl border border-border bg-card/70 px-4 py-3">
+            <p class="text-sm font-semibold text-foreground">Habit Momentum</p>
+            <p class="text-xs text-muted-foreground">
+              Daily logs, heatmaps, streak rewards, and goals.
+            </p>
+          </div>
+        </div>
       </div>
-      <div class="panel-gradient panel-hover rounded-2xl border border-border p-6">
-        <p class="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">
-          Sanctum Web
-        </p>
-        <p class="mt-3 text-sm text-slate-300">
-          A lightweight log builder you can use anywhere. Generate a single JSON file and import it
-          later in the desktop app.
-        </p>
-      </div>
-      <div class="panel-gradient panel-hover rounded-2xl border border-border p-6">
-        <p class="text-xs font-semibold uppercase tracking-[0.25em] text-slate-400">
-          Habit Momentum
-        </p>
-        <p class="mt-3 text-sm text-slate-300">
-          Track small wins, keep streaks alive, and sync back once you are home.
-        </p>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div class="panel-gradient rounded-2xl border border-border p-4">
+          <p class="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">Import</p>
+          <p class="mt-2 text-sm text-foreground">JSON v1, CSV, TXT</p>
+          <p class="text-xs text-muted-foreground">Best-effort + dedup</p>
+        </div>
+        <div class="panel-gradient rounded-2xl border border-border p-4">
+          <p class="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">Settings</p>
+          <p class="mt-2 text-sm text-foreground">USD / CLP, EN / ES</p>
+          <p class="text-xs text-muted-foreground">Proxy + session lock</p>
+        </div>
       </div>
     </div>
   </div>

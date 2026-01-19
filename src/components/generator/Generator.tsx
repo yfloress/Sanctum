@@ -110,7 +110,12 @@ function normalizeTransactionType(value: unknown): TransactionType {
 
 function normalizeCryptoType(value: unknown): CryptoType {
   const normalized = String(value ?? "").toLowerCase();
-  if (normalized === "buy" || normalized === "sell" || normalized === "transfer_in" || normalized === "transfer_out") {
+  if (
+    normalized === "buy" ||
+    normalized === "sell" ||
+    normalized === "transfer_in" ||
+    normalized === "transfer_out"
+  ) {
     return normalized as CryptoType;
   }
   return "buy";
@@ -370,98 +375,116 @@ export default function Generator() {
   }
 
   return (
-    <div className="grid gap-8">
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="panel-gradient-strong rounded-2xl border border-border p-6 shadow-xl shadow-black/20">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
-                Sanctum Web
-              </p>
-              <h3 className="mt-2 text-2xl font-semibold text-foreground">
-                Daily Log Generator
-              </h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Build a single JSON file while you are away. Everything stays in your browser.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" onClick={handleLoadClick}>
-                Load JSON
-              </Button>
-              <Button variant="outline" onClick={handleReset}>
-                Clear
-              </Button>
-              <Button onClick={handleDownload}>Download JSON</Button>
-            </div>
+    <div className="grid gap-10">
+      <div className="panel-gradient-strong rounded-3xl border border-border p-6 shadow-glow">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+              JSON v1 Generator
+            </p>
+            <h3 className="font-display mt-3 text-2xl font-semibold text-foreground">
+              Build a trip-safe log
+            </h3>
+            <p className="mt-3 text-sm text-muted-foreground max-w-lg">
+              This generator matches Sanctum&apos;s import schema. Account, habit, wallet, and category
+              names must already exist in your vault for the import to succeed.
+            </p>
           </div>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json,application/json"
-            className="hidden"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) handleLoadFile(file);
-              event.currentTarget.value = "";
-            }}
-          />
-
-          <div className="mt-6 grid gap-4 sm:grid-cols-3">
-            <div className="panel-gradient rounded-xl border border-border p-4">
-              <p className="text-xs text-muted-foreground">Transactions</p>
-              <p className="text-2xl font-semibold text-foreground">{transactions.length}</p>
-            </div>
-            <div className="panel-gradient rounded-xl border border-border p-4">
-              <p className="text-xs text-muted-foreground">Habit Logs</p>
-              <p className="text-2xl font-semibold text-foreground">{habits.length}</p>
-            </div>
-            <div className="panel-gradient rounded-xl border border-border p-4">
-              <p className="text-xs text-muted-foreground">Crypto Entries</p>
-              <p className="text-2xl font-semibold text-foreground">{cryptoTx.length}</p>
-            </div>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" onClick={handleLoadClick}>
+              Load JSON
+            </Button>
+            <Button variant="outline" onClick={handleReset}>
+              Clear
+            </Button>
+            <Button onClick={handleDownload}>Download JSON</Button>
           </div>
-
-          {loadedFile && (
-            <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
-              <Badge variant="outline">Loaded</Badge>
-              <span>{loadedFile}</span>
-            </div>
-          )}
-
-          {error && (
-            <div className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive-foreground">
-              {error}
-            </div>
-          )}
         </div>
 
-        <div className="panel-gradient rounded-2xl border border-border p-6">
-          <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            Paste Existing JSON
-          </h4>
-          <p className="mt-2 text-sm text-muted-foreground">
-            If you cannot access files, paste the JSON here to keep editing.
-          </p>
-          <Textarea
-            className="mt-4 min-h-[180px] font-mono text-xs"
-            value={rawInput}
-            onChange={(event) => setRawInput(event.target.value)}
-            placeholder="Paste a sanctum_export.json payload..."
-          />
-          <div className="mt-4 flex justify-end">
-            <Button variant="outline" onClick={handleLoadPaste}>
-              Load From Paste
-            </Button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json,application/json"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) handleLoadFile(file);
+            event.currentTarget.value = "";
+          }}
+        />
+
+        <div className="mt-6 flex flex-wrap gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <Badge variant="outline">Step 1: Load</Badge>
+          <Badge variant="outline">Step 2: Add Entries</Badge>
+          <Badge variant="outline">Step 3: Export</Badge>
+        </div>
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="panel-gradient rounded-xl border border-border p-4">
+                <p className="text-xs text-muted-foreground">Transactions</p>
+                <p className="text-2xl font-semibold text-foreground">{transactions.length}</p>
+              </div>
+              <div className="panel-gradient rounded-xl border border-border p-4">
+                <p className="text-xs text-muted-foreground">Habit Logs</p>
+                <p className="text-2xl font-semibold text-foreground">{habits.length}</p>
+              </div>
+              <div className="panel-gradient rounded-xl border border-border p-4">
+                <p className="text-xs text-muted-foreground">Crypto Entries</p>
+                <p className="text-2xl font-semibold text-foreground">{cryptoTx.length}</p>
+              </div>
+            </div>
+
+            {loadedFile && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Badge variant="outline">Loaded</Badge>
+                <span>{loadedFile}</span>
+              </div>
+            )}
+
+            {error && (
+              <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive-foreground">
+                {error}
+              </div>
+            )}
+
+            <div className="rounded-2xl border border-border bg-card/70 p-4 text-xs text-muted-foreground">
+              <p className="font-semibold text-foreground">Import Tips</p>
+              <ul className="mt-2 space-y-1">
+                <li>Dates must be in YYYY-MM-DD format.</li>
+                <li>Currency is a 3-letter code (USD, CLP).</li>
+                <li>Transfers require a destination account.</li>
+              </ul>
+            </div>
           </div>
-          <p className="mt-4 text-xs text-muted-foreground">
-            Privacy: data never leaves your browser. Works offline after first load.
-          </p>
+
+          <div className="panel-gradient rounded-2xl border border-border p-5">
+            <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              Paste or Load JSON
+            </h4>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Use this if you only have access to text notes. The payload stays local.
+            </p>
+            <Textarea
+              className="mt-4 min-h-[180px] font-mono text-xs"
+              value={rawInput}
+              onChange={(event) => setRawInput(event.target.value)}
+              placeholder="Paste a sanctum_export.json payload..."
+            />
+            <div className="mt-4 flex justify-end">
+              <Button variant="outline" onClick={handleLoadPaste}>
+                Load From Paste
+              </Button>
+            </div>
+            <p className="mt-4 text-xs text-muted-foreground">
+              Privacy: data never leaves your browser. Works offline after first load.
+            </p>
+          </div>
         </div>
       </div>
 
-      <div className="panel-gradient-strong rounded-2xl border border-border p-6">
+      <div className="panel-gradient-strong rounded-3xl border border-border p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
@@ -563,7 +586,7 @@ export default function Generator() {
               <Button onClick={addTransaction}>Add Transaction</Button>
             </div>
 
-            <div className="panel-gradient rounded-xl border border-border p-4">
+            <div className="panel-gradient rounded-2xl border border-border p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 Recent Transactions
               </p>
@@ -573,35 +596,39 @@ export default function Generator() {
                     No transactions yet. Add the first one.
                   </p>
                 )}
-                {transactions.map((tx) => (
-                  <div
-                    key={tx.id}
-                    className="rounded-lg border border-border bg-card px-3 py-2"
-                  >
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-foreground">
-                        {tx.account} · {tx.currency} {tx.amount}
+                {transactions.map((tx) => {
+                  const isExpense = tx.transaction_type === "expense";
+                  const sign = tx.transaction_type === "transfer" ? "" : isExpense ? "-" : "+";
+                  return (
+                    <div
+                      key={tx.id}
+                      className="rounded-lg border border-border bg-card px-3 py-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-foreground">
+                          {tx.account} · {sign} {tx.currency} {tx.amount}
+                        </p>
+                        <button
+                          className="text-xs text-muted-foreground hover:text-foreground"
+                          onClick={() =>
+                            setTransactions((prev) => prev.filter((item) => item.id !== tx.id))
+                          }
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {tx.date} · {tx.transaction_type}
+                        {tx.transaction_type === "transfer" && tx.transfer_to_account
+                          ? ` → ${tx.transfer_to_account}`
+                          : ""}
                       </p>
-                      <button
-                        className="text-xs text-muted-foreground hover:text-foreground"
-                        onClick={() =>
-                          setTransactions((prev) => prev.filter((item) => item.id !== tx.id))
-                        }
-                      >
-                        Remove
-                      </button>
+                      {tx.description && (
+                        <p className="text-xs text-muted-foreground">{tx.description}</p>
+                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {tx.date} · {tx.transaction_type}
-                      {tx.transaction_type === "transfer" && tx.transfer_to_account
-                        ? ` → ${tx.transfer_to_account}`
-                        : ""}
-                    </p>
-                    {tx.description && (
-                      <p className="text-xs text-muted-foreground">{tx.description}</p>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -633,7 +660,7 @@ export default function Generator() {
               <Button onClick={addHabit}>Add Habit Log</Button>
             </div>
 
-            <div className="panel-gradient rounded-xl border border-border p-4">
+            <div className="panel-gradient rounded-2xl border border-border p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 Habit Logs
               </p>
@@ -743,7 +770,7 @@ export default function Generator() {
               <Button onClick={addCrypto}>Add Crypto Entry</Button>
             </div>
 
-            <div className="panel-gradient rounded-xl border border-border p-4">
+            <div className="panel-gradient rounded-2xl border border-border p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 Crypto Entries
               </p>
@@ -785,17 +812,15 @@ export default function Generator() {
         )}
       </div>
 
-      <div className="panel-gradient rounded-2xl border border-border p-6">
+      <div className="panel-gradient rounded-3xl border border-border p-6">
         <div className="flex items-center justify-between">
           <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Export Preview
           </h4>
-          <Button variant="outline" size="sm" onClick={handleDownload}>
-            Download JSON
-          </Button>
+          <Badge variant="outline">JSON v1</Badge>
         </div>
         <Textarea
-          className="mt-4 min-h-[220px] font-mono text-xs"
+          className="mt-4 min-h-[240px] font-mono text-xs"
           value={exportJson}
           readOnly
         />

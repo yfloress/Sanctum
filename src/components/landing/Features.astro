@@ -1,60 +1,95 @@
 ---
-// Features section - highlights key Sanctum capabilities
-// Uses scroll reveal animations via CSS classes
+// Features section - highlights key Sanctum capabilities based on app behavior
 
-const features = [
+const modules = [
   {
-    title: 'Privacy by default',
-    description:
-      'Your vault is local, encrypted, and never leaves your machine unless you export it yourself.',
+    title: 'Finance Core',
+    tag: 'Accounts + Transfers',
+    details: [
+      'Multiple account types with per-account currency.',
+      'Income, expense, and transfer flows with categories.',
+      'Dashboard analytics for net worth and expense slices.',
+    ],
   },
   {
-    title: 'Offline-first workflow',
-    description:
-      'No network required. Use the desktop app at home and the web log when you are traveling.',
+    title: 'Crypto Portfolio',
+    tag: 'Wallets + Prices',
+    details: [
+      'Wallet management for exchange, hardware, and software.',
+      'Buy, sell, transfer, and swap transaction support.',
+      'Price sync via CoinGecko with proxy controls.',
+    ],
   },
   {
-    title: 'Unified ledger',
-    description:
-      'Track cashflow, habits, and crypto in one place with clean categorization and analytics.',
+    title: 'Habit Momentum',
+    tag: 'Heatmaps + Rewards',
+    details: [
+      'Daily habit logs with monthly views.',
+      'Heatmap analytics across the year.',
+      'Streak rewards, milestones, and goals.',
+    ],
+  },
+];
+
+const controls = [
+  {
+    title: 'Security Controls',
+    description: 'Session timeout, vault lock, and encrypted backups by default.',
   },
   {
-    title: 'Best-effort imports',
-    description:
-      'Ingestion accepts partial files and reports clean errors so you never lose good entries.',
+    title: 'Localization',
+    description: 'English and Spanish UI with preferred currency settings.',
   },
   {
-    title: 'Security mindset',
-    description:
-      'SQLCipher, session protection, and zero telemetry keep your sensitive data safe.',
-  },
-  {
-    title: 'Open source',
-    description:
-      'The project is auditable and hackable. Build your own modules and keep full control.',
+    title: 'Import System',
+    description: 'Preview changes, deduplicate entries, and keep a clean ledger.',
   },
 ];
 ---
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-  <div class="text-center mb-16 reveal">
-    <h2 class="text-3xl sm:text-4xl font-semibold text-white mb-4">
-      A security-first life OS
+  <div class="reveal text-center mb-16" data-reveal="left">
+    <p class="text-xs font-semibold uppercase tracking-[0.4em] text-muted-foreground">Core Systems</p>
+    <h2 class="font-display mt-4 text-3xl sm:text-4xl text-foreground">
+      One vault. Three disciplines. Zero leakage.
     </h2>
-    <p class="text-slate-400 max-w-2xl mx-auto text-lg">
-      Sanctum blends finance, habits, and crypto into one encrypted workspace—without tracking you.
+    <p class="mt-4 text-muted-foreground max-w-2xl mx-auto text-lg">
+      Sanctum is structured as a local fortress: finance, crypto, and habits live together with
+      shared analytics and unified privacy controls.
     </p>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-    {features.map((feature, index) => (
+  <div class="grid gap-8 lg:grid-cols-3">
+    {modules.map((module, index) => (
       <div
-        class="reveal panel-gradient panel-hover rounded-2xl border border-border p-6"
-        style={`transition-delay: ${index * 90}ms`}
+        class="reveal panel-gradient-strong rounded-3xl border border-border p-6 panel-hover"
+        style={`transition-delay: ${index * 100}ms`}
       >
-        <div class="h-10 w-10 rounded-full border border-border bg-background"></div>
-        <h3 class="mt-4 text-xl font-semibold text-white">{feature.title}</h3>
-        <p class="mt-2 text-slate-400">{feature.description}</p>
+        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+          {module.tag}
+        </p>
+        <h3 class="mt-4 text-xl font-semibold text-foreground">{module.title}</h3>
+        <ul class="mt-4 space-y-3 text-sm text-muted-foreground">
+          {module.details.map((detail) => (
+            <li class="flex items-start gap-3">
+              <span class="mt-2 h-1.5 w-1.5 rounded-full bg-accent"></span>
+              <span>{detail}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </div>
+
+  <div class="mt-16 grid gap-6 lg:grid-cols-3">
+    {controls.map((control, index) => (
+      <div
+        class="reveal panel-gradient rounded-2xl border border-border p-5"
+        style={`transition-delay: ${index * 80}ms`}
+        data-reveal="right"
+      >
+        <h4 class="text-lg font-semibold text-foreground">{control.title}</h4>
+        <p class="mt-2 text-sm text-muted-foreground">{control.description}</p>
       </div>
     ))}
   </div>

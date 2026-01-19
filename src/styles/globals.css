@@ -2,6 +2,9 @@
 
 @layer base {
   :root {
+    --font-sans: "Space Grotesk", system-ui, sans-serif;
+    --font-display: "Syne", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
     --background: #f7f1e5;
     --foreground: #3b2f23;
     --card: #f1e6d6;
@@ -35,6 +38,8 @@
     --glow-primary: rgba(201, 162, 39, 0.35);
     --glow-secondary: rgba(227, 181, 102, 0.25);
     --glow-shadow: rgba(201, 162, 39, 0.25);
+    --glow-strong: rgba(201, 162, 39, 0.45);
+    --hero-ink: rgba(59, 47, 35, 0.18);
     --radius: 0.5rem;
   }
 
@@ -72,6 +77,8 @@
     --glow-primary: rgba(90, 0, 240, 0.35);
     --glow-secondary: rgba(255, 42, 195, 0.25);
     --glow-shadow: rgba(90, 0, 240, 0.25);
+    --glow-strong: rgba(255, 42, 195, 0.4);
+    --hero-ink: rgba(255, 255, 255, 0.08);
   }
 }
 
@@ -87,7 +94,7 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
-    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-family: var(--font-sans);
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
@@ -102,16 +109,38 @@
     display: none;
   }
 
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-mono {
+    font-family: var(--font-mono);
+  }
+
   /* Fade in animation for scroll reveals */
   .reveal {
     opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    transform: translateY(24px);
+    transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+    will-change: opacity, transform;
+  }
+
+  .reveal[data-reveal="left"] {
+    transform: translateX(-28px);
+  }
+
+  .reveal[data-reveal="right"] {
+    transform: translateX(28px);
   }
 
   .reveal.visible {
     opacity: 1;
     transform: translateY(0);
+  }
+
+  .reveal.visible[data-reveal="left"],
+  .reveal.visible[data-reveal="right"] {
+    transform: translateX(0);
   }
 
   .bg-grid {
@@ -125,6 +154,19 @@
     background-image:
       radial-gradient(circle at top, var(--glow-primary), transparent 55%),
       radial-gradient(circle at 70% 20%, var(--glow-secondary), transparent 45%);
+  }
+
+  .bg-hero {
+    background-image:
+      radial-gradient(circle at 15% 20%, var(--glow-primary), transparent 45%),
+      radial-gradient(circle at 80% 10%, var(--glow-secondary), transparent 40%),
+      linear-gradient(180deg, var(--grad-section-start), var(--grad-section-end));
+  }
+
+  .bg-hero-ink {
+    background-image:
+      linear-gradient(120deg, transparent, var(--hero-ink), transparent),
+      linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.35));
   }
 
   .bg-sanctum-section {
@@ -143,12 +185,22 @@
     background: linear-gradient(140deg, var(--grad-surface-strong-start), var(--grad-surface-strong-end));
   }
 
+  .panel-glass {
+    background: linear-gradient(140deg, color-mix(in srgb, var(--card), transparent 30%), var(--card));
+    border-color: color-mix(in srgb, var(--glow-primary), transparent 45%);
+    backdrop-filter: blur(12px);
+  }
+
   .border-glow {
     border-color: color-mix(in srgb, var(--glow-primary), transparent 40%);
   }
 
   .shadow-glow {
     box-shadow: 0 30px 80px var(--glow-shadow);
+  }
+
+  .shadow-strong {
+    box-shadow: 0 36px 120px var(--glow-strong);
   }
 
   .panel-hover {
@@ -164,5 +216,44 @@
   .btn-gradient {
     background: linear-gradient(135deg, var(--grad-primary-start), var(--grad-primary-end));
     color: var(--grad-primary-text);
+  }
+
+  .text-gradient {
+    background: linear-gradient(120deg, var(--grad-primary-start), var(--grad-primary-end));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  @keyframes float {
+    0% {
+      transform: translate3d(0, 0, 0);
+    }
+    50% {
+      transform: translate3d(0, -12px, 0);
+    }
+    100% {
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes drift {
+    0% {
+      transform: translate3d(0, 0, 0);
+    }
+    50% {
+      transform: translate3d(12px, -8px, 0);
+    }
+    100% {
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  .float-slow {
+    animation: float 10s ease-in-out infinite;
+  }
+
+  .float-fast {
+    animation: drift 7s ease-in-out infinite;
   }
 }
