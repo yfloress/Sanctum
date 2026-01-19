@@ -30,6 +30,11 @@ const baseUrl = import.meta.env.BASE_URL;
           if (theme === "light") {
             document.documentElement.classList.remove("dark");
           }
+          const lang = localStorage.getItem("sanctum-lang");
+          if (lang === "es") {
+            document.documentElement.lang = "es";
+            document.documentElement.dataset.lang = "es";
+          }
         } catch {}
       })();
     </script>
@@ -63,10 +68,464 @@ const baseUrl = import.meta.env.BASE_URL;
     <slot />
     <script is:inline>
       const themeKey = "sanctum-theme";
+      const langKey = "sanctum-lang";
       const root = document.documentElement;
       const themeMeta = document.querySelector('meta[name="theme-color"]');
-      const toggles = Array.from(document.querySelectorAll("[data-theme-toggle]"));
+      const themeToggles = Array.from(document.querySelectorAll("[data-theme-toggle]"));
+      const langToggles = Array.from(document.querySelectorAll("[data-lang-toggle]"));
       const themeColors = { dark: "#050505", light: "#f7f1e5" };
+
+      const translations = {
+        en: {
+          nav: {
+            modules: "Modules",
+            security: "Security",
+            import: "Import",
+            generator: "Sanctum Generator",
+            download: "Download",
+          },
+          hero: {
+            tag: "Sanctum",
+            title: "Your personal fortress for finance, crypto, and habits.",
+            description:
+              "Local-only, encrypted tracking with a cyber-clean interface. Sanctum keeps your vault private, lets you work offline, and syncs your progress when you are back at your desk.",
+            cta: {
+              primary: "Open Sanctum Generator",
+              secondary: "Download Desktop Vault",
+            },
+            badges: {
+              sqlcipher: "SQLCipher Vault",
+              offline: "Offline-first",
+              noTelemetry: "No Telemetry",
+            },
+            modules: {
+              tag: "Vault Modules",
+              badge: "Encrypted Local Storage",
+              finance: {
+                title: "Finance Core",
+                description: "Accounts, categories, transfers, and net-worth analytics.",
+              },
+              crypto: {
+                title: "Crypto Portfolio",
+                description: "Wallets, trades, swaps, and price sync via CoinGecko.",
+              },
+              habits: {
+                title: "Habit Momentum",
+                description: "Daily logs, heatmaps, streak rewards, and goals.",
+              },
+            },
+            highlights: {
+              import: {
+                tag: "Import",
+                line1: "JSON v1, CSV, TXT",
+                line2: "Best-effort + dedup",
+              },
+              settings: {
+                tag: "Settings",
+                line1: "USD / CLP, EN / ES",
+                line2: "Proxy + session lock",
+              },
+            },
+          },
+          features: {
+            tag: "Core Systems",
+            title: "One vault. Three disciplines. Zero leakage.",
+            description:
+              "Sanctum is structured as a local fortress: finance, crypto, and habits live together with shared analytics and unified privacy controls.",
+            modules: {
+              finance: {
+                tag: "Accounts + Transfers",
+                title: "Finance Core",
+                detail1: "Multiple account types with per-account currency.",
+                detail2: "Income, expense, and transfer flows with categories.",
+                detail3: "Dashboard analytics for net worth and expense slices.",
+              },
+              crypto: {
+                tag: "Wallets + Prices",
+                title: "Crypto Portfolio",
+                detail1: "Wallet management for exchange, hardware, and software.",
+                detail2: "Buy, sell, transfer, and swap transaction support.",
+                detail3: "Price sync via CoinGecko with proxy controls.",
+              },
+              habits: {
+                tag: "Heatmaps + Rewards",
+                title: "Habit Momentum",
+                detail1: "Daily habit logs with monthly views.",
+                detail2: "Heatmap analytics across the year.",
+                detail3: "Streak rewards, milestones, and goals.",
+              },
+            },
+            controls: {
+              security: {
+                title: "Security Controls",
+                description: "Session timeout, vault lock, and encrypted backups by default.",
+              },
+              localization: {
+                title: "Localization",
+                description: "English and Spanish UI with preferred currency settings.",
+              },
+              import: {
+                title: "Import System",
+                description: "Preview changes, deduplicate entries, and keep a clean ledger.",
+              },
+            },
+          },
+          privacy: {
+            tag: "Security & Privacy",
+            title: "Your data never leaves the vault.",
+            description:
+              "Sanctum stores everything locally using SQLCipher and keeps session access timeboxed. Backups stay encrypted, and nothing syncs unless you explicitly export or import it.",
+            cards: {
+              encryption: {
+                title: "Vault Encryption",
+                description: "AES-256-GCM via SQLCipher.",
+              },
+              session: {
+                title: "Session Lock",
+                description: "Auto-lock after inactivity.",
+              },
+              backups: {
+                title: "Encrypted Backups",
+                description: "Export and restore safely.",
+              },
+              telemetry: {
+                title: "No Telemetry",
+                description: "No analytics or trackers.",
+              },
+            },
+            notes: {
+              import:
+                "Every import is best-effort. Bad rows are reported, good rows still land in your ledger, and duplicates are skipped to keep the vault clean.",
+              crypto:
+                "Crypto price sync uses CoinGecko and can be routed through a proxy for extra privacy. If you prefer zero network calls, leave auto-fetch off and operate entirely offline.",
+              settings:
+                "Settings allow you to choose English or Spanish, set a preferred currency (USD/CLP), and maintain a workflow that matches your reality.",
+            },
+          },
+          import: {
+            tag: "Import Pipeline",
+            title: "Bring data home without breaking the vault.",
+            description:
+              "Sanctum ingests JSON, CSV, and TXT with strict validation, deduplication, and a preview step before any write happens.",
+            sources: {
+              json: {
+                title: "Sanctum Generator JSON v1",
+                description:
+                  "Primary format for travel logs. Versioned, strict schema, and designed for safe merging.",
+              },
+              csv: {
+                title: "Spreadsheet CSV",
+                description:
+                  "Templates from Excel/Sheets/ODS. Parsed with robust CSV handling for commas.",
+              },
+              text: {
+                title: "Plain Text (prefixed)",
+                description:
+                  "T;/H;/C; prefixes for quick typing when you only have notes or paper.",
+              },
+            },
+            structure: "JSON v1 Structure",
+            cards: {
+              best: {
+                title: "Best-effort import",
+                description: "Invalid rows are reported, valid rows still land in the vault.",
+              },
+              entities: {
+                title: "Smart entity resolution",
+                description:
+                  "Accounts, categories, habits, wallets, and coins must already exist.",
+              },
+              dedup: {
+                title: "Dedup + size limits",
+                description: "Duplicate entries are skipped. File size is limited to 10MB.",
+              },
+            },
+          },
+          generator: {
+            tag: "Sanctum Generator",
+            title: "Daily Log Builder",
+            description:
+              "Create or append to a single sanctum_export.json file while traveling or offline. Load an existing file, add entries, and export a clean JSON v1 payload.",
+          },
+          download: {
+            title: "Deploy the Vault",
+            description:
+              "Sanctum lives on your machine. Download the desktop app or audit the source on Codeberg.",
+            primary: "Desktop Releases",
+            secondary: "View Source",
+          },
+          footer: {
+            note: "Sanctum — AGPL-3.0-or-later — Your data stays encrypted and local.",
+          },
+          theme: {
+            light: "Light",
+            dark: "Dark",
+            ariaLight: "Switch to light mode",
+            ariaDark: "Switch to dark mode",
+          },
+          lang: {
+            toggle: "ES",
+            aria: "Switch to Spanish",
+          },
+        },
+        es: {
+          nav: {
+            modules: "Módulos",
+            security: "Seguridad",
+            import: "Importación",
+            generator: "Generador Sanctum",
+            download: "Descargar",
+          },
+          hero: {
+            tag: "Sanctum",
+            title: "Tu fortaleza personal para finanzas, cripto y hábitos.",
+            description:
+              "Seguimiento local y cifrado con una interfaz cyber-clean. Sanctum mantiene tu bóveda privada, te permite trabajar offline y sincroniza tu progreso cuando vuelves al escritorio.",
+            cta: {
+              primary: "Abrir Generador Sanctum",
+              secondary: "Descargar bóveda de escritorio",
+            },
+            badges: {
+              sqlcipher: "Bóveda SQLCipher",
+              offline: "Offline-first",
+              noTelemetry: "Sin telemetría",
+            },
+            modules: {
+              tag: "Módulos de la bóveda",
+              badge: "Almacenamiento local cifrado",
+              finance: {
+                title: "Núcleo financiero",
+                description: "Cuentas, categorías, transferencias y analíticas de patrimonio.",
+              },
+              crypto: {
+                title: "Portafolio cripto",
+                description: "Wallets, operaciones, swaps y sincronización de precios vía CoinGecko.",
+              },
+              habits: {
+                title: "Impulso de hábitos",
+                description: "Registros diarios, heatmaps, recompensas por rachas y metas.",
+              },
+            },
+            highlights: {
+              import: {
+                tag: "Importación",
+                line1: "JSON v1, CSV, TXT",
+                line2: "Best-effort + deduplicación",
+              },
+              settings: {
+                tag: "Configuración",
+                line1: "USD / CLP, EN / ES",
+                line2: "Proxy + bloqueo de sesión",
+              },
+            },
+          },
+          features: {
+            tag: "Sistemas clave",
+            title: "Una bóveda. Tres disciplinas. Cero filtraciones.",
+            description:
+              "Sanctum está estructurado como una fortaleza local: finanzas, cripto y hábitos conviven con analíticas compartidas y privacidad unificada.",
+            modules: {
+              finance: {
+                tag: "Cuentas + Transferencias",
+                title: "Núcleo financiero",
+                detail1: "Múltiples tipos de cuentas con moneda por cuenta.",
+                detail2: "Ingresos, gastos y transferencias con categorías.",
+                detail3: "Analíticas de patrimonio y desglose de gastos en el dashboard.",
+              },
+              crypto: {
+                tag: "Wallets + Precios",
+                title: "Portafolio cripto",
+                detail1: "Gestión de wallets para exchanges, hardware y software.",
+                detail2: "Soporte de compras, ventas, transferencias y swaps.",
+                detail3: "Sincronización de precios vía CoinGecko con control de proxy.",
+              },
+              habits: {
+                tag: "Heatmaps + Recompensas",
+                title: "Impulso de hábitos",
+                detail1: "Registros diarios con vista mensual.",
+                detail2: "Heatmaps a lo largo del año.",
+                detail3: "Recompensas por rachas, hitos y metas.",
+              },
+            },
+            controls: {
+              security: {
+                title: "Controles de seguridad",
+                description: "Tiempo de sesión, bloqueo de bóveda y backups cifrados por defecto.",
+              },
+              localization: {
+                title: "Localización",
+                description: "Interfaz en inglés y español con moneda preferida.",
+              },
+              import: {
+                title: "Sistema de importación",
+                description: "Vista previa, deduplicación y registro limpio.",
+              },
+            },
+          },
+          privacy: {
+            tag: "Seguridad y privacidad",
+            title: "Tus datos nunca salen de la bóveda.",
+            description:
+              "Sanctum almacena todo localmente usando SQLCipher y limita el acceso de sesión. Los backups permanecen cifrados y nada se sincroniza salvo que exportes o importes.",
+            cards: {
+              encryption: {
+                title: "Cifrado de bóveda",
+                description: "AES-256-GCM vía SQLCipher.",
+              },
+              session: {
+                title: "Bloqueo de sesión",
+                description: "Auto-bloqueo por inactividad.",
+              },
+              backups: {
+                title: "Backups cifrados",
+                description: "Exporta y restaura con seguridad.",
+              },
+              telemetry: {
+                title: "Sin telemetría",
+                description: "Sin analítica ni trackers.",
+              },
+            },
+            notes: {
+              import:
+                "Cada importación es best-effort. Las filas malas se reportan, las buenas se guardan y los duplicados se omiten para mantener la bóveda limpia.",
+              crypto:
+                "La sincronización de precios usa CoinGecko y puede ir por proxy para mayor privacidad. Si prefieres cero llamadas, deja el auto-fetch apagado y opera offline.",
+              settings:
+                "La configuración te permite elegir inglés o español, definir moneda preferida (USD/CLP) y mantener un flujo que se adapte a tu realidad.",
+            },
+          },
+          import: {
+            tag: "Pipeline de importación",
+            title: "Trae tus datos sin romper la bóveda.",
+            description:
+              "Sanctum ingiere JSON, CSV y TXT con validación estricta, deduplicación y vista previa antes de escribir.",
+            sources: {
+              json: {
+                title: "Sanctum Generator JSON v1",
+                description:
+                  "Formato principal para viajes. Esquema versionado, estricto y pensado para merges seguros.",
+              },
+              csv: {
+                title: "CSV de hoja de cálculo",
+                description:
+                  "Plantillas de Excel/Sheets/ODS. Parser CSV robusto para comas.",
+              },
+              text: {
+                title: "Texto plano (prefijos)",
+                description:
+                  "Prefijos T;/H;/C; para escribir rápido en notas o papel.",
+              },
+            },
+            structure: "Estructura JSON v1",
+            cards: {
+              best: {
+                title: "Importación best-effort",
+                description: "Las filas inválidas se reportan, las válidas se guardan.",
+              },
+              entities: {
+                title: "Resolución inteligente de entidades",
+                description:
+                  "Cuentas, categorías, hábitos, wallets y monedas deben existir.",
+              },
+              dedup: {
+                title: "Deduplicación + límites",
+                description: "Duplicados se omiten. Tamaño máximo 10MB.",
+              },
+            },
+          },
+          generator: {
+            tag: "Generador Sanctum",
+            title: "Constructor de registro diario",
+            description:
+              "Crea o continúa un archivo sanctum_export.json mientras viajas u operas offline. Carga un archivo existente, agrega entradas y exporta un JSON v1 limpio.",
+          },
+          download: {
+            title: "Despliega la bóveda",
+            description:
+              "Sanctum vive en tu máquina. Descarga la app de escritorio o audita el código en Codeberg.",
+            primary: "Versiones de escritorio",
+            secondary: "Ver código",
+          },
+          footer: {
+            note: "Sanctum — AGPL-3.0-or-later — Tus datos permanecen cifrados y locales.",
+          },
+          theme: {
+            light: "Claro",
+            dark: "Oscuro",
+            ariaLight: "Cambiar a modo claro",
+            ariaDark: "Cambiar a modo oscuro",
+          },
+          lang: {
+            toggle: "EN",
+            aria: "Cambiar a inglés",
+          },
+        },
+      };
+
+      const resolveKey = (obj, key) =>
+        key.split(".").reduce((acc, part) => (acc ? acc[part] : null), obj);
+
+      const getText = (lang, key) =>
+        resolveKey(translations[lang], key) ?? resolveKey(translations.en, key);
+
+      const updateStaticText = (lang) => {
+        document.querySelectorAll("[data-i18n]").forEach((el) => {
+          const key = el.getAttribute("data-i18n");
+          if (!key) return;
+          const value = getText(lang, key);
+          if (typeof value === "string") {
+            el.textContent = value;
+          }
+        });
+
+        document.querySelectorAll("[data-i18n-html]").forEach((el) => {
+          const key = el.getAttribute("data-i18n-html");
+          if (!key) return;
+          const value = getText(lang, key);
+          if (typeof value === "string") {
+            el.innerHTML = value;
+          }
+        });
+
+        document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+          const key = el.getAttribute("data-i18n-placeholder");
+          if (!key) return;
+          const value = getText(lang, key);
+          if (typeof value === "string") {
+            el.setAttribute("placeholder", value);
+          }
+        });
+      };
+
+      let currentLang = "en";
+
+      const updateThemeToggleLabels = (mode) => {
+        const labels = translations[currentLang]?.theme ?? translations.en.theme;
+        const nextLabel = mode === "dark" ? labels.light : labels.dark;
+        const nextAria = mode === "dark" ? labels.ariaLight : labels.ariaDark;
+
+        themeToggles.forEach((button) => {
+          const label = button.querySelector("[data-theme-toggle-label]");
+          if (label) {
+            label.textContent = nextLabel;
+          }
+          button.setAttribute("aria-label", nextAria);
+          button.setAttribute("aria-pressed", String(mode === "light"));
+          button.classList.toggle("is-light", mode === "light");
+        });
+      };
+
+      const updateLangToggleLabels = (lang) => {
+        const labels = translations[lang]?.lang ?? translations.en.lang;
+        langToggles.forEach((button) => {
+          const label = button.querySelector("[data-lang-toggle-label]");
+          if (label) {
+            label.textContent = labels.toggle;
+          }
+          button.setAttribute("aria-label", labels.aria);
+          button.setAttribute("aria-pressed", String(lang === "es"));
+        });
+      };
 
       const observer = new IntersectionObserver(
         (entries) => {
@@ -89,7 +548,15 @@ const baseUrl = import.meta.env.BASE_URL;
         }
       };
 
-      const applyTheme = (mode) => {
+      const getStoredLang = () => {
+        try {
+          return localStorage.getItem(langKey);
+        } catch {
+          return null;
+        }
+      };
+
+      const applyTheme = (mode, persist = true) => {
         if (mode === "light") {
           root.classList.remove("dark");
         } else {
@@ -100,29 +567,48 @@ const baseUrl = import.meta.env.BASE_URL;
           themeMeta.setAttribute("content", themeColors[mode] ?? themeColors.dark);
         }
 
-        toggles.forEach((button) => {
-          const nextLabel = mode === "dark" ? "Light" : "Dark";
-          const label = button.querySelector("[data-theme-toggle-label]");
-          if (label) {
-            label.textContent = nextLabel;
-          }
-          button.setAttribute("aria-label", `Switch to ${nextLabel.toLowerCase()} mode`);
-          button.setAttribute("aria-pressed", String(mode === "light"));
-          button.classList.toggle("is-light", mode === "light");
-        });
+        updateThemeToggleLabels(mode);
 
+        if (!persist) return;
         try {
           localStorage.setItem(themeKey, mode);
         } catch {}
       };
 
-      const stored = getStoredTheme();
-      applyTheme(stored === "light" ? "light" : "dark");
+      const applyLanguage = (lang, persist = true) => {
+        currentLang = lang;
+        root.lang = lang;
+        root.dataset.lang = lang;
 
-      toggles.forEach((button) => {
+        updateStaticText(lang);
+        updateLangToggleLabels(lang);
+        updateThemeToggleLabels(root.classList.contains("dark") ? "dark" : "light");
+
+        if (!persist) return;
+        try {
+          localStorage.setItem(langKey, lang);
+        } catch {}
+
+        window.dispatchEvent(new CustomEvent("sanctum-lang-change", { detail: { lang } }));
+      };
+
+      const storedLang = getStoredLang();
+      applyLanguage(storedLang === "es" ? "es" : "en", false);
+
+      const storedTheme = getStoredTheme();
+      applyTheme(storedTheme === "light" ? "light" : "dark", false);
+
+      themeToggles.forEach((button) => {
         button.addEventListener("click", () => {
           const next = root.classList.contains("dark") ? "light" : "dark";
           applyTheme(next);
+        });
+      });
+
+      langToggles.forEach((button) => {
+        button.addEventListener("click", () => {
+          const next = currentLang === "en" ? "es" : "en";
+          applyLanguage(next);
         });
       });
     </script>

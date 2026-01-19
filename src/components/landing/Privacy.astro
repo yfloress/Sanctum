@@ -1,46 +1,65 @@
 <section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
   <div class="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] items-center">
     <div class="reveal panel-gradient-strong rounded-3xl border border-border p-8" data-reveal="left">
-      <p class="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground">
+      <p
+        class="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground"
+        data-i18n="privacy.tag"
+      >
         Security & Privacy
       </p>
-      <h3 class="font-display mt-4 text-3xl text-foreground">
+      <h3 class="font-display mt-4 text-3xl text-foreground" data-i18n="privacy.title">
         Your data never leaves the vault.
       </h3>
-      <p class="mt-4 text-muted-foreground">
+      <p class="mt-4 text-muted-foreground" data-i18n="privacy.description">
         Sanctum stores everything locally using SQLCipher and keeps session access timeboxed. Backups
         stay encrypted, and nothing syncs unless you explicitly export or import it.
       </p>
       <div class="mt-6 grid gap-3 sm:grid-cols-2">
         <div class="rounded-2xl border border-border bg-card/70 p-4">
-          <p class="text-sm font-semibold text-foreground">Vault Encryption</p>
-          <p class="mt-1 text-xs text-muted-foreground">AES-256-GCM via SQLCipher.</p>
+          <p class="text-sm font-semibold text-foreground" data-i18n="privacy.cards.encryption.title">
+            Vault Encryption
+          </p>
+          <p class="mt-1 text-xs text-muted-foreground" data-i18n="privacy.cards.encryption.description">
+            AES-256-GCM via SQLCipher.
+          </p>
         </div>
         <div class="rounded-2xl border border-border bg-card/70 p-4">
-          <p class="text-sm font-semibold text-foreground">Session Lock</p>
-          <p class="mt-1 text-xs text-muted-foreground">Auto-lock after inactivity.</p>
+          <p class="text-sm font-semibold text-foreground" data-i18n="privacy.cards.session.title">
+            Session Lock
+          </p>
+          <p class="mt-1 text-xs text-muted-foreground" data-i18n="privacy.cards.session.description">
+            Auto-lock after inactivity.
+          </p>
         </div>
         <div class="rounded-2xl border border-border bg-card/70 p-4">
-          <p class="text-sm font-semibold text-foreground">Encrypted Backups</p>
-          <p class="mt-1 text-xs text-muted-foreground">Export and restore safely.</p>
+          <p class="text-sm font-semibold text-foreground" data-i18n="privacy.cards.backups.title">
+            Encrypted Backups
+          </p>
+          <p class="mt-1 text-xs text-muted-foreground" data-i18n="privacy.cards.backups.description">
+            Export and restore safely.
+          </p>
         </div>
         <div class="rounded-2xl border border-border bg-card/70 p-4">
-          <p class="text-sm font-semibold text-foreground">No Telemetry</p>
-          <p class="mt-1 text-xs text-muted-foreground">No analytics or trackers.</p>
+          <p class="text-sm font-semibold text-foreground" data-i18n="privacy.cards.telemetry.title">
+            No Telemetry
+          </p>
+          <p class="mt-1 text-xs text-muted-foreground" data-i18n="privacy.cards.telemetry.description">
+            No analytics or trackers.
+          </p>
         </div>
       </div>
     </div>
 
     <div class="reveal space-y-4 text-sm text-muted-foreground" data-reveal="right">
-      <p>
+      <p data-i18n="privacy.notes.import">
         Every import is best-effort. Bad rows are reported, good rows still land in your ledger, and
         duplicates are skipped to keep the vault clean.
       </p>
-      <p>
+      <p data-i18n="privacy.notes.crypto">
         Crypto price sync uses CoinGecko and can be routed through a proxy for extra privacy. If you
         prefer zero network calls, leave auto-fetch off and operate entirely offline.
       </p>
-      <p>
+      <p data-i18n="privacy.notes.settings">
         Settings allow you to choose English or Spanish, set a preferred currency (USD/CLP), and
         maintain a workflow that matches your reality.
       </p>

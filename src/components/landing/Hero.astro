@@ -10,11 +10,17 @@
 
   <div class="relative mx-auto grid min-h-screen max-w-7xl grid-cols-1 items-center gap-14 px-6 py-24 lg:grid-cols-[1.05fr_0.95fr] lg:py-32">
     <div class="reveal space-y-6" data-reveal="left">
-      <p class="text-xs font-semibold uppercase tracking-[0.45em] text-muted-foreground">Sanctum</p>
-      <h1 class="font-display text-4xl font-semibold leading-tight text-foreground sm:text-5xl lg:text-6xl">
+      <p
+        class="text-xs font-semibold uppercase tracking-[0.45em] text-muted-foreground"
+        data-i18n="hero.tag"
+      >Sanctum</p>
+      <h1
+        class="font-display text-4xl font-semibold leading-tight text-foreground sm:text-5xl lg:text-6xl"
+        data-i18n="hero.title"
+      >
         Your personal fortress for finance, crypto, and habits.
       </h1>
-      <p class="max-w-xl text-lg text-muted-foreground">
+      <p class="max-w-xl text-lg text-muted-foreground" data-i18n="hero.description">
         Local-only, encrypted tracking with a cyber-clean interface. Sanctum keeps your vault private,
         lets you work offline, and syncs your progress when you are back at your desk.
       </p>
@@ -22,49 +28,69 @@
         <a
           href="#generator"
           class="btn-gradient shadow-strong rounded-full px-6 py-3 text-sm font-semibold transition-all duration-200 ease-out hover:-translate-y-0.5 hover:brightness-110 hover:shadow-xl active:scale-[0.98]"
+          data-i18n="hero.cta.primary"
         >
           Open Sanctum Generator
         </a>
         <a
           href="#download"
           class="btn-surface rounded-full px-6 py-3 text-sm font-semibold transition-all duration-200 ease-out hover:-translate-y-0.5 hover:brightness-110 hover:shadow-lg active:scale-[0.98]"
+          data-i18n="hero.cta.secondary"
         >
           Download Desktop Vault
         </a>
       </div>
       <div class="flex flex-wrap gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-        <span class="rounded-full border border-border px-3 py-1">SQLCipher Vault</span>
-        <span class="rounded-full border border-border px-3 py-1">Offline-first</span>
-        <span class="rounded-full border border-border px-3 py-1">No Telemetry</span>
+        <span class="rounded-full border border-border px-3 py-1" data-i18n="hero.badges.sqlcipher">
+          SQLCipher Vault
+        </span>
+        <span class="rounded-full border border-border px-3 py-1" data-i18n="hero.badges.offline">
+          Offline-first
+        </span>
+        <span class="rounded-full border border-border px-3 py-1" data-i18n="hero.badges.noTelemetry">
+          No Telemetry
+        </span>
       </div>
     </div>
 
     <div class="reveal space-y-5" data-reveal="right">
       <div class="panel-glass rounded-3xl border p-6 shadow-glow">
         <div class="flex items-center justify-between">
-          <p class="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground">
+          <p
+            class="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground"
+            data-i18n="hero.modules.tag"
+          >
             Vault Modules
           </p>
-          <span class="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
+          <span
+            class="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground"
+            data-i18n="hero.modules.badge"
+          >
             Encrypted Local Storage
           </span>
         </div>
         <div class="mt-6 space-y-4">
           <div class="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p class="text-sm font-semibold text-foreground">Finance Core</p>
-            <p class="text-xs text-muted-foreground">
+            <p class="text-sm font-semibold text-foreground" data-i18n="hero.modules.finance.title">
+              Finance Core
+            </p>
+            <p class="text-xs text-muted-foreground" data-i18n="hero.modules.finance.description">
               Accounts, categories, transfers, and net-worth analytics.
             </p>
           </div>
           <div class="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p class="text-sm font-semibold text-foreground">Crypto Portfolio</p>
-            <p class="text-xs text-muted-foreground">
+            <p class="text-sm font-semibold text-foreground" data-i18n="hero.modules.crypto.title">
+              Crypto Portfolio
+            </p>
+            <p class="text-xs text-muted-foreground" data-i18n="hero.modules.crypto.description">
               Wallets, trades, swaps, and price sync via CoinGecko.
             </p>
           </div>
           <div class="rounded-2xl border border-border bg-card/70 px-4 py-3">
-            <p class="text-sm font-semibold text-foreground">Habit Momentum</p>
-            <p class="text-xs text-muted-foreground">
+            <p class="text-sm font-semibold text-foreground" data-i18n="hero.modules.habits.title">
+              Habit Momentum
+            </p>
+            <p class="text-xs text-muted-foreground" data-i18n="hero.modules.habits.description">
               Daily logs, heatmaps, streak rewards, and goals.
             </p>
           </div>
@@ -73,14 +99,32 @@
 
       <div class="grid gap-4 sm:grid-cols-2">
         <div class="panel-gradient rounded-2xl border border-border p-4">
-          <p class="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">Import</p>
-          <p class="mt-2 text-sm text-foreground">JSON v1, CSV, TXT</p>
-          <p class="text-xs text-muted-foreground">Best-effort + dedup</p>
+          <p
+            class="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground"
+            data-i18n="hero.highlights.import.tag"
+          >
+            Import
+          </p>
+          <p class="mt-2 text-sm text-foreground" data-i18n="hero.highlights.import.line1">
+            JSON v1, CSV, TXT
+          </p>
+          <p class="text-xs text-muted-foreground" data-i18n="hero.highlights.import.line2">
+            Best-effort + dedup
+          </p>
         </div>
         <div class="panel-gradient rounded-2xl border border-border p-4">
-          <p class="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">Settings</p>
-          <p class="mt-2 text-sm text-foreground">USD / CLP, EN / ES</p>
-          <p class="text-xs text-muted-foreground">Proxy + session lock</p>
+          <p
+            class="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground"
+            data-i18n="hero.highlights.settings.tag"
+          >
+            Settings
+          </p>
+          <p class="mt-2 text-sm text-foreground" data-i18n="hero.highlights.settings.line1">
+            USD / CLP, EN / ES
+          </p>
+          <p class="text-xs text-muted-foreground" data-i18n="hero.highlights.settings.line2">
+            Proxy + session lock
+          </p>
         </div>
       </div>
     </div>

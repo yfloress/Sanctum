@@ -3,44 +3,50 @@
 
 const modules = [
   {
+    key: 'finance',
     title: 'Finance Core',
     tag: 'Accounts + Transfers',
     details: [
-      'Multiple account types with per-account currency.',
-      'Income, expense, and transfer flows with categories.',
-      'Dashboard analytics for net worth and expense slices.',
+      { key: 'detail1', text: 'Multiple account types with per-account currency.' },
+      { key: 'detail2', text: 'Income, expense, and transfer flows with categories.' },
+      { key: 'detail3', text: 'Dashboard analytics for net worth and expense slices.' },
     ],
   },
   {
+    key: 'crypto',
     title: 'Crypto Portfolio',
     tag: 'Wallets + Prices',
     details: [
-      'Wallet management for exchange, hardware, and software.',
-      'Buy, sell, transfer, and swap transaction support.',
-      'Price sync via CoinGecko with proxy controls.',
+      { key: 'detail1', text: 'Wallet management for exchange, hardware, and software.' },
+      { key: 'detail2', text: 'Buy, sell, transfer, and swap transaction support.' },
+      { key: 'detail3', text: 'Price sync via CoinGecko with proxy controls.' },
     ],
   },
   {
+    key: 'habits',
     title: 'Habit Momentum',
     tag: 'Heatmaps + Rewards',
     details: [
-      'Daily habit logs with monthly views.',
-      'Heatmap analytics across the year.',
-      'Streak rewards, milestones, and goals.',
+      { key: 'detail1', text: 'Daily habit logs with monthly views.' },
+      { key: 'detail2', text: 'Heatmap analytics across the year.' },
+      { key: 'detail3', text: 'Streak rewards, milestones, and goals.' },
     ],
   },
 ];
 
 const controls = [
   {
+    key: 'security',
     title: 'Security Controls',
     description: 'Session timeout, vault lock, and encrypted backups by default.',
   },
   {
+    key: 'localization',
     title: 'Localization',
     description: 'English and Spanish UI with preferred currency settings.',
   },
   {
+    key: 'import',
     title: 'Import System',
     description: 'Preview changes, deduplicate entries, and keep a clean ledger.',
   },
@@ -49,11 +55,14 @@ const controls = [
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
   <div class="reveal text-center mb-16" data-reveal="left">
-    <p class="text-xs font-semibold uppercase tracking-[0.4em] text-muted-foreground">Core Systems</p>
-    <h2 class="font-display mt-4 text-3xl sm:text-4xl text-foreground">
+    <p
+      class="text-xs font-semibold uppercase tracking-[0.4em] text-muted-foreground"
+      data-i18n="features.tag"
+    >Core Systems</p>
+    <h2 class="font-display mt-4 text-3xl sm:text-4xl text-foreground" data-i18n="features.title">
       One vault. Three disciplines. Zero leakage.
     </h2>
-    <p class="mt-4 text-muted-foreground max-w-2xl mx-auto text-lg">
+    <p class="mt-4 text-muted-foreground max-w-2xl mx-auto text-lg" data-i18n="features.description">
       Sanctum is structured as a local fortress: finance, crypto, and habits live together with
       shared analytics and unified privacy controls.
     </p>
@@ -65,15 +74,20 @@ const controls = [
         class="reveal panel-gradient-strong rounded-3xl border border-border p-6 panel-hover"
         style={`transition-delay: ${index * 100}ms`}
       >
-        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+        <p
+          class="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground"
+          data-i18n={`features.modules.${module.key}.tag`}
+        >
           {module.tag}
         </p>
-        <h3 class="mt-4 text-xl font-semibold text-foreground">{module.title}</h3>
+        <h3 class="mt-4 text-xl font-semibold text-foreground" data-i18n={`features.modules.${module.key}.title`}>
+          {module.title}
+        </h3>
         <ul class="mt-4 space-y-3 text-sm text-muted-foreground">
           {module.details.map((detail) => (
             <li class="flex items-start gap-3">
               <span class="mt-2 h-1.5 w-1.5 rounded-full bg-accent"></span>
-              <span>{detail}</span>
+              <span data-i18n={`features.modules.${module.key}.${detail.key}`}>{detail.text}</span>
             </li>
           ))}
         </ul>
@@ -88,8 +102,18 @@ const controls = [
         style={`transition-delay: ${index * 80}ms`}
         data-reveal="right"
       >
-        <h4 class="text-lg font-semibold text-foreground">{control.title}</h4>
-        <p class="mt-2 text-sm text-muted-foreground">{control.description}</p>
+        <h4
+          class="text-lg font-semibold text-foreground"
+          data-i18n={`features.controls.${control.key}.title`}
+        >
+          {control.title}
+        </h4>
+        <p
+          class="mt-2 text-sm text-muted-foreground"
+          data-i18n={`features.controls.${control.key}.description`}
+        >
+          {control.description}
+        </p>
       </div>
     ))}
   </div>

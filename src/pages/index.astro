@@ -22,11 +22,31 @@ const baseUrl = import.meta.env.BASE_URL;
           <span>Sanctum</span>
         </a>
         <div class="hidden items-center gap-6 text-sm sm:flex">
-          <a href="#modules" class="text-muted-foreground hover:text-foreground transition-colors">Modules</a>
-          <a href="#security" class="text-muted-foreground hover:text-foreground transition-colors">Security</a>
-          <a href="#import" class="text-muted-foreground hover:text-foreground transition-colors">Import</a>
-          <a href="#generator" class="text-muted-foreground hover:text-foreground transition-colors">Sanctum Generator</a>
-          <a href="#download" class="text-muted-foreground hover:text-foreground transition-colors">Download</a>
+          <a
+            href="#modules"
+            class="text-muted-foreground hover:text-foreground transition-colors"
+            data-i18n="nav.modules"
+          >Modules</a>
+          <a
+            href="#security"
+            class="text-muted-foreground hover:text-foreground transition-colors"
+            data-i18n="nav.security"
+          >Security</a>
+          <a
+            href="#import"
+            class="text-muted-foreground hover:text-foreground transition-colors"
+            data-i18n="nav.import"
+          >Import</a>
+          <a
+            href="#generator"
+            class="text-muted-foreground hover:text-foreground transition-colors"
+            data-i18n="nav.generator"
+          >Sanctum Generator</a>
+          <a
+            href="#download"
+            class="text-muted-foreground hover:text-foreground transition-colors"
+            data-i18n="nav.download"
+          >Download</a>
           <button
             type="button"
             data-theme-toggle
@@ -38,6 +58,14 @@ const baseUrl = import.meta.env.BASE_URL;
               <span class="theme-toggle__thumb"></span>
             </span>
             <span class="theme-toggle__label" data-theme-toggle-label>Light</span>
+          </button>
+          <button
+            type="button"
+            data-lang-toggle
+            class="btn-surface rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:brightness-110 hover:shadow-md active:scale-[0.98]"
+            aria-label="Switch to Spanish"
+          >
+            <span data-lang-toggle-label>ES</span>
           </button>
         </div>
         <div class="flex items-center gap-2 sm:hidden">
@@ -53,9 +81,18 @@ const baseUrl = import.meta.env.BASE_URL;
             </span>
             <span class="theme-toggle__label" data-theme-toggle-label>Light</span>
           </button>
+          <button
+            type="button"
+            data-lang-toggle
+            class="btn-surface rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:brightness-110 hover:shadow-md active:scale-[0.98]"
+            aria-label="Switch to Spanish"
+          >
+            <span data-lang-toggle-label>ES</span>
+          </button>
           <a
             href="#generator"
             class="btn-surface rounded-full px-3 py-1 text-xs font-semibold transition-all duration-200 ease-out hover:-translate-y-0.5 hover:brightness-110 hover:shadow-md active:scale-[0.98]"
+            data-i18n="nav.generator"
           >
             Sanctum Generator
           </a>
@@ -85,9 +122,14 @@ const baseUrl = import.meta.env.BASE_URL;
     <section id="generator" class="scroll-mt-24 py-24 bg-sanctum-section-alt">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-12 reveal" data-reveal="left">
-          <p class="text-xs font-semibold uppercase tracking-[0.4em] text-muted-foreground">Sanctum Generator</p>
-          <h2 class="font-display text-3xl font-semibold text-foreground mb-4">Daily Log Builder</h2>
-          <p class="text-muted-foreground max-w-2xl mx-auto">
+          <p
+            class="text-xs font-semibold uppercase tracking-[0.4em] text-muted-foreground"
+            data-i18n="generator.tag"
+          >Sanctum Generator</p>
+          <h2 class="font-display text-3xl font-semibold text-foreground mb-4" data-i18n="generator.title">
+            Daily Log Builder
+          </h2>
+          <p class="text-muted-foreground max-w-2xl mx-auto" data-i18n="generator.description">
             Create or append to a single sanctum_export.json file while traveling or offline. Load
             an existing file, add entries, and export a clean JSON v1 payload.
           </p>

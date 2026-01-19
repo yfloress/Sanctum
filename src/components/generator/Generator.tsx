@@ -65,6 +65,237 @@ type ExportData = {
   }[];
 };
 
+const translations = {
+  en: {
+    headerTag: "Sanctum Generator",
+    headerTitle: "Build a trip-safe log",
+    headerDescription:
+      "This generator matches Sanctum's import schema. Account, habit, wallet, and category names must already exist in your vault for the import to succeed.",
+    startOver: "Start over",
+    steps: {
+      load: "Step 1: Load",
+      add: "Step 2: Add Entries",
+      export: "Step 3: Export",
+    },
+    stats: {
+      transactions: "Transactions",
+      habits: "Habit Logs",
+      crypto: "Crypto Entries",
+    },
+    loaded: "Loaded",
+    tips: {
+      title: "Import Tips",
+      date: "Dates must be in YYYY-MM-DD format.",
+      currency: "Currency is USD or CLP.",
+      transfer: "Transfers require a destination account.",
+    },
+    load: {
+      title: "Load Existing JSON",
+      description: "Upload a sanctum_export.json file to append new entries to the same log.",
+      button: "Upload JSON",
+    },
+    paste: {
+      title: "Paste JSON",
+      description: "Use this if you only have access to text notes. The payload stays local.",
+      placeholder: "Paste a sanctum_export.json payload...",
+      button: "Load From Paste",
+      privacy: "Privacy: data never leaves your browser. Works offline after first load.",
+    },
+    add: {
+      title: "Add Entries",
+      subtitle: "Build your log",
+      tabs: {
+        finances: "Finances",
+        crypto: "Crypto",
+        habits: "Habits",
+      },
+    },
+    transactions: {
+      form: {
+        account: "Account",
+        category: "Category",
+        transferTo: "Transfer to account",
+        description: "Description",
+        amount: "Amount",
+        add: "Add Transaction",
+      },
+      list: {
+        title: "Recent Transactions",
+        empty: "No transactions yet. Add the first one.",
+        remove: "Remove",
+      },
+    },
+    habits: {
+      form: {
+        name: "Habit name",
+        completed: "Completed",
+        add: "Add Habit Log",
+      },
+      list: {
+        title: "Habit Logs",
+        empty: "No habit logs yet. Capture today’s progress.",
+        remove: "Remove",
+        completed: "Completed",
+        skipped: "Skipped",
+      },
+    },
+    crypto: {
+      form: {
+        wallet: "Wallet",
+        symbol: "Symbol (BTC)",
+        amount: "Amount",
+        price: "Price per coin (optional)",
+        fee: "Fee (optional)",
+        notes: "Notes (optional)",
+        add: "Add Crypto Entry",
+      },
+      list: {
+        title: "Crypto Entries",
+        empty: "No crypto entries yet. Add wallet activity here.",
+        remove: "Remove",
+      },
+    },
+    types: {
+      expense: "Expense",
+      income: "Income",
+      transfer: "Transfer",
+      buy: "Buy",
+      sell: "Sell",
+      transfer_in: "Transfer In",
+      transfer_out: "Transfer Out",
+    },
+    export: {
+      title: "Export Preview",
+      download: "Download JSON",
+    },
+    errors: {
+      invalidJson: "Invalid JSON structure.",
+      unsupportedVersion: "Unsupported version. Expected version 1.0.",
+      parseFailed: "Failed to parse JSON.",
+      pasteRequired: "Paste a JSON payload before loading.",
+      transactionRequired: "Transaction requires date, account, amount, and currency.",
+      categoryRequired: "Category is required unless this is a transfer.",
+      transferRequired: "Transfer requires a destination account.",
+      habitRequired: "Habit name and date are required.",
+      cryptoRequired: "Crypto entry requires date, wallet, symbol, and amount.",
+    },
+  },
+  es: {
+    headerTag: "Generador Sanctum",
+    headerTitle: "Construye un registro seguro",
+    headerDescription:
+      "Este generador respeta el esquema de importación de Sanctum. Los nombres de cuentas, hábitos, wallets y categorías deben existir en tu bóveda para que la importación funcione.",
+    startOver: "Reiniciar",
+    steps: {
+      load: "Paso 1: Cargar",
+      add: "Paso 2: Agregar",
+      export: "Paso 3: Exportar",
+    },
+    stats: {
+      transactions: "Transacciones",
+      habits: "Registros de hábitos",
+      crypto: "Movimientos cripto",
+    },
+    loaded: "Cargado",
+    tips: {
+      title: "Consejos de importación",
+      date: "Las fechas deben ser YYYY-MM-DD.",
+      currency: "La moneda es USD o CLP.",
+      transfer: "Las transferencias requieren cuenta destino.",
+    },
+    load: {
+      title: "Cargar JSON existente",
+      description: "Sube un archivo sanctum_export.json para agregar nuevas entradas al mismo registro.",
+      button: "Subir JSON",
+    },
+    paste: {
+      title: "Pegar JSON",
+      description: "Úsalo si solo tienes acceso a notas de texto. El contenido se mantiene local.",
+      placeholder: "Pega el contenido de sanctum_export.json...",
+      button: "Cargar desde pegado",
+      privacy: "Privacidad: los datos nunca salen del navegador. Funciona offline después de la primera carga.",
+    },
+    add: {
+      title: "Agregar entradas",
+      subtitle: "Construye tu registro",
+      tabs: {
+        finances: "Finanzas",
+        crypto: "Cripto",
+        habits: "Hábitos",
+      },
+    },
+    transactions: {
+      form: {
+        account: "Cuenta",
+        category: "Categoría",
+        transferTo: "Transferir a cuenta",
+        description: "Descripción",
+        amount: "Monto",
+        add: "Agregar transacción",
+      },
+      list: {
+        title: "Transacciones recientes",
+        empty: "Aún no hay transacciones. Agrega la primera.",
+        remove: "Eliminar",
+      },
+    },
+    habits: {
+      form: {
+        name: "Nombre del hábito",
+        completed: "Completado",
+        add: "Agregar registro de hábito",
+      },
+      list: {
+        title: "Registros de hábitos",
+        empty: "Aún no hay registros. Captura el progreso de hoy.",
+        remove: "Eliminar",
+        completed: "Completado",
+        skipped: "Omitido",
+      },
+    },
+    crypto: {
+      form: {
+        wallet: "Wallet",
+        symbol: "Símbolo (BTC)",
+        amount: "Monto",
+        price: "Precio por moneda (opcional)",
+        fee: "Comisión (opcional)",
+        notes: "Notas (opcional)",
+        add: "Agregar movimiento cripto",
+      },
+      list: {
+        title: "Movimientos cripto",
+        empty: "Aún no hay movimientos. Agrega actividad aquí.",
+        remove: "Eliminar",
+      },
+    },
+    types: {
+      expense: "Gasto",
+      income: "Ingreso",
+      transfer: "Transferencia",
+      buy: "Compra",
+      sell: "Venta",
+      transfer_in: "Transferencia entrada",
+      transfer_out: "Transferencia salida",
+    },
+    export: {
+      title: "Vista previa de exportación",
+      download: "Descargar JSON",
+    },
+    errors: {
+      invalidJson: "Estructura JSON inválida.",
+      unsupportedVersion: "Versión no compatible. Se esperaba la versión 1.0.",
+      parseFailed: "No se pudo leer el JSON.",
+      pasteRequired: "Pega un JSON antes de cargar.",
+      transactionRequired: "La transacción requiere fecha, cuenta, monto y moneda.",
+      categoryRequired: "La categoría es obligatoria salvo que sea una transferencia.",
+      transferRequired: "La transferencia requiere una cuenta destino.",
+      habitRequired: "El nombre del hábito y la fecha son obligatorios.",
+      cryptoRequired: "El movimiento cripto requiere fecha, wallet, símbolo y monto.",
+    },
+  },
+};
+
 const defaultTx = {
   date: "",
   account: "",
@@ -125,7 +356,17 @@ function isSupportedVersion(value: unknown) {
   return value === "1" || value === "1.0" || value === 1;
 }
 
+function getInitialLang(): "en" | "es" {
+  if (typeof document === "undefined") {
+    return "en";
+  }
+  return document.documentElement.lang === "es" ? "es" : "en";
+}
+
 export default function Generator() {
+  const [lang, setLang] = React.useState<"en" | "es">(getInitialLang);
+  const copy = React.useMemo(() => translations[lang] ?? translations.en, [lang]);
+
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [habits, setHabits] = React.useState<HabitLog[]>([]);
   const [cryptoTx, setCryptoTx] = React.useState<CryptoTransaction[]>([]);
@@ -141,6 +382,18 @@ export default function Generator() {
   const [cryptoForm, setCryptoForm] = React.useState(defaultCrypto);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    const handleLangChange = (event: Event) => {
+      const detail = (event as CustomEvent<{ lang?: string }>).detail;
+      const nextLang = detail?.lang ?? document.documentElement.lang;
+      const next = nextLang === "es" ? "es" : "en";
+      setLang(next);
+    };
+
+    window.addEventListener("sanctum-lang-change", handleLangChange);
+    return () => window.removeEventListener("sanctum-lang-change", handleLangChange);
+  }, []);
 
   const exportPayload = React.useMemo<ExportData>(() => {
     return {
@@ -171,10 +424,10 @@ export default function Generator() {
         const text = String(reader.result ?? "");
         const parsed = JSON.parse(text);
         if (!parsed || typeof parsed !== "object") {
-          throw new Error("Invalid JSON structure.");
+          throw new Error(copy.errors.invalidJson);
         }
         if (!isSupportedVersion(parsed.version)) {
-          throw new Error("Unsupported version. Expected version 1.0.");
+          throw new Error(copy.errors.unsupportedVersion);
         }
 
         const nextTransactions = Array.isArray(parsed.transactions)
@@ -217,7 +470,12 @@ export default function Generator() {
         setRawInput("");
         setError(null);
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to parse JSON.";
+        const message =
+          err instanceof SyntaxError
+            ? copy.errors.parseFailed
+            : err instanceof Error
+            ? err.message
+            : copy.errors.parseFailed;
         setError(message);
       }
     };
@@ -230,13 +488,13 @@ export default function Generator() {
 
   function handleLoadPaste() {
     if (!rawInput.trim()) {
-      setError("Paste a JSON payload before loading.");
+      setError(copy.errors.pasteRequired);
       return;
     }
     try {
       const parsed = JSON.parse(rawInput);
       if (!isSupportedVersion(parsed.version)) {
-        throw new Error("Unsupported version. Expected version 1.0.");
+        throw new Error(copy.errors.unsupportedVersion);
       }
       setTransactions(
         Array.isArray(parsed.transactions)
@@ -276,7 +534,12 @@ export default function Generator() {
       setLoadedFile("pasted JSON");
       setError(null);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to parse JSON.";
+      const message =
+        err instanceof SyntaxError
+          ? copy.errors.parseFailed
+          : err instanceof Error
+          ? err.message
+          : copy.errors.parseFailed;
       setError(message);
     }
   }
@@ -304,15 +567,15 @@ export default function Generator() {
   function addTransaction() {
     setError(null);
     if (!txForm.date || !txForm.account || !txForm.amount || !txForm.currency) {
-      setError("Transaction requires date, account, amount, and currency.");
+      setError(copy.errors.transactionRequired);
       return;
     }
     if (txForm.transaction_type !== "transfer" && !txForm.category) {
-      setError("Category is required unless this is a transfer.");
+      setError(copy.errors.categoryRequired);
       return;
     }
     if (txForm.transaction_type === "transfer" && !txForm.transfer_to_account) {
-      setError("Transfer requires a destination account.");
+      setError(copy.errors.transferRequired);
       return;
     }
 
@@ -336,7 +599,7 @@ export default function Generator() {
   function addHabit() {
     setError(null);
     if (!habitForm.habit || !habitForm.date) {
-      setError("Habit name and date are required.");
+      setError(copy.errors.habitRequired);
       return;
     }
     setHabits((prev) => [
@@ -354,7 +617,7 @@ export default function Generator() {
   function addCrypto() {
     setError(null);
     if (!cryptoForm.date || !cryptoForm.wallet || !cryptoForm.symbol || !cryptoForm.amount) {
-      setError("Crypto entry requires date, wallet, symbol, and amount.");
+      setError(copy.errors.cryptoRequired);
       return;
     }
     setCryptoTx((prev) => [
@@ -380,19 +643,18 @@ export default function Generator() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
-              Sanctum Generator
+              {copy.headerTag}
             </p>
             <h3 className="font-display mt-3 text-2xl font-semibold text-foreground">
-              Build a trip-safe log
+              {copy.headerTitle}
             </h3>
             <p className="mt-3 text-sm text-muted-foreground max-w-lg">
-              This generator matches Sanctum&apos;s import schema. Account, habit, wallet, and category
-              names must already exist in your vault for the import to succeed.
+              {copy.headerDescription}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={handleReset}>
-              Start over
+              {copy.startOver}
             </Button>
           </div>
         </div>
@@ -410,24 +672,24 @@ export default function Generator() {
         />
 
         <div className="mt-6 flex flex-wrap gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-          <Badge variant="outline">Step 1: Load</Badge>
-          <Badge variant="outline">Step 2: Add Entries</Badge>
-          <Badge variant="outline">Step 3: Export</Badge>
+          <Badge variant="outline">{copy.steps.load}</Badge>
+          <Badge variant="outline">{copy.steps.add}</Badge>
+          <Badge variant="outline">{copy.steps.export}</Badge>
         </div>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="panel-gradient rounded-xl border border-border p-4">
-                <p className="text-xs text-muted-foreground">Transactions</p>
+                <p className="text-xs text-muted-foreground">{copy.stats.transactions}</p>
                 <p className="text-2xl font-semibold text-foreground">{transactions.length}</p>
               </div>
               <div className="panel-gradient rounded-xl border border-border p-4">
-                <p className="text-xs text-muted-foreground">Habit Logs</p>
+                <p className="text-xs text-muted-foreground">{copy.stats.habits}</p>
                 <p className="text-2xl font-semibold text-foreground">{habits.length}</p>
               </div>
               <div className="panel-gradient rounded-xl border border-border p-4">
-                <p className="text-xs text-muted-foreground">Crypto Entries</p>
+                <p className="text-xs text-muted-foreground">{copy.stats.crypto}</p>
                 <p className="text-2xl font-semibold text-foreground">{cryptoTx.length}</p>
               </div>
             </div>
@@ -439,11 +701,11 @@ export default function Generator() {
             )}
 
             <div className="rounded-2xl border border-border bg-card/70 p-4 text-xs text-muted-foreground">
-              <p className="font-semibold text-foreground">Import Tips</p>
+              <p className="font-semibold text-foreground">{copy.tips.title}</p>
               <ul className="mt-2 space-y-1">
-                <li>Dates must be in YYYY-MM-DD format.</li>
-                <li>Currency is USD or CLP.</li>
-                <li>Transfers require a destination account.</li>
+                <li>{copy.tips.date}</li>
+                <li>{copy.tips.currency}</li>
+                <li>{copy.tips.transfer}</li>
               </ul>
             </div>
           </div>
@@ -451,18 +713,16 @@ export default function Generator() {
           <div className="space-y-4">
             <div className="panel-gradient rounded-2xl border border-border p-5">
               <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                Load Existing JSON
+                {copy.load.title}
               </h4>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Upload a sanctum_export.json file to append new entries to the same log.
-              </p>
+              <p className="mt-2 text-sm text-muted-foreground">{copy.load.description}</p>
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 <Button variant="secondary" onClick={handleLoadClick}>
-                  Upload JSON
+                  {copy.load.button}
                 </Button>
                 {loadedFile && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Badge variant="outline">Loaded</Badge>
+                    <Badge variant="outline">{copy.loaded}</Badge>
                     <span>{loadedFile}</span>
                   </div>
                 )}
@@ -471,25 +731,21 @@ export default function Generator() {
 
             <div className="panel-gradient rounded-2xl border border-border p-5">
               <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                Paste JSON
+                {copy.paste.title}
               </h4>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Use this if you only have access to text notes. The payload stays local.
-              </p>
+              <p className="mt-2 text-sm text-muted-foreground">{copy.paste.description}</p>
               <Textarea
                 className="mt-4 min-h-[180px] font-mono text-xs"
                 value={rawInput}
                 onChange={(event) => setRawInput(event.target.value)}
-                placeholder="Paste a sanctum_export.json payload..."
+                placeholder={copy.paste.placeholder}
               />
               <div className="mt-4 flex justify-end">
                 <Button variant="outline" onClick={handleLoadPaste}>
-                  Load From Paste
+                  {copy.paste.button}
                 </Button>
               </div>
-              <p className="mt-4 text-xs text-muted-foreground">
-                Privacy: data never leaves your browser. Works offline after first load.
-              </p>
+              <p className="mt-4 text-xs text-muted-foreground">{copy.paste.privacy}</p>
             </div>
           </div>
         </div>
@@ -499,15 +755,15 @@ export default function Generator() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
-              Add Entries
+              {copy.add.title}
             </p>
-            <h4 className="mt-1 text-xl font-semibold text-foreground">Build your log</h4>
+            <h4 className="mt-1 text-xl font-semibold text-foreground">{copy.add.subtitle}</h4>
           </div>
           <div className="flex flex-wrap gap-2">
             {[
-              { id: "transactions", label: "Finances" },
-              { id: "crypto", label: "Crypto" },
-              { id: "habits", label: "Habits" },
+              { id: "transactions", label: copy.add.tabs.finances },
+              { id: "crypto", label: copy.add.tabs.crypto },
+              { id: "habits", label: copy.add.tabs.habits },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -536,7 +792,7 @@ export default function Generator() {
               />
               <div className="grid gap-4 sm:grid-cols-2">
                 <Input
-                  placeholder="Account"
+                  placeholder={copy.transactions.form.account}
                   value={txForm.account}
                   onChange={(event) =>
                     setTxForm({ ...txForm, account: event.target.value })
@@ -564,14 +820,14 @@ export default function Generator() {
                     })
                   }
                 >
-                  <option value="expense">Expense</option>
-                  <option value="income">Income</option>
-                  <option value="transfer">Transfer</option>
+                  <option value="expense">{copy.types.expense}</option>
+                  <option value="income">{copy.types.income}</option>
+                  <option value="transfer">{copy.types.transfer}</option>
                 </select>
                 <Input
                   type="number"
                   step="0.01"
-                  placeholder="Amount"
+                  placeholder={copy.transactions.form.amount}
                   value={txForm.amount}
                   onChange={(event) =>
                     setTxForm({ ...txForm, amount: event.target.value })
@@ -579,14 +835,14 @@ export default function Generator() {
                 />
               </div>
               <Input
-                placeholder="Category"
+                placeholder={copy.transactions.form.category}
                 value={txForm.category}
                 onChange={(event) => setTxForm({ ...txForm, category: event.target.value })}
                 disabled={txForm.transaction_type === "transfer"}
               />
               {txForm.transaction_type === "transfer" && (
                 <Input
-                  placeholder="Transfer to account"
+                  placeholder={copy.transactions.form.transferTo}
                   value={txForm.transfer_to_account}
                   onChange={(event) =>
                     setTxForm({ ...txForm, transfer_to_account: event.target.value })
@@ -594,21 +850,21 @@ export default function Generator() {
                 />
               )}
               <Input
-                placeholder="Description"
+                placeholder={copy.transactions.form.description}
                 value={txForm.description}
                 onChange={(event) => setTxForm({ ...txForm, description: event.target.value })}
               />
-              <Button onClick={addTransaction}>Add Transaction</Button>
+              <Button onClick={addTransaction}>{copy.transactions.form.add}</Button>
             </div>
 
             <div className="panel-gradient rounded-2xl border border-border p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                Recent Transactions
+                {copy.transactions.list.title}
               </p>
               <div className="mt-4 space-y-3">
                 {transactions.length === 0 && (
                   <p className="text-sm text-muted-foreground">
-                    No transactions yet. Add the first one.
+                    {copy.transactions.list.empty}
                   </p>
                 )}
                 {transactions.map((tx) => {
@@ -629,11 +885,11 @@ export default function Generator() {
                             setTransactions((prev) => prev.filter((item) => item.id !== tx.id))
                           }
                         >
-                          Remove
+                          {copy.transactions.list.remove}
                         </button>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {tx.date} · {tx.transaction_type}
+                        {tx.date} · {copy.types[tx.transaction_type]}
                         {tx.transaction_type === "transfer" && tx.transfer_to_account
                           ? ` → ${tx.transfer_to_account}`
                           : ""}
@@ -658,7 +914,7 @@ export default function Generator() {
                 onChange={(event) => setHabitForm({ ...habitForm, date: event.target.value })}
               />
               <Input
-                placeholder="Habit name"
+                placeholder={copy.habits.form.name}
                 value={habitForm.habit}
                 onChange={(event) => setHabitForm({ ...habitForm, habit: event.target.value })}
               />
@@ -670,19 +926,19 @@ export default function Generator() {
                     setHabitForm({ ...habitForm, completed: event.target.checked })
                   }
                 />
-                Completed
+                {copy.habits.form.completed}
               </label>
-              <Button onClick={addHabit}>Add Habit Log</Button>
+              <Button onClick={addHabit}>{copy.habits.form.add}</Button>
             </div>
 
             <div className="panel-gradient rounded-2xl border border-border p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                Habit Logs
+                {copy.habits.list.title}
               </p>
               <div className="mt-4 space-y-3">
                 {habits.length === 0 && (
                   <p className="text-sm text-muted-foreground">
-                    No habit logs yet. Capture today’s progress.
+                    {copy.habits.list.empty}
                   </p>
                 )}
                 {habits.map((log) => (
@@ -696,11 +952,11 @@ export default function Generator() {
                         className="text-xs text-muted-foreground transition-all duration-200 ease-out hover:-translate-y-0.5 hover:text-foreground"
                         onClick={() => setHabits((prev) => prev.filter((item) => item.id !== log.id))}
                       >
-                        Remove
+                        {copy.habits.list.remove}
                       </button>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {log.date} · {log.completed ? "Completed" : "Skipped"}
+                      {log.date} · {log.completed ? copy.habits.list.completed : copy.habits.list.skipped}
                     </p>
                   </div>
                 ))}
@@ -719,14 +975,14 @@ export default function Generator() {
               />
               <div className="grid gap-4 sm:grid-cols-2">
                 <Input
-                  placeholder="Wallet"
+                  placeholder={copy.crypto.form.wallet}
                   value={cryptoForm.wallet}
                   onChange={(event) =>
                     setCryptoForm({ ...cryptoForm, wallet: event.target.value })
                   }
                 />
                 <Input
-                  placeholder="Symbol (BTC)"
+                  placeholder={copy.crypto.form.symbol}
                   value={cryptoForm.symbol}
                   onChange={(event) =>
                     setCryptoForm({ ...cryptoForm, symbol: event.target.value })
@@ -744,15 +1000,15 @@ export default function Generator() {
                     })
                   }
                 >
-                  <option value="buy">Buy</option>
-                  <option value="sell">Sell</option>
-                  <option value="transfer_in">Transfer In</option>
-                  <option value="transfer_out">Transfer Out</option>
+                  <option value="buy">{copy.types.buy}</option>
+                  <option value="sell">{copy.types.sell}</option>
+                  <option value="transfer_in">{copy.types.transfer_in}</option>
+                  <option value="transfer_out">{copy.types.transfer_out}</option>
                 </select>
                 <Input
                   type="number"
                   step="0.00000001"
-                  placeholder="Amount"
+                  placeholder={copy.crypto.form.amount}
                   value={cryptoForm.amount}
                   onChange={(event) =>
                     setCryptoForm({ ...cryptoForm, amount: event.target.value })
@@ -763,7 +1019,7 @@ export default function Generator() {
                 <Input
                   type="number"
                   step="0.01"
-                  placeholder="Price per coin (optional)"
+                  placeholder={copy.crypto.form.price}
                   value={cryptoForm.price_per_coin}
                   onChange={(event) =>
                     setCryptoForm({ ...cryptoForm, price_per_coin: event.target.value })
@@ -772,27 +1028,27 @@ export default function Generator() {
                 <Input
                   type="number"
                   step="0.01"
-                  placeholder="Fee (optional)"
+                  placeholder={copy.crypto.form.fee}
                   value={cryptoForm.fee}
                   onChange={(event) => setCryptoForm({ ...cryptoForm, fee: event.target.value })}
                 />
               </div>
               <Input
-                placeholder="Notes (optional)"
+                placeholder={copy.crypto.form.notes}
                 value={cryptoForm.notes}
                 onChange={(event) => setCryptoForm({ ...cryptoForm, notes: event.target.value })}
               />
-              <Button onClick={addCrypto}>Add Crypto Entry</Button>
+              <Button onClick={addCrypto}>{copy.crypto.form.add}</Button>
             </div>
 
             <div className="panel-gradient rounded-2xl border border-border p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                Crypto Entries
+                {copy.crypto.list.title}
               </p>
               <div className="mt-4 space-y-3">
                 {cryptoTx.length === 0 && (
                   <p className="text-sm text-muted-foreground">
-                    No crypto entries yet. Add wallet activity here.
+                    {copy.crypto.list.empty}
                   </p>
                 )}
                 {cryptoTx.map((tx) => (
@@ -810,11 +1066,11 @@ export default function Generator() {
                           setCryptoTx((prev) => prev.filter((item) => item.id !== tx.id))
                         }
                       >
-                        Remove
+                        {copy.crypto.list.remove}
                       </button>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {tx.date} · {tx.transaction_type.replace("_", " ")}
+                      {tx.date} · {copy.types[tx.transaction_type]}
                     </p>
                     {tx.notes && (
                       <p className="text-xs text-muted-foreground">{tx.notes}</p>
@@ -831,11 +1087,11 @@ export default function Generator() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              Export Preview
+              {copy.export.title}
             </h4>
             <Badge variant="outline">JSON v1</Badge>
           </div>
-          <Button onClick={handleDownload}>Download JSON</Button>
+          <Button onClick={handleDownload}>{copy.export.download}</Button>
         </div>
         <Textarea
           className="mt-4 min-h-[240px] font-mono text-xs"

@@ -3,14 +3,17 @@
 
 const sources = [
   {
+    key: 'json',
     title: 'Sanctum Generator JSON v1',
     description: 'Primary format for travel logs. Versioned, strict schema, and designed for safe merging.',
   },
   {
+    key: 'csv',
     title: 'Spreadsheet CSV',
     description: 'Templates from Excel/Sheets/ODS. Parsed with robust CSV handling for commas.',
   },
   {
+    key: 'text',
     title: 'Plain Text (prefixed)',
     description: 'T;/H;/C; prefixes for quick typing when you only have notes or paper.',
   },
@@ -19,11 +22,14 @@ const sources = [
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
   <div class="reveal text-center mb-14" data-reveal="left">
-    <p class="text-xs font-semibold uppercase tracking-[0.4em] text-muted-foreground">Import Pipeline</p>
-    <h2 class="font-display mt-4 text-3xl sm:text-4xl text-foreground">
+    <p
+      class="text-xs font-semibold uppercase tracking-[0.4em] text-muted-foreground"
+      data-i18n="import.tag"
+    >Import Pipeline</p>
+    <h2 class="font-display mt-4 text-3xl sm:text-4xl text-foreground" data-i18n="import.title">
       Bring data home without breaking the vault.
     </h2>
-    <p class="mt-4 text-muted-foreground max-w-2xl mx-auto">
+    <p class="mt-4 text-muted-foreground max-w-2xl mx-auto" data-i18n="import.description">
       Sanctum ingests JSON, CSV, and TXT with strict validation, deduplication, and a preview step
       before any write happens.
     </p>
@@ -35,15 +41,22 @@ const sources = [
         class="reveal panel-gradient rounded-2xl border border-border p-6"
         style={`transition-delay: ${index * 80}ms`}
       >
-        <h3 class="text-lg font-semibold text-foreground">{source.title}</h3>
-        <p class="mt-2 text-sm text-muted-foreground">{source.description}</p>
+        <h3 class="text-lg font-semibold text-foreground" data-i18n={`import.sources.${source.key}.title`}>
+          {source.title}
+        </h3>
+        <p class="mt-2 text-sm text-muted-foreground" data-i18n={`import.sources.${source.key}.description`}>
+          {source.description}
+        </p>
       </div>
     ))}
   </div>
 
   <div class="mt-10 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
     <div class="reveal panel-gradient-strong rounded-3xl border border-border p-6" data-reveal="left">
-      <p class="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">JSON v1 Structure</p>
+      <p
+        class="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground"
+        data-i18n="import.structure"
+      >JSON v1 Structure</p>
       <pre class="mt-4 max-h-[320px] overflow-auto rounded-2xl border border-border bg-card/60 p-4 text-xs text-muted-foreground font-mono">
 {`{
   "version": "1.0",
@@ -79,20 +92,26 @@ const sources = [
 
     <div class="reveal space-y-4 text-sm text-muted-foreground" data-reveal="right">
       <div class="rounded-2xl border border-border bg-card/70 p-4">
-        <p class="text-sm font-semibold text-foreground">Best-effort import</p>
-        <p class="mt-1 text-xs text-muted-foreground">
+        <p class="text-sm font-semibold text-foreground" data-i18n="import.cards.best.title">
+          Best-effort import
+        </p>
+        <p class="mt-1 text-xs text-muted-foreground" data-i18n="import.cards.best.description">
           Invalid rows are reported, valid rows still land in the vault.
         </p>
       </div>
       <div class="rounded-2xl border border-border bg-card/70 p-4">
-        <p class="text-sm font-semibold text-foreground">Smart entity resolution</p>
-        <p class="mt-1 text-xs text-muted-foreground">
+        <p class="text-sm font-semibold text-foreground" data-i18n="import.cards.entities.title">
+          Smart entity resolution
+        </p>
+        <p class="mt-1 text-xs text-muted-foreground" data-i18n="import.cards.entities.description">
           Accounts, categories, habits, wallets, and coins must already exist.
         </p>
       </div>
       <div class="rounded-2xl border border-border bg-card/70 p-4">
-        <p class="text-sm font-semibold text-foreground">Dedup + size limits</p>
-        <p class="mt-1 text-xs text-muted-foreground">
+        <p class="text-sm font-semibold text-foreground" data-i18n="import.cards.dedup.title">
+          Dedup + size limits
+        </p>
+        <p class="mt-1 text-xs text-muted-foreground" data-i18n="import.cards.dedup.description">
           Duplicate entries are skipped. File size is limited to 10MB.
         </p>
       </div>
