@@ -218,6 +218,66 @@
     color: var(--grad-primary-text);
   }
 
+  .btn-surface {
+    border: 1px solid transparent;
+    background:
+      linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--grad-primary-start), transparent 72%),
+        color-mix(in srgb, var(--grad-primary-end), transparent 72%)
+      )
+        padding-box,
+      linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--glow-primary), transparent 35%),
+        color-mix(in srgb, var(--glow-secondary), transparent 35%)
+      )
+        border-box;
+    background-clip: padding-box, border-box;
+    background-origin: border-box;
+    color: var(--foreground);
+  }
+
+  .btn-glow {
+    box-shadow: 0 0 22px color-mix(in srgb, var(--glow-primary), transparent 35%);
+  }
+
+  .btn-outline {
+    border: 1px solid transparent;
+    background:
+      linear-gradient(135deg, transparent, transparent) padding-box,
+      linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--glow-primary), transparent 35%),
+        color-mix(in srgb, var(--glow-secondary), transparent 35%)
+      )
+        border-box;
+    background-clip: padding-box, border-box;
+    background-origin: border-box;
+    color: var(--foreground);
+  }
+
+  .btn-active {
+    border: 1px solid transparent;
+    background:
+      linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--grad-primary-start), transparent 8%),
+        color-mix(in srgb, var(--grad-primary-end), transparent 8%)
+      )
+        padding-box,
+      linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--glow-primary), transparent 20%),
+        color-mix(in srgb, var(--glow-secondary), transparent 20%)
+      )
+        border-box;
+    background-clip: padding-box, border-box;
+    background-origin: border-box;
+    color: var(--primary-foreground);
+    box-shadow: 0 0 28px color-mix(in srgb, var(--glow-primary), transparent 35%);
+  }
+
   .text-gradient {
     background: linear-gradient(120deg, var(--grad-primary-start), var(--grad-primary-end));
     -webkit-background-clip: text;

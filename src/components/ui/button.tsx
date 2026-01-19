@@ -12,12 +12,12 @@ export interface ButtonProps
 
 const variantClasses: Record<ButtonVariant, string> = {
   default:
-    "bg-primary text-primary-foreground hover:brightness-110 shadow-lg shadow-primary/10",
+    "btn-gradient text-primary-foreground hover:brightness-110 btn-glow",
   secondary:
-    "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+    "btn-surface text-foreground hover:brightness-110",
   outline:
-    "border border-border bg-transparent text-foreground hover:bg-muted",
-  ghost: "bg-transparent text-foreground hover:bg-muted",
+    "btn-surface text-foreground hover:brightness-110",
+  ghost: "bg-transparent text-foreground hover:bg-muted/60",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
@@ -32,7 +32,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       ref={ref}
       type={type ?? "button"}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-md font-semibold transition",
+        "inline-flex items-center justify-center gap-2 rounded-md font-semibold",
+        "transition-all duration-200 ease-out",
+        "hover:-translate-y-0.5 hover:brightness-105 hover:shadow-lg",
+        "active:translate-y-0 active:scale-[0.98]",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         "disabled:pointer-events-none disabled:opacity-50",
         variantClasses[variant],

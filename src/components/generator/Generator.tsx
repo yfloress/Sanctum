@@ -380,7 +380,7 @@ export default function Generator() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
-              JSON v1 Generator
+              Sanctum Generator
             </p>
             <h3 className="font-display mt-3 text-2xl font-semibold text-foreground">
               Build a trip-safe log
@@ -391,13 +391,9 @@ export default function Generator() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" onClick={handleLoadClick}>
-              Load JSON
-            </Button>
             <Button variant="outline" onClick={handleReset}>
-              Clear
+              Start over
             </Button>
-            <Button onClick={handleDownload}>Download JSON</Button>
           </div>
         </div>
 
@@ -419,7 +415,7 @@ export default function Generator() {
           <Badge variant="outline">Step 3: Export</Badge>
         </div>
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="mt-6 grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="panel-gradient rounded-xl border border-border p-4">
@@ -436,13 +432,6 @@ export default function Generator() {
               </div>
             </div>
 
-            {loadedFile && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Badge variant="outline">Loaded</Badge>
-                <span>{loadedFile}</span>
-              </div>
-            )}
-
             {error && (
               <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive-foreground">
                 {error}
@@ -453,33 +442,55 @@ export default function Generator() {
               <p className="font-semibold text-foreground">Import Tips</p>
               <ul className="mt-2 space-y-1">
                 <li>Dates must be in YYYY-MM-DD format.</li>
-                <li>Currency is a 3-letter code (USD, CLP).</li>
+                <li>Currency is USD or CLP.</li>
                 <li>Transfers require a destination account.</li>
               </ul>
             </div>
           </div>
 
-          <div className="panel-gradient rounded-2xl border border-border p-5">
-            <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              Paste or Load JSON
-            </h4>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Use this if you only have access to text notes. The payload stays local.
-            </p>
-            <Textarea
-              className="mt-4 min-h-[180px] font-mono text-xs"
-              value={rawInput}
-              onChange={(event) => setRawInput(event.target.value)}
-              placeholder="Paste a sanctum_export.json payload..."
-            />
-            <div className="mt-4 flex justify-end">
-              <Button variant="outline" onClick={handleLoadPaste}>
-                Load From Paste
-              </Button>
+          <div className="space-y-4">
+            <div className="panel-gradient rounded-2xl border border-border p-5">
+              <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                Load Existing JSON
+              </h4>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Upload a sanctum_export.json file to append new entries to the same log.
+              </p>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <Button variant="secondary" onClick={handleLoadClick}>
+                  Upload JSON
+                </Button>
+                {loadedFile && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Badge variant="outline">Loaded</Badge>
+                    <span>{loadedFile}</span>
+                  </div>
+                )}
+              </div>
             </div>
-            <p className="mt-4 text-xs text-muted-foreground">
-              Privacy: data never leaves your browser. Works offline after first load.
-            </p>
+
+            <div className="panel-gradient rounded-2xl border border-border p-5">
+              <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                Paste JSON
+              </h4>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Use this if you only have access to text notes. The payload stays local.
+              </p>
+              <Textarea
+                className="mt-4 min-h-[180px] font-mono text-xs"
+                value={rawInput}
+                onChange={(event) => setRawInput(event.target.value)}
+                placeholder="Paste a sanctum_export.json payload..."
+              />
+              <div className="mt-4 flex justify-end">
+                <Button variant="outline" onClick={handleLoadPaste}>
+                  Load From Paste
+                </Button>
+              </div>
+              <p className="mt-4 text-xs text-muted-foreground">
+                Privacy: data never leaves your browser. Works offline after first load.
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -494,17 +505,18 @@ export default function Generator() {
           </div>
           <div className="flex flex-wrap gap-2">
             {[
-              { id: "transactions", label: "Transactions" },
-              { id: "habits", label: "Habits" },
+              { id: "transactions", label: "Finances" },
               { id: "crypto", label: "Crypto" },
+              { id: "habits", label: "Habits" },
             ].map((tab) => (
               <button
                 key={tab.id}
                 className={cn(
-                  "rounded-full border px-3 py-1 text-xs font-semibold transition",
+                  "rounded-full px-3 py-1 text-xs font-semibold transition-all duration-200 ease-out",
+                  "hover:-translate-y-0.5 hover:shadow-md hover:brightness-110",
                   activeTab === tab.id
-                    ? "border-primary text-primary"
-                    : "border-border text-muted-foreground hover:text-foreground"
+                    ? "btn-active border-transparent text-primary-foreground"
+                    : "btn-surface text-muted-foreground hover:text-foreground"
                 )}
                 onClick={() => setActiveTab(tab.id as typeof activeTab)}
               >
@@ -530,13 +542,16 @@ export default function Generator() {
                     setTxForm({ ...txForm, account: event.target.value })
                   }
                 />
-                <Input
-                  placeholder="Currency (USD)"
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm text-foreground"
                   value={txForm.currency}
                   onChange={(event) =>
                     setTxForm({ ...txForm, currency: event.target.value })
                   }
-                />
+                >
+                  <option value="USD">USD</option>
+                  <option value="CLP">CLP</option>
+                </select>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <select
@@ -609,7 +624,7 @@ export default function Generator() {
                           {tx.account} · {sign} {tx.currency} {tx.amount}
                         </p>
                         <button
-                          className="text-xs text-muted-foreground hover:text-foreground"
+                          className="text-xs text-muted-foreground transition-all duration-200 ease-out hover:-translate-y-0.5 hover:text-foreground"
                           onClick={() =>
                             setTransactions((prev) => prev.filter((item) => item.id !== tx.id))
                           }
@@ -678,7 +693,7 @@ export default function Generator() {
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold text-foreground">{log.habit}</p>
                       <button
-                        className="text-xs text-muted-foreground hover:text-foreground"
+                        className="text-xs text-muted-foreground transition-all duration-200 ease-out hover:-translate-y-0.5 hover:text-foreground"
                         onClick={() => setHabits((prev) => prev.filter((item) => item.id !== log.id))}
                       >
                         Remove
@@ -790,7 +805,7 @@ export default function Generator() {
                         {tx.wallet} · {tx.symbol} {tx.amount}
                       </p>
                       <button
-                        className="text-xs text-muted-foreground hover:text-foreground"
+                        className="text-xs text-muted-foreground transition-all duration-200 ease-out hover:-translate-y-0.5 hover:text-foreground"
                         onClick={() =>
                           setCryptoTx((prev) => prev.filter((item) => item.id !== tx.id))
                         }
@@ -813,11 +828,14 @@ export default function Generator() {
       </div>
 
       <div className="panel-gradient rounded-3xl border border-border p-6">
-        <div className="flex items-center justify-between">
-          <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            Export Preview
-          </h4>
-          <Badge variant="outline">JSON v1</Badge>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              Export Preview
+            </h4>
+            <Badge variant="outline">JSON v1</Badge>
+          </div>
+          <Button onClick={handleDownload}>Download JSON</Button>
         </div>
         <Textarea
           className="mt-4 min-h-[240px] font-mono text-xs"
