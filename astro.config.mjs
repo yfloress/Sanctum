@@ -4,7 +4,7 @@ import AstroPWA from '@vite-pwa/astro';
 import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath } from 'node:url';
 
-const site = 'https://music-soul.codeberg.page';
+const site = 'https://kyronix.codeberg.page';
 const base = '/Sanctum/';
 
 export default defineConfig({
