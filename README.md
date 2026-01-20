@@ -15,13 +15,14 @@ pnpm preview            # Preview static build
 
 ## Deployment (Codeberg Pages)
 
-1. Build in `dev-pages` branch: `pnpm build`
-2. Push `dist/` to `pages` branch:
 ```bash
-git add dist -f
+pnpm build
+git checkout pages
+cp -r dist/* .
+git add .
 git commit -m "Deploy update"
-git subtree push --prefix dist origin pages
-git reset HEAD~1        # Clean up local commit
+git push
+git checkout dev-pages
 ```
 
 ## Stack
