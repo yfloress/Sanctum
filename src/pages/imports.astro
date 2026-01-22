@@ -1,0 +1,198 @@
+---
+import Layout from '@layouts/Layout.astro';
+
+const base = import.meta.env.BASE_URL;
+---
+
+<Layout title="Sanctum — Import Formats">
+  <nav class="fixed top-0 left-0 right-0 z-50 bg-transparent">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="mt-4 flex items-center justify-center">
+        <div class="nav-shell flex w-full items-center justify-center gap-6 px-4 py-2">
+          <a
+            href={`${base}`}
+            class="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground transition-colors hover:text-foreground"
+            data-i18n="imports.nav.home"
+          >Home</a>
+          <a
+            href={`${base}#generator`}
+            class="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground transition-colors hover:text-foreground"
+            data-i18n="imports.nav.generator"
+          >Generator</a>
+          <a
+            href={`${base}imports/`}
+            class="text-xs font-semibold uppercase tracking-[0.3em] text-foreground"
+            data-i18n="imports.nav.current"
+          >Imports</a>
+          <button
+            type="button"
+            data-theme-toggle
+            class="theme-toggle theme-toggle--compact"
+            aria-label="Switch to light mode"
+            aria-pressed="false"
+          >
+            <span class="theme-toggle__track" aria-hidden="true">
+              <span class="theme-toggle__thumb"></span>
+            </span>
+            <span class="theme-toggle__label" data-theme-toggle-label>Dark</span>
+          </button>
+          <button
+            type="button"
+            data-lang-toggle
+            class="btn-surface inline-flex items-center justify-center rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] leading-none text-center transition-all duration-200 ease-out hover:-translate-y-0.5 hover:brightness-110 hover:shadow-md active:scale-[0.98]"
+            aria-label="Switch to Spanish"
+          >
+            <span data-lang-toggle-label>EN</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="pt-24 bg-sanctum-section">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="mb-12 text-center">
+        <p class="text-xs font-semibold uppercase tracking-[0.4em] text-muted-foreground" data-i18n="imports.tag">
+          Imports
+        </p>
+        <h1 class="font-display text-4xl sm:text-5xl text-foreground mt-4" data-i18n="imports.title">
+          Import formats, simplified.
+        </h1>
+        <p class="mt-4 text-muted-foreground max-w-2xl mx-auto" data-i18n="imports.description">
+          Choose the format that fits your day. CSV for spreadsheets, TXT for notes, JSON for full fidelity.
+        </p>
+      </div>
+
+      <section class="panel-gradient-strong rounded-3xl border border-border p-6 mb-10">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground" data-i18n="imports.csv.tag">
+              CSV
+            </p>
+            <h2 class="text-2xl font-semibold text-foreground mt-2" data-i18n="imports.csv.title">
+              Spreadsheet exports (one file per type)
+            </h2>
+            <p class="text-sm text-muted-foreground mt-2" data-i18n="imports.csv.description">
+              Export as CSV from Excel, Sheets, LibreOffice, or Proton Sheets. You must export three separate files.
+            </p>
+          </div>
+          <a
+            class="btn-gradient rounded-full px-5 py-2 text-sm font-semibold shadow-strong transition-all duration-200 ease-out hover:-translate-y-0.5 hover:brightness-110"
+            href={`${base}templates/template-csv.xlsx`}
+            data-i18n="imports.csv.download"
+          >
+            Download Excel Template
+          </a>
+        </div>
+
+        <div class="mt-6">
+          <div class="flex flex-wrap gap-2" data-csv-tabs>
+            <button class="tab-button is-active" data-tab="transactions" data-i18n="imports.csv.tabs.transactions">
+              Transactions CSV
+            </button>
+            <button class="tab-button" data-tab="habits" data-i18n="imports.csv.tabs.habits">
+              Habit Logs CSV
+            </button>
+            <button class="tab-button" data-tab="crypto" data-i18n="imports.csv.tabs.crypto">
+              Crypto CSV
+            </button>
+          </div>
+
+          <p class="mt-4 text-sm text-muted-foreground" data-i18n="imports.csv.required">
+            Required columns: date, account, type, amount, currency, category, description.
+          </p>
+          <p class="mt-2 text-xs text-muted-foreground" data-i18n="imports.csv.optional">
+            Optional: transfer_to_account (only for transfers).
+          </p>
+
+          <div class="mt-4 space-y-4">
+            <div class="tab-panel" data-tab-panel="transactions">
+              <div class="code-scroll rounded-2xl border border-border bg-card/70 p-4 text-xs text-muted-foreground font-mono">
+                <pre>
+date,account,type,amount,currency,category,description,transfer_to_account
+2026-01-21,Checking,expense,45.50,USD,Food,Groceries,
+2026-01-22,Checking,transfer,500,USD,Transfer,Savings move,Savings</pre>
+              </div>
+            </div>
+            <div class="tab-panel hidden" data-tab-panel="habits">
+              <div class="code-scroll rounded-2xl border border-border bg-card/70 p-4 text-xs text-muted-foreground font-mono">
+                <pre>
+habit,date,completed
+Meditate,2026-01-21,true
+Exercise,2026-01-21,false</pre>
+              </div>
+            </div>
+            <div class="tab-panel hidden" data-tab-panel="crypto">
+              <div class="code-scroll rounded-2xl border border-border bg-card/70 p-4 text-xs text-muted-foreground font-mono">
+                <pre>
+date,wallet,symbol,type,amount,price_per_coin,fee,swap_to_symbol,swap_to_amount,fee_coin_symbol,fee_amount,notes
+2026-01-21,Binance,BTC,buy,0.1,42000,5,,,,,Spot buy
+2026-01-22,Binance,BTC,swap,0.05,,0.01,ETH,1.2,BTC,0.0001,Swap to ETH</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel-gradient rounded-3xl border border-border p-6 mb-10">
+        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground" data-i18n="imports.txt.tag">
+          TXT
+        </p>
+        <h2 class="text-2xl font-semibold text-foreground mt-2" data-i18n="imports.txt.title">
+          Quick notes format (prefixed)
+        </h2>
+        <p class="text-sm text-muted-foreground mt-2" data-i18n="imports.txt.description">
+          Use prefixes to paste straight from notes or paper. One line per entry.
+        </p>
+        <p class="mt-3 text-xs text-muted-foreground" data-i18n="imports.txt.required">
+          Required per line: date + key fields. Prefixes: T; transaction, H; habit, C; crypto.
+        </p>
+        <div class="code-scroll mt-4 rounded-2xl border border-border bg-card/70 p-4 text-xs text-muted-foreground font-mono">
+          <pre>
+T;2026-01-21;Checking;expense;45.50;USD;Food;Groceries;
+H;Meditate;2026-01-21;true
+C;2026-01-21;Binance;BTC;buy;0.1;42000;5;Spot buy</pre>
+        </div>
+      </section>
+
+      <section class="panel-gradient rounded-3xl border border-border p-6 mb-14">
+        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground" data-i18n="imports.json.tag">
+          JSON
+        </p>
+        <h2 class="text-2xl font-semibold text-foreground mt-2" data-i18n="imports.json.title">
+          Full fidelity (recommended)
+        </h2>
+        <p class="text-sm text-muted-foreground mt-2" data-i18n="imports.json.description">
+          JSON v1 is the most complete format. Use the Sanctum Generator to build it safely.
+        </p>
+        <div class="mt-4 flex flex-wrap items-center gap-3">
+          <a
+            href={`${base}#generator`}
+            class="btn-gradient rounded-full px-5 py-2 text-sm font-semibold shadow-strong transition-all duration-200 ease-out hover:-translate-y-0.5 hover:brightness-110"
+            data-i18n="imports.json.cta"
+          >
+            Open Sanctum Generator
+          </a>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script is:inline>
+    const tabRoot = document.querySelector("[data-csv-tabs]");
+    if (tabRoot) {
+      const buttons = Array.from(tabRoot.querySelectorAll("[data-tab]"));
+      const panels = Array.from(document.querySelectorAll("[data-tab-panel]"));
+      const setActive = (tab) => {
+        buttons.forEach((btn) => btn.classList.toggle("is-active", btn.dataset.tab === tab));
+        panels.forEach((panel) => {
+          panel.classList.toggle("hidden", panel.dataset.tabPanel !== tab);
+        });
+      };
+      buttons.forEach((btn) =>
+        btn.addEventListener("click", () => setActive(btn.dataset.tab))
+      );
+      setActive("transactions");
+    }
+  </script>
+</Layout>

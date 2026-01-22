@@ -262,6 +262,55 @@
     color: var(--foreground);
   }
 
+  .tab-button {
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--border), transparent 20%);
+    padding: 0.45rem 0.9rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+    transition: transform 0.2s ease, color 0.2s ease, background 0.2s ease;
+  }
+
+  .tab-button:hover {
+    color: var(--foreground);
+    transform: translateY(-1px);
+  }
+
+  .tab-button.is-active {
+    color: var(--foreground);
+    background: linear-gradient(135deg, var(--grad-primary-start), var(--grad-primary-end));
+    box-shadow: 0 12px 30px color-mix(in srgb, var(--glow-primary), transparent 70%);
+  }
+
+  .code-scroll {
+    overflow-x: auto;
+    max-width: 100%;
+    width: 100%;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--border), transparent 40%) transparent;
+  }
+
+  .code-scroll pre {
+    margin: 0;
+    min-width: max-content;
+  }
+
+  .code-scroll::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .code-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .code-scroll::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--border), transparent 30%);
+    border-radius: 999px;
+  }
+
   .btn-glow {
     box-shadow: 0 0 22px color-mix(in srgb, var(--glow-primary), transparent 35%);
   }

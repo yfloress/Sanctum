@@ -81,9 +81,47 @@ const baseUrl = import.meta.env.BASE_URL;
             modules: "Screens",
             security: "Security",
             import: "Import",
+            imports: "Imports",
             generator: "Sanctum Generator",
             download: "Download",
             menu: "Menu",
+          },
+          imports: {
+            nav: {
+              home: "Home",
+              generator: "Generator",
+              current: "Imports",
+            },
+            tag: "Imports",
+            title: "Import formats, simplified.",
+            description:
+              "Choose the format that fits your day. CSV for spreadsheets, TXT for notes, JSON for full fidelity.",
+            csv: {
+              tag: "CSV",
+              title: "Spreadsheet exports (one file per type)",
+              description:
+                "Export as CSV from Excel, Sheets, LibreOffice, or Proton Sheets. You must export three separate files.",
+              download: "Download Excel Template",
+              required: "Required columns: date, account, type, amount, currency, category, description.",
+              optional: "Optional: transfer_to_account (only for transfers).",
+              tabs: {
+                transactions: "Transactions CSV",
+                habits: "Habit Logs CSV",
+                crypto: "Crypto CSV",
+              },
+            },
+            txt: {
+              tag: "TXT",
+              title: "Quick notes format (prefixed)",
+              description: "Use prefixes to paste straight from notes or paper. One line per entry.",
+              required: "Required per line: date + key fields. Prefixes: T; transaction, H; habit, C; crypto.",
+            },
+            json: {
+              tag: "JSON",
+              title: "Full fidelity (recommended)",
+              description: "JSON v1 is the most complete format. Use the Sanctum Generator to build it safely.",
+              cta: "Open Sanctum Generator",
+            },
           },
           hero: {
             tag: "SANCTUM",
@@ -261,9 +299,47 @@ const baseUrl = import.meta.env.BASE_URL;
             modules: "Pantallas",
             security: "Seguridad",
             import: "Importación",
+            imports: "Importaciones",
             generator: "Generador Sanctum",
             download: "Descargar",
             menu: "Menú",
+          },
+          imports: {
+            nav: {
+              home: "Inicio",
+              generator: "Generador",
+              current: "Importaciones",
+            },
+            tag: "Importaciones",
+            title: "Formatos de importación, simples.",
+            description:
+              "Elige el formato que mejor te acomode. CSV para hojas de cálculo, TXT para notas, JSON para todo.",
+            csv: {
+              tag: "CSV",
+              title: "Exportación desde hojas de cálculo (un archivo por tipo)",
+              description:
+                "Exporta CSV desde Excel, Sheets, LibreOffice o Proton Sheets. Debes exportar tres archivos separados.",
+              download: "Descargar plantilla Excel",
+              required: "Columnas requeridas: date, account, type, amount, currency, category, description.",
+              optional: "Opcional: transfer_to_account (solo para transferencias).",
+              tabs: {
+                transactions: "Transacciones CSV",
+                habits: "Hábitos CSV",
+                crypto: "Cripto CSV",
+              },
+            },
+            txt: {
+              tag: "TXT",
+              title: "Formato rápido (prefijos)",
+              description: "Usa prefijos para pegar desde notas o papel. Una línea por entrada.",
+              required: "Requerido por línea: fecha + campos clave. Prefijos: T; transacción, H; hábito, C; cripto.",
+            },
+            json: {
+              tag: "JSON",
+              title: "Máxima fidelidad (recomendado)",
+              description: "JSON v1 es el formato más completo. Usa el Generador Sanctum para crearlo.",
+              cta: "Abrir Generador Sanctum",
+            },
           },
           hero: {
             tag: "SANCTUM",
