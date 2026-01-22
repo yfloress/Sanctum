@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 type TransactionType = "income" | "expense" | "transfer";
-type CryptoType = "buy" | "sell" | "transfer_in" | "transfer_out";
+type CryptoType = "buy" | "sell" | "transfer_in" | "transfer_out" | "swap";
 
 type Transaction = {
   id: string;
@@ -36,6 +36,10 @@ type CryptoTransaction = {
   amount: number;
   price_per_coin?: number | null;
   fee?: number | null;
+  swap_to_symbol?: string | null;
+  swap_to_amount?: number | null;
+  fee_coin_symbol?: string | null;
+  fee_amount?: number | null;
   notes?: string | null;
 };
 
@@ -61,6 +65,10 @@ type ExportData = {
     amount: number;
     price_per_coin?: number | null;
     fee?: number | null;
+    swap_to_symbol?: string | null;
+    swap_to_amount?: number | null;
+    fee_coin_symbol?: string | null;
+    fee_amount?: number | null;
     notes?: string | null;
   }[];
 };
@@ -141,11 +149,15 @@ const translations = {
         wallet: "Wallet",
         symbol: "Symbol (BTC)",
         amount: "Amount",
+        swapToSymbol: "Swap to symbol (ETH)",
+        swapToAmount: "Swap to amount",
         price: "Price per coin (optional)",
         fee: "Fee (optional)",
+        feeCoinSymbol: "Fee coin symbol (optional)",
+        feeAmount: "Fee amount (optional)",
         notes: "Notes (optional)",
         add: "Add Crypto Entry",
-        required: "Required: Date, Wallet, Symbol, Amount.",
+        required: "Required: Date, Wallet, Symbol, Amount. Swap needs target symbol + amount.",
       },
       list: {
         title: "Crypto Entries",
@@ -161,6 +173,7 @@ const translations = {
       sell: "Sell",
       transfer_in: "Transfer In",
       transfer_out: "Transfer Out",
+      swap: "Swap",
     },
     export: {
       title: "Export Preview",
@@ -183,6 +196,9 @@ const translations = {
       cryptoWalletRequired: "Crypto wallet is required.",
       cryptoSymbolRequired: "Crypto symbol is required.",
       cryptoAmountRequired: "Crypto amount is required.",
+      cryptoSwapSymbolRequired: "Swap target symbol is required.",
+      cryptoSwapAmountRequired: "Swap target amount is required.",
+      cryptoFeePairRequired: "Fee coin and fee amount must be provided together.",
     },
   },
   es: {
@@ -260,11 +276,15 @@ const translations = {
         wallet: "Wallet",
         symbol: "Símbolo (BTC)",
         amount: "Monto",
+        swapToSymbol: "Símbolo destino (ETH)",
+        swapToAmount: "Monto destino",
         price: "Precio por moneda (opcional)",
         fee: "Comisión (opcional)",
+        feeCoinSymbol: "Símbolo comisión (opcional)",
+        feeAmount: "Monto comisión (opcional)",
         notes: "Notas (opcional)",
         add: "Agregar movimiento cripto",
-        required: "Requerido: Fecha, Wallet, Símbolo, Monto.",
+        required: "Requerido: Fecha, Wallet, Símbolo, Monto. Swap exige símbolo + monto destino.",
       },
       list: {
         title: "Movimientos cripto",
@@ -280,6 +300,7 @@ const translations = {
       sell: "Venta",
       transfer_in: "Transferencia entrada",
       transfer_out: "Transferencia salida",
+      swap: "Swap",
     },
     export: {
       title: "Vista previa de exportación",
@@ -302,12 +323,21 @@ const translations = {
       cryptoWalletRequired: "La wallet es obligatoria.",
       cryptoSymbolRequired: "El símbolo cripto es obligatorio.",
       cryptoAmountRequired: "El monto cripto es obligatorio.",
+      cryptoSwapSymbolRequired: "El símbolo destino del swap es obligatorio.",
+      cryptoSwapAmountRequired: "El monto destino del swap es obligatorio.",
+      cryptoFeePairRequired: "El símbolo y monto de comisión deben ir juntos.",
     },
   },
 };
 
-const defaultTx = {
-  date: "",
+const getLocalDateString = () => {
+  const now = new Date();
+  const offsetMs = now.getTimezoneOffset() * 60_000;
+  return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10);
+};
+
+const createDefaultTx = (date: string) => ({
+  date,
   account: "",
   transaction_type: "expense" as TransactionType,
   amount: "",
@@ -315,24 +345,28 @@ const defaultTx = {
   category: "",
   description: "",
   transfer_to_account: "",
-};
+});
 
-const defaultHabit = {
+const createDefaultHabit = (date: string) => ({
   habit: "",
-  date: "",
+  date,
   completed: true,
-};
+});
 
-const defaultCrypto = {
-  date: "",
+const createDefaultCrypto = (date: string) => ({
+  date,
   wallet: "",
   symbol: "",
   transaction_type: "buy" as CryptoType,
   amount: "",
+  swap_to_symbol: "",
+  swap_to_amount: "",
   price_per_coin: "",
   fee: "",
+  fee_coin_symbol: "",
+  fee_amount: "",
   notes: "",
-};
+});
 
 function makeId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -355,7 +389,8 @@ function normalizeCryptoType(value: unknown): CryptoType {
     normalized === "buy" ||
     normalized === "sell" ||
     normalized === "transfer_in" ||
-    normalized === "transfer_out"
+    normalized === "transfer_out" ||
+    normalized === "swap"
   ) {
     return normalized as CryptoType;
   }
@@ -387,7 +422,7 @@ export default function Generator() {
   const [loadedFile, setLoadedFile] = React.useState<string | null>(null);
   const [rawInput, setRawInput] = React.useState("");
 
-  const [txForm, setTxForm] = React.useState(defaultTx);
+  const [txForm, setTxForm] = React.useState(() => createDefaultTx(getLocalDateString()));
   const [txErrors, setTxErrors] = React.useState<{
     date?: boolean;
     account?: boolean;
@@ -397,18 +432,24 @@ export default function Generator() {
     transfer_to_account?: boolean;
   }>({});
   const [txAttempted, setTxAttempted] = React.useState(false);
-  const [habitForm, setHabitForm] = React.useState(defaultHabit);
+  const [habitForm, setHabitForm] = React.useState(() => createDefaultHabit(getLocalDateString()));
   const [habitErrors, setHabitErrors] = React.useState<{
     date?: boolean;
     habit?: boolean;
   }>({});
   const [habitAttempted, setHabitAttempted] = React.useState(false);
-  const [cryptoForm, setCryptoForm] = React.useState(defaultCrypto);
+  const [cryptoForm, setCryptoForm] = React.useState(() =>
+    createDefaultCrypto(getLocalDateString())
+  );
   const [cryptoErrors, setCryptoErrors] = React.useState<{
     date?: boolean;
     wallet?: boolean;
     symbol?: boolean;
     amount?: boolean;
+    swap_to_symbol?: boolean;
+    swap_to_amount?: boolean;
+    fee_coin_symbol?: boolean;
+    fee_amount?: boolean;
   }>({});
   const [cryptoAttempted, setCryptoAttempted] = React.useState(false);
 
@@ -441,6 +482,10 @@ export default function Generator() {
         type: transaction_type,
         price_per_coin: tx.price_per_coin ?? null,
         fee: tx.fee ?? null,
+        swap_to_symbol: tx.swap_to_symbol ?? null,
+        swap_to_amount: tx.swap_to_amount ?? null,
+        fee_coin_symbol: tx.fee_coin_symbol ?? null,
+        fee_amount: tx.fee_amount ?? null,
         notes: tx.notes ?? null,
       })),
     };
@@ -481,17 +526,26 @@ export default function Generator() {
             }))
           : [];
         const nextCrypto = Array.isArray(parsed.crypto_transactions)
-          ? parsed.crypto_transactions.map((tx: any) => ({
-              id: makeId(),
-              date: String(tx.date ?? ""),
-              wallet: String(tx.wallet ?? ""),
-              symbol: String(tx.symbol ?? ""),
-              transaction_type: normalizeCryptoType(tx.transaction_type ?? tx.type),
-              amount: Number(tx.amount ?? 0),
-              price_per_coin: tx.price_per_coin ?? null,
-              fee: tx.fee ?? null,
-              notes: tx.notes ?? null,
-            }))
+          ? parsed.crypto_transactions.map((tx: any) => {
+              const swapToSymbol = tx.swap_to_symbol ?? tx.to_symbol ?? null;
+              const swapToAmount = tx.swap_to_amount ?? tx.to_amount ?? null;
+              const feeCoinSymbol = tx.fee_coin_symbol ?? tx.fee_coin ?? null;
+              return {
+                id: makeId(),
+                date: String(tx.date ?? ""),
+                wallet: String(tx.wallet ?? ""),
+                symbol: String(tx.symbol ?? ""),
+                transaction_type: normalizeCryptoType(tx.transaction_type ?? tx.type),
+                amount: Number(tx.amount ?? 0),
+                price_per_coin: tx.price_per_coin ?? null,
+                fee: tx.fee ?? null,
+                swap_to_symbol: swapToSymbol ? String(swapToSymbol) : null,
+                swap_to_amount: swapToAmount != null ? Number(swapToAmount) : null,
+                fee_coin_symbol: feeCoinSymbol ? String(feeCoinSymbol) : null,
+                fee_amount: tx.fee_amount != null ? Number(tx.fee_amount) : null,
+                notes: tx.notes ?? null,
+              };
+            })
           : [];
 
         setTransactions(nextTransactions);
@@ -506,6 +560,10 @@ export default function Generator() {
         setTxAttempted(false);
         setHabitAttempted(false);
         setCryptoAttempted(false);
+        const today = getLocalDateString();
+        setTxForm(createDefaultTx(today));
+        setHabitForm(createDefaultHabit(today));
+        setCryptoForm(createDefaultCrypto(today));
       } catch (err) {
         const message =
           err instanceof SyntaxError
@@ -555,17 +613,26 @@ export default function Generator() {
       );
       setCryptoTx(
         Array.isArray(parsed.crypto_transactions)
-          ? parsed.crypto_transactions.map((tx: any) => ({
-              id: makeId(),
-              date: String(tx.date ?? ""),
-              wallet: String(tx.wallet ?? ""),
-              symbol: String(tx.symbol ?? ""),
-              transaction_type: normalizeCryptoType(tx.transaction_type ?? tx.type),
-              amount: Number(tx.amount ?? 0),
-              price_per_coin: tx.price_per_coin ?? null,
-              fee: tx.fee ?? null,
-              notes: tx.notes ?? null,
-            }))
+          ? parsed.crypto_transactions.map((tx: any) => {
+              const swapToSymbol = tx.swap_to_symbol ?? tx.to_symbol ?? null;
+              const swapToAmount = tx.swap_to_amount ?? tx.to_amount ?? null;
+              const feeCoinSymbol = tx.fee_coin_symbol ?? tx.fee_coin ?? null;
+              return {
+                id: makeId(),
+                date: String(tx.date ?? ""),
+                wallet: String(tx.wallet ?? ""),
+                symbol: String(tx.symbol ?? ""),
+                transaction_type: normalizeCryptoType(tx.transaction_type ?? tx.type),
+                amount: Number(tx.amount ?? 0),
+                price_per_coin: tx.price_per_coin ?? null,
+                fee: tx.fee ?? null,
+                swap_to_symbol: swapToSymbol ? String(swapToSymbol) : null,
+                swap_to_amount: swapToAmount != null ? Number(swapToAmount) : null,
+                fee_coin_symbol: feeCoinSymbol ? String(feeCoinSymbol) : null,
+                fee_amount: tx.fee_amount != null ? Number(tx.fee_amount) : null,
+                notes: tx.notes ?? null,
+              };
+            })
           : []
       );
       setLoadedFile("pasted JSON");
@@ -576,6 +643,10 @@ export default function Generator() {
       setTxAttempted(false);
       setHabitAttempted(false);
       setCryptoAttempted(false);
+      const today = getLocalDateString();
+      setTxForm(createDefaultTx(today));
+      setHabitForm(createDefaultHabit(today));
+      setCryptoForm(createDefaultCrypto(today));
     } catch (err) {
       const message =
         err instanceof SyntaxError
@@ -611,6 +682,10 @@ export default function Generator() {
     setTxAttempted(false);
     setHabitAttempted(false);
     setCryptoAttempted(false);
+    const today = getLocalDateString();
+    setTxForm(createDefaultTx(today));
+    setHabitForm(createDefaultHabit(today));
+    setCryptoForm(createDefaultCrypto(today));
   }
 
   function addTransaction() {
@@ -662,7 +737,7 @@ export default function Generator() {
       },
       ...prev,
     ]);
-    setTxForm(defaultTx);
+    setTxForm(createDefaultTx(getLocalDateString()));
     setTxErrors({});
     setTxAttempted(false);
   }
@@ -694,7 +769,7 @@ export default function Generator() {
       },
       ...prev,
     ]);
-    setHabitForm(defaultHabit);
+    setHabitForm(createDefaultHabit(getLocalDateString()));
     setHabitErrors({});
     setHabitAttempted(false);
   }
@@ -720,6 +795,23 @@ export default function Generator() {
       nextErrors.amount = true;
       message ??= copy.errors.cryptoAmountRequired;
     }
+    if (cryptoForm.transaction_type === "swap") {
+      if (!cryptoForm.swap_to_symbol) {
+        nextErrors.swap_to_symbol = true;
+        message ??= copy.errors.cryptoSwapSymbolRequired;
+      }
+      if (!cryptoForm.swap_to_amount) {
+        nextErrors.swap_to_amount = true;
+        message ??= copy.errors.cryptoSwapAmountRequired;
+      }
+      const hasFeeCoin = Boolean(cryptoForm.fee_coin_symbol);
+      const hasFeeAmount = Boolean(cryptoForm.fee_amount);
+      if ((hasFeeCoin && !hasFeeAmount) || (!hasFeeCoin && hasFeeAmount)) {
+        nextErrors.fee_coin_symbol = !hasFeeCoin;
+        nextErrors.fee_amount = !hasFeeAmount;
+        message ??= copy.errors.cryptoFeePairRequired;
+      }
+    }
     if (Object.keys(nextErrors).length > 0) {
       setCryptoErrors(nextErrors);
       setError(message);
@@ -733,16 +825,31 @@ export default function Generator() {
         symbol: cryptoForm.symbol.toUpperCase(),
         transaction_type: cryptoForm.transaction_type,
         amount: Number(cryptoForm.amount),
-        price_per_coin: cryptoForm.price_per_coin ? Number(cryptoForm.price_per_coin) : null,
+        price_per_coin:
+          cryptoForm.transaction_type === "swap"
+            ? null
+            : cryptoForm.price_per_coin
+              ? Number(cryptoForm.price_per_coin)
+              : null,
         fee: cryptoForm.fee ? Number(cryptoForm.fee) : null,
+        swap_to_symbol: cryptoForm.swap_to_symbol
+          ? cryptoForm.swap_to_symbol.toUpperCase()
+          : null,
+        swap_to_amount: cryptoForm.swap_to_amount ? Number(cryptoForm.swap_to_amount) : null,
+        fee_coin_symbol: cryptoForm.fee_coin_symbol
+          ? cryptoForm.fee_coin_symbol.toUpperCase()
+          : null,
+        fee_amount: cryptoForm.fee_amount ? Number(cryptoForm.fee_amount) : null,
         notes: cryptoForm.notes || null,
       },
       ...prev,
     ]);
-    setCryptoForm(defaultCrypto);
+    setCryptoForm(createDefaultCrypto(getLocalDateString()));
     setCryptoErrors({});
     setCryptoAttempted(false);
   }
+
+  const isCryptoSwap = cryptoForm.transaction_type === "swap";
 
   return (
     <div className="grid gap-10">
@@ -1225,17 +1332,34 @@ export default function Generator() {
                 <select
                   className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm text-foreground"
                   value={cryptoForm.transaction_type}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    const nextType = event.target.value as CryptoType;
                     setCryptoForm({
                       ...cryptoForm,
-                      transaction_type: event.target.value as CryptoType,
-                    })
-                  }
+                      transaction_type: nextType,
+                      ...(nextType !== "swap"
+                        ? {
+                            swap_to_symbol: "",
+                            swap_to_amount: "",
+                            fee_coin_symbol: "",
+                            fee_amount: "",
+                          }
+                        : { price_per_coin: "" }),
+                    });
+                    setCryptoErrors((prev) => ({
+                      ...prev,
+                      swap_to_symbol: nextType === "swap" ? prev.swap_to_symbol : false,
+                      swap_to_amount: nextType === "swap" ? prev.swap_to_amount : false,
+                      fee_coin_symbol: nextType === "swap" ? prev.fee_coin_symbol : false,
+                      fee_amount: nextType === "swap" ? prev.fee_amount : false,
+                    }));
+                  }}
                 >
                   <option value="buy">{copy.types.buy}</option>
                   <option value="sell">{copy.types.sell}</option>
                   <option value="transfer_in">{copy.types.transfer_in}</option>
                   <option value="transfer_out">{copy.types.transfer_out}</option>
+                  <option value="swap">{copy.types.swap}</option>
                 </select>
                 <Input
                   type="number"
@@ -1257,24 +1381,112 @@ export default function Generator() {
                   )}
                 />
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder={copy.crypto.form.price}
-                  value={cryptoForm.price_per_coin}
-                  onChange={(event) =>
-                    setCryptoForm({ ...cryptoForm, price_per_coin: event.target.value })
-                  }
-                />
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder={copy.crypto.form.fee}
-                  value={cryptoForm.fee}
-                  onChange={(event) => setCryptoForm({ ...cryptoForm, fee: event.target.value })}
-                />
-              </div>
+              {isCryptoSwap ? (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Input
+                      placeholder={copy.crypto.form.swapToSymbol}
+                      value={cryptoForm.swap_to_symbol}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setCryptoForm({ ...cryptoForm, swap_to_symbol: value });
+                        if (value) {
+                          setCryptoErrors((prev) => ({ ...prev, swap_to_symbol: false }));
+                        }
+                      }}
+                      aria-invalid={Boolean(cryptoAttempted && cryptoErrors.swap_to_symbol)}
+                      className={cn(
+                        cryptoAttempted &&
+                          cryptoErrors.swap_to_symbol &&
+                          "border-destructive/60 focus-visible:ring-destructive/40"
+                      )}
+                    />
+                    <Input
+                      type="number"
+                      step="0.00000001"
+                      placeholder={copy.crypto.form.swapToAmount}
+                      value={cryptoForm.swap_to_amount}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setCryptoForm({ ...cryptoForm, swap_to_amount: value });
+                        if (value) {
+                          setCryptoErrors((prev) => ({ ...prev, swap_to_amount: false }));
+                        }
+                      }}
+                      aria-invalid={Boolean(cryptoAttempted && cryptoErrors.swap_to_amount)}
+                      className={cn(
+                        cryptoAttempted &&
+                          cryptoErrors.swap_to_amount &&
+                          "border-destructive/60 focus-visible:ring-destructive/40"
+                      )}
+                    />
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder={copy.crypto.form.fee}
+                      value={cryptoForm.fee}
+                      onChange={(event) => setCryptoForm({ ...cryptoForm, fee: event.target.value })}
+                    />
+                    <Input
+                      placeholder={copy.crypto.form.feeCoinSymbol}
+                      value={cryptoForm.fee_coin_symbol}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setCryptoForm({ ...cryptoForm, fee_coin_symbol: value });
+                        if (value) {
+                          setCryptoErrors((prev) => ({ ...prev, fee_coin_symbol: false }));
+                        }
+                      }}
+                      aria-invalid={Boolean(cryptoAttempted && cryptoErrors.fee_coin_symbol)}
+                      className={cn(
+                        cryptoAttempted &&
+                          cryptoErrors.fee_coin_symbol &&
+                          "border-destructive/60 focus-visible:ring-destructive/40"
+                      )}
+                    />
+                  </div>
+                  <Input
+                    type="number"
+                    step="0.00000001"
+                    placeholder={copy.crypto.form.feeAmount}
+                    value={cryptoForm.fee_amount}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setCryptoForm({ ...cryptoForm, fee_amount: value });
+                      if (value) {
+                        setCryptoErrors((prev) => ({ ...prev, fee_amount: false }));
+                      }
+                    }}
+                    aria-invalid={Boolean(cryptoAttempted && cryptoErrors.fee_amount)}
+                    className={cn(
+                      cryptoAttempted &&
+                        cryptoErrors.fee_amount &&
+                        "border-destructive/60 focus-visible:ring-destructive/40"
+                    )}
+                  />
+                </>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder={copy.crypto.form.price}
+                    value={cryptoForm.price_per_coin}
+                    onChange={(event) =>
+                      setCryptoForm({ ...cryptoForm, price_per_coin: event.target.value })
+                    }
+                  />
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder={copy.crypto.form.fee}
+                    value={cryptoForm.fee}
+                    onChange={(event) => setCryptoForm({ ...cryptoForm, fee: event.target.value })}
+                  />
+                </div>
+              )}
               <Input
                 placeholder={copy.crypto.form.notes}
                 value={cryptoForm.notes}
@@ -1301,7 +1513,10 @@ export default function Generator() {
                   >
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold text-foreground">
-                        {tx.wallet} · {tx.symbol} {tx.amount}
+                        {tx.wallet} ·{" "}
+                        {tx.transaction_type === "swap" && tx.swap_to_symbol && tx.swap_to_amount
+                          ? `${tx.symbol} ${tx.amount} → ${tx.swap_to_symbol} ${tx.swap_to_amount}`
+                          : `${tx.symbol} ${tx.amount}`}
                       </p>
                       <button
                         className="text-xs text-muted-foreground transition-all duration-200 ease-out hover:-translate-y-0.5 hover:text-foreground"
