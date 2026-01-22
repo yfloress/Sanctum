@@ -78,7 +78,7 @@ const baseUrl = import.meta.env.BASE_URL;
       const translations = {
         en: {
           nav: {
-            modules: "Modules",
+            modules: "Screens",
             security: "Security",
             import: "Import",
             generator: "Sanctum Generator",
@@ -86,17 +86,17 @@ const baseUrl = import.meta.env.BASE_URL;
             menu: "Menu",
           },
           hero: {
-            tag: "Sanctum",
-            title: "Your personal fortress for finance, crypto, and habits.",
+            tag: "SANCTUM",
+            title: "SANCTUM",
             description:
-              "Privacy-first, local-only tracking with encrypted storage. Sanctum keeps your vault private, lets you work offline, and syncs your progress when you are back at your desk.",
+              "Your private vault for money, crypto, and habits. Encrypted, offline-first, and built for daily use.",
             cta: {
               primary: "Open Sanctum Generator",
               secondary: "Download Desktop Vault",
             },
             badges: {
               sqlcipher: "SQLCipher Vault",
-              offline: "Offline-first",
+              offline: "Privacy-first",
               noTelemetry: "No Telemetry",
             },
             modules: {
@@ -129,46 +129,33 @@ const baseUrl = import.meta.env.BASE_URL;
             },
           },
           features: {
-            tag: "Core Systems",
-            title: "One vault. Three disciplines. Zero leakage.",
+            tag: "Core Screens",
+            title: "Four screens. One encrypted vault.",
             description:
-              "Sanctum is structured as a local fortress: finance, crypto, and habits live together with shared analytics and unified privacy controls.",
-            modules: {
-              finance: {
-                tag: "Accounts + Transfers",
-                title: "Finance Core",
-                detail1: "Multiple account types with per-account currency.",
-                detail2: "Income, expense, and transfer flows with categories.",
-                detail3: "Dashboard analytics for net worth and expense slices.",
+              "A clean, offline-first suite for money, crypto, and habits.",
+            pages: {
+              dashboard: {
+                title: "Dashboard",
+                description: "Net worth, trends, and a quick pulse of your vault.",
+              },
+              finances: {
+                title: "Finances",
+                description: "Accounts, categories, transfers, and everyday spending.",
               },
               crypto: {
-                tag: "Wallets + Prices",
-                title: "Crypto Portfolio",
-                detail1: "Wallet management for exchange, hardware, and software.",
-                detail2: "Buy, sell, transfer, and swap transaction support.",
-                detail3: "Price sync via CoinGecko with proxy controls.",
+                title: "Crypto",
+                description: "Wallets, trades, swaps, and portfolio balance.",
               },
               habits: {
-                tag: "Heatmaps + Rewards",
                 title: "Habits",
-                detail1: "Daily habit logs with monthly views.",
-                detail2: "Heatmap analytics across the year.",
-                detail3: "Streak rewards, milestones, and goals.",
+                description: "Daily check-ins, streaks, and heatmap progress.",
               },
             },
-            controls: {
-              security: {
-                title: "Security Controls",
-                description: "Session timeout, vault lock, and encrypted backups by default.",
-              },
-              localization: {
-                title: "Localization",
-                description: "English and Spanish UI with preferred currency settings.",
-              },
-              import: {
-                title: "Import System",
-                description: "Preview changes, deduplicate entries, and keep a clean ledger.",
-              },
+            highlights: {
+              languages: "EN / ES",
+              currency: "USD / CLP",
+              themes: "Dark / Light",
+              encryption: "Encrypted Vault",
             },
           },
           privacy: {
@@ -246,7 +233,7 @@ const baseUrl = import.meta.env.BASE_URL;
             tag: "Sanctum Generator",
             title: "Daily Log Builder",
             description:
-              "Create or append to a single sanctum_export.json file while traveling or offline. Load an existing file, add entries, and export a clean JSON v1 payload.",
+              "Build a single sanctum_export.json file while traveling or offline. Load, add entries, export.",
           },
           download: {
             title: "Deploy the Vault",
@@ -271,7 +258,7 @@ const baseUrl = import.meta.env.BASE_URL;
         },
         es: {
           nav: {
-            modules: "Módulos",
+            modules: "Pantallas",
             security: "Seguridad",
             import: "Importación",
             generator: "Generador Sanctum",
@@ -279,17 +266,17 @@ const baseUrl = import.meta.env.BASE_URL;
             menu: "Menú",
           },
           hero: {
-            tag: "Sanctum",
-            title: "Tu fortaleza personal para finanzas, cripto y hábitos.",
+            tag: "SANCTUM",
+            title: "SANCTUM",
             description:
-              "Privacidad primero y seguimiento local con almacenamiento cifrado. Sanctum mantiene tu bóveda privada, te permite trabajar offline y sincroniza tu progreso cuando vuelves al escritorio.",
+              "Tu bóveda privada para finanzas, cripto y hábitos. Cifrado, offline y pensado para el día a día.",
             cta: {
               primary: "Abrir Generador Sanctum",
               secondary: "Descargar bóveda de escritorio",
             },
             badges: {
               sqlcipher: "Bóveda SQLCipher",
-              offline: "Offline-first",
+              offline: "Privacidad primero",
               noTelemetry: "Sin telemetría",
             },
             modules: {
@@ -322,46 +309,33 @@ const baseUrl = import.meta.env.BASE_URL;
             },
           },
           features: {
-            tag: "Sistemas clave",
-            title: "Una bóveda. Tres disciplinas. Cero filtraciones.",
+            tag: "Pantallas principales",
+            title: "Cuatro pantallas. Una bóveda cifrada.",
             description:
-              "Sanctum está estructurado como una fortaleza local: finanzas, cripto y hábitos conviven con analíticas compartidas y privacidad unificada.",
-            modules: {
-              finance: {
-                tag: "Cuentas + Transferencias",
-                title: "Núcleo financiero",
-                detail1: "Múltiples tipos de cuentas con moneda por cuenta.",
-                detail2: "Ingresos, gastos y transferencias con categorías.",
-                detail3: "Analíticas de patrimonio y desglose de gastos en el dashboard.",
+              "Una suite limpia y offline para dinero, cripto y hábitos.",
+            pages: {
+              dashboard: {
+                title: "Dashboard",
+                description: "Patrimonio, tendencias y resumen del día.",
+              },
+              finances: {
+                title: "Finanzas",
+                description: "Cuentas, categorías, transferencias y gastos diarios.",
               },
               crypto: {
-                tag: "Wallets + Precios",
-                title: "Portafolio cripto",
-                detail1: "Gestión de wallets para exchanges, hardware y software.",
-                detail2: "Soporte de compras, ventas, transferencias y swaps.",
-                detail3: "Sincronización de precios vía CoinGecko con control de proxy.",
+                title: "Cripto",
+                description: "Wallets, trades, swaps y balance del portafolio.",
               },
               habits: {
-                tag: "Heatmaps + Recompensas",
                 title: "Hábitos",
-                detail1: "Registros diarios con vista mensual.",
-                detail2: "Heatmaps a lo largo del año.",
-                detail3: "Recompensas por rachas, hitos y metas.",
+                description: "Check-ins diarios, rachas y heatmap.",
               },
             },
-            controls: {
-              security: {
-                title: "Controles de seguridad",
-                description: "Tiempo de sesión, bloqueo de bóveda y backups cifrados por defecto.",
-              },
-              localization: {
-                title: "Localización",
-                description: "Interfaz en inglés y español con moneda preferida.",
-              },
-              import: {
-                title: "Sistema de importación",
-                description: "Vista previa, deduplicación y registro limpio.",
-              },
+            highlights: {
+              languages: "ES / EN",
+              currency: "USD / CLP",
+              themes: "Oscuro / Claro",
+              encryption: "Bóveda cifrada",
             },
           },
           privacy: {
@@ -439,7 +413,7 @@ const baseUrl = import.meta.env.BASE_URL;
             tag: "Generador Sanctum",
             title: "Constructor de registro diario",
             description:
-              "Crea o continúa un archivo sanctum_export.json mientras viajas u operas offline. Carga un archivo existente, agrega entradas y exporta un JSON v1 limpio.",
+              "Crea un sanctum_export.json mientras viajas u offline. Carga, agrega y exporta.",
           },
           download: {
             title: "Despliega la bóveda",

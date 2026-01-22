@@ -170,8 +170,10 @@
 
   .bg-hero {
     background-image:
-      radial-gradient(circle at 15% 20%, var(--glow-primary), transparent 45%),
-      radial-gradient(circle at 80% 10%, var(--glow-secondary), transparent 40%),
+      radial-gradient(circle at 18% 18%, color-mix(in srgb, var(--glow-primary), transparent 30%), transparent 50%),
+      radial-gradient(circle at 82% 12%, color-mix(in srgb, var(--glow-secondary), transparent 35%), transparent 45%),
+      radial-gradient(circle at 50% 65%, color-mix(in srgb, var(--glow-primary), transparent 55%), transparent 60%),
+      linear-gradient(135deg, color-mix(in srgb, var(--glow-primary), transparent 85%), transparent 45%),
       linear-gradient(180deg, var(--grad-section-start), var(--grad-section-end));
   }
 
@@ -182,11 +184,21 @@
   }
 
   .bg-sanctum-section {
-    background: linear-gradient(180deg, var(--grad-section-start), var(--grad-section-end));
+    background-image:
+      radial-gradient(circle at 12% 12%, color-mix(in srgb, var(--glow-primary), transparent 40%), transparent 60%),
+      radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--glow-secondary), transparent 45%), transparent 55%),
+      linear-gradient(135deg, color-mix(in srgb, var(--glow-secondary), transparent 88%), transparent 45%),
+      linear-gradient(180deg, var(--grad-section-start), var(--grad-section-end));
+    background-size: auto, auto, auto;
   }
 
   .bg-sanctum-section-alt {
-    background: linear-gradient(180deg, var(--grad-section-alt-start), var(--grad-section-alt-end));
+    background-image:
+      radial-gradient(circle at 15% 85%, color-mix(in srgb, var(--glow-primary), transparent 40%), transparent 60%),
+      radial-gradient(circle at 85% 25%, color-mix(in srgb, var(--glow-secondary), transparent 45%), transparent 55%),
+      linear-gradient(135deg, color-mix(in srgb, var(--glow-primary), transparent 88%), transparent 45%),
+      linear-gradient(180deg, var(--grad-section-alt-start), var(--grad-section-alt-end));
+    background-size: auto, auto, auto;
   }
 
   .panel-gradient {

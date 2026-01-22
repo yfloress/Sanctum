@@ -3,8 +3,6 @@
 import Layout from '@layouts/Layout.astro';
 import Hero from '@components/landing/Hero.astro';
 import Features from '@components/landing/Features.astro';
-import ImportFlow from '@components/landing/ImportFlow.astro';
-import Privacy from '@components/landing/Privacy.astro';
 import Download from '@components/landing/Download.astro';
 import Footer from '@components/landing/Footer.astro';
 import Generator from '@components/generator/Generator';
@@ -23,17 +21,7 @@ import Generator from '@components/generator/Generator';
             href="#modules"
             class="text-muted-foreground hover:text-foreground transition-colors"
             data-i18n="nav.modules"
-          >Modules</a>
-          <a
-            href="#security"
-            class="text-muted-foreground hover:text-foreground transition-colors"
-            data-i18n="nav.security"
-          >Security</a>
-          <a
-            href="#import"
-            class="text-muted-foreground hover:text-foreground transition-colors"
-            data-i18n="nav.import"
-          >Import</a>
+          >Screens</a>
           <a
             href="#generator"
             class="text-muted-foreground hover:text-foreground transition-colors"
@@ -94,9 +82,7 @@ import Generator from '@components/generator/Generator';
               </svg>
             </summary>
             <div class="nav-mobile__panel">
-              <a href="#modules" class="nav-mobile__link" data-i18n="nav.modules">Modules</a>
-              <a href="#security" class="nav-mobile__link" data-i18n="nav.security">Security</a>
-              <a href="#import" class="nav-mobile__link" data-i18n="nav.import">Import</a>
+              <a href="#modules" class="nav-mobile__link" data-i18n="nav.modules">Screens</a>
               <a href="#generator" class="nav-mobile__link nav-mobile__link--primary" data-i18n="nav.generator">
                 Sanctum Generator
               </a>
@@ -118,14 +104,6 @@ import Generator from '@components/generator/Generator';
       <Features />
     </section>
 
-    <section id="security" class="scroll-mt-24 py-24 bg-sanctum-section-alt">
-      <Privacy />
-    </section>
-
-    <section id="import" class="scroll-mt-24 py-24 bg-sanctum-section">
-      <ImportFlow />
-    </section>
-
     <section id="generator" class="scroll-mt-24 py-24 bg-sanctum-section-alt">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-12 reveal" data-reveal="left">
@@ -133,7 +111,7 @@ import Generator from '@components/generator/Generator';
             class="text-xs font-semibold uppercase tracking-[0.4em] text-muted-foreground"
             data-i18n="generator.tag"
           >Sanctum Generator</p>
-          <h2 class="font-display text-3xl font-semibold text-foreground mb-4" data-i18n="generator.title">
+          <h2 class="font-display text-4xl font-semibold text-foreground mb-4" data-i18n="generator.title">
             Daily Log Builder
           </h2>
           <p class="text-muted-foreground max-w-2xl mx-auto" data-i18n="generator.description">

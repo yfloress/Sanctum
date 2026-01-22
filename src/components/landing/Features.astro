@@ -1,119 +1,75 @@
 ---
 // Features section - highlights key Sanctum capabilities based on app behavior
 
-const modules = [
+const pages = [
   {
-    key: 'finance',
-    title: 'Finance Core',
-    tag: 'Accounts + Transfers',
-    details: [
-      { key: 'detail1', text: 'Multiple account types with per-account currency.' },
-      { key: 'detail2', text: 'Income, expense, and transfer flows with categories.' },
-      { key: 'detail3', text: 'Dashboard analytics for net worth and expense slices.' },
-    ],
+    key: 'dashboard',
+    title: 'Dashboard',
+    description: 'Net worth, trends, and a quick pulse of your vault.',
+  },
+  {
+    key: 'finances',
+    title: 'Finances',
+    description: 'Accounts, categories, transfers, and everyday spending.',
   },
   {
     key: 'crypto',
-    title: 'Crypto Portfolio',
-    tag: 'Wallets + Prices',
-    details: [
-      { key: 'detail1', text: 'Wallet management for exchange, hardware, and software.' },
-      { key: 'detail2', text: 'Buy, sell, transfer, and swap transaction support.' },
-      { key: 'detail3', text: 'Price sync via CoinGecko with proxy controls.' },
-    ],
+    title: 'Crypto',
+    description: 'Wallets, trades, swaps, and portfolio balance.',
   },
   {
     key: 'habits',
     title: 'Habits',
-    tag: 'Heatmaps + Rewards',
-    details: [
-      { key: 'detail1', text: 'Daily habit logs with monthly views.' },
-      { key: 'detail2', text: 'Heatmap analytics across the year.' },
-      { key: 'detail3', text: 'Streak rewards, milestones, and goals.' },
-    ],
+    description: 'Daily check-ins, streaks, and heatmap progress.',
   },
 ];
 
-const controls = [
-  {
-    key: 'security',
-    title: 'Security Controls',
-    description: 'Session timeout, vault lock, and encrypted backups by default.',
-  },
-  {
-    key: 'localization',
-    title: 'Localization',
-    description: 'English and Spanish UI with preferred currency settings.',
-  },
-  {
-    key: 'import',
-    title: 'Import System',
-    description: 'Preview changes, deduplicate entries, and keep a clean ledger.',
-  },
+const highlights = [
+  { key: 'languages', label: 'EN / ES' },
+  { key: 'currency', label: 'USD / CLP' },
+  { key: 'themes', label: 'Dark / Light' },
+  { key: 'encryption', label: 'Encrypted Vault' },
 ];
 ---
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-  <div class="reveal text-center mb-16" data-reveal="left">
+  <div class="reveal text-center mb-12" data-reveal="left">
     <p
       class="text-xs font-semibold uppercase tracking-[0.4em] text-muted-foreground"
       data-i18n="features.tag"
     >Core Systems</p>
-    <h2 class="font-display mt-4 text-3xl sm:text-4xl text-foreground" data-i18n="features.title">
-      One vault. Three disciplines. Zero leakage.
+    <h2 class="font-display mt-4 text-4xl sm:text-5xl text-foreground" data-i18n="features.title">
+      Four screens. One encrypted vault.
     </h2>
-    <p class="mt-4 text-muted-foreground max-w-2xl mx-auto text-lg" data-i18n="features.description">
-      Sanctum is structured as a local fortress: finance, crypto, and habits live together with
-      shared analytics and unified privacy controls.
+    <p class="mt-3 text-muted-foreground max-w-2xl mx-auto text-lg" data-i18n="features.description">
+      A clean, offline-first suite for money, crypto, and habits.
     </p>
   </div>
 
-  <div class="grid gap-8 lg:grid-cols-3">
-    {modules.map((module, index) => (
+  <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+    {pages.map((page, index) => (
       <div
         class="reveal panel-gradient-strong rounded-3xl border border-border p-6 panel-hover"
-        style={`transition-delay: ${index * 100}ms`}
+        style={`transition-delay: ${index * 90}ms`}
       >
-        <p
-          class="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground"
-          data-i18n={`features.modules.${module.key}.tag`}
-        >
-          {module.tag}
-        </p>
-        <h3 class="mt-4 text-xl font-semibold text-foreground" data-i18n={`features.modules.${module.key}.title`}>
-          {module.title}
+        <h3 class="text-2xl font-semibold text-foreground" data-i18n={`features.pages.${page.key}.title`}>
+          {page.title}
         </h3>
-        <ul class="mt-4 space-y-3 text-sm text-muted-foreground">
-          {module.details.map((detail) => (
-            <li class="flex items-start gap-3">
-              <span class="mt-2 h-1.5 w-1.5 rounded-full bg-accent"></span>
-              <span data-i18n={`features.modules.${module.key}.${detail.key}`}>{detail.text}</span>
-            </li>
-          ))}
-        </ul>
+        <p class="mt-3 text-sm text-muted-foreground" data-i18n={`features.pages.${page.key}.description`}>
+          {page.description}
+        </p>
       </div>
     ))}
   </div>
 
-  <div class="mt-16 grid gap-6 lg:grid-cols-3">
-    {controls.map((control, index) => (
+  <div class="mt-12 flex flex-wrap justify-center gap-3">
+    {highlights.map((item, index) => (
       <div
-        class="reveal panel-gradient rounded-2xl border border-border p-5"
+        class="reveal rounded-full border border-border px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground"
         style={`transition-delay: ${index * 80}ms`}
         data-reveal="right"
       >
-        <h4
-          class="text-lg font-semibold text-foreground"
-          data-i18n={`features.controls.${control.key}.title`}
-        >
-          {control.title}
-        </h4>
-        <p
-          class="mt-2 text-sm text-muted-foreground"
-          data-i18n={`features.controls.${control.key}.description`}
-        >
-          {control.description}
-        </p>
+        <span data-i18n={`features.highlights.${item.key}`}>{item.label}</span>
       </div>
     ))}
   </div>
