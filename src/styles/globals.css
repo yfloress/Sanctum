@@ -232,8 +232,8 @@
   }
 
   .panel-hover:hover {
-    border-color: color-mix(in srgb, var(--glow-primary), transparent 30%);
-    box-shadow: 0 24px 60px var(--glow-shadow);
+    border-color: color-mix(in srgb, var(--glow-secondary), transparent 30%);
+    box-shadow: 0 24px 60px var(--glow-strong);
     transform: translateY(-2px);
   }
 

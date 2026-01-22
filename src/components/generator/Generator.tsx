@@ -990,7 +990,7 @@ export default function Generator() {
 
         {activeTab === "transactions" && (
           <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-            <div className="space-y-4">
+            <div className="space-y-4 panel-gradient rounded-2xl border border-border p-5">
               <Input
                 type="date"
                 value={txForm.date}
@@ -1136,10 +1136,12 @@ export default function Generator() {
                 <p>{copy.transactions.form.required}</p>
                 <p>{copy.transactions.form.transferNote}</p>
               </div>
-              <Button onClick={addTransaction}>{copy.transactions.form.add}</Button>
+              <Button onClick={addTransaction} className="w-full">
+                {copy.transactions.form.add}
+              </Button>
             </div>
 
-            <div className="panel-gradient rounded-2xl border border-border p-4">
+            <div className="panel-gradient-strong rounded-2xl border border-border p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 {copy.transactions.list.title}
               </p>
@@ -1189,7 +1191,7 @@ export default function Generator() {
 
         {activeTab === "habits" && (
           <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-            <div className="space-y-4">
+            <div className="space-y-4 panel-gradient rounded-2xl border border-border p-5">
               <Input
                 type="date"
                 value={habitForm.date}
@@ -1235,10 +1237,12 @@ export default function Generator() {
                 {copy.habits.form.completed}
               </label>
               <p className="text-xs text-muted-foreground">{copy.habits.form.required}</p>
-              <Button onClick={addHabit}>{copy.habits.form.add}</Button>
+              <Button onClick={addHabit} className="w-full">
+                {copy.habits.form.add}
+              </Button>
             </div>
 
-            <div className="panel-gradient rounded-2xl border border-border p-4">
+            <div className="panel-gradient-strong rounded-2xl border border-border p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 {copy.habits.list.title}
               </p>
@@ -1251,7 +1255,7 @@ export default function Generator() {
                 {habits.map((log) => (
                   <div
                     key={log.id}
-                    className="rounded-lg border border-border bg-card px-3 py-2"
+                    className="rounded-xl border border-border bg-card/70 px-4 py-3 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md"
                   >
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold text-foreground">{log.habit}</p>
@@ -1274,7 +1278,7 @@ export default function Generator() {
 
         {activeTab === "crypto" && (
           <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-            <div className="space-y-4">
+            <div className="space-y-4 panel-gradient rounded-2xl border border-border p-5">
               <Input
                 type="date"
                 value={cryptoForm.date}
@@ -1493,10 +1497,12 @@ export default function Generator() {
                 onChange={(event) => setCryptoForm({ ...cryptoForm, notes: event.target.value })}
               />
               <p className="text-xs text-muted-foreground">{copy.crypto.form.required}</p>
-              <Button onClick={addCrypto}>{copy.crypto.form.add}</Button>
+              <Button onClick={addCrypto} className="w-full">
+                {copy.crypto.form.add}
+              </Button>
             </div>
 
-            <div className="panel-gradient rounded-2xl border border-border p-4">
+            <div className="panel-gradient-strong rounded-2xl border border-border p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 {copy.crypto.list.title}
               </p>
@@ -1509,7 +1515,7 @@ export default function Generator() {
                 {cryptoTx.map((tx) => (
                   <div
                     key={tx.id}
-                    className="rounded-lg border border-border bg-card px-3 py-2"
+                    className="rounded-xl border border-border bg-card/70 px-4 py-3 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md"
                   >
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold text-foreground">
