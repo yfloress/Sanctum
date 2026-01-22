@@ -16,27 +16,17 @@ const base = import.meta.env.BASE_URL;
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="mt-4 flex items-center justify-center">
         <div class="nav-shell flex w-full items-center justify-center gap-6 px-4 py-2">
-        <div class="hidden items-center gap-6 text-sm sm:flex">
-          <a
-            href="#modules"
-            class="text-muted-foreground hover:text-foreground transition-colors"
-            data-i18n="nav.modules"
-          >Screens</a>
+          <div class="hidden items-center gap-6 text-sm sm:flex">
           <a
             href={`${base}imports/`}
-            class="text-muted-foreground hover:text-foreground transition-colors"
+            class="text-muted-foreground hover:text-foreground transition-colors text-[0.7rem] font-semibold uppercase tracking-[0.35em]"
             data-i18n="nav.imports"
-          >Imports</a>
+          >IMPORTS</a>
           <a
             href="#generator"
-            class="text-muted-foreground hover:text-foreground transition-colors"
+            class="text-muted-foreground hover:text-foreground transition-colors text-[0.7rem] font-semibold uppercase tracking-[0.35em]"
             data-i18n="nav.generator"
-          >Sanctum Generator</a>
-          <a
-            href="#download"
-            class="text-muted-foreground hover:text-foreground transition-colors"
-            data-i18n="nav.download"
-          >Download</a>
+          >SANCTUM GENERATOR</a>
           <button
             type="button"
             data-theme-toggle
@@ -45,9 +35,11 @@ const base = import.meta.env.BASE_URL;
             aria-pressed="false"
           >
             <span class="theme-toggle__track" aria-hidden="true">
-              <span class="theme-toggle__thumb"></span>
+              <span class="theme-toggle__thumb">
+                <span class="theme-toggle__icon theme-toggle__icon--sun" aria-hidden="true">☀</span>
+                <span class="theme-toggle__icon theme-toggle__icon--moon" aria-hidden="true">☾</span>
+              </span>
             </span>
-            <span class="theme-toggle__label" data-theme-toggle-label>Dark</span>
           </button>
           <button
             type="button"
@@ -58,7 +50,7 @@ const base = import.meta.env.BASE_URL;
             <span data-lang-toggle-label>EN</span>
           </button>
         </div>
-        <div class="flex items-center gap-2 sm:hidden">
+          <div class="flex items-center gap-2 sm:hidden">
           <button
             type="button"
             data-theme-toggle
@@ -67,9 +59,11 @@ const base = import.meta.env.BASE_URL;
             aria-pressed="false"
           >
             <span class="theme-toggle__track" aria-hidden="true">
-              <span class="theme-toggle__thumb"></span>
+              <span class="theme-toggle__thumb">
+                <span class="theme-toggle__icon theme-toggle__icon--sun" aria-hidden="true">☀</span>
+                <span class="theme-toggle__icon theme-toggle__icon--moon" aria-hidden="true">☾</span>
+              </span>
             </span>
-            <span class="theme-toggle__label" data-theme-toggle-label>Dark</span>
           </button>
           <button
             type="button"
@@ -87,15 +81,13 @@ const base = import.meta.env.BASE_URL;
               </svg>
             </summary>
             <div class="nav-mobile__panel">
-              <a href="#modules" class="nav-mobile__link" data-i18n="nav.modules">Screens</a>
-              <a href={`${base}imports/`} class="nav-mobile__link" data-i18n="nav.imports">Imports</a>
+              <a href={`${base}imports/`} class="nav-mobile__link" data-i18n="nav.imports">IMPORTS</a>
               <a href="#generator" class="nav-mobile__link nav-mobile__link--primary" data-i18n="nav.generator">
-                Sanctum Generator
+                SANCTUM GENERATOR
               </a>
-              <a href="#download" class="nav-mobile__link" data-i18n="nav.download">Download</a>
             </div>
           </details>
-        </div>
+          </div>
         </div>
       </div>
     </div>
