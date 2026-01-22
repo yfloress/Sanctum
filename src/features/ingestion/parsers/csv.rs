@@ -477,6 +477,25 @@ impl CsvParser {
                 .filter(|s| !s.is_empty())
                 .and_then(|s| s.replace(',', ".").parse().ok());
 
+            let swap_to_symbol = Self::get_field(&record, &columns, "swap_to_symbol")
+                .or_else(|| Self::get_field(&record, &columns, "to_symbol"))
+                .filter(|s| !s.is_empty())
+                .map(String::from);
+
+            let swap_to_amount = Self::get_field(&record, &columns, "swap_to_amount")
+                .or_else(|| Self::get_field(&record, &columns, "to_amount"))
+                .filter(|s| !s.is_empty())
+                .and_then(|s| s.replace(',', ".").parse().ok());
+
+            let fee_coin_symbol = Self::get_field(&record, &columns, "fee_coin_symbol")
+                .or_else(|| Self::get_field(&record, &columns, "fee_coin"))
+                .filter(|s| !s.is_empty())
+                .map(String::from);
+
+            let fee_amount = Self::get_field(&record, &columns, "fee_amount")
+                .filter(|s| !s.is_empty())
+                .and_then(|s| s.replace(',', ".").parse().ok());
+
             let notes = Self::get_field(&record, &columns, "notes")
                 .filter(|s| !s.is_empty())
                 .map(String::from);
@@ -491,6 +510,10 @@ impl CsvParser {
                     amount,
                     price_per_coin,
                     fee,
+                    swap_to_symbol,
+                    swap_to_amount,
+                    fee_coin_symbol,
+                    fee_amount,
                     notes,
                 },
             ));

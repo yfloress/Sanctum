@@ -186,9 +186,9 @@ pub fn validate_import_habit_log(log: &ImportHabitLog, line_number: usize) -> Re
 pub fn validate_crypto_tx_type(tx_type: &str) -> Result<String, String> {
     let normalized = tx_type.trim().to_lowercase();
     match normalized.as_str() {
-        "buy" | "sell" | "transfer_in" | "transfer_out" => Ok(normalized),
+        "buy" | "sell" | "transfer_in" | "transfer_out" | "swap" => Ok(normalized),
         _ => Err(format!(
-            "Invalid crypto transaction type: '{}'. Expected: buy, sell, transfer_in, or transfer_out",
+            "Invalid crypto transaction type: '{}'. Expected: buy, sell, transfer_in, transfer_out, or swap",
             tx_type
         )),
     }
@@ -268,12 +268,70 @@ pub fn validate_import_crypto_transaction(
     validate_price_per_coin(tx.price_per_coin).map_err(|e| make_error("price_per_coin", e))?;
     validate_fee(tx.fee).map_err(|e| make_error("fee", e))?;
 
+    let tx_type = tx.transaction_type.trim().to_lowercase();
+    if tx_type == "swap" {
+        let to_symbol = tx
+            .swap_to_symbol
+            .as_ref()
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .ok_or_else(|| make_error("swap_to_symbol", "Swap target symbol is required".to_string()))?;
+        let to_amount = tx
+            .swap_to_amount
+            .ok_or_else(|| make_error("swap_to_amount", "Swap target amount is required".to_string()))?;
+
+        validate_crypto_symbol(to_symbol).map_err(|e| make_error("swap_to_symbol", e))?;
+        validate_crypto_amount(to_amount).map_err(|e| make_error("swap_to_amount", e))?;
+
+        let from_symbol = tx.symbol.trim().to_uppercase();
+        let to_symbol_norm = to_symbol.trim().to_uppercase();
+        if from_symbol == to_symbol_norm {
+            return Err(make_error(
+                "swap_to_symbol",
+                "Swap requires two different assets".to_string(),
+            ));
+        }
+
+        let fee_coin_symbol = tx
+            .fee_coin_symbol
+            .as_ref()
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty());
+        if fee_coin_symbol.is_some() ^ tx.fee_amount.is_some() {
+            return Err(make_error(
+                "fee_coin_symbol",
+                "Fee coin symbol and fee amount must be provided together".to_string(),
+            ));
+        }
+        if let (Some(symbol), Some(amount)) = (fee_coin_symbol, tx.fee_amount) {
+            validate_crypto_symbol(symbol).map_err(|e| make_error("fee_coin_symbol", e))?;
+            validate_crypto_amount(amount).map_err(|e| make_error("fee_amount", e))?;
+        }
+    }
+
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn base_crypto_tx(tx_type: &str) -> ImportCryptoTransaction {
+        ImportCryptoTransaction {
+            date: "2024-01-10".to_string(),
+            wallet: "Ledger".to_string(),
+            symbol: "BTC".to_string(),
+            transaction_type: tx_type.to_string(),
+            amount: 0.5,
+            price_per_coin: None,
+            fee: None,
+            swap_to_symbol: None,
+            swap_to_amount: None,
+            fee_coin_symbol: None,
+            fee_amount: None,
+            notes: None,
+        }
+    }
 
     #[test]
     fn test_validate_date_valid() {
@@ -313,6 +371,22 @@ mod tests {
         assert!(validate_currency("US").is_err());
         assert!(validate_currency("USDD").is_err());
         assert!(validate_currency("").is_err());
+    }
+
+    #[test]
+    fn test_validate_crypto_tx_type_includes_swap() {
+        assert_eq!(validate_crypto_tx_type("swap").unwrap(), "swap");
+        assert!(validate_crypto_tx_type("stake").is_err());
+    }
+
+    #[test]
+    fn test_validate_crypto_swap_requires_targets() {
+        let mut tx = base_crypto_tx("swap");
+        assert!(validate_import_crypto_transaction(&tx, 1).is_err());
+
+        tx.swap_to_symbol = Some("ETH".to_string());
+        tx.swap_to_amount = Some(1.25);
+        assert!(validate_import_crypto_transaction(&tx, 1).is_ok());
     }
 
     #[test]

@@ -238,7 +238,8 @@ impl TextParser {
     }
 
     /// Parse a crypto line (after C; prefix is removed)
-    /// Format: date;wallet;symbol;type;amount;price;fee;notes
+    /// Format (standard): date;wallet;symbol;type;amount;price;fee;notes
+    /// Format (swap): date;wallet;symbol;type;amount;swap_to_symbol;swap_to_amount;fee;fee_coin_symbol;fee_amount;notes
     fn parse_crypto_line(
         &self,
         line: &str,
@@ -268,9 +269,6 @@ impl TextParser {
         let symbol = fields[2].trim();
         let tx_type = fields[3].trim();
         let amount_str = fields[4].trim();
-        let price_str = fields.get(5).map(|s| s.trim()).filter(|s| !s.is_empty());
-        let fee_str = fields.get(6).map(|s| s.trim()).filter(|s| !s.is_empty());
-        let notes = fields.get(7).map(|s| s.trim()).filter(|s| !s.is_empty());
 
         // Validate required fields
         if date.is_empty() {
@@ -324,8 +322,89 @@ impl TextParser {
             }
         };
 
-        let price_per_coin = price_str.and_then(|s| s.replace(',', ".").parse().ok());
-        let fee = fee_str.and_then(|s| s.replace(',', ".").parse().ok());
+        let is_swap = tx_type.eq_ignore_ascii_case("swap");
+        let (price_per_coin, fee, swap_to_symbol, swap_to_amount, fee_coin_symbol, fee_amount, notes) =
+            if is_swap {
+            let to_symbol = fields.get(5).map(|s| s.trim()).unwrap_or("");
+            let to_amount_str = fields.get(6).map(|s| s.trim()).unwrap_or("");
+
+            if to_symbol.is_empty() {
+                result.errors.push(
+                    RowError::new(line_number, Some("swap_to_symbol"), "Swap target symbol is required")
+                        .with_raw_data(format!("C;{}", line)),
+                );
+                return;
+            }
+            if to_amount_str.is_empty() {
+                result.errors.push(
+                    RowError::new(line_number, Some("swap_to_amount"), "Swap target amount is required")
+                        .with_raw_data(format!("C;{}", line)),
+                );
+                return;
+            }
+
+            let to_amount: f64 = match to_amount_str.replace(',', ".").parse() {
+                Ok(value) => value,
+                Err(_) => {
+                    result.errors.push(
+                        RowError::new(
+                            line_number,
+                            Some("swap_to_amount"),
+                            format!("Invalid swap target amount: '{}'", to_amount_str),
+                        )
+                        .with_raw_data(format!("C;{}", line)),
+                    );
+                    return;
+                }
+            };
+
+            let fee = fields
+                .get(7)
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .and_then(|s| s.replace(',', ".").parse().ok());
+            let fee_coin_symbol = fields
+                .get(8)
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .map(String::from);
+            let fee_amount = fields
+                .get(9)
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .and_then(|s| s.replace(',', ".").parse().ok());
+            let notes = fields
+                .get(10)
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .map(String::from);
+            (
+                None,
+                fee,
+                Some(to_symbol.to_string()),
+                Some(to_amount),
+                fee_coin_symbol,
+                fee_amount,
+                notes,
+            )
+        } else {
+            let price_per_coin = fields
+                .get(5)
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .and_then(|s| s.replace(',', ".").parse().ok());
+            let fee = fields
+                .get(6)
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .and_then(|s| s.replace(',', ".").parse().ok());
+            let notes = fields
+                .get(7)
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .map(String::from);
+            (price_per_coin, fee, None, None, None, None, notes)
+        };
 
         result.items.push((
             line_number,
@@ -337,7 +416,11 @@ impl TextParser {
                 amount,
                 price_per_coin,
                 fee,
-                notes: notes.map(String::from),
+                swap_to_symbol,
+                swap_to_amount,
+                fee_coin_symbol,
+                fee_amount,
+                notes,
             },
         ));
     }
@@ -390,6 +473,26 @@ mod tests {
         assert_eq!(result.crypto_transactions.items[0].1.price_per_coin, Some(45000.0));
         assert_eq!(result.crypto_transactions.items[1].1.symbol, "ETH");
         assert!(result.crypto_transactions.items[1].1.fee.is_none());
+    }
+
+    #[test]
+    fn test_parse_mixed_crypto_swap() {
+        let text = "C;2024-01-20;Binance;BTC;swap;0.1;ETH;2.5;0.01;BTC;0.0001;Swap note";
+
+        let parser = TextParser;
+        let result = parser.parse_mixed(text);
+
+        assert!(result.crypto_transactions.errors.is_empty());
+        assert_eq!(result.crypto_transactions.items.len(), 1);
+        let tx = &result.crypto_transactions.items[0].1;
+        assert_eq!(tx.transaction_type, "swap");
+        assert_eq!(tx.symbol, "BTC");
+        assert_eq!(tx.swap_to_symbol.as_deref(), Some("ETH"));
+        assert_eq!(tx.swap_to_amount, Some(2.5));
+        assert_eq!(tx.fee, Some(0.01));
+        assert_eq!(tx.fee_coin_symbol.as_deref(), Some("BTC"));
+        assert_eq!(tx.fee_amount, Some(0.0001));
+        assert_eq!(tx.notes.as_deref(), Some("Swap note"));
     }
 
     #[test]

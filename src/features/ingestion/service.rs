@@ -5,7 +5,7 @@
 use crate::db::{Database, DbError};
 use crate::models::{CryptoTransaction, HabitLog, Transaction};
 use crate::services::i18n::{t, t_args};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
@@ -878,16 +878,27 @@ impl IngestionService {
 
         let existing = IngestionRepository::get_all_crypto_transactions(db)
             .map_err(IngestionError::Database)?;
+        let existing_map: HashMap<String, &CryptoTransaction> =
+            existing.iter().map(|tx| (tx.id.clone(), tx)).collect();
 
         let mut dedup_set: HashSet<CryptoDedupKey> = existing
             .iter()
             .map(|tx| {
+                let pair_coin_id = if tx.transaction_type == "swap" {
+                    tx.related_tx_id
+                        .as_ref()
+                        .and_then(|id| existing_map.get(id))
+                        .map(|related| related.coin_id.as_str())
+                } else {
+                    None
+                };
                 CryptoDedupKey::new(
                     &tx.date,
                     &tx.wallet_id,
                     &tx.coin_id,
                     &tx.transaction_type,
                     tx.amount,
+                    pair_coin_id,
                 )
             })
             .collect();
@@ -921,7 +932,7 @@ impl IngestionService {
                 }
             };
 
-            // Resolve coin
+            // Resolve coin (source)
             let symbol_key = import_tx.symbol.trim().to_lowercase();
             let coin = match coin_lookup.get(&symbol_key) {
                 Some(c) => c,
@@ -940,7 +951,53 @@ impl IngestionService {
 
             let tx_type = import_tx.transaction_type.trim().to_lowercase();
 
-            // Validate balance for sell and transfer_out operations
+            let mut swap_to_coin = None;
+            if tx_type == "swap" {
+                let to_symbol = import_tx
+                    .swap_to_symbol
+                    .as_ref()
+                    .map(|s| s.trim())
+                    .unwrap_or("");
+                let to_key = to_symbol.to_lowercase();
+                swap_to_coin = match coin_lookup.get(&to_key) {
+                    Some(c) => Some(c),
+                    None => {
+                        summary.record_error(RowError::new(
+                            line_num,
+                            Some("swap_to_symbol"),
+                            t_args(
+                                "import-error-crypto-not-found",
+                                &[("symbol", to_symbol)],
+                            ),
+                        ));
+                        continue;
+                    }
+                };
+            }
+
+            let mut fee_coin = None;
+            if tx_type == "swap"
+                && let Some(symbol) = import_tx
+                    .fee_coin_symbol
+                    .as_ref()
+                    .map(|s| s.trim())
+                    .filter(|s| !s.is_empty())
+            {
+                let fee_key = symbol.to_lowercase();
+                fee_coin = match coin_lookup.get(&fee_key) {
+                    Some(c) => Some(c),
+                    None => {
+                        summary.record_error(RowError::new(
+                            line_num,
+                            Some("fee_coin_symbol"),
+                            t_args("import-error-crypto-not-found", &[("symbol", symbol)]),
+                        ));
+                        continue;
+                    }
+                };
+            }
+
+            // Validate balance for outflow operations
             if tx_type == "sell" || tx_type == "transfer_out" {
                 let db_balance = match IngestionRepository::get_wallet_coin_balance(
                     db,
@@ -985,35 +1042,307 @@ impl IngestionService {
                 }
             }
 
-            let dedup_key = CryptoDedupKey::new(
-                &import_tx.date,
-                &wallet.id,
-                &coin.id,
-                &tx_type,
-                import_tx.amount,
-            );
+            if tx_type == "swap" {
+                let to_coin = match swap_to_coin {
+                    Some(c) => c,
+                    None => continue,
+                };
+                let to_amount = import_tx.swap_to_amount.unwrap_or(0.0);
+                let fee_amount = import_tx.fee_amount.unwrap_or(0.0);
 
-            if dedup_set.contains(&dedup_key) {
-                summary.record_skipped(&skipped_duplicate);
+                let db_balance = match IngestionRepository::get_wallet_coin_balance(
+                    db,
+                    &wallet.id,
+                    &coin.id,
+                    import_tx.date.trim(),
+                ) {
+                    Ok(b) => b,
+                    Err(e) => {
+                        summary.record_error(RowError::new(
+                            line_num,
+                            None,
+                            format!("Database error checking balance: {}", e),
+                        ));
+                        continue;
+                    }
+                };
+                let balance_key = (wallet.id.clone(), coin.id.clone());
+                let pending_delta = pending_balance_changes
+                    .get(&balance_key)
+                    .copied()
+                    .unwrap_or(0.0);
+                let mut required_from = import_tx.amount;
+
+                if let Some(fee_coin) = fee_coin.as_ref()
+                    && fee_coin.id == coin.id
+                {
+                    required_from += fee_amount;
+                }
+
+                let available_from = db_balance + pending_delta;
+                if available_from < required_from {
+                    summary.record_error(RowError::new(
+                        line_num,
+                        Some("amount"),
+                        t_args(
+                            "import-error-insufficient-crypto-balance",
+                            &[
+                                ("symbol", coin.symbol.as_str()),
+                                ("wallet", wallet.name.as_str()),
+                                ("available", &format!("{:.8}", available_from)),
+                                ("required", &format!("{:.8}", required_from)),
+                            ],
+                        ),
+                    ));
+                    continue;
+                }
+
+                if let Some(fee_coin) = fee_coin.as_ref() {
+                    if fee_coin.id == to_coin.id {
+                        let to_balance = match IngestionRepository::get_wallet_coin_balance(
+                            db,
+                            &wallet.id,
+                            &to_coin.id,
+                            import_tx.date.trim(),
+                        ) {
+                            Ok(b) => b,
+                            Err(e) => {
+                                summary.record_error(RowError::new(
+                                    line_num,
+                                    None,
+                                    format!("Database error checking balance: {}", e),
+                                ));
+                                continue;
+                            }
+                        };
+                        let to_key = (wallet.id.clone(), to_coin.id.clone());
+                        let to_pending = pending_balance_changes.get(&to_key).copied().unwrap_or(0.0);
+                        let available_to = to_balance + to_pending + to_amount;
+                        if fee_amount > available_to {
+                            summary.record_error(RowError::new(
+                                line_num,
+                                Some("fee_amount"),
+                                "Fee amount exceeds available output balance".to_string(),
+                            ));
+                            continue;
+                        }
+                    } else if fee_coin.id != coin.id {
+                        let fee_balance = match IngestionRepository::get_wallet_coin_balance(
+                            db,
+                            &wallet.id,
+                            &fee_coin.id,
+                            import_tx.date.trim(),
+                        ) {
+                            Ok(b) => b,
+                            Err(e) => {
+                                summary.record_error(RowError::new(
+                                    line_num,
+                                    None,
+                                    format!("Database error checking balance: {}", e),
+                                ));
+                                continue;
+                            }
+                        };
+                        let fee_key = (wallet.id.clone(), fee_coin.id.clone());
+                        let fee_pending =
+                            pending_balance_changes.get(&fee_key).copied().unwrap_or(0.0);
+                        let available_fee = fee_balance + fee_pending;
+                        if fee_amount > available_fee {
+                            summary.record_error(RowError::new(
+                                line_num,
+                                Some("fee_amount"),
+                                t_args(
+                                    "import-error-insufficient-crypto-balance",
+                                    &[
+                                        ("symbol", fee_coin.symbol.as_str()),
+                                        ("wallet", wallet.name.as_str()),
+                                        ("available", &format!("{:.8}", available_fee)),
+                                        ("required", &format!("{:.8}", fee_amount)),
+                                    ],
+                                ),
+                            ));
+                            continue;
+                        }
+                    }
+                }
+            }
+
+            let dedup_key = if tx_type == "swap" {
+                let to_coin = match swap_to_coin {
+                    Some(c) => c,
+                    None => continue,
+                };
+                let from_key = CryptoDedupKey::new(
+                    &import_tx.date,
+                    &wallet.id,
+                    &coin.id,
+                    &tx_type,
+                    import_tx.amount,
+                    Some(&to_coin.id),
+                );
+                let to_key = CryptoDedupKey::new(
+                    &import_tx.date,
+                    &wallet.id,
+                    &to_coin.id,
+                    &tx_type,
+                    import_tx.swap_to_amount.unwrap_or(0.0),
+                    Some(&coin.id),
+                );
+                if dedup_set.contains(&from_key) || dedup_set.contains(&to_key) {
+                    summary.record_skipped(&skipped_duplicate);
+                    continue;
+                }
+                // stash both keys later
+                Some((from_key, to_key))
+            } else {
+                let key = CryptoDedupKey::new(
+                    &import_tx.date,
+                    &wallet.id,
+                    &coin.id,
+                    &tx_type,
+                    import_tx.amount,
+                    None,
+                );
+                if dedup_set.contains(&key) {
+                    summary.record_skipped(&skipped_duplicate);
+                    continue;
+                }
+                None
+            };
+
+            // Update pending balance changes for subsequent validations
+            if tx_type == "swap" {
+                let to_coin = match swap_to_coin {
+                    Some(c) => c,
+                    None => continue,
+                };
+                let to_amount = import_tx.swap_to_amount.unwrap_or(0.0);
+                *pending_balance_changes
+                    .entry((wallet.id.clone(), coin.id.clone()))
+                    .or_insert(0.0) -= import_tx.amount;
+                *pending_balance_changes
+                    .entry((wallet.id.clone(), to_coin.id.clone()))
+                    .or_insert(0.0) += to_amount;
+
+                if let (Some(fee_coin), Some(fee_amount)) = (fee_coin.as_ref(), import_tx.fee_amount)
+                {
+                    *pending_balance_changes
+                        .entry((wallet.id.clone(), fee_coin.id.clone()))
+                        .or_insert(0.0) -= fee_amount;
+                }
+            } else {
+                let balance_key = (wallet.id.clone(), coin.id.clone());
+                let delta = match tx_type.as_str() {
+                    "buy" | "transfer_in" => import_tx.amount,
+                    "sell" | "transfer_out" => -import_tx.amount,
+                    _ => 0.0,
+                };
+                *pending_balance_changes.entry(balance_key).or_insert(0.0) += delta;
+            }
+
+            if dry_run {
+                if let Some((from_key, to_key)) = dedup_key.clone() {
+                    dedup_set.insert(from_key);
+                    dedup_set.insert(to_key);
+                    let to_coin = match swap_to_coin {
+                        Some(c) => c,
+                        None => continue,
+                    };
+                    summary.record_preview_change(
+                        &t("import-preview-change-crypto"),
+                        format!(
+                            "{:.8} {} → {:.8} {}",
+                            import_tx.amount,
+                            coin.symbol,
+                            import_tx.swap_to_amount.unwrap_or(0.0),
+                            to_coin.symbol
+                        ),
+                        format!("{} - {}", wallet.name, import_tx.date),
+                    );
+                } else {
+                    let key = CryptoDedupKey::new(
+                        &import_tx.date,
+                        &wallet.id,
+                        &coin.id,
+                        &tx_type,
+                        import_tx.amount,
+                        None,
+                    );
+                    dedup_set.insert(key);
+                    summary.record_preview_change(
+                        &t("import-preview-change-crypto"),
+                        format!("{:.8} {} ({})", import_tx.amount, coin.symbol, tx_type),
+                        format!("{} - {}", wallet.name, import_tx.date),
+                    );
+                }
                 continue;
             }
 
-            // Update pending balance changes for subsequent validations
-            let balance_key = (wallet.id.clone(), coin.id.clone());
-            let delta = match tx_type.as_str() {
-                "buy" | "transfer_in" => import_tx.amount,
-                "sell" | "transfer_out" => -import_tx.amount,
-                _ => 0.0,
-            };
-            *pending_balance_changes.entry(balance_key).or_insert(0.0) += delta;
+            if tx_type == "swap" {
+                let to_coin = match swap_to_coin {
+                    Some(c) => c,
+                    None => continue,
+                };
+                let to_amount = import_tx.swap_to_amount.unwrap_or(0.0);
+                let source_id = Uuid::new_v4().to_string();
+                let target_id = Uuid::new_v4().to_string();
 
-            if dry_run {
-                dedup_set.insert(dedup_key);
-                summary.record_preview_change(
-                    &t("import-preview-change-crypto"),
-                    format!("{:.8} {} ({})", import_tx.amount, coin.symbol, tx_type),
-                    format!("{} - {}", wallet.name, import_tx.date),
-                );
+                let source = CryptoTransaction {
+                    id: source_id.clone(),
+                    wallet_id: wallet.id.clone(),
+                    coin_id: coin.id.clone(),
+                    symbol: coin.symbol.clone(),
+                    transaction_type: "swap".to_string(),
+                    amount: import_tx.amount,
+                    price_per_coin: None,
+                    fee: import_tx.fee,
+                    fee_coin_id: fee_coin.as_ref().map(|c| c.id.clone()),
+                    fee_amount: import_tx.fee_amount,
+                    date: import_tx.date.trim().to_string(),
+                    notes: import_tx.notes.clone(),
+                    related_tx_id: Some(target_id.clone()),
+                };
+
+                let target = CryptoTransaction {
+                    id: target_id.clone(),
+                    wallet_id: wallet.id.clone(),
+                    coin_id: to_coin.id.clone(),
+                    symbol: to_coin.symbol.clone(),
+                    transaction_type: "swap".to_string(),
+                    amount: to_amount,
+                    price_per_coin: None,
+                    fee: None,
+                    fee_coin_id: None,
+                    fee_amount: None,
+                    date: import_tx.date.trim().to_string(),
+                    notes: import_tx.notes.clone(),
+                    related_tx_id: Some(source_id.clone()),
+                };
+
+                if let Err(e) = IngestionRepository::create_crypto_transaction(db, &source) {
+                    summary.record_error(RowError::new(
+                        line_num,
+                        None,
+                        format!("Database error: {}", e),
+                    ));
+                    continue;
+                }
+
+                if let Err(e) = IngestionRepository::create_crypto_transaction(db, &target) {
+                    let _ = db.delete_crypto_transaction(&source_id);
+                    summary.record_error(RowError::new(
+                        line_num,
+                        None,
+                        format!("Database error: {}", e),
+                    ));
+                    continue;
+                }
+
+                if let Some((from_key, to_key)) = dedup_key {
+                    dedup_set.insert(from_key);
+                    dedup_set.insert(to_key);
+                }
+                summary.record_inserted();
                 continue;
             }
 
@@ -1032,7 +1361,15 @@ impl IngestionService {
 
             match IngestionRepository::create_crypto_transaction(db, &transaction) {
                 Ok(_) => {
-                    dedup_set.insert(dedup_key);
+                    let key = CryptoDedupKey::new(
+                        &import_tx.date,
+                        &wallet.id,
+                        &coin.id,
+                        &transaction.transaction_type,
+                        import_tx.amount,
+                        None,
+                    );
+                    dedup_set.insert(key);
                     summary.record_inserted();
                 }
                 Err(e) => {
