@@ -456,6 +456,26 @@
     box-shadow: 0 16px 40px color-mix(in srgb, var(--glow-primary), transparent 60%);
   }
 
+  .nav-shell {
+    max-width: 820px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--border), transparent 20%);
+    background: linear-gradient(
+      140deg,
+      color-mix(in srgb, var(--grad-surface-start), transparent 18%),
+      color-mix(in srgb, var(--grad-surface-end), transparent 18%)
+    );
+    box-shadow: 0 16px 40px color-mix(in srgb, var(--glow-primary), transparent 75%);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+
+  @media (max-width: 640px) {
+    .nav-shell {
+      max-width: 100%;
+    }
+  }
+
   .import-json-mobile {
     border-radius: 1rem;
     border: 1px solid color-mix(in srgb, var(--border), transparent 30%);
