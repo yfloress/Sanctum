@@ -75,7 +75,7 @@ type ExportData = {
 
 const translations = {
   en: {
-    headerTag: "Sanctum Generator",
+    headerTag: "Generator",
     headerTitle: "Build a trip-safe log",
     headerDescription:
       "This generator matches Sanctum's import schema. Account, habit, wallet, and category names must already exist in your vault for the import to succeed.",

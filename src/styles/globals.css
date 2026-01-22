@@ -184,12 +184,13 @@
 
   .bg-sanctum-section {
     background-image:
-      radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--glow-primary), transparent 28%), transparent 58%),
-      radial-gradient(circle at 88% 12%, color-mix(in srgb, var(--glow-secondary), transparent 32%), transparent 55%),
-      radial-gradient(circle at 50% 85%, color-mix(in srgb, var(--glow-primary), transparent 65%), transparent 70%),
-      linear-gradient(140deg, color-mix(in srgb, var(--glow-secondary), transparent 92%), transparent 45%),
+      radial-gradient(circle at 18% 6%, color-mix(in srgb, var(--glow-primary), transparent 24%), transparent 60%),
+      radial-gradient(circle at 82% 10%, color-mix(in srgb, var(--glow-secondary), transparent 26%), transparent 58%),
+      radial-gradient(circle at 50% 55%, color-mix(in srgb, var(--glow-primary), transparent 72%), transparent 70%),
+      radial-gradient(circle at 50% 100%, color-mix(in srgb, var(--glow-secondary), transparent 78%), transparent 75%),
+      linear-gradient(90deg, color-mix(in srgb, var(--glow-primary), transparent 90%), transparent 55%),
       linear-gradient(180deg, var(--grad-section-start), var(--grad-section-end));
-    background-size: auto, auto, auto, auto, auto;
+    background-size: auto, auto, auto, auto, auto, auto;
   }
 
   .bg-sanctum-section-alt {
