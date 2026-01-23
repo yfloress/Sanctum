@@ -425,12 +425,14 @@
   .theme-toggle__icon {
     position: absolute;
     inset: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.55rem;
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 2px;
+    object-fit: contain;
     opacity: 0;
     transition: opacity 0.2s ease;
+    pointer-events: none;
   }
 
   .theme-toggle__icon--moon {
@@ -478,7 +480,7 @@
   }
 
   .theme-toggle--compact .theme-toggle__icon {
-    font-size: 0.5rem;
+    padding: 1px;
   }
 
   .theme-toggle--compact.is-light .theme-toggle__thumb {
