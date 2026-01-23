@@ -78,12 +78,9 @@ const baseUrl = import.meta.env.BASE_URL;
       const translations = {
         en: {
           nav: {
-            modules: "Screens",
-            security: "Security",
-            import: "Import",
+            modules: "Modules",
             imports: "Imports",
             generator: "Generator",
-            download: "Download",
             menu: "Menu",
           },
           imports: {
@@ -153,18 +150,6 @@ const baseUrl = import.meta.env.BASE_URL;
                 description: "Daily logs, heatmaps, streak rewards, and goals.",
               },
             },
-            highlights: {
-              import: {
-                tag: "Import",
-                line1: "JSON v1, CSV, TXT",
-                line2: "Best-effort + dedup",
-              },
-              settings: {
-                tag: "Settings",
-                line1: "USD / CLP, EN / ES",
-                line2: "Proxy + session lock",
-              },
-            },
           },
           features: {
             tag: "Core Screens",
@@ -196,77 +181,6 @@ const baseUrl = import.meta.env.BASE_URL;
               encryption: "Encrypted Vault",
             },
           },
-          privacy: {
-            tag: "Security & Privacy",
-            title: "Your data never leaves the vault.",
-            description:
-              "Sanctum stores everything locally using SQLCipher and keeps session access timeboxed. Backups stay encrypted, and nothing syncs unless you explicitly export or import it.",
-            cards: {
-              encryption: {
-                title: "Vault Encryption",
-                description: "AES-256-GCM via SQLCipher.",
-              },
-              session: {
-                title: "Session Lock",
-                description: "Auto-lock after inactivity.",
-              },
-              backups: {
-                title: "Encrypted Backups",
-                description: "Export and restore safely.",
-              },
-              telemetry: {
-                title: "No Telemetry",
-                description: "No analytics or trackers.",
-              },
-            },
-            notes: {
-              import:
-                "Every import is best-effort. Bad rows are reported, good rows still land in your ledger, and duplicates are skipped to keep the vault clean.",
-              crypto:
-                "Crypto price sync uses CoinGecko and can be routed through a proxy for extra privacy. If you prefer zero network calls, leave auto-fetch off and operate entirely offline.",
-              settings:
-                "Settings allow you to choose English or Spanish, set a preferred currency (USD/CLP), and maintain a workflow that matches your reality.",
-            },
-          },
-          import: {
-            tag: "Import Pipeline",
-            title: "Bring data home without breaking the vault.",
-            description:
-              "Sanctum ingests JSON, CSV, and TXT with strict validation, deduplication, and a preview step before any write happens.",
-            sources: {
-              json: {
-                title: "Generator JSON v1",
-                description:
-                  "Primary format for travel logs. Versioned, strict schema, and designed for safe merging.",
-              },
-              csv: {
-                title: "Spreadsheet CSV",
-                description:
-                  "Templates from Excel/Sheets/ODS. Parsed with robust CSV handling for commas.",
-              },
-              text: {
-                title: "Plain Text (prefixed)",
-                description:
-                  "T;/H;/C; prefixes for quick typing when you only have notes or paper.",
-              },
-            },
-            structure: "JSON v1 Structure",
-            cards: {
-              best: {
-                title: "Best-effort import",
-                description: "Invalid rows are reported, valid rows still land in the vault.",
-              },
-              entities: {
-                title: "Smart entity resolution",
-                description:
-                  "Accounts, categories, habits, wallets, and coins must already exist.",
-              },
-              dedup: {
-                title: "Dedup + size limits",
-                description: "Duplicate entries are skipped. File size is limited to 10MB.",
-              },
-            },
-          },
           generator: {
             tag: "Generator",
             title: "Daily Log Builder",
@@ -296,12 +210,9 @@ const baseUrl = import.meta.env.BASE_URL;
         },
         es: {
           nav: {
-            modules: "Pantallas",
-            security: "Seguridad",
-            import: "Importación",
+            modules: "Módulos",
             imports: "Importaciones",
             generator: "Generador",
-            download: "Descargar",
             menu: "Menú",
           },
           imports: {
@@ -371,18 +282,6 @@ const baseUrl = import.meta.env.BASE_URL;
                 description: "Registros diarios, heatmaps, recompensas por rachas y metas.",
               },
             },
-            highlights: {
-              import: {
-                tag: "Importación",
-                line1: "JSON v1, CSV, TXT",
-                line2: "Best-effort + deduplicación",
-              },
-              settings: {
-                tag: "Configuración",
-                line1: "USD / CLP, EN / ES",
-                line2: "Proxy + bloqueo de sesión",
-              },
-            },
           },
           features: {
             tag: "Pantallas principales",
@@ -412,77 +311,6 @@ const baseUrl = import.meta.env.BASE_URL;
               currency: "USD / CLP",
               themes: "Oscuro / Claro",
               encryption: "Bóveda cifrada",
-            },
-          },
-          privacy: {
-            tag: "Seguridad y privacidad",
-            title: "Tus datos nunca salen de la bóveda.",
-            description:
-              "Sanctum almacena todo localmente usando SQLCipher y limita el acceso de sesión. Los backups permanecen cifrados y nada se sincroniza salvo que exportes o importes.",
-            cards: {
-              encryption: {
-                title: "Cifrado de bóveda",
-                description: "AES-256-GCM vía SQLCipher.",
-              },
-              session: {
-                title: "Bloqueo de sesión",
-                description: "Auto-bloqueo por inactividad.",
-              },
-              backups: {
-                title: "Backups cifrados",
-                description: "Exporta y restaura con seguridad.",
-              },
-              telemetry: {
-                title: "Sin telemetría",
-                description: "Sin analítica ni trackers.",
-              },
-            },
-            notes: {
-              import:
-                "Cada importación es best-effort. Las filas malas se reportan, las buenas se guardan y los duplicados se omiten para mantener la bóveda limpia.",
-              crypto:
-                "La sincronización de precios usa CoinGecko y puede ir por proxy para mayor privacidad. Si prefieres cero llamadas, deja el auto-fetch apagado y opera offline.",
-              settings:
-                "La configuración te permite elegir inglés o español, definir moneda preferida (USD/CLP) y mantener un flujo que se adapte a tu realidad.",
-            },
-          },
-          import: {
-            tag: "Pipeline de importación",
-            title: "Trae tus datos sin romper la bóveda.",
-            description:
-              "Sanctum ingiere JSON, CSV y TXT con validación estricta, deduplicación y vista previa antes de escribir.",
-            sources: {
-              json: {
-                title: "JSON v1 del Generador",
-                description:
-                  "Formato principal para viajes. Esquema versionado, estricto y pensado para merges seguros.",
-              },
-              csv: {
-                title: "CSV de hoja de cálculo",
-                description:
-                  "Plantillas de Excel/Sheets/ODS. Parser CSV robusto para comas.",
-              },
-              text: {
-                title: "Texto plano (prefijos)",
-                description:
-                  "Prefijos T;/H;/C; para escribir rápido en notas o papel.",
-              },
-            },
-            structure: "Estructura JSON v1",
-            cards: {
-              best: {
-                title: "Importación best-effort",
-                description: "Las filas inválidas se reportan, las válidas se guardan.",
-              },
-              entities: {
-                title: "Resolución inteligente de entidades",
-                description:
-                  "Cuentas, categorías, hábitos, wallets y monedas deben existir.",
-              },
-              dedup: {
-                title: "Deduplicación + límites",
-                description: "Duplicados se omiten. Tamaño máximo 10MB.",
-              },
             },
           },
           generator: {
