@@ -1,15 +1,15 @@
 # Building Sanctum
 
 ## Table of Contents
-- [1) Linux (recommended)](#1-linux-recommended)
+- [Linux (recommended)](#linux-recommended)
   - [Option A: Nix (preferred)](#option-a-nix-preferred)
   - [Option B: Manual dependencies (no Nix)](#option-b-manual-dependencies-no-nix)
-- [2) macOS](#2-macos)
-- [3) Windows](#3-windows)
+- [macOS](#macos)
+- [Windows](#windows)
 
-Sanctum ships with a reproducible Nix environment, but you can also build manually on Linux, macOS, and Windows. Each section below lists the required system dependencies and how to compile.
+Sanctum ships with a reproducible Nix environment, but you can also build manually on Linux, macOS, and Windows. Each section below lists the required system dependencies and how to validate the workspace.
 
-## 1) Linux (recommended)
+## Linux (recommended)
 
 ### Option A: Nix (preferred)
 1. Install Nix and (optionally) Direnv.
@@ -21,9 +21,10 @@ Sanctum ships with a reproducible Nix environment, but you can also build manual
 3. Enter the shell:
    - With direnv: `direnv allow`
    - Without direnv: `nix develop`
-4. Build/run inside the shell:
+4. Validate inside the shell:
    ```bash
-   cargo build --release   # or: cargo run
+   # Or without --release
+   nix develop -c cargo run --release 
    ```
    Note: run all cargo commands inside the Nix shell unless you installed the manual dependencies.
 
@@ -57,7 +58,7 @@ Install per distro:
       libxcursor libxkbcommon wayland mesa
   ```
 
-Then install Rust and build:
+Then install Rust and validate:
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source $HOME/.cargo/env
@@ -65,10 +66,12 @@ rustup default stable
 rustup component add clippy
 git clone https://codeberg.org/Kyronix/Sanctum.git
 cd Sanctum
-cargo build --release   # or: cargo run
+
+# Or without --release
+cargo run --release
 ```
 
-## 2) macOS
+## macOS
 Requirements: Xcode Command Line Tools, Homebrew.
 
 Install dependencies:
@@ -85,17 +88,19 @@ Hint: expose Homebrew OpenSSL/SQLCipher to pkg-config if needed:
 export PKG_CONFIG_PATH="$(brew --prefix openssl@3)/lib/pkgconfig:$(brew --prefix sqlcipher)/lib/pkgconfig:$PKG_CONFIG_PATH"
 ```
 
-Build:
+Validate:
 ```bash
 git clone https://codeberg.org/Kyronix/Sanctum.git
 cd Sanctum
-cargo build --release   # or: cargo run
+
+# Or without --release
+cargo run --release
 ```
 
-## 3) Windows
+## Windows
 
 ### Option A: WSL (recommended)
-Use an Ubuntu/Fedora/Arch WSL distro and follow the Linux manual steps above (apt/dnf/pacman). Enter `wsl` and build with `cargo build --release`.
+Use an Ubuntu/Fedora/Arch WSL distro and follow the Linux manual steps above (apt/dnf/pacman). Enter `wsl` and validate with `cargo check`, `cargo clippy`, and `cargo test`.
 
 ### Option B: Native Windows (MSVC toolchain)
 1. Install **Visual Studio Build Tools** with the “Desktop development with C++” workload.
@@ -117,7 +122,9 @@ Use an Ubuntu/Fedora/Arch WSL distro and follow the Linux manual steps above (ap
    ```powershell
    git clone https://codeberg.org/Kyronix/Sanctum.git
    cd Sanctum
-   cargo build --release   # or: cargo run
+
+   # Or without --release
+   cargo run --release
    ```
 
 If pkg-config cannot find OpenSSL/SQLCipher, ensure `PKG_CONFIG_PATH` points to their `lib/pkgconfig` directory and that you are using the MSVC developer prompt.

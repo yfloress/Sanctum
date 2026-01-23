@@ -37,19 +37,29 @@
 
 > **NO ESTA LISTO PARA USAR, EN DESARROLLO**
 
-**Sanctum** es una aplicación de escritorio diseñada para quienes se niegan a comprometer su privacidad. A diferencia de las soluciones basadas en la nube o los pesados wrappers web, Sanctum se ejecuta completamente offline en tu máquina Linux con rendimiento nativo.
+**Sanctum** es una bóveda de escritorio orientada a privacidad para finanzas, crypto y hábitos.
+Funciona localmente en Linux, con almacenamiento cifrado, cero telemetría y sin dependencia
+de la nube. Tú controlas las llaves, la base de datos y los respaldos.
 
-Tus datos financieros, portafolio de criptomonedas y hábitos se almacenan en una **base de datos SQLite local encriptada con SQLCipher**. Tú tienes las llaves. Sin servidores, sin rastreo, sin fugas.
+## Capacidades Actuales
 
-## Características Principales
+- **Dashboard:** Patrimonio neto y tendencias combinando finanzas + crypto.
+- **Finanzas:** Cuentas, categorías, transferencias y ledger completo.
+- **Crypto:** Billeteras, trades, swaps, balances y precios vía CoinGecko.
+- **Hábitos:** Registros diarios, heatmaps, rachas y recompensas/objetivos.
+- **Importación y Backups:** Ingesta JSON/CSV/TXT con preview + dedup y backups cifrados.
+- **Configuración:** Moneda USD/CLP, idioma EN/ES y proxy para APIs de crypto.
 
-- **Encriptación de Grado Militar:** Arquitectura de conocimiento cero. La base de datos es ilegible sin tu contraseña maestra (AES-256 + 600k iteraciones).
-- **Libro Mayor Financiero:** Gestión avanzada de billeteras, ingresos, gastos y transferencias. Auditoría completa.
-- **Portafolio Crypto:** Seguimiento de inversiones, cálculo de PnL (Ganancias/Pérdidas) y agregación de activos multi-wallet.
-- **Seguimiento de Hábitos:** Monitoreo de rachas y consistencia diaria integrado en tu flujo de trabajo.
-- **Analíticas:** Gráficos de trayectoria de patrimonio neto y desglose de gastos.
-- **Rendimiento Nativo:** Construido con Slint y Skia para una interfaz ligera y acelerada por GPU (Sin consumo de RAM de WebKit/Chromium).
-- **Nativo de Linux:** Optimizado para el ecosistema de escritorio Linux (Soporte Wayland y X11).
+## Formatos de Importación
+
+Sanctum acepta formatos offline pensados para viajes o baja conectividad:
+
+- **JSON v1** (recomendado): Formato completo usado por el Sanctum Generator.
+- **CSV**: Exportes desde hojas de cálculo (archivos separados por tipo).
+- **TXT**: Notas por línea con prefijos para captura rápida.
+
+Todos los imports son **best-effort**, se validan por fila y hacen deduplicación.
+No se realizan llamadas de red durante la ingesta.
 
 ## Tecnologías
 
@@ -73,7 +83,7 @@ Este proyecto utiliza **Nix Flakes** para garantizar un entorno reproducible sin
 - [Direnv](https://direnv.net/) (Opcional, pero muy recomendado)
 - Git
 
-### Inicio Rápido
+### Inicio Rápido Recomendado
 
 1. **Clonar el repositorio:**
    ```bash
@@ -82,24 +92,15 @@ Este proyecto utiliza **Nix Flakes** para garantizar un entorno reproducible sin
    ````
 
 2.  **Activar el Entorno:**
-
-      - **Opción A (Recomendada con `direnv`):** Si tienes `direnv` instalado, simplemente permite el entorno. Esto cargará automáticamente Rust, dependencias de Slint y bibliotecas del sistema (Wayland/GL) al entrar en la carpeta.
-
-        ```bash
-        direnv allow
-        ```
-
-      - **Opción B (Manual con Nix):**
-
-        ```bash
-        nix develop
-        ```
-
-3.  **Ejecutar en Modo Desarrollo:** Una vez dentro de la shell de Nix, lanza la app:
-
     ```bash
-    cargo run
+    direnv allow
     ```
+
+3. **Verificar el entorno:**
+   ```bash
+   # Or without --release
+   nix develop -c cargo run --release
+   ```
 
 Para instrucciones detalladas en otras plataformas (Linux manual, macOS, Windows), revisa [docs/BUILDING_ES.md](docs/BUILDING_ES.md).
 
@@ -108,7 +109,10 @@ Para instrucciones detalladas en otras plataformas (Linux manual, macOS, Windows
 Este es un proyecto Open Source moderno que abraza la evolución del desarrollo de software.
 
   - **Arquitectura y Visión:** Diseñado y dirigido por humanos, priorizando la privacidad y la seguridad local.
-  - **Colaboración con IA:** Partes del código han sido generadas y refactorizadas con la asistencia de LLMs avanzados. Modelos como **Gemini 3 Pro**, **Claude Opus 4.5**, **Claude Sonnet 4.5** y **Codex 5.2** han sido utilizados bajo estricta supervisión humana y auditoría para asegurar la seguridad y la lógica de negocio.
+  - **Colaboración con IA:** La mayor parte del código ha sido generada y/o
+    refactorizada con LLMs bajo estricta auditoría humana. Los modelos usados,
+    en orden, son **Claude Opus 4.5**, **Claude Sonnet 4.5**, **Codex 5.2** y
+    **Gemini 3 Pro**.
   - **Auditabilidad:** El código es abierto para que cualquiera pueda verificar que no hay telemetría oculta ni vectores de ataque.
 
 ## Aviso Legal

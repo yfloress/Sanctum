@@ -37,50 +37,60 @@
 
 > **NOT READY FOR USE, IN DEVELOPMENT**
 
-**Sanctum** is a desktop application designed for those who refuse to compromise
-on privacy. Unlike cloud-based solutions or heavy web-wrappers, Sanctum runs entirely
-offline on your Linux machine with native performance.
+**Sanctum** is a privacy-first desktop vault for money, crypto, and habits. It runs
+locally on Linux with encrypted storage, no telemetry, and zero cloud dependency.
+You keep the keys, the database, and the backups.
 
-Your financial data, crypto portfolio, and habits are stored in a local **SQLite
-database encrypted with SQLCipher**. You hold the keys. No servers, no tracking,
-no leaks.
+## Current Capabilities
 
-## Key Features
+- **Dashboard:** Net worth and trend analytics across finance + crypto.
+- **Finances:** Accounts, categories, transfers, and full transaction ledger.
+- **Crypto:** Wallets, trades, swaps, portfolio balances, and price sync via CoinGecko.
+- **Habits:** Daily logs, heatmaps, streaks, and rewards/goals.
+- **Import & Backup:** JSON/CSV/TXT ingestion with preview + dedup, plus encrypted
+  backups and restore/rollback.
+- **Settings:** USD/CLP currency, EN/ES language, proxy support for crypto APIs.
 
-- **Military-Grade Encryption:** Zero-knowledge architecture. The database is
-  unreadable without your master password (AES-256 + 600k iterations).
-- **Financial Ledger:** Advanced management of wallets, income, expenses, and
-  transfers. Complete audit trail.
-- **Crypto Portfolio:** Investment tracking, PnL (Profit/Loss) calculation, and
-  multi-wallet asset aggregation.
-- **Habit Tracking:** Streak monitoring and daily consistency checks integrated into your workflow.
-- **Analytics:** Net worth trajectory charts and expense breakdown.
-- **Native Performance:** Built with Slint and Skia for a GPU-accelerated,
-  lightweight interface (No WebKit/Chromium RAM usage).
-- **Linux Native:** Optimized for the Linux desktop ecosystem (Wayland & X11 support).
+## Import Formats
+
+Sanctum accepts multiple offline formats, designed for travel or low-connectivity workflows:
+
+- **JSON v1** (recommended): Full-fidelity format used by the Sanctum Generator.
+- **CSV**: Spreadsheet exports (separate files for transactions, habit logs, crypto).
+- **TXT**: Prefixed, line-based notes for quick capture.
+
+All imports are **best-effort**, validated per row, and include duplicate detection.
+No network calls are made during ingestion.
+
+## Security & Privacy
+
+- **SQLCipher encryption** with a user-held master password.
+- **No telemetry** or analytics.
+- **Local-first** storage with explicit import/export only.
+- **Encrypted backups** with restore + rollback safety.
 
 ## Tech Stack
 
-Sanctum is built prioritizing performance, type safety, and auditability.
+Sanctum prioritizes performance, type safety, and auditability.
 
 | Component            | Technology             | Description                                                       |
 | :------------------- | :--------------------- | :---------------------------------------------------------------- |
-| **Core** | **Rust** | Business logic, financial calculations, and security.             |
-| **GUI Framework** | **Slint** | Native Rust-based UI toolkit. Lightweight and type-safe.          |
-| **Renderer** | **Skia / OpenGL** | High-performance 2D graphics rendering via Winit.                 |
-| **Database** | **SQLite + SQLCipher** | Locally encrypted relational storage.                             |
-| **Environment** | **Nix + Direnv** | Reproducible and hermetic development environment.                |
+| **Core**             | **Rust**               | Business logic, validation, and calculations.                     |
+| **GUI Framework**    | **Slint**              | Native Rust UI toolkit. Lightweight and type-safe.                |
+| **Renderer**         | **Skia / OpenGL**       | High-performance 2D rendering via Winit.                          |
+| **Database**         | **SQLite + SQLCipher**  | Locally encrypted relational storage.                             |
+| **Environment**      | **Nix + Direnv**        | Reproducible dev environment.                                     |
 
 ## Installation & Development
 
 This project uses **Nix Flakes** to guarantee a reproducible environment without
-polluting your global system. You don't need to manually install Rust or
-system libraries.
+polluting your global system. You don't need to manually install Rust or system
+libraries.
 
 ### Prerequisites
 
 - [Nix Package Manager](https://nixos.org/download.html)
-- [Direnv](https://direnv.net/) (Optional, but highly recommended)
+- [Direnv](https://direnv.net/) (optional, recommended)
 - Git
 
 ### Quick Start
@@ -89,46 +99,31 @@ system libraries.
    ```bash
    git clone https://codeberg.org/Kyronix/Sanctum.git
    cd Sanctum
-   ````
+   ```
 
-2.  **Activate the Environment:**
+2. **Activate the Environment:**
+   ```bash
+   direnv allow
+   ```
 
-      - **Option A (Recommended with `direnv`):** If you have `direnv` installed,
-        simply allow the environment. This will automatically load Rust, Slint dependencies,
-        and system libraries (Wayland/GL) upon entering the folder.
+3. **Verify the workspace:**
+   ```bash
+   # Or without --release
+   nix develop -c cargo run --release
+   ```
 
-        ```bash
-        direnv allow
-        ```
-
-      - **Option B (Manual with Nix):**
-
-        ```bash
-        nix develop
-        ```
-
-3.  **Run in Development Mode:** Once inside the Nix shell, launch the app:
-
-    ```bash
-    cargo run
-    ```
-
-For detailed setup on other platforms (manual Linux, macOS, Windows), see [docs/BUILDING.md](docs/BUILDING.md).
+For detailed setup on other platforms, see [docs/BUILDING.md](docs/BUILDING.md).
 
 ## Development Transparency
 
-This is a modern Open Source project that embraces the evolution of software
-development.
+This project embraces open collaboration without compromising auditability.
 
-  - **Architecture and Vision:** Designed and directed by humans, prioritizing
-    privacy and local security.
-  - **AI Collaboration:** Parts of the code have been generated and refactored
-    with the assistance of advanced LLMs. Models such as **Gemini 3 Pro**,
-    **Claude Opus 4.5**, **Claude Sonnet 4.5**, and **Codex 5.2** have been used
-    under strict human supervision and auditing to ensure security and business
-    logic.
-  - **Auditability:** The code is open so anyone can verify that there is no
-    hidden telemetry or attack vectors.
+- **Human-led architecture:** Privacy and data integrity are the priority.
+- **AI-assisted development:** Most of the code has been generated or
+  refactored with LLMs under strict human auditing. The primary models used,
+  in order, are **Claude Opus 4.5**, **Claude Sonnet 4.5**, **Codex 5.2**, and
+  **Gemini 3 Pro**.
+- **Auditability:** The code is open for inspection and verification.
 
 ## Disclaimer
 
