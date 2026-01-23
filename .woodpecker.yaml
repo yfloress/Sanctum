@@ -30,4 +30,4 @@ steps:
       - cp .domains $CI_REPO_NAME || true
       - cd $CI_REPO_NAME
       - git add .
-      - 'if ! git diff --cached --quiet; then git commit -m "chore(deploy): Woodpecker CI ${CI_BUILD_CREATED} update pages [SKIP CI]" && git push; fi'
+      - 'if ! git diff --cached --quiet; then git commit -m "chore(deploy): woodpecker ci ${CI_BUILD_CREATED} update pages [SKIP CI]" && git push; fi'
