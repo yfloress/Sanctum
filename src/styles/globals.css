@@ -40,6 +40,7 @@
     --glow-shadow: rgba(201, 162, 39, 0.25);
     --glow-strong: rgba(201, 162, 39, 0.45);
     --hero-ink: rgba(59, 47, 35, 0.18);
+    --section-ink: rgba(59, 47, 35, 0.2);
     --radius: 0.5rem;
   }
 
@@ -79,6 +80,7 @@
     --glow-shadow: rgba(90, 0, 240, 0.25);
     --glow-strong: rgba(255, 42, 195, 0.4);
     --hero-ink: rgba(255, 255, 255, 0.08);
+    --section-ink: rgba(0, 0, 0, 0.6);
   }
 }
 
@@ -184,6 +186,10 @@
 
   .bg-sanctum-section {
     background-image:
+      radial-gradient(circle at 20% 25%, color-mix(in srgb, var(--section-ink), transparent 35%), transparent 65%),
+      radial-gradient(circle at 85% 15%, color-mix(in srgb, var(--section-ink), transparent 45%), transparent 70%),
+      radial-gradient(circle at 60% 85%, color-mix(in srgb, var(--section-ink), transparent 55%), transparent 70%),
+      linear-gradient(90deg, color-mix(in srgb, var(--grad-primary-start), transparent 50%), color-mix(in srgb, var(--grad-primary-end), transparent 55%)),
       radial-gradient(circle at 18% 6%, color-mix(in srgb, var(--glow-primary), transparent 24%), transparent 60%),
       radial-gradient(circle at 82% 10%, color-mix(in srgb, var(--glow-secondary), transparent 26%), transparent 58%),
       radial-gradient(circle at 50% 55%, color-mix(in srgb, var(--glow-primary), transparent 72%), transparent 70%),
