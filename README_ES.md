@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./ui/assets/logo/sanctum_logo.svg" alt="Sanctum Logo" width="96" height="96" />
+<img src="./ui/assets/logo/sanctum_logo.svg" alt="Sanctum Logo" width="120" height="120" />
 
 <h1>SANCTUM</h1>
 
