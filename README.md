@@ -33,7 +33,7 @@
 
 ---
 
-![Sanctum](./.img/sanctum.png)
+![Sanctum](assets/sanctum.png)
 
 ## About
 

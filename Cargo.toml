@@ -12,7 +12,7 @@ readme = "README.md"
 keywords = ["finance", "privacy", "crypto", "slint", "sqlite"]
 categories = ["cryptography", "database"]
 exclude = [
-    ".img/*",
+    "assets/*",
     ".envrc"
 ]
 
