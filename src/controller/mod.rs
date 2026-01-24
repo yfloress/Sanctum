@@ -35,7 +35,7 @@ pub use crate::features::crypto::{
     SETTING_CRYPTO_HIDDEN_COINS, SETTING_CRYPTO_LAST_COIN_ID, SETTING_CRYPTO_LAST_UPDATED,
     SETTING_CRYPTO_LAST_WALLET_ID, SETTING_CRYPTO_PROXY_ENABLED, SETTING_CRYPTO_PROXY_URL,
     SETTING_DARK_MODE, SETTING_PREFERRED_CURRENCY, SETTING_PREFERRED_LANGUAGE,
-    SETTING_SESSION_TIMEOUT, SETTING_TICKER_COINS,
+    SETTING_SESSION_TIMEOUT, SETTING_SIDEBAR_COLLAPSED, SETTING_TICKER_COINS,
 };
 pub use crate::features::finance::{DashboardData, ExpenseSlice};
 use crate::features::finance::{FinanceError, FinanceService};
@@ -193,6 +193,7 @@ fn ensure_default_settings(db: &Database) -> Result<(), ControllerError> {
         (SETTING_AUTO_FETCH, "false"),
         (SETTING_CRYPTO_PROXY_ENABLED, "false"),
         (SETTING_CRYPTO_PROXY_URL, ""),
+        (SETTING_SIDEBAR_COLLAPSED, "false"),
     ];
 
     for (key, value) in defaults {

@@ -18,7 +18,7 @@
 // ==================== Sanctum Sidebar ====================
 // Premium Fintech UI - Navigation sidebar with collapse support
 
-import { AppState, AuthAdapter } from "../globals.slint";
+import { AppState, AuthAdapter, SettingsAdapter } from "../globals.slint";
 import { Translations } from "../translations.slint";
 import { Theme } from "../theme.slint";
 
@@ -35,7 +35,7 @@ component SidebarItem inherits Rectangle {
 
     height: 48px;
     background: is-active ? Theme.surface : (touch.has-hover ? Theme.surface-hover : transparent);
-    border-radius: collapsed ? 8px : 0px;
+    border-radius: 0px;
 
     animate background {
         duration: 150ms;
@@ -44,7 +44,7 @@ component SidebarItem inherits Rectangle {
     animate border-radius { duration: 200ms; easing: ease-out; }
 
     // Active indicator (left border)
-    if !collapsed: Rectangle {
+    Rectangle {
         x: 0;
         width: 3px;
         height: 100%;
@@ -54,15 +54,7 @@ component SidebarItem inherits Rectangle {
     }
 
     // Active glow for collapsed mode
-    if collapsed && is-active: Rectangle {
-        x: -2px;
-        y: -2px;
-        width: parent.width + 4px;
-        height: parent.height + 4px;
-        border-radius: 10px;
-        background: Theme.accent;
-        opacity: 0.15;
-    }
+    // Removed to keep selection background identical in compact mode.
 
     HorizontalLayout {
         spacing: 0px;
@@ -125,7 +117,7 @@ component SidebarItem inherits Rectangle {
 // ==================== SanctumSidebar ====================
 
 export component SanctumSidebar inherits Rectangle {
-    property <bool> collapsed: false;
+    in-out property <bool> collapsed: false;
 
     width: collapsed ? 72px : 220px;
     background: Theme.sidebar-bg;
@@ -207,9 +199,9 @@ export component SanctumSidebar inherits Rectangle {
 
         // Navigation Items
         VerticalLayout {
-            padding-left: collapsed ? 12px : 0px;
-            padding-right: collapsed ? 12px : 0px;
-            spacing: collapsed ? 8px : 0px;
+            padding-left: 0px;
+            padding-right: 0px;
+            spacing: 0px;
 
             SidebarItem {
                 label: Translations.nav-dashboard;
@@ -338,6 +330,7 @@ export component SanctumSidebar inherits Rectangle {
                 mouse-cursor: pointer;
                 clicked => {
                     root.collapsed = !root.collapsed;
+                    SettingsAdapter.set-sidebar-collapsed(root.collapsed);
                 }
             }
         }

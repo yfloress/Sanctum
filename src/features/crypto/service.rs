@@ -53,6 +53,7 @@ pub const SETTING_DARK_MODE: &str = "dark_mode";
 pub const SETTING_SESSION_TIMEOUT: &str = "session_timeout";
 pub const SETTING_PREFERRED_CURRENCY: &str = "preferred_currency";
 pub const SETTING_PREFERRED_LANGUAGE: &str = "preferred_language";
+pub const SETTING_SIDEBAR_COLLAPSED: &str = "sidebar_collapsed";
 
 // ==================== Error Types ====================
 

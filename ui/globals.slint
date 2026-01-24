@@ -441,6 +441,9 @@ export global SettingsAdapter {
     // Callback to set preferred language
     callback set-preferred-language(string);
 
+    // Callback to persist sidebar collapsed state
+    callback set-sidebar-collapsed(bool);
+
     // Callback to reset all settings to defaults
     callback reset-settings();
 }
@@ -766,5 +769,8 @@ export global AppState {
     in-out property <bool> show-import-results: false;
 
     // Current date (YYYY-MM-DD), set from backend to avoid hardcoded defaults
-    in-out property <string> current-date: "2024-01-01";
+    in-out property <string> current-date: "0000-00-00";
+
+    // Sidebar layout preference
+    in-out property <bool> sidebar-collapsed: false;
 }

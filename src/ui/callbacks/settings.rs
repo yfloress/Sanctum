@@ -22,7 +22,7 @@
 use crate::controller::{
     AppController, SETTING_AUTO_FETCH, SETTING_CRYPTO_PROXY_ENABLED, SETTING_CRYPTO_PROXY_URL,
     SETTING_DARK_MODE, SETTING_PREFERRED_CURRENCY, SETTING_PREFERRED_LANGUAGE,
-    SETTING_SESSION_TIMEOUT,
+    SETTING_SESSION_TIMEOUT, SETTING_SIDEBAR_COLLAPSED,
 };
 use crate::ui::callbacks::translations::{change_language, load_all_translations};
 use crate::{AccountAdapter, AppState, AppWindow, CryptoAdapter, DashboardAdapter, SettingsAdapter};
@@ -140,6 +140,14 @@ pub fn setup_settings_callbacks<N>(
                     .unwrap_or_else(|_| "en".to_string());
                 ui.global::<SettingsAdapter>()
                     .set_preferred_language(SharedString::from(language.clone()));
+
+                // Load sidebar collapsed preference (default to false)
+                let sidebar_collapsed = controller
+                    .get_app_setting(SETTING_SIDEBAR_COLLAPSED)
+                    .map(|v| v == "true")
+                    .unwrap_or(false);
+                ui.global::<AppState>()
+                    .set_sidebar_collapsed(sidebar_collapsed);
 
                 // Apply saved language to i18n and reload translations
                 // This ensures the UI updates to the user's saved preference after login
@@ -268,6 +276,16 @@ pub fn setup_settings_callbacks<N>(
             });
     }
 
+    // Sidebar collapsed preference
+    {
+        let controller = controller.clone();
+        ui.global::<SettingsAdapter>()
+            .on_set_sidebar_collapsed(move |collapsed| {
+                let val = if collapsed { "true" } else { "false" };
+                let _ = controller.set_app_setting(SETTING_SIDEBAR_COLLAPSED, val);
+            });
+    }
+
     // Reset all settings to defaults
     {
         let controller = controller.clone();
@@ -282,6 +300,7 @@ pub fn setup_settings_callbacks<N>(
             let _ = controller.set_app_setting(SETTING_SESSION_TIMEOUT, "900"); // 15 min
             let _ = controller.set_app_setting(SETTING_PREFERRED_CURRENCY, "USD");
             let _ = controller.set_app_setting(SETTING_PREFERRED_LANGUAGE, "en");
+            let _ = controller.set_app_setting(SETTING_SIDEBAR_COLLAPSED, "false");
 
             // Reset language to English
             let _ = change_language("en");

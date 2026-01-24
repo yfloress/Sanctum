@@ -93,7 +93,9 @@ export component AppWindow inherits Window {
         spacing: 0px;
 
         // Sidebar navigation
-        SanctumSidebar { }
+        SanctumSidebar {
+            collapsed <=> AppState.sidebar-collapsed;
+        }
 
         // Main content area
         Rectangle {
