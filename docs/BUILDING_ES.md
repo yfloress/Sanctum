@@ -1,130 +1,103 @@
 # Compilación de Sanctum
 
 ## Índice
-- [Linux (recomendado)](#linux-recomendado)
-  - [Opción A: Nix (preferida)](#opción-a-nix-preferida)
-  - [Opción B: Dependencias manuales (sin Nix)](#opción-b-dependencias-manuales-sin-nix)
+- [Obtener el Código Fuente](#obtener-el-código-fuente)
+- [Linux](#linux)
+  - [Opción A: Nix (Recomendada)](#opción-a-nix-recomendada)
+  - [Opción B: Instalación Manual](#opción-b-instalación-manual)
 - [macOS](#macos)
 - [Windows](#windows)
 
-Sanctum incluye un entorno reproducible con Nix, pero también puedes compilarlo manualmente en Linux, macOS y Windows. A continuación se listan dependencias y pasos para validar el workspace.
+Sanctum incluye un entorno reproducible con Nix, pero también puedes compilarlo manualmente en tu sistema operativo preferido.
 
-## Linux (recomendado)
-
-### Opción A: Nix (preferida)
-1. Instala Nix y (opcionalmente) Direnv.
-2. Clona el repo:
-   ```bash
-   git clone https://codeberg.org/Kyronix/Sanctum.git
-   cd Sanctum
-   ```
-3. Entra al shell:
-   - Con direnv: `direnv allow`
-   - Sin direnv: `nix develop`
-4. Valida dentro del shell:
-   ```bash
-   # Or without --release
-   nix develop -c cargo run --release 
-   ```
-   Nota: ejecuta los comandos de cargo dentro del shell de Nix salvo que uses dependencias manuales.
-
-### Opción B: Dependencias manuales (sin Nix)
-Requisitos generales: Rust (`rustup`), `pkg-config`, `cmake`, `ninja`, headers de OpenSSL, SQLCipher y SQLite, fontconfig, X11/Wayland + GL/EGL.
-
-Instala por distro:
-
-- **Debian/Ubuntu**
-  ```bash
-  sudo apt update
-  sudo apt install -y build-essential pkg-config clang cmake ninja-build \
-      libssl-dev libsqlcipher-dev libsqlite3-dev fontconfig libfontconfig1-dev \
-      libx11-dev libxext-dev libxi-dev libxrandr-dev libxcursor-dev \
-      libxkbcommon-dev libwayland-dev libgl1-mesa-dev libegl1-mesa-dev
-  ```
-
-- **Fedora/RHEL**
-  ```bash
-  sudo dnf groupinstall -y "Development Tools"
-  sudo dnf install -y pkg-config clang cmake ninja-build openssl-devel \
-      sqlcipher-devel sqlite-devel fontconfig-devel libX11-devel libXext-devel \
-      libXi-devel libXrandr-devel libXcursor-devel libxkbcommon-devel \
-      wayland-devel mesa-libGL-devel mesa-libEGL-devel
-  ```
-
-- **Arch Linux**
-  ```bash
-  sudo pacman -S --needed base-devel pkgconf clang cmake ninja \
-      openssl sqlcipher sqlite fontconfig libx11 libxext libxi libxrandr \
-      libxcursor libxkbcommon wayland mesa
-  ```
-
-Luego instala Rust y valida:
+## Obtener el Código Fuente
+Primero, descarga el repositorio en tu equipo:
 ```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source $HOME/.cargo/env
-rustup default stable
-rustup component add clippy
 git clone https://codeberg.org/Kyronix/Sanctum.git
 cd Sanctum
+```
 
-# Or without --release
-nix develop -c cargo run --release 
+## Linux
+
+### Opción A: Nix (Recomendada)
+Es la forma más fácil de ejecutar Sanctum sin preocuparse por librerías del sistema.
+1. Instala Nix.
+2. Desde la carpeta del proyecto, ejecuta:
+   ```bash
+   nix develop -c cargo run --release
+   ```
+
+### Opción B: Instalación Manual
+Si prefieres no usar Nix, debes instalar primero las librerías del sistema necesarias.
+
+**Debian/Ubuntu**
+```bash
+sudo apt update
+sudo apt install -y build-essential pkg-config cmake ninja-build \
+    libssl-dev libfontconfig1-dev libfreetype-dev libharfbuzz-dev \
+    libx11-dev libxext-dev libxi-dev libxrandr-dev libxcursor-dev \
+    libxkbcommon-dev libwayland-dev libgl1-mesa-dev libegl1-mesa-dev
+```
+
+**Fedora**
+```bash
+sudo dnf groupinstall -y "Development Tools"
+sudo dnf install -y pkg-config cmake ninja-build openssl-devel \
+    fontconfig-devel freetype-devel harfbuzz-devel libX11-devel libXext-devel \
+    libXi-devel libXrandr-devel libXcursor-devel libxkbcommon-devel \
+    wayland-devel mesa-libGL-devel mesa-libEGL-devel
+```
+
+**Arch Linux**
+```bash
+sudo pacman -S --needed base-devel pkgconf cmake ninja \
+    openssl fontconfig freetype2 harfbuzz libx11 libxext libxi libxrandr \
+    libxcursor libxkbcommon wayland mesa
+```
+
+**Ejecutar la App:**
+Asegúrate de tener [Rust instalado](https://rustup.rs/) y luego ejecuta:
+```bash
+cargo run --release
 ```
 
 ## macOS
-Requisitos: Xcode Command Line Tools y Homebrew.
+**Requisitos:** Xcode Command Line Tools y Homebrew.
 
-Dependencias:
-```bash
-xcode-select --install         # si no está instalado
-brew install rustup-init pkg-config cmake ninja openssl@3 sqlcipher sqlite fontconfig freetype
-rustup-init -y
-source $HOME/.cargo/env
-rustup default stable
-```
+1. Instala las dependencias del sistema:
+   ```bash
+   xcode-select --install
+   brew install rustup-init pkg-config cmake ninja openssl@3 fontconfig freetype harfbuzz
+   ```
 
-Sugerencia: expón OpenSSL/SQLCipher de Homebrew a pkg-config si hace falta:
-```bash
-export PKG_CONFIG_PATH="$(brew --prefix openssl@3)/lib/pkgconfig:$(brew --prefix sqlcipher)/lib/pkgconfig:$PKG_CONFIG_PATH"
-```
+2. Inicializa Rust (si no está instalado):
+   ```bash
+   rustup-init -y
+   source $HOME/.cargo/env
+   ```
 
-Valida:
-```bash
-git clone https://codeberg.org/Kyronix/Sanctum.git
-cd Sanctum
-
-# Or without --release
-nix develop -c cargo run --release 
-```
+3. Ejecuta la App:
+   ```bash
+   cargo run --release
+   ```
 
 ## Windows
 
-### Opción A: WSL (recomendada)
-Usa una distro Ubuntu/Fedora/Arch en WSL y sigue los pasos manuales de Linux (apt/dnf/pacman). Entra a `wsl` y valida con `cargo check`, `cargo clippy` y `cargo test`.
+### Opción A: WSL (Subsistema de Windows para Linux)
+Requiere Windows 10 u 11 con soporte para WSLg (interfaz gráfica) habilitado.
+1. Instala una distribución como Ubuntu o Fedora desde la Microsoft Store.
+2. Sigue las instrucciones de **Linux (Opción B: Instalación Manual)** de arriba para tu distribución elegida.
+3. Ejecuta `cargo run --release` dentro de la terminal de WSL.
 
-### Opción B: Windows nativo (toolchain MSVC)
-1. Instala **Visual Studio Build Tools** con el workload “Desktop development with C++”.
-2. Instala Git y Rust (objetivo MSVC) vía [rustup](https://rustup.rs/).
-3. Instala herramientas de build y pkg-config (ejemplo con Chocolatey):
+### Opción B: Windows Nativo
+1. Instala **Visual Studio Build Tools** (selecciona la carga de trabajo "Desarrollo para el escritorio con C++").
+2. Instala **Rust** (MSVC) vía [rustup.rs](https://rustup.rs/).
+3. Instala **Git**, **CMake** y **Ninja** (se recomienda usar un gestor de paquetes como Chocolatey):
    ```powershell
-   choco install -y git cmake ninja pkgconfiglite nasm
+   choco install -y git cmake ninja
    ```
-4. Instala OpenSSL y SQLCipher (por ejemplo con vcpkg):
+4. **Ejecutar la App:**
+Abre el "x64 Native Tools Command Prompt for VS", navega a la carpeta de Sanctum y ejecuta:
    ```powershell
-   git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
-   cd C:\vcpkg
-   .\bootstrap-vcpkg.bat
-   .\vcpkg install openssl-windows sqlcipher
-   setx VCPKG_ROOT C:\vcpkg
-   setx PKG_CONFIG_PATH C:\vcpkg\installed\x64-windows\lib\pkgconfig
+   cargo run --release
    ```
-5. Abre un “x64 Native Tools Command Prompt for VS” y valida:
-   ```powershell
-   git clone https://codeberg.org/Kyronix/Sanctum.git
-   cd Sanctum
-
-   # Or without --release
-   nix develop -c cargo run --release 
-   ```
-
-Si pkg-config no encuentra OpenSSL/SQLCipher, verifica que `PKG_CONFIG_PATH` apunta a `lib/pkgconfig` y que usas la consola de desarrollador de MSVC.
