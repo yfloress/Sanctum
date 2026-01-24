@@ -47,7 +47,7 @@ You keep the keys, the database, and the backups.
 
 - **Dashboard:** Net worth and trend analytics across finance + crypto.
 - **Finances:** Accounts, categories, transfers, and full transaction ledger.
-- **Crypto:** Wallets, trades, swaps, portfolio balances, and price sync via CoinGecko.
+- **Crypto:** Wallets, trades, swaps, portfolio balances, and privacy-preserving price sync via CoinGecko.
 - **Habits:** Daily logs, heatmaps, streaks, and rewards/goals.
 - **Import & Backup:** JSON/CSV/TXT ingestion with preview + dedup, plus encrypted
   backups and restore/rollback.
@@ -83,19 +83,14 @@ Sanctum prioritizes performance, type safety, and auditability.
 | **Database**         | **SQLite + SQLCipher**  | Locally encrypted relational storage.                             |
 | **Environment**      | **Nix + Direnv**        | Reproducible dev environment.                                     |
 
-## Installation & Development
+### Installation & Development
 
 This project uses **Nix Flakes** to guarantee a reproducible environment without
-polluting your global system. You don't need to manually install Rust or system
-libraries.
+polluting your global system.
 
-### Prerequisites
+> **Note:** For manual installation on Linux, macOS, or Windows, please see the complete [Building Guide](docs/BUILDING.md).
 
-- [Nix Package Manager](https://nixos.org/download.html)
-- [Direnv](https://direnv.net/) (optional, recommended)
-- Git
-
-### Quick Start
+### Quick Start (Nix)
 
 1. **Clone the repository:**
    ```bash

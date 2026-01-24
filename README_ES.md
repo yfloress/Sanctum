@@ -47,7 +47,7 @@ de la nube. Tú controlas las llaves, la base de datos y los respaldos.
 
 - **Dashboard:** Patrimonio neto y tendencias combinando finanzas + crypto.
 - **Finanzas:** Cuentas, categorías, transferencias y ledger completo.
-- **Crypto:** Billeteras, trades, swaps, balances y precios vía CoinGecko.
+- **Crypto:** Billeteras, trades, swaps, balances y sincronización privada de precios vía CoinGecko.
 - **Hábitos:** Registros diarios, heatmaps, rachas y recompensas/objetivos.
 - **Importación y Backups:** Ingesta JSON/CSV/TXT con preview + dedup y backups cifrados.
 - **Configuración:** Moneda USD/CLP, idioma EN/ES y proxy para APIs de crypto.
@@ -77,21 +77,17 @@ Sanctum está construido priorizando el rendimiento, la seguridad de tipos y la 
 
 ## Instalación y Desarrollo
 
-Este proyecto utiliza **Nix Flakes** para garantizar un entorno reproducible sin contaminar tu sistema global. No necesitas instalar Rust o bibliotecas del sistema manualmente.
+Este proyecto utiliza **Nix Flakes** para garantizar un entorno reproducible sin contaminar tu sistema global.
 
-### Requisitos Previos
+> **Nota:** Para instalación manual en Linux, macOS o Windows, consulta la [Guía de Compilación](docs/BUILDING_ES.md).
 
-- [Gestor de Paquetes Nix](https://nixos.org/download.html)
-- [Direnv](https://direnv.net/) (Opcional, pero muy recomendado)
-- Git
-
-### Inicio Rápido Recomendado
+### Inicio Rápido (Nix)
 
 1. **Clonar el repositorio:**
    ```bash
    git clone https://codeberg.org/Kyronix/Sanctum.git
    cd Sanctum
-   ````
+   ```
 
 2.  **Activar el Entorno:**
     ```bash
