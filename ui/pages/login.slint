@@ -161,21 +161,29 @@ export component LoginPage inherits Rectangle {
         x: 0px;
         y: 0px;
         width: parent.width;
-        height: 96px;
+        height: 104px;
 
-        HorizontalLayout {
-            alignment: center;
+        VerticalLayout {
+            spacing: 0px;
 
             Rectangle {
-                width: min(320px, parent.width);
+                height: 12px;
+            }
 
-                HorizontalLayout {
-                    alignment: center;
+            HorizontalLayout {
+                alignment: center;
 
-                    Image {
-                        source: @image-url("../assets/logo/sanctum_logo.svg");
-                        width: 52px;
-                        height: 52px;
+                Rectangle {
+                    width: min(320px, parent.width);
+
+                    HorizontalLayout {
+                        alignment: center;
+
+                        Image {
+                            source: @image-url("../assets/logo/sanctum_logo.svg");
+                            width: 52px;
+                            height: 52px;
+                        }
                     }
                 }
             }
