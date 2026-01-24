@@ -15,8 +15,15 @@ const base = import.meta.env.BASE_URL;
   <nav class="fixed top-0 left-0 right-0 z-50 bg-transparent">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="mt-4 flex items-center justify-center">
-        <div class="nav-shell flex w-full items-center justify-center gap-6 px-4 py-2">
+        <div class="nav-shell inline-flex items-center justify-center gap-6 px-4 py-2">
           <div class="hidden items-center gap-6 text-sm sm:flex">
+          <a
+            href={`${base}`}
+            class="btn-surface inline-flex h-8 w-8 items-center justify-center rounded-full"
+            aria-label="Sanctum home"
+          >
+            <img src={`${base}favicon.png`} alt="Sanctum logo" class="h-5 w-5" />
+          </a>
           <a
             href={`${base}imports/`}
             class="text-muted-foreground hover:text-foreground transition-colors text-[0.7rem] font-semibold uppercase tracking-[0.35em]"
@@ -61,6 +68,13 @@ const base = import.meta.env.BASE_URL;
           </button>
         </div>
           <div class="flex items-center gap-2 sm:hidden">
+          <a
+            href={`${base}`}
+            class="btn-surface inline-flex h-8 w-8 items-center justify-center rounded-full"
+            aria-label="Sanctum home"
+          >
+            <img src={`${base}favicon.png`} alt="Sanctum logo" class="h-5 w-5" />
+          </a>
           <button
             type="button"
             data-theme-toggle

@@ -1,11 +1,18 @@
 ---
 // Hero section - main landing with core positioning
+const base = import.meta.env.BASE_URL;
 ---
 
 <section class="relative overflow-hidden">
   <div class="relative mx-auto flex min-h-screen max-w-5xl flex-col items-center justify-center gap-10 px-6 py-24 text-center lg:py-32">
     <div class="reveal space-y-6" data-reveal="left">
-      <div class="relative inline-flex items-center justify-center">
+      <div class="flex flex-col items-center gap-4">
+        <img
+          src={`${base}favicon.png`}
+          alt="Sanctum logo"
+          class="h-14 w-14 drop-shadow-[0_18px_35px_rgba(0,0,0,0.35)] sm:h-16 sm:w-16"
+          loading="eager"
+        />
         <h1
           class="font-display text-[clamp(3.25rem,12vw,8.5rem)] font-semibold leading-[0.9] uppercase tracking-[0.12em] text-foreground sm:tracking-[0.16em] lg:tracking-[0.18em]"
           style="text-shadow: 0 18px 35px rgba(0, 0, 0, 0.35)"
