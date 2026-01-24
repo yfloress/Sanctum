@@ -43,6 +43,7 @@
           cargo-edit
           slint-lsp
           cargo-modules
+          python314
         ];
       in
       {
