@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="./ui/assets/logo/sanctum_logo.svg" alt="Sanctum Logo" width="96" height="96" />
+
 <h1>SANCTUM</h1>
 
 <p align="center">

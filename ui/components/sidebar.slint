@@ -24,6 +24,7 @@ component SidebarItem inherits Rectangle {
         duration: 150ms;
         easing: ease-out;
     }
+    animate border-radius { duration: 200ms; easing: ease-out; }
 
     // Active indicator (left border)
     if !collapsed: Rectangle {
@@ -52,6 +53,7 @@ component SidebarItem inherits Rectangle {
         // Icon Area (always visible, centered in collapsed mode)
         Rectangle {
             width: collapsed ? parent.width : 54px;
+            animate width { duration: 250ms; easing: ease-in-out; }
 
             Rectangle {
                 width: 32px;
@@ -73,10 +75,13 @@ component SidebarItem inherits Rectangle {
             }
         }
 
-        // Label Area (hidden when collapsed)
-        if !collapsed: Rectangle {
+        // Label Area (fade out when collapsed)
+        Rectangle {
             horizontal-stretch: 1;
             clip: true;
+            opacity: collapsed ? 0.0 : 1.0;
+
+            animate opacity { duration: 200ms; easing: ease-out; }
 
             Text {
                 text: root.label;
@@ -135,17 +140,16 @@ export component SanctumSidebar inherits Rectangle {
 
                 // Logo container
                 if collapsed: Rectangle {
-                    width: 40px;
-                    height: 40px;
-                    border-radius: 10px;
-                    background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
+                    width: 48px;
+                    height: 48px;
+                    background: transparent;
                     y: (parent.height - self.height) / 2; // Center vertically
 
-                    Text {
-                        text: "S";
-                        color: Theme.text;
-                        font-size: 18px;
-                        font-weight: 600;
+                    Image {
+                        source: @image-url("../assets/logo/sanctum_logo.svg");
+                        width: 32px;
+                        height: 32px;
+                        colorize: Theme.text-primary;
                         horizontal-alignment: center;
                         vertical-alignment: center;
                     }
@@ -154,13 +158,20 @@ export component SanctumSidebar inherits Rectangle {
                 if !collapsed: HorizontalLayout {
                     spacing: 12px;
 
-                    Text {
-                        text: Translations.sidebar-title;
-                        color: Theme.text-primary;
-                        font-size: 14px;
-                        font-weight: 500;
-                        letter-spacing: 3px;
-                        vertical-alignment: center;
+                    Rectangle {
+                        width: 48px;
+                        height: 48px;
+                        background: transparent;
+                        y: (parent.height - self.height) / 2; // Center vertically
+
+                        Image {
+                            source: @image-url("../assets/logo/sanctum_logo.svg");
+                            width: 32px;
+                            height: 32px;
+                            colorize: Theme.text-primary;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
                     }
                 }
             }

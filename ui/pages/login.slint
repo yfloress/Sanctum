@@ -139,11 +139,37 @@ export component LoginPage inherits Rectangle {
     }
 
     // Full screen centered layout
+    // Top logo overlay (doesn't affect main layout)
+    Rectangle {
+        x: 0px;
+        y: 0px;
+        width: parent.width;
+        height: 96px;
+
+        HorizontalLayout {
+            alignment: center;
+
+            Rectangle {
+                width: min(320px, parent.width);
+
+                HorizontalLayout {
+                    alignment: center;
+
+                    Image {
+                        source: @image-url("../assets/logo/sanctum_logo.svg");
+                        width: 52px;
+                        height: 52px;
+                    }
+                }
+            }
+        }
+    }
+
     VerticalLayout {
         alignment: center;
         spacing: 0px;
 
-        // Top spacer
+        // Top spacer for main content
         Rectangle {
             vertical-stretch: 1;
         }
