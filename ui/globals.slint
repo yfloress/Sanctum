@@ -416,6 +416,7 @@ export global SettingsAdapter {
     in-out property <int> session-timeout: 900;  // Default 15 min (in seconds)
     in-out property <string> preferred-currency: "USD";  // Default currency
     in-out property <string> preferred-language: "en";  // Default language (en/es)
+    in-out property <string> login-wallpaper-name: "";
 
     // Callback to load settings from backend
     callback load-settings();
@@ -440,6 +441,12 @@ export global SettingsAdapter {
 
     // Callback to set preferred language
     callback set-preferred-language(string);
+
+    // Callback to select login wallpaper
+    callback select-login-wallpaper();
+
+    // Callback to reset login wallpaper to default
+    callback reset-login-wallpaper();
 
     // Callback to persist sidebar collapsed state
     callback set-sidebar-collapsed(bool);
@@ -773,4 +780,8 @@ export global AppState {
 
     // Sidebar layout preference
     in-out property <bool> sidebar-collapsed: false;
+
+    // Login wallpaper (optional)
+    in-out property <image> login-wallpaper: @image-url("assets/backgrounds/login_default.jpg");
+    in-out property <bool> login-wallpaper-custom: false;
 }

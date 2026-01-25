@@ -299,6 +299,7 @@ fn password_strength_warning(password: &str) -> Option<String> {
 #[derive(Debug, Serialize, Deserialize, Default)]
 struct AppConfig {
     last_db_rel_path: Option<String>,
+    login_wallpaper_path: Option<String>,
 }
 
 pub struct AppController {
@@ -452,6 +453,25 @@ impl AppController {
                     path.file_name()
                         .map(|name| name.to_string_lossy().to_string())
                 });
+        self.save_config(&config)
+    }
+
+    /// Loads the login wallpaper path from config (if valid)
+    pub fn get_login_wallpaper_path(&self) -> Option<PathBuf> {
+        let config = self.load_config().ok()?;
+        let raw = config.login_wallpaper_path?;
+        let path = PathBuf::from(raw);
+        if path.is_file() {
+            Some(path)
+        } else {
+            None
+        }
+    }
+
+    /// Persists the login wallpaper path (stored in config.toml, not encrypted)
+    pub fn set_login_wallpaper_path(&self, path: Option<PathBuf>) -> Result<(), ControllerError> {
+        let mut config = self.load_config()?;
+        config.login_wallpaper_path = path.map(|p| p.to_string_lossy().to_string());
         self.save_config(&config)
     }
 

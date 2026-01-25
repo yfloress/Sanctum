@@ -33,7 +33,7 @@
 
 ---
 
-![Sanctum](assets/sanctum.png)
+![Sanctum](assets/sanctum.jpg)
 
 ## Acerca de
 

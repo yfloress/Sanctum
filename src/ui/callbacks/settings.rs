@@ -26,7 +26,8 @@ use crate::controller::{
 };
 use crate::ui::callbacks::translations::{change_language, load_all_translations};
 use crate::{AccountAdapter, AppState, AppWindow, CryptoAdapter, DashboardAdapter, SettingsAdapter};
-use slint::{ComponentHandle, SharedString, Weak};
+use rfd::FileDialog;
+use slint::{ComponentHandle, Image, SharedString, Weak};
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -148,6 +149,17 @@ pub fn setup_settings_callbacks<N>(
                     .unwrap_or(false);
                 ui.global::<AppState>()
                     .set_sidebar_collapsed(sidebar_collapsed);
+
+                // Load login wallpaper name (from config.toml)
+                let wallpaper_name = controller
+                    .get_login_wallpaper_path()
+                    .and_then(|path| {
+                        path.file_name()
+                            .map(|name| name.to_string_lossy().to_string())
+                    })
+                    .unwrap_or_default();
+                ui.global::<SettingsAdapter>()
+                    .set_login_wallpaper_name(SharedString::from(wallpaper_name));
 
                 // Apply saved language to i18n and reload translations
                 // This ensures the UI updates to the user's saved preference after login
@@ -276,6 +288,64 @@ pub fn setup_settings_callbacks<N>(
             });
     }
 
+    // Select login wallpaper (stored in config.toml, not encrypted)
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = notify.clone();
+        ui.global::<SettingsAdapter>()
+            .on_select_login_wallpaper(move || {
+                let file_path = FileDialog::new()
+                    .add_filter(
+                        "Images",
+                        &["png", "jpg", "jpeg", "webp", "bmp", "gif", "tif", "tiff"],
+                    )
+                    .pick_file();
+
+                let Some(path) = file_path else { return; };
+
+                match Image::load_from_path(&path) {
+                    Ok(image) => {
+                        if let Err(err) = controller.set_login_wallpaper_path(Some(path.clone())) {
+                            notify(err.to_string(), true);
+                            return;
+                        }
+
+                        if let Some(ui) = ui_weak.upgrade() {
+                            ui.global::<AppState>().set_login_wallpaper(image);
+                            ui.global::<AppState>().set_login_wallpaper_custom(true);
+
+                            let name = path
+                                .file_name()
+                                .map(|name| name.to_string_lossy().to_string())
+                                .unwrap_or_default();
+                            ui.global::<SettingsAdapter>()
+                                .set_login_wallpaper_name(SharedString::from(name));
+                        }
+                    }
+                    Err(_) => {
+                        notify("Could not load selected image".into(), true);
+                    }
+                }
+            });
+    }
+
+    // Reset login wallpaper to default
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        ui.global::<SettingsAdapter>()
+            .on_reset_login_wallpaper(move || {
+                let _ = controller.set_login_wallpaper_path(None);
+
+                if let Some(ui) = ui_weak.upgrade() {
+                    ui.global::<AppState>().set_login_wallpaper_custom(false);
+                    ui.global::<SettingsAdapter>()
+                        .set_login_wallpaper_name(SharedString::from(""));
+                }
+            });
+    }
+
     // Sidebar collapsed preference
     {
         let controller = controller.clone();
@@ -301,6 +371,7 @@ pub fn setup_settings_callbacks<N>(
             let _ = controller.set_app_setting(SETTING_PREFERRED_CURRENCY, "USD");
             let _ = controller.set_app_setting(SETTING_PREFERRED_LANGUAGE, "en");
             let _ = controller.set_app_setting(SETTING_SIDEBAR_COLLAPSED, "false");
+            let _ = controller.set_login_wallpaper_path(None);
 
             // Reset language to English
             let _ = change_language("en");
@@ -309,6 +380,7 @@ pub fn setup_settings_callbacks<N>(
             if let Some(ui) = ui_weak.upgrade() {
                 ui.global::<SettingsAdapter>().invoke_load_settings();
                 load_all_translations(&ui);
+                ui.global::<AppState>().set_login_wallpaper_custom(false);
             }
 
             notify("Settings reset to defaults".into(), false);

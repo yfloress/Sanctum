@@ -269,6 +269,13 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_settings_dark_mode_desc(s(&t("settings-dark-mode-desc")));
     tr.set_settings_dark_mode_title(s(&t("settings-dark-mode-title")));
     tr.set_settings_dark_mode_toggle_desc(s(&t("settings-dark-mode-toggle-desc")));
+    tr.set_settings_wallpaper_title(s(&t("settings-wallpaper-title")));
+    tr.set_settings_wallpaper_desc(s(&t("settings-wallpaper-desc")));
+    tr.set_settings_wallpaper_default(s(&t("settings-wallpaper-default")));
+    tr.set_settings_wallpaper_select(s(&t("settings-wallpaper-select")));
+    tr.set_settings_wallpaper_reset(s(&t("settings-wallpaper-reset")));
+    tr.set_settings_wallpaper_note(s(&t("settings-wallpaper-note")));
+    tr.set_settings_wallpaper_formats(s(&t("settings-wallpaper-formats")));
 
     tr.set_settings_session_timeout(s(&t("settings-session-timeout")));
     tr.set_settings_session_timeout_desc(s(&t("settings-session-timeout-desc")));

@@ -29,7 +29,7 @@ use sanctum::ui::{
     format_category_label, format_decimal_from_cents, format_money, load_account_icon,
 };
 use slint::SharedString;
-use slint::{ComponentHandle, ModelRc, VecModel, Weak};
+use slint::{ComponentHandle, Image, ModelRc, VecModel, Weak};
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -84,6 +84,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create the Slint UI
     let ui = AppWindow::new()?;
     let habit_analytics_cache = Rc::new(RefCell::new(sanctum::ui::HabitChartsCache::default()));
+
+    // Apply optional login wallpaper (stored in config.toml, not encrypted)
+    if let Some(path) = controller.get_login_wallpaper_path()
+        && let Ok(image) = Image::load_from_path(&path)
+    {
+        ui.global::<AppState>().set_login_wallpaper(image);
+        ui.global::<AppState>().set_login_wallpaper_custom(true);
+    }
 
     // Title Animation: Decryption Effect
     {

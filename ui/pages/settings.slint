@@ -511,6 +511,131 @@ export component SettingsPage inherits Rectangle {
                             SettingsAdapter.dark-mode = value;
                         }
                     }
+
+                    Rectangle {
+                        height: 96px;
+                        background: Theme.surface;
+                        border-radius: 12px;
+                        border-width: 1px;
+                        border-color: Theme.border;
+
+                        HorizontalLayout {
+                            padding-left: 24px;
+                            padding-right: 20px;
+                            alignment: space-between;
+
+                            VerticalLayout {
+                                alignment: center;
+                                spacing: 4px;
+
+                                Text {
+                                    text: Translations.settings-wallpaper-title;
+                                    color: Theme.text-primary;
+                                    font-size: 14px;
+                                    font-weight: 500;
+                                    letter-spacing: 0.3px;
+                                }
+
+                                Text {
+                                    text: Translations.settings-wallpaper-desc;
+                                    color: Theme.text-muted;
+                                    font-size: 11px;
+                                    font-weight: 400;
+                                }
+                            }
+
+                            VerticalLayout {
+                                alignment: center;
+                                spacing: 10px;
+
+                                Text {
+                                    text: (SettingsAdapter.login-wallpaper-name == "" ? Translations.settings-wallpaper-default : SettingsAdapter.login-wallpaper-name);
+                                    color: Theme.text-secondary;
+                                    font-size: 11px;
+                                    font-weight: 500;
+                                    horizontal-alignment: center;
+                                }
+
+                                HorizontalLayout {
+                                    spacing: 10px;
+                                    alignment: center;
+
+                                    Rectangle {
+                                        width: 140px;
+                                        height: 32px;
+                                        border-radius: 8px;
+                                        background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
+
+                                        Text {
+                                            text: Translations.settings-wallpaper-select;
+                                            color: Theme.text;
+                                            font-size: 10px;
+                                            font-weight: 600;
+                                            letter-spacing: 1px;
+                                            horizontal-alignment: center;
+                                            vertical-alignment: center;
+                                        }
+
+                                        TouchArea {
+                                            mouse-cursor: pointer;
+                                            clicked => {
+                                                SettingsAdapter.select-login-wallpaper();
+                                            }
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        width: 96px;
+                                        height: 32px;
+                                        border-radius: 8px;
+                                        background: Theme.surface-hover;
+                                        border-width: 1px;
+                                        border-color: Theme.border;
+
+                                        Text {
+                                            text: Translations.settings-wallpaper-reset;
+                                            color: Theme.text-secondary;
+                                            font-size: 10px;
+                                            font-weight: 600;
+                                            letter-spacing: 1px;
+                                            horizontal-alignment: center;
+                                            vertical-alignment: center;
+                                        }
+
+                                        TouchArea {
+                                            mouse-cursor: pointer;
+                                            clicked => {
+                                                SettingsAdapter.reset-login-wallpaper();
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        height: 34px;
+
+                        VerticalLayout {
+                            padding-left: 12px;
+                            spacing: 2px;
+
+                            Text {
+                                text: Translations.settings-wallpaper-note;
+                                color: Theme.text-muted;
+                                font-size: 10px;
+                                font-weight: 400;
+                            }
+
+                            Text {
+                                text: Translations.settings-wallpaper-formats;
+                                color: Theme.text-muted;
+                                font-size: 10px;
+                                font-weight: 400;
+                            }
+                        }
+                    }
                 }
 
                 // Regional Settings Section

@@ -130,7 +130,10 @@ component PasswordInput inherits Rectangle {
 
 export component LoginPage inherits Rectangle {
     // Smooth gradient background
-    GradientBackground { }
+    GradientBackground {
+        use-custom-image: AppState.login-wallpaper-custom;
+        custom-image: AppState.login-wallpaper;
+    }
 
     // Internal state
     in-out property <string> password-text: "";

@@ -239,6 +239,13 @@ settings-dark-mode = Dark Mode
 settings-dark-mode-desc = Enable dark theme
 settings-dark-mode-title = Dark Mode
 settings-dark-mode-toggle-desc = Switch between dark and light (cream/gold) themes
+settings-wallpaper-title = Login Wallpaper
+settings-wallpaper-desc = Background image for the vault lock screen
+settings-wallpaper-default = Default
+settings-wallpaper-select = SELECT IMAGE
+settings-wallpaper-reset = RESET
+settings-wallpaper-note = Stored in config.toml (not encrypted).
+settings-wallpaper-formats = Supported formats: PNG, JPG, JPEG, WEBP, BMP, GIF, TIFF
 
 # Security settings
 settings-session-timeout = Session Timeout

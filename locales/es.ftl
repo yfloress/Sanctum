@@ -239,6 +239,13 @@ settings-dark-mode = Modo Oscuro
 settings-dark-mode-desc = Activar tema oscuro
 settings-dark-mode-title = Modo Oscuro
 settings-dark-mode-toggle-desc = Cambiar entre temas oscuro y claro (crema/dorado)
+settings-wallpaper-title = Fondo de inicio de sesión
+settings-wallpaper-desc = Imagen de fondo para la pantalla de bloqueo
+settings-wallpaper-default = Predeterminado
+settings-wallpaper-select = SELECCIONAR IMAGEN
+settings-wallpaper-reset = RESTABLECER
+settings-wallpaper-note = Se guarda en config.toml (no está cifrado).
+settings-wallpaper-formats = Formatos admitidos: PNG, JPG, JPEG, WEBP, BMP, GIF, TIFF
 
 # Security settings
 settings-session-timeout = Tiempo de Sesión
