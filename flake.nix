@@ -29,7 +29,7 @@
           ];
 
           shellHook = ''
-            echo "> SANCTUM WEB DEV SHELL ACTIVE"
+            echo "> DEV SHELL ACTIVE"
             echo "   Node.js: $(node --version)"
             echo "   pnpm:    $(pnpm --version)"
             echo ""
