@@ -203,7 +203,7 @@ export component PrimaryButton inherits Rectangle {
 
     Text {
         text: root.text;
-        color: Theme.text;
+        color: Theme.text-light;
         font-size: 12px;
         font-weight: 600;
         letter-spacing: 2px;
@@ -315,13 +315,13 @@ export component ActionButton inherits Rectangle {
             source: icon;
             width: 16px;
             height: 16px;
-            colorize: primary ? Theme.text : Theme.text-primary;
+            colorize: primary ? Theme.text-light : Theme.text-primary;
             vertical-alignment: center;
         }
 
         Text {
             text: root.text;
-            color: primary ? Theme.text : Theme.text-primary;
+            color: primary ? Theme.text-light : Theme.text-primary;
             font-size: 11px;
             font-weight: 600;
             letter-spacing: 1px;

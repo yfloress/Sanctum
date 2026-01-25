@@ -70,13 +70,13 @@ export component AppWindow inherits Window {
 
     in-out property <string> login-title: "SANCTUM";
 
-    // Sync Theme.is-dark with SettingsAdapter.dark-mode
-    property <bool> dark-mode-tracker: SettingsAdapter.dark-mode;
-    changed dark-mode-tracker => {
-        Theme.is-dark = SettingsAdapter.dark-mode;
+    // Sync Theme.is-dark with SettingsAdapter.dark-mode (login always stays dark)
+    property <bool> effective-dark: AppState.is-logged-in ? SettingsAdapter.dark-mode : true;
+    changed effective-dark => {
+        Theme.is-dark = effective-dark;
     }
     init => {
-        Theme.is-dark = SettingsAdapter.dark-mode;
+        Theme.is-dark = effective-dark;
     }
 
     // ==================== Conditional Rendering ====================

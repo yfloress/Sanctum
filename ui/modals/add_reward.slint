@@ -623,13 +623,13 @@ export component AddRewardModal inherits Rectangle {
                         source: @image-url("../assets/icons/flame.svg");
                         width: 16px;
                         height: 16px;
-                        colorize: Theme.text-primary;
+                        colorize: Theme.text-light;
                         y: (parent.height - self.height) / 2;
                     }
 
                     Text {
                         text: editing ? Translations.modal-save-changes : Translations.modal-create-reward;
-                        color: Theme.text-primary;
+                        color: Theme.text-light;
                         font-size: 12px;
                         font-weight: 600;
                         letter-spacing: 2px;

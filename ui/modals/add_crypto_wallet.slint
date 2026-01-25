@@ -72,7 +72,7 @@ component CategoryCard inherits Rectangle {
                 source: root.icon;
                 width: 20px;
                 height: 20px;
-                colorize: selected ? Theme.text-primary : Theme.text-secondary;
+                colorize: selected ? Theme.text-light : Theme.text-secondary;
                 x: (parent.width - self.width) / 2;
                 y: (parent.height - self.height) / 2;
             }
@@ -86,7 +86,7 @@ component CategoryCard inherits Rectangle {
 
             Text {
                 text: root.title;
-                color: selected ? Theme.text-primary : Theme.text-secondary;
+                color: selected ? Theme.text-light : Theme.text-secondary;
                 font-size: 13px;
                 font-weight: selected ? 600 : 400;
             }
@@ -357,7 +357,7 @@ export component AddCryptoWalletModal inherits Rectangle {
 
                     Text {
                         text: "+";
-                        color: Theme.text-primary;
+                        color: Theme.text-light;
                         font-size: 16px;
                         font-weight: 500;
                         vertical-alignment: center;
@@ -365,7 +365,7 @@ export component AddCryptoWalletModal inherits Rectangle {
 
                     Text {
                         text: Translations.modal-create-wallet;
-                        color: Theme.text-primary;
+                        color: Theme.text-light;
                         font-size: 12px;
                         font-weight: 600;
                         letter-spacing: 2px;

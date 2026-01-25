@@ -67,33 +67,30 @@ component SettingCard inherits Rectangle {
             alignment: center;
 
             Rectangle {
-                width: 52px;
-                height: 28px;
-                border-radius: 14px;
-                background: toggle-value ? @linear-gradient(135deg, Theme.success 0%, Theme.success-strong 100%) : Theme.surface-hover;
+                width: 36px;
+                height: 20px;
+                border-radius: 10px;
+                background: toggle-value ? Theme.accent : Theme.surface-hover;
                 border-width: 1px;
-                border-color: toggle-value ? transparent : Theme.border;
+                border-color: toggle-value ? Theme.accent : Theme.border;
 
                 animate background {
-                    duration: 250ms;
+                    duration: 150ms;
                     easing: ease-out;
                 }
 
                 // Knob
                 Rectangle {
-                    x: toggle-value ? 26px : 2px;
+                    x: toggle-value ? 18px : 2px;
                     y: 2px;
-                    width: 24px;
-                    height: 24px;
-                    border-radius: 12px;
-                    background: @linear-gradient(135deg, Theme.text 0%, Theme.text-light 100%);
-                    drop-shadow-blur: 4px;
-                    drop-shadow-color: Theme.bg.with-alpha(0.2);
-                    drop-shadow-offset-y: 2px;
+                    width: 16px;
+                    height: 16px;
+                    border-radius: 8px;
+                    background: toggle-value ? Theme.background : Theme.text-secondary;
 
                     animate x {
-                        duration: 250ms;
-                        easing: ease-out;
+                        duration: 150ms;
+                        easing: ease-in-out;
                     }
                 }
 
@@ -164,7 +161,7 @@ component ActionCard inherits Rectangle {
 
             Text {
                 text: root.button-text;
-                color: Theme.text;
+                color: Theme.text-light;
                 font-size: 11px;
                 font-weight: 600;
                 letter-spacing: 1px;
@@ -417,6 +414,14 @@ export component SettingsPage inherits Rectangle {
             height: 100px;
             background: @linear-gradient(180deg, Theme.modal-bg-end 0%, Theme.background 100%);
 
+            Rectangle {
+                width: 100%;
+                height: 3px;
+                y: 0;
+                background: @linear-gradient(90deg, transparent 0%, Theme.action-gradient-start 20%, Theme.action-gradient-end 80%, transparent 100%);
+                opacity: 0.3;
+            }
+
             // Decorative accent
             Rectangle {
                 width: 100%;
@@ -568,7 +573,7 @@ export component SettingsPage inherits Rectangle {
 
                                         Text {
                                             text: Translations.settings-wallpaper-select;
-                                            color: Theme.text;
+                                            color: Theme.text-light;
                                             font-size: 10px;
                                             font-weight: 600;
                                             letter-spacing: 1px;
@@ -741,13 +746,13 @@ export component SettingsPage inherits Rectangle {
                                         source: @image-url("../assets/icons/download.svg");
                                         width: 16px;
                                         height: 16px;
-                                        colorize: Theme.text;
+                                        colorize: Theme.text-light;
                                         y: (parent.height - self.height) / 2;
                                     }
 
                                     Text {
                                         text: Translations.vault-export-button;
-                                        color: Theme.text;
+                                        color: Theme.text-light;
                                         font-size: 11px;
                                         font-weight: 600;
                                         letter-spacing: 1px;

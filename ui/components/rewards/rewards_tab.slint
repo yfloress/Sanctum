@@ -51,7 +51,7 @@ export component RewardsTab inherits Rectangle {
 
                 ActionButton {
                     text: Translations.rewards-add-reward-button;
-                    primary: false;
+                    primary: true;
                     clicked => {
                         AppState.show-add-reward = true;
                     }
@@ -119,7 +119,7 @@ export component RewardsTab inherits Rectangle {
 
                 ActionButton {
                     text: Translations.rewards-add-goal-button;
-                    primary: false;
+                    primary: true;
                     clicked => {
                         AppState.show-add-goal = true;
                     }

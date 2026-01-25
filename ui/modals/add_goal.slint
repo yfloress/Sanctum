@@ -358,7 +358,7 @@ export component AddGoalModal inherits Rectangle {
                         width: 4px;
                         height: 20px;
                         border-radius: 2px;
-                        background: @linear-gradient(180deg, Theme.success 0%, Theme.accent 100%);
+                        background: @linear-gradient(180deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
                         y: (parent.height - self.height) / 2;
                     }
 
@@ -538,7 +538,7 @@ export component AddGoalModal inherits Rectangle {
             // Submit button (fixed at bottom)
             Rectangle {
                 height: 48px;
-                background: @linear-gradient(135deg, Theme.success 0%, Theme.accent 100%);
+                background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
                 border-radius: 10px;
 
                 HorizontalLayout {
@@ -549,13 +549,13 @@ export component AddGoalModal inherits Rectangle {
                         source: @image-url("../assets/icons/target.svg");
                         width: 16px;
                         height: 16px;
-                        colorize: Theme.text-primary;
+                        colorize: Theme.text-light;
                         y: (parent.height - self.height) / 2;
                     }
 
                     Text {
                         text: editing ? Translations.modal-save-changes : Translations.modal-create-goal;
-                        color: Theme.text-primary;
+                        color: Theme.text-light;
                         font-size: 12px;
                         font-weight: 600;
                         letter-spacing: 2px;
