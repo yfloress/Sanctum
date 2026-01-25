@@ -15,29 +15,28 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
 //
 
-// ==================== Gradient Background ====================
-// Smooth purple to black radial gradient for authentication screens
+// ==================== Auth Background ====================
+// Full-bleed background image with dark overlay for authentication screens
 
-import { Theme } from "../theme.slint";
 
 export component GradientBackground inherits Rectangle {
     in property <bool> show-background: true;
+    in property <image> background-image: @image-url("../assets/backgrounds/login_default.jpg");
+    in property <color> overlay-color: #000000b3;
 
     width: 100%;
     height: 100%;
 
-    // Smooth purple to black radial gradient with multiple stops for seamless transition
-    background: root.show-background
-        ? @radial-gradient(
-            circle,
-            Theme.auth-bg-1 0%,
-            Theme.auth-bg-2 15%,
-            Theme.auth-bg-3 30%,
-            Theme.auth-bg-4 45%,
-            Theme.auth-bg-5 60%,
-            Theme.auth-bg-6 75%,
-            Theme.auth-bg-7 88%,
-            Theme.auth-bg-8 100%
-        )
-        : transparent;
+    if root.show-background: Image {
+        width: 100%;
+        height: 100%;
+        source: root.background-image;
+        image-fit: cover;
+    }
+
+    if root.show-background: Rectangle {
+        width: 100%;
+        height: 100%;
+        background: root.overlay-color;
+    }
 }

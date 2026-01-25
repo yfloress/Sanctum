@@ -21,7 +21,6 @@
 import { AuthAdapter, AppState, NotificationAdapter, VaultAdapter } from "../globals.slint";
 import { Translations } from "../translations.slint";
 import { Theme } from "../theme.slint";
-import { TextButton } from "../widgets.slint";
 import { GradientBackground } from "../components/gradient_background.slint";
 
 // ==================== PasswordInput ====================
@@ -50,9 +49,9 @@ component PasswordInput inherits Rectangle {
             // Placeholder (shown when empty and not focused)
             if root.text == "" && !input.has-focus: Text {
                 text: root.placeholder;
-                color: Theme.text-muted;
+                color: Theme.text-secondary;
                 font-size: 16px;
-                font-weight: 300;
+                font-weight: 400;
                 vertical-alignment: center;
                 horizontal-alignment: left;
                 letter-spacing: 1px;
@@ -64,7 +63,7 @@ component PasswordInput inherits Rectangle {
                 enabled: root.enabled;
                 color: Theme.text-primary;
                 font-size: 16px;
-                font-weight: 300;
+                font-weight: 400;
                 vertical-alignment: center;
                 letter-spacing: 0.5px;
 
@@ -84,7 +83,7 @@ component PasswordInput inherits Rectangle {
         // Underline with gradient (full width, centered with container)
         Rectangle {
             height: input.has-focus ? 2px : 1px;
-            background: input.has-focus ? @linear-gradient(90deg, transparent 0%, Theme.accent-indigo 20%, Theme.text-primary 50%, Theme.accent-indigo 80%, transparent 100%) : @linear-gradient(90deg, transparent 0%, Theme.border 50%, transparent 100%);
+            background: input.has-focus ? Theme.text-primary : @linear-gradient(90deg, transparent 0%, Theme.border 50%, transparent 100%);
 
             animate height {
                 duration: 150ms;
@@ -106,9 +105,9 @@ component PasswordInput inherits Rectangle {
 
         Text {
             text: root.show-password ? Translations.login-hide : Translations.login-show;
-            color: toggle-touch.has-hover ? Theme.text-primary : Theme.text-muted;
+            color: toggle-touch.has-hover ? Theme.text-primary : Theme.text-secondary;
             font-size: 10px;
-            font-weight: 400;
+            font-weight: 500;
             letter-spacing: 1.5px;
             horizontal-alignment: center;
             vertical-alignment: center;
@@ -155,41 +154,6 @@ export component LoginPage inherits Rectangle {
         }
     }
 
-    // Full screen centered layout
-    // Top logo overlay (doesn't affect main layout)
-    Rectangle {
-        x: 0px;
-        y: 0px;
-        width: parent.width;
-        height: 104px;
-
-        VerticalLayout {
-            spacing: 0px;
-
-            Rectangle {
-                height: 12px;
-            }
-
-            HorizontalLayout {
-                alignment: center;
-
-                Rectangle {
-                    width: min(320px, parent.width);
-
-                    HorizontalLayout {
-                        alignment: center;
-
-                        Image {
-                            source: @image-url("../assets/logo/sanctum_logo.svg");
-                            width: 52px;
-                            height: 52px;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     VerticalLayout {
         alignment: center;
         spacing: 0px;
@@ -210,12 +174,26 @@ export component LoginPage inherits Rectangle {
                     spacing: 0px;
                     alignment: center;
 
+                    HorizontalLayout {
+                        alignment: center;
+
+                        Image {
+                            source: @image-url("../assets/logo/sanctum_logo.svg");
+                            width: 58px;
+                            height: 58px;
+                        }
+                    }
+
+                    Rectangle {
+                        height: 14px;
+                    }
+
                     // Title
                     Text {
                         text: root.title-text;
                         color: Theme.text-primary;
-                        font-size: 42px;
-                        font-weight: 300;
+                        font-size: 44px;
+                        font-weight: 700;
                         letter-spacing: 12px;
                         horizontal-alignment: center;
                     }
@@ -228,11 +206,11 @@ export component LoginPage inherits Rectangle {
                     // Subtitle with elegant styling
                     Text {
                         text: Translations.login-subtitle;
-                        color: @linear-gradient(90deg, Theme.text-muted 0%, Theme.text-secondary 50%, Theme.text-muted 100%);
+                        color: Theme.text-secondary;
                         font-size: 13px;
-                        font-weight: 200;
-                        font-italic: true;
-                        letter-spacing: 2.5px;
+                        font-weight: 400;
+                        font-italic: false;
+                        letter-spacing: 1.5px;
                         horizontal-alignment: center;
                     }
 
@@ -301,15 +279,58 @@ export component LoginPage inherits Rectangle {
                     }
 
                     // Action button
-                    TextButton {
-                        text: vault-exists ? (is-loading ? Translations.login-unlocking : Translations.login-unlock) : (is-loading ? Translations.login-creating : Translations.login-create);
-                        enabled: password-text != "" && !is-loading;
+                    Rectangle {
+                        width: parent.width;
+                        height: 46px;
+                        border-radius: 10px;
+                        background: Theme.primary;
+                        opacity: submit-touch.enabled ? (submit-touch.has-hover ? 0.95 : 1.0) : 0.45;
+                        drop-shadow-blur: submit-touch.has-hover ? 14px : 8px;
+                        drop-shadow-color: Theme.shadow;
 
-                        clicked => {
-                            if (vault-exists) {
-                                root.handle-unlock();
-                            } else {
-                                root.handle-create();
+                        Text {
+                            text: vault-exists ? (is-loading ? Translations.login-unlocking : Translations.login-unlock) : (is-loading ? Translations.login-creating : Translations.login-create);
+                            color: Theme.text-light;
+                            font-size: 12px;
+                            font-weight: 700;
+                            letter-spacing: 2px;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+
+                        animate opacity { duration: 150ms; easing: ease-out; }
+                        animate drop-shadow-blur { duration: 150ms; easing: ease-out; }
+
+                        submit-touch := TouchArea {
+                            enabled: password-text != "" && !is-loading;
+                            mouse-cursor: submit-touch.enabled ? pointer : default;
+
+                            clicked => {
+                                if (vault-exists) {
+                                    root.handle-unlock();
+                                } else {
+                                    root.handle-create();
+                                }
+                            }
+                        }
+                    }
+
+                    if vault-exists: Rectangle {
+                        height: 22px;
+                    }
+
+                    if vault-exists: Text {
+                        text: Translations.vault-restore-from-backup;
+                        color: restore-touch.has-hover ? Theme.text-primary : Theme.text-secondary;
+                        font-size: 11px;
+                        font-weight: 500;
+                        letter-spacing: 0.6px;
+                        horizontal-alignment: center;
+
+                        restore-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                VaultAdapter.restore-vault();
                             }
                         }
                     }
@@ -322,67 +343,8 @@ export component LoginPage inherits Rectangle {
             vertical-stretch: 1;
         }
 
-        // Footer
         Rectangle {
-            height: 60px;
-
-            Text {
-                text: Translations.login-encryption-note;
-                color: Theme.text-subtle;
-                font-size: 9px;
-                font-weight: 500;
-                letter-spacing: 3px;
-                horizontal-alignment: center;
-                vertical-alignment: center;
-            }
-        }
-    }
-
-    // Restore button (floating in bottom-right corner, only when vault exists)
-    if vault-exists: Rectangle {
-        x: parent.width - self.width - 24px;
-        y: parent.height - self.height - 24px;
-        width: 180px;
-        height: 40px;
-        border-radius: 10px;
-        background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
-        opacity: restore-touch.has-hover ? 1.0 : 0.85;
-        drop-shadow-blur: restore-touch.has-hover ? 12px : 6px;
-        drop-shadow-color: Theme.shadow;
-
-        HorizontalLayout {
-            padding-left: 14px;
-            padding-right: 14px;
-            spacing: 8px;
-            alignment: center;
-
-            Image {
-                source: @image-url("../assets/icons/upload.svg");
-                width: 14px;
-                height: 14px;
-                colorize: Theme.text;
-                y: (parent.height - self.height) / 2;
-            }
-
-            Text {
-                text: Translations.vault-restore-from-backup;
-                color: Theme.text;
-                font-size: 10px;
-                font-weight: 600;
-                letter-spacing: 0.5px;
-                vertical-alignment: center;
-                overflow: elide;
-            }
-        }
-
-        animate opacity { duration: 200ms; easing: ease-out; }
-        animate drop-shadow-blur { duration: 200ms; easing: ease-out; }
-
-        restore-touch := TouchArea {
-            mouse-cursor: pointer;
-            clicked => {
-                VaultAdapter.restore-vault();
-            }
+            height: 32px;
         }
     }
 
