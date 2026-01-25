@@ -1,6 +1,44 @@
 ---
 // Features section - highlights key Sanctum capabilities based on app behavior
 
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
+const base = import.meta.env.BASE_URL;
+const screenshotsDir = fileURLToPath(new URL('../../../public/screenshots', import.meta.url));
+
+const preferredOrder = ['lock', 'dashboard', 'finances', 'crypto', 'habits'];
+
+const screenshotFiles = fs.existsSync(screenshotsDir)
+  ? fs
+      .readdirSync(screenshotsDir)
+      .filter((name) => {
+        const ext = name.split('.').pop()?.toLowerCase();
+        return ext === 'png' || ext === 'jpg' || ext === 'jpeg';
+      })
+      .sort((a, b) => {
+        const aBase = a.replace(/\.[^.]+$/, '').toLowerCase();
+        const bBase = b.replace(/\.[^.]+$/, '').toLowerCase();
+        const aIndex = preferredOrder.indexOf(aBase);
+        const bIndex = preferredOrder.indexOf(bBase);
+        if (aIndex !== -1 || bIndex !== -1) {
+          if (aIndex === -1) return 1;
+          if (bIndex === -1) return -1;
+          return aIndex - bIndex;
+        }
+        return aBase.localeCompare(bBase);
+      })
+  : [];
+
+const screens = screenshotFiles.map((name) => {
+  const baseName = name.replace(/\.[^.]+$/, '');
+  const label = baseName.replace(/[-_]+/g, ' ');
+  const alt = `${label.charAt(0).toUpperCase()}${label.slice(1)} screen`;
+  return { src: `${base}screenshots/${name}`, alt };
+});
+
+const slideDuration = 6;
+
 const pages = [
   {
     key: 'dashboard',
@@ -46,7 +84,47 @@ const highlights = [
     </p>
   </div>
 
-  <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+  {screens.length > 0 && (
+    <div class="reveal mt-10" data-reveal="right">
+      <div
+        class="sanctum-slider panel-gradient-strong rounded-3xl border border-border shadow-strong"
+        data-slider
+        data-interval={slideDuration * 1000}
+      >
+        <div class="sanctum-slider__frame">
+          {screens.map((screen, index) => (
+            <img
+              src={screen.src}
+              alt={screen.alt}
+              class={`sanctum-slider__slide${index === 0 ? " is-active" : ""}`}
+              loading={index === 0 ? "eager" : "lazy"}
+              decoding="async"
+            />
+          ))}
+        </div>
+        <div class="sanctum-slider__controls">
+          <button class="sanctum-slider__btn" type="button" data-prev aria-label="Previous screen">
+            <span aria-hidden="true">‹</span>
+          </button>
+          <button class="sanctum-slider__btn" type="button" data-next aria-label="Next screen">
+            <span aria-hidden="true">›</span>
+          </button>
+        </div>
+        <div class="sanctum-slider__dots" data-dots>
+          {screens.map((screen, index) => (
+            <button
+              class={`sanctum-slider__dot${index === 0 ? " is-active" : ""}`}
+              type="button"
+              data-dot={index}
+              aria-label={`Go to ${screen.alt}`}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  )}
+
+  <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mt-12">
     {pages.map((page, index) => (
       <div
         class="reveal panel-gradient-strong rounded-3xl border border-border p-6 panel-hover"

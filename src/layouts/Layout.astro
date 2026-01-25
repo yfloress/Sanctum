@@ -411,6 +411,67 @@ const baseUrl = import.meta.env.BASE_URL;
         });
       };
 
+      const initSanctumSliders = () => {
+        const sliders = Array.from(document.querySelectorAll("[data-slider]"));
+        sliders.forEach((slider) => {
+          if (slider.dataset.sliderInitialized === "true") return;
+          slider.dataset.sliderInitialized = "true";
+
+          const slides = Array.from(slider.querySelectorAll(".sanctum-slider__slide"));
+          const dots = Array.from(slider.querySelectorAll("[data-dot]"));
+          const prev = slider.querySelector("[data-prev]");
+          const next = slider.querySelector("[data-next]");
+          const intervalMs = Number(slider.dataset.interval) || 6000;
+          let index = 0;
+          let timer = null;
+          let hideTimer = null;
+
+          const setActive = (nextIndex, userTriggered = false) => {
+            if (!slides.length) return;
+            index = (nextIndex + slides.length) % slides.length;
+            slides.forEach((slide, i) => slide.classList.toggle("is-active", i === index));
+            dots.forEach((dot, i) => dot.classList.toggle("is-active", i === index));
+            if (userTriggered) {
+              slider.classList.add("sanctum-slider--active");
+              clearTimeout(hideTimer);
+              hideTimer = setTimeout(() => {
+                slider.classList.remove("sanctum-slider--active");
+              }, 2200);
+            }
+          };
+
+          const step = (dir) => setActive(index + dir, true);
+
+          const start = () => {
+            clearInterval(timer);
+            if (slides.length > 1) {
+              timer = setInterval(() => setActive(index + 1), intervalMs);
+            }
+          };
+
+          prev?.addEventListener("click", () => {
+            step(-1);
+            start();
+          });
+          next?.addEventListener("click", () => {
+            step(1);
+            start();
+          });
+          dots.forEach((dot, dotIndex) => {
+            dot.addEventListener("click", () => {
+              setActive(dotIndex, true);
+              start();
+            });
+          });
+
+          slider.addEventListener("mouseenter", () => slider.classList.add("sanctum-slider--active"));
+          slider.addEventListener("mouseleave", () => slider.classList.remove("sanctum-slider--active"));
+
+          setActive(0);
+          start();
+        });
+      };
+
       const observer = new IntersectionObserver(
         (entries) => {
           entries.forEach((entry) => {
@@ -481,6 +542,8 @@ const baseUrl = import.meta.env.BASE_URL;
 
       const storedTheme = getStoredTheme();
       applyTheme(storedTheme === "light" ? "light" : "dark", false);
+
+      initSanctumSliders();
 
       themeToggles.forEach((button) => {
         button.addEventListener("click", () => {
