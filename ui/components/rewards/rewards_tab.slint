@@ -139,6 +139,15 @@ export component RewardsTab inherits Rectangle {
                         RewardsAdapter.edit-goal-reward = goal.reward-text;
                         RewardsAdapter.edit-goal-deadline = goal.deadline;
                         RewardsAdapter.edit-goal-checkpoint-count = goal.checkpoints.length;
+                        // Reset checkpoints to avoid stale values
+                        RewardsAdapter.edit-goal-cp1-id = "";
+                        RewardsAdapter.edit-goal-cp1-text = "";
+                        RewardsAdapter.edit-goal-cp2-id = "";
+                        RewardsAdapter.edit-goal-cp2-text = "";
+                        RewardsAdapter.edit-goal-cp3-id = "";
+                        RewardsAdapter.edit-goal-cp3-text = "";
+                        RewardsAdapter.edit-goal-cp4-id = "";
+                        RewardsAdapter.edit-goal-cp4-text = "";
                         // Load checkpoints
                         if goal.checkpoints.length >= 1 {
                             RewardsAdapter.edit-goal-cp1-id = goal.checkpoints[0].id;

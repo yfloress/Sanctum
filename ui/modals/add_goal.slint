@@ -223,69 +223,27 @@ export component AddGoalModal inherits Rectangle {
             return;
         }
         if editing {
-            // Update existing goal
-            let result = RewardsAdapter.update-goal(
+            let result = RewardsAdapter.update-goal-with-checkpoints(
                 RewardsAdapter.edit-goal-id,
                 goal-name,
                 goal-description,
                 goal-reward,
-                goal-deadline);
+                goal-deadline,
+                checkpoint-count,
+                cp1-id,
+                cp1,
+                cp2-id,
+                cp2,
+                cp3-id,
+                cp3,
+                cp4-id,
+                cp4);
 
             if (result != "") {
+                NotificationAdapter.show(result, true);
                 return;
             }
 
-            // Handle checkpoints for existing goal
-            let goal-id = RewardsAdapter.edit-goal-id;
-
-            // For existing checkpoints, we keep them. For new ones, we add them.
-            // Delete removed checkpoints
-            if checkpoint-count < 4 && cp4-id != "" {
-                RewardsAdapter.delete-checkpoint(cp4-id);
-            }
-            if checkpoint-count < 3 && cp3-id != "" {
-                RewardsAdapter.delete-checkpoint(cp3-id);
-            }
-            if checkpoint-count < 2 && cp2-id != "" {
-                RewardsAdapter.delete-checkpoint(cp2-id);
-            }
-
-            // Update existing checkpoints
-            if cp1-id != "" && cp1 != "" {
-                let update_result_1 = RewardsAdapter.update-checkpoint(cp1-id, cp1);
-                if (update_result_1 != "") {
-                    return;
-                }
-            }
-            if checkpoint-count >= 2 && cp2-id != "" && cp2 != "" {
-                let update_result_2 = RewardsAdapter.update-checkpoint(cp2-id, cp2);
-                if (update_result_2 != "") {
-                    return;
-                }
-            }
-            if checkpoint-count >= 3 && cp3-id != "" && cp3 != "" {
-                let update_result_3 = RewardsAdapter.update-checkpoint(cp3-id, cp3);
-                if (update_result_3 != "") {
-                    return;
-                }
-            }
-            if checkpoint-count >= 4 && cp4-id != "" && cp4 != "" {
-                let update_result_4 = RewardsAdapter.update-checkpoint(cp4-id, cp4);
-                if (update_result_4 != "") {
-                    return;
-                }
-            }
-
-            // Add new checkpoints (those without IDs)
-            if checkpoint-count >= 2 && cp2 != "" && cp2-id == "" {
-                RewardsAdapter.add-checkpoint(goal-id, cp2);
-            }
-            if checkpoint-count >= 3 && cp3 != "" && cp3-id == "" {
-                RewardsAdapter.add-checkpoint(goal-id, cp3);
-            }
-            if checkpoint-count >= 4 && cp4 != "" && cp4-id == "" {
-                RewardsAdapter.add-checkpoint(goal-id, cp4);
-            }
             close-modal();
         } else {
             // Create new goal

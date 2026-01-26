@@ -287,6 +287,66 @@ impl AppController {
             .map_err(ControllerError::Database)
     }
 
+    #[allow(clippy::too_many_arguments)]
+    pub fn update_goal_with_checkpoints(
+        &self,
+        id: String,
+        name: String,
+        description: String,
+        reward_text: String,
+        deadline: String,
+        checkpoint_count: i32,
+        cp1_id: String,
+        cp1_text: String,
+        cp2_id: String,
+        cp2_text: String,
+        cp3_id: String,
+        cp3_text: String,
+        cp4_id: String,
+        cp4_text: String,
+    ) -> Result<(), ControllerError> {
+        if validate_uuid(&id).is_err() {
+            return Err(ControllerError::Validation("Invalid UUID".into()));
+        }
+        if name.trim().is_empty() {
+            return Err(ControllerError::Validation("Goal name is required".into()));
+        }
+        if reward_text.trim().is_empty() {
+            return Err(ControllerError::Validation("Reward is required".into()));
+        }
+
+        let count = checkpoint_count.clamp(1, 4);
+        let mut checkpoints: Vec<(Option<String>, String, i32)> = Vec::with_capacity(count as usize);
+
+        let entries = [
+            (cp1_id, cp1_text),
+            (cp2_id, cp2_text),
+            (cp3_id, cp3_text),
+            (cp4_id, cp4_text),
+        ];
+
+        for (idx, (cp_id, cp_text)) in entries.into_iter().enumerate().take(count as usize) {
+            if cp_text.trim().is_empty() {
+                return Err(ControllerError::Validation(
+                    "Checkpoint description cannot be empty".into(),
+                ));
+            }
+            let id_opt = if cp_id.trim().is_empty() {
+                None
+            } else {
+                if validate_uuid(cp_id.trim()).is_err() {
+                    return Err(ControllerError::Validation("Invalid UUID".into()));
+                }
+                Some(cp_id)
+            };
+            checkpoints.push((id_opt, cp_text, (idx + 1) as i32));
+        }
+
+        self.rewards_service
+            .update_goal_with_checkpoints(id, name, description, reward_text, deadline, checkpoints)
+            .map_err(ControllerError::Database)
+    }
+
     pub fn complete_goal(&self, id: String) -> Result<Option<String>, ControllerError> {
         if validate_uuid(&id).is_err() {
             return Err(ControllerError::Validation("Invalid UUID".into()));

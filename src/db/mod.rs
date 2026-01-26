@@ -204,6 +204,24 @@ impl Database {
         Ok(db)
     }
 
+    pub fn with_transaction<T, F>(&self, f: F) -> Result<T, DbError>
+    where
+        F: FnOnce(&Database) -> Result<T, DbError>,
+    {
+        self.conn.execute("BEGIN IMMEDIATE", [])?;
+        let result = f(self);
+        match result {
+            Ok(value) => {
+                self.conn.execute("COMMIT", [])?;
+                Ok(value)
+            }
+            Err(err) => {
+                let _ = self.conn.execute("ROLLBACK", []);
+                Err(err)
+            }
+        }
+    }
+
     /// Adjusts defensive SQLCipher PRAGMAs for the connection
     /// IMPORTANT: Algorithm parameters must be applied BEFORE attempting to decrypt
     /// for both new and existing DBs, as they define how to interpret the key.

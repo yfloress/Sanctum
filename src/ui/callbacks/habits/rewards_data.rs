@@ -70,7 +70,13 @@ where
         return;
     };
 
-    let habits: Vec<Habit> = controller.get_habits().unwrap_or_default();
+    let habits: Vec<Habit> = match controller.get_habits() {
+        Ok(h) => h,
+        Err(e) => {
+            notify(format!("Failed to load habits: {}", e), true);
+            Vec::new()
+        }
+    };
 
     let rewards = match controller.get_streak_rewards() {
         Ok(r) => r,
@@ -82,6 +88,9 @@ where
 
     let mut reward_data: Vec<StreakRewardData> = Vec::with_capacity(rewards.len());
 
+    let mut milestones_error = false;
+    let mut progress_error = false;
+
     for reward in rewards {
         let habit = habits.iter().find(|h| h.id == reward.habit_id);
         let habit_name = habit.map(|h| h.name.clone()).unwrap_or_default();
@@ -89,13 +98,27 @@ where
             .map(|h| parse_hex_color(&h.color))
             .unwrap_or_else(default_color);
 
-        let milestones = controller
-            .get_milestones(reward.id.clone())
-            .unwrap_or_default();
+        let milestones = match controller.get_milestones(reward.id.clone()) {
+            Ok(m) => m,
+            Err(e) => {
+                if !milestones_error {
+                    notify(format!("Failed to load milestones: {}", e), true);
+                    milestones_error = true;
+                }
+                Vec::new()
+            }
+        };
 
-        let progress = controller
-            .get_streak_progress(reward.id.clone())
-            .unwrap_or(0);
+        let progress = match controller.get_streak_progress(reward.id.clone()) {
+            Ok(p) => p,
+            Err(e) => {
+                if !progress_error {
+                    notify(format!("Failed to load streak progress: {}", e), true);
+                    progress_error = true;
+                }
+                0
+            }
+        };
 
         let next_milestone = milestones
             .iter()
@@ -171,10 +194,19 @@ where
 
     let mut goal_data: Vec<GoalData> = Vec::with_capacity(goals.len());
 
+    let mut checkpoints_error = false;
+
     for goal in goals {
-        let checkpoints = controller
-            .get_checkpoints(goal.id.clone())
-            .unwrap_or_default();
+        let checkpoints = match controller.get_checkpoints(goal.id.clone()) {
+            Ok(c) => c,
+            Err(e) => {
+                if !checkpoints_error {
+                    notify(format!("Failed to load checkpoints: {}", e), true);
+                    checkpoints_error = true;
+                }
+                Vec::new()
+            }
+        };
 
         let completed_count = checkpoints.iter().filter(|c| c.completed).count() as i32;
         let total_count = checkpoints.len() as i32;
@@ -216,9 +248,7 @@ where
 
 /// Loads achievements data into the UI.
 ///
-/// Achievements are created automatically when:
-/// - A streak reward milestone is unlocked
-/// - A goal is completed (either manually or when all checkpoints are done)
+/// Achievements are created automatically when a goal is completed.
 ///
 /// The `achieved_at` timestamp is truncated to YYYY-MM-DD for display.
 pub fn load_achievements_data<N>(

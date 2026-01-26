@@ -682,7 +682,7 @@ rewards-days-to-go = days to go
 # ==================== History Tab ====================
 history-achievements-section = ACHIEVEMENTS
 history-no-achievements = No achievements yet
-history-complete-to-earn = Complete streak milestones and goals to earn trophies
+history-complete-to-earn = Complete goals to earn trophies
 
 # ==================== Data Import ====================
 import-title = Import Data

@@ -104,63 +104,65 @@ impl RewardsService {
         milestones: Vec<(i32, String)>, // (target_days, reward_text)
     ) -> Result<(), DbError> {
         self.with_db(|db| {
-            // Get existing milestones to preserve unlocked status
-            let existing_milestones = RewardsRepository::get_milestones(db, &id)?;
+            db.with_transaction(|db| {
+                // Get existing milestones to preserve unlocked status
+                let existing_milestones = RewardsRepository::get_milestones(db, &id)?;
 
-            // Update the reward
-            let reward = StreakReward::new(
-                id.clone(),
-                habit_id,
-                is_consecutive,
-                target_days,
-                target_total,
-            );
-            RewardsRepository::update_streak_reward(db, &reward)?;
+                // Update the reward
+                let reward = StreakReward::new(
+                    id.clone(),
+                    habit_id,
+                    is_consecutive,
+                    target_days,
+                    target_total,
+                );
+                RewardsRepository::update_streak_reward(db, &reward)?;
 
-            // Delete existing milestones
-            RewardsRepository::delete_milestones_by_reward(db, &id)?;
+                // Delete existing milestones
+                RewardsRepository::delete_milestones_by_reward(db, &id)?;
 
-            // Get current progress to determine which milestones should be unlocked
-            let progress = RewardsRepository::get_streak_progress(
-                db,
-                &reward.habit_id,
-                reward.is_consecutive,
-                reward.target_total,
-            )?;
+                // Get current progress to determine which milestones should be unlocked
+                let progress = RewardsRepository::get_streak_progress(
+                    db,
+                    &reward.habit_id,
+                    reward.is_consecutive,
+                    reward.target_total,
+                )?;
 
-            // Create new milestones, preserving unlocked status based on:
-            // 1. Existing milestone with same target_days that was unlocked, OR
-            // 2. Current progress already exceeds the milestone target
-            for (days, text) in milestones {
-                let milestone_id = Uuid::new_v4().to_string();
-                let mut milestone = Milestone::new(milestone_id, id.clone(), days, text);
+                // Create new milestones, preserving unlocked status based on:
+                // 1. Existing milestone with same target_days that was unlocked, OR
+                // 2. Current progress already exceeds the milestone target
+                for (days, text) in milestones {
+                    let milestone_id = Uuid::new_v4().to_string();
+                    let mut milestone = Milestone::new(milestone_id, id.clone(), days, text);
 
-                // Check if there was an existing milestone with the same target_days that was unlocked
-                let was_previously_unlocked = existing_milestones
-                    .iter()
-                    .any(|m| m.target_days == days && m.unlocked);
-
-                // Also check if current progress already exceeds this milestone
-                let should_be_unlocked = was_previously_unlocked || progress >= days;
-
-                if should_be_unlocked {
-                    // Find the original unlocked_at if it exists
-                    if let Some(existing) = existing_milestones
+                    // Check if there was an existing milestone with the same target_days that was unlocked
+                    let was_previously_unlocked = existing_milestones
                         .iter()
-                        .find(|m| m.target_days == days && m.unlocked)
-                    {
-                        milestone.unlocked = true;
-                        milestone.unlocked_at = existing.unlocked_at.clone();
-                    } else {
-                        // Progress exceeds but wasn't previously unlocked - unlock now
-                        milestone.unlock();
+                        .any(|m| m.target_days == days && m.unlocked);
+
+                    // Also check if current progress already exceeds this milestone
+                    let should_be_unlocked = was_previously_unlocked || progress >= days;
+
+                    if should_be_unlocked {
+                        // Find the original unlocked_at if it exists
+                        if let Some(existing) = existing_milestones
+                            .iter()
+                            .find(|m| m.target_days == days && m.unlocked)
+                        {
+                            milestone.unlocked = true;
+                            milestone.unlocked_at = existing.unlocked_at.clone();
+                        } else {
+                            // Progress exceeds but wasn't previously unlocked - unlock now
+                            milestone.unlock();
+                        }
                     }
+
+                    RewardsRepository::create_milestone(db, &milestone)?;
                 }
 
-                RewardsRepository::create_milestone(db, &milestone)?;
-            }
-
-            Ok(())
+                Ok(())
+            })
         })
     }
 
@@ -358,6 +360,79 @@ impl RewardsService {
             };
             checkpoint.description = description;
             RewardsRepository::update_checkpoint(db, &checkpoint)
+        })
+    }
+
+    pub fn update_goal_with_checkpoints(
+        &self,
+        goal_id: String,
+        name: String,
+        description: String,
+        reward_text: String,
+        deadline: String,
+        checkpoints: Vec<(Option<String>, String, i32)>, // (id, text, sort_order)
+    ) -> Result<(), DbError> {
+        self.with_db(|db| {
+            db.with_transaction(|db| {
+                let mut goal = match RewardsRepository::get_goal(db, &goal_id)? {
+                    Some(g) => g,
+                    None => return Err(DbError::GoalNotFound),
+                };
+
+                goal.name = name;
+                goal.description = if description.is_empty() {
+                    None
+                } else {
+                    Some(description)
+                };
+                goal.reward_text = reward_text;
+                goal.deadline = if deadline.is_empty() {
+                    None
+                } else {
+                    Some(deadline)
+                };
+
+                RewardsRepository::update_goal(db, &goal)?;
+
+                let existing = RewardsRepository::get_checkpoints(db, &goal_id)?;
+                let mut keep_ids: Vec<String> = Vec::new();
+
+                for (cp_id, _, _) in &checkpoints {
+                    if let Some(id) = cp_id.as_ref() {
+                        keep_ids.push(id.clone());
+                    }
+                }
+
+                for cp in existing {
+                    if !keep_ids.iter().any(|id| id == &cp.id) {
+                        RewardsRepository::delete_checkpoint(db, &cp.id)?;
+                    }
+                }
+
+                for (cp_id, text, order) in checkpoints {
+                    if let Some(checkpoint_id) = cp_id {
+                        match RewardsRepository::get_checkpoint(db, &checkpoint_id)? {
+                            Some(mut checkpoint) => {
+                                checkpoint.description = text;
+                                checkpoint.sort_order = order;
+                                RewardsRepository::update_checkpoint(db, &checkpoint)?;
+                            }
+                            None => {
+                                let new_id = Uuid::new_v4().to_string();
+                                let checkpoint =
+                                    Checkpoint::new(new_id, goal_id.clone(), text, order);
+                                RewardsRepository::create_checkpoint(db, &checkpoint)?;
+                            }
+                        }
+                    } else {
+                        let new_id = Uuid::new_v4().to_string();
+                        let checkpoint = Checkpoint::new(new_id, goal_id.clone(), text, order);
+                        RewardsRepository::create_checkpoint(db, &checkpoint)?;
+                    }
+                }
+
+                Ok(())
+            })
         })
     }
 

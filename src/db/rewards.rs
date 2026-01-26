@@ -505,7 +505,8 @@ impl Database {
 
     fn calculate_accumulative_progress(&self, habit_id: &str, days: i32) -> Result<i32, DbError> {
         let today = chrono::Local::now().date_naive();
-        let start = today - chrono::Duration::days(days as i64);
+        let window = days.max(1);
+        let start = today - chrono::Duration::days((window - 1) as i64);
 
         let count: i32 = self.conn.query_row(
             "SELECT COUNT(*) FROM habit_logs

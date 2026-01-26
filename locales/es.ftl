@@ -682,7 +682,7 @@ rewards-days-to-go = días restantes
 # ==================== History Tab ====================
 history-achievements-section = LOGROS
 history-no-achievements = Sin logros aún
-history-complete-to-earn = Completa hitos de racha y metas para ganar trofeos
+history-complete-to-earn = Completa metas para ganar trofeos
 
 # ==================== Importación de Datos ====================
 import-title = Importar Datos
