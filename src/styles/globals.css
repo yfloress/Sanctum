@@ -133,7 +133,7 @@
   }
 
   * {
-    border-color: hsl(var(--border));
+    border-color: var(--border);
   }
 
   html {
@@ -216,37 +216,6 @@
     transform: translateX(0);
   }
 
-  .bg-grid {
-    background-image:
-      linear-gradient(to right, var(--glow-primary) 1px, transparent 1px),
-      linear-gradient(to bottom, var(--glow-primary) 1px, transparent 1px);
-    background-size: 32px 32px;
-  }
-
-  .bg-radial-glow {
-    background-image:
-      radial-gradient(circle at top, var(--glow-primary), transparent 55%),
-      radial-gradient(circle at 70% 20%, var(--glow-secondary), transparent 45%);
-  }
-
-  .bg-hero {
-    background-image:
-      radial-gradient(circle at 12% 12%, color-mix(in srgb, var(--glow-primary), transparent 40%), transparent 60%),
-      radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--glow-secondary), transparent 45%), transparent 55%),
-      linear-gradient(135deg, color-mix(in srgb, var(--glow-secondary), transparent 88%), transparent 45%),
-      linear-gradient(
-        90deg,
-        var(--grad-section-start) 0%,
-        color-mix(in srgb, var(--grad-section-end), var(--accent) 22%) 100%
-      );
-  }
-
-  .bg-hero-ink {
-    background-image:
-      linear-gradient(120deg, transparent, var(--hero-ink), transparent),
-      linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.35));
-  }
-
   .bg-sanctum-section {
     background-image:
       var(--diamond-pattern),
@@ -278,32 +247,6 @@
       auto;
   }
 
-  .bg-sanctum-section-alt {
-    background-image:
-      var(--diamond-pattern),
-      radial-gradient(circle at 15% 85%, color-mix(in srgb, var(--glow-primary), transparent 24%), transparent 60%),
-      radial-gradient(circle at 85% 25%, color-mix(in srgb, var(--glow-secondary), transparent 30%), transparent 55%),
-      linear-gradient(135deg, color-mix(in srgb, var(--glow-primary), transparent 88%), transparent 45%),
-      linear-gradient(
-        90deg,
-        var(--grad-section-alt-start) 0%,
-        color-mix(in srgb, var(--grad-section-alt-end), var(--accent) 22%) 100%
-      );
-    background-size:
-      72px 108px,
-      auto,
-      auto,
-      auto,
-      auto;
-  }
-
-  html:not(.dark) .bg-hero {
-    background-image:
-      radial-gradient(circle at 18% 12%, rgba(107, 95, 232, 0.18), transparent 60%),
-      radial-gradient(circle at 88% 10%, rgba(180, 109, 255, 0.14), transparent 58%),
-      linear-gradient(90deg, #ffffff 0%, #bba0ff 100%);
-  }
-
   html:not(.dark) .bg-sanctum-section {
     background-image:
       var(--diamond-pattern),
@@ -315,41 +258,6 @@
       auto,
       auto,
       auto;
-  }
-
-  html:not(.dark) .bg-sanctum-section-alt {
-    background-image:
-      var(--diamond-pattern),
-      radial-gradient(circle at 18% 80%, rgba(107, 95, 232, 0.14), transparent 60%),
-      radial-gradient(circle at 82% 22%, rgba(180, 109, 255, 0.14), transparent 58%),
-      linear-gradient(90deg, #ffffff 0%, #b090ff 100%);
-    background-size:
-      72px 108px,
-      auto,
-      auto,
-      auto;
-  }
-
-  .dark .bg-hero {
-    background-image:
-      linear-gradient(
-        90deg,
-        #000000 0%,
-        #000000 12%,
-        rgba(0, 0, 0, 0.6) 38%,
-        transparent 100%
-      ),
-      linear-gradient(
-        90deg,
-        #000000 0%,
-        #000000 25%,
-        #090314 55%,
-        #1a0838 80%,
-        #2b0a55 100%
-      ),
-      radial-gradient(circle at 12% 12%, color-mix(in srgb, var(--glow-primary), transparent 35%), transparent 60%),
-      radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--glow-secondary), transparent 40%), transparent 55%);
-    background-color: #000000;
   }
 
   .dark .bg-sanctum-section {
@@ -396,37 +304,6 @@
       auto;
   }
 
-  .dark .bg-sanctum-section-alt {
-    background-image:
-      var(--diamond-pattern),
-      linear-gradient(
-        90deg,
-        #000000 0%,
-        #000000 12%,
-        rgba(0, 0, 0, 0.6) 38%,
-        transparent 100%
-      ),
-      linear-gradient(
-        90deg,
-        #000000 0%,
-        #000000 25%,
-        #090314 55%,
-        #1a0838 80%,
-        #2b0a55 100%
-      ),
-      radial-gradient(circle at 15% 85%, color-mix(in srgb, var(--glow-primary), transparent 24%), transparent 60%),
-      radial-gradient(circle at 85% 25%, color-mix(in srgb, var(--glow-secondary), transparent 30%), transparent 55%),
-      linear-gradient(135deg, color-mix(in srgb, var(--glow-primary), transparent 88%), transparent 45%);
-    background-color: #000000;
-    background-size:
-      72px 108px,
-      100% 100%,
-      100% 100%,
-      auto,
-      auto,
-      auto,
-      auto;
-  }
 
   .panel-gradient {
     background: linear-gradient(140deg, var(--grad-surface-start), var(--grad-surface-end));
@@ -555,16 +432,6 @@
     }
   }
 
-  .panel-glass {
-    background: linear-gradient(140deg, color-mix(in srgb, var(--card), transparent 30%), var(--card));
-    border-color: color-mix(in srgb, var(--glow-primary), transparent 45%);
-    backdrop-filter: blur(12px);
-  }
-
-  .border-glow {
-    border-color: color-mix(in srgb, var(--glow-primary), transparent 40%);
-  }
-
   .shadow-glow {
     box-shadow: 0 30px 80px var(--glow-shadow);
   }
@@ -661,21 +528,6 @@
     box-shadow: 0 0 22px color-mix(in srgb, var(--glow-primary), transparent 35%);
   }
 
-  .btn-outline {
-    border: 1px solid transparent;
-    background:
-      linear-gradient(135deg, transparent, transparent) padding-box,
-      linear-gradient(
-        135deg,
-        color-mix(in srgb, var(--glow-primary), transparent 35%),
-        color-mix(in srgb, var(--glow-secondary), transparent 35%)
-      )
-        border-box;
-    background-clip: padding-box, border-box;
-    background-origin: border-box;
-    color: var(--foreground);
-  }
-
   .btn-active {
     border: 1px solid transparent;
     background:
@@ -695,19 +547,6 @@
     background-origin: border-box;
     color: var(--primary-foreground);
     box-shadow: 0 0 28px color-mix(in srgb, var(--glow-primary), transparent 35%);
-  }
-
-  .nav-fade-border {
-    border-bottom-color: transparent;
-    background-image: linear-gradient(
-      90deg,
-      transparent,
-      color-mix(in srgb, var(--border), white 40%),
-      transparent
-    );
-    background-size: 100% 1px;
-    background-repeat: no-repeat;
-    background-position: bottom center;
   }
 
   .theme-toggle {
@@ -905,38 +744,6 @@
     }
   }
 
-  .import-json-mobile {
-    border-radius: 1rem;
-    border: 1px solid color-mix(in srgb, var(--border), transparent 30%);
-    padding: 0.5rem;
-    background: linear-gradient(140deg, var(--grad-surface-start), var(--grad-surface-end));
-  }
-
-  .import-json-mobile__summary {
-    list-style: none;
-    cursor: pointer;
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.3em;
-    color: var(--muted-foreground);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.45rem 0.6rem;
-  }
-
-  .import-json-mobile__summary::after {
-    content: "▾";
-    font-size: 0.8rem;
-    color: var(--muted-foreground);
-    transition: transform 0.2s ease;
-  }
-
-  .import-json-mobile[open] .import-json-mobile__summary::after {
-    transform: rotate(180deg);
-  }
-
   input[aria-invalid="true"],
   select[aria-invalid="true"],
   textarea[aria-invalid="true"] {
@@ -952,35 +759,4 @@
     color: transparent;
   }
 
-  @keyframes float {
-    0% {
-      transform: translate3d(0, 0, 0);
-    }
-    50% {
-      transform: translate3d(0, -12px, 0);
-    }
-    100% {
-      transform: translate3d(0, 0, 0);
-    }
-  }
-
-  @keyframes drift {
-    0% {
-      transform: translate3d(0, 0, 0);
-    }
-    50% {
-      transform: translate3d(12px, -8px, 0);
-    }
-    100% {
-      transform: translate3d(0, 0, 0);
-    }
-  }
-
-  .float-slow {
-    animation: float 10s ease-in-out infinite;
-  }
-
-  .float-fast {
-    animation: drift 7s ease-in-out infinite;
-  }
 }

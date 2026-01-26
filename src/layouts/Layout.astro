@@ -355,24 +355,6 @@ const baseUrl = import.meta.env.BASE_URL;
             el.textContent = value;
           }
         });
-
-        document.querySelectorAll("[data-i18n-html]").forEach((el) => {
-          const key = el.getAttribute("data-i18n-html");
-          if (!key) return;
-          const value = getText(lang, key);
-          if (typeof value === "string") {
-            el.innerHTML = value;
-          }
-        });
-
-        document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
-          const key = el.getAttribute("data-i18n-placeholder");
-          if (!key) return;
-          const value = getText(lang, key);
-          if (typeof value === "string") {
-            el.setAttribute("placeholder", value);
-          }
-        });
       };
 
       let currentLang = "en";

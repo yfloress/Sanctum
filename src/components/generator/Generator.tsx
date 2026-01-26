@@ -588,6 +588,9 @@ export default function Generator() {
     }
     try {
       const parsed = JSON.parse(rawInput);
+      if (!parsed || typeof parsed !== "object") {
+        throw new Error(copy.errors.invalidJson);
+      }
       if (!isSupportedVersion(parsed.version)) {
         throw new Error(copy.errors.unsupportedVersion);
       }
