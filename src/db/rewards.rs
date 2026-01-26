@@ -362,10 +362,17 @@ impl Database {
 
     pub fn update_checkpoint(&self, checkpoint: &Checkpoint) -> Result<(), DbError> {
         self.conn.execute(
-            "UPDATE checkpoints SET completed = ?1, completed_at = ?2 WHERE id = ?3",
+            "UPDATE checkpoints
+             SET description = ?1,
+                 completed = ?2,
+                 completed_at = ?3,
+                 sort_order = ?4
+             WHERE id = ?5",
             params![
+                &checkpoint.description,
                 checkpoint.completed as i32,
                 &checkpoint.completed_at,
+                checkpoint.sort_order,
                 &checkpoint.id
             ],
         )?;

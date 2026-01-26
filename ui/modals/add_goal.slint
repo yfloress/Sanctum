@@ -250,6 +250,32 @@ export component AddGoalModal inherits Rectangle {
                 RewardsAdapter.delete-checkpoint(cp2-id);
             }
 
+            // Update existing checkpoints
+            if cp1-id != "" && cp1 != "" {
+                let update_result_1 = RewardsAdapter.update-checkpoint(cp1-id, cp1);
+                if (update_result_1 != "") {
+                    return;
+                }
+            }
+            if checkpoint-count >= 2 && cp2-id != "" && cp2 != "" {
+                let update_result_2 = RewardsAdapter.update-checkpoint(cp2-id, cp2);
+                if (update_result_2 != "") {
+                    return;
+                }
+            }
+            if checkpoint-count >= 3 && cp3-id != "" && cp3 != "" {
+                let update_result_3 = RewardsAdapter.update-checkpoint(cp3-id, cp3);
+                if (update_result_3 != "") {
+                    return;
+                }
+            }
+            if checkpoint-count >= 4 && cp4-id != "" && cp4 != "" {
+                let update_result_4 = RewardsAdapter.update-checkpoint(cp4-id, cp4);
+                if (update_result_4 != "") {
+                    return;
+                }
+            }
+
             // Add new checkpoints (those without IDs)
             if checkpoint-count >= 2 && cp2 != "" && cp2-id == "" {
                 RewardsAdapter.add-checkpoint(goal-id, cp2);

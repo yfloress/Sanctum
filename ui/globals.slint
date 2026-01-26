@@ -288,6 +288,7 @@ export global RewardsAdapter {
     callback create-goal(string, string, string, string) -> string;  // name, description, reward, deadline
     callback update-goal(string, string, string, string, string) -> string;  // id, name, description, reward, deadline
     callback add-checkpoint(string, string) -> string;  // goal-id, description
+    callback update-checkpoint(string, string) -> string;  // checkpoint-id, description
     callback delete-checkpoint(string) -> string;  // checkpoint-id
     callback toggle-checkpoint(string, string) -> string;  // goal-id, checkpoint-id
     callback delete-goal(string) -> string;

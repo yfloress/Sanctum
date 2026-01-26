@@ -335,6 +335,25 @@ impl AppController {
             .map_err(ControllerError::Database)
     }
 
+    pub fn update_checkpoint(
+        &self,
+        checkpoint_id: String,
+        description: String,
+    ) -> Result<(), ControllerError> {
+        if validate_uuid(&checkpoint_id).is_err() {
+            return Err(ControllerError::Validation("Invalid UUID".into()));
+        }
+        if description.trim().is_empty() {
+            return Err(ControllerError::Validation(
+                "Checkpoint description cannot be empty".into(),
+            ));
+        }
+
+        self.rewards_service
+            .update_checkpoint(checkpoint_id, description)
+            .map_err(ControllerError::Database)
+    }
+
     pub fn get_checkpoints(&self, goal_id: String) -> Result<Vec<Checkpoint>, ControllerError> {
         if validate_uuid(&goal_id).is_err() {
             return Err(ControllerError::Validation("Invalid UUID".into()));

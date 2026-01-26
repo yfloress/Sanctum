@@ -487,6 +487,31 @@ fn setup_checkpoint_callbacks<N>(
         );
     }
 
+    // on_update_checkpoint
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = notify.clone();
+        ui.global::<RewardsAdapter>().on_update_checkpoint(
+            move |checkpoint_id: SharedString, description: SharedString| -> SharedString {
+                let result =
+                    controller.update_checkpoint(checkpoint_id.to_string(), description.to_string());
+                match result {
+                    Ok(_) => {
+                        let ui_weak = ui_weak.clone();
+                        let controller = controller.clone();
+                        let notify = notify.clone();
+                        Timer::single_shot(Duration::from_millis(UI_UPDATE_DELAY_MS), move || {
+                            load_goals_data(&ui_weak, &controller, &notify);
+                        });
+                        SharedString::from("")
+                    }
+                    Err(e) => SharedString::from(e.to_string()),
+                }
+            },
+        );
+    }
+
     // on_toggle_checkpoint
     {
         let controller = controller.clone();

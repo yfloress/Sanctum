@@ -22,6 +22,7 @@
 use super::rewards_repository::RewardsRepository;
 use crate::db::{Database, DbError};
 use crate::models::{Achievement, Checkpoint, Goal, Milestone, StreakReward};
+use rusqlite::Error as RusqliteError;
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
@@ -343,6 +344,21 @@ impl RewardsService {
 
     pub fn delete_checkpoint(&self, checkpoint_id: String) -> Result<(), DbError> {
         self.with_db(|db| RewardsRepository::delete_checkpoint(db, &checkpoint_id))
+    }
+
+    pub fn update_checkpoint(
+        &self,
+        checkpoint_id: String,
+        description: String,
+    ) -> Result<(), DbError> {
+        self.with_db(|db| {
+            let mut checkpoint = match RewardsRepository::get_checkpoint(db, &checkpoint_id)? {
+                Some(checkpoint) => checkpoint,
+                None => return Err(DbError::Sqlite(RusqliteError::QueryReturnedNoRows)),
+            };
+            checkpoint.description = description;
+            RewardsRepository::update_checkpoint(db, &checkpoint)
+        })
     }
 
     pub fn toggle_checkpoint(
