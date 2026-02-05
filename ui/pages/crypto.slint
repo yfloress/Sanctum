@@ -39,6 +39,7 @@ import {
     PortfolioTrendChart,
 } from "../components/crypto_charts.slint";
 import { TabButton } from "../components/buttons/tab_button.slint";
+import { CryptoTaxTab } from "../components/crypto_tax.slint";
 import {
     TextButton,
     BorderButton,
@@ -58,6 +59,7 @@ export component CryptoPage inherits Rectangle {
         CryptoAdapter.is-loading = true;
         CryptoAdapter.fetch-portfolio();
         CryptoAdapter.fetch-wallets();
+        CryptoAdapter.load-tax-settings();
     }
 
     VerticalLayout {
@@ -392,6 +394,14 @@ export component CryptoPage inherits Rectangle {
                                 active: root.active-tab == "wallets";
                                 clicked => {
                                     root.active-tab = "wallets";
+                                }
+                            }
+
+                            TabButton {
+                                text: Translations.crypto-tax-tab;
+                                active: root.active-tab == "tax";
+                                clicked => {
+                                    root.active-tab = "tax";
                                 }
                             }
                         }
@@ -760,6 +770,14 @@ export component CryptoPage inherits Rectangle {
                         }
                     }
                 }
+            }
+
+            // TAB: TAX
+            if root.active-tab == "tax": Flickable {
+                vertical-stretch: 1;
+                viewport-height: 720px;
+
+                CryptoTaxTab { }
             }
         }
     }

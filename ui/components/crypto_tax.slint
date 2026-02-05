@@ -1,0 +1,357 @@
+// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Copyright (C) 2026  Kyronix
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as
+// published by the Free Software Foundation, either version 3 of the
+// License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
+//
+
+// Crypto tax tab UI (offline-first)
+
+import { CryptoAdapter } from "../globals.slint";
+import { Theme } from "../theme.slint";
+import { Translations } from "../translations.slint";
+import { SectionHeader } from "./sections/section_header.slint";
+import { FormField } from "./forms/form_field.slint";
+import { TabButton } from "./buttons/tab_button.slint";
+import { ActionButton, SanctumCard } from "../widgets.slint";
+
+component ToggleRow inherits Rectangle {
+    in property <string> title;
+    in property <string> description;
+    in property <bool> value: false;
+    callback toggled(bool);
+
+    height: 68px;
+    background: touch.has-hover ? Theme.surface-hover : Theme.surface;
+    border-radius: 12px;
+    border-width: 1px;
+    border-color: Theme.border;
+
+    animate background { duration: 150ms; }
+
+    HorizontalLayout {
+        padding-left: 20px;
+        padding-right: 20px;
+        alignment: space-between;
+
+        VerticalLayout {
+            alignment: center;
+            spacing: 4px;
+
+            Text {
+                text: root.title;
+                color: Theme.text-primary;
+                font-size: 13px;
+                font-weight: 500;
+            }
+
+            Text {
+                text: root.description;
+                color: Theme.text-muted;
+                font-size: 11px;
+                wrap: word-wrap;
+            }
+        }
+
+        Rectangle {
+            width: 38px;
+            height: 20px;
+            border-radius: 10px;
+            background: value ? Theme.accent : Theme.surface-hover;
+            border-width: 1px;
+            border-color: value ? Theme.accent : Theme.border;
+
+            animate background { duration: 150ms; }
+
+            Rectangle {
+                x: value ? 18px : 2px;
+                y: 2px;
+                width: 16px;
+                height: 16px;
+                border-radius: 8px;
+                background: value ? Theme.background : Theme.text-secondary;
+
+                animate x { duration: 150ms; }
+            }
+
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => { root.toggled(!value); }
+            }
+        }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.toggled(!value); }
+    }
+}
+
+export component CryptoTaxTab inherits Rectangle {
+    background: Theme.background;
+    height: 960px;
+
+    VerticalLayout {
+        padding-left: Theme.spacing-3xl;
+        padding-right: Theme.spacing-3xl;
+        padding-top: Theme.spacing-lg;
+        padding-bottom: Theme.spacing-xl;
+        spacing: Theme.spacing-lg;
+        width: parent.width;
+
+        SectionHeader {
+            title: Translations.crypto-tax-title;
+        }
+
+        SanctumCard {
+            width: parent.width;
+            card-padding: 24px;
+
+            VerticalLayout {
+                spacing: 16px;
+
+                FormField {
+                    label: Translations.crypto-tax-period-label;
+                    placeholder: Translations.crypto-tax-period-placeholder;
+                    value <=> CryptoAdapter.tax-period;
+                    edited => {
+                        CryptoAdapter.load-tax-settings();
+                    }
+                }
+
+                Text {
+                    text: Translations.crypto-tax-jurisdiction-label;
+                    color: Theme.text-muted;
+                    font-size: 10px;
+                    font-weight: 600;
+                    letter-spacing: 1.5px;
+                }
+
+                HorizontalLayout {
+                    spacing: 8px;
+
+                    TabButton {
+                        text: Translations.crypto-tax-jurisdiction-cl;
+                        active: CryptoAdapter.tax-jurisdiction == "chile";
+                        clicked => {
+                            CryptoAdapter.tax-jurisdiction = "chile";
+                        }
+                    }
+
+                    TabButton {
+                        text: Translations.crypto-tax-jurisdiction-us;
+                        active: CryptoAdapter.tax-jurisdiction == "usa";
+                        clicked => {
+                            CryptoAdapter.tax-jurisdiction = "usa";
+                        }
+                    }
+                }
+
+                Text {
+                    text: Translations.crypto-tax-method-label;
+                    color: Theme.text-muted;
+                    font-size: 10px;
+                    font-weight: 600;
+                    letter-spacing: 1.5px;
+                }
+
+                HorizontalLayout {
+                    spacing: 8px;
+
+                    TabButton {
+                        text: "FIFO";
+                        active: CryptoAdapter.tax-method == "fifo";
+                        clicked => { CryptoAdapter.tax-method = "fifo"; }
+                    }
+
+                    TabButton {
+                        text: "LIFO";
+                        active: CryptoAdapter.tax-method == "lifo";
+                        clicked => { CryptoAdapter.tax-method = "lifo"; }
+                    }
+
+                    TabButton {
+                        text: "HIFO";
+                        active: CryptoAdapter.tax-method == "hifo";
+                        clicked => { CryptoAdapter.tax-method = "hifo"; }
+                    }
+
+                    TabButton {
+                        text: "CPP";
+                        active: CryptoAdapter.tax-method == "cpp";
+                        clicked => { CryptoAdapter.tax-method = "cpp"; }
+                    }
+                }
+
+                ToggleRow {
+                    title: Translations.crypto-tax-include-swaps;
+                    description: Translations.crypto-tax-include-swaps-desc;
+                    value: CryptoAdapter.tax-include-swaps;
+                    toggled(value) => { CryptoAdapter.tax-include-swaps = value; }
+                }
+
+                ToggleRow {
+                    title: Translations.crypto-tax-include-fee-crypto;
+                    description: Translations.crypto-tax-include-fee-crypto-desc;
+                    value: CryptoAdapter.tax-include-fee-crypto;
+                    toggled(value) => { CryptoAdapter.tax-include-fee-crypto = value; }
+                }
+
+                HorizontalLayout {
+                    spacing: 12px;
+
+                    ActionButton {
+                        text: Translations.crypto-tax-save-settings;
+                        primary: true;
+                        clicked => { CryptoAdapter.save-tax-settings(); }
+                    }
+                }
+            }
+        }
+
+        SanctumCard {
+            width: parent.width;
+            card-padding: 24px;
+
+            VerticalLayout {
+                spacing: 12px;
+
+                Text {
+                    text: Translations.crypto-tax-report-title;
+                    color: Theme.text-primary;
+                    font-size: 14px;
+                    font-weight: 600;
+                }
+
+                Text {
+                    text: Translations.crypto-tax-report-desc;
+                    color: Theme.text-muted;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                }
+
+                HorizontalLayout {
+                    spacing: 12px;
+
+                    ActionButton {
+                        text: Translations.crypto-tax-report-generate;
+                        primary: true;
+                        clicked => { CryptoAdapter.generate-tax-report(); }
+                    }
+
+                    ActionButton {
+                        text: Translations.crypto-tax-report-export;
+                        primary: false;
+                        clicked => { CryptoAdapter.export-tax-report(); }
+                    }
+                }
+
+                Text {
+                    text: Translations.crypto-tax-report-summary-label;
+                    color: Theme.text-subtle;
+                    font-size: 10px;
+                    font-weight: 600;
+                    letter-spacing: 1px;
+                }
+
+                Text {
+                    text: CryptoAdapter.tax-report-summary;
+                    color: Theme.text-secondary;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                }
+
+                Text {
+                    text: Translations.crypto-tax-report-warnings-label;
+                    color: Theme.text-subtle;
+                    font-size: 10px;
+                    font-weight: 600;
+                    letter-spacing: 1px;
+                }
+
+                Text {
+                    text: CryptoAdapter.tax-report-warnings;
+                    color: Theme.text-secondary;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                }
+            }
+        }
+
+        SanctumCard {
+            width: parent.width;
+            card-padding: 24px;
+
+            VerticalLayout {
+                spacing: 12px;
+
+                Text {
+                    text: Translations.crypto-tax-ipc-title;
+                    color: Theme.text-primary;
+                    font-size: 14px;
+                    font-weight: 600;
+                }
+
+                Text {
+                    text: Translations.crypto-tax-ipc-desc;
+                    color: Theme.text-muted;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                }
+
+                Text {
+                    text: Translations.crypto-tax-ipc-source-label;
+                    color: Theme.text-subtle;
+                    font-size: 10px;
+                    font-weight: 600;
+                    letter-spacing: 1px;
+                }
+
+                Text {
+                    text: Translations.crypto-tax-ipc-source-url;
+                    color: Theme.text-secondary;
+                    font-size: 11px;
+                    wrap: word-wrap;
+                }
+
+                Rectangle { height: 6px; }
+
+                HorizontalLayout {
+                    spacing: 12px;
+                    alignment: start;
+
+                    ActionButton {
+                        text: Translations.crypto-tax-ipc-import;
+                        primary: true;
+                        clicked => { CryptoAdapter.import-ipc-csv(); }
+                    }
+                }
+
+                Text {
+                    text: Translations.crypto-tax-ipc-summary-label;
+                    color: Theme.text-subtle;
+                    font-size: 10px;
+                    font-weight: 600;
+                    letter-spacing: 1px;
+                }
+
+                Text {
+                    text: CryptoAdapter.tax-ipc-summary;
+                    color: Theme.text-secondary;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                }
+            }
+        }
+    }
+}

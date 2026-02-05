@@ -633,6 +633,14 @@ export global CryptoAdapter {
     in-out property <[CryptoDistributionSlice]> portfolio-distribution: [];
     in-out property <bool> limit-reached: false;
     in-out property <string> limit-excluded: "";
+    in-out property <string> tax-ipc-summary: "";
+    in-out property <string> tax-period: "";
+    in-out property <string> tax-jurisdiction: "";
+    in-out property <string> tax-method: "";
+    in-out property <bool> tax-include-swaps: true;
+    in-out property <bool> tax-include-fee-crypto: true;
+    in-out property <string> tax-report-summary: "";
+    in-out property <string> tax-report-warnings: "";
 
     // Edit Transaction State
     in-out property <string> edit-tx-id: "";
@@ -656,6 +664,11 @@ export global CryptoAdapter {
     callback refresh-prices();
     callback refresh-prices-silent(); // auto-fetch without notifications
     callback fetch-asset-details(string); // coin_id
+    callback load-tax-settings();
+    callback import-ipc-csv();
+    callback save-tax-settings();
+    callback generate-tax-report();
+    callback export-tax-report();
     callback get-last-price(string) -> string; // coin_id -> price string
     callback get-swap-quote(string, string, string) -> string; // from_coin_id, to_coin_id, from_amount -> to_amount
     callback get-available-balance(string, string, string) -> string; // wallet_id, coin_id, date -> balance string

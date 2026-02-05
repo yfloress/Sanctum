@@ -32,6 +32,8 @@ pub mod api;
 pub mod catalog;
 pub mod repository;
 pub mod service;
+mod service_tax;
+pub mod tax;
 pub mod transactions;
 pub mod validation;
 
@@ -47,8 +49,13 @@ pub use service::{
     SETTING_AUTO_FETCH, SETTING_CRYPTO_CUSTOM_COINS, SETTING_CRYPTO_FAVORITE_COINS,
     SETTING_CRYPTO_HIDDEN_COINS, SETTING_CRYPTO_LAST_COIN_ID, SETTING_CRYPTO_LAST_UPDATED,
     SETTING_CRYPTO_LAST_WALLET_ID, SETTING_CRYPTO_PROXY_ENABLED, SETTING_CRYPTO_PROXY_URL,
-    SETTING_DARK_MODE, SETTING_PREFERRED_CURRENCY, SETTING_PREFERRED_LANGUAGE,
-    SETTING_SESSION_TIMEOUT, SETTING_SIDEBAR_COLLAPSED, SETTING_TICKER_COINS,
+    SETTING_CRYPTO_TAX_IPC_DATA, SETTING_CRYPTO_TAX_IPC_UPDATED, SETTING_DARK_MODE,
+    SETTING_PREFERRED_CURRENCY, SETTING_PREFERRED_LANGUAGE, SETTING_SESSION_TIMEOUT,
+    SETTING_SIDEBAR_COLLAPSED, SETTING_TICKER_COINS,
 };
+
+pub use tax::{IpcImportSummary, IpcSummary};
+pub use tax::{LotAllocation, TaxDisposal, TaxReport, TaxReportSummary, TaxWarning};
+pub use tax::{TaxJurisdiction, TaxMethod, TaxPeriodSettings, TaxSettingsStore};
 
 pub use repository::CryptoRepository;

@@ -20,6 +20,7 @@
 //! Wallets, transactions, prices, and portfolio aggregation.
 
 use super::{AppController, ControllerError};
+use crate::features::crypto::{IpcImportSummary, IpcSummary, TaxPeriodSettings, TaxReport};
 use crate::models::{AggregatedAsset, CryptoAsset, CryptoTransaction, CryptoWallet};
 
 impl AppController {
@@ -84,6 +85,57 @@ impl AppController {
     ) -> Result<Vec<(String, f64, f64)>, ControllerError> {
         self.crypto_service
             .get_crypto_portfolio_snapshots(days)
+            .map_err(ControllerError::from)
+    }
+
+    // ==================== Crypto Tax (IPC) ====================
+
+    pub fn import_ipc_csv(&self, content: &str) -> Result<IpcImportSummary, ControllerError> {
+        self.crypto_service
+            .import_ipc_csv(content)
+            .map_err(ControllerError::from)
+    }
+
+    pub fn get_ipc_summary(&self) -> Result<Option<IpcSummary>, ControllerError> {
+        self.crypto_service
+            .get_ipc_summary()
+            .map_err(ControllerError::from)
+    }
+
+    pub fn load_tax_settings(
+        &self,
+        period_id: String,
+    ) -> Result<TaxPeriodSettings, ControllerError> {
+        self.crypto_service
+            .load_tax_settings(period_id)
+            .map_err(ControllerError::from)
+    }
+
+    pub fn save_tax_settings(
+        &self,
+        settings: TaxPeriodSettings,
+    ) -> Result<(), ControllerError> {
+        self.crypto_service
+            .save_tax_settings(settings)
+            .map_err(ControllerError::from)
+    }
+
+    pub fn generate_tax_report(
+        &self,
+        period_id: String,
+    ) -> Result<TaxReport, ControllerError> {
+        self.crypto_service
+            .generate_tax_report(period_id)
+            .map_err(ControllerError::from)
+    }
+
+    pub fn export_tax_report_csv(
+        &self,
+        period_id: String,
+        path: String,
+    ) -> Result<(), ControllerError> {
+        self.crypto_service
+            .export_tax_report_csv(period_id, &path)
             .map_err(ControllerError::from)
     }
 

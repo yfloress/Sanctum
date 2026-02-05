@@ -27,6 +27,7 @@
 mod catalog;
 mod helpers;
 mod portfolio;
+mod tax;
 mod transactions;
 mod wallets;
 
@@ -65,5 +66,6 @@ pub fn setup_crypto_callbacks<N>(
     portfolio::setup_portfolio_callbacks(ui, ui_weak, controller, notify.clone());
     wallets::setup_wallet_callbacks(ui, ui_weak, controller, notify.clone());
     transactions::setup_transaction_callbacks(ui, ui_weak, controller, notify.clone());
-    catalog::setup_catalog_callbacks(ui, ui_weak, controller, notify);
+    catalog::setup_catalog_callbacks(ui, ui_weak, controller, notify.clone());
+    tax::setup_tax_callbacks(ui, ui_weak, controller, notify);
 }
