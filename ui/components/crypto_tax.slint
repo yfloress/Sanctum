@@ -70,6 +70,7 @@ component ToggleRow inherits Rectangle {
             background: value ? Theme.accent : Theme.surface-hover;
             border-width: 1px;
             border-color: value ? Theme.accent : Theme.border;
+            y: (parent.height - self.height) / 2;
 
             animate background { duration: 150ms; }
 
@@ -97,25 +98,46 @@ component ToggleRow inherits Rectangle {
     }
 }
 
-export component CryptoTaxTab inherits Rectangle {
-    background: Theme.background;
-    height: 960px;
+component UrlField inherits Rectangle {
+    in property <string> url;
 
-    VerticalLayout {
-        padding-left: Theme.spacing-3xl;
-        padding-right: Theme.spacing-3xl;
-        padding-top: Theme.spacing-lg;
-        padding-bottom: Theme.spacing-xl;
+    height: 40px;
+    horizontal-stretch: 1;
+    background: Theme.surface-hover;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: Theme.border;
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 12px;
+
+        input := TextInput {
+            text: root.url;
+            color: Theme.text-secondary;
+            font-size: 11px;
+            font-weight: 400;
+            horizontal-stretch: 1;
+        }
+    }
+}
+
+export component CryptoTaxTab inherits Rectangle {
+    background: transparent;
+
+    content := VerticalLayout {
         spacing: Theme.spacing-lg;
-        width: parent.width;
+        horizontal-stretch: 1;
 
         SectionHeader {
             title: Translations.crypto-tax-title;
         }
 
         SanctumCard {
-            width: parent.width;
+            horizontal-stretch: 1;
             card-padding: 24px;
+            background: @linear-gradient(135deg, Theme.crypto-panel-gradient-start 0%, Theme.crypto-panel-gradient-end 100%);
+            border-color: Theme.border-subtle;
 
             VerticalLayout {
                 spacing: 16px;
@@ -169,9 +191,9 @@ export component CryptoTaxTab inherits Rectangle {
                     spacing: 8px;
 
                     TabButton {
-                        text: "FIFO";
-                        active: CryptoAdapter.tax-method == "fifo";
-                        clicked => { CryptoAdapter.tax-method = "fifo"; }
+                        text: "HIFO";
+                        active: CryptoAdapter.tax-method == "hifo";
+                        clicked => { CryptoAdapter.tax-method = "hifo"; }
                     }
 
                     TabButton {
@@ -181,9 +203,9 @@ export component CryptoTaxTab inherits Rectangle {
                     }
 
                     TabButton {
-                        text: "HIFO";
-                        active: CryptoAdapter.tax-method == "hifo";
-                        clicked => { CryptoAdapter.tax-method = "hifo"; }
+                        text: "FIFO";
+                        active: CryptoAdapter.tax-method == "fifo";
+                        clicked => { CryptoAdapter.tax-method = "fifo"; }
                     }
 
                     TabButton {
@@ -220,8 +242,10 @@ export component CryptoTaxTab inherits Rectangle {
         }
 
         SanctumCard {
-            width: parent.width;
+            horizontal-stretch: 1;
             card-padding: 24px;
+            background: @linear-gradient(135deg, Theme.crypto-panel-gradient-start 0%, Theme.crypto-panel-gradient-end 100%);
+            border-color: Theme.border-subtle;
 
             VerticalLayout {
                 spacing: 12px;
@@ -288,9 +312,11 @@ export component CryptoTaxTab inherits Rectangle {
             }
         }
 
-        SanctumCard {
-            width: parent.width;
+        if CryptoAdapter.tax-jurisdiction == "chile": SanctumCard {
+            horizontal-stretch: 1;
             card-padding: 24px;
+            background: @linear-gradient(135deg, Theme.crypto-panel-gradient-start 0%, Theme.crypto-panel-gradient-end 100%);
+            border-color: Theme.border-subtle;
 
             VerticalLayout {
                 spacing: 12px;
@@ -317,11 +343,8 @@ export component CryptoTaxTab inherits Rectangle {
                     letter-spacing: 1px;
                 }
 
-                Text {
-                    text: Translations.crypto-tax-ipc-source-url;
-                    color: Theme.text-secondary;
-                    font-size: 11px;
-                    wrap: word-wrap;
+                UrlField {
+                    url: Translations.crypto-tax-ipc-source-url;
                 }
 
                 Rectangle { height: 6px; }

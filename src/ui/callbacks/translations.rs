@@ -433,11 +433,32 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_crypto_tax_report_export(s(&t("crypto-tax-report-export")));
     tr.set_crypto_tax_report_summary_label(s(&t("crypto-tax-report-summary-label")));
     tr.set_crypto_tax_report_summary_empty(s(&t("crypto-tax-report-summary-empty")));
-    tr.set_crypto_tax_report_summary(s(&t("crypto-tax-report-summary")));
-    tr.set_crypto_tax_report_summary_us(s(&t("crypto-tax-report-summary-us")));
+    tr.set_crypto_tax_report_summary(s(&t_args(
+        "crypto-tax-report-summary",
+        &[
+            ("disposals", "0"),
+            ("proceeds", "0"),
+            ("cost", "0"),
+            ("gain", "0"),
+        ],
+    )));
+    tr.set_crypto_tax_report_summary_us(s(&t_args(
+        "crypto-tax-report-summary-us",
+        &[
+            ("disposals", "0"),
+            ("proceeds", "0"),
+            ("cost", "0"),
+            ("gain", "0"),
+            ("short", "0"),
+            ("long", "0"),
+        ],
+    )));
     tr.set_crypto_tax_report_warnings_label(s(&t("crypto-tax-report-warnings-label")));
     tr.set_crypto_tax_report_warnings_empty(s(&t("crypto-tax-report-warnings-empty")));
-    tr.set_crypto_tax_report_warnings_count(s(&t("crypto-tax-report-warnings-count")));
+    tr.set_crypto_tax_report_warnings_count(s(&t_args(
+        "crypto-tax-report-warnings-count",
+        &[("count", "0")],
+    )));
     tr.set_crypto_tax_report_generated(s(&t("crypto-tax-report-generated")));
     tr.set_crypto_tax_report_exported(s(&t("crypto-tax-report-exported")));
     tr.set_crypto_tax_ipc_title(s(&t("crypto-tax-ipc-title")));
@@ -447,8 +468,14 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_crypto_tax_ipc_import(s(&t("crypto-tax-ipc-import")));
     tr.set_crypto_tax_ipc_summary_label(s(&t("crypto-tax-ipc-summary-label")));
     tr.set_crypto_tax_ipc_empty(s(&t("crypto-tax-ipc-empty")));
-    tr.set_crypto_tax_ipc_summary(s(&t("crypto-tax-ipc-summary")));
-    tr.set_crypto_tax_ipc_import_success(s(&t("crypto-tax-ipc-import-success")));
+    tr.set_crypto_tax_ipc_summary(s(&t_args(
+        "crypto-tax-ipc-summary",
+        &[("first", "--"), ("last", "--"), ("count", "0")],
+    )));
+    tr.set_crypto_tax_ipc_import_success(s(&t_args(
+        "crypto-tax-ipc-import-success",
+        &[("count", "0"), ("first", "--"), ("last", "--")],
+    )));
     tr.set_crypto_tax_settings_saved(s(&t("crypto-tax-settings-saved")));
     tr.set_crypto_tax_period_required(s(&t("crypto-tax-period-required")));
     tr.set_crypto_wallet(s(&t("crypto-wallet")));

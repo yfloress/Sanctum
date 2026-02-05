@@ -775,9 +775,19 @@ export component CryptoPage inherits Rectangle {
             // TAB: TAX
             if root.active-tab == "tax": Flickable {
                 vertical-stretch: 1;
-                viewport-height: 720px;
+                width: 100%;
+                height: 100%;
 
-                CryptoTaxTab { }
+                VerticalLayout {
+                    padding-left: Theme.spacing-3xl;
+                    padding-right: Theme.spacing-3xl;
+                    padding-top: Theme.spacing-lg;
+                    padding-bottom: Theme.spacing-xl;
+
+                    CryptoTaxTab {
+                        horizontal-stretch: 1;
+                    }
+                }
             }
         }
     }

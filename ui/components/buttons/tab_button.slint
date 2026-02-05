@@ -27,22 +27,22 @@ export component TabButton inherits Rectangle {
     min-width: 80px;
     height: 36px;
     border-radius: 18px;
-    background: active ? @linear-gradient(135deg, Theme.surface-hover 0%, Theme.surface 100%) : transparent;
-    border-width: 1px;
-    border-color: active ? Theme.border-light : transparent;
+    background: active ? @linear-gradient(135deg, Theme.crypto-panel-gradient-start 0%, Theme.crypto-panel-gradient-end 100%) : transparent;
+    border-width: active ? 1px : 0px;
+    border-color: active ? Theme.border-subtle : transparent;
 
     animate background { duration: 250ms; easing: ease-out; }
     animate border-color { duration: 250ms; easing: ease-out; }
 
     // Subtle glow when active
     if active: Rectangle {
-        x: -2px;
-        y: -2px;
-        width: parent.width + 4px;
-        height: parent.height + 4px;
-        border-radius: 20px;
+        x: -1px;
+        y: -1px;
+        width: parent.width + 2px;
+        height: parent.height + 2px;
+        border-radius: 19px;
         background: Theme.accent;
-        opacity: 0.1;
+        opacity: 0.08;
     }
 
     HorizontalLayout {

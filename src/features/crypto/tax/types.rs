@@ -85,7 +85,7 @@ impl TaxPeriodSettings {
         Self {
             period_id: period_id.to_string(),
             jurisdiction: TaxJurisdiction::Chile.as_str().to_string(),
-            method: TaxMethod::Fifo.as_str().to_string(),
+            method: TaxMethod::Hifo.as_str().to_string(),
             include_swaps: true,
             include_fee_crypto: true,
         }
