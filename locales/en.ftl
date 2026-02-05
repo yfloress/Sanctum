@@ -388,6 +388,7 @@ crypto-tax-ipc-desc = Download the official IPC series, convert it to CSV, and i
 crypto-tax-ipc-source-label = OFFICIAL SOURCE (MANUAL DOWNLOAD)
 crypto-tax-ipc-source-url = https://www.ine.gob.cl/docs/default-source/%C3%ADndice-de-precios-al-consumidor/cuadros-estadisticos/series-empalmadas-y-antecedentes-historicos/series-empalmadas-diciembre-2009-a-la-fecha/serie-hist%C3%B3rica-empalmada-ipc-diciembre-2009-a-la-fecha-xls.xlsx
 crypto-tax-ipc-import = Import IPC (CSV)
+crypto-tax-ipc-copy-url = Copy URL
 crypto-tax-ipc-summary-label = IPC STATUS
 crypto-tax-ipc-empty = No IPC data loaded
 crypto-tax-ipc-summary = Loaded: {$first} -> {$last} ({$count} months)

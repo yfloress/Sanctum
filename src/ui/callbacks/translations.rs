@@ -466,6 +466,7 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_crypto_tax_ipc_source_label(s(&t("crypto-tax-ipc-source-label")));
     tr.set_crypto_tax_ipc_source_url(s(&t("crypto-tax-ipc-source-url")));
     tr.set_crypto_tax_ipc_import(s(&t("crypto-tax-ipc-import")));
+    tr.set_crypto_tax_ipc_copy_url(s(&t("crypto-tax-ipc-copy-url")));
     tr.set_crypto_tax_ipc_summary_label(s(&t("crypto-tax-ipc-summary-label")));
     tr.set_crypto_tax_ipc_empty(s(&t("crypto-tax-ipc-empty")));
     tr.set_crypto_tax_ipc_summary(s(&t_args(

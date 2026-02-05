@@ -22,6 +22,7 @@ path = "src/main.rs"
 
 [dependencies]
 slint = { version = "1.15.0", features = ["renderer-winit-skia"] }
+i-slint-backend-selector = "1.15.0"
 tokio = { version = "1.49.0", features = ["full"] }
 rusqlite = { version = "0.38.0", features = ["bundled-sqlcipher"] }
 serde = { version = "1.0.228", features = ["derive"] }

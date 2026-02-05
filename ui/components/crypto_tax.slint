@@ -23,7 +23,7 @@ import { Translations } from "../translations.slint";
 import { SectionHeader } from "./sections/section_header.slint";
 import { FormField } from "./forms/form_field.slint";
 import { TabButton } from "./buttons/tab_button.slint";
-import { ActionButton, SanctumCard } from "../widgets.slint";
+import { ActionButton, BorderButton, SanctumCard } from "../widgets.slint";
 
 component ToggleRow inherits Rectangle {
     in property <string> title;
@@ -95,30 +95,6 @@ component ToggleRow inherits Rectangle {
     touch := TouchArea {
         mouse-cursor: pointer;
         clicked => { root.toggled(!value); }
-    }
-}
-
-component UrlField inherits Rectangle {
-    in property <string> url;
-
-    height: 40px;
-    horizontal-stretch: 1;
-    background: Theme.surface-hover;
-    border-radius: 8px;
-    border-width: 1px;
-    border-color: Theme.border;
-
-    HorizontalLayout {
-        padding-left: 12px;
-        padding-right: 12px;
-
-        input := TextInput {
-            text: root.url;
-            color: Theme.text-secondary;
-            font-size: 11px;
-            font-weight: 400;
-            horizontal-stretch: 1;
-        }
     }
 }
 
@@ -343,8 +319,14 @@ export component CryptoTaxTab inherits Rectangle {
                     letter-spacing: 1px;
                 }
 
-                UrlField {
-                    url: Translations.crypto-tax-ipc-source-url;
+                HorizontalLayout {
+                    spacing: 12px;
+                    alignment: start;
+
+                    BorderButton {
+                        text: Translations.crypto-tax-ipc-copy-url;
+                        clicked => { CryptoAdapter.copy-ipc-url(); }
+                    }
                 }
 
                 Rectangle { height: 6px; }

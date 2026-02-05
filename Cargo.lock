@@ -4741,6 +4741,7 @@ dependencies = [
  "fluent-syntax",
  "fontdb",
  "futures",
+ "i-slint-backend-selector",
  "log",
  "plotters",
  "rand",

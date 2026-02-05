@@ -20,8 +20,9 @@
 use crate::controller::AppController;
 use crate::services::i18n::{t, t_args};
 use crate::ui::{format_money, format_money_signed};
-use crate::{AppWindow, CryptoAdapter};
+use crate::{AppWindow, CryptoAdapter, Translations};
 use slint::{ComponentHandle, SharedString, Weak};
+use slint::platform::Clipboard;
 use std::sync::Arc;
 
 pub fn setup_tax_callbacks<N>(
@@ -90,6 +91,24 @@ pub fn setup_tax_callbacks<N>(
                     notify(format!("IPC import failed: {}", err), true);
                 }
             }
+        });
+    }
+
+    // Copy IPC source URL to clipboard
+    {
+        let ui_weak = ui_weak.clone();
+
+        ui.global::<CryptoAdapter>().on_copy_ipc_url(move || {
+            let Some(ui) = ui_weak.upgrade() else {
+                return;
+            };
+            let url = ui
+                .global::<Translations>()
+                .get_crypto_tax_ipc_source_url();
+            let _ = i_slint_backend_selector::with_platform(|platform| {
+                platform.set_clipboard_text(&url, Clipboard::DefaultClipboard);
+                Ok(())
+            });
         });
     }
 
