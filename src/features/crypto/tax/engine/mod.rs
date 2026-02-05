@@ -27,8 +27,9 @@ use period::{parse_date, parse_period};
 use swaps::{apply_swap_pair, resolve_swap_pair};
 use crate::features::crypto::tax::{TaxJurisdiction, TaxMethod};
 use crate::features::crypto::{
-    IpcEntry, TaxReport, TaxReportSummary, TaxWarning,
+    TaxReport, TaxReportSummary, TaxWarning,
 };
+use crate::features::crypto::tax::IpcEntry;
 use crate::models::{CryptoTransaction, CryptoTransactionType};
 use std::collections::{BTreeMap, HashMap, HashSet};
 

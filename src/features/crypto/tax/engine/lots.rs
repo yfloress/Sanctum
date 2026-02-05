@@ -209,8 +209,6 @@ pub(super) fn consume_lots(
 ) -> (Vec<AllocationInfo>, f64, f64, f64) {
     let mut allocations = Vec::new();
     let mut cost_basis = 0.0;
-    let mut short_gain = 0.0;
-    let mut long_gain = 0.0;
 
     let entry = lots.entry(coin_id.to_string()).or_default();
     let total_available: f64 = entry.iter().map(|lot| lot.quantity).sum();
@@ -240,9 +238,8 @@ pub(super) fn consume_lots(
         );
         allocations = allocs;
         cost_basis = cost;
-        let (short, long) = split_term_gain(&allocations, proceeds, sale_date, jurisdiction);
-        short_gain = short;
-        long_gain = long;
+        let (short_gain, long_gain) =
+            split_term_gain(&allocations, proceeds, sale_date, jurisdiction);
         return (allocations, cost_basis, short_gain, long_gain);
     }
 
@@ -314,10 +311,7 @@ pub(super) fn consume_lots(
         });
     }
 
-    let (short, long) = split_term_gain(&allocations, proceeds, sale_date, jurisdiction);
-    short_gain = short;
-    long_gain = long;
-
+    let (short_gain, long_gain) = split_term_gain(&allocations, proceeds, sale_date, jurisdiction);
     (allocations, cost_basis, short_gain, long_gain)
 }
 
@@ -345,11 +339,12 @@ fn consume_lots_cpp(
     let sale_prev_month = prev_month_key(sale_date);
     let mut total_cost = 0.0;
 
+    let lot_count = lots.len();
     for (idx, lot) in lots.iter_mut().enumerate() {
         if lot.quantity <= 0.0 {
             continue;
         }
-        let share = if idx == lots.len() - 1 {
+        let share = if idx + 1 == lot_count {
             remaining
         } else {
             amount * (lot.quantity / total_qty)
