@@ -151,3 +151,48 @@ pub(super) fn resolve_swap_pair(
         (b.clone(), a.clone(), true)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn swap_tx(id: &str, amount: f64, price: Option<f64>) -> CryptoTransaction {
+        CryptoTransaction::new(
+            id.to_string(),
+            "wallet".to_string(),
+            "btc".to_string(),
+            "BTC".to_string(),
+            "swap".to_string(),
+            amount,
+            price,
+            None,
+            "2024-01-10".to_string(),
+            None,
+        )
+    }
+
+    #[test]
+    fn compute_swap_proceeds_prefers_source_price() {
+        let source = swap_tx("s1", 1.0, Some(150.0));
+        let target = swap_tx("s2", 2.0, None);
+        assert_eq!(compute_swap_proceeds(&source, &target), Some(150.0));
+    }
+
+    #[test]
+    fn compute_swap_proceeds_uses_target_price() {
+        let source = swap_tx("s1", 1.0, None);
+        let target = swap_tx("s2", 2.0, Some(200.0));
+        assert_eq!(compute_swap_proceeds(&source, &target), Some(400.0));
+    }
+
+    #[test]
+    fn resolve_swap_pair_prefers_fee_side() {
+        let mut a = swap_tx("a", 1.0, Some(100.0));
+        a.fee = Some(1.0);
+        let b = swap_tx("b", 2.0, Some(50.0));
+
+        let (source, _target, inferred) = resolve_swap_pair(&a, &b);
+        assert_eq!(source.id, "a");
+        assert!(!inferred);
+    }
+}

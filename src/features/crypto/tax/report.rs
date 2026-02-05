@@ -166,3 +166,58 @@ fn csv_escape(value: &str) -> String {
     let escaped = value.replace('"', "\"\"");
     format!("\"{}\"", escaped)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn csv_includes_summary_and_warnings() {
+        let report = TaxReport {
+            period_id: "2024".to_string(),
+            period_start: "2024-01-01".to_string(),
+            period_end: "2024-12-31".to_string(),
+            jurisdiction: "usa".to_string(),
+            method: "fifo".to_string(),
+            summary: TaxReportSummary {
+                disposals: 1,
+                total_proceeds: 150.0,
+                total_cost: 100.0,
+                total_gain: 50.0,
+                short_term_gain: Some(50.0),
+                long_term_gain: Some(0.0),
+            },
+            disposals: vec![TaxDisposal {
+                tx_id: "s1".to_string(),
+                date: "2024-02-01".to_string(),
+                coin_id: "btc".to_string(),
+                symbol: "BTC".to_string(),
+                amount: 1.0,
+                proceeds: 150.0,
+                cost_basis: 100.0,
+                gain: 50.0,
+                term: Some("short".to_string()),
+                disposal_type: "sell".to_string(),
+                allocations: vec![LotAllocation {
+                    lot_id: "b1".to_string(),
+                    lot_date: "2024-01-01".to_string(),
+                    quantity: 1.0,
+                    unit_cost: 100.0,
+                    cost: 100.0,
+                    adjusted_cost: None,
+                }],
+            }],
+            warnings: vec![TaxWarning {
+                code: "sample_warning".to_string(),
+                message: "Missing, price".to_string(),
+                tx_id: Some("s1".to_string()),
+            }],
+        };
+
+        let csv = report.to_csv();
+        assert!(csv.contains("period_id,period_start,period_end"));
+        assert!(csv.contains("tx_id,date,coin_id"));
+        assert!(csv.contains("warnings"));
+        assert!(csv.contains("sample_warning"));
+    }
+}

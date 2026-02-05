@@ -504,3 +504,161 @@ pub(super) fn update_summary(
         *val += long_gain;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::features::crypto::TaxReportSummary;
+    use chrono::NaiveDate;
+
+    fn approx_eq(a: f64, b: f64) -> bool {
+        (a - b).abs() < 0.0001
+    }
+
+    fn base_report() -> TaxReport {
+        TaxReport {
+            period_id: "2024".to_string(),
+            period_start: "2024-01-01".to_string(),
+            period_end: "2024-12-31".to_string(),
+            jurisdiction: "usa".to_string(),
+            method: "fifo".to_string(),
+            summary: TaxReportSummary::default(),
+            disposals: Vec::new(),
+            warnings: Vec::new(),
+        }
+    }
+
+    fn tx(id: &str, kind: &str, amount: f64, price: f64, date: &str) -> CryptoTransaction {
+        CryptoTransaction::new(
+            id.to_string(),
+            "wallet".to_string(),
+            "btc".to_string(),
+            "BTC".to_string(),
+            kind.to_string(),
+            amount,
+            Some(price),
+            None,
+            date.to_string(),
+            None,
+        )
+    }
+
+    #[test]
+    fn hifo_uses_highest_cost_lot() {
+        let mut report = base_report();
+        let mut lots: HashMap<String, Vec<Lot>> = HashMap::new();
+
+        let buy1 = tx("b1", "buy", 1.0, 100.0, "2024-01-05");
+        let buy2 = tx("b2", "buy", 1.0, 200.0, "2024-02-05");
+
+        add_lot(
+            &mut report,
+            &mut lots,
+            &buy1,
+            NaiveDate::from_ymd_opt(2024, 1, 5).unwrap(),
+        );
+        add_lot(
+            &mut report,
+            &mut lots,
+            &buy2,
+            NaiveDate::from_ymd_opt(2024, 2, 5).unwrap(),
+        );
+
+        let (allocs, cost, _, _) = consume_lots(
+            &mut report,
+            &mut lots,
+            "btc",
+            1.0,
+            NaiveDate::from_ymd_opt(2024, 3, 1).unwrap(),
+            TaxMethod::Hifo,
+            TaxJurisdiction::Usa,
+            &BTreeMap::new(),
+            "s1",
+            300.0,
+            true,
+        );
+
+        assert_eq!(allocs.len(), 1);
+        assert_eq!(allocs[0].allocation.lot_id, "b2");
+        assert!(approx_eq(cost, 200.0));
+    }
+
+    #[test]
+    fn cpp_uses_weighted_average_cost() {
+        let mut report = base_report();
+        let mut lots: HashMap<String, Vec<Lot>> = HashMap::new();
+
+        let buy1 = tx("b1", "buy", 1.0, 100.0, "2024-01-05");
+        let buy2 = tx("b2", "buy", 3.0, 300.0, "2024-02-05");
+
+        add_lot(
+            &mut report,
+            &mut lots,
+            &buy1,
+            NaiveDate::from_ymd_opt(2024, 1, 5).unwrap(),
+        );
+        add_lot(
+            &mut report,
+            &mut lots,
+            &buy2,
+            NaiveDate::from_ymd_opt(2024, 2, 5).unwrap(),
+        );
+
+        let (_, cost, _, _) = consume_lots(
+            &mut report,
+            &mut lots,
+            "btc",
+            2.0,
+            NaiveDate::from_ymd_opt(2024, 3, 1).unwrap(),
+            TaxMethod::Cpp,
+            TaxJurisdiction::Usa,
+            &BTreeMap::new(),
+            "s1",
+            600.0,
+            true,
+        );
+
+        assert!(approx_eq(cost, 500.0));
+    }
+
+    #[test]
+    fn ipc_adjustment_applies_for_chile() {
+        let mut report = base_report();
+        let mut ipc = BTreeMap::new();
+        ipc.insert("2023-12".to_string(), 100.0);
+        ipc.insert("2024-01".to_string(), 110.0);
+
+        let (adjusted, cost) = apply_ipc_adjustment(
+            &mut report,
+            TaxJurisdiction::Chile,
+            &ipc,
+            "2023-12",
+            "2024-01",
+            100.0,
+            "tx1",
+        );
+
+        assert!(adjusted.map(|v| approx_eq(v, 110.0)).unwrap_or(false));
+        assert!(approx_eq(cost, 110.0));
+    }
+
+    #[test]
+    fn ipc_missing_emits_warning() {
+        let mut report = base_report();
+        let ipc = BTreeMap::new();
+
+        let (adjusted, cost) = apply_ipc_adjustment(
+            &mut report,
+            TaxJurisdiction::Chile,
+            &ipc,
+            "2023-12",
+            "2024-01",
+            100.0,
+            "tx1",
+        );
+
+        assert!(adjusted.is_none());
+        assert!(approx_eq(cost, 100.0));
+        assert!(report.warnings.iter().any(|w| w.code == "ipc_missing"));
+    }
+}

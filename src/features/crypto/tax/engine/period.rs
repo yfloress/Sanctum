@@ -65,3 +65,34 @@ pub(super) fn prev_month_key(date: NaiveDate) -> String {
     }
     format!("{:04}-{:02}", year, month)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_period_valid_year() {
+        let period = parse_period("2024").expect("valid period");
+        assert_eq!(period.id, "2024");
+        assert_eq!(period.start, NaiveDate::from_ymd_opt(2024, 1, 1).unwrap());
+        assert_eq!(period.end, NaiveDate::from_ymd_opt(2024, 12, 31).unwrap());
+    }
+
+    #[test]
+    fn parse_period_invalid_year() {
+        assert!(parse_period("20").is_err());
+        assert!(parse_period("20aa").is_err());
+    }
+
+    #[test]
+    fn parse_date_accepts_time_suffix() {
+        let parsed = parse_date("2024-05-10T12:30:00Z").expect("parsed date");
+        assert_eq!(parsed, NaiveDate::from_ymd_opt(2024, 5, 10).unwrap());
+    }
+
+    #[test]
+    fn prev_month_handles_january() {
+        let date = NaiveDate::from_ymd_opt(2024, 1, 15).unwrap();
+        assert_eq!(prev_month_key(date), "2023-12");
+    }
+}

@@ -309,3 +309,94 @@ pub fn build_tax_report(
 
     Ok(report)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::features::crypto::TaxPeriodSettings;
+
+    fn approx_eq(a: f64, b: f64) -> bool {
+        (a - b).abs() < 0.0001
+    }
+
+    fn tx(
+        id: &str,
+        kind: &str,
+        amount: f64,
+        price: Option<f64>,
+        date: &str,
+    ) -> CryptoTransaction {
+        CryptoTransaction::new(
+            id.to_string(),
+            "wallet".to_string(),
+            "btc".to_string(),
+            "BTC".to_string(),
+            kind.to_string(),
+            amount,
+            price,
+            None,
+            date.to_string(),
+            None,
+        )
+    }
+
+    #[test]
+    fn build_report_fifo_usa() {
+        let buy = tx("b1", "buy", 1.0, Some(100.0), "2024-01-10");
+        let sell = tx("s1", "sell", 1.0, Some(150.0), "2024-02-10");
+
+        let settings = TaxPeriodSettings {
+            period_id: "2024".to_string(),
+            jurisdiction: "usa".to_string(),
+            method: "fifo".to_string(),
+            include_swaps: false,
+            include_fee_crypto: false,
+        };
+
+        let report = build_tax_report(vec![buy, sell], settings, vec![]).expect("report");
+
+        assert_eq!(report.summary.disposals, 1);
+        assert!(approx_eq(report.summary.total_proceeds, 150.0));
+        assert!(approx_eq(report.summary.total_cost, 100.0));
+        assert!(approx_eq(report.summary.total_gain, 50.0));
+        assert_eq!(report.disposals.len(), 1);
+        assert_eq!(report.disposals[0].term.as_deref(), Some("short"));
+        assert!(report.summary.short_term_gain.is_some());
+    }
+
+    #[test]
+    fn build_report_warns_on_missing_price() {
+        let buy = tx("b1", "buy", 1.0, Some(100.0), "2024-01-10");
+        let sell = tx("s1", "sell", 1.0, None, "2024-02-10");
+
+        let settings = TaxPeriodSettings {
+            period_id: "2024".to_string(),
+            jurisdiction: "usa".to_string(),
+            method: "fifo".to_string(),
+            include_swaps: false,
+            include_fee_crypto: false,
+        };
+
+        let report = build_tax_report(vec![buy, sell], settings, vec![]).expect("report");
+        assert!(report.disposals.is_empty());
+        assert!(report.warnings.iter().any(|w| w.code == "missing_price"));
+    }
+
+    #[test]
+    fn chile_missing_ipc_emits_warning() {
+        let buy = tx("b1", "buy", 1.0, Some(100.0), "2024-01-10");
+        let sell = tx("s1", "sell", 1.0, Some(150.0), "2024-02-10");
+
+        let settings = TaxPeriodSettings {
+            period_id: "2024".to_string(),
+            jurisdiction: "chile".to_string(),
+            method: "fifo".to_string(),
+            include_swaps: false,
+            include_fee_crypto: false,
+        };
+
+        let report = build_tax_report(vec![buy, sell], settings, vec![]).expect("report");
+        assert!(report.warnings.iter().any(|w| w.code == "ipc_missing"));
+        assert_eq!(report.summary.disposals, 1);
+    }
+}

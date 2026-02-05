@@ -434,3 +434,40 @@ fn parse_index(raw: &str) -> Option<f64> {
 
     filtered.parse::<f64>().ok()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_csv_with_header_and_duplicates() {
+        let csv = "Periodo,IPC\n2024-01,100\n2024-02,101,5\n2024-02,102\n";
+        let parsed = parse_ipc_csv(csv).expect("parsed");
+        assert_eq!(parsed.entries.len(), 2);
+        assert_eq!(parsed.total_rows, 3);
+        assert_eq!(parsed.skipped, 1);
+        assert_eq!(parsed.errors, 0);
+        assert_eq!(parsed.entries.get("2024-01").copied(), Some(100.0));
+        assert_eq!(parsed.entries.get("2024-02").copied(), Some(102.0));
+    }
+
+    #[test]
+    fn parses_csv_without_header() {
+        let csv = "2024-01,100\n2024-02,101\n";
+        let parsed = parse_ipc_csv(csv).expect("parsed");
+        assert_eq!(parsed.entries.len(), 2);
+        assert_eq!(parsed.entries.get("2024-02").copied(), Some(101.0));
+    }
+
+    #[test]
+    fn parses_month_name_period() {
+        let period = parse_period("Enero 2024").expect("period");
+        assert_eq!(period, "2024-01");
+    }
+
+    #[test]
+    fn parses_index_with_thousands_and_decimal() {
+        let value = parse_index("1.234,50").expect("index");
+        assert!((value - 1234.50).abs() < 0.0001);
+    }
+}
