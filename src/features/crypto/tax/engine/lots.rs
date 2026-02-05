@@ -235,6 +235,7 @@ pub(super) fn consume_lots(
             jurisdiction,
             ipc_map,
             tx_id,
+            taxable,
         );
         allocations = allocs;
         cost_basis = cost;
@@ -284,6 +285,7 @@ pub(super) fn consume_lots(
             &sale_prev_month,
             base_cost,
             tx_id,
+            taxable,
         );
 
         cost_basis += cost_used;
@@ -323,6 +325,7 @@ fn consume_lots_cpp(
     jurisdiction: TaxJurisdiction,
     ipc_map: &BTreeMap<String, f64>,
     tx_id: &str,
+    warn: bool,
 ) -> (Vec<AllocationInfo>, f64) {
     let mut allocations = Vec::new();
     let total_qty: f64 = lots.iter().map(|lot| lot.quantity).sum();
@@ -362,6 +365,7 @@ fn consume_lots_cpp(
             &sale_prev_month,
             base_cost,
             tx_id,
+            warn,
         );
 
         total_cost += cost_used;
@@ -399,8 +403,13 @@ fn apply_ipc_adjustment(
     sale_prev: &str,
     base_cost: f64,
     tx_id: &str,
+    warn: bool,
 ) -> (Option<f64>, f64) {
     if !matches!(jurisdiction, TaxJurisdiction::Chile) {
+        return (None, base_cost);
+    }
+
+    if ipc_map.is_empty() || !warn {
         return (None, base_cost);
     }
 
@@ -636,6 +645,7 @@ mod tests {
             "2024-01",
             100.0,
             "tx1",
+            true,
         );
 
         assert!(adjusted.map(|v| approx_eq(v, 110.0)).unwrap_or(false));
@@ -655,6 +665,7 @@ mod tests {
             "2024-01",
             100.0,
             "tx1",
+            true,
         );
 
         assert!(adjusted.is_none());
