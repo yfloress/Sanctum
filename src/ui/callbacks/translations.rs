@@ -20,7 +20,7 @@
 //! Loads translated strings from the i18n service into Slint UI.
 //! Handles language switching and translation reloading.
 
-use crate::services::i18n::{self, t};
+use crate::services::i18n::{self, t, t_args};
 use crate::{AppWindow, CryptoAdapter, Translations};
 use slint::{ComponentHandle, Model, SharedString};
 
