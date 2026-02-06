@@ -52,6 +52,14 @@ pub struct IpcParsed {
     pub skipped: usize,
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+struct ColumnSpec {
+    period_idx: Option<usize>,
+    year_idx: Option<usize>,
+    month_idx: Option<usize>,
+    index_idx: Option<usize>,
+}
+
 pub fn parse_ipc_csv(content: &str) -> Result<IpcParsed, String> {
     let trimmed = content.trim();
     if trimmed.is_empty() {
@@ -69,12 +77,16 @@ pub fn parse_ipc_csv(content: &str) -> Result<IpcParsed, String> {
         .clone();
 
     if is_header_data_row(&headers) {
-        return parse_ipc_csv_no_header(trimmed);
+        return parse_ipc_csv_no_header_flexible(trimmed);
     }
 
-    let (period_idx, index_idx) = detect_columns(&headers);
-    let period_idx = period_idx.unwrap_or(0);
-    let index_idx = index_idx.unwrap_or(1);
+    let columns = detect_columns(&headers);
+    if columns.index_idx.is_none()
+        || (columns.period_idx.is_none()
+            && (columns.year_idx.is_none() || columns.month_idx.is_none()))
+    {
+        return parse_ipc_csv_no_header_flexible(trimmed);
+    }
 
     let mut entries: BTreeMap<String, f64> = BTreeMap::new();
     let mut total_rows = 0usize;
@@ -95,13 +107,19 @@ pub fn parse_ipc_csv(content: &str) -> Result<IpcParsed, String> {
         }
         total_rows += 1;
 
-        let period_raw = record.get(period_idx).unwrap_or("");
-        let index_raw = record.get(index_idx).unwrap_or("");
-
-        let Some(period) = parse_period(period_raw) else {
+        let period = if let Some(period_idx) = columns.period_idx {
+            parse_period(record.get(period_idx).unwrap_or(""))
+        } else {
+            parse_year_month_period(
+                record.get(columns.year_idx.unwrap_or(0)).unwrap_or(""),
+                record.get(columns.month_idx.unwrap_or(1)).unwrap_or(""),
+            )
+        };
+        let Some(period) = period else {
             errors += 1;
             continue;
         };
+        let index_raw = record.get(columns.index_idx.unwrap_or(1)).unwrap_or("");
         let Some(index) = parse_index(index_raw) else {
             errors += 1;
             continue;
@@ -121,7 +139,7 @@ pub fn parse_ipc_csv(content: &str) -> Result<IpcParsed, String> {
     })
 }
 
-fn parse_ipc_csv_no_header(content: &str) -> Result<IpcParsed, String> {
+fn parse_ipc_csv_no_header_flexible(content: &str) -> Result<IpcParsed, String> {
     let mut reader = ReaderBuilder::new()
         .trim(Trim::All)
         .flexible(true)
@@ -147,10 +165,25 @@ fn parse_ipc_csv_no_header(content: &str) -> Result<IpcParsed, String> {
         }
         total_rows += 1;
 
-        let period_raw = record.get(0).unwrap_or("");
-        let index_raw = record.get(1).unwrap_or("");
+        let mut period = None;
+        let mut index_raw = "";
 
-        let Some(period) = parse_period(period_raw) else {
+        if record.len() >= 3 {
+            period = parse_year_month_period(
+                record.get(0).unwrap_or(""),
+                record.get(1).unwrap_or(""),
+            );
+            if period.is_some() {
+                index_raw = record.get(2).unwrap_or("");
+            }
+        }
+
+        if period.is_none() {
+            period = parse_period(record.get(0).unwrap_or(""));
+            index_raw = record.get(1).unwrap_or("");
+        }
+
+        let Some(period) = period else {
             errors += 1;
             continue;
         };
@@ -230,22 +263,29 @@ pub fn normalize_header(input: &str) -> String {
     normalized
 }
 
-fn detect_columns(headers: &StringRecord) -> (Option<usize>, Option<usize>) {
-    let mut period_idx = None;
-    let mut index_idx = None;
+fn detect_columns(headers: &StringRecord) -> ColumnSpec {
+    let mut columns = ColumnSpec::default();
 
     for (idx, raw) in headers.iter().enumerate() {
         let key = normalize_header(raw);
-        if period_idx.is_none() && is_period_header(&key) {
-            period_idx = Some(idx);
+        if columns.period_idx.is_none() && is_period_header(&key) {
+            columns.period_idx = Some(idx);
             continue;
         }
-        if index_idx.is_none() && is_index_header(&key) {
-            index_idx = Some(idx);
+        if columns.year_idx.is_none() && is_year_header(&key) {
+            columns.year_idx = Some(idx);
+            continue;
+        }
+        if columns.month_idx.is_none() && is_month_header(&key) {
+            columns.month_idx = Some(idx);
+            continue;
+        }
+        if columns.index_idx.is_none() && is_index_header(&key) {
+            columns.index_idx = Some(idx);
         }
     }
 
-    (period_idx, index_idx)
+    columns
 }
 
 fn is_header_data_row(headers: &StringRecord) -> bool {
@@ -255,6 +295,14 @@ fn is_header_data_row(headers: &StringRecord) -> bool {
     let left = headers.get(0).unwrap_or("");
     let right = headers.get(1).unwrap_or("");
     parse_period(left).is_some() && parse_index(right).is_some()
+}
+
+fn is_year_header(key: &str) -> bool {
+    matches!(key, "anio" | "ano" | "year")
+}
+
+fn is_month_header(key: &str) -> bool {
+    matches!(key, "mes" | "month")
 }
 
 fn is_period_header(key: &str) -> bool {
@@ -333,6 +381,23 @@ fn parse_numeric_period(raw: &str) -> Option<String> {
         let year = digits[0..4].parse::<i32>().ok()?;
         let month = digits[4..6].parse::<u32>().ok()?;
         return format_period(year, month);
+    }
+
+    None
+}
+
+fn parse_year_month_period(year_raw: &str, month_raw: &str) -> Option<String> {
+    let year_trim = year_raw.trim();
+    let month_trim = month_raw.trim();
+
+    if let Ok(year) = year_trim.parse::<i32>() {
+        if let Ok(month) = month_trim.parse::<u32>() {
+            return format_period(year, month);
+        }
+        let normalized = normalize_header(month_trim);
+        if let Some(month) = extract_month(&normalized) {
+            return format_period(year, month);
+        }
     }
 
     None
@@ -457,6 +522,15 @@ mod tests {
         let parsed = parse_ipc_csv(csv).expect("parsed");
         assert_eq!(parsed.entries.len(), 2);
         assert_eq!(parsed.entries.get("2024-02").copied(), Some(101.0));
+    }
+
+    #[test]
+    fn parses_csv_with_year_month_and_titles() {
+        let csv = ",,Índice de Precios al Consumidor (IPC)\n,,Cobertura Nacional - Año base 2023\nAño,Mes,Índice\n2009,12,57.31\n2010,1,57.61\n";
+        let parsed = parse_ipc_csv(csv).expect("parsed");
+        assert_eq!(parsed.entries.len(), 2);
+        assert_eq!(parsed.entries.get("2009-12").copied(), Some(57.31));
+        assert_eq!(parsed.entries.get("2010-01").copied(), Some(57.61));
     }
 
     #[test]

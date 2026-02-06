@@ -256,7 +256,7 @@ impl TextParser {
 
     /// Parse a crypto line (after C; prefix is removed)
     /// Format (standard): date;wallet;symbol;type;amount;price;fee;notes
-    /// Format (swap): date;wallet;symbol;type;amount;swap_to_symbol;swap_to_amount;fee;fee_coin_symbol;fee_amount;notes
+    /// Format (swap): date;wallet;symbol;type;amount;[price];swap_to_symbol;swap_to_amount;fee;fee_coin_symbol;fee_amount;notes
     fn parse_crypto_line(
         &self,
         line: &str,
@@ -342,8 +342,26 @@ impl TextParser {
         let is_swap = tx_type.eq_ignore_ascii_case("swap");
         let (price_per_coin, fee, swap_to_symbol, swap_to_amount, fee_coin_symbol, fee_amount, notes) =
             if is_swap {
-            let to_symbol = fields.get(5).map(|s| s.trim()).unwrap_or("");
-            let to_amount_str = fields.get(6).map(|s| s.trim()).unwrap_or("");
+            let parse_num = |raw: &str| raw.replace(',', ".").parse::<f64>().ok();
+            let price_candidate = fields.get(5).map(|s| s.trim()).unwrap_or("");
+            let mut price_per_coin = None;
+            let mut swap_symbol_idx = 5;
+
+            if parse_num(price_candidate).is_some()
+                && !fields
+                    .get(6)
+                    .map(|s| parse_num(s.trim()).is_some())
+                    .unwrap_or(false)
+            {
+                price_per_coin = parse_num(price_candidate);
+                swap_symbol_idx = 6;
+            }
+
+            let to_symbol = fields.get(swap_symbol_idx).map(|s| s.trim()).unwrap_or("");
+            let to_amount_str = fields
+                .get(swap_symbol_idx + 1)
+                .map(|s| s.trim())
+                .unwrap_or("");
 
             if to_symbol.is_empty() {
                 result.errors.push(
@@ -360,9 +378,9 @@ impl TextParser {
                 return;
             }
 
-            let to_amount: f64 = match to_amount_str.replace(',', ".").parse() {
-                Ok(value) => value,
-                Err(_) => {
+            let to_amount: f64 = match parse_num(to_amount_str) {
+                Some(value) => value,
+                None => {
                     result.errors.push(
                         RowError::new(
                             line_number,
@@ -376,27 +394,27 @@ impl TextParser {
             };
 
             let fee = fields
-                .get(7)
+                .get(swap_symbol_idx + 2)
                 .map(|s| s.trim())
                 .filter(|s| !s.is_empty())
                 .and_then(|s| s.replace(',', ".").parse().ok());
             let fee_coin_symbol = fields
-                .get(8)
+                .get(swap_symbol_idx + 3)
                 .map(|s| s.trim())
                 .filter(|s| !s.is_empty())
                 .map(String::from);
             let fee_amount = fields
-                .get(9)
+                .get(swap_symbol_idx + 4)
                 .map(|s| s.trim())
                 .filter(|s| !s.is_empty())
                 .and_then(|s| s.replace(',', ".").parse().ok());
             let notes = fields
-                .get(10)
+                .get(swap_symbol_idx + 5)
                 .map(|s| s.trim())
                 .filter(|s| !s.is_empty())
                 .map(String::from);
             (
-                None,
+                price_per_coin,
                 fee,
                 Some(to_symbol.to_string()),
                 Some(to_amount),
@@ -510,6 +528,22 @@ mod tests {
         assert_eq!(tx.fee_coin_symbol.as_deref(), Some("BTC"));
         assert_eq!(tx.fee_amount, Some(0.0001));
         assert_eq!(tx.notes.as_deref(), Some("Swap note"));
+    }
+
+    #[test]
+    fn test_parse_crypto_swap_with_price() {
+        let text = "C;2024-01-20;Binance;BTC;swap;0.1;50000;ETH;2.5;0.01;BTC;0.0001;Swap note";
+
+        let parser = TextParser;
+        let result = parser.parse_mixed(text);
+
+        assert!(result.crypto_transactions.errors.is_empty());
+        assert_eq!(result.crypto_transactions.items.len(), 1);
+        let tx = &result.crypto_transactions.items[0].1;
+        assert_eq!(tx.transaction_type, "swap");
+        assert_eq!(tx.price_per_coin, Some(50000.0));
+        assert_eq!(tx.swap_to_symbol.as_deref(), Some("ETH"));
+        assert_eq!(tx.swap_to_amount, Some(2.5));
     }
 
     #[test]

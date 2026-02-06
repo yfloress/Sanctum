@@ -1311,7 +1311,7 @@ impl IngestionService {
                     symbol: coin.symbol.clone(),
                     transaction_type: "swap".to_string(),
                     amount: import_tx.amount,
-                    price_per_coin: None,
+                    price_per_coin: import_tx.price_per_coin,
                     fee: import_tx.fee,
                     fee_coin_id: fee_coin.as_ref().map(|c| c.id.clone()),
                     fee_amount: import_tx.fee_amount,
