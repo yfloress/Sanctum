@@ -147,7 +147,7 @@ pub fn validate_tax_subtype(
     if trimmed.is_empty() {
         return Ok(None);
     }
-    let resolved = tax_type.and_then(TaxTxType::from_str).ok_or_else(|| {
+    let resolved = tax_type.and_then(TaxTxType::parse).ok_or_else(|| {
         CryptoError::Validation("Tax subtype requires a valid tax type".to_string())
     })?;
     let normalized = normalize_tax_subtype(resolved.as_str(), trimmed).ok_or_else(|| {

@@ -1,0 +1,192 @@
+// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Copyright (C) 2026  Kyronix
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as
+// published by the Free Software Foundation, either version 3 of the
+// License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
+//
+
+// FormDropdown - Generic dropdown selector for string options
+// Matches the visual style of FormField and other form components.
+
+import { Theme } from "../../theme.slint";
+
+export component FormDropdown inherits Rectangle {
+    in property <string> label: "";
+    in property <string> placeholder: "Select...";
+    in property <[string]> options: [];
+    in-out property <string> value: "";
+    in property <bool> enabled: true;
+    in property <bool> allow-empty: true;
+    callback changed(string);
+
+    height: 64px;
+    background: transparent;
+
+    VerticalLayout {
+        spacing: 8px;
+
+        Text {
+            text: root.label;
+            color: Theme.text-muted;
+            font-size: 10px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
+        }
+
+        Rectangle {
+            height: 40px;
+            background: root.enabled ? Theme.surface : Theme.surface-hover;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: Theme.border;
+
+            HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 12px;
+                spacing: 8px;
+
+                Text {
+                    horizontal-stretch: 1;
+                    text: root.value != "" ? root.value : root.placeholder;
+                    color: root.value != ""
+                        ? (root.enabled ? Theme.text-primary : Theme.text-muted)
+                        : Theme.text-subtle;
+                    font-size: 14px;
+                    font-weight: 400;
+                    vertical-alignment: center;
+                    overflow: elide;
+                }
+
+                Text {
+                    text: "▼";
+                    color: Theme.text-muted;
+                    font-size: 10px;
+                    vertical-alignment: center;
+                }
+            }
+
+            TouchArea {
+                enabled: root.enabled;
+                mouse-cursor: root.enabled ? pointer : default;
+                clicked => {
+                    if (root.options.length > 0) {
+                        popup.show();
+                    }
+                }
+            }
+        }
+    }
+
+    popup := PopupWindow {
+        x: 0;
+        y: 64px;
+        width: root.width;
+
+        Rectangle {
+            background: Theme.sidebar-bg;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: Theme.border-light;
+            drop-shadow-blur: 16px;
+            drop-shadow-color: Theme.shadow-color;
+
+            property <int> total-rows: root.allow-empty
+                ? root.options.length + 1
+                : root.options.length;
+            height: min(self.total-rows * 36px + 8px, 200px);
+
+            Flickable {
+                viewport-height: parent.total-rows * 36px + 8px;
+
+                VerticalLayout {
+                    padding: 4px;
+                    spacing: 0px;
+
+                    // Empty / clear option
+                    if root.allow-empty: Rectangle {
+                        height: 36px;
+                        background: empty-touch.has-hover ? Theme.surface-hover : transparent;
+                        border-radius: 6px;
+
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+
+                            Text {
+                                text: "—";
+                                color: Theme.text-subtle;
+                                font-size: 13px;
+                                font-weight: 400;
+                                font-italic: true;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+
+                            if root.value == "": Image {
+                                source: @image-url("../../assets/icons/check.svg");
+                                width: 12px;
+                                height: 12px;
+                                colorize: Theme.accent;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        empty-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                root.value = "";
+                                root.changed("");
+                            }
+                        }
+                    }
+
+                    for option[idx] in root.options: Rectangle {
+                        height: 36px;
+                        background: opt-touch.has-hover ? Theme.surface-hover : transparent;
+                        border-radius: 6px;
+
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+
+                            Text {
+                                text: option;
+                                color: option == root.value ? Theme.text-primary : Theme.text-secondary;
+                                font-size: 13px;
+                                font-weight: option == root.value ? 500 : 400;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+
+                            if option == root.value: Image {
+                                source: @image-url("../../assets/icons/check.svg");
+                                width: 12px;
+                                height: 12px;
+                                colorize: Theme.accent;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        opt-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                root.value = option;
+                                root.changed(option);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -18,7 +18,9 @@
 //! Tax engine internal types.
 
 use super::super::report::LotAllocation;
+use crate::features::crypto::tax::{TaxJurisdiction, TaxMethod};
 use chrono::NaiveDate;
+use std::collections::BTreeMap;
 
 #[derive(Clone, Debug)]
 pub(super) struct Lot {
@@ -41,4 +43,22 @@ pub(crate) struct TaxPeriod {
     pub id: String,
     pub start: NaiveDate,
     pub end: NaiveDate,
+}
+
+/// Immutable configuration shared across all engine operations in a single report run.
+pub(super) struct TaxConfig<'a> {
+    pub period: &'a TaxPeriod,
+    pub method: TaxMethod,
+    pub jurisdiction: TaxJurisdiction,
+    pub ipc_map: &'a BTreeMap<String, f64>,
+}
+
+/// Parameters describing a single lot-consumption (disposal) request.
+pub(super) struct DisposalRequest<'a> {
+    pub coin_id: &'a str,
+    pub amount: f64,
+    pub sale_date: NaiveDate,
+    pub tx_id: &'a str,
+    pub proceeds: f64,
+    pub taxable: bool,
 }

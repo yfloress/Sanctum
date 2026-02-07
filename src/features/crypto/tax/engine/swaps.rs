@@ -19,22 +19,17 @@
 
 use super::lots::{build_term, consume_lots, update_summary};
 use super::period::{is_in_period, parse_date};
-use super::types::{Lot, TaxPeriod};
-use crate::features::crypto::tax::{TaxJurisdiction, TaxMethod};
+use super::types::{DisposalRequest, Lot, TaxConfig};
 use crate::features::crypto::{TaxDisposal, TaxReport, TaxWarning};
 use crate::models::CryptoTransaction;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
-#[allow(clippy::too_many_arguments)]
 pub(super) fn apply_swap_pair(
     report: &mut TaxReport,
     lots: &mut HashMap<String, Vec<Lot>>,
-    period: &TaxPeriod,
+    cfg: &TaxConfig,
     source: &CryptoTransaction,
     target: &CryptoTransaction,
-    method: TaxMethod,
-    jurisdiction: TaxJurisdiction,
-    ipc_map: &BTreeMap<String, f64>,
     taxable_swap: bool,
 ) {
     let source_date = match parse_date(&source.date) {
@@ -54,23 +49,20 @@ pub(super) fn apply_swap_pair(
     let taxable = taxable_swap && proceeds.is_some();
     let disposal_proceeds = proceeds.unwrap_or(0.0);
 
-    let (allocations, cost_basis, short_gain, long_gain) = consume_lots(
-        report,
-        lots,
-        &source.coin_id,
-        source.amount,
-        source_date,
-        method,
-        jurisdiction,
-        ipc_map,
-        source.id.as_str(),
-        disposal_proceeds,
+    let req = DisposalRequest {
+        coin_id: &source.coin_id,
+        amount: source.amount,
+        sale_date: source_date,
+        tx_id: &source.id,
+        proceeds: disposal_proceeds,
         taxable,
-    );
+    };
 
-    if taxable && is_in_period(period, source_date) {
+    let (allocations, cost_basis, short_gain, long_gain) = consume_lots(report, lots, cfg, &req);
+
+    if taxable && is_in_period(cfg.period, source_date) {
         let gain = disposal_proceeds - cost_basis;
-        let term = build_term(short_gain, long_gain, jurisdiction);
+        let term = build_term(short_gain, long_gain, cfg.jurisdiction);
         report.disposals.push(TaxDisposal {
             tx_id: source.id.clone(),
             date: source.date.clone(),

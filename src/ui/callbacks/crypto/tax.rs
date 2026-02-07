@@ -17,14 +17,49 @@
 
 //! Crypto tax UI callbacks (IPC import + summary)
 
-use crate::controller::AppController;
+use crate::controller::{AppController, SETTING_PREFERRED_CURRENCY};
 use crate::features::crypto::tax::types::{TaxJurisdiction, TaxMethod};
 use crate::services::i18n::{t, t_args};
-use crate::ui::{format_money, format_money_signed};
+use crate::ui::{convert_usd_to_preferred, format_preferred};
 use crate::{AppWindow, CryptoAdapter, TaxReadinessItem, Translations};
 use slint::platform::Clipboard;
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel, Weak};
 use std::sync::Arc;
+
+/// Resolves the display currency and CLP exchange rate from the controller.
+fn resolve_display_currency(controller: &AppController) -> (String, f64) {
+    let preferred = controller
+        .get_app_setting(SETTING_PREFERRED_CURRENCY)
+        .unwrap_or_else(|_| "USD".to_string());
+    let clp_rate = controller
+        .load_exchange_rate_allow_stale("CLP_USD".to_string())
+        .ok()
+        .and_then(|r| r.map(|(rate, _)| rate))
+        .unwrap_or(0.0);
+    (preferred, clp_rate)
+}
+
+/// Formats a USD-denominated float amount in the user's preferred currency.
+fn fmt_preferred(amount_usd: f64, currency: &str, clp_rate: f64) -> String {
+    let converted = convert_usd_to_preferred(amount_usd, currency, clp_rate);
+    format_preferred(converted, currency)
+}
+
+/// Formats a USD-denominated float amount with a sign prefix in the user's preferred currency.
+fn fmt_preferred_signed(amount_usd: f64, currency: &str, clp_rate: f64) -> String {
+    let converted = convert_usd_to_preferred(amount_usd, currency, clp_rate);
+    let abs = if converted < 0.0 {
+        -converted
+    } else {
+        converted
+    };
+    let formatted = format_preferred(abs, currency);
+    if converted < 0.0 {
+        format!("- {}", formatted)
+    } else {
+        format!("+ {}", formatted)
+    }
+}
 
 pub fn setup_tax_callbacks<N>(
     ui: &AppWindow,
@@ -125,10 +160,12 @@ pub fn setup_tax_callbacks<N>(
                     return;
                 }
 
+                let (currency, clp_rate) = resolve_display_currency(&controller);
+
                 match controller.generate_tax_summary(period) {
                     Ok(summary) => {
-                        update_report_state(&adapter, &summary.report);
-                        update_summary_state(&adapter, &summary);
+                        update_report_state(&adapter, &summary.report, &currency, clp_rate);
+                        update_summary_state(&adapter, &summary, &currency, clp_rate);
                         notify(t("crypto-tax-report-generated"), false);
                     }
                     Err(err) => {
@@ -233,8 +270,8 @@ pub fn setup_tax_callbacks<N>(
 
             let settings = crate::features::crypto::TaxPeriodSettings {
                 period_id: period,
-                jurisdiction: TaxJurisdiction::from_str(&adapter.get_tax_jurisdiction()),
-                method: TaxMethod::from_str(&adapter.get_tax_method()),
+                jurisdiction: TaxJurisdiction::parse_or_default(&adapter.get_tax_jurisdiction()),
+                method: TaxMethod::parse_or_default(&adapter.get_tax_method()),
                 include_swaps: adapter.get_tax_include_swaps(),
                 include_fee_crypto: adapter.get_tax_include_fee_crypto(),
             };
@@ -302,18 +339,23 @@ fn reset_report_state(ui_weak: &Weak<AppWindow>) {
     }
 }
 
-fn update_report_state(adapter: &CryptoAdapter, report: &crate::features::crypto::TaxReport) {
-    let proceeds = format_money((report.summary.total_proceeds * 100.0) as i64, "USD");
-    let cost = format_money((report.summary.total_cost * 100.0) as i64, "USD");
-    let gain = format_money_signed((report.summary.total_gain * 100.0) as i64, "USD");
+fn update_report_state(
+    adapter: &CryptoAdapter,
+    report: &crate::features::crypto::TaxReport,
+    currency: &str,
+    clp_rate: f64,
+) {
+    let proceeds = fmt_preferred(report.summary.total_proceeds, currency, clp_rate);
+    let cost = fmt_preferred(report.summary.total_cost, currency, clp_rate);
+    let gain = fmt_preferred_signed(report.summary.total_gain, currency, clp_rate);
     let disposals = report.summary.disposals.to_string();
 
     let summary = if let (Some(short), Some(long)) = (
         report.summary.short_term_gain,
         report.summary.long_term_gain,
     ) {
-        let short_fmt = format_money_signed((short * 100.0) as i64, "USD");
-        let long_fmt = format_money_signed((long * 100.0) as i64, "USD");
+        let short_fmt = fmt_preferred_signed(short, currency, clp_rate);
+        let long_fmt = fmt_preferred_signed(long, currency, clp_rate);
         t_args(
             "crypto-tax-report-summary-us",
             &[
@@ -354,18 +396,15 @@ fn update_report_state(adapter: &CryptoAdapter, report: &crate::features::crypto
 fn update_summary_state(
     adapter: &CryptoAdapter,
     summary: &crate::features::crypto::TaxSummaryPayload,
+    currency: &str,
+    clp_rate: f64,
 ) {
-    let proceeds = format_money(
-        (summary.report.summary.total_proceeds * 100.0) as i64,
-        "USD",
-    );
-    let cost = format_money((summary.report.summary.total_cost * 100.0) as i64, "USD");
-    let gain = format_money_signed((summary.report.summary.total_gain * 100.0) as i64, "USD");
-    let income = format_money((summary.taxable_income_total * 100.0) as i64, "USD");
+    let proceeds = fmt_preferred(summary.report.summary.total_proceeds, currency, clp_rate);
+    let cost = fmt_preferred(summary.report.summary.total_cost, currency, clp_rate);
+    let gain = fmt_preferred_signed(summary.report.summary.total_gain, currency, clp_rate);
+    let income = fmt_preferred(summary.taxable_income_total, currency, clp_rate);
     let balance = match summary.end_balance_value {
-        Some(value) if summary.end_balance_missing == 0 => {
-            format_money((value * 100.0) as i64, "USD")
-        }
+        Some(value) if summary.end_balance_missing == 0 => fmt_preferred(value, currency, clp_rate),
         _ => "N/A".to_string(),
     };
     let period_text = format!(
@@ -392,9 +431,10 @@ fn update_summary_state(
     adapter.set_tax_summary_transactions(SharedString::from(
         summary.transactions_in_period.to_string(),
     ));
-    adapter.set_tax_summary_volume(SharedString::from(format_money(
-        (summary.volume_processed * 100.0) as i64,
-        "USD",
+    adapter.set_tax_summary_volume(SharedString::from(fmt_preferred(
+        summary.volume_processed,
+        currency,
+        clp_rate,
     )));
     adapter.set_tax_summary_warnings(SharedString::from(warnings_text));
 

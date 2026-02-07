@@ -27,6 +27,7 @@ import { Theme } from "../theme.slint";
 import { Translations } from "../translations.slint";
 import {
     FormField,
+    FormDropdown,
     TypeSelector,
     WalletSelector,
     CoinSelector,
@@ -571,11 +572,11 @@ export component AddCryptoTransactionModal inherits Rectangle {
                         }
                     }
 
-                    HorizontalLayout {
+                    if root.selected-type != "swap" && root.selected-type != "move": HorizontalLayout {
                         spacing: 12px;
-                        if root.selected-type != "swap" && root.selected-type != "move": FormField {
+                        FormField {
                             label: Translations.modal-price-usd;
-                            placeholder: (root.selected-type == "transfer_in" || root.selected-type == "transfer_out") ? Translations.modal-optional : Translations.modal-required;
+                            placeholder: Translations.modal-required;
                             value <=> root.price;
                             horizontal-stretch: 1;
                             submit-shortcut => {
@@ -586,10 +587,19 @@ export component AddCryptoTransactionModal inherits Rectangle {
                             label: Translations.modal-fee-usd;
                             placeholder: "0.00";
                             value <=> root.fee;
-                            width: root.selected-type == "swap" ? 160px : 120px;
+                            horizontal-stretch: 1;
                             submit-shortcut => {
                                 root.submit();
                             }
+                        }
+                    }
+
+                    if root.selected-type == "swap" || root.selected-type == "move": FormField {
+                        label: Translations.modal-fee-usd;
+                        placeholder: "0.00";
+                        value <=> root.fee;
+                        submit-shortcut => {
+                            root.submit();
                         }
                     }
 
@@ -605,40 +615,52 @@ export component AddCryptoTransactionModal inherits Rectangle {
                             label: Translations.modal-fee-amount;
                             placeholder: "0.00";
                             value <=> root.fee-coin-amount;
-                            width: 140px;
+                            horizontal-stretch: 1;
                             submit-shortcut => {
                                 root.submit();
                             }
                         }
                     }
 
-                    Text {
-                        text: Translations.crypto-tax-advanced;
-                        color: Theme.text-muted;
-                        font-size: 10px;
-                        font-weight: 600;
-                        letter-spacing: 1.6px;
-                    }
-
-                    HorizontalLayout {
+                    if root.selected-type == "buy" || root.selected-type == "sell": VerticalLayout {
                         spacing: 12px;
-                        FormField {
-                            label: Translations.modal-tax-type;
-                            placeholder: Translations.modal-tax-type-placeholder;
-                            value <=> root.tax-type;
-                            horizontal-stretch: 1;
-                            submit-shortcut => {
-                                root.submit();
-                            }
+
+                        Text {
+                            text: Translations.crypto-tax-advanced;
+                            color: Theme.text-muted;
+                            font-size: 10px;
+                            font-weight: 600;
+                            letter-spacing: 1.6px;
                         }
 
-                        FormField {
-                            label: Translations.modal-tax-subtype;
-                            placeholder: Translations.modal-tax-subtype-placeholder;
-                            value <=> root.tax-subtype;
-                            horizontal-stretch: 1;
-                            submit-shortcut => {
-                                root.submit();
+                        HorizontalLayout {
+                            spacing: 12px;
+
+                            FormDropdown {
+                                label: Translations.modal-tax-type;
+                                placeholder: Translations.modal-tax-type-placeholder;
+                                value <=> root.tax-type;
+                                horizontal-stretch: 1;
+                                options: ["trade", "income", "expense", "transfer"];
+                                changed(val) => {
+                                    root.tax-subtype = "";
+                                }
+                            }
+
+                            FormDropdown {
+                                label: Translations.modal-tax-subtype;
+                                placeholder: Translations.modal-tax-subtype-placeholder;
+                                value <=> root.tax-subtype;
+                                horizontal-stretch: 1;
+                                options: root.tax-type == "income"
+                                    ? ["interest", "reward", "airdrop", "gift", "staking", "mining", "fork", "payment", "rebate", "other"]
+                                    : root.tax-type == "expense"
+                                        ? ["payment", "gift", "fee", "lost", "stolen", "donation", "sell", "other"]
+                                        : root.tax-type == "transfer"
+                                            ? ["deposit", "withdrawal"]
+                                            : root.tax-type == "trade"
+                                                ? ["buy", "sell", "swap", "other"]
+                                                : [];
                             }
                         }
                     }

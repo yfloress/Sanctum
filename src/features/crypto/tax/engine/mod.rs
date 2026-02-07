@@ -34,6 +34,7 @@ use crate::models::{CryptoTransaction, CryptoTransactionType};
 use lots::{add_lot, apply_disposal, apply_fee_disposal};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use swaps::{apply_swap_pair, resolve_swap_pair};
+use types::TaxConfig;
 
 pub fn build_tax_report(
     mut transactions: Vec<CryptoTransaction>,
@@ -49,8 +50,15 @@ pub fn build_tax_report(
         ipc_map.insert(entry.period, entry.index);
     }
 
+    let cfg = TaxConfig {
+        period: &period,
+        method,
+        jurisdiction,
+        ipc_map: &ipc_map,
+    };
+
     let mut warnings: Vec<TaxWarning> = Vec::new();
-    if matches!(jurisdiction, TaxJurisdiction::Chile) && ipc_map.is_empty() {
+    if matches!(cfg.jurisdiction, TaxJurisdiction::Chile) && cfg.ipc_map.is_empty() {
         warnings.push(TaxWarning {
             code: "ipc_missing".to_string(),
             message: "IPC data not loaded. Chilean inflation adjustment cannot be applied."
@@ -150,24 +158,8 @@ pub fn build_tax_report(
                 processed.insert(rel_id.clone());
 
                 if settings.include_fee_crypto {
-                    apply_fee_disposal(
-                        &mut report,
-                        &mut lots,
-                        &period,
-                        &tx,
-                        method,
-                        jurisdiction,
-                        &ipc_map,
-                    );
-                    apply_fee_disposal(
-                        &mut report,
-                        &mut lots,
-                        &period,
-                        counter,
-                        method,
-                        jurisdiction,
-                        &ipc_map,
-                    );
+                    apply_fee_disposal(&mut report, &mut lots, &cfg, &tx);
+                    apply_fee_disposal(&mut report, &mut lots, &cfg, counter);
                 }
 
                 continue;
@@ -196,28 +188,10 @@ pub fn build_tax_report(
                     && !matches!(source_tax_type, TaxTxType::Transfer)
                     && !(matches!(source_tax_type, TaxTxType::Expense) && loss_only);
 
-                apply_swap_pair(
-                    &mut report,
-                    &mut lots,
-                    &period,
-                    &source,
-                    &target,
-                    method,
-                    jurisdiction,
-                    &ipc_map,
-                    swap_taxable,
-                );
+                apply_swap_pair(&mut report, &mut lots, &cfg, &source, &target, swap_taxable);
 
                 if settings.include_fee_crypto && !matches!(source_tax_type, TaxTxType::Transfer) {
-                    apply_fee_disposal(
-                        &mut report,
-                        &mut lots,
-                        &period,
-                        &source,
-                        method,
-                        jurisdiction,
-                        &ipc_map,
-                    );
+                    apply_fee_disposal(&mut report, &mut lots, &cfg, &source);
                 }
                 continue;
             }
@@ -233,15 +207,7 @@ pub fn build_tax_report(
         if tax_type == TaxTxType::Income {
             add_lot(&mut report, &mut lots, &tx, tx_date);
             if settings.include_fee_crypto {
-                apply_fee_disposal(
-                    &mut report,
-                    &mut lots,
-                    &period,
-                    &tx,
-                    method,
-                    jurisdiction,
-                    &ipc_map,
-                );
+                apply_fee_disposal(&mut report, &mut lots, &cfg, &tx);
             }
             continue;
         }
@@ -266,51 +232,15 @@ pub fn build_tax_report(
                 add_lot(&mut report, &mut lots, &tx, tx_date);
             }
             CryptoTransactionType::Sell => {
-                apply_disposal(
-                    &mut report,
-                    &mut lots,
-                    &period,
-                    &tx,
-                    tx_date,
-                    method,
-                    jurisdiction,
-                    &ipc_map,
-                    taxable,
-                );
+                apply_disposal(&mut report, &mut lots, &cfg, &tx, tx_date, taxable);
                 if settings.include_fee_crypto {
-                    apply_fee_disposal(
-                        &mut report,
-                        &mut lots,
-                        &period,
-                        &tx,
-                        method,
-                        jurisdiction,
-                        &ipc_map,
-                    );
+                    apply_fee_disposal(&mut report, &mut lots, &cfg, &tx);
                 }
             }
             CryptoTransactionType::TransferOut => {
-                apply_disposal(
-                    &mut report,
-                    &mut lots,
-                    &period,
-                    &tx,
-                    tx_date,
-                    method,
-                    jurisdiction,
-                    &ipc_map,
-                    taxable,
-                );
+                apply_disposal(&mut report, &mut lots, &cfg, &tx, tx_date, taxable);
                 if settings.include_fee_crypto {
-                    apply_fee_disposal(
-                        &mut report,
-                        &mut lots,
-                        &period,
-                        &tx,
-                        method,
-                        jurisdiction,
-                        &ipc_map,
-                    );
+                    apply_fee_disposal(&mut report, &mut lots, &cfg, &tx);
                 }
             }
             CryptoTransactionType::Swap => {
@@ -322,24 +252,13 @@ pub fn build_tax_report(
                 apply_disposal(
                     &mut report,
                     &mut lots,
-                    &period,
+                    &cfg,
                     &tx,
                     tx_date,
-                    method,
-                    jurisdiction,
-                    &ipc_map,
                     settings.include_swaps && taxable,
                 );
                 if settings.include_fee_crypto {
-                    apply_fee_disposal(
-                        &mut report,
-                        &mut lots,
-                        &period,
-                        &tx,
-                        method,
-                        jurisdiction,
-                        &ipc_map,
-                    );
+                    apply_fee_disposal(&mut report, &mut lots, &cfg, &tx);
                 }
             }
         }

@@ -127,6 +127,7 @@ component ReadinessRow inherits Rectangle {
         }
 
         VerticalLayout {
+            alignment: center;
             spacing: 2px;
 
             Text {
@@ -212,6 +213,7 @@ export component CryptoTaxTab inherits Rectangle {
 
                     HorizontalLayout {
                         spacing: 12px;
+                        alignment: start;
 
                         ActionButton {
                             text: Translations.crypto-tax-report-generate;
@@ -219,13 +221,15 @@ export component CryptoTaxTab inherits Rectangle {
                             clicked => { CryptoAdapter.generate-tax-report(); }
                         }
 
-                        BorderButton {
+                        ActionButton {
                             text: Translations.crypto-tax-summary-export-history;
+                            primary: false;
                             clicked => { CryptoAdapter.export-tax-history(); }
                         }
 
-                        BorderButton {
+                        ActionButton {
                             text: Translations.crypto-tax-summary-export-capital;
+                            primary: false;
                             clicked => { CryptoAdapter.export-tax-report(); }
                         }
                     }

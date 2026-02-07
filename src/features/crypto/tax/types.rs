@@ -34,8 +34,7 @@ impl TaxJurisdiction {
         }
     }
 
-    #[allow(clippy::should_implement_trait)]
-    pub fn from_str(raw: &str) -> Self {
+    pub fn parse_or_default(raw: &str) -> Self {
         match raw.trim().to_lowercase().as_str() {
             "chile" | "cl" => TaxJurisdiction::Chile,
             "usa" | "us" | "united_states" => TaxJurisdiction::Usa,
@@ -69,8 +68,7 @@ impl TaxMethod {
         }
     }
 
-    #[allow(clippy::should_implement_trait)]
-    pub fn from_str(raw: &str) -> Self {
+    pub fn parse_or_default(raw: &str) -> Self {
         match raw.trim().to_lowercase().as_str() {
             "fifo" => TaxMethod::Fifo,
             "lifo" => TaxMethod::Lifo,
@@ -104,8 +102,7 @@ impl TaxTxType {
         }
     }
 
-    #[allow(clippy::should_implement_trait)]
-    pub fn from_str(value: &str) -> Option<Self> {
+    pub fn parse(value: &str) -> Option<Self> {
         match value.trim().to_lowercase().as_str() {
             "trade" | "buy" | "sell" | "swap" => Some(TaxTxType::Trade),
             "income" => Some(TaxTxType::Income),
@@ -130,7 +127,7 @@ pub const TAX_SUBTYPES_TRANSFER: [&str; 2] = ["deposit", "withdrawal"];
 pub const TAX_SUBTYPES_TRADE: [&str; 4] = ["buy", "sell", "swap", "other"];
 
 pub fn normalize_tax_type(value: &str) -> Option<String> {
-    TaxTxType::from_str(value).map(|t| t.as_str().to_string())
+    TaxTxType::parse(value).map(|t| t.as_str().to_string())
 }
 
 pub fn normalize_tax_subtype(tax_type: &str, value: &str) -> Option<String> {
@@ -138,7 +135,7 @@ pub fn normalize_tax_subtype(tax_type: &str, value: &str) -> Option<String> {
     if trimmed.is_empty() {
         return None;
     }
-    let list = match TaxTxType::from_str(tax_type) {
+    let list = match TaxTxType::parse(tax_type) {
         Some(TaxTxType::Income) => TAX_SUBTYPES_INCOME.as_slice(),
         Some(TaxTxType::Expense) => TAX_SUBTYPES_EXPENSE.as_slice(),
         Some(TaxTxType::Transfer) => TAX_SUBTYPES_TRANSFER.as_slice(),

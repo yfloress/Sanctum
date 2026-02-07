@@ -18,11 +18,11 @@
 //! Lot management and disposal calculations.
 
 use super::period::{is_in_period, parse_date, prev_month_key};
-use super::types::{AllocationInfo, Lot, TaxPeriod};
+use super::types::{AllocationInfo, DisposalRequest, Lot, TaxConfig};
 use crate::features::crypto::tax::{TaxJurisdiction, TaxMethod};
 use crate::features::crypto::{TaxDisposal, TaxReport, TaxWarning};
 use crate::models::CryptoTransaction;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
 pub(super) fn add_lot(
     report: &mut TaxReport,
@@ -62,16 +62,12 @@ pub(super) fn add_lot(
     lots.entry(tx.coin_id.clone()).or_default().push(lot);
 }
 
-#[allow(clippy::too_many_arguments)]
 pub(super) fn apply_disposal(
     report: &mut TaxReport,
     lots: &mut HashMap<String, Vec<Lot>>,
-    period: &TaxPeriod,
+    cfg: &TaxConfig,
     tx: &CryptoTransaction,
     tx_date: chrono::NaiveDate,
-    method: TaxMethod,
-    jurisdiction: TaxJurisdiction,
-    ipc_map: &BTreeMap<String, f64>,
     taxable: bool,
 ) {
     let mut proceeds = match tx.price_per_coin {
@@ -93,23 +89,20 @@ pub(super) fn apply_disposal(
         proceeds = (proceeds - fee).max(0.0);
     }
 
-    let (allocations, cost_basis, short_gain, long_gain) = consume_lots(
-        report,
-        lots,
-        &tx.coin_id,
-        tx.amount,
-        tx_date,
-        method,
-        jurisdiction,
-        ipc_map,
-        tx.id.as_str(),
+    let req = DisposalRequest {
+        coin_id: &tx.coin_id,
+        amount: tx.amount,
+        sale_date: tx_date,
+        tx_id: &tx.id,
         proceeds,
         taxable,
-    );
+    };
 
-    if taxable && is_in_period(period, tx_date) && tx.price_per_coin.is_some() {
+    let (allocations, cost_basis, short_gain, long_gain) = consume_lots(report, lots, cfg, &req);
+
+    if taxable && is_in_period(cfg.period, tx_date) && tx.price_per_coin.is_some() {
         let gain = proceeds - cost_basis;
-        let term = build_term(short_gain, long_gain, jurisdiction);
+        let term = build_term(short_gain, long_gain, cfg.jurisdiction);
         report.disposals.push(TaxDisposal {
             tx_id: tx.id.clone(),
             date: tx.date.clone(),
@@ -130,11 +123,8 @@ pub(super) fn apply_disposal(
 pub(super) fn apply_fee_disposal(
     report: &mut TaxReport,
     lots: &mut HashMap<String, Vec<Lot>>,
-    period: &TaxPeriod,
+    cfg: &TaxConfig,
     tx: &CryptoTransaction,
-    method: TaxMethod,
-    jurisdiction: TaxJurisdiction,
-    ipc_map: &BTreeMap<String, f64>,
 ) {
     let fee_coin_id = match tx.fee_coin_id.as_deref() {
         Some(id) => id,
@@ -166,23 +156,20 @@ pub(super) fn apply_fee_disposal(
         }
     };
 
-    let (allocations, cost_basis, short_gain, long_gain) = consume_lots(
-        report,
-        lots,
-        fee_coin_id,
-        fee_amount,
-        tx_date,
-        method,
-        jurisdiction,
-        ipc_map,
-        tx.id.as_str(),
+    let req = DisposalRequest {
+        coin_id: fee_coin_id,
+        amount: fee_amount,
+        sale_date: tx_date,
+        tx_id: &tx.id,
         proceeds,
-        true,
-    );
+        taxable: true,
+    };
 
-    if is_in_period(period, tx_date) && fee_price.is_some() {
+    let (allocations, cost_basis, short_gain, long_gain) = consume_lots(report, lots, cfg, &req);
+
+    if is_in_period(cfg.period, tx_date) && fee_price.is_some() {
         let gain = proceeds - cost_basis;
-        let term = build_term(short_gain, long_gain, jurisdiction);
+        let term = build_term(short_gain, long_gain, cfg.jurisdiction);
         report.disposals.push(TaxDisposal {
             tx_id: format!("{}:fee", tx.id),
             date: tx.date.clone(),
@@ -200,59 +187,50 @@ pub(super) fn apply_fee_disposal(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 pub(super) fn consume_lots(
     report: &mut TaxReport,
     lots: &mut HashMap<String, Vec<Lot>>,
-    coin_id: &str,
-    amount: f64,
-    sale_date: chrono::NaiveDate,
-    method: TaxMethod,
-    jurisdiction: TaxJurisdiction,
-    ipc_map: &BTreeMap<String, f64>,
-    tx_id: &str,
-    proceeds: f64,
-    taxable: bool,
+    cfg: &TaxConfig,
+    req: &DisposalRequest,
 ) -> (Vec<AllocationInfo>, f64, f64, f64) {
     let mut allocations = Vec::new();
     let mut cost_basis = 0.0;
 
-    let entry = lots.entry(coin_id.to_string()).or_default();
+    let entry = lots.entry(req.coin_id.to_string()).or_default();
     let total_available: f64 = entry.iter().map(|lot| lot.quantity).sum();
 
     if total_available <= 0.0 {
-        if taxable {
+        if req.taxable {
             report.warnings.push(TaxWarning {
                 code: "no_lots".to_string(),
-                message: format!("No lots available for {}", tx_id),
-                tx_id: Some(tx_id.to_string()),
+                message: format!("No lots available for {}", req.tx_id),
+                tx_id: Some(req.tx_id.to_string()),
             });
         }
         return (allocations, 0.0, 0.0, 0.0);
     }
 
-    let mut remaining = amount;
+    let mut remaining = req.amount;
 
-    if method == TaxMethod::Cpp {
+    if cfg.method == TaxMethod::Cpp {
         let (allocs, cost) = consume_lots_cpp(
             report,
             entry,
-            amount,
-            sale_date,
-            jurisdiction,
-            ipc_map,
-            tx_id,
-            taxable,
+            cfg,
+            req.amount,
+            req.sale_date,
+            req.tx_id,
+            req.taxable,
         );
         allocations = allocs;
         cost_basis = cost;
         let (short_gain, long_gain) =
-            split_term_gain(&allocations, proceeds, sale_date, jurisdiction);
+            split_term_gain(&allocations, req.proceeds, req.sale_date, cfg.jurisdiction);
         return (allocations, cost_basis, short_gain, long_gain);
     }
 
     let mut indices: Vec<usize> = (0..entry.len()).collect();
-    match method {
+    match cfg.method {
         TaxMethod::Fifo => {}
         TaxMethod::Lifo => indices.reverse(),
         TaxMethod::Hifo => indices.sort_by(|a, b| {
@@ -265,7 +243,7 @@ pub(super) fn consume_lots(
         TaxMethod::Cpp => {}
     }
 
-    let sale_prev_month = prev_month_key(sale_date);
+    let sale_prev_month = prev_month_key(req.sale_date);
 
     for idx in indices {
         if remaining <= 0.0 {
@@ -286,13 +264,12 @@ pub(super) fn consume_lots(
         let base_cost = qty * lot.unit_cost;
         let (adjusted_cost, cost_used) = apply_ipc_adjustment(
             report,
-            jurisdiction,
-            ipc_map,
+            cfg,
             &lot.acquired_prev_month,
             &sale_prev_month,
             base_cost,
-            tx_id,
-            taxable,
+            req.tx_id,
+            req.taxable,
         );
 
         cost_basis += cost_used;
@@ -315,23 +292,22 @@ pub(super) fn consume_lots(
     if remaining > 0.0 {
         report.warnings.push(TaxWarning {
             code: "insufficient_lots".to_string(),
-            message: format!("Not enough lots to cover {}", tx_id),
-            tx_id: Some(tx_id.to_string()),
+            message: format!("Not enough lots to cover {}", req.tx_id),
+            tx_id: Some(req.tx_id.to_string()),
         });
     }
 
-    let (short_gain, long_gain) = split_term_gain(&allocations, proceeds, sale_date, jurisdiction);
+    let (short_gain, long_gain) =
+        split_term_gain(&allocations, req.proceeds, req.sale_date, cfg.jurisdiction);
     (allocations, cost_basis, short_gain, long_gain)
 }
 
-#[allow(clippy::too_many_arguments)]
 fn consume_lots_cpp(
     report: &mut TaxReport,
     lots: &mut Vec<Lot>,
+    cfg: &TaxConfig,
     amount: f64,
     sale_date: chrono::NaiveDate,
-    jurisdiction: TaxJurisdiction,
-    ipc_map: &BTreeMap<String, f64>,
     tx_id: &str,
     warn: bool,
 ) -> (Vec<AllocationInfo>, f64) {
@@ -367,8 +343,7 @@ fn consume_lots_cpp(
         let base_cost = qty * lot.unit_cost;
         let (adjusted_cost, cost_used) = apply_ipc_adjustment(
             report,
-            jurisdiction,
-            ipc_map,
+            cfg,
             &lot.acquired_prev_month,
             &sale_prev_month,
             base_cost,
@@ -403,27 +378,25 @@ fn consume_lots_cpp(
     (allocations, total_cost)
 }
 
-#[allow(clippy::too_many_arguments)]
 fn apply_ipc_adjustment(
     report: &mut TaxReport,
-    jurisdiction: TaxJurisdiction,
-    ipc_map: &BTreeMap<String, f64>,
+    cfg: &TaxConfig,
     buy_prev: &str,
     sale_prev: &str,
     base_cost: f64,
     tx_id: &str,
     warn: bool,
 ) -> (Option<f64>, f64) {
-    if !matches!(jurisdiction, TaxJurisdiction::Chile) {
+    if !matches!(cfg.jurisdiction, TaxJurisdiction::Chile) {
         return (None, base_cost);
     }
 
-    if ipc_map.is_empty() || !warn {
+    if cfg.ipc_map.is_empty() || !warn {
         return (None, base_cost);
     }
 
-    let buy_idx = ipc_map.get(buy_prev).copied();
-    let sale_idx = ipc_map.get(sale_prev).copied();
+    let buy_idx = cfg.ipc_map.get(buy_prev).copied();
+    let sale_idx = cfg.ipc_map.get(sale_prev).copied();
 
     match (buy_idx, sale_idx) {
         (Some(buy), Some(sale)) if buy > 0.0 => {
@@ -525,9 +498,11 @@ pub(super) fn update_summary(
 
 #[cfg(test)]
 mod tests {
+    use super::super::types::TaxPeriod;
     use super::*;
     use crate::features::crypto::TaxReportSummary;
     use chrono::NaiveDate;
+    use std::collections::BTreeMap;
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 0.0001
@@ -543,6 +518,14 @@ mod tests {
             summary: TaxReportSummary::default(),
             disposals: Vec::new(),
             warnings: Vec::new(),
+        }
+    }
+
+    fn test_period() -> TaxPeriod {
+        TaxPeriod {
+            id: "2024".to_string(),
+            start: NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
+            end: NaiveDate::from_ymd_opt(2024, 12, 31).unwrap(),
         }
     }
 
@@ -565,6 +548,8 @@ mod tests {
     fn hifo_uses_highest_cost_lot() {
         let mut report = base_report();
         let mut lots: HashMap<String, Vec<Lot>> = HashMap::new();
+        let period = test_period();
+        let ipc_map = BTreeMap::new();
 
         let buy1 = tx("b1", "buy", 1.0, 100.0, "2024-01-05");
         let buy2 = tx("b2", "buy", 1.0, 200.0, "2024-02-05");
@@ -582,19 +567,23 @@ mod tests {
             NaiveDate::from_ymd_opt(2024, 2, 5).unwrap(),
         );
 
-        let (allocs, cost, _, _) = consume_lots(
-            &mut report,
-            &mut lots,
-            "btc",
-            1.0,
-            NaiveDate::from_ymd_opt(2024, 3, 1).unwrap(),
-            TaxMethod::Hifo,
-            TaxJurisdiction::Usa,
-            &BTreeMap::new(),
-            "s1",
-            300.0,
-            true,
-        );
+        let cfg = TaxConfig {
+            period: &period,
+            method: TaxMethod::Hifo,
+            jurisdiction: TaxJurisdiction::Usa,
+            ipc_map: &ipc_map,
+        };
+
+        let req = DisposalRequest {
+            coin_id: "btc",
+            amount: 1.0,
+            sale_date: NaiveDate::from_ymd_opt(2024, 3, 1).unwrap(),
+            tx_id: "s1",
+            proceeds: 300.0,
+            taxable: true,
+        };
+
+        let (allocs, cost, _, _) = consume_lots(&mut report, &mut lots, &cfg, &req);
 
         assert_eq!(allocs.len(), 1);
         assert_eq!(allocs[0].allocation.lot_id, "b2");
@@ -605,6 +594,8 @@ mod tests {
     fn cpp_uses_weighted_average_cost() {
         let mut report = base_report();
         let mut lots: HashMap<String, Vec<Lot>> = HashMap::new();
+        let period = test_period();
+        let ipc_map = BTreeMap::new();
 
         let buy1 = tx("b1", "buy", 1.0, 100.0, "2024-01-05");
         let buy2 = tx("b2", "buy", 3.0, 300.0, "2024-02-05");
@@ -622,19 +613,23 @@ mod tests {
             NaiveDate::from_ymd_opt(2024, 2, 5).unwrap(),
         );
 
-        let (_, cost, _, _) = consume_lots(
-            &mut report,
-            &mut lots,
-            "btc",
-            2.0,
-            NaiveDate::from_ymd_opt(2024, 3, 1).unwrap(),
-            TaxMethod::Cpp,
-            TaxJurisdiction::Usa,
-            &BTreeMap::new(),
-            "s1",
-            600.0,
-            true,
-        );
+        let cfg = TaxConfig {
+            period: &period,
+            method: TaxMethod::Cpp,
+            jurisdiction: TaxJurisdiction::Usa,
+            ipc_map: &ipc_map,
+        };
+
+        let req = DisposalRequest {
+            coin_id: "btc",
+            amount: 2.0,
+            sale_date: NaiveDate::from_ymd_opt(2024, 3, 1).unwrap(),
+            tx_id: "s1",
+            proceeds: 600.0,
+            taxable: true,
+        };
+
+        let (_, cost, _, _) = consume_lots(&mut report, &mut lots, &cfg, &req);
 
         assert!(approx_eq(cost, 500.0));
     }
@@ -645,17 +640,17 @@ mod tests {
         let mut ipc = BTreeMap::new();
         ipc.insert("2023-12".to_string(), 100.0);
         ipc.insert("2024-01".to_string(), 110.0);
+        let period = test_period();
 
-        let (adjusted, cost) = apply_ipc_adjustment(
-            &mut report,
-            TaxJurisdiction::Chile,
-            &ipc,
-            "2023-12",
-            "2024-01",
-            100.0,
-            "tx1",
-            true,
-        );
+        let cfg = TaxConfig {
+            period: &period,
+            method: TaxMethod::Fifo,
+            jurisdiction: TaxJurisdiction::Chile,
+            ipc_map: &ipc,
+        };
+
+        let (adjusted, cost) =
+            apply_ipc_adjustment(&mut report, &cfg, "2023-12", "2024-01", 100.0, "tx1", true);
 
         assert!(adjusted.map(|v| approx_eq(v, 110.0)).unwrap_or(false));
         assert!(approx_eq(cost, 110.0));
@@ -665,17 +660,17 @@ mod tests {
     fn ipc_missing_emits_warning() {
         let mut report = base_report();
         let ipc = BTreeMap::new();
+        let period = test_period();
 
-        let (adjusted, cost) = apply_ipc_adjustment(
-            &mut report,
-            TaxJurisdiction::Chile,
-            &ipc,
-            "2023-12",
-            "2024-01",
-            100.0,
-            "tx1",
-            true,
-        );
+        let cfg = TaxConfig {
+            period: &period,
+            method: TaxMethod::Fifo,
+            jurisdiction: TaxJurisdiction::Chile,
+            ipc_map: &ipc,
+        };
+
+        let (adjusted, cost) =
+            apply_ipc_adjustment(&mut report, &cfg, "2023-12", "2024-01", 100.0, "tx1", true);
 
         assert!(adjusted.is_none());
         assert!(approx_eq(cost, 100.0));

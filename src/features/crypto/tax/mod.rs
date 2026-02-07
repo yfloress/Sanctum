@@ -41,7 +41,7 @@ use crate::models::CryptoTransaction;
 
 pub fn resolve_tax_type(tx: &CryptoTransaction) -> TaxTxType {
     if let Some(value) = tx.tax_type.as_deref()
-        && let Some(normalized) = TaxTxType::from_str(value)
+        && let Some(normalized) = TaxTxType::parse(value)
     {
         return normalized;
     }
