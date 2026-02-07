@@ -36,6 +36,9 @@ Goal: add tax/reporting capabilities for crypto using selectable cost-basis meth
 - Date stored as ISO string is sufficient; tie-break with tx.id for deterministic ordering.
 
 ## Data Model Changes (minimal)
+- Add optional transaction fields:
+  - `tax_type`, `tax_subtype`
+  - `override_proceeds`, `override_cost_basis`
 - **Settings keys** (examples):
   - `crypto_tax_jurisdiction`
   - `crypto_tax_method_default`

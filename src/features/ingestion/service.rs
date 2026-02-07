@@ -1315,6 +1315,16 @@ impl IngestionService {
                     fee: import_tx.fee,
                     fee_coin_id: fee_coin.as_ref().map(|c| c.id.clone()),
                     fee_amount: import_tx.fee_amount,
+                    tax_type: import_tx
+                        .tax_type
+                        .clone()
+                        .or_else(|| Some("trade".to_string())),
+                    tax_subtype: import_tx
+                        .tax_subtype
+                        .clone()
+                        .or_else(|| Some("swap".to_string())),
+                    override_proceeds: import_tx.override_proceeds,
+                    override_cost_basis: None,
                     date: import_tx.date.trim().to_string(),
                     notes: import_tx.notes.clone(),
                     related_tx_id: Some(target_id.clone()),
@@ -1331,6 +1341,16 @@ impl IngestionService {
                     fee: None,
                     fee_coin_id: None,
                     fee_amount: None,
+                    tax_type: import_tx
+                        .tax_type
+                        .clone()
+                        .or_else(|| Some("trade".to_string())),
+                    tax_subtype: import_tx
+                        .tax_subtype
+                        .clone()
+                        .or_else(|| Some("swap".to_string())),
+                    override_proceeds: None,
+                    override_cost_basis: import_tx.override_cost_basis,
                     date: import_tx.date.trim().to_string(),
                     notes: import_tx.notes.clone(),
                     related_tx_id: Some(source_id.clone()),
@@ -1375,6 +1395,11 @@ impl IngestionService {
                 import_tx.date.trim().to_string(),
                 import_tx.notes.clone(),
             );
+            let mut transaction = transaction;
+            transaction.tax_type = import_tx.tax_type.clone();
+            transaction.tax_subtype = import_tx.tax_subtype.clone();
+            transaction.override_proceeds = import_tx.override_proceeds;
+            transaction.override_cost_basis = import_tx.override_cost_basis;
 
             match IngestionRepository::create_crypto_transaction(db, &transaction) {
                 Ok(_) => {

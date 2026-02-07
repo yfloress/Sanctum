@@ -15,30 +15,27 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
 //
 
-//! Tax engine internal types.
+//! Migration v002: Add tax classification + overrides to crypto transactions.
 
-use super::super::report::LotAllocation;
-use chrono::NaiveDate;
+use crate::db::DbError;
+use rusqlite::Connection;
 
-#[derive(Clone, Debug)]
-pub(super) struct Lot {
-    pub lot_id: String,
-    pub acquired_date: NaiveDate,
-    pub acquired_date_raw: String,
-    pub acquired_prev_month: String,
-    pub quantity: f64,
-    pub unit_cost: f64,
-}
-
-#[derive(Clone, Debug)]
-pub(super) struct AllocationInfo {
-    pub allocation: LotAllocation,
-    pub lot_date: NaiveDate,
-}
-
-#[derive(Clone, Debug)]
-pub(crate) struct TaxPeriod {
-    pub id: String,
-    pub start: NaiveDate,
-    pub end: NaiveDate,
+pub fn up(conn: &Connection) -> Result<(), DbError> {
+    conn.execute(
+        "ALTER TABLE crypto_transactions ADD COLUMN tax_type TEXT",
+        [],
+    )?;
+    conn.execute(
+        "ALTER TABLE crypto_transactions ADD COLUMN tax_subtype TEXT",
+        [],
+    )?;
+    conn.execute(
+        "ALTER TABLE crypto_transactions ADD COLUMN override_proceeds REAL",
+        [],
+    )?;
+    conn.execute(
+        "ALTER TABLE crypto_transactions ADD COLUMN override_cost_basis REAL",
+        [],
+    )?;
+    Ok(())
 }

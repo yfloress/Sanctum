@@ -494,6 +494,22 @@ impl CsvParser {
                 .filter(|s| !s.is_empty())
                 .and_then(|s| s.replace(',', ".").parse().ok());
 
+            let tax_type = Self::get_field(&record, &columns, "tax_type")
+                .filter(|s| !s.is_empty())
+                .map(String::from);
+
+            let tax_subtype = Self::get_field(&record, &columns, "tax_subtype")
+                .filter(|s| !s.is_empty())
+                .map(String::from);
+
+            let override_proceeds = Self::get_field(&record, &columns, "override_proceeds")
+                .filter(|s| !s.is_empty())
+                .and_then(|s| s.replace(',', ".").parse().ok());
+
+            let override_cost_basis = Self::get_field(&record, &columns, "override_cost_basis")
+                .filter(|s| !s.is_empty())
+                .and_then(|s| s.replace(',', ".").parse().ok());
+
             let swap_to_symbol = Self::get_field(&record, &columns, "swap_to_symbol")
                 .or_else(|| Self::get_field(&record, &columns, "to_symbol"))
                 .filter(|s| !s.is_empty())
@@ -527,6 +543,10 @@ impl CsvParser {
                     amount,
                     price_per_coin,
                     fee,
+                    tax_type,
+                    tax_subtype,
+                    override_proceeds,
+                    override_cost_basis,
                     swap_to_symbol,
                     swap_to_amount,
                     fee_coin_symbol,

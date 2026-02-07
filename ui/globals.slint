@@ -577,6 +577,12 @@ export struct CatalogCoin {
     selected: bool,
 }
 
+export struct TaxReadinessItem {
+    code: string,
+    status: string, // ok, warn, error
+    detail: string,
+}
+
 export global CryptoAdapter {
     in-out property <[CryptoAssetData]> portfolio: [];
     in-out property <string> portfolio-summary: "";
@@ -641,6 +647,17 @@ export global CryptoAdapter {
     in-out property <bool> tax-include-fee-crypto: true;
     in-out property <string> tax-report-summary: "";
     in-out property <string> tax-report-warnings: "";
+    in-out property <bool> tax-summary-ready: false;
+    in-out property <string> tax-summary-period: "";
+    in-out property <string> tax-summary-proceeds: "";
+    in-out property <string> tax-summary-cost: "";
+    in-out property <string> tax-summary-gain: "";
+    in-out property <string> tax-summary-income: "";
+    in-out property <string> tax-summary-balance: "";
+    in-out property <string> tax-summary-transactions: "";
+    in-out property <string> tax-summary-volume: "";
+    in-out property <string> tax-summary-warnings: "";
+    in-out property <[TaxReadinessItem]> tax-readiness: [];
 
     // Edit Transaction State
     in-out property <string> edit-tx-id: "";
@@ -656,6 +673,10 @@ export global CryptoAdapter {
     in-out property <string> edit-fee-coin-amount: "";
     in-out property <string> edit-date: "";
     in-out property <string> edit-notes: "";
+    in-out property <string> edit-tax-type: "";
+    in-out property <string> edit-tax-subtype: "";
+    in-out property <string> edit-override-proceeds: "";
+    in-out property <string> edit-override-cost: "";
 
     // Actions
     callback fetch-portfolio();
@@ -670,19 +691,20 @@ export global CryptoAdapter {
     callback save-tax-settings();
     callback generate-tax-report();
     callback export-tax-report();
+    callback export-tax-history();
     callback get-last-price(string) -> string; // coin_id -> price string
     callback get-swap-quote(string, string, string) -> string; // from_coin_id, to_coin_id, from_amount -> to_amount
     callback get-available-balance(string, string, string) -> string; // wallet_id, coin_id, date -> balance string
     callback load-edit-transaction(string) -> string; // tx_id -> "" or error
 
-    // (wallet_id, coin_id, symbol, type, amount, price, fee, fee_coin_id, fee_coin_amount, date, notes)
-    callback add-transaction(string, string, string, string, string, string, string, string, string, string, string) -> string;
+    // (wallet_id, coin_id, symbol, type, amount, price, fee, fee_coin_id, fee_coin_amount, date, notes, tax_type, tax_subtype, override_proceeds, override_cost_basis)
+    callback add-transaction(string, string, string, string, string, string, string, string, string, string, string, string, string, string, string) -> string;
     // (from_wallet_id, to_wallet_id, coin_id, symbol, from_amount, to_amount, fee, fee_coin_id, fee_coin_amount, date, notes)
     callback add-transfer(string, string, string, string, string, string, string, string, string, string, string) -> string;
     // (wallet_id, from_coin_id, from_symbol, from_amount, to_coin_id, to_symbol, to_amount, fee, fee_coin_id, fee_coin_amount, date, notes)
     callback add-swap(string, string, string, string, string, string, string, string, string, string, string, string) -> string;
-    // (tx_id, amount, price, fee, fee_coin_id, fee_coin_amount, date, notes)
-    callback update-transaction(string, string, string, string, string, string, string, string) -> string;
+    // (tx_id, amount, price, fee, fee_coin_id, fee_coin_amount, date, notes, tax_type, tax_subtype, override_proceeds, override_cost_basis)
+    callback update-transaction(string, string, string, string, string, string, string, string, string, string, string, string) -> string;
 
     // (name, category) -> id or error
     callback create-wallet(string, string) -> string;

@@ -25,6 +25,7 @@ use crate::features::crypto::{TaxDisposal, TaxReport, TaxWarning};
 use crate::models::CryptoTransaction;
 use std::collections::{BTreeMap, HashMap};
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn apply_swap_pair(
     report: &mut TaxReport,
     lots: &mut HashMap<String, Vec<Lot>>,
@@ -34,7 +35,7 @@ pub(super) fn apply_swap_pair(
     method: TaxMethod,
     jurisdiction: TaxJurisdiction,
     ipc_map: &BTreeMap<String, f64>,
-    include_swaps: bool,
+    taxable_swap: bool,
 ) {
     let source_date = match parse_date(&source.date) {
         Some(date) => date,
@@ -50,7 +51,7 @@ pub(super) fn apply_swap_pair(
 
     let proceeds = compute_swap_proceeds(source, target);
 
-    let taxable = include_swaps && proceeds.is_some();
+    let taxable = taxable_swap && proceeds.is_some();
     let disposal_proceeds = proceeds.unwrap_or(0.0);
 
     let (allocations, cost_basis, short_gain, long_gain) = consume_lots(
@@ -83,8 +84,15 @@ pub(super) fn apply_swap_pair(
             disposal_type: "swap".to_string(),
             allocations: allocations.iter().map(|a| a.allocation.clone()).collect(),
         });
-        update_summary(report, disposal_proceeds, cost_basis, gain, short_gain, long_gain);
-    } else if include_swaps && proceeds.is_none() {
+        update_summary(
+            report,
+            disposal_proceeds,
+            cost_basis,
+            gain,
+            short_gain,
+            long_gain,
+        );
+    } else if taxable_swap && proceeds.is_none() {
         report.warnings.push(TaxWarning {
             code: "swap_missing_price".to_string(),
             message: format!("Swap {} missing price; excluded from report", source.id),
@@ -92,7 +100,16 @@ pub(super) fn apply_swap_pair(
         });
     }
 
-    let acquisition_cost = if taxable { disposal_proceeds } else { cost_basis };
+    let acquisition_cost = match target.override_cost_basis {
+        Some(override_cost) => override_cost,
+        None => {
+            if taxable {
+                disposal_proceeds
+            } else {
+                cost_basis
+            }
+        }
+    };
     let unit_cost = if target.amount > 0.0 {
         acquisition_cost / target.amount
     } else {
@@ -122,6 +139,9 @@ pub(super) fn compute_swap_proceeds(
     source: &CryptoTransaction,
     target: &CryptoTransaction,
 ) -> Option<f64> {
+    if let Some(override_proceeds) = source.override_proceeds {
+        return Some(override_proceeds);
+    }
     if let Some(price) = source.price_per_coin {
         return Some(source.amount * price);
     }

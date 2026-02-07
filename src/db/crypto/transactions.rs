@@ -21,7 +21,39 @@
 
 use crate::db::{Database, DbError};
 use crate::models::CryptoTransaction;
-use rusqlite::{params, Error as RusqliteError};
+use rusqlite::{Error as RusqliteError, Row, params};
+
+/// Column list used in all SELECT queries for crypto transactions.
+/// Kept in a single place so that any schema change only requires one update.
+const CRYPTO_TX_COLUMNS: &str = "\
+    id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, \
+    fee_coin_id, fee_amount, tax_type, tax_subtype, override_proceeds, \
+    override_cost_basis, date, notes, related_tx_id";
+
+/// Maps a database row to a `CryptoTransaction`.
+///
+/// The column order MUST match [`CRYPTO_TX_COLUMNS`].
+fn row_to_crypto_transaction(row: &Row<'_>) -> rusqlite::Result<CryptoTransaction> {
+    Ok(CryptoTransaction {
+        id: row.get(0)?,
+        wallet_id: row.get(1)?,
+        coin_id: row.get(2)?,
+        symbol: row.get(3)?,
+        transaction_type: row.get(4)?,
+        amount: row.get(5)?,
+        price_per_coin: row.get(6)?,
+        fee: row.get(7)?,
+        fee_coin_id: row.get(8)?,
+        fee_amount: row.get(9)?,
+        tax_type: row.get(10)?,
+        tax_subtype: row.get(11)?,
+        override_proceeds: row.get(12)?,
+        override_cost_basis: row.get(13)?,
+        date: row.get(14)?,
+        notes: row.get(15)?,
+        related_tx_id: row.get(16)?,
+    })
+}
 
 impl Database {
     /// Creates a new crypto transaction
@@ -47,8 +79,8 @@ impl Database {
 
         self.conn.execute(
             "INSERT INTO crypto_transactions
-             (id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, fee_coin_id, fee_amount, date, notes, related_tx_id)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+             (id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, fee_coin_id, fee_amount, tax_type, tax_subtype, override_proceeds, override_cost_basis, date, notes, related_tx_id)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)",
             params![
                 &tx.id,
                 &tx.wallet_id,
@@ -60,6 +92,10 @@ impl Database {
                 &tx.fee,
                 &tx.fee_coin_id,
                 &tx.fee_amount,
+                &tx.tax_type,
+                &tx.tax_subtype,
+                &tx.override_proceeds,
+                &tx.override_cost_basis,
                 &tx.date,
                 &tx.notes,
                 &tx.related_tx_id,
@@ -74,31 +110,14 @@ impl Database {
         &self,
         wallet_id: &str,
     ) -> Result<Vec<CryptoTransaction>, DbError> {
-        let mut stmt = self.conn.prepare(
-            "SELECT id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, fee_coin_id, fee_amount, date, notes, related_tx_id
-             FROM crypto_transactions
-             WHERE wallet_id = ?1
-             ORDER BY date DESC, rowid DESC",
-        )?;
+        let sql = format!(
+            "SELECT {} FROM crypto_transactions WHERE wallet_id = ?1 ORDER BY date DESC, rowid DESC",
+            CRYPTO_TX_COLUMNS
+        );
+        let mut stmt = self.conn.prepare(&sql)?;
 
         let transactions = stmt
-            .query_map(params![wallet_id], |row| {
-                Ok(CryptoTransaction {
-                    id: row.get(0)?,
-                    wallet_id: row.get(1)?,
-                    coin_id: row.get(2)?,
-                    symbol: row.get(3)?,
-                    transaction_type: row.get(4)?,
-                    amount: row.get(5)?,
-                    price_per_coin: row.get(6)?,
-                    fee: row.get(7)?,
-                    fee_coin_id: row.get(8)?,
-                    fee_amount: row.get(9)?,
-                    date: row.get(10)?,
-                    notes: row.get(11)?,
-                    related_tx_id: row.get(12)?,
-                })
-            })?
+            .query_map(params![wallet_id], row_to_crypto_transaction)?
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(transactions)
@@ -110,32 +129,14 @@ impl Database {
         wallet_id: &str,
         date: &str,
     ) -> Result<Vec<CryptoTransaction>, DbError> {
-        let mut stmt = self.conn.prepare(
-            "SELECT id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, fee_coin_id, fee_amount, date, notes, related_tx_id
-             FROM crypto_transactions
-             WHERE wallet_id = ?1
-               AND date <= ?2
-             ORDER BY date ASC, rowid ASC",
-        )?;
+        let sql = format!(
+            "SELECT {} FROM crypto_transactions WHERE wallet_id = ?1 AND date <= ?2 ORDER BY date ASC, rowid ASC",
+            CRYPTO_TX_COLUMNS
+        );
+        let mut stmt = self.conn.prepare(&sql)?;
 
         let transactions = stmt
-            .query_map(params![wallet_id, date], |row| {
-                Ok(CryptoTransaction {
-                    id: row.get(0)?,
-                    wallet_id: row.get(1)?,
-                    coin_id: row.get(2)?,
-                    symbol: row.get(3)?,
-                    transaction_type: row.get(4)?,
-                    amount: row.get(5)?,
-                    price_per_coin: row.get(6)?,
-                    fee: row.get(7)?,
-                    fee_coin_id: row.get(8)?,
-                    fee_amount: row.get(9)?,
-                    date: row.get(10)?,
-                    notes: row.get(11)?,
-                    related_tx_id: row.get(12)?,
-                })
-            })?
+            .query_map(params![wallet_id, date], row_to_crypto_transaction)?
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(transactions)
@@ -143,30 +144,14 @@ impl Database {
 
     /// Gets all crypto transactions across all wallets
     pub fn get_all_crypto_transactions(&self) -> Result<Vec<CryptoTransaction>, DbError> {
-        let mut stmt = self.conn.prepare(
-            "SELECT id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, fee_coin_id, fee_amount, date, notes, related_tx_id
-             FROM crypto_transactions
-             ORDER BY date DESC, rowid DESC",
-        )?;
+        let sql = format!(
+            "SELECT {} FROM crypto_transactions ORDER BY date DESC, rowid DESC",
+            CRYPTO_TX_COLUMNS
+        );
+        let mut stmt = self.conn.prepare(&sql)?;
 
         let transactions = stmt
-            .query_map([], |row| {
-                Ok(CryptoTransaction {
-                    id: row.get(0)?,
-                    wallet_id: row.get(1)?,
-                    coin_id: row.get(2)?,
-                    symbol: row.get(3)?,
-                    transaction_type: row.get(4)?,
-                    amount: row.get(5)?,
-                    price_per_coin: row.get(6)?,
-                    fee: row.get(7)?,
-                    fee_coin_id: row.get(8)?,
-                    fee_amount: row.get(9)?,
-                    date: row.get(10)?,
-                    notes: row.get(11)?,
-                    related_tx_id: row.get(12)?,
-                })
-            })?
+            .query_map([], row_to_crypto_transaction)?
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(transactions)
@@ -177,31 +162,14 @@ impl Database {
         &self,
         coin_id: &str,
     ) -> Result<Vec<CryptoTransaction>, DbError> {
-        let mut stmt = self.conn.prepare(
-            "SELECT id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, fee_coin_id, fee_amount, date, notes, related_tx_id
-             FROM crypto_transactions
-             WHERE coin_id = ?1
-             ORDER BY date DESC, rowid DESC",
-        )?;
+        let sql = format!(
+            "SELECT {} FROM crypto_transactions WHERE coin_id = ?1 ORDER BY date DESC, rowid DESC",
+            CRYPTO_TX_COLUMNS
+        );
+        let mut stmt = self.conn.prepare(&sql)?;
 
         let transactions = stmt
-            .query_map(params![coin_id], |row| {
-                Ok(CryptoTransaction {
-                    id: row.get(0)?,
-                    wallet_id: row.get(1)?,
-                    coin_id: row.get(2)?,
-                    symbol: row.get(3)?,
-                    transaction_type: row.get(4)?,
-                    amount: row.get(5)?,
-                    price_per_coin: row.get(6)?,
-                    fee: row.get(7)?,
-                    fee_coin_id: row.get(8)?,
-                    fee_amount: row.get(9)?,
-                    date: row.get(10)?,
-                    notes: row.get(11)?,
-                    related_tx_id: row.get(12)?,
-                })
-            })?
+            .query_map(params![coin_id], row_to_crypto_transaction)?
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(transactions)
@@ -216,28 +184,14 @@ impl Database {
 
     /// Gets a crypto transaction by ID
     pub fn get_crypto_transaction(&self, id: &str) -> Result<Option<CryptoTransaction>, DbError> {
-        let result = self.conn.query_row(
-            "SELECT id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, fee_coin_id, fee_amount, date, notes, related_tx_id
-             FROM crypto_transactions WHERE id = ?1",
-            params![id],
-            |row| {
-                Ok(CryptoTransaction {
-                    id: row.get(0)?,
-                    wallet_id: row.get(1)?,
-                    coin_id: row.get(2)?,
-                    symbol: row.get(3)?,
-                    transaction_type: row.get(4)?,
-                    amount: row.get(5)?,
-                    price_per_coin: row.get(6)?,
-                    fee: row.get(7)?,
-                    fee_coin_id: row.get(8)?,
-                    fee_amount: row.get(9)?,
-                    date: row.get(10)?,
-                    notes: row.get(11)?,
-                    related_tx_id: row.get(12)?,
-                })
-            },
+        let sql = format!(
+            "SELECT {} FROM crypto_transactions WHERE id = ?1",
+            CRYPTO_TX_COLUMNS
         );
+
+        let result = self
+            .conn
+            .query_row(&sql, params![id], row_to_crypto_transaction);
 
         match result {
             Ok(tx) => Ok(Some(tx)),
@@ -258,6 +212,10 @@ impl Database {
         fee_amount: Option<f64>,
         date: &str,
         notes: Option<&str>,
+        tax_type: Option<&str>,
+        tax_subtype: Option<&str>,
+        override_proceeds: Option<f64>,
+        override_cost_basis: Option<f64>,
     ) -> Result<(), DbError> {
         self.conn.execute(
             "UPDATE crypto_transactions
@@ -266,15 +224,23 @@ impl Database {
                  fee = ?3,
                  fee_coin_id = ?4,
                  fee_amount = ?5,
-                 date = ?6,
-                 notes = ?7
-             WHERE id = ?8",
+                 tax_type = ?6,
+                 tax_subtype = ?7,
+                 override_proceeds = ?8,
+                 override_cost_basis = ?9,
+                 date = ?10,
+                 notes = ?11
+             WHERE id = ?12",
             params![
                 amount,
                 price_per_coin,
                 fee,
                 fee_coin_id,
                 fee_amount,
+                tax_type,
+                tax_subtype,
+                override_proceeds,
+                override_cost_basis,
                 date,
                 notes,
                 id

@@ -409,7 +409,7 @@ impl Database {
         true
     }
 
-    fn aggregate_crypto_transactions(
+    pub(crate) fn aggregate_crypto_transactions(
         mut transactions: Vec<CryptoTransaction>,
     ) -> Vec<AggregatedAsset> {
         if transactions.is_empty() {

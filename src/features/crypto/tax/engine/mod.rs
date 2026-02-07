@@ -22,16 +22,18 @@ mod period;
 mod swaps;
 mod types;
 
-use lots::{add_lot, apply_disposal, apply_fee_disposal};
-use period::{parse_date, parse_period};
-use swaps::{apply_swap_pair, resolve_swap_pair};
-use crate::features::crypto::tax::{TaxJurisdiction, TaxMethod};
-use crate::features::crypto::{
-    TaxReport, TaxReportSummary, TaxWarning,
-};
+pub(crate) use period::{is_in_period, parse_date, parse_period};
+pub(crate) use types::TaxPeriod;
+
 use crate::features::crypto::tax::IpcEntry;
+use crate::features::crypto::tax::{
+    TaxJurisdiction, TaxTxType, is_loss_only_subtype, resolve_tax_subtype, resolve_tax_type,
+};
+use crate::features::crypto::{TaxReport, TaxReportSummary, TaxWarning};
 use crate::models::{CryptoTransaction, CryptoTransactionType};
+use lots::{add_lot, apply_disposal, apply_fee_disposal};
 use std::collections::{BTreeMap, HashMap, HashSet};
+use swaps::{apply_swap_pair, resolve_swap_pair};
 
 pub fn build_tax_report(
     mut transactions: Vec<CryptoTransaction>,
@@ -39,8 +41,8 @@ pub fn build_tax_report(
     ipc_entries: Vec<IpcEntry>,
 ) -> Result<TaxReport, String> {
     let period = parse_period(&settings.period_id)?;
-    let method = TaxMethod::from_str(&settings.method);
-    let jurisdiction = TaxJurisdiction::from_str(&settings.jurisdiction);
+    let method = settings.method;
+    let jurisdiction = settings.jurisdiction;
 
     let mut ipc_map = BTreeMap::new();
     for entry in ipc_entries {
@@ -51,7 +53,8 @@ pub fn build_tax_report(
     if matches!(jurisdiction, TaxJurisdiction::Chile) && ipc_map.is_empty() {
         warnings.push(TaxWarning {
             code: "ipc_missing".to_string(),
-            message: "IPC data not loaded. Chilean inflation adjustment cannot be applied.".to_string(),
+            message: "IPC data not loaded. Chilean inflation adjustment cannot be applied."
+                .to_string(),
             tx_id: None,
         });
     }
@@ -86,8 +89,8 @@ pub fn build_tax_report(
         period_id: period.id.clone(),
         period_start: period.start.format("%Y-%m-%d").to_string(),
         period_end: period.end.format("%Y-%m-%d").to_string(),
-        jurisdiction: settings.jurisdiction.clone(),
-        method: settings.method.clone(),
+        jurisdiction: settings.jurisdiction_str().to_string(),
+        method: settings.method_str().to_string(),
         summary: TaxReportSummary {
             disposals: 0,
             total_proceeds: 0.0,
@@ -129,86 +132,118 @@ pub fn build_tax_report(
             break;
         }
 
-        if let Some(rel_id) = &tx.related_tx_id {
-            if let Some(counter) = tx_map.get(rel_id) {
-                if processed.contains(rel_id) {
-                    continue;
+        if let Some(rel_id) = &tx.related_tx_id
+            && let Some(counter) = tx_map.get(rel_id)
+        {
+            if processed.contains(rel_id) {
+                continue;
+            }
+
+            let is_transfer_pair = (tx.transaction_type == "transfer_out"
+                && counter.transaction_type == "transfer_in")
+                || (tx.transaction_type == "transfer_in"
+                    && counter.transaction_type == "transfer_out");
+            let is_swap_pair = tx.transaction_type == "swap" && counter.transaction_type == "swap";
+
+            if is_transfer_pair {
+                processed.insert(tx.id.clone());
+                processed.insert(rel_id.clone());
+
+                if settings.include_fee_crypto {
+                    apply_fee_disposal(
+                        &mut report,
+                        &mut lots,
+                        &period,
+                        &tx,
+                        method,
+                        jurisdiction,
+                        &ipc_map,
+                    );
+                    apply_fee_disposal(
+                        &mut report,
+                        &mut lots,
+                        &period,
+                        counter,
+                        method,
+                        jurisdiction,
+                        &ipc_map,
+                    );
                 }
 
-                let is_transfer_pair = (tx.transaction_type == "transfer_out"
-                    && counter.transaction_type == "transfer_in")
-                    || (tx.transaction_type == "transfer_in"
-                        && counter.transaction_type == "transfer_out");
-                let is_swap_pair = tx.transaction_type == "swap"
-                    && counter.transaction_type == "swap";
+                continue;
+            }
 
-                if is_transfer_pair {
-                    processed.insert(tx.id.clone());
-                    processed.insert(rel_id.clone());
+            if is_swap_pair {
+                processed.insert(tx.id.clone());
+                processed.insert(rel_id.clone());
 
-                    if settings.include_fee_crypto {
-                        apply_fee_disposal(
-                            &mut report,
-                            &mut lots,
-                            &period,
-                            &tx,
-                            method,
-                            jurisdiction,
-                            &ipc_map,
-                        );
-                        apply_fee_disposal(
-                            &mut report,
-                            &mut lots,
-                            &period,
-                            counter,
-                            method,
-                            jurisdiction,
-                            &ipc_map,
-                        );
-                    }
-
-                    continue;
+                let (source, target, inferred) = resolve_swap_pair(&tx, counter);
+                if inferred {
+                    report.warnings.push(TaxWarning {
+                        code: "swap_inferred".to_string(),
+                        message: format!("Swap direction inferred for {}", source.id),
+                        tx_id: Some(source.id.clone()),
+                    });
                 }
 
-                if is_swap_pair {
-                    processed.insert(tx.id.clone());
-                    processed.insert(rel_id.clone());
+                let source_tax_type = resolve_tax_type(&source);
+                let source_subtype = resolve_tax_subtype(&source);
+                let loss_only = source_subtype
+                    .as_deref()
+                    .map(is_loss_only_subtype)
+                    .unwrap_or(false);
+                let swap_taxable = settings.include_swaps
+                    && !matches!(source_tax_type, TaxTxType::Transfer)
+                    && !(matches!(source_tax_type, TaxTxType::Expense) && loss_only);
 
-                    let (source, target, inferred) = resolve_swap_pair(&tx, counter);
-                    if inferred {
-                        report.warnings.push(TaxWarning {
-                            code: "swap_inferred".to_string(),
-                            message: format!("Swap direction inferred for {}", source.id),
-                            tx_id: Some(source.id.clone()),
-                        });
-                    }
+                apply_swap_pair(
+                    &mut report,
+                    &mut lots,
+                    &period,
+                    &source,
+                    &target,
+                    method,
+                    jurisdiction,
+                    &ipc_map,
+                    swap_taxable,
+                );
 
-                    apply_swap_pair(
+                if settings.include_fee_crypto && !matches!(source_tax_type, TaxTxType::Transfer) {
+                    apply_fee_disposal(
                         &mut report,
                         &mut lots,
                         &period,
                         &source,
-                        &target,
                         method,
                         jurisdiction,
                         &ipc_map,
-                        settings.include_swaps,
                     );
-
-                    if settings.include_fee_crypto {
-                        apply_fee_disposal(
-                            &mut report,
-                            &mut lots,
-                            &period,
-                            &source,
-                            method,
-                            jurisdiction,
-                            &ipc_map,
-                        );
-                    }
-                    continue;
                 }
+                continue;
             }
+        }
+
+        let tax_type = resolve_tax_type(&tx);
+        let tax_subtype = resolve_tax_subtype(&tx);
+        let loss_only = tax_subtype
+            .as_deref()
+            .map(is_loss_only_subtype)
+            .unwrap_or(false);
+
+        if tax_type == TaxTxType::Income {
+            add_lot(&mut report, &mut lots, &tx, tx_date);
+            if settings.include_fee_crypto {
+                apply_fee_disposal(
+                    &mut report,
+                    &mut lots,
+                    &period,
+                    &tx,
+                    method,
+                    jurisdiction,
+                    &ipc_map,
+                );
+            }
+            continue;
         }
 
         let tx_type = match tx.transaction_type.parse::<CryptoTransactionType>() {
@@ -222,6 +257,9 @@ pub fn build_tax_report(
                 continue;
             }
         };
+
+        let taxable = !(matches!(tax_type, TaxTxType::Transfer)
+            || matches!(tax_type, TaxTxType::Expense) && loss_only);
 
         match tx_type {
             CryptoTransactionType::Buy | CryptoTransactionType::TransferIn => {
@@ -237,7 +275,7 @@ pub fn build_tax_report(
                     method,
                     jurisdiction,
                     &ipc_map,
-                    true,
+                    taxable,
                 );
                 if settings.include_fee_crypto {
                     apply_fee_disposal(
@@ -261,7 +299,7 @@ pub fn build_tax_report(
                     method,
                     jurisdiction,
                     &ipc_map,
-                    false,
+                    taxable,
                 );
                 if settings.include_fee_crypto {
                     apply_fee_disposal(
@@ -290,7 +328,7 @@ pub fn build_tax_report(
                     method,
                     jurisdiction,
                     &ipc_map,
-                    false,
+                    settings.include_swaps && taxable,
                 );
                 if settings.include_fee_crypto {
                     apply_fee_disposal(
@@ -314,18 +352,13 @@ pub fn build_tax_report(
 mod tests {
     use super::*;
     use crate::features::crypto::TaxPeriodSettings;
+    use crate::features::crypto::tax::TaxMethod;
 
     fn approx_eq(a: f64, b: f64) -> bool {
         (a - b).abs() < 0.0001
     }
 
-    fn tx(
-        id: &str,
-        kind: &str,
-        amount: f64,
-        price: Option<f64>,
-        date: &str,
-    ) -> CryptoTransaction {
+    fn tx(id: &str, kind: &str, amount: f64, price: Option<f64>, date: &str) -> CryptoTransaction {
         CryptoTransaction::new(
             id.to_string(),
             "wallet".to_string(),
@@ -347,8 +380,8 @@ mod tests {
 
         let settings = TaxPeriodSettings {
             period_id: "2024".to_string(),
-            jurisdiction: "usa".to_string(),
-            method: "fifo".to_string(),
+            jurisdiction: TaxJurisdiction::Usa,
+            method: TaxMethod::Fifo,
             include_swaps: false,
             include_fee_crypto: false,
         };
@@ -371,8 +404,8 @@ mod tests {
 
         let settings = TaxPeriodSettings {
             period_id: "2024".to_string(),
-            jurisdiction: "usa".to_string(),
-            method: "fifo".to_string(),
+            jurisdiction: TaxJurisdiction::Usa,
+            method: TaxMethod::Fifo,
             include_swaps: false,
             include_fee_crypto: false,
         };
@@ -389,8 +422,8 @@ mod tests {
 
         let settings = TaxPeriodSettings {
             period_id: "2024".to_string(),
-            jurisdiction: "chile".to_string(),
-            method: "fifo".to_string(),
+            jurisdiction: TaxJurisdiction::Chile,
+            method: TaxMethod::Fifo,
             include_swaps: false,
             include_fee_crypto: false,
         };

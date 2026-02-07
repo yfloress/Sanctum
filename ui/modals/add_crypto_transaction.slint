@@ -48,6 +48,8 @@ export component AddCryptoTransactionModal inherits Rectangle {
     property <string> swap-amount: "";
     property <int> swap-coin-index: 0;
     property <string> move-amount: "";
+    property <string> tax-type: "";
+    property <string> tax-subtype: "";
 
     function update-swap-quote() {
         if (selected-type != "swap") {
@@ -116,6 +118,8 @@ export component AddCryptoTransactionModal inherits Rectangle {
         swap-amount = "";
         swap-coin-index = 0;
         move-amount = "";
+        tax-type = "";
+        tax-subtype = "";
         CryptoAdapter.filter-coin-catalog("");
         root.refresh-price-from-coin();
     }
@@ -260,7 +264,11 @@ export component AddCryptoTransactionModal inherits Rectangle {
             fee-coin-id,
             fee-coin-amount,
             date,
-            notes);
+            notes,
+            tax-type,
+            tax-subtype,
+            "",
+            "");
 
         if (result == "") {
             root.reset();
@@ -598,6 +606,37 @@ export component AddCryptoTransactionModal inherits Rectangle {
                             placeholder: "0.00";
                             value <=> root.fee-coin-amount;
                             width: 140px;
+                            submit-shortcut => {
+                                root.submit();
+                            }
+                        }
+                    }
+
+                    Text {
+                        text: Translations.crypto-tax-advanced;
+                        color: Theme.text-muted;
+                        font-size: 10px;
+                        font-weight: 600;
+                        letter-spacing: 1.6px;
+                    }
+
+                    HorizontalLayout {
+                        spacing: 12px;
+                        FormField {
+                            label: Translations.modal-tax-type;
+                            placeholder: Translations.modal-tax-type-placeholder;
+                            value <=> root.tax-type;
+                            horizontal-stretch: 1;
+                            submit-shortcut => {
+                                root.submit();
+                            }
+                        }
+
+                        FormField {
+                            label: Translations.modal-tax-subtype;
+                            placeholder: Translations.modal-tax-subtype-placeholder;
+                            value <=> root.tax-subtype;
+                            horizontal-stretch: 1;
                             submit-shortcut => {
                                 root.submit();
                             }

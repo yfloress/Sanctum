@@ -20,7 +20,7 @@
 //! Wallets, transactions, prices, and portfolio aggregation.
 
 use super::{AppController, ControllerError};
-use crate::features::crypto::{IpcImportSummary, IpcSummary, TaxPeriodSettings, TaxReport};
+use crate::features::crypto::{IpcImportSummary, IpcSummary, TaxPeriodSettings, TaxReport, TaxSummaryPayload};
 use crate::models::{AggregatedAsset, CryptoAsset, CryptoTransaction, CryptoWallet};
 
 impl AppController {
@@ -129,6 +129,15 @@ impl AppController {
             .map_err(ControllerError::from)
     }
 
+    pub fn generate_tax_summary(
+        &self,
+        period_id: String,
+    ) -> Result<TaxSummaryPayload, ControllerError> {
+        self.crypto_service
+            .generate_tax_summary(period_id)
+            .map_err(ControllerError::from)
+    }
+
     pub fn export_tax_report_csv(
         &self,
         period_id: String,
@@ -136,6 +145,16 @@ impl AppController {
     ) -> Result<(), ControllerError> {
         self.crypto_service
             .export_tax_report_csv(period_id, &path)
+            .map_err(ControllerError::from)
+    }
+
+    pub fn export_tax_history_csv(
+        &self,
+        period_id: String,
+        path: String,
+    ) -> Result<(), ControllerError> {
+        self.crypto_service
+            .export_tax_history_csv(period_id, &path)
             .map_err(ControllerError::from)
     }
 
@@ -199,6 +218,10 @@ impl AppController {
         fee_amount: Option<f64>,
         date: String,
         notes: Option<String>,
+        tax_type: Option<String>,
+        tax_subtype: Option<String>,
+        override_proceeds: Option<f64>,
+        override_cost_basis: Option<f64>,
     ) -> Result<String, ControllerError> {
         self.crypto_service
             .add_crypto_transaction(
@@ -213,6 +236,10 @@ impl AppController {
                 fee_amount,
                 date,
                 notes,
+                tax_type,
+                tax_subtype,
+                override_proceeds,
+                override_cost_basis,
             )
             .map_err(ControllerError::from)
     }
@@ -327,6 +354,10 @@ impl AppController {
         fee_amount: Option<f64>,
         date: String,
         notes: Option<String>,
+        tax_type: Option<String>,
+        tax_subtype: Option<String>,
+        override_proceeds: Option<f64>,
+        override_cost_basis: Option<f64>,
     ) -> Result<(), ControllerError> {
         self.crypto_service
             .update_crypto_transaction(
@@ -338,6 +369,10 @@ impl AppController {
                 fee_amount,
                 date,
                 notes,
+                tax_type,
+                tax_subtype,
+                override_proceeds,
+                override_cost_basis,
             )
             .map_err(ControllerError::from)
     }

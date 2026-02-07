@@ -31,7 +31,7 @@ pub(super) fn add_lot(
     tx_date: chrono::NaiveDate,
 ) {
     let price = tx.price_per_coin.unwrap_or(0.0);
-    if tx.price_per_coin.is_none() {
+    if tx.price_per_coin.is_none() && tx.override_cost_basis.is_none() {
         report.warnings.push(TaxWarning {
             code: "missing_price".to_string(),
             message: format!("Missing price for acquisition {}", tx.id),
@@ -40,7 +40,10 @@ pub(super) fn add_lot(
     }
 
     let fee = tx.fee.unwrap_or(0.0);
-    let total_cost = (tx.amount * price) + fee;
+    let total_cost = match tx.override_cost_basis {
+        Some(override_cost) => override_cost,
+        None => (tx.amount * price) + fee,
+    };
     let unit_cost = if tx.amount > 0.0 {
         total_cost / tx.amount
     } else {
@@ -59,6 +62,7 @@ pub(super) fn add_lot(
     lots.entry(tx.coin_id.clone()).or_default().push(lot);
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn apply_disposal(
     report: &mut TaxReport,
     lots: &mut HashMap<String, Vec<Lot>>,
@@ -74,7 +78,7 @@ pub(super) fn apply_disposal(
         Some(price) => tx.amount * price,
         None => 0.0,
     };
-    if tx.price_per_coin.is_none() && taxable {
+    if tx.price_per_coin.is_none() && tx.override_proceeds.is_none() && taxable {
         report.warnings.push(TaxWarning {
             code: "missing_price".to_string(),
             message: format!("Missing price for disposal {}", tx.id),
@@ -82,7 +86,9 @@ pub(super) fn apply_disposal(
         });
     }
 
-    if taxable {
+    if let Some(override_proceeds) = tx.override_proceeds {
+        proceeds = override_proceeds;
+    } else if taxable {
         let fee = tx.fee.unwrap_or(0.0);
         proceeds = (proceeds - fee).max(0.0);
     }
@@ -194,6 +200,7 @@ pub(super) fn apply_fee_disposal(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn consume_lots(
     report: &mut TaxReport,
     lots: &mut HashMap<String, Vec<Lot>>,
@@ -317,6 +324,7 @@ pub(super) fn consume_lots(
     (allocations, cost_basis, short_gain, long_gain)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn consume_lots_cpp(
     report: &mut TaxReport,
     lots: &mut Vec<Lot>,
@@ -395,6 +403,7 @@ fn consume_lots_cpp(
     (allocations, total_cost)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn apply_ipc_adjustment(
     report: &mut TaxReport,
     jurisdiction: TaxJurisdiction,

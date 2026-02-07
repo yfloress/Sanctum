@@ -22,16 +22,21 @@
 
 pub mod database;
 pub mod error;
+pub mod settings;
 pub mod validation;
 
 pub use database::Database;
 pub use error::DbError;
+pub use settings::{
+    SETTING_DARK_MODE, SETTING_PREFERRED_CURRENCY, SETTING_PREFERRED_LANGUAGE,
+    SETTING_SESSION_TIMEOUT, SETTING_SIDEBAR_COLLAPSED,
+};
 pub use validation::{
-    format_money_display, sanitize_string, validate_color, validate_date, validate_field_length,
-    validate_uuid,
+    csv_escape, format_money_display, sanitize_string, validate_color, validate_date,
+    validate_field_length, validate_uuid,
 };
 
 // Re-export security logging from crate root for convenience
 pub use crate::security_log::{
-    init_security_logger, log_auth_failure, log_rate_limit, log_security_event, SecurityEvent,
+    SecurityEvent, init_security_logger, log_auth_failure, log_rate_limit, log_security_event,
 };

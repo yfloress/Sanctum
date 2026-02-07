@@ -20,6 +20,7 @@
 //! Provides field-level validation for imported transactions and habit logs.
 
 use super::types::{ImportCryptoTransaction, ImportHabitLog, ImportTransaction, RowError};
+use crate::features::crypto::tax::types::{normalize_tax_subtype, normalize_tax_type};
 use chrono::NaiveDate;
 
 /// Maximum file size (10MB)
@@ -154,7 +155,10 @@ pub fn validate_file_size(size: usize) -> Result<(), String> {
 }
 
 /// Validates an import transaction
-pub fn validate_import_transaction(tx: &ImportTransaction, line_number: usize) -> Result<(), RowError> {
+pub fn validate_import_transaction(
+    tx: &ImportTransaction,
+    line_number: usize,
+) -> Result<(), RowError> {
     let make_error = |field: &str, msg: String| RowError::new(line_number, Some(field), msg);
 
     validate_date(&tx.date).map_err(|e| make_error("date", e))?;
@@ -285,6 +289,47 @@ pub fn validate_import_crypto_transaction(
     validate_price_per_coin(tx.price_per_coin).map_err(|e| make_error("price_per_coin", e))?;
     validate_fee(tx.fee).map_err(|e| make_error("fee", e))?;
 
+    if let Some(raw) = tx.tax_type.as_deref() {
+        if raw.trim().eq_ignore_ascii_case("auto") {
+            // allow auto (no override)
+        } else if normalize_tax_type(raw).is_none() {
+            return Err(make_error(
+                "tax_type",
+                "Invalid tax_type. Use trade, income, expense, or transfer.".to_string(),
+            ));
+        }
+    }
+    if let Some(raw) = tx.tax_subtype.as_deref() {
+        let tax_type = tx.tax_type.as_deref().ok_or_else(|| {
+            make_error(
+                "tax_subtype",
+                "tax_type is required for tax_subtype".to_string(),
+            )
+        })?;
+        if normalize_tax_subtype(tax_type, raw).is_none() {
+            return Err(make_error(
+                "tax_subtype",
+                "Invalid tax_subtype for selected tax_type".to_string(),
+            ));
+        }
+    }
+    if let Some(value) = tx.override_proceeds
+        && value < 0.0
+    {
+        return Err(make_error(
+            "override_proceeds",
+            "Override proceeds cannot be negative".to_string(),
+        ));
+    }
+    if let Some(value) = tx.override_cost_basis
+        && value < 0.0
+    {
+        return Err(make_error(
+            "override_cost_basis",
+            "Override cost basis cannot be negative".to_string(),
+        ));
+    }
+
     let tx_type = tx.transaction_type.trim().to_lowercase();
     if tx_type == "swap" {
         let to_symbol = tx
@@ -292,10 +337,18 @@ pub fn validate_import_crypto_transaction(
             .as_ref()
             .map(|s| s.trim())
             .filter(|s| !s.is_empty())
-            .ok_or_else(|| make_error("swap_to_symbol", "Swap target symbol is required".to_string()))?;
-        let to_amount = tx
-            .swap_to_amount
-            .ok_or_else(|| make_error("swap_to_amount", "Swap target amount is required".to_string()))?;
+            .ok_or_else(|| {
+                make_error(
+                    "swap_to_symbol",
+                    "Swap target symbol is required".to_string(),
+                )
+            })?;
+        let to_amount = tx.swap_to_amount.ok_or_else(|| {
+            make_error(
+                "swap_to_amount",
+                "Swap target amount is required".to_string(),
+            )
+        })?;
 
         validate_crypto_symbol(to_symbol).map_err(|e| make_error("swap_to_symbol", e))?;
         validate_crypto_amount(to_amount).map_err(|e| make_error("swap_to_amount", e))?;
@@ -342,6 +395,10 @@ mod tests {
             amount: 0.5,
             price_per_coin: None,
             fee: None,
+            tax_type: None,
+            tax_subtype: None,
+            override_proceeds: None,
+            override_cost_basis: None,
             swap_to_symbol: None,
             swap_to_amount: None,
             fee_coin_symbol: None,

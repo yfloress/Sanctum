@@ -17,6 +17,7 @@
 
 //! Tax report models and CSV export.
 
+use crate::core::csv_escape;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -112,12 +113,7 @@ impl TaxReport {
                         .unwrap_or_default();
                     format!(
                         "{}|{}|{:.8}|{:.8}|{:.4}|{}",
-                        lot.lot_id,
-                        lot.lot_date,
-                        lot.quantity,
-                        lot.unit_cost,
-                        lot.cost,
-                        adjusted
+                        lot.lot_id, lot.lot_date, lot.quantity, lot.unit_cost, lot.cost, adjusted
                     )
                 })
                 .collect::<Vec<String>>()
@@ -155,16 +151,6 @@ impl TaxReport {
 
         out
     }
-}
-
-fn csv_escape(value: &str) -> String {
-    let needs_quotes = value.contains(',') || value.contains('\n') || value.contains('"');
-    if !needs_quotes {
-        return value.to_string();
-    }
-
-    let escaped = value.replace('"', "\"\"");
-    format!("\"{}\"", escaped)
 }
 
 #[cfg(test)]

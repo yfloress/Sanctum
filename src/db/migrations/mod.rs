@@ -33,12 +33,13 @@
 //! 3. Increment `SCHEMA_VERSION`
 
 mod v001_initial_schema;
+mod v002_crypto_tax_classification;
 
 use super::DbError;
 use rusqlite::Connection;
 
 /// Current schema version - increment when adding new migrations
-pub const SCHEMA_VERSION: i64 = 1;
+pub const SCHEMA_VERSION: i64 = 2;
 
 /// Represents a single database migration
 pub struct Migration {
@@ -49,11 +50,18 @@ pub struct Migration {
 
 /// Returns all migrations in version order
 pub fn get_migrations() -> Vec<Migration> {
-    vec![Migration {
-        version: 1,
-        name: "initial_schema",
-        up: v001_initial_schema::up,
-    }]
+    vec![
+        Migration {
+            version: 1,
+            name: "initial_schema",
+            up: v001_initial_schema::up,
+        },
+        Migration {
+            version: 2,
+            name: "crypto_tax_classification",
+            up: v002_crypto_tax_classification::up,
+        },
+    ]
 }
 
 /// Gets the current schema version from database

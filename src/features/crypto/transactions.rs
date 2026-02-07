@@ -27,7 +27,8 @@ use super::service::{CryptoError, CryptoService};
 use super::validation::{
     validate_coin_id_str, validate_symbol, validate_positive_amount, validate_non_negative,
     normalize_fee_coin, validate_date, validate_field_length, sanitize_string, validate_uuid,
-    validate_sufficient_balance, validate_fee_balance, FeeBalanceContext,
+    validate_sufficient_balance, validate_fee_balance, validate_tax_type, validate_tax_subtype,
+    FeeBalanceContext,
     MAX_NOTES_LENGTH,
 };
 
@@ -46,6 +47,10 @@ impl CryptoService {
         fee_amount: Option<f64>,
         date: String,
         notes: Option<String>,
+        tax_type: Option<String>,
+        tax_subtype: Option<String>,
+        override_proceeds: Option<f64>,
+        override_cost_basis: Option<f64>,
     ) -> Result<String, CryptoError> {
         self.with_db(|db| {
             let wallet_id = wallet_id.trim().to_string();
@@ -71,6 +76,11 @@ impl CryptoService {
             let fee = validate_non_negative(fee, "Fee")?;
             let (fee_coin_id, fee_amount) = normalize_fee_coin(fee_coin_id, fee_amount)?;
             let date = validate_date(&date)?;
+            let tax_type = validate_tax_type(tax_type)?;
+            let tax_subtype = validate_tax_subtype(tax_type.as_deref(), tax_subtype)?;
+            let override_proceeds = validate_non_negative(override_proceeds, "Override proceeds")?;
+            let override_cost_basis =
+                validate_non_negative(override_cost_basis, "Override cost basis")?;
 
             let valid_types = ["buy", "sell", "transfer_in", "transfer_out", "swap"];
             if !valid_types.contains(&transaction_type.as_str()) {
@@ -150,6 +160,10 @@ impl CryptoService {
             );
             transaction.fee_coin_id = fee_coin_id;
             transaction.fee_amount = fee_amount;
+            transaction.tax_type = tax_type;
+            transaction.tax_subtype = tax_subtype;
+            transaction.override_proceeds = override_proceeds;
+            transaction.override_cost_basis = override_cost_basis;
 
             db.create_crypto_transaction(&transaction)?;
             Ok(id)
@@ -273,6 +287,10 @@ impl CryptoService {
                 fee: None,
                 fee_coin_id: fee_coin_id.clone(),
                 fee_amount,
+                tax_type: Some("transfer".to_string()),
+                tax_subtype: Some("withdrawal".to_string()),
+                override_proceeds: None,
+                override_cost_basis: None,
                 date: date.clone(),
                 notes: notes.clone(),
                 related_tx_id: Some(target_id.clone()),
@@ -289,6 +307,10 @@ impl CryptoService {
                 fee,
                 fee_coin_id: None,
                 fee_amount: None,
+                tax_type: Some("transfer".to_string()),
+                tax_subtype: Some("deposit".to_string()),
+                override_proceeds: None,
+                override_cost_basis: None,
                 date,
                 notes,
                 related_tx_id: Some(source_id.clone()),
@@ -420,6 +442,10 @@ impl CryptoService {
                 fee,
                 fee_coin_id: fee_coin_id.clone(),
                 fee_amount,
+                tax_type: Some("trade".to_string()),
+                tax_subtype: Some("swap".to_string()),
+                override_proceeds: None,
+                override_cost_basis: None,
                 date: date.clone(),
                 notes: notes.clone(),
                 related_tx_id: Some(target_id.clone()),
@@ -436,6 +462,10 @@ impl CryptoService {
                 fee: None,
                 fee_coin_id: None,
                 fee_amount: None,
+                tax_type: Some("trade".to_string()),
+                tax_subtype: Some("swap".to_string()),
+                override_proceeds: None,
+                override_cost_basis: None,
                 date,
                 notes,
                 related_tx_id: Some(source_id.clone()),
@@ -504,6 +534,10 @@ impl CryptoService {
         fee_amount: Option<f64>,
         date: String,
         notes: Option<String>,
+        tax_type: Option<String>,
+        tax_subtype: Option<String>,
+        override_proceeds: Option<f64>,
+        override_cost_basis: Option<f64>,
     ) -> Result<(), CryptoError> {
         self.with_db(|db| {
             let validated_id = validate_uuid(&id)?;
@@ -628,6 +662,10 @@ impl CryptoService {
                 fee_amount,
                 &date,
                 notes.as_deref(),
+                tax_type.as_deref(),
+                tax_subtype.as_deref(),
+                override_proceeds,
+                override_cost_basis,
             )?;
 
             Ok(())

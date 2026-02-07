@@ -20,7 +20,7 @@
 use super::types::TaxPeriod;
 use chrono::{Datelike, NaiveDate};
 
-pub(super) fn parse_period(period_id: &str) -> Result<TaxPeriod, String> {
+pub(crate) fn parse_period(period_id: &str) -> Result<TaxPeriod, String> {
     let trimmed = period_id.trim();
     if trimmed.len() != 4 {
         return Err("Tax period must be a 4-digit year".to_string());
@@ -41,16 +41,16 @@ pub(super) fn parse_period(period_id: &str) -> Result<TaxPeriod, String> {
     })
 }
 
-pub(super) fn parse_date(raw: &str) -> Option<NaiveDate> {
-    if raw.len() >= 10 {
-        if let Ok(date) = NaiveDate::parse_from_str(&raw[..10], "%Y-%m-%d") {
-            return Some(date);
-        }
+pub(crate) fn parse_date(raw: &str) -> Option<NaiveDate> {
+    if raw.len() >= 10
+        && let Ok(date) = NaiveDate::parse_from_str(&raw[..10], "%Y-%m-%d")
+    {
+        return Some(date);
     }
     NaiveDate::parse_from_str(raw, "%Y-%m-%d").ok()
 }
 
-pub(super) fn is_in_period(period: &TaxPeriod, date: NaiveDate) -> bool {
+pub(crate) fn is_in_period(period: &TaxPeriod, date: NaiveDate) -> bool {
     date >= period.start && date <= period.end
 }
 

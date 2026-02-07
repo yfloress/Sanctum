@@ -15,30 +15,22 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
 //
 
-//! Tax engine internal types.
+//! Application-level settings constants.
+//!
+//! These keys are used across multiple feature modules and should not live
+//! inside any single domain (crypto, finance, habits, etc.).
 
-use super::super::report::LotAllocation;
-use chrono::NaiveDate;
+/// Whether dark mode is enabled (`"true"` / `"false"`).
+pub const SETTING_DARK_MODE: &str = "dark_mode";
 
-#[derive(Clone, Debug)]
-pub(super) struct Lot {
-    pub lot_id: String,
-    pub acquired_date: NaiveDate,
-    pub acquired_date_raw: String,
-    pub acquired_prev_month: String,
-    pub quantity: f64,
-    pub unit_cost: f64,
-}
+/// Session inactivity timeout in seconds (e.g. `"900"`).
+pub const SETTING_SESSION_TIMEOUT: &str = "session_timeout";
 
-#[derive(Clone, Debug)]
-pub(super) struct AllocationInfo {
-    pub allocation: LotAllocation,
-    pub lot_date: NaiveDate,
-}
+/// Preferred display currency code (e.g. `"USD"`, `"CLP"`).
+pub const SETTING_PREFERRED_CURRENCY: &str = "preferred_currency";
 
-#[derive(Clone, Debug)]
-pub(crate) struct TaxPeriod {
-    pub id: String,
-    pub start: NaiveDate,
-    pub end: NaiveDate,
-}
+/// Preferred UI language (e.g. `"en"`, `"es"`).
+pub const SETTING_PREFERRED_LANGUAGE: &str = "preferred_language";
+
+/// Whether the sidebar is collapsed (`"true"` / `"false"`).
+pub const SETTING_SIDEBAR_COLLAPSED: &str = "sidebar_collapsed";

@@ -15,30 +15,25 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
 //
 
-//! Tax engine internal types.
+//! Tax summary payloads for UI.
 
-use super::super::report::LotAllocation;
-use chrono::NaiveDate;
+use super::report::TaxReport;
 
-#[derive(Clone, Debug)]
-pub(super) struct Lot {
-    pub lot_id: String,
-    pub acquired_date: NaiveDate,
-    pub acquired_date_raw: String,
-    pub acquired_prev_month: String,
-    pub quantity: f64,
-    pub unit_cost: f64,
+#[derive(Debug, Clone)]
+pub struct TaxReadinessItem {
+    pub code: String,
+    pub status: String, // ok, warn, error
+    pub detail: String,
 }
 
-#[derive(Clone, Debug)]
-pub(super) struct AllocationInfo {
-    pub allocation: LotAllocation,
-    pub lot_date: NaiveDate,
-}
-
-#[derive(Clone, Debug)]
-pub(crate) struct TaxPeriod {
-    pub id: String,
-    pub start: NaiveDate,
-    pub end: NaiveDate,
+#[derive(Debug, Clone)]
+pub struct TaxSummaryPayload {
+    pub report: TaxReport,
+    pub taxable_income_total: f64,
+    pub taxable_income_count: usize,
+    pub end_balance_value: Option<f64>,
+    pub end_balance_missing: usize,
+    pub transactions_in_period: usize,
+    pub volume_processed: f64,
+    pub readiness: Vec<TaxReadinessItem>,
 }

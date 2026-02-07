@@ -24,6 +24,7 @@ use crate::db::Database;
 
 use super::api::validate_coin_id;
 use super::service::CryptoError;
+use super::tax::types::{TaxTxType, normalize_tax_subtype, normalize_tax_type};
 
 // Re-export sanitize_string from core (doesn't need error wrapping)
 pub use crate::core::validation::sanitize_string;
@@ -117,6 +118,42 @@ pub fn validate_non_negative(value: Option<f64>, field: &str) -> Result<Option<f
         }
     }
     Ok(value)
+}
+
+pub fn validate_tax_type(value: Option<String>) -> Result<Option<String>, CryptoError> {
+    let Some(raw) = value else {
+        return Ok(None);
+    };
+    let trimmed = raw.trim();
+    if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("auto") {
+        return Ok(None);
+    }
+    let normalized = normalize_tax_type(trimmed).ok_or_else(|| {
+        CryptoError::Validation(
+            "Invalid tax type. Use trade, income, expense, or transfer.".to_string(),
+        )
+    })?;
+    Ok(Some(normalized))
+}
+
+pub fn validate_tax_subtype(
+    tax_type: Option<&str>,
+    value: Option<String>,
+) -> Result<Option<String>, CryptoError> {
+    let Some(raw) = value else {
+        return Ok(None);
+    };
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Ok(None);
+    }
+    let resolved = tax_type.and_then(TaxTxType::from_str).ok_or_else(|| {
+        CryptoError::Validation("Tax subtype requires a valid tax type".to_string())
+    })?;
+    let normalized = normalize_tax_subtype(resolved.as_str(), trimmed).ok_or_else(|| {
+        CryptoError::Validation("Invalid tax subtype for selected tax type".to_string())
+    })?;
+    Ok(Some(normalized))
 }
 
 pub fn normalize_fee_coin(

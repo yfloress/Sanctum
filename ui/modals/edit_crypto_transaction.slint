@@ -85,6 +85,10 @@ export component EditCryptoTransactionModal inherits Rectangle {
         CryptoAdapter.edit-fee-coin-amount = "";
         CryptoAdapter.edit-date = AppState.current-date;
         CryptoAdapter.edit-notes = "";
+        CryptoAdapter.edit-tax-type = "";
+        CryptoAdapter.edit-tax-subtype = "";
+        CryptoAdapter.edit-override-proceeds = "";
+        CryptoAdapter.edit-override-cost = "";
     }
 
     init => {
@@ -109,7 +113,11 @@ export component EditCryptoTransactionModal inherits Rectangle {
             CryptoAdapter.edit-fee-coin-id,
             CryptoAdapter.edit-fee-coin-amount,
             CryptoAdapter.edit-date,
-            CryptoAdapter.edit-notes);
+            CryptoAdapter.edit-notes,
+            CryptoAdapter.edit-tax-type,
+            CryptoAdapter.edit-tax-subtype,
+            CryptoAdapter.edit-override-proceeds,
+            CryptoAdapter.edit-override-cost);
 
         if (result == "") {
             AppState.show-edit-crypto = false;
@@ -335,6 +343,60 @@ export component EditCryptoTransactionModal inherits Rectangle {
                         value <=> CryptoAdapter.edit-notes;
                         submit-shortcut => {
                             root.submit();
+                        }
+                    }
+
+                    Text {
+                        text: Translations.crypto-tax-advanced;
+                        color: Theme.text-muted;
+                        font-size: 10px;
+                        font-weight: 600;
+                        letter-spacing: 1.6px;
+                    }
+
+                    HorizontalLayout {
+                        spacing: 12px;
+                        FormField {
+                            label: Translations.modal-tax-type;
+                            placeholder: Translations.modal-tax-type-placeholder;
+                            value <=> CryptoAdapter.edit-tax-type;
+                            horizontal-stretch: 1;
+                            submit-shortcut => {
+                                root.submit();
+                            }
+                        }
+
+                        FormField {
+                            label: Translations.modal-tax-subtype;
+                            placeholder: Translations.modal-tax-subtype-placeholder;
+                            value <=> CryptoAdapter.edit-tax-subtype;
+                            horizontal-stretch: 1;
+                            submit-shortcut => {
+                                root.submit();
+                            }
+                        }
+                    }
+
+                    HorizontalLayout {
+                        spacing: 12px;
+                        FormField {
+                            label: Translations.modal-tax-override-proceeds;
+                            placeholder: Translations.modal-optional;
+                            value <=> CryptoAdapter.edit-override-proceeds;
+                            horizontal-stretch: 1;
+                            submit-shortcut => {
+                                root.submit();
+                            }
+                        }
+
+                        FormField {
+                            label: Translations.modal-tax-override-cost;
+                            placeholder: Translations.modal-optional;
+                            value <=> CryptoAdapter.edit-override-cost;
+                            horizontal-stretch: 1;
+                            submit-shortcut => {
+                                root.submit();
+                            }
                         }
                     }
 

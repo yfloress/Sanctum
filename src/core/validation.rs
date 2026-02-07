@@ -144,6 +144,20 @@ pub fn validate_color(color: &str) -> Result<String, String> {
     Ok(trimmed.to_lowercase())
 }
 
+/// Escapes a value for safe inclusion in a CSV field.
+///
+/// Wraps the value in double quotes if it contains commas, newlines, or quotes.
+/// Any internal double quotes are doubled per RFC 4180.
+pub fn csv_escape(value: &str) -> String {
+    let needs_quotes = value.contains(',') || value.contains('\n') || value.contains('"');
+    if !needs_quotes {
+        return value.to_string();
+    }
+
+    let escaped = value.replace('"', "\"\"");
+    format!("\"{}\"", escaped)
+}
+
 /// Formats money value (in cents) for display
 pub fn format_money_display(value: i64) -> String {
     let abs = value.abs();
@@ -187,5 +201,25 @@ mod tests {
     fn test_sanitize_string() {
         assert_eq!(sanitize_string("Hello World!"), "Hello World!");
         assert_eq!(sanitize_string("  trimmed  "), "trimmed");
+    }
+
+    #[test]
+    fn test_csv_escape_plain() {
+        assert_eq!(csv_escape("hello"), "hello");
+    }
+
+    #[test]
+    fn test_csv_escape_with_comma() {
+        assert_eq!(csv_escape("a,b"), "\"a,b\"");
+    }
+
+    #[test]
+    fn test_csv_escape_with_quotes() {
+        assert_eq!(csv_escape("say \"hi\""), "\"say \"\"hi\"\"\"");
+    }
+
+    #[test]
+    fn test_csv_escape_with_newline() {
+        assert_eq!(csv_escape("line1\nline2"), "\"line1\nline2\"");
     }
 }

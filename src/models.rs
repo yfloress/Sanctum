@@ -167,6 +167,14 @@ pub struct CryptoTransaction {
     pub fee: Option<f64>, // Fee paid (in USD)
     pub fee_coin_id: Option<String>, // If fee was paid in crypto
     pub fee_amount: Option<f64>, // Fee amount in crypto (if applicable)
+    #[serde(default)]
+    pub tax_type: Option<String>, // trade, income, expense, transfer (optional override)
+    #[serde(default)]
+    pub tax_subtype: Option<String>, // e.g., airdrop, staking, fee, transfer deposit/withdrawal
+    #[serde(default)]
+    pub override_proceeds: Option<f64>, // Optional manual proceeds override (tax)
+    #[serde(default)]
+    pub override_cost_basis: Option<f64>, // Optional manual cost basis override (tax)
     pub date: String,    // ISO-8601 date
     pub notes: Option<String>, // Optional notes
     pub related_tx_id: Option<String>, // For swaps/transfers, links to the counterpart transaction
@@ -197,6 +205,10 @@ impl CryptoTransaction {
             fee,
             fee_coin_id: None,
             fee_amount: None,
+            tax_type: None,
+            tax_subtype: None,
+            override_proceeds: None,
+            override_cost_basis: None,
             date,
             notes,
             related_tx_id: None,

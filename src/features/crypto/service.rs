@@ -29,12 +29,12 @@ use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
 use super::api::{
-    default_price_allowlist, fetch_clp_usd_rate, fetch_crypto_prices, validate_proxy_url,
-    ProxyConfig, MAX_PROXY_URL_LENGTH,
+    MAX_PROXY_URL_LENGTH, ProxyConfig, default_price_allowlist, fetch_clp_usd_rate,
+    fetch_crypto_prices, validate_proxy_url,
 };
 use super::validation::{
-    validate_coin_id_str, validate_date, validate_field_length, validate_uuid, sanitize_string,
-    MAX_WALLET_NAME_LENGTH, MAX_ICON_LENGTH,
+    MAX_ICON_LENGTH, MAX_WALLET_NAME_LENGTH, sanitize_string, validate_coin_id_str, validate_date,
+    validate_field_length, validate_uuid,
 };
 
 // ==================== Settings Constants ====================
@@ -52,11 +52,11 @@ pub const SETTING_CRYPTO_PROXY_URL: &str = "crypto_proxy_url";
 pub const SETTING_CRYPTO_TAX_IPC_DATA: &str = "crypto_tax_ipc_data";
 pub const SETTING_CRYPTO_TAX_IPC_UPDATED: &str = "crypto_tax_ipc_updated";
 pub const SETTING_CRYPTO_TAX_SETTINGS: &str = "crypto_tax_settings";
-pub const SETTING_DARK_MODE: &str = "dark_mode";
-pub const SETTING_SESSION_TIMEOUT: &str = "session_timeout";
-pub const SETTING_PREFERRED_CURRENCY: &str = "preferred_currency";
-pub const SETTING_PREFERRED_LANGUAGE: &str = "preferred_language";
-pub const SETTING_SIDEBAR_COLLAPSED: &str = "sidebar_collapsed";
+// Re-export app-level settings from core so existing consumers don't break.
+pub use crate::core::settings::{
+    SETTING_DARK_MODE, SETTING_PREFERRED_CURRENCY, SETTING_PREFERRED_LANGUAGE,
+    SETTING_SESSION_TIMEOUT, SETTING_SIDEBAR_COLLAPSED,
+};
 
 // ==================== Error Types ====================
 
@@ -125,10 +125,7 @@ impl CryptoService {
     }
 
     pub fn set_app_setting(&self, key: &str, value: &str) -> Result<(), CryptoError> {
-        self.with_db(|db| {
-            db.set_setting(key, value)
-                .map_err(CryptoError::Database)
-        })
+        self.with_db(|db| db.set_setting(key, value).map_err(CryptoError::Database))
     }
 
     pub fn set_proxy_enabled(&self, enabled: bool) -> Result<(), CryptoError> {
@@ -220,7 +217,9 @@ impl CryptoService {
 
     pub async fn get_clp_usd_rate(&self) -> Result<f64, CryptoError> {
         let proxy = self.get_proxy_config()?;
-        fetch_clp_usd_rate(proxy.as_ref()).await.map_err(CryptoError::Api)
+        fetch_clp_usd_rate(proxy.as_ref())
+            .await
+            .map_err(CryptoError::Api)
     }
 
     pub fn save_crypto_prices(&self, prices: Vec<CryptoAsset>) -> Result<(), CryptoError> {
@@ -265,7 +264,9 @@ impl CryptoService {
             return Ok(None);
         }
 
-        let url = self.get_app_setting(SETTING_CRYPTO_PROXY_URL).unwrap_or_default();
+        let url = self
+            .get_app_setting(SETTING_CRYPTO_PROXY_URL)
+            .unwrap_or_default();
         let url = validate_proxy_url(&url).map_err(CryptoError::Validation)?;
         Ok(Some(ProxyConfig { url }))
     }
@@ -333,7 +334,10 @@ impl CryptoService {
             };
 
             let existing_wallets = db.get_wallets()?;
-            if existing_wallets.iter().any(|w| w.name.eq_ignore_ascii_case(&name)) {
+            if existing_wallets
+                .iter()
+                .any(|w| w.name.eq_ignore_ascii_case(&name))
+            {
                 return Err(CryptoError::Validation(format!(
                     "A wallet named '{}' already exists. Please choose a different name.",
                     name
@@ -427,10 +431,7 @@ impl CryptoService {
     // ==================== Portfolio ====================
 
     pub fn get_aggregated_portfolio(&self) -> Result<Vec<AggregatedAsset>, CryptoError> {
-        self.with_db(|db| {
-            db.get_aggregated_portfolio()
-                .map_err(CryptoError::Database)
-        })
+        self.with_db(|db| db.get_aggregated_portfolio().map_err(CryptoError::Database))
     }
 
     pub fn get_wallet_holdings(
@@ -470,7 +471,9 @@ impl CryptoService {
 
 #[cfg(test)]
 mod tests {
-    use crate::features::crypto::api::{validate_coin_id, validate_price, validate_percentage, sanitize_api_string};
+    use crate::features::crypto::api::{
+        sanitize_api_string, validate_coin_id, validate_percentage, validate_price,
+    };
 
     #[test]
     fn test_validate_coin_id_valid() {

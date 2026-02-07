@@ -169,10 +169,8 @@ fn parse_ipc_csv_no_header_flexible(content: &str) -> Result<IpcParsed, String> 
         let mut index_raw = "";
 
         if record.len() >= 3 {
-            period = parse_year_month_period(
-                record.get(0).unwrap_or(""),
-                record.get(1).unwrap_or(""),
-            );
+            period =
+                parse_year_month_period(record.get(0).unwrap_or(""), record.get(1).unwrap_or(""));
             if period.is_some() {
                 index_raw = record.get(2).unwrap_or("");
             }
@@ -308,15 +306,7 @@ fn is_month_header(key: &str) -> bool {
 fn is_period_header(key: &str) -> bool {
     matches!(
         key,
-        "periodo"
-            | "period"
-            | "fecha"
-            | "mes"
-            | "month"
-            | "time"
-            | "date"
-            | "anio"
-            | "ano"
+        "periodo" | "period" | "fecha" | "mes" | "month" | "time" | "date" | "anio" | "ano"
     )
 }
 
@@ -416,10 +406,10 @@ fn extract_year(input: &str) -> Option<i32> {
     }
     for idx in 0..=digits.len().saturating_sub(4) {
         let slice: String = digits[idx..idx + 4].iter().collect();
-        if let Ok(year) = slice.parse::<i32>() {
-            if (1900..=2100).contains(&year) {
-                return Some(year);
-            }
+        if let Ok(year) = slice.parse::<i32>()
+            && (1900..=2100).contains(&year)
+        {
+            return Some(year);
         }
     }
     None

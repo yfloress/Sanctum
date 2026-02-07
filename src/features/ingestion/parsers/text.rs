@@ -340,8 +340,17 @@ impl TextParser {
         };
 
         let is_swap = tx_type.eq_ignore_ascii_case("swap");
-        let (price_per_coin, fee, swap_to_symbol, swap_to_amount, fee_coin_symbol, fee_amount, notes) =
-            if is_swap {
+        let (
+            price_per_coin,
+            fee,
+            swap_to_symbol,
+            swap_to_amount,
+            fee_coin_symbol,
+            fee_amount,
+            notes,
+            tax_type,
+            tax_subtype,
+        ) = if is_swap {
             let parse_num = |raw: &str| raw.replace(',', ".").parse::<f64>().ok();
             let price_candidate = fields.get(5).map(|s| s.trim()).unwrap_or("");
             let mut price_per_coin = None;
@@ -365,15 +374,23 @@ impl TextParser {
 
             if to_symbol.is_empty() {
                 result.errors.push(
-                    RowError::new(line_number, Some("swap_to_symbol"), "Swap target symbol is required")
-                        .with_raw_data(format!("C;{}", line)),
+                    RowError::new(
+                        line_number,
+                        Some("swap_to_symbol"),
+                        "Swap target symbol is required",
+                    )
+                    .with_raw_data(format!("C;{}", line)),
                 );
                 return;
             }
             if to_amount_str.is_empty() {
                 result.errors.push(
-                    RowError::new(line_number, Some("swap_to_amount"), "Swap target amount is required")
-                        .with_raw_data(format!("C;{}", line)),
+                    RowError::new(
+                        line_number,
+                        Some("swap_to_amount"),
+                        "Swap target amount is required",
+                    )
+                    .with_raw_data(format!("C;{}", line)),
                 );
                 return;
             }
@@ -413,6 +430,16 @@ impl TextParser {
                 .map(|s| s.trim())
                 .filter(|s| !s.is_empty())
                 .map(String::from);
+            let tax_type = fields
+                .get(swap_symbol_idx + 6)
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .map(String::from);
+            let tax_subtype = fields
+                .get(swap_symbol_idx + 7)
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .map(String::from);
             (
                 price_per_coin,
                 fee,
@@ -421,6 +448,8 @@ impl TextParser {
                 fee_coin_symbol,
                 fee_amount,
                 notes,
+                tax_type,
+                tax_subtype,
             )
         } else {
             let price_per_coin = fields
@@ -438,7 +467,27 @@ impl TextParser {
                 .map(|s| s.trim())
                 .filter(|s| !s.is_empty())
                 .map(String::from);
-            (price_per_coin, fee, None, None, None, None, notes)
+            let tax_type = fields
+                .get(8)
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .map(String::from);
+            let tax_subtype = fields
+                .get(9)
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .map(String::from);
+            (
+                price_per_coin,
+                fee,
+                None,
+                None,
+                None,
+                None,
+                notes,
+                tax_type,
+                tax_subtype,
+            )
         };
 
         result.items.push((
@@ -451,6 +500,10 @@ impl TextParser {
                 amount,
                 price_per_coin,
                 fee,
+                tax_type,
+                tax_subtype,
+                override_proceeds: None,
+                override_cost_basis: None,
                 swap_to_symbol,
                 swap_to_amount,
                 fee_coin_symbol,
@@ -505,7 +558,10 @@ mod tests {
         assert_eq!(result.crypto_transactions.items.len(), 2);
         assert_eq!(result.crypto_transactions.items[0].1.symbol, "BTC");
         assert_eq!(result.crypto_transactions.items[0].1.amount, 0.5);
-        assert_eq!(result.crypto_transactions.items[0].1.price_per_coin, Some(45000.0));
+        assert_eq!(
+            result.crypto_transactions.items[0].1.price_per_coin,
+            Some(45000.0)
+        );
         assert_eq!(result.crypto_transactions.items[1].1.symbol, "ETH");
         assert!(result.crypto_transactions.items[1].1.fee.is_none());
     }

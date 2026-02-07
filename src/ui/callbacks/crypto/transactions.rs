@@ -52,7 +52,11 @@ pub fn setup_transaction_callbacks<N>(
                   fee_coin_id_str,
                   fee_coin_amount_str,
                   date,
-                  notes_str|
+                  notes_str,
+                  tax_type_str,
+                  tax_subtype_str,
+                  override_proceeds_str,
+                  override_cost_basis_str|
                   -> SharedString {
                 let amount_clean = amount_str
                     .replace(",", "")
@@ -115,6 +119,35 @@ pub fn setup_transaction_callbacks<N>(
                     Some(notes_str.to_string())
                 };
 
+                let tax_type = if tax_type_str.trim().is_empty() {
+                    None
+                } else {
+                    Some(tax_type_str.to_string())
+                };
+                let tax_subtype = if tax_subtype_str.trim().is_empty() {
+                    None
+                } else {
+                    Some(tax_subtype_str.to_string())
+                };
+                let parse_override = |raw: SharedString, label: &str| -> Result<Option<f64>, SharedString> {
+                    let cleaned = raw.replace(",", "").replace("$", "").trim().to_string();
+                    if cleaned.is_empty() {
+                        return Ok(None);
+                    }
+                    let parsed: f64 = cleaned
+                        .parse()
+                        .map_err(|_| SharedString::from(format!("Invalid {} format", label)))?;
+                    Ok(Some(parsed))
+                };
+                let override_proceeds = match parse_override(override_proceeds_str, "override proceeds") {
+                    Ok(v) => v,
+                    Err(e) => return e,
+                };
+                let override_cost_basis = match parse_override(override_cost_basis_str, "override cost basis") {
+                    Ok(v) => v,
+                    Err(e) => return e,
+                };
+
                 let result = controller.add_crypto_transaction(
                     wallet_id_raw.to_string(),
                     coin_id.to_string(),
@@ -127,6 +160,10 @@ pub fn setup_transaction_callbacks<N>(
                     fee_coin_amount,
                     date.to_string(),
                     notes,
+                    tax_type,
+                    tax_subtype,
+                    override_proceeds,
+                    override_cost_basis,
                 );
 
                 match result {
@@ -413,6 +450,16 @@ pub fn setup_transaction_callbacks<N>(
                 let fee_coin_amount = tx.fee_amount.map(format_crypto_amount).unwrap_or_default();
                 let amount_str = format!("{:.4}", tx.amount);
                 let notes_str = tx.notes.unwrap_or_default();
+                let tax_type_str = tx.tax_type.unwrap_or_default();
+                let tax_subtype_str = tx.tax_subtype.unwrap_or_default();
+                let override_proceeds_str = tx
+                    .override_proceeds
+                    .map(|v| format!("{:.4}", v))
+                    .unwrap_or_default();
+                let override_cost_str = tx
+                    .override_cost_basis
+                    .map(|v| format!("{:.4}", v))
+                    .unwrap_or_default();
 
                 if let Some(ui) = ui_weak.upgrade() {
                     ui.global::<CryptoAdapter>()
@@ -441,6 +488,14 @@ pub fn setup_transaction_callbacks<N>(
                         .set_edit_date(SharedString::from(&tx.date));
                     ui.global::<CryptoAdapter>()
                         .set_edit_notes(SharedString::from(notes_str));
+                    ui.global::<CryptoAdapter>()
+                        .set_edit_tax_type(SharedString::from(tax_type_str));
+                    ui.global::<CryptoAdapter>()
+                        .set_edit_tax_subtype(SharedString::from(tax_subtype_str));
+                    ui.global::<CryptoAdapter>()
+                        .set_edit_override_proceeds(SharedString::from(override_proceeds_str));
+                    ui.global::<CryptoAdapter>()
+                        .set_edit_override_cost(SharedString::from(override_cost_str));
                 }
 
                 SharedString::from("")
@@ -459,7 +514,11 @@ pub fn setup_transaction_callbacks<N>(
                   fee_coin_id_str,
                   fee_coin_amount_str,
                   date,
-                  notes_str| {
+                  notes_str,
+                  tax_type_str,
+                  tax_subtype_str,
+                  override_proceeds_str,
+                  override_cost_basis_str| {
                 let amount_clean = amount_str
                     .replace(",", "")
                     .replace("$", "")
@@ -521,6 +580,35 @@ pub fn setup_transaction_callbacks<N>(
                     Some(notes_str.to_string())
                 };
 
+                let tax_type = if tax_type_str.trim().is_empty() {
+                    None
+                } else {
+                    Some(tax_type_str.to_string())
+                };
+                let tax_subtype = if tax_subtype_str.trim().is_empty() {
+                    None
+                } else {
+                    Some(tax_subtype_str.to_string())
+                };
+                let parse_override = |raw: SharedString, label: &str| -> Result<Option<f64>, SharedString> {
+                    let cleaned = raw.replace(",", "").replace("$", "").trim().to_string();
+                    if cleaned.is_empty() {
+                        return Ok(None);
+                    }
+                    let parsed: f64 = cleaned
+                        .parse()
+                        .map_err(|_| SharedString::from(format!("Invalid {} format", label)))?;
+                    Ok(Some(parsed))
+                };
+                let override_proceeds = match parse_override(override_proceeds_str, "override proceeds") {
+                    Ok(v) => v,
+                    Err(e) => return e,
+                };
+                let override_cost_basis = match parse_override(override_cost_basis_str, "override cost basis") {
+                    Ok(v) => v,
+                    Err(e) => return e,
+                };
+
                 match controller.update_crypto_transaction(
                     id.to_string(),
                     amount,
@@ -530,6 +618,10 @@ pub fn setup_transaction_callbacks<N>(
                     fee_coin_amount,
                     date.to_string(),
                     notes,
+                    tax_type,
+                    tax_subtype,
+                    override_proceeds,
+                    override_cost_basis,
                 ) {
                     Ok(_) => {
                         if let Some(ui) = ui_weak.upgrade() {

@@ -30,7 +30,6 @@
 
 pub mod api;
 pub mod catalog;
-pub mod repository;
 pub mod service;
 mod service_tax;
 pub mod tax;
@@ -39,23 +38,23 @@ pub mod validation;
 
 // Re-export API functions
 pub use api::{
-    default_coin_catalog, default_price_allowlist, default_ticker_ids,
-    fetch_clp_usd_rate, fetch_crypto_prices, validate_coin_id,
+    default_coin_catalog, default_price_allowlist, default_ticker_ids, fetch_clp_usd_rate,
+    fetch_crypto_prices, validate_coin_id,
 };
 
 // Re-export service
 pub use service::{
-    CryptoError, CryptoService,
-    SETTING_AUTO_FETCH, SETTING_CRYPTO_CUSTOM_COINS, SETTING_CRYPTO_FAVORITE_COINS,
-    SETTING_CRYPTO_HIDDEN_COINS, SETTING_CRYPTO_LAST_COIN_ID, SETTING_CRYPTO_LAST_UPDATED,
-    SETTING_CRYPTO_LAST_WALLET_ID, SETTING_CRYPTO_PROXY_ENABLED, SETTING_CRYPTO_PROXY_URL,
-    SETTING_CRYPTO_TAX_IPC_DATA, SETTING_CRYPTO_TAX_IPC_UPDATED, SETTING_DARK_MODE,
-    SETTING_PREFERRED_CURRENCY, SETTING_PREFERRED_LANGUAGE, SETTING_SESSION_TIMEOUT,
-    SETTING_SIDEBAR_COLLAPSED, SETTING_TICKER_COINS,
+    CryptoError, CryptoService, SETTING_AUTO_FETCH, SETTING_CRYPTO_CUSTOM_COINS,
+    SETTING_CRYPTO_FAVORITE_COINS, SETTING_CRYPTO_HIDDEN_COINS, SETTING_CRYPTO_LAST_COIN_ID,
+    SETTING_CRYPTO_LAST_UPDATED, SETTING_CRYPTO_LAST_WALLET_ID, SETTING_CRYPTO_PROXY_ENABLED,
+    SETTING_CRYPTO_PROXY_URL, SETTING_CRYPTO_TAX_IPC_DATA, SETTING_CRYPTO_TAX_IPC_UPDATED,
+    SETTING_DARK_MODE, SETTING_PREFERRED_CURRENCY, SETTING_PREFERRED_LANGUAGE,
+    SETTING_SESSION_TIMEOUT, SETTING_SIDEBAR_COLLAPSED, SETTING_TICKER_COINS,
 };
 
 pub use tax::{IpcImportSummary, IpcSummary};
-pub use tax::{LotAllocation, TaxDisposal, TaxReport, TaxReportSummary, TaxWarning};
-pub use tax::{TaxJurisdiction, TaxMethod, TaxPeriodSettings, TaxSettingsStore};
-
-pub use repository::CryptoRepository;
+pub use tax::{
+    LotAllocation, TaxDisposal, TaxReadinessItem, TaxReport, TaxReportSummary, TaxSummaryPayload,
+    TaxWarning,
+};
+pub use tax::{TaxJurisdiction, TaxMethod, TaxPeriodSettings, TaxSettingsStore, TaxTxType};

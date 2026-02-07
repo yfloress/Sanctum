@@ -89,6 +89,14 @@ pub struct ImportCryptoTransaction {
     #[serde(default)]
     pub fee: Option<f64>, // Fee in USD
     #[serde(default)]
+    pub tax_type: Option<String>,
+    #[serde(default)]
+    pub tax_subtype: Option<String>,
+    #[serde(default)]
+    pub override_proceeds: Option<f64>,
+    #[serde(default)]
+    pub override_cost_basis: Option<f64>,
+    #[serde(default)]
     pub swap_to_symbol: Option<String>, // Swap target symbol (e.g., "ETH")
     #[serde(default)]
     pub swap_to_amount: Option<f64>, // Swap target amount

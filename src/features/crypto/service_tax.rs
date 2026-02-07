@@ -22,9 +22,13 @@ use super::service::{
     SETTING_CRYPTO_TAX_SETTINGS,
 };
 use super::tax::{
-    build_import_summary, build_tax_report, map_to_entries, parse_ipc_csv, summarize_ipc,
-    IpcEntry, IpcImportSummary, IpcSummary, TaxPeriodSettings, TaxReport, TaxSettingsStore,
+    IpcEntry, IpcImportSummary, IpcSummary, TaxPeriodSettings, TaxReadinessItem, TaxReport,
+    TaxSettingsStore, TaxSummaryPayload, TaxTxType, build_import_summary, build_tax_report,
+    map_to_entries, parse_ipc_csv, resolve_tax_subtype, resolve_tax_type, summarize_ipc,
 };
+use crate::core::csv_escape;
+use crate::features::crypto::tax::engine::{TaxPeriod, is_in_period, parse_date, parse_period};
+use crate::models::CryptoTransaction;
 use chrono::Local;
 
 impl CryptoService {
@@ -73,10 +77,7 @@ impl CryptoService {
 
     // ==================== Tax: Settings (Per Period) ====================
 
-    pub fn load_tax_settings(
-        &self,
-        period_id: String,
-    ) -> Result<TaxPeriodSettings, CryptoError> {
+    pub fn load_tax_settings(&self, period_id: String) -> Result<TaxPeriodSettings, CryptoError> {
         let period_id = period_id.trim().to_string();
         self.with_db(|db| {
             let raw = db
@@ -127,24 +128,108 @@ impl CryptoService {
         let settings = self.load_tax_settings(period_id.clone())?;
 
         self.with_db(|db| {
-            let transactions = db.get_all_crypto_transactions().map_err(CryptoError::Database)?;
+            let transactions = db
+                .get_all_crypto_transactions()
+                .map_err(CryptoError::Database)?;
             let ipc_entries = load_ipc_entries(db)?;
 
-            build_tax_report(transactions, settings, ipc_entries)
-                .map_err(CryptoError::Validation)
+            build_tax_report(transactions, settings, ipc_entries).map_err(CryptoError::Validation)
         })
     }
 
-    pub fn export_tax_report_csv(
+    pub fn generate_tax_summary(
         &self,
         period_id: String,
-        path: &str,
-    ) -> Result<(), CryptoError> {
+    ) -> Result<TaxSummaryPayload, CryptoError> {
+        let period_id = period_id.trim().to_string();
+        if period_id.is_empty() {
+            return Err(CryptoError::Validation(
+                "Tax period is required".to_string(),
+            ));
+        }
+
+        let settings = self.load_tax_settings(period_id.clone())?;
+        let period = parse_period(&period_id).map_err(CryptoError::Validation)?;
+
+        self.with_db(|db| {
+            let transactions = db
+                .get_all_crypto_transactions()
+                .map_err(CryptoError::Database)?;
+            let ipc_entries = load_ipc_entries(db)?;
+
+            // Compute income and period stats from the borrowed slice BEFORE moving
+            // transactions into build_tax_report (which takes ownership).
+            let (income_total, income_count, income_warnings) =
+                compute_taxable_income(&transactions, &period);
+
+            let transactions_in_period = transactions
+                .iter()
+                .filter(|tx| {
+                    parse_date(&tx.date)
+                        .map(|date| is_in_period(&period, date))
+                        .unwrap_or(false)
+                })
+                .count();
+
+            let unpaired_transfers = count_unpaired_transfers(&transactions);
+
+            let (end_balance_value, end_balance_missing) =
+                compute_end_balance(db, &transactions, period.end)?;
+
+            let mut report = build_tax_report(transactions, settings, ipc_entries)
+                .map_err(CryptoError::Validation)?;
+
+            report.warnings.extend(income_warnings);
+
+            let readiness = build_readiness(
+                &report,
+                transactions_in_period,
+                end_balance_missing,
+                unpaired_transfers,
+            );
+
+            let volume_processed = report.summary.total_proceeds;
+
+            Ok(TaxSummaryPayload {
+                report,
+                taxable_income_total: income_total,
+                taxable_income_count: income_count,
+                end_balance_value,
+                end_balance_missing,
+                transactions_in_period,
+                volume_processed,
+                readiness,
+            })
+        })
+    }
+
+    pub fn export_tax_report_csv(&self, period_id: String, path: &str) -> Result<(), CryptoError> {
         let report = self.generate_tax_report(period_id)?;
         let csv = report.to_csv();
         std::fs::write(path, csv)
             .map_err(|e| CryptoError::Validation(format!("Failed to write report: {}", e)))?;
         Ok(())
+    }
+
+    pub fn export_tax_history_csv(&self, period_id: String, path: &str) -> Result<(), CryptoError> {
+        let period_id = period_id.trim().to_string();
+        if period_id.is_empty() {
+            return Err(CryptoError::Validation(
+                "Tax period is required".to_string(),
+            ));
+        }
+
+        let period = parse_period(&period_id).map_err(CryptoError::Validation)?;
+
+        self.with_db(|db| {
+            let transactions = db
+                .get_all_crypto_transactions()
+                .map_err(CryptoError::Database)?;
+            let csv = build_transaction_history_csv(&transactions, &period);
+            std::fs::write(path, csv)
+                .map_err(|e| CryptoError::Validation(format!("Failed to write history: {}", e)))?;
+            Ok(())
+        })
     }
 }
 
@@ -160,4 +245,242 @@ fn load_ipc_entries(db: &crate::db::Database) -> Result<Vec<IpcEntry>, CryptoErr
     let entries: Vec<IpcEntry> = serde_json::from_str(&raw)
         .map_err(|e| CryptoError::Validation(format!("IPC data invalid: {}", e)))?;
     Ok(entries)
+}
+
+fn compute_taxable_income(
+    transactions: &[CryptoTransaction],
+    period: &TaxPeriod,
+) -> (f64, usize, Vec<crate::features::crypto::TaxWarning>) {
+    let mut total = 0.0;
+    let mut count = 0;
+    let mut warnings = Vec::new();
+
+    for tx in transactions {
+        let Some(date) = parse_date(&tx.date) else {
+            continue;
+        };
+        if !is_in_period(period, date) {
+            continue;
+        }
+
+        let tax_type = resolve_tax_type(tx);
+        if tax_type != TaxTxType::Income {
+            continue;
+        }
+
+        count += 1;
+        if let Some(value) = tx.override_proceeds {
+            total += value;
+            continue;
+        }
+        if let Some(price) = tx.price_per_coin {
+            total += price * tx.amount;
+        } else {
+            warnings.push(crate::features::crypto::TaxWarning {
+                code: "income_missing_price".to_string(),
+                message: format!("Missing price for income {}", tx.id),
+                tx_id: Some(tx.id.clone()),
+            });
+        }
+    }
+
+    (total, count, warnings)
+}
+
+fn compute_end_balance(
+    db: &crate::db::Database,
+    transactions: &[CryptoTransaction],
+    period_end: chrono::NaiveDate,
+) -> Result<(Option<f64>, usize), CryptoError> {
+    let filtered: Vec<CryptoTransaction> = transactions
+        .iter()
+        .filter(|tx| {
+            parse_date(&tx.date)
+                .map(|date| date <= period_end)
+                .unwrap_or(false)
+        })
+        .cloned()
+        .collect();
+
+    let assets = crate::db::Database::aggregate_crypto_transactions(filtered);
+    let mut missing = 0usize;
+    let mut total = 0.0;
+
+    for asset in assets {
+        if asset.total_amount <= 0.0 {
+            continue;
+        }
+        match db
+            .load_crypto_price(&asset.coin_id)
+            .map_err(CryptoError::Database)?
+        {
+            Some((price, _)) => {
+                total += asset.total_amount * price;
+            }
+            None => {
+                missing += 1;
+            }
+        }
+    }
+
+    let value = if missing == 0 { Some(total) } else { None };
+    Ok((value, missing))
+}
+
+fn count_unpaired_transfers(transactions: &[CryptoTransaction]) -> usize {
+    transactions
+        .iter()
+        .filter(|tx| {
+            (tx.transaction_type == "transfer_in" || tx.transaction_type == "transfer_out")
+                && tx.related_tx_id.is_none()
+        })
+        .count()
+}
+
+fn build_readiness(
+    report: &TaxReport,
+    transactions_in_period: usize,
+    end_balance_missing: usize,
+    unpaired_transfers: usize,
+) -> Vec<TaxReadinessItem> {
+    let warning_codes: std::collections::HashSet<&str> =
+        report.warnings.iter().map(|w| w.code.as_str()).collect();
+
+    let has_invalid =
+        warning_codes.contains("invalid_date") || warning_codes.contains("invalid_type");
+
+    let missing_price_codes = [
+        "missing_price",
+        "fee_missing_price",
+        "swap_missing_price",
+        "income_missing_price",
+        "ipc_missing",
+    ];
+    let has_missing_prices = missing_price_codes
+        .iter()
+        .any(|c| warning_codes.contains(c))
+        || end_balance_missing > 0;
+
+    let has_insufficient = warning_codes.contains("insufficient_lots");
+
+    let missing_price_count = report
+        .warnings
+        .iter()
+        .filter(|w| missing_price_codes.contains(&w.code.as_str()))
+        .count()
+        + end_balance_missing;
+
+    let insufficient_count = report
+        .warnings
+        .iter()
+        .filter(|w| w.code == "insufficient_lots")
+        .count();
+
+    vec![
+        TaxReadinessItem {
+            code: "settings".to_string(),
+            status: if transactions_in_period > 0 {
+                "ok"
+            } else {
+                "warn"
+            }
+            .to_string(),
+            detail: if transactions_in_period == 0 {
+                "No transactions found in period".to_string()
+            } else {
+                format!("{} transactions in period", transactions_in_period)
+            },
+        },
+        TaxReadinessItem {
+            code: "history".to_string(),
+            status: if has_insufficient { "warn" } else { "ok" }.to_string(),
+            detail: if has_insufficient {
+                format!("{} disposals with insufficient lots", insufficient_count)
+            } else {
+                String::new()
+            },
+        },
+        TaxReadinessItem {
+            code: "balances".to_string(),
+            status: if has_insufficient { "warn" } else { "ok" }.to_string(),
+            detail: if has_insufficient {
+                "Some disposals exceed available lot quantity".to_string()
+            } else {
+                String::new()
+            },
+        },
+        TaxReadinessItem {
+            code: "prices".to_string(),
+            status: if has_invalid {
+                "error"
+            } else if has_missing_prices {
+                "warn"
+            } else {
+                "ok"
+            }
+            .to_string(),
+            detail: if has_invalid {
+                "Invalid dates or transaction types found".to_string()
+            } else if has_missing_prices {
+                format!("{} items missing price data", missing_price_count)
+            } else {
+                String::new()
+            },
+        },
+        TaxReadinessItem {
+            code: "transfers".to_string(),
+            status: if unpaired_transfers > 0 { "warn" } else { "ok" }.to_string(),
+            detail: if unpaired_transfers > 0 {
+                format!("{} unpaired transfers", unpaired_transfers)
+            } else {
+                String::new()
+            },
+        },
+    ]
+}
+
+fn build_transaction_history_csv(transactions: &[CryptoTransaction], period: &TaxPeriod) -> String {
+    let mut out = String::new();
+    out.push_str("tx_id,date,coin_id,symbol,transaction_type,tax_type,tax_subtype,amount,price_per_coin,fee,fee_coin_id,fee_amount,override_proceeds,override_cost_basis,notes,related_tx_id\n");
+
+    for tx in transactions {
+        let Some(date) = parse_date(&tx.date) else {
+            continue;
+        };
+        if !is_in_period(period, date) {
+            continue;
+        }
+
+        let tax_type = resolve_tax_type(tx).as_str().to_string();
+        let tax_subtype = resolve_tax_subtype(tx).unwrap_or_default();
+        out.push_str(&format!(
+            "{},{},{},{},{},{},{},{:.8},{},{},{},{},{},{},{},{}\n",
+            csv_escape(&tx.id),
+            csv_escape(&tx.date),
+            csv_escape(&tx.coin_id),
+            csv_escape(&tx.symbol),
+            csv_escape(&tx.transaction_type),
+            csv_escape(&tax_type),
+            csv_escape(&tax_subtype),
+            tx.amount,
+            tx.price_per_coin
+                .map(|v| format!("{:.8}", v))
+                .unwrap_or_default(),
+            tx.fee.map(|v| format!("{:.8}", v)).unwrap_or_default(),
+            csv_escape(tx.fee_coin_id.as_deref().unwrap_or("")),
+            tx.fee_amount
+                .map(|v| format!("{:.8}", v))
+                .unwrap_or_default(),
+            tx.override_proceeds
+                .map(|v| format!("{:.8}", v))
+                .unwrap_or_default(),
+            tx.override_cost_basis
+                .map(|v| format!("{:.8}", v))
+                .unwrap_or_default(),
+            csv_escape(tx.notes.as_deref().unwrap_or("")),
+            csv_escape(tx.related_tx_id.as_deref().unwrap_or("")),
+        ));
+    }
+
+    out
 }
