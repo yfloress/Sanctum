@@ -63,28 +63,30 @@ component TickerToggleRow inherits Rectangle {
 
             // Toggle Switch
             Rectangle {
-                width: 36px;
-                height: 20px;
-                border-radius: 10px;
+                width: 42px;
+                height: 24px;
+                border-radius: 12px;
                 background: root.checked ? Theme.accent : Theme.surface-hover;
                 border-width: 1px;
                 border-color: root.checked ? Theme.accent : Theme.border;
 
-                animate background { duration: 150ms; }
+                animate background { duration: 200ms; easing: ease-in-out; }
+                animate border-color { duration: 200ms; easing: ease-in-out; }
 
                 // Knob
                 Rectangle {
-                    x: root.checked ? 18px : 2px;
-                    y: 2px;
-                    width: 16px;
-                    height: 16px;
-                    border-radius: 8px;
+                    x: root.checked ? 21px : 3px;
+                    y: 3px;
+                    width: 18px;
+                    height: 18px;
+                    border-radius: 9px;
                     background: root.checked ? Theme.background : Theme.text-secondary;
 
                     animate x {
-                        duration: 150ms;
-                        easing: ease-in-out;
+                        duration: 250ms;
+                        easing: cubic-bezier(0.34, 1.4, 0.64, 1);
                     }
+                    animate background { duration: 200ms; easing: ease-in-out; }
                 }
 
                 TouchArea {

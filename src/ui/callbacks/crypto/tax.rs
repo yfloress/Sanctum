@@ -23,7 +23,7 @@ use crate::services::i18n::{t, t_args};
 use crate::ui::{convert_usd_to_preferred, format_preferred};
 use crate::{AppWindow, CryptoAdapter, TaxReadinessItem, TaxWalletEntry, Translations};
 use slint::platform::Clipboard;
-use slint::{ComponentHandle, ModelRc, SharedString, VecModel, Weak};
+use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel, Weak};
 use std::sync::Arc;
 
 /// Resolves the display currency and CLP exchange rate from the controller.
@@ -290,7 +290,19 @@ pub fn setup_tax_callbacks<N>(
                     notify(format!("Failed to save wallet exclusion: {}", err), true);
                 }
 
-                update_tax_wallet_list(&ui_weak, &controller);
+                // Update the specific item in-place so Slint sees a property
+                // transition and fires the toggle animation (rebuilding the
+                // whole model would recreate the for-loop items, skipping it).
+                let model = adapter.get_tax_wallet_list();
+                for i in 0..model.row_count() {
+                    if let Some(mut entry) = model.row_data(i) {
+                        if entry.id == wallet_id {
+                            entry.excluded = !entry.excluded;
+                            model.set_row_data(i, entry);
+                            break;
+                        }
+                    }
+                }
             });
     }
 
