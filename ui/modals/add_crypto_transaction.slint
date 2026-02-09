@@ -371,9 +371,9 @@ export component AddCryptoTransactionModal inherits Rectangle {
             return;
         }
         let result = CryptoAdapter.add-transaction(
-            wallet-id, from-coin-id, from-symbol, selected-type,
+            wallet-id, from-coin-id, from-symbol, tax-type,
             amount, price, fee, fee-coin-id, fee-coin-amount,
-            date, notes, tax-type, tax-subtype, "", "");
+            date, notes, tax-subtype, "", "");
         if (result == "") {
             root.reset();
             AppState.show-add-crypto = false;

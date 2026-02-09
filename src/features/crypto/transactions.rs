@@ -25,11 +25,10 @@ use uuid::Uuid;
 
 use super::service::{CryptoError, CryptoService};
 use super::validation::{
-    validate_coin_id_str, validate_symbol, validate_positive_amount, validate_non_negative,
-    normalize_fee_coin, validate_date, validate_field_length, sanitize_string, validate_uuid,
-    validate_sufficient_balance, validate_fee_balance, validate_tax_type, validate_tax_subtype,
-    FeeBalanceContext,
-    MAX_NOTES_LENGTH,
+    FeeBalanceContext, MAX_NOTES_LENGTH, normalize_fee_coin, sanitize_string, validate_coin_id_str,
+    validate_date, validate_fee_balance, validate_field_length, validate_non_negative,
+    validate_positive_amount, validate_subtype, validate_sufficient_balance, validate_symbol,
+    validate_uuid,
 };
 
 impl CryptoService {
@@ -47,8 +46,7 @@ impl CryptoService {
         fee_amount: Option<f64>,
         date: String,
         notes: Option<String>,
-        tax_type: Option<String>,
-        tax_subtype: Option<String>,
+        subtype: Option<String>,
         override_proceeds: Option<f64>,
         override_cost_basis: Option<f64>,
     ) -> Result<String, CryptoError> {
@@ -76,13 +74,12 @@ impl CryptoService {
             let fee = validate_non_negative(fee, "Fee")?;
             let (fee_coin_id, fee_amount) = normalize_fee_coin(fee_coin_id, fee_amount)?;
             let date = validate_date(&date)?;
-            let tax_type = validate_tax_type(tax_type)?;
-            let tax_subtype = validate_tax_subtype(tax_type.as_deref(), tax_subtype)?;
+            let subtype = validate_subtype(Some(transaction_type.as_str()), subtype)?;
             let override_proceeds = validate_non_negative(override_proceeds, "Override proceeds")?;
             let override_cost_basis =
                 validate_non_negative(override_cost_basis, "Override cost basis")?;
 
-            let valid_types = ["buy", "sell", "transfer_in", "transfer_out", "swap"];
+            let valid_types = ["trade", "income", "expense", "transfer"];
             if !valid_types.contains(&transaction_type.as_str()) {
                 return Err(CryptoError::Validation(format!(
                     "Invalid transaction type. Must be one of: {}",
@@ -90,19 +87,25 @@ impl CryptoService {
                 )));
             }
 
-            if transaction_type == "swap" {
+            // Build a temporary struct to derive mechanical type for validation
+            let mech = crate::features::crypto::tax::types::derive_mechanical_type(
+                &transaction_type,
+                subtype.as_deref(),
+            );
+
+            if mech == "swap" {
                 return Err(CryptoError::Validation(
                     "Swap requires paired transactions. Use the swap flow.".to_string(),
                 ));
             }
 
-            let price = if transaction_type == "buy" || transaction_type == "sell" {
+            let price = if mech == "buy" || mech == "sell" {
                 match price_per_coin {
                     Some(p) => Some(validate_positive_amount(p, "Price per coin")?),
                     None => {
                         return Err(CryptoError::Validation(
                             "Price per coin is required and must be greater than zero".to_string(),
-                        ))
+                        ));
                     }
                 }
             } else {
@@ -112,19 +115,11 @@ impl CryptoService {
                 }
             };
 
-            let is_outflow = transaction_type == "sell"
-                || transaction_type == "transfer_out"
-                || transaction_type == "swap";
+            let is_outflow = mech == "sell" || mech == "transfer_out" || mech == "swap";
 
             if is_outflow {
                 validate_sufficient_balance(
-                    db,
-                    &wallet_id,
-                    &coin_id,
-                    &symbol,
-                    amount,
-                    &date,
-                    None,
+                    db, &wallet_id, &coin_id, &symbol, amount, &date, None,
                 )?;
             }
 
@@ -160,8 +155,7 @@ impl CryptoService {
             );
             transaction.fee_coin_id = fee_coin_id;
             transaction.fee_amount = fee_amount;
-            transaction.tax_type = tax_type;
-            transaction.tax_subtype = tax_subtype;
+            transaction.subtype = subtype;
             transaction.override_proceeds = override_proceeds;
             transaction.override_cost_basis = override_cost_basis;
 
@@ -281,14 +275,13 @@ impl CryptoService {
                 wallet_id: from_wallet_id,
                 coin_id: coin_id.clone(),
                 symbol: symbol.clone(),
-                transaction_type: "transfer_out".to_string(),
+                transaction_type: "transfer".to_string(),
                 amount: from_amount,
                 price_per_coin: None,
                 fee: None,
                 fee_coin_id: fee_coin_id.clone(),
                 fee_amount,
-                tax_type: Some("transfer".to_string()),
-                tax_subtype: Some("withdrawal".to_string()),
+                subtype: Some("withdrawal".to_string()),
                 override_proceeds: None,
                 override_cost_basis: None,
                 date: date.clone(),
@@ -301,14 +294,13 @@ impl CryptoService {
                 wallet_id: to_wallet_id,
                 coin_id,
                 symbol,
-                transaction_type: "transfer_in".to_string(),
+                transaction_type: "transfer".to_string(),
                 amount: to_amount,
                 price_per_coin: transfer_price,
                 fee,
                 fee_coin_id: None,
                 fee_amount: None,
-                tax_type: Some("transfer".to_string()),
-                tax_subtype: Some("deposit".to_string()),
+                subtype: Some("deposit".to_string()),
                 override_proceeds: None,
                 override_cost_basis: None,
                 date,
@@ -436,14 +428,13 @@ impl CryptoService {
                 wallet_id: wallet_id.clone(),
                 coin_id: from_coin_id,
                 symbol: from_symbol,
-                transaction_type: "swap".to_string(),
+                transaction_type: "trade".to_string(),
                 amount: from_amount,
                 price_per_coin: None,
                 fee,
                 fee_coin_id: fee_coin_id.clone(),
                 fee_amount,
-                tax_type: Some("trade".to_string()),
-                tax_subtype: Some("swap".to_string()),
+                subtype: Some("swap".to_string()),
                 override_proceeds: None,
                 override_cost_basis: None,
                 date: date.clone(),
@@ -456,14 +447,13 @@ impl CryptoService {
                 wallet_id,
                 coin_id: to_coin_id,
                 symbol: to_symbol,
-                transaction_type: "swap".to_string(),
+                transaction_type: "trade".to_string(),
                 amount: to_amount,
                 price_per_coin: None,
                 fee: None,
                 fee_coin_id: None,
                 fee_amount: None,
-                tax_type: Some("trade".to_string()),
-                tax_subtype: Some("swap".to_string()),
+                subtype: Some("swap".to_string()),
                 override_proceeds: None,
                 override_cost_basis: None,
                 date,
@@ -534,8 +524,7 @@ impl CryptoService {
         fee_amount: Option<f64>,
         date: String,
         notes: Option<String>,
-        tax_type: Option<String>,
-        tax_subtype: Option<String>,
+        subtype: Option<String>,
         override_proceeds: Option<f64>,
         override_cost_basis: Option<f64>,
     ) -> Result<(), CryptoError> {
@@ -544,29 +533,24 @@ impl CryptoService {
             let existing = db.get_crypto_transaction(&validated_id)?;
             let existing = match existing {
                 Some(tx) => tx,
-                None => {
-                    return Err(CryptoError::Validation(
-                        "Transaction not found".to_string(),
-                    ))
-                }
+                None => return Err(CryptoError::Validation("Transaction not found".to_string())),
             };
 
-            if existing.transaction_type == "swap" || existing.related_tx_id.is_some() {
+            if existing.mechanical_type() == "swap" || existing.related_tx_id.is_some() {
                 return Err(CryptoError::Validation(
                     "Editing paired transactions is not supported".to_string(),
                 ));
             }
 
             validate_positive_amount(amount, "Amount")?;
-            let price = if existing.transaction_type == "buy"
-                || existing.transaction_type == "sell"
-            {
+            let existing_mech = existing.mechanical_type();
+            let price = if existing_mech == "buy" || existing_mech == "sell" {
                 match price_per_coin {
                     Some(p) => Some(validate_positive_amount(p, "Price per coin")?),
                     None => {
                         return Err(CryptoError::Validation(
                             "Price per coin is required and must be greater than zero".to_string(),
-                        ))
+                        ));
                     }
                 }
             } else {
@@ -587,8 +571,7 @@ impl CryptoService {
                 None => None,
             };
 
-            let is_outflow = existing.transaction_type == "sell"
-                || existing.transaction_type == "transfer_out";
+            let is_outflow = existing_mech == "sell" || existing_mech == "transfer_out";
 
             let existing_type = existing.get_type().unwrap_or(CryptoTransactionType::Buy);
 
@@ -662,8 +645,7 @@ impl CryptoService {
                 fee_amount,
                 &date,
                 notes.as_deref(),
-                tax_type.as_deref(),
-                tax_subtype.as_deref(),
+                subtype.as_deref(),
                 override_proceeds,
                 override_cost_basis,
             )?;

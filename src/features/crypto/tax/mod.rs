@@ -34,27 +34,22 @@ pub use report::{LotAllocation, TaxDisposal, TaxReport, TaxReportSummary, TaxWar
 pub use summary::{TaxReadinessItem, TaxSummaryPayload};
 pub use types::{
     TaxJurisdiction, TaxMethod, TaxPeriodSettings, TaxSettingsStore, TaxTxType,
-    is_loss_only_subtype, normalize_tax_subtype, normalize_tax_type,
+    is_loss_only_subtype, normalize_tax_subtype,
 };
 
 use crate::models::CryptoTransaction;
 
+/// Returns the fiscal category stored in `transaction_type`.
+///
+/// `type` holds the fiscal category directly
+/// (`trade` / `income` / `expense` / `transfer`), so this is a simple parse.
 pub fn resolve_tax_type(tx: &CryptoTransaction) -> TaxTxType {
-    if let Some(value) = tx.tax_type.as_deref()
-        && let Some(normalized) = TaxTxType::parse(value)
-    {
-        return normalized;
-    }
-
-    match tx.transaction_type.as_str() {
-        "transfer_in" | "transfer_out" => TaxTxType::Transfer,
-        "buy" | "sell" | "swap" => TaxTxType::Trade,
-        _ => TaxTxType::Trade,
-    }
+    TaxTxType::parse(&tx.transaction_type).unwrap_or(TaxTxType::Trade)
 }
 
+/// Returns the validated subtype (e.g. "airdrop", "deposit", "swap").
 pub fn resolve_tax_subtype(tx: &CryptoTransaction) -> Option<String> {
     let tax_type = resolve_tax_type(tx);
-    let raw = tx.tax_subtype.as_deref()?;
+    let raw = tx.subtype.as_deref()?;
     normalize_tax_subtype(tax_type.as_str(), raw)
 }

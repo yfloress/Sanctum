@@ -24,8 +24,7 @@ use super::service::{
 use super::tax::{
     IpcEntry, IpcImportSummary, IpcSummary, TaxJurisdiction, TaxPeriodSettings, TaxReadinessItem,
     TaxReport, TaxSettingsStore, TaxSummaryPayload, TaxTxType, TaxWarning, build_import_summary,
-    build_tax_report, map_to_entries, parse_ipc_csv, resolve_tax_subtype, resolve_tax_type,
-    summarize_ipc,
+    build_tax_report, map_to_entries, parse_ipc_csv, resolve_tax_type, summarize_ipc,
 };
 use crate::core::csv_escape;
 use crate::features::crypto::tax::engine::{TaxPeriod, is_in_period, parse_date, parse_period};
@@ -358,8 +357,8 @@ fn count_unpaired_transfers(transactions: &[CryptoTransaction]) -> usize {
     transactions
         .iter()
         .filter(|tx| {
-            (tx.transaction_type == "transfer_in" || tx.transaction_type == "transfer_out")
-                && tx.related_tx_id.is_none()
+            let mech = tx.mechanical_type();
+            (mech == "transfer_in" || mech == "transfer_out") && tx.related_tx_id.is_none()
         })
         .count()
 }
@@ -484,7 +483,7 @@ fn build_readiness(
 
 fn build_transaction_history_csv(transactions: &[CryptoTransaction], period: &TaxPeriod) -> String {
     let mut out = String::new();
-    out.push_str("tx_id,date,coin_id,symbol,transaction_type,tax_type,tax_subtype,amount,price_per_coin,fee,fee_coin_id,fee_amount,override_proceeds,override_cost_basis,notes,related_tx_id\n");
+    out.push_str("tx_id,date,coin_id,symbol,type,subtype,mechanical_type,amount,price_per_coin,fee,fee_coin_id,fee_amount,override_proceeds,override_cost_basis,notes,related_tx_id\n");
 
     for tx in transactions {
         let Some(date) = parse_date(&tx.date) else {
@@ -494,8 +493,7 @@ fn build_transaction_history_csv(transactions: &[CryptoTransaction], period: &Ta
             continue;
         }
 
-        let tax_type = resolve_tax_type(tx).as_str().to_string();
-        let tax_subtype = resolve_tax_subtype(tx).unwrap_or_default();
+        let subtype_str = tx.subtype.as_deref().unwrap_or("");
         out.push_str(&format!(
             "{},{},{},{},{},{},{},{:.8},{},{},{},{},{},{},{},{}\n",
             csv_escape(&tx.id),
@@ -503,8 +501,8 @@ fn build_transaction_history_csv(transactions: &[CryptoTransaction], period: &Ta
             csv_escape(&tx.coin_id),
             csv_escape(&tx.symbol),
             csv_escape(&tx.transaction_type),
-            csv_escape(&tax_type),
-            csv_escape(&tax_subtype),
+            csv_escape(subtype_str),
+            csv_escape(tx.mechanical_type()),
             tx.amount,
             tx.price_per_coin
                 .map(|v| format!("{:.8}", v))

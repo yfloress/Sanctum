@@ -20,26 +20,18 @@
 //! Uses `PRAGMA user_version` for schema version tracking.
 //! Migrations are applied incrementally and sequentially.
 //!
-//! ## No-Drop Policy
-//! Migrations must NEVER drop tables containing user data.
-//! Allowed operations:
-//! - `CREATE TABLE IF NOT EXISTS`
-//! - `ALTER TABLE ... ADD COLUMN`
-//! - `CREATE INDEX IF NOT EXISTS`
-//!
 //! ## Adding New Migrations
 //! 1. Create `vXXX_description.rs` with `pub fn up(conn: &Connection) -> Result<(), DbError>`
 //! 2. Add module declaration and Migration entry to `get_migrations()`
 //! 3. Increment `SCHEMA_VERSION`
 
 mod v001_initial_schema;
-mod v002_crypto_tax_classification;
 
 use super::DbError;
 use rusqlite::Connection;
 
 /// Current schema version - increment when adding new migrations
-pub const SCHEMA_VERSION: i64 = 2;
+pub const SCHEMA_VERSION: i64 = 1;
 
 /// Represents a single database migration
 pub struct Migration {
@@ -55,11 +47,6 @@ pub fn get_migrations() -> Vec<Migration> {
             version: 1,
             name: "initial_schema",
             up: v001_initial_schema::up,
-        },
-        Migration {
-            version: 2,
-            name: "crypto_tax_classification",
-            up: v002_crypto_tax_classification::up,
         },
     ]
 }

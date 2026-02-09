@@ -712,14 +712,14 @@ export global CryptoAdapter {
     callback get-available-balance(string, string, string) -> string; // wallet_id, coin_id, date -> balance string
     callback load-edit-transaction(string) -> string; // tx_id -> "" or error
 
-    // (wallet_id, coin_id, symbol, type, amount, price, fee, fee_coin_id, fee_coin_amount, date, notes, tax_type, tax_subtype, override_proceeds, override_cost_basis)
-    callback add-transaction(string, string, string, string, string, string, string, string, string, string, string, string, string, string, string) -> string;
+    // (wallet_id, coin_id, symbol, type, amount, price, fee, fee_coin_id, fee_coin_amount, date, notes, subtype, override_proceeds, override_cost_basis)
+    callback add-transaction(string, string, string, string, string, string, string, string, string, string, string, string, string, string) -> string;
     // (from_wallet_id, to_wallet_id, coin_id, symbol, from_amount, to_amount, fee, fee_coin_id, fee_coin_amount, date, notes)
     callback add-transfer(string, string, string, string, string, string, string, string, string, string, string) -> string;
     // (wallet_id, from_coin_id, from_symbol, from_amount, to_coin_id, to_symbol, to_amount, fee, fee_coin_id, fee_coin_amount, date, notes)
     callback add-swap(string, string, string, string, string, string, string, string, string, string, string, string) -> string;
-    // (tx_id, amount, price, fee, fee_coin_id, fee_coin_amount, date, notes, tax_type, tax_subtype, override_proceeds, override_cost_basis)
-    callback update-transaction(string, string, string, string, string, string, string, string, string, string, string, string) -> string;
+    // (tx_id, amount, price, fee, fee_coin_id, fee_coin_amount, date, notes, subtype, override_proceeds, override_cost_basis)
+    callback update-transaction(string, string, string, string, string, string, string, string, string, string, string) -> string;
 
     // (name, category) -> id or error
     callback create-wallet(string, string) -> string;

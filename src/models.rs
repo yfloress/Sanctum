@@ -153,7 +153,14 @@ impl FromStr for CryptoTransactionType {
     }
 }
 
-/// Represents a single crypto transaction in the ledger
+/// Represents a single crypto transaction in the ledger.
+///
+/// `transaction_type` holds the **fiscal category**: `trade`, `income`,
+/// `expense`, or `transfer`.  `subtype` holds the specific action
+/// (`buy`, `sell`, `swap`, `airdrop`, `deposit`, …).
+///
+/// The **mechanical type** (buy/sell/swap/transfer_in/transfer_out) used by
+/// balance and portfolio logic is derived via [`mechanical_type()`](Self::mechanical_type).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CryptoTransaction {
     pub id: String,
@@ -161,16 +168,14 @@ pub struct CryptoTransaction {
     pub coin_id: String, // CoinGecko ID (e.g., "bitcoin")
     pub symbol: String,  // Symbol (e.g., "BTC")
     #[serde(rename = "type")]
-    pub transaction_type: String, // "buy", "sell", "transfer_in", "transfer_out", "swap"
+    pub transaction_type: String, // fiscal: trade, income, expense, transfer
     pub amount: f64,     // Amount of coins
     pub price_per_coin: Option<f64>, // Price in USD at transaction time
     pub fee: Option<f64>, // Fee paid (in USD)
     pub fee_coin_id: Option<String>, // If fee was paid in crypto
     pub fee_amount: Option<f64>, // Fee amount in crypto (if applicable)
     #[serde(default)]
-    pub tax_type: Option<String>, // trade, income, expense, transfer (optional override)
-    #[serde(default)]
-    pub tax_subtype: Option<String>, // e.g., airdrop, staking, fee, transfer deposit/withdrawal
+    pub subtype: Option<String>, // e.g., buy, sell, swap, airdrop, deposit, withdrawal, …
     #[serde(default)]
     pub override_proceeds: Option<f64>, // Optional manual proceeds override (tax)
     #[serde(default)]
@@ -205,8 +210,7 @@ impl CryptoTransaction {
             fee,
             fee_coin_id: None,
             fee_amount: None,
-            tax_type: None,
-            tax_subtype: None,
+            subtype: None,
             override_proceeds: None,
             override_cost_basis: None,
             date,
@@ -215,19 +219,40 @@ impl CryptoTransaction {
         }
     }
 
+    /// Derives the mechanical transaction type from fiscal `type` + `subtype`.
+    ///
+    /// Returns one of: `"buy"`, `"sell"`, `"swap"`, `"transfer_in"`, `"transfer_out"`.
+    pub fn mechanical_type(&self) -> &str {
+        let sub = self.subtype.as_deref().unwrap_or("");
+        match self.transaction_type.as_str() {
+            "trade" => match sub {
+                "sell" => "sell",
+                "swap" => "swap",
+                _ => "buy", // buy, other, or missing
+            },
+            "transfer" => match sub {
+                "withdrawal" => "transfer_out",
+                _ => "transfer_in", // deposit or missing
+            },
+            "income" => "buy",   // all income is an inflow
+            "expense" => "sell", // all expense is an outflow
+            // Fallback for any unknown value — treat as buy
+            _ => "buy",
+        }
+    }
+
     pub fn validate(&self) -> bool {
+        let valid_types = ["trade", "income", "expense", "transfer"];
         !self.wallet_id.is_empty()
             && !self.coin_id.is_empty()
             && !self.symbol.is_empty()
             && self.amount > 0.0
-            && self
-                .transaction_type
-                .parse::<CryptoTransactionType>()
-                .is_ok()
+            && valid_types.contains(&self.transaction_type.as_str())
     }
 
+    /// Returns the mechanical type as a [`CryptoTransactionType`] enum.
     pub fn get_type(&self) -> Option<CryptoTransactionType> {
-        self.transaction_type.parse::<CryptoTransactionType>().ok()
+        self.mechanical_type().parse::<CryptoTransactionType>().ok()
     }
 
     /// Returns the cost basis for this transaction (amount * price + fees)

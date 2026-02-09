@@ -289,29 +289,44 @@ pub fn format_crypto_tx_display(
     tx: &CryptoTransaction,
     related: Option<&CryptoTransaction>,
 ) -> (String, String, String, bool) {
+    let tx_mech = tx.mechanical_type();
     let related_is_swap = related
-        .map(|counter| counter.transaction_type == "swap")
+        .map(|counter| counter.mechanical_type() == "swap")
         .unwrap_or(false);
-    let is_swap = tx.transaction_type == "swap" || related_is_swap;
+    let is_swap = tx_mech == "swap" || related_is_swap;
 
-    let label = match tx.transaction_type.as_str() {
-        "buy" => "BUY".to_string(),
-        "sell" => "SELL".to_string(),
-        "transfer_in" => {
-            if related_is_swap {
-                "SWAP IN".to_string()
-            } else {
-                "IN".to_string()
-            }
+    let is_swap_source = related.map_or(tx_mech == "swap", |counter| {
+        let tx_has_fee = tx.fee.is_some() || tx.fee_coin_id.is_some() || tx.fee_amount.is_some();
+        let counter_has_fee =
+            counter.fee.is_some() || counter.fee_coin_id.is_some() || counter.fee_amount.is_some();
+        if tx_has_fee && !counter_has_fee {
+            true
+        } else if counter_has_fee && !tx_has_fee {
+            false
+        } else {
+            tx.id < counter.id
         }
-        "transfer_out" => "OUT".to_string(),
-        "swap" => "SWAP OUT".to_string(),
-        _ => tx.transaction_type.to_uppercase(),
+    });
+
+    let label = if is_swap {
+        if is_swap_source {
+            "SWAP OUT".to_string()
+        } else {
+            "SWAP IN".to_string()
+        }
+    } else {
+        match tx_mech {
+            "buy" => "BUY".to_string(),
+            "sell" => "SELL".to_string(),
+            "transfer_in" => "IN".to_string(),
+            "transfer_out" => "OUT".to_string(),
+            _ => tx.transaction_type.to_uppercase(),
+        }
     };
 
     let amount_display = if is_swap {
         if let Some(counter) = related {
-            if tx.transaction_type == "swap" {
+            if is_swap_source {
                 format!(
                     "{} {} → {} {}",
                     format_crypto_amount(tx.amount),
@@ -335,9 +350,10 @@ pub fn format_crypto_tx_display(
         format!("{} {}", format_crypto_amount(tx.amount), tx.symbol)
     };
 
-    let price_display = match tx.transaction_type.as_str() {
-        "buy" | "sell" => format_price_display(tx.price_per_coin),
-        _ => String::new(),
+    let price_display = if matches!(tx_mech, "buy" | "sell") {
+        format_price_display(tx.price_per_coin)
+    } else {
+        String::new()
     };
 
     (label, amount_display, price_display, is_swap)

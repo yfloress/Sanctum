@@ -20,7 +20,9 @@
 //! Wallets, transactions, prices, and portfolio aggregation.
 
 use super::{AppController, ControllerError};
-use crate::features::crypto::{IpcImportSummary, IpcSummary, TaxPeriodSettings, TaxReport, TaxSummaryPayload};
+use crate::features::crypto::{
+    IpcImportSummary, IpcSummary, TaxPeriodSettings, TaxReport, TaxSummaryPayload,
+};
 use crate::models::{AggregatedAsset, CryptoAsset, CryptoTransaction, CryptoWallet};
 
 impl AppController {
@@ -111,19 +113,13 @@ impl AppController {
             .map_err(ControllerError::from)
     }
 
-    pub fn save_tax_settings(
-        &self,
-        settings: TaxPeriodSettings,
-    ) -> Result<(), ControllerError> {
+    pub fn save_tax_settings(&self, settings: TaxPeriodSettings) -> Result<(), ControllerError> {
         self.crypto_service
             .save_tax_settings(settings)
             .map_err(ControllerError::from)
     }
 
-    pub fn generate_tax_report(
-        &self,
-        period_id: String,
-    ) -> Result<TaxReport, ControllerError> {
+    pub fn generate_tax_report(&self, period_id: String) -> Result<TaxReport, ControllerError> {
         self.crypto_service
             .generate_tax_report(period_id)
             .map_err(ControllerError::from)
@@ -195,7 +191,11 @@ impl AppController {
     }
 
     /// Updates a wallet's icon
-    pub fn update_wallet_icon(&self, id: String, icon: Option<String>) -> Result<(), ControllerError> {
+    pub fn update_wallet_icon(
+        &self,
+        id: String,
+        icon: Option<String>,
+    ) -> Result<(), ControllerError> {
         self.crypto_service
             .update_wallet_icon(id, icon)
             .map_err(ControllerError::from)
@@ -218,8 +218,7 @@ impl AppController {
         fee_amount: Option<f64>,
         date: String,
         notes: Option<String>,
-        tax_type: Option<String>,
-        tax_subtype: Option<String>,
+        subtype: Option<String>,
         override_proceeds: Option<f64>,
         override_cost_basis: Option<f64>,
     ) -> Result<String, ControllerError> {
@@ -236,8 +235,7 @@ impl AppController {
                 fee_amount,
                 date,
                 notes,
-                tax_type,
-                tax_subtype,
+                subtype,
                 override_proceeds,
                 override_cost_basis,
             )
@@ -354,8 +352,7 @@ impl AppController {
         fee_amount: Option<f64>,
         date: String,
         notes: Option<String>,
-        tax_type: Option<String>,
-        tax_subtype: Option<String>,
+        subtype: Option<String>,
         override_proceeds: Option<f64>,
         override_cost_basis: Option<f64>,
     ) -> Result<(), ControllerError> {
@@ -369,8 +366,7 @@ impl AppController {
                 fee_amount,
                 date,
                 notes,
-                tax_type,
-                tax_subtype,
+                subtype,
                 override_proceeds,
                 override_cost_basis,
             )

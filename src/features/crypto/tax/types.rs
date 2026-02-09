@@ -107,10 +107,10 @@ impl TaxTxType {
 
     pub fn parse(value: &str) -> Option<Self> {
         match value.trim().to_lowercase().as_str() {
-            "trade" | "buy" | "sell" | "swap" => Some(TaxTxType::Trade),
+            "trade" => Some(TaxTxType::Trade),
             "income" => Some(TaxTxType::Income),
             "expense" => Some(TaxTxType::Expense),
-            "transfer" | "move" => Some(TaxTxType::Transfer),
+            "transfer" => Some(TaxTxType::Transfer),
             _ => None,
         }
     }
@@ -128,10 +128,6 @@ pub const TAX_SUBTYPES_EXPENSE: [&str; 8] = [
 pub const TAX_SUBTYPES_TRANSFER: [&str; 2] = ["deposit", "withdrawal"];
 
 pub const TAX_SUBTYPES_TRADE: [&str; 4] = ["buy", "sell", "swap", "other"];
-
-pub fn normalize_tax_type(value: &str) -> Option<String> {
-    TaxTxType::parse(value).map(|t| t.as_str().to_string())
-}
 
 pub fn normalize_tax_subtype(tax_type: &str, value: &str) -> Option<String> {
     let trimmed = value.trim().to_lowercase();
@@ -159,22 +155,34 @@ pub fn is_loss_only_subtype(subtype: &str) -> bool {
     matches!(subtype, "lost" | "stolen")
 }
 
+/// Derives the mechanical transaction type from a fiscal category + subtype.
+///
+/// Returns one of: `"buy"`, `"sell"`, `"swap"`, `"transfer_in"`, `"transfer_out"`.
+///
+/// This is the standalone version of [`CryptoTransaction::mechanical_type()`]
+/// for use in contexts where only the raw strings are available (e.g. DB
+/// balance queries that don't materialise a full struct).
+pub fn derive_mechanical_type(fiscal_type: &str, subtype: Option<&str>) -> &'static str {
+    let sub = subtype.unwrap_or("");
+    match fiscal_type {
+        "trade" => match sub {
+            "sell" => "sell",
+            "swap" => "swap",
+            _ => "buy",
+        },
+        "transfer" => match sub {
+            "withdrawal" => "transfer_out",
+            _ => "transfer_in",
+        },
+        "income" => "buy",
+        "expense" => "sell",
+        _ => "buy",
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn normalize_tax_type_accepts_aliases() {
-        assert_eq!(normalize_tax_type("trade").as_deref(), Some("trade"));
-        assert_eq!(normalize_tax_type("buy").as_deref(), Some("trade"));
-        assert_eq!(normalize_tax_type("sell").as_deref(), Some("trade"));
-        assert_eq!(normalize_tax_type("swap").as_deref(), Some("trade"));
-        assert_eq!(normalize_tax_type("income").as_deref(), Some("income"));
-        assert_eq!(normalize_tax_type("expense").as_deref(), Some("expense"));
-        assert_eq!(normalize_tax_type("transfer").as_deref(), Some("transfer"));
-        assert_eq!(normalize_tax_type("move").as_deref(), Some("transfer"));
-        assert!(normalize_tax_type("unknown").is_none());
-    }
 
     #[test]
     fn normalize_tax_subtype_requires_matching_type() {
@@ -231,12 +239,12 @@ impl TaxPeriodSettings {
         }
     }
 
-    /// Helper for backward-compatible string access to jurisdiction.
+    /// Helper for string access to jurisdiction.
     pub fn jurisdiction_str(&self) -> &'static str {
         self.jurisdiction.as_str()
     }
 
-    /// Helper for backward-compatible string access to method.
+    /// Helper for string access to method.
     pub fn method_str(&self) -> &'static str {
         self.method.as_str()
     }

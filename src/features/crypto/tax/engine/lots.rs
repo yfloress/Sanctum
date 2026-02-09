@@ -163,7 +163,7 @@ pub(super) fn apply_disposal(
             cost_basis,
             gain,
             term,
-            disposal_type: tx.transaction_type.clone(),
+            disposal_type: tx.mechanical_type().to_string(),
             allocations: allocations.iter().map(|a| a.allocation.clone()).collect(),
         });
         update_summary(report, proceeds, cost_basis, gain, short_gain, long_gain);
@@ -671,18 +671,28 @@ mod tests {
     }
 
     fn tx(id: &str, kind: &str, amount: f64, price: f64, date: &str) -> CryptoTransaction {
-        CryptoTransaction::new(
+        let (fiscal_type, subtype) = match kind {
+            "buy" => ("trade", Some("buy")),
+            "sell" => ("trade", Some("sell")),
+            "swap" => ("trade", Some("swap")),
+            "transfer_in" => ("transfer", Some("deposit")),
+            "transfer_out" => ("transfer", Some("withdrawal")),
+            _ => ("trade", None),
+        };
+        let mut tx = CryptoTransaction::new(
             id.to_string(),
             "wallet".to_string(),
             "btc".to_string(),
             "BTC".to_string(),
-            kind.to_string(),
+            fiscal_type.to_string(),
             amount,
             Some(price),
             None,
             date.to_string(),
             None,
-        )
+        );
+        tx.subtype = subtype.map(str::to_string);
+        tx
     }
 
     fn tx_with_fee(
@@ -693,18 +703,28 @@ mod tests {
         fee: f64,
         date: &str,
     ) -> CryptoTransaction {
-        CryptoTransaction::new(
+        let (fiscal_type, subtype) = match kind {
+            "buy" => ("trade", Some("buy")),
+            "sell" => ("trade", Some("sell")),
+            "swap" => ("trade", Some("swap")),
+            "transfer_in" => ("transfer", Some("deposit")),
+            "transfer_out" => ("transfer", Some("withdrawal")),
+            _ => ("trade", None),
+        };
+        let mut tx = CryptoTransaction::new(
             id.to_string(),
             "wallet".to_string(),
             "btc".to_string(),
             "BTC".to_string(),
-            kind.to_string(),
+            fiscal_type.to_string(),
             amount,
             Some(price),
             Some(fee),
             date.to_string(),
             None,
-        )
+        );
+        tx.subtype = subtype.map(str::to_string);
+        tx
     }
 
     // -----------------------------------------------------------------------

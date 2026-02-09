@@ -254,9 +254,13 @@ impl TextParser {
         ));
     }
 
-    /// Parse a crypto line (after C; prefix is removed)
-    /// Format (standard): date;wallet;symbol;type;amount;price;fee;fee_coin;fee_amount;notes;tax_type;tax_subtype
-    /// Format (swap): date;wallet;symbol;type;amount;[price];swap_to_symbol;swap_to_amount;fee;fee_coin_symbol;fee_amount;notes;tax_type;tax_subtype
+    /// Parse a crypto line (after C; prefix is removed).
+    ///
+    /// Non-swap format:
+    /// `date;wallet;symbol;type;amount;subtype;[price];[fee];[fee_coin];[fee_amount];[notes]`
+    ///
+    /// Swap format (`type=trade` and `subtype=swap`):
+    /// `date;wallet;symbol;type;amount;swap;swap_to_symbol;swap_to_amount;[price];[fee];[fee_coin_symbol];[fee_amount];[notes]`
     fn parse_crypto_line(
         &self,
         line: &str,
@@ -272,7 +276,7 @@ impl TextParser {
                     line_number,
                     None,
                     format!(
-                        "Invalid crypto transaction: expected at least 5 fields (date;wallet;symbol;type;amount;[price];[fee];[notes]), got {}",
+                        "Invalid crypto transaction: expected at least 5 fields (date;wallet;symbol;type;amount), got {}",
                         fields.len()
                     ),
                 )
@@ -339,7 +343,16 @@ impl TextParser {
             }
         };
 
-        let is_swap = tx_type.eq_ignore_ascii_case("swap");
+        let subtype = fields
+            .get(5)
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .map(String::from);
+        let is_swap = tx_type.eq_ignore_ascii_case("trade")
+            && subtype
+                .as_deref()
+                .map(|s| s.eq_ignore_ascii_case("swap"))
+                .unwrap_or(false);
         let (
             price_per_coin,
             fee,
@@ -348,29 +361,9 @@ impl TextParser {
             fee_coin_symbol,
             fee_amount,
             notes,
-            tax_type,
-            tax_subtype,
         ) = if is_swap {
-            let parse_num = |raw: &str| raw.replace(',', ".").parse::<f64>().ok();
-            let price_candidate = fields.get(5).map(|s| s.trim()).unwrap_or("");
-            let mut price_per_coin = None;
-            let mut swap_symbol_idx = 5;
-
-            if parse_num(price_candidate).is_some()
-                && !fields
-                    .get(6)
-                    .map(|s| parse_num(s.trim()).is_some())
-                    .unwrap_or(false)
-            {
-                price_per_coin = parse_num(price_candidate);
-                swap_symbol_idx = 6;
-            }
-
-            let to_symbol = fields.get(swap_symbol_idx).map(|s| s.trim()).unwrap_or("");
-            let to_amount_str = fields
-                .get(swap_symbol_idx + 1)
-                .map(|s| s.trim())
-                .unwrap_or("");
+            let to_symbol = fields.get(6).map(|s| s.trim()).unwrap_or("");
+            let to_amount_str = fields.get(7).map(|s| s.trim()).unwrap_or("");
 
             if to_symbol.is_empty() {
                 result.errors.push(
@@ -395,9 +388,9 @@ impl TextParser {
                 return;
             }
 
-            let to_amount: f64 = match parse_num(to_amount_str) {
-                Some(value) => value,
-                None => {
+            let to_amount: f64 = match to_amount_str.replace(',', ".").parse() {
+                Ok(value) => value,
+                Err(_) => {
                     result.errors.push(
                         RowError::new(
                             line_number,
@@ -410,33 +403,28 @@ impl TextParser {
                 }
             };
 
+            let price_per_coin = fields
+                .get(8)
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .and_then(|s| s.replace(',', ".").parse().ok());
             let fee = fields
-                .get(swap_symbol_idx + 2)
+                .get(9)
                 .map(|s| s.trim())
                 .filter(|s| !s.is_empty())
                 .and_then(|s| s.replace(',', ".").parse().ok());
             let fee_coin_symbol = fields
-                .get(swap_symbol_idx + 3)
+                .get(10)
                 .map(|s| s.trim())
                 .filter(|s| !s.is_empty())
                 .map(String::from);
             let fee_amount = fields
-                .get(swap_symbol_idx + 4)
+                .get(11)
                 .map(|s| s.trim())
                 .filter(|s| !s.is_empty())
                 .and_then(|s| s.replace(',', ".").parse().ok());
             let notes = fields
-                .get(swap_symbol_idx + 5)
-                .map(|s| s.trim())
-                .filter(|s| !s.is_empty())
-                .map(String::from);
-            let tax_type = fields
-                .get(swap_symbol_idx + 6)
-                .map(|s| s.trim())
-                .filter(|s| !s.is_empty())
-                .map(String::from);
-            let tax_subtype = fields
-                .get(swap_symbol_idx + 7)
+                .get(12)
                 .map(|s| s.trim())
                 .filter(|s| !s.is_empty())
                 .map(String::from);
@@ -448,79 +436,33 @@ impl TextParser {
                 fee_coin_symbol,
                 fee_amount,
                 notes,
-                tax_type,
-                tax_subtype,
             )
         } else {
-            // Non-swap format (new):
-            // [5]=price, [6]=fee, [7]=fee_coin, [8]=fee_amount, [9]=notes, [10]=tax_type, [11]=tax_subtype
-            //
-            // Legacy format (backward compat):
-            // [5]=price, [6]=fee, [7]=notes, [8]=tax_type, [9]=tax_subtype
-            //
-            // Heuristic: if field[7] looks like free text (contains spaces,
-            // non-alphanumeric chars, or is longer than 10 chars) it's the
-            // legacy "notes" position. Otherwise treat as the new layout.
             let price_per_coin = fields
-                .get(5)
-                .map(|s| s.trim())
-                .filter(|s| !s.is_empty())
-                .and_then(|s| s.replace(',', ".").parse().ok());
-            let fee = fields
                 .get(6)
                 .map(|s| s.trim())
                 .filter(|s| !s.is_empty())
                 .and_then(|s| s.replace(',', ".").parse().ok());
-
-            let field7 = fields.get(7).map(|s| s.trim()).unwrap_or("");
-            let is_legacy_format = !field7.is_empty()
-                && (field7.len() > 10
-                    || field7.contains(' ')
-                    || !field7.chars().all(|c| c.is_ascii_alphanumeric()));
-
-            let (fee_coin_symbol, fee_amount, notes, tax_type, tax_subtype) = if is_legacy_format {
-                // Legacy layout: [7]=notes, [8]=tax_type, [9]=tax_subtype
-                let notes = Some(field7.to_string());
-                let tax_type = fields
-                    .get(8)
-                    .map(|s| s.trim())
-                    .filter(|s| !s.is_empty())
-                    .map(String::from);
-                let tax_subtype = fields
-                    .get(9)
-                    .map(|s| s.trim())
-                    .filter(|s| !s.is_empty())
-                    .map(String::from);
-                (None, None, notes, tax_type, tax_subtype)
-            } else {
-                // New layout: [7]=fee_coin, [8]=fee_amount, [9]=notes, [10]=tax_type, [11]=tax_subtype
-                let fee_coin_symbol = if field7.is_empty() {
-                    None
-                } else {
-                    Some(field7.to_string())
-                };
-                let fee_amount = fields
-                    .get(8)
-                    .map(|s| s.trim())
-                    .filter(|s| !s.is_empty())
-                    .and_then(|s| s.replace(',', ".").parse().ok());
-                let notes = fields
-                    .get(9)
-                    .map(|s| s.trim())
-                    .filter(|s| !s.is_empty())
-                    .map(String::from);
-                let tax_type = fields
-                    .get(10)
-                    .map(|s| s.trim())
-                    .filter(|s| !s.is_empty())
-                    .map(String::from);
-                let tax_subtype = fields
-                    .get(11)
-                    .map(|s| s.trim())
-                    .filter(|s| !s.is_empty())
-                    .map(String::from);
-                (fee_coin_symbol, fee_amount, notes, tax_type, tax_subtype)
-            };
+            let fee = fields
+                .get(7)
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .and_then(|s| s.replace(',', ".").parse().ok());
+            let fee_coin_symbol = fields
+                .get(8)
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .map(String::from);
+            let fee_amount = fields
+                .get(9)
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .and_then(|s| s.replace(',', ".").parse().ok());
+            let notes = fields
+                .get(10)
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
+                .map(String::from);
             (
                 price_per_coin,
                 fee,
@@ -529,8 +471,6 @@ impl TextParser {
                 fee_coin_symbol,
                 fee_amount,
                 notes,
-                tax_type,
-                tax_subtype,
             )
         };
 
@@ -542,10 +482,9 @@ impl TextParser {
                 symbol: symbol.to_string(),
                 transaction_type: tx_type.to_string(),
                 amount,
+                subtype,
                 price_per_coin,
                 fee,
-                tax_type,
-                tax_subtype,
                 override_proceeds: None,
                 override_cost_basis: None,
                 swap_to_symbol,
@@ -592,9 +531,8 @@ mod tests {
 
     #[test]
     fn test_parse_mixed_crypto() {
-        // Legacy format still works: notes at position 7 (contains spaces → legacy heuristic)
-        let text = "C;2024-01-15;Binance;BTC;buy;0.5;45000;10;First BTC purchase\n\
-                    C;2024-01-16;Coinbase;ETH;sell;2.0;2500;;";
+        let text = "C;2024-01-15;Binance;BTC;trade;0.5;buy;45000;10;;;First BTC purchase\n\
+                    C;2024-01-16;Coinbase;ETH;trade;2.0;sell;2500;;;;";
 
         let parser = TextParser;
         let result = parser.parse_mixed(text);
@@ -611,7 +549,6 @@ mod tests {
             result.crypto_transactions.items[0].1.notes.as_deref(),
             Some("First BTC purchase")
         );
-        // Legacy format: fee_coin should be None (notes consumed field 7)
         assert!(
             result.crypto_transactions.items[0]
                 .1
@@ -624,8 +561,8 @@ mod tests {
 
     #[test]
     fn test_parse_crypto_new_format_with_fee_coin() {
-        // New format: [7]=fee_coin (short alphanumeric), [8]=fee_amount, [9]=notes
-        let text = "C;2024-01-15;Binance;BTC;buy;0.5;45000;10;BNB;0.01;BTC purchase with BNB fee";
+        let text =
+            "C;2024-01-15;Binance;BTC;trade;0.5;buy;45000;10;BNB;0.01;BTC purchase with BNB fee";
 
         let parser = TextParser;
         let result = parser.parse_mixed(text);
@@ -641,8 +578,7 @@ mod tests {
 
     #[test]
     fn test_parse_crypto_new_format_explicit_empty_fee_coin() {
-        // New format with explicit empty fee_coin/fee_amount slots, notes at [9]
-        let text = "C;2024-01-15;Binance;BTC;buy;0.5;45000;10;;;A note here";
+        let text = "C;2024-01-15;Binance;BTC;trade;0.5;buy;45000;10;;;A note here";
 
         let parser = TextParser;
         let result = parser.parse_mixed(text);
@@ -657,9 +593,8 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_crypto_backward_compat_short_line() {
-        // Shorter lines (old format) still work — missing fields become None
-        let text = "C;2024-01-15;Binance;BTC;buy;0.5;45000;10";
+    fn test_parse_crypto_short_line_without_optional_fields() {
+        let text = "C;2024-01-15;Binance;BTC;trade;0.5;buy;45000;10";
 
         let parser = TextParser;
         let result = parser.parse_mixed(text);
@@ -675,7 +610,7 @@ mod tests {
 
     #[test]
     fn test_parse_mixed_crypto_swap() {
-        let text = "C;2024-01-20;Binance;BTC;swap;0.1;ETH;2.5;0.01;BTC;0.0001;Swap note";
+        let text = "C;2024-01-20;Binance;BTC;trade;0.1;swap;ETH;2.5;;0.01;BTC;0.0001;Swap note";
 
         let parser = TextParser;
         let result = parser.parse_mixed(text);
@@ -683,7 +618,8 @@ mod tests {
         assert!(result.crypto_transactions.errors.is_empty());
         assert_eq!(result.crypto_transactions.items.len(), 1);
         let tx = &result.crypto_transactions.items[0].1;
-        assert_eq!(tx.transaction_type, "swap");
+        assert_eq!(tx.transaction_type, "trade");
+        assert_eq!(tx.subtype.as_deref(), Some("swap"));
         assert_eq!(tx.symbol, "BTC");
         assert_eq!(tx.swap_to_symbol.as_deref(), Some("ETH"));
         assert_eq!(tx.swap_to_amount, Some(2.5));
@@ -695,7 +631,8 @@ mod tests {
 
     #[test]
     fn test_parse_crypto_swap_with_price() {
-        let text = "C;2024-01-20;Binance;BTC;swap;0.1;50000;ETH;2.5;0.01;BTC;0.0001;Swap note";
+        let text =
+            "C;2024-01-20;Binance;BTC;trade;0.1;swap;ETH;2.5;50000;0.01;BTC;0.0001;Swap note";
 
         let parser = TextParser;
         let result = parser.parse_mixed(text);
@@ -703,7 +640,7 @@ mod tests {
         assert!(result.crypto_transactions.errors.is_empty());
         assert_eq!(result.crypto_transactions.items.len(), 1);
         let tx = &result.crypto_transactions.items[0].1;
-        assert_eq!(tx.transaction_type, "swap");
+        assert_eq!(tx.transaction_type, "trade");
         assert_eq!(tx.price_per_coin, Some(50000.0));
         assert_eq!(tx.swap_to_symbol.as_deref(), Some("ETH"));
         assert_eq!(tx.swap_to_amount, Some(2.5));
@@ -714,7 +651,7 @@ mod tests {
         let text = "# My import file\n\
                     T;2024-01-15;Checking;expense;100;USD;Food;Groceries;\n\
                     H;Meditate;2024-01-15;true\n\
-                    C;2024-01-15;Binance;BTC;buy;0.1;42000;5\n\
+                    C;2024-01-15;Binance;BTC;trade;0.1;buy;42000;5\n\
                     \n\
                     # More entries\n\
                     T;2024-01-16;Savings;income;500;USD;Salary;Monthly pay;";
@@ -731,7 +668,7 @@ mod tests {
     fn test_case_insensitive_prefix() {
         let text = "t;2024-01-15;Checking;expense;100;USD;Food;Groceries;\n\
                     h;Meditate;2024-01-15;true\n\
-                    c;2024-01-15;Binance;BTC;buy;0.1;42000;5";
+                    c;2024-01-15;Binance;BTC;trade;0.1;buy;42000;5";
 
         let parser = TextParser;
         let result = parser.parse_mixed(text);

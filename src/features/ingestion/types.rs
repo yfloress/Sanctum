@@ -75,23 +75,35 @@ pub struct ImportHabitLog {
     pub completed: bool,
 }
 
-/// Intermediate crypto transaction representation
+/// Intermediate crypto transaction representation.
+///
+/// JSON format — `type` is the fiscal category, `subtype` the specific action:
+/// ```json
+/// { "type": "income", "subtype": "airdrop", "amount": 0.5, ... }
+/// { "type": "trade",  "subtype": "buy",     "amount": 1.0, ... }
+/// ```
+///
+/// Valid `type` values: `trade`, `income`, `expense`, `transfer`.
+/// Each has its own set of valid subtypes (see `TAX_SUBTYPES_*` constants).
+///
+/// The `type` field maps directly to `CryptoTransaction.transaction_type`
+/// (fiscal category) and `subtype` maps to `CryptoTransaction.subtype`.
+/// No intermediate "resolved" fields — the fiscal info is stored as-is.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImportCryptoTransaction {
     pub date: String,
     pub wallet: String,
     pub symbol: String, // e.g., "BTC", "ETH"
     #[serde(rename = "type")]
-    pub transaction_type: String, // buy, sell, transfer_in, transfer_out, swap
+    pub transaction_type: String, // fiscal: trade, income, expense, transfer
     pub amount: f64,
+    /// Subtype within the category (e.g. "buy", "airdrop", "deposit").
+    #[serde(default)]
+    pub subtype: Option<String>,
     #[serde(default)]
     pub price_per_coin: Option<f64>, // USD price at transaction time
     #[serde(default)]
     pub fee: Option<f64>, // Fee in USD
-    #[serde(default)]
-    pub tax_type: Option<String>,
-    #[serde(default)]
-    pub tax_subtype: Option<String>,
     #[serde(default)]
     pub override_proceeds: Option<f64>,
     #[serde(default)]
@@ -106,6 +118,19 @@ pub struct ImportCryptoTransaction {
     pub fee_amount: Option<f64>, // Fee amount in crypto (if applicable)
     #[serde(default)]
     pub notes: Option<String>,
+}
+
+impl ImportCryptoTransaction {
+    /// Returns the mechanical transaction type derived from
+    /// `type` (fiscal category) + `subtype`.
+    ///
+    /// Result is one of: `"buy"`, `"sell"`, `"swap"`, `"transfer_in"`, `"transfer_out"`.
+    pub fn mechanical_type(&self) -> &str {
+        crate::features::crypto::tax::types::derive_mechanical_type(
+            &self.transaction_type,
+            self.subtype.as_deref(),
+        )
+    }
 }
 
 /// Error details for a single row
@@ -315,7 +340,119 @@ impl Hash for CryptoDedupKey {
 
 #[cfg(test)]
 mod tests {
-    use super::TransactionDedupKey;
+    use super::{ImportCryptoTransaction, TransactionDedupKey};
+
+    fn base_import(tx_type: &str) -> ImportCryptoTransaction {
+        ImportCryptoTransaction {
+            date: "2026-01-10".to_string(),
+            wallet: "Ledger".to_string(),
+            symbol: "BTC".to_string(),
+            transaction_type: tx_type.to_string(),
+            amount: 0.5,
+            subtype: None,
+            price_per_coin: None,
+            fee: None,
+            override_proceeds: None,
+            override_cost_basis: None,
+            swap_to_symbol: None,
+            swap_to_amount: None,
+            fee_coin_symbol: None,
+            fee_amount: None,
+            notes: None,
+        }
+    }
+
+    // ── mechanical_type() derivation ──
+
+    #[test]
+    fn test_mechanical_trade_buy() {
+        let mut tx = base_import("trade");
+        tx.subtype = Some("buy".to_string());
+        assert_eq!(tx.mechanical_type(), "buy");
+        assert_eq!(tx.transaction_type, "trade");
+        assert_eq!(tx.subtype.as_deref(), Some("buy"));
+    }
+
+    #[test]
+    fn test_mechanical_trade_sell() {
+        let mut tx = base_import("trade");
+        tx.subtype = Some("sell".to_string());
+        assert_eq!(tx.mechanical_type(), "sell");
+    }
+
+    #[test]
+    fn test_mechanical_trade_swap() {
+        let mut tx = base_import("trade");
+        tx.subtype = Some("swap".to_string());
+        assert_eq!(tx.mechanical_type(), "swap");
+    }
+
+    #[test]
+    fn test_mechanical_trade_other() {
+        let tx = base_import("trade");
+        // No subtype or unknown → defaults to buy
+        assert_eq!(tx.mechanical_type(), "buy");
+    }
+
+    #[test]
+    fn test_mechanical_transfer_deposit() {
+        let mut tx = base_import("transfer");
+        tx.subtype = Some("deposit".to_string());
+        assert_eq!(tx.mechanical_type(), "transfer_in");
+    }
+
+    #[test]
+    fn test_mechanical_transfer_withdrawal() {
+        let mut tx = base_import("transfer");
+        tx.subtype = Some("withdrawal".to_string());
+        assert_eq!(tx.mechanical_type(), "transfer_out");
+    }
+
+    #[test]
+    fn test_mechanical_income_airdrop() {
+        let mut tx = base_import("income");
+        tx.subtype = Some("airdrop".to_string());
+        assert_eq!(tx.mechanical_type(), "buy");
+    }
+
+    #[test]
+    fn test_mechanical_income_staking() {
+        let mut tx = base_import("income");
+        tx.subtype = Some("staking".to_string());
+        assert_eq!(tx.mechanical_type(), "buy");
+    }
+
+    #[test]
+    fn test_mechanical_expense_stolen() {
+        let mut tx = base_import("expense");
+        tx.subtype = Some("stolen".to_string());
+        assert_eq!(tx.mechanical_type(), "sell");
+    }
+
+    #[test]
+    fn test_mechanical_expense_donation() {
+        let mut tx = base_import("expense");
+        tx.subtype = Some("donation".to_string());
+        assert_eq!(tx.mechanical_type(), "sell");
+    }
+
+    // ── edge cases ──
+
+    #[test]
+    fn test_mechanical_category_without_subtype() {
+        let tx = base_import("income");
+        // Income without subtype still derives to "buy"
+        assert_eq!(tx.mechanical_type(), "buy");
+    }
+
+    #[test]
+    fn test_mechanical_unknown_type_defaults_to_buy() {
+        let tx = base_import("banana");
+        // Unknown category falls back to "buy"
+        assert_eq!(tx.mechanical_type(), "buy");
+    }
+
+    // ── Dedup tests ──
 
     #[test]
     fn test_transfer_dedup_includes_destination() {

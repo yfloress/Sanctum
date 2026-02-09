@@ -20,8 +20,11 @@
 //! Provides field-level validation for imported transactions and habit logs.
 
 use super::types::{ImportCryptoTransaction, ImportHabitLog, ImportTransaction, RowError};
-use crate::features::crypto::tax::types::{normalize_tax_subtype, normalize_tax_type};
+use crate::features::crypto::tax::types::normalize_tax_subtype;
 use chrono::NaiveDate;
+
+/// Valid fiscal categories for crypto transactions.
+const VALID_FISCAL_TYPES: [&str; 4] = ["trade", "income", "expense", "transfer"];
 
 /// Maximum file size (10MB)
 pub const MAX_FILE_SIZE: usize = 10 * 1024 * 1024;
@@ -47,6 +50,19 @@ pub fn validate_transaction_type(tx_type: &str) -> Result<String, String> {
             "Invalid transaction type: '{}'. Expected: income, expense, or transfer",
             tx_type
         )),
+    }
+}
+
+/// Validates a fiscal crypto transaction type (trade/income/expense/transfer).
+pub fn validate_fiscal_type(tx_type: &str) -> Result<String, String> {
+    let normalized = tx_type.trim().to_lowercase();
+    if VALID_FISCAL_TYPES.contains(&normalized.as_str()) {
+        Ok(normalized)
+    } else {
+        Err(format!(
+            "Invalid crypto type: '{}'. Expected: trade, income, expense, or transfer",
+            tx_type
+        ))
     }
 }
 
@@ -204,6 +220,7 @@ pub fn validate_import_habit_log(log: &ImportHabitLog, line_number: usize) -> Re
 // ==================== Crypto Validation ====================
 
 /// Validates crypto transaction type
+/// Validates the mechanical type derived from fiscal type + subtype.
 pub fn validate_crypto_tx_type(tx_type: &str) -> Result<String, String> {
     let normalized = tx_type.trim().to_lowercase();
     match normalized.as_str() {
@@ -284,35 +301,27 @@ pub fn validate_import_crypto_transaction(
     validate_date(&tx.date).map_err(|e| make_error("date", e))?;
     validate_wallet_name(&tx.wallet).map_err(|e| make_error("wallet", e))?;
     validate_crypto_symbol(&tx.symbol).map_err(|e| make_error("symbol", e))?;
-    validate_crypto_tx_type(&tx.transaction_type).map_err(|e| make_error("type", e))?;
+
+    // Validate fiscal type (trade/income/expense/transfer)
+    validate_fiscal_type(&tx.transaction_type).map_err(|e| make_error("type", e))?;
+
+    // Validate the derived mechanical type
+    let mech = tx.mechanical_type();
+    validate_crypto_tx_type(mech).map_err(|e| make_error("type", e))?;
+
     validate_crypto_amount(tx.amount).map_err(|e| make_error("amount", e))?;
     validate_price_per_coin(tx.price_per_coin).map_err(|e| make_error("price_per_coin", e))?;
     validate_fee(tx.fee).map_err(|e| make_error("fee", e))?;
 
-    if let Some(raw) = tx.tax_type.as_deref() {
-        if raw.trim().eq_ignore_ascii_case("auto") || raw.trim().is_empty() {
-            // "auto" or empty means no override — will be treated as None during processing
-        } else if normalize_tax_type(raw).is_none() {
+    // Validate subtype against the fiscal category
+    if let Some(ref sub) = tx.subtype {
+        if normalize_tax_subtype(&tx.transaction_type, sub).is_none() {
             return Err(make_error(
-                "tax_type",
-                "Invalid tax_type. Use trade, income, expense, transfer, or auto.".to_string(),
-            ));
-        }
-    }
-    if let Some(raw) = tx.tax_subtype.as_deref() {
-        let tax_type = tx.tax_type.as_deref().ok_or_else(|| {
-            make_error(
-                "tax_subtype",
-                "tax_type is required for tax_subtype".to_string(),
-            )
-        })?;
-        // Skip subtype validation when tax_type is "auto" (means no override)
-        if !tax_type.trim().eq_ignore_ascii_case("auto")
-            && normalize_tax_subtype(tax_type, raw).is_none()
-        {
-            return Err(make_error(
-                "tax_subtype",
-                "Invalid tax_subtype for selected tax_type".to_string(),
+                "subtype",
+                format!(
+                    "Invalid subtype '{}' for type '{}'. Check TAX_SUBTYPES_* catalogs.",
+                    sub, tx.transaction_type
+                ),
             ));
         }
     }
@@ -334,7 +343,7 @@ pub fn validate_import_crypto_transaction(
     }
 
     // Validate fee_coin_symbol/fee_amount pairing for all types
-    let tx_type = tx.transaction_type.trim().to_lowercase();
+    let tx_type = mech;
     if tx_type != "swap" {
         let fee_coin_symbol = tx
             .fee_coin_symbol
@@ -418,10 +427,9 @@ mod tests {
             symbol: "BTC".to_string(),
             transaction_type: tx_type.to_string(),
             amount: 0.5,
+            subtype: None,
             price_per_coin: None,
             fee: None,
-            tax_type: None,
-            tax_subtype: None,
             override_proceeds: None,
             override_cost_basis: None,
             swap_to_symbol: None,
@@ -479,8 +487,17 @@ mod tests {
     }
 
     #[test]
+    fn test_validate_fiscal_type() {
+        assert_eq!(validate_fiscal_type("trade").unwrap(), "trade");
+        assert_eq!(validate_fiscal_type("INCOME").unwrap(), "income");
+        assert!(validate_fiscal_type("buy").is_err());
+        assert!(validate_fiscal_type("banana").is_err());
+    }
+
+    #[test]
     fn test_validate_crypto_swap_requires_targets() {
-        let mut tx = base_crypto_tx("swap");
+        let mut tx = base_crypto_tx("trade");
+        tx.subtype = Some("swap".to_string());
         assert!(validate_import_crypto_transaction(&tx, 1).is_err());
 
         tx.swap_to_symbol = Some("ETH".to_string());

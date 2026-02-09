@@ -68,8 +68,8 @@ pub fn build_tax_report(
     }
 
     transactions.sort_by(|a, b| {
-        let type_order = |tx_type: &str| -> u8 {
-            match tx_type {
+        let type_order = |mech: &str| -> u8 {
+            match mech {
                 "buy" => 0,
                 "transfer_in" => 1,
                 "sell" => 2,
@@ -80,7 +80,7 @@ pub fn build_tax_report(
         };
         a.date
             .cmp(&b.date)
-            .then_with(|| type_order(&a.transaction_type).cmp(&type_order(&b.transaction_type)))
+            .then_with(|| type_order(a.mechanical_type()).cmp(&type_order(b.mechanical_type())))
             .then_with(|| a.id.cmp(&b.id))
     });
 
@@ -151,11 +151,11 @@ pub fn build_tax_report(
                 continue;
             }
 
-            let is_transfer_pair = (tx.transaction_type == "transfer_out"
-                && counter.transaction_type == "transfer_in")
-                || (tx.transaction_type == "transfer_in"
-                    && counter.transaction_type == "transfer_out");
-            let is_swap_pair = tx.transaction_type == "swap" && counter.transaction_type == "swap";
+            let tx_mech = tx.mechanical_type();
+            let counter_mech = counter.mechanical_type();
+            let is_transfer_pair = (tx_mech == "transfer_out" && counter_mech == "transfer_in")
+                || (tx_mech == "transfer_in" && counter_mech == "transfer_out");
+            let is_swap_pair = tx_mech == "swap" && counter_mech == "swap";
 
             if is_transfer_pair {
                 processed.insert(tx.id.clone());
@@ -223,7 +223,7 @@ pub fn build_tax_report(
             continue;
         }
 
-        let tx_type = match tx.transaction_type.parse::<CryptoTransactionType>() {
+        let tx_type = match tx.mechanical_type().parse::<CryptoTransactionType>() {
             Ok(t) => t,
             Err(_) => {
                 report.warnings.push(TaxWarning {
@@ -296,18 +296,28 @@ mod tests {
     }
 
     fn tx(id: &str, kind: &str, amount: f64, price: Option<f64>, date: &str) -> CryptoTransaction {
-        CryptoTransaction::new(
+        let (fiscal_type, subtype) = match kind {
+            "buy" => ("trade", Some("buy")),
+            "sell" => ("trade", Some("sell")),
+            "swap" => ("trade", Some("swap")),
+            "transfer_in" => ("transfer", Some("deposit")),
+            "transfer_out" => ("transfer", Some("withdrawal")),
+            _ => ("trade", None),
+        };
+        let mut tx = CryptoTransaction::new(
             id.to_string(),
             "wallet".to_string(),
             "btc".to_string(),
             "BTC".to_string(),
-            kind.to_string(),
+            fiscal_type.to_string(),
             amount,
             price,
             None,
             date.to_string(),
             None,
-        )
+        );
+        tx.subtype = subtype.map(str::to_string);
+        tx
     }
 
     #[test]

@@ -170,18 +170,20 @@ mod tests {
     use super::*;
 
     fn swap_tx(id: &str, amount: f64, price: Option<f64>) -> CryptoTransaction {
-        CryptoTransaction::new(
+        let mut tx = CryptoTransaction::new(
             id.to_string(),
             "wallet".to_string(),
             "btc".to_string(),
             "BTC".to_string(),
-            "swap".to_string(),
+            "trade".to_string(),
             amount,
             price,
             None,
             "2024-01-10".to_string(),
             None,
-        )
+        );
+        tx.subtype = Some("swap".to_string());
+        tx
     }
 
     #[test]

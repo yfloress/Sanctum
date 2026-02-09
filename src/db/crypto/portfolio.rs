@@ -20,6 +20,7 @@
 //! Balance calculations, cost basis tracking, and portfolio aggregation.
 
 use crate::db::{Database, DbError};
+use crate::features::crypto::tax::types::derive_mechanical_type;
 use crate::models::{AggregatedAsset, CryptoTransaction, CryptoTransactionType};
 use rusqlite::params;
 use std::collections::{HashMap, HashSet};
@@ -38,7 +39,7 @@ impl Database {
         let mut balance = 0.0;
         if let Some(exclude) = exclude_tx_id {
             let mut stmt = self.conn.prepare(
-                "SELECT coin_id, type, amount, fee_coin_id, fee_amount
+                "SELECT coin_id, type, amount, fee_coin_id, fee_amount, subtype
                  FROM crypto_transactions
                  WHERE wallet_id = ?1
                    AND date <= ?2
@@ -52,12 +53,14 @@ impl Database {
                     row.get::<_, f64>(2)?,
                     row.get::<_, Option<String>>(3)?,
                     row.get::<_, Option<f64>>(4)?,
+                    row.get::<_, Option<String>>(5)?,
                 ))
             })?;
             for row in rows {
-                let (row_coin_id, tx_type, amount, fee_coin_id, fee_amount) = row?;
+                let (row_coin_id, tx_type, amount, fee_coin_id, fee_amount, subtype) = row?;
                 if row_coin_id == coin_id {
-                    if let Ok(kind) = tx_type.parse::<CryptoTransactionType>() {
+                    let mech = derive_mechanical_type(&tx_type, subtype.as_deref());
+                    if let Ok(kind) = mech.parse::<CryptoTransactionType>() {
                         match kind {
                             CryptoTransactionType::Buy | CryptoTransactionType::TransferIn => {
                                 balance += amount
@@ -79,7 +82,7 @@ impl Database {
             }
         } else {
             let mut stmt = self.conn.prepare(
-                "SELECT coin_id, type, amount, fee_coin_id, fee_amount
+                "SELECT coin_id, type, amount, fee_coin_id, fee_amount, subtype
                  FROM crypto_transactions
                  WHERE wallet_id = ?1
                    AND date <= ?2
@@ -92,12 +95,14 @@ impl Database {
                     row.get::<_, f64>(2)?,
                     row.get::<_, Option<String>>(3)?,
                     row.get::<_, Option<f64>>(4)?,
+                    row.get::<_, Option<String>>(5)?,
                 ))
             })?;
             for row in rows {
-                let (row_coin_id, tx_type, amount, fee_coin_id, fee_amount) = row?;
+                let (row_coin_id, tx_type, amount, fee_coin_id, fee_amount, subtype) = row?;
                 if row_coin_id == coin_id {
-                    if let Ok(kind) = tx_type.parse::<CryptoTransactionType>() {
+                    let mech = derive_mechanical_type(&tx_type, subtype.as_deref());
+                    if let Ok(kind) = mech.parse::<CryptoTransactionType>() {
                         match kind {
                             CryptoTransactionType::Buy | CryptoTransactionType::TransferIn => {
                                 balance += amount
@@ -149,21 +154,20 @@ impl Database {
 
             if let Some(rel_id) = &tx.related_tx_id {
                 if let Some(counter) = tx_map.get(rel_id) {
-                    let is_transfer_pair = (tx.transaction_type == "transfer_out"
-                        && counter.transaction_type == "transfer_in")
-                        || (tx.transaction_type == "transfer_in"
-                            && counter.transaction_type == "transfer_out");
-                    let is_swap_pair = (tx.transaction_type == "swap"
-                        && counter.transaction_type == "transfer_in")
-                        || (tx.transaction_type == "transfer_in"
-                            && counter.transaction_type == "swap");
+                    let tx_mech = tx.mechanical_type();
+                    let counter_mech = counter.mechanical_type();
+                    let is_transfer_pair = (tx_mech == "transfer_out"
+                        && counter_mech == "transfer_in")
+                        || (tx_mech == "transfer_in" && counter_mech == "transfer_out");
+                    let is_swap_pair = (tx_mech == "swap" && counter_mech == "transfer_in")
+                        || (tx_mech == "transfer_in" && counter_mech == "swap");
 
                     if is_transfer_pair {
                         if processed.contains(rel_id) || processed.contains(&tx.id) {
                             continue;
                         }
 
-                        let applied = if tx.transaction_type == "transfer_out" {
+                        let applied = if tx_mech == "transfer_out" {
                             Self::apply_transfer_pair(&mut assets, &tx, counter)
                         } else {
                             Self::apply_transfer_pair(&mut assets, counter, &tx)
@@ -184,7 +188,7 @@ impl Database {
                         processed.insert(tx.id.clone());
                         processed.insert(rel_id.clone());
 
-                        if tx.transaction_type == "swap" {
+                        if tx_mech == "swap" {
                             Self::apply_swap_pair(&mut assets, &tx, counter);
                         } else {
                             Self::apply_swap_pair(&mut assets, counter, &tx);
@@ -194,7 +198,7 @@ impl Database {
                 }
             }
 
-            let tx_type = match tx.transaction_type.parse::<CryptoTransactionType>() {
+            let tx_type = match tx.mechanical_type().parse::<CryptoTransactionType>() {
                 Ok(t) => t,
                 Err(_) => continue,
             };
@@ -419,8 +423,8 @@ impl Database {
         // Process transactions chronologically to keep cost basis adjustments consistent
         // When dates are equal, process inflows (buy, transfer_in) before outflows (sell, transfer_out, swap)
         // This ensures correct balance calculation when buy and sell happen on the same day
-        fn tx_type_order(tx_type: &str) -> u8 {
-            match tx_type {
+        fn tx_type_order(mech: &str) -> u8 {
+            match mech {
                 "buy" => 0,
                 "transfer_in" => 1,
                 "sell" => 2,
@@ -432,7 +436,9 @@ impl Database {
         transactions.sort_by(|a, b| {
             a.date
                 .cmp(&b.date)
-                .then_with(|| tx_type_order(&a.transaction_type).cmp(&tx_type_order(&b.transaction_type)))
+                .then_with(|| {
+                    tx_type_order(a.mechanical_type()).cmp(&tx_type_order(b.mechanical_type()))
+                })
                 .then_with(|| a.id.cmp(&b.id))
         });
 
@@ -453,21 +459,20 @@ impl Database {
             // Handle swap/transfer pairs to carry over cost basis
             if let Some(rel_id) = &tx.related_tx_id {
                 if let Some(counter) = tx_map.get(rel_id) {
-                    let is_transfer_pair = (tx.transaction_type == "transfer_out"
-                        && counter.transaction_type == "transfer_in")
-                        || (tx.transaction_type == "transfer_in"
-                            && counter.transaction_type == "transfer_out");
-                    let is_swap_pair = (tx.transaction_type == "swap"
-                        && counter.transaction_type == "transfer_in")
-                        || (tx.transaction_type == "transfer_in"
-                            && counter.transaction_type == "swap");
+                    let tx_mech = tx.mechanical_type();
+                    let counter_mech = counter.mechanical_type();
+                    let is_transfer_pair = (tx_mech == "transfer_out"
+                        && counter_mech == "transfer_in")
+                        || (tx_mech == "transfer_in" && counter_mech == "transfer_out");
+                    let is_swap_pair = (tx_mech == "swap" && counter_mech == "transfer_in")
+                        || (tx_mech == "transfer_in" && counter_mech == "swap");
 
                     if is_transfer_pair {
                         if processed.contains(rel_id) || processed.contains(&tx.id) {
                             continue;
                         }
 
-                        let applied = if tx.transaction_type == "transfer_out" {
+                        let applied = if tx_mech == "transfer_out" {
                             Self::apply_transfer_pair(&mut assets, &tx, counter)
                         } else {
                             Self::apply_transfer_pair(&mut assets, counter, &tx)
@@ -489,7 +494,7 @@ impl Database {
                         processed.insert(rel_id.clone());
 
                         // Determine which side is the source (swap out) and target (swap in)
-                        if tx.transaction_type == "swap" {
+                        if tx_mech == "swap" {
                             Self::apply_swap_pair(&mut assets, &tx, counter);
                         } else {
                             Self::apply_swap_pair(&mut assets, counter, &tx);
@@ -499,7 +504,7 @@ impl Database {
                 }
             }
 
-            let tx_type = match tx.transaction_type.parse::<CryptoTransactionType>() {
+            let tx_type = match tx.mechanical_type().parse::<CryptoTransactionType>() {
                 Ok(t) => t,
                 Err(_) => continue, // Skip invalid transaction types
             };

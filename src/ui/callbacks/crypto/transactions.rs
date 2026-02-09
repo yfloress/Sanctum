@@ -54,8 +54,7 @@ pub fn setup_transaction_callbacks<N>(
                   fee_coin_amount_str,
                   date,
                   notes_str,
-                  tax_type_str,
-                  tax_subtype_str,
+                  subtype_str,
                   override_proceeds_str,
                   override_cost_basis_str|
                   -> SharedString {
@@ -120,15 +119,10 @@ pub fn setup_transaction_callbacks<N>(
                     Some(notes_str.to_string())
                 };
 
-                let tax_type = if tax_type_str.trim().is_empty() {
+                let subtype = if subtype_str.trim().is_empty() {
                     None
                 } else {
-                    Some(tax_type_str.to_string())
-                };
-                let tax_subtype = if tax_subtype_str.trim().is_empty() {
-                    None
-                } else {
-                    Some(tax_subtype_str.to_string())
+                    Some(subtype_str.to_string())
                 };
                 let parse_override =
                     |raw: SharedString, label: &str| -> Result<Option<f64>, SharedString> {
@@ -164,8 +158,7 @@ pub fn setup_transaction_callbacks<N>(
                     fee_coin_amount,
                     date.to_string(),
                     notes,
-                    tax_type,
-                    tax_subtype,
+                    subtype,
                     override_proceeds,
                     override_cost_basis,
                 );
@@ -433,7 +426,7 @@ pub fn setup_transaction_callbacks<N>(
                     Err(e) => return SharedString::from(e.to_string()),
                 };
 
-                if tx.transaction_type == "swap" || tx.related_tx_id.is_some() {
+                if tx.mechanical_type() == "swap" || tx.related_tx_id.is_some() {
                     return SharedString::from("Editing paired transactions is not supported");
                 }
 
@@ -456,9 +449,8 @@ pub fn setup_transaction_callbacks<N>(
                 let fee_coin_id = tx.fee_coin_id.clone().unwrap_or_default();
                 let fee_coin_amount = tx.fee_amount.map(format_crypto_amount).unwrap_or_default();
                 let amount_str = format!("{:.4}", tx.amount);
-                let notes_str = tx.notes.unwrap_or_default();
-                let tax_type_str = tx.tax_type.unwrap_or_default();
-                let tax_subtype_str = tx.tax_subtype.unwrap_or_default();
+                let notes_str = tx.notes.as_deref().unwrap_or_default();
+                let subtype_str = tx.subtype.as_deref().unwrap_or_default();
                 let override_proceeds_str = tx
                     .override_proceeds
                     .map(|v| format!("{:.4}", v))
@@ -480,7 +472,7 @@ pub fn setup_transaction_callbacks<N>(
                     ui.global::<CryptoAdapter>()
                         .set_edit_symbol(SharedString::from(&tx.symbol));
                     ui.global::<CryptoAdapter>()
-                        .set_edit_type(SharedString::from(&tx.transaction_type));
+                        .set_edit_type(SharedString::from(tx.mechanical_type()));
                     ui.global::<CryptoAdapter>()
                         .set_edit_amount(SharedString::from(amount_str));
                     ui.global::<CryptoAdapter>()
@@ -496,9 +488,9 @@ pub fn setup_transaction_callbacks<N>(
                     ui.global::<CryptoAdapter>()
                         .set_edit_notes(SharedString::from(notes_str));
                     ui.global::<CryptoAdapter>()
-                        .set_edit_tax_type(SharedString::from(tax_type_str));
+                        .set_edit_tax_type(SharedString::from(&tx.transaction_type));
                     ui.global::<CryptoAdapter>()
-                        .set_edit_tax_subtype(SharedString::from(tax_subtype_str));
+                        .set_edit_tax_subtype(SharedString::from(subtype_str));
                     ui.global::<CryptoAdapter>()
                         .set_edit_override_proceeds(SharedString::from(override_proceeds_str));
                     ui.global::<CryptoAdapter>()
@@ -522,8 +514,7 @@ pub fn setup_transaction_callbacks<N>(
                   fee_coin_amount_str,
                   date,
                   notes_str,
-                  tax_type_str,
-                  tax_subtype_str,
+                  subtype_str,
                   override_proceeds_str,
                   override_cost_basis_str| {
                 let amount_clean = amount_str
@@ -587,15 +578,10 @@ pub fn setup_transaction_callbacks<N>(
                     Some(notes_str.to_string())
                 };
 
-                let tax_type = if tax_type_str.trim().is_empty() {
+                let subtype = if subtype_str.trim().is_empty() {
                     None
                 } else {
-                    Some(tax_type_str.to_string())
-                };
-                let tax_subtype = if tax_subtype_str.trim().is_empty() {
-                    None
-                } else {
-                    Some(tax_subtype_str.to_string())
+                    Some(subtype_str.to_string())
                 };
                 let parse_override =
                     |raw: SharedString, label: &str| -> Result<Option<f64>, SharedString> {
@@ -628,8 +614,7 @@ pub fn setup_transaction_callbacks<N>(
                     fee_coin_amount,
                     date.to_string(),
                     notes,
-                    tax_type,
-                    tax_subtype,
+                    subtype,
                     override_proceeds,
                     override_cost_basis,
                 ) {

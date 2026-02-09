@@ -27,7 +27,7 @@ use rusqlite::{Error as RusqliteError, Row, params};
 /// Kept in a single place so that any schema change only requires one update.
 const CRYPTO_TX_COLUMNS: &str = "\
     id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, \
-    fee_coin_id, fee_amount, tax_type, tax_subtype, override_proceeds, \
+    fee_coin_id, fee_amount, subtype, override_proceeds, \
     override_cost_basis, date, notes, related_tx_id";
 
 /// Maps a database row to a `CryptoTransaction`.
@@ -45,13 +45,12 @@ fn row_to_crypto_transaction(row: &Row<'_>) -> rusqlite::Result<CryptoTransactio
         fee: row.get(7)?,
         fee_coin_id: row.get(8)?,
         fee_amount: row.get(9)?,
-        tax_type: row.get(10)?,
-        tax_subtype: row.get(11)?,
-        override_proceeds: row.get(12)?,
-        override_cost_basis: row.get(13)?,
-        date: row.get(14)?,
-        notes: row.get(15)?,
-        related_tx_id: row.get(16)?,
+        subtype: row.get(10)?,
+        override_proceeds: row.get(11)?,
+        override_cost_basis: row.get(12)?,
+        date: row.get(13)?,
+        notes: row.get(14)?,
+        related_tx_id: row.get(15)?,
     })
 }
 
@@ -79,8 +78,8 @@ impl Database {
 
         self.conn.execute(
             "INSERT INTO crypto_transactions
-             (id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, fee_coin_id, fee_amount, tax_type, tax_subtype, override_proceeds, override_cost_basis, date, notes, related_tx_id)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)",
+             (id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, fee_coin_id, fee_amount, subtype, override_proceeds, override_cost_basis, date, notes, related_tx_id)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)",
             params![
                 &tx.id,
                 &tx.wallet_id,
@@ -92,8 +91,7 @@ impl Database {
                 &tx.fee,
                 &tx.fee_coin_id,
                 &tx.fee_amount,
-                &tx.tax_type,
-                &tx.tax_subtype,
+                &tx.subtype,
                 &tx.override_proceeds,
                 &tx.override_cost_basis,
                 &tx.date,
@@ -212,8 +210,7 @@ impl Database {
         fee_amount: Option<f64>,
         date: &str,
         notes: Option<&str>,
-        tax_type: Option<&str>,
-        tax_subtype: Option<&str>,
+        subtype: Option<&str>,
         override_proceeds: Option<f64>,
         override_cost_basis: Option<f64>,
     ) -> Result<(), DbError> {
@@ -224,21 +221,19 @@ impl Database {
                  fee = ?3,
                  fee_coin_id = ?4,
                  fee_amount = ?5,
-                 tax_type = ?6,
-                 tax_subtype = ?7,
-                 override_proceeds = ?8,
-                 override_cost_basis = ?9,
-                 date = ?10,
-                 notes = ?11
-             WHERE id = ?12",
+                 subtype = ?6,
+                 override_proceeds = ?7,
+                 override_cost_basis = ?8,
+                 date = ?9,
+                 notes = ?10
+             WHERE id = ?11",
             params![
                 amount,
                 price_per_coin,
                 fee,
                 fee_coin_id,
                 fee_amount,
-                tax_type,
-                tax_subtype,
+                subtype,
                 override_proceeds,
                 override_cost_basis,
                 date,

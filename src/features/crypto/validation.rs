@@ -24,7 +24,7 @@ use crate::db::Database;
 
 use super::api::validate_coin_id;
 use super::service::CryptoError;
-use super::tax::types::{TaxTxType, normalize_tax_subtype, normalize_tax_type};
+use super::tax::types::{TaxTxType, normalize_tax_subtype};
 
 // Re-export sanitize_string from core (doesn't need error wrapping)
 pub use crate::core::validation::sanitize_string;
@@ -120,24 +120,12 @@ pub fn validate_non_negative(value: Option<f64>, field: &str) -> Result<Option<f
     Ok(value)
 }
 
-pub fn validate_tax_type(value: Option<String>) -> Result<Option<String>, CryptoError> {
-    let Some(raw) = value else {
-        return Ok(None);
-    };
-    let trimmed = raw.trim();
-    if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("auto") {
-        return Ok(None);
-    }
-    let normalized = normalize_tax_type(trimmed).ok_or_else(|| {
-        CryptoError::Validation(
-            "Invalid tax type. Use trade, income, expense, or transfer.".to_string(),
-        )
-    })?;
-    Ok(Some(normalized))
-}
-
-pub fn validate_tax_subtype(
-    tax_type: Option<&str>,
+/// Validates and normalises a subtype value against its fiscal category.
+///
+/// `fiscal_type` is the fiscal category (trade/income/expense/transfer).
+/// `value` is the raw subtype string (e.g. "buy", "airdrop", "deposit").
+pub fn validate_subtype(
+    fiscal_type: Option<&str>,
     value: Option<String>,
 ) -> Result<Option<String>, CryptoError> {
     let Some(raw) = value else {
@@ -147,11 +135,18 @@ pub fn validate_tax_subtype(
     if trimmed.is_empty() {
         return Ok(None);
     }
-    let resolved = tax_type.and_then(TaxTxType::parse).ok_or_else(|| {
-        CryptoError::Validation("Tax subtype requires a valid tax type".to_string())
+    let resolved = fiscal_type.and_then(TaxTxType::parse).ok_or_else(|| {
+        CryptoError::Validation(
+            "Subtype requires a valid fiscal type (trade, income, expense, or transfer)"
+                .to_string(),
+        )
     })?;
     let normalized = normalize_tax_subtype(resolved.as_str(), trimmed).ok_or_else(|| {
-        CryptoError::Validation("Invalid tax subtype for selected tax type".to_string())
+        CryptoError::Validation(format!(
+            "Invalid subtype '{}' for type '{}'. Check allowed subtypes.",
+            trimmed,
+            resolved.as_str()
+        ))
     })?;
     Ok(Some(normalized))
 }

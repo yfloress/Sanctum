@@ -556,7 +556,14 @@ impl IngestionService {
             };
 
             if tx_type == "transfer" {
-                let dest_name = import_tx.transfer_to_account.as_ref().unwrap();
+                let Some(dest_name) = import_tx.transfer_to_account.as_ref() else {
+                    summary.record_error(RowError::new(
+                        line_num,
+                        Some("transfer_to_account"),
+                        "Transfer transactions require a destination account",
+                    ));
+                    continue;
+                };
                 let dest_key = dest_name.trim().to_lowercase();
                 let dest_account = match account_lookup.get(&dest_key) {
                     Some(a) => a,
@@ -901,7 +908,7 @@ impl IngestionService {
         let mut dedup_set: HashSet<CryptoDedupKey> = existing
             .iter()
             .map(|tx| {
-                let pair_coin_id = if tx.transaction_type == "swap" {
+                let pair_coin_id = if tx.mechanical_type() == "swap" {
                     tx.related_tx_id
                         .as_ref()
                         .and_then(|id| existing_map.get(id))
@@ -913,7 +920,7 @@ impl IngestionService {
                     &tx.date,
                     &tx.wallet_id,
                     &tx.coin_id,
-                    &tx.transaction_type,
+                    tx.mechanical_type(),
                     tx.amount,
                     pair_coin_id,
                 )
@@ -924,30 +931,6 @@ impl IngestionService {
         // Key: (wallet_id, coin_id), Value: pending balance delta
         let mut pending_balance_changes: std::collections::HashMap<(String, String), f64> =
             std::collections::HashMap::new();
-
-        /// Normalizes "auto" or empty tax_type to None, otherwise normalizes
-        /// to a canonical value (trade, income, expense, transfer).
-        fn normalize_import_tax_type(raw: Option<&str>) -> Option<String> {
-            let value = raw?.trim();
-            if value.is_empty() || value.eq_ignore_ascii_case("auto") {
-                return None;
-            }
-            crate::features::crypto::tax::types::normalize_tax_type(value)
-        }
-
-        /// Normalizes tax_subtype given a resolved tax_type. Returns None if
-        /// tax_type is None/invalid or the subtype doesn't match.
-        fn normalize_import_tax_subtype(
-            tax_type: Option<&str>,
-            raw: Option<&str>,
-        ) -> Option<String> {
-            let tt = tax_type?;
-            let val = raw?.trim();
-            if val.is_empty() {
-                return None;
-            }
-            crate::features::crypto::tax::types::normalize_tax_subtype(tt, val)
-        }
 
         for (line_num, import_tx) in transactions {
             if let Err(mut error) = validate_import_crypto_transaction(&import_tx, line_num) {
@@ -990,32 +973,7 @@ impl IngestionService {
                 }
             };
 
-            let tx_type = import_tx.transaction_type.trim().to_lowercase();
-
-            // Normalize tax fields: convert "auto"/empty to None, apply defaults
-            // for transfers that lack explicit tax classification.
-            let resolved_tax_type = {
-                let raw = normalize_import_tax_type(import_tx.tax_type.as_deref());
-                match raw {
-                    Some(tt) => Some(tt),
-                    None if tx_type == "transfer_in" || tx_type == "transfer_out" => {
-                        Some("transfer".to_string())
-                    }
-                    None => None,
-                }
-            };
-            let resolved_tax_subtype = {
-                let raw = normalize_import_tax_subtype(
-                    resolved_tax_type.as_deref(),
-                    import_tx.tax_subtype.as_deref(),
-                );
-                match raw {
-                    Some(st) => Some(st),
-                    None if tx_type == "transfer_out" => Some("withdrawal".to_string()),
-                    None if tx_type == "transfer_in" => Some("deposit".to_string()),
-                    None => None,
-                }
-            };
+            let tx_type = import_tx.mechanical_type();
 
             let mut swap_to_coin = None;
             if tx_type == "swap" {
@@ -1412,7 +1370,7 @@ impl IngestionService {
                     &import_tx.date,
                     &wallet.id,
                     &coin.id,
-                    &tx_type,
+                    tx_type,
                     import_tx.amount,
                     Some(&to_coin.id),
                 );
@@ -1420,7 +1378,7 @@ impl IngestionService {
                     &import_tx.date,
                     &wallet.id,
                     &to_coin.id,
-                    &tx_type,
+                    tx_type,
                     import_tx.swap_to_amount.unwrap_or(0.0),
                     Some(&coin.id),
                 );
@@ -1435,7 +1393,7 @@ impl IngestionService {
                     &import_tx.date,
                     &wallet.id,
                     &coin.id,
-                    &tx_type,
+                    tx_type,
                     import_tx.amount,
                     None,
                 );
@@ -1469,7 +1427,7 @@ impl IngestionService {
                 }
             } else {
                 let balance_key = (wallet.id.clone(), coin.id.clone());
-                let delta = match tx_type.as_str() {
+                let delta = match tx_type {
                     "buy" | "transfer_in" => import_tx.amount,
                     "sell" | "transfer_out" => -import_tx.amount,
                     _ => 0.0,
@@ -1510,7 +1468,7 @@ impl IngestionService {
                         &import_tx.date,
                         &wallet.id,
                         &coin.id,
-                        &tx_type,
+                        tx_type,
                         import_tx.amount,
                         None,
                     );
@@ -1533,27 +1491,18 @@ impl IngestionService {
                 let source_id = Uuid::new_v4().to_string();
                 let target_id = Uuid::new_v4().to_string();
 
-                // For swaps, use resolved tax or default to trade/swap
-                let swap_tax_type = resolved_tax_type
-                    .clone()
-                    .or_else(|| Some("trade".to_string()));
-                let swap_tax_subtype = resolved_tax_subtype
-                    .clone()
-                    .or_else(|| Some("swap".to_string()));
-
                 let source = CryptoTransaction {
                     id: source_id.clone(),
                     wallet_id: wallet.id.clone(),
                     coin_id: coin.id.clone(),
                     symbol: coin.symbol.clone(),
-                    transaction_type: "swap".to_string(),
+                    transaction_type: import_tx.transaction_type.clone(),
                     amount: import_tx.amount,
                     price_per_coin: import_tx.price_per_coin,
                     fee: import_tx.fee,
                     fee_coin_id: resolved_fee_coin_id.clone(),
                     fee_amount: resolved_fee_amount,
-                    tax_type: swap_tax_type.clone(),
-                    tax_subtype: swap_tax_subtype.clone(),
+                    subtype: import_tx.subtype.clone(),
                     override_proceeds: import_tx.override_proceeds,
                     override_cost_basis: None,
                     date: import_tx.date.trim().to_string(),
@@ -1566,14 +1515,13 @@ impl IngestionService {
                     wallet_id: wallet.id.clone(),
                     coin_id: to_coin.id.clone(),
                     symbol: to_coin.symbol.clone(),
-                    transaction_type: "swap".to_string(),
+                    transaction_type: import_tx.transaction_type.clone(),
                     amount: to_amount,
                     price_per_coin: None,
                     fee: None,
                     fee_coin_id: None,
                     fee_amount: None,
-                    tax_type: swap_tax_type,
-                    tax_subtype: swap_tax_subtype,
+                    subtype: import_tx.subtype.clone(),
                     override_proceeds: None,
                     override_cost_basis: import_tx.override_cost_basis,
                     date: import_tx.date.trim().to_string(),
@@ -1608,23 +1556,21 @@ impl IngestionService {
                 continue;
             }
 
-            let transaction = CryptoTransaction::new(
+            let mut transaction = CryptoTransaction::new(
                 Uuid::new_v4().to_string(),
                 wallet.id.clone(),
                 coin.id.clone(),
                 coin.symbol.clone(),
-                tx_type,
+                import_tx.transaction_type.clone(),
                 import_tx.amount,
                 import_tx.price_per_coin,
                 import_tx.fee,
                 import_tx.date.trim().to_string(),
                 import_tx.notes.clone(),
             );
-            let mut transaction = transaction;
             transaction.fee_coin_id = resolved_fee_coin_id.clone();
             transaction.fee_amount = resolved_fee_amount;
-            transaction.tax_type = resolved_tax_type.clone();
-            transaction.tax_subtype = resolved_tax_subtype.clone();
+            transaction.subtype = import_tx.subtype.clone();
             transaction.override_proceeds = import_tx.override_proceeds;
             transaction.override_cost_basis = import_tx.override_cost_basis;
 
@@ -1634,7 +1580,7 @@ impl IngestionService {
                         &import_tx.date,
                         &wallet.id,
                         &coin.id,
-                        &transaction.transaction_type,
+                        transaction.mechanical_type(),
                         import_tx.amount,
                         None,
                     );

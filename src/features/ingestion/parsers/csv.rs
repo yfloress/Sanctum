@@ -65,13 +65,25 @@ impl ImportParser for CsvParser {
         let columns = Self::parse_header(&headers);
 
         // Validate required columns exist
-        let required = ["date", "account", "type", "amount", "currency", "category", "description"];
+        let required = [
+            "date",
+            "account",
+            "type",
+            "amount",
+            "currency",
+            "category",
+            "description",
+        ];
         for col in required {
             if !columns.contains_key(col) {
                 return Err(RowError::new(
                     1,
                     None,
-                    format!("Missing required column: '{}'. Expected: {}", col, required.join(", ")),
+                    format!(
+                        "Missing required column: '{}'. Expected: {}",
+                        col,
+                        required.join(", ")
+                    ),
                 ));
             }
         }
@@ -82,10 +94,7 @@ impl ImportParser for CsvParser {
             let record = match record {
                 Ok(record) => record,
                 Err(err) => {
-                    let line = err
-                        .position()
-                        .map(|p| p.line())
-                        .unwrap_or((idx + 2) as u64);
+                    let line = err.position().map(|p| p.line()).unwrap_or((idx + 2) as u64);
                     result.errors.push(RowError::new(
                         line as usize,
                         None,
@@ -228,10 +237,7 @@ impl ImportParser for CsvParser {
         Ok(result)
     }
 
-    fn parse_habit_logs(
-        &self,
-        content: &str,
-    ) -> Result<ParseResult<ImportHabitLog>, RowError> {
+    fn parse_habit_logs(&self, content: &str) -> Result<ParseResult<ImportHabitLog>, RowError> {
         let mut reader = ReaderBuilder::new()
             .trim(Trim::All)
             .flexible(true)
@@ -249,7 +255,11 @@ impl ImportParser for CsvParser {
                 return Err(RowError::new(
                     1,
                     None,
-                    format!("Missing required column: '{}'. Expected: {}", col, required.join(", ")),
+                    format!(
+                        "Missing required column: '{}'. Expected: {}",
+                        col,
+                        required.join(", ")
+                    ),
                 ));
             }
         }
@@ -260,10 +270,7 @@ impl ImportParser for CsvParser {
             let record = match record {
                 Ok(record) => record,
                 Err(err) => {
-                    let line = err
-                        .position()
-                        .map(|p| p.line())
-                        .unwrap_or((idx + 2) as u64);
+                    let line = err.position().map(|p| p.line()).unwrap_or((idx + 2) as u64);
                     result.errors.push(RowError::new(
                         line as usize,
                         None,
@@ -288,12 +295,8 @@ impl ImportParser for CsvParser {
                 Some(value) if !value.is_empty() => value,
                 _ => {
                     result.errors.push(
-                        RowError::new(
-                            line_number,
-                            Some("habit"),
-                            "Missing required field: habit",
-                        )
-                        .with_raw_data(raw_data),
+                        RowError::new(line_number, Some("habit"), "Missing required field: habit")
+                            .with_raw_data(raw_data),
                     );
                     continue;
                 }
@@ -378,10 +381,7 @@ impl CsvParser {
             let record = match record {
                 Ok(record) => record,
                 Err(err) => {
-                    let line = err
-                        .position()
-                        .map(|p| p.line())
-                        .unwrap_or((idx + 2) as u64);
+                    let line = err.position().map(|p| p.line()).unwrap_or((idx + 2) as u64);
                     result.errors.push(RowError::new(
                         line as usize,
                         None,
@@ -494,11 +494,8 @@ impl CsvParser {
                 .filter(|s| !s.is_empty())
                 .and_then(|s| s.replace(',', ".").parse().ok());
 
-            let tax_type = Self::get_field(&record, &columns, "tax_type")
-                .filter(|s| !s.is_empty())
-                .map(String::from);
-
-            let tax_subtype = Self::get_field(&record, &columns, "tax_subtype")
+            // Subtype column (e.g. "buy", "airdrop", "deposit")
+            let subtype = Self::get_field(&record, &columns, "subtype")
                 .filter(|s| !s.is_empty())
                 .map(String::from);
 
@@ -541,10 +538,9 @@ impl CsvParser {
                     symbol: symbol.to_string(),
                     transaction_type: tx_type.to_string(),
                     amount,
+                    subtype,
                     price_per_coin,
                     fee,
-                    tax_type,
-                    tax_subtype,
                     override_proceeds,
                     override_cost_basis,
                     swap_to_symbol,
@@ -583,7 +579,10 @@ mod tests {
         assert!(parsed.items[0].1.transfer_to_account.is_none());
 
         assert_eq!(parsed.items[1].1.transaction_type, "transfer");
-        assert_eq!(parsed.items[1].1.transfer_to_account, Some("Savings".to_string()));
+        assert_eq!(
+            parsed.items[1].1.transfer_to_account,
+            Some("Savings".to_string())
+        );
     }
 
     #[test]
