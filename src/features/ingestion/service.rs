@@ -925,6 +925,30 @@ impl IngestionService {
         let mut pending_balance_changes: std::collections::HashMap<(String, String), f64> =
             std::collections::HashMap::new();
 
+        /// Normalizes "auto" or empty tax_type to None, otherwise normalizes
+        /// to a canonical value (trade, income, expense, transfer).
+        fn normalize_import_tax_type(raw: Option<&str>) -> Option<String> {
+            let value = raw?.trim();
+            if value.is_empty() || value.eq_ignore_ascii_case("auto") {
+                return None;
+            }
+            crate::features::crypto::tax::types::normalize_tax_type(value)
+        }
+
+        /// Normalizes tax_subtype given a resolved tax_type. Returns None if
+        /// tax_type is None/invalid or the subtype doesn't match.
+        fn normalize_import_tax_subtype(
+            tax_type: Option<&str>,
+            raw: Option<&str>,
+        ) -> Option<String> {
+            let tt = tax_type?;
+            let val = raw?.trim();
+            if val.is_empty() {
+                return None;
+            }
+            crate::features::crypto::tax::types::normalize_tax_subtype(tt, val)
+        }
+
         for (line_num, import_tx) in transactions {
             if let Err(mut error) = validate_import_crypto_transaction(&import_tx, line_num) {
                 error.raw_data = Some(format!("{:?}", import_tx));
@@ -968,6 +992,31 @@ impl IngestionService {
 
             let tx_type = import_tx.transaction_type.trim().to_lowercase();
 
+            // Normalize tax fields: convert "auto"/empty to None, apply defaults
+            // for transfers that lack explicit tax classification.
+            let resolved_tax_type = {
+                let raw = normalize_import_tax_type(import_tx.tax_type.as_deref());
+                match raw {
+                    Some(tt) => Some(tt),
+                    None if tx_type == "transfer_in" || tx_type == "transfer_out" => {
+                        Some("transfer".to_string())
+                    }
+                    None => None,
+                }
+            };
+            let resolved_tax_subtype = {
+                let raw = normalize_import_tax_subtype(
+                    resolved_tax_type.as_deref(),
+                    import_tx.tax_subtype.as_deref(),
+                );
+                match raw {
+                    Some(st) => Some(st),
+                    None if tx_type == "transfer_out" => Some("withdrawal".to_string()),
+                    None if tx_type == "transfer_in" => Some("deposit".to_string()),
+                    None => None,
+                }
+            };
+
             let mut swap_to_coin = None;
             if tx_type == "swap" {
                 let to_symbol = import_tx
@@ -982,23 +1031,20 @@ impl IngestionService {
                         summary.record_error(RowError::new(
                             line_num,
                             Some("swap_to_symbol"),
-                            t_args(
-                                "import-error-crypto-not-found",
-                                &[("symbol", to_symbol)],
-                            ),
+                            t_args("import-error-crypto-not-found", &[("symbol", to_symbol)]),
                         ));
                         continue;
                     }
                 };
             }
 
+            // Resolve fee coin for ALL transaction types (not just swaps)
             let mut fee_coin = None;
-            if tx_type == "swap"
-                && let Some(symbol) = import_tx
-                    .fee_coin_symbol
-                    .as_ref()
-                    .map(|s| s.trim())
-                    .filter(|s| !s.is_empty())
+            if let Some(symbol) = import_tx
+                .fee_coin_symbol
+                .as_ref()
+                .map(|s| s.trim())
+                .filter(|s| !s.is_empty())
             {
                 let fee_key = symbol.to_lowercase();
                 fee_coin = match coin_lookup.get(&fee_key) {
@@ -1013,6 +1059,19 @@ impl IngestionService {
                     }
                 };
             }
+
+            // Normalize fee_coin_id/fee_amount pair (require both or neither)
+            let (resolved_fee_coin_id, resolved_fee_amount) = match (
+                fee_coin.as_ref().map(|c| c.id.clone()),
+                import_tx.fee_amount,
+            ) {
+                (Some(id), Some(amount)) if amount > 0.0 => (Some(id), Some(amount)),
+                (None, Some(_)) => {
+                    // fee_amount without fee_coin_symbol: already caught in validation
+                    (None, None)
+                }
+                _ => (None, None),
+            };
 
             // Validate balance for outflow operations
             if tx_type == "sell" || tx_type == "transfer_out" {
@@ -1056,6 +1115,163 @@ impl IngestionService {
                         ),
                     ));
                     continue;
+                }
+
+                // Validate fee balance for non-swap outflows with fee in same coin
+                if let (Some(fee_coin_ref), Some(fee_amt)) =
+                    (resolved_fee_coin_id.as_deref(), resolved_fee_amount)
+                {
+                    if fee_coin_ref == coin.id {
+                        // Fee is in the same coin as the main outflow
+                        let total_required = import_tx.amount + fee_amt;
+                        if available_balance < total_required {
+                            summary.record_error(RowError::new(
+                                line_num,
+                                Some("fee_amount"),
+                                t_args(
+                                    "import-error-insufficient-crypto-balance",
+                                    &[
+                                        ("symbol", coin.symbol.as_str()),
+                                        ("wallet", wallet.name.as_str()),
+                                        ("available", &format!("{:.8}", available_balance)),
+                                        ("required", &format!("{:.8}", total_required)),
+                                    ],
+                                ),
+                            ));
+                            continue;
+                        }
+                    } else {
+                        // Fee is in a different coin — check that coin's balance
+                        let fee_db_balance = match IngestionRepository::get_wallet_coin_balance(
+                            db,
+                            &wallet.id,
+                            fee_coin_ref,
+                            import_tx.date.trim(),
+                        ) {
+                            Ok(b) => b,
+                            Err(e) => {
+                                summary.record_error(RowError::new(
+                                    line_num,
+                                    None,
+                                    format!("Database error checking fee balance: {}", e),
+                                ));
+                                continue;
+                            }
+                        };
+                        let fee_key = (wallet.id.clone(), fee_coin_ref.to_string());
+                        let fee_pending = pending_balance_changes
+                            .get(&fee_key)
+                            .copied()
+                            .unwrap_or(0.0);
+                        let available_fee = fee_db_balance + fee_pending;
+                        if fee_amt > available_fee {
+                            summary.record_error(RowError::new(
+                                line_num,
+                                Some("fee_amount"),
+                                t_args(
+                                    "import-error-insufficient-crypto-balance",
+                                    &[
+                                        (
+                                            "symbol",
+                                            fee_coin
+                                                .as_ref()
+                                                .map(|c| c.symbol.as_str())
+                                                .unwrap_or("?"),
+                                        ),
+                                        ("wallet", wallet.name.as_str()),
+                                        ("available", &format!("{:.8}", available_fee)),
+                                        ("required", &format!("{:.8}", fee_amt)),
+                                    ],
+                                ),
+                            ));
+                            continue;
+                        }
+                    }
+                }
+            } else if tx_type == "buy" || tx_type == "transfer_in" {
+                // For inflows, validate fee balance if fee is in a different coin
+                if let (Some(fee_coin_ref), Some(fee_amt)) =
+                    (resolved_fee_coin_id.as_deref(), resolved_fee_amount)
+                {
+                    if fee_coin_ref == coin.id {
+                        // Fee is in same coin as inflow — after the buy we get `amount`,
+                        // but we also need to pay `fee_amt` from that coin.
+                        let db_balance = match IngestionRepository::get_wallet_coin_balance(
+                            db,
+                            &wallet.id,
+                            &coin.id,
+                            import_tx.date.trim(),
+                        ) {
+                            Ok(b) => b,
+                            Err(e) => {
+                                summary.record_error(RowError::new(
+                                    line_num,
+                                    None,
+                                    format!("Database error checking balance: {}", e),
+                                ));
+                                continue;
+                            }
+                        };
+                        let balance_key = (wallet.id.clone(), coin.id.clone());
+                        let pending_delta = pending_balance_changes
+                            .get(&balance_key)
+                            .copied()
+                            .unwrap_or(0.0);
+                        let available = db_balance + pending_delta + import_tx.amount;
+                        if fee_amt > available {
+                            summary.record_error(RowError::new(
+                                line_num,
+                                Some("fee_amount"),
+                                "Fee amount exceeds available balance after inflow".to_string(),
+                            ));
+                            continue;
+                        }
+                    } else {
+                        let fee_db_balance = match IngestionRepository::get_wallet_coin_balance(
+                            db,
+                            &wallet.id,
+                            fee_coin_ref,
+                            import_tx.date.trim(),
+                        ) {
+                            Ok(b) => b,
+                            Err(e) => {
+                                summary.record_error(RowError::new(
+                                    line_num,
+                                    None,
+                                    format!("Database error checking fee balance: {}", e),
+                                ));
+                                continue;
+                            }
+                        };
+                        let fee_key = (wallet.id.clone(), fee_coin_ref.to_string());
+                        let fee_pending = pending_balance_changes
+                            .get(&fee_key)
+                            .copied()
+                            .unwrap_or(0.0);
+                        let available_fee = fee_db_balance + fee_pending;
+                        if fee_amt > available_fee {
+                            summary.record_error(RowError::new(
+                                line_num,
+                                Some("fee_amount"),
+                                t_args(
+                                    "import-error-insufficient-crypto-balance",
+                                    &[
+                                        (
+                                            "symbol",
+                                            fee_coin
+                                                .as_ref()
+                                                .map(|c| c.symbol.as_str())
+                                                .unwrap_or("?"),
+                                        ),
+                                        ("wallet", wallet.name.as_str()),
+                                        ("available", &format!("{:.8}", available_fee)),
+                                        ("required", &format!("{:.8}", fee_amt)),
+                                    ],
+                                ),
+                            ));
+                            continue;
+                        }
+                    }
                 }
             }
 
@@ -1133,7 +1349,8 @@ impl IngestionService {
                             }
                         };
                         let to_key = (wallet.id.clone(), to_coin.id.clone());
-                        let to_pending = pending_balance_changes.get(&to_key).copied().unwrap_or(0.0);
+                        let to_pending =
+                            pending_balance_changes.get(&to_key).copied().unwrap_or(0.0);
                         let available_to = to_balance + to_pending + to_amount;
                         if fee_amount > available_to {
                             summary.record_error(RowError::new(
@@ -1161,8 +1378,10 @@ impl IngestionService {
                             }
                         };
                         let fee_key = (wallet.id.clone(), fee_coin.id.clone());
-                        let fee_pending =
-                            pending_balance_changes.get(&fee_key).copied().unwrap_or(0.0);
+                        let fee_pending = pending_balance_changes
+                            .get(&fee_key)
+                            .copied()
+                            .unwrap_or(0.0);
                         let available_fee = fee_balance + fee_pending;
                         if fee_amount > available_fee {
                             summary.record_error(RowError::new(
@@ -1241,7 +1460,8 @@ impl IngestionService {
                     .entry((wallet.id.clone(), to_coin.id.clone()))
                     .or_insert(0.0) += to_amount;
 
-                if let (Some(fee_coin), Some(fee_amount)) = (fee_coin.as_ref(), import_tx.fee_amount)
+                if let (Some(fee_coin), Some(fee_amount)) =
+                    (fee_coin.as_ref(), import_tx.fee_amount)
                 {
                     *pending_balance_changes
                         .entry((wallet.id.clone(), fee_coin.id.clone()))
@@ -1255,6 +1475,15 @@ impl IngestionService {
                     _ => 0.0,
                 };
                 *pending_balance_changes.entry(balance_key).or_insert(0.0) += delta;
+
+                // Track fee-coin balance changes for non-swap types
+                if let (Some(fee_coin_id), Some(fee_amt)) =
+                    (resolved_fee_coin_id.as_deref(), resolved_fee_amount)
+                {
+                    *pending_balance_changes
+                        .entry((wallet.id.clone(), fee_coin_id.to_string()))
+                        .or_insert(0.0) -= fee_amt;
+                }
             }
 
             if dry_run {
@@ -1304,6 +1533,14 @@ impl IngestionService {
                 let source_id = Uuid::new_v4().to_string();
                 let target_id = Uuid::new_v4().to_string();
 
+                // For swaps, use resolved tax or default to trade/swap
+                let swap_tax_type = resolved_tax_type
+                    .clone()
+                    .or_else(|| Some("trade".to_string()));
+                let swap_tax_subtype = resolved_tax_subtype
+                    .clone()
+                    .or_else(|| Some("swap".to_string()));
+
                 let source = CryptoTransaction {
                     id: source_id.clone(),
                     wallet_id: wallet.id.clone(),
@@ -1313,16 +1550,10 @@ impl IngestionService {
                     amount: import_tx.amount,
                     price_per_coin: import_tx.price_per_coin,
                     fee: import_tx.fee,
-                    fee_coin_id: fee_coin.as_ref().map(|c| c.id.clone()),
-                    fee_amount: import_tx.fee_amount,
-                    tax_type: import_tx
-                        .tax_type
-                        .clone()
-                        .or_else(|| Some("trade".to_string())),
-                    tax_subtype: import_tx
-                        .tax_subtype
-                        .clone()
-                        .or_else(|| Some("swap".to_string())),
+                    fee_coin_id: resolved_fee_coin_id.clone(),
+                    fee_amount: resolved_fee_amount,
+                    tax_type: swap_tax_type.clone(),
+                    tax_subtype: swap_tax_subtype.clone(),
                     override_proceeds: import_tx.override_proceeds,
                     override_cost_basis: None,
                     date: import_tx.date.trim().to_string(),
@@ -1341,14 +1572,8 @@ impl IngestionService {
                     fee: None,
                     fee_coin_id: None,
                     fee_amount: None,
-                    tax_type: import_tx
-                        .tax_type
-                        .clone()
-                        .or_else(|| Some("trade".to_string())),
-                    tax_subtype: import_tx
-                        .tax_subtype
-                        .clone()
-                        .or_else(|| Some("swap".to_string())),
+                    tax_type: swap_tax_type,
+                    tax_subtype: swap_tax_subtype,
                     override_proceeds: None,
                     override_cost_basis: import_tx.override_cost_basis,
                     date: import_tx.date.trim().to_string(),
@@ -1396,8 +1621,10 @@ impl IngestionService {
                 import_tx.notes.clone(),
             );
             let mut transaction = transaction;
-            transaction.tax_type = import_tx.tax_type.clone();
-            transaction.tax_subtype = import_tx.tax_subtype.clone();
+            transaction.fee_coin_id = resolved_fee_coin_id.clone();
+            transaction.fee_amount = resolved_fee_amount;
+            transaction.tax_type = resolved_tax_type.clone();
+            transaction.tax_subtype = resolved_tax_subtype.clone();
             transaction.override_proceeds = import_tx.override_proceeds;
             transaction.override_cost_basis = import_tx.override_cost_basis;
 

@@ -290,12 +290,12 @@ pub fn validate_import_crypto_transaction(
     validate_fee(tx.fee).map_err(|e| make_error("fee", e))?;
 
     if let Some(raw) = tx.tax_type.as_deref() {
-        if raw.trim().eq_ignore_ascii_case("auto") {
-            // allow auto (no override)
+        if raw.trim().eq_ignore_ascii_case("auto") || raw.trim().is_empty() {
+            // "auto" or empty means no override — will be treated as None during processing
         } else if normalize_tax_type(raw).is_none() {
             return Err(make_error(
                 "tax_type",
-                "Invalid tax_type. Use trade, income, expense, or transfer.".to_string(),
+                "Invalid tax_type. Use trade, income, expense, transfer, or auto.".to_string(),
             ));
         }
     }
@@ -306,7 +306,10 @@ pub fn validate_import_crypto_transaction(
                 "tax_type is required for tax_subtype".to_string(),
             )
         })?;
-        if normalize_tax_subtype(tax_type, raw).is_none() {
+        // Skip subtype validation when tax_type is "auto" (means no override)
+        if !tax_type.trim().eq_ignore_ascii_case("auto")
+            && normalize_tax_subtype(tax_type, raw).is_none()
+        {
             return Err(make_error(
                 "tax_subtype",
                 "Invalid tax_subtype for selected tax_type".to_string(),
@@ -330,7 +333,29 @@ pub fn validate_import_crypto_transaction(
         ));
     }
 
+    // Validate fee_coin_symbol/fee_amount pairing for all types
     let tx_type = tx.transaction_type.trim().to_lowercase();
+    if tx_type != "swap" {
+        let fee_coin_symbol = tx
+            .fee_coin_symbol
+            .as_ref()
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty());
+        if fee_coin_symbol.is_some() && tx.fee_amount.is_none() {
+            // fee_coin without fee_amount: ignore (will be cleared during processing)
+        }
+        if fee_coin_symbol.is_none() && tx.fee_amount.is_some() {
+            return Err(make_error(
+                "fee_coin_symbol",
+                "Fee coin symbol is required when fee amount is provided".to_string(),
+            ));
+        }
+        if let (Some(symbol), Some(amount)) = (fee_coin_symbol, tx.fee_amount) {
+            validate_crypto_symbol(symbol).map_err(|e| make_error("fee_coin_symbol", e))?;
+            validate_crypto_amount(amount).map_err(|e| make_error("fee_amount", e))?;
+        }
+    }
+
     if tx_type == "swap" {
         let to_symbol = tx
             .swap_to_symbol

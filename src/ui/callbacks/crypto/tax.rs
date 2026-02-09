@@ -295,12 +295,12 @@ pub fn setup_tax_callbacks<N>(
                 // whole model would recreate the for-loop items, skipping it).
                 let model = adapter.get_tax_wallet_list();
                 for i in 0..model.row_count() {
-                    if let Some(mut entry) = model.row_data(i) {
-                        if entry.id == wallet_id {
-                            entry.excluded = !entry.excluded;
-                            model.set_row_data(i, entry);
-                            break;
-                        }
+                    if let Some(mut entry) = model.row_data(i)
+                        && entry.id == wallet_id
+                    {
+                        entry.excluded = !entry.excluded;
+                        model.set_row_data(i, entry);
+                        break;
                     }
                 }
             });
