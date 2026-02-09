@@ -429,33 +429,6 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_crypto_tax_include_fee_crypto(s(&t("crypto-tax-include-fee-crypto")));
     tr.set_crypto_tax_include_fee_crypto_desc(s(&t("crypto-tax-include-fee-crypto-desc")));
     tr.set_crypto_tax_save_settings(s(&t("crypto-tax-save-settings")));
-    tr.set_crypto_tax_report_title(s(&t("crypto-tax-report-title")));
-    tr.set_crypto_tax_report_desc(s(&t("crypto-tax-report-desc")));
-    tr.set_crypto_tax_report_generate(s(&t("crypto-tax-report-generate")));
-    tr.set_crypto_tax_report_export(s(&t("crypto-tax-report-export")));
-    tr.set_crypto_tax_report_summary_label(s(&t("crypto-tax-report-summary-label")));
-    tr.set_crypto_tax_report_summary_empty(s(&t("crypto-tax-report-summary-empty")));
-    tr.set_crypto_tax_report_summary(s(&t_args(
-        "crypto-tax-report-summary",
-        &[
-            ("disposals", "0"),
-            ("proceeds", "0"),
-            ("cost", "0"),
-            ("gain", "0"),
-        ],
-    )));
-    tr.set_crypto_tax_report_summary_us(s(&t_args(
-        "crypto-tax-report-summary-us",
-        &[
-            ("disposals", "0"),
-            ("proceeds", "0"),
-            ("cost", "0"),
-            ("gain", "0"),
-            ("short", "0"),
-            ("long", "0"),
-        ],
-    )));
-    tr.set_crypto_tax_report_warnings_label(s(&t("crypto-tax-report-warnings-label")));
     tr.set_crypto_tax_report_warnings_empty(s(&t("crypto-tax-report-warnings-empty")));
     tr.set_crypto_tax_report_warnings_count(s(&t_args(
         "crypto-tax-report-warnings-count",
@@ -463,8 +436,6 @@ pub fn load_all_translations(ui: &AppWindow) {
     )));
     tr.set_crypto_tax_report_generated(s(&t("crypto-tax-report-generated")));
     tr.set_crypto_tax_report_exported(s(&t("crypto-tax-report-exported")));
-    tr.set_crypto_tax_summary_title(s(&t("crypto-tax-summary-title")));
-    tr.set_crypto_tax_summary_empty(s(&t("crypto-tax-summary-empty")));
     tr.set_crypto_tax_summary_capital(s(&t("crypto-tax-summary-capital")));
     tr.set_crypto_tax_summary_income(s(&t("crypto-tax-summary-income")));
     tr.set_crypto_tax_summary_balance(s(&t("crypto-tax-summary-balance")));
@@ -473,12 +444,26 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_crypto_tax_summary_gain(s(&t("crypto-tax-summary-gain")));
     tr.set_crypto_tax_summary_income_total(s(&t("crypto-tax-summary-income-total")));
     tr.set_crypto_tax_summary_balance_total(s(&t("crypto-tax-summary-balance-total")));
-    tr.set_crypto_tax_summary_reports(s(&t("crypto-tax-summary-reports")));
     tr.set_crypto_tax_summary_export_history(s(&t("crypto-tax-summary-export-history")));
     tr.set_crypto_tax_summary_export_capital(s(&t("crypto-tax-summary-export-capital")));
-    tr.set_crypto_tax_summary_simulation(s(&t("crypto-tax-summary-simulation")));
     tr.set_crypto_tax_summary_transactions(s(&t("crypto-tax-summary-transactions")));
     tr.set_crypto_tax_summary_volume(s(&t("crypto-tax-summary-volume")));
+    tr.set_crypto_tax_summary_short_term(s(&t("crypto-tax-summary-short-term")));
+    tr.set_crypto_tax_summary_long_term(s(&t("crypto-tax-summary-long-term")));
+    tr.set_crypto_tax_summary_disposals(s(&t("crypto-tax-summary-disposals")));
+    tr.set_crypto_tax_readiness_banner(s(&t_args(
+        "crypto-tax-readiness-banner",
+        &[("count", "0")],
+    )));
+    tr.set_crypto_tax_empty_title(s(&t("crypto-tax-empty-title")));
+    tr.set_crypto_tax_empty_desc(s(&t("crypto-tax-empty-desc")));
+    tr.set_crypto_tax_exports_title(s(&t("crypto-tax-exports-title")));
+    tr.set_crypto_tax_exports_capital_desc(s(&t("crypto-tax-exports-capital-desc")));
+    tr.set_crypto_tax_exports_history_desc(s(&t("crypto-tax-exports-history-desc")));
+    tr.set_crypto_tax_report_details(s(&t("crypto-tax-report-details")));
+    tr.set_crypto_tax_settings_advanced(s(&t("crypto-tax-settings-advanced")));
+    tr.set_crypto_tax_filing_title(s(&t("crypto-tax-filing-title")));
+    tr.set_crypto_tax_save_generate(s(&t("crypto-tax-save-generate")));
     tr.set_crypto_tax_readiness_title(s(&t("crypto-tax-readiness-title")));
     tr.set_crypto_tax_readiness_desc(s(&t("crypto-tax-readiness-desc")));
     tr.set_crypto_tax_readiness_settings(s(&t("crypto-tax-readiness-settings")));
@@ -486,13 +471,13 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_crypto_tax_readiness_balances(s(&t("crypto-tax-readiness-balances")));
     tr.set_crypto_tax_readiness_prices(s(&t("crypto-tax-readiness-prices")));
     tr.set_crypto_tax_readiness_transfers(s(&t("crypto-tax-readiness-transfers")));
+    tr.set_crypto_tax_readiness_filing(s(&t("crypto-tax-readiness-filing")));
     tr.set_crypto_tax_ipc_title(s(&t("crypto-tax-ipc-title")));
     tr.set_crypto_tax_ipc_desc(s(&t("crypto-tax-ipc-desc")));
     tr.set_crypto_tax_ipc_source_label(s(&t("crypto-tax-ipc-source-label")));
     tr.set_crypto_tax_ipc_source_url(s(&t("crypto-tax-ipc-source-url")));
     tr.set_crypto_tax_ipc_import(s(&t("crypto-tax-ipc-import")));
     tr.set_crypto_tax_ipc_copy_url(s(&t("crypto-tax-ipc-copy-url")));
-    tr.set_crypto_tax_ipc_summary_label(s(&t("crypto-tax-ipc-summary-label")));
     tr.set_crypto_tax_ipc_empty(s(&t("crypto-tax-ipc-empty")));
     tr.set_crypto_tax_ipc_summary(s(&t_args(
         "crypto-tax-ipc-summary",
@@ -832,7 +817,10 @@ pub fn load_all_translations(ui: &AppWindow) {
         let wallets_str = wallet_count.to_string();
         let summary = i18n::t_args(
             "crypto-assets-across-wallets",
-            &[("assets", assets_str.as_str()), ("wallets", wallets_str.as_str())],
+            &[
+                ("assets", assets_str.as_str()),
+                ("wallets", wallets_str.as_str()),
+            ],
         );
         crypto.set_portfolio_summary(SharedString::from(summary));
     }

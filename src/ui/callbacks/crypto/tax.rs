@@ -321,30 +321,6 @@ fn update_ipc_summary<N>(
     }
 }
 
-fn reset_report_state(ui_weak: &Weak<AppWindow>) {
-    if let Some(ui) = ui_weak.upgrade() {
-        let adapter = ui.global::<CryptoAdapter>();
-        adapter.set_tax_report_summary(SharedString::from(t("crypto-tax-report-summary-empty")));
-        adapter.set_tax_report_warnings(SharedString::from(t("crypto-tax-report-warnings-empty")));
-        adapter.set_tax_summary_ready(false);
-        adapter.set_tax_gain_positive(true);
-        adapter.set_tax_summary_period(SharedString::from(""));
-        adapter.set_tax_summary_proceeds(SharedString::from("--"));
-        adapter.set_tax_summary_cost(SharedString::from("--"));
-        adapter.set_tax_summary_gain(SharedString::from("--"));
-        adapter.set_tax_summary_short_gain(SharedString::from("--"));
-        adapter.set_tax_summary_long_gain(SharedString::from("--"));
-        adapter.set_tax_summary_disposals(SharedString::from("0"));
-        adapter.set_tax_summary_income(SharedString::from("--"));
-        adapter.set_tax_summary_balance(SharedString::from("--"));
-        adapter.set_tax_summary_transactions(SharedString::from("0"));
-        adapter.set_tax_summary_volume(SharedString::from("--"));
-        adapter.set_tax_summary_warnings(SharedString::from(""));
-        adapter.set_tax_readiness_issues(0);
-        adapter.set_tax_readiness(ModelRc::new(VecModel::from(Vec::<TaxReadinessItem>::new())));
-    }
-}
-
 fn update_report_state(
     adapter: &CryptoAdapter,
     report: &crate::features::crypto::TaxReport,
