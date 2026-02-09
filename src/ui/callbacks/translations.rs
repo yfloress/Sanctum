@@ -451,10 +451,7 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_crypto_tax_summary_short_term(s(&t("crypto-tax-summary-short-term")));
     tr.set_crypto_tax_summary_long_term(s(&t("crypto-tax-summary-long-term")));
     tr.set_crypto_tax_summary_disposals(s(&t("crypto-tax-summary-disposals")));
-    tr.set_crypto_tax_readiness_banner(s(&t_args(
-        "crypto-tax-readiness-banner",
-        &[("count", "0")],
-    )));
+    tr.set_crypto_tax_readiness_banner(s(&t("crypto-tax-readiness-banner")));
     tr.set_crypto_tax_empty_title(s(&t("crypto-tax-empty-title")));
     tr.set_crypto_tax_empty_desc(s(&t("crypto-tax-empty-desc")));
     tr.set_crypto_tax_exports_title(s(&t("crypto-tax-exports-title")));
@@ -464,6 +461,28 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_crypto_tax_settings_advanced(s(&t("crypto-tax-settings-advanced")));
     tr.set_crypto_tax_filing_title(s(&t("crypto-tax-filing-title")));
     tr.set_crypto_tax_save_generate(s(&t("crypto-tax-save-generate")));
+    tr.set_crypto_tax_readiness_settings_suffix(s(&t("crypto-tax-readiness-settings-suffix")));
+    tr.set_crypto_tax_readiness_history_warn_suffix(s(&t(
+        "crypto-tax-readiness-history-warn-suffix",
+    )));
+    tr.set_crypto_tax_readiness_prices_invalid_suffix(s(&t(
+        "crypto-tax-readiness-prices-invalid-suffix",
+    )));
+    tr.set_crypto_tax_readiness_prices_warn_suffix(s(&t(
+        "crypto-tax-readiness-prices-warn-suffix",
+    )));
+    tr.set_crypto_tax_readiness_transfers_warn_suffix(s(&t(
+        "crypto-tax-readiness-transfers-warn-suffix",
+    )));
+    tr.set_crypto_tax_readiness_balances_warn_detail(s(&t(
+        "crypto-tax-readiness-balances-warn-detail",
+    )));
+    tr.set_crypto_tax_readiness_sii_gain_detail(s(&t("crypto-tax-readiness-sii-gain-detail")));
+    tr.set_crypto_tax_readiness_sii_loss_detail(s(&t("crypto-tax-readiness-sii-loss-detail")));
+    tr.set_crypto_tax_readiness_sii_neutral_detail(s(&t(
+        "crypto-tax-readiness-sii-neutral-detail",
+    )));
+    tr.set_crypto_tax_readiness_usa_filing_detail(s(&t("crypto-tax-readiness-usa-filing-detail")));
     tr.set_crypto_tax_readiness_title(s(&t("crypto-tax-readiness-title")));
     tr.set_crypto_tax_readiness_desc(s(&t("crypto-tax-readiness-desc")));
     tr.set_crypto_tax_readiness_settings(s(&t("crypto-tax-readiness-settings")));

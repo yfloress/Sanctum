@@ -432,13 +432,10 @@ fn update_summary_state(
     let readiness_items: Vec<TaxReadinessItem> = summary
         .readiness
         .iter()
-        .map(|item| {
-            let detail_text = translate_readiness_detail(&item.code, &item.detail, &item.status);
-            TaxReadinessItem {
-                code: SharedString::from(item.code.as_str()),
-                status: SharedString::from(item.status.as_str()),
-                detail: SharedString::from(detail_text),
-            }
+        .map(|item| TaxReadinessItem {
+            code: SharedString::from(item.code.as_str()),
+            status: SharedString::from(item.status.as_str()),
+            detail: SharedString::from(item.detail.as_str()),
         })
         .collect();
     // Count issues (non-ok, non-info statuses)
@@ -450,74 +447,6 @@ fn update_summary_state(
     adapter.set_tax_readiness_issues(issue_count as i32);
 
     adapter.set_tax_readiness(ModelRc::new(VecModel::from(readiness_items)));
-}
-
-/// Traduce el `detail` de un readiness item usando i18n según su `code`.
-fn translate_readiness_detail(code: &str, detail: &str, status: &str) -> String {
-    match code {
-        "settings" => {
-            let count: usize = detail.parse().unwrap_or(0);
-            if count == 0 {
-                t("crypto-tax-readiness-settings")
-            } else {
-                t_args(
-                    "crypto-tax-readiness-settings-count",
-                    &[("count", &count.to_string())],
-                )
-            }
-        }
-        "history" => {
-            let count: usize = detail.parse().unwrap_or(0);
-            if status == "warn" {
-                t_args(
-                    "crypto-tax-readiness-history-warn",
-                    &[("count", &count.to_string())],
-                )
-            } else {
-                t("crypto-tax-readiness-history")
-            }
-        }
-        "balances" => {
-            if status == "warn" {
-                t("crypto-tax-readiness-balances-warn")
-            } else {
-                t("crypto-tax-readiness-balances")
-            }
-        }
-        "prices" => {
-            if detail == "invalid" {
-                t("crypto-tax-readiness-prices-invalid")
-            } else {
-                let count: usize = detail.parse().unwrap_or(0);
-                if count > 0 {
-                    t_args(
-                        "crypto-tax-readiness-prices-warn",
-                        &[("count", &count.to_string())],
-                    )
-                } else {
-                    t("crypto-tax-readiness-prices")
-                }
-            }
-        }
-        "transfers" => {
-            let count: usize = detail.parse().unwrap_or(0);
-            if count > 0 {
-                t_args(
-                    "crypto-tax-readiness-transfers-warn",
-                    &[("count", &count.to_string())],
-                )
-            } else {
-                t("crypto-tax-readiness-transfers")
-            }
-        }
-        "sii_f22" => match detail {
-            "gain" => t("crypto-tax-readiness-sii-gain"),
-            "loss" => t("crypto-tax-readiness-sii-loss"),
-            _ => t("crypto-tax-readiness-sii-neutral"),
-        },
-        "filing" => t("crypto-tax-readiness-usa-filing"),
-        _ => detail.to_string(),
-    }
 }
 
 fn load_tax_settings(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>) {

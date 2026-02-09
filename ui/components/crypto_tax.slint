@@ -106,13 +106,54 @@ component ToggleRow inherits Rectangle {
 component ReadinessRow inherits Rectangle {
     in property <TaxReadinessItem> item;
 
-    height: 48px;
-    background: touch.has-hover ? Theme.surface-hover : Theme.surface;
-    border-radius: 10px;
-    border-width: 1px;
-    border-color: Theme.border;
+    // Resolved translated title
+    property <string> resolved-title: root.item.code == "settings"
+        ? Translations.crypto-tax-readiness-settings
+        : root.item.code == "history"
+            ? Translations.crypto-tax-readiness-history
+            : root.item.code == "balances"
+                ? Translations.crypto-tax-readiness-balances
+                : root.item.code == "prices"
+                    ? Translations.crypto-tax-readiness-prices
+                    : root.item.code == "transfers"
+                        ? Translations.crypto-tax-readiness-transfers
+                        : root.item.code == "sii_f22"
+                            ? Translations.crypto-tax-readiness-filing
+                            : root.item.code == "filing"
+                                ? Translations.crypto-tax-readiness-filing
+                                : root.item.code;
 
-    animate background { duration: 150ms; }
+    // Resolved translated detail — composed from Translations.* + raw data
+    property <string> resolved-detail:
+        // settings: "N transactions in period"
+        root.item.code == "settings" && root.item.detail != "" && root.item.detail != "0"
+            ? root.item.detail + " " + Translations.crypto-tax-readiness-settings-suffix
+        // history warn: "N disposals with insufficient lots"
+        : root.item.code == "history" && root.item.status == "warn" && root.item.detail != "0"
+            ? root.item.detail + " " + Translations.crypto-tax-readiness-history-warn-suffix
+        // balances warn
+        : root.item.code == "balances" && root.item.status == "warn"
+            ? Translations.crypto-tax-readiness-balances-warn-detail
+        // prices error (invalid)
+        : root.item.code == "prices" && root.item.detail == "invalid"
+            ? Translations.crypto-tax-readiness-prices-invalid-suffix
+        // prices warn: "N items missing price data"
+        : root.item.code == "prices" && root.item.status == "warn" && root.item.detail != "0"
+            ? root.item.detail + " " + Translations.crypto-tax-readiness-prices-warn-suffix
+        // transfers warn: "N unpaired transfers"
+        : root.item.code == "transfers" && root.item.status == "warn" && root.item.detail != "0"
+            ? root.item.detail + " " + Translations.crypto-tax-readiness-transfers-warn-suffix
+        // sii_f22 filing guidance
+        : root.item.code == "sii_f22" && root.item.detail == "gain"
+            ? Translations.crypto-tax-readiness-sii-gain-detail
+        : root.item.code == "sii_f22" && root.item.detail == "loss"
+            ? Translations.crypto-tax-readiness-sii-loss-detail
+        : root.item.code == "sii_f22"
+            ? Translations.crypto-tax-readiness-sii-neutral-detail
+        // usa filing guidance
+        : root.item.code == "filing"
+            ? Translations.crypto-tax-readiness-usa-filing-detail
+        : "";
 
     property <color> status-color: item.status == "ok"
         ? Theme.success
@@ -122,60 +163,68 @@ component ReadinessRow inherits Rectangle {
                 ? Theme.accent
                 : Theme.danger;
 
+    height: root.resolved-detail != "" ? 56px : 44px;
+    background: touch.has-hover ? Theme.surface-hover : Theme.surface;
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: root.status-color.with-alpha(0.12);
+
+    animate background { duration: 150ms; }
+
     HorizontalLayout {
-        padding-left: 14px;
+        padding-left: 16px;
         padding-right: 14px;
         spacing: 12px;
 
-        // Status dot
+        // Status dot with glow
         Rectangle {
-            width: 8px;
-            height: 8px;
-            border-radius: 4px;
-            background: root.status-color;
+            width: 10px;
+            height: 10px;
+            border-radius: 5px;
+            background: root.status-color.with-alpha(0.2);
             y: (parent.height - self.height) / 2;
+
+            Rectangle {
+                x: 2px;
+                y: 2px;
+                width: 6px;
+                height: 6px;
+                border-radius: 3px;
+                background: root.status-color;
+            }
         }
 
         VerticalLayout {
             alignment: center;
-            spacing: 2px;
+            spacing: 3px;
             horizontal-stretch: 1;
 
             Text {
-                text: root.item.code == "settings"
-                    ? Translations.crypto-tax-readiness-settings
-                    : root.item.code == "history"
-                        ? Translations.crypto-tax-readiness-history
-                        : root.item.code == "balances"
-                            ? Translations.crypto-tax-readiness-balances
-                            : root.item.code == "prices"
-                                ? Translations.crypto-tax-readiness-prices
-                                : root.item.code == "transfers"
-                                    ? Translations.crypto-tax-readiness-transfers
-                                    : root.item.code == "sii_f22"
-                                        ? Translations.crypto-tax-readiness-filing
-                                        : root.item.code == "filing"
-                                            ? Translations.crypto-tax-readiness-filing
-                                            : root.item.code;
+                text: root.resolved-title;
                 color: Theme.text-primary;
                 font-size: 12px;
-                font-weight: 500;
+                font-weight: 600;
             }
 
-            if root.item.detail != "": Text {
-                text: root.item.detail;
-                color: Theme.text-muted;
-                font-size: 10px;
+            if root.resolved-detail != "": Text {
+                text: root.resolved-detail;
+                color: root.item.status == "warn" ? Theme.warning.with-alpha(0.85)
+                     : root.item.status == "error" ? Theme.danger.with-alpha(0.85)
+                     : Theme.text-muted;
+                font-size: 10.5px;
+                font-weight: 400;
                 wrap: word-wrap;
             }
         }
 
-        // Status label
+        // Status badge
         Rectangle {
-            width: 44px;
-            height: 20px;
-            border-radius: 10px;
-            background: root.status-color.with-alpha(0.12);
+            width: 32px;
+            height: 22px;
+            border-radius: 6px;
+            background: root.status-color.with-alpha(0.1);
+            border-width: 1px;
+            border-color: root.status-color.with-alpha(0.2);
             y: (parent.height - self.height) / 2;
 
             Text {
@@ -184,7 +233,7 @@ component ReadinessRow inherits Rectangle {
                     : root.item.status == "info" ? "i"
                     : "✗";
                 color: root.status-color;
-                font-size: 10px;
+                font-size: 11px;
                 font-weight: 700;
                 horizontal-alignment: center;
                 vertical-alignment: center;
