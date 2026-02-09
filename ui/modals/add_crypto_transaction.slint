@@ -786,7 +786,9 @@ export component AddCryptoTransactionModal inherits Rectangle {
 
                         FormField {
                             label: Translations.modal-price-usd;
-                            placeholder: Translations.modal-required;
+                            placeholder: (root.selected-type == "transfer_in" || root.selected-type == "transfer_out")
+                                ? Translations.modal-optional
+                                : Translations.modal-required;
                             value <=> root.price;
                             horizontal-stretch: 1;
                             submit-shortcut => { root.submit(); }

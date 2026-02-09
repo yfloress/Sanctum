@@ -92,11 +92,11 @@ component ReadonlyField inherits Rectangle {
 component TypeBadge inherits Rectangle {
     in property <string> tx-type: "";
 
-    property <string> display-type: root.tx-type == "buy" ? "BUY"
-        : root.tx-type == "sell" ? "SELL"
-        : root.tx-type == "transfer_in" ? "TRANSFER IN"
-        : root.tx-type == "transfer_out" ? "TRANSFER OUT"
-        : root.tx-type == "swap" ? "SWAP"
+    property <string> display-type: root.tx-type == "buy" ? Translations.tx-type-buy
+        : root.tx-type == "sell" ? Translations.tx-type-sell
+        : root.tx-type == "transfer_in" ? Translations.tx-type-transfer-in
+        : root.tx-type == "transfer_out" ? Translations.tx-type-transfer-out
+        : root.tx-type == "swap" ? Translations.tx-type-swap
         : root.tx-type;
 
     property <color> type-color: root.tx-type == "buy" || root.tx-type == "transfer_in"

@@ -230,7 +230,7 @@ export component TypeSelector inherits Rectangle {
                         root.selected-category = "transfer";
                         root.selected-type = "move";
                         root.tax-type = "transfer";
-                        root.tax-subtype = "deposit";
+                        root.tax-subtype = "";
                     }
                 }
 
@@ -277,7 +277,7 @@ export component TypeSelector inherits Rectangle {
                 spacing: 3px;
 
                 ScenarioPill {
-                    label: "BUY";
+                    label: Translations.tx-scenario-buy;
                     active: root.selected-type == "buy";
                     active-color: Theme.success;
                     icon: @image-url("../../assets/icons/trending-up.svg");
@@ -290,7 +290,7 @@ export component TypeSelector inherits Rectangle {
                 }
 
                 ScenarioPill {
-                    label: "SELL";
+                    label: Translations.tx-scenario-sell;
                     active: root.selected-type == "sell";
                     active-color: Theme.danger;
                     icon: @image-url("../../assets/icons/trending-down.svg");
@@ -303,7 +303,7 @@ export component TypeSelector inherits Rectangle {
                 }
 
                 ScenarioPill {
-                    label: "SWAP";
+                    label: Translations.tx-scenario-swap;
                     active: root.selected-type == "swap";
                     active-color: root.trade-color;
                     icon: @image-url("../../assets/icons/arrow-left-right.svg");
@@ -330,7 +330,7 @@ export component TypeSelector inherits Rectangle {
                 spacing: 3px;
 
                 ScenarioPill {
-                    label: "MOVE";
+                    label: Translations.tx-scenario-move;
                     active: root.selected-type == "move";
                     active-color: root.transfer-color;
                     icon: @image-url("../../assets/icons/arrow-right.svg");
@@ -338,7 +338,7 @@ export component TypeSelector inherits Rectangle {
                     clicked => {
                         root.selected-type = "move";
                         root.tax-type = "transfer";
-                        root.tax-subtype = "deposit";
+                        root.tax-subtype = "";
                     }
                 }
 
@@ -387,7 +387,7 @@ export component TypeSelector inherits Rectangle {
                     spacing: 2px;
 
                     ScenarioPill {
-                        label: "Airdrop";
+                        label: Translations.tx-scenario-airdrop;
                         active: root.tax-subtype == "airdrop";
                         active-color: root.income-color;
                         clicked => {
@@ -398,7 +398,7 @@ export component TypeSelector inherits Rectangle {
                     }
 
                     ScenarioPill {
-                        label: "Staking";
+                        label: Translations.tx-scenario-staking;
                         active: root.tax-subtype == "staking";
                         active-color: root.income-color;
                         clicked => {
@@ -409,7 +409,7 @@ export component TypeSelector inherits Rectangle {
                     }
 
                     ScenarioPill {
-                        label: "Mining";
+                        label: Translations.tx-scenario-mining;
                         active: root.tax-subtype == "mining";
                         active-color: root.income-color;
                         clicked => {
@@ -447,7 +447,7 @@ export component TypeSelector inherits Rectangle {
                     }
 
                     ScenarioPill {
-                        label: "Fork";
+                        label: Translations.tx-scenario-fork;
                         active: root.tax-subtype == "fork";
                         active-color: root.income-color;
                         clicked => {

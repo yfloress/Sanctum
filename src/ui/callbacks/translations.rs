@@ -746,6 +746,21 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_tx_scenario_fee(s(&t("tx-scenario-fee")));
     tr.set_tx_scenario_lost(s(&t("tx-scenario-lost")));
     tr.set_tx_scenario_stolen(s(&t("tx-scenario-stolen")));
+    tr.set_tx_scenario_buy(s(&t("tx-scenario-buy")));
+    tr.set_tx_scenario_sell(s(&t("tx-scenario-sell")));
+    tr.set_tx_scenario_swap(s(&t("tx-scenario-swap")));
+    tr.set_tx_scenario_move(s(&t("tx-scenario-move")));
+    tr.set_tx_scenario_airdrop(s(&t("tx-scenario-airdrop")));
+    tr.set_tx_scenario_staking(s(&t("tx-scenario-staking")));
+    tr.set_tx_scenario_mining(s(&t("tx-scenario-mining")));
+    tr.set_tx_scenario_fork(s(&t("tx-scenario-fork")));
+
+    // Type badge labels (edit modal)
+    tr.set_tx_type_buy(s(&t("tx-type-buy")));
+    tr.set_tx_type_sell(s(&t("tx-type-sell")));
+    tr.set_tx_type_swap(s(&t("tx-type-swap")));
+    tr.set_tx_type_transfer_in(s(&t("tx-type-transfer-in")));
+    tr.set_tx_type_transfer_out(s(&t("tx-type-transfer-out")));
 
     // Goal Modal
     tr.set_modal_new_goal(s(&t("modal-new-goal")));

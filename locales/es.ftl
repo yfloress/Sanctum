@@ -705,6 +705,21 @@ tx-scenario-donation = Donacion
 tx-scenario-fee = Comision
 tx-scenario-lost = Perdido
 tx-scenario-stolen = Robado
+tx-scenario-buy = COMPRA
+tx-scenario-sell = VENTA
+tx-scenario-swap = SWAP
+tx-scenario-move = MOVER
+tx-scenario-airdrop = Airdrop
+tx-scenario-staking = Staking
+tx-scenario-mining = Mineria
+tx-scenario-fork = Fork
+
+# Type badge labels (edit modal)
+tx-type-buy = COMPRA
+tx-type-sell = VENTA
+tx-type-swap = SWAP
+tx-type-transfer-in = TRANSFERENCIA ENTRADA
+tx-type-transfer-out = TRANSFERENCIA SALIDA
 
 # ==================== Goal Modal ====================
 modal-new-goal = NUEVA META
