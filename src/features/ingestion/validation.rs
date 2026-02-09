@@ -506,6 +506,42 @@ mod tests {
     }
 
     #[test]
+    fn test_validate_crypto_rejects_mismatched_subtype_for_type() {
+        let mut tx = base_crypto_tx("income");
+        tx.subtype = Some("sell".to_string());
+        let err = validate_import_crypto_transaction(&tx, 1).expect_err("must fail");
+        assert_eq!(err.field.as_deref(), Some("subtype"));
+    }
+
+    #[test]
+    fn test_validate_crypto_transfer_withdrawal_maps_to_mechanical_outflow() {
+        let mut tx = base_crypto_tx("transfer");
+        tx.subtype = Some("withdrawal".to_string());
+        assert_eq!(tx.mechanical_type(), "transfer_out");
+        assert!(validate_import_crypto_transaction(&tx, 1).is_ok());
+    }
+
+    #[test]
+    fn test_validate_crypto_fee_amount_requires_fee_coin_symbol() {
+        let mut tx = base_crypto_tx("trade");
+        tx.subtype = Some("buy".to_string());
+        tx.fee_amount = Some(0.002);
+        let err = validate_import_crypto_transaction(&tx, 1).expect_err("must fail");
+        assert_eq!(err.field.as_deref(), Some("fee_coin_symbol"));
+    }
+
+    #[test]
+    fn test_validate_crypto_swap_rejects_same_asset_target() {
+        let mut tx = base_crypto_tx("trade");
+        tx.subtype = Some("swap".to_string());
+        tx.swap_to_symbol = Some("BTC".to_string());
+        tx.swap_to_amount = Some(0.1);
+
+        let err = validate_import_crypto_transaction(&tx, 1).expect_err("must fail");
+        assert_eq!(err.field.as_deref(), Some("swap_to_symbol"));
+    }
+
+    #[test]
     fn test_parse_bool() {
         assert!(parse_bool("true").unwrap());
         assert!(parse_bool("1").unwrap());

@@ -53,3 +53,56 @@ pub fn resolve_tax_subtype(tx: &CryptoTransaction) -> Option<String> {
     let raw = tx.subtype.as_deref()?;
     normalize_tax_subtype(tax_type.as_str(), raw)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn tx(fiscal_type: &str, subtype: Option<&str>) -> CryptoTransaction {
+        let mut tx = CryptoTransaction::new(
+            "tx-1".to_string(),
+            "wallet-1".to_string(),
+            "bitcoin".to_string(),
+            "BTC".to_string(),
+            fiscal_type.to_string(),
+            1.0,
+            Some(100.0),
+            None,
+            "2026-01-10".to_string(),
+            None,
+        );
+        tx.subtype = subtype.map(str::to_string);
+        tx
+    }
+
+    #[test]
+    fn resolve_tax_type_reads_fiscal_type_field() {
+        assert_eq!(resolve_tax_type(&tx("trade", Some("buy"))), TaxTxType::Trade);
+        assert_eq!(
+            resolve_tax_type(&tx("income", Some("airdrop"))),
+            TaxTxType::Income
+        );
+        assert_eq!(
+            resolve_tax_type(&tx("expense", Some("donation"))),
+            TaxTxType::Expense
+        );
+        assert_eq!(
+            resolve_tax_type(&tx("transfer", Some("deposit"))),
+            TaxTxType::Transfer
+        );
+    }
+
+    #[test]
+    fn resolve_tax_subtype_requires_valid_subtype_for_selected_type() {
+        assert_eq!(
+            resolve_tax_subtype(&tx("income", Some("airdrop"))).as_deref(),
+            Some("airdrop")
+        );
+        assert_eq!(
+            resolve_tax_subtype(&tx("transfer", Some("withdrawal"))).as_deref(),
+            Some("withdrawal")
+        );
+        assert_eq!(resolve_tax_subtype(&tx("income", Some("sell"))), None);
+        assert_eq!(resolve_tax_subtype(&tx("trade", None)), None);
+    }
+}

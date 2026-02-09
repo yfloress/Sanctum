@@ -631,4 +631,79 @@ mod tests {
         let result = parser.parse_transactions("");
         assert!(result.is_err());
     }
+
+    #[test]
+    fn test_parse_csv_crypto_transactions_with_subtype_and_swap_fields() {
+        let csv = "date,wallet,symbol,type,subtype,amount,price_per_coin,fee,swap_to_symbol,swap_to_amount,fee_coin_symbol,fee_amount,notes\n\
+                   2026-01-10,Ledger,BTC,trade,buy,0.5,97000,10,,,,,Spot buy\n\
+                   2026-01-11,Binance,BTC,trade,swap,0.1,97000,5,ETH,3.0,BNB,0.01,Swap BTC to ETH";
+
+        let parser = CsvParser;
+        let result = parser.parse_crypto_transactions(csv);
+        assert!(result.is_ok());
+
+        let parsed = result.expect("csv crypto parse");
+        assert!(parsed.errors.is_empty());
+        assert_eq!(parsed.items.len(), 2);
+
+        let buy = &parsed.items[0].1;
+        assert_eq!(buy.transaction_type, "trade");
+        assert_eq!(buy.subtype.as_deref(), Some("buy"));
+        assert_eq!(buy.amount, 0.5);
+        assert_eq!(buy.notes.as_deref(), Some("Spot buy"));
+
+        let swap = &parsed.items[1].1;
+        assert_eq!(swap.transaction_type, "trade");
+        assert_eq!(swap.subtype.as_deref(), Some("swap"));
+        assert_eq!(swap.swap_to_symbol.as_deref(), Some("ETH"));
+        assert_eq!(swap.swap_to_amount, Some(3.0));
+        assert_eq!(swap.fee_coin_symbol.as_deref(), Some("BNB"));
+        assert_eq!(swap.fee_amount, Some(0.01));
+    }
+
+    #[test]
+    fn test_parse_csv_crypto_alias_columns_for_price_and_swap_target() {
+        let csv = "date,wallet,symbol,type,subtype,amount,price,to_symbol,to_amount,fee_coin,fee_amount\n\
+                   2026-01-12,Exchange,BTC,trade,swap,0.2,98000,ETH,6.2,USDT,1.5";
+
+        let parser = CsvParser;
+        let result = parser.parse_crypto_transactions(csv);
+        assert!(result.is_ok());
+
+        let parsed = result.expect("csv crypto parse");
+        assert!(parsed.errors.is_empty());
+        assert_eq!(parsed.items.len(), 1);
+
+        let tx = &parsed.items[0].1;
+        assert_eq!(tx.price_per_coin, Some(98000.0));
+        assert_eq!(tx.swap_to_symbol.as_deref(), Some("ETH"));
+        assert_eq!(tx.swap_to_amount, Some(6.2));
+        assert_eq!(tx.fee_coin_symbol.as_deref(), Some("USDT"));
+        assert_eq!(tx.fee_amount, Some(1.5));
+    }
+
+    #[test]
+    fn test_parse_csv_crypto_best_effort_with_invalid_amount() {
+        let csv = "date,wallet,symbol,type,subtype,amount\n\
+                   2026-01-10,Ledger,BTC,trade,buy,invalid\n\
+                   2026-01-11,Ledger,ETH,income,airdrop,1.25";
+
+        let parser = CsvParser;
+        let result = parser.parse_crypto_transactions(csv);
+        assert!(result.is_ok());
+
+        let parsed = result.expect("csv crypto parse");
+        assert_eq!(parsed.items.len(), 1);
+        assert_eq!(parsed.errors.len(), 1);
+        assert_eq!(parsed.items[0].1.symbol, "ETH");
+        assert_eq!(parsed.items[0].1.subtype.as_deref(), Some("airdrop"));
+    }
+
+    #[test]
+    fn test_parse_csv_crypto_missing_required_column() {
+        let csv = "date,wallet,type,amount\n2026-01-10,Ledger,trade,0.5";
+        let parser = CsvParser;
+        let result = parser.parse_crypto_transactions(csv);
+        assert!(result.is_err());
+    }
 }

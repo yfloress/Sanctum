@@ -169,7 +169,7 @@ mod tests {
 
     #[test]
     fn test_detect_text_mixed() {
-        let text = "T;2024-01-15;Account;expense;100;USD;Food;Groceries;\nH;Meditate;2024-01-15;true\nC;2024-01-15;Binance;BTC;buy;0.5;45000;10;";
+        let text = "T;2024-01-15;Account;expense;100;USD;Food;Groceries;\nH;Meditate;2024-01-15;true\nC;2024-01-15;Binance;BTC;trade;0.5;buy;45000;10;";
         assert_eq!(
             detect_format(text, "data.txt"),
             Some(ImportFormat::TextMixed)

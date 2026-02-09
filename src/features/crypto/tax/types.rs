@@ -212,6 +212,34 @@ mod tests {
         assert!(is_loss_only_subtype("stolen"));
         assert!(!is_loss_only_subtype("fee"));
     }
+
+    #[test]
+    fn tax_type_parse_accepts_only_fiscal_values() {
+        assert_eq!(TaxTxType::parse("trade"), Some(TaxTxType::Trade));
+        assert_eq!(TaxTxType::parse("income"), Some(TaxTxType::Income));
+        assert_eq!(TaxTxType::parse("expense"), Some(TaxTxType::Expense));
+        assert_eq!(TaxTxType::parse("transfer"), Some(TaxTxType::Transfer));
+
+        // Legacy mechanical aliases are intentionally rejected.
+        assert_eq!(TaxTxType::parse("buy"), None);
+        assert_eq!(TaxTxType::parse("sell"), None);
+        assert_eq!(TaxTxType::parse("swap"), None);
+        assert_eq!(TaxTxType::parse("move"), None);
+    }
+
+    #[test]
+    fn derive_mechanical_type_maps_expected_combinations() {
+        assert_eq!(derive_mechanical_type("trade", Some("buy")), "buy");
+        assert_eq!(derive_mechanical_type("trade", Some("sell")), "sell");
+        assert_eq!(derive_mechanical_type("trade", Some("swap")), "swap");
+        assert_eq!(derive_mechanical_type("transfer", Some("deposit")), "transfer_in");
+        assert_eq!(
+            derive_mechanical_type("transfer", Some("withdrawal")),
+            "transfer_out"
+        );
+        assert_eq!(derive_mechanical_type("income", Some("staking")), "buy");
+        assert_eq!(derive_mechanical_type("expense", Some("fee")), "sell");
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
