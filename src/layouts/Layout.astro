@@ -97,8 +97,10 @@ const baseUrl = import.meta.env.BASE_URL;
               description:
                 "Export as CSV from Excel, Sheets, LibreOffice, or Proton Sheets. You must export three separate files.",
               download: "Download Excel Template",
-              required: "Required columns: date, account, type, amount, currency, category, description.",
-              optional: "Optional: transfer_to_account (only for transfers).",
+              required:
+                "Required columns depend on file type. Crypto now uses fiscal type + subtype.",
+              optional:
+                "Transactions optional: transfer_to_account. Crypto optional: price, fee, swap targets, fee coin, notes.",
               tabs: {
                 transactions: "Transactions CSV",
                 habits: "Habit Logs CSV",
@@ -109,7 +111,8 @@ const baseUrl = import.meta.env.BASE_URL;
               tag: "TXT",
               title: "Quick notes format (prefixed)",
               description: "Use prefixes to paste straight from notes or paper. One line per entry.",
-              required: "Required per line: date + key fields. Prefixes: T; transaction, H; habit, C; crypto.",
+              required:
+                "Required per line: date + key fields. Prefixes: T; transaction, H; habit, C; crypto (type + subtype).",
             },
             json: {
               tag: "JSON",
@@ -229,8 +232,10 @@ const baseUrl = import.meta.env.BASE_URL;
               description:
                 "Exporta CSV desde Excel, Sheets, LibreOffice o Proton Sheets. Debes exportar tres archivos separados.",
               download: "Descargar plantilla Excel",
-              required: "Columnas requeridas: date, account, type, amount, currency, category, description.",
-              optional: "Opcional: transfer_to_account (solo para transferencias).",
+              required:
+                "Las columnas requeridas dependen del tipo de archivo. Cripto ahora usa type fiscal + subtype.",
+              optional:
+                "Transacciones opcional: transfer_to_account. Cripto opcional: price, fee, destino swap, fee coin, notas.",
               tabs: {
                 transactions: "Transacciones CSV",
                 habits: "Hábitos CSV",
@@ -241,7 +246,8 @@ const baseUrl = import.meta.env.BASE_URL;
               tag: "TXT",
               title: "Formato rápido (prefijos)",
               description: "Usa prefijos para pegar desde notas o papel. Una línea por entrada.",
-              required: "Requerido por línea: fecha + campos clave. Prefijos: T; transacción, H; hábito, C; cripto.",
+              required:
+                "Requerido por línea: fecha + campos clave. Prefijos: T; transacción, H; hábito, C; cripto (type + subtype).",
             },
             json: {
               tag: "JSON",

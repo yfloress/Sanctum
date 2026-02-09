@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 // ==================== Types ====================
 
 type TransactionType = "income" | "expense" | "transfer";
-type CryptoType = "buy" | "sell" | "transfer_in" | "transfer_out" | "swap";
+type CryptoType = "trade" | "income" | "expense" | "transfer";
 
 type Transaction = {
   id: string;
@@ -35,6 +35,7 @@ type CryptoTransaction = {
   wallet: string;
   symbol: string;
   transaction_type: CryptoType;
+  subtype?: string | null;
   amount: number;
   price_per_coin?: number | null;
   fee?: number | null;
@@ -42,8 +43,6 @@ type CryptoTransaction = {
   swap_to_amount?: number | null;
   fee_coin_symbol?: string | null;
   fee_amount?: number | null;
-  tax_type?: string | null;
-  tax_subtype?: string | null;
   override_proceeds?: number | null;
   override_cost_basis?: number | null;
   notes?: string | null;
@@ -68,6 +67,7 @@ type ExportData = {
     wallet: string;
     symbol: string;
     type: CryptoType;
+    subtype?: string | null;
     amount: number;
     price_per_coin?: number | null;
     fee?: number | null;
@@ -75,8 +75,6 @@ type ExportData = {
     swap_to_amount?: number | null;
     fee_coin_symbol?: string | null;
     fee_amount?: number | null;
-    tax_type?: string | null;
-    tax_subtype?: string | null;
     override_proceeds?: number | null;
     override_cost_basis?: number | null;
     notes?: string | null;
@@ -104,7 +102,7 @@ const INCOME_CATEGORIES = [
   "OTHER",
 ];
 
-const CURRENCIES = ["USD", "CLP", "EUR", "GBP"];
+const CURRENCIES = ["USD", "CLP"];
 
 // Mirrors default_coin_catalog() from src/features/crypto/api.rs (feat/crypto-tax)
 // Order and IDs must stay in sync with the Rust catalog.
@@ -152,20 +150,18 @@ const CRYPTO_COINS = [
 ];
 
 // Mirrors TAX_SUBTYPES_* from src/features/crypto/tax/types.rs (feat/crypto-tax)
-// Each scenario maps to (transaction_type, tax_type, tax_subtype).
-// For trade/transfer the app infers tax fields when null; income/expense MUST be explicit.
+// Each scenario maps directly to fiscal (type, subtype).
 type CryptoScenario = {
   key: string;
   group: "trade" | "transfer" | "income" | "expense";
-  txType: CryptoType;
-  taxType: string | null;
-  taxSub: string | null;
+  fiscalType: CryptoType;
+  subtype: string | null;
   en: string;
   es: string;
 };
 
 const SCENARIO_GROUPS: Record<string, { en: string; es: string }> = {
-  trade: { en: "Trade", es: "Comercio" },
+  trade: { en: "Trade", es: "Operaciones" },
   transfer: { en: "Transfer", es: "Transferencia" },
   income: { en: "Income", es: "Ingreso" },
   expense: { en: "Expense", es: "Gasto" },
@@ -174,148 +170,132 @@ const SCENARIO_GROUPS: Record<string, { en: string; es: string }> = {
 const CRYPTO_SCENARIOS: CryptoScenario[] = [
   // ── Trade ──
   {
-    key: "buy",
+    key: "trade:buy",
     group: "trade",
-    txType: "buy",
-    taxType: null,
-    taxSub: null,
+    fiscalType: "trade",
+    subtype: "buy",
     en: "Buy",
     es: "Compra",
   },
   {
-    key: "sell",
+    key: "trade:sell",
     group: "trade",
-    txType: "sell",
-    taxType: null,
-    taxSub: null,
+    fiscalType: "trade",
+    subtype: "sell",
     en: "Sell",
     es: "Venta",
   },
   {
-    key: "swap",
+    key: "trade:swap",
     group: "trade",
-    txType: "swap",
-    taxType: null,
-    taxSub: null,
+    fiscalType: "trade",
+    subtype: "swap",
     en: "Swap",
     es: "Swap",
   },
   {
     key: "trade:other",
     group: "trade",
-    txType: "buy",
-    taxType: "trade",
-    taxSub: "other",
+    fiscalType: "trade",
+    subtype: "other",
     en: "Other Trade",
-    es: "Otro comercio",
+    es: "Otra operacion",
   },
   // ── Transfer ──
   {
-    key: "transfer_in",
+    key: "transfer:deposit",
     group: "transfer",
-    txType: "transfer_in",
-    taxType: null,
-    taxSub: null,
-    en: "Transfer In",
-    es: "Entrada",
+    fiscalType: "transfer",
+    subtype: "deposit",
+    en: "Deposit",
+    es: "Deposito",
   },
   {
-    key: "transfer_out",
+    key: "transfer:withdrawal",
     group: "transfer",
-    txType: "transfer_out",
-    taxType: null,
-    taxSub: null,
-    en: "Transfer Out",
-    es: "Salida",
+    fiscalType: "transfer",
+    subtype: "withdrawal",
+    en: "Withdrawal",
+    es: "Retiro",
   },
   // ── Income ──
   {
     key: "income:airdrop",
     group: "income",
-    txType: "buy",
-    taxType: "income",
-    taxSub: "airdrop",
+    fiscalType: "income",
+    subtype: "airdrop",
     en: "Airdrop",
     es: "Airdrop",
   },
   {
     key: "income:staking",
     group: "income",
-    txType: "buy",
-    taxType: "income",
-    taxSub: "staking",
+    fiscalType: "income",
+    subtype: "staking",
     en: "Staking Reward",
     es: "Recompensa staking",
   },
   {
     key: "income:mining",
     group: "income",
-    txType: "buy",
-    taxType: "income",
-    taxSub: "mining",
+    fiscalType: "income",
+    subtype: "mining",
     en: "Mining",
     es: "Mineria",
   },
   {
     key: "income:interest",
     group: "income",
-    txType: "buy",
-    taxType: "income",
-    taxSub: "interest",
+    fiscalType: "income",
+    subtype: "interest",
     en: "Interest",
     es: "Interes",
   },
   {
     key: "income:reward",
     group: "income",
-    txType: "buy",
-    taxType: "income",
-    taxSub: "reward",
+    fiscalType: "income",
+    subtype: "reward",
     en: "Reward",
     es: "Recompensa",
   },
   {
     key: "income:gift",
     group: "income",
-    txType: "buy",
-    taxType: "income",
-    taxSub: "gift",
+    fiscalType: "income",
+    subtype: "gift",
     en: "Gift Received",
     es: "Regalo recibido",
   },
   {
     key: "income:fork",
     group: "income",
-    txType: "buy",
-    taxType: "income",
-    taxSub: "fork",
+    fiscalType: "income",
+    subtype: "fork",
     en: "Fork",
     es: "Fork",
   },
   {
     key: "income:payment",
     group: "income",
-    txType: "buy",
-    taxType: "income",
-    taxSub: "payment",
+    fiscalType: "income",
+    subtype: "payment",
     en: "Payment Received",
     es: "Pago recibido",
   },
   {
     key: "income:rebate",
     group: "income",
-    txType: "buy",
-    taxType: "income",
-    taxSub: "rebate",
+    fiscalType: "income",
+    subtype: "rebate",
     en: "Rebate",
     es: "Reembolso",
   },
   {
     key: "income:other",
     group: "income",
-    txType: "buy",
-    taxType: "income",
-    taxSub: "other",
+    fiscalType: "income",
+    subtype: "other",
     en: "Other Income",
     es: "Otro ingreso",
   },
@@ -323,72 +303,64 @@ const CRYPTO_SCENARIOS: CryptoScenario[] = [
   {
     key: "expense:payment",
     group: "expense",
-    txType: "sell",
-    taxType: "expense",
-    taxSub: "payment",
+    fiscalType: "expense",
+    subtype: "payment",
     en: "Payment",
     es: "Pago",
   },
   {
     key: "expense:gift",
     group: "expense",
-    txType: "sell",
-    taxType: "expense",
-    taxSub: "gift",
+    fiscalType: "expense",
+    subtype: "gift",
     en: "Gift Sent",
     es: "Regalo enviado",
   },
   {
     key: "expense:fee",
     group: "expense",
-    txType: "sell",
-    taxType: "expense",
-    taxSub: "fee",
+    fiscalType: "expense",
+    subtype: "fee",
     en: "Fee",
     es: "Comision",
   },
   {
     key: "expense:lost",
     group: "expense",
-    txType: "sell",
-    taxType: "expense",
-    taxSub: "lost",
+    fiscalType: "expense",
+    subtype: "lost",
     en: "Lost",
     es: "Perdida",
   },
   {
     key: "expense:stolen",
     group: "expense",
-    txType: "sell",
-    taxType: "expense",
-    taxSub: "stolen",
+    fiscalType: "expense",
+    subtype: "stolen",
     en: "Stolen",
     es: "Robo",
   },
   {
     key: "expense:donation",
     group: "expense",
-    txType: "sell",
-    taxType: "expense",
-    taxSub: "donation",
+    fiscalType: "expense",
+    subtype: "donation",
     en: "Donation",
     es: "Donacion",
   },
   {
     key: "expense:sell",
     group: "expense",
-    txType: "sell",
-    taxType: "expense",
-    taxSub: "sell",
+    fiscalType: "expense",
+    subtype: "sell",
     en: "Liquidation",
     es: "Liquidacion",
   },
   {
     key: "expense:other",
     group: "expense",
-    txType: "sell",
-    taxType: "expense",
-    taxSub: "other",
+    fiscalType: "expense",
+    subtype: "other",
     en: "Other Expense",
     es: "Otro gasto",
   },
@@ -398,27 +370,21 @@ const SCENARIO_MAP: Record<string, CryptoScenario> = Object.fromEntries(
   CRYPTO_SCENARIOS.map((s) => [s.key, s]),
 );
 
-/** Resolve a scenario key from imported (transaction_type, tax_type, tax_subtype) */
+/** Resolve a scenario key from imported fiscal (type, subtype). */
 function resolveScenarioKey(
   txType: CryptoType,
-  taxType: string | null,
-  taxSub: string | null,
+  subtype: string | null,
 ): string {
-  // Explicit income/expense subtypes
-  if (taxType && taxSub && (taxType === "income" || taxType === "expense")) {
-    const key = `${taxType}:${taxSub}`;
+  const normalizedSubtype = (subtype ?? "").trim().toLowerCase();
+  if (normalizedSubtype) {
+    const key = `${txType}:${normalizedSubtype}`;
     if (SCENARIO_MAP[key]) return key;
   }
-  // Trade with "other"
-  if (
-    (taxType === "trade" && taxSub === "other") ||
-    (!taxType && txType === "buy" && taxSub === "other")
-  ) {
-    return "trade:other";
-  }
-  // Default: use transaction_type directly (buy, sell, swap, transfer_in, transfer_out)
-  if (SCENARIO_MAP[txType]) return txType;
-  return "buy";
+  if (txType === "trade") return "trade:buy";
+  if (txType === "transfer") return "transfer:deposit";
+  if (txType === "income") return "income:other";
+  if (txType === "expense") return "expense:other";
+  return "trade:buy";
 }
 
 // ==================== Translations ====================
@@ -468,6 +434,7 @@ const translations = {
     transactions: {
       form: {
         account: "Account",
+        currency: "Currency (USD, CLP or custom)",
         category: "Category",
         selectCategory: "Select category...",
         transferTo: "Transfer to account",
@@ -609,6 +576,7 @@ const translations = {
     transactions: {
       form: {
         account: "Cuenta",
+        currency: "Moneda (USD, CLP u otra)",
         category: "Categoria",
         selectCategory: "Seleccionar categoria...",
         transferTo: "Transferir a cuenta",
@@ -741,7 +709,7 @@ const createDefaultCrypto = (date: string) => ({
   symbol: "",
   customSymbol: "",
   scenarioGroup: "trade" as "trade" | "transfer" | "income" | "expense",
-  scenarioKey: "buy",
+  scenarioKey: "trade:buy",
   amount: "",
   swap_to_symbol: "",
   swap_to_amount: "",
@@ -776,15 +744,14 @@ function normalizeTransactionType(value: unknown): TransactionType {
 function normalizeCryptoType(value: unknown): CryptoType {
   const normalized = String(value ?? "").toLowerCase();
   if (
-    normalized === "buy" ||
-    normalized === "sell" ||
-    normalized === "transfer_in" ||
-    normalized === "transfer_out" ||
-    normalized === "swap"
+    normalized === "trade" ||
+    normalized === "income" ||
+    normalized === "expense" ||
+    normalized === "transfer"
   ) {
     return normalized as CryptoType;
   }
-  return "buy";
+  return "trade";
 }
 
 function isSupportedVersion(value: unknown) {
@@ -809,12 +776,31 @@ function parseCryptoFromJson(tx: any): CryptoTransaction {
   const swapToSymbol = emptyToNull(tx.swap_to_symbol ?? tx.to_symbol);
   const swapToAmount = tx.swap_to_amount ?? tx.to_amount ?? null;
   const feeCoinSymbol = emptyToNull(tx.fee_coin_symbol ?? tx.fee_coin);
-  const rawTaxType = emptyToNull(tx.tax_type);
-  // Normalize "auto" to null — matches app behavior (ingestion service converts auto → None)
-  const taxType =
-    rawTaxType && rawTaxType.toLowerCase() !== "auto" ? rawTaxType : null;
-  const taxSubtype = taxType ? emptyToNull(tx.tax_subtype) : null;
-  const txType = normalizeCryptoType(tx.transaction_type ?? tx.type);
+  const rawType = String(tx.transaction_type ?? tx.type ?? "")
+    .trim()
+    .toLowerCase();
+  let txType = normalizeCryptoType(rawType);
+  let subtype = emptyToNull(tx.subtype);
+
+  // Backfill subtype when loading older payloads that used mechanical type.
+  if (!subtype) {
+    if (rawType === "buy") {
+      txType = "trade";
+      subtype = "buy";
+    } else if (rawType === "sell") {
+      txType = "trade";
+      subtype = "sell";
+    } else if (rawType === "swap") {
+      txType = "trade";
+      subtype = "swap";
+    } else if (rawType === "transfer_in") {
+      txType = "transfer";
+      subtype = "deposit";
+    } else if (rawType === "transfer_out") {
+      txType = "transfer";
+      subtype = "withdrawal";
+    }
+  }
 
   return {
     id: makeId(),
@@ -822,6 +808,7 @@ function parseCryptoFromJson(tx: any): CryptoTransaction {
     wallet: String(tx.wallet ?? ""),
     symbol: String(tx.symbol ?? ""),
     transaction_type: txType,
+    subtype,
     amount: Number(tx.amount ?? 0),
     price_per_coin:
       tx.price_per_coin != null ? Number(tx.price_per_coin) : null,
@@ -830,8 +817,6 @@ function parseCryptoFromJson(tx: any): CryptoTransaction {
     swap_to_amount: swapToAmount != null ? Number(swapToAmount) : null,
     fee_coin_symbol: feeCoinSymbol,
     fee_amount: tx.fee_amount != null ? Number(tx.fee_amount) : null,
-    tax_type: taxType,
-    tax_subtype: taxSubtype,
     override_proceeds:
       tx.override_proceeds != null ? Number(tx.override_proceeds) : null,
     override_cost_basis:
@@ -965,8 +950,10 @@ export default function Generator() {
 
   // Derived: selected scenario
   const selectedScenario =
-    SCENARIO_MAP[cryptoForm.scenarioKey] ?? SCENARIO_MAP["buy"]!;
-  const isCryptoSwap = selectedScenario.txType === "swap";
+    SCENARIO_MAP[cryptoForm.scenarioKey] ?? SCENARIO_MAP["trade:buy"]!;
+  const isCryptoSwap =
+    selectedScenario.fiscalType === "trade" &&
+    selectedScenario.subtype === "swap";
 
   // Derived: subtype options for current group
   const subtypeOptions = React.useMemo(
@@ -1013,6 +1000,7 @@ export default function Generator() {
         wallet: tx.wallet,
         symbol: tx.symbol,
         type: transaction_type,
+        subtype: tx.subtype || null,
         amount: tx.amount,
         price_per_coin: tx.price_per_coin ?? null,
         fee: tx.fee ?? null,
@@ -1020,8 +1008,6 @@ export default function Generator() {
         swap_to_amount: tx.swap_to_amount ?? null,
         fee_coin_symbol: tx.fee_coin_symbol || null,
         fee_amount: tx.fee_amount ?? null,
-        tax_type: tx.tax_type || null,
-        tax_subtype: tx.tax_subtype || null,
         override_proceeds: tx.override_proceeds ?? null,
         override_cost_basis: tx.override_cost_basis ?? null,
         notes: tx.notes || null,
@@ -1297,7 +1283,8 @@ export default function Generator() {
         date: cryptoForm.date,
         wallet: cryptoForm.wallet,
         symbol: resolvedSymbol,
-        transaction_type: sc.txType,
+        transaction_type: sc.fiscalType,
+        subtype: sc.subtype,
         amount: Number(cryptoForm.amount),
         price_per_coin: cryptoForm.price_per_coin
           ? Number(cryptoForm.price_per_coin)
@@ -1315,8 +1302,6 @@ export default function Generator() {
         fee_amount: cryptoForm.fee_amount
           ? Number(cryptoForm.fee_amount)
           : null,
-        tax_type: sc.taxType,
-        tax_subtype: sc.taxSub,
         override_proceeds: cryptoForm.override_proceeds
           ? Number(cryptoForm.override_proceeds)
           : null,
@@ -1566,21 +1551,20 @@ export default function Generator() {
                       "border-destructive/60 focus-visible:ring-destructive/40",
                   )}
                 />
-                <SelectField
+                <Input
+                  list="currency-options"
+                  placeholder={copy.transactions.form.currency}
                   value={txForm.currency}
-                  onChange={(v) => {
-                    setTxForm({ ...txForm, currency: v });
-                    if (v) {
+                  onChange={(event) => {
+                    const value = event.target.value.toUpperCase();
+                    setTxForm({ ...txForm, currency: value });
+                    if (value) {
                       setTxErrors((prev) => ({
                         ...prev,
                         currency: false,
                       }));
                     }
                   }}
-                  options={CURRENCIES.map((c) => ({
-                    value: c,
-                    label: c,
-                  }))}
                   aria-invalid={Boolean(txAttempted && txErrors.currency)}
                   className={cn(
                     txAttempted &&
@@ -1589,6 +1573,11 @@ export default function Generator() {
                   )}
                 />
               </div>
+              <datalist id="currency-options">
+                {CURRENCIES.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
               <div className="grid gap-4 sm:grid-cols-2">
                 <SelectField
                   value={txForm.transaction_type}
@@ -1991,9 +1980,10 @@ export default function Generator() {
                     const firstInGroup = CRYPTO_SCENARIOS.find(
                       (s) => s.group === nextGroup,
                     );
-                    const nextKey = firstInGroup?.key ?? "buy";
+                    const nextKey = firstInGroup?.key ?? "trade:buy";
                     const sc = SCENARIO_MAP[nextKey];
-                    const isSwap = sc?.txType === "swap";
+                    const isSwap =
+                      sc?.fiscalType === "trade" && sc?.subtype === "swap";
                     setCryptoForm({
                       ...cryptoForm,
                       scenarioGroup: nextGroup,
@@ -2019,7 +2009,8 @@ export default function Generator() {
                   value={cryptoForm.scenarioKey}
                   onChange={(v) => {
                     const sc = SCENARIO_MAP[v];
-                    const isSwap = sc?.txType === "swap";
+                    const isSwap =
+                      sc?.fiscalType === "trade" && sc?.subtype === "swap";
                     setCryptoForm({
                       ...cryptoForm,
                       scenarioKey: v,
@@ -2294,7 +2285,8 @@ export default function Generator() {
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold text-foreground">
                         {tx.wallet} ·{" "}
-                        {tx.transaction_type === "swap" &&
+                        {tx.transaction_type === "trade" &&
+                        tx.subtype === "swap" &&
                         tx.swap_to_symbol &&
                         tx.swap_to_amount
                           ? `${tx.symbol} ${tx.amount} -> ${tx.swap_to_symbol} ${tx.swap_to_amount}`
@@ -2316,8 +2308,7 @@ export default function Generator() {
                       {scenarioLabel(
                         resolveScenarioKey(
                           tx.transaction_type,
-                          tx.tax_type ?? null,
-                          tx.tax_subtype ?? null,
+                          tx.subtype ?? null,
                         ),
                       )}
                     </p>
