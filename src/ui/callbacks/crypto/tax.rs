@@ -303,20 +303,22 @@ fn update_ipc_summary<N>(
 
     if let Some(ui) = ui_weak.upgrade() {
         let adapter = ui.global::<CryptoAdapter>();
-        let text = if let Some(summary) = summary {
-            t_args(
+        let (text, loaded) = if let Some(summary) = summary {
+            let t = t_args(
                 "crypto-tax-ipc-summary",
                 &[
                     ("count", summary.count.to_string().as_str()),
                     ("first", summary.first_period.as_str()),
                     ("last", summary.last_period.as_str()),
                 ],
-            )
+            );
+            (t, summary.count > 0)
         } else {
-            t("crypto-tax-ipc-empty")
+            (t("crypto-tax-ipc-empty"), false)
         };
 
         adapter.set_tax_ipc_summary(SharedString::from(text));
+        adapter.set_tax_ipc_loaded(loaded);
     }
 }
 
@@ -326,15 +328,20 @@ fn reset_report_state(ui_weak: &Weak<AppWindow>) {
         adapter.set_tax_report_summary(SharedString::from(t("crypto-tax-report-summary-empty")));
         adapter.set_tax_report_warnings(SharedString::from(t("crypto-tax-report-warnings-empty")));
         adapter.set_tax_summary_ready(false);
+        adapter.set_tax_gain_positive(true);
         adapter.set_tax_summary_period(SharedString::from(""));
         adapter.set_tax_summary_proceeds(SharedString::from("--"));
         adapter.set_tax_summary_cost(SharedString::from("--"));
         adapter.set_tax_summary_gain(SharedString::from("--"));
+        adapter.set_tax_summary_short_gain(SharedString::from("--"));
+        adapter.set_tax_summary_long_gain(SharedString::from("--"));
+        adapter.set_tax_summary_disposals(SharedString::from("0"));
         adapter.set_tax_summary_income(SharedString::from("--"));
         adapter.set_tax_summary_balance(SharedString::from("--"));
         adapter.set_tax_summary_transactions(SharedString::from("0"));
         adapter.set_tax_summary_volume(SharedString::from("--"));
         adapter.set_tax_summary_warnings(SharedString::from(""));
+        adapter.set_tax_readiness_issues(0);
         adapter.set_tax_readiness(ModelRc::new(VecModel::from(Vec::<TaxReadinessItem>::new())));
     }
 }
@@ -350,12 +357,19 @@ fn update_report_state(
     let gain = fmt_preferred_signed(report.summary.total_gain, currency, clp_rate);
     let disposals = report.summary.disposals.to_string();
 
+    // Populate gain polarity for semantic coloring
+    adapter.set_tax_gain_positive(report.summary.total_gain >= 0.0);
+    adapter.set_tax_summary_disposals(SharedString::from(&disposals));
+
+    // Populate short/long term gains for USA
     let summary = if let (Some(short), Some(long)) = (
         report.summary.short_term_gain,
         report.summary.long_term_gain,
     ) {
         let short_fmt = fmt_preferred_signed(short, currency, clp_rate);
         let long_fmt = fmt_preferred_signed(long, currency, clp_rate);
+        adapter.set_tax_summary_short_gain(SharedString::from(&short_fmt));
+        adapter.set_tax_summary_long_gain(SharedString::from(&long_fmt));
         t_args(
             "crypto-tax-report-summary-us",
             &[
@@ -368,6 +382,8 @@ fn update_report_state(
             ],
         )
     } else {
+        adapter.set_tax_summary_short_gain(SharedString::from("--"));
+        adapter.set_tax_summary_long_gain(SharedString::from("--"));
         t_args(
             "crypto-tax-report-summary",
             &[
@@ -450,6 +466,14 @@ fn update_summary_state(
             }
         })
         .collect();
+    // Count issues (non-ok, non-info statuses)
+    let issue_count = summary
+        .readiness
+        .iter()
+        .filter(|item| item.status != "ok" && item.status != "info")
+        .count();
+    adapter.set_tax_readiness_issues(issue_count as i32);
+
     adapter.set_tax_readiness(ModelRc::new(VecModel::from(readiness_items)));
 }
 

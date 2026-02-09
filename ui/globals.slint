@@ -640,6 +640,7 @@ export global CryptoAdapter {
     in-out property <bool> limit-reached: false;
     in-out property <string> limit-excluded: "";
     in-out property <string> tax-ipc-summary: "";
+    in-out property <bool> tax-ipc-loaded: false;
     in-out property <string> tax-period: "";
     in-out property <string> tax-jurisdiction: "";
     in-out property <string> tax-method: "";
@@ -648,15 +649,20 @@ export global CryptoAdapter {
     in-out property <string> tax-report-summary: "";
     in-out property <string> tax-report-warnings: "";
     in-out property <bool> tax-summary-ready: false;
+    in-out property <bool> tax-gain-positive: true;
     in-out property <string> tax-summary-period: "";
     in-out property <string> tax-summary-proceeds: "";
     in-out property <string> tax-summary-cost: "";
     in-out property <string> tax-summary-gain: "";
+    in-out property <string> tax-summary-short-gain: "--";
+    in-out property <string> tax-summary-long-gain: "--";
+    in-out property <string> tax-summary-disposals: "0";
     in-out property <string> tax-summary-income: "";
     in-out property <string> tax-summary-balance: "";
     in-out property <string> tax-summary-transactions: "";
     in-out property <string> tax-summary-volume: "";
     in-out property <string> tax-summary-warnings: "";
+    in-out property <int> tax-readiness-issues: 0;
     in-out property <[TaxReadinessItem]> tax-readiness: [];
 
     // Edit Transaction State
