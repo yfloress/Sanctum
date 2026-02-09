@@ -205,7 +205,14 @@ pub fn build_tax_report(
             .unwrap_or(false);
 
         if tax_type == TaxTxType::Income {
-            add_lot(&mut report, &mut lots, &tx, tx_date);
+            add_lot(
+                &mut report,
+                &mut lots,
+                &tx,
+                tx_date,
+                jurisdiction,
+                tax_subtype.as_deref(),
+            );
             if settings.include_fee_crypto {
                 apply_fee_disposal(&mut report, &mut lots, &cfg, &tx);
             }
@@ -229,7 +236,14 @@ pub fn build_tax_report(
 
         match tx_type {
             CryptoTransactionType::Buy | CryptoTransactionType::TransferIn => {
-                add_lot(&mut report, &mut lots, &tx, tx_date);
+                add_lot(
+                    &mut report,
+                    &mut lots,
+                    &tx,
+                    tx_date,
+                    jurisdiction,
+                    tax_subtype.as_deref(),
+                );
             }
             CryptoTransactionType::Sell => {
                 apply_disposal(&mut report, &mut lots, &cfg, &tx, tx_date, taxable);

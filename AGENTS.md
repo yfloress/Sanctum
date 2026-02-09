@@ -53,10 +53,10 @@ locales/
 - Crypto icons live in `ui/assets/crypto-icons`; the base path is defined in `src/ui/helpers.rs`.
 
 ## Build, Test, and Development Commands
-First ask the user
-- `nix develop -c cargo check`
-- `nix develop -c cargo clippy`
-- `nix develop -c cargo test`
+Always ask the user if they want to run any of these commands:
+- `nix develop -c cargo check -j 2`
+- `nix develop -c cargo clippy -j 2`
+- `nix develop -c cargo test -j 2`
 
 ## Coding Style and Naming Conventions
 - Rust: `rustfmt` defaults (4-space).

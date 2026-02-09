@@ -22,9 +22,10 @@ use super::service::{
     SETTING_CRYPTO_TAX_SETTINGS,
 };
 use super::tax::{
-    IpcEntry, IpcImportSummary, IpcSummary, TaxPeriodSettings, TaxReadinessItem, TaxReport,
-    TaxSettingsStore, TaxSummaryPayload, TaxTxType, build_import_summary, build_tax_report,
-    map_to_entries, parse_ipc_csv, resolve_tax_subtype, resolve_tax_type, summarize_ipc,
+    IpcEntry, IpcImportSummary, IpcSummary, TaxJurisdiction, TaxPeriodSettings, TaxReadinessItem,
+    TaxReport, TaxSettingsStore, TaxSummaryPayload, TaxTxType, TaxWarning, build_import_summary,
+    build_tax_report, map_to_entries, parse_ipc_csv, resolve_tax_subtype, resolve_tax_type,
+    summarize_ipc,
 };
 use crate::core::csv_escape;
 use crate::features::crypto::tax::engine::{TaxPeriod, is_in_period, parse_date, parse_period};
@@ -149,6 +150,7 @@ impl CryptoService {
         }
 
         let settings = self.load_tax_settings(period_id.clone())?;
+        let jurisdiction = settings.jurisdiction;
         let period = parse_period(&period_id).map_err(CryptoError::Validation)?;
 
         self.with_db(|db| {
@@ -181,11 +183,23 @@ impl CryptoService {
 
             report.warnings.extend(income_warnings);
 
+            // Chile: always emit a reminder that F22 casilla codes may change.
+            if matches!(jurisdiction, TaxJurisdiction::Chile) {
+                report.warnings.push(TaxWarning {
+                    code: "sii_casilla_may_change".to_string(),
+                    message: "Los códigos de casilla del Formulario 22 pueden cambiar cada año. \
+                              Verifica el suplemento tributario del SII para el Año Tributario vigente."
+                        .to_string(),
+                    tx_id: None,
+                });
+            }
+
             let readiness = build_readiness(
                 &report,
                 transactions_in_period,
                 end_balance_missing,
                 unpaired_transfers,
+                jurisdiction,
             );
 
             let volume_processed = report.summary.total_proceeds;
@@ -342,6 +356,7 @@ fn build_readiness(
     transactions_in_period: usize,
     end_balance_missing: usize,
     unpaired_transfers: usize,
+    jurisdiction: TaxJurisdiction,
 ) -> Vec<TaxReadinessItem> {
     let warning_codes: std::collections::HashSet<&str> =
         report.warnings.iter().map(|w| w.code.as_str()).collect();
@@ -435,6 +450,31 @@ fn build_readiness(
             } else {
                 String::new()
             },
+        },
+        // Chile-specific: F22 casilla guidance
+        if matches!(jurisdiction, TaxJurisdiction::Chile) {
+            let has_gain = report.summary.total_gain > 0.0;
+            let has_loss = report.summary.total_gain < 0.0;
+            TaxReadinessItem {
+                code: "sii_f22".to_string(),
+                status: "info".to_string(),
+                detail: if has_gain {
+                    "Ganancia → F22 Línea 10, Casilla 1032. ⚠ Casillas pueden cambiar cada año."
+                        .to_string()
+                } else if has_loss {
+                    "Pérdida → F22 Línea 17, Casilla 169 (tope: casillas 105+155+152+1032+1891+1104). ⚠ Casillas pueden cambiar cada año."
+                        .to_string()
+                } else {
+                    "Sin ganancia ni pérdida neta. ⚠ Casillas F22 pueden cambiar cada año."
+                        .to_string()
+                },
+            }
+        } else {
+            TaxReadinessItem {
+                code: "filing".to_string(),
+                status: "info".to_string(),
+                detail: "USA: Report on Form 8949 + Schedule D.".to_string(),
+            }
         },
     ]
 }

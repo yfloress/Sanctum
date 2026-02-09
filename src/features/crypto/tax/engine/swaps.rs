@@ -17,7 +17,7 @@
 
 //! Swap handling helpers.
 
-use super::lots::{build_term, consume_lots, update_summary};
+use super::lots::{apply_gain_ipc_adjustment, build_term, consume_lots, update_summary};
 use super::period::{is_in_period, parse_date};
 use super::types::{DisposalRequest, Lot, TaxConfig};
 use crate::features::crypto::{TaxDisposal, TaxReport, TaxWarning};
@@ -61,7 +61,8 @@ pub(super) fn apply_swap_pair(
     let (allocations, cost_basis, short_gain, long_gain) = consume_lots(report, lots, cfg, &req);
 
     if taxable && is_in_period(cfg.period, source_date) {
-        let gain = disposal_proceeds - cost_basis;
+        let raw_gain = disposal_proceeds - cost_basis;
+        let gain = apply_gain_ipc_adjustment(report, cfg, source_date, raw_gain, &source.id);
         let term = build_term(short_gain, long_gain, cfg.jurisdiction);
         report.disposals.push(TaxDisposal {
             tx_id: source.id.clone(),
