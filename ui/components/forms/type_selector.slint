@@ -31,13 +31,13 @@ component CategoryTab inherits Rectangle {
     callback clicked();
 
     horizontal-stretch: 1;
-    height: 32px;
+    height: 28px;
     background: root.active
         ? root.active-color.with-alpha(0.15)
         : cat-touch.has-hover
             ? Theme.surface-hover.with-alpha(0.5)
             : transparent;
-    border-radius: 8px;
+    border-radius: 7px;
     border-width: root.active ? 1px : 0px;
     border-color: root.active-color.with-alpha(root.active ? 0.35 : 0.0);
 
@@ -47,20 +47,25 @@ component CategoryTab inherits Rectangle {
 
     HorizontalLayout {
         alignment: center;
-        spacing: 5px;
+        spacing: 4px;
 
-        Image {
-            source: root.icon;
-            width: 10px;
-            height: 10px;
-            colorize: root.active
-                ? root.active-color
-                : cat-touch.has-hover
-                    ? Theme.text-secondary
-                    : Theme.text-muted;
+        Rectangle {
+            width: 9px;
+            height: self.width;
             y: (parent.height - self.height) / 2;
 
-            animate colorize { duration: 180ms; }
+            Image {
+                source: root.icon;
+                width: parent.width;
+                height: parent.height;
+                colorize: root.active
+                    ? root.active-color
+                    : cat-touch.has-hover
+                        ? Theme.text-secondary
+                        : Theme.text-muted;
+
+                animate colorize { duration: 180ms; }
+            }
         }
 
         Text {
@@ -73,6 +78,7 @@ component CategoryTab inherits Rectangle {
             font-size: 9px;
             font-weight: root.active ? 700 : 600;
             letter-spacing: 1px;
+            horizontal-alignment: center;
             vertical-alignment: center;
 
             animate color { duration: 180ms; }
@@ -95,13 +101,13 @@ component ScenarioPill inherits Rectangle {
     callback clicked();
 
     horizontal-stretch: 1;
-    height: 30px;
+    height: 26px;
     background: root.active
         ? root.active-color.with-alpha(0.18)
         : pill-touch.has-hover
             ? Theme.surface-hover.with-alpha(0.5)
             : transparent;
-    border-radius: 7px;
+    border-radius: 6px;
     border-width: root.active ? 1px : 0px;
     border-color: root.active-color.with-alpha(root.active ? 0.4 : 0.0);
 
@@ -111,20 +117,25 @@ component ScenarioPill inherits Rectangle {
 
     HorizontalLayout {
         alignment: center;
-        spacing: 5px;
+        spacing: 4px;
 
-        if root.show-icon: Image {
-            source: root.icon;
-            width: 11px;
-            height: 11px;
-            colorize: root.active
-                ? root.active-color
-                : pill-touch.has-hover
-                    ? Theme.text-secondary
-                    : Theme.text-muted;
+        if root.show-icon: Rectangle {
+            width: 9px;
+            height: self.width;
             y: (parent.height - self.height) / 2;
 
-            animate colorize { duration: 180ms; }
+            Image {
+                source: root.icon;
+                width: parent.width;
+                height: parent.height;
+                colorize: root.active
+                    ? root.active-color
+                    : pill-touch.has-hover
+                        ? Theme.text-secondary
+                        : Theme.text-muted;
+
+                animate colorize { duration: 180ms; }
+            }
         }
 
         Text {
@@ -137,6 +148,7 @@ component ScenarioPill inherits Rectangle {
             font-size: 10px;
             font-weight: root.active ? 700 : 500;
             letter-spacing: 0.5px;
+            horizontal-alignment: center;
             vertical-alignment: center;
 
             animate color { duration: 180ms; }
@@ -175,7 +187,7 @@ export component TypeSelector inherits Rectangle {
 
     // Height adapts: trade/transfer = 2 rows, income/expense = 3 rows (more options)
     property <bool> multi-row: root.selected-category == "income" || root.selected-category == "expense";
-    height: root.multi-row ? 138px : 100px;
+    height: root.multi-row ? 108px : 78px;
 
     animate height { duration: 200ms; easing: ease-in-out; }
 
@@ -186,7 +198,7 @@ export component TypeSelector inherits Rectangle {
 
         // ==================== Category Tabs ====================
         Rectangle {
-            height: 38px;
+            height: 34px;
             background: Theme.surface;
             border-radius: 10px;
             border-width: 1px;
@@ -254,15 +266,15 @@ export component TypeSelector inherits Rectangle {
 
         // ---------- TRADE: Buy / Sell / Swap ----------
         if root.selected-category == "trade": Rectangle {
-            height: 46px;
+            height: 34px;
             background: Theme.surface;
             border-radius: 10px;
             border-width: 1px;
             border-color: Theme.border;
 
             HorizontalLayout {
-                padding: 4px;
-                spacing: 4px;
+                padding: 3px;
+                spacing: 3px;
 
                 ScenarioPill {
                     label: "BUY";
@@ -307,15 +319,15 @@ export component TypeSelector inherits Rectangle {
 
         // ---------- TRANSFER: Move / Deposit / Withdrawal ----------
         if root.selected-category == "transfer": Rectangle {
-            height: 46px;
+            height: 34px;
             background: Theme.surface;
             border-radius: 10px;
             border-width: 1px;
             border-color: Theme.border;
 
             HorizontalLayout {
-                padding: 4px;
-                spacing: 4px;
+                padding: 3px;
+                spacing: 3px;
 
                 ScenarioPill {
                     label: "MOVE";
@@ -360,19 +372,19 @@ export component TypeSelector inherits Rectangle {
 
         // ---------- INCOME: Two rows of scenario pills ----------
         if root.selected-category == "income": Rectangle {
-            height: 84px;
+            height: 64px;
             background: Theme.surface;
             border-radius: 10px;
             border-width: 1px;
             border-color: Theme.border;
 
             VerticalLayout {
-                padding: 4px;
-                spacing: 3px;
+                padding: 3px;
+                spacing: 2px;
 
                 // Row 1
                 HorizontalLayout {
-                    spacing: 3px;
+                    spacing: 2px;
 
                     ScenarioPill {
                         label: "Airdrop";
@@ -421,7 +433,7 @@ export component TypeSelector inherits Rectangle {
 
                 // Row 2
                 HorizontalLayout {
-                    spacing: 3px;
+                    spacing: 2px;
 
                     ScenarioPill {
                         label: Translations.tx-scenario-gift;
@@ -472,19 +484,19 @@ export component TypeSelector inherits Rectangle {
 
         // ---------- EXPENSE: Two rows of scenario pills ----------
         if root.selected-category == "expense": Rectangle {
-            height: 84px;
+            height: 64px;
             background: Theme.surface;
             border-radius: 10px;
             border-width: 1px;
             border-color: Theme.border;
 
             VerticalLayout {
-                padding: 4px;
-                spacing: 3px;
+                padding: 3px;
+                spacing: 2px;
 
                 // Row 1
                 HorizontalLayout {
-                    spacing: 3px;
+                    spacing: 2px;
 
                     ScenarioPill {
                         label: Translations.tx-scenario-payment;
@@ -533,7 +545,7 @@ export component TypeSelector inherits Rectangle {
 
                 // Row 2
                 HorizontalLayout {
-                    spacing: 3px;
+                    spacing: 2px;
 
                     ScenarioPill {
                         label: Translations.tx-scenario-lost;
