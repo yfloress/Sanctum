@@ -24,6 +24,7 @@ use serde::{Deserialize, Serialize};
 pub enum TaxJurisdiction {
     Chile,
     Usa,
+    Other,
 }
 
 impl TaxJurisdiction {
@@ -31,6 +32,7 @@ impl TaxJurisdiction {
         match self {
             TaxJurisdiction::Chile => "chile",
             TaxJurisdiction::Usa => "usa",
+            TaxJurisdiction::Other => "other",
         }
     }
 
@@ -38,6 +40,7 @@ impl TaxJurisdiction {
         match raw.trim().to_lowercase().as_str() {
             "chile" | "cl" => TaxJurisdiction::Chile,
             "usa" | "us" | "united_states" => TaxJurisdiction::Usa,
+            "other" | "generic" | "international" => TaxJurisdiction::Other,
             other => {
                 log::warn!(
                     "Unrecognized tax jurisdiction '{}', defaulting to Chile",

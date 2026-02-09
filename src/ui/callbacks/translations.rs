@@ -423,6 +423,7 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_crypto_tax_jurisdiction_label(s(&t("crypto-tax-jurisdiction-label")));
     tr.set_crypto_tax_jurisdiction_cl(s(&t("crypto-tax-jurisdiction-cl")));
     tr.set_crypto_tax_jurisdiction_us(s(&t("crypto-tax-jurisdiction-us")));
+    tr.set_crypto_tax_jurisdiction_other(s(&t("crypto-tax-jurisdiction-other")));
     tr.set_crypto_tax_method_label(s(&t("crypto-tax-method-label")));
     tr.set_crypto_tax_include_swaps(s(&t("crypto-tax-include-swaps")));
     tr.set_crypto_tax_include_swaps_desc(s(&t("crypto-tax-include-swaps-desc")));
@@ -483,6 +484,9 @@ pub fn load_all_translations(ui: &AppWindow) {
         "crypto-tax-readiness-sii-neutral-detail",
     )));
     tr.set_crypto_tax_readiness_usa_filing_detail(s(&t("crypto-tax-readiness-usa-filing-detail")));
+    tr.set_crypto_tax_readiness_other_filing_detail(s(&t(
+        "crypto-tax-readiness-other-filing-detail",
+    )));
     tr.set_crypto_tax_readiness_title(s(&t("crypto-tax-readiness-title")));
     tr.set_crypto_tax_readiness_desc(s(&t("crypto-tax-readiness-desc")));
     tr.set_crypto_tax_readiness_settings(s(&t("crypto-tax-readiness-settings")));

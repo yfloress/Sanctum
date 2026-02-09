@@ -66,7 +66,7 @@ o feriado se usa el día hábil inmediatamente siguiente.
 
 ### Declaración en el SII (Formulario 22)
 
-> ⚠️ **Los códigos de casilla pueden cambiar año a año.** Siempre verificar en
+> **Warning: Los códigos de casilla pueden cambiar año a año.** Siempre verificar en
 > el suplemento tributario del SII correspondiente al Año Tributario vigente.
 
 | Resultado | Línea | Casilla | Notas |
@@ -91,6 +91,29 @@ del año siguiente (Operación Renta).
   ese FMV pasa a ser el costo base.
 - No hay ajuste por inflación.
 - Reporte: Form 8949 + Schedule D.
+
+### Other (Genérico / Internacional)
+
+Jurisdicción genérica para usuarios fuera de Chile y USA. Aplica reglas
+estándar internacionales sin ajustes específicos de ningún país. **No
+reemplaza la asesoría de un profesional tributario local.**
+
+- Las comisiones se suman al costo base (en compra) o reducen el monto
+  recibido (en venta) — mismo comportamiento que USA.
+- Airdrops/Staking se reconocen como **ingreso** al FMV; ese FMV pasa a ser
+  el costo base.
+- Corto plazo: tenencia menor a 365 días. Largo plazo: 365 días o más.
+- No hay ajuste por inflación (sin IPC).
+- Todos los métodos de costo base disponibles (FIFO, LIFO, HIFO, CPP).
+- Sin guía de declaración específica — el reporte incluye un aviso para
+  consultar al asesor tributario local.
+
+> **Warning:** Cada país tiene reglas propias que pueden diferir
+> significativamente de estas reglas genéricas. Ejemplos: Alemania exime
+> ganancias si la tenencia supera 1 año; Francia no grava swaps
+> crypto-to-crypto; Países Bajos usa impuesto al patrimonio en vez de
+> ganancias de capital. Usa esta opción solo como punto de partida y valida
+> con un profesional.
 
 ## Métodos de Costo Base
 

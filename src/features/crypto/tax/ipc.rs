@@ -304,10 +304,7 @@ fn is_month_header(key: &str) -> bool {
 }
 
 fn is_period_header(key: &str) -> bool {
-    matches!(
-        key,
-        "periodo" | "period" | "fecha" | "mes" | "month" | "time" | "date" | "anio" | "ano"
-    )
+    matches!(key, "periodo" | "period" | "fecha" | "time" | "date")
 }
 
 fn is_index_header(key: &str) -> bool {
@@ -533,5 +530,19 @@ mod tests {
     fn parses_index_with_thousands_and_decimal() {
         let value = parse_index("1.234,50").expect("index");
         assert!((value - 1234.50).abs() < 0.0001);
+    }
+
+    #[test]
+    fn parses_clean_csv_with_year_month_headers() {
+        // Regression: clean CSV with Año,Mes,Índice (no junk rows above).
+        // Previously failed because "Año" was matched by is_period_header,
+        // causing the parser to try parse_period("2024") which has no month.
+        let csv = "Año,Mes,Índice\n2024,1,100.5\n2024,2,101.2\n2024,3,102.0\n";
+        let parsed = parse_ipc_csv(csv).expect("parsed");
+        assert_eq!(parsed.entries.len(), 3);
+        assert_eq!(parsed.errors, 0);
+        assert_eq!(parsed.entries.get("2024-01").copied(), Some(100.5));
+        assert_eq!(parsed.entries.get("2024-02").copied(), Some(101.2));
+        assert_eq!(parsed.entries.get("2024-03").copied(), Some(102.0));
     }
 }

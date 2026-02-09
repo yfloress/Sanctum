@@ -143,7 +143,10 @@ pub(super) fn apply_disposal(
 
     let (allocations, cost_basis, short_gain, long_gain) = consume_lots(report, lots, cfg, &req);
 
-    if taxable && is_in_period(cfg.period, tx_date) && tx.price_per_coin.is_some() {
+    if taxable
+        && is_in_period(cfg.period, tx_date)
+        && (tx.price_per_coin.is_some() || tx.override_proceeds.is_some())
+    {
         let raw_gain = proceeds - cost_basis;
 
         // Chile: apply second IPC adjustment to the gain (sale → end of year).
@@ -528,7 +531,7 @@ pub(super) fn apply_gain_ipc_adjustment(
 }
 
 // ---------------------------------------------------------------------------
-// Term classification (USA only)
+// Term classification (USA + Other)
 // ---------------------------------------------------------------------------
 
 fn split_term_gain(
@@ -537,7 +540,7 @@ fn split_term_gain(
     sale_date: chrono::NaiveDate,
     jurisdiction: TaxJurisdiction,
 ) -> (f64, f64) {
-    if !matches!(jurisdiction, TaxJurisdiction::Usa) {
+    if !matches!(jurisdiction, TaxJurisdiction::Usa | TaxJurisdiction::Other) {
         return (0.0, 0.0);
     }
 
@@ -574,7 +577,7 @@ pub(super) fn build_term(
     long_gain: f64,
     jurisdiction: TaxJurisdiction,
 ) -> Option<String> {
-    if !matches!(jurisdiction, TaxJurisdiction::Usa) {
+    if !matches!(jurisdiction, TaxJurisdiction::Usa | TaxJurisdiction::Other) {
         return None;
     }
 

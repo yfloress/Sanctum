@@ -409,8 +409,13 @@ fn build_readiness(
         },
         TaxReadinessItem {
             code: "balances".to_string(),
-            status: if has_insufficient { "warn" } else { "ok" }.to_string(),
-            detail: insufficient_count.to_string(),
+            status: if end_balance_missing > 0 {
+                "warn"
+            } else {
+                "ok"
+            }
+            .to_string(),
+            detail: end_balance_missing.to_string(),
         },
         TaxReadinessItem {
             code: "prices".to_string(),
@@ -448,11 +453,17 @@ fn build_readiness(
                     "neutral".to_string()
                 },
             }
+        } else if matches!(jurisdiction, TaxJurisdiction::Usa) {
+            TaxReadinessItem {
+                code: "filing".to_string(),
+                status: "info".to_string(),
+                detail: "usa".to_string(),
+            }
         } else {
             TaxReadinessItem {
                 code: "filing".to_string(),
                 status: "info".to_string(),
-                detail: String::new(),
+                detail: "other".to_string(),
             }
         },
     ]

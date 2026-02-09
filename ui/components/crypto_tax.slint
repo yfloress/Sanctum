@@ -151,8 +151,13 @@ component ReadinessRow inherits Rectangle {
         : root.item.code == "sii_f22"
             ? Translations.crypto-tax-readiness-sii-neutral-detail
         // usa filing guidance
-        : root.item.code == "filing"
+        : root.item.code == "filing" && root.item.detail == "usa"
             ? Translations.crypto-tax-readiness-usa-filing-detail
+        // other/generic filing guidance
+        : root.item.code == "filing" && root.item.detail == "other"
+            ? Translations.crypto-tax-readiness-other-filing-detail
+        : root.item.code == "filing"
+            ? Translations.crypto-tax-readiness-other-filing-detail
         : "";
 
     property <color> status-color: item.status == "ok"
@@ -336,11 +341,13 @@ component ReadinessBanner inherits Rectangle {
             background: Theme.warning.with-alpha(0.15);
             y: (parent.height - self.height) / 2;
 
-            Text {
-                text: "⚠";
-                font-size: 11px;
-                horizontal-alignment: center;
-                vertical-alignment: center;
+            Image {
+                source: @image-url("../assets/icons/info.svg");
+                width: 12px;
+                height: 12px;
+                colorize: Theme.warning;
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
             }
         }
 
@@ -449,6 +456,12 @@ export component CryptoTaxTab inherits Rectangle {
                                 text: Translations.crypto-tax-jurisdiction-us;
                                 active: CryptoAdapter.tax-jurisdiction == "usa";
                                 clicked => { CryptoAdapter.tax-jurisdiction = "usa"; }
+                            }
+
+                            TabButton {
+                                text: Translations.crypto-tax-jurisdiction-other;
+                                active: CryptoAdapter.tax-jurisdiction == "other";
+                                clicked => { CryptoAdapter.tax-jurisdiction = "other"; }
                             }
                         }
                     }
@@ -583,8 +596,8 @@ export component CryptoTaxTab inherits Rectangle {
                     }
                 }
 
-                // USA: Short/Long term row
-                if CryptoAdapter.tax-jurisdiction == "usa" && CryptoAdapter.tax-summary-short-gain != "--": HorizontalLayout {
+                // USA / Other: Short/Long term row
+                if (CryptoAdapter.tax-jurisdiction == "usa" || CryptoAdapter.tax-jurisdiction == "other") && CryptoAdapter.tax-summary-short-gain != "--": HorizontalLayout {
                     spacing: 12px;
 
                     TaxStatCard {
@@ -598,7 +611,7 @@ export component CryptoTaxTab inherits Rectangle {
                     TaxStatCard {
                         label: Translations.crypto-tax-summary-long-term;
                         value: CryptoAdapter.tax-summary-long-gain;
-                        sub-text: "≥ 365 days";
+                        sub-text: ">= 365 days";
                         use-semantic-color: true;
                         positive: CryptoAdapter.tax-gain-positive;
                     }

@@ -104,12 +104,16 @@ pub fn build_tax_report(
             total_proceeds: 0.0,
             total_cost: 0.0,
             total_gain: 0.0,
-            short_term_gain: if matches!(jurisdiction, TaxJurisdiction::Usa) {
+            short_term_gain: if matches!(
+                jurisdiction,
+                TaxJurisdiction::Usa | TaxJurisdiction::Other
+            ) {
                 Some(0.0)
             } else {
                 None
             },
-            long_term_gain: if matches!(jurisdiction, TaxJurisdiction::Usa) {
+            long_term_gain: if matches!(jurisdiction, TaxJurisdiction::Usa | TaxJurisdiction::Other)
+            {
                 Some(0.0)
             } else {
                 None

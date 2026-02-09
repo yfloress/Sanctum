@@ -74,3 +74,7 @@ Always ask the user if they want to run any of these commands:
 ## Security Notes
 - DB uses SQLCipher; avoid logging sensitive values.
 - Crypto price fetching uses external APIs; respect privacy settings.
+
+## Extra
+- NEVER use emojis. Use SVG icons from `ui/assets/icons/` instead.
+- If you cannot find the icon you need, there is an older commit where many SVGs were imported from the Lucide repository. Find it and bring the icon back.
