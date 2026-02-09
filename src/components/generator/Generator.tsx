@@ -5,6 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
+// ==================== Types ====================
+
 type TransactionType = "income" | "expense" | "transfer";
 type CryptoType = "buy" | "sell" | "transfer_in" | "transfer_out" | "swap";
 
@@ -40,6 +42,10 @@ type CryptoTransaction = {
   swap_to_amount?: number | null;
   fee_coin_symbol?: string | null;
   fee_amount?: number | null;
+  tax_type?: string | null;
+  tax_subtype?: string | null;
+  override_proceeds?: number | null;
+  override_cost_basis?: number | null;
   notes?: string | null;
 };
 
@@ -69,9 +75,353 @@ type ExportData = {
     swap_to_amount?: number | null;
     fee_coin_symbol?: string | null;
     fee_amount?: number | null;
+    tax_type?: string | null;
+    tax_subtype?: string | null;
+    override_proceeds?: number | null;
+    override_cost_basis?: number | null;
     notes?: string | null;
   }[];
 };
+
+// ==================== Catalogs ====================
+
+const EXPENSE_CATEGORIES = [
+  "FOOD",
+  "TRANSPORT",
+  "UTILITIES",
+  "ENTERTAINMENT",
+  "HEALTH",
+  "SHOPPING",
+  "EDUCATION",
+  "OTHER",
+];
+
+const INCOME_CATEGORIES = [
+  "SALARY",
+  "FREELANCE",
+  "INVESTMENT",
+  "GIFT",
+  "OTHER",
+];
+
+const CURRENCIES = ["USD", "CLP", "EUR", "GBP"];
+
+// Mirrors default_coin_catalog() from src/features/crypto/api.rs (feat/crypto-tax)
+// Order and IDs must stay in sync with the Rust catalog.
+const CRYPTO_COINS = [
+  { id: "bitcoin", symbol: "BTC", name: "Bitcoin" },
+  { id: "litecoin", symbol: "LTC", name: "Litecoin" },
+  { id: "monero", symbol: "XMR", name: "Monero" },
+  { id: "ethereum", symbol: "ETH", name: "Ethereum" },
+  { id: "tether", symbol: "USDT", name: "Tether" },
+  { id: "binancecoin", symbol: "BNB", name: "BNB" },
+  { id: "solana", symbol: "SOL", name: "Solana" },
+  { id: "ripple", symbol: "XRP", name: "XRP" },
+  { id: "usd-coin", symbol: "USDC", name: "USDC" },
+  { id: "cardano", symbol: "ADA", name: "Cardano" },
+  { id: "dogecoin", symbol: "DOGE", name: "Dogecoin" },
+  { id: "tron", symbol: "TRX", name: "TRON" },
+  { id: "polygon-ecosystem-token", symbol: "POL", name: "Polygon" },
+  { id: "chainlink", symbol: "LINK", name: "Chainlink" },
+  { id: "polkadot", symbol: "DOT", name: "Polkadot" },
+  { id: "shiba-inu", symbol: "SHIB", name: "Shiba Inu" },
+  { id: "avalanche-2", symbol: "AVAX", name: "Avalanche" },
+  { id: "stellar", symbol: "XLM", name: "Stellar" },
+  { id: "bitcoin-cash", symbol: "BCH", name: "Bitcoin Cash" },
+  { id: "uniswap", symbol: "UNI", name: "Uniswap" },
+  { id: "cosmos", symbol: "ATOM", name: "Cosmos Hub" },
+  { id: "ethereum-classic", symbol: "ETC", name: "Ethereum Classic" },
+  { id: "hedera-hashgraph", symbol: "HBAR", name: "Hedera" },
+  { id: "aave", symbol: "AAVE", name: "Aave" },
+  { id: "vechain", symbol: "VET", name: "VeChain" },
+  { id: "near", symbol: "NEAR", name: "NEAR Protocol" },
+  { id: "algorand", symbol: "ALGO", name: "Algorand" },
+  { id: "quant-network", symbol: "QNT", name: "Quant" },
+  { id: "arbitrum", symbol: "ARB", name: "Arbitrum" },
+  { id: "sui", symbol: "SUI", name: "Sui" },
+  { id: "aptos", symbol: "APT", name: "Aptos" },
+  { id: "crypto-com-chain", symbol: "CRO", name: "Cronos" },
+  { id: "zcash", symbol: "ZEC", name: "Zcash" },
+  { id: "dai", symbol: "DAI", name: "Dai" },
+  { id: "the-open-network", symbol: "TON", name: "Toncoin" },
+  { id: "internet-computer", symbol: "ICP", name: "Internet Computer" },
+  { id: "kaspa", symbol: "KAS", name: "Kaspa" },
+  { id: "mantle", symbol: "MNT", name: "Mantle" },
+  { id: "bittensor", symbol: "TAO", name: "Bittensor" },
+  { id: "worldcoin-wld", symbol: "WLD", name: "Worldcoin" },
+];
+
+// Mirrors TAX_SUBTYPES_* from src/features/crypto/tax/types.rs (feat/crypto-tax)
+// Each scenario maps to (transaction_type, tax_type, tax_subtype).
+// For trade/transfer the app infers tax fields when null; income/expense MUST be explicit.
+type CryptoScenario = {
+  key: string;
+  group: "trade" | "transfer" | "income" | "expense";
+  txType: CryptoType;
+  taxType: string | null;
+  taxSub: string | null;
+  en: string;
+  es: string;
+};
+
+const SCENARIO_GROUPS: Record<string, { en: string; es: string }> = {
+  trade: { en: "Trade", es: "Comercio" },
+  transfer: { en: "Transfer", es: "Transferencia" },
+  income: { en: "Income", es: "Ingreso" },
+  expense: { en: "Expense", es: "Gasto" },
+};
+
+const CRYPTO_SCENARIOS: CryptoScenario[] = [
+  // ── Trade ──
+  {
+    key: "buy",
+    group: "trade",
+    txType: "buy",
+    taxType: null,
+    taxSub: null,
+    en: "Buy",
+    es: "Compra",
+  },
+  {
+    key: "sell",
+    group: "trade",
+    txType: "sell",
+    taxType: null,
+    taxSub: null,
+    en: "Sell",
+    es: "Venta",
+  },
+  {
+    key: "swap",
+    group: "trade",
+    txType: "swap",
+    taxType: null,
+    taxSub: null,
+    en: "Swap",
+    es: "Swap",
+  },
+  {
+    key: "trade:other",
+    group: "trade",
+    txType: "buy",
+    taxType: "trade",
+    taxSub: "other",
+    en: "Other Trade",
+    es: "Otro comercio",
+  },
+  // ── Transfer ──
+  {
+    key: "transfer_in",
+    group: "transfer",
+    txType: "transfer_in",
+    taxType: null,
+    taxSub: null,
+    en: "Transfer In",
+    es: "Entrada",
+  },
+  {
+    key: "transfer_out",
+    group: "transfer",
+    txType: "transfer_out",
+    taxType: null,
+    taxSub: null,
+    en: "Transfer Out",
+    es: "Salida",
+  },
+  // ── Income ──
+  {
+    key: "income:airdrop",
+    group: "income",
+    txType: "buy",
+    taxType: "income",
+    taxSub: "airdrop",
+    en: "Airdrop",
+    es: "Airdrop",
+  },
+  {
+    key: "income:staking",
+    group: "income",
+    txType: "buy",
+    taxType: "income",
+    taxSub: "staking",
+    en: "Staking Reward",
+    es: "Recompensa staking",
+  },
+  {
+    key: "income:mining",
+    group: "income",
+    txType: "buy",
+    taxType: "income",
+    taxSub: "mining",
+    en: "Mining",
+    es: "Mineria",
+  },
+  {
+    key: "income:interest",
+    group: "income",
+    txType: "buy",
+    taxType: "income",
+    taxSub: "interest",
+    en: "Interest",
+    es: "Interes",
+  },
+  {
+    key: "income:reward",
+    group: "income",
+    txType: "buy",
+    taxType: "income",
+    taxSub: "reward",
+    en: "Reward",
+    es: "Recompensa",
+  },
+  {
+    key: "income:gift",
+    group: "income",
+    txType: "buy",
+    taxType: "income",
+    taxSub: "gift",
+    en: "Gift Received",
+    es: "Regalo recibido",
+  },
+  {
+    key: "income:fork",
+    group: "income",
+    txType: "buy",
+    taxType: "income",
+    taxSub: "fork",
+    en: "Fork",
+    es: "Fork",
+  },
+  {
+    key: "income:payment",
+    group: "income",
+    txType: "buy",
+    taxType: "income",
+    taxSub: "payment",
+    en: "Payment Received",
+    es: "Pago recibido",
+  },
+  {
+    key: "income:rebate",
+    group: "income",
+    txType: "buy",
+    taxType: "income",
+    taxSub: "rebate",
+    en: "Rebate",
+    es: "Reembolso",
+  },
+  {
+    key: "income:other",
+    group: "income",
+    txType: "buy",
+    taxType: "income",
+    taxSub: "other",
+    en: "Other Income",
+    es: "Otro ingreso",
+  },
+  // ── Expense ──
+  {
+    key: "expense:payment",
+    group: "expense",
+    txType: "sell",
+    taxType: "expense",
+    taxSub: "payment",
+    en: "Payment",
+    es: "Pago",
+  },
+  {
+    key: "expense:gift",
+    group: "expense",
+    txType: "sell",
+    taxType: "expense",
+    taxSub: "gift",
+    en: "Gift Sent",
+    es: "Regalo enviado",
+  },
+  {
+    key: "expense:fee",
+    group: "expense",
+    txType: "sell",
+    taxType: "expense",
+    taxSub: "fee",
+    en: "Fee",
+    es: "Comision",
+  },
+  {
+    key: "expense:lost",
+    group: "expense",
+    txType: "sell",
+    taxType: "expense",
+    taxSub: "lost",
+    en: "Lost",
+    es: "Perdida",
+  },
+  {
+    key: "expense:stolen",
+    group: "expense",
+    txType: "sell",
+    taxType: "expense",
+    taxSub: "stolen",
+    en: "Stolen",
+    es: "Robo",
+  },
+  {
+    key: "expense:donation",
+    group: "expense",
+    txType: "sell",
+    taxType: "expense",
+    taxSub: "donation",
+    en: "Donation",
+    es: "Donacion",
+  },
+  {
+    key: "expense:sell",
+    group: "expense",
+    txType: "sell",
+    taxType: "expense",
+    taxSub: "sell",
+    en: "Liquidation",
+    es: "Liquidacion",
+  },
+  {
+    key: "expense:other",
+    group: "expense",
+    txType: "sell",
+    taxType: "expense",
+    taxSub: "other",
+    en: "Other Expense",
+    es: "Otro gasto",
+  },
+];
+
+const SCENARIO_MAP: Record<string, CryptoScenario> = Object.fromEntries(
+  CRYPTO_SCENARIOS.map((s) => [s.key, s]),
+);
+
+/** Resolve a scenario key from imported (transaction_type, tax_type, tax_subtype) */
+function resolveScenarioKey(
+  txType: CryptoType,
+  taxType: string | null,
+  taxSub: string | null,
+): string {
+  // Explicit income/expense subtypes
+  if (taxType && taxSub && (taxType === "income" || taxType === "expense")) {
+    const key = `${taxType}:${taxSub}`;
+    if (SCENARIO_MAP[key]) return key;
+  }
+  // Trade with "other"
+  if (
+    (taxType === "trade" && taxSub === "other") ||
+    (!taxType && txType === "buy" && taxSub === "other")
+  ) {
+    return "trade:other";
+  }
+  // Default: use transaction_type directly (buy, sell, swap, transfer_in, transfer_out)
+  if (SCENARIO_MAP[txType]) return txType;
+  return "buy";
+}
+
+// ==================== Translations ====================
 
 const translations = {
   en: {
@@ -93,15 +443,18 @@ const translations = {
     loaded: "Loaded",
     load: {
       title: "Load Existing JSON",
-      description: "Upload a sanctum_export.json file to append new entries to the same log.",
+      description:
+        "Upload a sanctum_export.json file to append new entries to the same log.",
       button: "Upload JSON",
     },
     paste: {
       title: "Paste JSON",
-      description: "Use this if you only have access to text notes. The payload stays local.",
+      description:
+        "Use this if you only have access to text notes. The payload stays local.",
       placeholder: "Paste a sanctum_export.json payload...",
       button: "Load From Paste",
-      privacy: "Privacy: data never leaves your browser. Works offline after first load.",
+      privacy:
+        "Privacy: data never leaves your browser. Works offline after first load.",
     },
     add: {
       title: "Add Entries",
@@ -116,6 +469,7 @@ const translations = {
       form: {
         account: "Account",
         category: "Category",
+        selectCategory: "Select category...",
         transferTo: "Transfer to account",
         description: "Description",
         amount: "Amount",
@@ -138,7 +492,7 @@ const translations = {
       },
       list: {
         title: "Habit Logs",
-        empty: "No habit logs yet. Capture today’s progress.",
+        empty: "No habit logs yet. Capture today's progress.",
         remove: "Remove",
         completed: "Completed",
         skipped: "Skipped",
@@ -147,17 +501,25 @@ const translations = {
     crypto: {
       form: {
         wallet: "Wallet",
-        symbol: "Symbol (BTC)",
+        symbol: "Symbol",
+        selectSymbol: "Select coin...",
+        customSymbol: "Or type custom...",
         amount: "Amount",
-        swapToSymbol: "Swap to symbol (ETH)",
+        swapToSymbol: "Swap to symbol",
         swapToAmount: "Swap to amount",
         price: "Price per coin (optional)",
-        fee: "Fee (optional)",
-        feeCoinSymbol: "Fee coin symbol (optional)",
-        feeAmount: "Fee amount (optional)",
+        fee: "Fee in USD (optional)",
+        feeCoinSymbol: "Fee coin symbol",
+        feeAmount: "Fee amount in crypto",
         notes: "Notes (optional)",
         add: "Add Crypto Entry",
-        required: "Required: Date, Wallet, Symbol, Amount. Swap needs target symbol + amount.",
+        required:
+          "Required: Date, Wallet, Symbol, Amount. Swap needs target symbol + amount.",
+        overrideProceeds: "Override proceeds (USD)",
+        overrideCostBasis: "Override cost basis (USD)",
+        advancedSection: "Advanced options",
+        selectScenario: "Select scenario...",
+        feeCoinSection: "Crypto fee (optional)",
       },
       list: {
         title: "Crypto Entries",
@@ -174,7 +536,7 @@ const translations = {
       transfer_in: "Transfer In",
       transfer_out: "Transfer Out",
       swap: "Swap",
-    },
+    } as Record<string, string>,
     export: {
       title: "Export Preview",
       download: "Download JSON",
@@ -188,7 +550,8 @@ const translations = {
       transactionAccountRequired: "Transaction account is required.",
       transactionAmountRequired: "Transaction amount is required.",
       transactionCurrencyRequired: "Transaction currency is required.",
-      transactionCategoryRequired: "Category is required unless this is a transfer.",
+      transactionCategoryRequired:
+        "Category is required unless this is a transfer.",
       transactionTransferRequired: "Transfer requires a destination account.",
       habitDateRequired: "Habit date is required.",
       habitNameRequired: "Habit name is required.",
@@ -198,14 +561,15 @@ const translations = {
       cryptoAmountRequired: "Crypto amount is required.",
       cryptoSwapSymbolRequired: "Swap target symbol is required.",
       cryptoSwapAmountRequired: "Swap target amount is required.",
-      cryptoFeePairRequired: "Fee coin and fee amount must be provided together.",
+      cryptoFeePairRequired:
+        "Fee coin and fee amount must be provided together.",
     },
   },
   es: {
     headerTag: "Generador Sanctum",
     headerTitle: "Construye un registro seguro",
     headerDescription:
-      "Este generador respeta el esquema de importación de Sanctum. Los nombres de cuentas, hábitos, wallets y categorías deben existir en tu bóveda para que la importación funcione.",
+      "Este generador respeta el esquema de importacion de Sanctum. Los nombres de cuentas, habitos, wallets y categorias deben existir en tu boveda para que la importacion funcione.",
     startOver: "Reiniciar",
     steps: {
       load: "Paso 1: Cargar",
@@ -214,21 +578,24 @@ const translations = {
     },
     stats: {
       transactions: "Transacciones",
-      habits: "Registros de hábitos",
+      habits: "Registros de habitos",
       crypto: "Movimientos cripto",
     },
     loaded: "Cargado",
     load: {
       title: "Cargar JSON existente",
-      description: "Sube un archivo sanctum_export.json para agregar nuevas entradas al mismo registro.",
+      description:
+        "Sube un archivo sanctum_export.json para agregar nuevas entradas al mismo registro.",
       button: "Subir JSON",
     },
     paste: {
       title: "Pegar JSON",
-      description: "Úsalo si solo tienes acceso a notas de texto. El contenido se mantiene local.",
+      description:
+        "Usalo si solo tienes acceso a notas de texto. El contenido se mantiene local.",
       placeholder: "Pega el contenido de sanctum_export.json...",
       button: "Cargar desde pegado",
-      privacy: "Privacidad: los datos nunca salen del navegador. Funciona offline después de la primera carga.",
+      privacy:
+        "Privacidad: los datos nunca salen del navegador. Funciona offline despues de la primera carga.",
     },
     add: {
       title: "Agregar entradas",
@@ -236,36 +603,38 @@ const translations = {
       tabs: {
         finances: "Finanzas",
         crypto: "Cripto",
-        habits: "Hábitos",
+        habits: "Habitos",
       },
     },
     transactions: {
       form: {
         account: "Cuenta",
-        category: "Categoría",
+        category: "Categoria",
+        selectCategory: "Seleccionar categoria...",
         transferTo: "Transferir a cuenta",
-        description: "Descripción",
+        description: "Descripcion",
         amount: "Monto",
-        add: "Agregar transacción",
+        add: "Agregar transaccion",
         required: "Requerido: Fecha, Cuenta, Monto, Moneda.",
-        transferNote: "La categoría es obligatoria salvo que sea una transferencia.",
+        transferNote:
+          "La categoria es obligatoria salvo que sea una transferencia.",
       },
       list: {
         title: "Transacciones recientes",
-        empty: "Aún no hay transacciones. Agrega la primera.",
+        empty: "Aun no hay transacciones. Agrega la primera.",
         remove: "Eliminar",
       },
     },
     habits: {
       form: {
-        name: "Nombre del hábito",
+        name: "Nombre del habito",
         completed: "Completado",
-        add: "Agregar registro de hábito",
-        required: "Requerido: Fecha, Nombre del hábito.",
+        add: "Agregar registro de habito",
+        required: "Requerido: Fecha, Nombre del habito.",
       },
       list: {
-        title: "Registros de hábitos",
-        empty: "Aún no hay registros. Captura el progreso de hoy.",
+        title: "Registros de habitos",
+        empty: "Aun no hay registros. Captura el progreso de hoy.",
         remove: "Eliminar",
         completed: "Completado",
         skipped: "Omitido",
@@ -274,21 +643,29 @@ const translations = {
     crypto: {
       form: {
         wallet: "Wallet",
-        symbol: "Símbolo (BTC)",
+        symbol: "Simbolo",
+        selectSymbol: "Seleccionar moneda...",
+        customSymbol: "O escribe una...",
         amount: "Monto",
-        swapToSymbol: "Símbolo destino (ETH)",
+        swapToSymbol: "Simbolo destino",
         swapToAmount: "Monto destino",
         price: "Precio por moneda (opcional)",
-        fee: "Comisión (opcional)",
-        feeCoinSymbol: "Símbolo comisión (opcional)",
-        feeAmount: "Monto comisión (opcional)",
+        fee: "Comision en USD (opcional)",
+        feeCoinSymbol: "Simbolo comision",
+        feeAmount: "Monto comision en cripto",
         notes: "Notas (opcional)",
         add: "Agregar movimiento cripto",
-        required: "Requerido: Fecha, Wallet, Símbolo, Monto. Swap exige símbolo + monto destino.",
+        required:
+          "Requerido: Fecha, Wallet, Simbolo, Monto. Swap exige simbolo + monto destino.",
+        overrideProceeds: "Forzar ingresos (USD)",
+        overrideCostBasis: "Forzar costo base (USD)",
+        advancedSection: "Opciones avanzadas",
+        selectScenario: "Seleccionar escenario...",
+        feeCoinSection: "Comision cripto (opcional)",
       },
       list: {
         title: "Movimientos cripto",
-        empty: "Aún no hay movimientos. Agrega actividad aquí.",
+        empty: "Aun no hay movimientos. Agrega actividad aqui.",
         remove: "Eliminar",
       },
     },
@@ -301,34 +678,39 @@ const translations = {
       transfer_in: "Transferencia entrada",
       transfer_out: "Transferencia salida",
       swap: "Swap",
-    },
+    } as Record<string, string>,
     export: {
-      title: "Vista previa de exportación",
+      title: "Vista previa de exportacion",
       download: "Descargar JSON",
     },
     errors: {
-      invalidJson: "Estructura JSON inválida.",
-      unsupportedVersion: "Versión no compatible. Se esperaba la versión 1.0.",
+      invalidJson: "Estructura JSON invalida.",
+      unsupportedVersion: "Version no compatible. Se esperaba la version 1.0.",
       parseFailed: "No se pudo leer el JSON.",
       pasteRequired: "Pega un JSON antes de cargar.",
-      transactionDateRequired: "La fecha de la transacción es obligatoria.",
-      transactionAccountRequired: "La cuenta de la transacción es obligatoria.",
-      transactionAmountRequired: "El monto de la transacción es obligatorio.",
-      transactionCurrencyRequired: "La moneda de la transacción es obligatoria.",
-      transactionCategoryRequired: "La categoría es obligatoria salvo que sea una transferencia.",
-      transactionTransferRequired: "La transferencia requiere una cuenta destino.",
-      habitDateRequired: "La fecha del hábito es obligatoria.",
-      habitNameRequired: "El nombre del hábito es obligatorio.",
+      transactionDateRequired: "La fecha de la transaccion es obligatoria.",
+      transactionAccountRequired: "La cuenta de la transaccion es obligatoria.",
+      transactionAmountRequired: "El monto de la transaccion es obligatorio.",
+      transactionCurrencyRequired:
+        "La moneda de la transaccion es obligatoria.",
+      transactionCategoryRequired:
+        "La categoria es obligatoria salvo que sea una transferencia.",
+      transactionTransferRequired:
+        "La transferencia requiere una cuenta destino.",
+      habitDateRequired: "La fecha del habito es obligatoria.",
+      habitNameRequired: "El nombre del habito es obligatorio.",
       cryptoDateRequired: "La fecha del movimiento cripto es obligatoria.",
       cryptoWalletRequired: "La wallet es obligatoria.",
-      cryptoSymbolRequired: "El símbolo cripto es obligatorio.",
+      cryptoSymbolRequired: "El simbolo cripto es obligatorio.",
       cryptoAmountRequired: "El monto cripto es obligatorio.",
-      cryptoSwapSymbolRequired: "El símbolo destino del swap es obligatorio.",
+      cryptoSwapSymbolRequired: "El simbolo destino del swap es obligatorio.",
       cryptoSwapAmountRequired: "El monto destino del swap es obligatorio.",
-      cryptoFeePairRequired: "El símbolo y monto de comisión deben ir juntos.",
+      cryptoFeePairRequired: "El simbolo y monto de comision deben ir juntos.",
     },
   },
 };
+
+// ==================== Helpers ====================
 
 const getLocalDateString = () => {
   const now = new Date();
@@ -357,7 +739,9 @@ const createDefaultCrypto = (date: string) => ({
   date,
   wallet: "",
   symbol: "",
-  transaction_type: "buy" as CryptoType,
+  customSymbol: "",
+  scenarioGroup: "trade" as "trade" | "transfer" | "income" | "expense",
+  scenarioKey: "buy",
   amount: "",
   swap_to_symbol: "",
   swap_to_amount: "",
@@ -365,6 +749,8 @@ const createDefaultCrypto = (date: string) => ({
   fee: "",
   fee_coin_symbol: "",
   fee_amount: "",
+  override_proceeds: "",
+  override_cost_basis: "",
   notes: "",
 });
 
@@ -377,7 +763,11 @@ function makeId() {
 
 function normalizeTransactionType(value: unknown): TransactionType {
   const normalized = String(value ?? "").toLowerCase();
-  if (normalized === "income" || normalized === "expense" || normalized === "transfer") {
+  if (
+    normalized === "income" ||
+    normalized === "expense" ||
+    normalized === "transfer"
+  ) {
     return normalized as TransactionType;
   }
   return "expense";
@@ -408,21 +798,112 @@ function getInitialLang(): "en" | "es" {
   return document.documentElement.lang === "es" ? "es" : "en";
 }
 
+/** Converts empty/whitespace strings to null for optional fields */
+function emptyToNull(value: unknown): string | null {
+  if (value == null) return null;
+  const s = String(value).trim();
+  return s === "" ? null : s;
+}
+
+function parseCryptoFromJson(tx: any): CryptoTransaction {
+  const swapToSymbol = emptyToNull(tx.swap_to_symbol ?? tx.to_symbol);
+  const swapToAmount = tx.swap_to_amount ?? tx.to_amount ?? null;
+  const feeCoinSymbol = emptyToNull(tx.fee_coin_symbol ?? tx.fee_coin);
+  const rawTaxType = emptyToNull(tx.tax_type);
+  // Normalize "auto" to null — matches app behavior (ingestion service converts auto → None)
+  const taxType =
+    rawTaxType && rawTaxType.toLowerCase() !== "auto" ? rawTaxType : null;
+  const taxSubtype = taxType ? emptyToNull(tx.tax_subtype) : null;
+  const txType = normalizeCryptoType(tx.transaction_type ?? tx.type);
+
+  return {
+    id: makeId(),
+    date: String(tx.date ?? ""),
+    wallet: String(tx.wallet ?? ""),
+    symbol: String(tx.symbol ?? ""),
+    transaction_type: txType,
+    amount: Number(tx.amount ?? 0),
+    price_per_coin:
+      tx.price_per_coin != null ? Number(tx.price_per_coin) : null,
+    fee: tx.fee != null ? Number(tx.fee) : null,
+    swap_to_symbol: swapToSymbol,
+    swap_to_amount: swapToAmount != null ? Number(swapToAmount) : null,
+    fee_coin_symbol: feeCoinSymbol,
+    fee_amount: tx.fee_amount != null ? Number(tx.fee_amount) : null,
+    tax_type: taxType,
+    tax_subtype: taxSubtype,
+    override_proceeds:
+      tx.override_proceeds != null ? Number(tx.override_proceeds) : null,
+    override_cost_basis:
+      tx.override_cost_basis != null ? Number(tx.override_cost_basis) : null,
+    notes: emptyToNull(tx.notes),
+  };
+}
+
+// ==================== Select Component ====================
+
+function SelectField({
+  value,
+  onChange,
+  options,
+  placeholder,
+  className,
+  "aria-invalid": ariaInvalid,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  placeholder?: string;
+  className?: string;
+  "aria-invalid"?: boolean;
+}) {
+  return (
+    <select
+      className={cn(
+        "h-10 w-full rounded-md border border-input bg-card px-3 text-sm text-foreground",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        className,
+      )}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      aria-invalid={ariaInvalid}
+    >
+      {placeholder && (
+        <option value="" disabled>
+          {placeholder}
+        </option>
+      )}
+      {options.map((opt) => (
+        <option key={opt.value} value={opt.value}>
+          {opt.label}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+// ==================== Main Component ====================
+
 export default function Generator() {
   const [lang, setLang] = React.useState<"en" | "es">(getInitialLang);
-  const copy = React.useMemo(() => translations[lang] ?? translations.en, [lang]);
+  const copy = React.useMemo(
+    () => translations[lang] ?? translations.en,
+    [lang],
+  );
 
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [habits, setHabits] = React.useState<HabitLog[]>([]);
   const [cryptoTx, setCryptoTx] = React.useState<CryptoTransaction[]>([]);
-  const [activeTab, setActiveTab] = React.useState<"transactions" | "habits" | "crypto">(
-    "transactions"
-  );
+  const [activeTab, setActiveTab] = React.useState<
+    "transactions" | "habits" | "crypto"
+  >("transactions");
   const [error, setError] = React.useState<string | null>(null);
   const [loadedFile, setLoadedFile] = React.useState<string | null>(null);
   const [rawInput, setRawInput] = React.useState("");
 
-  const [txForm, setTxForm] = React.useState(() => createDefaultTx(getLocalDateString()));
+  const [txForm, setTxForm] = React.useState(() =>
+    createDefaultTx(getLocalDateString()),
+  );
   const [txErrors, setTxErrors] = React.useState<{
     date?: boolean;
     account?: boolean;
@@ -432,14 +913,18 @@ export default function Generator() {
     transfer_to_account?: boolean;
   }>({});
   const [txAttempted, setTxAttempted] = React.useState(false);
-  const [habitForm, setHabitForm] = React.useState(() => createDefaultHabit(getLocalDateString()));
+
+  const [habitForm, setHabitForm] = React.useState(() =>
+    createDefaultHabit(getLocalDateString()),
+  );
   const [habitErrors, setHabitErrors] = React.useState<{
     date?: boolean;
     habit?: boolean;
   }>({});
   const [habitAttempted, setHabitAttempted] = React.useState(false);
+
   const [cryptoForm, setCryptoForm] = React.useState(() =>
-    createDefaultCrypto(getLocalDateString())
+    createDefaultCrypto(getLocalDateString()),
   );
   const [cryptoErrors, setCryptoErrors] = React.useState<{
     date?: boolean;
@@ -452,6 +937,7 @@ export default function Generator() {
     fee_amount?: boolean;
   }>({});
   const [cryptoAttempted, setCryptoAttempted] = React.useState(false);
+  const [showAdvancedSection, setShowAdvancedSection] = React.useState(false);
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -464,8 +950,53 @@ export default function Generator() {
     };
 
     window.addEventListener("sanctum-lang-change", handleLangChange);
-    return () => window.removeEventListener("sanctum-lang-change", handleLangChange);
+    return () =>
+      window.removeEventListener("sanctum-lang-change", handleLangChange);
   }, []);
+
+  // Derived: categories based on tx type
+  const categoryOptions = React.useMemo(() => {
+    const cats =
+      txForm.transaction_type === "income"
+        ? INCOME_CATEGORIES
+        : EXPENSE_CATEGORIES;
+    return cats.map((c) => ({ value: c, label: c }));
+  }, [txForm.transaction_type]);
+
+  // Derived: selected scenario
+  const selectedScenario =
+    SCENARIO_MAP[cryptoForm.scenarioKey] ?? SCENARIO_MAP["buy"]!;
+  const isCryptoSwap = selectedScenario.txType === "swap";
+
+  // Derived: subtype options for current group
+  const subtypeOptions = React.useMemo(
+    () =>
+      CRYPTO_SCENARIOS.filter((s) => s.group === cryptoForm.scenarioGroup).map(
+        (s) => ({ value: s.key, label: s[lang] }),
+      ),
+    [cryptoForm.scenarioGroup, lang],
+  );
+
+  // Derived: scenario label for display
+  const scenarioLabel = React.useCallback(
+    (key: string) => {
+      const s = SCENARIO_MAP[key];
+      if (!s) return key;
+      const groupLabel = SCENARIO_GROUPS[s.group]?.[lang] ?? s.group;
+      return `${groupLabel} / ${s[lang]}`;
+    },
+    [lang],
+  );
+
+  // Derived: resolved symbol (select or custom)
+  const resolvedSymbol = React.useMemo(() => {
+    if (cryptoForm.symbol === "__custom__") {
+      return cryptoForm.customSymbol.trim().toUpperCase();
+    }
+    return cryptoForm.symbol;
+  }, [cryptoForm.symbol, cryptoForm.customSymbol]);
+
+  // ==================== Export ====================
 
   const exportPayload = React.useMemo<ExportData>(() => {
     return {
@@ -478,20 +1009,88 @@ export default function Generator() {
       })),
       habit_logs: habits.map(({ id, ...log }) => log),
       crypto_transactions: cryptoTx.map(({ id, transaction_type, ...tx }) => ({
-        ...tx,
+        date: tx.date,
+        wallet: tx.wallet,
+        symbol: tx.symbol,
         type: transaction_type,
+        amount: tx.amount,
         price_per_coin: tx.price_per_coin ?? null,
         fee: tx.fee ?? null,
-        swap_to_symbol: tx.swap_to_symbol ?? null,
+        swap_to_symbol: tx.swap_to_symbol || null,
         swap_to_amount: tx.swap_to_amount ?? null,
-        fee_coin_symbol: tx.fee_coin_symbol ?? null,
+        fee_coin_symbol: tx.fee_coin_symbol || null,
         fee_amount: tx.fee_amount ?? null,
-        notes: tx.notes ?? null,
+        tax_type: tx.tax_type || null,
+        tax_subtype: tx.tax_subtype || null,
+        override_proceeds: tx.override_proceeds ?? null,
+        override_cost_basis: tx.override_cost_basis ?? null,
+        notes: tx.notes || null,
       })),
     };
   }, [transactions, habits, cryptoTx]);
 
-  const exportJson = React.useMemo(() => JSON.stringify(exportPayload, null, 2), [exportPayload]);
+  const exportJson = React.useMemo(
+    () => JSON.stringify(exportPayload, null, 2),
+    [exportPayload],
+  );
+
+  // ==================== Load / Reset ====================
+
+  function resetFormState() {
+    setTxErrors({});
+    setHabitErrors({});
+    setCryptoErrors({});
+    setTxAttempted(false);
+    setHabitAttempted(false);
+    setCryptoAttempted(false);
+    setShowAdvancedSection(false);
+    const today = getLocalDateString();
+    setTxForm(createDefaultTx(today));
+    setHabitForm(createDefaultHabit(today));
+    setCryptoForm(createDefaultCrypto(today));
+  }
+
+  function loadParsedData(parsed: any, sourceName: string) {
+    if (!parsed || typeof parsed !== "object") {
+      throw new Error(copy.errors.invalidJson);
+    }
+    if (!isSupportedVersion(parsed.version)) {
+      throw new Error(copy.errors.unsupportedVersion);
+    }
+
+    const nextTransactions = Array.isArray(parsed.transactions)
+      ? parsed.transactions.map((tx: any) => ({
+          id: makeId(),
+          date: String(tx.date ?? ""),
+          account: String(tx.account ?? ""),
+          transaction_type: normalizeTransactionType(
+            tx.transaction_type ?? tx.type,
+          ),
+          amount: Number(tx.amount ?? 0),
+          currency: String(tx.currency ?? ""),
+          category: String(tx.category ?? ""),
+          description: String(tx.description ?? ""),
+          transfer_to_account: tx.transfer_to_account ?? null,
+        }))
+      : [];
+    const nextHabits = Array.isArray(parsed.habit_logs)
+      ? parsed.habit_logs.map((log: HabitLog) => ({
+          ...log,
+          id: makeId(),
+        }))
+      : [];
+    const nextCrypto = Array.isArray(parsed.crypto_transactions)
+      ? parsed.crypto_transactions.map(parseCryptoFromJson)
+      : [];
+
+    setTransactions(nextTransactions);
+    setHabits(nextHabits);
+    setCryptoTx(nextCrypto);
+    setLoadedFile(sourceName);
+    setRawInput("");
+    setError(null);
+    resetFormState();
+  }
 
   function handleLoadFile(file: File) {
     const reader = new FileReader();
@@ -499,78 +1098,14 @@ export default function Generator() {
       try {
         const text = String(reader.result ?? "");
         const parsed = JSON.parse(text);
-        if (!parsed || typeof parsed !== "object") {
-          throw new Error(copy.errors.invalidJson);
-        }
-        if (!isSupportedVersion(parsed.version)) {
-          throw new Error(copy.errors.unsupportedVersion);
-        }
-
-        const nextTransactions = Array.isArray(parsed.transactions)
-          ? parsed.transactions.map((tx: any) => ({
-              id: makeId(),
-              date: String(tx.date ?? ""),
-              account: String(tx.account ?? ""),
-              transaction_type: normalizeTransactionType(tx.transaction_type ?? tx.type),
-              amount: Number(tx.amount ?? 0),
-              currency: String(tx.currency ?? ""),
-              category: String(tx.category ?? ""),
-              description: String(tx.description ?? ""),
-              transfer_to_account: tx.transfer_to_account ?? null,
-            }))
-          : [];
-        const nextHabits = Array.isArray(parsed.habit_logs)
-          ? parsed.habit_logs.map((log: HabitLog) => ({
-              id: makeId(),
-              ...log,
-            }))
-          : [];
-        const nextCrypto = Array.isArray(parsed.crypto_transactions)
-          ? parsed.crypto_transactions.map((tx: any) => {
-              const swapToSymbol = tx.swap_to_symbol ?? tx.to_symbol ?? null;
-              const swapToAmount = tx.swap_to_amount ?? tx.to_amount ?? null;
-              const feeCoinSymbol = tx.fee_coin_symbol ?? tx.fee_coin ?? null;
-              return {
-                id: makeId(),
-                date: String(tx.date ?? ""),
-                wallet: String(tx.wallet ?? ""),
-                symbol: String(tx.symbol ?? ""),
-                transaction_type: normalizeCryptoType(tx.transaction_type ?? tx.type),
-                amount: Number(tx.amount ?? 0),
-                price_per_coin: tx.price_per_coin ?? null,
-                fee: tx.fee ?? null,
-                swap_to_symbol: swapToSymbol ? String(swapToSymbol) : null,
-                swap_to_amount: swapToAmount != null ? Number(swapToAmount) : null,
-                fee_coin_symbol: feeCoinSymbol ? String(feeCoinSymbol) : null,
-                fee_amount: tx.fee_amount != null ? Number(tx.fee_amount) : null,
-                notes: tx.notes ?? null,
-              };
-            })
-          : [];
-
-        setTransactions(nextTransactions);
-        setHabits(nextHabits);
-        setCryptoTx(nextCrypto);
-        setLoadedFile(file.name);
-        setRawInput("");
-        setError(null);
-        setTxErrors({});
-        setHabitErrors({});
-        setCryptoErrors({});
-        setTxAttempted(false);
-        setHabitAttempted(false);
-        setCryptoAttempted(false);
-        const today = getLocalDateString();
-        setTxForm(createDefaultTx(today));
-        setHabitForm(createDefaultHabit(today));
-        setCryptoForm(createDefaultCrypto(today));
+        loadParsedData(parsed, file.name);
       } catch (err) {
         const message =
           err instanceof SyntaxError
             ? copy.errors.parseFailed
             : err instanceof Error
-            ? err.message
-            : copy.errors.parseFailed;
+              ? err.message
+              : copy.errors.parseFailed;
         setError(message);
       }
     };
@@ -588,75 +1123,14 @@ export default function Generator() {
     }
     try {
       const parsed = JSON.parse(rawInput);
-      if (!parsed || typeof parsed !== "object") {
-        throw new Error(copy.errors.invalidJson);
-      }
-      if (!isSupportedVersion(parsed.version)) {
-        throw new Error(copy.errors.unsupportedVersion);
-      }
-      setTransactions(
-        Array.isArray(parsed.transactions)
-          ? parsed.transactions.map((tx: any) => ({
-              id: makeId(),
-              date: String(tx.date ?? ""),
-              account: String(tx.account ?? ""),
-              transaction_type: normalizeTransactionType(tx.transaction_type ?? tx.type),
-              amount: Number(tx.amount ?? 0),
-              currency: String(tx.currency ?? ""),
-              category: String(tx.category ?? ""),
-              description: String(tx.description ?? ""),
-              transfer_to_account: tx.transfer_to_account ?? null,
-            }))
-          : []
-      );
-      setHabits(
-        Array.isArray(parsed.habit_logs)
-          ? parsed.habit_logs.map((log: HabitLog) => ({ id: makeId(), ...log }))
-          : []
-      );
-      setCryptoTx(
-        Array.isArray(parsed.crypto_transactions)
-          ? parsed.crypto_transactions.map((tx: any) => {
-              const swapToSymbol = tx.swap_to_symbol ?? tx.to_symbol ?? null;
-              const swapToAmount = tx.swap_to_amount ?? tx.to_amount ?? null;
-              const feeCoinSymbol = tx.fee_coin_symbol ?? tx.fee_coin ?? null;
-              return {
-                id: makeId(),
-                date: String(tx.date ?? ""),
-                wallet: String(tx.wallet ?? ""),
-                symbol: String(tx.symbol ?? ""),
-                transaction_type: normalizeCryptoType(tx.transaction_type ?? tx.type),
-                amount: Number(tx.amount ?? 0),
-                price_per_coin: tx.price_per_coin ?? null,
-                fee: tx.fee ?? null,
-                swap_to_symbol: swapToSymbol ? String(swapToSymbol) : null,
-                swap_to_amount: swapToAmount != null ? Number(swapToAmount) : null,
-                fee_coin_symbol: feeCoinSymbol ? String(feeCoinSymbol) : null,
-                fee_amount: tx.fee_amount != null ? Number(tx.fee_amount) : null,
-                notes: tx.notes ?? null,
-              };
-            })
-          : []
-      );
-      setLoadedFile("pasted JSON");
-      setError(null);
-      setTxErrors({});
-      setHabitErrors({});
-      setCryptoErrors({});
-      setTxAttempted(false);
-      setHabitAttempted(false);
-      setCryptoAttempted(false);
-      const today = getLocalDateString();
-      setTxForm(createDefaultTx(today));
-      setHabitForm(createDefaultHabit(today));
-      setCryptoForm(createDefaultCrypto(today));
+      loadParsedData(parsed, "pasted JSON");
     } catch (err) {
       const message =
         err instanceof SyntaxError
           ? copy.errors.parseFailed
           : err instanceof Error
-          ? err.message
-          : copy.errors.parseFailed;
+            ? err.message
+            : copy.errors.parseFailed;
       setError(message);
     }
   }
@@ -679,17 +1153,10 @@ export default function Generator() {
     setCryptoTx([]);
     setLoadedFile(null);
     setError(null);
-    setTxErrors({});
-    setHabitErrors({});
-    setCryptoErrors({});
-    setTxAttempted(false);
-    setHabitAttempted(false);
-    setCryptoAttempted(false);
-    const today = getLocalDateString();
-    setTxForm(createDefaultTx(today));
-    setHabitForm(createDefaultHabit(today));
-    setCryptoForm(createDefaultCrypto(today));
+    resetFormState();
   }
+
+  // ==================== Add Handlers ====================
 
   function addTransaction() {
     setError(null);
@@ -790,7 +1257,7 @@ export default function Generator() {
       nextErrors.wallet = true;
       message ??= copy.errors.cryptoWalletRequired;
     }
-    if (!cryptoForm.symbol) {
+    if (!resolvedSymbol) {
       nextErrors.symbol = true;
       message ??= copy.errors.cryptoSymbolRequired;
     }
@@ -798,7 +1265,7 @@ export default function Generator() {
       nextErrors.amount = true;
       message ??= copy.errors.cryptoAmountRequired;
     }
-    if (cryptoForm.transaction_type === "swap") {
+    if (isCryptoSwap) {
       if (!cryptoForm.swap_to_symbol) {
         nextErrors.swap_to_symbol = true;
         message ??= copy.errors.cryptoSwapSymbolRequired;
@@ -807,42 +1274,55 @@ export default function Generator() {
         nextErrors.swap_to_amount = true;
         message ??= copy.errors.cryptoSwapAmountRequired;
       }
-      const hasFeeCoin = Boolean(cryptoForm.fee_coin_symbol);
-      const hasFeeAmount = Boolean(cryptoForm.fee_amount);
-      if ((hasFeeCoin && !hasFeeAmount) || (!hasFeeCoin && hasFeeAmount)) {
-        nextErrors.fee_coin_symbol = !hasFeeCoin;
-        nextErrors.fee_amount = !hasFeeAmount;
-        message ??= copy.errors.cryptoFeePairRequired;
-      }
+    }
+    // Fee coin/amount pairing (all types)
+    const hasFeeCoin = Boolean(cryptoForm.fee_coin_symbol);
+    const hasFeeAmount = Boolean(cryptoForm.fee_amount);
+    if ((hasFeeCoin && !hasFeeAmount) || (!hasFeeCoin && hasFeeAmount)) {
+      nextErrors.fee_coin_symbol = !hasFeeCoin;
+      nextErrors.fee_amount = !hasFeeAmount;
+      message ??= copy.errors.cryptoFeePairRequired;
     }
     if (Object.keys(nextErrors).length > 0) {
       setCryptoErrors(nextErrors);
       setError(message);
       return;
     }
+
+    const sc = selectedScenario;
+
     setCryptoTx((prev) => [
       {
         id: makeId(),
         date: cryptoForm.date,
         wallet: cryptoForm.wallet,
-        symbol: cryptoForm.symbol.toUpperCase(),
-        transaction_type: cryptoForm.transaction_type,
+        symbol: resolvedSymbol,
+        transaction_type: sc.txType,
         amount: Number(cryptoForm.amount),
-        price_per_coin:
-          cryptoForm.transaction_type === "swap"
-            ? null
-            : cryptoForm.price_per_coin
-              ? Number(cryptoForm.price_per_coin)
-              : null,
+        price_per_coin: cryptoForm.price_per_coin
+          ? Number(cryptoForm.price_per_coin)
+          : null,
         fee: cryptoForm.fee ? Number(cryptoForm.fee) : null,
         swap_to_symbol: cryptoForm.swap_to_symbol
           ? cryptoForm.swap_to_symbol.toUpperCase()
           : null,
-        swap_to_amount: cryptoForm.swap_to_amount ? Number(cryptoForm.swap_to_amount) : null,
+        swap_to_amount: cryptoForm.swap_to_amount
+          ? Number(cryptoForm.swap_to_amount)
+          : null,
         fee_coin_symbol: cryptoForm.fee_coin_symbol
           ? cryptoForm.fee_coin_symbol.toUpperCase()
           : null,
-        fee_amount: cryptoForm.fee_amount ? Number(cryptoForm.fee_amount) : null,
+        fee_amount: cryptoForm.fee_amount
+          ? Number(cryptoForm.fee_amount)
+          : null,
+        tax_type: sc.taxType,
+        tax_subtype: sc.taxSub,
+        override_proceeds: cryptoForm.override_proceeds
+          ? Number(cryptoForm.override_proceeds)
+          : null,
+        override_cost_basis: cryptoForm.override_cost_basis
+          ? Number(cryptoForm.override_cost_basis)
+          : null,
         notes: cryptoForm.notes || null,
       },
       ...prev,
@@ -850,12 +1330,45 @@ export default function Generator() {
     setCryptoForm(createDefaultCrypto(getLocalDateString()));
     setCryptoErrors({});
     setCryptoAttempted(false);
+    setShowAdvancedSection(false);
   }
 
-  const isCryptoSwap = cryptoForm.transaction_type === "swap";
+  // ==================== Coin select options ====================
+
+  const coinOptions = React.useMemo(
+    () => [
+      ...CRYPTO_COINS.map((c) => ({
+        value: c.symbol,
+        label: `${c.symbol} - ${c.name}`,
+      })),
+      { value: "__custom__", label: "-- Custom --" },
+    ],
+    [],
+  );
+
+  const swapCoinOptions = React.useMemo(
+    () =>
+      CRYPTO_COINS.map((c) => ({
+        value: c.symbol,
+        label: `${c.symbol} - ${c.name}`,
+      })),
+    [],
+  );
+
+  const feeCoinOptions = React.useMemo(
+    () =>
+      CRYPTO_COINS.map((c) => ({
+        value: c.symbol,
+        label: c.symbol,
+      })),
+    [],
+  );
+
+  // ==================== Render ====================
 
   return (
     <div className="grid gap-10">
+      {/* Header */}
       <div className="panel-gradient-strong rounded-3xl border border-border p-6 shadow-glow">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -865,7 +1378,7 @@ export default function Generator() {
             <h3 className="font-display mt-3 text-2xl font-semibold text-foreground">
               {copy.headerTitle}
             </h3>
-            <p className="mt-3 text-sm text-muted-foreground max-w-lg">
+            <p className="mt-3 max-w-lg text-sm text-muted-foreground">
               {copy.headerDescription}
             </p>
           </div>
@@ -898,16 +1411,28 @@ export default function Generator() {
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="panel-gradient rounded-xl border border-border p-4">
-                <p className="text-xs text-muted-foreground">{copy.stats.transactions}</p>
-                <p className="text-2xl font-semibold text-foreground">{transactions.length}</p>
+                <p className="text-xs text-muted-foreground">
+                  {copy.stats.transactions}
+                </p>
+                <p className="text-2xl font-semibold text-foreground">
+                  {transactions.length}
+                </p>
               </div>
               <div className="panel-gradient rounded-xl border border-border p-4">
-                <p className="text-xs text-muted-foreground">{copy.stats.habits}</p>
-                <p className="text-2xl font-semibold text-foreground">{habits.length}</p>
+                <p className="text-xs text-muted-foreground">
+                  {copy.stats.habits}
+                </p>
+                <p className="text-2xl font-semibold text-foreground">
+                  {habits.length}
+                </p>
               </div>
               <div className="panel-gradient rounded-xl border border-border p-4">
-                <p className="text-xs text-muted-foreground">{copy.stats.crypto}</p>
-                <p className="text-2xl font-semibold text-foreground">{cryptoTx.length}</p>
+                <p className="text-xs text-muted-foreground">
+                  {copy.stats.crypto}
+                </p>
+                <p className="text-2xl font-semibold text-foreground">
+                  {cryptoTx.length}
+                </p>
               </div>
             </div>
 
@@ -916,7 +1441,6 @@ export default function Generator() {
                 {error}
               </div>
             )}
-
           </div>
 
           <div className="space-y-4">
@@ -924,7 +1448,9 @@ export default function Generator() {
               <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 {copy.load.title}
               </h4>
-              <p className="mt-2 text-sm text-muted-foreground">{copy.load.description}</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {copy.load.description}
+              </p>
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 <Button variant="secondary" onClick={handleLoadClick}>
                   {copy.load.button}
@@ -942,9 +1468,11 @@ export default function Generator() {
               <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 {copy.paste.title}
               </h4>
-              <p className="mt-2 text-sm text-muted-foreground">{copy.paste.description}</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {copy.paste.description}
+              </p>
               <Textarea
-                className="mt-4 min-h-[180px] font-mono text-xs"
+                className="mt-4 min-h-45 font-mono text-xs"
                 value={rawInput}
                 onChange={(event) => setRawInput(event.target.value)}
                 placeholder={copy.paste.placeholder}
@@ -954,19 +1482,24 @@ export default function Generator() {
                   {copy.paste.button}
                 </Button>
               </div>
-              <p className="mt-4 text-xs text-muted-foreground">{copy.paste.privacy}</p>
+              <p className="mt-4 text-xs text-muted-foreground">
+                {copy.paste.privacy}
+              </p>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Tabs */}
       <div className="panel-gradient-strong rounded-3xl border border-border p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
               {copy.add.title}
             </p>
-            <h4 className="mt-1 text-xl font-semibold text-foreground">{copy.add.subtitle}</h4>
+            <h4 className="mt-1 text-xl font-semibold text-foreground">
+              {copy.add.subtitle}
+            </h4>
           </div>
           <div className="flex flex-wrap gap-2">
             {[
@@ -981,7 +1514,7 @@ export default function Generator() {
                   "hover:-translate-y-0.5 hover:shadow-md hover:brightness-110",
                   activeTab === tab.id
                     ? "btn-active border-transparent text-primary-foreground"
-                    : "btn-surface text-muted-foreground hover:text-foreground"
+                    : "btn-surface text-muted-foreground hover:text-foreground",
                 )}
                 onClick={() => setActiveTab(tab.id as typeof activeTab)}
               >
@@ -991,6 +1524,7 @@ export default function Generator() {
           </div>
         </div>
 
+        {/* ==================== Transactions Tab ==================== */}
         {activeTab === "transactions" && (
           <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.2fr]">
             <div className="space-y-4 panel-gradient rounded-2xl border border-border p-5">
@@ -1008,7 +1542,7 @@ export default function Generator() {
                 className={cn(
                   txAttempted &&
                     txErrors.date &&
-                    "border-destructive/60 focus-visible:ring-destructive/40"
+                    "border-destructive/60 focus-visible:ring-destructive/40",
                 )}
               />
               <div className="grid gap-4 sm:grid-cols-2">
@@ -1019,60 +1553,76 @@ export default function Generator() {
                     const value = event.target.value;
                     setTxForm({ ...txForm, account: value });
                     if (value) {
-                      setTxErrors((prev) => ({ ...prev, account: false }));
+                      setTxErrors((prev) => ({
+                        ...prev,
+                        account: false,
+                      }));
                     }
                   }}
                   aria-invalid={Boolean(txAttempted && txErrors.account)}
                   className={cn(
                     txAttempted &&
                       txErrors.account &&
-                      "border-destructive/60 focus-visible:ring-destructive/40"
+                      "border-destructive/60 focus-visible:ring-destructive/40",
                   )}
                 />
-                <select
-                  className={cn(
-                    "h-10 w-full rounded-md border border-input bg-card px-3 text-sm text-foreground",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    txAttempted &&
-                      txErrors.currency &&
-                      "border-destructive/60 focus-visible:ring-destructive/40"
-                  )}
+                <SelectField
                   value={txForm.currency}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    setTxForm({ ...txForm, currency: value });
-                    if (value) {
-                      setTxErrors((prev) => ({ ...prev, currency: false }));
+                  onChange={(v) => {
+                    setTxForm({ ...txForm, currency: v });
+                    if (v) {
+                      setTxErrors((prev) => ({
+                        ...prev,
+                        currency: false,
+                      }));
                     }
                   }}
+                  options={CURRENCIES.map((c) => ({
+                    value: c,
+                    label: c,
+                  }))}
                   aria-invalid={Boolean(txAttempted && txErrors.currency)}
-                >
-                  <option value="USD">USD</option>
-                  <option value="CLP">CLP</option>
-                </select>
+                  className={cn(
+                    txAttempted &&
+                      txErrors.currency &&
+                      "border-destructive/60 focus-visible:ring-destructive/40",
+                  )}
+                />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                <SelectField
                   value={txForm.transaction_type}
-                  onChange={(event) => {
-                    const nextType = event.target.value as TransactionType;
+                  onChange={(v) => {
+                    const nextType = v as TransactionType;
                     setTxForm({
                       ...txForm,
                       transaction_type: nextType,
+                      category: nextType === "transfer" ? "" : txForm.category,
                     });
                     setTxErrors((prev) => ({
                       ...prev,
                       category: nextType === "transfer" ? false : prev.category,
                       transfer_to_account:
-                        nextType === "transfer" ? prev.transfer_to_account : false,
+                        nextType === "transfer"
+                          ? prev.transfer_to_account
+                          : false,
                     }));
                   }}
-                >
-                  <option value="expense">{copy.types.expense}</option>
-                  <option value="income">{copy.types.income}</option>
-                  <option value="transfer">{copy.types.transfer}</option>
-                </select>
+                  options={[
+                    {
+                      value: "expense",
+                      label: copy.types.expense,
+                    },
+                    {
+                      value: "income",
+                      label: copy.types.income,
+                    },
+                    {
+                      value: "transfer",
+                      label: copy.types.transfer,
+                    },
+                  ]}
+                />
                 <Input
                   type="number"
                   step="0.01"
@@ -1082,58 +1632,77 @@ export default function Generator() {
                     const value = event.target.value;
                     setTxForm({ ...txForm, amount: value });
                     if (value) {
-                      setTxErrors((prev) => ({ ...prev, amount: false }));
+                      setTxErrors((prev) => ({
+                        ...prev,
+                        amount: false,
+                      }));
                     }
                   }}
                   aria-invalid={Boolean(txAttempted && txErrors.amount)}
                   className={cn(
                     txAttempted &&
                       txErrors.amount &&
-                      "border-destructive/60 focus-visible:ring-destructive/40"
+                      "border-destructive/60 focus-visible:ring-destructive/40",
                   )}
                 />
               </div>
-              <Input
-                placeholder={copy.transactions.form.category}
-                value={txForm.category}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  setTxForm({ ...txForm, category: value });
-                  if (value) {
-                    setTxErrors((prev) => ({ ...prev, category: false }));
-                  }
-                }}
-                disabled={txForm.transaction_type === "transfer"}
-                aria-invalid={Boolean(txAttempted && txErrors.category)}
-                className={cn(
-                  txAttempted &&
-                    txErrors.category &&
-                    "border-destructive/60 focus-visible:ring-destructive/40"
-                )}
-              />
-              {txForm.transaction_type === "transfer" && (
+              {txForm.transaction_type !== "transfer" ? (
+                <SelectField
+                  value={txForm.category}
+                  onChange={(v) => {
+                    setTxForm({ ...txForm, category: v });
+                    if (v) {
+                      setTxErrors((prev) => ({
+                        ...prev,
+                        category: false,
+                      }));
+                    }
+                  }}
+                  options={categoryOptions}
+                  placeholder={copy.transactions.form.selectCategory}
+                  aria-invalid={Boolean(txAttempted && txErrors.category)}
+                  className={cn(
+                    txAttempted &&
+                      txErrors.category &&
+                      "border-destructive/60 focus-visible:ring-destructive/40",
+                  )}
+                />
+              ) : (
                 <Input
                   placeholder={copy.transactions.form.transferTo}
                   value={txForm.transfer_to_account}
                   onChange={(event) => {
                     const value = event.target.value;
-                    setTxForm({ ...txForm, transfer_to_account: value });
+                    setTxForm({
+                      ...txForm,
+                      transfer_to_account: value,
+                    });
                     if (value) {
-                      setTxErrors((prev) => ({ ...prev, transfer_to_account: false }));
+                      setTxErrors((prev) => ({
+                        ...prev,
+                        transfer_to_account: false,
+                      }));
                     }
                   }}
-                  aria-invalid={Boolean(txAttempted && txErrors.transfer_to_account)}
+                  aria-invalid={Boolean(
+                    txAttempted && txErrors.transfer_to_account,
+                  )}
                   className={cn(
                     txAttempted &&
                       txErrors.transfer_to_account &&
-                      "border-destructive/60 focus-visible:ring-destructive/40"
+                      "border-destructive/60 focus-visible:ring-destructive/40",
                   )}
                 />
               )}
               <Input
                 placeholder={copy.transactions.form.description}
                 value={txForm.description}
-                onChange={(event) => setTxForm({ ...txForm, description: event.target.value })}
+                onChange={(event) =>
+                  setTxForm({
+                    ...txForm,
+                    description: event.target.value,
+                  })
+                }
               />
               <div className="text-xs text-muted-foreground">
                 <p>{copy.transactions.form.required}</p>
@@ -1156,7 +1725,12 @@ export default function Generator() {
                 )}
                 {transactions.map((tx) => {
                   const isExpense = tx.transaction_type === "expense";
-                  const sign = tx.transaction_type === "transfer" ? "" : isExpense ? "-" : "+";
+                  const sign =
+                    tx.transaction_type === "transfer"
+                      ? ""
+                      : isExpense
+                        ? "-"
+                        : "+";
                   return (
                     <div
                       key={tx.id}
@@ -1169,7 +1743,9 @@ export default function Generator() {
                         <button
                           className="text-xs text-muted-foreground transition-all duration-200 ease-out hover:-translate-y-0.5 hover:text-foreground"
                           onClick={() =>
-                            setTransactions((prev) => prev.filter((item) => item.id !== tx.id))
+                            setTransactions((prev) =>
+                              prev.filter((item) => item.id !== tx.id),
+                            )
                           }
                         >
                           {copy.transactions.list.remove}
@@ -1177,12 +1753,17 @@ export default function Generator() {
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {tx.date} · {copy.types[tx.transaction_type]}
-                        {tx.transaction_type === "transfer" && tx.transfer_to_account
-                          ? ` → ${tx.transfer_to_account}`
-                          : ""}
+                        {tx.transaction_type === "transfer" &&
+                        tx.transfer_to_account
+                          ? ` -> ${tx.transfer_to_account}`
+                          : tx.category
+                            ? ` · ${tx.category}`
+                            : ""}
                       </p>
                       {tx.description && (
-                        <p className="text-xs text-muted-foreground">{tx.description}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {tx.description}
+                        </p>
                       )}
                     </div>
                   );
@@ -1192,6 +1773,7 @@ export default function Generator() {
           </div>
         )}
 
+        {/* ==================== Habits Tab ==================== */}
         {activeTab === "habits" && (
           <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.2fr]">
             <div className="space-y-4 panel-gradient rounded-2xl border border-border p-5">
@@ -1202,14 +1784,17 @@ export default function Generator() {
                   const value = event.target.value;
                   setHabitForm({ ...habitForm, date: value });
                   if (value) {
-                    setHabitErrors((prev) => ({ ...prev, date: false }));
+                    setHabitErrors((prev) => ({
+                      ...prev,
+                      date: false,
+                    }));
                   }
                 }}
                 aria-invalid={Boolean(habitAttempted && habitErrors.date)}
                 className={cn(
                   habitAttempted &&
                     habitErrors.date &&
-                    "border-destructive/60 focus-visible:ring-destructive/40"
+                    "border-destructive/60 focus-visible:ring-destructive/40",
                 )}
               />
               <Input
@@ -1219,14 +1804,17 @@ export default function Generator() {
                   const value = event.target.value;
                   setHabitForm({ ...habitForm, habit: value });
                   if (value) {
-                    setHabitErrors((prev) => ({ ...prev, habit: false }));
+                    setHabitErrors((prev) => ({
+                      ...prev,
+                      habit: false,
+                    }));
                   }
                 }}
                 aria-invalid={Boolean(habitAttempted && habitErrors.habit)}
                 className={cn(
                   habitAttempted &&
                     habitErrors.habit &&
-                    "border-destructive/60 focus-visible:ring-destructive/40"
+                    "border-destructive/60 focus-visible:ring-destructive/40",
                 )}
               />
               <label className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -1234,12 +1822,17 @@ export default function Generator() {
                   type="checkbox"
                   checked={habitForm.completed}
                   onChange={(event) =>
-                    setHabitForm({ ...habitForm, completed: event.target.checked })
+                    setHabitForm({
+                      ...habitForm,
+                      completed: event.target.checked,
+                    })
                   }
                 />
                 {copy.habits.form.completed}
               </label>
-              <p className="text-xs text-muted-foreground">{copy.habits.form.required}</p>
+              <p className="text-xs text-muted-foreground">
+                {copy.habits.form.required}
+              </p>
               <Button onClick={addHabit} className="w-full">
                 {copy.habits.form.add}
               </Button>
@@ -1261,16 +1854,25 @@ export default function Generator() {
                     className="rounded-xl border border-border bg-card/70 px-4 py-3 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md"
                   >
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold text-foreground">{log.habit}</p>
+                      <p className="text-sm font-semibold text-foreground">
+                        {log.habit}
+                      </p>
                       <button
                         className="text-xs text-muted-foreground transition-all duration-200 ease-out hover:-translate-y-0.5 hover:text-foreground"
-                        onClick={() => setHabits((prev) => prev.filter((item) => item.id !== log.id))}
+                        onClick={() =>
+                          setHabits((prev) =>
+                            prev.filter((item) => item.id !== log.id),
+                          )
+                        }
                       >
                         {copy.habits.list.remove}
                       </button>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {log.date} · {log.completed ? copy.habits.list.completed : copy.habits.list.skipped}
+                      {log.date} ·{" "}
+                      {log.completed
+                        ? copy.habits.list.completed
+                        : copy.habits.list.skipped}
                     </p>
                   </div>
                 ))}
@@ -1279,9 +1881,11 @@ export default function Generator() {
           </div>
         )}
 
+        {/* ==================== Crypto Tab ==================== */}
         {activeTab === "crypto" && (
           <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.2fr]">
             <div className="space-y-4 panel-gradient rounded-2xl border border-border p-5">
+              {/* Date */}
               <Input
                 type="date"
                 value={cryptoForm.date}
@@ -1289,16 +1893,21 @@ export default function Generator() {
                   const value = event.target.value;
                   setCryptoForm({ ...cryptoForm, date: value });
                   if (value) {
-                    setCryptoErrors((prev) => ({ ...prev, date: false }));
+                    setCryptoErrors((prev) => ({
+                      ...prev,
+                      date: false,
+                    }));
                   }
                 }}
                 aria-invalid={Boolean(cryptoAttempted && cryptoErrors.date)}
                 className={cn(
                   cryptoAttempted &&
                     cryptoErrors.date &&
-                    "border-destructive/60 focus-visible:ring-destructive/40"
+                    "border-destructive/60 focus-visible:ring-destructive/40",
                 )}
               />
+
+              {/* Wallet + Symbol */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <Input
                   placeholder={copy.crypto.form.wallet}
@@ -1307,67 +1916,129 @@ export default function Generator() {
                     const value = event.target.value;
                     setCryptoForm({ ...cryptoForm, wallet: value });
                     if (value) {
-                      setCryptoErrors((prev) => ({ ...prev, wallet: false }));
+                      setCryptoErrors((prev) => ({
+                        ...prev,
+                        wallet: false,
+                      }));
                     }
                   }}
                   aria-invalid={Boolean(cryptoAttempted && cryptoErrors.wallet)}
                   className={cn(
                     cryptoAttempted &&
                       cryptoErrors.wallet &&
-                      "border-destructive/60 focus-visible:ring-destructive/40"
+                      "border-destructive/60 focus-visible:ring-destructive/40",
                   )}
                 />
-                <Input
-                  placeholder={copy.crypto.form.symbol}
+                <SelectField
                   value={cryptoForm.symbol}
+                  onChange={(v) => {
+                    setCryptoForm({
+                      ...cryptoForm,
+                      symbol: v,
+                      customSymbol: v === "__custom__" ? "" : "",
+                    });
+                    if (v && v !== "__custom__") {
+                      setCryptoErrors((prev) => ({
+                        ...prev,
+                        symbol: false,
+                      }));
+                    }
+                  }}
+                  options={coinOptions}
+                  placeholder={copy.crypto.form.selectSymbol}
+                  aria-invalid={Boolean(cryptoAttempted && cryptoErrors.symbol)}
+                  className={cn(
+                    cryptoAttempted &&
+                      cryptoErrors.symbol &&
+                      "border-destructive/60 focus-visible:ring-destructive/40",
+                  )}
+                />
+              </div>
+
+              {/* Custom symbol input */}
+              {cryptoForm.symbol === "__custom__" && (
+                <Input
+                  placeholder={copy.crypto.form.customSymbol}
+                  value={cryptoForm.customSymbol}
                   onChange={(event) => {
                     const value = event.target.value;
-                    setCryptoForm({ ...cryptoForm, symbol: value });
-                    if (value) {
-                      setCryptoErrors((prev) => ({ ...prev, symbol: false }));
+                    setCryptoForm({
+                      ...cryptoForm,
+                      customSymbol: value,
+                    });
+                    if (value.trim()) {
+                      setCryptoErrors((prev) => ({
+                        ...prev,
+                        symbol: false,
+                      }));
                     }
                   }}
                   aria-invalid={Boolean(cryptoAttempted && cryptoErrors.symbol)}
                   className={cn(
                     cryptoAttempted &&
                       cryptoErrors.symbol &&
-                      "border-destructive/60 focus-visible:ring-destructive/40"
+                      "border-destructive/60 focus-visible:ring-destructive/40",
                   )}
                 />
-              </div>
+              )}
+
+              {/* Category + Subtype */}
               <div className="grid gap-4 sm:grid-cols-2">
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm text-foreground"
-                  value={cryptoForm.transaction_type}
-                  onChange={(event) => {
-                    const nextType = event.target.value as CryptoType;
+                <SelectField
+                  value={cryptoForm.scenarioGroup}
+                  onChange={(v) => {
+                    const nextGroup = v as typeof cryptoForm.scenarioGroup;
+                    const firstInGroup = CRYPTO_SCENARIOS.find(
+                      (s) => s.group === nextGroup,
+                    );
+                    const nextKey = firstInGroup?.key ?? "buy";
+                    const sc = SCENARIO_MAP[nextKey];
+                    const isSwap = sc?.txType === "swap";
                     setCryptoForm({
                       ...cryptoForm,
-                      transaction_type: nextType,
-                      ...(nextType !== "swap"
-                        ? {
-                            swap_to_symbol: "",
-                            swap_to_amount: "",
-                            fee_coin_symbol: "",
-                            fee_amount: "",
-                          }
-                        : { price_per_coin: "" }),
+                      scenarioGroup: nextGroup,
+                      scenarioKey: nextKey,
+                      ...(isSwap
+                        ? {}
+                        : { swap_to_symbol: "", swap_to_amount: "" }),
                     });
                     setCryptoErrors((prev) => ({
                       ...prev,
-                      swap_to_symbol: nextType === "swap" ? prev.swap_to_symbol : false,
-                      swap_to_amount: nextType === "swap" ? prev.swap_to_amount : false,
-                      fee_coin_symbol: nextType === "swap" ? prev.fee_coin_symbol : false,
-                      fee_amount: nextType === "swap" ? prev.fee_amount : false,
+                      swap_to_symbol: isSwap ? prev.swap_to_symbol : false,
+                      swap_to_amount: isSwap ? prev.swap_to_amount : false,
                     }));
                   }}
-                >
-                  <option value="buy">{copy.types.buy}</option>
-                  <option value="sell">{copy.types.sell}</option>
-                  <option value="transfer_in">{copy.types.transfer_in}</option>
-                  <option value="transfer_out">{copy.types.transfer_out}</option>
-                  <option value="swap">{copy.types.swap}</option>
-                </select>
+                  options={Object.entries(SCENARIO_GROUPS).map(
+                    ([key, labels]) => ({
+                      value: key,
+                      label: labels[lang],
+                    }),
+                  )}
+                />
+                <SelectField
+                  value={cryptoForm.scenarioKey}
+                  onChange={(v) => {
+                    const sc = SCENARIO_MAP[v];
+                    const isSwap = sc?.txType === "swap";
+                    setCryptoForm({
+                      ...cryptoForm,
+                      scenarioKey: v,
+                      ...(isSwap
+                        ? {}
+                        : { swap_to_symbol: "", swap_to_amount: "" }),
+                    });
+                    setCryptoErrors((prev) => ({
+                      ...prev,
+                      swap_to_symbol: isSwap ? prev.swap_to_symbol : false,
+                      swap_to_amount: isSwap ? prev.swap_to_amount : false,
+                    }));
+                  }}
+                  options={subtypeOptions}
+                />
+              </div>
+
+              {/* Amount */}
+              <div>
                 <Input
                   type="number"
                   step="0.00000001"
@@ -1377,134 +2048,234 @@ export default function Generator() {
                     const value = event.target.value;
                     setCryptoForm({ ...cryptoForm, amount: value });
                     if (value) {
-                      setCryptoErrors((prev) => ({ ...prev, amount: false }));
+                      setCryptoErrors((prev) => ({
+                        ...prev,
+                        amount: false,
+                      }));
                     }
                   }}
                   aria-invalid={Boolean(cryptoAttempted && cryptoErrors.amount)}
                   className={cn(
                     cryptoAttempted &&
                       cryptoErrors.amount &&
-                      "border-destructive/60 focus-visible:ring-destructive/40"
+                      "border-destructive/60 focus-visible:ring-destructive/40",
                   )}
                 />
               </div>
-              {isCryptoSwap ? (
-                <>
+
+              {/* Swap-specific: to_symbol + to_amount */}
+              {isCryptoSwap && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <SelectField
+                    value={cryptoForm.swap_to_symbol}
+                    onChange={(v) => {
+                      setCryptoForm({
+                        ...cryptoForm,
+                        swap_to_symbol: v,
+                      });
+                      if (v) {
+                        setCryptoErrors((prev) => ({
+                          ...prev,
+                          swap_to_symbol: false,
+                        }));
+                      }
+                    }}
+                    options={swapCoinOptions}
+                    placeholder={copy.crypto.form.swapToSymbol}
+                    aria-invalid={Boolean(
+                      cryptoAttempted && cryptoErrors.swap_to_symbol,
+                    )}
+                    className={cn(
+                      cryptoAttempted &&
+                        cryptoErrors.swap_to_symbol &&
+                        "border-destructive/60 focus-visible:ring-destructive/40",
+                    )}
+                  />
+                  <Input
+                    type="number"
+                    step="0.00000001"
+                    placeholder={copy.crypto.form.swapToAmount}
+                    value={cryptoForm.swap_to_amount}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setCryptoForm({
+                        ...cryptoForm,
+                        swap_to_amount: value,
+                      });
+                      if (value) {
+                        setCryptoErrors((prev) => ({
+                          ...prev,
+                          swap_to_amount: false,
+                        }));
+                      }
+                    }}
+                    aria-invalid={Boolean(
+                      cryptoAttempted && cryptoErrors.swap_to_amount,
+                    )}
+                    className={cn(
+                      cryptoAttempted &&
+                        cryptoErrors.swap_to_amount &&
+                        "border-destructive/60 focus-visible:ring-destructive/40",
+                    )}
+                  />
+                </div>
+              )}
+
+              {/* Price + Fee USD */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder={copy.crypto.form.price}
+                  value={cryptoForm.price_per_coin}
+                  onChange={(event) =>
+                    setCryptoForm({
+                      ...cryptoForm,
+                      price_per_coin: event.target.value,
+                    })
+                  }
+                />
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder={copy.crypto.form.fee}
+                  value={cryptoForm.fee}
+                  onChange={(event) =>
+                    setCryptoForm({
+                      ...cryptoForm,
+                      fee: event.target.value,
+                    })
+                  }
+                />
+              </div>
+
+              {/* Notes */}
+              <Input
+                placeholder={copy.crypto.form.notes}
+                value={cryptoForm.notes}
+                onChange={(event) =>
+                  setCryptoForm({
+                    ...cryptoForm,
+                    notes: event.target.value,
+                  })
+                }
+              />
+
+              {/* Advanced section toggle */}
+              <button
+                type="button"
+                className="flex items-center gap-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                onClick={() => setShowAdvancedSection((prev) => !prev)}
+              >
+                <span
+                  className="inline-block transition-transform duration-200"
+                  style={{
+                    transform: showAdvancedSection
+                      ? "rotate(90deg)"
+                      : "rotate(0deg)",
+                  }}
+                >
+                  &#9654;
+                </span>
+                {copy.crypto.form.advancedSection}
+              </button>
+
+              {showAdvancedSection && (
+                <div className="space-y-3 rounded-xl border border-border/50 bg-card/30 p-4">
+                  {/* Fee in crypto */}
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <Input
-                      placeholder={copy.crypto.form.swapToSymbol}
-                      value={cryptoForm.swap_to_symbol}
-                      onChange={(event) => {
-                        const value = event.target.value;
-                        setCryptoForm({ ...cryptoForm, swap_to_symbol: value });
-                        if (value) {
-                          setCryptoErrors((prev) => ({ ...prev, swap_to_symbol: false }));
+                    <SelectField
+                      value={cryptoForm.fee_coin_symbol}
+                      onChange={(v) => {
+                        setCryptoForm({
+                          ...cryptoForm,
+                          fee_coin_symbol: v,
+                        });
+                        if (v) {
+                          setCryptoErrors((prev) => ({
+                            ...prev,
+                            fee_coin_symbol: false,
+                          }));
                         }
                       }}
-                      aria-invalid={Boolean(cryptoAttempted && cryptoErrors.swap_to_symbol)}
+                      options={feeCoinOptions}
+                      placeholder={copy.crypto.form.feeCoinSymbol}
+                      aria-invalid={Boolean(
+                        cryptoAttempted && cryptoErrors.fee_coin_symbol,
+                      )}
                       className={cn(
                         cryptoAttempted &&
-                          cryptoErrors.swap_to_symbol &&
-                          "border-destructive/60 focus-visible:ring-destructive/40"
+                          cryptoErrors.fee_coin_symbol &&
+                          "border-destructive/60 focus-visible:ring-destructive/40",
                       )}
                     />
                     <Input
                       type="number"
                       step="0.00000001"
-                      placeholder={copy.crypto.form.swapToAmount}
-                      value={cryptoForm.swap_to_amount}
+                      placeholder={copy.crypto.form.feeAmount}
+                      value={cryptoForm.fee_amount}
                       onChange={(event) => {
                         const value = event.target.value;
-                        setCryptoForm({ ...cryptoForm, swap_to_amount: value });
+                        setCryptoForm({
+                          ...cryptoForm,
+                          fee_amount: value,
+                        });
                         if (value) {
-                          setCryptoErrors((prev) => ({ ...prev, swap_to_amount: false }));
+                          setCryptoErrors((prev) => ({
+                            ...prev,
+                            fee_amount: false,
+                          }));
                         }
                       }}
-                      aria-invalid={Boolean(cryptoAttempted && cryptoErrors.swap_to_amount)}
+                      aria-invalid={Boolean(
+                        cryptoAttempted && cryptoErrors.fee_amount,
+                      )}
                       className={cn(
                         cryptoAttempted &&
-                          cryptoErrors.swap_to_amount &&
-                          "border-destructive/60 focus-visible:ring-destructive/40"
+                          cryptoErrors.fee_amount &&
+                          "border-destructive/60 focus-visible:ring-destructive/40",
                       )}
                     />
                   </div>
+                  {/* Override proceeds / cost basis */}
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Input
                       type="number"
                       step="0.01"
-                      placeholder={copy.crypto.form.fee}
-                      value={cryptoForm.fee}
-                      onChange={(event) => setCryptoForm({ ...cryptoForm, fee: event.target.value })}
+                      placeholder={copy.crypto.form.overrideProceeds}
+                      value={cryptoForm.override_proceeds}
+                      onChange={(event) =>
+                        setCryptoForm({
+                          ...cryptoForm,
+                          override_proceeds: event.target.value,
+                        })
+                      }
                     />
                     <Input
-                      placeholder={copy.crypto.form.feeCoinSymbol}
-                      value={cryptoForm.fee_coin_symbol}
-                      onChange={(event) => {
-                        const value = event.target.value;
-                        setCryptoForm({ ...cryptoForm, fee_coin_symbol: value });
-                        if (value) {
-                          setCryptoErrors((prev) => ({ ...prev, fee_coin_symbol: false }));
-                        }
-                      }}
-                      aria-invalid={Boolean(cryptoAttempted && cryptoErrors.fee_coin_symbol)}
-                      className={cn(
-                        cryptoAttempted &&
-                          cryptoErrors.fee_coin_symbol &&
-                          "border-destructive/60 focus-visible:ring-destructive/40"
-                      )}
+                      type="number"
+                      step="0.01"
+                      placeholder={copy.crypto.form.overrideCostBasis}
+                      value={cryptoForm.override_cost_basis}
+                      onChange={(event) =>
+                        setCryptoForm({
+                          ...cryptoForm,
+                          override_cost_basis: event.target.value,
+                        })
+                      }
                     />
                   </div>
-                  <Input
-                    type="number"
-                    step="0.00000001"
-                    placeholder={copy.crypto.form.feeAmount}
-                    value={cryptoForm.fee_amount}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      setCryptoForm({ ...cryptoForm, fee_amount: value });
-                      if (value) {
-                        setCryptoErrors((prev) => ({ ...prev, fee_amount: false }));
-                      }
-                    }}
-                    aria-invalid={Boolean(cryptoAttempted && cryptoErrors.fee_amount)}
-                    className={cn(
-                      cryptoAttempted &&
-                        cryptoErrors.fee_amount &&
-                        "border-destructive/60 focus-visible:ring-destructive/40"
-                    )}
-                  />
-                </>
-              ) : (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder={copy.crypto.form.price}
-                    value={cryptoForm.price_per_coin}
-                    onChange={(event) =>
-                      setCryptoForm({ ...cryptoForm, price_per_coin: event.target.value })
-                    }
-                  />
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder={copy.crypto.form.fee}
-                    value={cryptoForm.fee}
-                    onChange={(event) => setCryptoForm({ ...cryptoForm, fee: event.target.value })}
-                  />
                 </div>
               )}
-              <Input
-                placeholder={copy.crypto.form.notes}
-                value={cryptoForm.notes}
-                onChange={(event) => setCryptoForm({ ...cryptoForm, notes: event.target.value })}
-              />
-              <p className="text-xs text-muted-foreground">{copy.crypto.form.required}</p>
+
+              <p className="text-xs text-muted-foreground">
+                {copy.crypto.form.required}
+              </p>
               <Button onClick={addCrypto} className="w-full">
                 {copy.crypto.form.add}
               </Button>
             </div>
 
+            {/* Crypto list */}
             <div className="panel-gradient-strong rounded-2xl border border-border p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 {copy.crypto.list.title}
@@ -1523,24 +2294,42 @@ export default function Generator() {
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold text-foreground">
                         {tx.wallet} ·{" "}
-                        {tx.transaction_type === "swap" && tx.swap_to_symbol && tx.swap_to_amount
-                          ? `${tx.symbol} ${tx.amount} → ${tx.swap_to_symbol} ${tx.swap_to_amount}`
+                        {tx.transaction_type === "swap" &&
+                        tx.swap_to_symbol &&
+                        tx.swap_to_amount
+                          ? `${tx.symbol} ${tx.amount} -> ${tx.swap_to_symbol} ${tx.swap_to_amount}`
                           : `${tx.symbol} ${tx.amount}`}
                       </p>
                       <button
                         className="text-xs text-muted-foreground transition-all duration-200 ease-out hover:-translate-y-0.5 hover:text-foreground"
                         onClick={() =>
-                          setCryptoTx((prev) => prev.filter((item) => item.id !== tx.id))
+                          setCryptoTx((prev) =>
+                            prev.filter((item) => item.id !== tx.id),
+                          )
                         }
                       >
                         {copy.crypto.list.remove}
                       </button>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {tx.date} · {copy.types[tx.transaction_type]}
+                      {tx.date} ·{" "}
+                      {scenarioLabel(
+                        resolveScenarioKey(
+                          tx.transaction_type,
+                          tx.tax_type ?? null,
+                          tx.tax_subtype ?? null,
+                        ),
+                      )}
                     </p>
+                    {tx.fee_coin_symbol && tx.fee_amount && (
+                      <p className="text-xs text-muted-foreground">
+                        Fee: {tx.fee_amount} {tx.fee_coin_symbol}
+                      </p>
+                    )}
                     {tx.notes && (
-                      <p className="text-xs text-muted-foreground">{tx.notes}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {tx.notes}
+                      </p>
                     )}
                   </div>
                 ))}
@@ -1550,6 +2339,7 @@ export default function Generator() {
         )}
       </div>
 
+      {/* Export */}
       <div className="panel-gradient rounded-3xl border border-border p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -1561,7 +2351,7 @@ export default function Generator() {
           <Button onClick={handleDownload}>{copy.export.download}</Button>
         </div>
         <Textarea
-          className="mt-4 min-h-[240px] font-mono text-xs"
+          className="mt-4 min-h-60 font-mono text-xs"
           value={exportJson}
           readOnly
         />
