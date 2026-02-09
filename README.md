@@ -118,7 +118,7 @@ This project embraces open collaboration without compromising auditability.
 - **Human-led architecture:** Privacy and data integrity are the priority.
 - **AI-assisted development:** Most of the code has been generated or
   refactored with LLMs under strict human auditing. The primary models used,
-  in order, are **Claude Opus 4.5**, **Claude Sonnet 4.5**, **Codex 5.2**, and
+  in order, are **Claude Opus 4.5(and now 4.6)**, **Claude Sonnet 4.5**, **Codex 5.2(and now 5.3)**, and
   **Gemini 3 Pro**.
 - **Auditability:** The code is open for inspection and verification.
 
