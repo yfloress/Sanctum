@@ -400,29 +400,17 @@ fn build_readiness(
                 "warn"
             }
             .to_string(),
-            detail: if transactions_in_period == 0 {
-                "No transactions found in period".to_string()
-            } else {
-                format!("{} transactions in period", transactions_in_period)
-            },
+            detail: transactions_in_period.to_string(),
         },
         TaxReadinessItem {
             code: "history".to_string(),
             status: if has_insufficient { "warn" } else { "ok" }.to_string(),
-            detail: if has_insufficient {
-                format!("{} disposals with insufficient lots", insufficient_count)
-            } else {
-                String::new()
-            },
+            detail: insufficient_count.to_string(),
         },
         TaxReadinessItem {
             code: "balances".to_string(),
             status: if has_insufficient { "warn" } else { "ok" }.to_string(),
-            detail: if has_insufficient {
-                "Some disposals exceed available lot quantity".to_string()
-            } else {
-                String::new()
-            },
+            detail: insufficient_count.to_string(),
         },
         TaxReadinessItem {
             code: "prices".to_string(),
@@ -435,21 +423,15 @@ fn build_readiness(
             }
             .to_string(),
             detail: if has_invalid {
-                "Invalid dates or transaction types found".to_string()
-            } else if has_missing_prices {
-                format!("{} items missing price data", missing_price_count)
+                "invalid".to_string()
             } else {
-                String::new()
+                missing_price_count.to_string()
             },
         },
         TaxReadinessItem {
             code: "transfers".to_string(),
             status: if unpaired_transfers > 0 { "warn" } else { "ok" }.to_string(),
-            detail: if unpaired_transfers > 0 {
-                format!("{} unpaired transfers", unpaired_transfers)
-            } else {
-                String::new()
-            },
+            detail: unpaired_transfers.to_string(),
         },
         // Chile-specific: F22 casilla guidance
         if matches!(jurisdiction, TaxJurisdiction::Chile) {
@@ -459,21 +441,18 @@ fn build_readiness(
                 code: "sii_f22".to_string(),
                 status: "info".to_string(),
                 detail: if has_gain {
-                    "Ganancia → F22 Línea 10, Casilla 1032. ⚠ Casillas pueden cambiar cada año."
-                        .to_string()
+                    "gain".to_string()
                 } else if has_loss {
-                    "Pérdida → F22 Línea 17, Casilla 169 (tope: casillas 105+155+152+1032+1891+1104). ⚠ Casillas pueden cambiar cada año."
-                        .to_string()
+                    "loss".to_string()
                 } else {
-                    "Sin ganancia ni pérdida neta. ⚠ Casillas F22 pueden cambiar cada año."
-                        .to_string()
+                    "neutral".to_string()
                 },
             }
         } else {
             TaxReadinessItem {
                 code: "filing".to_string(),
                 status: "info".to_string(),
-                detail: "USA: Report on Form 8949 + Schedule D.".to_string(),
+                detail: String::new(),
             }
         },
     ]
