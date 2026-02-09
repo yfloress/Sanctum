@@ -195,6 +195,18 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_crypto_tx_transfer_in(s(&t("crypto-tx-transfer-in")));
     tr.set_crypto_tx_transfer_out(s(&t("crypto-tx-transfer-out")));
     tr.set_crypto_tx_swap(s(&t("crypto-tx-swap")));
+    tr.set_crypto_tx_added(s(&t("crypto-tx-added")));
+    tr.set_crypto_tx_transfer_added(s(&t("crypto-tx-transfer-added")));
+    tr.set_crypto_tx_swap_added(s(&t("crypto-tx-swap-added")));
+    tr.set_crypto_tx_deleted(s(&t("crypto-tx-deleted")));
+    tr.set_crypto_tx_wallet_required(s(&t("crypto-tx-wallet-required")));
+    tr.set_crypto_tx_two_wallets_required(s(&t("crypto-tx-two-wallets-required")));
+    tr.set_crypto_tx_amount_required(s(&t("crypto-tx-amount-required")));
+    tr.set_crypto_tx_price_required(s(&t("crypto-tx-price-required")));
+    tr.set_crypto_tx_coins_required(s(&t("crypto-tx-coins-required")));
+    tr.set_crypto_tx_different_wallets(s(&t("crypto-tx-different-wallets")));
+    tr.set_crypto_tx_to_amount_required(s(&t("crypto-tx-to-amount-required")));
+    tr.set_crypto_tx_swap_different_assets(s(&t("crypto-tx-swap-different-assets")));
 
     // Habits
     tr.set_habits_title(s(&t("habits-title")));
@@ -695,6 +707,45 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_modal_transaction_details(s(&t("modal-transaction-details")));
     tr.set_modal_date(s(&t("modal-date")));
     tr.set_modal_search_coins(s(&t("modal-search-coins")));
+
+    // Section labels (crypto transaction modal)
+    tr.set_section_asset_wallet(s(&t("section-asset-wallet")));
+    tr.set_section_amount(s(&t("section-amount")));
+    tr.set_section_advanced(s(&t("section-advanced")));
+    tr.set_section_details(s(&t("section-details")));
+    tr.set_section_fee_crypto(s(&t("section-fee-crypto")));
+    tr.set_section_tax(s(&t("section-tax")));
+
+    // Transaction summary
+    tr.set_tx_summary_buying(s(&t("tx-summary-buying")));
+    tr.set_tx_summary_selling(s(&t("tx-summary-selling")));
+    tr.set_tx_summary_swapping(s(&t("tx-summary-swapping")));
+    tr.set_tx_summary_moving(s(&t("tx-summary-moving")));
+    tr.set_tx_summary_receiving(s(&t("tx-summary-receiving")));
+    tr.set_tx_summary_sending(s(&t("tx-summary-sending")));
+    tr.set_tx_summary_at(s(&t("tx-summary-at")));
+    tr.set_tx_summary_per_coin(s(&t("tx-summary-per-coin")));
+    tr.set_tx_summary_to(s(&t("tx-summary-to")));
+    tr.set_tx_summary_from(s(&t("tx-summary-from")));
+
+    // Category tabs (type selector)
+    tr.set_tx_category_trade(s(&t("tx-category-trade")));
+    tr.set_tx_category_transfer(s(&t("tx-category-transfer")));
+    tr.set_tx_category_income(s(&t("tx-category-income")));
+    tr.set_tx_category_expense(s(&t("tx-category-expense")));
+
+    // Scenario labels (type selector sub-options)
+    tr.set_tx_scenario_deposit(s(&t("tx-scenario-deposit")));
+    tr.set_tx_scenario_withdrawal(s(&t("tx-scenario-withdrawal")));
+    tr.set_tx_scenario_interest(s(&t("tx-scenario-interest")));
+    tr.set_tx_scenario_gift(s(&t("tx-scenario-gift")));
+    tr.set_tx_scenario_reward(s(&t("tx-scenario-reward")));
+    tr.set_tx_scenario_other(s(&t("tx-scenario-other")));
+    tr.set_tx_scenario_payment(s(&t("tx-scenario-payment")));
+    tr.set_tx_scenario_donation(s(&t("tx-scenario-donation")));
+    tr.set_tx_scenario_fee(s(&t("tx-scenario-fee")));
+    tr.set_tx_scenario_lost(s(&t("tx-scenario-lost")));
+    tr.set_tx_scenario_stolen(s(&t("tx-scenario-stolen")));
 
     // Goal Modal
     tr.set_modal_new_goal(s(&t("modal-new-goal")));

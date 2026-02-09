@@ -157,6 +157,20 @@ crypto-tx-transfer-in = Entrada
 crypto-tx-transfer-out = Salida
 crypto-tx-swap = Intercambio
 
+# Transaction messages
+crypto-tx-added = Activo agregado exitosamente
+crypto-tx-transfer-added = Transferencia agregada exitosamente
+crypto-tx-swap-added = Intercambio agregado exitosamente
+crypto-tx-deleted = Transacción eliminada
+crypto-tx-wallet-required = Primero crea una billetera
+crypto-tx-two-wallets-required = Crea dos billeteras para mover activos
+crypto-tx-amount-required = El monto es obligatorio
+crypto-tx-price-required = El precio es obligatorio
+crypto-tx-coins-required = Agrega monedas en configuración primero
+crypto-tx-different-wallets = Selecciona dos billeteras distintas
+crypto-tx-to-amount-required = El monto de destino es obligatorio
+crypto-tx-swap-different-assets = Los activos del intercambio deben ser distintos
+
 # ==================== Habits ====================
 habits-title = HÁBITOS
 habits-my-habits = Mis Hábitos
@@ -652,6 +666,45 @@ modal-notes = NOTAS
 modal-transaction-details = Detalles de la transacción...
 modal-date = FECHA
 modal-search-coins = Buscar monedas...
+
+# Section labels (crypto transaction modal)
+section-asset-wallet = ACTIVO Y BILLETERA
+section-amount = MONTO
+section-advanced = AVANZADO
+section-details = DETALLES
+section-fee-crypto = COMISIONES EN CRYPTO
+section-tax = CLASIFICACIÓN TRIBUTARIA
+
+# Transaction summary
+tx-summary-buying = Comprando
+tx-summary-selling = Vendiendo
+tx-summary-swapping = Intercambiando
+tx-summary-moving = Moviendo
+tx-summary-receiving = Recibiendo
+tx-summary-sending = Enviando
+tx-summary-at = a
+tx-summary-per-coin = /moneda
+tx-summary-to = hacia
+tx-summary-from = desde
+
+# Category tabs (type selector)
+tx-category-trade = COMERCIO
+tx-category-transfer = TRANSFERENCIA
+tx-category-income = INGRESO
+tx-category-expense = GASTO
+
+# Scenario labels (type selector sub-options)
+tx-scenario-deposit = Deposito
+tx-scenario-withdrawal = Retiro
+tx-scenario-interest = Interes
+tx-scenario-gift = Regalo
+tx-scenario-reward = Recompensa
+tx-scenario-other = Otro
+tx-scenario-payment = Pago
+tx-scenario-donation = Donacion
+tx-scenario-fee = Comision
+tx-scenario-lost = Perdido
+tx-scenario-stolen = Robado
 
 # ==================== Goal Modal ====================
 modal-new-goal = NUEVA META

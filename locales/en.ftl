@@ -157,6 +157,20 @@ crypto-tx-transfer-in = Transfer In
 crypto-tx-transfer-out = Transfer Out
 crypto-tx-swap = Swap
 
+# Transaction messages
+crypto-tx-added = Asset added successfully
+crypto-tx-transfer-added = Transfer added successfully
+crypto-tx-swap-added = Swap added successfully
+crypto-tx-deleted = Transaction deleted
+crypto-tx-wallet-required = Please create a wallet first
+crypto-tx-two-wallets-required = Create two wallets to move assets
+crypto-tx-amount-required = Amount is required
+crypto-tx-price-required = Price is required
+crypto-tx-coins-required = Add coins in settings first
+crypto-tx-different-wallets = Pick two different wallets
+crypto-tx-to-amount-required = To amount is required
+crypto-tx-swap-different-assets = Swap assets must be different
+
 # ==================== Habits ====================
 habits-title = HABITS
 habits-my-habits = My Habits
@@ -652,6 +666,45 @@ modal-notes = NOTES
 modal-transaction-details = Transaction details...
 modal-date = DATE
 modal-search-coins = Search coins...
+
+# Section labels (crypto transaction modal)
+section-asset-wallet = ASSET & WALLET
+section-amount = AMOUNT
+section-advanced = ADVANCED
+section-details = DETAILS
+section-fee-crypto = FEES IN CRYPTO
+section-tax = TAX CLASSIFICATION
+
+# Transaction summary
+tx-summary-buying = Buying
+tx-summary-selling = Selling
+tx-summary-swapping = Swapping
+tx-summary-moving = Moving
+tx-summary-receiving = Receiving
+tx-summary-sending = Sending
+tx-summary-at = at
+tx-summary-per-coin = /coin
+tx-summary-to = to
+tx-summary-from = from
+
+# Category tabs (type selector)
+tx-category-trade = TRADE
+tx-category-transfer = TRANSFER
+tx-category-income = INCOME
+tx-category-expense = EXPENSE
+
+# Scenario labels (type selector sub-options)
+tx-scenario-deposit = Deposit
+tx-scenario-withdrawal = Withdrawal
+tx-scenario-interest = Interest
+tx-scenario-gift = Gift
+tx-scenario-reward = Reward
+tx-scenario-other = Other
+tx-scenario-payment = Payment
+tx-scenario-donation = Donation
+tx-scenario-fee = Fee
+tx-scenario-lost = Lost
+tx-scenario-stolen = Stolen
 
 # ==================== Goal Modal ====================
 modal-new-goal = NEW GOAL

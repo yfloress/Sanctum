@@ -16,7 +16,8 @@
 //
 
 // ==================== Edit Crypto Transaction Modal ====================
-// Premium Fintech UI - Transaction edit flow
+// Redesigned with visual sections, collapsible advanced area,
+// type-colored accents, and icon usage to match add modal style.
 
 import {
     AppState,
@@ -25,12 +26,19 @@ import {
 } from "../globals.slint";
 import { Theme } from "../theme.slint";
 import { Translations } from "../translations.slint";
-import { FormField } from "../components/transaction_form_components.slint";
+import {
+    FormField,
+    FormDropdown,
+    SectionDivider,
+    CollapsibleSection,
+} from "../components/transaction_form_components.slint";
 
 // ==================== ReadonlyField ====================
 component ReadonlyField inherits Rectangle {
     in property <string> label: "";
     in property <string> value: "";
+    in property <image> icon;
+    in property <bool> show-icon: false;
 
     height: 64px;
     background: transparent;
@@ -56,6 +64,15 @@ component ReadonlyField inherits Rectangle {
             HorizontalLayout {
                 padding-left: 16px;
                 padding-right: 16px;
+                spacing: 8px;
+
+                if root.show-icon: Image {
+                    source: root.icon;
+                    width: 14px;
+                    height: 14px;
+                    colorize: Theme.text-secondary;
+                    y: (parent.height - self.height) / 2;
+                }
 
                 Text {
                     text: root.value;
@@ -63,6 +80,92 @@ component ReadonlyField inherits Rectangle {
                     font-size: 14px;
                     font-weight: 400;
                     vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+            }
+        }
+    }
+}
+
+// ==================== TypeBadge ====================
+// A small colored badge showing the transaction type with icon
+component TypeBadge inherits Rectangle {
+    in property <string> tx-type: "";
+
+    property <string> display-type: root.tx-type == "buy" ? "BUY"
+        : root.tx-type == "sell" ? "SELL"
+        : root.tx-type == "transfer_in" ? "TRANSFER IN"
+        : root.tx-type == "transfer_out" ? "TRANSFER OUT"
+        : root.tx-type == "swap" ? "SWAP"
+        : root.tx-type;
+
+    property <color> type-color: root.tx-type == "buy" || root.tx-type == "transfer_in"
+        ? Theme.success
+        : root.tx-type == "sell" || root.tx-type == "transfer_out"
+            ? Theme.danger
+            : Theme.primary;
+
+    height: 64px;
+    background: transparent;
+
+    VerticalLayout {
+        spacing: 8px;
+
+        Text {
+            text: Translations.label-type;
+            color: Theme.text-muted;
+            font-size: 10px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
+        }
+
+        Rectangle {
+            height: 40px;
+            background: Theme.surface;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: root.type-color.with-alpha(0.3);
+
+            HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+                spacing: 10px;
+
+                Rectangle {
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 6px;
+                    background: root.type-color.with-alpha(0.12);
+                    y: (parent.height - self.height) / 2;
+
+                    Image {
+                        source: root.tx-type == "buy"
+                            ? @image-url("../assets/icons/trending-up.svg")
+                            : root.tx-type == "sell"
+                                ? @image-url("../assets/icons/trending-down.svg")
+                                : root.tx-type == "swap"
+                                    ? @image-url("../assets/icons/arrow-left-right.svg")
+                                    : root.tx-type == "transfer_in"
+                                        ? @image-url("../assets/icons/log-in.svg")
+                                        : root.tx-type == "transfer_out"
+                                            ? @image-url("../assets/icons/log-out.svg")
+                                            : @image-url("../assets/icons/arrow-right.svg");
+                        width: 12px;
+                        height: 12px;
+                        colorize: root.type-color;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
+                }
+
+                Text {
+                    text: root.display-type;
+                    color: root.type-color;
+                    font-size: 13px;
+                    font-weight: 600;
+                    letter-spacing: 1px;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
                 }
             }
         }
@@ -71,6 +174,15 @@ component ReadonlyField inherits Rectangle {
 
 // ==================== Main Modal ====================
 export component EditCryptoTransactionModal inherits Rectangle {
+    property <bool> show-advanced: false;
+
+    // Derived: type-specific accent color
+    property <color> type-accent: CryptoAdapter.edit-type == "buy" || CryptoAdapter.edit-type == "transfer_in"
+        ? Theme.success
+        : CryptoAdapter.edit-type == "sell" || CryptoAdapter.edit-type == "transfer_out"
+            ? Theme.danger
+            : Theme.primary;
+
     function reset() {
         CryptoAdapter.edit-tx-id = "";
         CryptoAdapter.edit-wallet-id = "";
@@ -89,6 +201,7 @@ export component EditCryptoTransactionModal inherits Rectangle {
         CryptoAdapter.edit-tax-subtype = "";
         CryptoAdapter.edit-override-proceeds = "";
         CryptoAdapter.edit-override-cost = "";
+        root.show-advanced = false;
     }
 
     init => {
@@ -97,12 +210,12 @@ export component EditCryptoTransactionModal inherits Rectangle {
 
     function submit() {
         if (CryptoAdapter.edit-amount == "") {
-            NotificationAdapter.show("Amount is required", true);
+            NotificationAdapter.show(Translations.crypto-tx-amount-required, true);
             return;
         }
-        let requires_price = CryptoAdapter.edit-type == "buy" || CryptoAdapter.edit-type == "sell";
-        if (requires_price && CryptoAdapter.edit-price == "") {
-            NotificationAdapter.show("Price is required", true);
+        let requires-price = CryptoAdapter.edit-type == "buy" || CryptoAdapter.edit-type == "sell";
+        if (requires-price && CryptoAdapter.edit-price == "") {
+            NotificationAdapter.show(Translations.crypto-tx-price-required, true);
             return;
         }
         let result = CryptoAdapter.update-transaction(
@@ -134,14 +247,13 @@ export component EditCryptoTransactionModal inherits Rectangle {
     height: 100%;
     background: transparent;
 
-    // Backdrop - captures all events to prevent scroll propagation
+    // ==================== Backdrop ====================
     Rectangle {
         width: 100%;
         height: 100%;
         background: Theme.overlay-bg;
         opacity: 1.0;
 
-        // Flickable with no scrolling blocks scroll events from propagating
         Flickable {
             width: 100%;
             height: 100%;
@@ -175,81 +287,133 @@ export component EditCryptoTransactionModal inherits Rectangle {
         }
     }
 
-    // Modal Panel
+    // ==================== Modal Panel ====================
     Rectangle {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
         width: min(Theme.modal-width-md, parent.width - 40px);
-        height: min(Theme.modal-height-compact, parent.height - 40px);
+        height: min(Theme.modal-height-lg, parent.height - 40px);
         background: @linear-gradient(180deg, Theme.sidebar-bg 0%, Theme.crypto-modal-gradient-end 100%);
         border-radius: 16px;
         border-width: 1px;
         border-color: Theme.border-light;
         drop-shadow-blur: 40px;
         drop-shadow-color: Theme.shadow-strong;
-        opacity: 1.0;
+        clip: true;
 
         TouchArea {
-            clicked => {
-                key-scope.focus();
-            }
+            width: parent.width;
+            height: parent.height;
+            clicked => { key-scope.focus(); }
         }
 
         VerticalLayout {
-            padding: 32px;
-            spacing: 20px;
+            padding: 0;
+            spacing: 0;
 
-            // Header
-            HorizontalLayout {
-                height: 32px;
+            // ==================== Header ====================
+            Rectangle {
+                height: 64px;
+                background: transparent;
 
-                HorizontalLayout {
-                    spacing: 12px;
-                    horizontal-stretch: 1;
-
-                    Rectangle {
-                        width: 4px;
-                        height: 20px;
-                        border-radius: 2px;
-                        background: @linear-gradient(180deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
-                        y: (parent.height - self.height) / 2;
-                    }
-
-                    Text {
-                        text: Translations.modal-edit-crypto-transaction;
-                        color: Theme.text-primary;
-                        font-size: 16px;
-                        font-weight: 500;
-                        letter-spacing: 2px;
-                        vertical-alignment: center;
-                    }
+                // Type-colored top accent line
+                Rectangle {
+                    x: 0;
+                    y: 0;
+                    width: parent.width;
+                    height: 2px;
+                    background: @linear-gradient(90deg,
+                        root.type-accent.with-alpha(0.0) 0%,
+                        root.type-accent.with-alpha(0.6) 30%,
+                        root.type-accent 50%,
+                        root.type-accent.with-alpha(0.6) 70%,
+                        root.type-accent.with-alpha(0.0) 100%);
                 }
 
-                Rectangle {
-                    width: 32px;
-                    height: 32px;
-                    border-radius: 8px;
-                    background: close-touch.has-hover ? Theme.surface-hover : transparent;
+                HorizontalLayout {
+                    padding-left: 28px;
+                    padding-right: 28px;
+                    padding-top: 10px;
 
-                    Text {
-                        text: "×";
-                        color: close-touch.has-hover ? Theme.text-primary : Theme.text-muted;
-                        font-size: 20px;
-                        font-weight: 300;
-                        vertical-alignment: center;
-                        horizontal-alignment: center;
+                    HorizontalLayout {
+                        spacing: 12px;
+                        horizontal-stretch: 1;
+
+                        // Accent bar
+                        Rectangle {
+                            width: 4px;
+                            height: 20px;
+                            border-radius: 2px;
+                            background: @linear-gradient(180deg,
+                                root.type-accent 0%,
+                                root.type-accent.with-alpha(0.5) 100%);
+                            y: (parent.height - self.height) / 2;
+                        }
+
+                        // Edit icon
+                        Rectangle {
+                            width: 28px;
+                            height: 28px;
+                            border-radius: 8px;
+                            background: root.type-accent.with-alpha(0.1);
+                            y: (parent.height - self.height) / 2;
+
+                            Image {
+                                source: @image-url("../assets/icons/pencil.svg");
+                                width: 14px;
+                                height: 14px;
+                                colorize: root.type-accent;
+                                x: (parent.width - self.width) / 2;
+                                y: (parent.height - self.height) / 2;
+                            }
+                        }
+
+                        Text {
+                            text: Translations.modal-edit-crypto-transaction;
+                            color: Theme.text-primary;
+                            font-size: 14px;
+                            font-weight: 600;
+                            letter-spacing: 1.8px;
+                            vertical-alignment: center;
+                        }
                     }
 
-                    close-touch := TouchArea {
-                        mouse-cursor: pointer;
-                        clicked => {
-                            root.reset();
-                            AppState.show-edit-crypto = false;
+                    // Close button
+                    Rectangle {
+                        width: 32px;
+                        height: 32px;
+                        border-radius: 8px;
+                        background: close-touch.has-hover ? Theme.surface-hover : transparent;
+                        y: (parent.height - self.height) / 2;
+
+                        Image {
+                            source: @image-url("../assets/icons/x.svg");
+                            width: 14px;
+                            height: 14px;
+                            colorize: close-touch.has-hover ? Theme.text-primary : Theme.text-muted;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                        }
+
+                        close-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                root.reset();
+                                AppState.show-edit-crypto = false;
+                            }
                         }
                     }
                 }
             }
 
+            // Header separator
+            Rectangle {
+                height: 1px;
+                background: Theme.border-subtle;
+                opacity: 0.4;
+            }
+
+            // ==================== Body ====================
             body := Flickable {
                 horizontal-stretch: 1;
                 vertical-stretch: 1;
@@ -257,28 +421,47 @@ export component EditCryptoTransactionModal inherits Rectangle {
                 TouchArea {
                     width: parent.width;
                     height: parent.height;
-                    clicked => {
-                        key-scope.focus();
-                    }
+                    clicked => { key-scope.focus(); }
                 }
 
                 VerticalLayout {
                     width: parent.width;
-                    spacing: 20px;
+                    padding: 28px;
+                    padding-top: 20px;
+                    spacing: 16px;
+
+                    // ==================== Section: Identity (Readonly) ====================
+                    SectionDivider {
+                        label: Translations.section-asset-wallet;
+                        icon: @image-url("../assets/icons/coins.svg");
+                    }
 
                     ReadonlyField {
                         label: Translations.crypto-wallet;
                         value: CryptoAdapter.edit-wallet-name;
+                        icon: @image-url("../assets/icons/wallet.svg");
+                        show-icon: true;
                     }
 
-                    ReadonlyField {
-                        label: Translations.crypto-assets;
-                        value: CryptoAdapter.edit-symbol;
+                    HorizontalLayout {
+                        spacing: 12px;
+
+                        ReadonlyField {
+                            label: Translations.crypto-assets;
+                            value: CryptoAdapter.edit-symbol;
+                            horizontal-stretch: 1;
+                        }
+
+                        TypeBadge {
+                            tx-type: CryptoAdapter.edit-type;
+                            horizontal-stretch: 1;
+                        }
                     }
 
-                    ReadonlyField {
-                        label: Translations.label-type;
-                        value: CryptoAdapter.edit-type;
+                    // ==================== Section: Amount ====================
+                    SectionDivider {
+                        label: Translations.section-amount;
+                        icon: @image-url("../assets/icons/dollar-sign.svg");
                     }
 
                     FormField {
@@ -286,21 +469,20 @@ export component EditCryptoTransactionModal inherits Rectangle {
                         placeholder: "0.00";
                         value <=> CryptoAdapter.edit-amount;
                         large: true;
-                        submit-shortcut => {
-                            root.submit();
-                        }
+                        submit-shortcut => { root.submit(); }
                     }
 
                     HorizontalLayout {
                         spacing: 12px;
+
                         FormField {
                             label: Translations.modal-price-usd;
-                            placeholder: (CryptoAdapter.edit-type == "transfer_in" || CryptoAdapter.edit-type == "transfer_out") ? Translations.modal-optional : Translations.modal-required;
+                            placeholder: (CryptoAdapter.edit-type == "transfer_in" || CryptoAdapter.edit-type == "transfer_out")
+                                ? Translations.modal-optional
+                                : Translations.modal-required;
                             value <=> CryptoAdapter.edit-price;
                             horizontal-stretch: 1;
-                            submit-shortcut => {
-                                root.submit();
-                            }
+                            submit-shortcut => { root.submit(); }
                         }
 
                         FormField {
@@ -308,141 +490,179 @@ export component EditCryptoTransactionModal inherits Rectangle {
                             placeholder: "0.00";
                             value <=> CryptoAdapter.edit-fee;
                             width: 120px;
-                            submit-shortcut => {
-                                root.submit();
+                            submit-shortcut => { root.submit(); }
+                        }
+                    }
+
+                    // ==================== Section: Advanced (Collapsible) ====================
+                    CollapsibleSection {
+                        label: Translations.section-advanced;
+                        icon: @image-url("../assets/icons/settings.svg");
+                        expanded <=> root.show-advanced;
+                    }
+
+                    if root.show-advanced: VerticalLayout {
+                        spacing: 16px;
+
+                        // Sub-section: Crypto fees
+                        SectionDivider {
+                            label: Translations.section-fee-crypto;
+                            icon: @image-url("../assets/icons/coins.svg");
+                        }
+
+                        HorizontalLayout {
+                            spacing: 12px;
+
+                            FormField {
+                                label: Translations.modal-fee-coin-optional;
+                                placeholder: Translations.modal-coingecko-id-placeholder;
+                                value <=> CryptoAdapter.edit-fee-coin-id;
+                                horizontal-stretch: 1;
+                                submit-shortcut => { root.submit(); }
+                            }
+
+                            FormField {
+                                label: Translations.modal-fee-amount;
+                                placeholder: "0.00";
+                                value <=> CryptoAdapter.edit-fee-coin-amount;
+                                width: 140px;
+                                submit-shortcut => { root.submit(); }
+                            }
+                        }
+
+                        // Sub-section: Tax classification
+                        SectionDivider {
+                            label: Translations.section-tax;
+                            icon: @image-url("../assets/icons/shield-check.svg");
+                        }
+
+                        HorizontalLayout {
+                            spacing: 12px;
+
+                            FormField {
+                                label: Translations.modal-tax-type;
+                                placeholder: Translations.modal-tax-type-placeholder;
+                                value <=> CryptoAdapter.edit-tax-type;
+                                horizontal-stretch: 1;
+                                submit-shortcut => { root.submit(); }
+                            }
+
+                            FormField {
+                                label: Translations.modal-tax-subtype;
+                                placeholder: Translations.modal-tax-subtype-placeholder;
+                                value <=> CryptoAdapter.edit-tax-subtype;
+                                horizontal-stretch: 1;
+                                submit-shortcut => { root.submit(); }
+                            }
+                        }
+
+                        // Sub-section: Overrides
+                        HorizontalLayout {
+                            spacing: 12px;
+
+                            FormField {
+                                label: Translations.modal-tax-override-proceeds;
+                                placeholder: Translations.modal-optional;
+                                value <=> CryptoAdapter.edit-override-proceeds;
+                                horizontal-stretch: 1;
+                                submit-shortcut => { root.submit(); }
+                            }
+
+                            FormField {
+                                label: Translations.modal-tax-override-cost;
+                                placeholder: Translations.modal-optional;
+                                value <=> CryptoAdapter.edit-override-cost;
+                                horizontal-stretch: 1;
+                                submit-shortcut => { root.submit(); }
                             }
                         }
                     }
 
-                    HorizontalLayout {
-                        spacing: 12px;
-                        FormField {
-                            label: Translations.modal-fee-coin-optional;
-                            placeholder: Translations.modal-coingecko-id-placeholder;
-                            value <=> CryptoAdapter.edit-fee-coin-id;
-                            horizontal-stretch: 1;
-                            submit-shortcut => {
-                                root.submit();
-                            }
-                        }
-
-                        FormField {
-                            label: Translations.modal-fee-amount;
-                            placeholder: "0.00";
-                            value <=> CryptoAdapter.edit-fee-coin-amount;
-                            width: 140px;
-                            submit-shortcut => {
-                                root.submit();
-                            }
-                        }
+                    // ==================== Section: Details ====================
+                    SectionDivider {
+                        label: Translations.section-details;
+                        icon: @image-url("../assets/icons/file-text.svg");
                     }
 
                     FormField {
                         label: Translations.modal-notes;
                         placeholder: Translations.modal-transaction-details;
                         value <=> CryptoAdapter.edit-notes;
-                        submit-shortcut => {
-                            root.submit();
-                        }
-                    }
-
-                    Text {
-                        text: Translations.crypto-tax-advanced;
-                        color: Theme.text-muted;
-                        font-size: 10px;
-                        font-weight: 600;
-                        letter-spacing: 1.6px;
-                    }
-
-                    HorizontalLayout {
-                        spacing: 12px;
-                        FormField {
-                            label: Translations.modal-tax-type;
-                            placeholder: Translations.modal-tax-type-placeholder;
-                            value <=> CryptoAdapter.edit-tax-type;
-                            horizontal-stretch: 1;
-                            submit-shortcut => {
-                                root.submit();
-                            }
-                        }
-
-                        FormField {
-                            label: Translations.modal-tax-subtype;
-                            placeholder: Translations.modal-tax-subtype-placeholder;
-                            value <=> CryptoAdapter.edit-tax-subtype;
-                            horizontal-stretch: 1;
-                            submit-shortcut => {
-                                root.submit();
-                            }
-                        }
-                    }
-
-                    HorizontalLayout {
-                        spacing: 12px;
-                        FormField {
-                            label: Translations.modal-tax-override-proceeds;
-                            placeholder: Translations.modal-optional;
-                            value <=> CryptoAdapter.edit-override-proceeds;
-                            horizontal-stretch: 1;
-                            submit-shortcut => {
-                                root.submit();
-                            }
-                        }
-
-                        FormField {
-                            label: Translations.modal-tax-override-cost;
-                            placeholder: Translations.modal-optional;
-                            value <=> CryptoAdapter.edit-override-cost;
-                            horizontal-stretch: 1;
-                            submit-shortcut => {
-                                root.submit();
-                            }
-                        }
+                        submit-shortcut => { root.submit(); }
                     }
 
                     FormField {
                         label: Translations.modal-date;
                         placeholder: Translations.form-date-format;
                         value <=> CryptoAdapter.edit-date;
-                        submit-shortcut => {
-                            root.submit();
-                        }
+                        submit-shortcut => { root.submit(); }
                     }
 
-                    Rectangle {
-                        height: 8px;
-                    }
+                    // Bottom spacing
+                    Rectangle { height: 4px; }
                 }
             }
 
-            // Submit Button
+            // Footer separator
             Rectangle {
-                height: 48px;
-                background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
-                border-radius: 10px;
+                height: 1px;
+                background: Theme.border-subtle;
+                opacity: 0.4;
+            }
 
-                Text {
-                    text: Translations.modal-save-changes;
-                    color: Theme.text-light;
-                    font-size: 12px;
-                    font-weight: 600;
-                    letter-spacing: 2px;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
+            // ==================== Submit Button ====================
+            Rectangle {
+                height: 72px;
+                background: transparent;
 
-                submit-touch := TouchArea {
-                    mouse-cursor: pointer;
-                    clicked => {
-                        root.submit();
+                HorizontalLayout {
+                    padding-left: 28px;
+                    padding-right: 28px;
+                    padding-top: 12px;
+                    padding-bottom: 12px;
+
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        height: 48px;
+                        border-radius: 10px;
+                        background: @linear-gradient(135deg,
+                            root.type-accent 0%,
+                            root.type-accent.with-alpha(0.7) 100%);
+
+                        HorizontalLayout {
+                            alignment: center;
+                            spacing: 8px;
+
+                            Image {
+                                source: @image-url("../assets/icons/check.svg");
+                                width: 14px;
+                                height: 14px;
+                                colorize: Theme.text-light;
+                                y: (parent.height - self.height) / 2;
+                            }
+
+                            Text {
+                                text: Translations.modal-save-changes;
+                                color: Theme.text-light;
+                                font-size: 12px;
+                                font-weight: 600;
+                                letter-spacing: 2px;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        submit-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.submit(); }
+                        }
+
+                        states [
+                            hover when submit-touch.has-hover: {
+                                opacity: 0.85;
+                            }
+                        ]
                     }
                 }
-
-                states [
-                    hover when submit-touch.has-hover: {
-                        opacity: 0.9;
-                    }
-                ]
             }
         }
     }

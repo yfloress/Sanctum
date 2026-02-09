@@ -15,8 +15,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
 //
 
-// ==================== Add Crypto Asset Modal ====================
-// Premium Fintech UI - Asset registration flow
+// ==================== Add Crypto Transaction Modal ====================
+// Redesigned with visual sections, collapsible advanced area,
+// transaction summary, type-colored accents, and icon usage.
 
 import {
     AppState,
@@ -27,11 +28,133 @@ import { Theme } from "../theme.slint";
 import { Translations } from "../translations.slint";
 import {
     FormField,
-    FormDropdown,
     TypeSelector,
     WalletSelector,
     CoinSelector,
+    SectionDivider,
+    CollapsibleSection,
 } from "../components/transaction_form_components.slint";
+
+// ==================== Transaction Summary Card ====================
+component TransactionSummary inherits Rectangle {
+    in property <string> tx-type: "buy";
+    in property <string> tax-category: "trade";
+    in property <string> tax-scenario: "";
+    in property <string> amount: "";
+    in property <string> price: "";
+    in property <string> fee: "";
+    in property <string> coin-symbol: "";
+    in property <string> swap-amount: "";
+    in property <string> swap-symbol: "";
+    in property <string> from-wallet: "";
+    in property <string> to-wallet: "";
+
+    property <bool> has-data: root.amount != "" && root.amount != "0";
+
+    height: has-data ? 64px : 0px;
+    background: transparent;
+    opacity: has-data ? 1.0 : 0.0;
+    clip: true;
+
+    animate height { duration: 200ms; easing: ease-in-out; }
+    animate opacity { duration: 200ms; }
+
+    // Derived: summary accent color based on category
+    property <color> summary-color:
+        root.tax-category == "income" || root.tx-type == "buy"
+            ? Theme.success
+        : root.tax-category == "expense" || root.tx-type == "sell"
+            ? Theme.danger
+        : Theme.primary;
+
+    if has-data: Rectangle {
+        width: parent.width;
+        height: 60px;
+        background: Theme.surface;
+        border-radius: 10px;
+        border-width: 1px;
+        border-color: root.summary-color.with-alpha(0.2);
+
+        HorizontalLayout {
+            padding-left: 16px;
+            padding-right: 16px;
+            spacing: 10px;
+
+            // Icon
+            Rectangle {
+                width: 32px;
+                height: 32px;
+                y: (parent.height - self.height) / 2;
+                border-radius: 8px;
+                background: root.summary-color.with-alpha(0.12);
+
+                Image {
+                    source: root.tx-type == "buy" || root.tax-category == "income"
+                        ? @image-url("../assets/icons/trending-up.svg")
+                        : root.tx-type == "sell" || root.tax-category == "expense"
+                            ? @image-url("../assets/icons/trending-down.svg")
+                            : root.tx-type == "swap"
+                                ? @image-url("../assets/icons/arrow-left-right.svg")
+                                : @image-url("../assets/icons/arrow-right.svg");
+                    width: 16px;
+                    height: 16px;
+                    colorize: root.summary-color;
+                    x: (parent.width - self.width) / 2;
+                    y: (parent.height - self.height) / 2;
+                }
+            }
+
+            // Summary text
+            VerticalLayout {
+                horizontal-stretch: 1;
+                alignment: center;
+                spacing: 2px;
+
+                // Primary line
+                Text {
+                    text: root.tx-type == "buy"
+                            ? Translations.tx-summary-buying + " " + root.amount + " " + root.coin-symbol
+                        : root.tx-type == "sell"
+                            ? Translations.tx-summary-selling + " " + root.amount + " " + root.coin-symbol
+                        : root.tx-type == "swap"
+                            ? root.amount + " " + root.coin-symbol + "  ->  " + root.swap-amount + " " + root.swap-symbol
+                        : root.tx-type == "move"
+                            ? Translations.tx-summary-moving + " " + root.amount + " " + root.coin-symbol
+                        : root.tax-category == "income" && root.tax-scenario != ""
+                            ? root.tax-scenario + "  ·  " + root.amount + " " + root.coin-symbol
+                        : root.tax-category == "expense" && root.tax-scenario != ""
+                            ? root.tax-scenario + "  ·  " + root.amount + " " + root.coin-symbol
+                        : root.tx-type == "transfer_in"
+                            ? Translations.tx-summary-receiving + " " + root.amount + " " + root.coin-symbol
+                        : Translations.tx-summary-sending + " " + root.amount + " " + root.coin-symbol;
+                    color: Theme.text-primary;
+                    font-size: 13px;
+                    font-weight: 500;
+                    overflow: elide;
+                }
+
+                // Secondary line
+                Text {
+                    text: (root.tx-type == "buy" || root.tx-type == "sell") && root.price != ""
+                            ? Translations.tx-summary-at + " $" + root.price + Translations.tx-summary-per-coin
+                                + (root.fee != "" && root.fee != "0" ? "  +  $" + root.fee + " fee" : "")
+                        : root.tx-type == "move"
+                            ? root.from-wallet + "  ->  " + root.to-wallet
+                        : (root.tax-category == "income" || root.tax-category == "expense") && root.price != ""
+                            ? "FMV $" + root.price + Translations.tx-summary-per-coin
+                                + (root.fee != "" && root.fee != "0" ? "  +  $" + root.fee + " fee" : "")
+                        : root.fee != "" && root.fee != "0"
+                            ? "$" + root.fee + " fee"
+                        : "";
+                    color: Theme.text-secondary;
+                    font-size: 11px;
+                    font-weight: 400;
+                    overflow: elide;
+                }
+            }
+        }
+    }
+}
 
 // ==================== Main Modal ====================
 export component AddCryptoTransactionModal inherits Rectangle {
@@ -41,6 +164,9 @@ export component AddCryptoTransactionModal inherits Rectangle {
     property <string> notes: "";
     property <string> date: AppState.current-date;
     property <string> selected-type: "buy";
+    property <string> selected-category: "trade";
+    property <string> tax-type: "trade";
+    property <string> tax-subtype: "buy";
     property <int> wallet-index: 0;
     property <int> wallet-index-to: 0;
     property <int> coin-index: 0;
@@ -49,13 +175,35 @@ export component AddCryptoTransactionModal inherits Rectangle {
     property <string> swap-amount: "";
     property <int> swap-coin-index: 0;
     property <string> move-amount: "";
-    property <string> tax-type: "";
-    property <string> tax-subtype: "";
+    property <bool> show-advanced: false;
+
+    // Derived: type-specific accent color (from category)
+    property <color> type-accent: root.selected-category == "income"
+        ? Theme.success
+        : root.selected-category == "expense"
+            ? Theme.danger
+            : root.selected-type == "buy"
+                ? Theme.success
+                : root.selected-type == "sell"
+                    ? Theme.danger
+                    : Theme.primary;
+
+    // Derived: safe coin symbols for summary
+    property <int> safe-coin-idx: root.coin-index >= CryptoAdapter.coin-catalog.length ? 0 : root.coin-index;
+    property <string> current-coin-symbol: CryptoAdapter.coin-catalog.length > 0
+        ? CryptoAdapter.coin-catalog[root.safe-coin-idx].symbol : "";
+    property <int> safe-swap-idx: root.swap-coin-index >= CryptoAdapter.coin-catalog.length ? 0 : root.swap-coin-index;
+    property <string> swap-coin-symbol: CryptoAdapter.coin-catalog.length > 0
+        ? CryptoAdapter.coin-catalog[root.safe-swap-idx].symbol : "";
+
+    // Derived: wallet names for summary
+    property <string> from-wallet-name: CryptoAdapter.wallet-list.length > 0 && root.wallet-index < CryptoAdapter.wallet-list.length
+        ? CryptoAdapter.wallet-list[root.wallet-index].name : "";
+    property <string> to-wallet-name: CryptoAdapter.wallet-list.length > 0 && root.wallet-index-to < CryptoAdapter.wallet-list.length
+        ? CryptoAdapter.wallet-list[root.wallet-index-to].name : "";
 
     function update-swap-quote() {
-        if (selected-type != "swap") {
-            return;
-        }
+        if (selected-type != "swap") { return; }
         if (amount == "" || CryptoAdapter.coin-catalog.length == 0) {
             swap-amount = "";
             return;
@@ -64,15 +212,12 @@ export component AddCryptoTransactionModal inherits Rectangle {
         let swap-safe-index = swap-coin-index >= CryptoAdapter.coin-catalog.length ? 0 : swap-coin-index;
         let from-coin-id = CryptoAdapter.coin-catalog[safe-index].id;
         let to-coin-id = CryptoAdapter.coin-catalog[swap-safe-index].id;
-
         let quote = CryptoAdapter.get-swap-quote(from-coin-id, to-coin-id, amount);
         swap-amount = quote;
     }
 
     function refresh-price-from-coin() {
-        if (selected-type != "buy" && selected-type != "sell") {
-            return;
-        }
+        if (selected-type != "buy" && selected-type != "sell") { return; }
         if (CryptoAdapter.coin-catalog.length == 0) {
             price = "";
             return;
@@ -89,9 +234,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
 
     swap-quote-timer := Timer {
         interval: 1200ms;
-        triggered => {
-            root.update-swap-quote();
-        }
+        triggered => { root.update-swap-quote(); }
     }
 
     init => {
@@ -112,6 +255,9 @@ export component AddCryptoTransactionModal inherits Rectangle {
         notes = "";
         date = AppState.current-date;
         selected-type = "buy";
+        selected-category = "trade";
+        tax-type = "trade";
+        tax-subtype = "buy";
         wallet-index = CryptoAdapter.default-wallet-index;
         wallet-index-to = 0;
         coin-index = CryptoAdapter.default-coin-index;
@@ -119,63 +265,56 @@ export component AddCryptoTransactionModal inherits Rectangle {
         swap-amount = "";
         swap-coin-index = 0;
         move-amount = "";
-        tax-type = "";
-        tax-subtype = "";
+        show-advanced = false;
         CryptoAdapter.filter-coin-catalog("");
         root.refresh-price-from-coin();
     }
 
     changed selected-type => {
-        if (selected-type == "swap") {
-            root.update-swap-quote();
-        }
+        if (selected-type == "swap") { root.update-swap-quote(); }
         if (selected-type == "move") {
-            // Ensure TO wallet is different from FROM wallet
             if (CryptoAdapter.wallet-list.length > 1) {
                 wallet-index-to = wallet-index == 0 ? 1 : 0;
             }
         }
+        // tax-type and tax-subtype are now set by the TypeSelector directly
         root.refresh-price-from-coin();
     }
 
     changed wallet-index => {
-        // If in move mode, ensure TO wallet doesn't match FROM wallet
         if (selected-type == "move" && wallet-index == wallet-index-to && CryptoAdapter.wallet-list.length > 1) {
             wallet-index-to = wallet-index == 0 ? 1 : 0;
         }
     }
 
     changed coin-index => {
-        if (fee-coin-amount == "") {
-            fee-coin-index = coin-index;
-        }
+        if (fee-coin-amount == "") { fee-coin-index = coin-index; }
         root.update-swap-quote();
         root.refresh-price-from-coin();
     }
+
     changed swap-coin-index => {
         root.update-swap-quote();
     }
 
     function submit() {
         if (CryptoAdapter.wallet-list.length == 0) {
-            NotificationAdapter.show("Please create a wallet first", true);
+            NotificationAdapter.show(Translations.crypto-tx-wallet-required, true);
             return;
         }
         if (selected-type == "move" && CryptoAdapter.wallet-list.length < 2) {
-            NotificationAdapter.show("Create two wallets to move assets", true);
+            NotificationAdapter.show(Translations.crypto-tx-two-wallets-required, true);
             return;
         }
         if (amount == "") {
-            NotificationAdapter.show("Amount is required", true);
+            NotificationAdapter.show(Translations.crypto-tx-amount-required, true);
             return;
         }
         if (CryptoAdapter.coin-catalog.length == 0) {
-            NotificationAdapter.show("Add coins in settings first", true);
+            NotificationAdapter.show(Translations.crypto-tx-coins-required, true);
             return;
         }
-        if (wallet-index >= CryptoAdapter.wallet-list.length) {
-            wallet-index = 0;
-        }
+        if (wallet-index >= CryptoAdapter.wallet-list.length) { wallet-index = 0; }
         let wallet-id = CryptoAdapter.wallet-list[wallet-index].id;
         let safe-index = coin-index >= CryptoAdapter.coin-catalog.length ? 0 : coin-index;
         let from-coin-id = CryptoAdapter.coin-catalog[safe-index].id;
@@ -184,29 +323,17 @@ export component AddCryptoTransactionModal inherits Rectangle {
         let fee-coin-id = CryptoAdapter.coin-catalog[fee-safe-index].id;
 
         if (selected-type == "move") {
-            if (wallet-index-to >= CryptoAdapter.wallet-list.length) {
-                wallet-index-to = 0;
-            }
+            if (wallet-index-to >= CryptoAdapter.wallet-list.length) { wallet-index-to = 0; }
             let to-wallet-id = CryptoAdapter.wallet-list[wallet-index-to].id;
             if (wallet-id == to-wallet-id) {
-                NotificationAdapter.show("Pick two different wallets", true);
+                NotificationAdapter.show(Translations.crypto-tx-different-wallets, true);
                 return;
             }
             let to-amount = move-amount == "" ? amount : move-amount;
-
             let result = CryptoAdapter.add-transfer(
-                wallet-id,
-                to-wallet-id,
-                from-coin-id,
-                from-symbol,
-                amount,
-                to-amount,
-                fee,
-                fee-coin-id,
-                fee-coin-amount,
-                date,
-                notes);
-
+                wallet-id, to-wallet-id, from-coin-id, from-symbol,
+                amount, to-amount, fee, fee-coin-id, fee-coin-amount,
+                date, notes);
             if (result == "") {
                 root.reset();
                 AppState.show-add-crypto = false;
@@ -219,31 +346,20 @@ export component AddCryptoTransactionModal inherits Rectangle {
         }
         if (selected-type == "swap") {
             if (swap-amount == "") {
-                NotificationAdapter.show("To amount is required", true);
+                NotificationAdapter.show(Translations.crypto-tx-to-amount-required, true);
                 return;
             }
             let swap-safe-index = swap-coin-index >= CryptoAdapter.coin-catalog.length ? 0 : swap-coin-index;
             let to-coin-id = CryptoAdapter.coin-catalog[swap-safe-index].id;
             let to-symbol = CryptoAdapter.coin-catalog[swap-safe-index].symbol;
-
             if (from-coin-id == to-coin-id) {
-                NotificationAdapter.show("Swap assets must be different", true);
+                NotificationAdapter.show(Translations.crypto-tx-swap-different-assets, true);
                 return;
             }
             let result = CryptoAdapter.add-swap(
-                wallet-id,
-                from-coin-id,
-                from-symbol,
-                amount,
-                to-coin-id,
-                to-symbol,
-                swap-amount,
-                fee,
-                fee-coin-id,
-                fee-coin-amount,
-                date,
-                notes);
-
+                wallet-id, from-coin-id, from-symbol, amount,
+                to-coin-id, to-symbol, swap-amount, fee,
+                fee-coin-id, fee-coin-amount, date, notes);
             if (result == "") {
                 root.reset();
                 AppState.show-add-crypto = false;
@@ -255,22 +371,9 @@ export component AddCryptoTransactionModal inherits Rectangle {
             return;
         }
         let result = CryptoAdapter.add-transaction(
-            wallet-id,
-            from-coin-id,
-            from-symbol,
-            selected-type,
-            amount,
-            price,
-            fee,
-            fee-coin-id,
-            fee-coin-amount,
-            date,
-            notes,
-            tax-type,
-            tax-subtype,
-            "",
-            "");
-
+            wallet-id, from-coin-id, from-symbol, selected-type,
+            amount, price, fee, fee-coin-id, fee-coin-amount,
+            date, notes, tax-type, tax-subtype, "", "");
         if (result == "") {
             root.reset();
             AppState.show-add-crypto = false;
@@ -285,14 +388,13 @@ export component AddCryptoTransactionModal inherits Rectangle {
     height: 100%;
     background: transparent;
 
-    // Backdrop - captures all events to prevent scroll propagation
+    // ==================== Backdrop ====================
     Rectangle {
         width: 100%;
         height: 100%;
         background: Theme.overlay-bg;
         opacity: 1.0;
 
-        // Flickable with no scrolling blocks scroll events from propagating
         Flickable {
             width: 100%;
             height: 100%;
@@ -326,7 +428,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
         }
     }
 
-    // Modal Panel
+    // ==================== Modal Panel ====================
     Rectangle {
         x: (parent.width - self.width) / 2;
         y: (parent.height - self.height) / 2;
@@ -338,72 +440,137 @@ export component AddCryptoTransactionModal inherits Rectangle {
         border-color: Theme.border-light;
         drop-shadow-blur: 40px;
         drop-shadow-color: Theme.shadow-strong;
-        opacity: 1.0;
+        clip: true;
 
-        // Block all pointer events from propagating to backdrop
         TouchArea {
             width: parent.width;
             height: parent.height;
-            clicked => {
-                key-scope.focus();
-            }
+            clicked => { key-scope.focus(); }
         }
 
         VerticalLayout {
-            padding: 32px;
-            spacing: 20px;
+            padding: 0;
+            spacing: 0;
 
-            // Header
-            HorizontalLayout {
-                height: 32px;
+            // ==================== Header ====================
+            Rectangle {
+                height: 64px;
+                background: transparent;
 
-                HorizontalLayout {
-                    spacing: 12px;
-                    horizontal-stretch: 1;
+                // Type-colored top accent line
+                Rectangle {
+                    x: 0;
+                    y: 0;
+                    width: parent.width;
+                    height: 2px;
+                    background: @linear-gradient(90deg,
+                        root.type-accent.with-alpha(0.0) 0%,
+                        root.type-accent.with-alpha(0.6) 30%,
+                        root.type-accent 50%,
+                        root.type-accent.with-alpha(0.6) 70%,
+                        root.type-accent.with-alpha(0.0) 100%);
 
-                    Rectangle {
-                        width: 4px;
-                        height: 20px;
-                        border-radius: 2px;
-                        background: @linear-gradient(180deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
-                        y: (parent.height - self.height) / 2;
-                    }
-
-                    Text {
-                        text: Translations.modal-new-crypto-transaction;
-                        color: Theme.text-primary;
-                        font-size: 16px;
-                        font-weight: 500;
-                        letter-spacing: 2px;
-                        vertical-alignment: center;
-                    }
+                    animate background { duration: 300ms; }
                 }
 
-                Rectangle {
-                    width: 32px;
-                    height: 32px;
-                    border-radius: 8px;
-                    background: close-touch.has-hover ? Theme.surface-hover : transparent;
+                HorizontalLayout {
+                    padding-left: 28px;
+                    padding-right: 28px;
+                    padding-top: 10px;
 
-                    Text {
-                        text: "×";
-                        color: close-touch.has-hover ? Theme.text-primary : Theme.text-muted;
-                        font-size: 20px;
-                        font-weight: 300;
-                        vertical-alignment: center;
-                        horizontal-alignment: center;
+                    HorizontalLayout {
+                        spacing: 12px;
+                        horizontal-stretch: 1;
+
+                        // Accent bar
+                        Rectangle {
+                            width: 4px;
+                            height: 20px;
+                            border-radius: 2px;
+                            background: @linear-gradient(180deg,
+                                root.type-accent 0%,
+                                root.type-accent.with-alpha(0.5) 100%);
+                            y: (parent.height - self.height) / 2;
+
+                            animate background { duration: 300ms; }
+                        }
+
+                        // Type icon
+                        Rectangle {
+                            width: 28px;
+                            height: 28px;
+                            border-radius: 8px;
+                            background: root.type-accent.with-alpha(0.1);
+                            y: (parent.height - self.height) / 2;
+
+                            animate background { duration: 300ms; }
+
+                            Image {
+                                source: root.selected-type == "buy"
+                                    ? @image-url("../assets/icons/trending-up.svg")
+                                    : root.selected-type == "sell"
+                                        ? @image-url("../assets/icons/trending-down.svg")
+                                        : root.selected-type == "swap"
+                                            ? @image-url("../assets/icons/arrow-left-right.svg")
+                                            : root.selected-type == "move"
+                                                ? @image-url("../assets/icons/arrow-right.svg")
+                                                : root.selected-type == "transfer_in"
+                                                    ? @image-url("../assets/icons/log-in.svg")
+                                                    : @image-url("../assets/icons/log-out.svg");
+                                width: 14px;
+                                height: 14px;
+                                colorize: root.type-accent;
+                                x: (parent.width - self.width) / 2;
+                                y: (parent.height - self.height) / 2;
+                            }
+                        }
+
+                        Text {
+                            text: Translations.modal-new-crypto-transaction;
+                            color: Theme.text-primary;
+                            font-size: 14px;
+                            font-weight: 600;
+                            letter-spacing: 1.8px;
+                            vertical-alignment: center;
+                        }
                     }
 
-                    close-touch := TouchArea {
-                        mouse-cursor: pointer;
-                        clicked => {
-                            root.reset();
-                            AppState.show-add-crypto = false;
+                    // Close button
+                    Rectangle {
+                        width: 32px;
+                        height: 32px;
+                        border-radius: 8px;
+                        background: close-touch.has-hover ? Theme.surface-hover : transparent;
+                        y: (parent.height - self.height) / 2;
+
+                        Image {
+                            source: @image-url("../assets/icons/x.svg");
+                            width: 14px;
+                            height: 14px;
+                            colorize: close-touch.has-hover ? Theme.text-primary : Theme.text-muted;
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                        }
+
+                        close-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                root.reset();
+                                AppState.show-add-crypto = false;
+                            }
                         }
                     }
                 }
             }
 
+            // Header separator
+            Rectangle {
+                height: 1px;
+                background: Theme.border-subtle;
+                opacity: 0.4;
+            }
+
+            // ==================== Body ====================
             body := Flickable {
                 horizontal-stretch: 1;
                 vertical-stretch: 1;
@@ -411,23 +578,34 @@ export component AddCryptoTransactionModal inherits Rectangle {
                 TouchArea {
                     width: parent.width;
                     height: parent.height;
-                    clicked => {
-                        key-scope.focus();
-                    }
+                    clicked => { key-scope.focus(); }
                 }
 
                 VerticalLayout {
                     width: parent.width;
-                    spacing: 20px;
+                    padding: 28px;
+                    padding-top: 20px;
+                    spacing: 16px;
 
-                    // Type Toggle
+                    // ==================== Type Selector ====================
                     TypeSelector {
                         selected-type <=> root.selected-type;
+                        selected-category <=> root.selected-category;
+                        tax-type <=> root.tax-type;
+                        tax-subtype <=> root.tax-subtype;
+                    }
+
+                    // ==================== Section: Asset & Wallet ====================
+                    SectionDivider {
+                        label: Translations.section-asset-wallet;
+                        icon: @image-url("../assets/icons/coins.svg");
                     }
 
                     // Coin Selector (From)
                     CoinSelector {
-                        label: root.selected-type == "swap" ? Translations.modal-from-asset : Translations.modal-cryptocurrency;
+                        label: root.selected-type == "swap"
+                            ? Translations.modal-from-asset
+                            : Translations.modal-cryptocurrency;
                         selected-index <=> root.coin-index;
                         selected(idx, name) => {
                             root.refresh-price-from-coin();
@@ -440,12 +618,35 @@ export component AddCryptoTransactionModal inherits Rectangle {
                         selected-index <=> root.swap-coin-index;
                     }
 
-                    // Wallet Selector
+                    // Wallet Selector(s)
                     if root.selected-type == "move": VerticalLayout {
                         spacing: 12px;
+
                         WalletSelector {
                             label: Translations.modal-from-wallet;
                             selected-index <=> root.wallet-index;
+                        }
+
+                        // Arrow indicator between wallets
+                        HorizontalLayout {
+                            alignment: center;
+                            height: 20px;
+
+                            Rectangle {
+                                width: 24px;
+                                height: 24px;
+                                border-radius: 12px;
+                                background: Theme.primary.with-alpha(0.1);
+
+                                Image {
+                                    source: @image-url("../assets/icons/arrow-down.svg");
+                                    width: 12px;
+                                    height: 12px;
+                                    colorize: Theme.primary;
+                                    x: (parent.width - self.width) / 2;
+                                    y: (parent.height - self.height) / 2;
+                                }
+                            }
                         }
 
                         WalletSelector {
@@ -453,11 +654,12 @@ export component AddCryptoTransactionModal inherits Rectangle {
                             selected-index <=> root.wallet-index-to;
                         }
                     }
+
                     if root.selected-type != "move": WalletSelector {
                         selected-index <=> root.wallet-index;
                     }
 
-                    // Warning if no wallets
+                    // Warning: no wallets
                     if CryptoAdapter.wallet-list.length == 0: Rectangle {
                         height: 40px;
                         background: Theme.warning-bg;
@@ -470,11 +672,12 @@ export component AddCryptoTransactionModal inherits Rectangle {
                             padding-right: 12px;
                             spacing: 8px;
 
-                            Text {
-                                text: "⚠";
-                                color: Theme.danger;
-                                font-size: 14px;
-                                vertical-alignment: center;
+                            Image {
+                                source: @image-url("../assets/icons/triangle-alert.svg");
+                                width: 14px;
+                                height: 14px;
+                                colorize: Theme.danger;
+                                y: (parent.height - self.height) / 2;
                             }
 
                             Text {
@@ -486,6 +689,8 @@ export component AddCryptoTransactionModal inherits Rectangle {
                             }
                         }
                     }
+
+                    // Warning: need 2 wallets for move
                     if root.selected-type == "move" && CryptoAdapter.wallet-list.length < 2: Rectangle {
                         height: 40px;
                         background: Theme.warning-bg;
@@ -498,11 +703,12 @@ export component AddCryptoTransactionModal inherits Rectangle {
                             padding-right: 12px;
                             spacing: 8px;
 
-                            Text {
-                                text: "⚠";
-                                color: Theme.danger;
-                                font-size: 14px;
-                                vertical-alignment: center;
+                            Image {
+                                source: @image-url("../assets/icons/triangle-alert.svg");
+                                width: 14px;
+                                height: 14px;
+                                colorize: Theme.danger;
+                                y: (parent.height - self.height) / 2;
                             }
 
                             Text {
@@ -515,13 +721,23 @@ export component AddCryptoTransactionModal inherits Rectangle {
                         }
                     }
 
-                    // Amount Field
+                    // ==================== Section: Amount ====================
+                    SectionDivider {
+                        label: Translations.section-amount;
+                        icon: @image-url("../assets/icons/dollar-sign.svg");
+                    }
+
+                    // Amount Field (From)
                     FormField {
-                        label: root.selected-type == "swap" || root.selected-type == "move" ? Translations.modal-from-amount : Translations.label-amount;
+                        label: root.selected-type == "swap" || root.selected-type == "move"
+                            ? Translations.modal-from-amount
+                            : Translations.label-amount;
                         placeholder: "0.00";
                         value <=> root.amount;
                         large: true;
-                        show-all-button: root.selected-type == "sell" || root.selected-type == "swap" || root.selected-type == "move";
+                        show-all-button: root.selected-type == "sell"
+                            || root.selected-type == "swap"
+                            || root.selected-type == "move";
                         edited => {
                             if (root.selected-type == "swap") {
                                 root.update-swap-quote();
@@ -535,190 +751,202 @@ export component AddCryptoTransactionModal inherits Rectangle {
                             let safe-coin-idx = coin-index >= CryptoAdapter.coin-catalog.length ? 0 : coin-index;
                             let wallet-id = CryptoAdapter.wallet-list[safe-wallet-idx].id;
                             let coin-id = CryptoAdapter.coin-catalog[safe-coin-idx].id;
-
-                            // Use AppState.current-date for today's balance
                             let balance = CryptoAdapter.get-available-balance(wallet-id, coin-id, AppState.current-date);
                             root.amount = balance;
-
                             if (root.selected-type == "swap") {
                                 root.update-swap-quote();
                             }
                         }
-                        submit-shortcut => {
-                            root.submit();
-                        }
+                        submit-shortcut => { root.submit(); }
                     }
 
+                    // Swap: To Amount
                     if root.selected-type == "swap": FormField {
                         label: Translations.modal-to-amount;
                         placeholder: "0.00";
                         value <=> root.swap-amount;
                         large: true;
                         show-refresh: true;
-                        refresh => {
-                            root.refresh-swap-quote();
-                        }
-                        submit-shortcut => {
-                            root.submit();
-                        }
+                        refresh => { root.refresh-swap-quote(); }
+                        submit-shortcut => { root.submit(); }
                     }
+
+                    // Move: To Amount (optional)
                     if root.selected-type == "move": FormField {
                         label: Translations.modal-to-amount-optional;
                         placeholder: Translations.modal-same-as-from;
                         value <=> root.move-amount;
                         large: true;
-                        submit-shortcut => {
-                            root.submit();
-                        }
+                        submit-shortcut => { root.submit(); }
                     }
 
+                    // Price + Fee (buy/sell only)
                     if root.selected-type != "swap" && root.selected-type != "move": HorizontalLayout {
                         spacing: 12px;
+
                         FormField {
                             label: Translations.modal-price-usd;
                             placeholder: Translations.modal-required;
                             value <=> root.price;
                             horizontal-stretch: 1;
-                            submit-shortcut => {
-                                root.submit();
-                            }
+                            submit-shortcut => { root.submit(); }
                         }
+
                         FormField {
                             label: Translations.modal-fee-usd;
                             placeholder: "0.00";
                             value <=> root.fee;
                             horizontal-stretch: 1;
-                            submit-shortcut => {
-                                root.submit();
-                            }
+                            submit-shortcut => { root.submit(); }
                         }
                     }
 
+                    // Fee (swap/move only)
                     if root.selected-type == "swap" || root.selected-type == "move": FormField {
                         label: Translations.modal-fee-usd;
                         placeholder: "0.00";
                         value <=> root.fee;
-                        submit-shortcut => {
-                            root.submit();
-                        }
+                        submit-shortcut => { root.submit(); }
                     }
 
-                    HorizontalLayout {
-                        spacing: 12px;
-                        CoinSelector {
-                            label: Translations.modal-fee-coin-optional;
-                            selected-index <=> root.fee-coin-index;
-                            horizontal-stretch: 1;
-                        }
-
-                        FormField {
-                            label: Translations.modal-fee-amount;
-                            placeholder: "0.00";
-                            value <=> root.fee-coin-amount;
-                            horizontal-stretch: 1;
-                            submit-shortcut => {
-                                root.submit();
-                            }
-                        }
+                    // ==================== Section: Advanced (Collapsible) ====================
+                    CollapsibleSection {
+                        label: Translations.section-advanced;
+                        icon: @image-url("../assets/icons/settings.svg");
+                        expanded <=> root.show-advanced;
                     }
 
-                    if root.selected-type == "buy" || root.selected-type == "sell": VerticalLayout {
-                        spacing: 12px;
+                    // Advanced content: Fee in crypto
+                    if root.show-advanced: VerticalLayout {
+                        spacing: 16px;
 
-                        Text {
-                            text: Translations.crypto-tax-advanced;
-                            color: Theme.text-muted;
-                            font-size: 10px;
-                            font-weight: 600;
-                            letter-spacing: 1.6px;
+                        // Sub-section: Crypto fees
+                        SectionDivider {
+                            label: Translations.section-fee-crypto;
+                            icon: @image-url("../assets/icons/coins.svg");
                         }
 
                         HorizontalLayout {
                             spacing: 12px;
 
-                            FormDropdown {
-                                label: Translations.modal-tax-type;
-                                placeholder: Translations.modal-tax-type-placeholder;
-                                value <=> root.tax-type;
+                            CoinSelector {
+                                label: Translations.modal-fee-coin-optional;
+                                selected-index <=> root.fee-coin-index;
                                 horizontal-stretch: 1;
-                                options: ["trade", "income", "expense", "transfer"];
-                                changed(val) => {
-                                    root.tax-subtype = "";
-                                }
                             }
 
-                            FormDropdown {
-                                label: Translations.modal-tax-subtype;
-                                placeholder: Translations.modal-tax-subtype-placeholder;
-                                value <=> root.tax-subtype;
+                            FormField {
+                                label: Translations.modal-fee-amount;
+                                placeholder: "0.00";
+                                value <=> root.fee-coin-amount;
                                 horizontal-stretch: 1;
-                                options: root.tax-type == "income"
-                                    ? ["interest", "reward", "airdrop", "gift", "staking", "mining", "fork", "payment", "rebate", "other"]
-                                    : root.tax-type == "expense"
-                                        ? ["payment", "gift", "fee", "lost", "stolen", "donation", "sell", "other"]
-                                        : root.tax-type == "transfer"
-                                            ? ["deposit", "withdrawal"]
-                                            : root.tax-type == "trade"
-                                                ? ["buy", "sell", "swap", "other"]
-                                                : [];
+                                submit-shortcut => { root.submit(); }
                             }
                         }
                     }
 
-                    // Notes Field
-                        FormField {
+                    // ==================== Section: Details ====================
+                    SectionDivider {
+                        label: Translations.section-details;
+                        icon: @image-url("../assets/icons/file-text.svg");
+                    }
+
+                    FormField {
                         label: Translations.modal-notes;
                         placeholder: Translations.modal-transaction-details;
                         value <=> root.notes;
-                        submit-shortcut => {
-                            root.submit();
-                        }
+                        submit-shortcut => { root.submit(); }
                     }
 
-                    // Date Field
-	                    FormField {
+                    FormField {
                         label: Translations.modal-date;
                         placeholder: Translations.form-date-format;
                         value <=> root.date;
-                        submit-shortcut => {
-                            root.submit();
-                        }
+                        submit-shortcut => { root.submit(); }
                     }
 
-                    Rectangle {
-                        height: 8px;
+                    // ==================== Transaction Summary ====================
+                    TransactionSummary {
+                        tx-type: root.selected-type;
+                        tax-category: root.selected-category;
+                        tax-scenario: root.tax-subtype;
+                        amount: root.amount;
+                        price: root.price;
+                        fee: root.fee;
+                        coin-symbol: root.current-coin-symbol;
+                        swap-amount: root.swap-amount;
+                        swap-symbol: root.swap-coin-symbol;
+                        from-wallet: root.from-wallet-name;
+                        to-wallet: root.to-wallet-name;
                     }
+
+                    // Bottom spacing
+                    Rectangle { height: 4px; }
                 }
             }
 
-            // Submit Button
-	            Rectangle {
-                height: 48px;
-                background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
-                border-radius: 10px;
+            // Footer separator
+            Rectangle {
+                height: 1px;
+                background: Theme.border-subtle;
+                opacity: 0.4;
+            }
 
-                Text {
-                    text: Translations.modal-save-transaction;
-                    color: Theme.text-light;
-                    font-size: 12px;
-                    font-weight: 600;
-                    letter-spacing: 2px;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
+            // ==================== Submit Button ====================
+            Rectangle {
+                height: 72px;
+                background: transparent;
 
-                submit-touch := TouchArea {
-                    mouse-cursor: pointer;
-                    clicked => {
-                        root.submit();
+                HorizontalLayout {
+                    padding-left: 28px;
+                    padding-right: 28px;
+                    padding-top: 12px;
+                    padding-bottom: 12px;
+
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        height: 48px;
+                        border-radius: 10px;
+                        background: @linear-gradient(135deg,
+                            root.type-accent 0%,
+                            root.type-accent.with-alpha(0.7) 100%);
+
+                        animate background { duration: 300ms; }
+
+                        HorizontalLayout {
+                            alignment: center;
+                            spacing: 8px;
+
+                            Image {
+                                source: @image-url("../assets/icons/check.svg");
+                                width: 14px;
+                                height: 14px;
+                                colorize: Theme.text-light;
+                                y: (parent.height - self.height) / 2;
+                            }
+
+                            Text {
+                                text: Translations.modal-save-transaction;
+                                color: Theme.text-light;
+                                font-size: 12px;
+                                font-weight: 600;
+                                letter-spacing: 2px;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        submit-touch := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.submit(); }
+                        }
+
+                        states [
+                            hover when submit-touch.has-hover: {
+                                opacity: 0.85;
+                            }
+                        ]
                     }
                 }
-
-                states [
-                    hover when submit-touch.has-hover: {
-                        opacity: 0.9;
-                    }
-                ]
             }
         }
     }

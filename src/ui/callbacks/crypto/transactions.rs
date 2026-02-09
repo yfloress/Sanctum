@@ -18,11 +18,12 @@
 //! Crypto transaction callbacks (add, edit, delete)
 
 use super::helpers::{
-    reload_portfolio, reload_wallets, SETTING_CRYPTO_LAST_COIN_ID, SETTING_CRYPTO_LAST_WALLET_ID,
+    SETTING_CRYPTO_LAST_COIN_ID, SETTING_CRYPTO_LAST_WALLET_ID, reload_portfolio, reload_wallets,
 };
 use crate::controller::AppController;
+use crate::services::i18n::t;
 use crate::ui::format_crypto_amount;
-use crate::{AnalyticsAdapter, CryptoAdapter, AppWindow};
+use crate::{AnalyticsAdapter, AppWindow, CryptoAdapter};
 use slint::{ComponentHandle, SharedString, Weak};
 use std::sync::Arc;
 
@@ -129,24 +130,27 @@ pub fn setup_transaction_callbacks<N>(
                 } else {
                     Some(tax_subtype_str.to_string())
                 };
-                let parse_override = |raw: SharedString, label: &str| -> Result<Option<f64>, SharedString> {
-                    let cleaned = raw.replace(",", "").replace("$", "").trim().to_string();
-                    if cleaned.is_empty() {
-                        return Ok(None);
-                    }
-                    let parsed: f64 = cleaned
-                        .parse()
-                        .map_err(|_| SharedString::from(format!("Invalid {} format", label)))?;
-                    Ok(Some(parsed))
-                };
-                let override_proceeds = match parse_override(override_proceeds_str, "override proceeds") {
-                    Ok(v) => v,
-                    Err(e) => return e,
-                };
-                let override_cost_basis = match parse_override(override_cost_basis_str, "override cost basis") {
-                    Ok(v) => v,
-                    Err(e) => return e,
-                };
+                let parse_override =
+                    |raw: SharedString, label: &str| -> Result<Option<f64>, SharedString> {
+                        let cleaned = raw.replace(",", "").replace("$", "").trim().to_string();
+                        if cleaned.is_empty() {
+                            return Ok(None);
+                        }
+                        let parsed: f64 = cleaned
+                            .parse()
+                            .map_err(|_| SharedString::from(format!("Invalid {} format", label)))?;
+                        Ok(Some(parsed))
+                    };
+                let override_proceeds =
+                    match parse_override(override_proceeds_str, "override proceeds") {
+                        Ok(v) => v,
+                        Err(e) => return e,
+                    };
+                let override_cost_basis =
+                    match parse_override(override_cost_basis_str, "override cost basis") {
+                        Ok(v) => v,
+                        Err(e) => return e,
+                    };
 
                 let result = controller.add_crypto_transaction(
                     wallet_id_raw.to_string(),
@@ -177,9 +181,10 @@ pub fn setup_transaction_callbacks<N>(
                         // Refresh dashboard analytics
                         if let Some(ui) = ui_weak.upgrade() {
                             let range = ui.global::<AnalyticsAdapter>().get_active_range();
-                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics(range);
+                            ui.global::<AnalyticsAdapter>()
+                                .invoke_fetch_analytics(range);
                         }
-                        notify("Asset added successfully".into(), false);
+                        notify(t("crypto-tx-added"), false);
                         SharedString::from("")
                     }
                     Err(e) => SharedString::from(e.to_string()),
@@ -292,9 +297,10 @@ pub fn setup_transaction_callbacks<N>(
                         // Refresh dashboard analytics
                         if let Some(ui) = ui_weak.upgrade() {
                             let range = ui.global::<AnalyticsAdapter>().get_active_range();
-                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics(range);
+                            ui.global::<AnalyticsAdapter>()
+                                .invoke_fetch_analytics(range);
                         }
-                        notify("Transfer added successfully".into(), false);
+                        notify(t("crypto-tx-transfer-added"), false);
                         SharedString::from("")
                     }
                     Err(e) => SharedString::from(e.to_string()),
@@ -403,9 +409,10 @@ pub fn setup_transaction_callbacks<N>(
                         // Refresh dashboard analytics
                         if let Some(ui) = ui_weak.upgrade() {
                             let range = ui.global::<AnalyticsAdapter>().get_active_range();
-                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics(range);
+                            ui.global::<AnalyticsAdapter>()
+                                .invoke_fetch_analytics(range);
                         }
-                        notify("Swap added successfully".into(), false);
+                        notify(t("crypto-tx-swap-added"), false);
                         SharedString::from("")
                     }
                     Err(e) => SharedString::from(e.to_string()),
@@ -473,7 +480,7 @@ pub fn setup_transaction_callbacks<N>(
                     ui.global::<CryptoAdapter>()
                         .set_edit_symbol(SharedString::from(&tx.symbol));
                     ui.global::<CryptoAdapter>()
-                        .set_edit_type(SharedString::from(tx.transaction_type.to_uppercase()));
+                        .set_edit_type(SharedString::from(&tx.transaction_type));
                     ui.global::<CryptoAdapter>()
                         .set_edit_amount(SharedString::from(amount_str));
                     ui.global::<CryptoAdapter>()
@@ -590,24 +597,27 @@ pub fn setup_transaction_callbacks<N>(
                 } else {
                     Some(tax_subtype_str.to_string())
                 };
-                let parse_override = |raw: SharedString, label: &str| -> Result<Option<f64>, SharedString> {
-                    let cleaned = raw.replace(",", "").replace("$", "").trim().to_string();
-                    if cleaned.is_empty() {
-                        return Ok(None);
-                    }
-                    let parsed: f64 = cleaned
-                        .parse()
-                        .map_err(|_| SharedString::from(format!("Invalid {} format", label)))?;
-                    Ok(Some(parsed))
-                };
-                let override_proceeds = match parse_override(override_proceeds_str, "override proceeds") {
-                    Ok(v) => v,
-                    Err(e) => return e,
-                };
-                let override_cost_basis = match parse_override(override_cost_basis_str, "override cost basis") {
-                    Ok(v) => v,
-                    Err(e) => return e,
-                };
+                let parse_override =
+                    |raw: SharedString, label: &str| -> Result<Option<f64>, SharedString> {
+                        let cleaned = raw.replace(",", "").replace("$", "").trim().to_string();
+                        if cleaned.is_empty() {
+                            return Ok(None);
+                        }
+                        let parsed: f64 = cleaned
+                            .parse()
+                            .map_err(|_| SharedString::from(format!("Invalid {} format", label)))?;
+                        Ok(Some(parsed))
+                    };
+                let override_proceeds =
+                    match parse_override(override_proceeds_str, "override proceeds") {
+                        Ok(v) => v,
+                        Err(e) => return e,
+                    };
+                let override_cost_basis =
+                    match parse_override(override_cost_basis_str, "override cost basis") {
+                        Ok(v) => v,
+                        Err(e) => return e,
+                    };
 
                 match controller.update_crypto_transaction(
                     id.to_string(),
@@ -629,7 +639,8 @@ pub fn setup_transaction_callbacks<N>(
                             ui.global::<CryptoAdapter>().invoke_fetch_wallets();
                             // Refresh dashboard analytics
                             let range = ui.global::<AnalyticsAdapter>().get_active_range();
-                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics(range);
+                            ui.global::<AnalyticsAdapter>()
+                                .invoke_fetch_analytics(range);
                         }
                         SharedString::from("")
                     }
@@ -656,9 +667,10 @@ pub fn setup_transaction_callbacks<N>(
                             ui.global::<CryptoAdapter>().invoke_fetch_wallets();
                             // Refresh dashboard analytics
                             let range = ui.global::<AnalyticsAdapter>().get_active_range();
-                            ui.global::<AnalyticsAdapter>().invoke_fetch_analytics(range);
+                            ui.global::<AnalyticsAdapter>()
+                                .invoke_fetch_analytics(range);
                         }
-                        notify("Transaction deleted".into(), false);
+                        notify(t("crypto-tx-deleted"), false);
                         SharedString::from("")
                     }
                     Err(e) => SharedString::from(e.to_string()),

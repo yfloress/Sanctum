@@ -15,24 +15,246 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
 //
 
-// TypeSelector - Transaction type selection (buy/sell/swap/transfer)
+// TypeSelector - 4-category transaction type selection
+// Categories: Trade, Transfer, Income, Expense
+// Each sub-option auto-maps to: transaction_type + tax_type + tax_subtype
 
 import { Theme } from "../../theme.slint";
+import { Translations } from "../../translations.slint";
 
+// ==================== Category Tab Button ====================
+component CategoryTab inherits Rectangle {
+    in property <string> label: "";
+    in property <bool> active: false;
+    in property <color> active-color: Theme.primary;
+    in property <image> icon;
+    callback clicked();
+
+    horizontal-stretch: 1;
+    height: 32px;
+    background: root.active
+        ? root.active-color.with-alpha(0.15)
+        : cat-touch.has-hover
+            ? Theme.surface-hover.with-alpha(0.5)
+            : transparent;
+    border-radius: 8px;
+    border-width: root.active ? 1px : 0px;
+    border-color: root.active-color.with-alpha(root.active ? 0.35 : 0.0);
+
+    animate background { duration: 180ms; easing: ease-in-out; }
+    animate border-width { duration: 120ms; }
+    animate border-color { duration: 180ms; }
+
+    HorizontalLayout {
+        alignment: center;
+        spacing: 5px;
+
+        Image {
+            source: root.icon;
+            width: 10px;
+            height: 10px;
+            colorize: root.active
+                ? root.active-color
+                : cat-touch.has-hover
+                    ? Theme.text-secondary
+                    : Theme.text-muted;
+            y: (parent.height - self.height) / 2;
+
+            animate colorize { duration: 180ms; }
+        }
+
+        Text {
+            text: root.label;
+            color: root.active
+                ? root.active-color
+                : cat-touch.has-hover
+                    ? Theme.text-secondary
+                    : Theme.text-muted;
+            font-size: 9px;
+            font-weight: root.active ? 700 : 600;
+            letter-spacing: 1px;
+            vertical-alignment: center;
+
+            animate color { duration: 180ms; }
+        }
+    }
+
+    cat-touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+// ==================== Scenario Pill Button ====================
+component ScenarioPill inherits Rectangle {
+    in property <string> label: "";
+    in property <bool> active: false;
+    in property <color> active-color: Theme.primary;
+    in property <image> icon;
+    in property <bool> show-icon: false;
+    callback clicked();
+
+    horizontal-stretch: 1;
+    height: 30px;
+    background: root.active
+        ? root.active-color.with-alpha(0.18)
+        : pill-touch.has-hover
+            ? Theme.surface-hover.with-alpha(0.5)
+            : transparent;
+    border-radius: 7px;
+    border-width: root.active ? 1px : 0px;
+    border-color: root.active-color.with-alpha(root.active ? 0.4 : 0.0);
+
+    animate background { duration: 180ms; easing: ease-in-out; }
+    animate border-width { duration: 120ms; }
+    animate border-color { duration: 180ms; }
+
+    HorizontalLayout {
+        alignment: center;
+        spacing: 5px;
+
+        if root.show-icon: Image {
+            source: root.icon;
+            width: 11px;
+            height: 11px;
+            colorize: root.active
+                ? root.active-color
+                : pill-touch.has-hover
+                    ? Theme.text-secondary
+                    : Theme.text-muted;
+            y: (parent.height - self.height) / 2;
+
+            animate colorize { duration: 180ms; }
+        }
+
+        Text {
+            text: root.label;
+            color: root.active
+                ? root.active-color
+                : pill-touch.has-hover
+                    ? Theme.text-secondary
+                    : Theme.text-muted;
+            font-size: 10px;
+            font-weight: root.active ? 700 : 500;
+            letter-spacing: 0.5px;
+            vertical-alignment: center;
+
+            animate color { duration: 180ms; }
+        }
+    }
+
+    pill-touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+// ==================== Main TypeSelector ====================
 export component TypeSelector inherits Rectangle {
+    // The DB transaction type: buy, sell, swap, move, transfer_in, transfer_out
     in-out property <string> selected-type: "buy";
-    property <string> active-group: (root.selected-type == "buy" || root.selected-type == "sell")
-        ? "trade"
-        : (root.selected-type == "swap" ? "swap" : "move");
 
-    height: root.active-group == "swap" ? 48px : 92px;
+    // Tax classification (auto-derived from selection)
+    in-out property <string> tax-type: "trade";
+    in-out property <string> tax-subtype: "buy";
+
+    // Which top-level category is active
+    in-out property <string> selected-category: "trade";
+
+    // Colors per category
+    property <color> trade-color: Theme.primary;
+    property <color> transfer-color: Theme.primary;
+    property <color> income-color: Theme.success;
+    property <color> expense-color: Theme.danger;
+
+    property <color> active-cat-color:
+        root.selected-category == "trade" ? root.trade-color
+        : root.selected-category == "transfer" ? root.transfer-color
+        : root.selected-category == "income" ? root.income-color
+        : root.expense-color;
+
+    // Height adapts: trade/transfer = 2 rows, income/expense = 3 rows (more options)
+    property <bool> multi-row: root.selected-category == "income" || root.selected-category == "expense";
+    height: root.multi-row ? 138px : 100px;
+
+    animate height { duration: 200ms; easing: ease-in-out; }
+
     background: transparent;
 
     VerticalLayout {
         spacing: 6px;
 
+        // ==================== Category Tabs ====================
         Rectangle {
-            height: 36px;
+            height: 38px;
+            background: Theme.surface;
+            border-radius: 10px;
+            border-width: 1px;
+            border-color: Theme.border;
+
+            HorizontalLayout {
+                padding: 3px;
+                spacing: 3px;
+
+                CategoryTab {
+                    label: Translations.tx-category-trade;
+                    active: root.selected-category == "trade";
+                    active-color: root.trade-color;
+                    icon: @image-url("../../assets/icons/arrow-left-right.svg");
+                    clicked => {
+                        root.selected-category = "trade";
+                        root.selected-type = "buy";
+                        root.tax-type = "trade";
+                        root.tax-subtype = "buy";
+                    }
+                }
+
+                CategoryTab {
+                    label: Translations.tx-category-transfer;
+                    active: root.selected-category == "transfer";
+                    active-color: root.transfer-color;
+                    icon: @image-url("../../assets/icons/arrow-right.svg");
+                    clicked => {
+                        root.selected-category = "transfer";
+                        root.selected-type = "move";
+                        root.tax-type = "transfer";
+                        root.tax-subtype = "deposit";
+                    }
+                }
+
+                CategoryTab {
+                    label: Translations.tx-category-income;
+                    active: root.selected-category == "income";
+                    active-color: root.income-color;
+                    icon: @image-url("../../assets/icons/trending-up.svg");
+                    clicked => {
+                        root.selected-category = "income";
+                        root.selected-type = "transfer_in";
+                        root.tax-type = "income";
+                        root.tax-subtype = "airdrop";
+                    }
+                }
+
+                CategoryTab {
+                    label: Translations.tx-category-expense;
+                    active: root.selected-category == "expense";
+                    active-color: root.expense-color;
+                    icon: @image-url("../../assets/icons/trending-down.svg");
+                    clicked => {
+                        root.selected-category = "expense";
+                        root.selected-type = "transfer_out";
+                        root.tax-type = "expense";
+                        root.tax-subtype = "payment";
+                    }
+                }
+            }
+        }
+
+        // ==================== Sub-type Options ====================
+
+        // ---------- TRADE: Buy / Sell / Swap ----------
+        if root.selected-category == "trade": Rectangle {
+            height: 46px;
             background: Theme.surface;
             border-radius: 10px;
             border-width: 1px;
@@ -42,118 +264,313 @@ export component TypeSelector inherits Rectangle {
                 padding: 4px;
                 spacing: 4px;
 
-                for group[index] in ["trade", "move", "swap"]: Rectangle {
-                    horizontal-stretch: 1;
-                    background: root.active-group == group ? Theme.primary.with-alpha(0.2) : transparent;
-                    border-radius: 8px;
-                    border-width: root.active-group == group ? 1px : 0px;
-                    border-color: Theme.primary.with-alpha(0.4);
+                ScenarioPill {
+                    label: "BUY";
+                    active: root.selected-type == "buy";
+                    active-color: Theme.success;
+                    icon: @image-url("../../assets/icons/trending-up.svg");
+                    show-icon: true;
+                    clicked => {
+                        root.selected-type = "buy";
+                        root.tax-type = "trade";
+                        root.tax-subtype = "buy";
+                    }
+                }
 
-                    Text {
-                        text: group == "trade" ? "TRADE" : group == "move" ? "MOVE" : "SWAP";
-                        color: root.active-group == group ? Theme.text-primary : Theme.text-muted;
-                        font-size: 9px;
-                        font-weight: 600;
-                        letter-spacing: 1px;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
+                ScenarioPill {
+                    label: "SELL";
+                    active: root.selected-type == "sell";
+                    active-color: Theme.danger;
+                    icon: @image-url("../../assets/icons/trending-down.svg");
+                    show-icon: true;
+                    clicked => {
+                        root.selected-type = "sell";
+                        root.tax-type = "trade";
+                        root.tax-subtype = "sell";
+                    }
+                }
+
+                ScenarioPill {
+                    label: "SWAP";
+                    active: root.selected-type == "swap";
+                    active-color: root.trade-color;
+                    icon: @image-url("../../assets/icons/arrow-left-right.svg");
+                    show-icon: true;
+                    clicked => {
+                        root.selected-type = "swap";
+                        root.tax-type = "trade";
+                        root.tax-subtype = "swap";
+                    }
+                }
+            }
+        }
+
+        // ---------- TRANSFER: Move / Deposit / Withdrawal ----------
+        if root.selected-category == "transfer": Rectangle {
+            height: 46px;
+            background: Theme.surface;
+            border-radius: 10px;
+            border-width: 1px;
+            border-color: Theme.border;
+
+            HorizontalLayout {
+                padding: 4px;
+                spacing: 4px;
+
+                ScenarioPill {
+                    label: "MOVE";
+                    active: root.selected-type == "move";
+                    active-color: root.transfer-color;
+                    icon: @image-url("../../assets/icons/arrow-right.svg");
+                    show-icon: true;
+                    clicked => {
+                        root.selected-type = "move";
+                        root.tax-type = "transfer";
+                        root.tax-subtype = "deposit";
+                    }
+                }
+
+                ScenarioPill {
+                    label: Translations.tx-scenario-deposit;
+                    active: root.selected-type == "transfer_in" && root.tax-type == "transfer";
+                    active-color: Theme.success;
+                    icon: @image-url("../../assets/icons/log-in.svg");
+                    show-icon: true;
+                    clicked => {
+                        root.selected-type = "transfer_in";
+                        root.tax-type = "transfer";
+                        root.tax-subtype = "deposit";
+                    }
+                }
+
+                ScenarioPill {
+                    label: Translations.tx-scenario-withdrawal;
+                    active: root.selected-type == "transfer_out" && root.tax-type == "transfer";
+                    active-color: Theme.danger;
+                    icon: @image-url("../../assets/icons/log-out.svg");
+                    show-icon: true;
+                    clicked => {
+                        root.selected-type = "transfer_out";
+                        root.tax-type = "transfer";
+                        root.tax-subtype = "withdrawal";
+                    }
+                }
+            }
+        }
+
+        // ---------- INCOME: Two rows of scenario pills ----------
+        if root.selected-category == "income": Rectangle {
+            height: 84px;
+            background: Theme.surface;
+            border-radius: 10px;
+            border-width: 1px;
+            border-color: Theme.border;
+
+            VerticalLayout {
+                padding: 4px;
+                spacing: 3px;
+
+                // Row 1
+                HorizontalLayout {
+                    spacing: 3px;
+
+                    ScenarioPill {
+                        label: "Airdrop";
+                        active: root.tax-subtype == "airdrop";
+                        active-color: root.income-color;
+                        clicked => {
+                            root.selected-type = "transfer_in";
+                            root.tax-type = "income";
+                            root.tax-subtype = "airdrop";
+                        }
                     }
 
-                    TouchArea {
-                        mouse-cursor: pointer;
+                    ScenarioPill {
+                        label: "Staking";
+                        active: root.tax-subtype == "staking";
+                        active-color: root.income-color;
                         clicked => {
-                            if (group == "trade") {
-                                root.selected-type = "buy";
-                            } else if (group == "move") {
-                                root.selected-type = "move";
-                            } else {
-                                root.selected-type = "swap";
-                            }
+                            root.selected-type = "transfer_in";
+                            root.tax-type = "income";
+                            root.tax-subtype = "staking";
+                        }
+                    }
+
+                    ScenarioPill {
+                        label: "Mining";
+                        active: root.tax-subtype == "mining";
+                        active-color: root.income-color;
+                        clicked => {
+                            root.selected-type = "transfer_in";
+                            root.tax-type = "income";
+                            root.tax-subtype = "mining";
+                        }
+                    }
+
+                    ScenarioPill {
+                        label: Translations.tx-scenario-interest;
+                        active: root.tax-subtype == "interest";
+                        active-color: root.income-color;
+                        clicked => {
+                            root.selected-type = "transfer_in";
+                            root.tax-type = "income";
+                            root.tax-subtype = "interest";
+                        }
+                    }
+                }
+
+                // Row 2
+                HorizontalLayout {
+                    spacing: 3px;
+
+                    ScenarioPill {
+                        label: Translations.tx-scenario-gift;
+                        active: root.tax-subtype == "gift" && root.tax-type == "income";
+                        active-color: root.income-color;
+                        clicked => {
+                            root.selected-type = "transfer_in";
+                            root.tax-type = "income";
+                            root.tax-subtype = "gift";
+                        }
+                    }
+
+                    ScenarioPill {
+                        label: "Fork";
+                        active: root.tax-subtype == "fork";
+                        active-color: root.income-color;
+                        clicked => {
+                            root.selected-type = "transfer_in";
+                            root.tax-type = "income";
+                            root.tax-subtype = "fork";
+                        }
+                    }
+
+                    ScenarioPill {
+                        label: Translations.tx-scenario-reward;
+                        active: root.tax-subtype == "reward";
+                        active-color: root.income-color;
+                        clicked => {
+                            root.selected-type = "transfer_in";
+                            root.tax-type = "income";
+                            root.tax-subtype = "reward";
+                        }
+                    }
+
+                    ScenarioPill {
+                        label: Translations.tx-scenario-other;
+                        active: root.tax-subtype == "other" && root.tax-type == "income";
+                        active-color: root.income-color;
+                        clicked => {
+                            root.selected-type = "transfer_in";
+                            root.tax-type = "income";
+                            root.tax-subtype = "other";
                         }
                     }
                 }
             }
         }
 
-        if root.active-group == "trade": Rectangle {
-            height: 48px;
+        // ---------- EXPENSE: Two rows of scenario pills ----------
+        if root.selected-category == "expense": Rectangle {
+            height: 84px;
             background: Theme.surface;
             border-radius: 10px;
             border-width: 1px;
             border-color: Theme.border;
 
-            HorizontalLayout {
+            VerticalLayout {
                 padding: 4px;
-                spacing: 4px;
+                spacing: 3px;
 
-                for type[index] in ["buy", "sell"]: Rectangle {
-                    horizontal-stretch: 1;
-                    background: root.selected-type == type
-                        ? (type == "buy" ? Theme.success.with-alpha(0.2) : Theme.danger.with-alpha(0.2))
-                        : transparent;
-                    border-radius: 8px;
-                    border-width: root.selected-type == type ? 1px : 0px;
-                    border-color: type == "buy"
-                        ? Theme.success.with-alpha(0.4)
-                        : Theme.danger.with-alpha(0.4);
+                // Row 1
+                HorizontalLayout {
+                    spacing: 3px;
 
-                    Text {
-                        text: type == "buy" ? "BUY" : "SELL";
-                        color: root.selected-type == type ? Theme.text-primary : Theme.text-muted;
-                        font-size: 9px;
-                        font-weight: 600;
-                        letter-spacing: 1px;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
+                    ScenarioPill {
+                        label: Translations.tx-scenario-payment;
+                        active: root.tax-subtype == "payment";
+                        active-color: root.expense-color;
+                        clicked => {
+                            root.selected-type = "transfer_out";
+                            root.tax-type = "expense";
+                            root.tax-subtype = "payment";
+                        }
                     }
 
-                    TouchArea {
-                        mouse-cursor: pointer;
-                        clicked => { root.selected-type = type; }
+                    ScenarioPill {
+                        label: Translations.tx-scenario-gift;
+                        active: root.tax-subtype == "gift" && root.tax-type == "expense";
+                        active-color: root.expense-color;
+                        clicked => {
+                            root.selected-type = "transfer_out";
+                            root.tax-type = "expense";
+                            root.tax-subtype = "gift";
+                        }
+                    }
+
+                    ScenarioPill {
+                        label: Translations.tx-scenario-donation;
+                        active: root.tax-subtype == "donation";
+                        active-color: root.expense-color;
+                        clicked => {
+                            root.selected-type = "transfer_out";
+                            root.tax-type = "expense";
+                            root.tax-subtype = "donation";
+                        }
+                    }
+
+                    ScenarioPill {
+                        label: Translations.tx-scenario-fee;
+                        active: root.tax-subtype == "fee" && root.tax-type == "expense";
+                        active-color: root.expense-color;
+                        clicked => {
+                            root.selected-type = "transfer_out";
+                            root.tax-type = "expense";
+                            root.tax-subtype = "fee";
+                        }
                     }
                 }
-            }
-        }
 
-        if root.active-group == "move": Rectangle {
-            height: 48px;
-            background: Theme.surface;
-            border-radius: 10px;
-            border-width: 1px;
-            border-color: Theme.border;
+                // Row 2
+                HorizontalLayout {
+                    spacing: 3px;
 
-            HorizontalLayout {
-                padding: 4px;
-                spacing: 4px;
-
-                for type[index] in ["transfer_in", "transfer_out", "move"]: Rectangle {
-                    horizontal-stretch: 1;
-                    background: root.selected-type == type
-                        ? (type == "transfer_in" ? Theme.success.with-alpha(0.2) :
-                           type == "transfer_out" ? Theme.danger.with-alpha(0.2) :
-                           Theme.primary.with-alpha(0.2))
-                        : transparent;
-                    border-radius: 8px;
-                    border-width: root.selected-type == type ? 1px : 0px;
-                    border-color: type == "transfer_in"
-                        ? Theme.success.with-alpha(0.4)
-                        : type == "transfer_out"
-                            ? Theme.danger.with-alpha(0.4)
-                            : Theme.primary.with-alpha(0.4);
-
-                    Text {
-                        text: type == "transfer_in" ? "IN" : type == "transfer_out" ? "OUT" : "MOVE";
-                        color: root.selected-type == type ? Theme.text-primary : Theme.text-muted;
-                        font-size: 9px;
-                        font-weight: 600;
-                        letter-spacing: 1px;
-                        horizontal-alignment: center;
-                        vertical-alignment: center;
+                    ScenarioPill {
+                        label: Translations.tx-scenario-lost;
+                        active: root.tax-subtype == "lost";
+                        active-color: root.expense-color;
+                        clicked => {
+                            root.selected-type = "transfer_out";
+                            root.tax-type = "expense";
+                            root.tax-subtype = "lost";
+                        }
                     }
 
-                    TouchArea {
-                        mouse-cursor: pointer;
-                        clicked => { root.selected-type = type; }
+                    ScenarioPill {
+                        label: Translations.tx-scenario-stolen;
+                        active: root.tax-subtype == "stolen";
+                        active-color: root.expense-color;
+                        clicked => {
+                            root.selected-type = "transfer_out";
+                            root.tax-type = "expense";
+                            root.tax-subtype = "stolen";
+                        }
+                    }
+
+                    ScenarioPill {
+                        label: Translations.tx-scenario-other;
+                        active: root.tax-subtype == "other" && root.tax-type == "expense";
+                        active-color: root.expense-color;
+                        clicked => {
+                            root.selected-type = "transfer_out";
+                            root.tax-type = "expense";
+                            root.tax-subtype = "other";
+                        }
+                    }
+
+                    // Spacer to balance layout with 3 items in row 2
+                    Rectangle {
+                        horizontal-stretch: 1;
                     }
                 }
             }
