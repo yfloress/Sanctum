@@ -77,7 +77,6 @@ pub fn setup_tax_callbacks<N>(
         ui.global::<CryptoAdapter>().on_load_tax_settings(move || {
             load_tax_settings(&ui_weak, &controller);
             update_ipc_summary(&ui_weak, &controller, None::<&fn(String, bool)>);
-            reset_report_state(&ui_weak);
         });
     }
 

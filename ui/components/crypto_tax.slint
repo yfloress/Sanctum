@@ -923,12 +923,14 @@ export component CryptoTaxTab inherits Rectangle {
                         alignment: start;
 
                         ActionButton {
+                            min-width: 160px;
                             text: Translations.crypto-tax-ipc-import;
                             primary: true;
                             clicked => { CryptoAdapter.import-ipc-csv(); }
                         }
 
                         BorderButton {
+                            min-width: 160px;
                             text: Translations.crypto-tax-ipc-copy-url;
                             clicked => { CryptoAdapter.copy-ipc-url(); }
                         }
