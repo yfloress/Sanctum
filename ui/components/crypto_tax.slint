@@ -17,7 +17,7 @@
 
 // Crypto tax tab UI — Option B "Smart Summary" redesign (offline-first)
 
-import { CryptoAdapter, TaxReadinessItem } from "../globals.slint";
+import { CryptoAdapter, TaxReadinessItem, TaxWalletEntry } from "../globals.slint";
 import { Theme } from "../theme.slint";
 import { Translations } from "../translations.slint";
 import { SectionHeader } from "./sections/section_header.slint";
@@ -887,6 +887,143 @@ export component CryptoTaxTab inherits Rectangle {
                             text: Translations.crypto-tax-save-settings;
                             primary: true;
                             clicked => { CryptoAdapter.save-tax-settings(); }
+                        }
+                    }
+                }
+            }
+
+            // ── Wallet Exclusions ──
+            SanctumCard {
+                horizontal-stretch: 1;
+                card-padding: 24px;
+                background: @linear-gradient(135deg, Theme.crypto-panel-gradient-start 0%, Theme.crypto-panel-gradient-end 100%);
+                border-color: Theme.border-subtle;
+
+                VerticalLayout {
+                    spacing: 16px;
+
+                    Text {
+                        text: Translations.crypto-tax-wallet-exclusions;
+                        color: Theme.text-primary;
+                        font-size: 14px;
+                        font-weight: 600;
+                    }
+
+                    Text {
+                        text: Translations.crypto-tax-wallet-exclusions-desc;
+                        color: Theme.text-muted;
+                        font-size: 12px;
+                        wrap: word-wrap;
+                    }
+
+                    if CryptoAdapter.tax-wallet-list.length == 0: Rectangle {
+                        height: 44px;
+                        background: Theme.surface;
+                        border-radius: 10px;
+                        border-width: 1px;
+                        border-color: Theme.border;
+
+                        Text {
+                            text: Translations.crypto-tax-wallet-none;
+                            color: Theme.text-muted;
+                            font-size: 12px;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+
+                    VerticalLayout {
+                        spacing: 6px;
+
+                        for entry[idx] in CryptoAdapter.tax-wallet-list: Rectangle {
+                            height: 56px;
+                            background: wallet-touch.has-hover ? Theme.surface-hover : Theme.surface;
+                            border-radius: 12px;
+                            border-width: 1px;
+                            border-color: entry.excluded ? Theme.warning.with-alpha(0.25) : Theme.border;
+
+                            animate background { duration: 150ms; }
+
+                            HorizontalLayout {
+                                padding-left: 20px;
+                                padding-right: 20px;
+                                alignment: space-between;
+
+                                VerticalLayout {
+                                    alignment: center;
+                                    spacing: 3px;
+
+                                    HorizontalLayout {
+                                        spacing: 8px;
+
+                                        Text {
+                                            text: entry.name;
+                                            color: entry.excluded ? Theme.text-muted : Theme.text-primary;
+                                            font-size: 13px;
+                                            font-weight: 500;
+                                            vertical-alignment: center;
+                                        }
+
+                                        if entry.excluded: Rectangle {
+                                            width: ex-label.preferred-width + 12px;
+                                            height: 18px;
+                                            border-radius: 4px;
+                                            background: Theme.warning.with-alpha(0.12);
+                                            y: (parent.height - self.height) / 2;
+
+                                            ex-label := Text {
+                                                text: Translations.crypto-tax-wallet-excluded-label;
+                                                color: Theme.warning;
+                                                font-size: 9px;
+                                                font-weight: 700;
+                                                letter-spacing: 0.5px;
+                                                horizontal-alignment: center;
+                                                vertical-alignment: center;
+                                            }
+                                        }
+                                    }
+
+                                    Text {
+                                        text: entry.category;
+                                        color: Theme.text-subtle;
+                                        font-size: 10.5px;
+                                    }
+                                }
+
+                                // Toggle: on = tracked, off = excluded
+                                Rectangle {
+                                    width: 38px;
+                                    height: 20px;
+                                    border-radius: 10px;
+                                    background: !entry.excluded ? Theme.accent : Theme.surface-hover;
+                                    border-width: 1px;
+                                    border-color: !entry.excluded ? Theme.accent : Theme.border;
+                                    y: (parent.height - self.height) / 2;
+
+                                    animate background { duration: 150ms; }
+
+                                    Rectangle {
+                                        x: !entry.excluded ? 18px : 2px;
+                                        y: 2px;
+                                        width: 16px;
+                                        height: 16px;
+                                        border-radius: 8px;
+                                        background: !entry.excluded ? Theme.background : Theme.text-secondary;
+
+                                        animate x { duration: 150ms; }
+                                    }
+
+                                    TouchArea {
+                                        mouse-cursor: pointer;
+                                        clicked => { CryptoAdapter.toggle-tax-wallet-exclusion(entry.id); }
+                                    }
+                                }
+                            }
+
+                            wallet-touch := TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => { CryptoAdapter.toggle-tax-wallet-exclusion(entry.id); }
+                            }
                         }
                     }
                 }

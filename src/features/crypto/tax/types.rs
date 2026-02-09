@@ -213,6 +213,10 @@ pub struct TaxPeriodSettings {
     pub method: TaxMethod,
     pub include_swaps: bool,
     pub include_fee_crypto: bool,
+    /// Wallet IDs excluded from tax calculations (e.g. DeFi play wallets,
+    /// donations-only wallets, or any wallet the user wants to omit).
+    #[serde(default)]
+    pub excluded_wallet_ids: Vec<String>,
 }
 
 impl TaxPeriodSettings {
@@ -223,6 +227,7 @@ impl TaxPeriodSettings {
             method: TaxMethod::Hifo,
             include_swaps: true,
             include_fee_crypto: true,
+            excluded_wallet_ids: Vec::new(),
         }
     }
 

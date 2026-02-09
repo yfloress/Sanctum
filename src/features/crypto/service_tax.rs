@@ -127,11 +127,15 @@ impl CryptoService {
         }
 
         let settings = self.load_tax_settings(period_id.clone())?;
+        let excluded = settings.excluded_wallet_ids.clone();
 
         self.with_db(|db| {
-            let transactions = db
+            let transactions: Vec<CryptoTransaction> = db
                 .get_all_crypto_transactions()
-                .map_err(CryptoError::Database)?;
+                .map_err(CryptoError::Database)?
+                .into_iter()
+                .filter(|tx| !excluded.contains(&tx.wallet_id))
+                .collect();
             let ipc_entries = load_ipc_entries(db)?;
 
             build_tax_report(transactions, settings, ipc_entries).map_err(CryptoError::Validation)
@@ -151,12 +155,16 @@ impl CryptoService {
 
         let settings = self.load_tax_settings(period_id.clone())?;
         let jurisdiction = settings.jurisdiction;
+        let excluded = settings.excluded_wallet_ids.clone();
         let period = parse_period(&period_id).map_err(CryptoError::Validation)?;
 
         self.with_db(|db| {
-            let transactions = db
+            let transactions: Vec<CryptoTransaction> = db
                 .get_all_crypto_transactions()
-                .map_err(CryptoError::Database)?;
+                .map_err(CryptoError::Database)?
+                .into_iter()
+                .filter(|tx| !excluded.contains(&tx.wallet_id))
+                .collect();
             let ipc_entries = load_ipc_entries(db)?;
 
             // Compute income and period stats from the borrowed slice BEFORE moving
@@ -233,12 +241,17 @@ impl CryptoService {
             ));
         }
 
+        let settings = self.load_tax_settings(period_id.clone())?;
+        let excluded = settings.excluded_wallet_ids;
         let period = parse_period(&period_id).map_err(CryptoError::Validation)?;
 
         self.with_db(|db| {
-            let transactions = db
+            let transactions: Vec<CryptoTransaction> = db
                 .get_all_crypto_transactions()
-                .map_err(CryptoError::Database)?;
+                .map_err(CryptoError::Database)?
+                .into_iter()
+                .filter(|tx| !excluded.contains(&tx.wallet_id))
+                .collect();
             let csv = build_transaction_history_csv(&transactions, &period);
             std::fs::write(path, csv)
                 .map_err(|e| CryptoError::Validation(format!("Failed to write history: {}", e)))?;

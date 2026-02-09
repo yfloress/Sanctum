@@ -321,6 +321,7 @@ mod tests {
             method: TaxMethod::Fifo,
             include_swaps: false,
             include_fee_crypto: false,
+            excluded_wallet_ids: Vec::new(),
         };
 
         let report = build_tax_report(vec![buy, sell], settings, vec![]).expect("report");
@@ -345,6 +346,7 @@ mod tests {
             method: TaxMethod::Fifo,
             include_swaps: false,
             include_fee_crypto: false,
+            excluded_wallet_ids: Vec::new(),
         };
 
         let report = build_tax_report(vec![buy, sell], settings, vec![]).expect("report");
@@ -363,6 +365,7 @@ mod tests {
             method: TaxMethod::Fifo,
             include_swaps: false,
             include_fee_crypto: false,
+            excluded_wallet_ids: Vec::new(),
         };
 
         let report = build_tax_report(vec![buy, sell], settings, vec![]).expect("report");

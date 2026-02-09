@@ -460,6 +460,10 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_crypto_tax_exports_history_desc(s(&t("crypto-tax-exports-history-desc")));
     tr.set_crypto_tax_report_details(s(&t("crypto-tax-report-details")));
     tr.set_crypto_tax_settings_advanced(s(&t("crypto-tax-settings-advanced")));
+    tr.set_crypto_tax_wallet_exclusions(s(&t("crypto-tax-wallet-exclusions")));
+    tr.set_crypto_tax_wallet_exclusions_desc(s(&t("crypto-tax-wallet-exclusions-desc")));
+    tr.set_crypto_tax_wallet_none(s(&t("crypto-tax-wallet-none")));
+    tr.set_crypto_tax_wallet_excluded_label(s(&t("crypto-tax-wallet-excluded-label")));
     tr.set_crypto_tax_filing_title(s(&t("crypto-tax-filing-title")));
     tr.set_crypto_tax_save_generate(s(&t("crypto-tax-save-generate")));
     tr.set_crypto_tax_readiness_settings_suffix(s(&t("crypto-tax-readiness-settings-suffix")));

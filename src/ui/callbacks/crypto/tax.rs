@@ -21,7 +21,7 @@ use crate::controller::{AppController, SETTING_PREFERRED_CURRENCY};
 use crate::features::crypto::tax::types::{TaxJurisdiction, TaxMethod};
 use crate::services::i18n::{t, t_args};
 use crate::ui::{convert_usd_to_preferred, format_preferred};
-use crate::{AppWindow, CryptoAdapter, TaxReadinessItem, Translations};
+use crate::{AppWindow, CryptoAdapter, TaxReadinessItem, TaxWalletEntry, Translations};
 use slint::platform::Clipboard;
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel, Weak};
 use std::sync::Arc;
@@ -76,6 +76,7 @@ pub fn setup_tax_callbacks<N>(
 
         ui.global::<CryptoAdapter>().on_load_tax_settings(move || {
             load_tax_settings(&ui_weak, &controller);
+            update_tax_wallet_list(&ui_weak, &controller);
             update_ipc_summary(&ui_weak, &controller, None::<&fn(String, bool)>);
         });
     }
@@ -248,6 +249,51 @@ pub fn setup_tax_callbacks<N>(
         });
     }
 
+    // Toggle wallet exclusion
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = notify.clone();
+
+        ui.global::<CryptoAdapter>()
+            .on_toggle_tax_wallet_exclusion(move |wallet_id| {
+                let Some(ui) = ui_weak.upgrade() else {
+                    return;
+                };
+
+                let adapter = ui.global::<CryptoAdapter>();
+                let period_raw = adapter.get_tax_period();
+                let period = period_raw.trim().to_string();
+                if period.is_empty() {
+                    return;
+                }
+
+                let mut settings =
+                    controller
+                        .load_tax_settings(period.clone())
+                        .unwrap_or_else(|_| {
+                            crate::features::crypto::TaxPeriodSettings::defaults_for(&period)
+                        });
+
+                let wid = wallet_id.to_string();
+                if let Some(pos) = settings
+                    .excluded_wallet_ids
+                    .iter()
+                    .position(|id| id == &wid)
+                {
+                    settings.excluded_wallet_ids.remove(pos);
+                } else {
+                    settings.excluded_wallet_ids.push(wid);
+                }
+
+                if let Err(err) = controller.save_tax_settings(settings) {
+                    notify(format!("Failed to save wallet exclusion: {}", err), true);
+                }
+
+                update_tax_wallet_list(&ui_weak, &controller);
+            });
+    }
+
     // Save tax settings
     {
         let controller = controller.clone();
@@ -267,12 +313,19 @@ pub fn setup_tax_callbacks<N>(
                 return;
             }
 
+            // Preserve current excluded_wallet_ids from the already-saved settings.
+            let existing_excluded = controller
+                .load_tax_settings(period.clone())
+                .map(|s| s.excluded_wallet_ids)
+                .unwrap_or_default();
+
             let settings = crate::features::crypto::TaxPeriodSettings {
                 period_id: period,
                 jurisdiction: TaxJurisdiction::parse_or_default(&adapter.get_tax_jurisdiction()),
                 method: TaxMethod::parse_or_default(&adapter.get_tax_method()),
                 include_swaps: adapter.get_tax_include_swaps(),
                 include_fee_crypto: adapter.get_tax_include_fee_crypto(),
+                excluded_wallet_ids: existing_excluded,
             };
 
             match controller.save_tax_settings(settings) {
@@ -281,6 +334,38 @@ pub fn setup_tax_callbacks<N>(
             }
         });
     }
+}
+
+fn update_tax_wallet_list(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>) {
+    let wallets = controller.get_wallets().unwrap_or_default();
+
+    let Some(ui) = ui_weak.upgrade() else {
+        return;
+    };
+    let adapter = ui.global::<CryptoAdapter>();
+    let period_raw = adapter.get_tax_period();
+    let period = period_raw.trim().to_string();
+
+    let excluded = if !period.is_empty() {
+        controller
+            .load_tax_settings(period)
+            .map(|s| s.excluded_wallet_ids)
+            .unwrap_or_default()
+    } else {
+        Vec::new()
+    };
+
+    let entries: Vec<TaxWalletEntry> = wallets
+        .iter()
+        .map(|w| TaxWalletEntry {
+            id: SharedString::from(w.id.as_str()),
+            name: SharedString::from(w.name.as_str()),
+            category: SharedString::from(w.category.as_str()),
+            excluded: excluded.contains(&w.id),
+        })
+        .collect();
+
+    adapter.set_tax_wallet_list(ModelRc::new(VecModel::from(entries)));
 }
 
 fn update_ipc_summary<N>(
