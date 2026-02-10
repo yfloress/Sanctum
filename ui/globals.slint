@@ -636,7 +636,7 @@ export global CryptoAdapter {
     in-out property <string> total-pnl: "+ $ 0.00";
     in-out property <bool> total-pnl-positive: true;
     in-out property <string> clp-rate: "...";
-    in-out property <string> last-updated: "Never";
+    in-out property <string> last-updated: "";
     in-out property <bool> is-refreshing: false;
     in-out property <bool> is-loading: false;
     in-out property <image> portfolio-trend-image;
@@ -698,6 +698,7 @@ export global CryptoAdapter {
     callback fetch-wallet-details(string); // wallet_id
     callback refresh-prices();
     callback refresh-prices-silent(); // auto-fetch without notifications
+    callback show-last-updated-info();
     callback fetch-asset-details(string); // coin_id
     callback load-tax-settings();
     callback import-ipc-csv();

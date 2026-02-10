@@ -38,6 +38,7 @@ impl TaxJurisdiction {
 
     pub fn parse_or_default(raw: &str) -> Self {
         match raw.trim().to_lowercase().as_str() {
+            "" => TaxJurisdiction::Chile,
             "chile" | "cl" => TaxJurisdiction::Chile,
             "usa" | "us" | "united_states" => TaxJurisdiction::Usa,
             "other" | "generic" | "international" => TaxJurisdiction::Other,

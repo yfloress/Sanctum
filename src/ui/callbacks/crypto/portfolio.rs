@@ -20,6 +20,7 @@
 use super::helpers::{reload_portfolio, SETTING_CRYPTO_LAST_UPDATED};
 use crate::controller::{AppController, SETTING_PREFERRED_CURRENCY};
 use crate::models::CryptoTransaction;
+use crate::services::i18n::{t, t_args};
 use crate::ui::{
     convert_usd_to_preferred, crypto_icon_for_symbol, format_clp_rate, format_crypto_tx_display,
     format_fee_display, format_preferred,
@@ -133,7 +134,8 @@ pub fn setup_portfolio_callbacks<N>(
                 None
             };
             let last_updated_label = if prices_updated {
-                Some(format!("Today at {}", now.format("%H:%M")))
+                let time = now.format("%H:%M").to_string();
+                Some(t_args("crypto-last-updated-today-at", &[("time", time.as_str())]))
             } else {
                 None
             };
@@ -199,6 +201,26 @@ pub fn setup_portfolio_callbacks<N>(
                     "".into()
                 }
             });
+    }
+
+    // on_show_last_updated_info
+    {
+        let ui_weak = ui_weak.clone();
+        let notify = notify.clone();
+        ui.global::<CryptoAdapter>().on_show_last_updated_info(move || {
+            let Some(ui) = ui_weak.upgrade() else {
+                return;
+            };
+            let adapter = ui.global::<CryptoAdapter>();
+            let raw = adapter.get_last_updated().trim().to_string();
+            let value = if raw.is_empty() {
+                t("crypto-last-updated-never")
+            } else {
+                raw
+            };
+            let msg = t_args("crypto-last-updated-info", &[("value", value.as_str())]);
+            notify(msg, false);
+        });
     }
 
     // on_get_swap_quote

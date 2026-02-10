@@ -247,28 +247,6 @@ export component CryptoPage inherits Rectangle {
                             vertical-alignment: center;
                         }
 
-                        Rectangle {
-                            height: 20px;
-                            border-radius: 10px;
-                            background: Theme.surface;
-                            border-width: 1px;
-                            border-color: Theme.border-subtle;
-                            y: (parent.height - self.height) / 2;
-
-                            HorizontalLayout {
-                                padding-left: 8px;
-                                padding-right: 8px;
-                                alignment: center;
-
-                                Text {
-                                    text: Translations.crypto-last-updated + ": " + CryptoAdapter.last-updated;
-                                    color: Theme.text-subtle;
-                                    font-size: 10px;
-                                    font-weight: 500;
-                                    vertical-alignment: center;
-                                }
-                            }
-                        }
                     }
 
                     VerticalLayout {
@@ -426,12 +404,22 @@ export component CryptoPage inherits Rectangle {
 
                     HorizontalLayout {
                         alignment: end;
+                        spacing: 6px;
 
                         GhostButton {
                             text: CryptoAdapter.is-refreshing ? Translations.button-syncing : Translations.button-sync;
                             enabled: !CryptoAdapter.is-refreshing;
                             clicked => {
                                 CryptoAdapter.refresh-prices();
+                            }
+                        }
+
+                        GhostButton {
+                            text: "?";
+                            icon-mode: true;
+                            enabled: true;
+                            clicked => {
+                                CryptoAdapter.show-last-updated-info();
                             }
                         }
                     }

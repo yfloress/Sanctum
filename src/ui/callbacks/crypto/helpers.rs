@@ -417,7 +417,8 @@ where
                     let local = dt.with_timezone(&chrono::Local);
                     let now = chrono::Local::now();
                     if local.date_naive() == now.date_naive() {
-                        format!("Today at {}", local.format("%H:%M"))
+                        let time = local.format("%H:%M").to_string();
+                        i18n::t_args("crypto-last-updated-today-at", &[("time", time.as_str())])
                     } else {
                         local.format("%Y-%m-%d %H:%M").to_string()
                     }
@@ -435,7 +436,8 @@ where
                     let local = dt.with_timezone(&chrono::Local);
                     let now = chrono::Local::now();
                     if local.date_naive() == now.date_naive() {
-                        format!("Today at {}", local.format("%H:%M"))
+                        let time = local.format("%H:%M").to_string();
+                        i18n::t_args("crypto-last-updated-today-at", &[("time", time.as_str())])
                     } else {
                         local.format("%Y-%m-%d %H:%M").to_string()
                     }
