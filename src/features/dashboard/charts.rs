@@ -70,13 +70,14 @@ impl DashboardCharts {
     /// # Arguments
     /// * `crypto_total_usd` - Current crypto portfolio value in USD
     /// * `crypto_snapshots` - Historical snapshots: Vec<(date_str, value_usd, cost_usd)>
+    /// * `usd_rates` - Currency rates in `CURRENCY/USD` format (e.g. CLP per 1 USD)
     pub fn calculate_dashboard_data(
         balances: &[AccountBalance],
         accounts: &[Account],
         transactions: &[Transaction],
         crypto_total_usd: f64,
         crypto_snapshots: &[(String, f64, f64)],
-        clp_rate: f64,
+        usd_rates: &HashMap<String, f64>,
         range: &str,
     ) -> DashboardData {
         let currency_map: HashMap<String, String> = accounts
@@ -84,18 +85,13 @@ impl DashboardCharts {
             .map(|a| (a.id.clone(), a.currency.to_uppercase()))
             .collect();
 
-        let rate = if clp_rate > 0.0 { clp_rate } else { 1.0 };
-
         let normalize = |amount: i64, account_id: &str| -> i64 {
             let currency = currency_map
                 .get(account_id)
                 .map(|s| s.as_str())
                 .unwrap_or("USD");
-            if currency == "CLP" {
-                ((amount as f64) / rate) as i64
-            } else {
-                amount
-            }
+            let rate = usd_rates.get(currency).copied().filter(|r| *r > 0.0).unwrap_or(1.0);
+            ((amount as f64) / rate).round() as i64
         };
 
         // Calculate FIAT balance in cents
@@ -180,8 +176,13 @@ impl DashboardCharts {
         let min_val = *values.iter().min().unwrap_or(&0);
         let max_val = *values.iter().max().unwrap_or(&0);
 
-        let expense_slices =
-            Self::calculate_expense_slices(transactions, &currency_map, rate, start_date, today);
+        let expense_slices = Self::calculate_expense_slices(
+            transactions,
+            &currency_map,
+            usd_rates,
+            start_date,
+            today,
+        );
 
         DashboardData {
             chart_values: values,
@@ -196,25 +197,20 @@ impl DashboardCharts {
     pub fn get_expenses_by_category(
         transactions: &[Transaction],
         accounts: &[Account],
-        clp_rate: f64,
+        usd_rates: &HashMap<String, f64>,
     ) -> Vec<(String, i64)> {
         let currency_map: HashMap<String, String> = accounts
             .iter()
             .map(|a| (a.id.clone(), a.currency.to_uppercase()))
             .collect();
 
-        let rate = if clp_rate > 0.0 { clp_rate } else { 1.0 };
-
         let normalize = |amount: i64, account_id: &str| -> i64 {
             let currency = currency_map
                 .get(account_id)
                 .map(|s| s.as_str())
                 .unwrap_or("USD");
-            if currency == "CLP" {
-                ((amount as f64) / rate) as i64
-            } else {
-                amount
-            }
+            let rate = usd_rates.get(currency).copied().filter(|r| *r > 0.0).unwrap_or(1.0);
+            ((amount as f64) / rate).round() as i64
         };
 
         let mut map: HashMap<String, i64> = HashMap::new();
@@ -234,7 +230,7 @@ impl DashboardCharts {
     fn calculate_expense_slices(
         transactions: &[Transaction],
         currency_map: &HashMap<String, String>,
-        rate: f64,
+        usd_rates: &HashMap<String, f64>,
         start_date: NaiveDate,
         end_date: NaiveDate,
     ) -> Vec<ExpenseSlice> {
@@ -243,11 +239,8 @@ impl DashboardCharts {
                 .get(account_id)
                 .map(|s| s.as_str())
                 .unwrap_or("USD");
-            if currency == "CLP" {
-                ((amount as f64) / rate) as i64
-            } else {
-                amount
-            }
+            let rate = usd_rates.get(currency).copied().filter(|r| *r > 0.0).unwrap_or(1.0);
+            ((amount as f64) / rate).round() as i64
         };
 
         let mut expenses: HashMap<String, i64> = HashMap::new();
@@ -297,6 +290,15 @@ mod tests {
     use super::*;
     use crate::core::validation::format_money_display;
     use crate::models::{Account, AccountBalance, Transaction};
+    use std::collections::HashMap;
+
+    fn usd_rates(rates: &[(&str, f64)]) -> HashMap<String, f64> {
+        let mut map = HashMap::from([("USD".to_string(), 1.0)]);
+        for (currency, rate) in rates {
+            map.insert((*currency).to_string(), *rate);
+        }
+        map
+    }
 
     fn make_account(id: &str, currency: &str, initial_balance: i64) -> Account {
         Account {
@@ -336,7 +338,8 @@ mod tests {
     fn test_get_expenses_by_category_empty() {
         let transactions: Vec<Transaction> = vec![];
         let accounts: Vec<Account> = vec![];
-        let result = DashboardCharts::get_expenses_by_category(&transactions, &accounts, 1.0);
+        let rates = usd_rates(&[]);
+        let result = DashboardCharts::get_expenses_by_category(&transactions, &accounts, &rates);
         assert!(result.is_empty());
     }
 
@@ -347,10 +350,52 @@ mod tests {
             "tx1", "acc1", 5000, "Food", "expense", "2024-12-01",
         )];
 
-        let result = DashboardCharts::get_expenses_by_category(&transactions, &accounts, 1.0);
+        let rates = usd_rates(&[]);
+        let result = DashboardCharts::get_expenses_by_category(&transactions, &accounts, &rates);
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].0, "Food");
         assert_eq!(result[0].1, 5000);
+    }
+
+    #[test]
+    fn test_get_expenses_by_category_converts_non_usd_with_cached_rate() {
+        let accounts = vec![make_account("acc1", "EUR", 0)];
+        let transactions = vec![make_transaction(
+            "tx1", "acc1", 9200, "Food", "expense", "2024-12-01",
+        )];
+        let rates = usd_rates(&[("EUR", 0.92)]);
+
+        let result = DashboardCharts::get_expenses_by_category(&transactions, &accounts, &rates);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].0, "Food");
+        // 92.00 EUR -> ~100.00 USD (cents)
+        assert_eq!(result[0].1, 10000);
+    }
+
+    #[test]
+    fn test_dashboard_data_converts_non_usd_balances_with_cached_rate() {
+        let balances = vec![AccountBalance {
+            account_id: "acc1".to_string(),
+            account_name: "Euro".to_string(),
+            current_balance: 9200,
+            total_income: 9200,
+            total_expense: 0,
+        }];
+        let accounts = vec![make_account("acc1", "EUR", 0)];
+        let transactions: Vec<Transaction> = vec![];
+        let snapshots: Vec<(String, f64, f64)> = vec![];
+        let rates = usd_rates(&[("EUR", 0.92)]);
+
+        let result = DashboardCharts::calculate_dashboard_data(
+            &balances,
+            &accounts,
+            &transactions,
+            0.0,
+            &snapshots,
+            &rates,
+            "1M",
+        );
+        assert_eq!(result.net_worth, "$ 100.00");
     }
 
     #[test]
@@ -359,9 +404,16 @@ mod tests {
         let accounts: Vec<Account> = vec![];
         let transactions: Vec<Transaction> = vec![];
         let snapshots: Vec<(String, f64, f64)> = vec![];
+        let rates = usd_rates(&[]);
 
         let result = DashboardCharts::calculate_dashboard_data(
-            &balances, &accounts, &transactions, 0.0, &snapshots, 1.0, "1M",
+            &balances,
+            &accounts,
+            &transactions,
+            0.0,
+            &snapshots,
+            &rates,
+            "1M",
         );
 
         assert_eq!(result.net_worth, "$ 0.00");
@@ -374,9 +426,16 @@ mod tests {
         let accounts: Vec<Account> = vec![];
         let transactions: Vec<Transaction> = vec![];
         let snapshots: Vec<(String, f64, f64)> = vec![];
+        let rates = usd_rates(&[]);
 
         let result = DashboardCharts::calculate_dashboard_data(
-            &balances, &accounts, &transactions, 500.0, &snapshots, 1.0, "1M",
+            &balances,
+            &accounts,
+            &transactions,
+            500.0,
+            &snapshots,
+            &rates,
+            "1M",
         );
 
         assert_eq!(result.net_worth, "$ 500.00");
@@ -394,10 +453,17 @@ mod tests {
         let accounts = vec![make_account("acc1", "USD", 0)];
         let transactions: Vec<Transaction> = vec![];
         let snapshots: Vec<(String, f64, f64)> = vec![];
+        let rates = usd_rates(&[]);
 
         // $100 FIAT + $200 crypto = $300
         let result = DashboardCharts::calculate_dashboard_data(
-            &balances, &accounts, &transactions, 200.0, &snapshots, 1.0, "1M",
+            &balances,
+            &accounts,
+            &transactions,
+            200.0,
+            &snapshots,
+            &rates,
+            "1M",
         );
 
         assert_eq!(result.net_worth, "$ 300.00");

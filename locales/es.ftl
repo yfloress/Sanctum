@@ -346,7 +346,7 @@ confirm-delete-generic = Esto eliminará permanentemente
 
 # ==================== Dashboard Extended ====================
 dashboard-total-net-worth = PATRIMONIO NETO TOTAL
-dashboard-exchange-rate-warning = Tipo de cambio no disponible. Saldos en CLP mostrados a tasa 1:1.
+dashboard-exchange-rate-warning = Tipo de cambio no disponible para algunas monedas. Saldos mostrados con tasa de respaldo 1:1.
 dashboard-loading = Cargando panel...
 dashboard-retry = REINTENTAR
 dashboard-usd-clp = USD/CLP

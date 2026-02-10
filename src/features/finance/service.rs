@@ -24,6 +24,7 @@ use crate::db::{Database, DbError};
 use crate::models::{Account, AccountBalance, BalanceSummary, Transaction, TransactionCategory};
 use crate::security_log::{log_security_event, SecurityEvent};
 use chrono::Utc;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
@@ -491,16 +492,12 @@ impl FinanceService {
     pub fn get_expenses_by_category(&self) -> Result<Vec<(String, i64)>, FinanceError> {
         let transactions = self.get_transactions()?;
         let accounts = self.get_accounts()?;
-
-        let clp_rate = match self.load_exchange_rate_allow_stale("CLP_USD".to_string()) {
-            Ok(Some((r, _))) => r,
-            _ => 1.0,
-        };
+        let usd_rates = self.load_account_usd_rates(&accounts);
 
         Ok(DashboardCharts::get_expenses_by_category(
             &transactions,
             &accounts,
-            clp_rate,
+            &usd_rates,
         ))
     }
 
@@ -517,11 +514,7 @@ impl FinanceService {
         let balances = self.get_account_balances()?;
         let accounts = self.get_accounts()?;
         let transactions = self.get_transactions()?;
-
-        let clp_rate = match self.load_exchange_rate_allow_stale("CLP_USD".to_string()) {
-            Ok(Some((r, _))) => r,
-            _ => 1.0,
-        };
+        let usd_rates = self.load_account_usd_rates(&accounts);
 
         Ok(DashboardCharts::calculate_dashboard_data(
             &balances,
@@ -529,8 +522,34 @@ impl FinanceService {
             &transactions,
             crypto_total_usd,
             crypto_snapshots,
-            clp_rate,
+            &usd_rates,
             &range,
         ))
+    }
+
+    fn load_account_usd_rates(&self, accounts: &[Account]) -> HashMap<String, f64> {
+        let mut rates = HashMap::from([("USD".to_string(), 1.0)]);
+        let currencies: HashSet<String> = accounts
+            .iter()
+            .map(|account| account.currency.trim().to_uppercase())
+            .filter(|currency| !currency.is_empty())
+            .collect();
+
+        for currency in currencies {
+            if currency == "USD" {
+                continue;
+            }
+
+            let pair = format!("{}_USD", currency);
+            let rate = self
+                .load_exchange_rate_allow_stale(pair)
+                .ok()
+                .and_then(|entry| entry.map(|(value, _)| value))
+                .filter(|value| *value > 0.0)
+                .unwrap_or(1.0);
+            rates.insert(currency, rate);
+        }
+
+        rates
     }
 }

@@ -55,6 +55,19 @@ pub fn load_accounts_state(
     controller: &Arc<AppController>,
     preferred_currency: &str,
 ) -> Result<AccountsState, String> {
+    fn load_cached_usd_rate(controller: &AppController, currency: &str) -> f64 {
+        let code = currency.trim().to_uppercase();
+        if code == "USD" {
+            return 1.0;
+        }
+        controller
+            .load_exchange_rate_allow_stale(format!("{}_USD", code))
+            .ok()
+            .and_then(|rate| rate.map(|(r, _)| r))
+            .filter(|r| *r > 0.0)
+            .unwrap_or(1.0)
+    }
+
     let preferred_currency = preferred_currency.trim().to_uppercase();
     let accounts = controller.get_accounts().map_err(|e| e.to_string())?;
     let balances = controller
@@ -71,21 +84,19 @@ pub fn load_accounts_state(
         .map(|acc| (acc.id.clone(), acc.currency.to_uppercase()))
         .collect();
 
-    let clp_rate = controller
-        .load_exchange_rate_allow_stale("CLP_USD".to_string())
-        .ok()
-        .and_then(|rate| rate.map(|(r, _)| r))
-        .filter(|r| *r > 0.0)
-        .unwrap_or(1.0);
+    let mut usd_rates: HashMap<String, f64> = HashMap::from([("USD".to_string(), 1.0)]);
+    for currency in currency_map.values() {
+        if !usd_rates.contains_key(currency) {
+            usd_rates.insert(currency.clone(), load_cached_usd_rate(controller, currency));
+        }
+    }
     let preferred_rate = if preferred_currency == "USD" {
         1.0
     } else {
-        controller
-            .load_exchange_rate_allow_stale(format!("{}_USD", preferred_currency.as_str()))
-            .ok()
-            .and_then(|rate| rate.map(|(r, _)| r))
-            .filter(|r| *r > 0.0)
-            .unwrap_or(1.0)
+        usd_rates
+            .get(&preferred_currency)
+            .copied()
+            .unwrap_or_else(|| load_cached_usd_rate(controller, &preferred_currency))
     };
 
     // Calculate total in preferred currency
@@ -96,11 +107,8 @@ pub fn load_accounts_state(
             .map(|s| s.as_str())
             .unwrap_or("USD");
 
-        let usd_cents = if acc_currency == "CLP" {
-            (bal.current_balance as f64 / clp_rate).round() as i64
-        } else {
-            bal.current_balance
-        };
+        let usd_rate = usd_rates.get(acc_currency).copied().unwrap_or(1.0);
+        let usd_cents = (bal.current_balance as f64 / usd_rate).round() as i64;
 
         let preferred_cents = if preferred_currency == "USD" {
             usd_cents

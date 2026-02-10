@@ -346,7 +346,7 @@ confirm-delete-generic = This will permanently delete
 
 # ==================== Dashboard Extended ====================
 dashboard-total-net-worth = TOTAL NET WORTH
-dashboard-exchange-rate-warning = Exchange rate unavailable. CLP balances shown at 1:1 rate.
+dashboard-exchange-rate-warning = Exchange rate unavailable for some currencies. Balances shown with fallback 1:1 rate.
 dashboard-loading = Loading dashboard...
 dashboard-retry = RETRY
 dashboard-usd-clp = USD/CLP

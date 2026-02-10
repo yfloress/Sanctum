@@ -37,17 +37,20 @@ fn usd_pair_for_currency(currency: &str) -> String {
     format!("{}_USD", normalize_currency_code(currency))
 }
 
-fn load_cached_usd_rate(controller: &AppController, currency: &str) -> f64 {
+fn load_cached_usd_rate_opt(controller: &AppController, currency: &str) -> Option<f64> {
     let target = normalize_currency_code(currency);
     if target == "USD" {
-        return 1.0;
+        return Some(1.0);
     }
     controller
         .load_exchange_rate_allow_stale(usd_pair_for_currency(&target))
         .ok()
         .and_then(|r| r.map(|(rate, _)| rate))
         .filter(|rate| *rate > 0.0)
-        .unwrap_or(1.0)
+}
+
+fn load_cached_usd_rate(controller: &AppController, currency: &str) -> f64 {
+    load_cached_usd_rate_opt(controller, currency).unwrap_or(1.0)
 }
 
 /// Sets up all DashboardAdapter and AnalyticsAdapter callbacks
@@ -80,18 +83,11 @@ pub fn setup_dashboard_callbacks<F>(
             );
             let preferred_rate = load_cached_usd_rate(&controller, &preferred_currency);
 
-            // 1. Load Exchange Rate (CLP -> USD)
-            let (clp_rate, missing_rate) =
-                match controller.load_exchange_rate_allow_stale("CLP_USD".to_string()) {
-                    Ok(Some((r, _))) if r > 0.0 => (r, false),
-                    _ => (1.0, true), // Fallback to 1:1, flag as missing
-                };
-
-            // 2. Fetch Accounts & Balances (for normalized calculation)
+            // 1. Fetch Accounts & Balances (for normalized calculation)
             let accounts_res = controller.get_accounts();
             let balances_res = controller.get_account_balances();
 
-            // 3. Fetch Crypto Portfolio
+            // 2. Fetch Crypto Portfolio
             let crypto_result = controller.get_aggregated_portfolio();
             let prices = controller.load_crypto_prices().unwrap_or_default();
 
@@ -120,15 +116,27 @@ pub fn setup_dashboard_callbacks<F>(
             let balances = balances_res.unwrap();
             let assets = crypto_result.unwrap();
 
-            // Flag missing exchange rate (CLP balances may be inaccurate)
-            let has_clp_accounts = accounts.iter().any(|a| a.currency.to_uppercase() == "CLP");
-            dash.set_missing_exchange_rate(missing_rate && has_clp_accounts);
-
             // Create Currency Map (Account ID -> Currency)
             let currency_map: HashMap<String, String> = accounts
-                .into_iter()
-                .map(|a| (a.id, a.currency.to_uppercase()))
+                .iter()
+                .map(|a| (a.id.clone(), a.currency.to_uppercase()))
                 .collect();
+
+            // Load USD rates for every non-USD account currency and flag missing entries.
+            let mut usd_rates: HashMap<String, f64> = HashMap::from([("USD".to_string(), 1.0)]);
+            let mut missing_rate = false;
+            for currency in currency_map.values() {
+                if usd_rates.contains_key(currency) {
+                    continue;
+                }
+                if let Some(rate) = load_cached_usd_rate_opt(&controller, currency) {
+                    usd_rates.insert(currency.clone(), rate);
+                } else {
+                    missing_rate = true;
+                    usd_rates.insert(currency.clone(), 1.0);
+                }
+            }
+            dash.set_missing_exchange_rate(missing_rate);
 
             // Calculate Normalized Fiat Total (always in USD first)
             let mut total_fiat_usd: f64 = 0.0;
@@ -138,7 +146,7 @@ pub fn setup_dashboard_callbacks<F>(
                     .get(&bal.account_id)
                     .map(|s| s.as_str())
                     .unwrap_or("USD");
-                let rate = if currency == "CLP" { clp_rate } else { 1.0 };
+                let rate = usd_rates.get(currency).copied().unwrap_or(1.0);
                 total_fiat_usd += (bal.current_balance as f64) / rate;
             }
 

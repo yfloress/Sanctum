@@ -212,11 +212,24 @@ export component AddAccountModal inherits Rectangle {
     property <string> name-value: editing && AccountAdapter.accounts.length > selected-index ? AccountAdapter.accounts[selected-index].name : "";
     property <string> initial-balance: editing && AccountAdapter.accounts.length > selected-index ? AccountAdapter.accounts[selected-index].initial-balance : "";
     property <int> type-index: editing && AccountAdapter.accounts.length > selected-index ? (AccountAdapter.accounts[selected-index].account-type-key == "cash" ? 1 : AccountAdapter.accounts[selected-index].account-type-key == "savings" ? 2 : AccountAdapter.accounts[selected-index].account-type-key == "credit_card" ? 3 : AccountAdapter.accounts[selected-index].account-type-key == "other" ? 4 : 0) : 0;
-    property <int> currency-index: editing && AccountAdapter.accounts.length > selected-index ? (AccountAdapter.accounts[selected-index].currency == "CLP" ? 1 : 0) : 0;
+    function currency_option_index(code: string) -> int {
+        code == "CLP" || code == "clp" ? 1 :
+        code == "EUR" || code == "eur" ? 2 :
+        code == "GBP" || code == "gbp" ? 3 :
+        code == "BRL" || code == "brl" ? 4 :
+        code == "MXN" || code == "mxn" ? 5 :
+        code == "ARS" || code == "ars" ? 6 :
+        code == "CAD" || code == "cad" ? 7 :
+        code == "AUD" || code == "aud" ? 8 :
+        code == "CHF" || code == "chf" ? 9 :
+        code == "JPY" || code == "jpy" ? 10 :
+        0;
+    }
+    property <int> currency-index: editing && AccountAdapter.accounts.length > selected-index ? currency_option_index(AccountAdapter.accounts[selected-index].currency) : 0;
     property <bool> show-delete-confirm: false;
 
     property <[string]> type-options: ["Bank", "Cash", "Savings", "Credit Card", "Other"];
-    property <[string]> currency-options: ["USD", "CLP"];
+    property <[string]> currency-options: ["USD", "CLP", "EUR", "GBP", "BRL", "MXN", "ARS", "CAD", "AUD", "CHF", "JPY"];
 
     init => {
         key-scope.focus();
