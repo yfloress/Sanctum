@@ -180,7 +180,10 @@ export component CoinSelector inherits Rectangle {
                 }
 
                 TouchArea {
-                    clicked => { search-input.focus(); }
+                    clicked => {
+                        search-input.focus();
+                        search-input.set-selection-offsets(2147483647, 2147483647);
+                    }
                 }
             }
 

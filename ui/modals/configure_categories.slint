@@ -95,6 +95,7 @@ component CategoryRow inherits Rectangle {
             TouchArea {
                 clicked => {
                     edit-input.focus();
+                    edit-input.set-selection-offsets(2147483647, 2147483647);
                 }
             }
         }
@@ -263,6 +264,7 @@ component AddCategoryForm inherits Rectangle {
                 TouchArea {
                     clicked => {
                         input.focus();
+                        input.set-selection-offsets(2147483647, 2147483647);
                     }
                 }
             }

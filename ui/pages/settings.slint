@@ -562,12 +562,12 @@ export component SettingsPage inherits Rectangle {
                                     alignment: center;
 
                                     Rectangle {
-                                        width: 140px;
+                                        width: max(140px, select-wallpaper-label.preferred-width + 24px);
                                         height: 32px;
                                         border-radius: 8px;
                                         background: @linear-gradient(135deg, Theme.action-gradient-start 0%, Theme.action-gradient-end 100%);
 
-                                        Text {
+                                        select-wallpaper-label := Text {
                                             text: Translations.settings-wallpaper-select;
                                             color: Theme.text-light;
                                             font-size: 10px;

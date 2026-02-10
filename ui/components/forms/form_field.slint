@@ -147,7 +147,10 @@ export component FormField inherits Rectangle {
 
             TouchArea {
                 enabled: root.enabled;
-                clicked => { input.focus(); }
+                clicked => {
+                    input.focus();
+                    input.set-selection-offsets(2147483647, 2147483647);
+                }
             }
         }
     }

@@ -628,7 +628,7 @@ export component GhostButton inherits Rectangle {
     in property <bool> enabled: true;
     callback clicked;
 
-    width: icon-mode ? 32px : 96px;
+    width: icon-mode ? 32px : max(96px, label.preferred-width + 20px);
     height: 28px;
     background: enabled ? (touch.has-hover ? Theme.surface : transparent) : Theme.surface;
     border-radius: 6px;
@@ -639,7 +639,7 @@ export component GhostButton inherits Rectangle {
     animate background { duration: 150ms; }
     animate border-color { duration: 150ms; }
 
-    Text {
+    label := Text {
         text: root.text;
         color: enabled ? (touch.has-hover ? Theme.text-primary : Theme.text-muted) : Theme.text-muted;
         font-size: 10px;
