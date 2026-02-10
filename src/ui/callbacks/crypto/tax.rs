@@ -83,6 +83,20 @@ fn effective_period_id(raw: &str, jurisdiction: TaxJurisdiction) -> Result<Strin
     }
 }
 
+/// Returns the year label used in export file names.
+/// For Chile, UI tax period (AT) is one year ahead of the engine period.
+fn export_period_label(effective_period: &str, jurisdiction: TaxJurisdiction) -> String {
+    if matches!(jurisdiction, TaxJurisdiction::Chile) {
+        return effective_period
+            .parse::<i32>()
+            .ok()
+            .and_then(|y| y.checked_add(1))
+            .map(|y| y.to_string())
+            .unwrap_or_else(|| effective_period.to_string());
+    }
+    effective_period.to_string()
+}
+
 pub fn setup_tax_callbacks<N>(
     ui: &AppWindow,
     ui_weak: &Weak<AppWindow>,
@@ -222,8 +236,9 @@ pub fn setup_tax_callbacks<N>(
                     return;
                 }
             };
+            let period_label = export_period_label(&period, jurisdiction);
 
-            let file_name = format!("sanctum-crypto-capital-gains-{}.csv", period);
+            let file_name = format!("sanctum-crypto-capital-gains-{}.csv", period_label);
             let file_path = rfd::FileDialog::new()
                 .set_file_name(&file_name)
                 .add_filter("CSV", &["csv"])
@@ -262,8 +277,9 @@ pub fn setup_tax_callbacks<N>(
                     return;
                 }
             };
+            let period_label = export_period_label(&period, jurisdiction);
 
-            let file_name = format!("sanctum-crypto-transaction-history-{}.csv", period);
+            let file_name = format!("sanctum-crypto-transaction-history-{}.csv", period_label);
             let file_path = rfd::FileDialog::new()
                 .set_file_name(&file_name)
                 .add_filter("CSV", &["csv"])

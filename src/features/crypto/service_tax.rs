@@ -19,11 +19,11 @@
 
 use super::service::{
     CryptoError, CryptoService, SETTING_CRYPTO_TAX_IPC_DATA, SETTING_CRYPTO_TAX_IPC_UPDATED,
-    SETTING_CRYPTO_TAX_SETTINGS,
+    SETTING_CRYPTO_TAX_SETTINGS, SETTING_PREFERRED_CURRENCY,
 };
 use super::tax::{
     IpcEntry, IpcImportSummary, IpcSummary, TaxJurisdiction, TaxPeriodSettings, TaxReadinessItem,
-    TaxReport, TaxSettingsStore, TaxSummaryPayload, TaxTxType, TaxWarning, build_import_summary,
+    TaxReport, TaxSettingsStore, TaxSummaryPayload, TaxTxType, build_import_summary,
     build_tax_report, map_to_entries, parse_ipc_csv, resolve_tax_type, summarize_ipc,
 };
 use crate::core::csv_escape;
@@ -190,17 +190,6 @@ impl CryptoService {
 
             report.warnings.extend(income_warnings);
 
-            // Chile: always emit a reminder that F22 casilla codes may change.
-            if matches!(jurisdiction, TaxJurisdiction::Chile) {
-                report.warnings.push(TaxWarning {
-                    code: "sii_casilla_may_change".to_string(),
-                    message: "Los códigos de casilla del Formulario 22 pueden cambiar cada año. \
-                              Verifica el suplemento tributario del SII para el Año Tributario vigente."
-                        .to_string(),
-                    tx_id: None,
-                });
-            }
-
             let readiness = build_readiness(
                 &report,
                 transactions_in_period,
@@ -226,7 +215,8 @@ impl CryptoService {
 
     pub fn export_tax_report_csv(&self, period_id: String, path: &str) -> Result<(), CryptoError> {
         let report = self.generate_tax_report(period_id)?;
-        let csv = report.to_csv();
+        let (currency, clp_rate) = self.resolve_export_currency()?;
+        let csv = report.to_csv_with_currency(&currency, clp_rate);
         std::fs::write(path, csv)
             .map_err(|e| CryptoError::Validation(format!("Failed to write report: {}", e)))?;
         Ok(())
@@ -243,6 +233,7 @@ impl CryptoService {
         let settings = self.load_tax_settings(period_id.clone())?;
         let excluded = settings.excluded_wallet_ids;
         let period = parse_period(&period_id).map_err(CryptoError::Validation)?;
+        let (currency, clp_rate) = self.resolve_export_currency()?;
 
         self.with_db(|db| {
             let transactions: Vec<CryptoTransaction> = db
@@ -251,11 +242,39 @@ impl CryptoService {
                 .into_iter()
                 .filter(|tx| !excluded.contains(&tx.wallet_id))
                 .collect();
-            let csv = build_transaction_history_csv(&transactions, &period);
+            let csv = build_transaction_history_csv(&transactions, &period, &currency, clp_rate);
             std::fs::write(path, csv)
                 .map_err(|e| CryptoError::Validation(format!("Failed to write history: {}", e)))?;
             Ok(())
         })
+    }
+
+    fn resolve_export_currency(&self) -> Result<(String, f64), CryptoError> {
+        let preferred = self
+            .get_app_setting(SETTING_PREFERRED_CURRENCY)
+            .unwrap_or_else(|_| "USD".to_string())
+            .to_uppercase();
+
+        if preferred == "CLP" {
+            let rate = self.with_db(|db| {
+                let rate = db
+                    .load_exchange_rate("CLP_USD")
+                    .map_err(CryptoError::Database)?
+                    .map(|(value, _)| value)
+                    .unwrap_or(0.0);
+                Ok(rate)
+            })?;
+
+            if rate <= 0.0 {
+                return Err(CryptoError::Validation(
+                    "CLP export requires a valid CLP/USD rate. Please sync prices first."
+                        .to_string(),
+                ));
+            }
+            return Ok(("CLP".to_string(), rate));
+        }
+
+        Ok(("USD".to_string(), 0.0))
     }
 }
 
@@ -481,9 +500,22 @@ fn build_readiness(
     ]
 }
 
-fn build_transaction_history_csv(transactions: &[CryptoTransaction], period: &TaxPeriod) -> String {
+fn convert_usd_for_export(value: f64, currency: &str, clp_rate: f64) -> f64 {
+    if currency == "CLP" {
+        value * clp_rate
+    } else {
+        value
+    }
+}
+
+fn build_transaction_history_csv(
+    transactions: &[CryptoTransaction],
+    period: &TaxPeriod,
+    currency: &str,
+    clp_rate: f64,
+) -> String {
     let mut out = String::new();
-    out.push_str("tx_id,date,coin_id,symbol,type,subtype,mechanical_type,amount,price_per_coin,fee,fee_coin_id,fee_amount,override_proceeds,override_cost_basis,notes,related_tx_id\n");
+    out.push_str("tx_id,date,coin_id,symbol,type,subtype,mechanical_type,amount,price_per_coin,fee,fee_coin_id,fee_amount,override_proceeds,override_cost_basis,fiat_currency,notes,related_tx_id\n");
 
     for tx in transactions {
         let Some(date) = parse_date(&tx.date) else {
@@ -495,7 +527,7 @@ fn build_transaction_history_csv(transactions: &[CryptoTransaction], period: &Ta
 
         let subtype_str = tx.subtype.as_deref().unwrap_or("");
         out.push_str(&format!(
-            "{},{},{},{},{},{},{},{:.8},{},{},{},{},{},{},{},{}\n",
+            "{},{},{},{},{},{},{},{:.8},{},{},{},{},{},{},{},{},{}\n",
             csv_escape(&tx.id),
             csv_escape(&tx.date),
             csv_escape(&tx.coin_id),
@@ -505,19 +537,22 @@ fn build_transaction_history_csv(transactions: &[CryptoTransaction], period: &Ta
             csv_escape(tx.mechanical_type()),
             tx.amount,
             tx.price_per_coin
-                .map(|v| format!("{:.8}", v))
+                .map(|v| format!("{:.8}", convert_usd_for_export(v, currency, clp_rate)))
                 .unwrap_or_default(),
-            tx.fee.map(|v| format!("{:.8}", v)).unwrap_or_default(),
+            tx.fee
+                .map(|v| format!("{:.8}", convert_usd_for_export(v, currency, clp_rate)))
+                .unwrap_or_default(),
             csv_escape(tx.fee_coin_id.as_deref().unwrap_or("")),
             tx.fee_amount
                 .map(|v| format!("{:.8}", v))
                 .unwrap_or_default(),
             tx.override_proceeds
-                .map(|v| format!("{:.8}", v))
+                .map(|v| format!("{:.8}", convert_usd_for_export(v, currency, clp_rate)))
                 .unwrap_or_default(),
             tx.override_cost_basis
-                .map(|v| format!("{:.8}", v))
+                .map(|v| format!("{:.8}", convert_usd_for_export(v, currency, clp_rate)))
                 .unwrap_or_default(),
+            csv_escape(currency),
             csv_escape(tx.notes.as_deref().unwrap_or("")),
             csv_escape(tx.related_tx_id.as_deref().unwrap_or("")),
         ));
@@ -599,7 +634,7 @@ mod tests {
             method: "fifo".to_string(),
             summary: TaxReportSummary::default(),
             disposals: Vec::new(),
-            warnings: vec![TaxWarning {
+            warnings: vec![crate::features::crypto::TaxWarning {
                 code: "invalid_date".to_string(),
                 message: "bad date".to_string(),
                 tx_id: None,
@@ -620,8 +655,19 @@ mod tests {
         let period = parse_period("2024").expect("valid period");
         let tx = tx("s1", "trade", Some("swap"), 0.1, Some(50000.0), "2024-01-10");
 
-        let csv = build_transaction_history_csv(&[tx], &period);
+        let csv = build_transaction_history_csv(&[tx], &period, "USD", 0.0);
         assert!(csv.contains("type,subtype,mechanical_type"));
         assert!(csv.contains(",trade,swap,swap,"));
+    }
+
+    #[test]
+    fn history_csv_converts_fiat_values_for_clp_export() {
+        let period = parse_period("2024").expect("valid period");
+        let tx = tx("s1", "trade", Some("sell"), 0.1, Some(10.0), "2024-01-10");
+
+        let csv = build_transaction_history_csv(&[tx], &period, "CLP", 1000.0);
+        assert!(csv.contains("fiat_currency"));
+        assert!(csv.contains(",10000.00000000,"));
+        assert!(csv.contains(",CLP,"));
     }
 }

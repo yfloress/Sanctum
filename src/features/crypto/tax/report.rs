@@ -76,31 +76,46 @@ pub struct TaxWarning {
 
 impl TaxReport {
     pub fn to_csv(&self) -> String {
+        self.to_csv_with_currency("USD", 0.0)
+    }
+
+    pub fn to_csv_with_currency(&self, currency: &str, clp_rate: f64) -> String {
+        let convert = |value: f64| {
+            if currency == "CLP" {
+                value * clp_rate
+            } else {
+                value
+            }
+        };
+
         let mut out = String::new();
-        out.push_str("period_id,period_start,period_end,jurisdiction,method,disposals,total_proceeds,total_cost,total_gain,short_term_gain,long_term_gain\n");
+        out.push_str("period_id,period_start,period_end,jurisdiction,method,currency,disposals,total_proceeds,total_cost,total_gain,short_term_gain,long_term_gain\n");
         out.push_str(&format!(
-            "{},{},{},{},{},{},{:.2},{:.2},{:.2},{},{}\n",
+            "{},{},{},{},{},{},{},{:.2},{:.2},{:.2},{},{}\n",
             csv_escape(&self.period_id),
             csv_escape(&self.period_start),
             csv_escape(&self.period_end),
             csv_escape(&self.jurisdiction),
             csv_escape(&self.method),
+            csv_escape(currency),
             self.summary.disposals,
-            self.summary.total_proceeds,
-            self.summary.total_cost,
-            self.summary.total_gain,
+            convert(self.summary.total_proceeds),
+            convert(self.summary.total_cost),
+            convert(self.summary.total_gain),
             self.summary
                 .short_term_gain
-                .map(|v| format!("{:.2}", v))
+                .map(|v| format!("{:.2}", convert(v)))
                 .unwrap_or_default(),
             self.summary
                 .long_term_gain
-                .map(|v| format!("{:.2}", v))
+                .map(|v| format!("{:.2}", convert(v)))
                 .unwrap_or_default(),
         ));
 
         out.push('\n');
-        out.push_str("tx_id,date,coin_id,symbol,amount,proceeds,cost_basis,gain,term,disposal_type,lot_breakdown\n");
+        out.push_str(
+            "tx_id,date,coin_id,symbol,amount,proceeds,cost_basis,gain,term,disposal_type,fiat_currency,lot_breakdown\n",
+        );
 
         for disposal in &self.disposals {
             let lot_breakdown = disposal
@@ -109,28 +124,34 @@ impl TaxReport {
                 .map(|lot| {
                     let adjusted = lot
                         .adjusted_cost
-                        .map(|v| format!("{:.4}", v))
+                        .map(|v| format!("{:.4}", convert(v)))
                         .unwrap_or_default();
                     format!(
                         "{}|{}|{:.8}|{:.8}|{:.4}|{}",
-                        lot.lot_id, lot.lot_date, lot.quantity, lot.unit_cost, lot.cost, adjusted
+                        lot.lot_id,
+                        lot.lot_date,
+                        lot.quantity,
+                        convert(lot.unit_cost),
+                        convert(lot.cost),
+                        adjusted
                     )
                 })
                 .collect::<Vec<String>>()
                 .join(";");
 
             out.push_str(&format!(
-                "{},{},{},{},{:.8},{:.2},{:.2},{:.2},{},{},{}\n",
+                "{},{},{},{},{:.8},{:.2},{:.2},{:.2},{},{},{},{}\n",
                 csv_escape(&disposal.tx_id),
                 csv_escape(&disposal.date),
                 csv_escape(&disposal.coin_id),
                 csv_escape(&disposal.symbol),
                 disposal.amount,
-                disposal.proceeds,
-                disposal.cost_basis,
-                disposal.gain,
+                convert(disposal.proceeds),
+                convert(disposal.cost_basis),
+                convert(disposal.gain),
                 csv_escape(disposal.term.as_deref().unwrap_or("")),
                 csv_escape(&disposal.disposal_type),
+                csv_escape(currency),
                 csv_escape(&lot_breakdown),
             ));
         }
@@ -205,5 +226,29 @@ mod tests {
         assert!(csv.contains("tx_id,date,coin_id"));
         assert!(csv.contains("warnings"));
         assert!(csv.contains("sample_warning"));
+    }
+
+    #[test]
+    fn csv_with_currency_converts_summary_values_for_clp() {
+        let report = TaxReport {
+            period_id: "2024".to_string(),
+            period_start: "2024-01-01".to_string(),
+            period_end: "2024-12-31".to_string(),
+            jurisdiction: "chile".to_string(),
+            method: "hifo".to_string(),
+            summary: TaxReportSummary {
+                disposals: 1,
+                total_proceeds: 10.0,
+                total_cost: 7.0,
+                total_gain: 3.0,
+                short_term_gain: Some(3.0),
+                long_term_gain: Some(0.0),
+            },
+            disposals: Vec::new(),
+            warnings: Vec::new(),
+        };
+
+        let csv = report.to_csv_with_currency("CLP", 1000.0);
+        assert!(csv.contains(",CLP,1,10000.00,7000.00,3000.00,3000.00,0.00"));
     }
 }
