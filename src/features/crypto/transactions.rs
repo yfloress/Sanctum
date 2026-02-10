@@ -420,8 +420,13 @@ impl CryptoService {
 
             log_security_event(SecurityEvent::CryptoTransactionCreated, Some("swap"));
 
-            let source_id = Uuid::new_v4().to_string();
-            let target_id = Uuid::new_v4().to_string();
+            let first_id = Uuid::new_v4().to_string();
+            let second_id = Uuid::new_v4().to_string();
+            let (source_id, target_id) = if first_id <= second_id {
+                (first_id, second_id)
+            } else {
+                (second_id, first_id)
+            };
 
             let source = CryptoTransaction {
                 id: source_id.clone(),
@@ -562,6 +567,19 @@ impl CryptoService {
             let fee = validate_non_negative(fee, "Fee")?;
             let (fee_coin_id, fee_amount) = normalize_fee_coin(fee_coin_id, fee_amount)?;
             let date = validate_date(&date)?;
+            let subtype = validate_subtype(Some(existing.transaction_type.as_str()), subtype)?;
+            let override_proceeds = validate_non_negative(override_proceeds, "Override proceeds")?;
+            let override_cost_basis =
+                validate_non_negative(override_cost_basis, "Override cost basis")?;
+            let next_mech = crate::features::crypto::tax::types::derive_mechanical_type(
+                &existing.transaction_type,
+                subtype.as_deref(),
+            );
+            if next_mech != existing_mech {
+                return Err(CryptoError::Validation(
+                    "Changing subtype that alters transaction direction is not supported".to_string(),
+                ));
+            }
 
             let notes = match notes {
                 Some(n) => {
@@ -571,7 +589,7 @@ impl CryptoService {
                 None => None,
             };
 
-            let is_outflow = existing_mech == "sell" || existing_mech == "transfer_out";
+            let is_outflow = next_mech == "sell" || next_mech == "transfer_out";
 
             let existing_type = existing.get_type().unwrap_or(CryptoTransactionType::Buy);
 

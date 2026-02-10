@@ -148,13 +148,34 @@ pub(super) fn resolve_swap_pair(
     a: &CryptoTransaction,
     b: &CryptoTransaction,
 ) -> (CryptoTransaction, CryptoTransaction, bool) {
-    let a_has_fee = a.fee.is_some() || a.fee_coin_id.is_some() || a.fee_amount.is_some();
-    let b_has_fee = b.fee.is_some() || b.fee_coin_id.is_some() || b.fee_amount.is_some();
+    // Source-side scoring to avoid relying on UUID ordering.
+    // Higher score means "more likely to be disposal/source".
+    let source_score = |tx: &CryptoTransaction| -> i32 {
+        let mut score = 0;
+        if tx.override_proceeds.is_some() {
+            score += 8;
+        }
+        if tx.override_cost_basis.is_some() {
+            score -= 8;
+        }
+        if tx.fee_coin_id.is_some() || tx.fee_amount.is_some() {
+            score += 4;
+        }
+        if tx.fee.is_some() {
+            score += 2;
+        }
+        if tx.price_per_coin.is_some() {
+            score += 1;
+        }
+        score
+    };
 
-    if a_has_fee && !b_has_fee {
+    let a_score = source_score(a);
+    let b_score = source_score(b);
+    if a_score > b_score {
         return (a.clone(), b.clone(), false);
     }
-    if b_has_fee && !a_has_fee {
+    if b_score > a_score {
         return (b.clone(), a.clone(), false);
     }
 
@@ -209,5 +230,26 @@ mod tests {
         let (source, _target, inferred) = resolve_swap_pair(&a, &b);
         assert_eq!(source.id, "a");
         assert!(!inferred);
+    }
+
+    #[test]
+    fn resolve_swap_pair_prefers_override_proceeds_side() {
+        let mut a = swap_tx("a", 1.0, None);
+        a.override_proceeds = Some(100.0);
+        let mut b = swap_tx("b", 2.0, None);
+        b.override_cost_basis = Some(100.0);
+
+        let (source, target, inferred) = resolve_swap_pair(&a, &b);
+        assert_eq!(source.id, "a");
+        assert_eq!(target.id, "b");
+        assert!(!inferred);
+    }
+
+    #[test]
+    fn resolve_swap_pair_marks_inferred_on_tie() {
+        let a = swap_tx("a", 1.0, None);
+        let b = swap_tx("b", 2.0, None);
+        let (_source, _target, inferred) = resolve_swap_pair(&a, &b);
+        assert!(inferred);
     }
 }

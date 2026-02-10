@@ -126,9 +126,16 @@ impl ImportCryptoTransaction {
     ///
     /// Result is one of: `"buy"`, `"sell"`, `"swap"`, `"transfer_in"`, `"transfer_out"`.
     pub fn mechanical_type(&self) -> &str {
+        let fiscal_type = self.transaction_type.trim().to_lowercase();
+        let normalized_subtype = self
+            .subtype
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_lowercase);
         crate::features::crypto::tax::types::derive_mechanical_type(
-            &self.transaction_type,
-            self.subtype.as_deref(),
+            &fiscal_type,
+            normalized_subtype.as_deref(),
         )
     }
 }
@@ -384,6 +391,13 @@ mod tests {
     fn test_mechanical_trade_swap() {
         let mut tx = base_import("trade");
         tx.subtype = Some("swap".to_string());
+        assert_eq!(tx.mechanical_type(), "swap");
+    }
+
+    #[test]
+    fn test_mechanical_type_is_case_insensitive_for_fiscal_and_subtype() {
+        let mut tx = base_import("Trade");
+        tx.subtype = Some("SWAP".to_string());
         assert_eq!(tx.mechanical_type(), "swap");
     }
 

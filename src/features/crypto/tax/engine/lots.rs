@@ -122,13 +122,11 @@ pub(super) fn apply_disposal(
 
     if let Some(override_proceeds) = tx.override_proceeds {
         proceeds = override_proceeds;
-    } else if taxable {
-        // For USA, fee reduces proceeds. For Chile, fees are not deductible
-        // for personas naturales, so we do not subtract them.
-        let fee = match cfg.jurisdiction {
-            TaxJurisdiction::Chile => 0.0,
-            _ => tx.fee.unwrap_or(0.0),
-        };
+    } else if taxable && !matches!(cfg.jurisdiction, TaxJurisdiction::Chile) {
+        // For business-style regimes, disposal fees reduce proceeds.
+        // Chile persona natural (art. 17 N°8 m) does not deduct these commissions
+        // in mayor valor determination.
+        let fee = tx.fee.unwrap_or(0.0);
         proceeds = (proceeds - fee).max(0.0);
     }
 
@@ -285,21 +283,23 @@ pub(super) fn consume_lots(
         return (allocations, cost_basis, short_gain, long_gain);
     }
 
+    let sale_prev_month = prev_month_key(req.sale_date);
+
     let mut indices: Vec<usize> = (0..entry.len()).collect();
     match cfg.method {
         TaxMethod::Fifo => {}
         TaxMethod::Lifo => indices.reverse(),
         TaxMethod::Hifo => indices.sort_by(|a, b| {
-            entry[*b]
-                .unit_cost
-                .partial_cmp(&entry[*a].unit_cost)
+            let a_cost = hifo_effective_unit_cost(&entry[*a], cfg, &sale_prev_month);
+            let b_cost = hifo_effective_unit_cost(&entry[*b], cfg, &sale_prev_month);
+
+            b_cost
+                .partial_cmp(&a_cost)
                 .unwrap_or(std::cmp::Ordering::Equal)
                 .then_with(|| entry[*a].acquired_date.cmp(&entry[*b].acquired_date))
         }),
         TaxMethod::Cpp => {}
     }
-
-    let sale_prev_month = prev_month_key(req.sale_date);
 
     for idx in indices {
         if remaining <= 0.0 {
@@ -356,6 +356,27 @@ pub(super) fn consume_lots(
     let (short_gain, long_gain) =
         split_term_gain(&allocations, req.proceeds, req.sale_date, cfg.jurisdiction);
     (allocations, cost_basis, short_gain, long_gain)
+}
+
+fn hifo_effective_unit_cost(lot: &Lot, cfg: &TaxConfig, sale_prev_month: &str) -> f64 {
+    if !matches!(cfg.jurisdiction, TaxJurisdiction::Chile) || cfg.ipc_map.is_empty() {
+        return lot.unit_cost;
+    }
+
+    let buy_idx = cfg.ipc_map.get(&lot.acquired_prev_month).copied();
+    let sale_idx = cfg.ipc_map.get(sale_prev_month).copied();
+
+    match (buy_idx, sale_idx) {
+        (Some(buy), Some(sale)) if buy > 0.0 => {
+            let adjusted = lot.unit_cost * (sale / buy);
+            if adjusted.is_finite() && adjusted > 0.0 {
+                adjusted
+            } else {
+                lot.unit_cost
+            }
+        }
+        _ => lot.unit_cost,
+    }
 }
 
 fn consume_lots_cpp(
@@ -781,6 +802,62 @@ mod tests {
         assert!(approx_eq(cost, 200.0));
     }
 
+    #[test]
+    fn chile_hifo_uses_highest_ipc_adjusted_cost_lot() {
+        let mut report = chile_report();
+        let mut lots: HashMap<String, Vec<Lot>> = HashMap::new();
+        let period = test_period();
+        let mut ipc_map = BTreeMap::new();
+
+        // Sale in Aug => sale_prev = 2024-07
+        // b1 nominal 100 but adjusted to 111.11 (100 * 100/90)
+        // b2 nominal 105 and adjusted remains 105 (105 * 100/100)
+        ipc_map.insert("2023-12".to_string(), 90.0);
+        ipc_map.insert("2024-06".to_string(), 100.0);
+        ipc_map.insert("2024-07".to_string(), 100.0);
+
+        let buy1 = tx("b1", "buy", 1.0, 100.0, "2024-01-05");
+        let buy2 = tx("b2", "buy", 1.0, 105.0, "2024-07-05");
+
+        add_lot(
+            &mut report,
+            &mut lots,
+            &buy1,
+            NaiveDate::from_ymd_opt(2024, 1, 5).expect("valid date"),
+            TaxJurisdiction::Chile,
+            None,
+        );
+        add_lot(
+            &mut report,
+            &mut lots,
+            &buy2,
+            NaiveDate::from_ymd_opt(2024, 7, 5).expect("valid date"),
+            TaxJurisdiction::Chile,
+            None,
+        );
+
+        let cfg = TaxConfig {
+            period: &period,
+            method: TaxMethod::Hifo,
+            jurisdiction: TaxJurisdiction::Chile,
+            ipc_map: &ipc_map,
+        };
+
+        let req = DisposalRequest {
+            coin_id: "btc",
+            amount: 1.0,
+            sale_date: NaiveDate::from_ymd_opt(2024, 8, 1).expect("valid date"),
+            tx_id: "s1",
+            proceeds: 200.0,
+            taxable: true,
+        };
+
+        let (allocs, cost, _, _) = consume_lots(&mut report, &mut lots, &cfg, &req);
+        assert_eq!(allocs.len(), 1);
+        assert_eq!(allocs[0].allocation.lot_id, "b1");
+        assert!(cost > 110.0 && cost < 112.0);
+    }
+
     // -----------------------------------------------------------------------
     // CPP (weighted average)
     // -----------------------------------------------------------------------
@@ -993,6 +1070,80 @@ mod tests {
         let lot = &lots["btc"][0];
         // USA: cost = (amount × price) + fee = 100.0 + 5.0 = 105.0
         assert!(approx_eq(lot.unit_cost, 105.0));
+    }
+
+    #[test]
+    fn chile_sale_fee_does_not_reduce_proceeds() {
+        let mut report = chile_report();
+        let mut lots: HashMap<String, Vec<Lot>> = HashMap::new();
+        let period = test_period();
+        let ipc_map = BTreeMap::new();
+
+        let buy = tx("b1", "buy", 1.0, 100.0, "2024-01-10");
+        add_lot(
+            &mut report,
+            &mut lots,
+            &buy,
+            NaiveDate::from_ymd_opt(2024, 1, 10).expect("valid date"),
+            TaxJurisdiction::Chile,
+            None,
+        );
+
+        let sell = tx_with_fee("s1", "sell", 1.0, 200.0, 10.0, "2024-02-10");
+        let cfg = TaxConfig {
+            period: &period,
+            method: TaxMethod::Fifo,
+            jurisdiction: TaxJurisdiction::Chile,
+            ipc_map: &ipc_map,
+        };
+        apply_disposal(
+            &mut report,
+            &mut lots,
+            &cfg,
+            &sell,
+            NaiveDate::from_ymd_opt(2024, 2, 10).expect("valid date"),
+            true,
+        );
+
+        assert_eq!(report.disposals.len(), 1);
+        assert!(approx_eq(report.disposals[0].proceeds, 200.0));
+    }
+
+    #[test]
+    fn usa_sale_fee_reduces_proceeds() {
+        let mut report = base_report();
+        let mut lots: HashMap<String, Vec<Lot>> = HashMap::new();
+        let period = test_period();
+        let ipc_map = BTreeMap::new();
+
+        let buy = tx("b1", "buy", 1.0, 100.0, "2024-01-10");
+        add_lot(
+            &mut report,
+            &mut lots,
+            &buy,
+            NaiveDate::from_ymd_opt(2024, 1, 10).expect("valid date"),
+            TaxJurisdiction::Usa,
+            None,
+        );
+
+        let sell = tx_with_fee("s1", "sell", 1.0, 200.0, 10.0, "2024-02-10");
+        let cfg = TaxConfig {
+            period: &period,
+            method: TaxMethod::Fifo,
+            jurisdiction: TaxJurisdiction::Usa,
+            ipc_map: &ipc_map,
+        };
+        apply_disposal(
+            &mut report,
+            &mut lots,
+            &cfg,
+            &sell,
+            NaiveDate::from_ymd_opt(2024, 2, 10).expect("valid date"),
+            true,
+        );
+
+        assert_eq!(report.disposals.len(), 1);
+        assert!(approx_eq(report.disposals[0].proceeds, 190.0));
     }
 
     // -----------------------------------------------------------------------

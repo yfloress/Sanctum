@@ -20,6 +20,7 @@
 //! Orchestrates data import from various file formats.
 
 use crate::db::{Database, DbError};
+use crate::features::crypto::tax::types::{derive_mechanical_type, normalize_tax_subtype};
 use crate::models::{CryptoTransaction, HabitLog, Transaction};
 use crate::services::i18n::{t, t_args};
 use std::collections::{HashMap, HashSet};
@@ -939,6 +940,13 @@ impl IngestionService {
                 continue;
             }
 
+            let fiscal_type = import_tx.transaction_type.trim().to_lowercase();
+            let normalized_subtype = import_tx
+                .subtype
+                .as_deref()
+                .and_then(|s| normalize_tax_subtype(&fiscal_type, s));
+            let tx_type = derive_mechanical_type(&fiscal_type, normalized_subtype.as_deref());
+
             // Resolve wallet
             let wallet_key = import_tx.wallet.trim().to_lowercase();
             let wallet = match wallet_lookup.get(&wallet_key) {
@@ -972,8 +980,6 @@ impl IngestionService {
                     continue;
                 }
             };
-
-            let tx_type = import_tx.mechanical_type();
 
             let mut swap_to_coin = None;
             if tx_type == "swap" {
@@ -1488,21 +1494,26 @@ impl IngestionService {
                     None => continue,
                 };
                 let to_amount = import_tx.swap_to_amount.unwrap_or(0.0);
-                let source_id = Uuid::new_v4().to_string();
-                let target_id = Uuid::new_v4().to_string();
+                let first_id = Uuid::new_v4().to_string();
+                let second_id = Uuid::new_v4().to_string();
+                let (source_id, target_id) = if first_id <= second_id {
+                    (first_id, second_id)
+                } else {
+                    (second_id, first_id)
+                };
 
                 let source = CryptoTransaction {
                     id: source_id.clone(),
                     wallet_id: wallet.id.clone(),
                     coin_id: coin.id.clone(),
                     symbol: coin.symbol.clone(),
-                    transaction_type: import_tx.transaction_type.clone(),
+                    transaction_type: fiscal_type.clone(),
                     amount: import_tx.amount,
                     price_per_coin: import_tx.price_per_coin,
                     fee: import_tx.fee,
                     fee_coin_id: resolved_fee_coin_id.clone(),
                     fee_amount: resolved_fee_amount,
-                    subtype: import_tx.subtype.clone(),
+                    subtype: normalized_subtype.clone(),
                     override_proceeds: import_tx.override_proceeds,
                     override_cost_basis: None,
                     date: import_tx.date.trim().to_string(),
@@ -1515,13 +1526,13 @@ impl IngestionService {
                     wallet_id: wallet.id.clone(),
                     coin_id: to_coin.id.clone(),
                     symbol: to_coin.symbol.clone(),
-                    transaction_type: import_tx.transaction_type.clone(),
+                    transaction_type: fiscal_type.clone(),
                     amount: to_amount,
                     price_per_coin: None,
                     fee: None,
                     fee_coin_id: None,
                     fee_amount: None,
-                    subtype: import_tx.subtype.clone(),
+                    subtype: normalized_subtype.clone(),
                     override_proceeds: None,
                     override_cost_basis: import_tx.override_cost_basis,
                     date: import_tx.date.trim().to_string(),
@@ -1561,7 +1572,7 @@ impl IngestionService {
                 wallet.id.clone(),
                 coin.id.clone(),
                 coin.symbol.clone(),
-                import_tx.transaction_type.clone(),
+                fiscal_type.clone(),
                 import_tx.amount,
                 import_tx.price_per_coin,
                 import_tx.fee,
@@ -1570,7 +1581,7 @@ impl IngestionService {
             );
             transaction.fee_coin_id = resolved_fee_coin_id.clone();
             transaction.fee_amount = resolved_fee_amount;
-            transaction.subtype = import_tx.subtype.clone();
+            transaction.subtype = normalized_subtype.clone();
             transaction.override_proceeds = import_tx.override_proceeds;
             transaction.override_cost_basis = import_tx.override_cost_basis;
 
