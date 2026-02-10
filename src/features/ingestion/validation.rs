@@ -314,16 +314,16 @@ pub fn validate_import_crypto_transaction(
     validate_fee(tx.fee).map_err(|e| make_error("fee", e))?;
 
     // Validate subtype against the fiscal category
-    if let Some(ref sub) = tx.subtype {
-        if normalize_tax_subtype(&tx.transaction_type, sub).is_none() {
-            return Err(make_error(
-                "subtype",
-                format!(
-                    "Invalid subtype '{}' for type '{}'. Check TAX_SUBTYPES_* catalogs.",
-                    sub, tx.transaction_type
-                ),
-            ));
-        }
+    if let Some(ref sub) = tx.subtype
+        && normalize_tax_subtype(&tx.transaction_type, sub).is_none()
+    {
+        return Err(make_error(
+            "subtype",
+            format!(
+                "Invalid subtype '{}' for type '{}'. Check TAX_SUBTYPES_* catalogs.",
+                sub, tx.transaction_type
+            ),
+        ));
     }
     if let Some(value) = tx.override_proceeds
         && value < 0.0
