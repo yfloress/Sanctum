@@ -260,40 +260,6 @@ export component CryptoPage inherits Rectangle {
                             font-weight: 300;
                             letter-spacing: -1px;
                         }
-
-                        // PnL Badge
-                        Rectangle {
-                            property <bool> pnl_available: CryptoAdapter.total-pnl != "N/A";
-
-                            height: 28px;
-                            min-width: 90px;
-                            border-radius: 6px;
-                            background: pnl_available ? (CryptoAdapter.total-pnl-positive ? Theme.success.with-alpha(0.12) : Theme.danger.with-alpha(0.12)) : Theme.surface;
-                            border-width: 1px;
-                            border-color: pnl_available ? (CryptoAdapter.total-pnl-positive ? Theme.success.with-alpha(0.2) : Theme.danger.with-alpha(0.2)) : Theme.border;
-
-                            HorizontalLayout {
-                                padding-left: 12px;
-                                padding-right: 12px;
-                                alignment: center;
-                                spacing: 4px;
-
-                                Text {
-                                    text: pnl_available ? (CryptoAdapter.total-pnl-positive ? "▲" : "▼") : "•";
-                                    color: pnl_available ? (CryptoAdapter.total-pnl-positive ? Theme.success : Theme.danger) : Theme.text-muted;
-                                    font-size: 10px;
-                                    vertical-alignment: center;
-                                }
-
-                                Text {
-                                    text: CryptoAdapter.total-pnl;
-                                    color: pnl_available ? (CryptoAdapter.total-pnl-positive ? Theme.success : Theme.danger) : Theme.text-muted;
-                                    font-size: 12px;
-                                    font-weight: 600;
-                                    vertical-alignment: center;
-                                }
-                            }
-                        }
                     }
 
                     // Subtitle Area
@@ -431,6 +397,114 @@ export component CryptoPage inherits Rectangle {
         Rectangle {
             height: 1px;
             background: @linear-gradient(90deg, transparent 0%, Theme.border-light 50%, transparent 100%);
+        }
+
+        if root.active-tab == "portfolio": Rectangle {
+            height: 72px;
+            background: Theme.background;
+
+            HorizontalLayout {
+                padding-left: Theme.spacing-3xl;
+                padding-right: Theme.spacing-3xl;
+                padding-top: 10px;
+                padding-bottom: 10px;
+                spacing: 8px;
+
+                Rectangle {
+                    property <bool> available: CryptoAdapter.total-pnl != "N/A";
+                    horizontal-stretch: 1;
+                    border-radius: 8px;
+                    border-width: 1px;
+                    background: available ? (CryptoAdapter.total-pnl-positive ? Theme.success.with-alpha(0.10) : Theme.danger.with-alpha(0.10)) : Theme.surface;
+                    border-color: available ? (CryptoAdapter.total-pnl-positive ? Theme.success.with-alpha(0.2) : Theme.danger.with-alpha(0.2)) : Theme.border;
+
+                    VerticalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
+                        padding-top: 6px;
+                        padding-bottom: 6px;
+                        spacing: 0px;
+
+                        Text {
+                            text: Translations.crypto-unrealized;
+                            color: Theme.text-subtle;
+                            font-size: 9px;
+                            font-weight: 600;
+                            letter-spacing: 1px;
+                        }
+
+                        Text {
+                            text: CryptoAdapter.total-pnl;
+                            color: available ? (CryptoAdapter.total-pnl-positive ? Theme.success : Theme.danger) : Theme.text-muted;
+                            font-size: 13px;
+                            font-weight: 700;
+                        }
+                    }
+                }
+
+                Rectangle {
+                    property <bool> available: CryptoAdapter.total-realized != "N/A";
+                    horizontal-stretch: 1;
+                    border-radius: 8px;
+                    border-width: 1px;
+                    background: available ? (CryptoAdapter.total-realized-positive ? Theme.success.with-alpha(0.10) : Theme.danger.with-alpha(0.10)) : Theme.surface;
+                    border-color: available ? (CryptoAdapter.total-realized-positive ? Theme.success.with-alpha(0.2) : Theme.danger.with-alpha(0.2)) : Theme.border;
+
+                    VerticalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
+                        padding-top: 6px;
+                        padding-bottom: 6px;
+                        spacing: 0px;
+
+                        Text {
+                            text: Translations.crypto-realized-ytd;
+                            color: Theme.text-subtle;
+                            font-size: 9px;
+                            font-weight: 600;
+                            letter-spacing: 1px;
+                        }
+
+                        Text {
+                            text: CryptoAdapter.total-realized;
+                            color: available ? (CryptoAdapter.total-realized-positive ? Theme.success : Theme.danger) : Theme.text-muted;
+                            font-size: 13px;
+                            font-weight: 700;
+                        }
+                    }
+                }
+
+                Rectangle {
+                    width: 140px;
+                    border-radius: 8px;
+                    border-width: 1px;
+                    background: Theme.surface;
+                    border-color: Theme.border;
+
+                    VerticalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
+                        padding-top: 6px;
+                        padding-bottom: 6px;
+                        spacing: 0px;
+
+                        Text {
+                            text: Translations.crypto-roi;
+                            color: Theme.text-subtle;
+                            font-size: 9px;
+                            font-weight: 600;
+                            letter-spacing: 1px;
+                        }
+
+                        Text {
+                            text: CryptoAdapter.total-roi;
+                            color: Theme.text-primary;
+                            font-size: 13px;
+                            font-weight: 700;
+                        }
+                    }
+                }
+            }
         }
 
         // ==================== CONTENT AREA ====================

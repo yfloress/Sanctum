@@ -110,6 +110,32 @@ fn set_portfolio_summary(adapter: &CryptoAdapter, assets: usize, wallets: usize)
     adapter.set_portfolio_summary(SharedString::from(summary));
 }
 
+fn format_signed_preferred(value_usd: f64, preferred_currency: &str, usd_rate: f64) -> (String, bool) {
+    let positive = value_usd >= 0.0;
+    let value_preferred = convert_usd_to_preferred(value_usd.abs(), preferred_currency, usd_rate);
+    let sign = if positive { "+" } else { "-" };
+    (
+        format!(
+            "{} {}",
+            sign,
+            format_preferred(value_preferred, preferred_currency)
+        ),
+        positive,
+    )
+}
+
+fn format_roi(total_value: f64, total_cost: f64) -> String {
+    if total_cost <= f64::EPSILON {
+        return "N/A".to_string();
+    }
+    let roi = ((total_value - total_cost) / total_cost) * 100.0;
+    if roi >= 0.0 {
+        format!("+ {:.2}%", roi)
+    } else {
+        format!("{:.2}%", roi)
+    }
+}
+
 /// Reload wallets list
 /// Optionally accepts a notify closure to report errors
 pub fn reload_wallets<N>(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>, notify: Option<&N>)
@@ -407,23 +433,29 @@ where
         "N/A".to_string()
     };
 
-    let (total_pnl_label, total_pnl_positive) =
+    let (total_pnl_label, total_pnl_positive, total_roi_label) =
         if priced_assets > 0 && missing_price_assets == 0 {
             let total_pnl_val = total_val - total_cost;
-            let pnl_preferred =
-                convert_usd_to_preferred(total_pnl_val.abs(), &preferred_currency, usd_rate);
-            let pnl_sign = if total_pnl_val >= 0.0 { "+" } else { "-" };
-            (
-                format!(
-                    "{} {}",
-                    pnl_sign,
-                    format_preferred(pnl_preferred, &preferred_currency)
-                ),
-                total_pnl_val >= 0.0,
-            )
+            let (pnl_label, pnl_positive) =
+                format_signed_preferred(total_pnl_val, &preferred_currency, usd_rate);
+            let roi_label = format_roi(total_val, total_cost);
+            (pnl_label, pnl_positive, roi_label)
         } else {
-            ("N/A".to_string(), true)
+            ("N/A".to_string(), true, "N/A".to_string())
         };
+
+    let current_period = chrono::Local::now().format("%Y").to_string();
+    let (total_realized_label, total_realized_positive) = controller
+        .generate_tax_summary(current_period)
+        .ok()
+        .map(|summary| {
+            format_signed_preferred(
+                summary.report.summary.total_gain,
+                &preferred_currency,
+                usd_rate,
+            )
+        })
+        .unwrap_or_else(|| ("N/A".to_string(), true));
 
     let mut trend_image = None;
     let mut trend_ready = false;
@@ -491,6 +523,9 @@ where
         adapter.set_total_value(SharedString::from(total_value_label));
         adapter.set_total_pnl_positive(total_pnl_positive);
         adapter.set_total_pnl(SharedString::from(total_pnl_label));
+        adapter.set_total_realized_positive(total_realized_positive);
+        adapter.set_total_realized(SharedString::from(total_realized_label));
+        adapter.set_total_roi(SharedString::from(total_roi_label));
         adapter.set_fx_rate_label(SharedString::from(fx_label));
         adapter.set_clp_rate(SharedString::from(fx_display));
         adapter.set_portfolio_trend_image(trend_image.unwrap_or_default());
@@ -504,5 +539,35 @@ where
         let wallet_count = adapter.get_wallets().row_count();
         set_portfolio_summary(&adapter, asset_count, wallet_count);
         adapter.set_is_loading(false);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{format_roi, format_signed_preferred};
+
+    #[test]
+    fn format_roi_returns_na_when_cost_is_zero() {
+        assert_eq!(format_roi(100.0, 0.0), "N/A");
+    }
+
+    #[test]
+    fn format_roi_formats_positive_and_negative_values() {
+        assert_eq!(format_roi(120.0, 100.0), "+ 20.00%");
+        assert_eq!(format_roi(80.0, 100.0), "-20.00%");
+    }
+
+    #[test]
+    fn format_signed_preferred_marks_positive_values() {
+        let (label, positive) = format_signed_preferred(125.0, "USD", 1.0);
+        assert_eq!(label, "+ USD 125.00");
+        assert!(positive);
+    }
+
+    #[test]
+    fn format_signed_preferred_marks_negative_values() {
+        let (label, positive) = format_signed_preferred(-40.0, "USD", 1.0);
+        assert_eq!(label, "- USD 40.00");
+        assert!(!positive);
     }
 }
