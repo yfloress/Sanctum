@@ -61,6 +61,28 @@ fn fmt_preferred_signed(amount_usd: f64, currency: &str, clp_rate: f64) -> Strin
     }
 }
 
+/// Interprets input as tax year (AT) and returns the period year used by the
+/// engine. For Chile, AT maps to commercial year (AT - 1).
+fn effective_period_id(raw: &str, jurisdiction: TaxJurisdiction) -> Result<String, String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Err(t("crypto-tax-period-required"));
+    }
+    if trimmed.len() != 4 {
+        return Err("Tax period must be a 4-digit year".to_string());
+    }
+    let year: i32 = trimmed
+        .parse()
+        .map_err(|_| "Tax period must be a valid year".to_string())?;
+    if matches!(jurisdiction, TaxJurisdiction::Chile) {
+        year.checked_sub(1)
+            .map(|value| value.to_string())
+            .ok_or_else(|| "Tax period must be greater than 0000".to_string())
+    } else {
+        Ok(year.to_string())
+    }
+}
+
 pub fn setup_tax_callbacks<N>(
     ui: &AppWindow,
     ui_weak: &Weak<AppWindow>,
@@ -154,11 +176,15 @@ pub fn setup_tax_callbacks<N>(
 
                 let adapter = ui.global::<CryptoAdapter>();
                 let period_raw = adapter.get_tax_period();
-                let period = period_raw.trim().to_string();
-                if period.is_empty() {
-                    notify(t("crypto-tax-period-required"), true);
-                    return;
-                }
+                let jurisdiction =
+                    TaxJurisdiction::parse_or_default(&adapter.get_tax_jurisdiction());
+                let period = match effective_period_id(&period_raw, jurisdiction) {
+                    Ok(value) => value,
+                    Err(err) => {
+                        notify(err, true);
+                        return;
+                    }
+                };
 
                 let (currency, clp_rate) = resolve_display_currency(&controller);
 
@@ -188,11 +214,14 @@ pub fn setup_tax_callbacks<N>(
 
             let adapter = ui.global::<CryptoAdapter>();
             let period_raw = adapter.get_tax_period();
-            let period = period_raw.trim().to_string();
-            if period.is_empty() {
-                notify(t("crypto-tax-period-required"), true);
-                return;
-            }
+            let jurisdiction = TaxJurisdiction::parse_or_default(&adapter.get_tax_jurisdiction());
+            let period = match effective_period_id(&period_raw, jurisdiction) {
+                Ok(value) => value,
+                Err(err) => {
+                    notify(err, true);
+                    return;
+                }
+            };
 
             let file_name = format!("sanctum-crypto-capital-gains-{}.csv", period);
             let file_path = rfd::FileDialog::new()
@@ -225,11 +254,14 @@ pub fn setup_tax_callbacks<N>(
 
             let adapter = ui.global::<CryptoAdapter>();
             let period_raw = adapter.get_tax_period();
-            let period = period_raw.trim().to_string();
-            if period.is_empty() {
-                notify(t("crypto-tax-period-required"), true);
-                return;
-            }
+            let jurisdiction = TaxJurisdiction::parse_or_default(&adapter.get_tax_jurisdiction());
+            let period = match effective_period_id(&period_raw, jurisdiction) {
+                Ok(value) => value,
+                Err(err) => {
+                    notify(err, true);
+                    return;
+                }
+            };
 
             let file_name = format!("sanctum-crypto-transaction-history-{}.csv", period);
             let file_path = rfd::FileDialog::new()
@@ -263,10 +295,14 @@ pub fn setup_tax_callbacks<N>(
 
                 let adapter = ui.global::<CryptoAdapter>();
                 let period_raw = adapter.get_tax_period();
-                let period = period_raw.trim().to_string();
-                if period.is_empty() {
-                    return;
-                }
+                let jurisdiction =
+                    TaxJurisdiction::parse_or_default(&adapter.get_tax_jurisdiction());
+                let period = match effective_period_id(&period_raw, jurisdiction) {
+                    Ok(value) => value,
+                    Err(_) => {
+                        return;
+                    }
+                };
 
                 let mut settings =
                     controller
@@ -318,12 +354,15 @@ pub fn setup_tax_callbacks<N>(
             };
 
             let adapter = ui.global::<CryptoAdapter>();
+            let jurisdiction = TaxJurisdiction::parse_or_default(&adapter.get_tax_jurisdiction());
             let period_raw = adapter.get_tax_period();
-            let period = period_raw.trim().to_string();
-            if period.is_empty() {
-                notify(t("crypto-tax-period-required"), true);
-                return;
-            }
+            let period = match effective_period_id(&period_raw, jurisdiction) {
+                Ok(value) => value,
+                Err(err) => {
+                    notify(err, true);
+                    return;
+                }
+            };
 
             // Preserve current excluded_wallet_ids from the already-saved settings.
             let existing_excluded = controller
@@ -333,7 +372,7 @@ pub fn setup_tax_callbacks<N>(
 
             let settings = crate::features::crypto::TaxPeriodSettings {
                 period_id: period,
-                jurisdiction: TaxJurisdiction::parse_or_default(&adapter.get_tax_jurisdiction()),
+                jurisdiction,
                 method: TaxMethod::parse_or_default(&adapter.get_tax_method()),
                 include_swaps: adapter.get_tax_include_swaps(),
                 include_fee_crypto: adapter.get_tax_include_fee_crypto(),
@@ -355,8 +394,9 @@ fn update_tax_wallet_list(ui_weak: &Weak<AppWindow>, controller: &Arc<AppControl
         return;
     };
     let adapter = ui.global::<CryptoAdapter>();
+    let jurisdiction = TaxJurisdiction::parse_or_default(&adapter.get_tax_jurisdiction());
     let period_raw = adapter.get_tax_period();
-    let period = period_raw.trim().to_string();
+    let period = effective_period_id(&period_raw, jurisdiction).unwrap_or_default();
 
     let excluded = if !period.is_empty() {
         controller
@@ -549,6 +589,7 @@ fn update_summary_state(
 fn load_tax_settings(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>) {
     if let Some(ui) = ui_weak.upgrade() {
         let adapter = ui.global::<CryptoAdapter>();
+        let jurisdiction = TaxJurisdiction::parse_or_default(&adapter.get_tax_jurisdiction());
         let period_raw = adapter.get_tax_period();
         let period_clean = period_raw.trim();
         let period_id = if period_clean.is_empty() {
@@ -558,6 +599,7 @@ fn load_tax_settings(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>)
         } else {
             period_clean.to_string()
         };
+        let period_id = effective_period_id(&period_id, jurisdiction).unwrap_or(period_id);
 
         let settings = controller
             .load_tax_settings(period_id.clone())

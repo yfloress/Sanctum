@@ -1,0 +1,28 @@
+{
+  "version": "1.0",
+  "exported_at": "2026-02-10T00:00:00.000Z",
+  "transactions": [],
+  "habit_logs": [],
+  "crypto_transactions": [
+    {
+      "date": "2025-02-10",
+      "wallet": "Ledger",
+      "symbol": "BTC",
+      "type": "trade",
+      "subtype": "buy",
+      "amount": 1.0,
+      "override_cost_basis": 2000000.0,
+      "notes": "Vector BTC: compra 10-feb-2025 por 2,000,000 CLP"
+    },
+    {
+      "date": "2025-09-20",
+      "wallet": "Ledger",
+      "symbol": "BTC",
+      "type": "trade",
+      "subtype": "sell",
+      "amount": 1.0,
+      "override_proceeds": 3100000.0,
+      "notes": "Vector BTC: venta 20-sep-2025 por 3,100,000 CLP"
+    }
+  ]
+}
