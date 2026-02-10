@@ -38,9 +38,8 @@ pub mod validation;
 
 // Re-export API functions
 pub use api::{
-    default_coin_catalog, default_price_allowlist, default_ticker_ids, fetch_clp_usd_rate,
-    fetch_usd_fx_rate,
-    fetch_crypto_prices, validate_coin_id,
+    default_coin_catalog, default_price_allowlist, default_ticker_ids, fetch_crypto_prices,
+    fetch_usd_fx_rate, validate_coin_id,
 };
 
 // Re-export service

@@ -27,7 +27,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
-use super::parsers::{CsvParser, ImportParser, JsonV1Parser, TextParser, detect_format};
+use super::parsers::{CsvParser, ImportParser, JsonParser, TextParser, detect_format};
 use super::repository::IngestionRepository;
 use super::types::{
     CryptoDedupKey, ImportCryptoTransaction, ImportFormat, ImportHabitLog, ImportSummary,
@@ -135,7 +135,7 @@ impl IngestionService {
         })?;
 
         match format {
-            ImportFormat::JsonV1 => self.import_json_v1(content),
+            ImportFormat::Json => self.import_json(content),
             ImportFormat::CsvTransactions => self.import_csv_transactions(content),
             ImportFormat::CsvHabitLogs => self.import_csv_habit_logs(content),
             ImportFormat::CsvCrypto => self.import_csv_crypto(content),
@@ -159,7 +159,7 @@ impl IngestionService {
         })?;
 
         match format {
-            ImportFormat::JsonV1 => self.preview_json_v1(content),
+            ImportFormat::Json => self.preview_json(content),
             ImportFormat::CsvTransactions => self.preview_csv_transactions(content),
             ImportFormat::CsvHabitLogs => self.preview_csv_habit_logs(content),
             ImportFormat::CsvCrypto => self.preview_csv_crypto(content),
@@ -167,10 +167,10 @@ impl IngestionService {
         }
     }
 
-    /// Import JSON v1 format (can contain transactions, habit logs, and crypto)
-    fn import_json_v1(&self, content: &str) -> Result<ImportSummary, IngestionError> {
-        let parser = JsonV1Parser;
-        let mut summary = ImportSummary::new("JSON v1", "Mixed");
+    /// Import JSON format (can contain transactions, habit logs, and crypto)
+    fn import_json(&self, content: &str) -> Result<ImportSummary, IngestionError> {
+        let parser = JsonParser;
+        let mut summary = ImportSummary::new("JSON", "Mixed");
 
         let file = parser
             .parse_full(content)
@@ -212,10 +212,10 @@ impl IngestionService {
         Ok(summary)
     }
 
-    /// Preview JSON v1 format (can contain transactions, habit logs, and crypto)
-    fn preview_json_v1(&self, content: &str) -> Result<ImportSummary, IngestionError> {
-        let parser = JsonV1Parser;
-        let mut summary = ImportSummary::new("JSON v1", "Mixed");
+    /// Preview JSON format (can contain transactions, habit logs, and crypto)
+    fn preview_json(&self, content: &str) -> Result<ImportSummary, IngestionError> {
+        let parser = JsonParser;
+        let mut summary = ImportSummary::new("JSON", "Mixed");
 
         let file = parser
             .parse_full(content)

@@ -17,14 +17,14 @@
 
 //! Parsers for different import formats
 //!
-//! Supports JSON v1, CSV, and plain text formats.
+//! Supports JSON, CSV, and plain text formats.
 
 pub mod csv;
 pub mod json;
 pub mod text;
 
 pub use self::csv::CsvParser;
-pub use self::json::{JsonV1ParseResult, JsonV1Parser};
+pub use self::json::{JsonParseResult, JsonParser};
 pub use self::text::{TextMixedParseResult, TextParser};
 
 use super::types::{
@@ -79,16 +79,11 @@ pub fn detect_format(content: &str, filename: &str) -> Option<ImportFormat> {
         .to_lowercase();
 
     // JSON detection
-    if ext == "json" || trimmed.starts_with('{') {
-        if trimmed.contains("\"version\"")
-            && (trimmed.contains("\"1.0\"") || trimmed.contains("\"1\""))
-        {
-            return Some(ImportFormat::JsonV1);
-        }
-        // Try to parse as JSON anyway if it looks like JSON
-        if trimmed.starts_with('{') && trimmed.ends_with('}') {
-            return Some(ImportFormat::JsonV1);
-        }
+    if (ext == "json" || trimmed.starts_with('{'))
+        && trimmed.starts_with('{')
+        && trimmed.ends_with('}')
+    {
+        return Some(ImportFormat::Json);
     }
 
     // CSV detection (has comma-separated header on first line)
@@ -137,7 +132,7 @@ mod tests {
     #[test]
     fn test_detect_json_format() {
         let json = r#"{"version": "1.0", "transactions": []}"#;
-        assert_eq!(detect_format(json, "data.json"), Some(ImportFormat::JsonV1));
+        assert_eq!(detect_format(json, "data.json"), Some(ImportFormat::Json));
     }
 
     #[test]

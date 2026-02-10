@@ -42,7 +42,7 @@ impl AppController {
     /// Imports data from file content
     ///
     /// Automatically detects format based on content and filename.
-    /// Supported formats: JSON v1, CSV, Plain Text
+    /// Supported formats: JSON, CSV, Plain Text
     ///
     /// Returns an ImportSummary with counts and error details.
     pub fn import_data(

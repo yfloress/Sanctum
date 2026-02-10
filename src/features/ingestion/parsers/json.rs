@@ -15,7 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
 //
 
-//! JSON v1 parser for Sanctum Web exports
+//! JSON parser for Sanctum Web exports
 
 use super::{ImportParser, ParseResult};
 use crate::features::ingestion::types::{
@@ -24,8 +24,7 @@ use crate::features::ingestion::types::{
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
-struct JsonV1FileRaw {
-    version: String,
+struct JsonFileRaw {
     #[serde(default)]
     transactions: Vec<serde_json::Value>,
     #[serde(default)]
@@ -35,15 +34,15 @@ struct JsonV1FileRaw {
 }
 
 #[derive(Debug)]
-pub struct JsonV1ParseResult {
+pub struct JsonParseResult {
     pub transactions: ParseResult<ImportTransaction>,
     pub habit_logs: ParseResult<ImportHabitLog>,
     pub crypto_transactions: ParseResult<ImportCryptoTransaction>,
 }
 
-pub struct JsonV1Parser;
+pub struct JsonParser;
 
-impl ImportParser for JsonV1Parser {
+impl ImportParser for JsonParser {
     fn parse_transactions(
         &self,
         content: &str,
@@ -58,15 +57,15 @@ impl ImportParser for JsonV1Parser {
     }
 
     fn format_name(&self) -> &'static str {
-        "JSON v1"
+        "JSON"
     }
 }
 
-impl JsonV1Parser {
+impl JsonParser {
     /// Parses the full JSON file and returns transactions, habit logs, and crypto
-    pub fn parse_full(&self, content: &str) -> Result<JsonV1ParseResult, RowError> {
+    pub fn parse_full(&self, content: &str) -> Result<JsonParseResult, RowError> {
         let file = self.parse_raw(content)?;
-        Ok(JsonV1ParseResult {
+        Ok(JsonParseResult {
             transactions: parse_json_items(file.transactions, "transaction"),
             habit_logs: parse_json_items(file.habit_logs, "habit log"),
             crypto_transactions: parse_json_items(file.crypto_transactions, "crypto transaction"),
@@ -85,21 +84,8 @@ impl JsonV1Parser {
         ))
     }
 
-    fn parse_raw(&self, content: &str) -> Result<JsonV1FileRaw, RowError> {
-        let file: JsonV1FileRaw = serde_json::from_str(content)
-            .map_err(|e| RowError::new(1, None, format!("Invalid JSON: {}", e)))?;
-
-        // Validate version
-        let version = file.version.trim();
-        if version != "1.0" && version != "1" {
-            return Err(RowError::new(
-                1,
-                Some("version"),
-                format!("Unsupported JSON version: '{}'. Expected: 1.0", version),
-            ));
-        }
-
-        Ok(file)
+    fn parse_raw(&self, content: &str) -> Result<JsonFileRaw, RowError> {
+        serde_json::from_str(content).map_err(|e| RowError::new(1, None, format!("Invalid JSON: {}", e)))
     }
 }
 
@@ -146,7 +132,7 @@ mod tests {
             "habit_logs": []
         }"#;
 
-        let parser = JsonV1Parser;
+        let parser = JsonParser;
         let result = parser.parse_transactions(json);
         assert!(result.is_ok());
         let parsed = result.unwrap();
@@ -176,7 +162,7 @@ mod tests {
             ]
         }"#;
 
-        let parser = JsonV1Parser;
+        let parser = JsonParser;
         let result = parser.parse_habit_logs(json);
         assert!(result.is_ok());
         let parsed = result.unwrap();
@@ -187,16 +173,16 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_version() {
-        let json = r#"{"version": "2.0", "transactions": [], "habit_logs": []}"#;
-        let parser = JsonV1Parser;
+    fn test_parse_without_version_is_accepted() {
+        let json = r#"{"transactions": [], "habit_logs": []}"#;
+        let parser = JsonParser;
         let result = parser.parse_transactions(json);
-        assert!(result.is_err());
+        assert!(result.is_ok());
     }
 
     #[test]
     fn test_invalid_json() {
-        let parser = JsonV1Parser;
+        let parser = JsonParser;
         let result = parser.parse_transactions("not valid json");
         assert!(result.is_err());
     }
@@ -221,7 +207,7 @@ mod tests {
             "habit_logs": []
         }"#;
 
-        let parser = JsonV1Parser;
+        let parser = JsonParser;
         let result = parser.parse_transactions(json);
         assert!(result.is_ok());
 
@@ -231,7 +217,7 @@ mod tests {
     }
 
     /// Simulates the exact JSON the web generator produces for every crypto
-    /// scenario category and validates that the JSON v1 parser + validation
+    /// scenario category and validates that the JSON parser + validation
     /// accept them all without errors.
     #[test]
     fn test_parse_generator_crypto_all_scenarios() {
@@ -493,7 +479,7 @@ mod tests {
             ]
         }"#;
 
-        let parser = JsonV1Parser;
+        let parser = JsonParser;
         let result = parser.parse_full(json).expect("JSON parse should succeed");
 
         // All 25 crypto transactions should parse without errors

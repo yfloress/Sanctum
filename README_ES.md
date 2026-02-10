@@ -56,7 +56,7 @@ de la nube. Tú controlas las llaves, la base de datos y los respaldos.
 
 Sanctum acepta formatos offline pensados para viajes o baja conectividad:
 
-- **JSON v1** (recomendado): Formato completo usado por el Sanctum Generator.
+- **JSON** (recomendado): Formato completo usado por el Sanctum Generator.
 - **CSV**: Exportes desde hojas de cálculo (archivos separados por tipo).
 - **TXT**: Notas por línea con prefijos para captura rápida.
 

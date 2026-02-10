@@ -47,14 +47,6 @@ impl AppController {
             .map_err(ControllerError::from)
     }
 
-    /// Fetches CLP to USD exchange rate
-    pub async fn get_clp_usd_rate(&self) -> Result<f64, ControllerError> {
-        self.crypto_service
-            .get_clp_usd_rate()
-            .await
-            .map_err(ControllerError::from)
-    }
-
     /// Fetches USD to target fiat exchange rate (e.g. USD/EUR).
     pub async fn get_usd_fx_rate(&self, target_currency: String) -> Result<f64, ControllerError> {
         self.crypto_service

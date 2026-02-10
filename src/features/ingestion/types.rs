@@ -25,7 +25,7 @@ use std::hash::{Hash, Hasher};
 /// File format detection result
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ImportFormat {
-    JsonV1,
+    Json,
     CsvTransactions,
     CsvHabitLogs,
     CsvCrypto,
@@ -35,7 +35,7 @@ pub enum ImportFormat {
 impl ImportFormat {
     pub fn name(&self) -> &'static str {
         match self {
-            ImportFormat::JsonV1 => "JSON v1",
+            ImportFormat::Json => "JSON",
             ImportFormat::CsvTransactions => "CSV",
             ImportFormat::CsvHabitLogs => "CSV",
             ImportFormat::CsvCrypto => "CSV",
@@ -45,7 +45,7 @@ impl ImportFormat {
 
     pub fn data_type(&self) -> &'static str {
         match self {
-            ImportFormat::JsonV1 | ImportFormat::TextMixed => "Mixed",
+            ImportFormat::Json | ImportFormat::TextMixed => "Mixed",
             ImportFormat::CsvTransactions => "Transactions",
             ImportFormat::CsvHabitLogs => "Habit Logs",
             ImportFormat::CsvCrypto => "Crypto",

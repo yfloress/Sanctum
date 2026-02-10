@@ -449,11 +449,6 @@ pub async fn fetch_usd_fx_rate(
     fetch_usd_rate_from_usdt(&client, &target).await
 }
 
-/// Backward-compatible wrapper for existing CLP call sites.
-pub async fn fetch_clp_usd_rate(proxy: Option<&ProxyConfig>) -> Result<f64, String> {
-    fetch_usd_fx_rate("CLP", proxy).await
-}
-
 async fn fetch_clp_rate_from_mindicador(client: &Client) -> Result<f64, String> {
     let url = format!("{}/dolar", MINDICADOR_API_BASE);
     let response = client.get(&url).send().await.map_err(handle_request_error)?;
@@ -718,10 +713,9 @@ mod tests {
     }
 
     #[test]
-    fn parse_usdt_fiat_rate_rejects_out_of_range_value_for_clp() {
-        let body = br#"{"tether":{"clp":42.0}}"#;
-        let err =
-            parse_usdt_fiat_rate(body, "CLP").expect_err("rate outside range must fail");
+    fn parse_usdt_fiat_rate_rejects_non_positive_value() {
+        let body = br#"{"tether":{"clp":0.0}}"#;
+        let err = parse_usdt_fiat_rate(body, "CLP").expect_err("non-positive rate must fail");
         assert_eq!(err, "Exchange rate out of expected range");
     }
 

@@ -18,10 +18,10 @@
 //! Finance repository
 //!
 //! Database operations for finance feature.
-//! Currently delegates to the main Database struct for backwards compatibility.
+//! Delegates to the main Database struct.
 
 use crate::db::{Database, DbError};
-// Use original models for compatibility with db.rs
+// Use shared models from the central domain layer
 use crate::models::{Account, AccountBalance, BalanceSummary, Transaction, TransactionCategory};
 
 /// Repository for finance-related database operations

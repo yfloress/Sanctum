@@ -26,14 +26,12 @@ import {
 } from "../globals.slint";
 import { Theme } from "../theme.slint";
 import { Translations } from "../translations.slint";
-import {
-    FormField,
-    TypeSelector,
-    WalletSelector,
-    CoinSelector,
-    SectionDivider,
-    CollapsibleSection,
-} from "../components/transaction_form_components.slint";
+import { FormField } from "../components/forms/form_field.slint";
+import { TypeSelector } from "../components/forms/type_selector.slint";
+import { WalletSelector } from "../components/forms/wallet_selector.slint";
+import { CoinSelector } from "../components/forms/coin_selector.slint";
+import { SectionDivider } from "../components/forms/section_divider.slint";
+import { CollapsibleSection } from "../components/forms/collapsible_section.slint";
 
 // ==================== Transaction Summary Card ====================
 component TransactionSummary inherits Rectangle {

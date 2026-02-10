@@ -20,7 +20,7 @@
 //! Handles importing transactions and habit logs from external files.
 //!
 //! Supported formats:
-//! - JSON v1 (Sanctum Web export)
+//! - JSON (Sanctum Web export)
 //! - CSV (Excel/Google Sheets)
 //! - Plain text (semicolon-separated)
 //!

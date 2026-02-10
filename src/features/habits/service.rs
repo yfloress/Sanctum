@@ -20,7 +20,7 @@
 //! Business logic for habit tracking.
 
 use crate::db::{Database, DbError};
-// Use original models for compatibility
+// Use shared models from the central domain layer
 use crate::models::{Habit, HabitLog};
 use super::repository::HabitsRepository;
 use std::sync::{Arc, Mutex};

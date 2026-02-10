@@ -57,7 +57,7 @@ You keep the keys, the database, and the backups.
 
 Sanctum accepts multiple offline formats, designed for travel or low-connectivity workflows:
 
-- **JSON v1** (recommended): Full-fidelity format used by the Sanctum Generator.
+- **JSON** (recommended): Full-fidelity format used by the Sanctum Generator.
 - **CSV**: Spreadsheet exports (separate files for transactions, habit logs, crypto).
 - **TXT**: Prefixed, line-based notes for quick capture.
 

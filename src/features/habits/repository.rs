@@ -20,7 +20,7 @@
 //! Database operations for habits feature.
 
 use crate::db::{Database, DbError};
-// Use original models for compatibility with db.rs
+// Use shared models from the central domain layer
 use crate::models::{Habit, HabitLog};
 
 /// Repository for habit-related database operations

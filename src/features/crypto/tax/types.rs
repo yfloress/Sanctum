@@ -221,7 +221,7 @@ mod tests {
         assert_eq!(TaxTxType::parse("expense"), Some(TaxTxType::Expense));
         assert_eq!(TaxTxType::parse("transfer"), Some(TaxTxType::Transfer));
 
-        // Legacy mechanical aliases are intentionally rejected.
+        // Mechanical aliases are intentionally rejected.
         assert_eq!(TaxTxType::parse("buy"), None);
         assert_eq!(TaxTxType::parse("sell"), None);
         assert_eq!(TaxTxType::parse("swap"), None);

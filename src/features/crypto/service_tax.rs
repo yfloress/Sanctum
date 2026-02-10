@@ -567,7 +567,36 @@ fn build_transaction_history_csv(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::db::Database;
     use crate::features::crypto::TaxReportSummary;
+    use secrecy::SecretString;
+    use std::path::PathBuf;
+    use std::sync::{Arc, Mutex};
+    use uuid::Uuid;
+
+    struct TestServiceHarness {
+        service: CryptoService,
+        test_dir: PathBuf,
+    }
+
+    impl Drop for TestServiceHarness {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.test_dir);
+        }
+    }
+
+    fn new_test_service() -> TestServiceHarness {
+        let base_dir = std::env::temp_dir().join(format!("sanctum-tax-test-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&base_dir).expect("create test dir");
+        let db_path = base_dir.join("vault.db");
+        let password = SecretString::from("test-password-123".to_string());
+        let db = Database::init(db_path, &password).expect("init test database");
+        let service = CryptoService::new(Arc::new(Mutex::new(Some(db))));
+        TestServiceHarness {
+            service,
+            test_dir: base_dir,
+        }
+    }
 
     fn tx(
         id: &str,
@@ -672,5 +701,111 @@ mod tests {
         assert!(csv.contains("fiat_currency"));
         assert!(csv.contains(",10000.00000000,"));
         assert!(csv.contains(",CLP,"));
+    }
+
+    #[test]
+    fn generate_tax_report_excludes_wallet_ids_from_settings() {
+        let harness = new_test_service();
+        let service = &harness.service;
+
+        let wallet_excluded = service
+            .add_wallet("Excluded wallet".to_string(), "exchange".to_string(), None)
+            .expect("create excluded wallet");
+        let wallet_included = service
+            .add_wallet("Included wallet".to_string(), "exchange".to_string(), None)
+            .expect("create included wallet");
+
+        service
+            .add_crypto_transaction(
+                wallet_excluded.clone(),
+                "bitcoin".to_string(),
+                "BTC".to_string(),
+                "trade".to_string(),
+                1.0,
+                Some(100.0),
+                None,
+                None,
+                None,
+                "2024-01-10".to_string(),
+                None,
+                Some("buy".to_string()),
+                None,
+                None,
+            )
+            .expect("buy in excluded wallet");
+        let excluded_sell_id = service
+            .add_crypto_transaction(
+                wallet_excluded.clone(),
+                "bitcoin".to_string(),
+                "BTC".to_string(),
+                "trade".to_string(),
+                1.0,
+                Some(150.0),
+                None,
+                None,
+                None,
+                "2024-02-10".to_string(),
+                None,
+                Some("sell".to_string()),
+                None,
+                None,
+            )
+            .expect("sell in excluded wallet");
+
+        service
+            .add_crypto_transaction(
+                wallet_included.clone(),
+                "bitcoin".to_string(),
+                "BTC".to_string(),
+                "trade".to_string(),
+                1.0,
+                Some(200.0),
+                None,
+                None,
+                None,
+                "2024-03-10".to_string(),
+                None,
+                Some("buy".to_string()),
+                None,
+                None,
+            )
+            .expect("buy in included wallet");
+        let included_sell_id = service
+            .add_crypto_transaction(
+                wallet_included,
+                "bitcoin".to_string(),
+                "BTC".to_string(),
+                "trade".to_string(),
+                1.0,
+                Some(260.0),
+                None,
+                None,
+                None,
+                "2024-04-10".to_string(),
+                None,
+                Some("sell".to_string()),
+                None,
+                None,
+            )
+            .expect("sell in included wallet");
+
+        let mut settings = TaxPeriodSettings::defaults_for("2024");
+        settings.jurisdiction = TaxJurisdiction::Usa;
+        settings.excluded_wallet_ids = vec![wallet_excluded];
+
+        service
+            .save_tax_settings(settings)
+            .expect("save tax settings with exclusion");
+
+        let report = service
+            .generate_tax_report("2024".to_string())
+            .expect("generate tax report");
+
+        assert_eq!(report.disposals.len(), 1);
+        assert_eq!(report.summary.disposals, 1);
+        assert_eq!(report.disposals[0].tx_id, included_sell_id);
+        assert_ne!(report.disposals[0].tx_id, excluded_sell_id);
+
+        drop(harness);
     }
 }

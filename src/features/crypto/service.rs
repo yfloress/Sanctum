@@ -29,9 +29,8 @@ use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
 use super::api::{
-    MAX_PROXY_URL_LENGTH, ProxyConfig, default_price_allowlist, fetch_clp_usd_rate,
-    fetch_usd_fx_rate,
-    fetch_crypto_prices, validate_proxy_url,
+    MAX_PROXY_URL_LENGTH, ProxyConfig, default_price_allowlist, fetch_crypto_prices,
+    fetch_usd_fx_rate, validate_proxy_url,
 };
 use super::validation::{
     MAX_ICON_LENGTH, MAX_WALLET_NAME_LENGTH, sanitize_string, validate_coin_id_str, validate_date,
@@ -53,7 +52,7 @@ pub const SETTING_CRYPTO_PROXY_URL: &str = "crypto_proxy_url";
 pub const SETTING_CRYPTO_TAX_IPC_DATA: &str = "crypto_tax_ipc_data";
 pub const SETTING_CRYPTO_TAX_IPC_UPDATED: &str = "crypto_tax_ipc_updated";
 pub const SETTING_CRYPTO_TAX_SETTINGS: &str = "crypto_tax_settings";
-// Re-export app-level settings from core so existing consumers don't break.
+// Re-export app-level settings from core for unified access from crypto flows.
 pub use crate::core::settings::{
     SETTING_DARK_MODE, SETTING_PREFERRED_CURRENCY, SETTING_PREFERRED_LANGUAGE,
     SETTING_SESSION_TIMEOUT, SETTING_SIDEBAR_COLLAPSED,
@@ -212,13 +211,6 @@ impl CryptoService {
 
         let proxy = self.get_proxy_config()?;
         fetch_crypto_prices(final_list, proxy.as_ref())
-            .await
-            .map_err(CryptoError::Api)
-    }
-
-    pub async fn get_clp_usd_rate(&self) -> Result<f64, CryptoError> {
-        let proxy = self.get_proxy_config()?;
-        fetch_clp_usd_rate(proxy.as_ref())
             .await
             .map_err(CryptoError::Api)
     }
