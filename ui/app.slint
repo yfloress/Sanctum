@@ -59,6 +59,7 @@ import { RestoreVaultModal } from "modals/restore_vault_modal.slint";
 import { ImportPreviewModal } from "modals/import_preview.slint";
 import { ImportResultsModal } from "modals/import_results.slint";
 import { NotificationToast } from "components/notification.slint";
+import { Palette } from "std-widgets.slint";
 
 // ==================== Main Application Window ====================
 
@@ -74,9 +75,11 @@ export component AppWindow inherits Window {
     property <bool> effective-dark: AppState.is-logged-in ? SettingsAdapter.dark-mode : true;
     changed effective-dark => {
         Theme.is-dark = effective-dark;
+        Palette.color-scheme = effective-dark ? ColorScheme.dark : ColorScheme.light;
     }
     init => {
         Theme.is-dark = effective-dark;
+        Palette.color-scheme = effective-dark ? ColorScheme.dark : ColorScheme.light;
     }
 
     // ==================== Conditional Rendering ====================
