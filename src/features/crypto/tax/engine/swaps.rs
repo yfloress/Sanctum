@@ -189,6 +189,11 @@ pub(super) fn resolve_swap_pair(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::super::types::TaxPeriod;
+    use crate::features::crypto::tax::{TaxJurisdiction, TaxMethod};
+    use crate::features::crypto::TaxReportSummary;
+    use chrono::NaiveDate;
+    use std::collections::BTreeMap;
 
     fn swap_tx(id: &str, amount: f64, price: Option<f64>) -> CryptoTransaction {
         let mut tx = CryptoTransaction::new(
@@ -205,6 +210,27 @@ mod tests {
         );
         tx.subtype = Some("swap".to_string());
         tx
+    }
+
+    fn base_report() -> TaxReport {
+        TaxReport {
+            period_id: "2024".to_string(),
+            period_start: "2024-01-01".to_string(),
+            period_end: "2024-12-31".to_string(),
+            jurisdiction: "chile".to_string(),
+            method: "fifo".to_string(),
+            summary: TaxReportSummary::default(),
+            disposals: Vec::new(),
+            warnings: Vec::new(),
+        }
+    }
+
+    fn period_2024() -> TaxPeriod {
+        TaxPeriod {
+            id: "2024".to_string(),
+            start: NaiveDate::from_ymd_opt(2024, 1, 1).expect("valid date"),
+            end: NaiveDate::from_ymd_opt(2024, 12, 31).expect("valid date"),
+        }
     }
 
     #[test]
@@ -251,5 +277,116 @@ mod tests {
         let b = swap_tx("b", 2.0, None);
         let (_source, _target, inferred) = resolve_swap_pair(&a, &b);
         assert!(inferred);
+    }
+
+    #[test]
+    fn apply_swap_pair_uses_target_override_cost_basis_for_acquisition() {
+        let mut report = base_report();
+        let mut lots = HashMap::<String, Vec<Lot>>::new();
+        lots.insert(
+            "btc".to_string(),
+            vec![Lot {
+                lot_id: "b1".to_string(),
+                acquired_date: NaiveDate::from_ymd_opt(2024, 1, 1).expect("valid date"),
+                acquired_date_raw: "2024-01-01".to_string(),
+                acquired_prev_month: "2023-12".to_string(),
+                quantity: 1.0,
+                unit_cost: 80.0,
+            }],
+        );
+
+        let period = period_2024();
+        let ipc = BTreeMap::new();
+        let cfg = TaxConfig {
+            period: &period,
+            method: TaxMethod::Fifo,
+            jurisdiction: TaxJurisdiction::Chile,
+            ipc_map: &ipc,
+        };
+
+        let source = swap_tx("s1", 1.0, Some(100.0));
+        let mut target = swap_tx("s2", 2.0, Some(50.0));
+        target.coin_id = "eth".to_string();
+        target.symbol = "ETH".to_string();
+        target.override_cost_basis = Some(150.0);
+
+        apply_swap_pair(&mut report, &mut lots, &cfg, &source, &target, true);
+
+        let eth_lots = lots.get("eth").expect("eth lot exists");
+        assert_eq!(eth_lots.len(), 1);
+        assert!((eth_lots[0].unit_cost - 75.0).abs() < 0.0001);
+    }
+
+    #[test]
+    fn apply_swap_pair_warns_when_taxable_swap_missing_price() {
+        let mut report = base_report();
+        let mut lots = HashMap::<String, Vec<Lot>>::new();
+        lots.insert(
+            "btc".to_string(),
+            vec![Lot {
+                lot_id: "b1".to_string(),
+                acquired_date: NaiveDate::from_ymd_opt(2024, 1, 1).expect("valid date"),
+                acquired_date_raw: "2024-01-01".to_string(),
+                acquired_prev_month: "2023-12".to_string(),
+                quantity: 1.0,
+                unit_cost: 80.0,
+            }],
+        );
+
+        let period = period_2024();
+        let ipc = BTreeMap::new();
+        let cfg = TaxConfig {
+            period: &period,
+            method: TaxMethod::Fifo,
+            jurisdiction: TaxJurisdiction::Chile,
+            ipc_map: &ipc,
+        };
+
+        let source = swap_tx("s1", 1.0, None);
+        let mut target = swap_tx("s2", 2.0, None);
+        target.coin_id = "eth".to_string();
+        target.symbol = "ETH".to_string();
+
+        apply_swap_pair(&mut report, &mut lots, &cfg, &source, &target, true);
+
+        assert!(report.warnings.iter().any(|w| w.code == "swap_missing_price"));
+        assert!(report.disposals.is_empty());
+    }
+
+    #[test]
+    fn apply_swap_pair_warns_on_invalid_target_date() {
+        let mut report = base_report();
+        let mut lots = HashMap::<String, Vec<Lot>>::new();
+        lots.insert(
+            "btc".to_string(),
+            vec![Lot {
+                lot_id: "b1".to_string(),
+                acquired_date: NaiveDate::from_ymd_opt(2024, 1, 1).expect("valid date"),
+                acquired_date_raw: "2024-01-01".to_string(),
+                acquired_prev_month: "2023-12".to_string(),
+                quantity: 1.0,
+                unit_cost: 80.0,
+            }],
+        );
+
+        let period = period_2024();
+        let ipc = BTreeMap::new();
+        let cfg = TaxConfig {
+            period: &period,
+            method: TaxMethod::Fifo,
+            jurisdiction: TaxJurisdiction::Chile,
+            ipc_map: &ipc,
+        };
+
+        let source = swap_tx("s1", 1.0, Some(100.0));
+        let mut target = swap_tx("s2", 2.0, Some(50.0));
+        target.coin_id = "eth".to_string();
+        target.symbol = "ETH".to_string();
+        target.date = "invalid-date".to_string();
+
+        apply_swap_pair(&mut report, &mut lots, &cfg, &source, &target, true);
+
+        assert!(report.warnings.iter().any(|w| w.code == "invalid_date"));
+        assert!(lots.get("eth").is_none());
     }
 }

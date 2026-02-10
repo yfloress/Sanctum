@@ -1116,6 +1116,104 @@ mod tests {
         assert_eq!(tx.get_type(), Some(FinancialTransactionType::Expense));
     }
 
+    // ==================== Crypto Transaction Tests ====================
+
+    #[test]
+    fn test_crypto_transaction_type_parsing_and_flags() {
+        assert_eq!(
+            "buy".parse::<CryptoTransactionType>().expect("buy parse"),
+            CryptoTransactionType::Buy
+        );
+        assert_eq!(
+            "swap".parse::<CryptoTransactionType>().expect("swap parse"),
+            CryptoTransactionType::Swap
+        );
+        assert!("unknown".parse::<CryptoTransactionType>().is_err());
+
+        assert!(CryptoTransactionType::Buy.is_inflow());
+        assert!(CryptoTransactionType::TransferIn.is_inflow());
+        assert!(!CryptoTransactionType::Sell.is_inflow());
+
+        assert!(CryptoTransactionType::Sell.is_outflow());
+        assert!(CryptoTransactionType::TransferOut.is_outflow());
+        assert!(!CryptoTransactionType::Swap.is_outflow());
+    }
+
+    #[test]
+    fn test_crypto_mechanical_type_from_fiscal_type_and_subtype() {
+        let mut tx = CryptoTransaction::new(
+            "c1".to_string(),
+            "w1".to_string(),
+            "bitcoin".to_string(),
+            "BTC".to_string(),
+            "trade".to_string(),
+            1.0,
+            Some(100.0),
+            None,
+            "2024-01-01".to_string(),
+            None,
+        );
+        tx.subtype = Some("sell".to_string());
+        assert_eq!(tx.mechanical_type(), "sell");
+        assert_eq!(tx.get_type(), Some(CryptoTransactionType::Sell));
+
+        tx.transaction_type = "transfer".to_string();
+        tx.subtype = Some("withdrawal".to_string());
+        assert_eq!(tx.mechanical_type(), "transfer_out");
+
+        tx.transaction_type = "income".to_string();
+        tx.subtype = Some("airdrop".to_string());
+        assert_eq!(tx.mechanical_type(), "buy");
+    }
+
+    #[test]
+    fn test_crypto_cost_basis_includes_fee() {
+        let tx = CryptoTransaction::new(
+            "c2".to_string(),
+            "w1".to_string(),
+            "bitcoin".to_string(),
+            "BTC".to_string(),
+            "trade".to_string(),
+            2.0,
+            Some(150.0),
+            Some(5.0),
+            "2024-01-01".to_string(),
+            None,
+        );
+        assert!((tx.cost_basis() - 305.0).abs() < 0.0000001);
+    }
+
+    #[test]
+    fn test_crypto_transaction_validate_requires_fiscal_type() {
+        let valid = CryptoTransaction::new(
+            "c3".to_string(),
+            "w1".to_string(),
+            "bitcoin".to_string(),
+            "BTC".to_string(),
+            "expense".to_string(),
+            0.5,
+            None,
+            None,
+            "2024-01-01".to_string(),
+            None,
+        );
+        assert!(valid.validate());
+
+        let invalid_type = CryptoTransaction::new(
+            "c4".to_string(),
+            "w1".to_string(),
+            "bitcoin".to_string(),
+            "BTC".to_string(),
+            "buy".to_string(),
+            0.5,
+            None,
+            None,
+            "2024-01-01".to_string(),
+            None,
+        );
+        assert!(!invalid_type.validate());
+    }
+
     // ==================== Rewards System Tests ====================
 
     #[test]

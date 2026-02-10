@@ -259,3 +259,98 @@ pub fn validate_fee_balance(
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn validate_symbol_normalizes_uppercase() {
+        assert_eq!(validate_symbol(" btc ").expect("valid symbol"), "BTC");
+    }
+
+    #[test]
+    fn validate_symbol_rejects_invalid_values() {
+        assert!(validate_symbol("").is_err());
+        assert!(validate_symbol("a$").is_err());
+        assert!(validate_symbol(&"a".repeat(MAX_SYMBOL_LENGTH + 1)).is_err());
+    }
+
+    #[test]
+    fn validate_positive_amount_rejects_non_finite_or_non_positive() {
+        assert!(validate_positive_amount(0.0, "Amount").is_err());
+        assert!(validate_positive_amount(-1.0, "Amount").is_err());
+        assert!(validate_positive_amount(f64::NAN, "Amount").is_err());
+        assert!(validate_positive_amount(f64::INFINITY, "Amount").is_err());
+        assert_eq!(
+            validate_positive_amount(1.23, "Amount").expect("positive"),
+            1.23
+        );
+    }
+
+    #[test]
+    fn validate_non_negative_handles_optional_values() {
+        assert_eq!(
+            validate_non_negative(None, "Fee").expect("none allowed"),
+            None
+        );
+        assert_eq!(
+            validate_non_negative(Some(0.0), "Fee").expect("zero allowed"),
+            Some(0.0)
+        );
+        assert!(validate_non_negative(Some(-0.1), "Fee").is_err());
+        assert!(validate_non_negative(Some(f64::NAN), "Fee").is_err());
+    }
+
+    #[test]
+    fn validate_subtype_accepts_matching_fiscal_catalog() {
+        assert_eq!(
+            validate_subtype(Some("trade"), Some("  SWAP  ".to_string()))
+                .expect("valid")
+                .as_deref(),
+            Some("swap")
+        );
+        assert_eq!(
+            validate_subtype(Some("income"), Some("airdrop".to_string()))
+                .expect("valid")
+                .as_deref(),
+            Some("airdrop")
+        );
+        assert_eq!(
+            validate_subtype(Some("transfer"), Some("withdrawal".to_string()))
+                .expect("valid")
+                .as_deref(),
+            Some("withdrawal")
+        );
+    }
+
+    #[test]
+    fn validate_subtype_rejects_invalid_or_missing_fiscal_type() {
+        assert!(validate_subtype(Some("income"), Some("sell".to_string())).is_err());
+        assert!(validate_subtype(Some("banana"), Some("buy".to_string())).is_err());
+        assert_eq!(
+            validate_subtype(Some("trade"), Some("   ".to_string())).expect("empty to none"),
+            None
+        );
+        assert_eq!(
+            validate_subtype(Some("trade"), None).expect("none to none"),
+            None
+        );
+    }
+
+    #[test]
+    fn normalize_fee_coin_requires_both_fields_or_none() {
+        let normalized = normalize_fee_coin(Some(" bitcoin ".to_string()), Some(0.001))
+            .expect("valid fee pair");
+        assert_eq!(normalized.0.as_deref(), Some("bitcoin"));
+        assert_eq!(normalized.1, Some(0.001));
+
+        assert_eq!(
+            normalize_fee_coin(Some("bitcoin".to_string()), None).expect("coin-only clears"),
+            (None, None)
+        );
+        assert!(normalize_fee_coin(None, Some(0.001)).is_err());
+        assert!(normalize_fee_coin(Some("invalid symbol".to_string()), Some(0.001)).is_err());
+        assert!(normalize_fee_coin(Some("bitcoin".to_string()), Some(0.0)).is_err());
+    }
+}

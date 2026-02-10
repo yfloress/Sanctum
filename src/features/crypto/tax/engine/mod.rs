@@ -27,7 +27,8 @@ pub(crate) use types::TaxPeriod;
 
 use crate::features::crypto::tax::IpcEntry;
 use crate::features::crypto::tax::{
-    TaxJurisdiction, TaxTxType, is_loss_only_subtype, resolve_tax_subtype, resolve_tax_type,
+    TaxJurisdiction, TaxTxType, is_loss_only_subtype, normalize_tax_subtype, resolve_tax_subtype,
+    resolve_tax_type,
 };
 use crate::features::crypto::{TaxReport, TaxReportSummary, TaxWarning};
 use crate::models::{CryptoTransaction, CryptoTransactionType};
@@ -201,8 +202,22 @@ pub fn build_tax_report(
             }
         }
 
-        let tax_type = resolve_tax_type(&tx);
-        let tax_subtype = resolve_tax_subtype(&tx);
+        let parsed_tax_type = TaxTxType::parse(&tx.transaction_type);
+        if parsed_tax_type.is_none() {
+            report.warnings.push(TaxWarning {
+                code: "invalid_type".to_string(),
+                message: format!(
+                    "Invalid fiscal type '{}' for transaction {}. Defaulted to trade.",
+                    tx.transaction_type, tx.id
+                ),
+                tx_id: Some(tx.id.clone()),
+            });
+        }
+        let tax_type = parsed_tax_type.unwrap_or(TaxTxType::Trade);
+        let tax_subtype = tx
+            .subtype
+            .as_deref()
+            .and_then(|sub| normalize_tax_subtype(tax_type.as_str(), sub));
         let loss_only = tax_subtype
             .as_deref()
             .map(is_loss_only_subtype)
@@ -320,6 +335,30 @@ mod tests {
         tx
     }
 
+    fn tx_fiscal(
+        id: &str,
+        fiscal_type: &str,
+        subtype: Option<&str>,
+        amount: f64,
+        price: Option<f64>,
+        date: &str,
+    ) -> CryptoTransaction {
+        let mut tx = CryptoTransaction::new(
+            id.to_string(),
+            "wallet".to_string(),
+            "btc".to_string(),
+            "BTC".to_string(),
+            fiscal_type.to_string(),
+            amount,
+            price,
+            None,
+            date.to_string(),
+            None,
+        );
+        tx.subtype = subtype.map(str::to_string);
+        tx
+    }
+
     #[test]
     fn build_report_fifo_usa() {
         let buy = tx("b1", "buy", 1.0, Some(100.0), "2024-01-10");
@@ -381,5 +420,109 @@ mod tests {
         let report = build_tax_report(vec![buy, sell], settings, vec![]).expect("report");
         assert!(report.warnings.iter().any(|w| w.code == "ipc_missing"));
         assert_eq!(report.summary.disposals, 1);
+    }
+
+    #[test]
+    fn swap_pair_not_taxable_when_include_swaps_is_false() {
+        let buy = tx("b1", "buy", 1.0, Some(100.0), "2024-01-10");
+        let mut swap_out = tx("s1", "swap", 1.0, Some(150.0), "2024-02-10");
+        swap_out.related_tx_id = Some("s2".to_string());
+
+        let mut swap_in = CryptoTransaction::new(
+            "s2".to_string(),
+            "wallet".to_string(),
+            "eth".to_string(),
+            "ETH".to_string(),
+            "trade".to_string(),
+            10.0,
+            Some(15.0),
+            None,
+            "2024-02-10".to_string(),
+            None,
+        );
+        swap_in.subtype = Some("swap".to_string());
+        swap_in.related_tx_id = Some("s1".to_string());
+
+        let settings = TaxPeriodSettings {
+            period_id: "2024".to_string(),
+            jurisdiction: TaxJurisdiction::Chile,
+            method: TaxMethod::Fifo,
+            include_swaps: false,
+            include_fee_crypto: false,
+            excluded_wallet_ids: Vec::new(),
+        };
+
+        let report = build_tax_report(vec![buy, swap_out, swap_in], settings, vec![]).expect("report");
+        assert_eq!(report.summary.disposals, 0);
+        assert!(report.disposals.is_empty());
+    }
+
+    #[test]
+    fn expense_lost_is_not_taxable() {
+        let buy = tx("b1", "buy", 1.0, Some(100.0), "2024-01-10");
+        let lost = tx_fiscal(
+            "e1",
+            "expense",
+            Some("lost"),
+            1.0,
+            Some(200.0),
+            "2024-02-10",
+        );
+
+        let settings = TaxPeriodSettings {
+            period_id: "2024".to_string(),
+            jurisdiction: TaxJurisdiction::Chile,
+            method: TaxMethod::Fifo,
+            include_swaps: true,
+            include_fee_crypto: false,
+            excluded_wallet_ids: Vec::new(),
+        };
+
+        let report = build_tax_report(vec![buy, lost], settings, vec![]).expect("report");
+        assert_eq!(report.summary.disposals, 0);
+        assert!(report.disposals.is_empty());
+    }
+
+    #[test]
+    fn transfer_pair_with_fee_crypto_records_fee_disposal() {
+        let buy = tx("b1", "buy", 1.0, Some(100.0), "2024-01-10");
+        let mut out = tx("t1", "transfer_out", 0.5, Some(120.0), "2024-02-10");
+        out.related_tx_id = Some("t2".to_string());
+        out.fee_coin_id = Some("btc".to_string());
+        out.fee_amount = Some(0.01);
+
+        let mut inc = tx("t2", "transfer_in", 0.5, None, "2024-02-10");
+        inc.related_tx_id = Some("t1".to_string());
+
+        let settings = TaxPeriodSettings {
+            period_id: "2024".to_string(),
+            jurisdiction: TaxJurisdiction::Chile,
+            method: TaxMethod::Fifo,
+            include_swaps: true,
+            include_fee_crypto: true,
+            excluded_wallet_ids: Vec::new(),
+        };
+
+        let report = build_tax_report(vec![buy, out, inc], settings, vec![]).expect("report");
+        assert_eq!(report.summary.disposals, 1);
+        assert_eq!(report.disposals[0].disposal_type, "fee");
+    }
+
+    #[test]
+    fn invalid_fiscal_type_emits_warning_and_defaults_to_trade_behavior() {
+        let invalid = tx_fiscal("x1", "banana", None, 1.0, Some(100.0), "2024-01-10");
+        let settings = TaxPeriodSettings {
+            period_id: "2024".to_string(),
+            jurisdiction: TaxJurisdiction::Chile,
+            method: TaxMethod::Fifo,
+            include_swaps: true,
+            include_fee_crypto: false,
+            excluded_wallet_ids: Vec::new(),
+        };
+
+        let report = build_tax_report(vec![invalid], settings, vec![]).expect("report");
+        assert!(report.warnings.iter().any(|w| w.code == "invalid_type"));
+        // Defaulted to trade + missing subtype => mechanical buy (acquisition), no disposal.
+        assert_eq!(report.summary.disposals, 0);
     }
 }

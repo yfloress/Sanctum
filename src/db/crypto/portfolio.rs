@@ -187,11 +187,9 @@ impl Database {
                         processed.insert(tx.id.clone());
                         processed.insert(rel_id.clone());
 
-                        if tx_mech == "swap" {
-                            Self::apply_swap_pair(&mut assets, &tx, counter);
-                        } else {
-                            Self::apply_swap_pair(&mut assets, counter, &tx);
-                        }
+                        let (source, target) =
+                            Self::resolve_swap_pair_direction(&assets, &tx, counter);
+                        Self::apply_swap_pair(&mut assets, source, target);
                         continue;
                     }
                 }
@@ -324,6 +322,63 @@ impl Database {
             };
             Self::apply_fee_coin_outflow(assets, fee_coin_id, fee_amount, fee_symbol);
         }
+    }
+
+    /// Resolves swap direction for portfolio aggregation.
+    /// Prefers the side with available balance, then fiscal signal scoring,
+    /// and finally deterministic ID fallback.
+    fn resolve_swap_pair_direction<'a>(
+        assets: &HashMap<String, AggregatedAsset>,
+        a: &'a CryptoTransaction,
+        b: &'a CryptoTransaction,
+    ) -> (&'a CryptoTransaction, &'a CryptoTransaction) {
+        let eps = 1e-8_f64;
+        let a_balance = assets.get(&a.coin_id).map(|x| x.total_amount).unwrap_or(0.0);
+        let b_balance = assets.get(&b.coin_id).map(|x| x.total_amount).unwrap_or(0.0);
+        let a_can_outflow = a.amount > 0.0 && a_balance + eps >= a.amount;
+        let b_can_outflow = b.amount > 0.0 && b_balance + eps >= b.amount;
+
+        if a_can_outflow && !b_can_outflow {
+            return (a, b);
+        }
+        if b_can_outflow && !a_can_outflow {
+            return (b, a);
+        }
+
+        let source_score = |tx: &CryptoTransaction| -> i32 {
+            let mut score = 0;
+            if tx.override_proceeds.is_some() {
+                score += 8;
+            }
+            if tx.override_cost_basis.is_some() {
+                score -= 8;
+            }
+            if tx.fee_coin_id.is_some() || tx.fee_amount.is_some() {
+                score += 4;
+            }
+            if tx.fee.is_some() {
+                score += 2;
+            }
+            if tx.price_per_coin.is_some() {
+                score += 1;
+            }
+            score
+        };
+
+        let a_score = source_score(a);
+        let b_score = source_score(b);
+        if a_score > b_score {
+            return (a, b);
+        }
+        if b_score > a_score {
+            return (b, a);
+        }
+
+        log::warn!(
+            "Swap direction fallback by id (a={}, b={}, a_score={}, b_score={}, a_balance={:.8}, b_balance={:.8})",
+            a.id, b.id, a_score, b_score, a_balance, b_balance
+        );
+        if a.id < b.id { (a, b) } else { (b, a) }
     }
 
     fn apply_fee_coin_outflow(
@@ -491,12 +546,9 @@ impl Database {
                         processed.insert(tx.id.clone());
                         processed.insert(rel_id.clone());
 
-                        // Determine which side is the source (swap out) and target (swap in)
-                        if tx_mech == "swap" {
-                            Self::apply_swap_pair(&mut assets, &tx, counter);
-                        } else {
-                            Self::apply_swap_pair(&mut assets, counter, &tx);
-                        }
+                        let (source, target) =
+                            Self::resolve_swap_pair_direction(&assets, &tx, counter);
+                        Self::apply_swap_pair(&mut assets, source, target);
                         continue;
                     }
                 }
@@ -640,6 +692,51 @@ mod tests {
         let assets = Database::aggregate_crypto_transactions(vec![buy_btc, swap_out_btc, swap_in_eth]);
 
         assert_eq!(assets.len(), 1);
+        let eth = assets
+            .iter()
+            .find(|a| a.coin_id == "ethereum")
+            .expect("expected ETH holding after swap");
+        assert!((eth.total_amount - 10.0).abs() < 0.00000001);
+    }
+
+    #[test]
+    fn aggregate_swap_pair_prefers_side_with_available_balance_over_id_order() {
+        // IDs intentionally ordered so lexical fallback would choose swap-in as source.
+        let buy_btc = tx(
+            "buy-1",
+            "bitcoin",
+            "BTC",
+            "trade",
+            Some("buy"),
+            1.0,
+            Some(100.0),
+            "2024-01-01",
+            None,
+        );
+        let swap_out_btc = tx(
+            "z-swap-out",
+            "bitcoin",
+            "BTC",
+            "trade",
+            Some("swap"),
+            1.0,
+            None,
+            "2024-01-02",
+            Some("a-swap-in"),
+        );
+        let swap_in_eth = tx(
+            "a-swap-in",
+            "ethereum",
+            "ETH",
+            "trade",
+            Some("swap"),
+            10.0,
+            None,
+            "2024-01-02",
+            Some("z-swap-out"),
+        );
+
+        let assets = Database::aggregate_crypto_transactions(vec![buy_btc, swap_out_btc, swap_in_eth]);
         let eth = assets
             .iter()
             .find(|a| a.coin_id == "ethereum")

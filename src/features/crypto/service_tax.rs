@@ -525,3 +525,103 @@ fn build_transaction_history_csv(transactions: &[CryptoTransaction], period: &Ta
 
     out
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::features::crypto::TaxReportSummary;
+
+    fn tx(
+        id: &str,
+        tx_type: &str,
+        subtype: Option<&str>,
+        amount: f64,
+        price: Option<f64>,
+        date: &str,
+    ) -> CryptoTransaction {
+        let mut tx = CryptoTransaction::new(
+            id.to_string(),
+            "wallet-1".to_string(),
+            "bitcoin".to_string(),
+            "BTC".to_string(),
+            tx_type.to_string(),
+            amount,
+            price,
+            None,
+            date.to_string(),
+            None,
+        );
+        tx.subtype = subtype.map(str::to_string);
+        tx
+    }
+
+    #[test]
+    fn compute_taxable_income_uses_override_proceeds_priority() {
+        let period = parse_period("2024").expect("valid period");
+
+        let income_with_price = tx("i1", "income", Some("airdrop"), 1.0, Some(100.0), "2024-03-10");
+        let mut income_with_override =
+            tx("i2", "income", Some("reward"), 2.0, Some(200.0), "2024-05-10");
+        income_with_override.override_proceeds = Some(50.0);
+        let trade = tx("t1", "trade", Some("buy"), 1.0, Some(999.0), "2024-06-10");
+        let outside_period = tx("i3", "income", Some("staking"), 1.0, Some(10.0), "2023-12-31");
+
+        let (total, count, warnings) = compute_taxable_income(
+            &[income_with_price, income_with_override, trade, outside_period],
+            &period,
+        );
+
+        assert!((total - 150.0).abs() < 0.0001);
+        assert_eq!(count, 2);
+        assert!(warnings.is_empty());
+    }
+
+    #[test]
+    fn compute_taxable_income_warns_when_price_missing() {
+        let period = parse_period("2024").expect("valid period");
+        let income_missing_price = tx("i1", "income", Some("gift"), 1.0, None, "2024-01-10");
+
+        let (total, count, warnings) = compute_taxable_income(&[income_missing_price], &period);
+        assert_eq!(total, 0.0);
+        assert_eq!(count, 1);
+        assert_eq!(warnings.len(), 1);
+        assert_eq!(warnings[0].code, "income_missing_price");
+        assert_eq!(warnings[0].tx_id.as_deref(), Some("i1"));
+    }
+
+    #[test]
+    fn build_readiness_sets_prices_error_on_invalid_warning() {
+        let report = TaxReport {
+            period_id: "2024".to_string(),
+            period_start: "2024-01-01".to_string(),
+            period_end: "2024-12-31".to_string(),
+            jurisdiction: "chile".to_string(),
+            method: "fifo".to_string(),
+            summary: TaxReportSummary::default(),
+            disposals: Vec::new(),
+            warnings: vec![TaxWarning {
+                code: "invalid_date".to_string(),
+                message: "bad date".to_string(),
+                tx_id: None,
+            }],
+        };
+
+        let readiness = build_readiness(&report, 3, 0, 0, TaxJurisdiction::Chile);
+        let prices = readiness
+            .iter()
+            .find(|r| r.code == "prices")
+            .expect("prices readiness item");
+        assert_eq!(prices.status, "error");
+        assert_eq!(prices.detail, "invalid");
+    }
+
+    #[test]
+    fn history_csv_includes_fiscal_type_subtype_and_mechanical_type() {
+        let period = parse_period("2024").expect("valid period");
+        let tx = tx("s1", "trade", Some("swap"), 0.1, Some(50000.0), "2024-01-10");
+
+        let csv = build_transaction_history_csv(&[tx], &period);
+        assert!(csv.contains("type,subtype,mechanical_type"));
+        assert!(csv.contains(",trade,swap,swap,"));
+    }
+}
