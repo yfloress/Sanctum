@@ -217,6 +217,10 @@ pub fn setup_settings_callbacks<N>(
 
                     if let Err(err) = controller.validate_crypto_proxy_url(current_url) {
                         notify(err.to_string(), true);
+                        if let Some(ui) = ui_weak.upgrade() {
+                            ui.global::<SettingsAdapter>().set_proxy_enabled(false);
+                        }
+                        return;
                     }
                 }
 

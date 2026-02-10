@@ -241,6 +241,23 @@ mod tests {
         assert_eq!(derive_mechanical_type("income", Some("staking")), "buy");
         assert_eq!(derive_mechanical_type("expense", Some("fee")), "sell");
     }
+
+    #[test]
+    fn tax_settings_store_persists_excluded_wallet_ids() {
+        let mut store = TaxSettingsStore::default();
+        let mut settings = TaxPeriodSettings::defaults_for("2025");
+        settings.excluded_wallet_ids = vec!["wallet-a".to_string(), "wallet-b".to_string()];
+
+        store.upsert(settings);
+
+        let loaded = store
+            .get_for_period("2025")
+            .expect("settings for 2025 must exist");
+        assert_eq!(
+            loaded.excluded_wallet_ids,
+            vec!["wallet-a".to_string(), "wallet-b".to_string()]
+        );
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

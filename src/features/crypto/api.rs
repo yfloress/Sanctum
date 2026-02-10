@@ -254,7 +254,9 @@ fn create_secure_client(proxy: Option<&ProxyConfig>) -> Result<Client, String> {
     if let Some(proxy_cfg) = proxy {
         let proxy_url = validate_proxy_url(&proxy_cfg.url)?;
         let proxy = Proxy::all(proxy_url).map_err(|_| "Invalid proxy URL".to_string())?;
-        builder = builder.proxy(proxy);
+        // If the user configured a proxy inside Sanctum, force using that route only.
+        // If no in-app proxy is configured, we keep default reqwest behavior (env/system proxy).
+        builder = builder.no_proxy().proxy(proxy);
     }
 
     builder
@@ -506,4 +508,49 @@ pub fn default_coin_catalog() -> Vec<CryptoCatalogCoin> {
             custom: false,
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn validate_proxy_url_accepts_supported_schemes() {
+        assert!(validate_proxy_url("http://127.0.0.1:8080").is_ok());
+        assert!(validate_proxy_url("https://proxy.example.com:443").is_ok());
+        assert!(validate_proxy_url("socks5://127.0.0.1:9050").is_ok());
+        assert!(validate_proxy_url("socks5h://127.0.0.1:9050").is_ok());
+    }
+
+    #[test]
+    fn validate_proxy_url_rejects_invalid_values() {
+        assert!(validate_proxy_url("").is_err());
+        assert!(validate_proxy_url("ftp://127.0.0.1:21").is_err());
+        assert!(validate_proxy_url("http://").is_err());
+    }
+
+    #[test]
+    fn create_secure_client_rejects_invalid_proxy_config() {
+        let bad_proxy = ProxyConfig {
+            url: "ftp://127.0.0.1:21".to_string(),
+        };
+        let result = create_secure_client(Some(&bad_proxy));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn create_secure_client_accepts_valid_proxy_config() {
+        let proxy = ProxyConfig {
+            url: "http://127.0.0.1:8080".to_string(),
+        };
+        let result = create_secure_client(Some(&proxy));
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn fetch_crypto_prices_empty_list_returns_without_network() {
+        let result = fetch_crypto_prices(Vec::new(), None).await;
+        assert!(result.is_ok());
+        assert!(result.expect("empty list should return ok").is_empty());
+    }
 }
