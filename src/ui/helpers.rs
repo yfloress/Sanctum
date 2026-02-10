@@ -63,10 +63,8 @@ pub fn format_decimal_from_cents(value: i64) -> String {
     format!("{units}.{cents:02}")
 }
 
-/// Formats CLP exchange rate with thousand separators
-pub fn format_clp_rate(rate: f64) -> String {
-    let rounded = rate.round() as i64;
-    let mut digits = rounded.abs().to_string();
+fn format_grouped_integer(value: i64) -> String {
+    let mut digits = value.abs().to_string();
     let mut grouped = String::new();
 
     while digits.len() > 3 {
@@ -74,8 +72,27 @@ pub fn format_clp_rate(rate: f64) -> String {
         grouped = format!(",{chunk}{grouped}");
     }
 
-    let formatted = format!("{digits}{grouped}");
-    format!("$ {formatted}")
+    format!("{digits}{grouped}")
+}
+
+/// Formats a USD/target exchange rate for display in the ticker badge.
+pub fn format_fx_rate(rate: f64, target_currency: &str) -> String {
+    let target = target_currency.trim().to_uppercase();
+    if target == "CLP" {
+        let rounded = rate.round() as i64;
+        return format!("$ {}", format_grouped_integer(rounded));
+    }
+
+    if !rate.is_finite() || rate <= 0.0 {
+        return "N/A".to_string();
+    }
+
+    format!("{:.4}", rate)
+}
+
+/// Formats CLP exchange rate with thousand separators
+pub fn format_clp_rate(rate: f64) -> String {
+    format_fx_rate(rate, "CLP")
 }
 
 /// Formats crypto amount removing trailing zeros

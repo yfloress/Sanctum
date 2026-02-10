@@ -81,7 +81,7 @@ impl TaxReport {
 
     pub fn to_csv_with_currency(&self, currency: &str, clp_rate: f64) -> String {
         let convert = |value: f64| {
-            if currency == "CLP" {
+            if currency != "USD" {
                 value * clp_rate
             } else {
                 value

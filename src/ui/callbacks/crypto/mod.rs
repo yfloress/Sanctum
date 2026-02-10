@@ -32,9 +32,8 @@ mod transactions;
 mod wallets;
 
 use crate::controller::AppController;
-use crate::ui::format_clp_rate;
 use crate::{CryptoAdapter, AppWindow};
-use helpers::SETTING_CRYPTO_LAST_UPDATED;
+use helpers::{SETTING_CRYPTO_LAST_UPDATED, load_crypto_badge_state};
 use slint::{ComponentHandle, SharedString, Weak};
 use std::sync::Arc;
 
@@ -48,13 +47,11 @@ pub fn setup_crypto_callbacks<N>(
     N: Fn(String, bool) + Clone + Send + 'static,
 {
     // Initial state setup
-    if let Ok(Some((rate, _))) = controller.load_exchange_rate_allow_stale("CLP_USD".to_string()) {
-        ui.global::<CryptoAdapter>()
-            .set_clp_rate(SharedString::from(format_clp_rate(rate)));
-    } else {
-        ui.global::<CryptoAdapter>()
-            .set_clp_rate(SharedString::from("N/A"));
-    }
+    let (fx_label, fx_value) = load_crypto_badge_state(controller);
+    ui.global::<CryptoAdapter>()
+        .set_fx_rate_label(SharedString::from(fx_label));
+    ui.global::<CryptoAdapter>()
+        .set_clp_rate(SharedString::from(fx_value));
 
     if let Ok(val) = controller.get_app_setting(SETTING_CRYPTO_LAST_UPDATED)
         && !val.is_empty()

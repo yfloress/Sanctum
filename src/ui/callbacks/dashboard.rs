@@ -29,6 +29,27 @@ use std::sync::Arc;
 /// Maximum days for crypto portfolio snapshots (2 years)
 const MAX_SNAPSHOT_DAYS: i64 = 730;
 
+fn normalize_currency_code(code: &str) -> String {
+    code.trim().to_uppercase()
+}
+
+fn usd_pair_for_currency(currency: &str) -> String {
+    format!("{}_USD", normalize_currency_code(currency))
+}
+
+fn load_cached_usd_rate(controller: &AppController, currency: &str) -> f64 {
+    let target = normalize_currency_code(currency);
+    if target == "USD" {
+        return 1.0;
+    }
+    controller
+        .load_exchange_rate_allow_stale(usd_pair_for_currency(&target))
+        .ok()
+        .and_then(|r| r.map(|(rate, _)| rate))
+        .filter(|rate| *rate > 0.0)
+        .unwrap_or(1.0)
+}
+
 /// Sets up all DashboardAdapter and AnalyticsAdapter callbacks
 pub fn setup_dashboard_callbacks<F>(
     ui: &AppWindow,
@@ -52,9 +73,12 @@ pub fn setup_dashboard_callbacks<F>(
             }
 
             // Load preferred currency setting
-            let preferred_currency = controller
+            let preferred_currency = normalize_currency_code(
+                &controller
                 .get_app_setting(SETTING_PREFERRED_CURRENCY)
-                .unwrap_or_else(|_| "USD".to_string());
+                .unwrap_or_else(|_| "USD".to_string()),
+            );
+            let preferred_rate = load_cached_usd_rate(&controller, &preferred_currency);
 
             // 1. Load Exchange Rate (CLP -> USD)
             let (clp_rate, missing_rate) =
@@ -132,11 +156,12 @@ pub fn setup_dashboard_callbacks<F>(
             let net_worth_usd = fiat_total_dollars + crypto_total_usd;
 
             // Convert to preferred currency for display
-            let net_worth = convert_usd_to_preferred(net_worth_usd, &preferred_currency, clp_rate);
+            let net_worth =
+                convert_usd_to_preferred(net_worth_usd, &preferred_currency, preferred_rate);
             let fiat_display =
-                convert_usd_to_preferred(fiat_total_dollars, &preferred_currency, clp_rate);
+                convert_usd_to_preferred(fiat_total_dollars, &preferred_currency, preferred_rate);
             let crypto_display =
-                convert_usd_to_preferred(crypto_total_usd, &preferred_currency, clp_rate);
+                convert_usd_to_preferred(crypto_total_usd, &preferred_currency, preferred_rate);
 
             dash.set_balance(BalanceData {
                 total_balance: format_preferred(net_worth, &preferred_currency).into(),
@@ -166,12 +191,8 @@ pub fn setup_dashboard_callbacks<F>(
                 let preferred_currency = controller
                     .get_app_setting(SETTING_PREFERRED_CURRENCY)
                     .unwrap_or_else(|_| "USD".to_string());
-
-                let clp_rate = controller
-                    .load_exchange_rate_allow_stale("CLP_USD".to_string())
-                    .ok()
-                    .and_then(|r| r.map(|(rate, _)| rate))
-                    .unwrap_or(1.0);
+                let preferred_currency = normalize_currency_code(&preferred_currency);
+                let preferred_rate = load_cached_usd_rate(&controller, &preferred_currency);
 
                 // Calculate crypto total for dashboard data
                 let crypto_total = calculate_crypto_total(&controller);
@@ -202,7 +223,11 @@ pub fn setup_dashboard_callbacks<F>(
                                 // Convert expense amount to preferred currency
                                 let amount_usd = slice.amount as f64 / 100.0;
                                 let amount_display =
-                                    convert_usd_to_preferred(amount_usd, &preferred_currency, clp_rate);
+                                    convert_usd_to_preferred(
+                                        amount_usd,
+                                        &preferred_currency,
+                                        preferred_rate,
+                                    );
                                 CategoryData {
                                     name: SharedString::from(&slice.category),
                                     amount: SharedString::from(format_preferred(

@@ -84,7 +84,7 @@ export component CryptoPage inherits Rectangle {
                 spacing: 0px;
                 padding-right: Theme.crypto-ticker-settings-width;
 
-                // CLP Rate Badge
+                // FX Rate Badge
                 Rectangle {
                     width: Theme.crypto-clp-badge-width;
                     background: Theme.surface;
@@ -106,7 +106,7 @@ export component CryptoPage inherits Rectangle {
                             alignment: center;
                             spacing: 2px;
                             Text {
-                                text: Translations.dashboard-usd-clp;
+                                text: CryptoAdapter.fx-rate-label;
                                 color: Theme.text-muted;
                                 font-size: 9px;
                                 font-weight: 600;

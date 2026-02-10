@@ -31,7 +31,7 @@ use crate::security_log::{SecurityEvent, log_rate_limit, log_security_event};
 use futures::TryStreamExt;
 use reqwest::{Client, Proxy, Url};
 use serde::Deserialize;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 use tokio::time::sleep;
@@ -42,6 +42,11 @@ use tokio::time::sleep;
 const COINGECKO_API_BASE: &str = "https://api.coingecko.com/api/v3";
 /// Mindicador API base URL (public Chilean market indicators)
 const MINDICADOR_API_BASE: &str = "https://mindicador.cl/api";
+/// Primary public currency API (USD base table, no API key required)
+const CURRENCY_API_PRIMARY_URL: &str = "https://latest.currency-api.pages.dev/v1/currencies/usd.json";
+/// Mirror endpoint for the same currency dataset
+const CURRENCY_API_MIRROR_URL: &str =
+    "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json";
 
 /// Maximum number of coins per request (CoinGecko limit)
 const MAX_COINS_PER_REQUEST: usize = 50;
@@ -89,15 +94,10 @@ struct CoinGeckoMarketData {
     last_updated: Option<String>,
 }
 
-/// Internal struct for simple price response (used for CLP/USD rate)
+/// Internal struct for simple price response (used for USD fallback via USDT quote)
 #[derive(Debug, Deserialize)]
 struct SimplePriceResponse {
-    tether: Option<TetherPrice>,
-}
-
-#[derive(Debug, Deserialize)]
-struct TetherPrice {
-    clp: Option<f64>,
+    tether: Option<HashMap<String, f64>>,
 }
 
 /// Mindicador response for USD observed value in CLP.
@@ -110,6 +110,12 @@ struct MindicadorDollarResponse {
 #[derive(Debug, Deserialize)]
 struct MindicadorSeriesPoint {
     valor: Option<f64>,
+}
+
+/// Public currency API response (base USD).
+#[derive(Debug, Deserialize)]
+struct CurrencyApiUsdResponse {
+    usd: Option<HashMap<String, f64>>,
 }
 
 // ==================== Proxy Configuration ====================
@@ -219,6 +225,14 @@ pub fn validate_proxy_url(raw: &str) -> Result<String, String> {
     }
 
     Ok(trimmed.to_string())
+}
+
+fn validate_fiat_currency_code(raw: &str) -> Result<String, String> {
+    let normalized = raw.trim().to_uppercase();
+    if normalized.len() != 3 || !normalized.chars().all(|c| c.is_ascii_alphabetic()) {
+        return Err("Invalid fiat currency code".to_string());
+    }
+    Ok(normalized)
 }
 
 // ==================== Rate Limiting ====================
@@ -397,28 +411,47 @@ pub async fn fetch_crypto_prices(
     Ok(assets)
 }
 
-/// Fetches the current CLP to USD exchange rate.
-/// Primary source is Mindicador; CoinGecko USDT/CLP is used as fallback.
-pub async fn fetch_clp_usd_rate(proxy: Option<&ProxyConfig>) -> Result<f64, String> {
+/// Fetches the current USD/target fiat exchange rate.
+/// Primary source is Mindicador for CLP and Currency API for all other fiat targets.
+/// CoinGecko USDT quote is used as fallback for all currencies.
+pub async fn fetch_usd_fx_rate(
+    target_currency: &str,
+    proxy: Option<&ProxyConfig>,
+) -> Result<f64, String> {
+    let target = validate_fiat_currency_code(target_currency)?;
+    if target == "USD" {
+        return Ok(1.0);
+    }
+
     enforce_rate_limit().await?;
 
-    log_security_event(SecurityEvent::ExternalApiRequest, Some("clp_usd_rate"));
+    log_security_event(
+        SecurityEvent::ExternalApiRequest,
+        Some(&format!("usd_fx_rate={}", target)),
+    );
 
     let client = create_secure_client(proxy)?;
 
-    // Primary source: Mindicador (Chile indicator feed)
-    let primary_result = fetch_clp_rate_from_mindicador(&client).await;
-    if let Ok(rate) = primary_result {
+    if target == "CLP" {
+        if let Ok(rate) = fetch_clp_rate_from_mindicador(&client).await {
+            return Ok(rate);
+        }
+    } else if let Ok(rate) = fetch_usd_rate_from_currency_api(&client, &target).await {
         return Ok(rate);
     }
 
-    // Fallback source: CoinGecko USDT/CLP approximation
+    // Fallback source: CoinGecko USDT/fiat approximation.
     log_security_event(
         SecurityEvent::ExternalApiRequest,
-        Some("clp_usd_rate_usdt_fallback"),
+        Some(&format!("usd_fx_rate_usdt_fallback={}", target)),
     );
     enforce_rate_limit().await?;
-    fetch_clp_rate_from_usdt(&client).await
+    fetch_usd_rate_from_usdt(&client, &target).await
+}
+
+/// Backward-compatible wrapper for existing CLP call sites.
+pub async fn fetch_clp_usd_rate(proxy: Option<&ProxyConfig>) -> Result<f64, String> {
+    fetch_usd_fx_rate("CLP", proxy).await
 }
 
 async fn fetch_clp_rate_from_mindicador(client: &Client) -> Result<f64, String> {
@@ -436,10 +469,42 @@ async fn fetch_clp_rate_from_mindicador(client: &Client) -> Result<f64, String> 
     parse_mindicador_rate(&body)
 }
 
-async fn fetch_clp_rate_from_usdt(client: &Client) -> Result<f64, String> {
+async fn fetch_usd_rate_from_currency_api(client: &Client, target: &str) -> Result<f64, String> {
+    let mut parse_error: Option<String> = None;
+    for url in [CURRENCY_API_PRIMARY_URL, CURRENCY_API_MIRROR_URL] {
+        let response = match client.get(url).send().await {
+            Ok(res) => res,
+            Err(err) => {
+                parse_error = Some(handle_request_error(err));
+                continue;
+            }
+        };
+        if !response.status().is_success() {
+            continue;
+        }
+
+        let body = match download_response_body(response).await {
+            Ok(bytes) => bytes,
+            Err(err) => {
+                parse_error = Some(err);
+                continue;
+            }
+        };
+
+        match parse_currency_api_rate(&body, target) {
+            Ok(rate) => return Ok(rate),
+            Err(err) => parse_error = Some(err),
+        }
+    }
+
+    Err(parse_error.unwrap_or_else(|| "Failed to fetch exchange rate".to_string()))
+}
+
+async fn fetch_usd_rate_from_usdt(client: &Client, target: &str) -> Result<f64, String> {
     let url = format!(
-        "{}/simple/price?ids=tether&vs_currencies=clp",
-        COINGECKO_API_BASE
+        "{}/simple/price?ids=tether&vs_currencies={}",
+        COINGECKO_API_BASE,
+        target.to_lowercase()
     );
     let response = client.get(&url).send().await.map_err(handle_request_error)?;
     let status = response.status();
@@ -451,7 +516,7 @@ async fn fetch_clp_rate_from_usdt(client: &Client) -> Result<f64, String> {
     }
 
     let body = download_response_body(response).await?;
-    parse_usdt_clp_rate(&body)
+    parse_usdt_fiat_rate(&body, target)
 }
 
 async fn download_response_body(response: reqwest::Response) -> Result<Vec<u8>, String> {
@@ -480,16 +545,28 @@ async fn download_response_body(response: reqwest::Response) -> Result<Vec<u8>, 
     Ok(body)
 }
 
-fn parse_usdt_clp_rate(body: &[u8]) -> Result<f64, String> {
+fn parse_usdt_fiat_rate(body: &[u8], target: &str) -> Result<f64, String> {
     let price_data: SimplePriceResponse =
         serde_json::from_slice(body).map_err(|_| "Failed to parse exchange rate data")?;
 
     let rate = price_data
         .tether
-        .and_then(|t| t.clp)
-        .ok_or("CLP rate not available")?;
+        .and_then(|quotes| quotes.get(&target.to_lowercase()).copied())
+        .ok_or("Requested rate not available")?;
 
-    validate_exchange_rate_range(rate)
+    validate_exchange_rate_range(rate, target)
+}
+
+fn parse_currency_api_rate(body: &[u8], target: &str) -> Result<f64, String> {
+    let parsed: CurrencyApiUsdResponse =
+        serde_json::from_slice(body).map_err(|_| "Failed to parse exchange rate data")?;
+
+    let rate = parsed
+        .usd
+        .and_then(|rates| rates.get(&target.to_lowercase()).copied())
+        .ok_or("Requested rate not available")?;
+
+    validate_exchange_rate_range(rate, target)
 }
 
 fn parse_mindicador_rate(body: &[u8]) -> Result<f64, String> {
@@ -503,11 +580,11 @@ fn parse_mindicador_rate(body: &[u8]) -> Result<f64, String> {
     });
 
     let rate = rate.ok_or("CLP rate not available")?;
-    validate_exchange_rate_range(rate)
+    validate_exchange_rate_range(rate, "CLP")
 }
 
-fn validate_exchange_rate_range(rate: f64) -> Result<f64, String> {
-    if !(100.0..=5000.0).contains(&rate) {
+fn validate_exchange_rate_range(rate: f64, _target: &str) -> Result<f64, String> {
+    if !rate.is_finite() || rate <= 0.0 || rate > 1_000_000.0 {
         return Err("Exchange rate out of expected range".to_string());
     }
     Ok(rate)
@@ -641,9 +718,29 @@ mod tests {
     }
 
     #[test]
-    fn parse_usdt_clp_rate_rejects_out_of_range_value() {
+    fn parse_usdt_fiat_rate_rejects_out_of_range_value_for_clp() {
         let body = br#"{"tether":{"clp":42.0}}"#;
-        let err = parse_usdt_clp_rate(body).expect_err("rate outside range must fail");
+        let err =
+            parse_usdt_fiat_rate(body, "CLP").expect_err("rate outside range must fail");
         assert_eq!(err, "Exchange rate out of expected range");
     }
+
+    #[test]
+    fn parse_currency_api_rate_reads_target_currency() {
+        let body = br#"{"date":"2026-02-10","usd":{"eur":0.95,"gbp":0.79}}"#;
+        let eur = parse_currency_api_rate(body, "EUR").expect("EUR rate must parse");
+        let gbp = parse_currency_api_rate(body, "GBP").expect("GBP rate must parse");
+        assert_eq!(eur, 0.95);
+        assert_eq!(gbp, 0.79);
+    }
+
+    #[test]
+    fn parse_usdt_fiat_rate_reads_requested_currency() {
+        let body = br#"{"tether":{"eur":0.96,"mxn":17.20}}"#;
+        let eur = parse_usdt_fiat_rate(body, "EUR").expect("EUR fallback rate must parse");
+        let mxn = parse_usdt_fiat_rate(body, "MXN").expect("MXN fallback rate must parse");
+        assert_eq!(eur, 0.96);
+        assert_eq!(mxn, 17.20);
+    }
+
 }

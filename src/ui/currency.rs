@@ -55,13 +55,13 @@ pub fn convert_currency(amount_cents: i64, from: &str, to: &str, clp_rate: f64) 
     }
 }
 
-/// Converts a float USD amount to the preferred currency.
-pub fn convert_usd_to_preferred(amount_usd: f64, preferred: &str, clp_rate: f64) -> f64 {
-    if preferred == "CLP" && clp_rate > 0.0 {
-        amount_usd * clp_rate
-    } else {
-        amount_usd
+/// Converts a float USD amount to the preferred currency using a USD/target rate.
+pub fn convert_usd_to_preferred(amount_usd: f64, preferred: &str, usd_rate: f64) -> f64 {
+    let target = preferred.trim().to_uppercase();
+    if target == "USD" || usd_rate <= 0.0 {
+        return amount_usd;
     }
+    amount_usd * usd_rate
 }
 
 /// Formats a float amount in CLP (no decimals, Chilean format with dot for thousands).
@@ -77,10 +77,11 @@ pub fn format_usd(amount: f64) -> String {
 
 /// Formats a float amount in the preferred currency.
 pub fn format_preferred(amount: f64, currency: &str) -> String {
-    if currency == "CLP" {
+    let code = currency.trim().to_uppercase();
+    if code == "CLP" {
         format_clp(amount)
     } else {
-        format_usd(amount)
+        format_money((amount * 100.0) as i64, &code)
     }
 }
 

@@ -21,7 +21,7 @@ use crate::controller::{AppController, SETTING_PREFERRED_CURRENCY};
 use crate::models::CryptoAsset;
 use crate::services::i18n;
 use crate::ui::{
-    convert_usd_to_preferred, crypto_icon_for_symbol, format_clp_rate, format_preferred,
+    convert_usd_to_preferred, crypto_icon_for_symbol, format_fx_rate, format_preferred,
     load_wallet_icon,
 };
 use crate::{
@@ -36,6 +36,69 @@ use std::sync::Arc;
 pub const SETTING_CRYPTO_LAST_WALLET_ID: &str = "crypto_last_wallet_id";
 pub const SETTING_CRYPTO_LAST_COIN_ID: &str = "crypto_last_coin_id";
 pub const SETTING_CRYPTO_LAST_UPDATED: &str = "crypto_last_updated";
+
+fn normalize_currency_code(code: &str) -> String {
+    code.trim().to_uppercase()
+}
+
+pub fn resolve_preferred_currency(controller: &AppController) -> String {
+    normalize_currency_code(
+        &controller
+            .get_app_setting(SETTING_PREFERRED_CURRENCY)
+            .unwrap_or_else(|_| "USD".to_string()),
+    )
+}
+
+pub fn badge_currency_for_preferred(preferred_currency: &str) -> String {
+    let preferred = normalize_currency_code(preferred_currency);
+    if preferred == "USD" {
+        "CLP".to_string()
+    } else {
+        preferred
+    }
+}
+
+pub fn usd_pair_for_target_currency(target_currency: &str) -> String {
+    format!("{}_USD", normalize_currency_code(target_currency))
+}
+
+pub fn load_cached_usd_rate(controller: &AppController, target_currency: &str) -> f64 {
+    let target = normalize_currency_code(target_currency);
+    if target == "USD" {
+        return 1.0;
+    }
+    let pair = usd_pair_for_target_currency(&target);
+    controller
+        .load_exchange_rate_allow_stale(pair)
+        .ok()
+        .and_then(|r| r.map(|(rate, _)| rate))
+        .filter(|rate| *rate > 0.0)
+        .unwrap_or(1.0)
+}
+
+pub fn load_preferred_usd_rate(controller: &AppController, preferred_currency: &str) -> f64 {
+    load_cached_usd_rate(controller, preferred_currency)
+}
+
+pub fn load_crypto_badge_state(controller: &AppController) -> (String, String) {
+    let preferred_currency = resolve_preferred_currency(controller);
+    let target = badge_currency_for_preferred(&preferred_currency);
+    let label = format!("USD/{}", target);
+    let pair = usd_pair_for_target_currency(&target);
+    let value = controller
+        .load_exchange_rate_allow_stale(pair)
+        .ok()
+        .flatten()
+        .and_then(|(rate, _)| {
+            if rate > 0.0 {
+                Some(format_fx_rate(rate, &target))
+            } else {
+                None
+            }
+        })
+        .unwrap_or_else(|| "N/A".to_string());
+    (label, value)
+}
 
 fn set_portfolio_summary(adapter: &CryptoAdapter, assets: usize, wallets: usize) {
     let assets_str = assets.to_string();
@@ -64,15 +127,8 @@ where
     };
 
     // Load preferred currency and exchange rate
-    let preferred_currency = controller
-        .get_app_setting(SETTING_PREFERRED_CURRENCY)
-        .unwrap_or_else(|_| "USD".to_string());
-
-    let clp_rate = controller
-        .load_exchange_rate_allow_stale("CLP_USD".to_string())
-        .ok()
-        .and_then(|r| r.map(|(rate, _)| rate))
-        .unwrap_or(1.0);
+    let preferred_currency = resolve_preferred_currency(controller);
+    let usd_rate = load_preferred_usd_rate(controller, &preferred_currency);
 
     let mut wallet_data: Vec<CryptoWalletData> = Vec::new();
     let mut wallet_simple: Vec<WalletSimple> = Vec::new();
@@ -100,7 +156,7 @@ where
             })
             .sum();
 
-        let total_bal = convert_usd_to_preferred(total_bal_usd, &preferred_currency, clp_rate);
+        let total_bal = convert_usd_to_preferred(total_bal_usd, &preferred_currency, usd_rate);
 
         wallet_data.push(CryptoWalletData {
             id: SharedString::from(w.id),
@@ -153,15 +209,8 @@ where
     };
 
     // Load preferred currency and exchange rate
-    let preferred_currency = controller
-        .get_app_setting(SETTING_PREFERRED_CURRENCY)
-        .unwrap_or_else(|_| "USD".to_string());
-
-    let clp_rate = controller
-        .load_exchange_rate_allow_stale("CLP_USD".to_string())
-        .ok()
-        .and_then(|r| r.map(|(rate, _)| rate))
-        .unwrap_or(1.0);
+    let preferred_currency = resolve_preferred_currency(controller);
+    let usd_rate = load_preferred_usd_rate(controller, &preferred_currency);
 
     let prices = controller.load_crypto_prices().unwrap_or_default();
     let price_map: HashMap<String, CryptoAsset> = prices
@@ -212,7 +261,8 @@ where
             .enumerate()
             .map(|(idx, (label, value))| {
                 let percent = (*value / chart_total) * 100.0;
-                let value_preferred = convert_usd_to_preferred(*value, &preferred_currency, clp_rate);
+                let value_preferred =
+                    convert_usd_to_preferred(*value, &preferred_currency, usd_rate);
                 let (r, g, b) = controller.chart_color_for_symbol(label, idx);
                 CryptoDistributionSlice {
                     label: SharedString::from(label),
@@ -263,8 +313,10 @@ where
                 .unwrap_or_else(|| a.symbol.clone());
 
             // Convert price and value to preferred currency
-            let price_preferred = convert_usd_to_preferred(a.current_price, &preferred_currency, clp_rate);
-            let value_preferred = convert_usd_to_preferred(a.current_value, &preferred_currency, clp_rate);
+            let price_preferred =
+                convert_usd_to_preferred(a.current_price, &preferred_currency, usd_rate);
+            let value_preferred =
+                convert_usd_to_preferred(a.current_value, &preferred_currency, usd_rate);
 
             let price_fmt = if price_data.is_none() {
                 "N/A".to_string()
@@ -307,9 +359,9 @@ where
                 format!("{:.2}%", data.price_change_percentage_24h)
             };
             let price_preferred =
-                convert_usd_to_preferred(data.current_price, &preferred_currency, clp_rate);
+                convert_usd_to_preferred(data.current_price, &preferred_currency, usd_rate);
             let price_fmt = if price_preferred < 1.0 {
-                format!("$ {:.4}", price_preferred)
+                format!("{} {:.4}", preferred_currency, price_preferred)
             } else {
                 format_preferred(price_preferred, &preferred_currency)
             };
@@ -349,7 +401,7 @@ where
     }
 
     let total_value_label = if priced_assets > 0 && missing_price_assets == 0 {
-        let total_preferred = convert_usd_to_preferred(total_val, &preferred_currency, clp_rate);
+        let total_preferred = convert_usd_to_preferred(total_val, &preferred_currency, usd_rate);
         format_preferred(total_preferred, &preferred_currency)
     } else {
         "N/A".to_string()
@@ -359,7 +411,7 @@ where
         if priced_assets > 0 && missing_price_assets == 0 {
             let total_pnl_val = total_val - total_cost;
             let pnl_preferred =
-                convert_usd_to_preferred(total_pnl_val.abs(), &preferred_currency, clp_rate);
+                convert_usd_to_preferred(total_pnl_val.abs(), &preferred_currency, usd_rate);
             let pnl_sign = if total_pnl_val >= 0.0 { "+" } else { "-" };
             (
                 format!(
@@ -391,20 +443,7 @@ where
         trend_ready = trend_image.is_some();
     }
 
-    let clp_cached = controller
-        .load_exchange_rate_allow_stale("CLP_USD".to_string())
-        .ok()
-        .flatten();
-
-    let clp_display = clp_cached
-        .and_then(|(r, _)| {
-            if r > 0.0 {
-                Some(format_clp_rate(r))
-            } else {
-                None
-            }
-        })
-        .unwrap_or_else(|| "N/A".to_string());
+    let (fx_label, fx_display) = load_crypto_badge_state(controller);
 
     let last_updated_label = controller
         .get_app_setting(SETTING_CRYPTO_LAST_UPDATED)
@@ -452,7 +491,8 @@ where
         adapter.set_total_value(SharedString::from(total_value_label));
         adapter.set_total_pnl_positive(total_pnl_positive);
         adapter.set_total_pnl(SharedString::from(total_pnl_label));
-        adapter.set_clp_rate(SharedString::from(clp_display));
+        adapter.set_fx_rate_label(SharedString::from(fx_label));
+        adapter.set_clp_rate(SharedString::from(fx_display));
         adapter.set_portfolio_trend_image(trend_image.unwrap_or_default());
         adapter.set_portfolio_trend_ready(trend_ready);
         adapter.set_portfolio_chart_image(chart_image.unwrap_or_default());

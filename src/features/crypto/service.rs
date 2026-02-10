@@ -30,6 +30,7 @@ use uuid::Uuid;
 
 use super::api::{
     MAX_PROXY_URL_LENGTH, ProxyConfig, default_price_allowlist, fetch_clp_usd_rate,
+    fetch_usd_fx_rate,
     fetch_crypto_prices, validate_proxy_url,
 };
 use super::validation::{
@@ -218,6 +219,13 @@ impl CryptoService {
     pub async fn get_clp_usd_rate(&self) -> Result<f64, CryptoError> {
         let proxy = self.get_proxy_config()?;
         fetch_clp_usd_rate(proxy.as_ref())
+            .await
+            .map_err(CryptoError::Api)
+    }
+
+    pub async fn get_usd_fx_rate(&self, target_currency: String) -> Result<f64, CryptoError> {
+        let proxy = self.get_proxy_config()?;
+        fetch_usd_fx_rate(&target_currency, proxy.as_ref())
             .await
             .map_err(CryptoError::Api)
     }

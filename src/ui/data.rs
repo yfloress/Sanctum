@@ -22,8 +22,8 @@
 
 use crate::controller::AppController;
 use crate::ui::{
-    convert_currency, format_category_label, format_decimal_from_cents, format_money,
-    format_money_signed, normalize_bank_icon_path,
+    format_category_label, format_decimal_from_cents, format_money, format_money_signed,
+    normalize_bank_icon_path,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -55,6 +55,7 @@ pub fn load_accounts_state(
     controller: &Arc<AppController>,
     preferred_currency: &str,
 ) -> Result<AccountsState, String> {
+    let preferred_currency = preferred_currency.trim().to_uppercase();
     let accounts = controller.get_accounts().map_err(|e| e.to_string())?;
     let balances = controller
         .get_account_balances()
@@ -74,7 +75,18 @@ pub fn load_accounts_state(
         .load_exchange_rate_allow_stale("CLP_USD".to_string())
         .ok()
         .and_then(|rate| rate.map(|(r, _)| r))
-        .unwrap_or(0.0);
+        .filter(|r| *r > 0.0)
+        .unwrap_or(1.0);
+    let preferred_rate = if preferred_currency == "USD" {
+        1.0
+    } else {
+        controller
+            .load_exchange_rate_allow_stale(format!("{}_USD", preferred_currency.as_str()))
+            .ok()
+            .and_then(|rate| rate.map(|(r, _)| r))
+            .filter(|r| *r > 0.0)
+            .unwrap_or(1.0)
+    };
 
     // Calculate total in preferred currency
     let mut total_preferred_cents: i64 = 0;
@@ -83,8 +95,19 @@ pub fn load_accounts_state(
             .get(&bal.account_id)
             .map(|s| s.as_str())
             .unwrap_or("USD");
-        total_preferred_cents +=
-            convert_currency(bal.current_balance, acc_currency, preferred_currency, clp_rate);
+
+        let usd_cents = if acc_currency == "CLP" {
+            (bal.current_balance as f64 / clp_rate).round() as i64
+        } else {
+            bal.current_balance
+        };
+
+        let preferred_cents = if preferred_currency == "USD" {
+            usd_cents
+        } else {
+            (usd_cents as f64 * preferred_rate).round() as i64
+        };
+        total_preferred_cents += preferred_cents;
     }
 
     let mapped: Vec<AccountDisplayData> = accounts
@@ -128,7 +151,7 @@ pub fn load_accounts_state(
 
     Ok(AccountsState {
         accounts: mapped,
-        total_balance: format_money_signed(total_preferred_cents, preferred_currency),
+        total_balance: format_money_signed(total_preferred_cents, &preferred_currency),
         total_balance_negative: total_preferred_cents < 0,
     })
 }

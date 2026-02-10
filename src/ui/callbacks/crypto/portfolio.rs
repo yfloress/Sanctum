@@ -17,18 +17,84 @@
 
 //! Portfolio and price-related crypto callbacks
 
-use super::helpers::{reload_portfolio, SETTING_CRYPTO_LAST_UPDATED};
-use crate::controller::{AppController, SETTING_PREFERRED_CURRENCY};
+use super::helpers::{
+    SETTING_CRYPTO_LAST_UPDATED, badge_currency_for_preferred, load_preferred_usd_rate,
+    reload_portfolio, resolve_preferred_currency, usd_pair_for_target_currency,
+};
+use crate::controller::AppController;
 use crate::models::CryptoTransaction;
 use crate::services::i18n::{t, t_args};
 use crate::ui::{
-    convert_usd_to_preferred, crypto_icon_for_symbol, format_clp_rate, format_crypto_tx_display,
-    format_fee_display, format_preferred,
+    convert_usd_to_preferred, crypto_icon_for_symbol, format_crypto_tx_display, format_fee_display,
+    format_fx_rate,
+    format_preferred,
 };
 use crate::{AssetTransaction, AssetWalletBreakdown, AppWindow, CryptoAdapter, CryptoAssetData};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel, Weak};
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+const MANUAL_REFRESH_COOLDOWN_SECS: u64 = 8;
+
+static LAST_MANUAL_REFRESH_MS: AtomicU64 = AtomicU64::new(0);
+
+fn now_millis() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64
+}
+
+fn try_acquire_manual_refresh_slot() -> Option<u64> {
+    let cooldown_ms = MANUAL_REFRESH_COOLDOWN_SECS.saturating_mul(1000);
+    loop {
+        let now = now_millis();
+        let last = LAST_MANUAL_REFRESH_MS.load(Ordering::SeqCst);
+
+        if last == 0 || now >= last.saturating_add(cooldown_ms) {
+            if LAST_MANUAL_REFRESH_MS
+                .compare_exchange(last, now, Ordering::SeqCst, Ordering::SeqCst)
+                .is_ok()
+            {
+                return None;
+            }
+            continue;
+        }
+
+        let remaining_ms = last.saturating_add(cooldown_ms).saturating_sub(now);
+        return Some(remaining_ms.div_ceil(1000));
+    }
+}
+
+fn is_suspicious_fx_jump(
+    new_rate: f64,
+    cached: Option<&(f64, String)>,
+) -> Option<f64> {
+    let (old_rate, updated_at) = cached?;
+    if *old_rate <= 0.0 || !new_rate.is_finite() || new_rate <= 0.0 {
+        return None;
+    }
+    let Ok(previous_dt) = chrono::DateTime::parse_from_rfc3339(updated_at) else {
+        return None;
+    };
+    let age = chrono::Utc::now().signed_duration_since(previous_dt.with_timezone(&chrono::Utc));
+    if age.num_seconds() < 0 {
+        return None;
+    }
+
+    let age_hours = (age.num_seconds() as f64 / 3600.0).max(1.0);
+    // Adaptive limit based on elapsed time since last trusted rate:
+    // after 24h allows ~100% move; shorter windows allow proportionally less.
+    let allowed_jump = (age_hours / 24.0).sqrt();
+    let jump = (new_rate - *old_rate).abs() / old_rate.abs();
+    if jump > allowed_jump {
+        Some(jump)
+    } else {
+        None
+    }
+}
 
 /// Sets up portfolio-related callbacks
 pub fn setup_portfolio_callbacks<N>(
@@ -111,16 +177,41 @@ pub fn setup_portfolio_callbacks<N>(
                 }
             }
 
-            let (clp_display, clp_updated) = match controller_async.get_clp_usd_rate().await {
+            let preferred_currency = resolve_preferred_currency(&controller_async);
+            let badge_currency = badge_currency_for_preferred(&preferred_currency);
+            let badge_pair = usd_pair_for_target_currency(&badge_currency);
+            let badge_label = format!("USD/{}", badge_currency);
+            let cached_fx = controller_async
+                .load_exchange_rate_allow_stale(badge_pair.clone())
+                .ok()
+                .flatten();
+
+            let mut fx_warning: Option<String> = None;
+            let (fx_display, fx_updated) = match controller_async
+                .get_usd_fx_rate(badge_currency.clone())
+                .await
+            {
                 Ok(rate) => {
-                    let _ = controller_async.save_exchange_rate("CLP_USD".to_string(), rate);
-                    (format_clp_rate(rate), true)
+                    if let Some(jump) = is_suspicious_fx_jump(rate, cached_fx.as_ref()) {
+                        if let Some((cached_rate, _)) = cached_fx.as_ref() {
+                            fx_warning = Some(format!(
+                                "Ignored suspicious USD/{} jump ({:.1}%). Using cached rate.",
+                                badge_currency,
+                                jump * 100.0
+                            ));
+                            (format_fx_rate(*cached_rate, &badge_currency), true)
+                        } else {
+                            let _ = controller_async.save_exchange_rate(badge_pair.clone(), rate);
+                            (format_fx_rate(rate, &badge_currency), true)
+                        }
+                    } else {
+                        let _ = controller_async.save_exchange_rate(badge_pair.clone(), rate);
+                        (format_fx_rate(rate, &badge_currency), true)
+                    }
                 }
                 Err(_) => {
-                    if let Ok(Some((rate, _))) =
-                        controller_async.load_exchange_rate_allow_stale("CLP_USD".to_string())
-                    {
-                        (format_clp_rate(rate), true)
+                    if let Some((rate, _)) = cached_fx.as_ref() {
+                        (format_fx_rate(*rate, &badge_currency), true)
                     } else {
                         ("N/A".to_string(), false)
                     }
@@ -149,7 +240,9 @@ pub fn setup_portfolio_callbacks<N>(
                 ui.global::<CryptoAdapter>().set_is_refreshing(false);
                 ui.global::<CryptoAdapter>().invoke_fetch_portfolio();
                 ui.global::<CryptoAdapter>()
-                    .set_clp_rate(SharedString::from(clp_display));
+                    .set_fx_rate_label(SharedString::from(badge_label));
+                ui.global::<CryptoAdapter>()
+                    .set_clp_rate(SharedString::from(fx_display));
                 if let Some(label) = last_updated_label {
                     ui.global::<CryptoAdapter>().set_last_updated(label.into());
                 }
@@ -159,8 +252,11 @@ pub fn setup_portfolio_callbacks<N>(
                     .set_limit_excluded(limit_excluded.into());
                 if prices_updated {
                     notify_success("Prices updated".into(), false);
-                } else if !has_coins && clp_updated {
+                } else if !has_coins && fx_updated {
                     notify_success("Rates updated".into(), false);
+                }
+                if let Some(warn) = fx_warning {
+                    notify_success(warn, true);
                 }
             });
         });
@@ -173,6 +269,13 @@ pub fn setup_portfolio_callbacks<N>(
         let notify = notify.clone();
 
         ui.global::<CryptoAdapter>().on_refresh_prices(move || {
+            if let Some(wait_secs) = try_acquire_manual_refresh_slot() {
+                notify(
+                    format!("Please wait {}s before syncing again.", wait_secs),
+                    true,
+                );
+                return;
+            }
             do_refresh_prices(controller.clone(), ui_weak.clone(), notify.clone(), true);
         });
     }
@@ -306,15 +409,8 @@ pub fn setup_portfolio_callbacks<N>(
                 let coin_id_str = coin_id.to_string();
 
                 // Load preferred currency and exchange rate
-                let preferred_currency = controller
-                    .get_app_setting(SETTING_PREFERRED_CURRENCY)
-                    .unwrap_or_else(|_| "USD".to_string());
-
-                let clp_rate = controller
-                    .load_exchange_rate_allow_stale("CLP_USD".to_string())
-                    .ok()
-                    .and_then(|r| r.map(|(rate, _)| rate))
-                    .unwrap_or(1.0);
+                let preferred_currency = resolve_preferred_currency(&controller);
+                let usd_rate = load_preferred_usd_rate(&controller, &preferred_currency);
 
                 if let Ok(assets) = controller.get_aggregated_portfolio()
                     && let Some(asset) = assets.iter().find(|a| a.coin_id == coin_id_str)
@@ -345,14 +441,14 @@ pub fn setup_portfolio_callbacks<N>(
 
                     // Convert price and value to preferred currency
                     let price_preferred =
-                        convert_usd_to_preferred(updated_asset.current_price, &preferred_currency, clp_rate);
+                        convert_usd_to_preferred(updated_asset.current_price, &preferred_currency, usd_rate);
                     let value_preferred =
-                        convert_usd_to_preferred(updated_asset.current_value, &preferred_currency, clp_rate);
+                        convert_usd_to_preferred(updated_asset.current_value, &preferred_currency, usd_rate);
 
                     let price_fmt = if missing_price {
                         "N/A".to_string()
                     } else if price_preferred < 1.0 {
-                        format!("$ {:.4}", price_preferred)
+                        format!("{} {:.4}", preferred_currency, price_preferred)
                     } else {
                         format_preferred(price_preferred, &preferred_currency)
                     };
@@ -391,7 +487,7 @@ pub fn setup_portfolio_callbacks<N>(
                         {
                             let val_usd = h.total_amount * current_price;
                             let val_preferred =
-                                convert_usd_to_preferred(val_usd, &preferred_currency, clp_rate);
+                                convert_usd_to_preferred(val_usd, &preferred_currency, usd_rate);
                             wallet_breakdown.push(AssetWalletBreakdown {
                                 wallet_name: SharedString::from(w.name),
                                 amount: SharedString::from(format!("{:.4}", h.total_amount)),

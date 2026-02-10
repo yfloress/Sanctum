@@ -76,8 +76,19 @@ pub fn setup_settings_callbacks<N>(
                         start_auto_fetch_timer(&timer, ui.as_weak());
 
                         // Check if we need an immediate refresh (data older than 1 min)
+                        let preferred = controller
+                            .get_app_setting(SETTING_PREFERRED_CURRENCY)
+                            .unwrap_or_else(|_| "USD".to_string())
+                            .trim()
+                            .to_uppercase();
+                        let badge_currency = if preferred == "USD" {
+                            "CLP".to_string()
+                        } else {
+                            preferred
+                        };
+                        let pair = format!("{}_USD", badge_currency);
                         let needs_update = if let Ok(Some((_, updated_at))) =
-                            controller.load_exchange_rate_allow_stale("CLP_USD".to_string())
+                            controller.load_exchange_rate_allow_stale(pair)
                         {
                             if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(&updated_at) {
                                 let now = chrono::Utc::now();
@@ -272,6 +283,8 @@ pub fn setup_settings_callbacks<N>(
                     ui.global::<DashboardAdapter>().invoke_fetch_balance();
                     ui.global::<CryptoAdapter>().invoke_fetch_portfolio();
                     ui.global::<AccountAdapter>().invoke_fetch_accounts();
+                    // User explicitly changed display currency: refresh FX rate for the badge/conversions.
+                    ui.global::<CryptoAdapter>().invoke_refresh_prices_silent();
                 }
             });
     }

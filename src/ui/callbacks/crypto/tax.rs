@@ -26,17 +26,24 @@ use slint::platform::Clipboard;
 use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel, Weak};
 use std::sync::Arc;
 
-/// Resolves the display currency and CLP exchange rate from the controller.
+/// Resolves the display currency and USD/target exchange rate from the controller.
 fn resolve_display_currency(controller: &AppController) -> (String, f64) {
     let preferred = controller
         .get_app_setting(SETTING_PREFERRED_CURRENCY)
-        .unwrap_or_else(|_| "USD".to_string());
-    let clp_rate = controller
-        .load_exchange_rate_allow_stale("CLP_USD".to_string())
-        .ok()
-        .and_then(|r| r.map(|(rate, _)| rate))
-        .unwrap_or(0.0);
-    (preferred, clp_rate)
+        .unwrap_or_else(|_| "USD".to_string())
+        .trim()
+        .to_uppercase();
+    let rate = if preferred == "USD" {
+        1.0
+    } else {
+        controller
+            .load_exchange_rate_allow_stale(format!("{}_USD", preferred.as_str()))
+            .ok()
+            .and_then(|r| r.map(|(value, _)| value))
+            .filter(|value| *value > 0.0)
+            .unwrap_or(1.0)
+    };
+    (preferred, rate)
 }
 
 /// Formats a USD-denominated float amount in the user's preferred currency.

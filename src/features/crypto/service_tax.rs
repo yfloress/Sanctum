@@ -255,10 +255,11 @@ impl CryptoService {
             .unwrap_or_else(|_| "USD".to_string())
             .to_uppercase();
 
-        if preferred == "CLP" {
+        if preferred != "USD" {
+            let pair = format!("{}_USD", preferred.as_str());
             let rate = self.with_db(|db| {
                 let rate = db
-                    .load_exchange_rate("CLP_USD")
+                    .load_exchange_rate(&pair)
                     .map_err(CryptoError::Database)?
                     .map(|(value, _)| value)
                     .unwrap_or(0.0);
@@ -267,11 +268,13 @@ impl CryptoService {
 
             if rate <= 0.0 {
                 return Err(CryptoError::Validation(
-                    "CLP export requires a valid CLP/USD rate. Please sync prices first."
-                        .to_string(),
+                    format!(
+                        "{} export requires a valid USD/{} rate. Please sync prices first.",
+                        preferred, preferred
+                    ),
                 ));
             }
-            return Ok(("CLP".to_string(), rate));
+            return Ok((preferred, rate));
         }
 
         Ok(("USD".to_string(), 0.0))
@@ -501,7 +504,7 @@ fn build_readiness(
 }
 
 fn convert_usd_for_export(value: f64, currency: &str, clp_rate: f64) -> f64 {
-    if currency == "CLP" {
+    if currency != "USD" {
         value * clp_rate
     } else {
         value

@@ -55,6 +55,14 @@ impl AppController {
             .map_err(ControllerError::from)
     }
 
+    /// Fetches USD to target fiat exchange rate (e.g. USD/EUR).
+    pub async fn get_usd_fx_rate(&self, target_currency: String) -> Result<f64, ControllerError> {
+        self.crypto_service
+            .get_usd_fx_rate(target_currency)
+            .await
+            .map_err(ControllerError::from)
+    }
+
     /// Saves crypto prices to cache
     pub fn save_crypto_prices(&self, prices: Vec<CryptoAsset>) -> Result<(), ControllerError> {
         self.crypto_service

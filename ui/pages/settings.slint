@@ -22,6 +22,7 @@ import { SettingsAdapter, VaultAdapter, IngestionAdapter } from "../globals.slin
 import { Translations } from "../translations.slint";
 import { Theme } from "../theme.slint";
 import { FormField } from "../components/forms/form_field.slint";
+import { ComboBox } from "std-widgets.slint";
 
 component SettingCard inherits Rectangle {
     in property <string> title;
@@ -253,145 +254,84 @@ component SettingSelector inherits Rectangle {
     in property <[string]> option-labels;
     callback value-selected(string);
 
-    height: 72px;
-    background: Theme.surface;
-    border-radius: 12px;
-    border-width: 1px;
-    border-color: Theme.border;
-
-    HorizontalLayout {
-        padding-left: 24px;
-        padding-right: 24px;
-        alignment: space-between;
-
-        VerticalLayout {
-            alignment: center;
-            spacing: 4px;
-
-            Text {
-                text: root.title;
-                color: Theme.text-primary;
-                font-size: 14px;
-                font-weight: 500;
-                letter-spacing: 0.3px;
-            }
-
-            Text {
-                text: root.description;
-                color: Theme.text-muted;
-                font-size: 11px;
-                font-weight: 400;
-            }
-        }
-
-        // Dropdown
-        VerticalLayout {
-            alignment: center;
-            width: 140px;
-
-            selector-box := Rectangle {
-                height: 36px;
-                background: selector-touch.has-hover ? Theme.surface-hover : Theme.surface-deep;
-                border-radius: 8px;
-                border-width: 1px;
-                border-color: Theme.border;
-
-                animate background { duration: 150ms; }
-
-                HorizontalLayout {
-                    padding-left: 12px;
-                    padding-right: 12px;
-                    spacing: 8px;
-
-                    Text {
-                        // Map selected value to its display label
-                        text: root.options.length > 0 && root.selected-value == root.options[0] ? root.option-labels[0] :
-                              root.options.length > 1 && root.selected-value == root.options[1] ? root.option-labels[1] :
-                              root.options.length > 2 && root.selected-value == root.options[2] ? root.option-labels[2] :
-                              root.options.length > 3 && root.selected-value == root.options[3] ? root.option-labels[3] :
-                              root.options.length > 4 && root.selected-value == root.options[4] ? root.option-labels[4] :
-                              root.selected-value;
-                        color: Theme.text-primary;
-                        font-size: 12px;
-                        font-weight: 500;
-                        vertical-alignment: center;
-                        horizontal-stretch: 1;
-                    }
-
-                    Image {
-                        source: @image-url("../assets/icons/chevron-down.svg");
-                        width: 12px;
-                        height: 12px;
-                        colorize: Theme.text-muted;
-                        y: (parent.height - self.height) / 2;
-                    }
-                }
-
-                selector-touch := TouchArea {
-                    mouse-cursor: pointer;
-                    clicked => {
-                        dropdown.show();
-                    }
-                }
-            }
-        }
+    function selected_index() -> int {
+        root.options.length > 0 && root.selected-value == root.options[0] ? 0 :
+        root.options.length > 1 && root.selected-value == root.options[1] ? 1 :
+        root.options.length > 2 && root.selected-value == root.options[2] ? 2 :
+        root.options.length > 3 && root.selected-value == root.options[3] ? 3 :
+        root.options.length > 4 && root.selected-value == root.options[4] ? 4 :
+        root.options.length > 5 && root.selected-value == root.options[5] ? 5 :
+        root.options.length > 6 && root.selected-value == root.options[6] ? 6 :
+        root.options.length > 7 && root.selected-value == root.options[7] ? 7 :
+        root.options.length > 8 && root.selected-value == root.options[8] ? 8 :
+        root.options.length > 9 && root.selected-value == root.options[9] ? 9 :
+        root.options.length > 10 && root.selected-value == root.options[10] ? 10 :
+        -1;
     }
 
-    dropdown := PopupWindow {
-        x: root.width - 164px;
-        y: selector-box.y + selector-box.height + 4px;
-        width: 140px;
+    function value_for_label(label: string) -> string {
+        root.option-labels.length > 0 && label == root.option-labels[0] ? root.options[0] :
+        root.option-labels.length > 1 && label == root.option-labels[1] ? root.options[1] :
+        root.option-labels.length > 2 && label == root.option-labels[2] ? root.options[2] :
+        root.option-labels.length > 3 && label == root.option-labels[3] ? root.options[3] :
+        root.option-labels.length > 4 && label == root.option-labels[4] ? root.options[4] :
+        root.option-labels.length > 5 && label == root.option-labels[5] ? root.options[5] :
+        root.option-labels.length > 6 && label == root.option-labels[6] ? root.options[6] :
+        root.option-labels.length > 7 && label == root.option-labels[7] ? root.options[7] :
+        root.option-labels.length > 8 && label == root.option-labels[8] ? root.options[8] :
+        root.option-labels.length > 9 && label == root.option-labels[9] ? root.options[9] :
+        root.option-labels.length > 10 && label == root.option-labels[10] ? root.options[10] :
+        root.selected-value;
+    }
 
-        Rectangle {
-            background: Theme.sidebar-bg;
-            border-radius: 8px;
-            border-width: 1px;
-            border-color: Theme.border-light;
-            height: min(root.options.length * 36px + 8px, 240px);
-            drop-shadow-blur: 16px;
-            drop-shadow-color: Theme.shadow;
+    height: 72px;
+    background: transparent;
 
-            Flickable {
-                viewport-height: root.options.length * 36px + 8px;
+    header-card := Rectangle {
+        width: parent.width;
+        height: 72px;
+        background: Theme.surface;
+        border-radius: 12px;
+        border-width: 1px;
+        border-color: Theme.border;
 
-                VerticalLayout {
-                    padding: 4px;
-                    spacing: 0px;
+        HorizontalLayout {
+            padding-left: 24px;
+            padding-right: 24px;
+            alignment: space-between;
 
-                    for option[index] in root.options: Rectangle {
-                        height: 36px;
-                        background: option-touch.has-hover ? Theme.surface-hover : transparent;
-                        border-radius: 6px;
+            VerticalLayout {
+                alignment: center;
+                spacing: 4px;
 
-                        HorizontalLayout {
-                            padding-left: 12px;
-                            padding-right: 12px;
+                Text {
+                    text: root.title;
+                    color: Theme.text-primary;
+                    font-size: 14px;
+                    font-weight: 500;
+                    letter-spacing: 0.3px;
+                }
 
-                            Text {
-                                text: index < root.option-labels.length ? root.option-labels[index] : option;
-                                color: option == root.selected-value ? Theme.text-primary : Theme.text-secondary;
-                                font-size: 12px;
-                                font-weight: option == root.selected-value ? 500 : 400;
-                                vertical-alignment: center;
-                                horizontal-stretch: 1;
-                            }
+                Text {
+                    text: root.description;
+                    color: Theme.text-muted;
+                    font-size: 11px;
+                    font-weight: 400;
+                }
+            }
 
-                            if option == root.selected-value: Image {
-                                source: @image-url("../assets/icons/check.svg");
-                                width: 12px;
-                                height: 12px;
-                                colorize: Theme.accent;
-                                y: (parent.height - self.height) / 2;
-                            }
-                        }
+            // Dropdown
+            VerticalLayout {
+                alignment: center;
+                width: 140px;
 
-                        option-touch := TouchArea {
-                            mouse-cursor: pointer;
-                            clicked => {
-                                root.value-selected(option);
-                                dropdown.close();
-                            }
-                        }
+                ComboBox {
+                    width: 140px;
+                    height: 36px;
+                    model: root.option-labels;
+                    current-index: root.selected_index();
+                    selected(label) => {
+                        root.value-selected(root.value_for_label(label));
                     }
                 }
             }
@@ -651,8 +591,8 @@ export component SettingsPage inherits Rectangle {
                         title: Translations.settings-preferred-currency;
                         description: Translations.settings-preferred-currency-desc;
                         selected-value: SettingsAdapter.preferred-currency;
-                        options: ["USD", "CLP"];
-                        option-labels: ["USD ($)", "CLP ($)"];
+                        options: ["USD", "CLP", "EUR", "GBP", "BRL", "MXN", "ARS", "CAD", "AUD", "CHF", "JPY"];
+                        option-labels: ["USD ($)", "CLP ($)", "EUR (€)", "GBP (£)", "BRL (R$)", "MXN ($)", "ARS ($)", "CAD ($)", "AUD ($)", "CHF (Fr)", "JPY (¥)"];
                         value-selected(value) => {
                             SettingsAdapter.set-preferred-currency(value);
                             SettingsAdapter.preferred-currency = value;
