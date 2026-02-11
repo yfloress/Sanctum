@@ -16,7 +16,7 @@ src/features/crypto/tax/
 ├── report.rs       # TaxReport, TaxDisposal, LotAllocation, exportación CSV
 ├── summary.rs      # TaxSummaryPayload, TaxReadinessItem
 ├── types.rs        # TaxJurisdiction, TaxMethod, TaxPeriodSettings, TaxTxType
-└── mod.rs          # Re-exportaciones y helpers resolve_tax_type/subtype
+└── mod.rs          # Re-exportaciones y helpers resolve_type/resolve_subtype
 ```
 
 Capa de servicio: `src/features/crypto/service_tax.rs`
@@ -40,7 +40,7 @@ Hay **dos** ajustes IPC obligatorios:
 1. **Costo de adquisición**: se reajusta por IPC desde el mes anterior a la
    compra hasta el mes anterior a la venta.
 2. **Ganancia resultante**: se reajusta por IPC desde el mes anterior a la venta
-   hasta noviembre (mes anterior al cierre del año fiscal, 31 de diciembre).
+   hasta noviembre (mes anterior al cierre del año tributario, 31 de diciembre).
 
 **Comisiones (fees):** Las personas naturales sin contabilidad completa **no
 pueden** deducir comisiones como costo de adquisición ni como gasto. El fee en
@@ -79,7 +79,7 @@ o feriado se usa el día hábil inmediatamente siguiente.
 **Exención:** No se paga impuesto si la renta neta global anual no supera
 13,5 UTA (aprox. $10.400.000 CLP, varía cada año).
 
-**Período:** Año fiscal = 1 de enero al 31 de diciembre. Se declara en abril
+**Período:** Año tributario base = 1 de enero al 31 de diciembre. Se declara en abril
 del año siguiente (Operación Renta).
 
 ### USA (IRS)
@@ -160,7 +160,7 @@ Por defecto: Chile, HIFO, include_swaps=true, include_fee_crypto=true.
 
 - **CSV de Reporte Tributario:** Resumen + enajenaciones + desglose de lotes + advertencias.
 - **CSV de Historial de Transacciones:** Todas las transacciones del período con
-  clasificación tax_type/tax_subtype.
+  clasificación type/subtype.
 
 ## Advertencias del Motor
 

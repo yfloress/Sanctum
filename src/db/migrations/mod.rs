@@ -73,25 +73,3 @@ pub fn run_pending(conn: &Connection, from_version: i64, to_version: i64) -> Res
     }
     Ok(())
 }
-
-/// Helper: checks if a column exists in a table
-#[allow(dead_code)]
-pub fn column_exists(conn: &Connection, table: &str, column: &str) -> Result<bool, DbError> {
-    let sql = format!(
-        "SELECT COUNT(*) FROM pragma_table_info('{}') WHERE name = ?1",
-        table
-    );
-    let count: i64 = conn.query_row(&sql, [column], |r| r.get(0))?;
-    Ok(count > 0)
-}
-
-/// Helper: checks if a table exists
-#[allow(dead_code)]
-pub fn table_exists(conn: &Connection, table: &str) -> Result<bool, DbError> {
-    let count: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?1",
-        [table],
-        |r| r.get(0),
-    )?;
-    Ok(count > 0)
-}

@@ -195,8 +195,8 @@ export component EditCryptoTransactionModal inherits Rectangle {
         CryptoAdapter.edit-fee-coin-amount = "";
         CryptoAdapter.edit-date = AppState.current-date;
         CryptoAdapter.edit-notes = "";
-        CryptoAdapter.edit-tax-type = "";
-        CryptoAdapter.edit-tax-subtype = "";
+        CryptoAdapter.edit-transaction-type = "";
+        CryptoAdapter.edit-transaction-subtype = "";
         CryptoAdapter.edit-override-proceeds = "";
         CryptoAdapter.edit-override-cost = "";
         root.show-advanced = false;
@@ -225,7 +225,7 @@ export component EditCryptoTransactionModal inherits Rectangle {
             CryptoAdapter.edit-fee-coin-amount,
             CryptoAdapter.edit-date,
             CryptoAdapter.edit-notes,
-            CryptoAdapter.edit-tax-subtype,
+            CryptoAdapter.edit-transaction-subtype,
             CryptoAdapter.edit-override-proceeds,
             CryptoAdapter.edit-override-cost);
 
@@ -537,17 +537,17 @@ export component EditCryptoTransactionModal inherits Rectangle {
                             spacing: 12px;
 
                             FormField {
-                                label: Translations.modal-tax-type;
-                                placeholder: Translations.modal-tax-type-placeholder;
-                                value <=> CryptoAdapter.edit-tax-type;
+                                label: Translations.modal-transaction-type;
+                                placeholder: Translations.modal-transaction-type-placeholder;
+                                value <=> CryptoAdapter.edit-transaction-type;
                                 horizontal-stretch: 1;
                                 submit-shortcut => { root.submit(); }
                             }
 
                             FormField {
-                                label: Translations.modal-tax-subtype;
-                                placeholder: Translations.modal-tax-subtype-placeholder;
-                                value <=> CryptoAdapter.edit-tax-subtype;
+                                label: Translations.modal-transaction-subtype;
+                                placeholder: Translations.modal-transaction-subtype-placeholder;
+                                value <=> CryptoAdapter.edit-transaction-subtype;
                                 horizontal-stretch: 1;
                                 submit-shortcut => { root.submit(); }
                             }

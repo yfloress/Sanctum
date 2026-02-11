@@ -488,9 +488,9 @@ pub fn setup_transaction_callbacks<N>(
                     ui.global::<CryptoAdapter>()
                         .set_edit_notes(SharedString::from(notes_str));
                     ui.global::<CryptoAdapter>()
-                        .set_edit_tax_type(SharedString::from(&tx.transaction_type));
+                        .set_edit_transaction_type(SharedString::from(&tx.transaction_type));
                     ui.global::<CryptoAdapter>()
-                        .set_edit_tax_subtype(SharedString::from(subtype_str));
+                        .set_edit_transaction_subtype(SharedString::from(subtype_str));
                     ui.global::<CryptoAdapter>()
                         .set_edit_override_proceeds(SharedString::from(override_proceeds_str));
                     ui.global::<CryptoAdapter>()

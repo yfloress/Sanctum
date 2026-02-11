@@ -117,29 +117,29 @@ impl TaxTxType {
     }
 }
 
-pub const TAX_SUBTYPES_INCOME: [&str; 10] = [
+pub const SUBTYPES_INCOME: [&str; 10] = [
     "interest", "reward", "airdrop", "gift", "staking", "mining", "fork", "payment", "rebate",
     "other",
 ];
 
-pub const TAX_SUBTYPES_EXPENSE: [&str; 8] = [
+pub const SUBTYPES_EXPENSE: [&str; 8] = [
     "payment", "gift", "fee", "lost", "stolen", "donation", "sell", "other",
 ];
 
-pub const TAX_SUBTYPES_TRANSFER: [&str; 2] = ["deposit", "withdrawal"];
+pub const SUBTYPES_TRANSFER: [&str; 2] = ["deposit", "withdrawal"];
 
-pub const TAX_SUBTYPES_TRADE: [&str; 4] = ["buy", "sell", "swap", "other"];
+pub const SUBTYPES_TRADE: [&str; 4] = ["buy", "sell", "swap", "other"];
 
-pub fn normalize_tax_subtype(tax_type: &str, value: &str) -> Option<String> {
+pub fn normalize_subtype(tx_type: &str, value: &str) -> Option<String> {
     let trimmed = value.trim().to_lowercase();
     if trimmed.is_empty() {
         return None;
     }
-    let list = match TaxTxType::parse(tax_type) {
-        Some(TaxTxType::Income) => TAX_SUBTYPES_INCOME.as_slice(),
-        Some(TaxTxType::Expense) => TAX_SUBTYPES_EXPENSE.as_slice(),
-        Some(TaxTxType::Transfer) => TAX_SUBTYPES_TRANSFER.as_slice(),
-        Some(TaxTxType::Trade) => TAX_SUBTYPES_TRADE.as_slice(),
+    let list = match TaxTxType::parse(tx_type) {
+        Some(TaxTxType::Income) => SUBTYPES_INCOME.as_slice(),
+        Some(TaxTxType::Expense) => SUBTYPES_EXPENSE.as_slice(),
+        Some(TaxTxType::Transfer) => SUBTYPES_TRANSFER.as_slice(),
+        Some(TaxTxType::Trade) => SUBTYPES_TRADE.as_slice(),
         None => return None,
     };
     if list
@@ -156,16 +156,16 @@ pub fn is_loss_only_subtype(subtype: &str) -> bool {
     matches!(subtype, "lost" | "stolen")
 }
 
-/// Derives the mechanical transaction type from a fiscal category + subtype.
+/// Derives the mechanical transaction type from a transaction type category + subtype.
 ///
 /// Returns one of: `"buy"`, `"sell"`, `"swap"`, `"transfer_in"`, `"transfer_out"`.
 ///
 /// This is the standalone version of [`CryptoTransaction::mechanical_type()`]
 /// for use in contexts where only the raw strings are available (e.g. DB
 /// balance queries that don't materialise a full struct).
-pub fn derive_mechanical_type(fiscal_type: &str, subtype: Option<&str>) -> &'static str {
+pub fn derive_mechanical_type(tx_type: &str, subtype: Option<&str>) -> &'static str {
     let sub = subtype.unwrap_or("");
-    match fiscal_type {
+    match tx_type {
         "trade" => match sub {
             "sell" => "sell",
             "swap" => "swap",
@@ -186,25 +186,25 @@ mod tests {
     use super::*;
 
     #[test]
-    fn normalize_subtype_requires_matching_fiscal_type() {
+    fn normalize_subtype_requires_matching_type() {
         assert_eq!(
-            normalize_tax_subtype("income", "airdrop").as_deref(),
+            normalize_subtype("income", "airdrop").as_deref(),
             Some("airdrop")
         );
         assert_eq!(
-            normalize_tax_subtype("expense", "stolen").as_deref(),
+            normalize_subtype("expense", "stolen").as_deref(),
             Some("stolen")
         );
         assert_eq!(
-            normalize_tax_subtype("transfer", "deposit").as_deref(),
+            normalize_subtype("transfer", "deposit").as_deref(),
             Some("deposit")
         );
         assert_eq!(
-            normalize_tax_subtype("trade", "swap").as_deref(),
+            normalize_subtype("trade", "swap").as_deref(),
             Some("swap")
         );
-        assert!(normalize_tax_subtype("income", "sell").is_none());
-        assert!(normalize_tax_subtype("trade", "airdrop").is_none());
+        assert!(normalize_subtype("income", "sell").is_none());
+        assert!(normalize_subtype("trade", "airdrop").is_none());
     }
 
     #[test]
@@ -215,7 +215,7 @@ mod tests {
     }
 
     #[test]
-    fn fiscal_type_parse_accepts_only_fiscal_values() {
+    fn type_parse_accepts_only_supported_values() {
         assert_eq!(TaxTxType::parse("trade"), Some(TaxTxType::Trade));
         assert_eq!(TaxTxType::parse("income"), Some(TaxTxType::Income));
         assert_eq!(TaxTxType::parse("expense"), Some(TaxTxType::Expense));

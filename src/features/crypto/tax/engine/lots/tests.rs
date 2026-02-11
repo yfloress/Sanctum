@@ -43,7 +43,7 @@
     }
 
     fn tx(id: &str, kind: &str, amount: f64, price: f64, date: &str) -> CryptoTransaction {
-        let (fiscal_type, subtype) = match kind {
+        let (tx_type, subtype) = match kind {
             "buy" => ("trade", Some("buy")),
             "sell" => ("trade", Some("sell")),
             "swap" => ("trade", Some("swap")),
@@ -56,7 +56,7 @@
             "wallet".to_string(),
             "btc".to_string(),
             "BTC".to_string(),
-            fiscal_type.to_string(),
+            tx_type.to_string(),
             amount,
             Some(price),
             None,
@@ -75,7 +75,7 @@
         fee: f64,
         date: &str,
     ) -> CryptoTransaction {
-        let (fiscal_type, subtype) = match kind {
+        let (tx_type, subtype) = match kind {
             "buy" => ("trade", Some("buy")),
             "sell" => ("trade", Some("sell")),
             "swap" => ("trade", Some("swap")),
@@ -88,7 +88,7 @@
             "wallet".to_string(),
             "btc".to_string(),
             "BTC".to_string(),
-            fiscal_type.to_string(),
+            tx_type.to_string(),
             amount,
             Some(price),
             Some(fee),

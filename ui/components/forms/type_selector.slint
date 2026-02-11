@@ -17,7 +17,7 @@
 
 // TypeSelector - 4-category transaction type selection
 // Categories: Trade, Transfer, Income, Expense
-// Each sub-option auto-maps to: fiscal type + subtype
+// Each sub-option auto-maps to: type + subtype
 
 import { Theme } from "../../theme.slint";
 import { Translations } from "../../translations.slint";
@@ -167,8 +167,8 @@ export component TypeSelector inherits Rectangle {
     in-out property <string> selected-type: "buy";
 
     // Tax classification (auto-derived from selection)
-    in-out property <string> tax-type: "trade";
-    in-out property <string> tax-subtype: "buy";
+    in-out property <string> transaction-type: "trade";
+    in-out property <string> transaction-subtype: "buy";
 
     // Which top-level category is active
     in-out property <string> selected-category: "trade";
@@ -216,8 +216,8 @@ export component TypeSelector inherits Rectangle {
                     clicked => {
                         root.selected-category = "trade";
                         root.selected-type = "buy";
-                        root.tax-type = "trade";
-                        root.tax-subtype = "buy";
+                        root.transaction-type = "trade";
+                        root.transaction-subtype = "buy";
                     }
                 }
 
@@ -229,8 +229,8 @@ export component TypeSelector inherits Rectangle {
                     clicked => {
                         root.selected-category = "transfer";
                         root.selected-type = "move";
-                        root.tax-type = "transfer";
-                        root.tax-subtype = "";
+                        root.transaction-type = "transfer";
+                        root.transaction-subtype = "";
                     }
                 }
 
@@ -242,8 +242,8 @@ export component TypeSelector inherits Rectangle {
                     clicked => {
                         root.selected-category = "income";
                         root.selected-type = "transfer_in";
-                        root.tax-type = "income";
-                        root.tax-subtype = "airdrop";
+                        root.transaction-type = "income";
+                        root.transaction-subtype = "airdrop";
                     }
                 }
 
@@ -255,8 +255,8 @@ export component TypeSelector inherits Rectangle {
                     clicked => {
                         root.selected-category = "expense";
                         root.selected-type = "transfer_out";
-                        root.tax-type = "expense";
-                        root.tax-subtype = "payment";
+                        root.transaction-type = "expense";
+                        root.transaction-subtype = "payment";
                     }
                 }
             }
@@ -284,8 +284,8 @@ export component TypeSelector inherits Rectangle {
                     show-icon: true;
                     clicked => {
                         root.selected-type = "buy";
-                        root.tax-type = "trade";
-                        root.tax-subtype = "buy";
+                        root.transaction-type = "trade";
+                        root.transaction-subtype = "buy";
                     }
                 }
 
@@ -297,8 +297,8 @@ export component TypeSelector inherits Rectangle {
                     show-icon: true;
                     clicked => {
                         root.selected-type = "sell";
-                        root.tax-type = "trade";
-                        root.tax-subtype = "sell";
+                        root.transaction-type = "trade";
+                        root.transaction-subtype = "sell";
                     }
                 }
 
@@ -310,8 +310,8 @@ export component TypeSelector inherits Rectangle {
                     show-icon: true;
                     clicked => {
                         root.selected-type = "swap";
-                        root.tax-type = "trade";
-                        root.tax-subtype = "swap";
+                        root.transaction-type = "trade";
+                        root.transaction-subtype = "swap";
                     }
                 }
             }
@@ -337,34 +337,34 @@ export component TypeSelector inherits Rectangle {
                     show-icon: true;
                     clicked => {
                         root.selected-type = "move";
-                        root.tax-type = "transfer";
-                        root.tax-subtype = "";
+                        root.transaction-type = "transfer";
+                        root.transaction-subtype = "";
                     }
                 }
 
                 ScenarioPill {
                     label: Translations.tx-scenario-deposit;
-                    active: root.selected-type == "transfer_in" && root.tax-type == "transfer";
+                    active: root.selected-type == "transfer_in" && root.transaction-type == "transfer";
                     active-color: Theme.success;
                     icon: @image-url("../../assets/icons/log-in.svg");
                     show-icon: true;
                     clicked => {
                         root.selected-type = "transfer_in";
-                        root.tax-type = "transfer";
-                        root.tax-subtype = "deposit";
+                        root.transaction-type = "transfer";
+                        root.transaction-subtype = "deposit";
                     }
                 }
 
                 ScenarioPill {
                     label: Translations.tx-scenario-withdrawal;
-                    active: root.selected-type == "transfer_out" && root.tax-type == "transfer";
+                    active: root.selected-type == "transfer_out" && root.transaction-type == "transfer";
                     active-color: Theme.danger;
                     icon: @image-url("../../assets/icons/log-out.svg");
                     show-icon: true;
                     clicked => {
                         root.selected-type = "transfer_out";
-                        root.tax-type = "transfer";
-                        root.tax-subtype = "withdrawal";
+                        root.transaction-type = "transfer";
+                        root.transaction-subtype = "withdrawal";
                     }
                 }
             }
@@ -388,45 +388,45 @@ export component TypeSelector inherits Rectangle {
 
                     ScenarioPill {
                         label: Translations.tx-scenario-airdrop;
-                        active: root.tax-subtype == "airdrop";
+                        active: root.transaction-subtype == "airdrop";
                         active-color: root.income-color;
                         clicked => {
                             root.selected-type = "transfer_in";
-                            root.tax-type = "income";
-                            root.tax-subtype = "airdrop";
+                            root.transaction-type = "income";
+                            root.transaction-subtype = "airdrop";
                         }
                     }
 
                     ScenarioPill {
                         label: Translations.tx-scenario-staking;
-                        active: root.tax-subtype == "staking";
+                        active: root.transaction-subtype == "staking";
                         active-color: root.income-color;
                         clicked => {
                             root.selected-type = "transfer_in";
-                            root.tax-type = "income";
-                            root.tax-subtype = "staking";
+                            root.transaction-type = "income";
+                            root.transaction-subtype = "staking";
                         }
                     }
 
                     ScenarioPill {
                         label: Translations.tx-scenario-mining;
-                        active: root.tax-subtype == "mining";
+                        active: root.transaction-subtype == "mining";
                         active-color: root.income-color;
                         clicked => {
                             root.selected-type = "transfer_in";
-                            root.tax-type = "income";
-                            root.tax-subtype = "mining";
+                            root.transaction-type = "income";
+                            root.transaction-subtype = "mining";
                         }
                     }
 
                     ScenarioPill {
                         label: Translations.tx-scenario-interest;
-                        active: root.tax-subtype == "interest";
+                        active: root.transaction-subtype == "interest";
                         active-color: root.income-color;
                         clicked => {
                             root.selected-type = "transfer_in";
-                            root.tax-type = "income";
-                            root.tax-subtype = "interest";
+                            root.transaction-type = "income";
+                            root.transaction-subtype = "interest";
                         }
                     }
                 }
@@ -437,45 +437,45 @@ export component TypeSelector inherits Rectangle {
 
                     ScenarioPill {
                         label: Translations.tx-scenario-gift;
-                        active: root.tax-subtype == "gift" && root.tax-type == "income";
+                        active: root.transaction-subtype == "gift" && root.transaction-type == "income";
                         active-color: root.income-color;
                         clicked => {
                             root.selected-type = "transfer_in";
-                            root.tax-type = "income";
-                            root.tax-subtype = "gift";
+                            root.transaction-type = "income";
+                            root.transaction-subtype = "gift";
                         }
                     }
 
                     ScenarioPill {
                         label: Translations.tx-scenario-fork;
-                        active: root.tax-subtype == "fork";
+                        active: root.transaction-subtype == "fork";
                         active-color: root.income-color;
                         clicked => {
                             root.selected-type = "transfer_in";
-                            root.tax-type = "income";
-                            root.tax-subtype = "fork";
+                            root.transaction-type = "income";
+                            root.transaction-subtype = "fork";
                         }
                     }
 
                     ScenarioPill {
                         label: Translations.tx-scenario-reward;
-                        active: root.tax-subtype == "reward";
+                        active: root.transaction-subtype == "reward";
                         active-color: root.income-color;
                         clicked => {
                             root.selected-type = "transfer_in";
-                            root.tax-type = "income";
-                            root.tax-subtype = "reward";
+                            root.transaction-type = "income";
+                            root.transaction-subtype = "reward";
                         }
                     }
 
                     ScenarioPill {
                         label: Translations.tx-scenario-other;
-                        active: root.tax-subtype == "other" && root.tax-type == "income";
+                        active: root.transaction-subtype == "other" && root.transaction-type == "income";
                         active-color: root.income-color;
                         clicked => {
                             root.selected-type = "transfer_in";
-                            root.tax-type = "income";
-                            root.tax-subtype = "other";
+                            root.transaction-type = "income";
+                            root.transaction-subtype = "other";
                         }
                     }
                 }
@@ -500,45 +500,45 @@ export component TypeSelector inherits Rectangle {
 
                     ScenarioPill {
                         label: Translations.tx-scenario-payment;
-                        active: root.tax-subtype == "payment";
+                        active: root.transaction-subtype == "payment";
                         active-color: root.expense-color;
                         clicked => {
                             root.selected-type = "transfer_out";
-                            root.tax-type = "expense";
-                            root.tax-subtype = "payment";
+                            root.transaction-type = "expense";
+                            root.transaction-subtype = "payment";
                         }
                     }
 
                     ScenarioPill {
                         label: Translations.tx-scenario-gift;
-                        active: root.tax-subtype == "gift" && root.tax-type == "expense";
+                        active: root.transaction-subtype == "gift" && root.transaction-type == "expense";
                         active-color: root.expense-color;
                         clicked => {
                             root.selected-type = "transfer_out";
-                            root.tax-type = "expense";
-                            root.tax-subtype = "gift";
+                            root.transaction-type = "expense";
+                            root.transaction-subtype = "gift";
                         }
                     }
 
                     ScenarioPill {
                         label: Translations.tx-scenario-donation;
-                        active: root.tax-subtype == "donation";
+                        active: root.transaction-subtype == "donation";
                         active-color: root.expense-color;
                         clicked => {
                             root.selected-type = "transfer_out";
-                            root.tax-type = "expense";
-                            root.tax-subtype = "donation";
+                            root.transaction-type = "expense";
+                            root.transaction-subtype = "donation";
                         }
                     }
 
                     ScenarioPill {
                         label: Translations.tx-scenario-fee;
-                        active: root.tax-subtype == "fee" && root.tax-type == "expense";
+                        active: root.transaction-subtype == "fee" && root.transaction-type == "expense";
                         active-color: root.expense-color;
                         clicked => {
                             root.selected-type = "transfer_out";
-                            root.tax-type = "expense";
-                            root.tax-subtype = "fee";
+                            root.transaction-type = "expense";
+                            root.transaction-subtype = "fee";
                         }
                     }
                 }
@@ -549,34 +549,34 @@ export component TypeSelector inherits Rectangle {
 
                     ScenarioPill {
                         label: Translations.tx-scenario-lost;
-                        active: root.tax-subtype == "lost";
+                        active: root.transaction-subtype == "lost";
                         active-color: root.expense-color;
                         clicked => {
                             root.selected-type = "transfer_out";
-                            root.tax-type = "expense";
-                            root.tax-subtype = "lost";
+                            root.transaction-type = "expense";
+                            root.transaction-subtype = "lost";
                         }
                     }
 
                     ScenarioPill {
                         label: Translations.tx-scenario-stolen;
-                        active: root.tax-subtype == "stolen";
+                        active: root.transaction-subtype == "stolen";
                         active-color: root.expense-color;
                         clicked => {
                             root.selected-type = "transfer_out";
-                            root.tax-type = "expense";
-                            root.tax-subtype = "stolen";
+                            root.transaction-type = "expense";
+                            root.transaction-subtype = "stolen";
                         }
                     }
 
                     ScenarioPill {
                         label: Translations.tx-scenario-other;
-                        active: root.tax-subtype == "other" && root.tax-type == "expense";
+                        active: root.transaction-subtype == "other" && root.transaction-type == "expense";
                         active-color: root.expense-color;
                         clicked => {
                             root.selected-type = "transfer_out";
-                            root.tax-type = "expense";
-                            root.tax-subtype = "other";
+                            root.transaction-type = "expense";
+                            root.transaction-subtype = "other";
                         }
                     }
 

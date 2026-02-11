@@ -24,7 +24,7 @@ use super::service::{
 use super::tax::{
     IpcEntry, IpcImportSummary, IpcSummary, TaxJurisdiction, TaxPeriodSettings, TaxReadinessItem,
     TaxReport, TaxSettingsStore, TaxSummaryPayload, TaxTxType, build_import_summary,
-    build_tax_report, map_to_entries, parse_ipc_csv, resolve_tax_type, summarize_ipc,
+    build_tax_report, map_to_entries, parse_ipc_csv, resolve_type, summarize_ipc,
 };
 use crate::core::csv_escape;
 use crate::features::crypto::tax::engine::{TaxPeriod, is_in_period, parse_date, parse_period};
@@ -311,8 +311,8 @@ fn compute_taxable_income(
             continue;
         }
 
-        let tax_type = resolve_tax_type(tx);
-        if tax_type != TaxTxType::Income {
+        let tx_type = resolve_type(tx);
+        if tx_type != TaxTxType::Income {
             continue;
         }
 

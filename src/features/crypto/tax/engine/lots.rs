@@ -43,12 +43,12 @@ pub(super) fn add_lot(
     tx: &CryptoTransaction,
     tx_date: chrono::NaiveDate,
     jurisdiction: TaxJurisdiction,
-    tax_subtype: Option<&str>,
+    subtype: Option<&str>,
 ) {
     // Chile: airdrops, staking and forks are recognised at cost $0.
     let force_zero_cost = matches!(jurisdiction, TaxJurisdiction::Chile)
         && matches!(
-            tax_subtype,
+            subtype,
             Some("airdrop") | Some("staking") | Some("fork")
         );
 
@@ -502,7 +502,7 @@ fn apply_ipc_cost_adjustment(
 /// **Second IPC adjustment** — adjusts the realised gain/loss.
 ///
 /// Reajuste de la ganancia/pérdida por variación del IPC entre el mes
-/// anterior a la venta y noviembre (mes anterior al cierre del año fiscal,
+/// anterior a la venta y noviembre (mes anterior al cierre del año tributario,
 /// 31 de diciembre).
 ///
 /// For non-Chile jurisdictions this is a no-op and returns the gain unchanged.
@@ -523,7 +523,7 @@ pub(super) fn apply_gain_ipc_adjustment(
 
     let sale_prev = prev_month_key(sale_date);
 
-    // End-of-year key: November of the fiscal year (month before December 31).
+    // End-of-year key: November of the tax year (month before December 31).
     let year_end_prev = format!("{:04}-11", cfg.period.end.year());
 
     // If the sale is already in December, sale_prev == November == year_end_prev,

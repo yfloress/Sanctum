@@ -532,10 +532,10 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_crypto_tax_settings_saved(s(&t("crypto-tax-settings-saved")));
     tr.set_crypto_tax_period_required(s(&t("crypto-tax-period-required")));
     tr.set_crypto_tax_advanced(s(&t("crypto-tax-advanced")));
-    tr.set_modal_tax_type(s(&t("modal-tax-type")));
-    tr.set_modal_tax_type_placeholder(s(&t("modal-tax-type-placeholder")));
-    tr.set_modal_tax_subtype(s(&t("modal-tax-subtype")));
-    tr.set_modal_tax_subtype_placeholder(s(&t("modal-tax-subtype-placeholder")));
+    tr.set_modal_transaction_type(s(&t("modal-transaction-type")));
+    tr.set_modal_transaction_type_placeholder(s(&t("modal-transaction-type-placeholder")));
+    tr.set_modal_transaction_subtype(s(&t("modal-transaction-subtype")));
+    tr.set_modal_transaction_subtype_placeholder(s(&t("modal-transaction-subtype-placeholder")));
     tr.set_modal_tax_override_proceeds(s(&t("modal-tax-override-proceeds")));
     tr.set_modal_tax_override_cost(s(&t("modal-tax-override-cost")));
     tr.set_crypto_wallet(s(&t("crypto-wallet")));

@@ -215,8 +215,8 @@ mod tests {
     fn test_parse_generator_crypto_all_scenarios() {
         use crate::features::ingestion::validation::validate_import_crypto_transaction;
 
-        // New format: type = fiscal category, subtype = specific action.
-        // No more tax_type / tax_subtype fields.
+        // New format: type = transaction type category, subtype = specific action.
+        // Legacy split fields are no longer supported.
         let json = r#"{
             "version": "1.0",
             "exported_at": "2026-02-10T12:00:00.000Z",

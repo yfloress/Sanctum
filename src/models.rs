@@ -155,7 +155,7 @@ impl FromStr for CryptoTransactionType {
 
 /// Represents a single crypto transaction in the ledger.
 ///
-/// `transaction_type` holds the **fiscal category**: `trade`, `income`,
+/// `transaction_type` holds the **transaction type category**: `trade`, `income`,
 /// `expense`, or `transfer`.  `subtype` holds the specific action
 /// (`buy`, `sell`, `swap`, `airdrop`, `deposit`, …).
 ///
@@ -168,7 +168,7 @@ pub struct CryptoTransaction {
     pub coin_id: String, // CoinGecko ID (e.g., "bitcoin")
     pub symbol: String,  // Symbol (e.g., "BTC")
     #[serde(rename = "type")]
-    pub transaction_type: String, // fiscal: trade, income, expense, transfer
+    pub transaction_type: String, // type: trade, income, expense, transfer
     pub amount: f64,     // Amount of coins
     pub price_per_coin: Option<f64>, // Price in USD at transaction time
     pub fee: Option<f64>, // Fee paid (in USD)
@@ -219,7 +219,7 @@ impl CryptoTransaction {
         }
     }
 
-    /// Derives the mechanical transaction type from fiscal `type` + `subtype`.
+    /// Derives the mechanical transaction type from `type` + `subtype`.
     ///
     /// Returns one of: `"buy"`, `"sell"`, `"swap"`, `"transfer_in"`, `"transfer_out"`.
     pub fn mechanical_type(&self) -> &str {
@@ -1140,7 +1140,7 @@ mod tests {
     }
 
     #[test]
-    fn test_crypto_mechanical_type_from_fiscal_type_and_subtype() {
+    fn test_crypto_mechanical_type_from_type_and_subtype() {
         let mut tx = CryptoTransaction::new(
             "c1".to_string(),
             "w1".to_string(),
@@ -1184,7 +1184,7 @@ mod tests {
     }
 
     #[test]
-    fn test_crypto_transaction_validate_requires_fiscal_type() {
+    fn test_crypto_transaction_validate_requires_type() {
         let valid = CryptoTransaction::new(
             "c3".to_string(),
             "w1".to_string(),

@@ -325,7 +325,7 @@ impl Database {
     }
 
     /// Resolves swap direction for portfolio aggregation.
-    /// Prefers the side with available balance, then fiscal signal scoring,
+    /// Prefers the side with available balance, then type signal scoring,
     /// and finally deterministic ID fallback.
     fn resolve_swap_pair_direction<'a>(
         assets: &HashMap<String, AggregatedAsset>,

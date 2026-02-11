@@ -27,8 +27,8 @@ pub(crate) use types::TaxPeriod;
 
 use crate::features::crypto::tax::IpcEntry;
 use crate::features::crypto::tax::{
-    TaxJurisdiction, TaxTxType, is_loss_only_subtype, normalize_tax_subtype, resolve_tax_subtype,
-    resolve_tax_type,
+    TaxJurisdiction, TaxTxType, is_loss_only_subtype, normalize_subtype, resolve_subtype,
+    resolve_type,
 };
 use crate::features::crypto::{TaxReport, TaxReportSummary, TaxWarning};
 use crate::models::{CryptoTransaction, CryptoTransactionType};
@@ -183,54 +183,54 @@ pub fn build_tax_report(
                     });
                 }
 
-                let source_tax_type = resolve_tax_type(&source);
-                let source_subtype = resolve_tax_subtype(&source);
+                let source_type = resolve_type(&source);
+                let source_subtype = resolve_subtype(&source);
                 let loss_only = source_subtype
                     .as_deref()
                     .map(is_loss_only_subtype)
                     .unwrap_or(false);
                 let swap_taxable = settings.include_swaps
-                    && !matches!(source_tax_type, TaxTxType::Transfer)
-                    && !(matches!(source_tax_type, TaxTxType::Expense) && loss_only);
+                    && !matches!(source_type, TaxTxType::Transfer)
+                    && !(matches!(source_type, TaxTxType::Expense) && loss_only);
 
                 apply_swap_pair(&mut report, &mut lots, &cfg, &source, &target, swap_taxable);
 
-                if settings.include_fee_crypto && !matches!(source_tax_type, TaxTxType::Transfer) {
+                if settings.include_fee_crypto && !matches!(source_type, TaxTxType::Transfer) {
                     apply_fee_disposal(&mut report, &mut lots, &cfg, &source);
                 }
                 continue;
             }
         }
 
-        let parsed_tax_type = TaxTxType::parse(&tx.transaction_type);
-        if parsed_tax_type.is_none() {
+        let parsed_type = TaxTxType::parse(&tx.transaction_type);
+        if parsed_type.is_none() {
             report.warnings.push(TaxWarning {
                 code: "invalid_type".to_string(),
                 message: format!(
-                    "Invalid fiscal type '{}' for transaction {}. Defaulted to trade.",
+                    "Invalid type '{}' for transaction {}. Defaulted to trade.",
                     tx.transaction_type, tx.id
                 ),
                 tx_id: Some(tx.id.clone()),
             });
         }
-        let tax_type = parsed_tax_type.unwrap_or(TaxTxType::Trade);
-        let tax_subtype = tx
+        let category_type = parsed_type.unwrap_or(TaxTxType::Trade);
+        let subtype = tx
             .subtype
             .as_deref()
-            .and_then(|sub| normalize_tax_subtype(tax_type.as_str(), sub));
-        let loss_only = tax_subtype
+            .and_then(|sub| normalize_subtype(category_type.as_str(), sub));
+        let loss_only = subtype
             .as_deref()
             .map(is_loss_only_subtype)
             .unwrap_or(false);
 
-        if tax_type == TaxTxType::Income {
+        if category_type == TaxTxType::Income {
             add_lot(
                 &mut report,
                 &mut lots,
                 &tx,
                 tx_date,
                 jurisdiction,
-                tax_subtype.as_deref(),
+                subtype.as_deref(),
             );
             if settings.include_fee_crypto {
                 apply_fee_disposal(&mut report, &mut lots, &cfg, &tx);
@@ -238,7 +238,7 @@ pub fn build_tax_report(
             continue;
         }
 
-        let tx_type = match tx.mechanical_type().parse::<CryptoTransactionType>() {
+        let mechanical_type = match tx.mechanical_type().parse::<CryptoTransactionType>() {
             Ok(t) => t,
             Err(_) => {
                 report.warnings.push(TaxWarning {
@@ -250,10 +250,10 @@ pub fn build_tax_report(
             }
         };
 
-        let taxable = !(matches!(tax_type, TaxTxType::Transfer)
-            || matches!(tax_type, TaxTxType::Expense) && loss_only);
+        let taxable = !(matches!(category_type, TaxTxType::Transfer)
+            || matches!(category_type, TaxTxType::Expense) && loss_only);
 
-        match tx_type {
+        match mechanical_type {
             CryptoTransactionType::Buy | CryptoTransactionType::TransferIn => {
                 add_lot(
                     &mut report,
@@ -261,7 +261,7 @@ pub fn build_tax_report(
                     &tx,
                     tx_date,
                     jurisdiction,
-                    tax_subtype.as_deref(),
+                    subtype.as_deref(),
                 );
             }
             CryptoTransactionType::Sell => {
@@ -311,7 +311,7 @@ mod tests {
     }
 
     fn tx(id: &str, kind: &str, amount: f64, price: Option<f64>, date: &str) -> CryptoTransaction {
-        let (fiscal_type, subtype) = match kind {
+        let (tx_type, subtype) = match kind {
             "buy" => ("trade", Some("buy")),
             "sell" => ("trade", Some("sell")),
             "swap" => ("trade", Some("swap")),
@@ -324,7 +324,7 @@ mod tests {
             "wallet".to_string(),
             "btc".to_string(),
             "BTC".to_string(),
-            fiscal_type.to_string(),
+            tx_type.to_string(),
             amount,
             price,
             None,
@@ -335,9 +335,9 @@ mod tests {
         tx
     }
 
-    fn tx_fiscal(
+    fn tx_typed(
         id: &str,
-        fiscal_type: &str,
+        tx_type: &str,
         subtype: Option<&str>,
         amount: f64,
         price: Option<f64>,
@@ -348,7 +348,7 @@ mod tests {
             "wallet".to_string(),
             "btc".to_string(),
             "BTC".to_string(),
-            fiscal_type.to_string(),
+            tx_type.to_string(),
             amount,
             price,
             None,
@@ -460,7 +460,7 @@ mod tests {
     #[test]
     fn expense_lost_is_not_taxable() {
         let buy = tx("b1", "buy", 1.0, Some(100.0), "2024-01-10");
-        let lost = tx_fiscal(
+        let lost = tx_typed(
             "e1",
             "expense",
             Some("lost"),
@@ -509,8 +509,8 @@ mod tests {
     }
 
     #[test]
-    fn invalid_fiscal_type_emits_warning_and_defaults_to_trade_behavior() {
-        let invalid = tx_fiscal("x1", "banana", None, 1.0, Some(100.0), "2024-01-10");
+    fn invalid_type_emits_warning_and_defaults_to_trade_behavior() {
+        let invalid = tx_typed("x1", "banana", None, 1.0, Some(100.0), "2024-01-10");
         let settings = TaxPeriodSettings {
             period_id: "2024".to_string(),
             jurisdiction: TaxJurisdiction::Chile,

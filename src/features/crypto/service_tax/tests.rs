@@ -115,7 +115,7 @@
     }
 
     #[test]
-    fn history_csv_includes_fiscal_type_subtype_and_mechanical_type() {
+    fn history_csv_includes_type_subtype_and_mechanical_type() {
         let period = parse_period("2024").expect("valid period");
         let tx = tx("s1", "trade", Some("swap"), 0.1, Some(50000.0), "2024-01-10");
 

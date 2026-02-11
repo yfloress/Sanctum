@@ -77,25 +77,25 @@ pub struct ImportHabitLog {
 
 /// Intermediate crypto transaction representation.
 ///
-/// JSON format — `type` is the fiscal category, `subtype` the specific action:
+/// JSON format — `type` is the transaction type category, `subtype` the specific action:
 /// ```json
 /// { "type": "income", "subtype": "airdrop", "amount": 0.5, ... }
 /// { "type": "trade",  "subtype": "buy",     "amount": 1.0, ... }
 /// ```
 ///
 /// Valid `type` values: `trade`, `income`, `expense`, `transfer`.
-/// Each has its own set of valid subtypes (see `TAX_SUBTYPES_*` constants).
+/// Each has its own set of valid subtypes (see `SUBTYPES_*` constants).
 ///
 /// The `type` field maps directly to `CryptoTransaction.transaction_type`
-/// (fiscal category) and `subtype` maps to `CryptoTransaction.subtype`.
-/// No intermediate "resolved" fields — the fiscal info is stored as-is.
+/// (transaction type category) and `subtype` maps to `CryptoTransaction.subtype`.
+/// No intermediate "resolved" fields — type/subtype info is stored as-is.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImportCryptoTransaction {
     pub date: String,
     pub wallet: String,
     pub symbol: String, // e.g., "BTC", "ETH"
     #[serde(rename = "type")]
-    pub transaction_type: String, // fiscal: trade, income, expense, transfer
+    pub transaction_type: String, // type: trade, income, expense, transfer
     pub amount: f64,
     /// Subtype within the category (e.g. "buy", "airdrop", "deposit").
     #[serde(default)]
@@ -122,11 +122,11 @@ pub struct ImportCryptoTransaction {
 
 impl ImportCryptoTransaction {
     /// Returns the mechanical transaction type derived from
-    /// `type` (fiscal category) + `subtype`.
+    /// `type` (transaction type category) + `subtype`.
     ///
     /// Result is one of: `"buy"`, `"sell"`, `"swap"`, `"transfer_in"`, `"transfer_out"`.
     pub fn mechanical_type(&self) -> &str {
-        let fiscal_type = self.transaction_type.trim().to_lowercase();
+        let tx_type = self.transaction_type.trim().to_lowercase();
         let normalized_subtype = self
             .subtype
             .as_deref()
@@ -134,7 +134,7 @@ impl ImportCryptoTransaction {
             .filter(|s| !s.is_empty())
             .map(str::to_lowercase);
         crate::features::crypto::tax::types::derive_mechanical_type(
-            &fiscal_type,
+            &tx_type,
             normalized_subtype.as_deref(),
         )
     }
@@ -395,7 +395,7 @@ mod tests {
     }
 
     #[test]
-    fn test_mechanical_type_is_case_insensitive_for_fiscal_and_subtype() {
+    fn test_mechanical_type_is_case_insensitive_for_type_and_subtype() {
         let mut tx = base_import("Trade");
         tx.subtype = Some("SWAP".to_string());
         assert_eq!(tx.mechanical_type(), "swap");

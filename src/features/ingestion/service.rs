@@ -20,7 +20,7 @@
 //! Orchestrates data import from various file formats.
 
 use crate::db::{Database, DbError};
-use crate::features::crypto::tax::types::{derive_mechanical_type, normalize_tax_subtype};
+use crate::features::crypto::tax::types::{derive_mechanical_type, normalize_subtype};
 use crate::models::{CryptoTransaction, HabitLog, Transaction};
 use crate::services::i18n::{t, t_args};
 use std::collections::{HashMap, HashSet};
@@ -940,12 +940,13 @@ impl IngestionService {
                 continue;
             }
 
-            let fiscal_type = import_tx.transaction_type.trim().to_lowercase();
+            let category_type = import_tx.transaction_type.trim().to_lowercase();
             let normalized_subtype = import_tx
                 .subtype
                 .as_deref()
-                .and_then(|s| normalize_tax_subtype(&fiscal_type, s));
-            let tx_type = derive_mechanical_type(&fiscal_type, normalized_subtype.as_deref());
+                .and_then(|s| normalize_subtype(&category_type, s));
+            let mechanical_type =
+                derive_mechanical_type(&category_type, normalized_subtype.as_deref());
 
             // Resolve wallet
             let wallet_key = import_tx.wallet.trim().to_lowercase();
@@ -982,7 +983,7 @@ impl IngestionService {
             };
 
             let mut swap_to_coin = None;
-            if tx_type == "swap" {
+            if mechanical_type == "swap" {
                 let to_symbol = import_tx
                     .swap_to_symbol
                     .as_ref()
@@ -1038,7 +1039,7 @@ impl IngestionService {
             };
 
             // Validate balance for outflow operations
-            if tx_type == "sell" || tx_type == "transfer_out" {
+            if mechanical_type == "sell" || mechanical_type == "transfer_out" {
                 let db_balance = match IngestionRepository::get_wallet_coin_balance(
                     db,
                     &wallet.id,
@@ -1152,7 +1153,7 @@ impl IngestionService {
                         }
                     }
                 }
-            } else if tx_type == "buy" || tx_type == "transfer_in" {
+            } else if mechanical_type == "buy" || mechanical_type == "transfer_in" {
                 // For inflows, validate fee balance if fee is in a different coin
                 if let (Some(fee_coin_ref), Some(fee_amt)) =
                     (resolved_fee_coin_id.as_deref(), resolved_fee_amount)
@@ -1239,7 +1240,7 @@ impl IngestionService {
                 }
             }
 
-            if tx_type == "swap" {
+            if mechanical_type == "swap" {
                 let to_coin = match swap_to_coin {
                     Some(c) => c,
                     None => continue,
@@ -1367,7 +1368,7 @@ impl IngestionService {
                 }
             }
 
-            let dedup_key = if tx_type == "swap" {
+            let dedup_key = if mechanical_type == "swap" {
                 let to_coin = match swap_to_coin {
                     Some(c) => c,
                     None => continue,
@@ -1376,7 +1377,7 @@ impl IngestionService {
                     &import_tx.date,
                     &wallet.id,
                     &coin.id,
-                    tx_type,
+                    mechanical_type,
                     import_tx.amount,
                     Some(&to_coin.id),
                 );
@@ -1384,7 +1385,7 @@ impl IngestionService {
                     &import_tx.date,
                     &wallet.id,
                     &to_coin.id,
-                    tx_type,
+                    mechanical_type,
                     import_tx.swap_to_amount.unwrap_or(0.0),
                     Some(&coin.id),
                 );
@@ -1399,7 +1400,7 @@ impl IngestionService {
                     &import_tx.date,
                     &wallet.id,
                     &coin.id,
-                    tx_type,
+                    mechanical_type,
                     import_tx.amount,
                     None,
                 );
@@ -1411,7 +1412,7 @@ impl IngestionService {
             };
 
             // Update pending balance changes for subsequent validations
-            if tx_type == "swap" {
+            if mechanical_type == "swap" {
                 let to_coin = match swap_to_coin {
                     Some(c) => c,
                     None => continue,
@@ -1433,7 +1434,7 @@ impl IngestionService {
                 }
             } else {
                 let balance_key = (wallet.id.clone(), coin.id.clone());
-                let delta = match tx_type {
+                let delta = match mechanical_type {
                     "buy" | "transfer_in" => import_tx.amount,
                     "sell" | "transfer_out" => -import_tx.amount,
                     _ => 0.0,
@@ -1474,21 +1475,24 @@ impl IngestionService {
                         &import_tx.date,
                         &wallet.id,
                         &coin.id,
-                        tx_type,
+                        mechanical_type,
                         import_tx.amount,
                         None,
                     );
                     dedup_set.insert(key);
                     summary.record_preview_change(
                         &t("import-preview-change-crypto"),
-                        format!("{:.8} {} ({})", import_tx.amount, coin.symbol, tx_type),
+                        format!(
+                            "{:.8} {} ({})",
+                            import_tx.amount, coin.symbol, mechanical_type
+                        ),
                         format!("{} - {}", wallet.name, import_tx.date),
                     );
                 }
                 continue;
             }
 
-            if tx_type == "swap" {
+            if mechanical_type == "swap" {
                 let to_coin = match swap_to_coin {
                     Some(c) => c,
                     None => continue,
@@ -1507,7 +1511,7 @@ impl IngestionService {
                     wallet_id: wallet.id.clone(),
                     coin_id: coin.id.clone(),
                     symbol: coin.symbol.clone(),
-                    transaction_type: fiscal_type.clone(),
+                    transaction_type: category_type.clone(),
                     amount: import_tx.amount,
                     price_per_coin: import_tx.price_per_coin,
                     fee: import_tx.fee,
@@ -1526,7 +1530,7 @@ impl IngestionService {
                     wallet_id: wallet.id.clone(),
                     coin_id: to_coin.id.clone(),
                     symbol: to_coin.symbol.clone(),
-                    transaction_type: fiscal_type.clone(),
+                    transaction_type: category_type.clone(),
                     amount: to_amount,
                     price_per_coin: None,
                     fee: None,
@@ -1572,7 +1576,7 @@ impl IngestionService {
                 wallet.id.clone(),
                 coin.id.clone(),
                 coin.symbol.clone(),
-                fiscal_type.clone(),
+                category_type.clone(),
                 import_tx.amount,
                 import_tx.price_per_coin,
                 import_tx.fee,

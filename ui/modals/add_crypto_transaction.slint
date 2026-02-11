@@ -163,8 +163,8 @@ export component AddCryptoTransactionModal inherits Rectangle {
     property <string> date: AppState.current-date;
     property <string> selected-type: "buy";
     property <string> selected-category: "trade";
-    property <string> tax-type: "trade";
-    property <string> tax-subtype: "buy";
+    property <string> transaction-type: "trade";
+    property <string> transaction-subtype: "buy";
     property <int> wallet-index: 0;
     property <int> wallet-index-to: 0;
     property <int> coin-index: 0;
@@ -254,8 +254,8 @@ export component AddCryptoTransactionModal inherits Rectangle {
         date = AppState.current-date;
         selected-type = "buy";
         selected-category = "trade";
-        tax-type = "trade";
-        tax-subtype = "buy";
+        transaction-type = "trade";
+        transaction-subtype = "buy";
         wallet-index = CryptoAdapter.default-wallet-index;
         wallet-index-to = 0;
         coin-index = CryptoAdapter.default-coin-index;
@@ -275,7 +275,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
                 wallet-index-to = wallet-index == 0 ? 1 : 0;
             }
         }
-        // tax-type and tax-subtype are now set by the TypeSelector directly
+        // transaction-type and transaction-subtype are now set by the TypeSelector directly
         root.refresh-price-from-coin();
     }
 
@@ -369,9 +369,9 @@ export component AddCryptoTransactionModal inherits Rectangle {
             return;
         }
         let result = CryptoAdapter.add-transaction(
-            wallet-id, from-coin-id, from-symbol, tax-type,
+            wallet-id, from-coin-id, from-symbol, transaction-type,
             amount, price, fee, fee-coin-id, fee-coin-amount,
-            date, notes, tax-subtype, "", "");
+            date, notes, transaction-subtype, "", "");
         if (result == "") {
             root.reset();
             AppState.show-add-crypto = false;
@@ -589,8 +589,8 @@ export component AddCryptoTransactionModal inherits Rectangle {
                     TypeSelector {
                         selected-type <=> root.selected-type;
                         selected-category <=> root.selected-category;
-                        tax-type <=> root.tax-type;
-                        tax-subtype <=> root.tax-subtype;
+                        transaction-type <=> root.transaction-type;
+                        transaction-subtype <=> root.transaction-subtype;
                     }
 
                     // ==================== Section: Asset & Wallet ====================
@@ -869,7 +869,7 @@ export component AddCryptoTransactionModal inherits Rectangle {
                     TransactionSummary {
                         tx-type: root.selected-type;
                         tax-category: root.selected-category;
-                        tax-scenario: root.tax-subtype;
+                        tax-scenario: root.transaction-subtype;
                         amount: root.amount;
                         price: root.price;
                         fee: root.fee;
