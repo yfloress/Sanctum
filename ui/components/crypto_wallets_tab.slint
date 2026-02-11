@@ -1,0 +1,170 @@
+// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Copyright (C) 2026  Kyronix
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as
+// published by the Free Software Foundation, either version 3 of the
+// License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
+//
+
+import { CryptoAdapter } from "../globals.slint";
+import { Theme } from "../theme.slint";
+import { Translations } from "../translations.slint";
+import { WalletRow } from "./crypto_widgets.slint";
+
+export component CryptoWalletsTab inherits Rectangle {
+    in-out property <bool> show-delete-wallet-confirm;
+    in-out property <string> delete-wallet-id;
+    in-out property <string> delete-wallet-name;
+
+    VerticalLayout {
+        padding-left: Theme.spacing-3xl;
+        padding-right: Theme.spacing-3xl;
+        padding-bottom: Theme.spacing-xl;
+        spacing: 0px;
+
+        // Headers
+        Rectangle {
+            height: 48px;
+
+            HorizontalLayout {
+                padding-left: 20px;
+                padding-right: 20px;
+
+                Text {
+                    width: Theme.wallet-info-width;
+                    text: Translations.crypto-wallet;
+                    color: Theme.text-subtle;
+                    font-size: 10px;
+                    font-weight: 600;
+                    letter-spacing: 2px;
+                    vertical-alignment: center;
+                }
+
+                Text {
+                    width: 100px;
+                    text: Translations.crypto-assets;
+                    color: Theme.text-subtle;
+                    font-size: 10px;
+                    font-weight: 600;
+                    letter-spacing: 2px;
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    width: 150px;
+                    text: Translations.crypto-value;
+                    color: Theme.text-subtle;
+                    font-size: 10px;
+                    font-weight: 600;
+                    letter-spacing: 2px;
+                    vertical-alignment: center;
+                    horizontal-alignment: right;
+                }
+
+                Rectangle {
+                    width: 40px;
+                }
+            }
+
+            // Bottom border
+            Rectangle {
+                y: parent.height - 1px;
+                height: 1px;
+                width: 100%;
+                background: Theme.border-subtle;
+            }
+        }
+
+        // Empty State
+        if CryptoAdapter.wallets.length == 0: Rectangle {
+            vertical-stretch: 1;
+
+            VerticalLayout {
+                alignment: center;
+                spacing: 16px;
+
+                Rectangle {
+                    width: 80px;
+                    height: 80px;
+                    border-radius: 40px;
+                    background: Theme.surface;
+                    border-width: 1px;
+                    border-color: Theme.border-subtle;
+                    x: (parent.width - self.width) / 2;
+
+                    Image {
+                        source: @image-url("../assets/icons/briefcase.svg");
+                        width: 32px;
+                        height: 32px;
+                        colorize: Theme.text-muted;
+                        vertical-alignment: center;
+                        horizontal-alignment: center;
+                    }
+                }
+
+                Text {
+                    text: Translations.crypto-no-wallets;
+                    color: Theme.text-secondary;
+                    font-size: 16px;
+                    font-weight: 400;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: Translations.crypto-add-first-wallet;
+                    color: Theme.text-muted;
+                    font-size: 13px;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+
+        // Wallets List
+        if CryptoAdapter.wallets.length > 0: Flickable {
+            vertical-stretch: 1;
+            viewport-height: CryptoAdapter.wallets.length * 80px;
+
+            VerticalLayout {
+                spacing: 8px;
+                padding-top: 8px;
+
+                for wallet[index] in CryptoAdapter.wallets: Rectangle {
+                    height: 72px;
+                    background: Theme.surface;
+                    border-radius: 10px;
+                    border-width: 1px;
+                    border-color: Theme.border-subtle;
+
+                    WalletRow {
+                        name: wallet.name;
+                        category: wallet.category;
+                        icon: wallet.icon;
+                        balance: wallet.balance;
+                        count: wallet.asset-count;
+                        id: wallet.id;
+                        is-last: index == CryptoAdapter.wallets.length - 1;
+                        delete => {
+                            delete-wallet-id = wallet.id;
+                            delete-wallet-name = wallet.name;
+                            show-delete-wallet-confirm = true;
+                        }
+                        clicked => {
+                            CryptoAdapter.fetch-wallet-details(wallet.id);
+                            CryptoAdapter.show-wallet-detail = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
