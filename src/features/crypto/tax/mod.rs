@@ -76,7 +76,7 @@ mod tests {
     }
 
     #[test]
-    fn resolve_tax_type_reads_fiscal_type_field() {
+    fn resolve_fiscal_type_reads_transaction_type_field() {
         assert_eq!(resolve_tax_type(&tx("trade", Some("buy"))), TaxTxType::Trade);
         assert_eq!(
             resolve_tax_type(&tx("income", Some("airdrop"))),
@@ -93,7 +93,7 @@ mod tests {
     }
 
     #[test]
-    fn resolve_tax_subtype_requires_valid_subtype_for_selected_type() {
+    fn resolve_fiscal_subtype_requires_valid_subtype_for_selected_type() {
         assert_eq!(
             resolve_tax_subtype(&tx("income", Some("airdrop"))).as_deref(),
             Some("airdrop")

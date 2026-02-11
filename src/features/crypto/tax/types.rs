@@ -186,7 +186,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn normalize_tax_subtype_requires_matching_type() {
+    fn normalize_subtype_requires_matching_fiscal_type() {
         assert_eq!(
             normalize_tax_subtype("income", "airdrop").as_deref(),
             Some("airdrop")
@@ -215,7 +215,7 @@ mod tests {
     }
 
     #[test]
-    fn tax_type_parse_accepts_only_fiscal_values() {
+    fn fiscal_type_parse_accepts_only_fiscal_values() {
         assert_eq!(TaxTxType::parse("trade"), Some(TaxTxType::Trade));
         assert_eq!(TaxTxType::parse("income"), Some(TaxTxType::Income));
         assert_eq!(TaxTxType::parse("expense"), Some(TaxTxType::Expense));

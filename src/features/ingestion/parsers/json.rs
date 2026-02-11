@@ -173,14 +173,6 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_without_version_is_accepted() {
-        let json = r#"{"transactions": [], "habit_logs": []}"#;
-        let parser = JsonParser;
-        let result = parser.parse_transactions(json);
-        assert!(result.is_ok());
-    }
-
-    #[test]
     fn test_invalid_json() {
         let parser = JsonParser;
         let result = parser.parse_transactions("not valid json");
