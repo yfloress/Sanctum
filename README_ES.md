@@ -10,6 +10,12 @@
 
 [English Version](README.md)
 
+<p align="center">
+  <a href="https://kyronix.codeberg.page/Sanctum/">
+    <img src="https://img.shields.io/badge/🌐_Website-Sanctum-2185D0?style=for-the-badge" alt="website"/>
+  </a>
+</p>
+
 <div align="center">
     <a href="">
       <img src="https://img.shields.io/badge/Core-Rust-orange?style=for-the-badge&logo=rust" alt="Rust" />
