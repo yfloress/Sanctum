@@ -623,7 +623,7 @@ export component SettingsPage inherits Rectangle {
                     SettingSelector {
                         title: Translations.settings-session-timeout;
                         description: Translations.settings-session-timeout-desc;
-                        selected-value: SettingsAdapter.session-timeout == 300 ? "5 min" : SettingsAdapter.session-timeout == 900 ? "15 min" : SettingsAdapter.session-timeout == 1800 ? "30 min" : SettingsAdapter.session-timeout == 3600 ? "1 hour" : SettingsAdapter.session-timeout == -1 ? "Never" : "15 min";
+                        selected-value: SettingsAdapter.session-timeout == 300 ? "300" : SettingsAdapter.session-timeout == 900 ? "900" : SettingsAdapter.session-timeout == 1800 ? "1800" : SettingsAdapter.session-timeout == 3600 ? "3600" : SettingsAdapter.session-timeout == -1 ? "-1" : "900";
                         options: ["300", "900", "1800", "3600", "-1"];
                         option-labels: ["5 min", "15 min", "30 min", "1 hour", "Never"];
                         value-selected(value) => {
