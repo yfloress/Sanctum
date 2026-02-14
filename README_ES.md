@@ -51,9 +51,10 @@ de la nube. Tú controlas las llaves, la base de datos y los respaldos.
 
 - **Dashboard:** Patrimonio neto y tendencias combinando finanzas + crypto.
 - **Finanzas:** Cuentas, categorías, transferencias y ledger completo.
-- **Crypto:** Billeteras, trades, swaps, balances y sincronización privada de precios vía CoinGecko.
+- **Crypto:** Billeteras, trades, swaps, balances, sincronización privada de precios vía CoinGecko y **motor de impuestos avanzado** (Chile/SII, USA/IRS, Internacional).
+- **Impuestos Crypto:** Motor tributario offline con soporte para múltiples jurisdicciones, métodos de valorización (FIFO, LIFO, HIFO, CPP), ajustes por IPC (Chile) y generación de reportes tributarios.
 - **Hábitos:** Registros diarios, heatmaps, rachas y recompensas/objetivos.
-- **Importación y Backups:** Ingesta JSON/CSV/TXT con preview + dedup y backups cifrados.
+- **Importación y Respaldos:** Ingesta JSON/CSV/TXT con preview + dedup, **importación manual de IPC** para ajustes tributarios y respaldos cifrados.
 - **Configuración:** Moneda USD/CLP, idioma EN/ES y proxy para APIs de crypto.
 
 ## Formatos de Importación
@@ -113,7 +114,7 @@ Este es un proyecto Open Source moderno que abraza la evolución del desarrollo 
   - **Arquitectura y Visión:** Diseñado y dirigido por humanos, priorizando la privacidad y la seguridad local.
   - **Colaboración con IA:** La mayor parte del código ha sido generada y/o
     refactorizada con LLMs bajo estricta auditoría humana. Los modelos usados,
-    en orden, son **Claude Opus 4.5(ahora 4.6)**, **Claude Sonnet 4.5**, **Codex 5.2(ahora 5.3)** y
+    en orden, son **Claude Opus 4.5 (ahora 4.6)**, **Claude Sonnet 4.5**, **Codex 5.2 (ahora 5.3)** y
     **Gemini 3 Pro**.
   - **Auditabilidad:** El código es abierto para que cualquiera pueda verificar que no hay telemetría oculta ni vectores de ataque.
 

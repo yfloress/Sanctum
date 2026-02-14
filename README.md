@@ -51,10 +51,10 @@ You keep the keys, the database, and the backups.
 
 - **Dashboard:** Net worth and trend analytics across finance + crypto.
 - **Finances:** Accounts, categories, transfers, and full transaction ledger.
-- **Crypto:** Wallets, trades, swaps, portfolio balances, and privacy-preserving price sync via CoinGecko.
+- **Crypto:** Wallets, trades, swaps, portfolio balances, privacy-preserving price sync via CoinGecko, and **comprehensive tax engine** (Chile/SII, USA/IRS, International).
+- **Crypto Taxes:** Offline-first tax engine supporting multiple jurisdictions, cost-basis methods (FIFO, LIFO, HIFO, CPP), IPC adjustments for Chile, and automated tax report generation.
 - **Habits:** Daily logs, heatmaps, streaks, and rewards/goals.
-- **Import & Backup:** JSON/CSV/TXT ingestion with preview + dedup, plus encrypted
-  backups and restore/rollback.
+- **Import & Backup:** JSON/CSV/TXT ingestion with preview + dedup, **manual IPC data import** for tax adjustments, plus encrypted backups and restore/rollback.
 - **Settings:** USD/CLP currency, EN/ES language, proxy support for crypto APIs.
 
 ## Import Formats
@@ -122,7 +122,7 @@ This project embraces open collaboration without compromising auditability.
 - **Human-led architecture:** Privacy and data integrity are the priority.
 - **AI-assisted development:** Most of the code has been generated or
   refactored with LLMs under strict human auditing. The primary models used,
-  in order, are **Claude Opus 4.5(and now 4.6)**, **Claude Sonnet 4.5**, **Codex 5.2(and now 5.3)**, and
+  in order, are **Claude Opus 4.5 (now 4.6)**, **Claude Sonnet 4.5**, **Codex 5.2 (now 5.3)**, and
   **Gemini 3 Pro**.
 - **Auditability:** The code is open for inspection and verification.
 
