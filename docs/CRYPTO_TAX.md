@@ -121,7 +121,7 @@ reemplaza la asesoría de un profesional tributario local.**
 |--------|-------------|
 | **FIFO** | Primero en entrar, primero en salir — lotes más antiguos primero |
 | **LIFO** | Último en entrar, primero en salir — lotes más recientes primero |
-| **HIFO** | Mayor costo primero — lotes de mayor costo primero |
+| **HIFO** | Mayor costo primero — lotes de mayor costo primero. En Chile, este cálculo es **IPC-aware** (compara costos reajustados para la selección). |
 | **CPP** | Costo Promedio Ponderado — promedio móvil del costo |
 
 ## IPC (Chile)
@@ -149,12 +149,27 @@ El parser (`ipc.rs`) soporta:
 ## Configuración
 
 Almacenados en `TaxPeriodSettings` (por año):
-- `jurisdiction`: Chile / USA
+- `jurisdiction`: Chile / USA / Other
 - `method`: FIFO / LIFO / HIFO / CPP
 - `include_swaps`: si los swaps generan enajenaciones
 - `include_fee_crypto`: si los fees en crypto generan enajenación
+- `excluded_wallet_ids`: lista de IDs de billeteras a omitir del reporte (ej. cuentas de test o donaciones).
 
 Por defecto: Chile, HIFO, include_swaps=true, include_fee_crypto=true.
+
+## Ajustes Manuales (Overrides)
+
+El motor respeta campos de anulación manual en las transacciones para casos complejos:
+- `override_proceeds`: ignora el cálculo automático de precio de venta y usa este valor.
+- `override_cost_basis`: ignora el costo de adquisición original y usa este valor (útil para herencias o errores de historial).
+
+## Resolutor de Swaps
+
+Para pares de swap, el motor usa un sistema de puntaje para identificar la "pata de salida" (enajenación):
+1. Prioriza transacciones con `override_proceeds`.
+2. Prioriza transacciones con comisiones (`fees`) pagadas.
+3. Prioriza transacciones con precio de mercado explícito.
+4. Si hay empate, usa el orden alfabético de los IDs.
 
 ## Exportaciones
 
