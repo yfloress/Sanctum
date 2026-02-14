@@ -31,14 +31,20 @@ use crate::ui::{
 };
 use crate::{AssetTransaction, AssetWalletBreakdown, AppWindow, CryptoAdapter, CryptoAssetData};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel, Weak};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const MANUAL_REFRESH_COOLDOWN_SECS: u64 = 8;
 
 static LAST_MANUAL_REFRESH_MS: AtomicU64 = AtomicU64::new(0);
+static HISTORICAL_REQUESTS_IN_FLIGHT: LazyLock<Mutex<HashSet<String>>> =
+    LazyLock::new(|| Mutex::new(HashSet::new()));
+static HISTORICAL_AUTO_REQUESTED_KEYS: LazyLock<Mutex<HashSet<String>>> =
+    LazyLock::new(|| Mutex::new(HashSet::new()));
+static HISTORICAL_PRICE_CACHE: LazyLock<Mutex<HashMap<String, String>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
 
 fn now_millis() -> u64 {
     SystemTime::now()
@@ -94,6 +100,75 @@ fn is_suspicious_fx_jump(
     } else {
         None
     }
+}
+
+fn try_start_historical_request(request_key: &str) -> bool {
+    let Ok(mut in_flight) = HISTORICAL_REQUESTS_IN_FLIGHT.lock() else {
+        return false;
+    };
+    if in_flight.contains(request_key) {
+        return false;
+    }
+    in_flight.insert(request_key.to_string());
+    true
+}
+
+fn has_auto_historical_request(request_key: &str) -> bool {
+    let Ok(keys) = HISTORICAL_AUTO_REQUESTED_KEYS.lock() else {
+        return false;
+    };
+    keys.contains(request_key)
+}
+
+fn mark_auto_historical_request(request_key: &str) {
+    if let Ok(mut keys) = HISTORICAL_AUTO_REQUESTED_KEYS.lock() {
+        keys.insert(request_key.to_string());
+    }
+}
+
+fn finish_historical_request(request_key: &str) {
+    if let Ok(mut in_flight) = HISTORICAL_REQUESTS_IN_FLIGHT.lock() {
+        in_flight.remove(request_key);
+    }
+}
+
+fn get_cached_historical_price(request_key: &str) -> Option<String> {
+    let Ok(cache) = HISTORICAL_PRICE_CACHE.lock() else {
+        return None;
+    };
+    cache.get(request_key).cloned()
+}
+
+fn cache_historical_price(request_key: &str, value: &str) {
+    if value.is_empty() {
+        return;
+    }
+    if let Ok(mut cache) = HISTORICAL_PRICE_CACHE.lock() {
+        cache.insert(request_key.to_string(), value.to_string());
+    }
+}
+
+fn should_suppress_historical_price_error(error_text: &str) -> bool {
+    error_text.contains("Date cannot be empty")
+        || error_text.contains("Invalid date format")
+        || error_text.contains("Coin ID cannot be empty")
+        || error_text.contains("Coin ID contains invalid characters")
+}
+
+fn map_historical_price_error_for_ui(error_text: &str) -> String {
+    if error_text.contains("Historical price data not found")
+        || error_text.contains("Historical USD price not available")
+        || error_text.contains("Date cannot be in the future")
+    {
+        return "No historical price available for that coin/date.".to_string();
+    }
+    if error_text.contains("Rate limit exceeded") {
+        return "Historical API rate limit reached. Please wait and try again.".to_string();
+    }
+    if let Some(stripped) = error_text.strip_prefix("API error: ") {
+        return stripped.to_string();
+    }
+    error_text.to_string()
 }
 
 /// Sets up portfolio-related callbacks
@@ -303,6 +378,88 @@ pub fn setup_portfolio_callbacks<N>(
                 } else {
                     "".into()
                 }
+            });
+    }
+
+    // on_request_historical_price
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = notify.clone();
+        ui.global::<CryptoAdapter>()
+            .on_request_historical_price(move |coin_id, date, user_initiated| {
+                let coin_id_str = coin_id.to_string();
+                let date_str = date.to_string();
+                let request_key = format!("{}|{}", coin_id_str, date_str);
+
+                if !user_initiated && has_auto_historical_request(&request_key) {
+                    if let Some(cached_value) = get_cached_historical_price(&request_key) {
+                        let request_key_cached = request_key.clone();
+                        let _ = ui_weak.upgrade_in_event_loop(move |ui| {
+                            let adapter = ui.global::<CryptoAdapter>();
+                            adapter.set_historical_price_key(SharedString::from(request_key_cached));
+                            adapter.set_historical_price_value(SharedString::from(cached_value));
+                        });
+                    }
+                    return;
+                }
+
+                if let Some(cached_value) = get_cached_historical_price(&request_key) {
+                    let request_key_cached = request_key.clone();
+                    let _ = ui_weak.upgrade_in_event_loop(move |ui| {
+                        let adapter = ui.global::<CryptoAdapter>();
+                        adapter.set_historical_price_key(SharedString::from(request_key_cached));
+                        adapter.set_historical_price_value(SharedString::from(cached_value));
+                    });
+                    return;
+                }
+
+                if !try_start_historical_request(&request_key) {
+                    return;
+                }
+                if !user_initiated {
+                    mark_auto_historical_request(&request_key);
+                }
+                let controller_async = controller.clone();
+                let ui_weak_async = ui_weak.clone();
+                let notify_async = notify.clone();
+                let request_key_async = request_key.clone();
+
+                tokio::spawn(async move {
+                    let result = controller_async
+                        .get_crypto_historical_price_usd(coin_id_str, date_str)
+                        .await;
+
+                    let (value, notify_msg) = match result {
+                        Ok(price) => (format!("{:.4}", price), None),
+                        Err(err) => {
+                            let err_text = err.to_string();
+                            let msg = if should_suppress_historical_price_error(&err_text) {
+                                None
+                            } else if !user_initiated {
+                                None
+                            } else {
+                                Some(map_historical_price_error_for_ui(&err_text))
+                            };
+                            (String::new(), msg)
+                        }
+                    };
+
+                    if let Some(message) = notify_msg {
+                        let notify_for_ui = notify_async.clone();
+                        let _ = ui_weak_async.upgrade_in_event_loop(move |_| {
+                            notify_for_ui(message, true);
+                        });
+                    }
+
+                    cache_historical_price(&request_key_async, &value);
+                    finish_historical_request(&request_key_async);
+                    let _ = ui_weak_async.upgrade_in_event_loop(move |ui| {
+                        let adapter = ui.global::<CryptoAdapter>();
+                        adapter.set_historical_price_key(SharedString::from(request_key));
+                        adapter.set_historical_price_value(SharedString::from(value));
+                    });
+                });
             });
     }
 

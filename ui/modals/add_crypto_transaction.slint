@@ -23,6 +23,7 @@ import {
     AppState,
     CryptoAdapter,
     NotificationAdapter,
+    SettingsAdapter,
 } from "../globals.slint";
 import { Theme } from "../theme.slint";
 import { Translations } from "../translations.slint";
@@ -174,6 +175,16 @@ export component AddCryptoTransactionModal inherits Rectangle {
     property <int> swap-coin-index: 0;
     property <string> move-amount: "";
     property <bool> show-advanced: false;
+    property <string> pending-historical-key: "";
+    property <string> last-auto-historical-key: "";
+    property <string> historical-price-key: CryptoAdapter.historical-price-key;
+    property <string> historical-price-value: CryptoAdapter.historical-price-value;
+    property <bool> supports-market-price: root.selected-type != "swap" && root.selected-type != "move";
+    property <bool> is-historical-date: root.date != AppState.current-date;
+    property <bool> show-manual-historical-fetch:
+        !SettingsAdapter.auto-fetch-enabled
+        && root.supports-market-price
+        && root.is-historical-date;
 
     // Derived: type-specific accent color (from category)
     property <color> type-accent: root.selected-category == "income"
@@ -214,12 +225,45 @@ export component AddCryptoTransactionModal inherits Rectangle {
         swap-amount = quote;
     }
 
+    function apply-historical-price-if-match() {
+        if (root.pending-historical-key == "") { return; }
+        if (root.historical-price-key != root.pending-historical-key) { return; }
+        if (root.historical-price-value == "") { return; }
+        root.price = root.historical-price-value;
+    }
+
+    function request-historical-price(user-initiated: bool) {
+        if (!root.supports-market-price || !root.is-historical-date) { return; }
+        if (CryptoAdapter.coin-catalog.length == 0) { return; }
+        let safe-index = coin-index >= CryptoAdapter.coin-catalog.length ? 0 : coin-index;
+        let coin-id = CryptoAdapter.coin-catalog[safe-index].id;
+        let request-key = coin-id + "|" + root.date;
+        if (!user-initiated && request-key == root.last-auto-historical-key) { return; }
+        if (!user-initiated) {
+            root.last-auto-historical-key = request-key;
+        }
+        root.pending-historical-key = request-key;
+        CryptoAdapter.request-historical-price(coin-id, root.date, user-initiated);
+    }
+
     function refresh-price-from-coin() {
-        if (selected-type != "buy" && selected-type != "sell") { return; }
+        if (!root.supports-market-price) {
+            root.pending-historical-key = "";
+            root.last-auto-historical-key = "";
+            return;
+        }
         if (CryptoAdapter.coin-catalog.length == 0) {
+            root.pending-historical-key = "";
+            root.last-auto-historical-key = "";
             price = "";
             return;
         }
+        if (SettingsAdapter.auto-fetch-enabled && root.is-historical-date) {
+            root.request-historical-price(false);
+            return;
+        }
+        root.pending-historical-key = "";
+        root.last-auto-historical-key = "";
         let safe-index = coin-index >= CryptoAdapter.coin-catalog.length ? 0 : coin-index;
         price = CryptoAdapter.get-last-price(CryptoAdapter.coin-catalog[safe-index].id);
     }
@@ -233,6 +277,16 @@ export component AddCryptoTransactionModal inherits Rectangle {
     swap-quote-timer := Timer {
         interval: 1200ms;
         triggered => { root.update-swap-quote(); }
+    }
+
+    historical-price-timer := Timer {
+        interval: 650ms;
+        triggered => {
+            historical-price-timer.stop();
+            if (SettingsAdapter.auto-fetch-enabled && root.supports-market-price && root.is-historical-date) {
+                root.request-historical-price(false);
+            }
+        }
     }
 
     init => {
@@ -264,6 +318,8 @@ export component AddCryptoTransactionModal inherits Rectangle {
         swap-coin-index = 0;
         move-amount = "";
         show-advanced = false;
+        pending-historical-key = "";
+        last-auto-historical-key = "";
         CryptoAdapter.filter-coin-catalog("");
         root.refresh-price-from-coin();
     }
@@ -293,6 +349,25 @@ export component AddCryptoTransactionModal inherits Rectangle {
 
     changed swap-coin-index => {
         root.update-swap-quote();
+    }
+
+    changed date => {
+        if (SettingsAdapter.auto-fetch-enabled && root.supports-market-price && root.is-historical-date) {
+            historical-price-timer.restart();
+        } else {
+            historical-price-timer.stop();
+            root.pending-historical-key = "";
+            root.last-auto-historical-key = "";
+            root.refresh-price-from-coin();
+        }
+    }
+
+    changed historical-price-key => {
+        root.apply-historical-price-if-match();
+    }
+
+    changed historical-price-value => {
+        root.apply-historical-price-if-match();
     }
 
     function submit() {
@@ -605,9 +680,6 @@ export component AddCryptoTransactionModal inherits Rectangle {
                             ? Translations.modal-from-asset
                             : Translations.modal-cryptocurrency;
                         selected-index <=> root.coin-index;
-                        selected(idx, name) => {
-                            root.refresh-price-from-coin();
-                        }
                     }
 
                     // Coin Selector (To) for swaps
@@ -788,6 +860,8 @@ export component AddCryptoTransactionModal inherits Rectangle {
                                 ? Translations.modal-optional
                                 : Translations.modal-required;
                             value <=> root.price;
+                            show-refresh: root.show-manual-historical-fetch;
+                            refresh => { root.request-historical-price(true); }
                             horizontal-stretch: 1;
                             submit-shortcut => { root.submit(); }
                         }
@@ -863,6 +937,42 @@ export component AddCryptoTransactionModal inherits Rectangle {
                         placeholder: Translations.form-date-format;
                         value <=> root.date;
                         submit-shortcut => { root.submit(); }
+                    }
+
+                    if root.show-manual-historical-fetch: Rectangle {
+                        height: 34px;
+                        background: Theme.surface;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: Theme.border;
+
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+                            spacing: 8px;
+
+                            Image {
+                                source: @image-url("../assets/icons/search.svg");
+                                width: 12px;
+                                height: 12px;
+                                colorize: Theme.accent;
+                                y: (parent.height - self.height) / 2;
+                            }
+
+                            Text {
+                                text: Translations.modal-fetch-price-date;
+                                color: Theme.text-primary;
+                                font-size: 11px;
+                                font-weight: 500;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+                        }
+
+                        TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.request-historical-price(true); }
+                        }
                     }
 
                     // ==================== Transaction Summary ====================

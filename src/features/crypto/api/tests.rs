@@ -80,3 +80,38 @@
         assert_eq!(mxn, 17.20);
     }
 
+    #[test]
+    fn normalize_history_date_accepts_supported_formats() {
+        let iso = normalize_history_date("2025-02-10").expect("ISO date must parse");
+        let dmy = normalize_history_date("10-02-2025").expect("DMY date must parse");
+        assert_eq!(iso, dmy);
+        assert_eq!(iso.format("%Y-%m-%d").to_string(), "2025-02-10");
+    }
+
+    #[test]
+    fn normalize_history_date_rejects_future_dates() {
+        let err = normalize_history_date("2999-01-01").expect_err("future date must fail");
+        assert_eq!(err, "Date cannot be in the future");
+    }
+
+    #[test]
+    fn parse_coinpaprika_historical_price_reads_first_price() {
+        let body = br#"[{"timestamp":"2025-02-10T00:00:00Z","price":43123.11}]"#;
+        let price = parse_coinpaprika_historical_price(body).expect("CoinPaprika price must parse");
+        assert_eq!(price, 43123.11);
+    }
+
+    #[test]
+    fn parse_kraken_ohlc_close_price_reads_close_field() {
+        let body = br#"{
+            "error": [],
+            "result": {
+                "XXBTZUSD": [
+                    [1739145600,"43000.1","44000.1","42000.1","43500.5","0","0","1"]
+                ],
+                "last": "1739232000"
+            }
+        }"#;
+        let price = parse_kraken_ohlc_close_price(body).expect("Kraken close price must parse");
+        assert_eq!(price, 43500.5);
+    }

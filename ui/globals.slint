@@ -695,6 +695,8 @@ export global CryptoAdapter {
     in-out property <string> edit-transaction-subtype: "";
     in-out property <string> edit-override-proceeds: "";
     in-out property <string> edit-override-cost: "";
+    in-out property <string> historical-price-key: "";
+    in-out property <string> historical-price-value: "";
 
     // Actions
     callback fetch-portfolio();
@@ -713,6 +715,7 @@ export global CryptoAdapter {
     callback export-tax-report();
     callback export-tax-history();
     callback get-last-price(string) -> string; // coin_id -> price string
+    callback request-historical-price(string, string, bool); // coin_id, date, user_initiated
     callback get-swap-quote(string, string, string) -> string; // from_coin_id, to_coin_id, from_amount -> to_amount
     callback get-available-balance(string, string, string) -> string; // wallet_id, coin_id, date -> balance string
     callback load-edit-transaction(string) -> string; // tx_id -> "" or error

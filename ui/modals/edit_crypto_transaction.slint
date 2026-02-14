@@ -23,6 +23,7 @@ import {
     AppState,
     CryptoAdapter,
     NotificationAdapter,
+    SettingsAdapter,
 } from "../globals.slint";
 import { Theme } from "../theme.slint";
 import { Translations } from "../translations.slint";
@@ -173,6 +174,19 @@ component TypeBadge inherits Rectangle {
 // ==================== Main Modal ====================
 export component EditCryptoTransactionModal inherits Rectangle {
     property <bool> show-advanced: false;
+    property <string> pending-historical-key: "";
+    property <string> last-auto-historical-key: "";
+    property <string> historical-price-key: CryptoAdapter.historical-price-key;
+    property <string> historical-price-value: CryptoAdapter.historical-price-value;
+    property <string> edit-date-value: CryptoAdapter.edit-date;
+    property <string> edit-coin-id-value: CryptoAdapter.edit-coin-id;
+    property <string> edit-type-value: CryptoAdapter.edit-type;
+    property <bool> supports-market-price: CryptoAdapter.edit-type != "swap" && CryptoAdapter.edit-type != "";
+    property <bool> is-historical-date: CryptoAdapter.edit-date != AppState.current-date;
+    property <bool> show-manual-historical-fetch:
+        !SettingsAdapter.auto-fetch-enabled
+        && root.supports-market-price
+        && root.is-historical-date;
 
     // Derived: type-specific accent color
     property <color> type-accent: CryptoAdapter.edit-type == "buy" || CryptoAdapter.edit-type == "transfer_in"
@@ -180,6 +194,45 @@ export component EditCryptoTransactionModal inherits Rectangle {
         : CryptoAdapter.edit-type == "sell" || CryptoAdapter.edit-type == "transfer_out"
             ? Theme.danger
             : Theme.primary;
+
+    function apply-historical-price-if-match() {
+        if (root.pending-historical-key == "") { return; }
+        if (root.historical-price-key != root.pending-historical-key) { return; }
+        if (root.historical-price-value == "") { return; }
+        CryptoAdapter.edit-price = root.historical-price-value;
+    }
+
+    function request-historical-price(user-initiated: bool) {
+        if (!root.supports-market-price || !root.is-historical-date) { return; }
+        if (CryptoAdapter.edit-coin-id == "") { return; }
+        let request-key = CryptoAdapter.edit-coin-id + "|" + CryptoAdapter.edit-date;
+        if (!user-initiated && request-key == root.last-auto-historical-key) { return; }
+        if (!user-initiated) {
+            root.last-auto-historical-key = request-key;
+        }
+        root.pending-historical-key = request-key;
+        CryptoAdapter.request-historical-price(CryptoAdapter.edit-coin-id, CryptoAdapter.edit-date, user-initiated);
+    }
+
+    function refresh-price-from-coin() {
+        if (!root.supports-market-price) {
+            root.pending-historical-key = "";
+            root.last-auto-historical-key = "";
+            return;
+        }
+        if (CryptoAdapter.edit-coin-id == "") {
+            root.pending-historical-key = "";
+            root.last-auto-historical-key = "";
+            return;
+        }
+        if (SettingsAdapter.auto-fetch-enabled && root.is-historical-date) {
+            root.request-historical-price(false);
+            return;
+        }
+        root.pending-historical-key = "";
+        root.last-auto-historical-key = "";
+        CryptoAdapter.edit-price = CryptoAdapter.get-last-price(CryptoAdapter.edit-coin-id);
+    }
 
     function reset() {
         CryptoAdapter.edit-tx-id = "";
@@ -199,11 +252,50 @@ export component EditCryptoTransactionModal inherits Rectangle {
         CryptoAdapter.edit-transaction-subtype = "";
         CryptoAdapter.edit-override-proceeds = "";
         CryptoAdapter.edit-override-cost = "";
+        pending-historical-key = "";
+        last-auto-historical-key = "";
         root.show-advanced = false;
     }
 
     init => {
         key-scope.focus();
+    }
+
+    historical-price-timer := Timer {
+        interval: 650ms;
+        triggered => {
+            historical-price-timer.stop();
+            if (SettingsAdapter.auto-fetch-enabled && root.supports-market-price && root.is-historical-date) {
+                root.request-historical-price(false);
+            }
+        }
+    }
+
+    changed edit-date-value => {
+        if (SettingsAdapter.auto-fetch-enabled && root.supports-market-price && root.is-historical-date) {
+            historical-price-timer.restart();
+        } else {
+            historical-price-timer.stop();
+            root.pending-historical-key = "";
+            root.last-auto-historical-key = "";
+            root.refresh-price-from-coin();
+        }
+    }
+
+    changed edit-coin-id-value => {
+        root.refresh-price-from-coin();
+    }
+
+    changed edit-type-value => {
+        root.refresh-price-from-coin();
+    }
+
+    changed historical-price-key => {
+        root.apply-historical-price-if-match();
+    }
+
+    changed historical-price-value => {
+        root.apply-historical-price-if-match();
     }
 
     function submit() {
@@ -478,6 +570,8 @@ export component EditCryptoTransactionModal inherits Rectangle {
                                 ? Translations.modal-optional
                                 : Translations.modal-required;
                             value <=> CryptoAdapter.edit-price;
+                            show-refresh: root.show-manual-historical-fetch;
+                            refresh => { root.request-historical-price(true); }
                             horizontal-stretch: 1;
                             submit-shortcut => { root.submit(); }
                         }
@@ -593,6 +687,42 @@ export component EditCryptoTransactionModal inherits Rectangle {
                         placeholder: Translations.form-date-format;
                         value <=> CryptoAdapter.edit-date;
                         submit-shortcut => { root.submit(); }
+                    }
+
+                    if root.show-manual-historical-fetch: Rectangle {
+                        height: 34px;
+                        background: Theme.surface;
+                        border-radius: 8px;
+                        border-width: 1px;
+                        border-color: Theme.border;
+
+                        HorizontalLayout {
+                            padding-left: 12px;
+                            padding-right: 12px;
+                            spacing: 8px;
+
+                            Image {
+                                source: @image-url("../assets/icons/search.svg");
+                                width: 12px;
+                                height: 12px;
+                                colorize: Theme.accent;
+                                y: (parent.height - self.height) / 2;
+                            }
+
+                            Text {
+                                text: Translations.modal-fetch-price-date;
+                                color: Theme.text-primary;
+                                font-size: 11px;
+                                font-weight: 500;
+                                vertical-alignment: center;
+                                horizontal-stretch: 1;
+                            }
+                        }
+
+                        TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.request-historical-price(true); }
+                        }
                     }
 
                     // Bottom spacing

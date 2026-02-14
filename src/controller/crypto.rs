@@ -55,6 +55,18 @@ impl AppController {
             .map_err(ControllerError::from)
     }
 
+    /// Fetches historical USD price for a coin on a specific day.
+    pub async fn get_crypto_historical_price_usd(
+        &self,
+        coin_id: String,
+        date: String,
+    ) -> Result<f64, ControllerError> {
+        self.crypto_service
+            .get_historical_price_usd(coin_id, date)
+            .await
+            .map_err(ControllerError::from)
+    }
+
     /// Saves crypto prices to cache
     pub fn save_crypto_prices(&self, prices: Vec<CryptoAsset>) -> Result<(), ControllerError> {
         self.crypto_service

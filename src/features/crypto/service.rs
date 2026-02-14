@@ -30,7 +30,7 @@ use uuid::Uuid;
 
 use super::api::{
     MAX_PROXY_URL_LENGTH, ProxyConfig, default_price_allowlist, fetch_crypto_prices,
-    fetch_usd_fx_rate, validate_proxy_url,
+    fetch_historical_price_usd, fetch_usd_fx_rate, validate_proxy_url,
 };
 use super::validation::{
     MAX_ICON_LENGTH, MAX_WALLET_NAME_LENGTH, sanitize_string, validate_coin_id_str, validate_date,
@@ -218,6 +218,19 @@ impl CryptoService {
     pub async fn get_usd_fx_rate(&self, target_currency: String) -> Result<f64, CryptoError> {
         let proxy = self.get_proxy_config()?;
         fetch_usd_fx_rate(&target_currency, proxy.as_ref())
+            .await
+            .map_err(CryptoError::Api)
+    }
+
+    pub async fn get_historical_price_usd(
+        &self,
+        coin_id: String,
+        date: String,
+    ) -> Result<f64, CryptoError> {
+        let validated_coin_id = validate_coin_id_str(&coin_id)?;
+        let validated_date = validate_date(&date)?;
+        let proxy = self.get_proxy_config()?;
+        fetch_historical_price_usd(&validated_coin_id, &validated_date, proxy.as_ref())
             .await
             .map_err(CryptoError::Api)
     }

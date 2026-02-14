@@ -671,6 +671,7 @@ modal-fee-amount = MONTO COMISIÓN
 modal-notes = NOTAS
 modal-transaction-details = Detalles de la transacción...
 modal-date = FECHA
+modal-fetch-price-date = Buscar precio para la fecha seleccionada
 modal-search-coins = Buscar monedas...
 
 # Section labels (crypto transaction modal)

@@ -709,6 +709,7 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_modal_notes(s(&t("modal-notes")));
     tr.set_modal_transaction_details(s(&t("modal-transaction-details")));
     tr.set_modal_date(s(&t("modal-date")));
+    tr.set_modal_fetch_price_date(s(&t("modal-fetch-price-date")));
     tr.set_modal_search_coins(s(&t("modal-search-coins")));
 
     // Section labels (crypto transaction modal)

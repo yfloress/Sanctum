@@ -671,6 +671,7 @@ modal-fee-amount = FEE AMOUNT
 modal-notes = NOTES
 modal-transaction-details = Transaction details...
 modal-date = DATE
+modal-fetch-price-date = Fetch price for selected date
 modal-search-coins = Search coins...
 
 # Section labels (crypto transaction modal)

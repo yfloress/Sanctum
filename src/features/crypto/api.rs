@@ -28,6 +28,7 @@
 
 use crate::models::{CryptoAsset, CryptoCatalogCoin};
 use crate::security_log::{SecurityEvent, log_rate_limit, log_security_event};
+use chrono::NaiveDate;
 use futures::TryStreamExt;
 use reqwest::{Client, Proxy, Url};
 use serde::Deserialize;
@@ -40,6 +41,10 @@ use tokio::time::sleep;
 
 /// CoinGecko API base URL (free tier, no API key required)
 const COINGECKO_API_BASE: &str = "https://api.coingecko.com/api/v3";
+/// CoinPaprika API base URL (public, no API key required for basic usage)
+const COINPAPRIKA_API_BASE: &str = "https://api.coinpaprika.com/v1";
+/// Kraken public REST API base URL
+const KRAKEN_API_BASE: &str = "https://api.kraken.com/0/public";
 /// Mindicador API base URL (public Chilean market indicators)
 const MINDICADOR_API_BASE: &str = "https://mindicador.cl/api";
 /// Primary public currency API (USD base table, no API key required)
@@ -92,6 +97,24 @@ struct CoinGeckoMarketData {
     current_price: Option<f64>,
     price_change_percentage_24h: Option<f64>,
     last_updated: Option<String>,
+}
+
+/// CoinPaprika search response.
+#[derive(Debug, Deserialize)]
+struct CoinPaprikaSearchResponse {
+    currencies: Option<Vec<CoinPaprikaCurrency>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CoinPaprikaCurrency {
+    id: String,
+    rank: Option<u32>,
+    is_active: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CoinPaprikaHistoricalTick {
+    price: Option<f64>,
 }
 
 /// Internal struct for simple price response (used for USD fallback via USDT quote)
@@ -263,7 +286,7 @@ async fn enforce_rate_limit() -> Result<(), String> {
 
         let wait_ms = last_request + MIN_REQUEST_INTERVAL_MS - now;
         let wait_secs = wait_ms.div_ceil(1000);
-        log_rate_limit("coingecko_api", wait_secs);
+        log_rate_limit("crypto_api", wait_secs);
         sleep(Duration::from_millis(wait_ms)).await;
     }
 }
@@ -449,6 +472,120 @@ pub async fn fetch_usd_fx_rate(
     fetch_usd_rate_from_usdt(&client, &target).await
 }
 
+/// Fetches historical USD price for a coin on a specific date.
+///
+/// `date` accepts `YYYY-MM-DD` or `DD-MM-YYYY`.
+pub async fn fetch_historical_price_usd(
+    coin_id: &str,
+    date: &str,
+    proxy: Option<&ProxyConfig>,
+) -> Result<f64, String> {
+    enforce_rate_limit().await?;
+
+    let validated_coin_id = validate_coin_id(coin_id)?;
+    let normalized_date = normalize_history_date(date)?;
+    let client = create_secure_client(proxy)?;
+
+    if let Ok(price) =
+        fetch_historical_price_from_kraken(&client, &validated_coin_id, &normalized_date).await
+    {
+        return Ok(price);
+    }
+
+    if let Ok(price) =
+        fetch_historical_price_from_coinpaprika(&client, &validated_coin_id, &normalized_date)
+            .await
+    {
+        return Ok(price);
+    }
+
+    Err("No historical price available for that coin/date.".to_string())
+}
+
+async fn fetch_historical_price_from_coinpaprika(
+    client: &Client,
+    coingecko_coin_id: &str,
+    normalized_date: &NaiveDate,
+) -> Result<f64, String> {
+    let query = coingecko_coin_id.replace('-', "%20");
+    let search_url = format!(
+        "{}/search?c=currencies&q={}",
+        COINPAPRIKA_API_BASE, query
+    );
+
+    log_security_event(
+        SecurityEvent::ExternalApiRequest,
+        Some(&format!("historical_price_coinpaprika_search={}", coingecko_coin_id)),
+    );
+
+    let search_response = client
+        .get(search_url)
+        .send()
+        .await
+        .map_err(handle_request_error)?;
+    if !search_response.status().is_success() {
+        return Err("CoinPaprika search request failed".to_string());
+    }
+    let search_body = download_response_body(search_response).await?;
+    let paprika_id = parse_coinpaprika_id_from_search(&search_body, coingecko_coin_id)?;
+
+    let start = format!("{}T00:00:00Z", normalized_date.format("%Y-%m-%d"));
+    let end = format!("{}T23:59:59Z", normalized_date.format("%Y-%m-%d"));
+    let historical_url = format!(
+        "{}/tickers/{}/historical?start={}&end={}&interval=24h&quote=usd",
+        COINPAPRIKA_API_BASE, paprika_id, start, end
+    );
+
+    log_security_event(
+        SecurityEvent::ExternalApiRequest,
+        Some(&format!("historical_price_coinpaprika={}", paprika_id)),
+    );
+
+    let response = client
+        .get(historical_url)
+        .send()
+        .await
+        .map_err(handle_request_error)?;
+    if !response.status().is_success() {
+        return Err("CoinPaprika historical request failed".to_string());
+    }
+
+    let body = download_response_body(response).await?;
+    parse_coinpaprika_historical_price(&body)
+}
+
+async fn fetch_historical_price_from_kraken(
+    client: &Client,
+    coingecko_coin_id: &str,
+    normalized_date: &NaiveDate,
+) -> Result<f64, String> {
+    let Some(pair) = kraken_pair_for_coingecko_id(coingecko_coin_id) else {
+        return Err("Kraken pair not available for this asset".to_string());
+    };
+
+    let since = normalized_date
+        .and_hms_opt(0, 0, 0)
+        .ok_or("Invalid date")?
+        .and_utc()
+        .timestamp();
+    let url = format!(
+        "{}/OHLC?pair={}&interval=1440&since={}",
+        KRAKEN_API_BASE, pair, since
+    );
+
+    log_security_event(
+        SecurityEvent::ExternalApiRequest,
+        Some(&format!("historical_price_kraken={}", pair)),
+    );
+
+    let response = client.get(url).send().await.map_err(handle_request_error)?;
+    if !response.status().is_success() {
+        return Err("Kraken historical request failed".to_string());
+    }
+    let body = download_response_body(response).await?;
+    parse_kraken_ohlc_close_price(&body)
+}
+
 async fn fetch_clp_rate_from_mindicador(client: &Client) -> Result<f64, String> {
     let url = format!("{}/dolar", MINDICADOR_API_BASE);
     let response = client.get(&url).send().await.map_err(handle_request_error)?;
@@ -576,6 +713,137 @@ fn parse_mindicador_rate(body: &[u8]) -> Result<f64, String> {
 
     let rate = rate.ok_or("CLP rate not available")?;
     validate_exchange_rate_range(rate, "CLP")
+}
+
+fn parse_coinpaprika_id_from_search(body: &[u8], coingecko_coin_id: &str) -> Result<String, String> {
+    let parsed: CoinPaprikaSearchResponse =
+        serde_json::from_slice(body).map_err(|_| "Failed to parse CoinPaprika search data")?;
+    let candidates = parsed.currencies.unwrap_or_default();
+    if candidates.is_empty() {
+        return Err("CoinPaprika coin not found".to_string());
+    }
+
+    let target_slug = coingecko_coin_id.to_lowercase();
+    let target_compact = target_slug.replace('-', "");
+
+    let best = candidates
+        .iter()
+        .filter(|c| c.is_active.unwrap_or(true))
+        .min_by_key(|c| {
+            let slug = c
+                .id
+                .split_once('-')
+                .map(|(_, right)| right)
+                .unwrap_or(c.id.as_str())
+                .to_lowercase();
+            let compact = slug.replace('-', "");
+            let score = if slug == target_slug {
+                0u8
+            } else if compact == target_compact {
+                1u8
+            } else if slug.contains(&target_slug) || target_slug.contains(&slug) {
+                2u8
+            } else {
+                3u8
+            };
+            (score, c.rank.unwrap_or(u32::MAX))
+        })
+        .ok_or("CoinPaprika coin not found".to_string())?;
+
+    Ok(best.id.clone())
+}
+
+fn parse_coinpaprika_historical_price(body: &[u8]) -> Result<f64, String> {
+    let rows: Vec<CoinPaprikaHistoricalTick> =
+        serde_json::from_slice(body).map_err(|_| "Failed to parse CoinPaprika historical data")?;
+    let price = rows
+        .into_iter()
+        .find_map(|row| row.price)
+        .ok_or("CoinPaprika historical price not available")?;
+    if !price.is_finite() || price <= 0.0 || price > 1e15 {
+        return Err("CoinPaprika historical price out of expected range".to_string());
+    }
+    Ok(price)
+}
+
+fn parse_kraken_ohlc_close_price(body: &[u8]) -> Result<f64, String> {
+    let payload: serde_json::Value =
+        serde_json::from_slice(body).map_err(|_| "Failed to parse Kraken historical data")?;
+
+    let errors = payload
+        .get("error")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    if !errors.is_empty() {
+        return Err("Kraken returned historical data errors".to_string());
+    }
+
+    let result = payload
+        .get("result")
+        .and_then(|v| v.as_object())
+        .ok_or("Kraken historical payload missing result")?;
+
+    let candles = result
+        .iter()
+        .find(|(key, _)| key.as_str() != "last")
+        .and_then(|(_, value)| value.as_array())
+        .ok_or("Kraken historical candles not available")?;
+
+    let close_value = candles
+        .first()
+        .and_then(|row| row.as_array())
+        .and_then(|row| row.get(4))
+        .ok_or("Kraken historical close price not available")?;
+
+    let close_price = close_value
+        .as_str()
+        .and_then(|v| v.parse::<f64>().ok())
+        .or_else(|| close_value.as_f64())
+        .ok_or("Kraken historical close price invalid")?;
+
+    if !close_price.is_finite() || close_price <= 0.0 || close_price > 1e15 {
+        return Err("Kraken historical price out of expected range".to_string());
+    }
+    Ok(close_price)
+}
+
+fn kraken_pair_for_coingecko_id(coin_id: &str) -> Option<&'static str> {
+    match coin_id {
+        "bitcoin" => Some("XBTUSD"),
+        "ethereum" => Some("ETHUSD"),
+        "litecoin" => Some("LTCUSD"),
+        "ripple" => Some("XRPUSD"),
+        "bitcoin-cash" => Some("BCHUSD"),
+        "monero" => Some("XMRUSD"),
+        "zcash" => Some("ZECUSD"),
+        "dogecoin" => Some("DOGEUSD"),
+        "cardano" => Some("ADAUSD"),
+        "polkadot" => Some("DOTUSD"),
+        "solana" => Some("SOLUSD"),
+        "chainlink" => Some("LINKUSD"),
+        "stellar" => Some("XLMUSD"),
+        "ethereum-classic" => Some("ETCUSD"),
+        "tron" => Some("TRXUSD"),
+        _ => None,
+    }
+}
+
+fn normalize_history_date(raw: &str) -> Result<NaiveDate, String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Err("Date cannot be empty".to_string());
+    }
+
+    let parsed = NaiveDate::parse_from_str(trimmed, "%Y-%m-%d")
+        .or_else(|_| NaiveDate::parse_from_str(trimmed, "%d-%m-%Y"))
+        .map_err(|_| "Invalid date format. Use DD-MM-YYYY or YYYY-MM-DD".to_string())?;
+
+    if parsed > chrono::Utc::now().date_naive() {
+        return Err("Date cannot be in the future".to_string());
+    }
+
+    Ok(parsed)
 }
 
 fn validate_exchange_rate_range(rate: f64, _target: &str) -> Result<f64, String> {
