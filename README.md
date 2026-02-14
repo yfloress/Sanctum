@@ -8,14 +8,11 @@
   <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=20&pause=1000&color=8B5CF6&center=true&vCenter=true&width=435&lines=Your+personal+fortress.;Private.+;Encrypted.;Local-first." alt="Typing SVG">
 </p>
 
-<p align="center">
-  <a href="README_ES.md">
-    <img src="https://img.shields.io/badge/Idioma-Espa%C3%B1ol-8b5cf6?style=for-the-badge" alt="Español" />
-  </a>
-  <a href="https://kyronix.codeberg.page/Sanctum/">
-    <img src="https://img.shields.io/badge/🌐_Website-Sanctum-blueviolet?style=for-the-badge" alt="website"/>
-  </a>
-</p>
+<div align="center">
+
+[![Español](https://img.shields.io/badge/Idioma-Espa%C3%B1ol-8b5cf6?style=for-the-badge)](README_ES.md) [![Website](https://img.shields.io/badge/🌐_Website-Sanctum-blueviolet?style=for-the-badge)](https://kyronix.codeberg.page/Sanctum/)
+
+</div>
 
 <div align="center">
     <a href="">
