@@ -22,7 +22,7 @@
 use chrono::Datelike;
 use directories::ProjectDirs;
 use log::error;
-use rand::Rng; // For title animation
+use rand::RngExt; // For title animation random_range
 use sanctum::controller::AppController;
 use sanctum::security_log::init_security_logger;
 use sanctum::ui::{
