@@ -434,9 +434,9 @@ pub fn setup_portfolio_callbacks<N>(
                         Ok(price) => (format!("{:.4}", price), None),
                         Err(err) => {
                             let err_text = err.to_string();
-                            let msg = if should_suppress_historical_price_error(&err_text) {
-                                None
-                            } else if !user_initiated {
+                            let msg = if should_suppress_historical_price_error(&err_text)
+                                || !user_initiated
+                            {
                                 None
                             } else {
                                 Some(map_historical_price_error_for_ui(&err_text))
@@ -702,3 +702,6 @@ pub fn setup_portfolio_callbacks<N>(
             });
     }
 }
+
+#[cfg(test)]
+mod tests;

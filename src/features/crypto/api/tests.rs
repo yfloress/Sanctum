@@ -102,6 +102,13 @@
     }
 
     #[test]
+    fn parse_coinpaprika_historical_price_rejects_missing_price() {
+        let body = br#"[{"timestamp":"2025-02-10T00:00:00Z"}]"#;
+        let err = parse_coinpaprika_historical_price(body).expect_err("missing price must fail");
+        assert_eq!(err, "CoinPaprika historical price not available");
+    }
+
+    #[test]
     fn parse_kraken_ohlc_close_price_reads_close_field() {
         let body = br#"{
             "error": [],
@@ -114,4 +121,34 @@
         }"#;
         let price = parse_kraken_ohlc_close_price(body).expect("Kraken close price must parse");
         assert_eq!(price, 43500.5);
+    }
+
+    #[test]
+    fn parse_kraken_ohlc_close_price_rejects_api_error_payload() {
+        let body = br#"{
+            "error": ["EGeneral:Permission denied"],
+            "result": {}
+        }"#;
+        let err = parse_kraken_ohlc_close_price(body).expect_err("kraken error payload must fail");
+        assert_eq!(err, "Kraken returned historical data errors");
+    }
+
+    #[test]
+    fn parse_kraken_ohlc_close_price_rejects_missing_candles() {
+        let body = br#"{
+            "error": [],
+            "result": {
+                "XXBTZUSD": [],
+                "last": "1739232000"
+            }
+        }"#;
+        let err = parse_kraken_ohlc_close_price(body).expect_err("missing candles must fail");
+        assert_eq!(err, "Kraken historical close price not available");
+    }
+
+    #[test]
+    fn kraken_pair_for_coingecko_id_maps_expected_assets() {
+        assert_eq!(kraken_pair_for_coingecko_id("bitcoin"), Some("XBTUSD"));
+        assert_eq!(kraken_pair_for_coingecko_id("monero"), Some("XMRUSD"));
+        assert_eq!(kraken_pair_for_coingecko_id("unknown-coin"), None);
     }
