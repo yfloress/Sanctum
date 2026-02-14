@@ -49,13 +49,17 @@ de la nube. Tú controlas las llaves, la base de datos y los respaldos.
 
 ## Capacidades Actuales
 
-- **Dashboard:** Patrimonio neto y tendencias combinando finanzas + crypto.
-- **Finanzas:** Cuentas, categorías, transferencias y ledger completo.
-- **Crypto:** Billeteras, trades, swaps, balances, sincronización privada de precios vía CoinGecko y **motor de impuestos avanzado** (Chile/SII, USA/IRS, Internacional).
-- **Impuestos Crypto:** Motor tributario offline con soporte para múltiples jurisdicciones, métodos de valorización (FIFO, LIFO, HIFO, CPP), ajustes por IPC (Chile) y generación de reportes tributarios.
+- **Analítica Central:** Patrimonio neto y tendencias combinando finanzas + crypto en un Dashboard unificado.
+- **Finanzas:** Cuentas, categorías, transferencias y ledger completo de transacciones.
+- **Crypto Avanzado:**
+  - Billeteras, trades y swaps con balance dinámico de portafolio.
+  - Sincronización privada de precios vía CoinGecko y soporte de proxy.
+  - **Motor de Impuestos:** Reportes offline para Chile (SII/IPC), USA (IRS) y jurisdicciones internacionales (FIFO, LIFO, HIFO, CPP). Ver [CRYPTO_TAX.md](docs/CRYPTO_TAX.md) para detalles técnicos.
 - **Hábitos:** Registros diarios, heatmaps, rachas y recompensas/objetivos.
-- **Importación y Respaldos:** Ingesta JSON/CSV/TXT con preview + dedup, **importación manual de IPC** para ajustes tributarios y respaldos cifrados.
-- **Configuración:** Moneda USD/CLP, idioma EN/ES y proxy para APIs de crypto.
+- **Confiabilidad y Privacidad:**
+  - Ingesta JSON/CSV/TXT con importación manual de datos IPC y detección de duplicados.
+  - Respaldos cifrados localmente (SQLCipher) con seguridad de restauración y rollback.
+  - Soporte multi-idioma (EN/ES) y múltiples divisas (USD, CLP, EUR, etc.).
 
 ## Formatos de Importación
 
@@ -67,6 +71,16 @@ Sanctum acepta formatos offline pensados para viajes o baja conectividad:
 
 Todos los imports son **best-effort**, se validan por fila y hacen deduplicación.
 No se realizan llamadas de red durante la ingesta.
+
+## Seguridad y Privacidad
+
+Sanctum se basa en tres pilares fundamentales:
+1. **Cero Nube:** Sin telemetría, sin sincronización en la nube, sin cuentas. Tus datos nunca salen de tu dispositivo.
+2. **Almacenamiento Blindado:** Cifrado SQLCipher con estándar industrial AES-256 para toda la base de datos.
+3. **Conexiones Externas Mitigadas:** La sincronización de precios usa relleno de tráfico (para ocultar tu portafolio real) y soporta proxies configurados por el usuario (SOCKS5/Tor, HTTP). Aunque minimizamos los metadatos, conectar con APIs externas revela tu IP al proveedor a menos que se use un proxy.
+
+- **Cifrado SQLCipher** con una contraseña maestra controlada por el usuario.
+- **Respaldos cifrados** con seguridad de restauración y rollback.
 
 ## Tecnologías
 
@@ -117,6 +131,10 @@ Este es un proyecto Open Source moderno que abraza la evolución del desarrollo 
     en orden, son **Claude Opus 4.5 (ahora 4.6)**, **Claude Sonnet 4.5**, **Codex 5.2 (ahora 5.3)** y
     **Gemini 3 Pro**.
   - **Auditabilidad:** El código es abierto para que cualquiera pueda verificar que no hay telemetría oculta ni vectores de ataque.
+
+## Comunidad y Contribución
+
+- **Reportar Problemas:** Usa el [Issue Tracker](https://codeberg.org/Kyronix/Sanctum/issues) para errores y sugerencias.
 
 ## Aviso Legal
 

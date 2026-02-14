@@ -49,13 +49,17 @@ You keep the keys, the database, and the backups.
 
 ## Current Capabilities
 
-- **Dashboard:** Net worth and trend analytics across finance + crypto.
+- **Core Analytics:** Net worth and trend analytics across finance + crypto via a unified Dashboard.
 - **Finances:** Accounts, categories, transfers, and full transaction ledger.
-- **Crypto:** Wallets, trades, swaps, portfolio balances, privacy-preserving price sync via CoinGecko, and **comprehensive tax engine** (Chile/SII, USA/IRS, International).
-- **Crypto Taxes:** Offline-first tax engine supporting multiple jurisdictions, cost-basis methods (FIFO, LIFO, HIFO, CPP), IPC adjustments for Chile, and automated tax report generation.
+- **Advanced Crypto:**
+  - Wallets, trades, and swaps with automated portfolio balancing.
+  - Privacy-preserving price sync via CoinGecko and proxy support.
+  - **Tax Engine:** Offline-first reporting for Chile (SII/IPC), USA (IRS), and International jurisdictions (FIFO, LIFO, HIFO, CPP). See [CRYPTO_TAX.md](docs/CRYPTO_TAX.md) for technical details.
 - **Habits:** Daily logs, heatmaps, streaks, and rewards/goals.
-- **Import & Backup:** JSON/CSV/TXT ingestion with preview + dedup, **manual IPC data import** for tax adjustments, plus encrypted backups and restore/rollback.
-- **Settings:** USD/CLP currency, EN/ES language, proxy support for crypto APIs.
+- **Reliability & Privacy:**
+  - JSON/CSV/TXT ingestion with manual IPC data import and duplicate detection.
+  - Locally encrypted backups (SQLCipher) with restore and rollback safety.
+  - Multi-language support (EN/ES) and multi-currency support (USD, CLP, EUR, etc.).
 
 ## Import Formats
 
@@ -70,9 +74,12 @@ No network calls are made during ingestion.
 
 ## Security & Privacy
 
+Sanctum is built on three core pillars:
+1. **Zero Cloud:** No telemetry, no cloud sync, no accounts. Your data never leaves your machine.
+2. **Hardened Storage:** SQLCipher encryption with industry-standard AES-256 for the entire database.
+3. **Mitigated External Connections:** Price sync uses traffic padding (obfuscating your portfolio) and supports user-configured proxies (SOCKS5/Tor, HTTP) to reduce data exposure. While we minimize metadata, connecting to external APIs inherently reveals your IP address to the provider unless routed through a proxy.
+
 - **SQLCipher encryption** with a user-held master password.
-- **No telemetry** or analytics.
-- **Local-first** storage with explicit import/export only.
 - **Encrypted backups** with restore + rollback safety.
 
 ## Tech Stack
@@ -125,6 +132,10 @@ This project embraces open collaboration without compromising auditability.
   in order, are **Claude Opus 4.5 (now 4.6)**, **Claude Sonnet 4.5**, **Codex 5.2 (now 5.3)**, and
   **Gemini 3 Pro**.
 - **Auditability:** The code is open for inspection and verification.
+
+## Community & Contributing
+
+- **Reporting Issues:** Use the [Issue Tracker](https://codeberg.org/Kyronix/Sanctum/issues) for bugs and feature requests.
 
 ## Disclaimer
 
