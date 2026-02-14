@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="./README.md">
+  <a href="README.md">
     <img src="https://img.shields.io/badge/Language-English-8b5cf6?style=for-the-badge" alt="English" />
   </a>
   <a href="https://kyronix.codeberg.page/Sanctum/">
