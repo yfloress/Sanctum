@@ -32,6 +32,7 @@ pub mod binance;
 pub mod common;
 pub mod feather;
 pub mod kraken;
+pub mod monero_gui;
 
 use super::ParseResult;
 use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
@@ -46,6 +47,7 @@ pub enum ExchangeSource {
     BinanceAllStatements,
     BinanceSpotTradeHistory,
     FeatherWallet,
+    MoneroGuiWallet,
     // Future:
     // CryptoMkt,
     // Mexc,
@@ -62,6 +64,7 @@ impl ExchangeSource {
             ExchangeSource::BinanceAllStatements => "Binance All Statements",
             ExchangeSource::BinanceSpotTradeHistory => "Binance Spot Trade History",
             ExchangeSource::FeatherWallet => "Feather Wallet",
+            ExchangeSource::MoneroGuiWallet => "Monero GUI Wallet",
         }
     }
 
@@ -73,6 +76,7 @@ impl ExchangeSource {
             ExchangeSource::BinanceAllStatements => "binance_all",
             ExchangeSource::BinanceSpotTradeHistory => "binance_spot",
             ExchangeSource::FeatherWallet => "feather",
+            ExchangeSource::MoneroGuiWallet => "monero_gui",
         }
     }
 
@@ -84,6 +88,7 @@ impl ExchangeSource {
                 "Binance"
             }
             ExchangeSource::FeatherWallet => "Feather",
+            ExchangeSource::MoneroGuiWallet => "Monero GUI",
         }
     }
 }
@@ -175,6 +180,24 @@ const EXCHANGE_SIGNATURES: &[(&[&str], ExchangeSource)] = &[
             "Fee",
         ],
         ExchangeSource::BinanceSpotTradeHistory,
+    ),
+    // Monero GUI Wallet (official)
+    (
+        &[
+            "blockHeight",
+            "epoch",
+            "date",
+            "direction",
+            "amount",
+            "atomicAmount",
+            "fee",
+            "txid",
+            "label",
+            "subaddrAccount",
+            "paymentId",
+            "description",
+        ],
+        ExchangeSource::MoneroGuiWallet,
     ),
     // Feather Wallet (Monero) — real export format
     (
@@ -289,6 +312,7 @@ pub fn parser_for(source: ExchangeSource) -> Box<dyn ExchangeParser> {
         ExchangeSource::BinanceAllStatements => Box::new(binance::BinanceAllStatementsParser),
         ExchangeSource::BinanceSpotTradeHistory => Box::new(binance::BinanceSpotParser),
         ExchangeSource::FeatherWallet => Box::new(feather::FeatherParser),
+        ExchangeSource::MoneroGuiWallet => Box::new(monero_gui::MoneroGuiParser),
     }
 }
 
@@ -340,6 +364,15 @@ mod tests {
         assert_eq!(
             detect_exchange_source(csv),
             Some(ExchangeSource::BinanceSpotTradeHistory)
+        );
+    }
+
+    #[test]
+    fn detect_monero_gui_wallet() {
+        let csv = "blockHeight,epoch,date,direction,amount,atomicAmount,fee,txid,label,subaddrAccount,paymentId,description\n";
+        assert_eq!(
+            detect_exchange_source(csv),
+            Some(ExchangeSource::MoneroGuiWallet)
         );
     }
 
@@ -424,6 +457,7 @@ mod tests {
             ExchangeSource::BinanceAllStatements,
             ExchangeSource::BinanceSpotTradeHistory,
             ExchangeSource::FeatherWallet,
+            ExchangeSource::MoneroGuiWallet,
         ];
         for source in sources {
             assert!(!source.label().is_empty());

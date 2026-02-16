@@ -232,6 +232,15 @@ mod tests {
     }
 
     #[test]
+    fn test_detect_monero_gui_wallet_csv() {
+        let csv = "blockHeight,epoch,date,direction,amount,atomicAmount,fee,txid,label,subaddrAccount,paymentId,description\n1111111,1610274075,2021-01-10 10:20:15,in,0.03,30000000000,0,abc,\"\",0,,\"\"\n";
+        assert_eq!(
+            detect_format(csv, "monero_gui.csv"),
+            Some(ImportFormat::ExchangeCsv(ExchangeSource::MoneroGuiWallet))
+        );
+    }
+
+    #[test]
     fn test_exchange_csv_takes_priority_over_generic() {
         // A Binance CSV has "Account" and could match generic CsvTransactions
         // if it also had "amount", but exchange detection runs first.
