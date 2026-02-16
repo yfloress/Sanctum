@@ -22,6 +22,8 @@
 use serde::{Deserialize, Serialize};
 use std::hash::{Hash, Hasher};
 
+use super::parsers::exchange::ExchangeSource;
+
 /// File format detection result
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ImportFormat {
@@ -29,7 +31,8 @@ pub enum ImportFormat {
     CsvTransactions,
     CsvHabitLogs,
     CsvCrypto,
-    TextMixed, // Mixed content with prefixes (T;, H;, C;)
+    TextMixed,                   // Mixed content with prefixes (T;, H;, C;)
+    ExchangeCsv(ExchangeSource), // Exchange/wallet-specific CSV (Kraken, Binance, Feather, etc.)
 }
 
 impl ImportFormat {
@@ -40,6 +43,7 @@ impl ImportFormat {
             ImportFormat::CsvHabitLogs => "CSV",
             ImportFormat::CsvCrypto => "CSV",
             ImportFormat::TextMixed => "Plain Text",
+            ImportFormat::ExchangeCsv(source) => source.label(),
         }
     }
 
@@ -49,6 +53,7 @@ impl ImportFormat {
             ImportFormat::CsvTransactions => "Transactions",
             ImportFormat::CsvHabitLogs => "Habit Logs",
             ImportFormat::CsvCrypto => "Crypto",
+            ImportFormat::ExchangeCsv(_) => "Crypto",
         }
     }
 }

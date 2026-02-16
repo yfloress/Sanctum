@@ -27,7 +27,10 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
-use super::parsers::{CsvParser, ImportParser, JsonParser, TextParser, detect_format};
+use super::parsers::{
+    CsvParser, ExchangeSource, ImportParser, JsonParser, TextParser, detect_exchange_source,
+    detect_format, parser_for,
+};
 use super::repository::IngestionRepository;
 use super::types::{
     CryptoDedupKey, ImportCryptoTransaction, ImportFormat, ImportHabitLog, ImportSummary,
@@ -140,6 +143,10 @@ impl IngestionService {
             ImportFormat::CsvHabitLogs => self.import_csv_habit_logs(content),
             ImportFormat::CsvCrypto => self.import_csv_crypto(content),
             ImportFormat::TextMixed => self.import_text_mixed(content),
+            ImportFormat::ExchangeCsv(source) => {
+                let wallet = source.default_wallet_name();
+                self.import_exchange_csv(content, wallet, source)
+            }
         }
     }
 
@@ -164,6 +171,10 @@ impl IngestionService {
             ImportFormat::CsvHabitLogs => self.preview_csv_habit_logs(content),
             ImportFormat::CsvCrypto => self.preview_csv_crypto(content),
             ImportFormat::TextMixed => self.preview_text_mixed(content),
+            ImportFormat::ExchangeCsv(source) => {
+                let wallet = source.default_wallet_name();
+                self.preview_exchange_csv(content, wallet, source)
+            }
         }
     }
 
@@ -330,6 +341,87 @@ impl IngestionService {
             summary.record_error(error);
         }
         Ok(summary)
+    }
+
+    // ── Exchange CSV import/preview ──────────────────────────────────────────
+
+    /// Import exchange CSV with explicit wallet name and source.
+    ///
+    /// This is the main entry point used by both the generic `import_from_content`
+    /// path (with default wallet name) and the dedicated exchange import callback
+    /// (with user-provided wallet name).
+    pub fn import_exchange_csv(
+        &self,
+        content: &str,
+        wallet_name: &str,
+        source: ExchangeSource,
+    ) -> Result<ImportSummary, IngestionError> {
+        let parser = parser_for(source);
+        let parsed = parser
+            .parse(content, wallet_name)
+            .map_err(|e| IngestionError::Parse(e.message))?;
+        let mut summary = self.process_crypto_transactions(parsed.items, source.label())?;
+        for error in parsed.errors {
+            summary.record_error(error);
+        }
+        Ok(summary)
+    }
+
+    /// Preview exchange CSV import without writing to the database.
+    pub fn preview_exchange_csv(
+        &self,
+        content: &str,
+        wallet_name: &str,
+        source: ExchangeSource,
+    ) -> Result<ImportSummary, IngestionError> {
+        let parser = parser_for(source);
+        let parsed = parser
+            .parse(content, wallet_name)
+            .map_err(|e| IngestionError::Parse(e.message))?;
+        let mut summary = self.preview_crypto_transactions(parsed.items, source.label())?;
+        for error in parsed.errors {
+            summary.record_error(error);
+        }
+        Ok(summary)
+    }
+
+    /// Import exchange CSV with auto-detection of exchange source.
+    ///
+    /// Validates file size, detects the exchange from headers, and delegates
+    /// to `import_exchange_csv`. The caller provides the wallet name.
+    pub fn import_exchange_csv_auto(
+        &self,
+        content: &str,
+        wallet_name: &str,
+    ) -> Result<ImportSummary, IngestionError> {
+        validate_file_size(content.len()).map_err(IngestionError::FileTooLarge)?;
+
+        let source = detect_exchange_source(content).ok_or_else(|| {
+            IngestionError::UnsupportedFormat(
+                "Could not detect exchange format. Supported: Kraken, Binance, Feather Wallet"
+                    .to_string(),
+            )
+        })?;
+
+        self.import_exchange_csv(content, wallet_name, source)
+    }
+
+    /// Preview exchange CSV with auto-detection of exchange source.
+    pub fn preview_exchange_csv_auto(
+        &self,
+        content: &str,
+        wallet_name: &str,
+    ) -> Result<ImportSummary, IngestionError> {
+        validate_file_size(content.len()).map_err(IngestionError::FileTooLarge)?;
+
+        let source = detect_exchange_source(content).ok_or_else(|| {
+            IngestionError::UnsupportedFormat(
+                "Could not detect exchange format. Supported: Kraken, Binance, Feather Wallet"
+                    .to_string(),
+            )
+        })?;
+
+        self.preview_exchange_csv(content, wallet_name, source)
     }
 
     /// Import text mixed content (T;, H;, C; prefixes)

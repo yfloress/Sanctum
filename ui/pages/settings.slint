@@ -830,6 +830,56 @@ export component SettingsPage inherits Rectangle {
                     }
                 }
 
+                // Exchange CSV Import Section
+                VerticalLayout {
+                    spacing: 12px;
+
+                    SectionHeader {
+                        title: Translations.settings-exchange-import;
+                    }
+
+                    ActionCard {
+                        title: Translations.import-exchange-title;
+                        description: Translations.import-exchange-description;
+                        button-text: Translations.import-exchange-select-file;
+                        triggered => {
+                            IngestionAdapter.import-exchange-csv();
+                        }
+                    }
+
+                    Text {
+                        text: Translations.import-exchange-supported;
+                        color: Theme.text-muted;
+                        font-size: 10px;
+                        font-weight: 400;
+                        letter-spacing: 0.3px;
+                    }
+
+                    Text {
+                        text: Translations.import-exchange-hint-kraken;
+                        color: Theme.text-muted;
+                        font-size: 9px;
+                        font-weight: 400;
+                        letter-spacing: 0.2px;
+                    }
+
+                    Text {
+                        text: Translations.import-exchange-hint-binance;
+                        color: Theme.text-muted;
+                        font-size: 9px;
+                        font-weight: 400;
+                        letter-spacing: 0.2px;
+                    }
+
+                    Text {
+                        text: Translations.import-exchange-hint-feather;
+                        color: Theme.text-muted;
+                        font-size: 9px;
+                        font-weight: 400;
+                        letter-spacing: 0.2px;
+                    }
+                }
+
                 // Data Settings Section
                 VerticalLayout {
                     spacing: 12px;

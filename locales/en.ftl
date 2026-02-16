@@ -940,3 +940,26 @@ import-preview-changes = PREVIEW CHANGES
 
 settings-import = DATA IMPORT
 settings-import-desc = Import transactions and habits from files
+
+# ==================== Exchange CSV Import ====================
+import-exchange-title = EXCHANGE IMPORT
+import-exchange-description = Import transaction history from exchanges and wallets
+import-exchange-select-file = SELECT EXCHANGE CSV
+import-exchange-supported = Supported: Kraken, Binance, Feather Wallet
+import-exchange-wallet-label = TARGET WALLET
+import-exchange-wallet-placeholder = Wallet name for imported transactions
+import-exchange-detected = Detected format:
+import-exchange-not-detected = Could not detect exchange format. Supported: Kraken, Binance, Feather Wallet.
+import-exchange-default-wallet = Using default wallet:
+import-exchange-importing = Importing { $exchange } transactions...
+import-exchange-success = { $exchange } import completed
+import-exchange-kraken-ledger = Kraken Ledger
+import-exchange-kraken-trades = Kraken Trades
+import-exchange-binance-all = Binance All Statements
+import-exchange-binance-spot = Binance Spot Trade History
+import-exchange-feather = Feather Wallet
+import-exchange-hint-kraken = Export from Kraken: History > Export > Ledgers or Trades (CSV)
+import-exchange-hint-binance = Export from Binance: Orders > Transaction History > Generate All Statements
+import-exchange-hint-feather = Export from Feather Wallet: History > Export CSV
+settings-exchange-import = EXCHANGE IMPORT
+settings-exchange-import-desc = Import crypto transactions from exchange CSV exports

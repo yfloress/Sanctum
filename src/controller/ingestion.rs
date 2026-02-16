@@ -20,7 +20,7 @@
 //! Handles importing transactions and habit logs from various file formats.
 
 use super::{AppController, ControllerError};
-use crate::features::ingestion::{IngestionError, ImportSummary, MAX_FILE_SIZE};
+use crate::features::ingestion::{ImportSummary, IngestionError, MAX_FILE_SIZE};
 
 impl From<IngestionError> for ControllerError {
     fn from(err: IngestionError) -> Self {
@@ -69,5 +69,47 @@ impl AppController {
     /// Returns the maximum allowed file size in bytes
     pub fn max_import_file_size(&self) -> usize {
         MAX_FILE_SIZE
+    }
+
+    // ==================== Exchange CSV Import ====================
+
+    /// Imports an exchange CSV with auto-detection.
+    ///
+    /// The exchange format is identified from the CSV headers.
+    /// `wallet_name` is the target wallet for all imported transactions.
+    pub fn import_exchange_csv(
+        &self,
+        content: String,
+        wallet_name: String,
+    ) -> Result<ImportSummary, ControllerError> {
+        self.ingestion_service
+            .import_exchange_csv_auto(&content, &wallet_name)
+            .map_err(ControllerError::from)
+    }
+
+    /// Previews an exchange CSV import without writing to the database.
+    pub fn preview_exchange_csv(
+        &self,
+        content: &str,
+        wallet_name: &str,
+    ) -> Result<ImportSummary, ControllerError> {
+        self.ingestion_service
+            .preview_exchange_csv_auto(content, wallet_name)
+            .map_err(ControllerError::from)
+    }
+
+    /// Detects the exchange source from CSV content.
+    ///
+    /// Returns a tuple of `(exchange_id, exchange_label, default_wallet_name)`
+    /// or `None` if the format is not recognized.
+    pub fn detect_exchange_source(&self, content: &str) -> Option<(String, String, String)> {
+        use crate::features::ingestion::parsers::detect_exchange_source;
+        detect_exchange_source(content).map(|source| {
+            (
+                source.id().to_string(),
+                source.label().to_string(),
+                source.default_wallet_name().to_string(),
+            )
+        })
     }
 }

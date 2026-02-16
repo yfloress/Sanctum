@@ -347,6 +347,22 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_import_skipped_reasons(s(&t("import-skipped-reasons")));
     tr.set_import_preview_changes(s(&t("import-preview-changes")));
 
+    // Exchange CSV import
+    tr.set_settings_exchange_import(s(&t("settings-exchange-import")));
+    tr.set_settings_exchange_import_desc(s(&t("settings-exchange-import-desc")));
+    tr.set_import_exchange_title(s(&t("import-exchange-title")));
+    tr.set_import_exchange_description(s(&t("import-exchange-description")));
+    tr.set_import_exchange_select_file(s(&t("import-exchange-select-file")));
+    tr.set_import_exchange_supported(s(&t("import-exchange-supported")));
+    tr.set_import_exchange_wallet_label(s(&t("import-exchange-wallet-label")));
+    tr.set_import_exchange_wallet_placeholder(s(&t("import-exchange-wallet-placeholder")));
+    tr.set_import_exchange_detected(s(&t("import-exchange-detected")));
+    tr.set_import_exchange_not_detected(s(&t("import-exchange-not-detected")));
+    tr.set_import_exchange_default_wallet(s(&t("import-exchange-default-wallet")));
+    tr.set_import_exchange_hint_kraken(s(&t("import-exchange-hint-kraken")));
+    tr.set_import_exchange_hint_binance(s(&t("import-exchange-hint-binance")));
+    tr.set_import_exchange_hint_feather(s(&t("import-exchange-hint-feather")));
+
     // Modals
     tr.set_modal_add_account_title(s(&t("modal-add-account-title")));
     tr.set_modal_edit_account_title(s(&t("modal-edit-account-title")));

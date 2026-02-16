@@ -490,6 +490,17 @@ export global IngestionAdapter {
     callback confirm-import();
     callback cancel-preview();
     callback reset-results();
+
+    // Exchange CSV import
+    in-out property <bool> is-exchange-import: false;
+    in-out property <string> exchange-detected-format: "";
+    in-out property <string> exchange-wallet-name: "";
+    in-out property <bool> exchange-file-loaded: false;
+
+    callback import-exchange-csv();
+    callback confirm-exchange-import();
+    callback cancel-exchange-preview();
+    callback exchange-wallet-name-changed(string);
 }
 
 // ==================== Vault Adapter ====================

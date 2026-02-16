@@ -220,18 +220,28 @@ export component AppWindow inherits Window {
         }
     }
 
-    // Import Preview Modal
+    // Import Preview Modal (shared between generic and exchange import)
     if AppState.show-import-preview: ImportPreviewModal {
         width: 100%;
         height: 100%;
 
         close => {
             AppState.show-import-preview = false;
-            IngestionAdapter.cancel-preview();
+            if IngestionAdapter.is-exchange-import {
+                IngestionAdapter.cancel-exchange-preview();
+                IngestionAdapter.is-exchange-import = false;
+            } else {
+                IngestionAdapter.cancel-preview();
+            }
         }
 
         confirm => {
-            IngestionAdapter.confirm-import();
+            if IngestionAdapter.is-exchange-import {
+                IngestionAdapter.confirm-exchange-import();
+                IngestionAdapter.is-exchange-import = false;
+            } else {
+                IngestionAdapter.confirm-import();
+            }
         }
     }
 

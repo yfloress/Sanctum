@@ -17,19 +17,19 @@
 
 //! Parsers for different import formats
 //!
-//! Supports JSON, CSV, and plain text formats.
+//! Supports JSON, CSV, plain text, and exchange-specific CSV formats.
 
 pub mod csv;
+pub mod exchange;
 pub mod json;
 pub mod text;
 
 pub use self::csv::CsvParser;
+pub use self::exchange::{ExchangeParser, ExchangeSource, detect_exchange_source, parser_for};
 pub use self::json::{JsonParseResult, JsonParser};
 pub use self::text::{TextMixedParseResult, TextParser};
 
-use super::types::{
-    ImportFormat, ImportHabitLog, ImportTransaction, RowError,
-};
+use super::types::{ImportFormat, ImportHabitLog, ImportTransaction, RowError};
 
 #[derive(Debug)]
 pub struct ParseResult<T> {
@@ -50,21 +50,23 @@ impl<T> Default for ParseResult<T> {
 pub trait ImportParser {
     /// Parses transactions from raw content
     /// Returns parsed items plus row-level parse errors
-    fn parse_transactions(
-        &self,
-        content: &str,
-    ) -> Result<ParseResult<ImportTransaction>, RowError>;
+    fn parse_transactions(&self, content: &str)
+    -> Result<ParseResult<ImportTransaction>, RowError>;
 
     /// Parses habit logs from raw content
     /// Returns parsed items plus row-level parse errors
-    fn parse_habit_logs(&self, content: &str)
-        -> Result<ParseResult<ImportHabitLog>, RowError>;
+    fn parse_habit_logs(&self, content: &str) -> Result<ParseResult<ImportHabitLog>, RowError>;
 
     /// Returns the format name for reporting
     fn format_name(&self) -> &'static str;
 }
 
-/// Detects file format from content and filename
+/// Detects file format from content and filename.
+///
+/// For `.csv` files, exchange-specific formats are checked first via header
+/// inspection. If a known exchange is detected the corresponding
+/// `ImportFormat::ExchangeCsv(source)` variant is returned. Otherwise the
+/// generic Sanctum CSV sub-formats (transactions, habits, crypto) are tried.
 pub fn detect_format(content: &str, filename: &str) -> Option<ImportFormat> {
     let trimmed = content.trim();
     if trimmed.is_empty() {
@@ -72,11 +74,7 @@ pub fn detect_format(content: &str, filename: &str) -> Option<ImportFormat> {
     }
 
     // Get file extension
-    let ext = filename
-        .rsplit('.')
-        .next()
-        .unwrap_or("")
-        .to_lowercase();
+    let ext = filename.rsplit('.').next().unwrap_or("").to_lowercase();
 
     // JSON detection
     if (ext == "json" || trimmed.starts_with('{'))
@@ -91,6 +89,11 @@ pub fn detect_format(content: &str, filename: &str) -> Option<ImportFormat> {
         let first_line = trimmed.lines().next()?.to_lowercase();
         // Must have commas and not start with # (comment)
         if first_line.contains(',') && !first_line.starts_with('#') {
+            // Try exchange-specific detection first (Kraken, Binance, Feather, etc.)
+            if let Some(source) = detect_exchange_source(content) {
+                return Some(ImportFormat::ExchangeCsv(source));
+            }
+
             // Crypto CSV: wallet, symbol columns
             if first_line.contains("wallet") && first_line.contains("symbol") {
                 return Some(ImportFormat::CsvCrypto);
@@ -175,5 +178,76 @@ mod tests {
     fn test_detect_empty() {
         assert_eq!(detect_format("", "file.json"), None);
         assert_eq!(detect_format("   ", "file.csv"), None);
+    }
+
+    // ── Exchange CSV detection via detect_format ──
+
+    #[test]
+    fn test_detect_kraken_ledger_csv() {
+        let csv = "\"txid\",\"refid\",\"time\",\"type\",\"subtype\",\"aclass\",\"asset\",\"amount\",\"fee\",\"balance\"\n\"ABC\",\"DEF\",\"2024-01-01\",\"deposit\",\"\",\"currency\",\"XXBT\",\"1.0\",\"0\",\"1.0\"\n";
+        assert_eq!(
+            detect_format(csv, "ledgers.csv"),
+            Some(ImportFormat::ExchangeCsv(ExchangeSource::KrakenLedger))
+        );
+    }
+
+    #[test]
+    fn test_detect_kraken_trades_csv() {
+        let csv = "\"txid\",\"ordertxid\",\"pair\",\"time\",\"type\",\"ordertype\",\"price\",\"cost\",\"fee\",\"vol\",\"margin\",\"misc\",\"ledgers\"\n";
+        assert_eq!(
+            detect_format(csv, "trades.csv"),
+            Some(ImportFormat::ExchangeCsv(ExchangeSource::KrakenTrades))
+        );
+    }
+
+    #[test]
+    fn test_detect_binance_all_statements_csv() {
+        let csv = "User_ID,UTC_Time,Account,Operation,Coin,Change,Remark\n12345,2024-01-01 00:00:00,Spot,Buy,BTC,0.5,\n";
+        assert_eq!(
+            detect_format(csv, "statement.csv"),
+            Some(ImportFormat::ExchangeCsv(
+                ExchangeSource::BinanceAllStatements
+            ))
+        );
+    }
+
+    #[test]
+    fn test_detect_binance_spot_csv() {
+        let csv = "Date(UTC),Pair,Side,Price,Executed,Amount,Fee\n2024-01-01,BTCUSDT,BUY,42000,0.5BTC,21000USDT,0.001BTC\n";
+        assert_eq!(
+            detect_format(csv, "spot.csv"),
+            Some(ImportFormat::ExchangeCsv(
+                ExchangeSource::BinanceSpotTradeHistory
+            ))
+        );
+    }
+
+    #[test]
+    fn test_detect_feather_wallet_csv() {
+        let csv = "blockheight,epoch,date,direction,amount,fee,txid,address,description,paymentid\n100,1700000000,2024-01-01,in,1.5,0.0001,abc123,addr1,,\n";
+        assert_eq!(
+            detect_format(csv, "feather.csv"),
+            Some(ImportFormat::ExchangeCsv(ExchangeSource::FeatherWallet))
+        );
+    }
+
+    #[test]
+    fn test_exchange_csv_takes_priority_over_generic() {
+        // A Binance CSV has "Account" and could match generic CsvTransactions
+        // if it also had "amount", but exchange detection runs first.
+        let csv = "User_ID,UTC_Time,Account,Operation,Coin,Change,Remark\n";
+        let fmt = detect_format(csv, "export.csv");
+        assert!(matches!(fmt, Some(ImportFormat::ExchangeCsv(_))));
+    }
+
+    #[test]
+    fn test_unknown_csv_falls_through_to_generic() {
+        // A CSV with wallet+symbol columns but NOT matching any exchange
+        // should fall through to CsvCrypto.
+        let csv = "date,wallet,symbol,type,amount,fee\n";
+        assert_eq!(
+            detect_format(csv, "my_data.csv"),
+            Some(ImportFormat::CsvCrypto)
+        );
     }
 }
