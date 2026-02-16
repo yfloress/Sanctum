@@ -176,7 +176,26 @@ const EXCHANGE_SIGNATURES: &[(&[&str], ExchangeSource)] = &[
         ],
         ExchangeSource::BinanceSpotTradeHistory,
     ),
-    // Feather Wallet (Monero)
+    // Feather Wallet (Monero) — real export format
+    (
+        &[
+            "blockHeight",
+            "timestamp",
+            "date",
+            "accountIndex",
+            "direction",
+            "balanceDelta",
+            "amount",
+            "fee",
+            "txid",
+            "description",
+            "paymentId",
+            "fiatAmount",
+            "fiatCurrency",
+        ],
+        ExchangeSource::FeatherWallet,
+    ),
+    // Feather Wallet (Monero) — legacy format
     (
         &[
             "blockheight",
@@ -326,6 +345,15 @@ mod tests {
 
     #[test]
     fn detect_feather_wallet() {
+        let csv = "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n";
+        assert_eq!(
+            detect_exchange_source(csv),
+            Some(ExchangeSource::FeatherWallet)
+        );
+    }
+
+    #[test]
+    fn detect_feather_wallet_legacy() {
         let csv =
             "blockheight,epoch,date,direction,amount,fee,txid,address,description,paymentid\n";
         assert_eq!(

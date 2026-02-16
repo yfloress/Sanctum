@@ -21,7 +21,7 @@
 //! on-chain transaction with the following columns:
 //!
 //! ```text
-//! blockheight,epoch,date,direction,amount,fee,txid,address,description,paymentid
+//! blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency
 //! ```
 //!
 //! - `direction` is either `"in"` or `"out"`.
@@ -29,6 +29,11 @@
 //! - `fee` is only meaningful for outgoing transactions.
 //! - `txid` is the Monero transaction hash.
 //! - `description` is the user-assigned label (may be empty).
+//! - `timestamp` is a Unix epoch (seconds) used as fallback when `date` is invalid.
+//! - `balanceDelta` is the signed balance change (positive for in, negative for out).
+//! - `fiatAmount` and `fiatCurrency` are optional fiat valuation at time of tx.
+//! - `accountIndex` is the Monero account index (usually 0).
+//! - `paymentId` is the Monero payment ID (usually empty).
 //!
 //! All transactions are mapped to the `XMR` symbol. Incoming transactions
 //! become `transfer/deposit`, outgoing become `transfer/withdrawal`.
@@ -55,14 +60,21 @@ fn resolve_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
             "blockheight" => {
                 map.insert("blockheight", i);
             }
-            "epoch" => {
-                map.insert("epoch", i);
+            // Real Feather exports use "timestamp"; keep "epoch" as legacy alias
+            "timestamp" | "epoch" => {
+                map.insert("timestamp", i);
             }
             "date" => {
                 map.insert("date", i);
             }
+            "accountindex" => {
+                map.insert("accountindex", i);
+            }
             "direction" => {
                 map.insert("direction", i);
+            }
+            "balancedelta" => {
+                map.insert("balancedelta", i);
             }
             "amount" => {
                 map.insert("amount", i);
@@ -73,14 +85,17 @@ fn resolve_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
             "txid" => {
                 map.insert("txid", i);
             }
-            "address" => {
-                map.insert("address", i);
-            }
             "description" => {
                 map.insert("description", i);
             }
             "paymentid" => {
                 map.insert("paymentid", i);
+            }
+            "fiatamount" => {
+                map.insert("fiatamount", i);
+            }
+            "fiatcurrency" => {
+                map.insert("fiatcurrency", i);
             }
             _ => {}
         }
@@ -158,6 +173,8 @@ impl ExchangeParser for FeatherParser {
             let txid = get_field(&record, &cols, "txid");
             let description = get_field(&record, &cols, "description");
             let blockheight = get_field(&record, &cols, "blockheight");
+            let fiat_amount = get_field(&record, &cols, "fiatamount");
+            let fiat_currency = get_field(&record, &cols, "fiatcurrency");
 
             // Skip empty rows
             if date_raw.is_empty() && direction_raw.is_empty() && amount_raw.is_empty() {
@@ -168,9 +185,9 @@ impl ExchangeParser for FeatherParser {
             let timestamp = match parse_timestamp(date_raw) {
                 Some(dt) => dt,
                 None => {
-                    // Try using epoch column as fallback
-                    let epoch_raw = get_field(&record, &cols, "epoch");
-                    match parse_decimal(epoch_raw) {
+                    // Try using timestamp column as fallback (Unix epoch seconds)
+                    let ts_raw = get_field(&record, &cols, "timestamp");
+                    match parse_decimal(ts_raw) {
                         Some(epoch) if epoch > 0.0 => {
                             match chrono::DateTime::from_timestamp(epoch as i64, 0) {
                                 Some(dt) => dt.naive_utc(),
@@ -179,8 +196,8 @@ impl ExchangeParser for FeatherParser {
                                         line_number,
                                         Some("date"),
                                         format!(
-                                            "Invalid date '{}' and epoch '{}'",
-                                            date_raw, epoch_raw
+                                            "Invalid date '{}' and timestamp '{}'",
+                                            date_raw, ts_raw
                                         ),
                                     ));
                                     continue;
@@ -257,6 +274,11 @@ impl ExchangeParser for FeatherParser {
             if let Some(bh) = non_empty(blockheight) {
                 notes_parts.push(format!("Block: {}", bh));
             }
+            // Include fiat valuation in notes if present
+            if let Some(fiat_val) = non_empty(fiat_amount) {
+                let currency = non_empty(fiat_currency).unwrap_or("USD");
+                notes_parts.push(format!("Fiat: {} {}", fiat_val, currency));
+            }
 
             let notes = Some(notes_parts.join(" | "));
 
@@ -306,9 +328,9 @@ mod tests {
 
     fn sample_csv() -> &'static str {
         concat!(
-            "blockheight,epoch,date,direction,amount,fee,txid,address,description,paymentid\n",
-            "3050000,1705312245,2024-01-15 10:30:45,in,0.500000000000,0.000000000000,abc123def456abc123def456abc123def456abc123def456abc123def456abcd,4AdUndXHHZ6cfufTMvppY6JwXNouMBzSkbLYfpAV5Usx3skxNgYeYTRJ5UzqtReoS44qo9mtmXCqY45DJ852K5Jv2684Rge,,\n",
-            "3060000,1705398645,2024-01-16 10:30:45,out,0.100000000000,0.000030000000,def789abc012def789abc012def789abc012def789abc012def789abc012defg,4BrL51JCc9NGQ71kWhnYoDRffsDZy7m1HUU7MRU4nUMXAHNFBEJhkTZV9HdaL4gfuNBxLPc3BeMkLGaPbF5TgwBw6YKQak,Payment to Alice,\n",
+            "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
+            "3050000,1705312245,2024-01-15 10:30:45,0,in,0.500000000000,0.500000000000,0.000000000000,abc123def456abc123def456abc123def456abc123def456abc123def456abcd,,,82.50,USD\n",
+            "3060000,1705398645,2024-01-16 10:30:45,0,out,-0.100030000000,0.100000000000,0.000030000000,def789abc012def789abc012def789abc012def789abc012def789abc012defg,Payment to Alice,,16.50,USD\n",
         )
     }
 
@@ -369,6 +391,18 @@ mod tests {
     }
 
     #[test]
+    fn notes_contain_fiat_valuation() {
+        let parser = FeatherParser;
+        let result = parser.parse(sample_csv(), "Feather").unwrap();
+
+        let notes = result.items[0].1.notes.as_deref().unwrap();
+        assert!(notes.contains("Fiat: 82.50 USD"));
+
+        let notes = result.items[1].1.notes.as_deref().unwrap();
+        assert!(notes.contains("Fiat: 16.50 USD"));
+    }
+
+    #[test]
     fn uses_custom_wallet_name() {
         let parser = FeatherParser;
         let result = parser.parse(sample_csv(), "Mi Monero").unwrap();
@@ -388,8 +422,9 @@ mod tests {
 
     #[test]
     fn empty_content_produces_no_items() {
-        let csv =
-            "blockheight,epoch,date,direction,amount,fee,txid,address,description,paymentid\n";
+        let csv = concat!(
+            "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
+        );
 
         let parser = FeatherParser;
         let result = parser.parse(csv, "Feather").unwrap();
@@ -401,8 +436,8 @@ mod tests {
     #[test]
     fn invalid_direction_produces_error() {
         let csv = concat!(
-            "blockheight,epoch,date,direction,amount,fee,txid,address,description,paymentid\n",
-            "3050000,1705312245,2024-01-15 10:30:45,sideways,0.5,0,abc,addr,,\n",
+            "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
+            "3050000,1705312245,2024-01-15 10:30:45,0,sideways,0.5,0.5,0,abc,,,,\n",
         );
 
         let parser = FeatherParser;
@@ -416,8 +451,8 @@ mod tests {
     #[test]
     fn invalid_amount_produces_error() {
         let csv = concat!(
-            "blockheight,epoch,date,direction,amount,fee,txid,address,description,paymentid\n",
-            "3050000,1705312245,2024-01-15 10:30:45,in,INVALID,0,abc,addr,,\n",
+            "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
+            "3050000,1705312245,2024-01-15 10:30:45,0,in,INVALID,INVALID,0,abc,,,,\n",
         );
 
         let parser = FeatherParser;
@@ -430,8 +465,8 @@ mod tests {
     #[test]
     fn zero_amount_produces_error() {
         let csv = concat!(
-            "blockheight,epoch,date,direction,amount,fee,txid,address,description,paymentid\n",
-            "3050000,1705312245,2024-01-15 10:30:45,in,0.0,0,abc,addr,,\n",
+            "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
+            "3050000,1705312245,2024-01-15 10:30:45,0,in,0.0,0.0,0,abc,,,,\n",
         );
 
         let parser = FeatherParser;
@@ -443,7 +478,8 @@ mod tests {
 
     #[test]
     fn missing_required_column_is_fatal_error() {
-        let csv = "blockheight,epoch,direction,amount,fee,txid\n";
+        // Missing "date" column
+        let csv = "blockHeight,timestamp,direction,amount,fee,txid\n";
 
         let parser = FeatherParser;
         let err = parser.parse(csv, "Feather").unwrap_err();
@@ -452,16 +488,16 @@ mod tests {
     }
 
     #[test]
-    fn epoch_fallback_when_date_invalid() {
+    fn timestamp_fallback_when_date_invalid() {
         let csv = concat!(
-            "blockheight,epoch,date,direction,amount,fee,txid,address,description,paymentid\n",
-            "3050000,1705312245,INVALID_DATE,in,0.5,0,abc,addr,,\n",
+            "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
+            "3050000,1705312245,INVALID_DATE,0,in,0.5,0.5,0,abc,,,,\n",
         );
 
         let parser = FeatherParser;
         let result = parser.parse(csv, "Feather").unwrap();
 
-        // Should fall back to epoch timestamp
+        // Should fall back to timestamp column
         assert_eq!(result.items.len(), 1);
         assert_eq!(result.items[0].1.date, "2024-01-15");
     }
@@ -469,8 +505,8 @@ mod tests {
     #[test]
     fn negative_amount_is_handled() {
         let csv = concat!(
-            "blockheight,epoch,date,direction,amount,fee,txid,address,description,paymentid\n",
-            "3050000,1705312245,2024-01-15 10:30:45,out,-0.5,0.00003,abc,addr,,\n",
+            "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
+            "3050000,1705312245,2024-01-15 10:30:45,0,out,-0.5,-0.5,0.00003,abc,,,,\n",
         );
 
         let parser = FeatherParser;
@@ -484,8 +520,8 @@ mod tests {
     #[test]
     fn incoming_with_zero_fee_has_no_fee_fields() {
         let csv = concat!(
-            "blockheight,epoch,date,direction,amount,fee,txid,address,description,paymentid\n",
-            "3050000,1705312245,2024-01-15 10:30:45,in,1.0,0,abc,addr,,\n",
+            "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
+            "3050000,1705312245,2024-01-15 10:30:45,0,in,1.0,1.0,0,abc,,,,\n",
         );
 
         let parser = FeatherParser;
@@ -499,10 +535,10 @@ mod tests {
     #[test]
     fn multiple_transactions_parsed() {
         let csv = concat!(
-            "blockheight,epoch,date,direction,amount,fee,txid,address,description,paymentid\n",
-            "3050000,1705312245,2024-01-15 10:30:45,in,1.0,0,abc1,addr1,,\n",
-            "3050001,1705312300,2024-01-15 10:31:40,out,0.5,0.00003,abc2,addr2,test,\n",
-            "3060000,1705398645,2024-01-16 10:30:45,in,2.5,0,abc3,addr3,mining,\n",
+            "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
+            "3050000,1705312245,2024-01-15 10:30:45,0,in,1.0,1.0,0,abc1,,,165.00,USD\n",
+            "3050001,1705312300,2024-01-15 10:31:40,0,out,-0.500030000000,0.5,0.00003,abc2,test,,82.50,USD\n",
+            "3060000,1705398645,2024-01-16 10:30:45,0,in,2.5,2.5,0,abc3,mining,,412.50,EUR\n",
         );
 
         let parser = FeatherParser;
@@ -518,5 +554,97 @@ mod tests {
     fn source_returns_feather_wallet() {
         let parser = FeatherParser;
         assert_eq!(parser.source(), ExchangeSource::FeatherWallet);
+    }
+
+    #[test]
+    fn legacy_header_still_works() {
+        // Ensure backward compatibility with the old header format
+        let csv = concat!(
+            "blockheight,epoch,date,direction,amount,fee,txid,address,description,paymentid\n",
+            "3050000,1705312245,2024-01-15 10:30:45,in,0.5,0,abc,addr,,\n",
+        );
+
+        let parser = FeatherParser;
+        let result = parser.parse(csv, "Feather").unwrap();
+
+        assert_eq!(result.items.len(), 1);
+        assert_eq!(result.items[0].1.symbol, "XMR");
+        assert_eq!(result.items[0].1.subtype.as_deref(), Some("deposit"));
+    }
+
+    #[test]
+    fn fiat_without_currency_defaults_to_usd() {
+        let csv = concat!(
+            "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
+            "3050000,1705312245,2024-01-15 10:30:45,0,in,0.5,0.5,0,abc,,,100.00,\n",
+        );
+
+        let parser = FeatherParser;
+        let result = parser.parse(csv, "Feather").unwrap();
+
+        let notes = result.items[0].1.notes.as_deref().unwrap();
+        assert!(notes.contains("Fiat: 100.00 USD"));
+    }
+
+    #[test]
+    fn no_fiat_when_fiat_amount_empty() {
+        let csv = concat!(
+            "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
+            "3050000,1705312245,2024-01-15 10:30:45,0,in,0.5,0.5,0,abc,,,,\n",
+        );
+
+        let parser = FeatherParser;
+        let result = parser.parse(csv, "Feather").unwrap();
+
+        let notes = result.items[0].1.notes.as_deref().unwrap();
+        assert!(!notes.contains("Fiat:"));
+    }
+
+    #[test]
+    fn real_feather_export_with_quoted_iso8601z_dates() {
+        // Exact format from a real Feather Wallet export: quoted fields,
+        // ISO 8601 dates with trailing Z, and an invalid date row that
+        // must fall back to the timestamp (Unix epoch) column.
+        let csv = concat!(
+            "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
+            "1111111,1761878329,\"2020-11-30T21:21:10Z\",0,\"in\",0.004450100000,0.034450000000,0.000000880000,\"4389432db3234234sjdhf32hjldsf5140ba29cc49234234fbdcd82b37c5957cceed\",\"\",\"\",\"10.68\",\"USD\"\n",
+            "2222222,1761823846,\"2020-13-30T29:59:42Z\",0,\"out\",-0.014450000000,0.034419280000,0.000000000000,\"9e2353234234232342342349515b457c01155db5fc36ac67233bbd207c5367\",\"\",\"\",\"10.63\",\"USD\"\n",
+        );
+
+        let parser = FeatherParser;
+        let result = parser.parse(csv, "Feather").unwrap();
+
+        // Both rows should parse (second falls back to timestamp column)
+        assert_eq!(result.items.len(), 2);
+        assert!(result.errors.is_empty());
+
+        // Row 1: valid ISO 8601 date with Z suffix
+        let tx1 = &result.items[0].1;
+        assert_eq!(tx1.date, "2020-11-30");
+        assert_eq!(tx1.transaction_type, "transfer");
+        assert_eq!(tx1.subtype.as_deref(), Some("deposit"));
+        assert!((tx1.amount - 0.034450).abs() < 1e-6);
+        assert_eq!(tx1.symbol, "XMR");
+        // Fee present (0.000000880000)
+        assert_eq!(tx1.fee_coin_symbol.as_deref(), Some("XMR"));
+        assert!((tx1.fee_amount.unwrap() - 0.00000088).abs() < 1e-12);
+        // Fiat valuation in notes
+        let notes1 = tx1.notes.as_deref().unwrap();
+        assert!(notes1.contains("Fiat: 10.68 USD"));
+        assert!(notes1.contains("Block: 1111111"));
+
+        // Row 2: invalid date (month 13, hour 29) => falls back to timestamp 1761823846
+        let tx2 = &result.items[1].1;
+        // timestamp 1761823846 = 2025-10-30 (approximately)
+        assert!(!tx2.date.is_empty());
+        assert_eq!(tx2.transaction_type, "transfer");
+        assert_eq!(tx2.subtype.as_deref(), Some("withdrawal"));
+        assert!((tx2.amount - 0.03441928).abs() < 1e-8);
+        // Fee is zero => no fee fields
+        assert!(tx2.fee_coin_symbol.is_none());
+        assert!(tx2.fee_amount.is_none());
+        let notes2 = tx2.notes.as_deref().unwrap();
+        assert!(notes2.contains("Fiat: 10.63 USD"));
+        assert!(notes2.contains("Block: 2222222"));
     }
 }

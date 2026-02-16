@@ -50,6 +50,10 @@ pub fn parse_timestamp(raw: &str) -> Option<NaiveDateTime> {
         return None;
     }
 
+    // Strip trailing 'Z' (UTC indicator) — NaiveDateTime has no timezone info,
+    // and Feather Wallet exports ISO-8601 dates like "2020-11-30T21:21:10Z".
+    let trimmed = trimmed.trim_end_matches('Z');
+
     for fmt in DATETIME_FORMATS {
         if let Ok(dt) = NaiveDateTime::parse_from_str(trimmed, fmt) {
             return Some(dt);
@@ -284,6 +288,19 @@ mod tests {
     fn parse_timestamp_iso8601() {
         let dt = parse_timestamp("2024-01-15T10:30:45").unwrap();
         assert_eq!(dt.to_string(), "2024-01-15 10:30:45");
+    }
+
+    #[test]
+    fn parse_timestamp_iso8601_with_z() {
+        // Feather Wallet uses this format: "2020-11-30T21:21:10Z"
+        let dt = parse_timestamp("2020-11-30T21:21:10Z").unwrap();
+        assert_eq!(dt.to_string(), "2020-11-30 21:21:10");
+    }
+
+    #[test]
+    fn parse_timestamp_iso8601_with_z_quoted() {
+        let dt = parse_timestamp("\"2020-11-30T21:21:10Z\"").unwrap();
+        assert_eq!(dt.to_string(), "2020-11-30 21:21:10");
     }
 
     #[test]
