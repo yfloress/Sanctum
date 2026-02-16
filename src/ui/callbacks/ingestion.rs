@@ -237,7 +237,7 @@ pub fn setup_ingestion_callbacks(
                         adapter.set_exchange_file_loaded(false);
 
                         let summary = build_error_summary(
-                            "Could not detect exchange format. Supported: Kraken, Binance, Feather Wallet.".to_string(),
+                            "Could not detect exchange format. Supported: Kraken, Binance, Feather Wallet, Monero GUI Wallet.".to_string(),
                         );
                         set_import_summary(&ui, summary, Some(display_name));
                         adapter.set_is_exchange_import(true);

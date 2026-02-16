@@ -985,6 +985,12 @@ impl IngestionService {
         format_name: &str,
         dry_run: bool,
     ) -> Result<ImportSummary, IngestionError> {
+        // Sort transactions by date to ensure chronological processing.
+        // This prevents balance validation failures when the CSV has rows
+        // out of order (e.g. a withdrawal before the deposit that funds it).
+        let mut transactions = transactions;
+        transactions.sort_by(|a, b| a.1.date.cmp(&b.1.date));
+
         let mut summary = ImportSummary::new(format_name, "Crypto");
         let skipped_duplicate = t("import-skipped-duplicate-crypto");
 
