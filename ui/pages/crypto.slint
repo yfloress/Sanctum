@@ -21,6 +21,7 @@
 import {
     CryptoAdapter,
     AppState,
+    IngestionAdapter,
 } from "../globals.slint";
 import { Translations } from "../translations.slint";
 import { Theme } from "../theme.slint";
@@ -366,6 +367,13 @@ export component CryptoPage inherits Rectangle {
                     HorizontalLayout {
                         alignment: end;
                         spacing: 6px;
+
+                        GhostButton {
+                            text: Translations.crypto-import-csv;
+                            clicked => {
+                                IngestionAdapter.import-exchange-csv();
+                            }
+                        }
 
                         GhostButton {
                             text: CryptoAdapter.is-refreshing ? Translations.button-syncing : Translations.button-sync;

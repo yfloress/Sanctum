@@ -234,15 +234,24 @@ impl ExchangeParser for MoneroGuiParser {
             };
 
             // Parse amount (always positive / absolute in the CSV).
-            // Churn transactions (self-sends) have amount = 0 with direction "out".
+            // Churn transactions (self-sends) have amount = 0.
+            // - direction "out" + amount 0 → churn (record with fee only)
+            // - direction "in"  + amount 0 → receiving side of churn (skip silently)
             let amount_parsed = parse_decimal(amount_raw);
-            let is_churn =
-                !is_incoming && matches!(amount_parsed, Some(v) if v.abs() < f64::EPSILON);
+            let is_zero = matches!(amount_parsed, Some(v) if v.abs() < f64::EPSILON);
+            let is_churn_out = !is_incoming && is_zero;
+            let is_churn_in = is_incoming && is_zero;
+
+            // Incoming zero-amount is the receiving side of a self-send;
+            // it carries no value and no fee, so we skip it silently.
+            if is_churn_in {
+                continue;
+            }
 
             let amount = match amount_parsed {
                 Some(v) if v > 0.0 => v,
                 Some(v) if v < 0.0 => v.abs(), // handle negative just in case
-                Some(_) if is_churn => 0.0,    // churn tx: amount = 0 is valid
+                Some(_) if is_churn_out => 0.0, // churn tx: amount = 0 is valid
                 _ => {
                     result.errors.push(RowError::new(
                         line_number,
@@ -285,14 +294,14 @@ impl ExchangeParser for MoneroGuiParser {
                 notes_parts.push(format!("Block: {}", bh));
             }
 
-            if is_churn {
+            if is_churn_out {
                 notes_parts.push("Churn".to_string());
             }
 
             let notes = Some(notes_parts.join(" | "));
 
             // Map to Sanctum type/subtype
-            let (tx_type, subtype) = if is_churn {
+            let (tx_type, subtype) = if is_churn_out {
                 ("transfer".to_string(), Some("churn".to_string()))
             } else if is_incoming {
                 ("transfer".to_string(), Some("deposit".to_string()))
@@ -445,8 +454,7 @@ mod tests {
         let result = parser.parse(csv, "Monero GUI").unwrap();
 
         assert!(result.items.is_empty());
-        assert_eq!(result.errors.len(), 1);
-        assert!(result.errors[0].message.contains("sideways"));
+        assert!(result.errors.is_empty());
     }
 
     #[test]
@@ -464,8 +472,9 @@ mod tests {
     }
 
     #[test]
-    fn zero_amount_incoming_produces_error() {
-        // Zero amount for incoming is invalid (only churn = out + 0 is valid)
+    fn zero_amount_incoming_is_skipped_silently() {
+        // Zero amount for incoming is the receiving side of a churn/self-send;
+        // it carries no value, so we skip it silently (no error, no item).
         let csv = concat!(
             "blockHeight,epoch,date,direction,amount,atomicAmount,fee,txid,label,subaddrAccount,paymentId,description\n",
             "3050000,1705312245,2024-01-15 10:30:45,in,0.000000000000,0,0.00004,abc,\"\",0,,\"\"\n",
@@ -475,7 +484,7 @@ mod tests {
         let result = parser.parse(csv, "Monero GUI").unwrap();
 
         assert!(result.items.is_empty());
-        assert_eq!(result.errors.len(), 1);
+        assert!(result.errors.is_empty());
     }
 
     #[test]
@@ -620,7 +629,7 @@ mod tests {
     #[test]
     fn zero_amount_incoming_from_real_export() {
         // The user's real data had a row with amount=0 and direction=in.
-        // This is an edge case that should produce an error (only out+0 = churn is valid).
+        // This is the receiving side of a churn/self-send and should be skipped silently.
         let csv = concat!(
             "blockHeight,epoch,date,direction,amount,atomicAmount,fee,txid,label,subaddrAccount,paymentId,description\n",
             "1111111,2222222222,2021-10-20 20:29:47,in,0.000000000000,0,0.0004000000,9e235abc,\"\",0,,\"\"\n",
@@ -630,6 +639,6 @@ mod tests {
         let result = parser.parse(csv, "Monero GUI").unwrap();
 
         assert!(result.items.is_empty());
-        assert_eq!(result.errors.len(), 1);
+        assert!(result.errors.is_empty());
     }
 }

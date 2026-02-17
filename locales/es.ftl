@@ -375,6 +375,7 @@ crypto-your-holdings = TUS TENENCIAS
 crypto-no-assets-yet = Sin activos registrados aún
 crypto-create-wallet-first = Crea una billetera primero, luego agrega tus criptomonedas
 crypto-start-adding = Comienza agregando una billetera y tu primer activo
+crypto-import-csv = IMPORTAR CSV
 crypto-unrealized = NO REALIZADO
 crypto-realized-ytd = REALIZADO (YTD)
 crypto-roi = ROI
@@ -942,9 +943,9 @@ settings-import = IMPORTAR DATOS
 settings-import-desc = Importar transacciones y hábitos desde archivos
 
 # ==================== Importación CSV de Exchanges ====================
-import-exchange-title = IMPORTAR EXCHANGE
+import-exchange-title = Importar Exchange
 import-exchange-description = Importar historial de transacciones desde exchanges y wallets
-import-exchange-select-file = SELECCIONAR CSV DE EXCHANGE
+import-exchange-select-file = SELECCIONAR ARCHIVO
 import-exchange-supported = Soportados: Kraken, Binance, Feather Wallet, Monero GUI Wallet
 import-exchange-wallet-label = WALLET DESTINO
 import-exchange-wallet-placeholder = Nombre del wallet para las transacciones importadas

@@ -23,8 +23,12 @@
 
 use crate::controller::AppController;
 use crate::features::ingestion::{ImportSummary, RowError};
+use crate::services::i18n::t;
 use crate::services::i18n::t_args;
-use crate::{AppState, AppWindow, ImportErrorData, ImportPreviewChange, IngestionAdapter};
+use crate::{
+    AppState, AppWindow, CryptoAdapter, ImportErrorData, ImportPreviewChange, IngestionAdapter,
+    NotificationAdapter,
+};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel, Weak};
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -214,6 +218,9 @@ pub fn setup_ingestion_callbacks(
                                 wallet_name: String::new(),
                             });
 
+                        // Ensure wallet list is loaded (user may not have visited crypto module yet)
+                        ui.global::<CryptoAdapter>().invoke_fetch_wallets();
+
                         // Show wallet selection modal instead of going to preview
                         ui.global::<AppState>()
                             .set_show_exchange_wallet_select(true);
@@ -222,12 +229,10 @@ pub fn setup_ingestion_callbacks(
                         adapter.set_exchange_detected_format(SharedString::from(""));
                         adapter.set_exchange_file_loaded(false);
 
-                        let summary = build_error_summary(
-                            "Could not detect exchange format. Supported: Kraken, Binance, Feather Wallet, Monero GUI Wallet.".to_string(),
-                        );
-                        set_import_summary(&ui, summary, Some(display_name));
-                        adapter.set_is_exchange_import(true);
-                        ui.global::<AppState>().set_show_import_preview(true);
+                        // Show a notification instead of opening a broken preview modal
+                        let msg = t("import-exchange-not-detected");
+                        ui.global::<NotificationAdapter>()
+                            .invoke_show(SharedString::from(msg), true);
                     }
                 }
             });

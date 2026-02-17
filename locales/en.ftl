@@ -375,6 +375,7 @@ crypto-your-holdings = YOUR HOLDINGS
 crypto-no-assets-yet = No assets tracked yet
 crypto-create-wallet-first = Create a wallet first, then add your crypto holdings
 crypto-start-adding = Start by adding a wallet and your first asset
+crypto-import-csv = IMPORT CSV
 crypto-unrealized = UNREALIZED
 crypto-realized-ytd = REALIZED (YTD)
 crypto-roi = ROI
@@ -942,7 +943,7 @@ settings-import = DATA IMPORT
 settings-import-desc = Import transactions and habits from files
 
 # ==================== Exchange CSV Import ====================
-import-exchange-title = EXCHANGE IMPORT
+import-exchange-title = Exchange Import
 import-exchange-description = Import transaction history from exchanges and wallets
 import-exchange-select-file = SELECT EXCHANGE CSV
 import-exchange-supported = Supported: Kraken, Binance, Feather Wallet, Monero GUI Wallet

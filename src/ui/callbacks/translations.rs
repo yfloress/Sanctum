@@ -457,6 +457,7 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_crypto_no_assets_yet(s(&t("crypto-no-assets-yet")));
     tr.set_crypto_create_wallet_first(s(&t("crypto-create-wallet-first")));
     tr.set_crypto_start_adding(s(&t("crypto-start-adding")));
+    tr.set_crypto_import_csv(s(&t("crypto-import-csv")));
     tr.set_crypto_unrealized(s(&t("crypto-unrealized")));
     tr.set_crypto_realized_ytd(s(&t("crypto-realized-ytd")));
     tr.set_crypto_roi(s(&t("crypto-roi")));
