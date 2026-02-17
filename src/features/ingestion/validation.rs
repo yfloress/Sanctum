@@ -36,9 +36,20 @@ pub fn validate_date(date: &str) -> Result<String, String> {
         return Err("Date is required".to_string());
     }
 
-    NaiveDate::parse_from_str(trimmed, "%Y-%m-%d")
-        .map(|_| trimmed.to_string())
-        .map_err(|_| format!("Invalid date format: '{}'. Expected YYYY-MM-DD", trimmed))
+    // Accept YYYY-MM-DD
+    if NaiveDate::parse_from_str(trimmed, "%Y-%m-%d").is_ok() {
+        return Ok(trimmed.to_string());
+    }
+
+    // Accept YYYY-MM-DD HH:MM:SS (full datetime from exchange imports)
+    if trimmed.len() >= 10 && NaiveDate::parse_from_str(&trimmed[..10], "%Y-%m-%d").is_ok() {
+        return Ok(trimmed.to_string());
+    }
+
+    Err(format!(
+        "Invalid date format: '{}'. Expected YYYY-MM-DD",
+        trimmed
+    ))
 }
 
 /// Validates transaction type
@@ -444,6 +455,12 @@ mod tests {
     fn test_validate_date_valid() {
         assert!(validate_date("2024-01-15").is_ok());
         assert!(validate_date("  2024-12-31  ").is_ok());
+        // Full datetime from exchange imports
+        assert!(validate_date("2024-01-15 10:30:45").is_ok());
+        assert_eq!(
+            validate_date("2024-01-15 10:30:45").unwrap(),
+            "2024-01-15 10:30:45"
+        );
     }
 
     #[test]

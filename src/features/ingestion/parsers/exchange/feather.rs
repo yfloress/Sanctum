@@ -43,7 +43,7 @@ use std::collections::HashMap;
 
 use csv::{ReaderBuilder, StringRecord, Trim};
 
-use super::common::{format_date, non_empty, parse_decimal, parse_timestamp};
+use super::common::{format_datetime, non_empty, parse_decimal, parse_timestamp};
 use super::{ExchangeParser, ExchangeSource, ParseResult};
 use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
 
@@ -216,7 +216,7 @@ impl ExchangeParser for FeatherParser {
                 }
             };
 
-            let date = format_date(timestamp);
+            let date = format_datetime(timestamp);
 
             // Parse direction
             let direction = direction_raw.to_lowercase();
@@ -440,8 +440,8 @@ mod tests {
         let parser = FeatherParser;
         let result = parser.parse(sample_csv(), "Feather").unwrap();
 
-        assert_eq!(result.items[0].1.date, "2024-01-15");
-        assert_eq!(result.items[1].1.date, "2024-01-16");
+        assert_eq!(result.items[0].1.date, "2024-01-15 10:30:45");
+        assert_eq!(result.items[1].1.date, "2024-01-16 10:30:45");
     }
 
     #[test]
@@ -548,7 +548,7 @@ mod tests {
 
         // Should fall back to timestamp column
         assert_eq!(result.items.len(), 1);
-        assert_eq!(result.items[0].1.date, "2024-01-15");
+        assert_eq!(result.items[0].1.date, "2024-01-15 08:30:45");
     }
 
     #[test]
@@ -684,7 +684,7 @@ mod tests {
 
         // Row 1: valid ISO 8601 date with Z suffix
         let tx1 = &result.items[0].1;
-        assert_eq!(tx1.date, "2020-11-30");
+        assert_eq!(tx1.date, "2020-11-30 21:21:10");
         assert_eq!(tx1.transaction_type, "transfer");
         assert_eq!(tx1.subtype.as_deref(), Some("deposit"));
         assert!((tx1.amount - 0.034450).abs() < 1e-6);

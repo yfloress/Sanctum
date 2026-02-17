@@ -43,7 +43,7 @@ use chrono::NaiveDateTime;
 use csv::{ReaderBuilder, StringRecord, Trim};
 
 use super::common::{
-    format_date, is_fiat, normalize_binance_currency, parse_amount_with_unit, parse_decimal,
+    format_datetime, is_fiat, normalize_binance_currency, parse_amount_with_unit, parse_decimal,
     parse_timestamp, should_rename_luna_to_lunc,
 };
 use super::{ExchangeParser, ExchangeSource, ParseResult};
@@ -282,7 +282,7 @@ impl PendingConvert {
                 return results;
             }
 
-            let date = format_date(out.timestamp);
+            let date = format_datetime(out.timestamp);
             let line = out.line_number;
             let notes = Some(format!("Binance {} | {}", out.operation_raw, out.remark));
 
@@ -378,7 +378,7 @@ impl PendingConvert {
                     continue;
                 }
 
-                let date = format_date(out.timestamp);
+                let date = format_datetime(out.timestamp);
                 let notes = Some(format!(
                     "Binance {} ({} assets) | {}",
                     out.operation_raw, total_outgoing_count, out.remark
@@ -453,7 +453,7 @@ fn single_row_to_transaction(
         return None;
     }
 
-    let date = format_date(row.timestamp);
+    let date = format_datetime(row.timestamp);
     let notes = Some(format!("Binance {} | {}", row.operation_raw, row.remark));
 
     let (tx_type, subtype) = match row.operation {
@@ -469,9 +469,7 @@ fn single_row_to_transaction(
             ("income".to_string(), Some("airdrop".to_string()))
         }
         BinanceOperation::StakingRewards => ("income".to_string(), Some("staking".to_string())),
-        BinanceOperation::Fee => {
-            ("expense".to_string(), Some("fee".to_string()))
-        }
+        BinanceOperation::Fee => ("expense".to_string(), Some("fee".to_string())),
         BinanceOperation::CardCashback => ("income".to_string(), Some("rebate".to_string())),
         BinanceOperation::CardSpending => {
             if row.change > 0.0 {
@@ -808,7 +806,7 @@ impl ExchangeParser for BinanceSpotParser {
                 }
             };
 
-            let date = format_date(timestamp);
+            let date = format_datetime(timestamp);
             let is_buy = side_raw.eq_ignore_ascii_case("BUY");
 
             // Parse Executed (base currency amount, e.g. "0.5BTC")

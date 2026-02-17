@@ -48,7 +48,8 @@ const KRAKEN_API_BASE: &str = "https://api.kraken.com/0/public";
 /// Mindicador API base URL (public Chilean market indicators)
 const MINDICADOR_API_BASE: &str = "https://mindicador.cl/api";
 /// Primary public currency API (USD base table, no API key required)
-const CURRENCY_API_PRIMARY_URL: &str = "https://latest.currency-api.pages.dev/v1/currencies/usd.json";
+const CURRENCY_API_PRIMARY_URL: &str =
+    "https://latest.currency-api.pages.dev/v1/currencies/usd.json";
 /// Mirror endpoint for the same currency dataset
 const CURRENCY_API_MIRROR_URL: &str =
     "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json";
@@ -169,7 +170,10 @@ pub fn validate_coin_id(coin_id: &str) -> Result<String, String> {
         ));
     }
 
-    if !trimmed.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') {
+    if !trimmed
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '-')
+    {
         return Err("Coin ID contains invalid characters".to_string());
     }
 
@@ -239,7 +243,7 @@ pub fn validate_proxy_url(raw: &str) -> Result<String, String> {
         _ => {
             return Err(
                 "Proxy URL must use http://, https://, socks5://, or socks5h://".to_string(),
-            )
+            );
         }
     }
 
@@ -371,7 +375,11 @@ pub async fn fetch_crypto_prices(
     );
 
     let client = create_secure_client(proxy)?;
-    let response = client.get(&url).send().await.map_err(handle_request_error)?;
+    let response = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(handle_request_error)?;
 
     let status = response.status();
     if !status.is_success() {
@@ -493,8 +501,7 @@ pub async fn fetch_historical_price_usd(
     }
 
     if let Ok(price) =
-        fetch_historical_price_from_coinpaprika(&client, &validated_coin_id, &normalized_date)
-            .await
+        fetch_historical_price_from_coinpaprika(&client, &validated_coin_id, &normalized_date).await
     {
         return Ok(price);
     }
@@ -508,14 +515,14 @@ async fn fetch_historical_price_from_coinpaprika(
     normalized_date: &NaiveDate,
 ) -> Result<f64, String> {
     let query = coingecko_coin_id.replace('-', "%20");
-    let search_url = format!(
-        "{}/search?c=currencies&q={}",
-        COINPAPRIKA_API_BASE, query
-    );
+    let search_url = format!("{}/search?c=currencies&q={}", COINPAPRIKA_API_BASE, query);
 
     log_security_event(
         SecurityEvent::ExternalApiRequest,
-        Some(&format!("historical_price_coinpaprika_search={}", coingecko_coin_id)),
+        Some(&format!(
+            "historical_price_coinpaprika_search={}",
+            coingecko_coin_id
+        )),
     );
 
     let search_response = client
@@ -588,7 +595,11 @@ async fn fetch_historical_price_from_kraken(
 
 async fn fetch_clp_rate_from_mindicador(client: &Client) -> Result<f64, String> {
     let url = format!("{}/dolar", MINDICADOR_API_BASE);
-    let response = client.get(&url).send().await.map_err(handle_request_error)?;
+    let response = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(handle_request_error)?;
     let status = response.status();
     if !status.is_success() {
         if status.as_u16() == 429 {
@@ -638,7 +649,11 @@ async fn fetch_usd_rate_from_usdt(client: &Client, target: &str) -> Result<f64, 
         COINGECKO_API_BASE,
         target.to_lowercase()
     );
-    let response = client.get(&url).send().await.map_err(handle_request_error)?;
+    let response = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(handle_request_error)?;
     let status = response.status();
     if !status.is_success() {
         if status.as_u16() == 429 {
@@ -715,7 +730,10 @@ fn parse_mindicador_rate(body: &[u8]) -> Result<f64, String> {
     validate_exchange_rate_range(rate, "CLP")
 }
 
-fn parse_coinpaprika_id_from_search(body: &[u8], coingecko_coin_id: &str) -> Result<String, String> {
+fn parse_coinpaprika_id_from_search(
+    body: &[u8],
+    coingecko_coin_id: &str,
+) -> Result<String, String> {
     let parsed: CoinPaprikaSearchResponse =
         serde_json::from_slice(body).map_err(|_| "Failed to parse CoinPaprika search data")?;
     let candidates = parsed.currencies.unwrap_or_default();
@@ -730,12 +748,11 @@ fn parse_coinpaprika_id_from_search(body: &[u8], coingecko_coin_id: &str) -> Res
         .iter()
         .filter(|c| c.is_active.unwrap_or(true))
         .min_by_key(|c| {
-            let slug = c
-                .id
-                .split_once('-')
-                .map(|(_, right)| right)
-                .unwrap_or(c.id.as_str())
-                .to_lowercase();
+            let slug =
+                c.id.split_once('-')
+                    .map(|(_, right)| right)
+                    .unwrap_or(c.id.as_str())
+                    .to_lowercase();
             let compact = slug.replace('-', "");
             let score = if slug == target_slug {
                 0u8
@@ -835,7 +852,14 @@ fn normalize_history_date(raw: &str) -> Result<NaiveDate, String> {
         return Err("Date cannot be empty".to_string());
     }
 
-    let parsed = NaiveDate::parse_from_str(trimmed, "%Y-%m-%d")
+    // Try full datetime first (YYYY-MM-DD HH:MM:SS from exchange imports)
+    let date_part = if trimmed.len() >= 10 {
+        &trimmed[..10]
+    } else {
+        trimmed
+    };
+
+    let parsed = NaiveDate::parse_from_str(date_part, "%Y-%m-%d")
         .or_else(|_| NaiveDate::parse_from_str(trimmed, "%d-%m-%Y"))
         .map_err(|_| "Invalid date format. Use DD-MM-YYYY or YYYY-MM-DD".to_string())?;
 
@@ -857,7 +881,10 @@ fn validate_exchange_rate_range(rate: f64, _target: &str) -> Result<f64, String>
 
 /// Returns the padding list used for default tickers and privacy obfuscation
 pub fn default_price_allowlist() -> Vec<String> {
-    PRIVACY_PRESERVING_PRICE_IDS.iter().map(|s| s.to_string()).collect()
+    PRIVACY_PRESERVING_PRICE_IDS
+        .iter()
+        .map(|s| s.to_string())
+        .collect()
 }
 
 /// Returns the default ticker IDs shown in the UI
@@ -920,7 +947,6 @@ pub fn default_coin_catalog() -> Vec<CryptoCatalogCoin> {
         })
         .collect()
 }
-
 
 #[cfg(test)]
 mod tests;

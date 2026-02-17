@@ -35,7 +35,7 @@ use chrono::NaiveDateTime;
 use csv::{ReaderBuilder, StringRecord, Trim};
 
 use super::common::{
-    format_date, is_fiat, normalize_kraken_currency, parse_decimal, parse_kraken_pair,
+    format_datetime, is_fiat, normalize_kraken_currency, parse_decimal, parse_kraken_pair,
     parse_timestamp,
 };
 use super::{ExchangeParser, ExchangeSource, ParseResult};
@@ -250,7 +250,7 @@ impl PendingTrade {
             return Vec::new();
         }
 
-        let date = format_date(outgoing.time);
+        let date = format_datetime(outgoing.time);
         let notes = Some(format!(
             "Kraken {} | Ref: {}",
             outgoing.ledger_type.label(),
@@ -389,7 +389,7 @@ fn single_row_to_transaction(
         return None;
     }
 
-    let date = format_date(row.time);
+    let date = format_datetime(row.time);
     let notes = Some(format!(
         "Kraken {} | Ref: {}",
         row.ledger_type.label(),
@@ -827,7 +827,7 @@ impl ExchangeParser for KrakenTradesParser {
 
             let is_buy = type_raw.eq_ignore_ascii_case("buy");
             let side = if is_buy { "buy" } else { "sell" };
-            let date = format_date(time);
+            let date = format_datetime(time);
 
             let base_fiat = is_fiat(&base);
             let quote_fiat = is_fiat(&quote);

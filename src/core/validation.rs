@@ -114,8 +114,15 @@ pub fn validate_date(date: &str) -> Result<String, String> {
     }
 
     // Try YYYY-MM-DD format
-    if let Ok(parsed) = NaiveDate::parse_from_str(trimmed, "%Y-%m-%d") {
-        return Ok(parsed.format("%Y-%m-%d").to_string());
+    if let Ok(_) = NaiveDate::parse_from_str(trimmed, "%Y-%m-%d") {
+        return Ok(trimmed.to_string());
+    }
+
+    // Try YYYY-MM-DD HH:MM:SS (full datetime from exchange imports)
+    if trimmed.len() >= 10 {
+        if let Ok(_) = NaiveDate::parse_from_str(&trimmed[..10], "%Y-%m-%d") {
+            return Ok(trimmed.to_string());
+        }
     }
 
     Err("Invalid date format. Use DD-MM-YYYY or YYYY-MM-DD".to_string())

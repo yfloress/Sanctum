@@ -48,7 +48,7 @@ use std::collections::HashMap;
 
 use csv::{ReaderBuilder, StringRecord, Trim};
 
-use super::common::{format_date, non_empty, parse_decimal, parse_timestamp};
+use super::common::{format_datetime, non_empty, parse_decimal, parse_timestamp};
 use super::{ExchangeParser, ExchangeSource, ParseResult};
 use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
 
@@ -216,7 +216,7 @@ impl ExchangeParser for MoneroGuiParser {
                 }
             };
 
-            let date = format_date(timestamp);
+            let date = format_datetime(timestamp);
 
             // Parse direction
             let direction = direction_raw.to_lowercase();
@@ -426,8 +426,8 @@ mod tests {
         let parser = MoneroGuiParser;
         let result = parser.parse(sample_csv(), "Monero GUI").unwrap();
 
-        assert_eq!(result.items[0].1.date, "2021-01-10");
-        assert_eq!(result.items[1].1.date, "2021-10-20");
+        assert_eq!(result.items[0].1.date, "2021-01-10 10:20:15");
+        assert_eq!(result.items[1].1.date, "2021-10-20 20:29:47");
     }
 
     #[test]
@@ -533,7 +533,7 @@ mod tests {
 
         // Should fall back to epoch timestamp
         assert_eq!(result.items.len(), 1);
-        assert_eq!(result.items[0].1.date, "2024-01-15");
+        assert_eq!(result.items[0].1.date, "2024-01-15 08:30:45");
     }
 
     #[test]
@@ -608,7 +608,7 @@ mod tests {
 
         // Row 1: incoming
         let tx1 = &result.items[0].1;
-        assert_eq!(tx1.date, "2021-01-10");
+        assert_eq!(tx1.date, "2021-01-10 10:20:15");
         assert_eq!(tx1.transaction_type, "transfer");
         assert_eq!(tx1.subtype.as_deref(), Some("deposit"));
         assert!((tx1.amount - 0.03).abs() < 1e-12);
@@ -618,7 +618,7 @@ mod tests {
 
         // Row 2: outgoing with fee
         let tx2 = &result.items[1].1;
-        assert_eq!(tx2.date, "2021-10-20");
+        assert_eq!(tx2.date, "2021-10-20 20:29:47");
         assert_eq!(tx2.transaction_type, "transfer");
         assert_eq!(tx2.subtype.as_deref(), Some("withdrawal"));
         assert!((tx2.amount - 0.03441928).abs() < 1e-12);
