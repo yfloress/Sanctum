@@ -501,6 +501,10 @@ export global IngestionAdapter {
     callback confirm-exchange-import();
     callback cancel-exchange-preview();
     callback exchange-wallet-name-changed(string);
+
+    // Exchange wallet selection step (between file pick and preview)
+    callback continue-exchange-with-wallet();
+    callback cancel-exchange-wallet-select();
 }
 
 // ==================== Vault Adapter ====================
@@ -861,6 +865,9 @@ export global AppState {
     // Import results modal
     in-out property <bool> show-import-preview: false;
     in-out property <bool> show-import-results: false;
+
+    // Exchange wallet selection modal (before import preview)
+    in-out property <bool> show-exchange-wallet-select: false;
 
     // Current date (YYYY-MM-DD), set from backend to avoid hardcoded defaults
     in-out property <string> current-date: "0000-00-00";

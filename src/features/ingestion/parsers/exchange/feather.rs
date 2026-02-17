@@ -234,15 +234,24 @@ impl ExchangeParser for FeatherParser {
             };
 
             // Parse amount (always positive in the CSV).
-            // Churn transactions (self-sends) have amount = 0 with direction "out".
+            // Churn transactions (self-sends) have amount = 0.
+            // - direction "out" + amount 0 → churn (record with fee only)
+            // - direction "in"  + amount 0 → receiving side of churn (skip silently)
             let amount_parsed = parse_decimal(amount_raw);
-            let is_churn = !is_incoming
-                && matches!(amount_parsed, Some(v) if v.abs() < f64::EPSILON);
+            let is_zero = matches!(amount_parsed, Some(v) if v.abs() < f64::EPSILON);
+            let is_churn_out = !is_incoming && is_zero;
+            let is_churn_in = is_incoming && is_zero;
+
+            // Incoming zero-amount is the receiving side of a self-send;
+            // it carries no value and no fee, so we skip it silently.
+            if is_churn_in {
+                continue;
+            }
 
             let amount = match amount_parsed {
                 Some(v) if v > 0.0 => v,
                 Some(v) if v < 0.0 => v.abs(), // handle negative just in case
-                Some(_) if is_churn => 0.0,     // churn tx: amount = 0 is valid
+                Some(_) if is_churn_out => 0.0, // churn tx: amount = 0 is valid
                 _ => {
                     result.errors.push(RowError::new(
                         line_number,
@@ -289,14 +298,14 @@ impl ExchangeParser for FeatherParser {
                 }
             }
 
-            if is_churn {
+            if is_churn_out {
                 notes_parts.push("Churn".to_string());
             }
 
             let notes = Some(notes_parts.join(" | "));
 
             // Map to Sanctum type/subtype
-            let (tx_type, subtype) = if is_churn {
+            let (tx_type, subtype) = if is_churn_out {
                 ("transfer".to_string(), Some("churn".to_string()))
             } else if is_incoming {
                 ("transfer".to_string(), Some("deposit".to_string()))
@@ -478,8 +487,9 @@ mod tests {
     }
 
     #[test]
-    fn zero_amount_incoming_produces_error() {
-        // Zero amount for incoming is invalid (only churn = out + 0 is valid)
+    fn zero_amount_incoming_is_silently_skipped() {
+        // Incoming with amount=0 is the receiving side of a churn/self-send.
+        // It carries no value, so we skip it silently (no error, no item).
         let csv = concat!(
             "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
             "3050000,1705312245,2024-01-15 10:30:45,0,in,0.0,0.0,0,abc,,,,\n",
@@ -488,8 +498,8 @@ mod tests {
         let parser = FeatherParser;
         let result = parser.parse(csv, "Feather").unwrap();
 
-        assert!(result.items.is_empty());
-        assert_eq!(result.errors.len(), 1);
+        assert!(result.items.is_empty(), "no items should be produced");
+        assert!(result.errors.is_empty(), "no errors should be produced");
     }
 
     #[test]

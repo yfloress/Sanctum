@@ -965,3 +965,17 @@ import-exchange-hint-feather = Exportar desde Feather Wallet: Historial > Export
 import-exchange-hint-monero-gui = Exportar desde Monero GUI: Wallet > Historial > Exportar CSV
 settings-exchange-import = IMPORTAR EXCHANGE
 settings-exchange-import-desc = Importar transacciones crypto desde archivos CSV de exchanges
+
+# ==================== Seleccion de Wallet para Exchange ====================
+exchange-wallet-select-title = WALLET DESTINO
+exchange-wallet-select-subtitle = Selecciona un wallet existente o crea uno nuevo para las transacciones importadas
+exchange-wallet-tab-select = SELECCIONAR WALLET
+exchange-wallet-tab-create = CREAR NUEVO
+exchange-wallet-select-label = WALLETS DISPONIBLES
+exchange-wallet-no-wallets = No se encontraron wallets. Cambia a la pestana de crear para agregar uno.
+exchange-wallet-select-required = Selecciona un wallet para continuar
+exchange-wallet-name-required = El nombre del wallet es requerido
+exchange-wallet-continue = CONTINUAR
+exchange-wallet-category-software = Software Wallet
+exchange-wallet-category-hardware = Hardware Wallet
+exchange-wallet-category-exchange = Exchange

@@ -199,38 +199,24 @@ pub fn setup_ingestion_callbacks(
                 let adapter = ui.global::<IngestionAdapter>();
 
                 match detected {
-                    Some((_, exchange_label, default_wallet)) => {
+                    Some((_, exchange_label, _default_wallet)) => {
                         adapter.set_exchange_detected_format(SharedString::from(&exchange_label));
-
-                        // Use user-provided wallet name if set, otherwise use default
-                        let current_wallet = adapter.get_exchange_wallet_name().to_string();
-                        let wallet_name = if current_wallet.trim().is_empty() {
-                            adapter.set_exchange_wallet_name(SharedString::from(&default_wallet));
-                            default_wallet.clone()
-                        } else {
-                            current_wallet
-                        };
-
                         adapter.set_exchange_file_loaded(true);
+                        // Clear wallet name so user must choose in the next step
+                        adapter.set_exchange_wallet_name(SharedString::from(""));
 
-                        // Preview with the determined wallet name
-                        let summary =
-                            match controller.preview_exchange_csv(&content, &wallet_name) {
-                                Ok(summary) => summary,
-                                Err(err) => build_error_summary(err.to_string()),
-                            };
-
+                        // Store CSV content temporarily (wallet not chosen yet)
                         pending_exchange
                             .borrow_mut()
                             .replace(PendingExchangeImport {
-                                display_name: display_name.clone(),
+                                display_name,
                                 content,
-                                wallet_name,
+                                wallet_name: String::new(),
                             });
 
-                        set_import_summary(&ui, summary, Some(display_name));
-                        adapter.set_is_exchange_import(true);
-                        ui.global::<AppState>().set_show_import_preview(true);
+                        // Show wallet selection modal instead of going to preview
+                        ui.global::<AppState>()
+                            .set_show_exchange_wallet_select(true);
                     }
                     None => {
                         adapter.set_exchange_detected_format(SharedString::from(""));
@@ -243,6 +229,69 @@ pub fn setup_ingestion_callbacks(
                         adapter.set_is_exchange_import(true);
                         ui.global::<AppState>().set_show_import_preview(true);
                     }
+                }
+            });
+    }
+
+    // Continue exchange import after wallet selection
+    // The wallet name has been set on IngestionAdapter.exchange-wallet-name
+    // by the ExchangeWalletSelectModal before this callback fires.
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let pending_exchange = pending_exchange.clone();
+
+        ui.global::<IngestionAdapter>()
+            .on_continue_exchange_with_wallet(move || {
+                let Some(ui) = ui_weak.upgrade() else {
+                    return;
+                };
+
+                let adapter = ui.global::<IngestionAdapter>();
+                let wallet_name = adapter.get_exchange_wallet_name().to_string();
+
+                if wallet_name.trim().is_empty() {
+                    return;
+                }
+
+                let mut borrow = pending_exchange.borrow_mut();
+                let Some(pending) = borrow.as_mut() else {
+                    return;
+                };
+
+                // Update the wallet name chosen by the user
+                pending.wallet_name = wallet_name.clone();
+
+                // Preview with the chosen wallet name
+                let summary = match controller.preview_exchange_csv(&pending.content, &wallet_name)
+                {
+                    Ok(summary) => summary,
+                    Err(err) => build_error_summary(err.to_string()),
+                };
+
+                let display = pending.display_name.clone();
+                drop(borrow);
+
+                set_import_summary(&ui, summary, Some(display));
+                adapter.set_is_exchange_import(true);
+                ui.global::<AppState>().set_show_import_preview(true);
+            });
+    }
+
+    // Cancel exchange wallet selection
+    {
+        let ui_weak = ui_weak.clone();
+        let pending_exchange = pending_exchange.clone();
+
+        ui.global::<IngestionAdapter>()
+            .on_cancel_exchange_wallet_select(move || {
+                pending_exchange.borrow_mut().take();
+                if let Some(ui) = ui_weak.upgrade() {
+                    let adapter = ui.global::<IngestionAdapter>();
+                    adapter.set_exchange_detected_format(SharedString::from(""));
+                    adapter.set_exchange_wallet_name(SharedString::from(""));
+                    adapter.set_exchange_file_loaded(false);
+                    adapter.set_is_exchange_import(false);
                 }
             });
     }

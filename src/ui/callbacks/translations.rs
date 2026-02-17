@@ -363,6 +363,20 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_import_exchange_hint_binance(s(&t("import-exchange-hint-binance")));
     tr.set_import_exchange_hint_feather(s(&t("import-exchange-hint-feather")));
 
+    // Exchange wallet selection modal
+    tr.set_exchange_wallet_select_title(s(&t("exchange-wallet-select-title")));
+    tr.set_exchange_wallet_select_subtitle(s(&t("exchange-wallet-select-subtitle")));
+    tr.set_exchange_wallet_tab_select(s(&t("exchange-wallet-tab-select")));
+    tr.set_exchange_wallet_tab_create(s(&t("exchange-wallet-tab-create")));
+    tr.set_exchange_wallet_select_label(s(&t("exchange-wallet-select-label")));
+    tr.set_exchange_wallet_no_wallets(s(&t("exchange-wallet-no-wallets")));
+    tr.set_exchange_wallet_select_required(s(&t("exchange-wallet-select-required")));
+    tr.set_exchange_wallet_name_required(s(&t("exchange-wallet-name-required")));
+    tr.set_exchange_wallet_continue(s(&t("exchange-wallet-continue")));
+    tr.set_exchange_wallet_category_software(s(&t("exchange-wallet-category-software")));
+    tr.set_exchange_wallet_category_hardware(s(&t("exchange-wallet-category-hardware")));
+    tr.set_exchange_wallet_category_exchange(s(&t("exchange-wallet-category-exchange")));
+
     // Modals
     tr.set_modal_add_account_title(s(&t("modal-add-account-title")));
     tr.set_modal_edit_account_title(s(&t("modal-edit-account-title")));

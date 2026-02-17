@@ -350,6 +350,10 @@ impl IngestionService {
     /// This is the main entry point used by both the generic `import_from_content`
     /// path (with default wallet name) and the dedicated exchange import callback
     /// (with user-provided wallet name).
+    ///
+    /// Balance validation is skipped for exchange imports because the wallet
+    /// export is the authoritative source of truth — if it records a withdrawal,
+    /// it happened regardless of what Sanctum currently knows about the balance.
     pub fn import_exchange_csv(
         &self,
         content: &str,
@@ -360,7 +364,8 @@ impl IngestionService {
         let parsed = parser
             .parse(content, wallet_name)
             .map_err(|e| IngestionError::Parse(e.message))?;
-        let mut summary = self.process_crypto_transactions(parsed.items, source.label())?;
+        let mut summary =
+            self.process_crypto_transactions_ext(parsed.items, source.label(), true)?;
         for error in parsed.errors {
             summary.record_error(error);
         }
@@ -378,7 +383,8 @@ impl IngestionService {
         let parsed = parser
             .parse(content, wallet_name)
             .map_err(|e| IngestionError::Parse(e.message))?;
-        let mut summary = self.preview_crypto_transactions(parsed.items, source.label())?;
+        let mut summary =
+            self.preview_crypto_transactions_ext(parsed.items, source.label(), true)?;
         for error in parsed.errors {
             summary.record_error(error);
         }
@@ -949,7 +955,7 @@ impl IngestionService {
         transactions: Vec<(usize, ImportCryptoTransaction)>,
         format_name: &str,
     ) -> Result<ImportSummary, IngestionError> {
-        self.process_crypto_transactions_internal(transactions, format_name, false)
+        self.process_crypto_transactions_internal(transactions, format_name, false, false)
     }
 
     /// Preview crypto transactions (validation and deduplication without inserts)
@@ -958,7 +964,38 @@ impl IngestionService {
         transactions: Vec<(usize, ImportCryptoTransaction)>,
         format_name: &str,
     ) -> Result<ImportSummary, IngestionError> {
-        self.process_crypto_transactions_internal(transactions, format_name, true)
+        self.process_crypto_transactions_internal(transactions, format_name, true, false)
+    }
+
+    /// Process crypto transactions, optionally skipping balance validation.
+    /// Used by exchange imports where the wallet export is authoritative.
+    fn process_crypto_transactions_ext(
+        &self,
+        transactions: Vec<(usize, ImportCryptoTransaction)>,
+        format_name: &str,
+        skip_balance_validation: bool,
+    ) -> Result<ImportSummary, IngestionError> {
+        self.process_crypto_transactions_internal(
+            transactions,
+            format_name,
+            false,
+            skip_balance_validation,
+        )
+    }
+
+    /// Preview crypto transactions, optionally skipping balance validation.
+    fn preview_crypto_transactions_ext(
+        &self,
+        transactions: Vec<(usize, ImportCryptoTransaction)>,
+        format_name: &str,
+        skip_balance_validation: bool,
+    ) -> Result<ImportSummary, IngestionError> {
+        self.process_crypto_transactions_internal(
+            transactions,
+            format_name,
+            true,
+            skip_balance_validation,
+        )
     }
 
     fn process_crypto_transactions_internal(
@@ -966,14 +1003,27 @@ impl IngestionService {
         transactions: Vec<(usize, ImportCryptoTransaction)>,
         format_name: &str,
         dry_run: bool,
+        skip_balance_validation: bool,
     ) -> Result<ImportSummary, IngestionError> {
         if dry_run {
             self.with_db_readonly(|db| {
-                self.process_crypto_transactions_with_db(db, transactions, format_name, dry_run)
+                self.process_crypto_transactions_with_db(
+                    db,
+                    transactions,
+                    format_name,
+                    dry_run,
+                    skip_balance_validation,
+                )
             })
         } else {
             self.with_db(|db| {
-                self.process_crypto_transactions_with_db(db, transactions, format_name, dry_run)
+                self.process_crypto_transactions_with_db(
+                    db,
+                    transactions,
+                    format_name,
+                    dry_run,
+                    skip_balance_validation,
+                )
             })
         }
     }
@@ -984,6 +1034,7 @@ impl IngestionService {
         transactions: Vec<(usize, ImportCryptoTransaction)>,
         format_name: &str,
         dry_run: bool,
+        skip_balance_validation: bool,
     ) -> Result<ImportSummary, IngestionError> {
         // Sort transactions by date to ensure chronological processing.
         // This prevents balance validation failures when the CSV has rows
@@ -1137,7 +1188,10 @@ impl IngestionService {
             };
 
             // Validate balance for outflow operations
-            if mechanical_type == "sell" || mechanical_type == "transfer_out" {
+            // Skipped for exchange imports — the wallet export is authoritative.
+            if !skip_balance_validation
+                && (mechanical_type == "sell" || mechanical_type == "transfer_out")
+            {
                 let db_balance = match IngestionRepository::get_wallet_coin_balance(
                     db,
                     &wallet.id,
@@ -1251,7 +1305,9 @@ impl IngestionService {
                         }
                     }
                 }
-            } else if mechanical_type == "buy" || mechanical_type == "transfer_in" {
+            } else if !skip_balance_validation
+                && (mechanical_type == "buy" || mechanical_type == "transfer_in")
+            {
                 // For inflows, validate fee balance if fee is in a different coin
                 if let (Some(fee_coin_ref), Some(fee_amt)) =
                     (resolved_fee_coin_id.as_deref(), resolved_fee_amount)
@@ -1346,124 +1402,126 @@ impl IngestionService {
                 let to_amount = import_tx.swap_to_amount.unwrap_or(0.0);
                 let fee_amount = import_tx.fee_amount.unwrap_or(0.0);
 
-                let db_balance = match IngestionRepository::get_wallet_coin_balance(
-                    db,
-                    &wallet.id,
-                    &coin.id,
-                    import_tx.date.trim(),
-                ) {
-                    Ok(b) => b,
-                    Err(e) => {
+                if !skip_balance_validation {
+                    let db_balance = match IngestionRepository::get_wallet_coin_balance(
+                        db,
+                        &wallet.id,
+                        &coin.id,
+                        import_tx.date.trim(),
+                    ) {
+                        Ok(b) => b,
+                        Err(e) => {
+                            summary.record_error(RowError::new(
+                                line_num,
+                                None,
+                                format!("Database error checking balance: {}", e),
+                            ));
+                            continue;
+                        }
+                    };
+                    let balance_key = (wallet.id.clone(), coin.id.clone());
+                    let pending_delta = pending_balance_changes
+                        .get(&balance_key)
+                        .copied()
+                        .unwrap_or(0.0);
+                    let mut required_from = import_tx.amount;
+
+                    if let Some(fee_coin) = fee_coin.as_ref()
+                        && fee_coin.id == coin.id
+                    {
+                        required_from += fee_amount;
+                    }
+
+                    let available_from = db_balance + pending_delta;
+                    if available_from < required_from {
                         summary.record_error(RowError::new(
                             line_num,
-                            None,
-                            format!("Database error checking balance: {}", e),
+                            Some("amount"),
+                            t_args(
+                                "import-error-insufficient-crypto-balance",
+                                &[
+                                    ("symbol", coin.symbol.as_str()),
+                                    ("wallet", wallet.name.as_str()),
+                                    ("available", &format!("{:.8}", available_from)),
+                                    ("required", &format!("{:.8}", required_from)),
+                                ],
+                            ),
                         ));
                         continue;
                     }
-                };
-                let balance_key = (wallet.id.clone(), coin.id.clone());
-                let pending_delta = pending_balance_changes
-                    .get(&balance_key)
-                    .copied()
-                    .unwrap_or(0.0);
-                let mut required_from = import_tx.amount;
 
-                if let Some(fee_coin) = fee_coin.as_ref()
-                    && fee_coin.id == coin.id
-                {
-                    required_from += fee_amount;
-                }
-
-                let available_from = db_balance + pending_delta;
-                if available_from < required_from {
-                    summary.record_error(RowError::new(
-                        line_num,
-                        Some("amount"),
-                        t_args(
-                            "import-error-insufficient-crypto-balance",
-                            &[
-                                ("symbol", coin.symbol.as_str()),
-                                ("wallet", wallet.name.as_str()),
-                                ("available", &format!("{:.8}", available_from)),
-                                ("required", &format!("{:.8}", required_from)),
-                            ],
-                        ),
-                    ));
-                    continue;
-                }
-
-                if let Some(fee_coin) = fee_coin.as_ref() {
-                    if fee_coin.id == to_coin.id {
-                        let to_balance = match IngestionRepository::get_wallet_coin_balance(
-                            db,
-                            &wallet.id,
-                            &to_coin.id,
-                            import_tx.date.trim(),
-                        ) {
-                            Ok(b) => b,
-                            Err(e) => {
+                    if let Some(fee_coin) = fee_coin.as_ref() {
+                        if fee_coin.id == to_coin.id {
+                            let to_balance = match IngestionRepository::get_wallet_coin_balance(
+                                db,
+                                &wallet.id,
+                                &to_coin.id,
+                                import_tx.date.trim(),
+                            ) {
+                                Ok(b) => b,
+                                Err(e) => {
+                                    summary.record_error(RowError::new(
+                                        line_num,
+                                        None,
+                                        format!("Database error checking balance: {}", e),
+                                    ));
+                                    continue;
+                                }
+                            };
+                            let to_key = (wallet.id.clone(), to_coin.id.clone());
+                            let to_pending =
+                                pending_balance_changes.get(&to_key).copied().unwrap_or(0.0);
+                            let available_to = to_balance + to_pending + to_amount;
+                            if fee_amount > available_to {
                                 summary.record_error(RowError::new(
                                     line_num,
-                                    None,
-                                    format!("Database error checking balance: {}", e),
+                                    Some("fee_amount"),
+                                    "Fee amount exceeds available output balance".to_string(),
                                 ));
                                 continue;
                             }
-                        };
-                        let to_key = (wallet.id.clone(), to_coin.id.clone());
-                        let to_pending =
-                            pending_balance_changes.get(&to_key).copied().unwrap_or(0.0);
-                        let available_to = to_balance + to_pending + to_amount;
-                        if fee_amount > available_to {
-                            summary.record_error(RowError::new(
-                                line_num,
-                                Some("fee_amount"),
-                                "Fee amount exceeds available output balance".to_string(),
-                            ));
-                            continue;
-                        }
-                    } else if fee_coin.id != coin.id {
-                        let fee_balance = match IngestionRepository::get_wallet_coin_balance(
-                            db,
-                            &wallet.id,
-                            &fee_coin.id,
-                            import_tx.date.trim(),
-                        ) {
-                            Ok(b) => b,
-                            Err(e) => {
+                        } else if fee_coin.id != coin.id {
+                            let fee_balance = match IngestionRepository::get_wallet_coin_balance(
+                                db,
+                                &wallet.id,
+                                &fee_coin.id,
+                                import_tx.date.trim(),
+                            ) {
+                                Ok(b) => b,
+                                Err(e) => {
+                                    summary.record_error(RowError::new(
+                                        line_num,
+                                        None,
+                                        format!("Database error checking balance: {}", e),
+                                    ));
+                                    continue;
+                                }
+                            };
+                            let fee_key = (wallet.id.clone(), fee_coin.id.clone());
+                            let fee_pending = pending_balance_changes
+                                .get(&fee_key)
+                                .copied()
+                                .unwrap_or(0.0);
+                            let available_fee = fee_balance + fee_pending;
+                            if fee_amount > available_fee {
                                 summary.record_error(RowError::new(
                                     line_num,
-                                    None,
-                                    format!("Database error checking balance: {}", e),
+                                    Some("fee_amount"),
+                                    t_args(
+                                        "import-error-insufficient-crypto-balance",
+                                        &[
+                                            ("symbol", fee_coin.symbol.as_str()),
+                                            ("wallet", wallet.name.as_str()),
+                                            ("available", &format!("{:.8}", available_fee)),
+                                            ("required", &format!("{:.8}", fee_amount)),
+                                        ],
+                                    ),
                                 ));
                                 continue;
                             }
-                        };
-                        let fee_key = (wallet.id.clone(), fee_coin.id.clone());
-                        let fee_pending = pending_balance_changes
-                            .get(&fee_key)
-                            .copied()
-                            .unwrap_or(0.0);
-                        let available_fee = fee_balance + fee_pending;
-                        if fee_amount > available_fee {
-                            summary.record_error(RowError::new(
-                                line_num,
-                                Some("fee_amount"),
-                                t_args(
-                                    "import-error-insufficient-crypto-balance",
-                                    &[
-                                        ("symbol", fee_coin.symbol.as_str()),
-                                        ("wallet", wallet.name.as_str()),
-                                        ("available", &format!("{:.8}", available_fee)),
-                                        ("required", &format!("{:.8}", fee_amount)),
-                                    ],
-                                ),
-                            ));
-                            continue;
                         }
                     }
-                }
+                } // end !skip_balance_validation for swap
             }
 
             let dedup_key = if mechanical_type == "swap" {
