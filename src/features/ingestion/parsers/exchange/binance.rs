@@ -278,16 +278,69 @@ impl PendingConvert {
 
     /// Resolves the pending convert into zero or more `ImportCryptoTransaction`s.
     ///
-    /// A simple 1:1 convert produces a single swap.
-    /// A SmallAssetsExchange can have many outgoing (small dust) and one incoming
-    /// (BNB). We emit one swap per outgoing row paired with the single incoming.
+    /// Binance sometimes logs internal account transfers (Funding → Spot) with
+    /// the same "Binance Convert" label and timestamp as the real conversion.
+    /// For example, converting USDT to USDC may produce three rows:
+    ///   - Funding, USDT, -6.28  (internal: move USDT out of Funding)
+    ///   - Spot,    USDT, +6.28  (internal: move USDT into Spot)
+    ///   - Spot,    USDC, +6.28  (real: receive converted USDC)
+    ///
+    /// We first identify symbols that appear on **both** sides (outgoing AND
+    /// incoming). Those are internal transfers and should not form the swap
+    /// target. After filtering, the remaining rows represent the real conversion.
     fn resolve(self, wallet_name: &str) -> Vec<(usize, ImportCryptoTransaction)> {
+        use std::collections::HashSet;
+
         let mut results = Vec::new();
 
-        // Simple case: exactly one of each side
-        if self.outgoing.len() == 1 && self.incoming.len() == 1 {
-            let out = &self.outgoing[0];
-            let inc = &self.incoming[0];
+        // ── Step 1: Identify internal-transfer symbols ──
+        // A symbol that has entries on both the outgoing AND incoming side
+        // within the same Convert group is an internal account movement.
+        let out_symbols: HashSet<String> = self
+            .outgoing
+            .iter()
+            .map(|r| r.symbol.to_uppercase())
+            .collect();
+        let in_symbols: HashSet<String> = self
+            .incoming
+            .iter()
+            .map(|r| r.symbol.to_uppercase())
+            .collect();
+        let internal_symbols: HashSet<&String> = out_symbols.intersection(&in_symbols).collect();
+
+        // ── Step 2: Build effective outgoing / incoming ──
+        // Remove internal-transfer rows from the incoming side (they are not
+        // the real conversion target). For the outgoing side, keep internal
+        // rows as a fallback source (the user DID spend that currency).
+        let real_outgoing: Vec<&BinanceRow> = self
+            .outgoing
+            .iter()
+            .filter(|r| !internal_symbols.contains(&r.symbol.to_uppercase()))
+            .collect();
+        let real_incoming: Vec<&BinanceRow> = self
+            .incoming
+            .iter()
+            .filter(|r| !internal_symbols.contains(&r.symbol.to_uppercase()))
+            .collect();
+
+        // If all outgoing was internal (e.g. USDT appeared on both sides),
+        // fall back to the original outgoing rows as the conversion source.
+        let effective_outgoing: Vec<&BinanceRow> = if real_outgoing.is_empty() {
+            self.outgoing.iter().collect()
+        } else {
+            real_outgoing
+        };
+        let effective_incoming = real_incoming;
+
+        // Nothing left after filtering → pure internal transfer, skip
+        if effective_incoming.is_empty() {
+            return results;
+        }
+
+        // ── Step 3: Resolve 1:1 pairs ──
+        if effective_outgoing.len() == 1 && effective_incoming.len() == 1 {
+            let out = effective_outgoing[0];
+            let inc = effective_incoming[0];
 
             let out_fiat = is_fiat(&out.symbol);
             let in_fiat = is_fiat(&inc.symbol);
@@ -297,7 +350,7 @@ impl PendingConvert {
                 return results;
             }
 
-            // Same symbol on both sides (e.g. USDT -> USDT) — no-op, skip
+            // Same symbol after filtering (shouldn't happen, but guard)
             if out.symbol.eq_ignore_ascii_case(&inc.symbol) {
                 return results;
             }
@@ -387,23 +440,29 @@ impl PendingConvert {
             return results;
         }
 
-        // Multi-outgoing case (SmallAssetsExchange): many dust -> one BNB
-        // We emit one swap for each outgoing asset, distributing the incoming
-        // amount equally among all non-fiat outgoing rows.
-        if !self.incoming.is_empty() && !self.outgoing.is_empty() {
-            let inc = &self.incoming[0];
-            let total_outgoing_count = self.outgoing.len();
+        // ── Step 4: Multi-outgoing (SmallAssetsExchange): many dust -> one target ──
+        if !effective_incoming.is_empty() && !effective_outgoing.is_empty() {
+            let inc = effective_incoming[0];
+            let total_outgoing_count = effective_outgoing.len();
 
             // Count non-fiat outgoing rows so we can split the incoming evenly.
-            let non_fiat_count = self.outgoing.iter().filter(|o| !is_fiat(&o.symbol)).count();
+            let non_fiat_count = effective_outgoing
+                .iter()
+                .filter(|o| !is_fiat(&o.symbol))
+                .count();
             let share = if non_fiat_count > 0 {
                 inc.change.abs() / non_fiat_count as f64
             } else {
                 0.0
             };
 
-            for out in &self.outgoing {
+            for out in &effective_outgoing {
                 if is_fiat(&out.symbol) {
+                    continue;
+                }
+
+                // Guard: skip same-symbol pairs within multi-path
+                if out.symbol.eq_ignore_ascii_case(&inc.symbol) {
                     continue;
                 }
 
@@ -1614,6 +1673,48 @@ mod tests {
             "User_ID,UTC_Time,Account,Operation,Coin,Change,Remark\n",
             "12345,2024-01-15 10:30:45,Spot,Binance Convert,USDT,-6.20000000,\n",
             "12345,2024-01-15 10:30:45,Spot,Binance Convert,USDT,6.20000000,\n",
+        );
+
+        let parser = BinanceAllStatementsParser;
+        let result = parser.parse(csv, "Binance").unwrap();
+
+        assert_eq!(result.items.len(), 0);
+    }
+
+    #[test]
+    fn all_statements_convert_with_internal_transfer() {
+        // Binance logs an internal Funding->Spot transfer with the same
+        // "Binance Convert" label and timestamp as the real conversion.
+        // The parser must filter out the internal USDT transfer and
+        // correctly produce a USDT -> USDC swap.
+        let csv = concat!(
+            "User_ID,UTC_Time,Account,Operation,Coin,Change,Remark\n",
+            "12345,2024-01-15 10:30:45,Funding,Binance Convert,USDT,-6.28000000,\n",
+            "12345,2024-01-15 10:30:45,Spot,Binance Convert,USDT,6.28000000,\n",
+            "12345,2024-01-15 10:30:45,Spot,Binance Convert,USDC,6.27603293,\n",
+        );
+
+        let parser = BinanceAllStatementsParser;
+        let result = parser.parse(csv, "Binance").unwrap();
+
+        assert_eq!(result.items.len(), 1);
+        let tx = &result.items[0].1;
+        assert_eq!(tx.transaction_type, "trade");
+        assert_eq!(tx.subtype.as_deref(), Some("swap"));
+        assert_eq!(tx.symbol, "USDT");
+        assert!((tx.amount - 6.28).abs() < f64::EPSILON);
+        assert_eq!(tx.swap_to_symbol.as_deref(), Some("USDC"));
+        assert!((tx.swap_to_amount.unwrap() - 6.27603293).abs() < 1e-8);
+    }
+
+    #[test]
+    fn all_statements_convert_pure_internal_transfer_is_skipped() {
+        // If after filtering internal transfers nothing real remains,
+        // the entire group is a no-op.
+        let csv = concat!(
+            "User_ID,UTC_Time,Account,Operation,Coin,Change,Remark\n",
+            "12345,2024-01-15 10:30:45,Funding,Binance Convert,USDT,-10.00000000,\n",
+            "12345,2024-01-15 10:30:45,Spot,Binance Convert,USDT,10.00000000,\n",
         );
 
         let parser = BinanceAllStatementsParser;
