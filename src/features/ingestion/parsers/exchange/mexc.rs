@@ -305,6 +305,12 @@ impl ExchangeParser for MexcSpotParser {
                 result.items.push((line_number, tx));
             } else {
                 // Crypto-to-crypto: swap
+                // Guard: skip same-symbol pairs (e.g. BTC_BTC) — would
+                // produce an invalid swap X→X that fails validation.
+                if base_symbol.eq_ignore_ascii_case(&quote_symbol) {
+                    continue;
+                }
+
                 let (from_symbol, from_amount, to_symbol, to_amount) = if is_buy {
                     // Buying base with quote: out=quote, in=base
                     (quote_symbol, order_amount, base_symbol, filled_qty)
@@ -676,5 +682,37 @@ mod tests {
     fn parse_pair_invalid_empty_side() {
         assert!(parse_mexc_pair("_USDT").is_none());
         assert!(parse_mexc_pair("LTC_").is_none());
+    }
+
+    // ── Same-symbol swap guard ──────────────────────────────────────────
+
+    #[test]
+    fn same_symbol_pair_is_skipped() {
+        // A degenerate pair like BTC_BTC should be silently skipped instead
+        // of producing an invalid swap X->X that fails downstream validation.
+        let csv = format!(
+            "{}\n{},{},{},{},{},{},{},{},{},{},{}",
+            HEADER,
+            "123456",
+            "BTC_BTC",
+            "2024-06-01 10:00:00",
+            "Limit Order",
+            "Buy",
+            "1.00",
+            "1.00",
+            "0.5",
+            "0.5",
+            "0.5",
+            "Filled",
+        );
+
+        let parser = MexcSpotParser;
+        let result = parser.parse(&csv, "MEXC").unwrap();
+
+        assert!(
+            result.items.is_empty(),
+            "Expected no transactions for same-symbol pair BTC_BTC, got {}",
+            result.items.len()
+        );
     }
 }

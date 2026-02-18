@@ -343,6 +343,13 @@ impl PendingTrade {
         }
 
         // Crypto -> Crypto = swap
+        // Guard: same-symbol pairs are no-ops (e.g. internal movements that
+        // slipped through subtype filtering). Skip silently instead of
+        // producing an invalid swap that fails downstream validation.
+        if outgoing.symbol.eq_ignore_ascii_case(&incoming.symbol) {
+            return Vec::new();
+        }
+
         let fee_coin_symbol;
         let fee_amount;
         if outgoing.fee.abs() > f64::EPSILON {
@@ -912,6 +919,13 @@ impl ExchangeParser for KrakenTradesParser {
                 result.items.push((line_number, tx));
             } else {
                 // Crypto-to-crypto pair — swap
+
+                // Guard: skip same-symbol pairs (shouldn't happen with valid
+                // Kraken data, but prevents invalid swap X→X if it does).
+                if base == quote {
+                    continue;
+                }
+
                 let (from_symbol, from_amount, to_symbol, to_amount) = if is_buy {
                     // Buying base with quote: outgoing=quote, incoming=base
                     (quote.clone(), cost, base.clone(), volume)
@@ -1345,7 +1359,7 @@ mod tests {
     fn ledger_invite_bonus_becomes_deposit() {
         let csv = concat!(
             "\"txid\",\"refid\",\"time\",\"type\",\"subtype\",\"aclass\",\"asset\",\"amount\",\"fee\",\"balance\"\n",
-            "\"TX1\",\"REF1\",\"2024-06-01 00:00:00\",\"invite bonus\",\"\",\"currency\",\"XXBT\",\"0.001\",\"0\",\"0.001\"\n",
+            "\"TX-BONUS\",\"REF-BONUS\",\"2024-07-01 12:00:00\",\"invite bonus\",\"\",\"currency\",\"XXBT\",\"0.001\",\"0\",\"0.001\"\n",
         );
 
         let parser = KrakenLedgerParser;
@@ -1353,8 +1367,51 @@ mod tests {
 
         assert_eq!(result.items.len(), 1);
         let tx = &result.items[0].1;
-        assert_eq!(tx.symbol, "BTC");
         assert_eq!(tx.transaction_type, "transfer");
         assert_eq!(tx.subtype.as_deref(), Some("deposit"));
+        assert_eq!(tx.symbol, "BTC");
+    }
+
+    // ── Same-symbol swap guards ─────────────────────────────────────────
+
+    #[test]
+    fn ledger_same_symbol_trade_pair_is_skipped() {
+        // If both sides of a trade pair resolve to the same symbol (e.g. an
+        // internal movement that wasn't caught by subtype filtering), the
+        // parser should silently skip it instead of producing an invalid
+        // swap X→X that fails downstream validation.
+        let csv = concat!(
+            "\"txid\",\"refid\",\"time\",\"type\",\"subtype\",\"aclass\",\"asset\",\"amount\",\"fee\",\"balance\"\n",
+            "\"TX-OUT\",\"REF-SAME\",\"2024-06-01 10:00:00\",\"trade\",\"\",\"currency\",\"XXBT\",\"-0.5\",\"0\",\"0\"\n",
+            "\"TX-IN\",\"REF-SAME\",\"2024-06-01 10:00:00\",\"trade\",\"\",\"currency\",\"XXBT\",\"0.5\",\"0\",\"0.5\"\n",
+        );
+
+        let parser = KrakenLedgerParser;
+        let result = parser.parse(csv, "Kraken").unwrap();
+
+        // Both rows normalise to BTC — same-symbol swap should be skipped
+        assert!(
+            result.items.is_empty(),
+            "Expected no transactions for same-symbol trade pair, got {}",
+            result.items.len()
+        );
+    }
+
+    #[test]
+    fn trades_same_symbol_pair_is_skipped() {
+        // Degenerate pair like BTC/BTC should be silently skipped.
+        let csv = concat!(
+            "\"txid\",\"ordertxid\",\"pair\",\"time\",\"type\",\"ordertype\",\"price\",\"cost\",\"fee\",\"vol\",\"margin\",\"misc\",\"ledgers\"\n",
+            "\"TX1\",\"ORD1\",\"BTC/BTC\",\"2024-06-01 10:00:00\",\"buy\",\"limit\",\"1.00\",\"0.5\",\"0\",\"0.5\",\"0\",\"\",\"L1,L2\"\n",
+        );
+
+        let parser = KrakenTradesParser;
+        let result = parser.parse(csv, "Kraken").unwrap();
+
+        assert!(
+            result.items.is_empty(),
+            "Expected no transactions for same-symbol pair, got {}",
+            result.items.len()
+        );
     }
 }
