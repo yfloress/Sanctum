@@ -360,8 +360,10 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_import_exchange_not_detected(s(&t("import-exchange-not-detected")));
     tr.set_import_exchange_default_wallet(s(&t("import-exchange-default-wallet")));
     tr.set_import_exchange_hint_kraken(s(&t("import-exchange-hint-kraken")));
+    tr.set_import_exchange_hint_kraken_pro(s(&t("import-exchange-hint-kraken-pro")));
     tr.set_import_exchange_hint_binance(s(&t("import-exchange-hint-binance")));
     tr.set_import_exchange_hint_feather(s(&t("import-exchange-hint-feather")));
+    tr.set_import_exchange_hint_monero_gui(s(&t("import-exchange-hint-monero-gui")));
 
     // Exchange wallet selection modal
     tr.set_exchange_wallet_select_title(s(&t("exchange-wallet-select-title")));

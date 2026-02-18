@@ -847,36 +847,174 @@ export component SettingsPage inherits Rectangle {
                         }
                     }
 
-                    Text {
-                        text: Translations.import-exchange-supported;
-                        color: Theme.text-muted;
-                        font-size: 10px;
-                        font-weight: 400;
-                        letter-spacing: 0.3px;
+                    property <bool> show-exchange-help: false;
+
+                    HorizontalLayout {
+                        alignment: start;
+                        spacing: 8px;
+
+                        Rectangle {
+                            width: 28px;
+                            height: 28px;
+                            border-radius: 14px;
+                            background: help-touch.has-hover
+                                ? Theme.surface-hover
+                                : Theme.surface;
+                            border-width: 1px;
+                            border-color: help-touch.has-hover
+                                ? Theme.border-subtle
+                                : transparent;
+
+                            animate background { duration: 150ms; }
+                            animate border-color { duration: 150ms; }
+
+                            Text {
+                                text: "?";
+                                color: help-touch.has-hover
+                                    ? Theme.text-primary
+                                    : Theme.text-muted;
+                                font-size: 13px;
+                                font-weight: 600;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+
+                                animate color { duration: 150ms; }
+                            }
+
+                            help-touch := TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => {
+                                    show-exchange-help = !show-exchange-help;
+                                }
+                            }
+                        }
+
+                        Text {
+                            text: Translations.import-exchange-supported;
+                            color: Theme.text-muted;
+                            font-size: 10px;
+                            font-weight: 400;
+                            letter-spacing: 0.3px;
+                            vertical-alignment: center;
+                        }
                     }
 
-                    Text {
-                        text: Translations.import-exchange-hint-kraken;
-                        color: Theme.text-muted;
-                        font-size: 9px;
-                        font-weight: 400;
-                        letter-spacing: 0.2px;
-                    }
+                    if show-exchange-help: Rectangle {
+                        background: Theme.surface;
+                        border-radius: 10px;
+                        border-width: 1px;
+                        border-color: Theme.border;
+                        height: help-content.preferred-height + 24px;
 
-                    Text {
-                        text: Translations.import-exchange-hint-binance;
-                        color: Theme.text-muted;
-                        font-size: 9px;
-                        font-weight: 400;
-                        letter-spacing: 0.2px;
-                    }
+                        help-content := VerticalLayout {
+                            padding: 12px;
+                            spacing: 10px;
 
-                    Text {
-                        text: Translations.import-exchange-hint-feather;
-                        color: Theme.text-muted;
-                        font-size: 9px;
-                        font-weight: 400;
-                        letter-spacing: 0.2px;
+                            // Kraken
+                            VerticalLayout {
+                                spacing: 2px;
+
+                                Text {
+                                    text: "Kraken";
+                                    color: Theme.text-primary;
+                                    font-size: 11px;
+                                    font-weight: 600;
+                                    letter-spacing: 0.5px;
+                                }
+
+                                Text {
+                                    text: Translations.import-exchange-hint-kraken;
+                                    color: Theme.text-muted;
+                                    font-size: 10px;
+                                    font-weight: 400;
+                                    wrap: word-wrap;
+                                }
+                            }
+
+                            // Kraken Pro
+                            VerticalLayout {
+                                spacing: 2px;
+
+                                Text {
+                                    text: "Kraken Pro";
+                                    color: Theme.text-primary;
+                                    font-size: 11px;
+                                    font-weight: 600;
+                                    letter-spacing: 0.5px;
+                                }
+
+                                Text {
+                                    text: Translations.import-exchange-hint-kraken-pro;
+                                    color: Theme.text-muted;
+                                    font-size: 10px;
+                                    font-weight: 400;
+                                    wrap: word-wrap;
+                                }
+                            }
+
+                            // Binance
+                            VerticalLayout {
+                                spacing: 2px;
+
+                                Text {
+                                    text: "Binance";
+                                    color: Theme.text-primary;
+                                    font-size: 11px;
+                                    font-weight: 600;
+                                    letter-spacing: 0.5px;
+                                }
+
+                                Text {
+                                    text: Translations.import-exchange-hint-binance;
+                                    color: Theme.text-muted;
+                                    font-size: 10px;
+                                    font-weight: 400;
+                                    wrap: word-wrap;
+                                }
+                            }
+
+                            // Feather Wallet
+                            VerticalLayout {
+                                spacing: 2px;
+
+                                Text {
+                                    text: "Feather Wallet";
+                                    color: Theme.text-primary;
+                                    font-size: 11px;
+                                    font-weight: 600;
+                                    letter-spacing: 0.5px;
+                                }
+
+                                Text {
+                                    text: Translations.import-exchange-hint-feather;
+                                    color: Theme.text-muted;
+                                    font-size: 10px;
+                                    font-weight: 400;
+                                    wrap: word-wrap;
+                                }
+                            }
+
+                            // Monero GUI Wallet
+                            VerticalLayout {
+                                spacing: 2px;
+
+                                Text {
+                                    text: "Monero GUI Wallet";
+                                    color: Theme.text-primary;
+                                    font-size: 11px;
+                                    font-weight: 600;
+                                    letter-spacing: 0.5px;
+                                }
+
+                                Text {
+                                    text: Translations.import-exchange-hint-monero-gui;
+                                    color: Theme.text-muted;
+                                    font-size: 10px;
+                                    font-weight: 400;
+                                    wrap: word-wrap;
+                                }
+                            }
+                        }
                     }
                 }
 
