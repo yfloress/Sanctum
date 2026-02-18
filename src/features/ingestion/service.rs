@@ -1662,6 +1662,18 @@ impl IngestionService {
                     (second_id, first_id)
                 };
 
+                // Ensure source side always has price_per_coin so the portfolio
+                // direction resolver can distinguish source from target (score +1).
+                // If the parser didn't provide a price, derive it from the
+                // exchange rate: to_amount / from_amount.
+                let swap_price = import_tx.price_per_coin.or_else(|| {
+                    if import_tx.amount > 0.0 && to_amount > 0.0 {
+                        Some(to_amount / import_tx.amount)
+                    } else {
+                        None
+                    }
+                });
+
                 let source = CryptoTransaction {
                     id: source_id.clone(),
                     wallet_id: wallet.id.clone(),
@@ -1669,7 +1681,7 @@ impl IngestionService {
                     symbol: coin.symbol.clone(),
                     transaction_type: category_type.clone(),
                     amount: import_tx.amount,
-                    price_per_coin: import_tx.price_per_coin,
+                    price_per_coin: swap_price,
                     fee: import_tx.fee,
                     fee_coin_id: resolved_fee_coin_id.clone(),
                     fee_amount: resolved_fee_amount,
