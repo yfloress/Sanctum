@@ -297,6 +297,11 @@ impl PendingConvert {
                 return results;
             }
 
+            // Same symbol on both sides (e.g. USDT -> USDT) — no-op, skip
+            if out.symbol.eq_ignore_ascii_case(&inc.symbol) {
+                return results;
+            }
+
             let date = format_datetime(out.timestamp);
             let line = out.line_number;
             let notes = Some(format!("Binance {} | {}", out.operation_raw, out.remark));
@@ -1599,6 +1604,22 @@ mod tests {
             // Incoming BNB (0.15) split equally across 2 dust assets
             assert_eq!(tx.swap_to_amount, Some(0.075));
         }
+    }
+
+    #[test]
+    fn all_statements_convert_same_symbol_is_skipped() {
+        // A convert where both sides are the same coin (e.g. USDT -> USDT)
+        // is a no-op and should produce zero transactions.
+        let csv = concat!(
+            "User_ID,UTC_Time,Account,Operation,Coin,Change,Remark\n",
+            "12345,2024-01-15 10:30:45,Spot,Binance Convert,USDT,-6.20000000,\n",
+            "12345,2024-01-15 10:30:45,Spot,Binance Convert,USDT,6.20000000,\n",
+        );
+
+        let parser = BinanceAllStatementsParser;
+        let result = parser.parse(csv, "Binance").unwrap();
+
+        assert_eq!(result.items.len(), 0);
     }
 
     // ── P2P Trading tests ──
