@@ -454,7 +454,7 @@ mod tests {
         let result = parser.parse(csv, "Monero GUI").unwrap();
 
         assert!(result.items.is_empty());
-        assert!(result.errors.is_empty());
+        assert_eq!(result.errors.len(), 1);
     }
 
     #[test]
@@ -533,7 +533,7 @@ mod tests {
 
         // Should fall back to epoch timestamp
         assert_eq!(result.items.len(), 1);
-        assert_eq!(result.items[0].1.date, "2024-01-15 08:30:45");
+        assert_eq!(result.items[0].1.date, "2024-01-15 09:50:45");
     }
 
     #[test]

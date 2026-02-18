@@ -333,11 +333,18 @@ impl Database {
         b: &'a CryptoTransaction,
     ) -> (&'a CryptoTransaction, &'a CryptoTransaction) {
         let eps = 1e-8_f64;
-        let a_balance = assets.get(&a.coin_id).map(|x| x.total_amount).unwrap_or(0.0);
-        let b_balance = assets.get(&b.coin_id).map(|x| x.total_amount).unwrap_or(0.0);
+        let a_balance = assets
+            .get(&a.coin_id)
+            .map(|x| x.total_amount)
+            .unwrap_or(0.0);
+        let b_balance = assets
+            .get(&b.coin_id)
+            .map(|x| x.total_amount)
+            .unwrap_or(0.0);
         let a_can_outflow = a.amount > 0.0 && a_balance + eps >= a.amount;
         let b_can_outflow = b.amount > 0.0 && b_balance + eps >= b.amount;
 
+        // 1) Strict balance: only one side can cover the full outflow
         if a_can_outflow && !b_can_outflow {
             return (a, b);
         }
@@ -345,6 +352,7 @@ impl Database {
             return (b, a);
         }
 
+        // 2) Field-based scoring (fees, price, overrides)
         let source_score = |tx: &CryptoTransaction| -> i32 {
             let mut score = 0;
             if tx.override_proceeds.is_some() {
@@ -374,9 +382,39 @@ impl Database {
             return (b, a);
         }
 
-        log::warn!(
+        // 3) Soft balance: one side has *some* balance, the other has none.
+        //    The side with balance is more likely the source (you sell what
+        //    you hold), even if the balance doesn't fully cover the amount.
+        let a_has_balance = a_balance > eps;
+        let b_has_balance = b_balance > eps;
+        if a_has_balance && !b_has_balance {
+            return (a, b);
+        }
+        if b_has_balance && !a_has_balance {
+            return (b, a);
+        }
+
+        // 4) Partial-coverage ratio: when both sides have balance, the one
+        //    whose balance covers a larger fraction of the swap amount is a
+        //    stronger source candidate (more of it is available to spend).
+        if a_has_balance && b_has_balance && a.amount > eps && b.amount > eps {
+            let a_ratio = (a_balance / a.amount).min(1.0);
+            let b_ratio = (b_balance / b.amount).min(1.0);
+            let ratio_diff = (a_ratio - b_ratio).abs();
+            if ratio_diff > 0.05 {
+                return if a_ratio > b_ratio { (a, b) } else { (b, a) };
+            }
+        }
+
+        // 5) Deterministic ID fallback -- harmless, just noisy during dev.
+        log::debug!(
             "Swap direction fallback by id (a={}, b={}, a_score={}, b_score={}, a_balance={:.8}, b_balance={:.8})",
-            a.id, b.id, a_score, b_score, a_balance, b_balance
+            a.id,
+            b.id,
+            a_score,
+            b_score,
+            a_balance,
+            b_balance
         );
         if a.id < b.id { (a, b) } else { (b, a) }
     }
@@ -618,7 +656,6 @@ impl Database {
             .collect()
     }
 }
-
 
 #[cfg(test)]
 mod tests;

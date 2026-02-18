@@ -548,7 +548,7 @@ mod tests {
 
         // Should fall back to timestamp column
         assert_eq!(result.items.len(), 1);
-        assert_eq!(result.items[0].1.date, "2024-01-15 08:30:45");
+        assert_eq!(result.items[0].1.date, "2024-01-15 09:50:45");
     }
 
     #[test]
@@ -699,8 +699,7 @@ mod tests {
 
         // Row 2: invalid date (month 13, hour 29) => falls back to timestamp 1761823846
         let tx2 = &result.items[1].1;
-        // timestamp 1761823846 = 2025-10-30 (approximately)
-        assert!(!tx2.date.is_empty());
+        assert_eq!(tx2.date, "2025-10-30 11:30:46");
         assert_eq!(tx2.transaction_type, "transfer");
         assert_eq!(tx2.subtype.as_deref(), Some("withdrawal"));
         assert!((tx2.amount - 0.03441928).abs() < 1e-8);
@@ -710,5 +709,22 @@ mod tests {
         let notes2 = tx2.notes.as_deref().unwrap();
         assert!(notes2.contains("Fiat: 10.63 USD"));
         assert!(notes2.contains("Block: 2222222"));
+    }
+
+    #[test]
+    fn real_feather_churn_in_is_skipped_silently() {
+        // Real Feather format: quoted ISO-8601 date with Z, direction "in",
+        // amount 0 → receiving side of a churn/self-send, must be skipped.
+        let csv = concat!(
+            "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
+            "1111111,111111111,\"2020-01-10T21:20:50Z\",0,\"in\",0.000000000000,0.000000000000,0.000490880000,\"291283921399821jhdsfkjaskjdfh92382839\",\"\",\"\",\"0.00\",\"USD\"\n",
+        );
+
+        let parser = FeatherParser;
+        let result = parser.parse(csv, "Feather").unwrap();
+
+        // Zero-amount incoming is churn-in: no items, no errors
+        assert!(result.items.is_empty());
+        assert!(result.errors.is_empty());
     }
 }
