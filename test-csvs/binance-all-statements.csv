@@ -16,3 +16,6 @@ User_ID,UTC_Time,Account,Operation,Coin,Change,Remark
 12345678,2024-04-10 14:00:00,Spot,Transaction Revenue,ADA,500.00000000,
 12345678,2024-05-01 10:00:00,Spot,Fiat Deposit,USD,1000.00000000,
 12345678,2024-05-15 12:00:00,Spot,Main and funding account transfer,BTC,0.20000000,
+12345678,2024-06-01 09:00:00,Funding,P2P Trading,USDT,500.00000000,P2P - 9876543210
+12345678,2024-06-05 14:30:00,Funding,P2P Trading,BTC,-0.01000000,P2P - 1234567890
+12345678,2024-06-10 11:00:00,USD-M Futures,Transfer Between Spot Account and UM Futures Account,USDT,-200.00000000,

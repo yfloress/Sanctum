@@ -73,6 +73,7 @@ enum BinanceOperation {
     Transfer,
     CardCashback,
     CardSpending,
+    P2PTrade,
     Unknown,
 }
 
@@ -110,10 +111,24 @@ impl BinanceOperation {
             | "Transfer Between Main and Margin Wallet"
             | "Transfer Between Spot and Futures"
             | "Main and Funding Account Transfer"
-            | "Main and funding account transfer" => BinanceOperation::Transfer,
+            | "Main and funding account transfer"
+            | "Transfer Between Spot Account and UM Futures Account"
+            | "Transfer Between Spot Account and USDⓈ-M Futures Account"
+            | "Transfer Between Spot Account and CM Futures Account"
+            | "Transfer Between Spot Account and COIN-M Futures Account" => {
+                BinanceOperation::Transfer
+            }
             "Binance Card Cashback" | "Card Cashback" => BinanceOperation::CardCashback,
             "Binance Card Spending" | "Card Spending" => BinanceOperation::CardSpending,
-            _ => BinanceOperation::Unknown,
+            "P2P Trading" | "C2C Transfer" => BinanceOperation::P2PTrade,
+            _ => {
+                let trimmed = raw.trim();
+                if trimmed.starts_with("Transfer Between") {
+                    BinanceOperation::Transfer
+                } else {
+                    BinanceOperation::Unknown
+                }
+            }
         }
     }
 
@@ -449,7 +464,11 @@ fn single_row_to_transaction(
         return None;
     }
 
-    if row.operation.should_skip() || row.operation.needs_pairing() {
+    if row.operation.needs_pairing() {
+        return None;
+    }
+
+    if row.operation.should_skip() {
         return None;
     }
 
@@ -462,6 +481,13 @@ fn single_row_to_transaction(
         }
         BinanceOperation::Sell | BinanceOperation::TransactionSold => {
             ("trade".to_string(), Some("sell".to_string()))
+        }
+        BinanceOperation::P2PTrade => {
+            if row.change > 0.0 {
+                ("trade".to_string(), Some("buy".to_string()))
+            } else {
+                ("trade".to_string(), Some("sell".to_string()))
+            }
         }
         BinanceOperation::Deposit => ("transfer".to_string(), Some("deposit".to_string())),
         BinanceOperation::Withdraw => ("transfer".to_string(), Some("withdrawal".to_string())),
@@ -1544,23 +1570,176 @@ mod tests {
     fn all_statements_small_assets_exchange_multi_dust() {
         let csv = concat!(
             "User_ID,UTC_Time,Account,Operation,Coin,Change,Remark\n",
-            "12345,2024-06-01 12:00:00,Spot,Small Assets Exchange BNB,DOGE,-50.0,\n",
-            "12345,2024-06-01 12:00:00,Spot,Small Assets Exchange BNB,ADA,-10.0,\n",
-            "12345,2024-06-01 12:00:00,Spot,Small Assets Exchange BNB,BNB,0.5,\n",
+            "12345,2024-01-15 10:30:45,Spot,Small Assets Exchange BNB,DOGE,-100.0,\n",
+            "12345,2024-01-15 10:30:45,Spot,Small Assets Exchange BNB,ADA,-50.0,\n",
+            "12345,2024-01-15 10:30:45,Spot,Small Assets Exchange BNB,BNB,0.15,\n",
         );
 
         let parser = BinanceAllStatementsParser;
         let result = parser.parse(csv, "Binance").unwrap();
 
-        // Should produce 2 swaps (DOGE->BNB, ADA->BNB)
+        // Two swap transactions (DOGE->BNB and ADA->BNB)
         assert_eq!(result.items.len(), 2);
 
-        for (_, tx) in &result.items {
+        for item in &result.items {
+            let tx = &item.1;
             assert_eq!(tx.transaction_type, "trade");
             assert_eq!(tx.subtype.as_deref(), Some("swap"));
             assert_eq!(tx.swap_to_symbol.as_deref(), Some("BNB"));
-            // swap_to_amount is None for dust conversions (can't split evenly)
+            // swap_to_amount is None for multi-dust conversions
             assert!(tx.swap_to_amount.is_none());
         }
+    }
+
+    // ── P2P Trading tests ──
+
+    #[test]
+    fn all_statements_p2p_buy_becomes_trade_buy() {
+        let csv = concat!(
+            "User_ID,UTC_Time,Account,Operation,Coin,Change,Remark\n",
+            "12345,2024-01-15 10:30:45,Funding,P2P Trading,USDT,6.20000000,P2P - 12345678\n",
+        );
+
+        let parser = BinanceAllStatementsParser;
+        let result = parser.parse(csv, "Binance").unwrap();
+
+        assert_eq!(result.items.len(), 1);
+        let tx = &result.items[0].1;
+        assert_eq!(tx.symbol, "USDT");
+        assert_eq!(tx.transaction_type, "trade");
+        assert_eq!(tx.subtype.as_deref(), Some("buy"));
+        assert!((tx.amount - 6.2).abs() < f64::EPSILON);
+        assert!(tx.notes.as_ref().unwrap().contains("P2P Trading"));
+        assert!(tx.notes.as_ref().unwrap().contains("P2P - 12345678"));
+    }
+
+    #[test]
+    fn all_statements_p2p_sell_becomes_trade_sell() {
+        let csv = concat!(
+            "User_ID,UTC_Time,Account,Operation,Coin,Change,Remark\n",
+            "12345,2024-02-20 14:00:00,Funding,P2P Trading,BTC,-0.01000000,P2P - 99887766\n",
+        );
+
+        let parser = BinanceAllStatementsParser;
+        let result = parser.parse(csv, "Binance").unwrap();
+
+        assert_eq!(result.items.len(), 1);
+        let tx = &result.items[0].1;
+        assert_eq!(tx.symbol, "BTC");
+        assert_eq!(tx.transaction_type, "trade");
+        assert_eq!(tx.subtype.as_deref(), Some("sell"));
+        assert!((tx.amount - 0.01).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn all_statements_c2c_transfer_becomes_trade_buy() {
+        let csv = concat!(
+            "User_ID,UTC_Time,Account,Operation,Coin,Change,Remark\n",
+            "12345,2024-03-10 08:15:00,Funding,C2C Transfer,ETH,1.50000000,\n",
+        );
+
+        let parser = BinanceAllStatementsParser;
+        let result = parser.parse(csv, "Binance").unwrap();
+
+        assert_eq!(result.items.len(), 1);
+        let tx = &result.items[0].1;
+        assert_eq!(tx.symbol, "ETH");
+        assert_eq!(tx.transaction_type, "trade");
+        assert_eq!(tx.subtype.as_deref(), Some("buy"));
+        assert!((tx.amount - 1.5).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn all_statements_p2p_fiat_is_skipped() {
+        let csv = concat!(
+            "User_ID,UTC_Time,Account,Operation,Coin,Change,Remark\n",
+            "12345,2024-01-15 10:30:45,Funding,P2P Trading,USD,100.00000000,P2P - 12345678\n",
+        );
+
+        let parser = BinanceAllStatementsParser;
+        let result = parser.parse(csv, "Binance").unwrap();
+
+        // USD is fiat — should be skipped
+        assert_eq!(result.items.len(), 0);
+    }
+
+    // ── Transfer between sub-accounts (UM Futures, etc.) ──
+
+    #[test]
+    fn all_statements_um_futures_transfer_is_skipped() {
+        let csv = concat!(
+            "User_ID,UTC_Time,Account,Operation,Coin,Change,Remark\n",
+            "12345,2024-01-15 10:30:45,USD-M Futures,Transfer Between Spot Account and UM Futures Account,USDT,-20.00000000,\n",
+        );
+
+        let parser = BinanceAllStatementsParser;
+        let result = parser.parse(csv, "Binance").unwrap();
+
+        // Internal transfer — should be skipped
+        assert_eq!(result.items.len(), 0);
+    }
+
+    #[test]
+    fn all_statements_unknown_transfer_between_is_skipped() {
+        // Any "Transfer Between..." string we haven't explicitly listed should
+        // still be caught by the starts_with fallback.
+        let csv = concat!(
+            "User_ID,UTC_Time,Account,Operation,Coin,Change,Remark\n",
+            "12345,2024-06-01 12:00:00,Spot,Transfer Between Spot and Some New Account,BTC,0.10000000,\n",
+        );
+
+        let parser = BinanceAllStatementsParser;
+        let result = parser.parse(csv, "Binance").unwrap();
+
+        assert_eq!(result.items.len(), 0);
+    }
+
+    #[test]
+    fn all_statements_mixed_p2p_convert_transfer() {
+        // Realistic scenario: P2P buy, then convert, then internal transfer
+        let csv = concat!(
+            "User_ID,UTC_Time,Account,Operation,Coin,Change,Remark\n",
+            "12345,2024-01-10 09:00:00,Funding,P2P Trading,USDT,100.00000000,P2P - 111\n",
+            "12345,2024-01-10 10:00:00,Spot,Binance Convert,USDT,-50.00000000,\n",
+            "12345,2024-01-10 10:00:00,Spot,Binance Convert,BTC,0.00120000,\n",
+            "12345,2024-01-10 11:00:00,USD-M Futures,Transfer Between Spot Account and UM Futures Account,USDT,-20.00000000,\n",
+        );
+
+        let parser = BinanceAllStatementsParser;
+        let result = parser.parse(csv, "Binance").unwrap();
+
+        // P2P buy (1) + Convert pair becomes buy since USDT->BTC with USDT
+        // not being fiat (1) + Transfer skipped (0) = 2 transactions
+        assert_eq!(result.items.len(), 2);
+
+        // Find the P2P trade
+        let p2p = result
+            .items
+            .iter()
+            .find(|(_, tx)| {
+                tx.notes
+                    .as_ref()
+                    .map_or(false, |n| n.contains("P2P Trading"))
+            })
+            .map(|(_, tx)| tx)
+            .expect("Should have a P2P transaction");
+        assert_eq!(p2p.symbol, "USDT");
+        assert_eq!(p2p.subtype.as_deref(), Some("buy"));
+        assert!((p2p.amount - 100.0).abs() < f64::EPSILON);
+
+        // Find the convert (USDT -> BTC = swap since neither is fiat)
+        let convert = result
+            .items
+            .iter()
+            .find(|(_, tx)| {
+                tx.notes
+                    .as_ref()
+                    .map_or(false, |n| n.contains("Binance Convert"))
+            })
+            .map(|(_, tx)| tx)
+            .expect("Should have a Convert transaction");
+        assert_eq!(convert.symbol, "USDT");
+        assert_eq!(convert.subtype.as_deref(), Some("swap"));
+        assert_eq!(convert.swap_to_symbol.as_deref(), Some("BTC"));
     }
 }
