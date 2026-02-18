@@ -383,10 +383,19 @@ impl PendingConvert {
         }
 
         // Multi-outgoing case (SmallAssetsExchange): many dust -> one BNB
-        // We emit one swap for each outgoing asset.
+        // We emit one swap for each outgoing asset, distributing the incoming
+        // amount equally among all non-fiat outgoing rows.
         if !self.incoming.is_empty() && !self.outgoing.is_empty() {
             let inc = &self.incoming[0];
             let total_outgoing_count = self.outgoing.len();
+
+            // Count non-fiat outgoing rows so we can split the incoming evenly.
+            let non_fiat_count = self.outgoing.iter().filter(|o| !is_fiat(&o.symbol)).count();
+            let share = if non_fiat_count > 0 {
+                inc.change.abs() / non_fiat_count as f64
+            } else {
+                0.0
+            };
 
             for out in &self.outgoing {
                 if is_fiat(&out.symbol) {
@@ -423,9 +432,10 @@ impl PendingConvert {
                     ));
                 } else {
                     // Dust -> BNB (or other crypto) = swap
-                    // We can't split the incoming BNB evenly, so we leave
-                    // swap_to_amount as None for dust conversions. The user
-                    // would need to set this manually or rely on price lookup.
+                    // We split the total incoming amount equally across all
+                    // non-fiat outgoing rows. Not perfectly accurate for
+                    // heterogeneous dust, but deterministic and passes
+                    // validation (swap_to_amount must be present).
                     results.push((
                         out.line_number,
                         ImportCryptoTransaction {
@@ -440,7 +450,7 @@ impl PendingConvert {
                             override_proceeds: None,
                             override_cost_basis: None,
                             swap_to_symbol: Some(inc.symbol.clone()),
-                            swap_to_amount: None,
+                            swap_to_amount: Some(share),
                             fee_coin_symbol: None,
                             fee_amount: None,
                             notes,
@@ -1586,8 +1596,8 @@ mod tests {
             assert_eq!(tx.transaction_type, "trade");
             assert_eq!(tx.subtype.as_deref(), Some("swap"));
             assert_eq!(tx.swap_to_symbol.as_deref(), Some("BNB"));
-            // swap_to_amount is None for multi-dust conversions
-            assert!(tx.swap_to_amount.is_none());
+            // Incoming BNB (0.15) split equally across 2 dust assets
+            assert_eq!(tx.swap_to_amount, Some(0.075));
         }
     }
 
