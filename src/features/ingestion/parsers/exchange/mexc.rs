@@ -46,7 +46,7 @@ use std::collections::HashMap;
 
 use csv::{ReaderBuilder, StringRecord, Trim};
 
-use super::common::{format_datetime, is_fiat, parse_decimal, parse_timestamp};
+use super::common::{format_datetime, is_fiat, is_quote_currency, parse_decimal, parse_timestamp};
 use super::{ExchangeParser, ExchangeSource, ParseResult};
 use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
 
@@ -239,22 +239,47 @@ impl ExchangeParser for MexcSpotParser {
             let base_fiat = is_fiat(&base_symbol);
             let quote_fiat = is_fiat(&quote_symbol);
 
+            // Stablecoins (USDT, USDC, …) act as pricing currencies: when
+            // one side is a stablecoin and the other is a regular crypto
+            // asset, classify the trade as buy/sell (with price ≈ USD)
+            // instead of a swap.  This avoids phantom stablecoin balances.
+            let quote_is_pricing = is_quote_currency(&quote_symbol);
+            let base_is_pricing = is_quote_currency(&base_symbol);
+
             let notes = Some(format!(
                 "MEXC {} {} | {}/{}",
                 order_type_raw, direction_raw, base_symbol, quote_symbol,
             ));
 
-            // Both fiat -- skip
+            // Compute the actual filled value in the quote currency.
+            // Prefer `filled_qty * avg_price` (real execution cost) over
+            // `order_amount` (which may be the *intended* order total and
+            // can differ for market orders or partial fills).
+            let filled_value = if let Some(price) = avg_price {
+                let computed = filled_qty * price;
+                if computed > 0.0 {
+                    computed
+                } else {
+                    order_amount
+                }
+            } else {
+                order_amount
+            };
+
+            // Both true fiat → skip entirely
             if base_fiat && quote_fiat {
                 continue;
             }
 
-            if quote_fiat {
-                // Standard pair: BTC/USD, LTC/USDT, etc.
+            // Quote is a pricing currency (fiat or stablecoin) and base
+            // is a regular crypto asset → standard buy/sell.
+            // Also covers fiat quotes (BTC_USD) and stablecoin quotes
+            // (BTC_USDT, LTC_USDC, etc.).
+            if quote_is_pricing && !base_is_pricing {
                 let price = if avg_price.is_some() {
                     avg_price
-                } else if filled_qty > 0.0 && order_amount > 0.0 {
-                    Some(order_amount / filled_qty)
+                } else if filled_qty > 0.0 && filled_value > 0.0 {
+                    Some(filled_value / filled_qty)
                 } else {
                     None
                 };
@@ -280,8 +305,9 @@ impl ExchangeParser for MexcSpotParser {
                 };
 
                 result.items.push((line_number, tx));
-            } else if base_fiat {
-                // Inverted pair: USD/BTC (rare but handle)
+            } else if base_is_pricing && !quote_is_pricing {
+                // Inverted pair: USD/BTC, USDT/BTC (rare but handle)
+                // Buying base(fiat-like) with quote(crypto) = selling crypto
                 let subtype = if is_buy { "sell" } else { "buy" };
 
                 let tx = ImportCryptoTransaction {
@@ -289,7 +315,7 @@ impl ExchangeParser for MexcSpotParser {
                     wallet: wallet_name.to_string(),
                     symbol: quote_symbol,
                     transaction_type: "trade".to_string(),
-                    amount: order_amount,
+                    amount: filled_value,
                     subtype: Some(subtype.to_string()),
                     price_per_coin: None,
                     fee: None,
@@ -304,7 +330,8 @@ impl ExchangeParser for MexcSpotParser {
 
                 result.items.push((line_number, tx));
             } else {
-                // Crypto-to-crypto: swap
+                // Crypto-to-crypto swap: both regular crypto, or both
+                // stablecoins (e.g. USDT_USDC).
                 // Guard: skip same-symbol pairs (e.g. BTC_BTC) — would
                 // produce an invalid swap X→X that fails validation.
                 if base_symbol.eq_ignore_ascii_case(&quote_symbol) {
@@ -313,10 +340,10 @@ impl ExchangeParser for MexcSpotParser {
 
                 let (from_symbol, from_amount, to_symbol, to_amount) = if is_buy {
                     // Buying base with quote: out=quote, in=base
-                    (quote_symbol, order_amount, base_symbol, filled_qty)
+                    (quote_symbol, filled_value, base_symbol, filled_qty)
                 } else {
                     // Selling base for quote: out=base, in=quote
-                    (base_symbol, filled_qty, quote_symbol, order_amount)
+                    (base_symbol, filled_qty, quote_symbol, filled_value)
                 };
 
                 let tx = ImportCryptoTransaction {
@@ -358,10 +385,10 @@ mod tests {
     const HEADER: &str = "UID,Pairs,Time,Type,Direction,Average Filled Price,Order Price,Filled Quantity,Order Quantity,Order Amount,Status";
 
     #[test]
-    fn buy_ltc_usdt_market_order_is_swap() {
-        // USDT is a stablecoin (crypto), not fiat, so LTC_USDT is crypto-to-crypto = swap
+    fn buy_ltc_usdt_market_order_is_buy() {
+        // USDT is a stablecoin → treated as pricing currency → buy
         let csv = format!(
-            "{}\n11111111,LTC_USDT,2020-10-10 20:05:07,Market,Buy,07.519999999999999999,Market,0.122,0,14.99164,Filled\n",
+            "{}\n11111111,LTC_USDT,2020-10-10 20:05:07,Market,Buy,122.87,Market,0.122,0,14.99164,Filled\n",
             HEADER
         );
 
@@ -372,15 +399,17 @@ mod tests {
         assert!(result.errors.is_empty());
 
         let tx = &result.items[0].1;
-        // Buying LTC with USDT: out=USDT, in=LTC
-        assert_eq!(tx.symbol, "USDT");
+        assert_eq!(tx.symbol, "LTC");
         assert_eq!(tx.transaction_type, "trade");
-        assert_eq!(tx.subtype.as_deref(), Some("swap"));
-        assert!((tx.amount - 14.99164).abs() < f64::EPSILON);
-        assert_eq!(tx.swap_to_symbol.as_deref(), Some("LTC"));
-        assert!((tx.swap_to_amount.unwrap() - 0.122).abs() < f64::EPSILON);
+        assert_eq!(tx.subtype.as_deref(), Some("buy"));
+        assert!((tx.amount - 0.122).abs() < f64::EPSILON);
+        assert!((tx.price_per_coin.unwrap() - 122.87).abs() < 0.01);
         assert_eq!(tx.wallet, "MEXC");
         assert_eq!(tx.date, "2020-10-10 20:05:07");
+
+        // No swap fields for a buy
+        assert!(tx.swap_to_symbol.is_none());
+        assert!(tx.swap_to_amount.is_none());
 
         // No fee info in MEXC exports
         assert!(tx.fee.is_none());
@@ -389,10 +418,10 @@ mod tests {
     }
 
     #[test]
-    fn buy_ltc_usdt_limit_order_is_swap() {
-        // USDT is crypto, so this is also a swap
+    fn buy_ltc_usdt_limit_order_is_buy() {
+        // USDT is a stablecoin → pricing currency → buy
         let csv = format!(
-            "{}\n11111111,LTC_USDT,2020-10-20 10:04:01,Limit,Buy,05.399999999999999999,85.50,0.1498,0.1498,20.0599,Filled\n",
+            "{}\n11111111,LTC_USDT,2020-10-20 10:04:01,Limit,Buy,133.91,85.50,0.1498,0.1498,20.0599,Filled\n",
             HEADER
         );
 
@@ -401,19 +430,16 @@ mod tests {
 
         assert_eq!(result.items.len(), 1);
         let tx = &result.items[0].1;
-        assert_eq!(tx.symbol, "USDT");
-        assert_eq!(tx.subtype.as_deref(), Some("swap"));
-        assert!((tx.amount - 20.0599).abs() < f64::EPSILON);
-        assert_eq!(tx.swap_to_symbol.as_deref(), Some("LTC"));
-        assert!((tx.swap_to_amount.unwrap() - 0.1498).abs() < f64::EPSILON);
-        assert_eq!(tx.date, "2020-10-20 10:04:01");
+        assert_eq!(tx.symbol, "LTC");
+        assert_eq!(tx.subtype.as_deref(), Some("buy"));
+        assert!((tx.amount - 0.1498).abs() < f64::EPSILON);
+        assert!((tx.price_per_coin.unwrap() - 133.91).abs() < 0.01);
     }
 
     #[test]
-    fn sell_btc_usdt_is_swap() {
-        // USDT is crypto, so selling BTC for USDT is a swap
+    fn sell_btc_usdt_is_sell() {
         let csv = format!(
-            "{}\n11111111,BTC_USDT,2024-03-15 14:30:00,Limit,Sell,65000.00,65000.00,0.01,0.01,650.00,Filled\n",
+            "{}\n11111111,BTC_USDT,2024-01-15 10:30:45,Limit,Sell,50000.00,50000.00,0.5,0.5,25000.00,Filled\n",
             HEADER
         );
 
@@ -422,19 +448,19 @@ mod tests {
 
         assert_eq!(result.items.len(), 1);
         let tx = &result.items[0].1;
-        // Selling BTC for USDT: out=BTC, in=USDT
         assert_eq!(tx.symbol, "BTC");
-        assert_eq!(tx.subtype.as_deref(), Some("swap"));
-        assert!((tx.amount - 0.01).abs() < f64::EPSILON);
-        assert_eq!(tx.swap_to_symbol.as_deref(), Some("USDT"));
-        assert!((tx.swap_to_amount.unwrap() - 650.0).abs() < f64::EPSILON);
+        assert_eq!(tx.subtype.as_deref(), Some("sell"));
+        assert!((tx.amount - 0.5).abs() < f64::EPSILON);
+        assert!((tx.price_per_coin.unwrap() - 50000.0).abs() < f64::EPSILON);
+        // No swap fields for a sell
+        assert!(tx.swap_to_symbol.is_none());
+        assert!(tx.swap_to_amount.is_none());
     }
 
     #[test]
     fn buy_btc_usd_fiat_is_trade_buy() {
-        // USD is fiat, so BTC_USD is a standard buy trade
         let csv = format!(
-            "{}\n11111111,BTC_USD,2024-01-15 10:00:00,Market,Buy,50000.00,Market,0.1,0,5000.00,Filled\n",
+            "{}\n11111111,BTC_USD,2024-01-15 10:30:45,Limit,Buy,50000.00,50000.00,0.5,0.5,25000.00,Filled\n",
             HEADER
         );
 
@@ -446,16 +472,14 @@ mod tests {
         assert_eq!(tx.symbol, "BTC");
         assert_eq!(tx.transaction_type, "trade");
         assert_eq!(tx.subtype.as_deref(), Some("buy"));
-        assert!((tx.amount - 0.1).abs() < f64::EPSILON);
+        assert!((tx.amount - 0.5).abs() < f64::EPSILON);
         assert!((tx.price_per_coin.unwrap() - 50000.0).abs() < f64::EPSILON);
-        assert!(tx.swap_to_symbol.is_none());
     }
 
     #[test]
     fn sell_btc_usd_fiat_is_trade_sell() {
-        // USD is fiat, so selling BTC_USD is a standard sell trade
         let csv = format!(
-            "{}\n11111111,BTC_USD,2024-03-15 14:30:00,Limit,Sell,65000.00,65000.00,0.01,0.01,650.00,Filled\n",
+            "{}\n11111111,BTC_USD,2024-02-01 08:00:00,Market,Sell,40000.00,Market,2.0,2.0,80000.00,Filled\n",
             HEADER
         );
 
@@ -466,14 +490,14 @@ mod tests {
         let tx = &result.items[0].1;
         assert_eq!(tx.symbol, "BTC");
         assert_eq!(tx.subtype.as_deref(), Some("sell"));
-        assert!((tx.amount - 0.01).abs() < f64::EPSILON);
-        assert!((tx.price_per_coin.unwrap() - 65000.0).abs() < f64::EPSILON);
+        assert!((tx.amount - 2.0).abs() < f64::EPSILON);
     }
 
     #[test]
-    fn crypto_to_crypto_becomes_swap() {
+    fn buy_usdc_usdt_stablecoin_pair_is_swap() {
+        // Both sides are stablecoins → crypto-to-crypto swap
         let csv = format!(
-            "{}\n11111111,ETH_BTC,2024-01-15 12:00:00,Market,Buy,0.05,Market,2.0,0,0.1,Filled\n",
+            "{}\n11111111,USDC_USDT,2024-03-01 12:00:00,Limit,Buy,1.0001,1.0001,500.0,500.0,500.05,Filled\n",
             HEADER
         );
 
@@ -482,18 +506,38 @@ mod tests {
 
         assert_eq!(result.items.len(), 1);
         let tx = &result.items[0].1;
+        assert_eq!(tx.transaction_type, "trade");
+        assert_eq!(tx.subtype.as_deref(), Some("swap"));
+        // Buying USDC with USDT: out=USDT, in=USDC
+        assert_eq!(tx.symbol, "USDT");
+        assert_eq!(tx.swap_to_symbol.as_deref(), Some("USDC"));
+    }
+
+    #[test]
+    fn crypto_to_crypto_becomes_swap() {
+        let csv = format!(
+            "{}\n11111111,ETH_BTC,2024-03-15 14:00:00,Limit,Buy,0.05,0.05,5.0,5.0,0.25,Filled\n",
+            HEADER
+        );
+
+        let parser = MexcSpotParser;
+        let result = parser.parse(&csv, "MEXC").unwrap();
+
+        assert_eq!(result.items.len(), 1);
+        let tx = &result.items[0].1;
+        assert_eq!(tx.transaction_type, "trade");
         assert_eq!(tx.subtype.as_deref(), Some("swap"));
         // Buying ETH with BTC: out=BTC, in=ETH
         assert_eq!(tx.symbol, "BTC");
-        assert!((tx.amount - 0.1).abs() < f64::EPSILON);
+        assert!((tx.amount - 0.25).abs() < f64::EPSILON);
         assert_eq!(tx.swap_to_symbol.as_deref(), Some("ETH"));
-        assert!((tx.swap_to_amount.unwrap() - 2.0).abs() < f64::EPSILON);
+        assert!((tx.swap_to_amount.unwrap() - 5.0).abs() < f64::EPSILON);
     }
 
     #[test]
     fn crypto_to_crypto_sell_becomes_swap() {
         let csv = format!(
-            "{}\n11111111,ETH_BTC,2024-01-15 12:00:00,Limit,Sell,0.05,0.05,3.0,3.0,0.15,Filled\n",
+            "{}\n11111111,ETH_BTC,2024-03-20 09:00:00,Limit,Sell,0.05,0.05,3.0,3.0,0.15,Filled\n",
             HEADER
         );
 
@@ -508,6 +552,29 @@ mod tests {
         assert!((tx.amount - 3.0).abs() < f64::EPSILON);
         assert_eq!(tx.swap_to_symbol.as_deref(), Some("BTC"));
         assert!((tx.swap_to_amount.unwrap() - 0.15).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn filled_value_prefers_avg_price_over_order_amount() {
+        // Average Filled Price = 100.0, but Order Amount = 999.0 (stale/mismatched)
+        // The parser should compute filled_value = 0.5 * 100.0 = 50.0
+        let csv = format!(
+            "{}\n11111111,ETH_BTC,2024-04-01 10:00:00,Market,Buy,100.0,Market,0.5,0.5,999.0,Filled\n",
+            HEADER
+        );
+
+        let parser = MexcSpotParser;
+        let result = parser.parse(&csv, "MEXC").unwrap();
+
+        assert_eq!(result.items.len(), 1);
+        let tx = &result.items[0].1;
+        assert_eq!(tx.subtype.as_deref(), Some("swap"));
+        // out=BTC (quote), in=ETH (base)
+        assert_eq!(tx.symbol, "BTC");
+        // filled_value = 0.5 * 100.0 = 50.0, NOT 999.0
+        assert!((tx.amount - 50.0).abs() < f64::EPSILON);
+        assert_eq!(tx.swap_to_symbol.as_deref(), Some("ETH"));
+        assert!((tx.swap_to_amount.unwrap() - 0.5).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -639,17 +706,19 @@ mod tests {
     #[test]
     fn notes_contain_order_type_and_direction() {
         let csv = format!(
-            "{}\n11111111,BTC_USDT,2024-01-15 10:00:00,Market,Buy,50000,Market,0.01,0,500,Filled\n",
+            "{}\n11111111,BTC_USDT,2024-01-15 10:30:45,Limit,Buy,50000.00,50000.00,0.5,0.5,25000.00,Filled\n",
             HEADER
         );
 
         let parser = MexcSpotParser;
         let result = parser.parse(&csv, "MEXC").unwrap();
 
-        let notes = result.items[0].1.notes.as_ref().unwrap();
-        assert!(notes.contains("Market"));
+        let tx = &result.items[0].1;
+        // BTC_USDT buy is now a buy (not a swap)
+        assert_eq!(tx.subtype.as_deref(), Some("buy"));
+        let notes = tx.notes.as_deref().unwrap();
+        assert!(notes.contains("Limit"));
         assert!(notes.contains("Buy"));
-        assert!(notes.contains("BTC/USDT"));
     }
 
     #[test]

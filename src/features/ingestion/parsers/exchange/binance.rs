@@ -43,8 +43,8 @@ use chrono::NaiveDateTime;
 use csv::{ReaderBuilder, StringRecord, Trim};
 
 use super::common::{
-    format_datetime, is_fiat, normalize_binance_currency, parse_amount_with_unit, parse_decimal,
-    parse_timestamp, should_rename_luna_to_lunc,
+    format_datetime, is_fiat, is_quote_currency, normalize_binance_currency,
+    parse_amount_with_unit, parse_decimal, parse_timestamp, should_rename_luna_to_lunc,
 };
 use super::{ExchangeParser, ExchangeSource, ParseResult};
 use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
@@ -352,6 +352,12 @@ impl PendingConvert {
             let out_fiat = is_fiat(&out.symbol);
             let in_fiat = is_fiat(&inc.symbol);
 
+            // Stablecoin-aware classification: treat stablecoins as
+            // pricing currencies so BTC/USDT becomes a buy/sell (not a
+            // swap), avoiding phantom stablecoin balances.
+            let out_is_pricing = is_quote_currency(&out.symbol);
+            let in_is_pricing = is_quote_currency(&inc.symbol);
+
             // Both fiat — skip
             if out_fiat && in_fiat {
                 return results;
@@ -366,8 +372,8 @@ impl PendingConvert {
             let line = out.line_number;
             let notes = Some(format!("Binance {} | {}", out.operation_raw, out.remark));
 
-            if out_fiat && !in_fiat {
-                // Fiat -> Crypto = buy
+            if out_is_pricing && !in_is_pricing {
+                // Fiat/stablecoin -> Crypto = buy
                 let price = if inc.change.abs() > 0.0 {
                     Some(out.change.abs() / inc.change.abs())
                 } else {
@@ -393,8 +399,8 @@ impl PendingConvert {
                         notes,
                     },
                 ));
-            } else if !out_fiat && in_fiat {
-                // Crypto -> Fiat = sell
+            } else if !out_is_pricing && in_is_pricing {
+                // Crypto -> Fiat/stablecoin = sell
                 let price = if out.change.abs() > 0.0 {
                     Some(inc.change.abs() / out.change.abs())
                 } else {
@@ -421,7 +427,7 @@ impl PendingConvert {
                     },
                 ));
             } else {
-                // Crypto -> Crypto = swap
+                // Crypto -> Crypto = swap (includes stablecoin-to-stablecoin)
                 results.push((
                     line,
                     ImportCryptoTransaction {
@@ -960,6 +966,10 @@ impl ExchangeParser for BinanceSpotParser {
             let base_fiat = is_fiat(&base_symbol);
             let quote_fiat = is_fiat(&quote_symbol);
 
+            // Stablecoin-aware: treat stablecoins as pricing currencies
+            let quote_is_pricing = is_quote_currency(&quote_symbol);
+            let base_is_pricing = is_quote_currency(&base_symbol);
+
             let notes = if pair_raw.is_empty() {
                 Some(format!(
                     "Binance Spot {} | {}/{}",
@@ -985,8 +995,8 @@ impl ExchangeParser for BinanceSpotParser {
                 continue;
             }
 
-            if quote_fiat {
-                // Standard pair: BTC/USD
+            if quote_is_pricing && !base_is_pricing {
+                // Standard pair: BTC/USD, BTC/USDT, etc.
                 let price = if executed_qty > 0.0 {
                     Some(amount_qty / executed_qty)
                 } else {
@@ -1014,8 +1024,8 @@ impl ExchangeParser for BinanceSpotParser {
                 };
 
                 result.items.push((line_number, tx));
-            } else if base_fiat {
-                // Inverted pair: USD/BTC (rare but handle)
+            } else if base_is_pricing && !quote_is_pricing {
+                // Inverted pair: USD/BTC, USDT/BTC (rare but possible)
                 let subtype = if is_buy { "sell" } else { "buy" };
 
                 let tx = ImportCryptoTransaction {
@@ -1038,7 +1048,13 @@ impl ExchangeParser for BinanceSpotParser {
 
                 result.items.push((line_number, tx));
             } else {
-                // Crypto-to-crypto: swap
+                // Crypto-to-crypto swap (includes stablecoin-to-stablecoin)
+
+                // Guard: skip same-symbol pairs
+                if base_symbol.eq_ignore_ascii_case(&quote_symbol) {
+                    continue;
+                }
+
                 let (from_symbol, from_amount, to_symbol, to_amount) = if is_buy {
                     // Buying base with quote: out=quote, in=base
                     (quote_symbol, amount_qty, base_symbol, executed_qty)
@@ -1410,11 +1426,17 @@ mod tests {
         let parser = BinanceAllStatementsParser;
         let result = parser.parse(csv, "Binance").unwrap();
 
-        // USDT is not fiat, so this is a swap
+        // USDT is a stablecoin (pricing currency) → USDT->BTC = buy
         assert_eq!(result.items.len(), 1);
         let tx = &result.items[0].1;
         assert_eq!(tx.transaction_type, "trade");
-        assert_eq!(tx.subtype.as_deref(), Some("swap"));
+        assert_eq!(tx.subtype.as_deref(), Some("buy"));
+        assert_eq!(tx.symbol, "BTC");
+        assert!((tx.amount - 0.002).abs() < 1e-8);
+        // price = 100 USDT / 0.002 BTC = 50000
+        assert!((tx.price_per_coin.unwrap() - 50000.0).abs() < 0.01);
+        assert!(tx.swap_to_symbol.is_none());
+        assert!(tx.swap_to_amount.is_none());
     }
 
     #[test]
@@ -1489,14 +1511,14 @@ mod tests {
 
         assert_eq!(result.items.len(), 1);
         let tx = &result.items[0].1;
-        // USDT is not fiat, so BTC/USDT is crypto-to-crypto = swap
+        // USDT is a stablecoin → treated as pricing currency → buy
         assert_eq!(tx.transaction_type, "trade");
-        assert_eq!(tx.subtype.as_deref(), Some("swap"));
-        // Buying BTC with USDT: outgoing=USDT, incoming=BTC
-        assert_eq!(tx.symbol, "USDT");
-        assert!((tx.amount - 25000.0).abs() < f64::EPSILON);
-        assert_eq!(tx.swap_to_symbol.as_deref(), Some("BTC"));
-        assert!((tx.swap_to_amount.unwrap() - 0.5).abs() < f64::EPSILON);
+        assert_eq!(tx.subtype.as_deref(), Some("buy"));
+        assert_eq!(tx.symbol, "BTC");
+        assert!((tx.amount - 0.5).abs() < f64::EPSILON);
+        assert!((tx.price_per_coin.unwrap() - 50000.0).abs() < f64::EPSILON);
+        assert!(tx.swap_to_symbol.is_none());
+        assert!(tx.swap_to_amount.is_none());
         assert_eq!(tx.fee_coin_symbol.as_deref(), Some("BNB"));
         assert!((tx.fee_amount.unwrap() - 0.001).abs() < f64::EPSILON);
     }
@@ -1542,10 +1564,49 @@ mod tests {
     }
 
     #[test]
+    fn spot_sell_btc_usdt_becomes_sell() {
+        let csv = concat!(
+            "Date(UTC),Pair,Side,Price,Executed,Amount,Fee\n",
+            "2024-02-10 12:00:00,BTCUSDT,SELL,50000.00,0.5BTC,25000USDT,0.001BNB\n",
+        );
+
+        let parser = BinanceSpotParser;
+        let result = parser.parse(csv, "Binance").unwrap();
+
+        assert_eq!(result.items.len(), 1);
+        let tx = &result.items[0].1;
+        // USDT is pricing currency → sell
+        assert_eq!(tx.symbol, "BTC");
+        assert_eq!(tx.subtype.as_deref(), Some("sell"));
+        assert!((tx.amount - 0.5).abs() < f64::EPSILON);
+        assert!((tx.price_per_coin.unwrap() - 50000.0).abs() < f64::EPSILON);
+        assert!(tx.swap_to_symbol.is_none());
+        assert!(tx.swap_to_amount.is_none());
+    }
+
+    #[test]
+    fn spot_stablecoin_to_stablecoin_becomes_swap() {
+        let csv = concat!(
+            "Date(UTC),Pair,Side,Price,Executed,Amount,Fee\n",
+            "2024-04-01 12:00:00,USDCUSDT,BUY,1.0001,500USDC,500.05USDT,0.00USD\n",
+        );
+
+        let parser = BinanceSpotParser;
+        let result = parser.parse(csv, "Binance").unwrap();
+
+        assert_eq!(result.items.len(), 1);
+        let tx = &result.items[0].1;
+        // Both stablecoins → swap
+        assert_eq!(tx.subtype.as_deref(), Some("swap"));
+        assert_eq!(tx.symbol, "USDT");
+        assert_eq!(tx.swap_to_symbol.as_deref(), Some("USDC"));
+    }
+
+    #[test]
     fn spot_crypto_to_crypto_becomes_swap() {
         let csv = concat!(
             "Date(UTC),Pair,Side,Price,Executed,Amount,Fee\n",
-            "2024-03-15 14:00:00,ETHBTC,BUY,0.05,5.0ETH,0.25BTC,0.0001BTC\n",
+            "2024-03-15 14:00:00,ETHBTC,BUY,0.05,5.0ETH,0.25BTC,0.001BNB\n",
         );
 
         let parser = BinanceSpotParser;
@@ -1809,14 +1870,17 @@ mod tests {
         let parser = BinanceAllStatementsParser;
         let result = parser.parse(csv, "Binance").unwrap();
 
-        // USDT -> BTC swap (USDT is not fiat in our classification)
+        // USDT is a stablecoin (pricing currency) → USDT->BTC = buy
         assert_eq!(result.items.len(), 1);
         let tx = &result.items[0].1;
         assert_eq!(tx.transaction_type, "trade");
-        assert_eq!(tx.subtype.as_deref(), Some("swap"));
-        assert_eq!(tx.symbol, "USDT");
-        assert_eq!(tx.swap_to_symbol.as_deref(), Some("BTC"));
-        assert!((tx.swap_to_amount.unwrap() - 0.002).abs() < 1e-8);
+        assert_eq!(tx.subtype.as_deref(), Some("buy"));
+        assert_eq!(tx.symbol, "BTC");
+        assert!((tx.amount - 0.002).abs() < 1e-8);
+        // price = 100 USDT / 0.002 BTC = 50000
+        assert!((tx.price_per_coin.unwrap() - 50000.0).abs() < 0.01);
+        assert!(tx.swap_to_symbol.is_none());
+        assert!(tx.swap_to_amount.is_none());
     }
 
     // ── P2P Trading tests ──
@@ -1936,8 +2000,7 @@ mod tests {
         let parser = BinanceAllStatementsParser;
         let result = parser.parse(csv, "Binance").unwrap();
 
-        // P2P buy (1) + Convert pair becomes buy since USDT->BTC with USDT
-        // not being fiat (1) + Transfer skipped (0) = 2 transactions
+        // P2P buy (1) + Convert USDT->BTC = buy (1) + Transfer skipped (0) = 2
         assert_eq!(result.items.len(), 2);
 
         // Find the P2P trade
@@ -1955,7 +2018,7 @@ mod tests {
         assert_eq!(p2p.subtype.as_deref(), Some("buy"));
         assert!((p2p.amount - 100.0).abs() < f64::EPSILON);
 
-        // Find the convert (USDT -> BTC = swap since neither is fiat)
+        // Find the convert (USDT is a pricing currency → USDT->BTC = buy)
         let convert = result
             .items
             .iter()
@@ -1966,8 +2029,12 @@ mod tests {
             })
             .map(|(_, tx)| tx)
             .expect("Should have a Convert transaction");
-        assert_eq!(convert.symbol, "USDT");
-        assert_eq!(convert.subtype.as_deref(), Some("swap"));
-        assert_eq!(convert.swap_to_symbol.as_deref(), Some("BTC"));
+        assert_eq!(convert.symbol, "BTC");
+        assert_eq!(convert.subtype.as_deref(), Some("buy"));
+        assert!((convert.amount - 0.0012).abs() < 1e-8);
+        // price = 50 USDT / 0.0012 BTC ≈ 41666.67
+        assert!(convert.price_per_coin.is_some());
+        assert!(convert.swap_to_symbol.is_none());
+        assert!(convert.swap_to_amount.is_none());
     }
 }

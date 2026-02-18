@@ -127,6 +127,42 @@ pub fn is_fiat(symbol: &str) -> bool {
     )
 }
 
+/// Returns `true` for common USD-pegged stablecoins.
+///
+/// These are **not** fiat — they are tracked crypto assets — but they serve
+/// as quote / pricing currencies on most exchanges.  When one side of a
+/// trade is a stablecoin and the other is a regular crypto asset, we
+/// classify the trade as a buy/sell (with `price_per_coin` ≈ USD) instead
+/// of a swap, which avoids phantom stablecoin balances the user never
+/// explicitly deposited.
+pub fn is_stablecoin(symbol: &str) -> bool {
+    matches!(
+        symbol,
+        "USDT"
+            | "USDC"
+            | "BUSD"
+            | "DAI"
+            | "TUSD"
+            | "FDUSD"
+            | "USDD"
+            | "USDP"
+            | "PYUSD"
+            | "UST"
+            | "FRAX"
+    )
+}
+
+/// Returns `true` if the symbol acts as a quote / pricing currency —
+/// either real fiat **or** a USD-pegged stablecoin.
+///
+/// Use this (instead of `is_fiat`) when deciding whether a trade leg is
+/// the "money" side (buy/sell) vs the "asset" side.  `is_fiat` should
+/// still be used when the question is "should we skip this row entirely?"
+/// (e.g. fiat-only deposits/withdrawals).
+pub fn is_quote_currency(symbol: &str) -> bool {
+    is_fiat(symbol) || is_stablecoin(symbol)
+}
+
 // ─── Binance currency normalisation ─────────────────────────────────────────
 
 /// Normalises Binance-specific asset names.
@@ -412,6 +448,52 @@ mod tests {
         assert!(!is_fiat("BTC"));
         assert!(!is_fiat("ETH"));
         assert!(!is_fiat("XMR"));
+    }
+
+    // ── Stablecoin detection ──
+
+    #[test]
+    fn stablecoin_detected() {
+        assert!(is_stablecoin("USDT"));
+        assert!(is_stablecoin("USDC"));
+        assert!(is_stablecoin("BUSD"));
+        assert!(is_stablecoin("DAI"));
+        assert!(is_stablecoin("FDUSD"));
+    }
+
+    #[test]
+    fn fiat_is_not_stablecoin() {
+        assert!(!is_stablecoin("USD"));
+        assert!(!is_stablecoin("EUR"));
+    }
+
+    #[test]
+    fn crypto_is_not_stablecoin() {
+        assert!(!is_stablecoin("BTC"));
+        assert!(!is_stablecoin("ETH"));
+        assert!(!is_stablecoin("BNB"));
+    }
+
+    // ── Quote currency detection ──
+
+    #[test]
+    fn quote_currency_includes_fiat() {
+        assert!(is_quote_currency("USD"));
+        assert!(is_quote_currency("EUR"));
+    }
+
+    #[test]
+    fn quote_currency_includes_stablecoins() {
+        assert!(is_quote_currency("USDT"));
+        assert!(is_quote_currency("USDC"));
+        assert!(is_quote_currency("BUSD"));
+    }
+
+    #[test]
+    fn quote_currency_excludes_crypto() {
+        assert!(!is_quote_currency("BTC"));
+        assert!(!is_quote_currency("ETH"));
+        assert!(!is_quote_currency("BNB"));
     }
 
     // ── Decimal parsing ──

@@ -35,8 +35,8 @@ use chrono::NaiveDateTime;
 use csv::{ReaderBuilder, StringRecord, Trim};
 
 use super::common::{
-    format_datetime, is_fiat, normalize_kraken_currency, parse_decimal, parse_kraken_pair,
-    parse_timestamp,
+    format_datetime, is_fiat, is_quote_currency, normalize_kraken_currency, parse_decimal,
+    parse_kraken_pair, parse_timestamp,
 };
 use super::{ExchangeParser, ExchangeSource, ParseResult};
 use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
@@ -245,6 +245,12 @@ impl PendingTrade {
         let out_fiat = is_fiat(&outgoing.symbol);
         let in_fiat = is_fiat(&incoming.symbol);
 
+        // Stablecoin-aware classification: treat stablecoins as pricing
+        // currencies so e.g. BTC/USDT trades become buy/sell instead of
+        // swaps, avoiding phantom stablecoin balances.
+        let out_is_pricing = is_quote_currency(&outgoing.symbol);
+        let in_is_pricing = is_quote_currency(&incoming.symbol);
+
         // Both fiat — skip entirely
         if out_fiat && in_fiat {
             return Vec::new();
@@ -257,8 +263,8 @@ impl PendingTrade {
             refid
         ));
 
-        // Fiat -> Crypto = buy
-        if out_fiat && !in_fiat {
+        // Fiat/stablecoin -> Crypto = buy
+        if out_is_pricing && !in_is_pricing {
             let price = if incoming.abs_amount() > 0.0 {
                 Some(outgoing.abs_amount() / incoming.abs_amount())
             } else {
@@ -301,8 +307,8 @@ impl PendingTrade {
             return vec![tx];
         }
 
-        // Crypto -> Fiat = sell
-        if !out_fiat && in_fiat {
+        // Crypto -> Fiat/stablecoin = sell
+        if !out_is_pricing && in_is_pricing {
             let price = if outgoing.abs_amount() > 0.0 {
                 Some(incoming.abs_amount() / outgoing.abs_amount())
             } else {
@@ -342,7 +348,7 @@ impl PendingTrade {
             return vec![tx];
         }
 
-        // Crypto -> Crypto = swap
+        // Crypto -> Crypto = swap (includes stablecoin-to-stablecoin)
         // Guard: same-symbol pairs are no-ops (e.g. internal movements that
         // slipped through subtype filtering). Skip silently instead of
         // producing an invalid swap that fails downstream validation.
@@ -839,6 +845,10 @@ impl ExchangeParser for KrakenTradesParser {
             let base_fiat = is_fiat(&base);
             let quote_fiat = is_fiat(&quote);
 
+            // Stablecoin-aware: treat stablecoins as pricing currencies
+            let quote_is_pricing = is_quote_currency(&quote);
+            let base_is_pricing = is_quote_currency(&base);
+
             let notes = if ordertxid.is_empty() {
                 Some(format!("Kraken trade | {}", pair_raw))
             } else {
@@ -854,8 +864,8 @@ impl ExchangeParser for KrakenTradesParser {
                 continue;
             }
 
-            if quote_fiat {
-                // Standard pair like BTC/USD
+            if quote_is_pricing && !base_is_pricing {
+                // Standard pair: BTC/USD, BTC/USDT, etc.
                 let price = if volume > 0.0 {
                     Some(cost / volume)
                 } else {
@@ -885,8 +895,8 @@ impl ExchangeParser for KrakenTradesParser {
                 };
 
                 result.items.push((line_number, tx));
-            } else if base_fiat {
-                // Inverted pair like USD/BTC (rare but possible)
+            } else if base_is_pricing && !quote_is_pricing {
+                // Inverted pair: USD/BTC, USDT/BTC (rare but possible)
                 let subtype_str = if is_buy { "sell" } else { "buy" };
                 let price = if cost > 0.0 {
                     Some(volume / cost)
@@ -918,7 +928,7 @@ impl ExchangeParser for KrakenTradesParser {
 
                 result.items.push((line_number, tx));
             } else {
-                // Crypto-to-crypto pair — swap
+                // Crypto-to-crypto pair — swap (includes stablecoin-to-stablecoin)
 
                 // Guard: skip same-symbol pairs (shouldn't happen with valid
                 // Kraken data, but prevents invalid swap X→X if it does).
@@ -1036,14 +1046,36 @@ mod tests {
 
         assert_eq!(result.items.len(), 1);
         let tx = &result.items[0].1;
+        // USD is fiat -> buying BTC
         assert_eq!(tx.symbol, "BTC");
         assert_eq!(tx.transaction_type, "trade");
         assert_eq!(tx.subtype.as_deref(), Some("buy"));
         assert!((tx.amount - 0.5).abs() < f64::EPSILON);
-        // Price = 25000 / 0.5 = 50000
-        assert!((tx.price_per_coin.unwrap() - 50000.0).abs() < 0.01);
-        // Fee in USD
+        assert!((tx.price_per_coin.unwrap() - 50000.0).abs() < f64::EPSILON);
         assert!((tx.fee.unwrap() - 5.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn ledger_usdt_trade_pair_becomes_buy() {
+        // USDT is a stablecoin → treated as pricing currency → buy (not swap)
+        let csv = concat!(
+            "\"txid\",\"refid\",\"time\",\"type\",\"subtype\",\"aclass\",\"asset\",\"amount\",\"fee\",\"balance\"\n",
+            "\"TX-OUT\",\"REF-USDT\",\"2024-05-01 10:00:00\",\"trade\",\"\",\"currency\",\"USDT\",\"-25000\",\"5.00\",\"0\"\n",
+            "\"TX-IN\",\"REF-USDT\",\"2024-05-01 10:00:00\",\"trade\",\"\",\"currency\",\"XXBT\",\"0.5\",\"0\",\"0.5\"\n",
+        );
+
+        let parser = KrakenLedgerParser;
+        let result = parser.parse(csv, "Kraken").unwrap();
+
+        assert_eq!(result.items.len(), 1);
+        let tx = &result.items[0].1;
+        assert_eq!(tx.symbol, "BTC");
+        assert_eq!(tx.transaction_type, "trade");
+        assert_eq!(tx.subtype.as_deref(), Some("buy"));
+        assert!((tx.amount - 0.5).abs() < f64::EPSILON);
+        assert!((tx.price_per_coin.unwrap() - 50000.0).abs() < f64::EPSILON);
+        assert!(tx.swap_to_symbol.is_none());
+        assert!(tx.swap_to_amount.is_none());
     }
 
     #[test]
@@ -1060,12 +1092,32 @@ mod tests {
         assert_eq!(result.items.len(), 1);
         let tx = &result.items[0].1;
         assert_eq!(tx.symbol, "ETH");
-        assert_eq!(tx.transaction_type, "trade");
         assert_eq!(tx.subtype.as_deref(), Some("sell"));
         assert!((tx.amount - 2.0).abs() < f64::EPSILON);
-        // Price = 4000 / 2 = 2000
-        assert!((tx.price_per_coin.unwrap() - 2000.0).abs() < 0.01);
+        assert!((tx.price_per_coin.unwrap() - 2000.0).abs() < f64::EPSILON);
         assert!((tx.fee.unwrap() - 3.5).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn ledger_sell_for_usdt_becomes_sell() {
+        // Selling ETH for USDT: USDT is a stablecoin → sell (not swap)
+        let csv = concat!(
+            "\"txid\",\"refid\",\"time\",\"type\",\"subtype\",\"aclass\",\"asset\",\"amount\",\"fee\",\"balance\"\n",
+            "\"TX-OUT\",\"REF-SELL-USDT\",\"2024-02-01 08:00:00\",\"trade\",\"\",\"currency\",\"XETH\",\"-2.0\",\"0\",\"0\"\n",
+            "\"TX-IN\",\"REF-SELL-USDT\",\"2024-02-01 08:00:00\",\"trade\",\"\",\"currency\",\"USDT\",\"4000\",\"3.50\",\"4000\"\n",
+        );
+
+        let parser = KrakenLedgerParser;
+        let result = parser.parse(csv, "Kraken").unwrap();
+
+        assert_eq!(result.items.len(), 1);
+        let tx = &result.items[0].1;
+        assert_eq!(tx.symbol, "ETH");
+        assert_eq!(tx.subtype.as_deref(), Some("sell"));
+        assert!((tx.amount - 2.0).abs() < f64::EPSILON);
+        assert!((tx.price_per_coin.unwrap() - 2000.0).abs() < f64::EPSILON);
+        assert!(tx.swap_to_symbol.is_none());
+        assert!(tx.swap_to_amount.is_none());
     }
 
     #[test]
@@ -1082,13 +1134,31 @@ mod tests {
         assert_eq!(result.items.len(), 1);
         let tx = &result.items[0].1;
         assert_eq!(tx.symbol, "ETH");
-        assert_eq!(tx.transaction_type, "trade");
         assert_eq!(tx.subtype.as_deref(), Some("swap"));
         assert!((tx.amount - 5.0).abs() < f64::EPSILON);
         assert_eq!(tx.swap_to_symbol.as_deref(), Some("BTC"));
         assert!((tx.swap_to_amount.unwrap() - 0.25).abs() < f64::EPSILON);
         assert_eq!(tx.fee_coin_symbol.as_deref(), Some("ETH"));
         assert!((tx.fee_amount.unwrap() - 0.01).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn ledger_stablecoin_to_stablecoin_becomes_swap() {
+        // USDT → USDC: both stablecoins → crypto-to-crypto swap
+        let csv = concat!(
+            "\"txid\",\"refid\",\"time\",\"type\",\"subtype\",\"aclass\",\"asset\",\"amount\",\"fee\",\"balance\"\n",
+            "\"TX-OUT\",\"REF-SS\",\"2024-04-01 10:00:00\",\"trade\",\"\",\"currency\",\"USDT\",\"-500\",\"0.10\",\"0\"\n",
+            "\"TX-IN\",\"REF-SS\",\"2024-04-01 10:00:00\",\"trade\",\"\",\"currency\",\"USDC\",\"499.90\",\"0\",\"499.90\"\n",
+        );
+
+        let parser = KrakenLedgerParser;
+        let result = parser.parse(csv, "Kraken").unwrap();
+
+        assert_eq!(result.items.len(), 1);
+        let tx = &result.items[0].1;
+        assert_eq!(tx.subtype.as_deref(), Some("swap"));
+        assert_eq!(tx.symbol, "USDT");
+        assert_eq!(tx.swap_to_symbol.as_deref(), Some("USDC"));
     }
 
     #[test]
@@ -1238,8 +1308,49 @@ mod tests {
         assert_eq!(tx.transaction_type, "trade");
         assert_eq!(tx.subtype.as_deref(), Some("buy"));
         assert!((tx.amount - 0.5).abs() < f64::EPSILON);
-        assert!((tx.price_per_coin.unwrap() - 50000.0).abs() < 0.01);
-        assert!((tx.fee.unwrap() - 5.0).abs() < f64::EPSILON);
+        assert!((tx.price_per_coin.unwrap() - 50000.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn trades_buy_btc_usdt_becomes_buy() {
+        // USDT is a stablecoin → pricing currency → buy (not swap)
+        let csv = concat!(
+            "\"txid\",\"ordertxid\",\"pair\",\"time\",\"type\",\"ordertype\",\"price\",\"cost\",\"fee\",\"vol\",\"margin\",\"misc\",\"ledgers\"\n",
+            "\"TX1\",\"ORD1\",\"BTC/USDT\",\"2024-01-15 10:30:45\",\"buy\",\"limit\",\"50000.00\",\"25000.00\",\"5.00\",\"0.5\",\"0\",\"\",\"L1,L2\"\n",
+        );
+
+        let parser = KrakenTradesParser;
+        let result = parser.parse(csv, "Kraken").unwrap();
+
+        assert_eq!(result.items.len(), 1);
+        let tx = &result.items[0].1;
+        assert_eq!(tx.symbol, "BTC");
+        assert_eq!(tx.subtype.as_deref(), Some("buy"));
+        assert!((tx.amount - 0.5).abs() < f64::EPSILON);
+        assert!((tx.price_per_coin.unwrap() - 50000.0).abs() < f64::EPSILON);
+        assert!(tx.swap_to_symbol.is_none());
+        assert!(tx.swap_to_amount.is_none());
+    }
+
+    #[test]
+    fn trades_sell_eth_usdt_becomes_sell() {
+        // Selling ETH for USDT: stablecoin quote → sell (not swap)
+        let csv = concat!(
+            "\"txid\",\"ordertxid\",\"pair\",\"time\",\"type\",\"ordertype\",\"price\",\"cost\",\"fee\",\"vol\",\"margin\",\"misc\",\"ledgers\"\n",
+            "\"TX1\",\"ORD1\",\"ETH/USDT\",\"2024-02-01 08:00:00\",\"sell\",\"market\",\"2000.00\",\"4000.00\",\"3.50\",\"2.0\",\"0\",\"\",\"L1,L2\"\n",
+        );
+
+        let parser = KrakenTradesParser;
+        let result = parser.parse(csv, "Kraken").unwrap();
+
+        assert_eq!(result.items.len(), 1);
+        let tx = &result.items[0].1;
+        assert_eq!(tx.symbol, "ETH");
+        assert_eq!(tx.subtype.as_deref(), Some("sell"));
+        assert!((tx.amount - 2.0).abs() < f64::EPSILON);
+        assert!((tx.price_per_coin.unwrap() - 2000.0).abs() < f64::EPSILON);
+        assert!(tx.swap_to_symbol.is_none());
+        assert!(tx.swap_to_amount.is_none());
     }
 
     #[test]
@@ -1329,18 +1440,40 @@ mod tests {
 
     #[test]
     fn trades_with_usdt_pair() {
+        // USDT is now a pricing currency → buy (not swap)
         let csv = concat!(
             "\"txid\",\"ordertxid\",\"pair\",\"time\",\"type\",\"ordertype\",\"price\",\"cost\",\"fee\",\"vol\",\"margin\",\"misc\",\"ledgers\"\n",
-            "\"TX1\",\"ORD1\",\"BTCUSDT\",\"2024-01-15 10:00:00\",\"buy\",\"limit\",\"50000\",\"5000\",\"1\",\"0.1\",\"0\",\"\",\"\"\n",
+            "\"TX1\",\"ORD1\",\"BTC/USDT\",\"2024-04-01 12:00:00\",\"buy\",\"market\",\"60000.00\",\"30000.00\",\"10.00\",\"0.5\",\"0\",\"\",\"L1\"\n",
         );
 
         let parser = KrakenTradesParser;
         let result = parser.parse(csv, "Kraken").unwrap();
 
-        // USDT is not fiat, so this should be a swap
+        assert_eq!(result.items.len(), 1);
+        let tx = &result.items[0].1;
+        assert_eq!(tx.symbol, "BTC");
+        assert_eq!(tx.subtype.as_deref(), Some("buy"));
+        assert!((tx.amount - 0.5).abs() < f64::EPSILON);
+        assert!((tx.price_per_coin.unwrap() - 60000.0).abs() < f64::EPSILON);
+        assert!(tx.swap_to_symbol.is_none());
+    }
+
+    #[test]
+    fn trades_stablecoin_to_stablecoin_is_swap() {
+        // Both stablecoins → neither is "pricing relative to the other" → swap
+        let csv = concat!(
+            "\"txid\",\"ordertxid\",\"pair\",\"time\",\"type\",\"ordertype\",\"price\",\"cost\",\"fee\",\"vol\",\"margin\",\"misc\",\"ledgers\"\n",
+            "\"TX1\",\"ORD1\",\"USDC/USDT\",\"2024-04-01 12:00:00\",\"buy\",\"limit\",\"1.0001\",\"500.05\",\"0.10\",\"500.0\",\"0\",\"\",\"L1\"\n",
+        );
+
+        let parser = KrakenTradesParser;
+        let result = parser.parse(csv, "Kraken").unwrap();
+
         assert_eq!(result.items.len(), 1);
         let tx = &result.items[0].1;
         assert_eq!(tx.subtype.as_deref(), Some("swap"));
+        assert_eq!(tx.symbol, "USDT");
+        assert_eq!(tx.swap_to_symbol.as_deref(), Some("USDC"));
     }
 
     // ── Edge cases ──
