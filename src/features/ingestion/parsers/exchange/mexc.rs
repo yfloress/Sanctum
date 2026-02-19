@@ -175,8 +175,12 @@ impl ExchangeParser for MexcSpotParser {
 
             let status = get_field(&record, &cols, "status");
 
-            // Only process filled orders
-            if !status.eq_ignore_ascii_case("Filled") {
+            // Process orders that had actual fills: "Filled" and "Partially Filled".
+            // MEXC exports partially filled orders (order was partially executed
+            // then cancelled) with the real `Filled Quantity`.  Dropping these
+            // loses real trades and causes wrong balances.
+            // Cancelled / Pending / other statuses are skipped.
+            if !status.to_lowercase().contains("filled") {
                 continue;
             }
 
@@ -216,9 +220,16 @@ impl ExchangeParser for MexcSpotParser {
                 }
             };
 
-            // Parse filled quantity (base asset amount)
+            // Parse filled quantity (base asset amount).
+            // Negative values are accepted and normalised — exchange exports
+            // covering a partial window of an account's history can
+            // legitimately contain negative figures.
             let filled_qty = match parse_decimal(filled_qty_raw) {
-                Some(q) if q > 0.0 => q,
+                Some(q) if q.abs() > 0.0 => q.abs(),
+                Some(_) => {
+                    // Zero after abs — skip silently (nothing was filled)
+                    continue;
+                }
                 _ => {
                     result.errors.push(RowError::new(
                         line_number,
@@ -229,11 +240,14 @@ impl ExchangeParser for MexcSpotParser {
                 }
             };
 
-            // Parse order amount (quote asset total)
-            let order_amount = parse_decimal(order_amount_raw).unwrap_or(0.0);
+            // Parse order amount (quote asset total).  Normalise to absolute
+            // value for the same partial-window reason.
+            let order_amount = parse_decimal(order_amount_raw)
+                .map(|v| v.abs())
+                .unwrap_or(0.0);
 
-            // Parse average filled price
-            let avg_price = parse_decimal(avg_price_raw);
+            // Parse average filled price (normalise to positive)
+            let avg_price = parse_decimal(avg_price_raw).map(|p| p.abs());
 
             let is_buy = direction_raw.eq_ignore_ascii_case("Buy");
             let base_fiat = is_fiat(&base_symbol);
@@ -592,7 +606,9 @@ mod tests {
     }
 
     #[test]
-    fn partially_filled_skipped() {
+    fn partially_filled_is_processed() {
+        // MEXC exports partially filled orders with the actual Filled Quantity.
+        // These represent real executed trades and must not be dropped.
         let csv = format!(
             "{}\n11111111,BTC_USDT,2024-01-15 10:00:00,Limit,Buy,50000,50000,0.005,0.01,250,Partially Filled\n",
             HEADER
@@ -601,8 +617,39 @@ mod tests {
         let parser = MexcSpotParser;
         let result = parser.parse(&csv, "MEXC").unwrap();
 
-        // Only "Filled" status is processed
-        assert!(result.items.is_empty());
+        assert_eq!(
+            result.items.len(),
+            1,
+            "Partially filled orders must be processed"
+        );
+        assert!(result.errors.is_empty());
+
+        let tx = &result.items[0].1;
+        assert_eq!(tx.symbol, "BTC");
+        assert_eq!(tx.subtype.as_deref(), Some("buy"));
+        // Uses the actual filled quantity, not the full order quantity
+        assert!((tx.amount - 0.005).abs() < f64::EPSILON);
+        assert!((tx.price_per_coin.unwrap() - 50000.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn partially_filled_sell_is_processed() {
+        // Ensures partially filled sell orders are recorded so the balance
+        // correctly decreases — this was the root cause of phantom holdings.
+        let csv = format!(
+            "{}\n11111111,ETH_USDT,2024-02-10 14:30:00,Limit,Sell,3200.00,3200.00,0.75,1.0,2400.00,Partially Filled\n",
+            HEADER
+        );
+
+        let parser = MexcSpotParser;
+        let result = parser.parse(&csv, "MEXC").unwrap();
+
+        assert_eq!(result.items.len(), 1);
+        let tx = &result.items[0].1;
+        assert_eq!(tx.symbol, "ETH");
+        assert_eq!(tx.subtype.as_deref(), Some("sell"));
+        assert!((tx.amount - 0.75).abs() < f64::EPSILON);
+        assert!((tx.price_per_coin.unwrap() - 3200.0).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -722,7 +769,7 @@ mod tests {
     }
 
     #[test]
-    fn zero_filled_quantity_produces_error() {
+    fn zero_filled_quantity_is_skipped() {
         let csv = format!(
             "{}\n11111111,BTC_USDT,2024-01-15 10:00:00,Market,Buy,50000,Market,0,0,0,Filled\n",
             HEADER
@@ -731,8 +778,9 @@ mod tests {
         let parser = MexcSpotParser;
         let result = parser.parse(&csv, "MEXC").unwrap();
 
+        // Zero filled quantity is silently skipped (nothing was filled)
         assert!(result.items.is_empty());
-        assert_eq!(result.errors.len(), 1);
+        assert!(result.errors.is_empty());
     }
 
     #[test]
@@ -751,6 +799,50 @@ mod tests {
     fn parse_pair_invalid_empty_side() {
         assert!(parse_mexc_pair("_USDT").is_none());
         assert!(parse_mexc_pair("LTC_").is_none());
+    }
+
+    // ── Negative amount normalisation ───────────────────────────────────
+
+    #[test]
+    fn negative_filled_qty_is_normalised() {
+        // Exchange exports covering a partial window can contain negative
+        // figures.  The parser should accept them and use the absolute value.
+        let csv = format!(
+            "{}\n11111111,LTC_USDT,2024-03-10 14:00:00,Market,Buy,50,Market,-0.1,0,5,Filled\n",
+            HEADER
+        );
+
+        let parser = MexcSpotParser;
+        let result = parser.parse(&csv, "MEXC").unwrap();
+
+        assert_eq!(result.items.len(), 1);
+        assert!(result.errors.is_empty());
+        let tx = &result.items[0].1;
+        assert_eq!(tx.transaction_type, "trade");
+        assert_eq!(tx.subtype.as_deref(), Some("buy"));
+        assert!(
+            (tx.amount - 0.1).abs() < f64::EPSILON,
+            "amount should be abs of -0.1"
+        );
+    }
+
+    #[test]
+    fn negative_order_amount_is_normalised() {
+        // order_amount negative → normalised to positive for filled_value
+        let csv = format!(
+            "{}\n11111111,LTC_USDT,2024-03-10 14:00:00,Market,Sell,50,Market,0.2,0,-10,Filled\n",
+            HEADER
+        );
+
+        let parser = MexcSpotParser;
+        let result = parser.parse(&csv, "MEXC").unwrap();
+
+        assert_eq!(result.items.len(), 1);
+        assert!(result.errors.is_empty());
+        let tx = &result.items[0].1;
+        assert_eq!(tx.subtype.as_deref(), Some("sell"));
+        // price_per_coin = filled_value / filled_qty = 10 / 0.2 = 50
+        assert!((tx.amount - 0.2).abs() < f64::EPSILON);
     }
 
     // ── Same-symbol swap guard ──────────────────────────────────────────

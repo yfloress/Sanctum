@@ -273,32 +273,50 @@ pub fn validate_wallet_name(name: &str) -> Result<String, String> {
     Ok(trimmed.to_string())
 }
 
-/// Validates crypto amount (can be very small, like 0.00000001)
+/// Validates crypto amount (can be very small, like 0.00000001).
+///
+/// Negative amounts are accepted and normalised to their absolute value.
+/// Exchange CSV exports covering a partial window of an account's history
+/// can legitimately contain negative figures (e.g. sells that happened
+/// before the export window's buys).  Rejecting them would block valid
+/// imports, so we allow them and use the magnitude.
 pub fn validate_crypto_amount(amount: f64) -> Result<f64, String> {
-    if amount <= 0.0 {
-        return Err("Amount must be positive".to_string());
+    if !amount.is_finite() {
+        return Err("Amount must be a finite number".to_string());
     }
-    if amount > 1_000_000_000.0 {
+    let abs = amount.abs();
+    if abs <= 0.0 {
+        return Err("Amount must be non-zero".to_string());
+    }
+    if abs > 1_000_000_000.0 {
         return Err("Amount exceeds maximum allowed".to_string());
     }
-    Ok(amount)
+    Ok(abs)
 }
 
-/// Validates optional price per coin
+/// Validates optional price per coin.
+///
+/// Negative prices are accepted and normalised to their absolute value
+/// so that exchange exports with sign-encoded direction are not rejected.
 pub fn validate_price_per_coin(price: Option<f64>) -> Result<Option<f64>, String> {
     match price {
-        Some(p) if p < 0.0 => Err("Price per coin cannot be negative".to_string()),
-        Some(p) if p > 10_000_000.0 => Err("Price per coin exceeds maximum".to_string()),
-        other => Ok(other),
+        Some(p) if !p.is_finite() => Err("Price per coin must be a finite number".to_string()),
+        Some(p) if p.abs() > 10_000_000.0 => Err("Price per coin exceeds maximum".to_string()),
+        Some(p) => Ok(Some(p.abs())),
+        None => Ok(None),
     }
 }
 
-/// Validates optional fee
+/// Validates optional fee.
+///
+/// Negative fees are accepted and normalised to their absolute value
+/// (they may represent rebates or sign-encoded values in exchange exports).
 pub fn validate_fee(fee: Option<f64>) -> Result<Option<f64>, String> {
     match fee {
-        Some(f) if f < 0.0 => Err("Fee cannot be negative".to_string()),
-        Some(f) if f > 1_000_000.0 => Err("Fee exceeds maximum".to_string()),
-        other => Ok(other),
+        Some(f) if !f.is_finite() => Err("Fee must be a finite number".to_string()),
+        Some(f) if f.abs() > 1_000_000.0 => Err("Fee exceeds maximum".to_string()),
+        Some(f) => Ok(Some(f.abs())),
+        None => Ok(None),
     }
 }
 
@@ -478,6 +496,44 @@ mod tests {
         assert_eq!(validate_amount(100.0).unwrap(), 10000);
         assert!(validate_amount(0.0).is_err());
         assert!(validate_amount(-10.0).is_err());
+    }
+
+    #[test]
+    fn test_validate_crypto_amount_allows_negatives() {
+        // Positive values pass through as-is
+        assert_eq!(validate_crypto_amount(0.5).unwrap(), 0.5);
+        assert_eq!(validate_crypto_amount(0.00000001).unwrap(), 0.00000001);
+        // Negative values are normalised to their absolute value
+        assert_eq!(validate_crypto_amount(-0.5).unwrap(), 0.5);
+        assert_eq!(validate_crypto_amount(-1.23).unwrap(), 1.23);
+        // Zero and non-finite are still rejected
+        assert!(validate_crypto_amount(0.0).is_err());
+        assert!(validate_crypto_amount(f64::NAN).is_err());
+        assert!(validate_crypto_amount(f64::INFINITY).is_err());
+        assert!(validate_crypto_amount(f64::NEG_INFINITY).is_err());
+        // Max boundary
+        assert!(validate_crypto_amount(2_000_000_000.0).is_err());
+        assert!(validate_crypto_amount(-2_000_000_000.0).is_err());
+    }
+
+    #[test]
+    fn test_validate_price_per_coin_allows_negatives() {
+        assert_eq!(validate_price_per_coin(Some(100.0)).unwrap(), Some(100.0));
+        // Negative normalised to absolute value
+        assert_eq!(validate_price_per_coin(Some(-50.0)).unwrap(), Some(50.0));
+        assert_eq!(validate_price_per_coin(None).unwrap(), None);
+        assert!(validate_price_per_coin(Some(f64::NAN)).is_err());
+        assert!(validate_price_per_coin(Some(20_000_000.0)).is_err());
+    }
+
+    #[test]
+    fn test_validate_fee_allows_negatives() {
+        assert_eq!(validate_fee(Some(0.5)).unwrap(), Some(0.5));
+        // Negative normalised to absolute value (rebate)
+        assert_eq!(validate_fee(Some(-0.1)).unwrap(), Some(0.1));
+        assert_eq!(validate_fee(None).unwrap(), None);
+        assert!(validate_fee(Some(f64::NAN)).is_err());
+        assert!(validate_fee(Some(2_000_000.0)).is_err());
     }
 
     #[test]

@@ -922,9 +922,12 @@ impl ExchangeParser for BinanceSpotParser {
             let date = format_datetime(timestamp);
             let is_buy = side_raw.eq_ignore_ascii_case("BUY");
 
-            // Parse Executed (base currency amount, e.g. "0.5BTC")
+            // Parse Executed (base currency amount, e.g. "0.5BTC").
+            // Normalise to absolute value — exchange exports covering a
+            // partial window of an account's history can legitimately
+            // contain negative figures.
             let (executed_qty, executed_unit) = match parse_amount_with_unit(executed_raw) {
-                Some(v) => v,
+                Some((q, u)) => (q.abs(), u),
                 None => {
                     result.errors.push(RowError::new(
                         line_number,
@@ -935,9 +938,10 @@ impl ExchangeParser for BinanceSpotParser {
                 }
             };
 
-            // Parse Amount (quote currency amount, e.g. "25000USDT")
+            // Parse Amount (quote currency amount, e.g. "25000USDT").
+            // Normalise to absolute value for the same reason.
             let (amount_qty, amount_unit) = match parse_amount_with_unit(amount_raw) {
-                Some(v) => v,
+                Some((q, u)) => (q.abs(), u),
                 None => {
                     result.errors.push(RowError::new(
                         line_number,
@@ -948,9 +952,9 @@ impl ExchangeParser for BinanceSpotParser {
                 }
             };
 
-            // Parse Fee (e.g. "0.001BNB")
+            // Parse Fee (e.g. "0.001BNB"). Normalise to absolute value.
             let (fee_qty, fee_unit) = match parse_amount_with_unit(fee_raw) {
-                Some(v) => v,
+                Some((q, u)) => (q.abs(), u),
                 None => (0.0, String::new()),
             };
 

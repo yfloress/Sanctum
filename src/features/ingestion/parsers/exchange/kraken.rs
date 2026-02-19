@@ -823,8 +823,16 @@ impl ExchangeParser for KrakenTradesParser {
                 }
             };
 
+            // Parse volume (base asset amount).
+            // Negative values are accepted and normalised — exchange exports
+            // covering a partial window of an account's history can
+            // legitimately contain negative figures.
             let volume = match parse_decimal(vol_raw) {
-                Some(v) if v > 0.0 => v,
+                Some(v) if v.abs() > 0.0 => v.abs(),
+                Some(_) => {
+                    // Zero after abs — skip silently
+                    continue;
+                }
                 _ => {
                     result.errors.push(RowError::new(
                         line_number,
@@ -835,8 +843,9 @@ impl ExchangeParser for KrakenTradesParser {
                 }
             };
 
-            let cost = parse_decimal(cost_raw).unwrap_or(0.0);
-            let fee = parse_decimal(fee_raw).unwrap_or(0.0);
+            // Normalise cost and fee to absolute values for the same reason.
+            let cost = parse_decimal(cost_raw).map(|v| v.abs()).unwrap_or(0.0);
+            let fee = parse_decimal(fee_raw).map(|v| v.abs()).unwrap_or(0.0);
 
             let is_buy = type_raw.eq_ignore_ascii_case("buy");
             let side = if is_buy { "buy" } else { "sell" };
@@ -1425,7 +1434,7 @@ mod tests {
     }
 
     #[test]
-    fn trades_zero_volume_is_error() {
+    fn trades_zero_volume_is_skipped() {
         let csv = concat!(
             "\"txid\",\"ordertxid\",\"pair\",\"time\",\"type\",\"ordertype\",\"price\",\"cost\",\"fee\",\"vol\",\"margin\",\"misc\",\"ledgers\"\n",
             "\"TX1\",\"ORD1\",\"BTC/USD\",\"2024-01-15 10:00:00\",\"buy\",\"limit\",\"50000\",\"0\",\"0\",\"0\",\"0\",\"\",\"\"\n",
@@ -1434,8 +1443,9 @@ mod tests {
         let parser = KrakenTradesParser;
         let result = parser.parse(csv, "Kraken").unwrap();
 
+        // Zero volume is silently skipped (nothing was filled)
         assert!(result.items.is_empty());
-        assert_eq!(result.errors.len(), 1);
+        assert!(result.errors.is_empty());
     }
 
     #[test]
@@ -1527,6 +1537,65 @@ mod tests {
             result.items.is_empty(),
             "Expected no transactions for same-symbol trade pair, got {}",
             result.items.len()
+        );
+    }
+
+    // ── Negative amount normalisation ───────────────────────────────────
+
+    #[test]
+    fn trades_negative_volume_is_normalised() {
+        // Exchange exports covering a partial window of an account's
+        // history can legitimately contain negative figures.  The parser
+        // should accept them and use the absolute value.
+        let csv = concat!(
+            "\"txid\",\"ordertxid\",\"pair\",\"time\",\"type\",\"ordertype\",\"price\",\"cost\",\"fee\",\"vol\",\"margin\",\"misc\",\"ledgers\"\n",
+            "\"TX1\",\"ORD1\",\"BTC/USD\",\"2024-01-15 10:00:00\",\"buy\",\"limit\",\"50000\",\"25000\",\"10\",\"-0.5\",\"0\",\"\",\"\"\n",
+        );
+
+        let parser = KrakenTradesParser;
+        let result = parser.parse(csv, "Kraken").unwrap();
+
+        assert_eq!(result.items.len(), 1);
+        assert!(result.errors.is_empty());
+        let tx = &result.items[0].1;
+        assert_eq!(tx.transaction_type, "trade");
+        assert_eq!(tx.subtype.as_deref(), Some("buy"));
+        assert!(
+            (tx.amount - 0.5).abs() < f64::EPSILON,
+            "amount should be abs of -0.5, got {}",
+            tx.amount
+        );
+        // price = cost / volume = 25000 / 0.5 = 50000
+        assert!(
+            (tx.price_per_coin.unwrap() - 50000.0).abs() < 0.01,
+            "price_per_coin should be 50000"
+        );
+    }
+
+    #[test]
+    fn trades_negative_cost_is_normalised() {
+        let csv = concat!(
+            "\"txid\",\"ordertxid\",\"pair\",\"time\",\"type\",\"ordertype\",\"price\",\"cost\",\"fee\",\"vol\",\"margin\",\"misc\",\"ledgers\"\n",
+            "\"TX1\",\"ORD1\",\"ETH/USD\",\"2024-02-20 12:00:00\",\"sell\",\"market\",\"3000\",\"-6000\",\"-5\",\"2.0\",\"0\",\"\",\"\"\n",
+        );
+
+        let parser = KrakenTradesParser;
+        let result = parser.parse(csv, "Kraken").unwrap();
+
+        assert_eq!(result.items.len(), 1);
+        assert!(result.errors.is_empty());
+        let tx = &result.items[0].1;
+        assert_eq!(tx.subtype.as_deref(), Some("sell"));
+        assert!((tx.amount - 2.0).abs() < f64::EPSILON);
+        // price = abs(cost) / volume = 6000 / 2.0 = 3000
+        assert!(
+            (tx.price_per_coin.unwrap() - 3000.0).abs() < 0.01,
+            "price_per_coin should be 3000"
+        );
+        // fee normalised to absolute value
+        assert!(
+            (tx.fee.unwrap() - 5.0).abs() < f64::EPSILON,
+            "fee should be abs of -5"
         );
     }
 
