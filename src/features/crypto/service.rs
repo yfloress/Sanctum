@@ -370,22 +370,33 @@ impl CryptoService {
         self.with_db(|db| db.get_wallets().map_err(CryptoError::Database))
     }
 
-    pub fn delete_wallet(&self, id: String) -> Result<(), CryptoError> {
+    pub fn delete_wallet(&self, id: String, force: bool) -> Result<(), CryptoError> {
         self.with_db(|db| {
             let validated_id = validate_uuid(&id)?;
 
-            let transactions = db.get_wallet_transactions(&validated_id)?;
-            if !transactions.is_empty() {
-                return Err(CryptoError::Validation(format!(
-                    "Cannot delete wallet with {} transaction{}. Please delete all transactions first.",
-                    transactions.len(),
-                    if transactions.len() == 1 { "" } else { "s" }
-                )));
+            if !force {
+                let transactions = db.get_wallet_transactions(&validated_id)?;
+                if !transactions.is_empty() {
+                    return Err(CryptoError::Validation(format!(
+                        "Cannot delete wallet with {} transaction{}. Please delete all transactions first.",
+                        transactions.len(),
+                        if transactions.len() == 1 { "" } else { "s" }
+                    )));
+                }
             }
 
-            db.delete_wallet(&validated_id)?;
+            db.delete_wallet(&validated_id, true)?;
             log_security_event(SecurityEvent::WalletDeleted, None);
             Ok(())
+        })
+    }
+
+    /// Returns the number of transactions in a wallet
+    pub fn get_wallet_transaction_count(&self, id: String) -> Result<usize, CryptoError> {
+        self.with_db(|db| {
+            let validated_id = validate_uuid(&id)?;
+            let transactions = db.get_wallet_transactions(&validated_id)?;
+            Ok(transactions.len())
         })
     }
 

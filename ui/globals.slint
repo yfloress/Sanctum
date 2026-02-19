@@ -747,7 +747,8 @@ export global CryptoAdapter {
     // (name, category) -> id or error
     callback create-wallet(string, string) -> string;
     callback create-wallet-with-icon(string, string, string) -> string; // (name, category, icon) -> "" or error
-    callback delete-wallet(string) -> string;
+    callback delete-wallet(string, bool) -> string; // (wallet_id, force) -> "" or error
+    callback get-wallet-tx-count(string) -> int; // (wallet_id) -> transaction count
     callback update-wallet-name(string, string) -> string; // (wallet_id, new_name) -> "" or error
     callback update-wallet-icon(string, string) -> string; // (wallet_id, icon_path) -> "" or error
     callback delete-crypto-transaction(string) -> string;

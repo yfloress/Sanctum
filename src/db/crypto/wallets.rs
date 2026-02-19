@@ -21,7 +21,7 @@
 
 use crate::db::{Database, DbError};
 use crate::models::CryptoWallet;
-use rusqlite::{params, Error as RusqliteError};
+use rusqlite::{Error as RusqliteError, params};
 
 impl Database {
     /// Creates a new crypto wallet
@@ -98,20 +98,28 @@ impl Database {
         Ok(())
     }
 
-    /// Deletes a wallet (blocks if wallet has transactions)
-    pub fn delete_wallet(&self, id: &str) -> Result<(), DbError> {
-        // Block deletion if wallet has existing transactions
-        let tx_count: i64 = self
+    /// Returns the number of transactions associated with a wallet
+    pub fn get_wallet_transaction_count(&self, wallet_id: &str) -> Result<i64, DbError> {
+        let count: i64 = self
             .conn
             .query_row(
                 "SELECT COUNT(*) FROM crypto_transactions WHERE wallet_id = ?1",
-                params![id],
+                params![wallet_id],
                 |row| row.get(0),
             )
             .unwrap_or(0);
+        Ok(count)
+    }
 
-        if tx_count > 0 {
-            return Err(DbError::WalletNotEmpty);
+    /// Deletes a wallet.
+    /// When `force` is false, blocks deletion if the wallet has transactions.
+    /// When `force` is true, deletes regardless (CASCADE removes transactions).
+    pub fn delete_wallet(&self, id: &str, force: bool) -> Result<(), DbError> {
+        if !force {
+            let tx_count = self.get_wallet_transaction_count(id)?;
+            if tx_count > 0 {
+                return Err(DbError::WalletNotEmpty);
+            }
         }
 
         let rows = self

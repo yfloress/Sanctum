@@ -579,6 +579,10 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_crypto_delete_wallet(s(&t("crypto-delete-wallet")));
     tr.set_crypto_delete_wallet_confirm_prefix(s(&t("crypto-delete-wallet-confirm-prefix")));
     tr.set_crypto_delete_wallet_confirm_suffix(s(&t("crypto-delete-wallet-confirm-suffix")));
+    tr.set_crypto_delete_wallet_warning_title(s(&t("crypto-delete-wallet-warning-title")));
+    tr.set_crypto_delete_wallet_warning_prefix(s(&t("crypto-delete-wallet-warning-prefix")));
+    tr.set_crypto_delete_wallet_warning_suffix(s(&t("crypto-delete-wallet-warning-suffix")));
+    tr.set_crypto_delete_wallet_force(s(&t("crypto-delete-wallet-force")));
     tr.set_crypto_loading_portfolio(s(&t("crypto-loading-portfolio")));
     tr.set_crypto_syncing_prices(s(&t("crypto-syncing-prices")));
     tr.set_crypto_syncing_wait(s(&t("crypto-syncing-wait")));

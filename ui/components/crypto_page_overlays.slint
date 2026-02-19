@@ -25,6 +25,8 @@ export component CryptoPageOverlays inherits Rectangle {
     in-out property <bool> show-delete-wallet-confirm;
     in-out property <string> delete-wallet-id;
     in-out property <string> delete-wallet-name;
+    property <bool> delete-wallet-warning-step: false;
+    property <int> delete-wallet-tx-count: 0;
 
     // ==================== DETAIL OVERLAY ====================
     if CryptoAdapter.show-asset-detail: Rectangle {
@@ -113,6 +115,8 @@ export component CryptoPageOverlays inherits Rectangle {
             TouchArea {
                 clicked => {
                     show-delete-wallet-confirm = false;
+                    delete-wallet-warning-step = false;
+                    delete-wallet-tx-count = 0;
                     delete-wallet-id = "";
                     delete-wallet-name = "";
                 }
@@ -120,14 +124,13 @@ export component CryptoPageOverlays inherits Rectangle {
         }
 
         Rectangle {
-            width: min(360px, parent.width - 40px);
-            height: min(180px, parent.height - 40px);
+            width: min(380px, parent.width - 40px);
             x: (parent.width - self.width) / 2;
             y: (parent.height - self.height) / 2;
             background: Theme.sidebar-bg;
             border-radius: 12px;
             border-width: 1px;
-            border-color: Theme.border-light;
+            border-color: delete-wallet-warning-step ? Theme.warning.with-alpha(0.4) : Theme.border-light;
             drop-shadow-blur: 20px;
             drop-shadow-color: Theme.shadow-color;
 
@@ -135,6 +138,7 @@ export component CryptoPageOverlays inherits Rectangle {
                 padding: 24px;
                 spacing: 16px;
 
+                // Title
                 Text {
                     text: Translations.crypto-delete-wallet;
                     color: Theme.text-primary;
@@ -143,7 +147,8 @@ export component CryptoPageOverlays inherits Rectangle {
                     horizontal-alignment: center;
                 }
 
-                Text {
+                // Normal confirmation text (step 1, no transactions)
+                if !delete-wallet-warning-step: Text {
                     text: Translations.crypto-delete-wallet-confirm-prefix + delete-wallet-name + Translations.crypto-delete-wallet-confirm-suffix;
                     color: Theme.text-muted;
                     font-size: 11px;
@@ -151,6 +156,50 @@ export component CryptoPageOverlays inherits Rectangle {
                     horizontal-alignment: center;
                 }
 
+                // Warning banner (step 2, has transactions)
+                if delete-wallet-warning-step: Rectangle {
+                    background: Theme.warning.with-alpha(0.08);
+                    border-radius: 8px;
+                    border-width: 1px;
+                    border-color: Theme.warning.with-alpha(0.25);
+                    height: warning-layout.preferred-height;
+
+                    warning-layout := VerticalLayout {
+                        padding: 12px;
+                        spacing: 8px;
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: center;
+
+                            Image {
+                                source: @image-url("../assets/icons/triangle-alert.svg");
+                                width: 16px;
+                                height: 16px;
+                                colorize: Theme.warning;
+                                y: (parent.height - self.height) / 2;
+                            }
+
+                            Text {
+                                text: Translations.crypto-delete-wallet-warning-title;
+                                color: Theme.warning;
+                                font-size: 12px;
+                                font-weight: 700;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        Text {
+                            text: Translations.crypto-delete-wallet-warning-prefix + delete-wallet-tx-count + Translations.crypto-delete-wallet-warning-suffix;
+                            color: Theme.text-secondary;
+                            font-size: 11px;
+                            wrap: word-wrap;
+                            horizontal-alignment: center;
+                        }
+                    }
+                }
+
+                // Buttons
                 HorizontalLayout {
                     spacing: 12px;
 
@@ -175,6 +224,8 @@ export component CryptoPageOverlays inherits Rectangle {
                             mouse-cursor: pointer;
                             clicked => {
                                 show-delete-wallet-confirm = false;
+                                delete-wallet-warning-step = false;
+                                delete-wallet-tx-count = 0;
                                 delete-wallet-id = "";
                                 delete-wallet-name = "";
                             }
@@ -190,7 +241,7 @@ export component CryptoPageOverlays inherits Rectangle {
                         border-color: Theme.delete-border;
 
                         Text {
-                            text: Translations.action-delete;
+                            text: delete-wallet-warning-step ? Translations.crypto-delete-wallet-force : Translations.action-delete;
                             color: Theme.text-primary;
                             font-size: 11px;
                             font-weight: 600;
@@ -201,13 +252,36 @@ export component CryptoPageOverlays inherits Rectangle {
                         confirm-touch := TouchArea {
                             mouse-cursor: pointer;
                             clicked => {
-                                let result = CryptoAdapter.delete-wallet(delete-wallet-id);
-                                if (result == "") {
-                                    show-delete-wallet-confirm = false;
-                                    delete-wallet-id = "";
-                                    delete-wallet-name = "";
+                                if (!delete-wallet-warning-step) {
+                                    // Step 1: check if wallet has transactions
+                                    let tx-count = CryptoAdapter.get-wallet-tx-count(delete-wallet-id);
+                                    if (tx-count > 0) {
+                                        // Show warning, wait for second confirmation
+                                        delete-wallet-tx-count = tx-count;
+                                        delete-wallet-warning-step = true;
+                                    } else {
+                                        // No transactions, delete directly
+                                        let result = CryptoAdapter.delete-wallet(delete-wallet-id, false);
+                                        if (result == "") {
+                                            show-delete-wallet-confirm = false;
+                                            delete-wallet-id = "";
+                                            delete-wallet-name = "";
+                                        } else {
+                                            NotificationAdapter.show(result, true);
+                                        }
+                                    }
                                 } else {
-                                    NotificationAdapter.show(result, true);
+                                    // Step 2: force delete (user confirmed the warning)
+                                    let result = CryptoAdapter.delete-wallet(delete-wallet-id, true);
+                                    if (result == "") {
+                                        show-delete-wallet-confirm = false;
+                                        delete-wallet-warning-step = false;
+                                        delete-wallet-tx-count = 0;
+                                        delete-wallet-id = "";
+                                        delete-wallet-name = "";
+                                    } else {
+                                        NotificationAdapter.show(result, true);
+                                    }
                                 }
                             }
                         }

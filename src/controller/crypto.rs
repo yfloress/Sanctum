@@ -188,10 +188,18 @@ impl AppController {
     }
 
     /// Deletes a wallet
-    /// Returns an error if the wallet has transactions
-    pub fn delete_wallet(&self, id: String) -> Result<(), ControllerError> {
+    /// When force=false, returns an error if the wallet has transactions.
+    /// When force=true, deletes the wallet and cascades to its transactions.
+    pub fn delete_wallet(&self, id: String, force: bool) -> Result<(), ControllerError> {
         self.crypto_service
-            .delete_wallet(id)
+            .delete_wallet(id, force)
+            .map_err(ControllerError::from)
+    }
+
+    /// Returns the number of transactions in a wallet
+    pub fn get_wallet_transaction_count(&self, id: String) -> Result<usize, ControllerError> {
+        self.crypto_service
+            .get_wallet_transaction_count(id)
             .map_err(ControllerError::from)
     }
 
