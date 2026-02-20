@@ -19,11 +19,14 @@
 //!
 //! Supported formats:
 //! - Spot trade history
+//! - Deposit history
 //! - Withdrawal history
 
+mod deposits;
 mod spot;
 mod withdrawals;
 
+pub use deposits::MexcDepositParser;
 pub use spot::MexcSpotParser;
 pub use withdrawals::MexcWithdrawalParser;
 

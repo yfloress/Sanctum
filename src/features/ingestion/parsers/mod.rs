@@ -252,6 +252,15 @@ mod tests {
     }
 
     #[test]
+    fn test_detect_mexc_deposits_csv() {
+        let csv = "UID,Status,Time,Crypto,Network,Deposit Amount,TxID,Progress\n10000000,Credited Successfully,2025-12-19 21:39:59,USDT,Polygon(MATIC),27,0xa1b2:0,(465/450)\n";
+        assert_eq!(
+            detect_format(csv, "mexc-deposits.csv"),
+            Some(ImportFormat::ExchangeCsv(ExchangeSource::MexcDepositHistory))
+        );
+    }
+
+    #[test]
     fn test_exchange_csv_takes_priority_over_generic() {
         // A Binance CSV has "Account" and could match generic CsvTransactions
         // if it also had "amount", but exchange detection runs first.
