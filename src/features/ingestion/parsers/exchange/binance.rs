@@ -629,6 +629,53 @@ fn single_row_to_transaction(
     })
 }
 
+/// Best-effort fallback for rows that are normally expected to be paired
+/// (`Binance Convert`, `Small Assets Exchange BNB`) but arrive unpaired in
+/// a partial CSV export window.
+///
+/// We avoid silently dropping legit crypto balance deltas:
+/// - positive change -> `trade:buy`
+/// - negative change -> `trade:sell`
+///
+/// Price cannot be inferred safely without the counterpart row, so it stays `None`.
+fn unpaired_row_to_transaction(
+    row: &BinanceRow,
+    wallet_name: &str,
+) -> Option<ImportCryptoTransaction> {
+    if !row.operation.needs_pairing() {
+        return single_row_to_transaction(row, wallet_name);
+    }
+
+    if is_fiat(&row.symbol) || row.operation.should_skip() {
+        return None;
+    }
+
+    let date = format_datetime(row.timestamp);
+    let subtype = if row.change >= 0.0 { "buy" } else { "sell" };
+    let notes = Some(format!(
+        "Binance {} (unpaired fallback) | {}",
+        row.operation_raw, row.remark
+    ));
+
+    Some(ImportCryptoTransaction {
+        date,
+        wallet: wallet_name.to_string(),
+        symbol: row.symbol.clone(),
+        transaction_type: "trade".to_string(),
+        amount: row.change.abs(),
+        subtype: Some(subtype.to_string()),
+        price_per_coin: None,
+        fee: None,
+        override_proceeds: None,
+        override_cost_basis: None,
+        swap_to_symbol: None,
+        swap_to_amount: None,
+        fee_coin_symbol: None,
+        fee_amount: None,
+        notes,
+    })
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 //  Binance All Statements Parser
 // ═══════════════════════════════════════════════════════════════════════════
@@ -795,7 +842,7 @@ impl ExchangeParser for BinanceAllStatementsParser {
             } else {
                 // Incomplete pair: emit individual rows as standalone
                 for row in pending.outgoing.iter().chain(pending.incoming.iter()) {
-                    if let Some(tx) = single_row_to_transaction(row, wallet_name) {
+                    if let Some(tx) = unpaired_row_to_transaction(row, wallet_name) {
                         result.items.push((row.line_number, tx));
                     }
                 }
@@ -812,7 +859,7 @@ impl ExchangeParser for BinanceAllStatementsParser {
             } else {
                 // Emit unpaired spend/revenue as standalone
                 for row in pending.outgoing.iter().chain(pending.incoming.iter()) {
-                    if let Some(tx) = single_row_to_transaction(row, wallet_name) {
+                    if let Some(tx) = unpaired_row_to_transaction(row, wallet_name) {
                         result.items.push((row.line_number, tx));
                     }
                 }
@@ -1301,6 +1348,60 @@ mod tests {
         assert_eq!(tx.transaction_type, "trade");
         assert_eq!(tx.subtype.as_deref(), Some("sell"));
         assert!((tx.amount - 0.5).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn all_statements_unpaired_convert_positive_crypto_uses_buy_fallback() {
+        let csv = concat!(
+            "User_ID,UTC_Time,Account,Operation,Coin,Change,Remark\n",
+            "12345,2024-04-01 12:00:00,Spot,Binance Convert,BTC,0.02,partial export\n",
+        );
+
+        let parser = BinanceAllStatementsParser;
+        let result = parser.parse(csv, "Binance").unwrap();
+
+        assert_eq!(result.items.len(), 1);
+        assert!(result.errors.is_empty());
+        let tx = &result.items[0].1;
+        assert_eq!(tx.symbol, "BTC");
+        assert_eq!(tx.transaction_type, "trade");
+        assert_eq!(tx.subtype.as_deref(), Some("buy"));
+        assert!((tx.amount - 0.02).abs() < f64::EPSILON);
+        assert!(tx.price_per_coin.is_none());
+    }
+
+    #[test]
+    fn all_statements_unpaired_convert_negative_crypto_uses_sell_fallback() {
+        let csv = concat!(
+            "User_ID,UTC_Time,Account,Operation,Coin,Change,Remark\n",
+            "12345,2024-04-01 12:00:00,Spot,Binance Convert,ETH,-1.5,partial export\n",
+        );
+
+        let parser = BinanceAllStatementsParser;
+        let result = parser.parse(csv, "Binance").unwrap();
+
+        assert_eq!(result.items.len(), 1);
+        assert!(result.errors.is_empty());
+        let tx = &result.items[0].1;
+        assert_eq!(tx.symbol, "ETH");
+        assert_eq!(tx.transaction_type, "trade");
+        assert_eq!(tx.subtype.as_deref(), Some("sell"));
+        assert!((tx.amount - 1.5).abs() < f64::EPSILON);
+        assert!(tx.price_per_coin.is_none());
+    }
+
+    #[test]
+    fn all_statements_unpaired_convert_fiat_row_is_skipped() {
+        let csv = concat!(
+            "User_ID,UTC_Time,Account,Operation,Coin,Change,Remark\n",
+            "12345,2024-04-01 12:00:00,Spot,Binance Convert,USD,-1000.0,partial export\n",
+        );
+
+        let parser = BinanceAllStatementsParser;
+        let result = parser.parse(csv, "Binance").unwrap();
+
+        assert!(result.items.is_empty());
+        assert!(result.errors.is_empty());
     }
 
     #[test]
