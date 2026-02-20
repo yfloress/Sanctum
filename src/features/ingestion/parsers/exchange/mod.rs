@@ -50,6 +50,7 @@ pub enum ExchangeSource {
     FeatherWallet,
     MoneroGuiWallet,
     MexcSpotTradeHistory,
+    MexcWithdrawalHistory,
     // Future:
     // CryptoMkt,
     // Bybit,
@@ -67,6 +68,7 @@ impl ExchangeSource {
             ExchangeSource::FeatherWallet => "Feather Wallet",
             ExchangeSource::MoneroGuiWallet => "Monero GUI Wallet",
             ExchangeSource::MexcSpotTradeHistory => "MEXC Spot Trade History",
+            ExchangeSource::MexcWithdrawalHistory => "MEXC Withdrawal History",
         }
     }
 
@@ -80,6 +82,7 @@ impl ExchangeSource {
             ExchangeSource::FeatherWallet => "feather",
             ExchangeSource::MoneroGuiWallet => "monero_gui",
             ExchangeSource::MexcSpotTradeHistory => "mexc_spot",
+            ExchangeSource::MexcWithdrawalHistory => "mexc_withdrawal",
         }
     }
 
@@ -92,7 +95,9 @@ impl ExchangeSource {
             }
             ExchangeSource::FeatherWallet => "Feather",
             ExchangeSource::MoneroGuiWallet => "Monero GUI",
-            ExchangeSource::MexcSpotTradeHistory => "MEXC",
+            ExchangeSource::MexcSpotTradeHistory | ExchangeSource::MexcWithdrawalHistory => {
+                "MEXC"
+            }
         }
     }
 }
@@ -201,6 +206,24 @@ const EXCHANGE_SIGNATURES: &[(&[&str], ExchangeSource)] = &[
             "Status",
         ],
         ExchangeSource::MexcSpotTradeHistory,
+    ),
+    // MEXC Withdrawal History
+    (
+        &[
+            "UID",
+            "Status",
+            "Time",
+            "Crypto",
+            "Network",
+            "Request Amount",
+            "Withdrawal Address",
+            "memo",
+            "TxID",
+            "Trading Fee",
+            "Settlement Amount",
+            "Withdrawal Descriptions",
+        ],
+        ExchangeSource::MexcWithdrawalHistory,
     ),
     // Monero GUI Wallet (official)
     (
@@ -335,6 +358,7 @@ pub fn parser_for(source: ExchangeSource) -> Box<dyn ExchangeParser> {
         ExchangeSource::FeatherWallet => Box::new(feather::FeatherParser),
         ExchangeSource::MoneroGuiWallet => Box::new(monero_gui::MoneroGuiParser),
         ExchangeSource::MexcSpotTradeHistory => Box::new(mexc::MexcSpotParser),
+        ExchangeSource::MexcWithdrawalHistory => Box::new(mexc::MexcWithdrawalParser),
     }
 }
 
@@ -427,6 +451,15 @@ mod tests {
     }
 
     #[test]
+    fn detect_mexc_withdrawals() {
+        let csv = "UID,Status,Time,Crypto,Network,Request Amount,Withdrawal Address,memo,TxID,Trading Fee,Settlement Amount,Withdrawal Descriptions\n";
+        assert_eq!(
+            detect_exchange_source(csv),
+            Some(ExchangeSource::MexcWithdrawalHistory)
+        );
+    }
+
+    #[test]
     fn detect_unknown_returns_none() {
         let csv = "date,account,amount,currency\n";
         assert_eq!(detect_exchange_source(csv), None);
@@ -490,6 +523,7 @@ mod tests {
             ExchangeSource::FeatherWallet,
             ExchangeSource::MoneroGuiWallet,
             ExchangeSource::MexcSpotTradeHistory,
+            ExchangeSource::MexcWithdrawalHistory,
         ];
         for source in sources {
             assert!(!source.label().is_empty());
