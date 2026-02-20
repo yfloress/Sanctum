@@ -261,6 +261,15 @@ mod tests {
     }
 
     #[test]
+    fn test_detect_mexc_trades_csv() {
+        let csv = "UID,Pairs,Time,Side,Filled Price,Executed Amount,Total,Fee,Role\n11111111,LTC_USDT,2025-12-18 22:13:41,Buy,78.04,0.315,24.58860,0.01229430USDT,Taker\n";
+        assert_eq!(
+            detect_format(csv, "mexc-trades.csv"),
+            Some(ImportFormat::ExchangeCsv(ExchangeSource::MexcTradeHistory))
+        );
+    }
+
+    #[test]
     fn test_exchange_csv_takes_priority_over_generic() {
         // A Binance CSV has "Account" and could match generic CsvTransactions
         // if it also had "amount", but exchange detection runs first.

@@ -291,11 +291,11 @@ impl ExchangeParser for FeatherParser {
             }
             // Include fiat valuation in notes if present.
             // Feather outputs "?" when the fiat value cannot be calculated.
-            if let Some(fiat_val) = non_empty(fiat_amount) {
-                if fiat_val != "?" {
-                    let currency = non_empty(fiat_currency).unwrap_or("USD");
-                    notes_parts.push(format!("Fiat: {} {}", fiat_val, currency));
-                }
+            if let Some(fiat_val) = non_empty(fiat_amount)
+                && fiat_val != "?"
+            {
+                let currency = non_empty(fiat_currency).unwrap_or("USD");
+                notes_parts.push(format!("Fiat: {} {}", fiat_val, currency));
             }
 
             if is_churn_out {

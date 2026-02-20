@@ -312,6 +312,7 @@ pub struct CryptoDedupKey {
 }
 
 impl CryptoDedupKey {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         date: &str,
         wallet_id: &str,

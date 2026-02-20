@@ -63,7 +63,7 @@ pub fn parse_timestamp(raw: &str) -> Option<NaiveDateTime> {
     // Fall back to date-only formats (midnight)
     for fmt in DATE_ONLY_FORMATS {
         if let Ok(d) = chrono::NaiveDate::parse_from_str(trimmed, fmt) {
-            return Some(d.and_hms_opt(0, 0, 0)?);
+            return d.and_hms_opt(0, 0, 0);
         }
     }
 
@@ -248,14 +248,14 @@ pub fn parse_kraken_pair(pair: &str) -> Option<(String, String)> {
     // We look for a Z-prefixed fiat in the latter portion.
     let fiat_prefixes = ["ZUSD", "ZEUR", "ZGBP", "ZJPY", "ZCAD", "ZAUD"];
     for prefix in fiat_prefixes {
-        if let Some(pos) = trimmed.find(prefix) {
-            if pos > 0 {
-                let base_raw = &trimmed[..pos];
-                let quote_raw = &trimmed[pos..];
-                let b = normalize_kraken_currency(base_raw);
-                let q = normalize_kraken_currency(quote_raw);
-                return Some((b.to_string(), q.to_string()));
-            }
+        if let Some(pos) = trimmed.find(prefix)
+            && pos > 0
+        {
+            let base_raw = &trimmed[..pos];
+            let quote_raw = &trimmed[pos..];
+            let b = normalize_kraken_currency(base_raw);
+            let q = normalize_kraken_currency(quote_raw);
+            return Some((b.to_string(), q.to_string()));
         }
     }
 
