@@ -1071,7 +1071,10 @@ impl IngestionService {
                     &tx.wallet_id,
                     &tx.coin_id,
                     tx.mechanical_type(),
+                    &tx.transaction_type,
+                    tx.subtype.as_deref(),
                     tx.amount,
+                    tx.price_per_coin,
                     pair_coin_id,
                 )
             })
@@ -1529,12 +1532,24 @@ impl IngestionService {
                     Some(c) => c,
                     None => continue,
                 };
+                // Match the same source-side price normalisation used when persisting swaps.
+                let source_price_for_dedup = import_tx.price_per_coin.or_else(|| {
+                    let to_amount = import_tx.swap_to_amount.unwrap_or(0.0);
+                    if import_tx.amount > 0.0 && to_amount > 0.0 {
+                        Some(to_amount / import_tx.amount)
+                    } else {
+                        None
+                    }
+                });
                 let from_key = CryptoDedupKey::new(
                     &import_tx.date,
                     &wallet.id,
                     &coin.id,
                     mechanical_type,
+                    &category_type,
+                    normalized_subtype.as_deref(),
                     import_tx.amount,
+                    source_price_for_dedup,
                     Some(&to_coin.id),
                 );
                 let to_key = CryptoDedupKey::new(
@@ -1542,7 +1557,10 @@ impl IngestionService {
                     &wallet.id,
                     &to_coin.id,
                     mechanical_type,
+                    &category_type,
+                    normalized_subtype.as_deref(),
                     import_tx.swap_to_amount.unwrap_or(0.0),
+                    None,
                     Some(&coin.id),
                 );
                 if dedup_set.contains(&from_key) || dedup_set.contains(&to_key) {
@@ -1557,7 +1575,10 @@ impl IngestionService {
                     &wallet.id,
                     &coin.id,
                     mechanical_type,
+                    &category_type,
+                    normalized_subtype.as_deref(),
                     import_tx.amount,
+                    import_tx.price_per_coin,
                     None,
                 );
                 if dedup_set.contains(&key) {
@@ -1632,7 +1653,10 @@ impl IngestionService {
                         &wallet.id,
                         &coin.id,
                         mechanical_type,
+                        &category_type,
+                        normalized_subtype.as_deref(),
                         import_tx.amount,
+                        import_tx.price_per_coin,
                         None,
                     );
                     dedup_set.insert(key);
@@ -1764,7 +1788,10 @@ impl IngestionService {
                         &wallet.id,
                         &coin.id,
                         transaction.mechanical_type(),
+                        &transaction.transaction_type,
+                        transaction.subtype.as_deref(),
                         import_tx.amount,
+                        transaction.price_per_coin,
                         None,
                     );
                     dedup_set.insert(key);

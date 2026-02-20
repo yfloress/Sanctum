@@ -303,8 +303,11 @@ pub struct CryptoDedupKey {
     pub date: String,
     pub wallet_id: String,
     pub coin_id: String,
-    pub transaction_type: String,
+    pub transaction_type: String, // mechanical type: buy/sell/swap/...
+    pub category_type: String,    // category type: trade/income/expense/transfer
+    pub subtype: String,          // normalized subtype, empty when absent
     pub amount_satoshis: i64, // amount * 10^8 for precision
+    pub price_micros: Option<i64>, // price_per_coin * 10^6
     pub pair_coin_id: String, // for swaps, track the counterpart asset
 }
 
@@ -313,16 +316,22 @@ impl CryptoDedupKey {
         date: &str,
         wallet_id: &str,
         coin_id: &str,
-        tx_type: &str,
+        mechanical_type: &str,
+        category_type: &str,
+        subtype: Option<&str>,
         amount: f64,
+        price_per_coin: Option<f64>,
         pair_coin_id: Option<&str>,
     ) -> Self {
         Self {
             date: date.to_string(),
             wallet_id: wallet_id.to_string(),
             coin_id: coin_id.to_string(),
-            transaction_type: tx_type.to_lowercase(),
+            transaction_type: mechanical_type.to_lowercase(),
+            category_type: category_type.to_lowercase(),
+            subtype: subtype.unwrap_or_default().to_lowercase(),
             amount_satoshis: (amount * 100_000_000.0).round() as i64,
+            price_micros: price_per_coin.map(|p| (p * 1_000_000.0).round() as i64),
             pair_coin_id: pair_coin_id.unwrap_or_default().to_string(),
         }
     }
@@ -334,7 +343,10 @@ impl PartialEq for CryptoDedupKey {
             && self.wallet_id == other.wallet_id
             && self.coin_id == other.coin_id
             && self.transaction_type == other.transaction_type
+            && self.category_type == other.category_type
+            && self.subtype == other.subtype
             && self.amount_satoshis == other.amount_satoshis
+            && self.price_micros == other.price_micros
             && self.pair_coin_id == other.pair_coin_id
     }
 }
@@ -345,14 +357,17 @@ impl Hash for CryptoDedupKey {
         self.wallet_id.hash(state);
         self.coin_id.hash(state);
         self.transaction_type.hash(state);
+        self.category_type.hash(state);
+        self.subtype.hash(state);
         self.amount_satoshis.hash(state);
+        self.price_micros.hash(state);
         self.pair_coin_id.hash(state);
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{ImportCryptoTransaction, TransactionDedupKey};
+    use super::{CryptoDedupKey, ImportCryptoTransaction, TransactionDedupKey};
 
     fn base_import(tx_type: &str) -> ImportCryptoTransaction {
         ImportCryptoTransaction {
@@ -495,5 +510,86 @@ mod tests {
         );
 
         assert_ne!(base, different_dest);
+    }
+
+    #[test]
+    fn test_crypto_dedup_distinguishes_category_and_subtype() {
+        let buy_trade = CryptoDedupKey::new(
+            "2026-01-10 10:00:00",
+            "wallet-1",
+            "bitcoin",
+            "buy",
+            "trade",
+            Some("buy"),
+            1.0,
+            Some(100_000.0),
+            None,
+        );
+        let income_airdrop = CryptoDedupKey::new(
+            "2026-01-10 10:00:00",
+            "wallet-1",
+            "bitcoin",
+            "buy",
+            "income",
+            Some("airdrop"),
+            1.0,
+            Some(100_000.0),
+            None,
+        );
+        assert_ne!(buy_trade, income_airdrop);
+    }
+
+    #[test]
+    fn test_crypto_dedup_distinguishes_price_when_rest_matches() {
+        let first = CryptoDedupKey::new(
+            "2026-01-10 10:00:00",
+            "wallet-1",
+            "bitcoin",
+            "buy",
+            "trade",
+            Some("buy"),
+            0.01,
+            Some(95_000.0),
+            None,
+        );
+        let second = CryptoDedupKey::new(
+            "2026-01-10 10:00:00",
+            "wallet-1",
+            "bitcoin",
+            "buy",
+            "trade",
+            Some("buy"),
+            0.01,
+            Some(96_000.0),
+            None,
+        );
+        assert_ne!(first, second);
+    }
+
+    #[test]
+    fn test_crypto_dedup_keeps_same_day_different_time_as_distinct() {
+        let earlier = CryptoDedupKey::new(
+            "2026-01-10 10:00:00",
+            "wallet-1",
+            "bitcoin",
+            "buy",
+            "trade",
+            Some("buy"),
+            0.25,
+            Some(95_000.0),
+            None,
+        );
+        let later = CryptoDedupKey::new(
+            "2026-01-10 12:00:00",
+            "wallet-1",
+            "bitcoin",
+            "sell",
+            "trade",
+            Some("sell"),
+            0.25,
+            Some(96_000.0),
+            None,
+        );
+        assert_ne!(earlier, later);
     }
 }

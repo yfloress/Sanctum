@@ -177,10 +177,12 @@ impl ExchangeParser for MexcSpotParser {
 
             // Process orders that had actual fills: "Filled" and "Partially Filled".
             // MEXC exports partially filled orders (order was partially executed
-            // then cancelled) with the real `Filled Quantity`.  Dropping these
+            // then cancelled) with the real `Filled Quantity`. Dropping these
             // loses real trades and causes wrong balances.
-            // Cancelled / Pending / other statuses are skipped.
-            if !status.to_lowercase().contains("filled") {
+            // Cancelled / Pending / Unfilled / other statuses are skipped.
+            let status_lower = status.to_lowercase();
+            let is_filled = status_lower == "filled" || status_lower.contains("partially filled");
+            if !is_filled {
                 continue;
             }
 
@@ -595,6 +597,21 @@ mod tests {
     fn unfilled_orders_are_skipped() {
         let csv = format!(
             "{}\n11111111,BTC_USDT,2024-01-15 10:00:00,Limit,Buy,0,50000.00,0,0.01,0,Cancelled\n",
+            HEADER
+        );
+
+        let parser = MexcSpotParser;
+        let result = parser.parse(&csv, "MEXC").unwrap();
+
+        assert!(result.items.is_empty());
+        assert!(result.errors.is_empty());
+    }
+
+    #[test]
+    fn unfilled_status_is_skipped_even_if_contains_word_filled() {
+        // Guard against broad `contains(\"filled\")` matching "Unfilled".
+        let csv = format!(
+            "{}\n11111111,BTC_USDT,2024-01-15 10:00:00,Limit,Buy,50000,50000,0.01,0.01,500,Unfilled\n",
             HEADER
         );
 
