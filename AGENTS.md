@@ -51,6 +51,25 @@ locales/
 - UI text must use i18n: add keys to `locales/*.ftl` and use `Translations.*` in Slint.
 - Use `ui/globals.slint` (Palette) for colors/spacing; avoid hardcoded styling values.
 - Crypto icons live in `ui/assets/crypto-icons`; the base path is defined in `src/ui/helpers.rs`.
+- Every source file (including tests) must start with this exact AGPL header:
+```rust
+// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Copyright (C) 2026  Kyronix
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as
+// published by the Free Software Foundation, either version 3 of the
+// License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
+//
+```
 
 ## Build, Test, and Development Commands
 Always ask the user if they want to run any of these commands:
