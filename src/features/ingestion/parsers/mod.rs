@@ -270,6 +270,49 @@ mod tests {
     }
 
     #[test]
+    fn test_detect_mexc_statement_csv() {
+        let csv =
+            "UID,Creation Time(UTC+00:00),Crypto,Transaction Type,Direction,Quantity\nUSER_001,2025-10-01 00:00:01,USDT,Deposit,Inflow,1000.00\n";
+        assert_eq!(
+            detect_format(csv, "mexc-statement.csv"),
+            Some(ImportFormat::ExchangeCsv(
+                ExchangeSource::MexcStatementHistory
+            ))
+        );
+    }
+
+    #[test]
+    fn test_detect_mexc_fiat_otc_csv() {
+        let csv = "UID,Order ID,Start Time(UTC+00:00),End Time(UTC+00:00),Trading Token,Trading Direction,Status,Order Quantity,Settlement Token,Order Amount,Payment Method\nUSER_001,OTC-001,2025-10-05 10:00:00,2025-10-05 10:15:00,USD,Buy,Completed,1000,USDT,1000.00,Bank Transfer\n";
+        assert_eq!(
+            detect_format(csv, "mexc-fiat-otc.csv"),
+            Some(ImportFormat::ExchangeCsv(ExchangeSource::MexcFiatOtcOrders))
+        );
+    }
+
+    #[test]
+    fn test_detect_mexc_funding_transfer_csv() {
+        let csv = "UID,From System,To System,Currency,Amount,Status,update_time(UTC+00:00),create_time(UTC+00:00),Transfer Type\nUSER_001,Internal,External,USDT,150,Completed,2025-12-15 08:00:00,2025-12-15 07:55:00,Withdrawal\n";
+        assert_eq!(
+            detect_format(csv, "mexc-funding-transfer.csv"),
+            Some(ImportFormat::ExchangeCsv(
+                ExchangeSource::MexcFundingTransferHistory
+            ))
+        );
+    }
+
+    #[test]
+    fn test_detect_mexc_futures_order_csv() {
+        let csv = "UID,Time(UTC+00:00),Futures Trading Pair,Direction,Leverage,Order Type,Order Qty (Cont.),Filled Qty (Cont.),Order Qty (Crypto),Filled Qty (Crypto),Order Qty (Amount),Filled Qty (Amount),Order Price,Average Filled Price,Closing PNL,Trading Fee,Fee-payment Crypto,Status\nUSER_001,2025-11-20 11:00:00,BTC-USDT,Long,5,Limit,1,1,0.03,0.03,1500,1500,30000,30000,200,5,USDT,Filled\n";
+        assert_eq!(
+            detect_format(csv, "mexc-futures-orders.csv"),
+            Some(ImportFormat::ExchangeCsv(
+                ExchangeSource::MexcFuturesOrderHistory
+            ))
+        );
+    }
+
+    #[test]
     fn test_exchange_csv_takes_priority_over_generic() {
         // A Binance CSV has "Account" and could match generic CsvTransactions
         // if it also had "amount", but exchange detection runs first.

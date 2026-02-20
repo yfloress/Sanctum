@@ -428,6 +428,20 @@ fn parse_pair_standard() {
 }
 
 #[test]
+fn parse_pair_hyphen_separator() {
+    let (base, quote) = parse_mexc_pair("BTC-USDT").unwrap();
+    assert_eq!(base, "BTC");
+    assert_eq!(quote, "USDT");
+}
+
+#[test]
+fn parse_pair_slash_separator() {
+    let (base, quote) = parse_mexc_pair("ETH/USDC").unwrap();
+    assert_eq!(base, "ETH");
+    assert_eq!(quote, "USDC");
+}
+
+#[test]
 fn parse_pair_invalid_no_underscore() {
     assert!(parse_mexc_pair("LTCUSDT").is_none());
 }

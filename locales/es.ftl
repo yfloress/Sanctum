@@ -970,7 +970,7 @@ import-exchange-hint-kraken-pro = Exportar desde Kraken Pro: History > Statement
 import-exchange-hint-binance = Exportar desde Binance: Órdenes > Historial de Transacciones > Generar Todos los Estados
 import-exchange-hint-feather = Exportar desde Feather Wallet: Historial > Exportar CSV
 import-exchange-hint-monero-gui = Exportar desde Monero GUI: Wallet > Historial > Exportar CSV
-import-exchange-hint-mexc = Exportar desde MEXC: Órdenes > Historial Spot > Exportar
+import-exchange-hint-mexc = Exportar desde MEXC: Help Center > Account Data Export > Seleccionar todos los necesarios > Convertir a CSV
 settings-exchange-import = IMPORTAR EXCHANGE
 settings-exchange-import-desc = Importar transacciones crypto desde archivos CSV de exchanges
 

@@ -53,6 +53,16 @@ pub enum ExchangeSource {
     MexcTradeHistory,
     MexcDepositHistory,
     MexcWithdrawalHistory,
+    MexcStatementHistory,
+    MexcFiatOtcOrders,
+    MexcFiatP2pOrders,
+    MexcFundingOtherHistory,
+    MexcFundingTransferHistory,
+    MexcFuturesCopyTradeOrderHistory,
+    MexcFuturesCapitalFlow,
+    MexcFuturesOrderHistory,
+    MexcFuturesPositionHistory,
+    MexcFuturesTradeHistory,
     // Future:
     // CryptoMkt,
     // Bybit,
@@ -73,6 +83,18 @@ impl ExchangeSource {
             ExchangeSource::MexcTradeHistory => "MEXC Trade History",
             ExchangeSource::MexcDepositHistory => "MEXC Deposit History",
             ExchangeSource::MexcWithdrawalHistory => "MEXC Withdrawal History",
+            ExchangeSource::MexcStatementHistory => "MEXC Statement History",
+            ExchangeSource::MexcFiatOtcOrders => "MEXC Fiat OTC Orders",
+            ExchangeSource::MexcFiatP2pOrders => "MEXC Fiat P2P Orders",
+            ExchangeSource::MexcFundingOtherHistory => "MEXC Funding Other History",
+            ExchangeSource::MexcFundingTransferHistory => "MEXC Funding Transfer History",
+            ExchangeSource::MexcFuturesCopyTradeOrderHistory => {
+                "MEXC Futures Copy Trade Order History"
+            }
+            ExchangeSource::MexcFuturesCapitalFlow => "MEXC Futures Capital Flow",
+            ExchangeSource::MexcFuturesOrderHistory => "MEXC Futures Order History",
+            ExchangeSource::MexcFuturesPositionHistory => "MEXC Futures Position History",
+            ExchangeSource::MexcFuturesTradeHistory => "MEXC Futures Trade History",
         }
     }
 
@@ -89,6 +111,16 @@ impl ExchangeSource {
             ExchangeSource::MexcTradeHistory => "mexc_trades",
             ExchangeSource::MexcDepositHistory => "mexc_deposit",
             ExchangeSource::MexcWithdrawalHistory => "mexc_withdrawal",
+            ExchangeSource::MexcStatementHistory => "mexc_statement",
+            ExchangeSource::MexcFiatOtcOrders => "mexc_fiat_otc",
+            ExchangeSource::MexcFiatP2pOrders => "mexc_fiat_p2p",
+            ExchangeSource::MexcFundingOtherHistory => "mexc_funding_other",
+            ExchangeSource::MexcFundingTransferHistory => "mexc_funding_transfer",
+            ExchangeSource::MexcFuturesCopyTradeOrderHistory => "mexc_futures_copy",
+            ExchangeSource::MexcFuturesCapitalFlow => "mexc_futures_capital",
+            ExchangeSource::MexcFuturesOrderHistory => "mexc_futures_orders",
+            ExchangeSource::MexcFuturesPositionHistory => "mexc_futures_positions",
+            ExchangeSource::MexcFuturesTradeHistory => "mexc_futures_trades",
         }
     }
 
@@ -104,7 +136,17 @@ impl ExchangeSource {
             ExchangeSource::MexcSpotTradeHistory
             | ExchangeSource::MexcTradeHistory
             | ExchangeSource::MexcDepositHistory
-            | ExchangeSource::MexcWithdrawalHistory => {
+            | ExchangeSource::MexcWithdrawalHistory
+            | ExchangeSource::MexcStatementHistory
+            | ExchangeSource::MexcFiatOtcOrders
+            | ExchangeSource::MexcFiatP2pOrders
+            | ExchangeSource::MexcFundingOtherHistory
+            | ExchangeSource::MexcFundingTransferHistory
+            | ExchangeSource::MexcFuturesCopyTradeOrderHistory
+            | ExchangeSource::MexcFuturesCapitalFlow
+            | ExchangeSource::MexcFuturesOrderHistory
+            | ExchangeSource::MexcFuturesPositionHistory
+            | ExchangeSource::MexcFuturesTradeHistory => {
                 "MEXC"
             }
         }
@@ -248,6 +290,170 @@ const EXCHANGE_SIGNATURES: &[(&[&str], ExchangeSource)] = &[
             "Withdrawal Descriptions",
         ],
         ExchangeSource::MexcWithdrawalHistory,
+    ),
+    // MEXC Statement-style exports (Earn, Spot Statement, Futures Statement)
+    (
+        &[
+            "UID",
+            "Creation Time(UTC+00:00)",
+            "Crypto",
+            "Transaction Type",
+            "Direction",
+            "Quantity",
+        ],
+        ExchangeSource::MexcStatementHistory,
+    ),
+    // MEXC Fiat OTC Orders
+    (
+        &[
+            "UID",
+            "Order ID",
+            "Start Time(UTC+00:00)",
+            "End Time(UTC+00:00)",
+            "Trading Token",
+            "Trading Direction",
+            "Status",
+            "Order Quantity",
+            "Settlement Token",
+            "Order Amount",
+            "Payment Method",
+        ],
+        ExchangeSource::MexcFiatOtcOrders,
+    ),
+    // MEXC Fiat P2P Orders
+    (
+        &[
+            "UID",
+            "P2P Type",
+            "User UID",
+            "Opponent UID",
+            "Start Time(UTC+00:00)",
+            "End Time(UTC+00:00)",
+            "Trading Token",
+            "Trading Direction",
+            "Status",
+            "Order Quantity",
+            "Price",
+            "Fee",
+            "Settlement Token",
+            "Order Amount",
+        ],
+        ExchangeSource::MexcFiatP2pOrders,
+    ),
+    // MEXC Funding Other History
+    (
+        &["UID", "Time", "Crypto", "Type", "Quantity", "Status", "Remark"],
+        ExchangeSource::MexcFundingOtherHistory,
+    ),
+    // MEXC Funding Transfer History
+    (
+        &[
+            "UID",
+            "From System",
+            "To System",
+            "Currency",
+            "Amount",
+            "Status",
+            "update_time(UTC+00:00)",
+            "create_time(UTC+00:00)",
+            "Transfer Type",
+        ],
+        ExchangeSource::MexcFundingTransferHistory,
+    ),
+    // MEXC Futures Copy Trade Order History
+    (
+        &[
+            "UID",
+            "copy_trader_uid",
+            "copy_state",
+            "futures",
+            "used_margin",
+            "leverage",
+            "open_type",
+            "vol(Cont)",
+            "copy_amount(USDT)",
+            "deal_avg_price",
+            "close_avg_price",
+            "Position Profit/Loss(USDT)",
+            "fee",
+            "create_time(UTC+00:00)",
+            "close_time(UTC+00:00)",
+        ],
+        ExchangeSource::MexcFuturesCopyTradeOrderHistory,
+    ),
+    // MEXC Futures Capital Flow
+    (
+        &[
+            "UID",
+            "Time(UTC+00:00)",
+            "Futures Trading Pair",
+            "Crypto",
+            "Fund Type",
+            "Fund Flow Type",
+            "Amount",
+        ],
+        ExchangeSource::MexcFuturesCapitalFlow,
+    ),
+    // MEXC Futures Order History
+    (
+        &[
+            "UID",
+            "Time(UTC+00:00)",
+            "Futures Trading Pair",
+            "Direction",
+            "Leverage",
+            "Order Type",
+            "Order Qty (Cont.)",
+            "Filled Qty (Cont.)",
+            "Order Qty (Crypto)",
+            "Filled Qty (Crypto)",
+            "Order Qty (Amount)",
+            "Filled Qty (Amount)",
+            "Order Price",
+            "Average Filled Price",
+            "Closing PNL",
+            "Trading Fee",
+            "Fee-payment Crypto",
+            "Status",
+        ],
+        ExchangeSource::MexcFuturesOrderHistory,
+    ),
+    // MEXC Futures Position History
+    (
+        &[
+            "UID",
+            "Futures",
+            "Open Time(UTC+00:00)",
+            "Close Time",
+            "Margin Mode",
+            "Avg Entry Price",
+            "Avg Close Price",
+            "Direction",
+            "Closing Qty (Cont.)",
+            "Fee",
+            "Realized PNL",
+            "Status",
+        ],
+        ExchangeSource::MexcFuturesPositionHistory,
+    ),
+    // MEXC Futures Trade History
+    (
+        &[
+            "UID",
+            "Time(UTC+00:00)",
+            "Futures Trading Pair",
+            "Direction",
+            "Order Type",
+            "Filled Qty (Cont.)",
+            "Filled Qty (Crypto)",
+            "Filled Qty (Amount)",
+            "Filled Price",
+            "Trading Fee",
+            "Fee-payment Crypto",
+            "Role",
+            "Closing PNL",
+        ],
+        ExchangeSource::MexcFuturesTradeHistory,
     ),
     // MEXC Deposit History
     (
@@ -399,6 +605,20 @@ pub fn parser_for(source: ExchangeSource) -> Box<dyn ExchangeParser> {
         ExchangeSource::MexcTradeHistory => Box::new(mexc::MexcTradeParser),
         ExchangeSource::MexcDepositHistory => Box::new(mexc::MexcDepositParser),
         ExchangeSource::MexcWithdrawalHistory => Box::new(mexc::MexcWithdrawalParser),
+        ExchangeSource::MexcStatementHistory => Box::new(mexc::MexcStatementParser),
+        ExchangeSource::MexcFiatOtcOrders => Box::new(mexc::MexcFiatOtcParser),
+        ExchangeSource::MexcFiatP2pOrders => Box::new(mexc::MexcFiatP2pParser),
+        ExchangeSource::MexcFundingOtherHistory => Box::new(mexc::MexcFundingOtherParser),
+        ExchangeSource::MexcFundingTransferHistory => Box::new(mexc::MexcFundingTransferParser),
+        ExchangeSource::MexcFuturesCopyTradeOrderHistory => {
+            Box::new(mexc::MexcFuturesCopyTradeOrderParser)
+        }
+        ExchangeSource::MexcFuturesCapitalFlow => Box::new(mexc::MexcFuturesCapitalFlowParser),
+        ExchangeSource::MexcFuturesOrderHistory => Box::new(mexc::MexcFuturesOrderHistoryParser),
+        ExchangeSource::MexcFuturesPositionHistory => {
+            Box::new(mexc::MexcFuturesPositionHistoryParser)
+        }
+        ExchangeSource::MexcFuturesTradeHistory => Box::new(mexc::MexcFuturesTradeHistoryParser),
     }
 }
 
@@ -518,6 +738,97 @@ mod tests {
     }
 
     #[test]
+    fn detect_mexc_statement() {
+        let csv =
+            "UID,Creation Time(UTC+00:00),Crypto,Transaction Type,Direction,Quantity\n";
+        assert_eq!(
+            detect_exchange_source(csv),
+            Some(ExchangeSource::MexcStatementHistory)
+        );
+    }
+
+    #[test]
+    fn detect_mexc_fiat_otc_orders() {
+        let csv = "UID,Order ID,Start Time(UTC+00:00),End Time(UTC+00:00),Trading Token,Trading Direction,Status,Order Quantity,Settlement Token,Order Amount,Payment Method\n";
+        assert_eq!(
+            detect_exchange_source(csv),
+            Some(ExchangeSource::MexcFiatOtcOrders)
+        );
+    }
+
+    #[test]
+    fn detect_mexc_fiat_p2p_orders() {
+        let csv = "UID,P2P Type,User UID,Opponent UID,Start Time(UTC+00:00),End Time(UTC+00:00),Trading Token,Trading Direction,Status,Order Quantity,Price,Fee,Settlement Token,Order Amount\n";
+        assert_eq!(
+            detect_exchange_source(csv),
+            Some(ExchangeSource::MexcFiatP2pOrders)
+        );
+    }
+
+    #[test]
+    fn detect_mexc_funding_other() {
+        let csv = "UID,Time,Crypto,Type,Quantity,Status,Remark\n";
+        assert_eq!(
+            detect_exchange_source(csv),
+            Some(ExchangeSource::MexcFundingOtherHistory)
+        );
+    }
+
+    #[test]
+    fn detect_mexc_funding_transfer() {
+        let csv = "UID,From System,To System,Currency,Amount,Status,update_time(UTC+00:00),create_time(UTC+00:00),Transfer Type\n";
+        assert_eq!(
+            detect_exchange_source(csv),
+            Some(ExchangeSource::MexcFundingTransferHistory)
+        );
+    }
+
+    #[test]
+    fn detect_mexc_futures_copy_order_history() {
+        let csv = "UID,copy_trader_uid,copy_state,futures,used_margin,leverage,open_type,vol(Cont),copy_amount(USDT),deal_avg_price,close_avg_price,Position Profit/Loss(USDT),fee,create_time(UTC+00:00),close_time(UTC+00:00)\n";
+        assert_eq!(
+            detect_exchange_source(csv),
+            Some(ExchangeSource::MexcFuturesCopyTradeOrderHistory)
+        );
+    }
+
+    #[test]
+    fn detect_mexc_futures_capital_flow() {
+        let csv = "UID,Time(UTC+00:00),Futures Trading Pair,Crypto,Fund Type,Fund Flow Type,Amount\n";
+        assert_eq!(
+            detect_exchange_source(csv),
+            Some(ExchangeSource::MexcFuturesCapitalFlow)
+        );
+    }
+
+    #[test]
+    fn detect_mexc_futures_order_history() {
+        let csv = "UID,Time(UTC+00:00),Futures Trading Pair,Direction,Leverage,Order Type,Order Qty (Cont.),Filled Qty (Cont.),Order Qty (Crypto),Filled Qty (Crypto),Order Qty (Amount),Filled Qty (Amount),Order Price,Average Filled Price,Closing PNL,Trading Fee,Fee-payment Crypto,Status\n";
+        assert_eq!(
+            detect_exchange_source(csv),
+            Some(ExchangeSource::MexcFuturesOrderHistory)
+        );
+    }
+
+    #[test]
+    fn detect_mexc_futures_position_history() {
+        let csv = "UID,Futures,Open Time(UTC+00:00),Close Time,Margin Mode,Avg Entry Price,Avg Close Price,Direction,Closing Qty (Cont.),Fee,Realized PNL,Status\n";
+        assert_eq!(
+            detect_exchange_source(csv),
+            Some(ExchangeSource::MexcFuturesPositionHistory)
+        );
+    }
+
+    #[test]
+    fn detect_mexc_futures_trade_history() {
+        let csv = "UID,Time(UTC+00:00),Futures Trading Pair,Direction,Order Type,Filled Qty (Cont.),Filled Qty (Crypto),Filled Qty (Amount),Filled Price,Trading Fee,Fee-payment Crypto,Role,Closing PNL\n";
+        assert_eq!(
+            detect_exchange_source(csv),
+            Some(ExchangeSource::MexcFuturesTradeHistory)
+        );
+    }
+
+    #[test]
     fn detect_unknown_returns_none() {
         let csv = "date,account,amount,currency\n";
         assert_eq!(detect_exchange_source(csv), None);
@@ -584,6 +895,16 @@ mod tests {
             ExchangeSource::MexcTradeHistory,
             ExchangeSource::MexcDepositHistory,
             ExchangeSource::MexcWithdrawalHistory,
+            ExchangeSource::MexcStatementHistory,
+            ExchangeSource::MexcFiatOtcOrders,
+            ExchangeSource::MexcFiatP2pOrders,
+            ExchangeSource::MexcFundingOtherHistory,
+            ExchangeSource::MexcFundingTransferHistory,
+            ExchangeSource::MexcFuturesCopyTradeOrderHistory,
+            ExchangeSource::MexcFuturesCapitalFlow,
+            ExchangeSource::MexcFuturesOrderHistory,
+            ExchangeSource::MexcFuturesPositionHistory,
+            ExchangeSource::MexcFuturesTradeHistory,
         ];
         for source in sources {
             assert!(!source.label().is_empty());

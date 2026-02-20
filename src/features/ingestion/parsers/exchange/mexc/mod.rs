@@ -22,14 +22,36 @@
 //! - Trade history
 //! - Deposit history
 //! - Withdrawal history
+//! - Statement exports (earn/spot/futures)
+//! - Fiat OTC / P2P order exports
+//! - Funding other / transfer history
+//! - Futures capital / orders / positions / trades
 
 mod deposits;
+mod fiat_common;
+mod fiat_otc;
+mod fiat_p2p;
+mod futures_capital;
+mod futures_common;
+mod futures_copy;
+mod futures_reports;
+mod funding;
 mod spot;
+mod statements;
 mod trades;
 mod withdrawals;
 
 pub use deposits::MexcDepositParser;
+pub use fiat_otc::MexcFiatOtcParser;
+pub use fiat_p2p::MexcFiatP2pParser;
+pub use funding::{MexcFundingOtherParser, MexcFundingTransferParser};
+pub use futures_capital::MexcFuturesCapitalFlowParser;
+pub use futures_copy::MexcFuturesCopyTradeOrderParser;
+pub use futures_reports::{
+    MexcFuturesOrderHistoryParser, MexcFuturesPositionHistoryParser, MexcFuturesTradeHistoryParser,
+};
 pub use spot::MexcSpotParser;
+pub use statements::MexcStatementParser;
 pub use trades::MexcTradeParser;
 pub use withdrawals::MexcWithdrawalParser;
 

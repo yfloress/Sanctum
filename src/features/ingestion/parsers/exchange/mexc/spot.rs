@@ -103,14 +103,21 @@ fn get_field<'a>(record: &'a StringRecord, cols: &HashMap<&str, usize>, name: &s
 
 /// Splits a MEXC pair like `LTC_USDT` into `("LTC", "USDT")`.
 pub(super) fn parse_mexc_pair(pair: &str) -> Option<(String, String)> {
-    let parts: Vec<&str> = pair.split('_').collect();
-    if parts.len() == 2 {
-        let base = parts[0].trim().to_uppercase();
-        let quote = parts[1].trim().to_uppercase();
-        if !base.is_empty() && !quote.is_empty() {
-            return Some((base, quote));
+    let trimmed = pair.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    for separator in ['_', '-', '/'] {
+        if let Some((left, right)) = trimmed.split_once(separator) {
+            let base = left.trim().to_uppercase();
+            let quote = right.trim().to_uppercase();
+            if !base.is_empty() && !quote.is_empty() {
+                return Some((base, quote));
+            }
         }
     }
+
     None
 }
 
