@@ -369,12 +369,12 @@ export component ExchangeWalletSelectModal inherits Rectangle {
                             border-width: 1px;
                             border-color: Theme.border;
 
-                            detected-layout := HorizontalLayout {
+                            detected-layout := VerticalLayout {
                                 padding-left: 16px;
                                 padding-right: 16px;
                                 padding-top: 8px;
                                 padding-bottom: 8px;
-                                spacing: 8px;
+                                spacing: 4px;
 
                                 Text {
                                     text: Translations.import-exchange-detected;
@@ -382,7 +382,6 @@ export component ExchangeWalletSelectModal inherits Rectangle {
                                     font-size: 11px;
                                     font-weight: 500;
                                     letter-spacing: 0.5px;
-                                    vertical-alignment: center;
                                 }
 
                                 Text {
@@ -390,7 +389,8 @@ export component ExchangeWalletSelectModal inherits Rectangle {
                                     color: Theme.accent;
                                     font-size: 11px;
                                     font-weight: 600;
-                                    vertical-alignment: center;
+                                    wrap: word-wrap;
+                                    overflow: elide;
                                 }
                             }
                         }

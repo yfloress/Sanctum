@@ -42,8 +42,15 @@ struct PendingImport {
 
 struct PendingExchangeImport {
     display_name: String,
-    content: String,
+    detected_format: String,
+    files: Vec<PendingExchangeFile>,
+    preflight_errors: Vec<RowError>,
     wallet_name: String,
+}
+
+struct PendingExchangeFile {
+    display_name: String,
+    content: String,
 }
 
 pub fn setup_ingestion_callbacks(
@@ -166,75 +173,97 @@ pub fn setup_ingestion_callbacks(
 
         ui.global::<IngestionAdapter>()
             .on_import_exchange_csv(move || {
-                let file_path = rfd::FileDialog::new()
+                let file_paths = rfd::FileDialog::new()
                     .add_filter("CSV Files", &["csv"])
-                    .pick_file();
+                    .pick_files();
 
-                let Some(path) = file_path else {
+                let Some(paths) = file_paths else {
                     return;
                 };
+                if paths.is_empty() {
+                    return;
+                }
 
                 pending_exchange.borrow_mut().take();
 
-                let display_name = path
-                    .file_name()
-                    .map(|name| name.to_string_lossy().to_string())
-                    .unwrap_or_else(|| path.to_string_lossy().to_string());
-                let content = match std::fs::read_to_string(&path) {
-                    Ok(data) => data,
-                    Err(err) => {
-                        if let Some(ui) = ui_weak.upgrade() {
-                            let summary =
-                                build_error_summary(format!("Failed to read file: {}", err));
-                            set_import_summary(&ui, summary, Some(display_name.clone()));
-                            ui.global::<AppState>().set_show_import_preview(true);
-                        }
-                        return;
-                    }
-                };
+                let mut pending_files = Vec::new();
+                let mut detected_labels = Vec::new();
+                let mut preflight_errors = Vec::new();
+                let mut selected_names = Vec::new();
 
-                // Detect exchange source from CSV headers
-                let detected = controller.detect_exchange_source(&content);
+                for path in paths {
+                    let display_name = path
+                        .file_name()
+                        .map(|name| name.to_string_lossy().to_string())
+                        .unwrap_or_else(|| path.to_string_lossy().to_string());
+                    selected_names.push(display_name.clone());
+
+                    let content = match std::fs::read_to_string(&path) {
+                        Ok(data) => data,
+                        Err(err) => {
+                            preflight_errors.push(RowError::new(
+                                0,
+                                None,
+                                format!("{}: Failed to read file: {}", display_name, err),
+                            ));
+                            continue;
+                        }
+                    };
+
+                    if let Some((_, exchange_label, _)) = controller.detect_exchange_source(&content)
+                    {
+                        detected_labels.push(exchange_label);
+                        pending_files.push(PendingExchangeFile {
+                            display_name,
+                            content,
+                        });
+                    } else {
+                        preflight_errors.push(RowError::new(
+                            0,
+                            None,
+                            format!("{}: {}", display_name, t("import-exchange-not-detected")),
+                        ));
+                    }
+                }
 
                 let Some(ui) = ui_weak.upgrade() else {
                     return;
                 };
 
                 let adapter = ui.global::<IngestionAdapter>();
-
-                match detected {
-                    Some((_, exchange_label, _default_wallet)) => {
-                        adapter.set_exchange_detected_format(SharedString::from(&exchange_label));
-                        adapter.set_exchange_file_loaded(true);
-                        // Clear wallet name so user must choose in the next step
-                        adapter.set_exchange_wallet_name(SharedString::from(""));
-
-                        // Store CSV content temporarily (wallet not chosen yet)
-                        pending_exchange
-                            .borrow_mut()
-                            .replace(PendingExchangeImport {
-                                display_name,
-                                content,
-                                wallet_name: String::new(),
-                            });
-
-                        // Ensure wallet list is loaded (user may not have visited crypto module yet)
-                        ui.global::<CryptoAdapter>().invoke_fetch_wallets();
-
-                        // Show wallet selection modal instead of going to preview
-                        ui.global::<AppState>()
-                            .set_show_exchange_wallet_select(true);
-                    }
-                    None => {
-                        adapter.set_exchange_detected_format(SharedString::from(""));
-                        adapter.set_exchange_file_loaded(false);
-
-                        // Show a notification instead of opening a broken preview modal
-                        let msg = t("import-exchange-not-detected");
-                        ui.global::<NotificationAdapter>()
-                            .invoke_show(SharedString::from(msg), true);
-                    }
+                if pending_files.is_empty() {
+                    adapter.set_exchange_detected_format(SharedString::from(""));
+                    adapter.set_exchange_file_loaded(false);
+                    let msg = t("import-exchange-not-detected");
+                    ui.global::<NotificationAdapter>()
+                        .invoke_show(SharedString::from(msg), true);
+                    return;
                 }
+
+                let combined_format = combine_exchange_labels(&detected_labels);
+                let combined_display = build_batch_display_name(&selected_names);
+
+                adapter.set_exchange_detected_format(SharedString::from(&combined_format));
+                adapter.set_exchange_file_loaded(true);
+                // Clear wallet name so user must choose in the next step
+                adapter.set_exchange_wallet_name(SharedString::from(""));
+
+                // Store CSV contents temporarily (wallet not chosen yet)
+                pending_exchange
+                    .borrow_mut()
+                    .replace(PendingExchangeImport {
+                        display_name: combined_display,
+                        detected_format: combined_format,
+                        files: pending_files,
+                        preflight_errors,
+                        wallet_name: String::new(),
+                    });
+
+                // Ensure wallet list is loaded (user may not have visited crypto module yet)
+                ui.global::<CryptoAdapter>().invoke_fetch_wallets();
+
+                // Show wallet selection modal instead of going to preview
+                ui.global::<AppState>().set_show_exchange_wallet_select(true);
             });
     }
 
@@ -267,12 +296,21 @@ pub fn setup_ingestion_callbacks(
                 // Update the wallet name chosen by the user
                 pending.wallet_name = wallet_name.clone();
 
-                // Preview with the chosen wallet name
-                let summary = match controller.preview_exchange_csv(&pending.content, &wallet_name)
-                {
-                    Ok(summary) => summary,
-                    Err(err) => build_error_summary(err.to_string()),
-                };
+                // Preview all selected files with the chosen wallet name
+                let mut summary = ImportSummary::new(&pending.detected_format, "Crypto");
+                for err in pending.preflight_errors.iter().cloned() {
+                    summary.record_error(err);
+                }
+                for file in &pending.files {
+                    match controller.preview_exchange_csv(&file.content, &wallet_name) {
+                        Ok(file_summary) => summary.merge(file_summary),
+                        Err(err) => summary.record_error(RowError::new(
+                            0,
+                            None,
+                            format!("{}: {}", file.display_name, err),
+                        )),
+                    }
+                }
 
                 let display = pending.display_name.clone();
                 drop(borrow);
@@ -314,14 +352,31 @@ pub fn setup_ingestion_callbacks(
                     return;
                 };
 
-                let summary =
-                    match controller.import_exchange_csv(pending.content, pending.wallet_name) {
-                        Ok(summary) => summary,
-                        Err(err) => build_error_summary(err.to_string()),
-                    };
+                let PendingExchangeImport {
+                    display_name,
+                    detected_format,
+                    files,
+                    preflight_errors,
+                    wallet_name,
+                } = pending;
+
+                let mut summary = ImportSummary::new(&detected_format, "Crypto");
+                for err in preflight_errors {
+                    summary.record_error(err);
+                }
+                for file in files {
+                    match controller.import_exchange_csv(file.content, wallet_name.clone()) {
+                        Ok(file_summary) => summary.merge(file_summary),
+                        Err(err) => summary.record_error(RowError::new(
+                            0,
+                            None,
+                            format!("{}: {}", file.display_name, err),
+                        )),
+                    }
+                }
 
                 if let Some(ui) = ui_weak.upgrade() {
-                    set_import_summary(&ui, summary, Some(pending.display_name));
+                    set_import_summary(&ui, summary, Some(display_name));
                     ui.global::<AppState>().set_show_import_preview(false);
                     ui.global::<AppState>().set_show_import_results(true);
 
@@ -443,5 +498,70 @@ fn map_error(err: RowError) -> ImportErrorData {
         field_label: field_label.into(),
         message: err.message.into(),
         raw_data: err.raw_data.unwrap_or_default().into(),
+    }
+}
+
+fn combine_exchange_labels(labels: &[String]) -> String {
+    let mut unique = Vec::<String>::new();
+    for label in labels {
+        if !unique.iter().any(|item| item == label) {
+            unique.push(label.clone());
+        }
+    }
+    match unique.len() {
+        0 => "CSV".to_string(),
+        1..=3 => unique.join(" / "),
+        _ => {
+            let head = unique[..3].join(" / ");
+            let extra = unique.len() - 3;
+            format!("{} +{}", head, extra)
+        }
+    }
+}
+
+fn build_batch_display_name(file_names: &[String]) -> String {
+    match file_names {
+        [] => String::new(),
+        [single] => single.clone(),
+        [first, rest @ ..] => format!("{} +{}", first, rest.len()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{build_batch_display_name, combine_exchange_labels};
+
+    #[test]
+    fn combine_exchange_labels_deduplicates_preserving_order() {
+        let labels = vec![
+            "MEXC".to_string(),
+            "Kraken".to_string(),
+            "MEXC".to_string(),
+        ];
+        assert_eq!(combine_exchange_labels(&labels), "MEXC / Kraken");
+    }
+
+    #[test]
+    fn combine_exchange_labels_limits_long_lists() {
+        let labels = vec![
+            "MEXC Spot".to_string(),
+            "MEXC Funding".to_string(),
+            "MEXC Futures".to_string(),
+            "MEXC Earn".to_string(),
+        ];
+        assert_eq!(
+            combine_exchange_labels(&labels),
+            "MEXC Spot / MEXC Funding / MEXC Futures +1"
+        );
+    }
+
+    #[test]
+    fn build_batch_display_name_uses_first_name_and_count() {
+        let files = vec![
+            "spot.csv".to_string(),
+            "withdrawals.csv".to_string(),
+            "deposits.csv".to_string(),
+        ];
+        assert_eq!(build_batch_display_name(&files), "spot.csv +2");
     }
 }
