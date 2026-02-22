@@ -137,11 +137,10 @@ export component CryptoPage inherits Rectangle {
                     Flickable {
                         horizontal-stretch: 1;
                         height: parent.height;
-                        viewport-width: (CryptoAdapter.market-tickers.length * Theme.crypto-ticker-width) + Theme.spacing-xl;
                         interactive: true;
 
-                        HorizontalLayout {
-                            padding-left: 16px;
+                        tickers-row := HorizontalLayout {
+                            spacing: 0px;
                             for ticker in CryptoAdapter.market-tickers: TickerItem {
                                 icon: ticker.icon;
                                 symbol: ticker.symbol;
@@ -150,6 +149,8 @@ export component CryptoPage inherits Rectangle {
                                 is-positive: ticker.is-positive;
                             }
                         }
+
+                        viewport-width: tickers-row.preferred-width + Theme.spacing-sm;
                     }
                 }
             }

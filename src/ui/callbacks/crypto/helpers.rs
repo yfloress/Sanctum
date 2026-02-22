@@ -41,6 +41,31 @@ fn normalize_currency_code(code: &str) -> String {
     code.trim().to_uppercase()
 }
 
+pub(super) fn format_compact_price_preferred(price_preferred: f64, preferred_currency: &str) -> String {
+    if !price_preferred.is_finite() || price_preferred <= 0.0 {
+        return "N/A".to_string();
+    }
+
+    let currency = normalize_currency_code(preferred_currency);
+    if price_preferred >= 1.0 {
+        return format_preferred(price_preferred, &currency);
+    }
+
+    if price_preferred < 0.0001 {
+        return format!("{currency} {:.2e}", price_preferred);
+    }
+
+    let precision = if price_preferred >= 0.01 { 4 } else { 6 };
+    let mut formatted = format!("{:.*}", precision, price_preferred);
+    while formatted.contains('.') && formatted.ends_with('0') {
+        formatted.pop();
+    }
+    if formatted.ends_with('.') {
+        formatted.pop();
+    }
+    format!("{currency} {formatted}")
+}
+
 pub fn resolve_preferred_currency(controller: &AppController) -> String {
     normalize_currency_code(
         &controller
@@ -347,10 +372,8 @@ where
 
             let price_fmt = if price_data.is_none() {
                 "N/A".to_string()
-            } else if price_preferred < 1.0 {
-                format!("$ {:.4}", price_preferred)
             } else {
-                format_preferred(price_preferred, &preferred_currency)
+                format_compact_price_preferred(price_preferred, &preferred_currency)
             };
 
             let value_fmt = if price_data.is_none() {
@@ -387,11 +410,7 @@ where
             };
             let price_preferred =
                 convert_usd_to_preferred(data.current_price, &preferred_currency, usd_rate);
-            let price_fmt = if price_preferred < 1.0 {
-                format!("{} {:.4}", preferred_currency, price_preferred)
-            } else {
-                format_preferred(price_preferred, &preferred_currency)
-            };
+            let price_fmt = format_compact_price_preferred(price_preferred, &preferred_currency);
 
             tickers.push(CryptoAssetData {
                 id: SharedString::from(&id),
@@ -545,7 +564,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::{format_roi, format_signed_preferred};
+    use super::{format_compact_price_preferred, format_roi, format_signed_preferred};
 
     #[test]
     fn format_roi_returns_na_when_cost_is_zero() {
@@ -570,5 +589,34 @@ mod tests {
         let (label, positive) = format_signed_preferred(-40.0, "USD", 1.0);
         assert_eq!(label, "- USD 40.00");
         assert!(!positive);
+    }
+
+    #[test]
+    fn format_compact_price_preferred_uses_four_decimals_for_subunit_prices() {
+        assert_eq!(
+            format_compact_price_preferred(0.123456, "USD"),
+            "USD 0.1235"
+        );
+    }
+
+    #[test]
+    fn format_compact_price_preferred_keeps_six_decimals_for_very_small_prices() {
+        assert_eq!(
+            format_compact_price_preferred(0.0054321, "USD"),
+            "USD 0.005432"
+        );
+    }
+
+    #[test]
+    fn format_compact_price_preferred_uses_scientific_for_tiny_prices() {
+        let formatted = format_compact_price_preferred(0.00000042, "USD");
+        assert!(formatted.starts_with("USD "));
+        assert!(formatted.contains("e-"));
+    }
+
+    #[test]
+    fn format_compact_price_preferred_returns_na_for_invalid_values() {
+        assert_eq!(format_compact_price_preferred(0.0, "USD"), "N/A");
+        assert_eq!(format_compact_price_preferred(f64::NAN, "USD"), "N/A");
     }
 }

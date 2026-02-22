@@ -387,29 +387,35 @@ export component TickerItem inherits Rectangle {
     in property <string> price;
     in property <string> change;
     in property <bool> is-positive;
+    property <length> left-block-width: symbol-icon.width + Theme.spacing-sm + symbol-label.preferred-width;
+    property <length> right-block-width: max(price-label.preferred-width, change-label.preferred-width);
+    property <length> dynamic-content-width: left-block-width + Theme.spacing-md + right-block-width + Theme.spacing-md + 1px;
 
-    width: Theme.crypto-ticker-width;
+    width: max(
+        Theme.crypto-ticker-width,
+        (Theme.crypto-ticker-item-padding-inline * 2) + dynamic-content-width
+    );
     height: 48px;
     background: transparent;
 
     HorizontalLayout {
-        padding-left: 16px;
-        padding-right: 16px;
-        spacing: 0px;
-        alignment: space-between;
-        
+        padding-left: Theme.crypto-ticker-item-padding-inline;
+        padding-right: Theme.crypto-ticker-item-padding-inline;
+        spacing: Theme.spacing-md;
+        alignment: start;
+
         // Left: Symbol
         HorizontalLayout {
-            spacing: 8px;
+            spacing: Theme.spacing-sm;
             alignment: start;
 
-            CryptoIcon {
+            symbol-icon := CryptoIcon {
                 symbol: root.symbol;
                 icon: root.icon;
                 y: (parent.height - self.height) / 2;
             }
-            
-            Text { 
+
+            symbol-label := Text {
                 text: root.symbol; 
                 color: Theme.text-primary; 
                 font-size: 12px; 
@@ -418,21 +424,22 @@ export component TickerItem inherits Rectangle {
                 vertical-alignment: center;
             }
         }
-        
+
         // Right: Price & Change
         VerticalLayout {
+            width: root.right-block-width;
             alignment: center;
             spacing: 2px;
-            
-            Text { 
+
+            price-label := Text {
                 text: root.price; 
                 color: Theme.text-primary; 
                 font-size: 12px;
                 font-weight: 500;
                 horizontal-alignment: right;
             }
-            
-            Text { 
+
+            change-label := Text {
                 text: root.change; 
                 color: root.is-positive ? Theme.success : Theme.danger; 
                 font-size: 10px;
@@ -440,15 +447,14 @@ export component TickerItem inherits Rectangle {
                 horizontal-alignment: right;
             }
         }
-    }
-    
-    // Separator
-    Rectangle {
-        width: 1px;
-        height: 24px;
-        background: Theme.border-subtle;
-        x: parent.width - 1px;
-        y: (parent.height - self.height) / 2;
+
+        // Separator aligned after actual content (symbol/price), not fixed X offset.
+        Rectangle {
+            width: 1px;
+            height: 24px;
+            background: Theme.border-subtle;
+            y: (parent.height - self.height) / 2;
+        }
     }
 }
 

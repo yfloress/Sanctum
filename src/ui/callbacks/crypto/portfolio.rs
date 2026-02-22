@@ -18,8 +18,9 @@
 //! Portfolio and price-related crypto callbacks
 
 use super::helpers::{
-    SETTING_CRYPTO_LAST_UPDATED, badge_currency_for_preferred, load_preferred_usd_rate,
-    reload_portfolio, resolve_preferred_currency, usd_pair_for_target_currency,
+    SETTING_CRYPTO_LAST_UPDATED, badge_currency_for_preferred, format_compact_price_preferred,
+    load_preferred_usd_rate, reload_portfolio, resolve_preferred_currency,
+    usd_pair_for_target_currency,
 };
 use crate::controller::AppController;
 use crate::models::CryptoTransaction;
@@ -610,10 +611,8 @@ pub fn setup_portfolio_callbacks<N>(
 
                     let price_fmt = if missing_price {
                         "N/A".to_string()
-                    } else if price_preferred < 1.0 {
-                        format!("{} {:.4}", preferred_currency, price_preferred)
                     } else {
-                        format_preferred(price_preferred, &preferred_currency)
+                        format_compact_price_preferred(price_preferred, &preferred_currency)
                     };
 
                     let value_fmt = if missing_price {
