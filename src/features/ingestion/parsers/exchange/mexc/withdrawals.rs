@@ -314,7 +314,7 @@ mod tests {
     #[test]
     fn successful_withdrawal_is_transfer_out_with_fee() {
         let csv = format!(
-            "{}\n11111111,Withdrawal Successful,2025-03-14 09:27:31,LTC,Litecoin(LTC),0.322,ltc1qaddr,--,a1b2,0.0001,0.3129,-\n",
+            "{}\n11111111,Withdrawal Successful,2025-03-14 09:27:31,LTC,Litecoin(LTC),0.322,addr_ltc_test,--,a1b2,0.0001,0.3129,-\n",
             HEADER
         );
 
@@ -352,7 +352,7 @@ mod tests {
     #[test]
     fn withdrawal_without_settlement_uses_request_minus_fee() {
         let csv = format!(
-            "{}\n11111111,Withdrawal Successful,2025-06-02 17:45:12,BTC,Bitcoin(BTC),0.00068164,bc1qaddr,--,b2c3,0.000014,,-\n",
+            "{}\n11111111,Withdrawal Successful,2025-06-02 17:45:12,BTC,Bitcoin(BTC),0.00068164,addr_btc_test,--,b2c3,0.000014,,-\n",
             HEADER
         );
 
@@ -368,7 +368,7 @@ mod tests {
     #[test]
     fn invalid_request_amount_produces_error() {
         let csv = format!(
-            "{}\n11111111,Withdrawal Successful,2025-06-02 17:45:12,BTC,Bitcoin(BTC),abc,bc1qaddr,--,b2c3,0.000014,0.00066764,-\n",
+            "{}\n11111111,Withdrawal Successful,2025-06-02 17:45:12,BTC,Bitcoin(BTC),abc,addr_btc_test,--,b2c3,0.000014,0.00066764,-\n",
             HEADER
         );
 

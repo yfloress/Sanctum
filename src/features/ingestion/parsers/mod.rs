@@ -242,7 +242,7 @@ mod tests {
 
     #[test]
     fn test_detect_mexc_withdrawals_csv() {
-        let csv = "UID,Status,Time,Crypto,Network,Request Amount,Withdrawal Address,memo,TxID,Trading Fee,Settlement Amount,Withdrawal Descriptions\n11111111,Withdrawal Successful,2025-03-14 09:27:31,LTC,Litecoin(LTC),0.322,ltc1qaddr,--,a1b2,0.0001,0.3129,-\n";
+        let csv = "UID,Status,Time,Crypto,Network,Request Amount,Withdrawal Address,memo,TxID,Trading Fee,Settlement Amount,Withdrawal Descriptions\n11111111,Withdrawal Successful,2025-03-14 09:27:31,LTC,Litecoin(LTC),0.322,addr_ltc_test,--,a1b2,0.0001,0.3129,-\n";
         assert_eq!(
             detect_format(csv, "mexc-withdrawals.csv"),
             Some(ImportFormat::ExchangeCsv(
