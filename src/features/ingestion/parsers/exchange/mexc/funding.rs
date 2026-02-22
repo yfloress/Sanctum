@@ -35,45 +35,45 @@ pub struct MexcFundingTransferParser;
 fn resolve_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
     let mut map = HashMap::new();
     for (i, col) in headers.iter().enumerate() {
-        let key = col.trim().trim_matches('"');
-        match key {
-            "Time" => {
+        let key = col.trim().trim_matches('"').to_lowercase();
+        match key.as_str() {
+            "time" => {
                 map.insert("time", i);
             }
-            "Crypto" => {
+            "crypto" => {
                 map.insert("symbol", i);
             }
-            "Type" => {
+            "type" => {
                 map.insert("type", i);
             }
-            "Quantity" => {
+            "quantity" => {
                 map.insert("quantity", i);
             }
-            "Status" => {
+            "status" => {
                 map.insert("status", i);
             }
-            "Remark" => {
+            "remark" => {
                 map.insert("remark", i);
             }
-            "From System" => {
+            "from system" => {
                 map.insert("from_system", i);
             }
-            "To System" => {
+            "to system" => {
                 map.insert("to_system", i);
             }
-            "Currency" => {
+            "currency" => {
                 map.insert("currency", i);
             }
-            "Amount" => {
+            "amount" => {
                 map.insert("amount", i);
             }
-            "update_time(UTC+00:00)" => {
+            "update_time(utc+00:00)" => {
                 map.insert("update_time", i);
             }
-            "create_time(UTC+00:00)" => {
+            "create_time(utc+00:00)" => {
                 map.insert("create_time", i);
             }
-            "Transfer Type" => {
+            "transfer type" => {
                 map.insert("transfer_type", i);
             }
             _ => {}
@@ -94,14 +94,23 @@ fn is_success_status(raw: &str) -> bool {
     if status.is_empty() {
         return false;
     }
-    if status.contains("cancel")
-        || status.contains("pending")
-        || status.contains("fail")
-        || status.contains("reject")
-    {
+    let rejected_terms = [
+        "pending",
+        "processing",
+        "cancel",
+        "fail",
+        "reject",
+        "review",
+        "verification",
+    ];
+    if rejected_terms.iter().any(|term| status.contains(term)) {
         return false;
     }
-    status.contains("success") || status.contains("complete")
+
+    status == "completed"
+        || status == "success"
+        || status == "successful"
+        || status.starts_with("completed ")
 }
 
 fn map_other_type(type_raw: &str, signed_quantity: f64) -> (String, Option<String>) {
@@ -135,10 +144,18 @@ fn map_other_type(type_raw: &str, signed_quantity: f64) -> (String, Option<Strin
 
 fn map_transfer_subtype(transfer_type_raw: &str, signed_amount: f64) -> String {
     let normalized = transfer_type_raw.trim().to_lowercase();
-    if normalized.contains("withdraw") || normalized.contains("out") {
+    let tokens: Vec<&str> = normalized
+        .split(|c: char| !c.is_ascii_alphanumeric())
+        .filter(|s| !s.is_empty())
+        .collect();
+    if normalized.contains("withdraw")
+        || tokens.iter().any(|t| *t == "out" || *t == "outflow")
+    {
         return "withdrawal".to_string();
     }
-    if normalized.contains("deposit") || normalized.contains("in") {
+    if normalized.contains("deposit")
+        || tokens.iter().any(|t| *t == "in" || *t == "inflow")
+    {
         return "deposit".to_string();
     }
     if signed_amount < 0.0 {
@@ -146,6 +163,21 @@ fn map_transfer_subtype(transfer_type_raw: &str, signed_amount: f64) -> String {
     } else {
         "deposit".to_string()
     }
+}
+
+fn is_internal_system_transfer(
+    from_system_raw: &str,
+    to_system_raw: &str,
+    transfer_type_raw: &str,
+) -> bool {
+    let from = from_system_raw.trim().to_lowercase();
+    let to = to_system_raw.trim().to_lowercase();
+    if !from.is_empty() && !to.is_empty() && from != to {
+        return true;
+    }
+
+    let transfer_type = transfer_type_raw.trim().to_lowercase();
+    transfer_type.contains("internal") || transfer_type == "transfer"
 }
 
 impl ExchangeParser for MexcFundingOtherParser {
@@ -314,8 +346,6 @@ impl ExchangeParser for MexcFundingTransferParser {
             ("currency", "Currency"),
             ("amount", "Amount"),
             ("status", "Status"),
-            ("update_time", "update_time(UTC+00:00)"),
-            ("create_time", "create_time(UTC+00:00)"),
             ("transfer_type", "Transfer Type"),
         ] {
             if !cols.contains_key(internal) {
@@ -325,6 +355,13 @@ impl ExchangeParser for MexcFundingTransferParser {
                     format!("Missing required MEXC column: '{display}'"),
                 ));
             }
+        }
+        if !cols.contains_key("update_time") && !cols.contains_key("create_time") {
+            return Err(RowError::new(
+                1,
+                None,
+                "Missing required MEXC column: 'update_time(UTC+00:00)' or 'create_time(UTC+00:00)'",
+            ));
         }
 
         let mut result: ParseResult<ImportCryptoTransaction> = ParseResult::default();
@@ -366,6 +403,10 @@ impl ExchangeParser for MexcFundingTransferParser {
             let transfer_type_raw = get_field(&record, &cols, "transfer_type");
             let from_system_raw = get_field(&record, &cols, "from_system");
             let to_system_raw = get_field(&record, &cols, "to_system");
+
+            if is_internal_system_transfer(from_system_raw, to_system_raw, transfer_type_raw) {
+                continue;
+            }
 
             let timestamp = match parse_timestamp(time_raw) {
                 Some(dt) => dt,
@@ -473,9 +514,23 @@ mod tests {
     }
 
     #[test]
-    fn funding_transfer_withdrawal_maps_to_transfer_out() {
+    fn funding_transfer_internal_system_rows_are_skipped() {
         let csv = format!(
             "{}\nUSER_001,Internal,External,USDT,150,Completed,2025-12-15 08:00:00,2025-12-15 07:55:00,Withdrawal\n",
+            TRANSFER_HEADER
+        );
+
+        let parser = MexcFundingTransferParser;
+        let result = parser.parse(&csv, "MEXC").unwrap();
+
+        assert!(result.items.is_empty());
+        assert!(result.errors.is_empty());
+    }
+
+    #[test]
+    fn funding_transfer_without_system_context_is_kept() {
+        let csv = format!(
+            "{}\nUSER_001,,,USDT,150,Completed,2025-12-15 08:00:00,2025-12-15 07:55:00,Withdrawal\n",
             TRANSFER_HEADER
         );
 

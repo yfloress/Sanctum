@@ -23,6 +23,7 @@ use crate::db::{Database, DbError};
 use crate::features::crypto::tax::types::{derive_mechanical_type, normalize_subtype};
 use crate::models::{CryptoTransaction, HabitLog, Transaction};
 use crate::services::i18n::{t, t_args};
+use chrono::{NaiveDate, NaiveDateTime};
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
@@ -44,6 +45,133 @@ use super::validation::{
 fn format_currency_simple(cents: i64, currency: &str) -> String {
     let amount = (cents.abs() as f64) / 100.0;
     format!("{:.2} {}", amount, currency)
+}
+
+fn normalize_import_symbol_key(raw: &str) -> String {
+    let lower = raw.trim().to_lowercase();
+    if lower.is_empty() {
+        return lower;
+    }
+
+    let compact: String = lower
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric())
+        .collect();
+
+    if compact.contains("usdt") || compact.contains("tether") {
+        return "usdt".to_string();
+    }
+    if compact.contains("usdc") || compact.contains("usdcoin") {
+        return "usdc".to_string();
+    }
+    if compact.contains("mxtoken") {
+        return "mx".to_string();
+    }
+
+    match compact.as_str() {
+        "xbt" => "btc".to_string(),
+        "bcc" => "bch".to_string(),
+        "matic" => "pol".to_string(),
+        other => other.to_string(),
+    }
+}
+
+fn matches_swap_rollup_duplicate(existing_amounts: &[f64], import_amount: f64) -> bool {
+    if existing_amounts.len() < 2 {
+        return false;
+    }
+    let summed_amount: f64 = existing_amounts.iter().copied().sum();
+    (summed_amount - import_amount).abs() <= 1e-8
+}
+
+fn parse_ingestion_datetime(raw: &str) -> Option<NaiveDateTime> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    NaiveDateTime::parse_from_str(trimmed, "%Y-%m-%d %H:%M:%S")
+        .ok()
+        .or_else(|| {
+            NaiveDate::parse_from_str(trimmed, "%Y-%m-%d")
+                .ok()
+                .and_then(|d| d.and_hms_opt(0, 0, 0))
+        })
+}
+
+fn note_starts_with_lowercase(note: Option<&str>, expected_prefix: &str) -> bool {
+    note.map(|n| n.trim().to_lowercase().starts_with(expected_prefix))
+        .unwrap_or(false)
+}
+
+fn has_mexc_transfer_overlap_duplicate(
+    existing: &[CryptoTransaction],
+    format_name: &str,
+    wallet_id: &str,
+    coin_id: &str,
+    mechanical_type: &str,
+    amount: f64,
+    fee_amount: Option<f64>,
+    date: &str,
+) -> bool {
+    if mechanical_type != "transfer_in" && mechanical_type != "transfer_out" {
+        return false;
+    }
+
+    let incoming_is_statement = format_name.eq_ignore_ascii_case("MEXC Statement History");
+    let incoming_is_deposit = format_name.eq_ignore_ascii_case("MEXC Deposit History");
+    let incoming_is_withdrawal = format_name.eq_ignore_ascii_case("MEXC Withdrawal History");
+
+    let required_existing_note_prefix = if incoming_is_statement {
+        if mechanical_type == "transfer_in" {
+            "mexc deposit"
+        } else {
+            "mexc withdrawal"
+        }
+    } else if incoming_is_deposit || incoming_is_withdrawal {
+        "mexc statement"
+    } else {
+        return false;
+    };
+
+    let import_dt = match parse_ingestion_datetime(date) {
+        Some(dt) => dt,
+        None => return false,
+    };
+
+    const OVERLAP_WINDOW_SECONDS: i64 = 15 * 60;
+
+    existing.iter().any(|tx| {
+        if tx.wallet_id != wallet_id || tx.coin_id != coin_id {
+            return false;
+        }
+        if tx.mechanical_type() != mechanical_type {
+            return false;
+        }
+        if (tx.amount - amount).abs() > 1e-8 {
+            return false;
+        }
+
+        if fee_amount.is_some() || tx.fee_amount.is_some() {
+            match (fee_amount, tx.fee_amount) {
+                (Some(incoming_fee), Some(existing_fee))
+                    if (incoming_fee - existing_fee).abs() <= 1e-8 => {}
+                _ => return false,
+            }
+        }
+
+        if !note_starts_with_lowercase(tx.notes.as_deref(), required_existing_note_prefix) {
+            return false;
+        }
+
+        let existing_dt = match parse_ingestion_datetime(&tx.date) {
+            Some(dt) => dt,
+            None => return false,
+        };
+
+        let delta = (existing_dt - import_dt).num_seconds().abs();
+        delta <= OVERLAP_WINDOW_SECONDS
+    })
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -403,11 +531,11 @@ impl IngestionService {
         validate_file_size(content.len()).map_err(IngestionError::FileTooLarge)?;
 
         let source = detect_exchange_source(content).ok_or_else(|| {
-            IngestionError::UnsupportedFormat(
-                "Could not detect exchange format. Supported: Kraken, Binance, Feather Wallet, Monero GUI Wallet"
-                    .to_string(),
-            )
-        })?;
+                IngestionError::UnsupportedFormat(
+                    "Could not detect exchange format. Supported: Kraken, Binance, MEXC, Feather Wallet, Monero GUI Wallet"
+                        .to_string(),
+                )
+            })?;
 
         self.import_exchange_csv(content, wallet_name, source)
     }
@@ -421,11 +549,11 @@ impl IngestionService {
         validate_file_size(content.len()).map_err(IngestionError::FileTooLarge)?;
 
         let source = detect_exchange_source(content).ok_or_else(|| {
-            IngestionError::UnsupportedFormat(
-                "Could not detect exchange format. Supported: Kraken, Binance, Feather Wallet, Monero GUI Wallet"
-                    .to_string(),
-            )
-        })?;
+                IngestionError::UnsupportedFormat(
+                    "Could not detect exchange format. Supported: Kraken, Binance, MEXC, Feather Wallet, Monero GUI Wallet"
+                        .to_string(),
+                )
+            })?;
 
         self.preview_exchange_csv(content, wallet_name, source)
     }
@@ -1044,6 +1172,8 @@ impl IngestionService {
 
         let mut summary = ImportSummary::new(format_name, "Crypto");
         let skipped_duplicate = t("import-skipped-duplicate-crypto");
+        let is_mexc_spot_order_history_source =
+            format_name.eq_ignore_ascii_case("MEXC Spot Trade History");
 
         let wallet_lookup =
             IngestionRepository::build_wallet_lookup(db).map_err(IngestionError::Database)?;
@@ -1054,6 +1184,31 @@ impl IngestionService {
             .map_err(IngestionError::Database)?;
         let existing_map: HashMap<String, &CryptoTransaction> =
             existing.iter().map(|tx| (tx.id.clone(), tx)).collect();
+        let mut existing_swap_amounts: HashMap<(String, String, String, String), Vec<f64>> =
+            HashMap::new();
+        if is_mexc_spot_order_history_source {
+            for tx in &existing {
+                if tx.mechanical_type() != "swap" {
+                    continue;
+                }
+                let pair_coin_id = tx
+                    .related_tx_id
+                    .as_ref()
+                    .and_then(|id| existing_map.get(id))
+                    .map(|related| related.coin_id.as_str());
+                if let Some(pair_coin_id) = pair_coin_id {
+                    existing_swap_amounts
+                        .entry((
+                            tx.date.clone(),
+                            tx.wallet_id.clone(),
+                            tx.coin_id.clone(),
+                            pair_coin_id.to_string(),
+                        ))
+                        .or_default()
+                        .push(tx.amount);
+                }
+            }
+        }
 
         let mut dedup_set: HashSet<CryptoDedupKey> = existing
             .iter()
@@ -1118,7 +1273,7 @@ impl IngestionService {
             };
 
             // Resolve coin (source)
-            let symbol_key = import_tx.symbol.trim().to_lowercase();
+            let symbol_key = normalize_import_symbol_key(&import_tx.symbol);
             let coin = match coin_lookup.get(&symbol_key) {
                 Some(c) => c,
                 None => {
@@ -1141,7 +1296,7 @@ impl IngestionService {
                     .as_ref()
                     .map(|s| s.trim())
                     .unwrap_or("");
-                let to_key = to_symbol.to_lowercase();
+                let to_key = normalize_import_symbol_key(to_symbol);
                 swap_to_coin = match coin_lookup.get(&to_key) {
                     Some(c) => Some(c),
                     None => {
@@ -1163,7 +1318,7 @@ impl IngestionService {
                 .map(|s| s.trim())
                 .filter(|s| !s.is_empty())
             {
-                let fee_key = symbol.to_lowercase();
+                let fee_key = normalize_import_symbol_key(symbol);
                 fee_coin = match coin_lookup.get(&fee_key) {
                     Some(c) => Some(c),
                     None => {
@@ -1189,6 +1344,20 @@ impl IngestionService {
                 }
                 _ => (None, None),
             };
+
+            if has_mexc_transfer_overlap_duplicate(
+                &existing,
+                format_name,
+                &wallet.id,
+                &coin.id,
+                mechanical_type,
+                import_tx.amount,
+                resolved_fee_amount,
+                &import_tx.date,
+            ) {
+                summary.record_skipped(&skipped_duplicate);
+                continue;
+            }
 
             // Validate balance for outflow operations
             // Skipped for exchange imports — the wallet export is authoritative.
@@ -1532,6 +1701,20 @@ impl IngestionService {
                     Some(c) => c,
                     None => continue,
                 };
+                if is_mexc_spot_order_history_source {
+                    let key = (
+                        import_tx.date.clone(),
+                        wallet.id.clone(),
+                        coin.id.clone(),
+                        to_coin.id.clone(),
+                    );
+                    if let Some(existing_amounts) = existing_swap_amounts.get(&key)
+                        && matches_swap_rollup_duplicate(existing_amounts, import_tx.amount)
+                    {
+                        summary.record_skipped(&skipped_duplicate);
+                        continue;
+                    }
+                }
                 // Match the same source-side price normalisation used when persisting swaps.
                 let source_price_for_dedup = import_tx.price_per_coin.or_else(|| {
                     let to_amount = import_tx.swap_to_amount.unwrap_or(0.0);
@@ -1808,5 +1991,150 @@ impl IngestionService {
         }
 
         Ok(summary)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        has_mexc_transfer_overlap_duplicate, matches_swap_rollup_duplicate,
+        normalize_import_symbol_key,
+    };
+    use crate::models::CryptoTransaction;
+
+    #[allow(clippy::too_many_arguments)]
+    fn sample_crypto_tx(
+        date: &str,
+        wallet_id: &str,
+        coin_id: &str,
+        tx_type: &str,
+        subtype: Option<&str>,
+        amount: f64,
+        fee_amount: Option<f64>,
+        notes: Option<&str>,
+    ) -> CryptoTransaction {
+        CryptoTransaction {
+            id: "tx-1".to_string(),
+            wallet_id: wallet_id.to_string(),
+            coin_id: coin_id.to_string(),
+            symbol: "USDT".to_string(),
+            transaction_type: tx_type.to_string(),
+            amount,
+            price_per_coin: None,
+            fee: None,
+            fee_coin_id: fee_amount.map(|_| coin_id.to_string()),
+            fee_amount,
+            subtype: subtype.map(|s| s.to_string()),
+            override_proceeds: None,
+            override_cost_basis: None,
+            date: date.to_string(),
+            notes: notes.map(|n| n.to_string()),
+            related_tx_id: None,
+        }
+    }
+
+    #[test]
+    fn normalize_import_symbol_key_maps_common_aliases() {
+        assert_eq!(normalize_import_symbol_key("TETHER"), "usdt");
+        assert_eq!(normalize_import_symbol_key("USDT(TRC20)"), "usdt");
+        assert_eq!(normalize_import_symbol_key("Tether USDt"), "usdt");
+        assert_eq!(normalize_import_symbol_key("USD Coin"), "usdc");
+        assert_eq!(normalize_import_symbol_key("MXTOKEN"), "mx");
+        assert_eq!(normalize_import_symbol_key("xbt"), "btc");
+        assert_eq!(normalize_import_symbol_key("BCC"), "bch");
+        assert_eq!(normalize_import_symbol_key("MATIC"), "pol");
+    }
+
+    #[test]
+    fn normalize_import_symbol_key_keeps_regular_symbols() {
+        assert_eq!(normalize_import_symbol_key("USDT"), "usdt");
+        assert_eq!(normalize_import_symbol_key("MX"), "mx");
+        assert_eq!(normalize_import_symbol_key(" ICP "), "icp");
+    }
+
+    #[test]
+    fn swap_rollup_duplicate_requires_multiple_existing_rows() {
+        assert!(!matches_swap_rollup_duplicate(&[12.0], 12.0));
+    }
+
+    #[test]
+    fn swap_rollup_duplicate_matches_summed_split_fills() {
+        assert!(matches_swap_rollup_duplicate(&[1.2, 3.8], 5.0));
+        assert!(!matches_swap_rollup_duplicate(&[1.2, 3.8], 4.9));
+    }
+
+    #[test]
+    fn mexc_overlap_detects_statement_deposit_vs_dedicated_deposit() {
+        let existing = vec![sample_crypto_tx(
+            "2026-01-12 10:00:00",
+            "wallet-1",
+            "tether",
+            "transfer",
+            Some("deposit"),
+            100.0,
+            None,
+            Some("MEXC deposit | network=Polygon"),
+        )];
+
+        assert!(has_mexc_transfer_overlap_duplicate(
+            &existing,
+            "MEXC Statement History",
+            "wallet-1",
+            "tether",
+            "transfer_in",
+            100.0,
+            None,
+            "2026-01-12 10:07:00",
+        ));
+    }
+
+    #[test]
+    fn mexc_overlap_rejects_rows_outside_time_window() {
+        let existing = vec![sample_crypto_tx(
+            "2026-01-12 10:00:00",
+            "wallet-1",
+            "tether",
+            "transfer",
+            Some("deposit"),
+            100.0,
+            None,
+            Some("MEXC deposit | network=Polygon"),
+        )];
+
+        assert!(!has_mexc_transfer_overlap_duplicate(
+            &existing,
+            "MEXC Statement History",
+            "wallet-1",
+            "tether",
+            "transfer_in",
+            100.0,
+            None,
+            "2026-01-12 10:30:01",
+        ));
+    }
+
+    #[test]
+    fn mexc_overlap_detects_dedicated_withdrawal_vs_statement_with_fee() {
+        let existing = vec![sample_crypto_tx(
+            "2026-01-12 12:20:00",
+            "wallet-1",
+            "litecoin",
+            "transfer",
+            Some("withdrawal"),
+            0.5,
+            Some(0.0001),
+            Some("MEXC statement | type=Withdraw | direction=Outflow"),
+        )];
+
+        assert!(has_mexc_transfer_overlap_duplicate(
+            &existing,
+            "MEXC Withdrawal History",
+            "wallet-1",
+            "litecoin",
+            "transfer_out",
+            0.5,
+            Some(0.0001),
+            "2026-01-12 12:12:30",
+        ));
     }
 }

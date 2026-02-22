@@ -33,27 +33,27 @@ pub struct MexcDepositParser;
 fn resolve_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
     let mut map = HashMap::new();
     for (i, col) in headers.iter().enumerate() {
-        let key = col.trim().trim_matches('"');
-        match key {
-            "Status" => {
+        let key = col.trim().trim_matches('"').to_lowercase();
+        match key.as_str() {
+            "status" => {
                 map.insert("status", i);
             }
-            "Time" => {
+            "time" => {
                 map.insert("time", i);
             }
-            "Crypto" => {
+            "crypto" => {
                 map.insert("symbol", i);
             }
-            "Network" => {
+            "network" => {
                 map.insert("network", i);
             }
-            "Deposit Amount" => {
+            "deposit amount" => {
                 map.insert("amount", i);
             }
-            "TxID" | "TxId" => {
+            "txid" => {
                 map.insert("txid", i);
             }
-            "Progress" => {
+            "progress" => {
                 map.insert("progress", i);
             }
             _ => {}
@@ -83,17 +83,29 @@ fn is_success_status(raw: &str) -> bool {
     if status.is_empty() {
         return false;
     }
-    if status.contains("cancel")
-        || status.contains("fail")
-        || status.contains("reject")
-        || status.contains("pending")
-    {
+    let rejected_terms = [
+        "pending",
+        "processing",
+        "pre-crediting",
+        "pre crediting",
+        "precrediting",
+        "cancel",
+        "fail",
+        "reject",
+        "invalid",
+        "restricted",
+        "return",
+    ];
+    if rejected_terms.iter().any(|term| status.contains(term)) {
         return false;
     }
-    status.contains("success")
-        || status.contains("complete")
-        || status.contains("credited")
-        || status.contains("credit")
+
+    status == "completed"
+        || status == "success"
+        || status == "successful"
+        || status == "credit"
+        || status == "credited"
+        || status.contains("credited successfully")
 }
 
 fn build_notes(cols: &HashMap<&str, usize>, record: &StringRecord) -> Option<String> {

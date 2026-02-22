@@ -45,11 +45,13 @@ struct PendingExchangeImport {
     detected_format: String,
     files: Vec<PendingExchangeFile>,
     preflight_errors: Vec<RowError>,
+    preflight_skips: Vec<String>,
     wallet_name: String,
 }
 
 struct PendingExchangeFile {
     display_name: String,
+    source_id: String,
     content: String,
 }
 
@@ -210,11 +212,13 @@ pub fn setup_ingestion_callbacks(
                         }
                     };
 
-                    if let Some((_, exchange_label, _)) = controller.detect_exchange_source(&content)
+                    if let Some((exchange_id, exchange_label, _)) =
+                        controller.detect_exchange_source(&content)
                     {
                         detected_labels.push(exchange_label);
                         pending_files.push(PendingExchangeFile {
                             display_name,
+                            source_id: exchange_id,
                             content,
                         });
                     } else {
@@ -240,6 +244,9 @@ pub fn setup_ingestion_callbacks(
                     return;
                 }
 
+                let (pending_files, preflight_skips) =
+                    apply_exchange_batch_filters(pending_files);
+
                 let combined_format = combine_exchange_labels(&detected_labels);
                 let combined_display = build_batch_display_name(&selected_names);
 
@@ -256,6 +263,7 @@ pub fn setup_ingestion_callbacks(
                         detected_format: combined_format,
                         files: pending_files,
                         preflight_errors,
+                        preflight_skips,
                         wallet_name: String::new(),
                     });
 
@@ -300,6 +308,9 @@ pub fn setup_ingestion_callbacks(
                 let mut summary = ImportSummary::new(&pending.detected_format, "Crypto");
                 for err in pending.preflight_errors.iter().cloned() {
                     summary.record_error(err);
+                }
+                for reason in &pending.preflight_skips {
+                    summary.record_skipped(reason);
                 }
                 for file in &pending.files {
                     match controller.preview_exchange_csv(&file.content, &wallet_name) {
@@ -357,12 +368,16 @@ pub fn setup_ingestion_callbacks(
                     detected_format,
                     files,
                     preflight_errors,
+                    preflight_skips,
                     wallet_name,
                 } = pending;
 
                 let mut summary = ImportSummary::new(&detected_format, "Crypto");
                 for err in preflight_errors {
                     summary.record_error(err);
+                }
+                for reason in preflight_skips {
+                    summary.record_skipped(&reason);
                 }
                 for file in files {
                     match controller.import_exchange_csv(file.content, wallet_name.clone()) {
@@ -519,6 +534,39 @@ fn combine_exchange_labels(labels: &[String]) -> String {
     }
 }
 
+fn apply_exchange_batch_filters(
+    files: Vec<PendingExchangeFile>,
+) -> (Vec<PendingExchangeFile>, Vec<String>) {
+    let has_mexc_futures_trades = files.iter().any(|f| f.source_id == "mexc_futures_trades");
+    let has_mexc_trade_history = files.iter().any(|f| f.source_id == "mexc_trades");
+
+    let mut filtered = Vec::with_capacity(files.len());
+    let mut skipped = Vec::new();
+
+    for file in files {
+        if has_mexc_trade_history && file.source_id == "mexc_spot" {
+            skipped.push(format!(
+                "{}: skipped overlapping source (covered by MEXC Trade History)",
+                file.display_name
+            ));
+            continue;
+        }
+        if has_mexc_futures_trades
+            && (file.source_id == "mexc_futures_orders"
+                || file.source_id == "mexc_futures_positions")
+        {
+            skipped.push(format!(
+                "{}: skipped duplicate source (covered by MEXC Futures Trade History)",
+                file.display_name
+            ));
+            continue;
+        }
+        filtered.push(file);
+    }
+
+    (filtered, skipped)
+}
+
 fn build_batch_display_name(file_names: &[String]) -> String {
     match file_names {
         [] => String::new(),
@@ -529,7 +577,10 @@ fn build_batch_display_name(file_names: &[String]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{build_batch_display_name, combine_exchange_labels};
+    use super::{
+        PendingExchangeFile, apply_exchange_batch_filters, build_batch_display_name,
+        combine_exchange_labels,
+    };
 
     #[test]
     fn combine_exchange_labels_deduplicates_preserving_order() {
@@ -563,5 +614,52 @@ mod tests {
             "deposits.csv".to_string(),
         ];
         assert_eq!(build_batch_display_name(&files), "spot.csv +2");
+    }
+
+    #[test]
+    fn batch_filter_skips_mexc_spot_when_trade_history_present() {
+        let files = vec![
+            PendingExchangeFile {
+                display_name: "Spot-Spot Order History.csv".to_string(),
+                source_id: "mexc_spot".to_string(),
+                content: "spot".to_string(),
+            },
+            PendingExchangeFile {
+                display_name: "Spot-Spot Trade History.csv".to_string(),
+                source_id: "mexc_trades".to_string(),
+                content: "trades".to_string(),
+            },
+        ];
+
+        let (filtered, skipped) = apply_exchange_batch_filters(files);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].source_id, "mexc_trades");
+        assert_eq!(skipped.len(), 1);
+    }
+
+    #[test]
+    fn batch_filter_skips_overlapping_mexc_futures_reports() {
+        let files = vec![
+            PendingExchangeFile {
+                display_name: "Futures-Futures Order History.csv".to_string(),
+                source_id: "mexc_futures_orders".to_string(),
+                content: "orders".to_string(),
+            },
+            PendingExchangeFile {
+                display_name: "Futures-Futures Position History.csv".to_string(),
+                source_id: "mexc_futures_positions".to_string(),
+                content: "positions".to_string(),
+            },
+            PendingExchangeFile {
+                display_name: "Futures-Futures Trade History.csv".to_string(),
+                source_id: "mexc_futures_trades".to_string(),
+                content: "trades".to_string(),
+            },
+        ];
+
+        let (filtered, skipped) = apply_exchange_batch_filters(files);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].source_id, "mexc_futures_trades");
+        assert_eq!(skipped.len(), 2);
     }
 }

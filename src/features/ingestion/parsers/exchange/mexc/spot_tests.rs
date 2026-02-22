@@ -21,8 +21,7 @@ use crate::features::ingestion::parsers::exchange::ExchangeParser;
 const HEADER: &str = "UID,Pairs,Time,Type,Direction,Average Filled Price,Order Price,Filled Quantity,Order Quantity,Order Amount,Status";
 
 #[test]
-fn buy_ltc_usdt_market_order_is_buy() {
-    // USDT is a stablecoin → treated as pricing currency → buy
+fn buy_ltc_usdt_market_order_is_swap() {
     let csv = format!(
         "{}\n11111111,LTC_USDT,2020-10-10 20:05:07,Market,Buy,122.87,Market,0.122,0,14.99164,Filled\n",
         HEADER
@@ -35,17 +34,16 @@ fn buy_ltc_usdt_market_order_is_buy() {
     assert!(result.errors.is_empty());
 
     let tx = &result.items[0].1;
-    assert_eq!(tx.symbol, "LTC");
+    assert_eq!(tx.symbol, "USDT");
     assert_eq!(tx.transaction_type, "trade");
-    assert_eq!(tx.subtype.as_deref(), Some("buy"));
-    assert!((tx.amount - 0.122).abs() < f64::EPSILON);
-    assert!((tx.price_per_coin.unwrap() - 122.87).abs() < 0.01);
+    assert_eq!(tx.subtype.as_deref(), Some("swap"));
+    assert!((tx.amount - 14.99014).abs() < 0.01);
+    assert_eq!(tx.swap_to_symbol.as_deref(), Some("LTC"));
+    assert!((tx.swap_to_amount.unwrap() - 0.122).abs() < f64::EPSILON);
     assert_eq!(tx.wallet, "MEXC");
     assert_eq!(tx.date, "2020-10-10 20:05:07");
 
-    // No swap fields for a buy
-    assert!(tx.swap_to_symbol.is_none());
-    assert!(tx.swap_to_amount.is_none());
+    assert!(tx.price_per_coin.is_none());
 
     // No fee info in MEXC exports
     assert!(tx.fee.is_none());
@@ -54,8 +52,7 @@ fn buy_ltc_usdt_market_order_is_buy() {
 }
 
 #[test]
-fn buy_ltc_usdt_limit_order_is_buy() {
-    // USDT is a stablecoin → pricing currency → buy
+fn buy_ltc_usdt_limit_order_is_swap() {
     let csv = format!(
         "{}\n11111111,LTC_USDT,2020-10-20 10:04:01,Limit,Buy,133.91,85.50,0.1498,0.1498,20.0599,Filled\n",
         HEADER
@@ -66,14 +63,15 @@ fn buy_ltc_usdt_limit_order_is_buy() {
 
     assert_eq!(result.items.len(), 1);
     let tx = &result.items[0].1;
-    assert_eq!(tx.symbol, "LTC");
-    assert_eq!(tx.subtype.as_deref(), Some("buy"));
-    assert!((tx.amount - 0.1498).abs() < f64::EPSILON);
-    assert!((tx.price_per_coin.unwrap() - 133.91).abs() < 0.01);
+    assert_eq!(tx.symbol, "USDT");
+    assert_eq!(tx.subtype.as_deref(), Some("swap"));
+    assert!((tx.amount - (0.1498 * 133.91)).abs() < 0.01);
+    assert_eq!(tx.swap_to_symbol.as_deref(), Some("LTC"));
+    assert!((tx.swap_to_amount.unwrap() - 0.1498).abs() < f64::EPSILON);
 }
 
 #[test]
-fn sell_btc_usdt_is_sell() {
+fn sell_btc_usdt_is_swap() {
     let csv = format!(
         "{}\n11111111,BTC_USDT,2024-01-15 10:30:45,Limit,Sell,50000.00,50000.00,0.5,0.5,25000.00,Filled\n",
         HEADER
@@ -85,12 +83,11 @@ fn sell_btc_usdt_is_sell() {
     assert_eq!(result.items.len(), 1);
     let tx = &result.items[0].1;
     assert_eq!(tx.symbol, "BTC");
-    assert_eq!(tx.subtype.as_deref(), Some("sell"));
+    assert_eq!(tx.subtype.as_deref(), Some("swap"));
     assert!((tx.amount - 0.5).abs() < f64::EPSILON);
-    assert!((tx.price_per_coin.unwrap() - 50000.0).abs() < f64::EPSILON);
-    // No swap fields for a sell
-    assert!(tx.swap_to_symbol.is_none());
-    assert!(tx.swap_to_amount.is_none());
+    assert_eq!(tx.swap_to_symbol.as_deref(), Some("USDT"));
+    assert!((tx.swap_to_amount.unwrap() - 25000.0).abs() < f64::EPSILON);
+    assert!(tx.price_per_coin.is_none());
 }
 
 #[test]
@@ -262,11 +259,12 @@ fn partially_filled_is_processed() {
     assert!(result.errors.is_empty());
 
     let tx = &result.items[0].1;
-    assert_eq!(tx.symbol, "BTC");
-    assert_eq!(tx.subtype.as_deref(), Some("buy"));
-    // Uses the actual filled quantity, not the full order quantity
-    assert!((tx.amount - 0.005).abs() < f64::EPSILON);
-    assert!((tx.price_per_coin.unwrap() - 50000.0).abs() < f64::EPSILON);
+    assert_eq!(tx.symbol, "USDT");
+    assert_eq!(tx.subtype.as_deref(), Some("swap"));
+    // Uses the actual filled quantity, not the full order quantity.
+    assert!((tx.amount - 250.0).abs() < f64::EPSILON);
+    assert_eq!(tx.swap_to_symbol.as_deref(), Some("BTC"));
+    assert!((tx.swap_to_amount.unwrap() - 0.005).abs() < f64::EPSILON);
 }
 
 #[test]
@@ -284,9 +282,10 @@ fn partially_filled_sell_is_processed() {
     assert_eq!(result.items.len(), 1);
     let tx = &result.items[0].1;
     assert_eq!(tx.symbol, "ETH");
-    assert_eq!(tx.subtype.as_deref(), Some("sell"));
+    assert_eq!(tx.subtype.as_deref(), Some("swap"));
     assert!((tx.amount - 0.75).abs() < f64::EPSILON);
-    assert!((tx.price_per_coin.unwrap() - 3200.0).abs() < f64::EPSILON);
+    assert_eq!(tx.swap_to_symbol.as_deref(), Some("USDT"));
+    assert!((tx.swap_to_amount.unwrap() - 2400.0).abs() < f64::EPSILON);
 }
 
 #[test]
@@ -398,8 +397,7 @@ fn notes_contain_order_type_and_direction() {
     let result = parser.parse(&csv, "MEXC").unwrap();
 
     let tx = &result.items[0].1;
-    // BTC_USDT buy is now a buy (not a swap)
-    assert_eq!(tx.subtype.as_deref(), Some("buy"));
+    assert_eq!(tx.subtype.as_deref(), Some("swap"));
     let notes = tx.notes.as_deref().unwrap();
     assert!(notes.contains("Limit"));
     assert!(notes.contains("Buy"));
@@ -442,8 +440,15 @@ fn parse_pair_slash_separator() {
 }
 
 #[test]
-fn parse_pair_invalid_no_underscore() {
-    assert!(parse_mexc_pair("LTCUSDT").is_none());
+fn parse_pair_compact_suffix() {
+    let (base, quote) = parse_mexc_pair("LTCUSDT").unwrap();
+    assert_eq!(base, "LTC");
+    assert_eq!(quote, "USDT");
+}
+
+#[test]
+fn parse_pair_invalid_unknown_compact_symbol() {
+    assert!(parse_mexc_pair("LTCQWERTY").is_none());
 }
 
 #[test]
@@ -470,11 +475,13 @@ fn negative_filled_qty_is_normalised() {
     assert!(result.errors.is_empty());
     let tx = &result.items[0].1;
     assert_eq!(tx.transaction_type, "trade");
-    assert_eq!(tx.subtype.as_deref(), Some("buy"));
+    assert_eq!(tx.subtype.as_deref(), Some("swap"));
     assert!(
-        (tx.amount - 0.1).abs() < f64::EPSILON,
-        "amount should be abs of -0.1"
+        (tx.amount - 5.0).abs() < f64::EPSILON,
+        "USDT outflow should use abs-filled value"
     );
+    assert_eq!(tx.swap_to_symbol.as_deref(), Some("LTC"));
+    assert!((tx.swap_to_amount.unwrap() - 0.1).abs() < f64::EPSILON);
 }
 
 #[test]
@@ -491,9 +498,10 @@ fn negative_order_amount_is_normalised() {
     assert_eq!(result.items.len(), 1);
     assert!(result.errors.is_empty());
     let tx = &result.items[0].1;
-    assert_eq!(tx.subtype.as_deref(), Some("sell"));
-    // price_per_coin = filled_value / filled_qty = 10 / 0.2 = 50
+    assert_eq!(tx.subtype.as_deref(), Some("swap"));
     assert!((tx.amount - 0.2).abs() < f64::EPSILON);
+    assert_eq!(tx.swap_to_symbol.as_deref(), Some("USDT"));
+    assert!((tx.swap_to_amount.unwrap() - 10.0).abs() < f64::EPSILON);
 }
 
 // ── Same-symbol swap guard ──────────────────────────────────────────

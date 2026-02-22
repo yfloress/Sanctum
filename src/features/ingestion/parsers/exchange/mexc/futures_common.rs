@@ -25,30 +25,24 @@ use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
 pub(super) fn resolve_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
     let mut map = HashMap::new();
     for (i, col) in headers.iter().enumerate() {
-        let key = col.trim().trim_matches('"');
-        match key {
-            "Time(UTC+00:00)" => {
+        let key = col.trim().trim_matches('"').to_lowercase();
+        match key.as_str() {
+            "time(utc+00:00)" => {
                 map.insert("time", i);
             }
-            "Futures Trading Pair" => {
+            "futures trading pair" | "futures" => {
                 map.insert("pair", i);
             }
-            "futures" => {
-                map.insert("pair", i);
-            }
-            "Futures" => {
-                map.insert("pair", i);
-            }
-            "Crypto" => {
+            "crypto" => {
                 map.insert("symbol", i);
             }
-            "Fund Type" => {
+            "fund type" => {
                 map.insert("fund_type", i);
             }
-            "Fund Flow Type" => {
+            "fund flow type" => {
                 map.insert("flow_type", i);
             }
-            "Amount" => {
+            "amount" => {
                 map.insert("amount", i);
             }
             "copy_trader_uid" => {
@@ -57,37 +51,37 @@ pub(super) fn resolve_columns(headers: &StringRecord) -> HashMap<&'static str, u
             "copy_state" => {
                 map.insert("copy_state", i);
             }
-            "fee" | "Fee" => {
+            "fee" => {
                 map.insert("fee", i);
             }
-            "create_time(UTC+00:00)" => {
+            "create_time(utc+00:00)" => {
                 map.insert("create_time", i);
             }
-            "close_time(UTC+00:00)" => {
+            "close_time(utc+00:00)" => {
                 map.insert("close_time", i);
             }
-            "Open Time(UTC+00:00)" => {
+            "open time(utc+00:00)" => {
                 map.insert("open_time", i);
             }
-            "Close Time" => {
+            "close time" => {
                 map.insert("close_time", i);
             }
-            "Position Profit/Loss(USDT)" => {
+            "position profit/loss(usdt)" => {
                 map.insert("pnl", i);
             }
-            "Closing PNL" => {
+            "closing pnl" => {
                 map.insert("pnl", i);
             }
-            "Realized PNL" => {
+            "realized pnl" => {
                 map.insert("pnl", i);
             }
-            "Trading Fee" => {
+            "trading fee" => {
                 map.insert("trading_fee", i);
             }
-            "Fee-payment Crypto" => {
+            "fee-payment crypto" => {
                 map.insert("fee_symbol", i);
             }
-            "Status" => {
+            "status" => {
                 map.insert("status", i);
             }
             _ => {}
@@ -129,18 +123,25 @@ pub(super) fn status_is_final(raw: &str) -> bool {
     if status.is_empty() {
         return true;
     }
-    if status.contains("pending")
-        || status.contains("cancel")
-        || status.contains("open")
-        || status.contains("new")
-        || status.contains("reject")
-    {
+    let rejected_terms = [
+        "pending",
+        "cancel",
+        "open",
+        "new",
+        "reject",
+        "unfilled",
+        "not filled",
+        "partial",
+    ];
+    if rejected_terms.iter().any(|term| status.contains(term)) {
         return false;
     }
-    status.contains("fill")
-        || status.contains("close")
-        || status.contains("complete")
-        || status.contains("success")
+
+    status.contains("filled")
+        || status.contains("closed")
+        || status == "completed"
+        || status == "success"
+        || status == "successful"
 }
 
 #[allow(clippy::too_many_arguments)]

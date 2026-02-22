@@ -33,39 +33,39 @@ pub struct MexcWithdrawalParser;
 fn resolve_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
     let mut map = HashMap::new();
     for (i, col) in headers.iter().enumerate() {
-        let key = col.trim().trim_matches('"');
-        match key {
-            "Status" => {
+        let key = col.trim().trim_matches('"').to_lowercase();
+        match key.as_str() {
+            "status" => {
                 map.insert("status", i);
             }
-            "Time" => {
+            "time" => {
                 map.insert("time", i);
             }
-            "Crypto" => {
+            "crypto" => {
                 map.insert("symbol", i);
             }
-            "Request Amount" => {
+            "request amount" => {
                 map.insert("request_amount", i);
             }
-            "Trading Fee" => {
+            "trading fee" => {
                 map.insert("trading_fee", i);
             }
-            "Settlement Amount" => {
+            "settlement amount" => {
                 map.insert("settlement_amount", i);
             }
-            "Network" => {
+            "network" => {
                 map.insert("network", i);
             }
-            "Withdrawal Address" => {
+            "withdrawal address" => {
                 map.insert("address", i);
             }
-            "memo" | "Memo" => {
+            "memo" => {
                 map.insert("memo", i);
             }
-            "TxID" => {
+            "txid" => {
                 map.insert("txid", i);
             }
-            "Withdrawal Descriptions" => {
+            "withdrawal descriptions" => {
                 map.insert("description", i);
             }
             _ => {}
@@ -95,14 +95,25 @@ fn is_success_status(raw: &str) -> bool {
     if status.is_empty() {
         return false;
     }
-    if status.contains("cancel")
-        || status.contains("fail")
-        || status.contains("reject")
-        || status.contains("pending")
-    {
+    let rejected_terms = [
+        "pending",
+        "processing",
+        "under review",
+        "review",
+        "verification",
+        "confirmation",
+        "cancel",
+        "fail",
+        "reject",
+    ];
+    if rejected_terms.iter().any(|term| status.contains(term)) {
         return false;
     }
-    status.contains("success") || status.contains("complete")
+
+    status == "completed"
+        || status == "success"
+        || status == "successful"
+        || status.contains("withdrawal successful")
 }
 
 fn resolve_transfer_amount(request_amount: f64, settlement_amount: Option<f64>, fee: Option<f64>) -> f64 {

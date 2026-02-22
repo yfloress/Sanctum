@@ -100,7 +100,17 @@ impl ExchangeParser for MexcFuturesCopyTradeOrderParser {
             };
             let date = format_datetime(timestamp);
 
-            let quote_symbol = parse_pair_quote_symbol(pair_raw).unwrap_or_else(|| "USDT".to_string());
+            let quote_symbol = match parse_pair_quote_symbol(pair_raw) {
+                Some(symbol) => symbol,
+                None => {
+                    result.errors.push(RowError::new(
+                        line_number,
+                        Some("futures"),
+                        format!("Cannot parse futures pair: '{pair_raw}'"),
+                    ));
+                    continue;
+                }
+            };
             if is_fiat(&quote_symbol) {
                 continue;
             }

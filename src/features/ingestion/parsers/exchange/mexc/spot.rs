@@ -30,7 +30,8 @@
 //!
 //! - Only rows with `Status == "Filled"` are processed; other statuses are
 //!   skipped silently.
-//! - `Pairs` uses underscore separator: `LTC_USDT`, `BTC_USDT`, `ETH_BTC`.
+//! - `Pairs` usually uses separators (`LTC_USDT`, `BTC-USDT`, `ETH/BTC`)
+//!   but compact forms like `BTCUSDT` are also accepted.
 //! - `Direction` is `Buy` or `Sell`.
 //! - `Filled Quantity` is the amount of the **base** asset actually filled.
 //! - `Order Amount` is the total in the **quote** currency.
@@ -46,9 +47,7 @@ use std::collections::HashMap;
 
 use csv::{ReaderBuilder, StringRecord, Trim};
 
-use super::super::common::{
-    format_datetime, is_fiat, is_quote_currency, parse_decimal, parse_timestamp,
-};
+use super::super::common::{format_datetime, is_fiat, parse_decimal, parse_timestamp};
 use super::super::{ExchangeParser, ExchangeSource, ParseResult};
 use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
 
@@ -57,33 +56,33 @@ use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
 fn resolve_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
     let mut map = HashMap::new();
     for (i, col) in headers.iter().enumerate() {
-        let key = col.trim().trim_matches('"');
-        match key {
-            "Pairs" => {
+        let key = col.trim().trim_matches('"').to_lowercase();
+        match key.as_str() {
+            "pairs" => {
                 map.insert("pairs", i);
             }
-            "Time" => {
+            "time" => {
                 map.insert("time", i);
             }
-            "Type" => {
+            "type" => {
                 map.insert("type", i);
             }
-            "Direction" => {
+            "direction" => {
                 map.insert("direction", i);
             }
-            "Average Filled Price" => {
+            "average filled price" => {
                 map.insert("avg_price", i);
             }
-            "Order Price" => {
+            "order price" => {
                 map.insert("order_price", i);
             }
-            "Filled Quantity" => {
+            "filled quantity" => {
                 map.insert("filled_qty", i);
             }
-            "Order Amount" => {
+            "order amount" => {
                 map.insert("order_amount", i);
             }
-            "Status" => {
+            "status" => {
                 map.insert("status", i);
             }
             _ => {}
@@ -101,7 +100,11 @@ fn get_field<'a>(record: &'a StringRecord, cols: &HashMap<&str, usize>, name: &s
 
 // ─── Pair parsing ───────────────────────────────────────────────────────────
 
-/// Splits a MEXC pair like `LTC_USDT` into `("LTC", "USDT")`.
+/// Splits a MEXC pair into `(base, quote)`.
+///
+/// Supported forms:
+/// - Separated: `LTC_USDT`, `BTC-USDT`, `ETH/USDC`
+/// - Compact: `BTCUSDT`, `ETHBTC` (using known quote suffixes)
 pub(super) fn parse_mexc_pair(pair: &str) -> Option<(String, String)> {
     let trimmed = pair.trim();
     if trimmed.is_empty() {
@@ -118,7 +121,30 @@ pub(super) fn parse_mexc_pair(pair: &str) -> Option<(String, String)> {
         }
     }
 
+    // Compact pair fallback (e.g. BTCUSDT, ETHBTC)
+    let upper = trimmed.to_uppercase();
+    const QUOTE_SUFFIXES: &[&str] = &[
+        "USDT", "USDC", "BUSD", "FDUSD", "TUSD", "USDD", "USDP", "DAI", "BTC", "ETH", "USD",
+        "EUR", "GBP", "JPY", "AUD", "CAD", "MXN", "BRL", "CLP", "ARS",
+    ];
+    for quote in QUOTE_SUFFIXES {
+        if let Some(base_raw) = upper.strip_suffix(quote) {
+            let base = base_raw.trim();
+            if !base.is_empty() && base.chars().all(|c| c.is_ascii_alphanumeric()) {
+                return Some((base.to_string(), (*quote).to_string()));
+            }
+        }
+    }
+
     None
+}
+
+fn parse_direction_is_buy(direction: &str) -> Option<bool> {
+    match direction.trim().to_lowercase().as_str() {
+        "buy" => Some(true),
+        "sell" => Some(false),
+        _ => None,
+    }
 }
 
 // ─── Parser ─────────────────────────────────────────────────────────────────
@@ -260,16 +286,25 @@ impl ExchangeParser for MexcSpotParser {
             // Parse average filled price (normalise to positive)
             let avg_price = parse_decimal(avg_price_raw).map(|p| p.abs());
 
-            let is_buy = direction_raw.eq_ignore_ascii_case("Buy");
+            let is_buy = match parse_direction_is_buy(direction_raw) {
+                Some(v) => v,
+                None => {
+                    result.errors.push(RowError::new(
+                        line_number,
+                        Some("Direction"),
+                        format!("Invalid direction value: '{}'", direction_raw),
+                    ));
+                    continue;
+                }
+            };
             let base_fiat = is_fiat(&base_symbol);
             let quote_fiat = is_fiat(&quote_symbol);
 
-            // Stablecoins (USDT, USDC, …) act as pricing currencies: when
-            // one side is a stablecoin and the other is a regular crypto
-            // asset, classify the trade as buy/sell (with price ≈ USD)
-            // instead of a swap.  This avoids phantom stablecoin balances.
-            let quote_is_pricing = is_quote_currency(&quote_symbol);
-            let base_is_pricing = is_quote_currency(&base_symbol);
+            // Only true fiat pairs (USD/BTC) are treated as buy/sell pricing
+            // operations. Stablecoin-quoted pairs (BTC/USDT) are swaps so
+            // stablecoin balances are updated correctly.
+            let quote_is_pricing = quote_fiat;
+            let base_is_pricing = base_fiat;
 
             let notes = Some(format!(
                 "MEXC {} {} | {}/{}",
@@ -296,10 +331,7 @@ impl ExchangeParser for MexcSpotParser {
                 continue;
             }
 
-            // Quote is a pricing currency (fiat or stablecoin) and base
-            // is a regular crypto asset → standard buy/sell.
-            // Also covers fiat quotes (BTC_USD) and stablecoin quotes
-            // (BTC_USDT, LTC_USDC, etc.).
+            // Quote is true fiat and base is crypto -> standard buy/sell.
             if quote_is_pricing && !base_is_pricing {
                 let price = if avg_price.is_some() {
                     avg_price
@@ -331,7 +363,7 @@ impl ExchangeParser for MexcSpotParser {
 
                 result.items.push((line_number, tx));
             } else if base_is_pricing && !quote_is_pricing {
-                // Inverted pair: USD/BTC, USDT/BTC (rare but handle)
+                // Inverted fiat pair (rare): USD/BTC.
                 // Buying base(fiat-like) with quote(crypto) = selling crypto
                 let subtype = if is_buy { "sell" } else { "buy" };
 

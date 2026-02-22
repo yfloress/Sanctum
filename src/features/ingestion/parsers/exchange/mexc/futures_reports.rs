@@ -104,7 +104,17 @@ impl ExchangeParser for MexcFuturesOrderHistoryParser {
             };
             let date = format_datetime(timestamp);
 
-            let quote_symbol = parse_pair_quote_symbol(pair_raw).unwrap_or_else(|| "USDT".to_string());
+            let quote_symbol = match parse_pair_quote_symbol(pair_raw) {
+                Some(symbol) => symbol,
+                None => {
+                    result.errors.push(RowError::new(
+                        line_number,
+                        Some("Futures Trading Pair"),
+                        format!("Cannot parse futures pair: '{pair_raw}'"),
+                    ));
+                    continue;
+                }
+            };
             let fee_symbol = if fee_symbol_raw.trim().is_empty() {
                 quote_symbol.clone()
             } else {
@@ -224,7 +234,17 @@ impl ExchangeParser for MexcFuturesPositionHistoryParser {
             };
             let date = format_datetime(timestamp);
 
-            let quote_symbol = parse_pair_quote_symbol(pair_raw).unwrap_or_else(|| "USDT".to_string());
+            let quote_symbol = match parse_pair_quote_symbol(pair_raw) {
+                Some(symbol) => symbol,
+                None => {
+                    result.errors.push(RowError::new(
+                        line_number,
+                        Some("Futures"),
+                        format!("Cannot parse futures pair: '{pair_raw}'"),
+                    ));
+                    continue;
+                }
+            };
             if is_fiat(&quote_symbol) {
                 continue;
             }
@@ -330,7 +350,17 @@ impl ExchangeParser for MexcFuturesTradeHistoryParser {
             };
             let date = format_datetime(timestamp);
 
-            let quote_symbol = parse_pair_quote_symbol(pair_raw).unwrap_or_else(|| "USDT".to_string());
+            let quote_symbol = match parse_pair_quote_symbol(pair_raw) {
+                Some(symbol) => symbol,
+                None => {
+                    result.errors.push(RowError::new(
+                        line_number,
+                        Some("Futures Trading Pair"),
+                        format!("Cannot parse futures pair: '{pair_raw}'"),
+                    ));
+                    continue;
+                }
+            };
             let fee_symbol = if fee_symbol_raw.trim().is_empty() {
                 quote_symbol.clone()
             } else {

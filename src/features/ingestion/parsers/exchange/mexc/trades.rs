@@ -24,9 +24,7 @@ use std::collections::HashMap;
 
 use csv::{ReaderBuilder, StringRecord, Trim};
 
-use super::super::common::{
-    format_datetime, is_fiat, is_quote_currency, parse_decimal, parse_timestamp,
-};
+use super::super::common::{format_datetime, is_fiat, parse_decimal, parse_timestamp};
 use super::super::{ExchangeParser, ExchangeSource, ParseResult};
 use super::spot::parse_mexc_pair;
 use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
@@ -36,30 +34,30 @@ pub struct MexcTradeParser;
 fn resolve_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
     let mut map = HashMap::new();
     for (i, col) in headers.iter().enumerate() {
-        let key = col.trim().trim_matches('"');
-        match key {
-            "Pairs" => {
+        let key = col.trim().trim_matches('"').to_lowercase();
+        match key.as_str() {
+            "pairs" => {
                 map.insert("pairs", i);
             }
-            "Time" => {
+            "time" => {
                 map.insert("time", i);
             }
-            "Side" => {
+            "side" => {
                 map.insert("side", i);
             }
-            "Filled Price" => {
+            "filled price" => {
                 map.insert("filled_price", i);
             }
-            "Executed Amount" => {
+            "executed amount" => {
                 map.insert("executed_amount", i);
             }
-            "Total" => {
+            "total" => {
                 map.insert("total", i);
             }
-            "Fee" => {
+            "fee" => {
                 map.insert("fee", i);
             }
-            "Role" => {
+            "role" => {
                 map.insert("role", i);
             }
             _ => {}
@@ -251,8 +249,10 @@ impl ExchangeParser for MexcTradeParser {
                 continue;
             }
 
-            let quote_is_pricing = is_quote_currency(&quote_symbol);
-            let base_is_pricing = is_quote_currency(&base_symbol);
+            // Only true fiat pairs are imported as buy/sell. Stablecoin pairs
+            // are imported as swaps to keep stablecoin balances consistent.
+            let quote_is_pricing = quote_fiat;
+            let base_is_pricing = base_fiat;
 
             let (fee_coin_symbol, fee_amount) = match parse_fee_field(fee_raw) {
                 Some((coin, amount)) => (Some(coin), Some(amount)),
@@ -357,7 +357,7 @@ mod tests {
     const HEADER: &str = "UID,Pairs,Time,Side,Filled Price,Executed Amount,Total,Fee,Role";
 
     #[test]
-    fn buy_trade_maps_to_trade_buy_with_fee() {
+    fn buy_trade_with_stablecoin_quote_maps_to_swap_with_fee() {
         let csv = format!(
             "{}\n11111111,LTC_USDT,2025-12-18 22:13:41,Buy,78.04,0.315,24.58860,0.01229430USDT,Taker\n",
             HEADER
@@ -369,17 +369,18 @@ mod tests {
         assert_eq!(result.items.len(), 1);
         assert!(result.errors.is_empty());
         let tx = &result.items[0].1;
-        assert_eq!(tx.symbol, "LTC");
+        assert_eq!(tx.symbol, "USDT");
         assert_eq!(tx.transaction_type, "trade");
-        assert_eq!(tx.subtype.as_deref(), Some("buy"));
-        assert!((tx.amount - 0.315).abs() < f64::EPSILON);
-        assert!((tx.price_per_coin.unwrap() - 78.04).abs() < f64::EPSILON);
+        assert_eq!(tx.subtype.as_deref(), Some("swap"));
+        assert!((tx.amount - 24.58860).abs() < f64::EPSILON);
+        assert_eq!(tx.swap_to_symbol.as_deref(), Some("LTC"));
+        assert!((tx.swap_to_amount.unwrap() - 0.315).abs() < f64::EPSILON);
         assert_eq!(tx.fee_coin_symbol.as_deref(), Some("USDT"));
         assert!((tx.fee_amount.unwrap() - 0.01229430).abs() < f64::EPSILON);
     }
 
     #[test]
-    fn sell_trade_maps_to_trade_sell() {
+    fn sell_trade_with_stablecoin_quote_maps_to_swap() {
         let csv = format!(
             "{}\n11111111,DCR_USDT,2025-11-06 11:57:31,Sell,36.58,0.138,5.045,0.00252250USDT,Taker\n",
             HEADER
@@ -392,8 +393,10 @@ mod tests {
         assert!(result.errors.is_empty());
         let tx = &result.items[0].1;
         assert_eq!(tx.symbol, "DCR");
-        assert_eq!(tx.subtype.as_deref(), Some("sell"));
+        assert_eq!(tx.subtype.as_deref(), Some("swap"));
         assert!((tx.amount - 0.138).abs() < f64::EPSILON);
+        assert_eq!(tx.swap_to_symbol.as_deref(), Some("USDT"));
+        assert!((tx.swap_to_amount.unwrap() - 5.045).abs() < f64::EPSILON);
     }
 
     #[test]

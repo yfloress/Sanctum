@@ -25,39 +25,39 @@ use crate::features::ingestion::types::ImportCryptoTransaction;
 pub(super) fn resolve_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
     let mut map = HashMap::new();
     for (i, col) in headers.iter().enumerate() {
-        let key = col.trim().trim_matches('"');
-        match key {
-            "Order ID" => {
+        let key = col.trim().trim_matches('"').to_lowercase();
+        match key.as_str() {
+            "order id" => {
                 map.insert("order_id", i);
             }
-            "Start Time(UTC+00:00)" => {
+            "start time(utc+00:00)" => {
                 map.insert("start_time", i);
             }
-            "Trading Token" => {
+            "trading token" => {
                 map.insert("trading_token", i);
             }
-            "Trading Direction" => {
+            "trading direction" => {
                 map.insert("direction", i);
             }
-            "Status" => {
+            "status" => {
                 map.insert("status", i);
             }
-            "Order Quantity" => {
+            "order quantity" => {
                 map.insert("order_quantity", i);
             }
-            "Settlement Token" => {
+            "settlement token" => {
                 map.insert("settlement_token", i);
             }
-            "Order Amount" => {
+            "order amount" => {
                 map.insert("order_amount", i);
             }
-            "Payment Method" => {
+            "payment method" => {
                 map.insert("payment_method", i);
             }
-            "P2P Type" => {
+            "p2p type" => {
                 map.insert("p2p_type", i);
             }
-            "Fee" => {
+            "fee" => {
                 map.insert("fee", i);
             }
             _ => {}
@@ -82,14 +82,22 @@ pub(super) fn is_completed_status(raw: &str) -> bool {
     if status.is_empty() {
         return false;
     }
-    if status.contains("pending")
-        || status.contains("cancel")
-        || status.contains("fail")
-        || status.contains("reject")
-    {
+    let rejected_terms = [
+        "pending",
+        "processing",
+        "cancel",
+        "fail",
+        "reject",
+        "review",
+        "verification",
+    ];
+    if rejected_terms.iter().any(|term| status.contains(term)) {
         return false;
     }
-    status.contains("complete") || status.contains("success")
+    status == "completed"
+        || status == "success"
+        || status == "successful"
+        || status.starts_with("completed ")
 }
 
 pub(super) fn parse_is_buy(raw: &str) -> Option<bool> {
