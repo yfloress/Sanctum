@@ -1,3 +1,20 @@
+// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Copyright (C) 2026  Kyronix
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as
+// published by the Free Software Foundation, either version 3 of the
+// License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
+//
+
     use super::*;
 
     fn tx(
@@ -119,4 +136,66 @@
             .find(|a| a.coin_id == "ethereum")
             .expect("expected ETH holding after swap");
         assert!((eth.total_amount - 10.0).abs() < 0.00000001);
+    }
+
+    #[test]
+    fn aggregate_fee_coin_uses_catalog_symbol_when_created_from_fee_first() {
+        let mut btc_buy_with_usdt_fee = tx(
+            "buy-btc",
+            "bitcoin",
+            "BTC",
+            "trade",
+            Some("buy"),
+            0.1,
+            Some(50_000.0),
+            "2024-01-01",
+            None,
+        );
+        btc_buy_with_usdt_fee.fee_coin_id = Some("tether".to_string());
+        btc_buy_with_usdt_fee.fee_amount = Some(1.0);
+
+        let usdt_deposit = tx(
+            "dep-usdt",
+            "tether",
+            "USDT",
+            "transfer",
+            Some("deposit"),
+            10.0,
+            None,
+            "2024-01-01",
+            None,
+        );
+
+        let assets =
+            Database::aggregate_crypto_transactions(vec![btc_buy_with_usdt_fee, usdt_deposit]);
+
+        let usdt = assets
+            .iter()
+            .find(|a| a.coin_id == "tether")
+            .expect("expected USDT holding");
+        assert_eq!(usdt.symbol, "USDT");
+        assert!((usdt.total_amount - 10.0).abs() < 0.00000001);
+    }
+
+    #[test]
+    fn aggregate_overrides_legacy_tether_symbol_with_canonical_usdt() {
+        let legacy_tether_tx = tx(
+            "legacy-usdt",
+            "tether",
+            "TETHER",
+            "transfer",
+            Some("deposit"),
+            2.5,
+            None,
+            "2024-01-03",
+            None,
+        );
+
+        let assets = Database::aggregate_crypto_transactions(vec![legacy_tether_tx]);
+        let usdt = assets
+            .iter()
+            .find(|a| a.coin_id == "tether")
+            .expect("expected USDT holding");
+        assert_eq!(usdt.symbol, "USDT");
+        assert!((usdt.total_amount - 2.5).abs() < 0.00000001);
     }

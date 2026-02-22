@@ -574,12 +574,18 @@ pub fn setup_portfolio_callbacks<N>(
                 {
                     let prices = controller.load_crypto_prices().unwrap_or_default();
                     let price_data = prices.iter().find(|p| p.id == coin_id_str);
+                    let catalog_map: HashMap<String, String> = controller
+                        .get_coin_catalog_or_default()
+                        .into_iter()
+                        .map(|coin| (coin.id, coin.name))
+                        .collect();
                     let current_price = price_data.map(|p| p.current_price).unwrap_or(0.0);
                     let price_change = price_data
                         .map(|p| p.price_change_percentage_24h)
                         .unwrap_or(0.0);
                     let asset_name = price_data
                         .map(|p| p.name.clone())
+                        .or_else(|| catalog_map.get(&coin_id_str).cloned())
                         .unwrap_or_else(|| asset.symbol.clone());
 
                     let mut updated_asset = asset.clone();

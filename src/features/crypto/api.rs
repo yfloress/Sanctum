@@ -920,6 +920,7 @@ pub fn default_coin_catalog() -> Vec<CryptoCatalogCoin> {
         ("arbitrum", "Arbitrum", "ARB"),
         ("cosmos", "Cosmos Hub", "ATOM"),
         ("internet-computer", "Internet Computer", "ICP"),
+        ("mx-token", "MX Token", "MX"),
         ("hedera-hashgraph", "Hedera", "HBAR"),
         ("vechain", "VeChain", "VET"),
         ("ethereum-classic", "Ethereum Classic", "ETC"),

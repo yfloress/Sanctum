@@ -336,6 +336,7 @@ where
 
             let asset_name = price_data
                 .map(|p| p.name.clone())
+                .or_else(|| catalog_map.get(&a.coin_id).map(|(name, _)| name.clone()))
                 .unwrap_or_else(|| a.symbol.clone());
 
             // Convert price and value to preferred currency

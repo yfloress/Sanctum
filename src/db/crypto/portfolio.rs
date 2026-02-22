@@ -24,6 +24,21 @@ use crate::features::crypto::tax::types::derive_mechanical_type;
 use crate::models::{AggregatedAsset, CryptoTransaction, CryptoTransactionType};
 use rusqlite::params;
 use std::collections::{HashMap, HashSet};
+use std::sync::LazyLock;
+
+static DEFAULT_SYMBOL_BY_COIN_ID: LazyLock<HashMap<String, String>> = LazyLock::new(|| {
+    crate::features::crypto::api::default_coin_catalog()
+        .into_iter()
+        .map(|coin| (coin.id.to_lowercase(), coin.symbol))
+        .collect()
+});
+
+fn canonical_symbol_for_coin(coin_id: &str, fallback_symbol: &str) -> String {
+    DEFAULT_SYMBOL_BY_COIN_ID
+        .get(&coin_id.to_lowercase())
+        .cloned()
+        .unwrap_or_else(|| fallback_symbol.to_string())
+}
 
 impl Database {
     // ==================== Balance Calculations ====================
@@ -202,7 +217,12 @@ impl Database {
 
             let entry = assets
                 .entry(tx.coin_id.clone())
-                .or_insert_with(|| AggregatedAsset::new(tx.coin_id.clone(), tx.symbol.clone()));
+                .or_insert_with(|| {
+                    AggregatedAsset::new(
+                        tx.coin_id.clone(),
+                        canonical_symbol_for_coin(&tx.coin_id, &tx.symbol),
+                    )
+                });
 
             if matches!(tx_type, CryptoTransactionType::Buy) {
                 entry.total_amount += tx.amount;
@@ -273,7 +293,12 @@ impl Database {
     ) {
         let source_entry = assets
             .entry(source.coin_id.clone())
-            .or_insert_with(|| AggregatedAsset::new(source.coin_id.clone(), source.symbol.clone()));
+            .or_insert_with(|| {
+                AggregatedAsset::new(
+                    source.coin_id.clone(),
+                    canonical_symbol_for_coin(&source.coin_id, &source.symbol),
+                )
+            });
 
         // Capture state before the swap to compute proportional cost
         let prev_amount = source_entry.total_amount;
@@ -297,7 +322,12 @@ impl Database {
         // Apply inflow on target asset
         let target_entry = assets
             .entry(target.coin_id.clone())
-            .or_insert_with(|| AggregatedAsset::new(target.coin_id.clone(), target.symbol.clone()));
+            .or_insert_with(|| {
+                AggregatedAsset::new(
+                    target.coin_id.clone(),
+                    canonical_symbol_for_coin(&target.coin_id, &target.symbol),
+                )
+            });
         target_entry.total_amount += target.amount;
         target_entry.total_cost_basis += cost_transferred.max(0.0);
 
@@ -429,12 +459,18 @@ impl Database {
             return;
         }
 
-        let entry = assets.entry(fee_coin_id.to_string()).or_insert_with(|| {
-            AggregatedAsset::new(
-                fee_coin_id.to_string(),
-                fee_symbol.unwrap_or(fee_coin_id).to_uppercase(),
-            )
-        });
+        let fallback_symbol = fee_symbol
+            .map(|s| s.to_uppercase())
+            .or_else(|| {
+                DEFAULT_SYMBOL_BY_COIN_ID
+                    .get(&fee_coin_id.to_lowercase())
+                    .cloned()
+            })
+            .unwrap_or_else(|| fee_coin_id.to_uppercase());
+
+        let entry = assets
+            .entry(fee_coin_id.to_string())
+            .or_insert_with(|| AggregatedAsset::new(fee_coin_id.to_string(), fallback_symbol));
 
         let prev_amount = entry.total_amount;
         entry.total_amount -= fee_amount;
@@ -461,7 +497,12 @@ impl Database {
 
         let entry = assets
             .entry(source.coin_id.clone())
-            .or_insert_with(|| AggregatedAsset::new(source.coin_id.clone(), source.symbol.clone()));
+            .or_insert_with(|| {
+                AggregatedAsset::new(
+                    source.coin_id.clone(),
+                    canonical_symbol_for_coin(&source.coin_id, &source.symbol),
+                )
+            });
 
         let prev_amount = entry.total_amount;
         let prev_cost = entry.total_cost_basis;
@@ -599,7 +640,12 @@ impl Database {
 
             let entry = assets
                 .entry(tx.coin_id.clone())
-                .or_insert_with(|| AggregatedAsset::new(tx.coin_id.clone(), tx.symbol.clone()));
+                .or_insert_with(|| {
+                    AggregatedAsset::new(
+                        tx.coin_id.clone(),
+                        canonical_symbol_for_coin(&tx.coin_id, &tx.symbol),
+                    )
+                });
 
             match tx_type {
                 CryptoTransactionType::Buy => {

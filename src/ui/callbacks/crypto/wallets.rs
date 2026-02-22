@@ -65,6 +65,11 @@ pub fn setup_wallet_callbacks<N>(
                     let prices = controller.load_crypto_prices().unwrap_or_default();
                     let price_map: HashMap<String, CryptoAsset> =
                         prices.into_iter().map(|p| (p.id.clone(), p)).collect();
+                    let catalog_map: HashMap<String, String> = controller
+                        .get_coin_catalog_or_default()
+                        .into_iter()
+                        .map(|coin| (coin.id, coin.name))
+                        .collect();
 
                     let mut total_value = 0.0;
                     let holdings_data: Vec<CryptoAssetData> = holdings
@@ -79,6 +84,7 @@ pub fn setup_wallet_callbacks<N>(
                             let price_data = price_map.get(&asset.coin_id);
                             let asset_name = price_data
                                 .map(|p| p.name.clone())
+                                .or_else(|| catalog_map.get(&asset.coin_id).cloned())
                                 .unwrap_or_else(|| asset.symbol.clone());
 
                             let price_fmt = if price_data.is_none() {

@@ -26,6 +26,42 @@ use crate::models::{
 };
 use std::collections::HashMap;
 
+fn coin_lookup_keys(coin: &CryptoCatalogCoin) -> Vec<String> {
+    let symbol = coin.symbol.trim().to_lowercase();
+    let id = coin.id.trim().to_lowercase();
+    let name = coin.name.trim().to_lowercase();
+
+    let compact = |value: &str| -> String {
+        value
+            .chars()
+            .filter(|c| c.is_ascii_alphanumeric())
+            .collect()
+    };
+
+    let mut keys = vec![symbol, id.clone(), name];
+    let compact_id = compact(&id);
+    if !compact_id.is_empty() {
+        keys.push(compact_id);
+    }
+
+    if id == "tether" {
+        keys.push("usdt".to_string());
+        keys.push("tether".to_string());
+    }
+    if id == "usd-coin" {
+        keys.push("usdc".to_string());
+        keys.push("usdcoin".to_string());
+    }
+    if id == "mx-token" {
+        keys.push("mx".to_string());
+        keys.push("mxtoken".to_string());
+    }
+
+    keys.sort();
+    keys.dedup();
+    keys
+}
+
 /// Repository for ingestion-related database lookups
 pub struct IngestionRepository;
 
@@ -125,10 +161,13 @@ impl IngestionRepository {
             }
         }
 
-        Ok(coins
-            .into_iter()
-            .map(|c| (c.symbol.trim().to_lowercase(), c))
-            .collect())
+        let mut lookup = HashMap::new();
+        for coin in coins {
+            for key in coin_lookup_keys(&coin) {
+                lookup.entry(key).or_insert_with(|| coin.clone());
+            }
+        }
+        Ok(lookup)
     }
 
     /// Gets all existing crypto transactions for deduplication
@@ -152,5 +191,35 @@ impl IngestionRepository {
         date: &str,
     ) -> Result<f64, DbError> {
         db.get_wallet_coin_balance_at(wallet_id, coin_id, date, None)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::coin_lookup_keys;
+    use crate::models::CryptoCatalogCoin;
+
+    fn coin(id: &str, name: &str, symbol: &str) -> CryptoCatalogCoin {
+        CryptoCatalogCoin {
+            id: id.to_string(),
+            name: name.to_string(),
+            symbol: symbol.to_string(),
+            custom: false,
+        }
+    }
+
+    #[test]
+    fn coin_lookup_keys_include_stablecoin_aliases() {
+        let keys = coin_lookup_keys(&coin("tether", "Tether", "USDT"));
+        assert!(keys.contains(&"usdt".to_string()));
+        assert!(keys.contains(&"tether".to_string()));
+    }
+
+    #[test]
+    fn coin_lookup_keys_include_mx_aliases() {
+        let keys = coin_lookup_keys(&coin("mx-token", "MX Token", "MX"));
+        assert!(keys.contains(&"mx".to_string()));
+        assert!(keys.contains(&"mx-token".to_string()));
+        assert!(keys.contains(&"mxtoken".to_string()));
     }
 }

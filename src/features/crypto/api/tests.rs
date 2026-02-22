@@ -1,3 +1,20 @@
+// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Copyright (C) 2026  Kyronix
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as
+// published by the Free Software Foundation, either version 3 of the
+// License, or (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
+//
+
     use super::*;
 
     #[test]
@@ -151,4 +168,20 @@
         assert_eq!(kraken_pair_for_coingecko_id("bitcoin"), Some("XBTUSD"));
         assert_eq!(kraken_pair_for_coingecko_id("monero"), Some("XMRUSD"));
         assert_eq!(kraken_pair_for_coingecko_id("unknown-coin"), None);
+    }
+
+    #[test]
+    fn default_coin_catalog_includes_mx_token() {
+        let catalog = default_coin_catalog();
+        let mx = catalog.iter().find(|coin| coin.id == "mx-token");
+        assert!(mx.is_some());
+        assert_eq!(mx.expect("mx-token must exist").symbol, "MX");
+    }
+
+    #[test]
+    fn default_coin_catalog_keeps_tether_symbol_as_usdt() {
+        let catalog = default_coin_catalog();
+        let usdt = catalog.iter().find(|coin| coin.id == "tether");
+        assert!(usdt.is_some());
+        assert_eq!(usdt.expect("tether must exist").symbol, "USDT");
     }
