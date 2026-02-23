@@ -563,7 +563,7 @@ impl IngestionService {
 
         let source = detect_exchange_source(content).ok_or_else(|| {
                 IngestionError::UnsupportedFormat(
-                    "Could not detect exchange format. Supported: Kraken, Binance, MEXC, Feather Wallet, Monero GUI Wallet"
+                    "Could not detect exchange format. Supported: Kraken, Binance, MEXC, NotBank, Feather Wallet, Monero GUI Wallet"
                         .to_string(),
                 )
             })?;
@@ -581,7 +581,7 @@ impl IngestionService {
 
         let source = detect_exchange_source(content).ok_or_else(|| {
                 IngestionError::UnsupportedFormat(
-                    "Could not detect exchange format. Supported: Kraken, Binance, MEXC, Feather Wallet, Monero GUI Wallet"
+                    "Could not detect exchange format. Supported: Kraken, Binance, MEXC, NotBank, Feather Wallet, Monero GUI Wallet"
                         .to_string(),
                 )
             })?;

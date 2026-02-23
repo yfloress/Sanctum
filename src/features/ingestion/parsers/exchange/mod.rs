@@ -34,6 +34,7 @@ pub mod feather;
 pub mod kraken;
 pub mod mexc;
 pub mod monero_gui;
+pub mod notbank;
 
 use super::ParseResult;
 use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
@@ -63,8 +64,10 @@ pub enum ExchangeSource {
     MexcFuturesOrderHistory,
     MexcFuturesPositionHistory,
     MexcFuturesTradeHistory,
+    NotBankTransactions,
+    NotBankTradeActivity,
+    NotBankPnlReport,
     // Future:
-    // CryptoMkt,
     // Bybit,
     // CakeWallet,
 }
@@ -95,6 +98,9 @@ impl ExchangeSource {
             ExchangeSource::MexcFuturesOrderHistory => "MEXC Futures Order History",
             ExchangeSource::MexcFuturesPositionHistory => "MEXC Futures Position History",
             ExchangeSource::MexcFuturesTradeHistory => "MEXC Futures Trade History",
+            ExchangeSource::NotBankTransactions => "NotBank Transaction Report",
+            ExchangeSource::NotBankTradeActivity => "NotBank Trade Activity Report",
+            ExchangeSource::NotBankPnlReport => "NotBank Profit And Loss Report",
         }
     }
 
@@ -121,6 +127,9 @@ impl ExchangeSource {
             ExchangeSource::MexcFuturesOrderHistory => "mexc_futures_orders",
             ExchangeSource::MexcFuturesPositionHistory => "mexc_futures_positions",
             ExchangeSource::MexcFuturesTradeHistory => "mexc_futures_trades",
+            ExchangeSource::NotBankTransactions => "notbank_transaction",
+            ExchangeSource::NotBankTradeActivity => "notbank_trade",
+            ExchangeSource::NotBankPnlReport => "notbank_pnl",
         }
     }
 
@@ -149,6 +158,9 @@ impl ExchangeSource {
             | ExchangeSource::MexcFuturesTradeHistory => {
                 "MEXC"
             }
+            ExchangeSource::NotBankTransactions
+            | ExchangeSource::NotBankTradeActivity
+            | ExchangeSource::NotBankPnlReport => "NotBank",
         }
     }
 }
@@ -240,6 +252,102 @@ const EXCHANGE_SIGNATURES: &[(&[&str], ExchangeSource)] = &[
             "Fee",
         ],
         ExchangeSource::BinanceSpotTradeHistory,
+    ),
+    // NotBank (ex-CryptoMarket) Transaction report
+    (
+        &[
+            "RegisteredEntityId",
+            "PostingEntryId",
+            "PostingEntryType",
+            "PostingDatetime",
+            "AccountId",
+            "AccountName",
+            "Product",
+            "CR",
+            "DR",
+            "ReferenceTransactionType",
+            "ReferenceTransactionId",
+            "SystemRecordReference",
+            "OMSId",
+            "Balance",
+        ],
+        ExchangeSource::NotBankTransactions,
+    ),
+    // NotBank Trade Activity report
+    (
+        &[
+            "RegisteredEntityId",
+            "TransReportId",
+            "TransReportRevision",
+            "TransReportType",
+            "OrderId",
+            "ClientOrderId",
+            "QuoteId",
+            "ExtTradeReportId",
+            "TradeId",
+            "TransReportDatetime",
+            "Side",
+            "Quantity",
+            "Instrument",
+            "Price",
+            "InsideBid",
+            "InsideBidSize",
+            "InsideOffer",
+            "InsideOfferSize",
+            "LeavesSize",
+            "MakerTaker",
+            "Trader",
+            "AccountId",
+            "AccountName",
+            "Fee",
+            "FeeProduct",
+            "Notional",
+            "BaseSettlementAmount",
+            "CounterpartySettlementAmount",
+            "OMSId",
+        ],
+        ExchangeSource::NotBankTradeActivity,
+    ),
+    // NotBank Profit And Loss report (Unrealized section header)
+    (
+        &[
+            "AccountId",
+            "AccountName",
+            "Product",
+            "FullName",
+            "TimeStamp",
+            "ProductQuantity",
+            "PurchasePrice",
+            "TotalFeeAsProduct",
+            "TotalQuantityMinusFee",
+            "TotalPurchaseValue",
+            "ProductEndPrice",
+            "TotalSaleValue",
+            "P/L",
+            "%Return",
+        ],
+        ExchangeSource::NotBankPnlReport,
+    ),
+    // NotBank Profit And Loss report (Realized section header)
+    (
+        &[
+            "AccountId",
+            "AccountName",
+            "Product",
+            "FullName",
+            "TimeStamp",
+            "ProductQuantity",
+            "PurchasePrice",
+            "TotalFeeAsProduct",
+            "TotalQuantityMinusFee",
+            "TotalPurchaseValue",
+            "SalePrice",
+            "TotalSaleFee",
+            "TotalSaleWithFee",
+            "P/L",
+            "%Return",
+        ],
+        ExchangeSource::NotBankPnlReport,
     ),
     // MEXC Spot Trade History
     (
@@ -525,34 +633,39 @@ const EXCHANGE_SIGNATURES: &[(&[&str], ExchangeSource)] = &[
 ];
 
 /// Attempts to identify the exchange source from CSV content by inspecting
-/// the header row. Returns `None` if the format is not recognized.
+/// the first few non-empty lines for a matching header. Returns `None` if
+/// the format is not recognized.
 ///
-/// The content must start with the CSV header line. Leading BOM characters
-/// are stripped automatically.
+/// Leading BOM characters are stripped automatically.
 pub fn detect_exchange_source(content: &str) -> Option<ExchangeSource> {
-    let first_line = content
+    let lines: Vec<&str> = content
         .trim_start_matches('\u{feff}') // strip UTF-8 BOM
         .lines()
-        .next()?
-        .trim();
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .take(5)
+        .collect();
 
-    if first_line.is_empty() {
+    if lines.is_empty() {
         return None;
     }
 
-    // Parse header into normalized tokens.
-    // We trim whitespace and strip surrounding quotes from each column name.
-    let headers: Vec<&str> = first_line
-        .split(',')
-        .map(|h| {
-            let t = h.trim();
-            t.trim_matches('"').trim()
-        })
-        .collect();
+    // Some files (e.g., NotBank PnL) include a non-CSV section title before
+    // the actual header. We inspect the first few non-empty lines to find the
+    // first matching header signature.
+    for line in lines {
+        let headers: Vec<&str> = line
+            .split(',')
+            .map(|h| {
+                let t = h.trim();
+                t.trim_matches('"').trim()
+            })
+            .collect();
 
-    for (expected, source) in EXCHANGE_SIGNATURES {
-        if headers_match(&headers, expected) {
-            return Some(*source);
+        for (expected, source) in EXCHANGE_SIGNATURES {
+            if headers_match(&headers, expected) {
+                return Some(*source);
+            }
         }
     }
 
@@ -619,6 +732,9 @@ pub fn parser_for(source: ExchangeSource) -> Box<dyn ExchangeParser> {
             Box::new(mexc::MexcFuturesPositionHistoryParser)
         }
         ExchangeSource::MexcFuturesTradeHistory => Box::new(mexc::MexcFuturesTradeHistoryParser),
+        ExchangeSource::NotBankTransactions => Box::new(notbank::NotBankTransactionParser),
+        ExchangeSource::NotBankTradeActivity => Box::new(notbank::NotBankTradeParser),
+        ExchangeSource::NotBankPnlReport => Box::new(notbank::NotBankPnlParser),
     }
 }
 
@@ -670,6 +786,33 @@ mod tests {
         assert_eq!(
             detect_exchange_source(csv),
             Some(ExchangeSource::BinanceSpotTradeHistory)
+        );
+    }
+
+    #[test]
+    fn detect_notbank_transactions() {
+        let csv = "\"RegisteredEntityId\",\"PostingEntryId\",\"PostingEntryType\",\"PostingDatetime\",\"AccountId\",\"AccountName\",\"Product\",\"CR\",\"DR\",\"ReferenceTransactionType\",\"ReferenceTransactionId\",\"SystemRecordReference\",\"OMSId\",\"Balance\"\n";
+        assert_eq!(
+            detect_exchange_source(csv),
+            Some(ExchangeSource::NotBankTransactions)
+        );
+    }
+
+    #[test]
+    fn detect_notbank_trade_activity() {
+        let csv = "\"RegisteredEntityId\",\"TransReportId\",\"TransReportRevision\",\"TransReportType\",\"OrderId\",\"ClientOrderId\",\"QuoteId\",\"ExtTradeReportId\",\"TradeId\",\"TransReportDatetime\",\"Side\",\"Quantity\",\"Instrument\",\"Price\",\"InsideBid\",\"InsideBidSize\",\"InsideOffer\",\"InsideOfferSize\",\"LeavesSize\",\"MakerTaker\",\"Trader\",\"AccountId\",\"AccountName\",\"Fee\",\"FeeProduct\",\"Notional\",\"BaseSettlementAmount\",\"CounterpartySettlementAmount\",\"OMSId\"\n";
+        assert_eq!(
+            detect_exchange_source(csv),
+            Some(ExchangeSource::NotBankTradeActivity)
+        );
+    }
+
+    #[test]
+    fn detect_notbank_pnl_with_section_header() {
+        let csv = "Unrealized Gain/Loss\n\"AccountId\",\"AccountName\",\"Product\",\"FullName\",\"TimeStamp\",\"ProductQuantity\",\"PurchasePrice\",\"TotalFeeAsProduct\",\"TotalQuantityMinusFee\",\"TotalPurchaseValue\",\"ProductEndPrice\",\"TotalSaleValue\",\"P/L\",\"%Return\"\n";
+        assert_eq!(
+            detect_exchange_source(csv),
+            Some(ExchangeSource::NotBankPnlReport)
         );
     }
 
@@ -905,6 +1048,9 @@ mod tests {
             ExchangeSource::MexcFuturesOrderHistory,
             ExchangeSource::MexcFuturesPositionHistory,
             ExchangeSource::MexcFuturesTradeHistory,
+            ExchangeSource::NotBankTransactions,
+            ExchangeSource::NotBankTradeActivity,
+            ExchangeSource::NotBankPnlReport,
         ];
         for source in sources {
             assert!(!source.label().is_empty());

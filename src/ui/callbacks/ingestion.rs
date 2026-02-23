@@ -19,7 +19,7 @@
 //!
 //! Handles file selection and import result mapping for the UI.
 //! Supports both generic data import (JSON/CSV/TXT) and exchange-specific
-//! CSV import (Kraken, Binance, Feather Wallet).
+//! CSV import (Kraken, Binance, MEXC, NotBank, Feather Wallet, Monero GUI).
 
 use crate::controller::AppController;
 use crate::features::ingestion::{ImportSummary, RowError};
@@ -715,6 +715,7 @@ fn apply_exchange_batch_filters(
 ) -> (Vec<PendingExchangeFile>, Vec<String>) {
     let has_mexc_futures_trades = files.iter().any(|f| f.source_id == "mexc_futures_trades");
     let has_mexc_trade_history = files.iter().any(|f| f.source_id == "mexc_trades");
+    let has_notbank_transactions = files.iter().any(|f| f.source_id == "notbank_transaction");
 
     let mut filtered = Vec::with_capacity(files.len());
     let mut skipped = Vec::new();
@@ -737,12 +738,21 @@ fn apply_exchange_batch_filters(
             ));
             continue;
         }
+        if has_notbank_transactions && file.source_id == "notbank_trade" {
+            skipped.push(format!(
+                "{}: skipped overlapping source (covered by NotBank Transaction Report)",
+                file.display_name
+            ));
+            continue;
+        }
         filtered.push(file);
     }
 
     filtered.sort_by_key(|file| match file.source_id.as_str() {
         "kraken_ledger" => 0_i32,
+        "notbank_transaction" => 0_i32,
         "kraken_trades" => 1_i32,
+        "notbank_trade" => 1_i32,
         _ => 2_i32,
     });
 
@@ -877,6 +887,27 @@ mod tests {
         assert_eq!(filtered.len(), 2);
         assert_eq!(filtered[0].source_id, "kraken_ledger");
         assert_eq!(filtered[1].source_id, "kraken_trades");
+    }
+
+    #[test]
+    fn batch_filter_skips_notbank_trade_when_transaction_present() {
+        let files = vec![
+            PendingExchangeFile {
+                display_name: "Trade Activity.csv".to_string(),
+                source_id: "notbank_trade".to_string(),
+                content: "trade".to_string(),
+            },
+            PendingExchangeFile {
+                display_name: "Transaction.csv".to_string(),
+                source_id: "notbank_transaction".to_string(),
+                content: "transaction".to_string(),
+            },
+        ];
+
+        let (filtered, skipped) = apply_exchange_batch_filters(files);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].source_id, "notbank_transaction");
+        assert_eq!(skipped.len(), 1);
     }
 
     #[test]

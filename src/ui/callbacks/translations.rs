@@ -365,6 +365,7 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_import_exchange_hint_feather(s(&t("import-exchange-hint-feather")));
     tr.set_import_exchange_hint_monero_gui(s(&t("import-exchange-hint-monero-gui")));
     tr.set_import_exchange_hint_mexc(s(&t("import-exchange-hint-mexc")));
+    tr.set_import_exchange_hint_notbank(s(&t("import-exchange-hint-notbank")));
 
     // Exchange wallet selection modal
     tr.set_exchange_wallet_select_title(s(&t("exchange-wallet-select-title")));

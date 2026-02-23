@@ -313,6 +313,35 @@ mod tests {
     }
 
     #[test]
+    fn test_detect_notbank_transaction_csv() {
+        let csv = "\"RegisteredEntityId\",\"PostingEntryId\",\"PostingEntryType\",\"PostingDatetime\",\"AccountId\",\"AccountName\",\"Product\",\"CR\",\"DR\",\"ReferenceTransactionType\",\"ReferenceTransactionId\",\"SystemRecordReference\",\"OMSId\",\"Balance\"\n";
+        assert_eq!(
+            detect_format(csv, "Transaction.csv"),
+            Some(ImportFormat::ExchangeCsv(ExchangeSource::NotBankTransactions))
+        );
+    }
+
+    #[test]
+    fn test_detect_notbank_trade_csv() {
+        let csv = "\"RegisteredEntityId\",\"TransReportId\",\"TransReportRevision\",\"TransReportType\",\"OrderId\",\"ClientOrderId\",\"QuoteId\",\"ExtTradeReportId\",\"TradeId\",\"TransReportDatetime\",\"Side\",\"Quantity\",\"Instrument\",\"Price\",\"InsideBid\",\"InsideBidSize\",\"InsideOffer\",\"InsideOfferSize\",\"LeavesSize\",\"MakerTaker\",\"Trader\",\"AccountId\",\"AccountName\",\"Fee\",\"FeeProduct\",\"Notional\",\"BaseSettlementAmount\",\"CounterpartySettlementAmount\",\"OMSId\"\n";
+        assert_eq!(
+            detect_format(csv, "Trade Activity.csv"),
+            Some(ImportFormat::ExchangeCsv(
+                ExchangeSource::NotBankTradeActivity
+            ))
+        );
+    }
+
+    #[test]
+    fn test_detect_notbank_pnl_csv_with_section_title() {
+        let csv = "Unrealized Gain/Loss\n\"AccountId\",\"AccountName\",\"Product\",\"FullName\",\"TimeStamp\",\"ProductQuantity\",\"PurchasePrice\",\"TotalFeeAsProduct\",\"TotalQuantityMinusFee\",\"TotalPurchaseValue\",\"ProductEndPrice\",\"TotalSaleValue\",\"P/L\",\"%Return\"\n";
+        assert_eq!(
+            detect_format(csv, "Profit And Loss.csv"),
+            Some(ImportFormat::ExchangeCsv(ExchangeSource::NotBankPnlReport))
+        );
+    }
+
+    #[test]
     fn test_exchange_csv_takes_priority_over_generic() {
         // A Binance CSV has "Account" and could match generic CsvTransactions
         // if it also had "amount", but exchange detection runs first.

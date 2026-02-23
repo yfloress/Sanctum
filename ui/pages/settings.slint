@@ -994,6 +994,27 @@ export component SettingsPage inherits Rectangle {
                                 }
                             }
 
+                            // NotBank (CryptoMarket)
+                            VerticalLayout {
+                                spacing: 2px;
+
+                                Text {
+                                    text: "NotBank (CryptoMarket)";
+                                    color: Theme.text-primary;
+                                    font-size: 11px;
+                                    font-weight: 600;
+                                    letter-spacing: 0.5px;
+                                }
+
+                                Text {
+                                    text: Translations.import-exchange-hint-notbank;
+                                    color: Theme.text-muted;
+                                    font-size: 10px;
+                                    font-weight: 400;
+                                    wrap: word-wrap;
+                                }
+                            }
+
                             // Feather Wallet
                             VerticalLayout {
                                 spacing: 2px;
