@@ -21,8 +21,7 @@ use crate::controller::{AppController, SETTING_PREFERRED_CURRENCY};
 use crate::models::CryptoAsset;
 use crate::services::i18n;
 use crate::ui::{
-    convert_usd_to_preferred, crypto_icon_for_symbol, format_crypto_amount, format_fx_rate,
-    format_preferred,
+    convert_usd_to_preferred, crypto_icon_for_symbol, format_fx_rate, format_preferred,
     load_wallet_icon,
 };
 use crate::{
@@ -47,11 +46,33 @@ pub(super) fn format_compact_asset_amount(amount: f64) -> String {
         return "0".to_string();
     }
 
-    if amount.abs() > 0.0 && amount.abs() < 0.0001 {
+    if amount.abs() > 0.0 && amount.abs() < 0.00001 {
         return format!("{:.2e}", amount);
     }
 
-    format_crypto_amount(amount)
+    let precision = if amount.abs() >= 1000.0 {
+        2_i32
+    } else if amount.abs() >= 1.0 {
+        4_i32
+    } else {
+        6_i32
+    };
+
+    let factor = 10_f64.powi(precision);
+    let truncated = (amount * factor).trunc() / factor;
+    let mut formatted = format!("{:.*}", precision as usize, truncated);
+    while formatted.contains('.') && formatted.ends_with('0') {
+        formatted.pop();
+    }
+    if formatted.ends_with('.') {
+        formatted.pop();
+    }
+
+    if formatted == "-0" {
+        "0".to_string()
+    } else {
+        formatted
+    }
 }
 
 pub(super) fn format_compact_price_preferred(price_preferred: f64, preferred_currency: &str) -> String {
@@ -646,7 +667,13 @@ mod tests {
     }
 
     #[test]
-    fn format_compact_asset_amount_keeps_regular_decimal_for_normal_values() {
-        assert_eq!(format_compact_asset_amount(0.12345678), "0.12345678");
+    fn format_compact_asset_amount_keeps_regular_decimal_for_small_values() {
+        assert_eq!(format_compact_asset_amount(0.00012), "0.00012");
+    }
+
+    #[test]
+    fn format_compact_asset_amount_truncates_large_decimals() {
+        assert_eq!(format_compact_asset_amount(0.12345678), "0.123456");
+        assert_eq!(format_compact_asset_amount(12.98765432), "12.9876");
     }
 }
