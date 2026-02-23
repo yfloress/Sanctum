@@ -31,15 +31,18 @@ use crate::{
 };
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel, Weak};
 use std::cell::RefCell;
+use std::collections::HashSet;
 use std::rc::Rc;
 use std::sync::Arc;
 
+#[derive(Clone)]
 struct PendingImport {
     filename: String,
     display_name: String,
     content: String,
 }
 
+#[derive(Clone)]
 struct PendingExchangeImport {
     display_name: String,
     detected_format: String,
@@ -49,6 +52,7 @@ struct PendingExchangeImport {
     wallet_name: String,
 }
 
+#[derive(Clone)]
 struct PendingExchangeFile {
     display_name: String,
     source_id: String,
@@ -62,6 +66,8 @@ pub fn setup_ingestion_callbacks(
 ) {
     let pending_import: Rc<RefCell<Option<PendingImport>>> = Rc::new(RefCell::new(None));
     let pending_exchange: Rc<RefCell<Option<PendingExchangeImport>>> = Rc::new(RefCell::new(None));
+    let last_exchange_import: Rc<RefCell<Option<PendingExchangeImport>>> =
+        Rc::new(RefCell::new(None));
 
     // ── Generic data import (JSON / CSV / TXT) ──────────────────────────────
 
@@ -173,6 +179,7 @@ pub fn setup_ingestion_callbacks(
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         let pending_exchange = pending_exchange.clone();
+        let last_exchange_import = last_exchange_import.clone();
 
         ui.global::<IngestionAdapter>()
             .on_import_exchange_csv(move || {
@@ -188,6 +195,7 @@ pub fn setup_ingestion_callbacks(
                 }
 
                 pending_exchange.borrow_mut().take();
+                last_exchange_import.borrow_mut().take();
 
                 let mut pending_files = Vec::new();
                 let mut detected_labels = Vec::new();
@@ -304,30 +312,11 @@ pub fn setup_ingestion_callbacks(
 
                 // Update the wallet name chosen by the user
                 pending.wallet_name = wallet_name.clone();
-
-                // Preview all selected files with the chosen wallet name
-                let mut summary = ImportSummary::new(&pending.detected_format, "Crypto");
-                for err in pending.preflight_errors.iter().cloned() {
-                    summary.record_error(err);
-                }
-                for reason in &pending.preflight_skips {
-                    summary.record_skipped(reason);
-                }
-                for file in &pending.files {
-                    match controller.preview_exchange_csv(&file.content, &wallet_name) {
-                        Ok(file_summary) => summary.merge(file_summary),
-                        Err(err) => summary.record_error(RowError::new(
-                            0,
-                            None,
-                            format!("{}: {}", file.display_name, err),
-                        )),
-                    }
-                }
-
-                let display = pending.display_name.clone();
+                let snapshot = pending.clone();
                 drop(borrow);
 
-                set_import_summary(&ui, summary, Some(display));
+                let summary = build_exchange_preview_summary(&controller, &snapshot);
+                set_import_summary(&ui, summary, Some(snapshot.display_name));
                 adapter.set_is_exchange_import(true);
                 ui.global::<AppState>().set_show_import_preview(true);
             });
@@ -356,6 +345,7 @@ pub fn setup_ingestion_callbacks(
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         let pending_exchange = pending_exchange.clone();
+        let last_exchange_import = last_exchange_import.clone();
 
         ui.global::<IngestionAdapter>()
             .on_confirm_exchange_import(move || {
@@ -363,33 +353,9 @@ pub fn setup_ingestion_callbacks(
                 let Some(pending) = pending else {
                     return;
                 };
-
-                let PendingExchangeImport {
-                    display_name,
-                    detected_format,
-                    files,
-                    preflight_errors,
-                    preflight_skips,
-                    wallet_name,
-                } = pending;
-
-                let mut summary = ImportSummary::new(&detected_format, "Crypto");
-                for err in preflight_errors {
-                    summary.record_error(err);
-                }
-                for reason in preflight_skips {
-                    summary.record_skipped(&reason);
-                }
-                for file in files {
-                    match controller.import_exchange_csv(file.content, wallet_name.clone()) {
-                        Ok(file_summary) => summary.merge(file_summary),
-                        Err(err) => summary.record_error(RowError::new(
-                            0,
-                            None,
-                            format!("{}: {}", file.display_name, err),
-                        )),
-                    }
-                }
+                let summary = build_exchange_import_summary(&controller, &pending);
+                let display_name = pending.display_name.clone();
+                last_exchange_import.borrow_mut().replace(pending);
 
                 if let Some(ui) = ui_weak.upgrade() {
                     set_import_summary(&ui, summary, Some(display_name));
@@ -438,6 +404,193 @@ pub fn setup_ingestion_callbacks(
                 }
             });
     }
+
+    // Add missing coin from exchange import error row and retry automatically.
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let pending_exchange = pending_exchange.clone();
+        let last_exchange_import = last_exchange_import.clone();
+
+        ui.global::<IngestionAdapter>()
+            .on_add_missing_exchange_coin(move |symbol| {
+                let requested_symbol = symbol.to_string();
+                let Some(normalized_symbol) = normalize_missing_coin_symbol(&requested_symbol)
+                else {
+                    if let Some(ui) = ui_weak.upgrade() {
+                        ui.global::<NotificationAdapter>().invoke_show(
+                            SharedString::from(t_args(
+                                "import-exchange-coin-invalid",
+                                &[("symbol", requested_symbol.as_str())],
+                            )),
+                            true,
+                        );
+                    }
+                    return;
+                };
+
+                let catalog = controller.get_coin_catalog_or_default();
+                let symbol_exists = catalog
+                    .iter()
+                    .any(|coin| coin.symbol.eq_ignore_ascii_case(&normalized_symbol));
+                let mut can_retry = symbol_exists;
+
+                if !symbol_exists {
+                    let coin_id = build_custom_coin_id(&catalog, &normalized_symbol);
+                    match controller.add_custom_coin(
+                        coin_id,
+                        normalized_symbol.clone(),
+                        normalized_symbol.clone(),
+                    ) {
+                        Ok(_) => {
+                            can_retry = true;
+                            if let Some(ui) = ui_weak.upgrade() {
+                                ui.global::<NotificationAdapter>().invoke_show(
+                                    SharedString::from(t_args(
+                                        "import-exchange-coin-added",
+                                        &[("symbol", normalized_symbol.as_str())],
+                                    )),
+                                    false,
+                                );
+                            }
+                        }
+                        Err(err) => {
+                            let reason = err.to_string();
+                            if let Some(ui) = ui_weak.upgrade() {
+                                ui.global::<NotificationAdapter>().invoke_show(
+                                    SharedString::from(t_args(
+                                        "import-exchange-coin-add-failed",
+                                        &[
+                                            ("symbol", normalized_symbol.as_str()),
+                                            ("reason", reason.as_str()),
+                                        ],
+                                    )),
+                                    true,
+                                );
+                            }
+                        }
+                    }
+                }
+
+                if !can_retry {
+                    return;
+                }
+
+                let Some(ui) = ui_weak.upgrade() else {
+                    return;
+                };
+
+                ui.global::<CryptoAdapter>().invoke_load_coin_catalog();
+
+                if let Some(pending) = pending_exchange.borrow().as_ref().cloned() {
+                    let summary = build_exchange_preview_summary(&controller, &pending);
+                    set_import_summary(&ui, summary, Some(pending.display_name));
+                    ui.global::<IngestionAdapter>().set_is_exchange_import(true);
+                    ui.global::<AppState>().set_show_import_preview(true);
+                    return;
+                }
+
+                if let Some(last) = last_exchange_import.borrow().as_ref().cloned() {
+                    let summary = build_exchange_import_summary(&controller, &last);
+                    set_import_summary(&ui, summary, Some(last.display_name));
+                    ui.global::<AppState>().set_show_import_results(true);
+                    refresh_crypto_views(&ui);
+                    return;
+                }
+
+                ui.global::<NotificationAdapter>().invoke_show(
+                    SharedString::from(t("import-exchange-coin-retry-unavailable")),
+                    true,
+                );
+            });
+    }
+}
+
+fn build_exchange_preview_summary(
+    controller: &AppController,
+    pending: &PendingExchangeImport,
+) -> ImportSummary {
+    let mut summary = ImportSummary::new(&pending.detected_format, "Crypto");
+    for err in pending.preflight_errors.iter().cloned() {
+        summary.record_error(err);
+    }
+    for reason in &pending.preflight_skips {
+        summary.record_skipped(reason);
+    }
+    for file in &pending.files {
+        match controller.preview_exchange_csv(&file.content, &pending.wallet_name) {
+            Ok(file_summary) => summary.merge(file_summary),
+            Err(err) => summary.record_error(RowError::new(
+                0,
+                None,
+                format!("{}: {}", file.display_name, err),
+            )),
+        }
+    }
+    summary
+}
+
+fn build_exchange_import_summary(
+    controller: &AppController,
+    pending: &PendingExchangeImport,
+) -> ImportSummary {
+    let mut summary = ImportSummary::new(&pending.detected_format, "Crypto");
+    for err in pending.preflight_errors.iter().cloned() {
+        summary.record_error(err);
+    }
+    for reason in &pending.preflight_skips {
+        summary.record_skipped(reason);
+    }
+    for file in &pending.files {
+        match controller.import_exchange_csv(file.content.clone(), pending.wallet_name.clone()) {
+            Ok(file_summary) => summary.merge(file_summary),
+            Err(err) => summary.record_error(RowError::new(
+                0,
+                None,
+                format!("{}: {}", file.display_name, err),
+            )),
+        }
+    }
+    summary
+}
+
+fn normalize_missing_coin_symbol(raw: &str) -> Option<String> {
+    let mut compact: String = raw.chars().filter(|c| c.is_ascii_alphanumeric()).collect();
+    if compact.is_empty() {
+        return None;
+    }
+    if compact.len() > 10 {
+        compact.truncate(10);
+    }
+    Some(compact.to_uppercase())
+}
+
+fn extract_missing_coin_symbol(err: &RowError) -> Option<String> {
+    let field = err.field.as_deref()?.trim().to_ascii_lowercase();
+    if field != "symbol" && field != "swap_to_symbol" && field != "fee_coin_symbol" {
+        return None;
+    }
+
+    let candidate = err.message.rsplit(':').next().unwrap_or("").trim();
+    normalize_missing_coin_symbol(candidate)
+}
+
+fn build_custom_coin_id(catalog: &[crate::models::CryptoCatalogCoin], symbol: &str) -> String {
+    let base = symbol.to_ascii_lowercase();
+    let existing: HashSet<String> = catalog.iter().map(|coin| coin.id.to_ascii_lowercase()).collect();
+
+    if !existing.contains(&base) {
+        return base;
+    }
+
+    for suffix in 2..=100 {
+        let candidate = format!("{}-{}", base, suffix);
+        if !existing.contains(&candidate) {
+            return candidate;
+        }
+    }
+
+    format!("{}-custom", base)
 }
 
 fn build_error_summary(message: String) -> ImportSummary {
@@ -511,6 +664,9 @@ fn set_import_summary(ui: &AppWindow, summary: ImportSummary, file_name: Option<
 }
 
 fn map_error(err: RowError) -> ImportErrorData {
+    let missing_coin_symbol = extract_missing_coin_symbol(&err).unwrap_or_default();
+    let can_add_missing_coin = !missing_coin_symbol.is_empty();
+
     let line_label = if err.line_number > 0 {
         let line_value = err.line_number.to_string();
         t_args("import-line", &[("line", line_value.as_str())])
@@ -531,6 +687,8 @@ fn map_error(err: RowError) -> ImportErrorData {
         field_label: field_label.into(),
         message: err.message.into(),
         raw_data: err.raw_data.unwrap_or_default().into(),
+        can_add_missing_coin,
+        missing_coin_symbol: missing_coin_symbol.into(),
     }
 }
 
@@ -603,8 +761,20 @@ fn build_batch_display_name(file_names: &[String]) -> String {
 mod tests {
     use super::{
         PendingExchangeFile, apply_exchange_batch_filters, build_batch_display_name,
-        combine_exchange_labels,
+        build_custom_coin_id, combine_exchange_labels, extract_missing_coin_symbol,
+        normalize_missing_coin_symbol,
     };
+    use crate::features::ingestion::RowError;
+    use crate::models::CryptoCatalogCoin;
+
+    fn coin(id: &str, symbol: &str) -> CryptoCatalogCoin {
+        CryptoCatalogCoin {
+            id: id.to_string(),
+            name: symbol.to_string(),
+            symbol: symbol.to_string(),
+            custom: true,
+        }
+    }
 
     #[test]
     fn combine_exchange_labels_deduplicates_preserving_order() {
@@ -707,5 +877,36 @@ mod tests {
         assert_eq!(filtered.len(), 2);
         assert_eq!(filtered[0].source_id, "kraken_ledger");
         assert_eq!(filtered[1].source_id, "kraken_trades");
+    }
+
+    #[test]
+    fn normalize_missing_coin_symbol_keeps_alphanumeric_uppercase() {
+        assert_eq!(
+            normalize_missing_coin_symbol(" pepe-usdt "),
+            Some("PEPEUSDT".to_string())
+        );
+        assert_eq!(normalize_missing_coin_symbol(""), None);
+    }
+
+    #[test]
+    fn extract_missing_coin_symbol_from_catalog_error() {
+        let err = RowError::new(
+            7,
+            Some("symbol"),
+            "Crypto asset not found in catalog: pepe",
+        );
+        assert_eq!(extract_missing_coin_symbol(&err), Some("PEPE".to_string()));
+    }
+
+    #[test]
+    fn extract_missing_coin_symbol_ignores_unrelated_errors() {
+        let err = RowError::new(7, Some("amount"), "Amount must be positive");
+        assert_eq!(extract_missing_coin_symbol(&err), None);
+    }
+
+    #[test]
+    fn build_custom_coin_id_avoids_existing_ids() {
+        let catalog = vec![coin("pepe", "PEPE"), coin("pepe-2", "PEP2")];
+        assert_eq!(build_custom_coin_id(&catalog, "PEPE"), "pepe-3");
     }
 }

@@ -971,6 +971,10 @@ import-exchange-hint-binance = Export from Binance: Orders > Transaction History
 import-exchange-hint-mexc = Export from MEXC: Help Center > Account Data Export > Select all required files > Convert to CSV
 import-exchange-hint-feather = Export from Feather Wallet: History > Export CSV
 import-exchange-hint-monero-gui = Export from Monero GUI: Wallet > History > Export CSV
+import-exchange-coin-added = Coin {$symbol} added. Re-running exchange import...
+import-exchange-coin-add-failed = Could not add coin {$symbol}: {$reason}
+import-exchange-coin-invalid = Invalid symbol for automatic coin creation: {$symbol}
+import-exchange-coin-retry-unavailable = No pending exchange import available to retry.
 settings-exchange-import = EXCHANGE IMPORT
 settings-exchange-import-desc = Import crypto transactions from exchange CSV exports
 

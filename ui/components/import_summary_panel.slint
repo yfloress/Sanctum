@@ -144,7 +144,7 @@ component ChangeRow inherits Rectangle {
 component ErrorRow inherits Rectangle {
     in property <ImportErrorData> error;
 
-    height: 66px;
+    height: error.can-add-missing-coin ? 84px : 66px;
     background: touch.has-hover ? Theme.surface-hover : Theme.surface;
     border-radius: 8px;
     border-width: 1px;
@@ -215,6 +215,37 @@ component ErrorRow inherits Rectangle {
                 font-size: 11px;
                 font-weight: 500;
                 wrap: word-wrap;
+            }
+
+            if error.can-add-missing-coin: HorizontalLayout {
+                spacing: 8px;
+                height: 20px;
+
+                Rectangle {
+                    height: 20px;
+                    width: add-coin-text.preferred-width + 14px;
+                    background: Theme.accent.with-alpha(0.18);
+                    border-radius: 5px;
+                    border-width: 1px;
+                    border-color: Theme.accent.with-alpha(0.35);
+
+                    add-coin-text := Text {
+                        text: Translations.modal-add-coin + " " + error.missing-coin-symbol;
+                        color: Theme.accent;
+                        font-size: 9px;
+                        font-weight: 700;
+                        letter-spacing: 0.3px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    add-coin-touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            IngestionAdapter.add-missing-exchange-coin(error.missing-coin-symbol);
+                        }
+                    }
+                }
             }
 
             if error.raw-data != "": Text {
@@ -437,7 +468,7 @@ export component ImportSummaryPanel inherits VerticalLayout {
                 error-scroll := Flickable {
                     width: parent.width;
                     height: parent.height;
-                    viewport-height: IngestionAdapter.import-error-details.length * 74px;
+                    viewport-height: IngestionAdapter.import-error-details.length * 92px;
 
                     VerticalLayout {
                         padding: 8px;
