@@ -1203,6 +1203,7 @@ impl IngestionService {
 
         let mut summary = ImportSummary::new(format_name, "Crypto");
         let skipped_duplicate = t("import-skipped-duplicate-crypto");
+        let skipped_missing_coin = t("import-skipped-crypto-not-found");
         let is_mexc_spot_order_history_source =
             format_name.eq_ignore_ascii_case("MEXC Spot Trade History");
 
@@ -1319,14 +1320,7 @@ impl IngestionService {
             let coin = match coin_lookup.get(&symbol_key) {
                 Some(c) => c,
                 None => {
-                    summary.record_error(RowError::new(
-                        line_num,
-                        Some("symbol"),
-                        t_args(
-                            "import-error-crypto-not-found",
-                            &[("symbol", import_tx.symbol.trim())],
-                        ),
-                    ));
+                    summary.record_skipped(&skipped_missing_coin);
                     continue;
                 }
             };
@@ -1342,11 +1336,7 @@ impl IngestionService {
                 swap_to_coin = match coin_lookup.get(&to_key) {
                     Some(c) => Some(c),
                     None => {
-                        summary.record_error(RowError::new(
-                            line_num,
-                            Some("swap_to_symbol"),
-                            t_args("import-error-crypto-not-found", &[("symbol", to_symbol)]),
-                        ));
+                        summary.record_skipped(&skipped_missing_coin);
                         continue;
                     }
                 };
@@ -1364,11 +1354,7 @@ impl IngestionService {
                 fee_coin = match coin_lookup.get(&fee_key) {
                     Some(c) => Some(c),
                     None => {
-                        summary.record_error(RowError::new(
-                            line_num,
-                            Some("fee_coin_symbol"),
-                            t_args("import-error-crypto-not-found", &[("symbol", symbol)]),
-                        ));
+                        summary.record_skipped(&skipped_missing_coin);
                         continue;
                     }
                 };

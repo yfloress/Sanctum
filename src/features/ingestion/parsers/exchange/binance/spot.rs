@@ -104,7 +104,18 @@ impl ExchangeParser for BinanceSpotParser {
             };
 
             let date = format_datetime(timestamp);
-            let is_buy = side_raw.eq_ignore_ascii_case("BUY");
+            let is_buy = if side_raw.eq_ignore_ascii_case("BUY") {
+                true
+            } else if side_raw.eq_ignore_ascii_case("SELL") {
+                false
+            } else {
+                result.errors.push(RowError::new(
+                    line_number,
+                    Some("Side"),
+                    format!("Invalid side: '{}'", side_raw),
+                ));
+                continue;
+            };
 
             // Parse Executed (base currency amount, e.g. "0.5BTC").
             // Normalise to absolute value — exchange exports covering a

@@ -322,7 +322,7 @@ impl PendingConvert {
 
         // If all outgoing was internal (e.g. USDT appeared on both sides),
         // fall back to the original outgoing rows as the conversion source.
-        let effective_outgoing: Vec<&BinanceRow> = if has_real_outgoing {
+        let mut effective_outgoing: Vec<&BinanceRow> = if has_real_outgoing {
             real_outgoing
         } else {
             self.outgoing.iter().collect()
@@ -334,7 +334,7 @@ impl PendingConvert {
         // (e.g. SmallAssetsExchange: BNB -0.0001 dust + BNB +0.15 target).
         // Fall back to the original incoming so those outgoing rows still
         // get paired with a target.
-        let effective_incoming: Vec<&BinanceRow> = if has_real_incoming {
+        let mut effective_incoming: Vec<&BinanceRow> = if has_real_incoming {
             real_incoming
         } else if has_real_outgoing {
             // Real outgoing exists but incoming was entirely filtered out.
@@ -344,117 +344,48 @@ impl PendingConvert {
             return results;
         };
 
+        // Deterministic pairing order for reproducible imports/tests.
+        effective_outgoing.sort_by_key(|row| row.line_number);
+        effective_incoming.sort_by_key(|row| row.line_number);
+
         // ── Step 3: Resolve 1:1 pairs ──
         if effective_outgoing.len() == 1 && effective_incoming.len() == 1 {
             let out = effective_outgoing[0];
             let inc = effective_incoming[0];
-
-            let out_fiat = is_fiat(&out.symbol);
-            let in_fiat = is_fiat(&inc.symbol);
-
-            // Stablecoin-aware classification: treat stablecoins as
-            // pricing currencies so BTC/USDT becomes a buy/sell (not a
-            // swap), avoiding phantom stablecoin balances.
-            let out_is_pricing = is_quote_currency(&out.symbol);
-            let in_is_pricing = is_quote_currency(&inc.symbol);
-
-            // Both fiat — skip
-            if out_fiat && in_fiat {
-                return results;
-            }
-
-            // Same symbol after filtering (shouldn't happen, but guard)
-            if out.symbol.eq_ignore_ascii_case(&inc.symbol) {
-                return results;
-            }
-
-            let date = format_datetime(out.timestamp);
-            let line = out.line_number;
-            let notes = Some(format!("Binance {} | {}", out.operation_raw, out.remark));
-
-            if out_is_pricing && !in_is_pricing {
-                // Fiat/stablecoin -> Crypto = buy
-                let price = if inc.change.abs() > 0.0 {
-                    Some(out.change.abs() / inc.change.abs())
-                } else {
-                    None
-                };
-                results.push((
-                    line,
-                    ImportCryptoTransaction {
-                        date,
-                        wallet: wallet_name.to_string(),
-                        symbol: inc.symbol.clone(),
-                        transaction_type: "trade".to_string(),
-                        amount: inc.change.abs(),
-                        subtype: Some("buy".to_string()),
-                        price_per_coin: price,
-                        fee: None,
-                        override_proceeds: None,
-                        override_cost_basis: None,
-                        swap_to_symbol: None,
-                        swap_to_amount: None,
-                        fee_coin_symbol: None,
-                        fee_amount: None,
-                        notes,
-                    },
-                ));
-            } else if !out_is_pricing && in_is_pricing {
-                // Crypto -> Fiat/stablecoin = sell
-                let price = if out.change.abs() > 0.0 {
-                    Some(inc.change.abs() / out.change.abs())
-                } else {
-                    None
-                };
-                results.push((
-                    line,
-                    ImportCryptoTransaction {
-                        date,
-                        wallet: wallet_name.to_string(),
-                        symbol: out.symbol.clone(),
-                        transaction_type: "trade".to_string(),
-                        amount: out.change.abs(),
-                        subtype: Some("sell".to_string()),
-                        price_per_coin: price,
-                        fee: None,
-                        override_proceeds: None,
-                        override_cost_basis: None,
-                        swap_to_symbol: None,
-                        swap_to_amount: None,
-                        fee_coin_symbol: None,
-                        fee_amount: None,
-                        notes,
-                    },
-                ));
-            } else {
-                // Crypto -> Crypto = swap (includes stablecoin-to-stablecoin)
-                results.push((
-                    line,
-                    ImportCryptoTransaction {
-                        date,
-                        wallet: wallet_name.to_string(),
-                        symbol: out.symbol.clone(),
-                        transaction_type: "trade".to_string(),
-                        amount: out.change.abs(),
-                        subtype: Some("swap".to_string()),
-                        price_per_coin: None,
-                        fee: None,
-                        override_proceeds: None,
-                        override_cost_basis: None,
-                        swap_to_symbol: Some(inc.symbol.clone()),
-                        swap_to_amount: Some(inc.change.abs()),
-                        fee_coin_symbol: None,
-                        fee_amount: None,
-                        notes,
-                    },
-                ));
+            if let Some(tx) = resolve_single_pair(out, inc, wallet_name) {
+                results.push(tx);
             }
 
             return results;
         }
 
+        // If we have multiple outgoing and multiple incoming rows in the same
+        // group, pair them in source order. This avoids merging independent
+        // same-second conversions into one synthetic multi-dust conversion.
+        if effective_outgoing.len() > 1 && effective_incoming.len() > 1 {
+            let pair_count = effective_outgoing.len().min(effective_incoming.len());
+            for i in 0..pair_count {
+                if let Some(tx) = resolve_single_pair(
+                    effective_outgoing[i],
+                    effective_incoming[i],
+                    wallet_name,
+                ) {
+                    results.push(tx);
+                }
+            }
+
+            // If all rows were consumed via 1:1 pairing, we're done.
+            if effective_outgoing.len() == pair_count && effective_incoming.len() == pair_count {
+                return results;
+            }
+
+            // Keep only leftovers for best-effort handling below.
+            effective_outgoing = effective_outgoing.into_iter().skip(pair_count).collect();
+            effective_incoming = effective_incoming.into_iter().skip(pair_count).collect();
+        }
+
         // ── Step 4: Multi-outgoing (SmallAssetsExchange): many dust -> one target ──
-        if !effective_incoming.is_empty() && !effective_outgoing.is_empty() {
+        if effective_incoming.len() == 1 && !effective_outgoing.is_empty() {
             let inc = effective_incoming[0];
             let total_outgoing_count = effective_outgoing.len();
 
@@ -538,6 +469,112 @@ impl PendingConvert {
         }
 
         results
+    }
+}
+
+fn resolve_single_pair(
+    out: &BinanceRow,
+    inc: &BinanceRow,
+    wallet_name: &str,
+) -> Option<(usize, ImportCryptoTransaction)> {
+    let out_fiat = is_fiat(&out.symbol);
+    let in_fiat = is_fiat(&inc.symbol);
+
+    // Stablecoin-aware classification: treat stablecoins as pricing currencies
+    // so BTC/USDT becomes a buy/sell (not a swap).
+    let out_is_pricing = is_quote_currency(&out.symbol);
+    let in_is_pricing = is_quote_currency(&inc.symbol);
+
+    // Both fiat — skip
+    if out_fiat && in_fiat {
+        return None;
+    }
+
+    // Same symbol after filtering (shouldn't happen, but guard)
+    if out.symbol.eq_ignore_ascii_case(&inc.symbol) {
+        return None;
+    }
+
+    let date = format_datetime(out.timestamp);
+    let line = out.line_number;
+    let notes = Some(format!("Binance {} | {}", out.operation_raw, out.remark));
+
+    if out_is_pricing && !in_is_pricing {
+        // Fiat/stablecoin -> Crypto = buy
+        let price = if inc.change.abs() > 0.0 {
+            Some(out.change.abs() / inc.change.abs())
+        } else {
+            None
+        };
+        Some((
+            line,
+            ImportCryptoTransaction {
+                date,
+                wallet: wallet_name.to_string(),
+                symbol: inc.symbol.clone(),
+                transaction_type: "trade".to_string(),
+                amount: inc.change.abs(),
+                subtype: Some("buy".to_string()),
+                price_per_coin: price,
+                fee: None,
+                override_proceeds: None,
+                override_cost_basis: None,
+                swap_to_symbol: None,
+                swap_to_amount: None,
+                fee_coin_symbol: None,
+                fee_amount: None,
+                notes,
+            },
+        ))
+    } else if !out_is_pricing && in_is_pricing {
+        // Crypto -> Fiat/stablecoin = sell
+        let price = if out.change.abs() > 0.0 {
+            Some(inc.change.abs() / out.change.abs())
+        } else {
+            None
+        };
+        Some((
+            line,
+            ImportCryptoTransaction {
+                date,
+                wallet: wallet_name.to_string(),
+                symbol: out.symbol.clone(),
+                transaction_type: "trade".to_string(),
+                amount: out.change.abs(),
+                subtype: Some("sell".to_string()),
+                price_per_coin: price,
+                fee: None,
+                override_proceeds: None,
+                override_cost_basis: None,
+                swap_to_symbol: None,
+                swap_to_amount: None,
+                fee_coin_symbol: None,
+                fee_amount: None,
+                notes,
+            },
+        ))
+    } else {
+        // Crypto -> Crypto = swap (includes stablecoin-to-stablecoin)
+        Some((
+            line,
+            ImportCryptoTransaction {
+                date,
+                wallet: wallet_name.to_string(),
+                symbol: out.symbol.clone(),
+                transaction_type: "trade".to_string(),
+                amount: out.change.abs(),
+                subtype: Some("swap".to_string()),
+                price_per_coin: None,
+                fee: None,
+                override_proceeds: None,
+                override_cost_basis: None,
+                swap_to_symbol: Some(inc.symbol.clone()),
+                swap_to_amount: Some(inc.change.abs()),
+                fee_coin_symbol: None,
+                fee_amount: None,
+                notes,
+            },
+        ))
     }
 }
 

@@ -156,11 +156,13 @@ impl ExchangeParser for BinanceAllStatementsParser {
             }
 
             if row.operation.needs_pairing() {
-                let key = format!(
-                    "{}_{:?}",
-                    row.timestamp.format("%Y-%m-%d %H:%M:%S"),
-                    row.operation
-                );
+                let time_key = row.timestamp.format("%Y-%m-%d %H:%M:%S").to_string();
+                let remark_key = row.remark.trim().to_ascii_lowercase();
+                let key = if remark_key.is_empty() {
+                    format!("{}_{:?}", time_key, row.operation)
+                } else {
+                    format!("{}_{:?}_{}", time_key, row.operation, remark_key)
+                };
                 let entry = pending_converts.entry(key).or_default();
                 entry.insert(row);
             } else if matches!(
@@ -168,7 +170,13 @@ impl ExchangeParser for BinanceAllStatementsParser {
                 BinanceOperation::TransactionSpend | BinanceOperation::TransactionRevenue
             ) {
                 // Pair TransactionSpend + TransactionRevenue by timestamp
-                let key = row.timestamp.format("%Y-%m-%d %H:%M:%S").to_string();
+                let time_key = row.timestamp.format("%Y-%m-%d %H:%M:%S").to_string();
+                let remark_key = row.remark.trim().to_ascii_lowercase();
+                let key = if remark_key.is_empty() {
+                    time_key
+                } else {
+                    format!("{}_{}", time_key, remark_key)
+                };
                 let entry = pending_spend_revenue.entry(key).or_default();
                 // Spend is outgoing (negative), Revenue is incoming (positive)
                 entry.insert(row);
@@ -218,6 +226,9 @@ impl ExchangeParser for BinanceAllStatementsParser {
                 result.items.push((row.line_number, tx));
             }
         }
+
+        // HashMap iteration order is non-deterministic; keep output stable by source line.
+        result.items.sort_by_key(|(line, _)| *line);
 
         Ok(result)
     }

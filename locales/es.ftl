@@ -930,6 +930,7 @@ import-skipped-duplicate-transaction = Transacción duplicada (misma fecha/cuent
 import-skipped-habit-not-completed = Hábito no completado (completed=false)
 import-skipped-habit-already-logged = Hábito ya registrado para esta fecha
 import-skipped-duplicate-crypto = Transacción crypto duplicada (misma fecha/wallet/moneda/tipo/monto)
+import-skipped-crypto-not-found = Activo crypto no encontrado en el catálogo (fila omitida)
 
 import-format-json = JSON (Exportación de Sanctum Web)
 import-format-csv = CSV (Excel/Sheets)

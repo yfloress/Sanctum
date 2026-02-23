@@ -930,6 +930,7 @@ import-skipped-duplicate-transaction = Duplicate transaction (same date/account/
 import-skipped-habit-not-completed = Habit not completed (completed=false)
 import-skipped-habit-already-logged = Habit already logged for this date
 import-skipped-duplicate-crypto = Duplicate crypto transaction (same date/wallet/coin/type/amount)
+import-skipped-crypto-not-found = Crypto asset not found in catalog (row ignored)
 
 import-format-json = JSON (Sanctum Web Export)
 import-format-csv = CSV (Excel/Sheets)

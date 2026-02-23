@@ -193,6 +193,21 @@ fn spot_invalid_executed_is_error() {
     assert_eq!(result.errors.len(), 1);
 }
 
+#[test]
+fn spot_invalid_side_is_error() {
+    let csv = concat!(
+        "Date(UTC),Pair,Side,Price,Executed,Amount,Fee\n",
+        "2024-01-15 10:00:00,BTCUSDT,HOLD,50000,0.1BTC,5000USDT,0.1USDT\n",
+    );
+
+    let parser = BinanceSpotParser;
+    let result = parser.parse(csv, "Binance").unwrap();
+
+    assert!(result.items.is_empty());
+    assert_eq!(result.errors.len(), 1);
+    assert_eq!(result.errors[0].field.as_deref(), Some("Side"));
+}
+
 // ── Edge cases ──
 
 #[test]
@@ -218,7 +233,7 @@ fn all_statements_multiple_operations() {
         .map(|(_, tx)| (tx.transaction_type.as_str(), tx.subtype.as_deref()))
         .collect();
 
-    // Note: ordering depends on HashMap iteration, so just check all are present
+    // Order should be deterministic by line; still check presence by type.
     assert!(types.contains(&("transfer", Some("deposit"))));
     assert!(types.contains(&("trade", Some("buy"))));
     assert!(types.contains(&("income", Some("staking"))));
@@ -399,6 +414,81 @@ fn all_statements_convert_with_internal_transfer_fiat_to_crypto() {
     assert!((tx.price_per_coin.unwrap() - 50000.0).abs() < 0.01);
     assert!(tx.swap_to_symbol.is_none());
     assert!(tx.swap_to_amount.is_none());
+}
+
+#[test]
+fn all_statements_spend_revenue_same_second_distinct_remarks_do_not_cross_pair() {
+    let csv = concat!(
+        "User_ID,UTC_Time,Account,Operation,Coin,Change,Remark\n",
+        "12345,2024-04-01 12:00:00,Spot,Transaction Spend,USDT,-100.0,order-a\n",
+        "12345,2024-04-01 12:00:00,Spot,Transaction Revenue,BTC,0.002,order-a\n",
+        "12345,2024-04-01 12:00:00,Spot,Transaction Spend,ETH,-1.0,order-b\n",
+        "12345,2024-04-01 12:00:00,Spot,Transaction Revenue,SOL,30.0,order-b\n",
+    );
+
+    let parser = BinanceAllStatementsParser;
+    let result = parser.parse(csv, "Binance").unwrap();
+
+    assert_eq!(result.items.len(), 2);
+
+    let btc_buy = result
+        .items
+        .iter()
+        .find(|(_, tx)| tx.symbol == "BTC" && tx.subtype.as_deref() == Some("buy"))
+        .map(|(_, tx)| tx)
+        .expect("Expected BTC buy");
+    assert!((btc_buy.amount - 0.002).abs() < 1e-8);
+    assert!((btc_buy.price_per_coin.unwrap_or_default() - 50000.0).abs() < 0.01);
+
+    let eth_sol_swap = result
+        .items
+        .iter()
+        .find(|(_, tx)| {
+            tx.symbol == "ETH"
+                && tx.subtype.as_deref() == Some("swap")
+                && tx.swap_to_symbol.as_deref() == Some("SOL")
+        })
+        .map(|(_, tx)| tx)
+        .expect("Expected ETH->SOL swap");
+    assert!((eth_sol_swap.amount - 1.0).abs() < 1e-8);
+    assert!((eth_sol_swap.swap_to_amount.unwrap_or_default() - 30.0).abs() < 1e-8);
+}
+
+#[test]
+fn all_statements_convert_same_second_multiple_pairs_without_remarks_pair_by_order() {
+    let csv = concat!(
+        "User_ID,UTC_Time,Account,Operation,Coin,Change,Remark\n",
+        "12345,2024-06-15 08:00:00,Spot,Binance Convert,USDT,-50.0,\n",
+        "12345,2024-06-15 08:00:00,Spot,Binance Convert,BTC,0.001,\n",
+        "12345,2024-06-15 08:00:00,Spot,Binance Convert,ETH,-1.0,\n",
+        "12345,2024-06-15 08:00:00,Spot,Binance Convert,SOL,20.0,\n",
+    );
+
+    let parser = BinanceAllStatementsParser;
+    let result = parser.parse(csv, "Binance").unwrap();
+
+    assert_eq!(result.items.len(), 2);
+
+    let btc_buy = result
+        .items
+        .iter()
+        .find(|(_, tx)| tx.symbol == "BTC" && tx.subtype.as_deref() == Some("buy"))
+        .map(|(_, tx)| tx)
+        .expect("Expected BTC buy");
+    assert!((btc_buy.amount - 0.001).abs() < 1e-8);
+
+    let eth_sol_swap = result
+        .items
+        .iter()
+        .find(|(_, tx)| {
+            tx.symbol == "ETH"
+                && tx.subtype.as_deref() == Some("swap")
+                && tx.swap_to_symbol.as_deref() == Some("SOL")
+        })
+        .map(|(_, tx)| tx)
+        .expect("Expected ETH->SOL swap");
+    assert!((eth_sol_swap.amount - 1.0).abs() < 1e-8);
+    assert!((eth_sol_swap.swap_to_amount.unwrap_or_default() - 20.0).abs() < 1e-8);
 }
 
 // ── P2P Trading tests ──

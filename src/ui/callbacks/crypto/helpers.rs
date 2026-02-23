@@ -364,21 +364,18 @@ where
     let chart_image = controller.render_portfolio_distribution_chart(&chart_assets);
     let chart_ready = chart_image.is_some();
 
-    let mut total_val = 0.0;
-    let mut total_cost = 0.0;
+    let mut total_val_priced = 0.0;
+    let mut total_cost_priced = 0.0;
     let mut priced_assets = 0;
-    let mut missing_price_assets = 0;
 
     let mapped_assets: Vec<CryptoAssetData> = assets
         .iter()
         .map(|a| {
             let price_data = price_map.get(&a.coin_id);
-            total_cost += a.total_cost_basis;
             if price_data.is_some() {
-                total_val += a.current_value;
+                total_val_priced += a.current_value;
+                total_cost_priced += a.total_cost_basis;
                 priced_assets += 1;
-            } else {
-                missing_price_assets += 1;
             }
 
             let change_percent = price_data
@@ -484,23 +481,23 @@ where
         }
     }
 
-    let total_value_label = if priced_assets > 0 && missing_price_assets == 0 {
-        let total_preferred = convert_usd_to_preferred(total_val, &preferred_currency, usd_rate);
+    let total_value_label = if priced_assets > 0 {
+        let total_preferred =
+            convert_usd_to_preferred(total_val_priced, &preferred_currency, usd_rate);
         format_preferred(total_preferred, &preferred_currency)
     } else {
         "N/A".to_string()
     };
 
-    let (total_pnl_label, total_pnl_positive, total_roi_label) =
-        if priced_assets > 0 && missing_price_assets == 0 {
-            let total_pnl_val = total_val - total_cost;
-            let (pnl_label, pnl_positive) =
-                format_signed_preferred(total_pnl_val, &preferred_currency, usd_rate);
-            let roi_label = format_roi(total_val, total_cost);
-            (pnl_label, pnl_positive, roi_label)
-        } else {
-            ("N/A".to_string(), true, "N/A".to_string())
-        };
+    let (total_pnl_label, total_pnl_positive, total_roi_label) = if priced_assets > 0 {
+        let total_pnl_val = total_val_priced - total_cost_priced;
+        let (pnl_label, pnl_positive) =
+            format_signed_preferred(total_pnl_val, &preferred_currency, usd_rate);
+        let roi_label = format_roi(total_val_priced, total_cost_priced);
+        (pnl_label, pnl_positive, roi_label)
+    } else {
+        ("N/A".to_string(), true, "N/A".to_string())
+    };
 
     let current_period = chrono::Local::now().format("%Y").to_string();
     let (total_realized_label, total_realized_positive) = controller
@@ -517,8 +514,8 @@ where
 
     let mut trend_image = None;
     let mut trend_ready = false;
-    if priced_assets > 0 && missing_price_assets == 0 {
-        let _ = controller.save_crypto_portfolio_snapshot(total_val, total_cost);
+    if priced_assets > 0 {
+        let _ = controller.save_crypto_portfolio_snapshot(total_val_priced, total_cost_priced);
     }
 
     let snapshots = controller
