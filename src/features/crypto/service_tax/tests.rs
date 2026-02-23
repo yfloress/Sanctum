@@ -240,3 +240,57 @@
 
         drop(harness);
     }
+
+    #[test]
+    fn resolve_export_currency_forces_clp_for_chile() {
+        let harness = new_test_service();
+        let service = &harness.service;
+
+        service
+            .set_app_setting(SETTING_PREFERRED_CURRENCY, "EUR")
+            .expect("set preferred currency");
+        service
+            .with_db(|db| {
+                db.save_exchange_rate("CLP_USD", 950.0)
+                    .map_err(CryptoError::Database)?;
+                db.save_exchange_rate("EUR_USD", 0.93)
+                    .map_err(CryptoError::Database)?;
+                Ok(())
+            })
+            .expect("save exchange rates");
+
+        let (currency, rate) = service
+            .resolve_export_currency(TaxJurisdiction::Chile)
+            .expect("resolve currency");
+
+        assert_eq!(currency, "CLP");
+        assert!((rate - 950.0).abs() < f64::EPSILON);
+
+        drop(harness);
+    }
+
+    #[test]
+    fn resolve_export_currency_uses_preferred_for_non_chile() {
+        let harness = new_test_service();
+        let service = &harness.service;
+
+        service
+            .set_app_setting(SETTING_PREFERRED_CURRENCY, "EUR")
+            .expect("set preferred currency");
+        service
+            .with_db(|db| {
+                db.save_exchange_rate("EUR_USD", 0.93)
+                    .map_err(CryptoError::Database)?;
+                Ok(())
+            })
+            .expect("save exchange rates");
+
+        let (currency, rate) = service
+            .resolve_export_currency(TaxJurisdiction::Usa)
+            .expect("resolve currency");
+
+        assert_eq!(currency, "EUR");
+        assert!((rate - 0.93).abs() < f64::EPSILON);
+
+        drop(harness);
+    }

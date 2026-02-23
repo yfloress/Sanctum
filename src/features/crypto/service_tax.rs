@@ -215,7 +215,8 @@ impl CryptoService {
 
     pub fn export_tax_report_csv(&self, period_id: String, path: &str) -> Result<(), CryptoError> {
         let report = self.generate_tax_report(period_id)?;
-        let (currency, clp_rate) = self.resolve_export_currency()?;
+        let jurisdiction = TaxJurisdiction::parse_or_default(&report.jurisdiction);
+        let (currency, clp_rate) = self.resolve_export_currency(jurisdiction)?;
         let csv = report.to_csv_with_currency(&currency, clp_rate);
         std::fs::write(path, csv)
             .map_err(|e| CryptoError::Validation(format!("Failed to write report: {}", e)))?;
@@ -231,9 +232,9 @@ impl CryptoService {
         }
 
         let settings = self.load_tax_settings(period_id.clone())?;
+        let (currency, clp_rate) = self.resolve_export_currency(settings.jurisdiction)?;
         let excluded = settings.excluded_wallet_ids;
         let period = parse_period(&period_id).map_err(CryptoError::Validation)?;
-        let (currency, clp_rate) = self.resolve_export_currency()?;
 
         self.with_db(|db| {
             let transactions: Vec<CryptoTransaction> = db
@@ -249,35 +250,49 @@ impl CryptoService {
         })
     }
 
-    fn resolve_export_currency(&self) -> Result<(String, f64), CryptoError> {
+    fn resolve_export_currency(
+        &self,
+        jurisdiction: TaxJurisdiction,
+    ) -> Result<(String, f64), CryptoError> {
         let preferred = self
             .get_app_setting(SETTING_PREFERRED_CURRENCY)
             .unwrap_or_else(|_| "USD".to_string())
+            .trim()
             .to_uppercase();
+        let preferred = if preferred.is_empty() {
+            "USD".to_string()
+        } else {
+            preferred
+        };
 
-        if preferred != "USD" {
-            let pair = format!("{}_USD", preferred.as_str());
-            let rate = self.with_db(|db| {
-                let rate = db
-                    .load_exchange_rate(&pair)
-                    .map_err(CryptoError::Database)?
-                    .map(|(value, _)| value)
-                    .unwrap_or(0.0);
-                Ok(rate)
-            })?;
+        let currency = if matches!(jurisdiction, TaxJurisdiction::Chile) {
+            "CLP".to_string()
+        } else {
+            preferred
+        };
 
-            if rate <= 0.0 {
-                return Err(CryptoError::Validation(
-                    format!(
-                        "{} export requires a valid USD/{} rate. Please sync prices first.",
-                        preferred, preferred
-                    ),
-                ));
-            }
-            return Ok((preferred, rate));
+        if currency == "USD" {
+            return Ok(("USD".to_string(), 0.0));
         }
 
-        Ok(("USD".to_string(), 0.0))
+        let pair = format!("{}_USD", currency.as_str());
+        let rate = self.with_db(|db| {
+            let rate = db
+                .load_exchange_rate(&pair)
+                .map_err(CryptoError::Database)?
+                .map(|(value, _)| value)
+                .unwrap_or(0.0);
+            Ok(rate)
+        })?;
+
+        if rate <= 0.0 {
+            return Err(CryptoError::Validation(format!(
+                "{} export requires a valid USD/{} rate. Please sync prices first.",
+                currency, currency
+            )));
+        }
+
+        Ok((currency, rate))
     }
 }
 

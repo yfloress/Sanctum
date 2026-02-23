@@ -27,32 +27,56 @@ use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel, Weak};
 use std::sync::Arc;
 
 /// Resolves the display currency and USD/target exchange rate from the controller.
-fn resolve_display_currency(controller: &AppController) -> (String, f64) {
-    let preferred = controller
-        .get_app_setting(SETTING_PREFERRED_CURRENCY)
-        .unwrap_or_else(|_| "USD".to_string())
-        .trim()
-        .to_uppercase();
-    let rate = if preferred == "USD" {
-        1.0
+/// Chile tax views are always displayed in CLP.
+fn resolve_display_currency(
+    controller: &AppController,
+    jurisdiction: TaxJurisdiction,
+) -> Result<(String, f64), String> {
+    let preferred = if matches!(jurisdiction, TaxJurisdiction::Chile) {
+        "CLP".to_string()
     } else {
         controller
-            .load_exchange_rate_allow_stale(format!("{}_USD", preferred.as_str()))
-            .ok()
-            .and_then(|r| r.map(|(value, _)| value))
-            .filter(|value| *value > 0.0)
-            .unwrap_or(1.0)
+            .get_app_setting(SETTING_PREFERRED_CURRENCY)
+            .unwrap_or_else(|_| "USD".to_string())
+            .trim()
+            .to_uppercase()
     };
-    (preferred, rate)
+    let preferred = if preferred.is_empty() {
+        "USD".to_string()
+    } else {
+        preferred
+    };
+    if preferred == "USD" {
+        return Ok(("USD".to_string(), 1.0));
+    }
+
+    let pair = format!("{}_USD", preferred.as_str());
+    let rate = controller
+        .load_exchange_rate_allow_stale(pair)
+        .ok()
+        .and_then(|r| r.map(|(value, _)| value))
+        .filter(|value| *value > 0.0);
+
+    if matches!(jurisdiction, TaxJurisdiction::Chile) {
+        if let Some(value) = rate {
+            return Ok((preferred, value));
+        }
+        return Err(
+            "CLP tax display requires a valid USD/CLP rate. Please sync prices first."
+                .to_string(),
+        );
+    }
+
+    Ok((preferred, rate.unwrap_or(1.0)))
 }
 
-/// Formats a USD-denominated float amount in the user's preferred currency.
+/// Formats a USD-denominated float amount in the selected display currency.
 fn fmt_preferred(amount_usd: f64, currency: &str, clp_rate: f64) -> String {
     let converted = convert_usd_to_preferred(amount_usd, currency, clp_rate);
     format_preferred(converted, currency)
 }
 
-/// Formats a USD-denominated float amount with a sign prefix in the user's preferred currency.
+/// Formats a USD-denominated float amount with a sign prefix in the selected display currency.
 fn fmt_preferred_signed(amount_usd: f64, currency: &str, clp_rate: f64) -> String {
     let converted = convert_usd_to_preferred(amount_usd, currency, clp_rate);
     let abs = if converted < 0.0 {
@@ -207,10 +231,18 @@ pub fn setup_tax_callbacks<N>(
                     }
                 };
 
-                let (currency, clp_rate) = resolve_display_currency(&controller);
-
                 match controller.generate_tax_summary(period) {
                     Ok(summary) => {
+                        let report_jurisdiction =
+                            TaxJurisdiction::parse_or_default(&summary.report.jurisdiction);
+                        let (currency, clp_rate) =
+                            match resolve_display_currency(&controller, report_jurisdiction) {
+                                Ok(value) => value,
+                                Err(err) => {
+                                    notify(err, true);
+                                    return;
+                                }
+                            };
                         update_report_state(&adapter, &summary.report, &currency, clp_rate);
                         update_summary_state(&adapter, &summary, &currency, clp_rate);
                         notify(t("crypto-tax-report-generated"), false);
