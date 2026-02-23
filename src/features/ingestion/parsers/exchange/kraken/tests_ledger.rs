@@ -78,8 +78,8 @@ fn ledger_trade_pair_becomes_buy() {
 }
 
 #[test]
-fn ledger_usdt_trade_pair_becomes_buy() {
-    // USDT is a stablecoin → treated as pricing currency → buy (not swap)
+fn ledger_usdt_trade_pair_becomes_swap() {
+    // USDT is a stablecoin (crypto) -> swap so quote-balance moves are tracked.
     let csv = concat!(
         "\"txid\",\"refid\",\"time\",\"type\",\"subtype\",\"aclass\",\"asset\",\"amount\",\"fee\",\"balance\"\n",
         "\"TX-OUT\",\"REF-USDT\",\"2024-05-01 10:00:00\",\"trade\",\"\",\"currency\",\"USDT\",\"-25000\",\"5.00\",\"0\"\n",
@@ -91,13 +91,15 @@ fn ledger_usdt_trade_pair_becomes_buy() {
 
     assert_eq!(result.items.len(), 1);
     let tx = &result.items[0].1;
-    assert_eq!(tx.symbol, "BTC");
+    assert_eq!(tx.symbol, "USDT");
     assert_eq!(tx.transaction_type, "trade");
-    assert_eq!(tx.subtype.as_deref(), Some("buy"));
-    assert!((tx.amount - 0.5).abs() < f64::EPSILON);
-    assert!((tx.price_per_coin.unwrap() - 50000.0).abs() < f64::EPSILON);
-    assert!(tx.swap_to_symbol.is_none());
-    assert!(tx.swap_to_amount.is_none());
+    assert_eq!(tx.subtype.as_deref(), Some("swap"));
+    assert!((tx.amount - 25000.0).abs() < f64::EPSILON);
+    assert_eq!(tx.swap_to_symbol.as_deref(), Some("BTC"));
+    assert!((tx.swap_to_amount.unwrap() - 0.5).abs() < f64::EPSILON);
+    assert!(tx.price_per_coin.is_none());
+    assert_eq!(tx.fee_coin_symbol.as_deref(), Some("USDT"));
+    assert!((tx.fee_amount.unwrap() - 5.0).abs() < f64::EPSILON);
 }
 
 #[test]
@@ -121,8 +123,8 @@ fn ledger_trade_pair_becomes_sell() {
 }
 
 #[test]
-fn ledger_sell_for_usdt_becomes_sell() {
-    // Selling ETH for USDT: USDT is a stablecoin → sell (not swap)
+fn ledger_sell_for_usdt_becomes_swap() {
+    // Selling ETH for USDT: both sides are crypto -> swap.
     let csv = concat!(
         "\"txid\",\"refid\",\"time\",\"type\",\"subtype\",\"aclass\",\"asset\",\"amount\",\"fee\",\"balance\"\n",
         "\"TX-OUT\",\"REF-SELL-USDT\",\"2024-02-01 08:00:00\",\"trade\",\"\",\"currency\",\"XETH\",\"-2.0\",\"0\",\"0\"\n",
@@ -135,11 +137,13 @@ fn ledger_sell_for_usdt_becomes_sell() {
     assert_eq!(result.items.len(), 1);
     let tx = &result.items[0].1;
     assert_eq!(tx.symbol, "ETH");
-    assert_eq!(tx.subtype.as_deref(), Some("sell"));
+    assert_eq!(tx.subtype.as_deref(), Some("swap"));
     assert!((tx.amount - 2.0).abs() < f64::EPSILON);
-    assert!((tx.price_per_coin.unwrap() - 2000.0).abs() < f64::EPSILON);
-    assert!(tx.swap_to_symbol.is_none());
-    assert!(tx.swap_to_amount.is_none());
+    assert_eq!(tx.swap_to_symbol.as_deref(), Some("USDT"));
+    assert!((tx.swap_to_amount.unwrap() - 4000.0).abs() < f64::EPSILON);
+    assert!(tx.price_per_coin.is_none());
+    assert_eq!(tx.fee_coin_symbol.as_deref(), Some("USDT"));
+    assert!((tx.fee_amount.unwrap() - 3.5).abs() < f64::EPSILON);
 }
 
 #[test]

@@ -104,6 +104,37 @@ fn note_starts_with_lowercase(note: Option<&str>, expected_prefix: &str) -> bool
         .unwrap_or(false)
 }
 
+fn extract_kraken_trade_ref(note: &str) -> Option<String> {
+    let trimmed = note.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    let lower = trimmed.to_ascii_lowercase();
+    if !lower.starts_with("kraken") || !lower.contains("trade") {
+        return None;
+    }
+
+    for marker in ["| ref:", "| tx:"] {
+        if let Some(pos) = lower.find(marker) {
+            let start = pos + marker.len();
+            if let Some(tail) = trimmed.get(start..) {
+                let value = tail.split('|').next().unwrap_or("").trim();
+                if !value.is_empty() {
+                    return Some(value.to_string());
+                }
+            }
+        }
+    }
+
+    None
+}
+
+fn kraken_trade_ref_key(wallet_id: &str, note: Option<&str>) -> Option<(String, String)> {
+    let reference = note.and_then(extract_kraken_trade_ref)?;
+    Some((wallet_id.to_string(), reference))
+}
+
 fn has_mexc_transfer_overlap_duplicate(
     existing: &[CryptoTransaction],
     format_name: &str,
@@ -1234,6 +1265,10 @@ impl IngestionService {
                 )
             })
             .collect();
+        let mut kraken_trade_ref_set: HashSet<(String, String)> = existing
+            .iter()
+            .filter_map(|tx| kraken_trade_ref_key(&tx.wallet_id, tx.notes.as_deref()))
+            .collect();
 
         // Track pending balance changes for dry_run validation
         // Key: (wallet_id, coin_id), Value: pending balance delta
@@ -1271,6 +1306,13 @@ impl IngestionService {
                     continue;
                 }
             };
+            let kraken_ref_key = kraken_trade_ref_key(&wallet.id, import_tx.notes.as_deref());
+            if let Some(ref_key) = kraken_ref_key.as_ref() {
+                if kraken_trade_ref_set.contains(ref_key) {
+                    summary.record_skipped(&skipped_duplicate);
+                    continue;
+                }
+            }
 
             // Resolve coin (source)
             let symbol_key = normalize_import_symbol_key(&import_tx.symbol);
@@ -1852,6 +1894,9 @@ impl IngestionService {
                         format!("{} - {}", wallet.name, import_tx.date),
                     );
                 }
+                if let Some(ref_key) = kraken_ref_key.clone() {
+                    kraken_trade_ref_set.insert(ref_key);
+                }
                 continue;
             }
 
@@ -1942,6 +1987,9 @@ impl IngestionService {
                     dedup_set.insert(from_key);
                     dedup_set.insert(to_key);
                 }
+                if let Some(ref_key) = kraken_ref_key.clone() {
+                    kraken_trade_ref_set.insert(ref_key);
+                }
                 summary.record_inserted();
                 continue;
             }
@@ -1978,6 +2026,9 @@ impl IngestionService {
                         None,
                     );
                     dedup_set.insert(key);
+                    if let Some(ref_key) = kraken_ref_key {
+                        kraken_trade_ref_set.insert(ref_key);
+                    }
                     summary.record_inserted();
                 }
                 Err(e) => {
@@ -1997,8 +2048,8 @@ impl IngestionService {
 #[cfg(test)]
 mod tests {
     use super::{
-        has_mexc_transfer_overlap_duplicate, matches_swap_rollup_duplicate,
-        normalize_import_symbol_key,
+        extract_kraken_trade_ref, has_mexc_transfer_overlap_duplicate, kraken_trade_ref_key,
+        matches_swap_rollup_duplicate, normalize_import_symbol_key,
     };
     use crate::models::CryptoTransaction;
 
@@ -2061,6 +2112,39 @@ mod tests {
     fn swap_rollup_duplicate_matches_summed_split_fills() {
         assert!(matches_swap_rollup_duplicate(&[1.2, 3.8], 5.0));
         assert!(!matches_swap_rollup_duplicate(&[1.2, 3.8], 4.9));
+    }
+
+    #[test]
+    fn extract_kraken_trade_ref_accepts_ref_and_tx_markers() {
+        assert_eq!(
+            extract_kraken_trade_ref("Kraken trade | BTC/USD | Ref: TX-123"),
+            Some("TX-123".to_string())
+        );
+        assert_eq!(
+            extract_kraken_trade_ref("Kraken trade | ETH/USDT | Tx: TX-456 | Order: ORD-1"),
+            Some("TX-456".to_string())
+        );
+    }
+
+    #[test]
+    fn extract_kraken_trade_ref_ignores_non_trade_notes() {
+        assert_eq!(
+            extract_kraken_trade_ref("Kraken deposit | Ref: TX-123"),
+            None
+        );
+        assert_eq!(extract_kraken_trade_ref("MEXC trade | Ref: TX-123"), None);
+    }
+
+    #[test]
+    fn kraken_trade_ref_key_binds_reference_to_wallet() {
+        assert_eq!(
+            kraken_trade_ref_key("wallet-1", Some("Kraken trade | BTC/USD | Ref: TX-777")),
+            Some(("wallet-1".to_string(), "TX-777".to_string()))
+        );
+        assert_eq!(
+            kraken_trade_ref_key("wallet-1", Some("Kraken deposit | Ref: TX-777")),
+            None
+        );
     }
 
     #[test]

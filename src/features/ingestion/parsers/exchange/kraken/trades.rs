@@ -127,6 +127,7 @@ impl ExchangeParser for KrakenTradesParser {
             let cost_raw = get_field(&record, &cols, "cost");
             let fee_raw = get_field(&record, &cols, "fee");
             let vol_raw = get_field(&record, &cols, "vol");
+            let txid = get_field(&record, &cols, "txid").to_string();
             let ordertxid = get_field(&record, &cols, "ordertxid").to_string();
 
             let time = match parse_timestamp(time_raw) {
@@ -184,17 +185,22 @@ impl ExchangeParser for KrakenTradesParser {
             let base_fiat = is_fiat(&base);
             let quote_fiat = is_fiat(&quote);
 
-            // Stablecoin-aware: treat stablecoins as pricing currencies
-            let quote_is_pricing = is_quote_currency(&quote);
-            let base_is_pricing = is_quote_currency(&base);
+            // Only true fiat should be treated as the pricing side for
+            // buy/sell. Stablecoins remain crypto so balances are tracked
+            // through swaps.
+            let quote_is_pricing = quote_fiat;
+            let base_is_pricing = base_fiat;
 
-            let notes = if ordertxid.is_empty() {
-                Some(format!("Kraken trade | {}", pair_raw))
-            } else {
-                Some(format!(
-                    "Kraken trade | {} | Order: {}",
-                    pair_raw, ordertxid
-                ))
+            let notes = match (txid.is_empty(), ordertxid.is_empty()) {
+                (false, false) => Some(format!(
+                    "Kraken trade | {} | Ref: {} | Order: {}",
+                    pair_raw, txid, ordertxid
+                )),
+                (false, true) => Some(format!("Kraken trade | {} | Ref: {}", pair_raw, txid)),
+                (true, false) => {
+                    Some(format!("Kraken trade | {} | Order: {}", pair_raw, ordertxid))
+                }
+                (true, true) => Some(format!("Kraken trade | {}", pair_raw)),
             };
 
             // Determine the crypto asset, subtype, and amounts
@@ -204,7 +210,7 @@ impl ExchangeParser for KrakenTradesParser {
             }
 
             if quote_is_pricing && !base_is_pricing {
-                // Standard pair: BTC/USD, BTC/USDT, etc.
+                // Standard fiat pair: BTC/USD, ETH/EUR, etc.
                 let price = if volume > 0.0 {
                     Some(cost / volume)
                 } else {
@@ -235,7 +241,7 @@ impl ExchangeParser for KrakenTradesParser {
 
                 result.items.push((line_number, tx));
             } else if base_is_pricing && !quote_is_pricing {
-                // Inverted pair: USD/BTC, USDT/BTC (rare but possible)
+                // Inverted fiat pair: USD/BTC (rare but possible)
                 let subtype_str = if is_buy { "sell" } else { "buy" };
                 let price = if cost > 0.0 {
                     Some(volume / cost)

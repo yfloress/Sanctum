@@ -21,7 +21,8 @@ use crate::controller::{AppController, SETTING_PREFERRED_CURRENCY};
 use crate::models::CryptoAsset;
 use crate::services::i18n;
 use crate::ui::{
-    convert_usd_to_preferred, crypto_icon_for_symbol, format_fx_rate, format_preferred,
+    convert_usd_to_preferred, crypto_icon_for_symbol, format_crypto_amount, format_fx_rate,
+    format_preferred,
     load_wallet_icon,
 };
 use crate::{
@@ -39,6 +40,18 @@ pub const SETTING_CRYPTO_LAST_UPDATED: &str = "crypto_last_updated";
 
 fn normalize_currency_code(code: &str) -> String {
     code.trim().to_uppercase()
+}
+
+pub(super) fn format_compact_asset_amount(amount: f64) -> String {
+    if !amount.is_finite() {
+        return "0".to_string();
+    }
+
+    if amount.abs() > 0.0 && amount.abs() < 0.0001 {
+        return format!("{:.2e}", amount);
+    }
+
+    format_crypto_amount(amount)
 }
 
 pub(super) fn format_compact_price_preferred(price_preferred: f64, preferred_currency: &str) -> String {
@@ -388,7 +401,11 @@ where
                 icon: crypto_icon_for_symbol(&a.symbol),
                 name: SharedString::from(asset_name),
                 price: SharedString::from(price_fmt),
-                amount: SharedString::from(format!("{:.4} {}", a.total_amount, a.symbol)),
+                amount: SharedString::from(format!(
+                    "{} {}",
+                    format_compact_asset_amount(a.total_amount),
+                    a.symbol
+                )),
                 value: SharedString::from(value_fmt),
                 change_24h: SharedString::from(change_str),
                 is_positive: change_percent >= 0.0,
@@ -564,7 +581,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::{format_compact_price_preferred, format_roi, format_signed_preferred};
+    use super::{
+        format_compact_asset_amount, format_compact_price_preferred, format_roi,
+        format_signed_preferred,
+    };
 
     #[test]
     fn format_roi_returns_na_when_cost_is_zero() {
@@ -618,5 +638,15 @@ mod tests {
     fn format_compact_price_preferred_returns_na_for_invalid_values() {
         assert_eq!(format_compact_price_preferred(0.0, "USD"), "N/A");
         assert_eq!(format_compact_price_preferred(f64::NAN, "USD"), "N/A");
+    }
+
+    #[test]
+    fn format_compact_asset_amount_uses_scientific_for_tiny_values() {
+        assert_eq!(format_compact_asset_amount(0.0000064), "6.40e-6");
+    }
+
+    #[test]
+    fn format_compact_asset_amount_keeps_regular_decimal_for_normal_values() {
+        assert_eq!(format_compact_asset_amount(0.12345678), "0.12345678");
     }
 }

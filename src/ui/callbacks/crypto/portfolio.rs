@@ -19,7 +19,8 @@
 
 use super::helpers::{
     SETTING_CRYPTO_LAST_UPDATED, badge_currency_for_preferred, format_compact_price_preferred,
-    load_preferred_usd_rate, reload_portfolio, resolve_preferred_currency,
+    format_compact_asset_amount, load_preferred_usd_rate, reload_portfolio,
+    resolve_preferred_currency,
     usd_pair_for_target_currency,
 };
 use crate::controller::AppController;
@@ -628,8 +629,9 @@ pub fn setup_portfolio_callbacks<N>(
                         name: SharedString::from(asset_name),
                         price: SharedString::from(price_fmt),
                         amount: SharedString::from(format!(
-                            "{:.4} {}",
-                            updated_asset.total_amount, updated_asset.symbol
+                            "{} {}",
+                            format_compact_asset_amount(updated_asset.total_amount),
+                            updated_asset.symbol
                         )),
                         value: SharedString::from(value_fmt),
                         change_24h: SharedString::from(change_str),
@@ -652,7 +654,9 @@ pub fn setup_portfolio_callbacks<N>(
                                 convert_usd_to_preferred(val_usd, &preferred_currency, usd_rate);
                             wallet_breakdown.push(AssetWalletBreakdown {
                                 wallet_name: SharedString::from(w.name),
-                                amount: SharedString::from(format!("{:.4}", h.total_amount)),
+                                amount: SharedString::from(format_compact_asset_amount(
+                                    h.total_amount,
+                                )),
                                 value: SharedString::from(format_preferred(
                                     val_preferred,
                                     &preferred_currency,

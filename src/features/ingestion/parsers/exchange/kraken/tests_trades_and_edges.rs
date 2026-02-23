@@ -34,11 +34,13 @@ fn trades_buy_btc_usd() {
     assert_eq!(tx.subtype.as_deref(), Some("buy"));
     assert!((tx.amount - 0.5).abs() < f64::EPSILON);
     assert!((tx.price_per_coin.unwrap() - 50000.0).abs() < f64::EPSILON);
+    let note = tx.notes.as_deref().unwrap_or_default();
+    assert!(note.contains("Ref: TX1"));
 }
 
 #[test]
-fn trades_buy_btc_usdt_becomes_buy() {
-    // USDT is a stablecoin → pricing currency → buy (not swap)
+fn trades_buy_btc_usdt_becomes_swap() {
+    // USDT is a stablecoin (crypto) -> swap to track quote-balance movement.
     let csv = concat!(
         "\"txid\",\"ordertxid\",\"pair\",\"time\",\"type\",\"ordertype\",\"price\",\"cost\",\"fee\",\"vol\",\"margin\",\"misc\",\"ledgers\"\n",
         "\"TX1\",\"ORD1\",\"BTC/USDT\",\"2024-01-15 10:30:45\",\"buy\",\"limit\",\"50000.00\",\"25000.00\",\"5.00\",\"0.5\",\"0\",\"\",\"L1,L2\"\n",
@@ -49,17 +51,19 @@ fn trades_buy_btc_usdt_becomes_buy() {
 
     assert_eq!(result.items.len(), 1);
     let tx = &result.items[0].1;
-    assert_eq!(tx.symbol, "BTC");
-    assert_eq!(tx.subtype.as_deref(), Some("buy"));
-    assert!((tx.amount - 0.5).abs() < f64::EPSILON);
-    assert!((tx.price_per_coin.unwrap() - 50000.0).abs() < f64::EPSILON);
-    assert!(tx.swap_to_symbol.is_none());
-    assert!(tx.swap_to_amount.is_none());
+    assert_eq!(tx.symbol, "USDT");
+    assert_eq!(tx.subtype.as_deref(), Some("swap"));
+    assert!((tx.amount - 25000.0).abs() < f64::EPSILON);
+    assert_eq!(tx.swap_to_symbol.as_deref(), Some("BTC"));
+    assert!((tx.swap_to_amount.unwrap() - 0.5).abs() < f64::EPSILON);
+    assert!(tx.price_per_coin.is_none());
+    assert_eq!(tx.fee_coin_symbol.as_deref(), Some("USDT"));
+    assert!((tx.fee_amount.unwrap() - 5.0).abs() < f64::EPSILON);
 }
 
 #[test]
-fn trades_sell_eth_usdt_becomes_sell() {
-    // Selling ETH for USDT: stablecoin quote → sell (not swap)
+fn trades_sell_eth_usdt_becomes_swap() {
+    // Selling ETH for USDT: both sides are crypto -> swap.
     let csv = concat!(
         "\"txid\",\"ordertxid\",\"pair\",\"time\",\"type\",\"ordertype\",\"price\",\"cost\",\"fee\",\"vol\",\"margin\",\"misc\",\"ledgers\"\n",
         "\"TX1\",\"ORD1\",\"ETH/USDT\",\"2024-02-01 08:00:00\",\"sell\",\"market\",\"2000.00\",\"4000.00\",\"3.50\",\"2.0\",\"0\",\"\",\"L1,L2\"\n",
@@ -71,11 +75,13 @@ fn trades_sell_eth_usdt_becomes_sell() {
     assert_eq!(result.items.len(), 1);
     let tx = &result.items[0].1;
     assert_eq!(tx.symbol, "ETH");
-    assert_eq!(tx.subtype.as_deref(), Some("sell"));
+    assert_eq!(tx.subtype.as_deref(), Some("swap"));
     assert!((tx.amount - 2.0).abs() < f64::EPSILON);
-    assert!((tx.price_per_coin.unwrap() - 2000.0).abs() < f64::EPSILON);
-    assert!(tx.swap_to_symbol.is_none());
-    assert!(tx.swap_to_amount.is_none());
+    assert_eq!(tx.swap_to_symbol.as_deref(), Some("USDT"));
+    assert!((tx.swap_to_amount.unwrap() - 4000.0).abs() < f64::EPSILON);
+    assert!(tx.price_per_coin.is_none());
+    assert_eq!(tx.fee_coin_symbol.as_deref(), Some("USDT"));
+    assert!((tx.fee_amount.unwrap() - 3.5).abs() < f64::EPSILON);
 }
 
 #[test]
@@ -166,7 +172,7 @@ fn trades_zero_volume_is_skipped() {
 
 #[test]
 fn trades_with_usdt_pair() {
-    // USDT is now a pricing currency → buy (not swap)
+    // USDT quote should be imported as swap so USDT is decremented.
     let csv = concat!(
         "\"txid\",\"ordertxid\",\"pair\",\"time\",\"type\",\"ordertype\",\"price\",\"cost\",\"fee\",\"vol\",\"margin\",\"misc\",\"ledgers\"\n",
         "\"TX1\",\"ORD1\",\"BTC/USDT\",\"2024-04-01 12:00:00\",\"buy\",\"market\",\"60000.00\",\"30000.00\",\"10.00\",\"0.5\",\"0\",\"\",\"L1\"\n",
@@ -177,11 +183,12 @@ fn trades_with_usdt_pair() {
 
     assert_eq!(result.items.len(), 1);
     let tx = &result.items[0].1;
-    assert_eq!(tx.symbol, "BTC");
-    assert_eq!(tx.subtype.as_deref(), Some("buy"));
-    assert!((tx.amount - 0.5).abs() < f64::EPSILON);
-    assert!((tx.price_per_coin.unwrap() - 60000.0).abs() < f64::EPSILON);
-    assert!(tx.swap_to_symbol.is_none());
+    assert_eq!(tx.symbol, "USDT");
+    assert_eq!(tx.subtype.as_deref(), Some("swap"));
+    assert!((tx.amount - 30000.0).abs() < f64::EPSILON);
+    assert_eq!(tx.swap_to_symbol.as_deref(), Some("BTC"));
+    assert!((tx.swap_to_amount.unwrap() - 0.5).abs() < f64::EPSILON);
+    assert!(tx.price_per_coin.is_none());
 }
 
 #[test]

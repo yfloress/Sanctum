@@ -35,8 +35,8 @@ use chrono::NaiveDateTime;
 use csv::StringRecord;
 
 use super::common::{
-    format_datetime, is_fiat, is_quote_currency, normalize_kraken_currency, parse_decimal,
-    parse_kraken_pair, parse_timestamp,
+    format_datetime, is_fiat, normalize_kraken_currency, parse_decimal, parse_kraken_pair,
+    parse_timestamp,
 };
 use super::{ExchangeParser, ExchangeSource, ParseResult};
 use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
@@ -245,11 +245,11 @@ impl PendingTrade {
         let out_fiat = is_fiat(&outgoing.symbol);
         let in_fiat = is_fiat(&incoming.symbol);
 
-        // Stablecoin-aware classification: treat stablecoins as pricing
-        // currencies so e.g. BTC/USDT trades become buy/sell instead of
-        // swaps, avoiding phantom stablecoin balances.
-        let out_is_pricing = is_quote_currency(&outgoing.symbol);
-        let in_is_pricing = is_quote_currency(&incoming.symbol);
+        // Only true fiat should be treated as the pricing side for
+        // buy/sell. Stablecoins remain crypto so their balances are
+        // updated through swaps (USDT outflow/inflow is tracked).
+        let out_is_pricing = out_fiat;
+        let in_is_pricing = in_fiat;
 
         // Both fiat — skip entirely
         if out_fiat && in_fiat {
@@ -263,7 +263,7 @@ impl PendingTrade {
             refid
         ));
 
-        // Fiat/stablecoin -> Crypto = buy
+        // Fiat -> Crypto = buy
         if out_is_pricing && !in_is_pricing {
             let price = if incoming.abs_amount() > 0.0 {
                 Some(outgoing.abs_amount() / incoming.abs_amount())
@@ -307,7 +307,7 @@ impl PendingTrade {
             return vec![tx];
         }
 
-        // Crypto -> Fiat/stablecoin = sell
+        // Crypto -> Fiat = sell
         if !out_is_pricing && in_is_pricing {
             let price = if outgoing.abs_amount() > 0.0 {
                 Some(incoming.abs_amount() / outgoing.abs_amount())

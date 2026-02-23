@@ -138,6 +138,7 @@ pub fn setup_ingestion_callbacks(
                 set_import_summary(&ui, summary, Some(pending.display_name));
                 ui.global::<AppState>().set_show_import_preview(false);
                 ui.global::<AppState>().set_show_import_results(true);
+                refresh_crypto_views(&ui);
             }
         });
     }
@@ -394,6 +395,7 @@ pub fn setup_ingestion_callbacks(
                     set_import_summary(&ui, summary, Some(display_name));
                     ui.global::<AppState>().set_show_import_preview(false);
                     ui.global::<AppState>().set_show_import_results(true);
+                    refresh_crypto_views(&ui);
 
                     // Clear exchange-specific state
                     let adapter = ui.global::<IngestionAdapter>();
@@ -458,6 +460,22 @@ fn clear_import_summary(ui: &AppWindow) {
     adapter.set_import_preview_changes(ModelRc::new(VecModel::from(
         Vec::<ImportPreviewChange>::new(),
     )));
+}
+
+fn refresh_crypto_views(ui: &AppWindow) {
+    let crypto = ui.global::<CryptoAdapter>();
+    crypto.invoke_fetch_portfolio();
+    crypto.invoke_fetch_wallets();
+
+    let selected_wallet_id = crypto.get_selected_wallet_id().to_string();
+    if !selected_wallet_id.trim().is_empty() {
+        crypto.invoke_fetch_wallet_details(SharedString::from(selected_wallet_id));
+    }
+
+    let selected_asset_id = crypto.get_selected_asset().id.to_string();
+    if !selected_asset_id.trim().is_empty() {
+        crypto.invoke_fetch_asset_details(SharedString::from(selected_asset_id));
+    }
 }
 
 fn set_import_summary(ui: &AppWindow, summary: ImportSummary, file_name: Option<String>) {
@@ -564,6 +582,12 @@ fn apply_exchange_batch_filters(
         filtered.push(file);
     }
 
+    filtered.sort_by_key(|file| match file.source_id.as_str() {
+        "kraken_ledger" => 0_i32,
+        "kraken_trades" => 1_i32,
+        _ => 2_i32,
+    });
+
     (filtered, skipped)
 }
 
@@ -661,5 +685,27 @@ mod tests {
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered[0].source_id, "mexc_futures_trades");
         assert_eq!(skipped.len(), 2);
+    }
+
+    #[test]
+    fn batch_filter_orders_kraken_ledger_before_kraken_trades() {
+        let files = vec![
+            PendingExchangeFile {
+                display_name: "trades.csv".to_string(),
+                source_id: "kraken_trades".to_string(),
+                content: "trades".to_string(),
+            },
+            PendingExchangeFile {
+                display_name: "ledgers.csv".to_string(),
+                source_id: "kraken_ledger".to_string(),
+                content: "ledger".to_string(),
+            },
+        ];
+
+        let (filtered, skipped) = apply_exchange_batch_filters(files);
+        assert!(skipped.is_empty());
+        assert_eq!(filtered.len(), 2);
+        assert_eq!(filtered[0].source_id, "kraken_ledger");
+        assert_eq!(filtered[1].source_id, "kraken_trades");
     }
 }

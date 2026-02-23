@@ -26,6 +26,8 @@ use rusqlite::params;
 use std::collections::{HashMap, HashSet};
 use std::sync::LazyLock;
 
+const MIN_VISIBLE_ASSET_AMOUNT: f64 = 1e-12;
+
 static DEFAULT_SYMBOL_BY_COIN_ID: LazyLock<HashMap<String, String>> = LazyLock::new(|| {
     crate::features::crypto::api::default_coin_catalog()
         .into_iter()
@@ -692,7 +694,9 @@ impl Database {
         assets
             .into_values()
             .filter_map(|mut asset| {
-                if asset.total_amount > 0.0001 {
+                // Keep genuine dust balances while still hiding pure
+                // floating-point residue.
+                if asset.total_amount > MIN_VISIBLE_ASSET_AMOUNT {
                     asset.calculate_avg_price();
                     Some(asset)
                 } else {

@@ -199,3 +199,44 @@
         assert_eq!(usdt.symbol, "USDT");
         assert!((usdt.total_amount - 2.5).abs() < 0.00000001);
     }
+
+    #[test]
+    fn aggregate_keeps_real_dust_balances_visible() {
+        let dust_tx = tx(
+            "dust-usdt",
+            "tether",
+            "USDT",
+            "transfer",
+            Some("deposit"),
+            0.0000064,
+            None,
+            "2024-01-04",
+            None,
+        );
+
+        let assets = Database::aggregate_crypto_transactions(vec![dust_tx]);
+        assert_eq!(assets.len(), 1);
+        let usdt = assets
+            .iter()
+            .find(|a| a.coin_id == "tether")
+            .expect("expected dust USDT holding");
+        assert!((usdt.total_amount - 0.0000064).abs() < 0.000000000001);
+    }
+
+    #[test]
+    fn aggregate_filters_near_zero_floating_residue() {
+        let residue_tx = tx(
+            "residue-usdt",
+            "tether",
+            "USDT",
+            "transfer",
+            Some("deposit"),
+            0.0000000000001,
+            None,
+            "2024-01-04",
+            None,
+        );
+
+        let assets = Database::aggregate_crypto_transactions(vec![residue_tx]);
+        assert!(assets.is_empty());
+    }

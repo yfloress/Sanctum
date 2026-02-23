@@ -17,7 +17,9 @@
 
 //! Wallet CRUD callbacks
 
-use super::helpers::reload_wallets;
+use super::helpers::{
+    format_compact_asset_amount, format_compact_price_preferred, reload_wallets,
+};
 use crate::controller::AppController;
 use crate::models::{CryptoAsset, CryptoTransaction};
 use crate::ui::{
@@ -89,10 +91,8 @@ pub fn setup_wallet_callbacks<N>(
 
                             let price_fmt = if price_data.is_none() {
                                 "N/A".to_string()
-                            } else if asset.current_price < 1.0 {
-                                format!("$ {:.4}", asset.current_price)
                             } else {
-                                format_usd(asset.current_price)
+                                format_compact_price_preferred(asset.current_price, "USD")
                             };
 
                             let value_fmt = if price_data.is_none() {
@@ -108,8 +108,9 @@ pub fn setup_wallet_callbacks<N>(
                                 name: SharedString::from(asset_name),
                                 price: SharedString::from(price_fmt),
                                 amount: SharedString::from(format!(
-                                    "{:.4} {}",
-                                    asset.total_amount, asset.symbol
+                                    "{} {}",
+                                    format_compact_asset_amount(asset.total_amount),
+                                    asset.symbol
                                 )),
                                 value: SharedString::from(value_fmt),
                                 change_24h: SharedString::from(""),
