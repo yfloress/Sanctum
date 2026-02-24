@@ -715,7 +715,6 @@ fn apply_exchange_batch_filters(
 ) -> (Vec<PendingExchangeFile>, Vec<String>) {
     let has_mexc_futures_trades = files.iter().any(|f| f.source_id == "mexc_futures_trades");
     let has_mexc_trade_history = files.iter().any(|f| f.source_id == "mexc_trades");
-    let has_notbank_transactions = files.iter().any(|f| f.source_id == "notbank_transaction");
 
     let mut filtered = Vec::with_capacity(files.len());
     let mut skipped = Vec::new();
@@ -734,13 +733,6 @@ fn apply_exchange_batch_filters(
         {
             skipped.push(format!(
                 "{}: skipped duplicate source (covered by MEXC Futures Trade History)",
-                file.display_name
-            ));
-            continue;
-        }
-        if has_notbank_transactions && file.source_id == "notbank_trade" {
-            skipped.push(format!(
-                "{}: skipped overlapping source (covered by NotBank Transaction Report)",
                 file.display_name
             ));
             continue;
@@ -890,7 +882,7 @@ mod tests {
     }
 
     #[test]
-    fn batch_filter_skips_notbank_trade_when_transaction_present() {
+    fn batch_filter_keeps_notbank_trade_when_transaction_present() {
         let files = vec![
             PendingExchangeFile {
                 display_name: "Trade Activity.csv".to_string(),
@@ -905,9 +897,10 @@ mod tests {
         ];
 
         let (filtered, skipped) = apply_exchange_batch_filters(files);
-        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered.len(), 2);
         assert_eq!(filtered[0].source_id, "notbank_transaction");
-        assert_eq!(skipped.len(), 1);
+        assert_eq!(filtered[1].source_id, "notbank_trade");
+        assert!(skipped.is_empty());
     }
 
     #[test]

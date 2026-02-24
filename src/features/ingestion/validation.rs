@@ -28,6 +28,7 @@ const VALID_CRYPTO_TYPES: [&str; 4] = ["trade", "income", "expense", "transfer"]
 
 /// Maximum file size (10MB)
 pub const MAX_FILE_SIZE: usize = 10 * 1024 * 1024;
+const MAX_PRICE_PER_COIN: f64 = 1_000_000_000_000.0;
 
 /// Validates a date string in YYYY-MM-DD format
 pub fn validate_date(date: &str) -> Result<String, String> {
@@ -301,7 +302,9 @@ pub fn validate_crypto_amount(amount: f64) -> Result<f64, String> {
 pub fn validate_price_per_coin(price: Option<f64>) -> Result<Option<f64>, String> {
     match price {
         Some(p) if !p.is_finite() => Err("Price per coin must be a finite number".to_string()),
-        Some(p) if p.abs() > 10_000_000.0 => Err("Price per coin exceeds maximum".to_string()),
+        Some(p) if p.abs() > MAX_PRICE_PER_COIN => {
+            Err("Price per coin exceeds maximum".to_string())
+        }
         Some(p) => Ok(Some(p.abs())),
         None => Ok(None),
     }
@@ -521,9 +524,13 @@ mod tests {
         assert_eq!(validate_price_per_coin(Some(100.0)).unwrap(), Some(100.0));
         // Negative normalised to absolute value
         assert_eq!(validate_price_per_coin(Some(-50.0)).unwrap(), Some(50.0));
+        assert_eq!(
+            validate_price_per_coin(Some(95_000_000.0)).unwrap(),
+            Some(95_000_000.0)
+        );
         assert_eq!(validate_price_per_coin(None).unwrap(), None);
         assert!(validate_price_per_coin(Some(f64::NAN)).is_err());
-        assert!(validate_price_per_coin(Some(20_000_000.0)).is_err());
+        assert!(validate_price_per_coin(Some(2_000_000_000_000.0)).is_err());
     }
 
     #[test]

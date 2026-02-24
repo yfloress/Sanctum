@@ -84,16 +84,19 @@ pub fn detect_format(content: &str, filename: &str) -> Option<ImportFormat> {
         return Some(ImportFormat::Json);
     }
 
-    // CSV detection (has comma-separated header on first line)
+    // CSV detection
     if ext == "csv" {
+        // Try exchange-specific detection first (Kraken, Binance, Feather, etc.).
+        // Some exports (e.g. NotBank PnL) begin with a section title line that
+        // is not comma-separated, so we cannot rely on `first_line` structure.
+        if let Some(source) = detect_exchange_source(content) {
+            return Some(ImportFormat::ExchangeCsv(source));
+        }
+
+        // Generic CSV fallback (expects comma-separated header on first line).
         let first_line = trimmed.lines().next()?.to_lowercase();
         // Must have commas and not start with # (comment)
         if first_line.contains(',') && !first_line.starts_with('#') {
-            // Try exchange-specific detection first (Kraken, Binance, Feather, etc.)
-            if let Some(source) = detect_exchange_source(content) {
-                return Some(ImportFormat::ExchangeCsv(source));
-            }
-
             // Crypto CSV: wallet, symbol columns
             if first_line.contains("wallet") && first_line.contains("symbol") {
                 return Some(ImportFormat::CsvCrypto);

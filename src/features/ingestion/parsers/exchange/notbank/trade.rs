@@ -271,10 +271,18 @@ impl ExchangeParser for NotBankTradeParser {
                 continue;
             }
 
-            let fee_amount = parse_decimal(fee_raw)
+            let parsed_fee_amount = parse_decimal(fee_raw)
                 .map(f64::abs)
                 .filter(|v| *v > f64::EPSILON);
-            let fee_symbol = maybe_symbol(fee_product_raw);
+            let parsed_fee_symbol = maybe_symbol(fee_product_raw);
+            let (fee_symbol, fee_amount) = match (parsed_fee_symbol, parsed_fee_amount) {
+                (Some(symbol), Some(amount)) => (Some(symbol), Some(amount)),
+                // NotBank often exports numeric product identifiers in FeeProduct.
+                // When that happens, infer fee coin from the received side so fees
+                // are not silently dropped and balances stay coherent.
+                (None, Some(amount)) => (Some(received_symbol.clone()), Some(amount)),
+                _ => (None, None),
+            };
 
             let notes = build_trade_notes(
                 instrument_raw,
@@ -366,7 +374,7 @@ impl ExchangeParser for NotBankTradeParser {
                     override_cost_basis: None,
                     swap_to_symbol: Some(received_symbol),
                     swap_to_amount: Some(received_amount),
-                    fee_coin_symbol: fee_symbol,
+                    fee_coin_symbol: fee_symbol.clone(),
                     fee_amount,
                     notes,
                 },
@@ -417,5 +425,40 @@ mod tests {
         assert_eq!(tx.amount, 45.6);
         assert_eq!(tx.swap_to_symbol.as_deref(), Some("LTC"));
         assert_eq!(tx.swap_to_amount, Some(0.5));
+        assert_eq!(tx.fee_coin_symbol.as_deref(), Some("LTC"));
+        assert_eq!(tx.fee_amount, Some(0.00038));
+    }
+
+    #[test]
+    fn trade_parser_swap_drops_orphan_fee_symbol_without_fee_amount() {
+        let csv = "\"RegisteredEntityId\",\"TransReportId\",\"TransReportRevision\",\"TransReportType\",\"OrderId\",\"ClientOrderId\",\"QuoteId\",\"ExtTradeReportId\",\"TradeId\",\"TransReportDatetime\",\"Side\",\"Quantity\",\"Instrument\",\"Price\",\"InsideBid\",\"InsideBidSize\",\"InsideOffer\",\"InsideOfferSize\",\"LeavesSize\",\"MakerTaker\",\"Trader\",\"AccountId\",\"AccountName\",\"Fee\",\"FeeProduct\",\"Notional\",\"BaseSettlementAmount\",\"CounterpartySettlementAmount\",\"OMSId\"\n\
+\"\",\"1\",\"1\",\"OrderExecution\",\"\",\"\",\"\",\"\",\"1001\",\"2025-10-30T20:19:39.450Z\",\"Buy\",\"0.5\",\"LTCUSDT\",\"91.2\",\"0\",\"0\",\"0\",\"0\",\"0\",\"Maker\",\"1\",\"100\",\"Primary\",\"0\",\"USDT\",\"45.6\",\"0.5\",\"-45.6\",\"1\"\n";
+
+        let parser = NotBankTradeParser;
+        let result = parser.parse(csv, "NotBank").unwrap();
+        assert_eq!(result.errors.len(), 0);
+        assert_eq!(result.items.len(), 1);
+        let tx = &result.items[0].1;
+        assert_eq!(tx.subtype.as_deref(), Some("swap"));
+        assert!(tx.fee_coin_symbol.is_none());
+        assert!(tx.fee_amount.is_none());
+    }
+
+    #[test]
+    fn trade_parser_infers_fee_coin_for_numeric_fee_product_on_fiat_buy() {
+        let csv = "\"RegisteredEntityId\",\"TransReportId\",\"TransReportRevision\",\"TransReportType\",\"OrderId\",\"ClientOrderId\",\"QuoteId\",\"ExtTradeReportId\",\"TradeId\",\"TransReportDatetime\",\"Side\",\"Quantity\",\"Instrument\",\"Price\",\"InsideBid\",\"InsideBidSize\",\"InsideOffer\",\"InsideOfferSize\",\"LeavesSize\",\"MakerTaker\",\"Trader\",\"AccountId\",\"AccountName\",\"Fee\",\"FeeProduct\",\"Notional\",\"BaseSettlementAmount\",\"CounterpartySettlementAmount\",\"OMSId\"\n\
+\"\",\"1\",\"1\",\"QuoteExecution\",\"\",\"\",\"\",\"\",\"1001\",\"2025-10-30T19:53:11.325Z\",\"Buy\",\"100\",\"USDTCLP\",\"945\",\"0\",\"0\",\"0\",\"0\",\"0\",\"Maker\",\"1\",\"100\",\"Primary\",\"0.095\",\"3\",\"94500\",\"100\",\"-94500\",\"1\"\n";
+
+        let parser = NotBankTradeParser;
+        let result = parser.parse(csv, "NotBank").unwrap();
+        assert_eq!(result.errors.len(), 0);
+        assert_eq!(result.items.len(), 1);
+        let tx = &result.items[0].1;
+        assert_eq!(tx.transaction_type, "trade");
+        assert_eq!(tx.subtype.as_deref(), Some("buy"));
+        assert_eq!(tx.symbol, "USDT");
+        assert_eq!(tx.fee_coin_symbol.as_deref(), Some("USDT"));
+        assert_eq!(tx.fee_amount, Some(0.095));
+        assert!(tx.fee.is_none());
     }
 }
