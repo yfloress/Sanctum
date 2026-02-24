@@ -279,31 +279,42 @@ export component DashboardPage inherits Rectangle {
         VerticalLayout {
             alignment: center;
             spacing: 20px;
+            padding-left: 24px;
+            padding-right: 24px;
 
-            Rectangle {
-                width: 60px;
-                height: 60px;
-                border-radius: 30px;
-                background: Theme.surface;
-                border-width: 3px;
-                border-color: Theme.accent;
+            HorizontalLayout {
+                alignment: center;
 
-                Image {
-                    source: @image-url("../assets/icons/trending-up.svg");
-                    width: 28px;
-                    height: 28px;
-                    colorize: Theme.accent;
-                    x: (parent.width - self.width) / 2;
-                    y: (parent.height - self.height) / 2;
+                Rectangle {
+                    width: 60px;
+                    height: 60px;
+                    border-radius: 30px;
+                    background: Theme.surface;
+                    border-width: 3px;
+                    border-color: Theme.accent;
+
+                    Image {
+                        source: @image-url("../assets/icons/trending-up.svg");
+                        width: 28px;
+                        height: 28px;
+                        colorize: Theme.accent;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
                 }
             }
 
-            Text {
-                text: Translations.dashboard-loading;
-                color: Theme.text-secondary;
-                font-size: 14px;
-                font-weight: 500;
-                horizontal-alignment: center;
+            HorizontalLayout {
+                alignment: center;
+
+                Text {
+                    width: root.width - 48px;
+                    text: Translations.dashboard-loading;
+                    color: Theme.text-secondary;
+                    font-size: 14px;
+                    font-weight: 500;
+                    horizontal-alignment: center;
+                }
             }
         }
     }
@@ -317,59 +328,77 @@ export component DashboardPage inherits Rectangle {
         VerticalLayout {
             alignment: center;
             spacing: 20px;
+            padding-left: 24px;
+            padding-right: 24px;
 
-            Rectangle {
-                width: 60px;
-                height: 60px;
-                border-radius: 30px;
-                background: Theme.danger.with-alpha(0.1);
-                border-width: 2px;
-                border-color: Theme.danger.with-alpha(0.3);
+            HorizontalLayout {
+                alignment: center;
 
-                Image {
-                    source: @image-url("../assets/icons/info.svg");
-                    width: 28px;
-                    height: 28px;
-                    colorize: Theme.danger;
-                    vertical-alignment: center;
-                    horizontal-alignment: center;
+                Rectangle {
+                    width: 60px;
+                    height: 60px;
+                    border-radius: 30px;
+                    background: Theme.danger.with-alpha(0.1);
+                    border-width: 2px;
+                    border-color: Theme.danger.with-alpha(0.3);
+
+                    Image {
+                        source: @image-url("../assets/icons/info.svg");
+                        width: 28px;
+                        height: 28px;
+                        colorize: Theme.danger;
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                    }
                 }
             }
 
-            Text {
-                text: DashboardAdapter.error-message;
-                color: Theme.text-secondary;
-                font-size: 14px;
-                font-weight: 500;
-                horizontal-alignment: center;
-            }
-
-            Rectangle {
-                height: 36px;
-                width: 120px;
-                background: retry-touch.has-hover ? Theme.surface-hover : Theme.surface;
-                border-radius: 8px;
-                border-width: 1px;
-                border-color: Theme.border;
+            HorizontalLayout {
+                alignment: center;
 
                 Text {
-                    text: Translations.dashboard-retry;
-                    color: Theme.text-primary;
-                    font-size: 11px;
-                    font-weight: 600;
-                    letter-spacing: 1px;
+                    width: root.width - 48px;
+                    text: DashboardAdapter.error-message;
+                    color: Theme.text-secondary;
+                    font-size: 14px;
+                    font-weight: 500;
+                    wrap: word-wrap;
                     horizontal-alignment: center;
-                    vertical-alignment: center;
                 }
+            }
 
-                retry-touch := TouchArea {
-                    mouse-cursor: pointer;
-                    clicked => {
-                        DashboardAdapter.is-loading = true;
-                        DashboardAdapter.has-error = false;
-                        DashboardAdapter.fetch-balance();
-                        DashboardAdapter.fetch-recent();
-                        AnalyticsAdapter.fetch-analytics(AnalyticsAdapter.active-range);
+            HorizontalLayout {
+                alignment: center;
+
+                Rectangle {
+                    height: 36px;
+                    width: 120px;
+                    background: retry-touch.has-hover ? Theme.surface-hover : Theme.surface;
+                    border-radius: 8px;
+                    border-width: 1px;
+                    border-color: Theme.border;
+
+                    Text {
+                        width: parent.width;
+                        height: parent.height;
+                        text: Translations.dashboard-retry;
+                        color: Theme.text-primary;
+                        font-size: 11px;
+                        font-weight: 600;
+                        letter-spacing: 1px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    retry-touch := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            DashboardAdapter.is-loading = true;
+                            DashboardAdapter.has-error = false;
+                            DashboardAdapter.fetch-balance();
+                            DashboardAdapter.fetch-recent();
+                            AnalyticsAdapter.fetch-analytics(AnalyticsAdapter.active-range);
+                        }
                     }
                 }
             }

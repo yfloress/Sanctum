@@ -42,6 +42,7 @@
           cargo-audit
           cargo-edit
           slint-lsp
+          slint-viewer
           cargo-modules
           python314
         ];
