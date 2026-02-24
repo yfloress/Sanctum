@@ -13,9 +13,9 @@ This repo uses a **feature-sliced** layout with strict layer separation:
 ```
 src/
 ├── core/            # Shared validation, errors, DB wrappers
-├── features/        # finance/, crypto/, habits/ (service + repository + validation)
+├── features/        # finance/, crypto/, habits/, dashboard/, ingestion/ (service + repository + validation)
 ├── controller/      # Orchestration per domain + settings
-├── db/              # Domain SQL (finance, crypto, habits)
+├── db/              # Domain SQL + migrations (finance, crypto, habits, rewards)
 ├── services/        # Cross-cutting services (charts)
 ├── ui/              # Rust-side UI callbacks + helpers + data
 ├── main.rs          # Slint bootstrap
@@ -51,6 +51,7 @@ locales/
 - UI text must use i18n: add keys to `locales/*.ftl` and use `Translations.*` in Slint.
 - Use `ui/globals.slint` (Palette) for colors/spacing; avoid hardcoded styling values.
 - Crypto icons live in `ui/assets/crypto-icons`; the base path is defined in `src/ui/helpers.rs`.
+- Tax rule: for Chile jurisdiction, tax reports, tax history exports, and displayed tax totals must always use CLP.
 - Every source file (including tests) must start with this exact AGPL header:
 ```rust
 // Sanctum — a privacy-first personal finance, crypto, and habits vault.
