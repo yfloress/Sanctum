@@ -308,7 +308,8 @@ impl ExchangeParser for MexcStatementParser {
         let mut result: ParseResult<ImportCryptoTransaction> = ParseResult::default();
         let mut pending_convert: HashMap<String, ConvertBucket> = HashMap::new();
         let mut pending_withdrawals: HashMap<String, VecDeque<PendingWithdraw>> = HashMap::new();
-        let mut pending_withdraw_fees: HashMap<String, VecDeque<PendingWithdrawFee>> = HashMap::new();
+        let mut pending_withdraw_fees: HashMap<String, VecDeque<PendingWithdrawFee>> =
+            HashMap::new();
 
         for (idx, record) in reader.records().enumerate() {
             let record = match record {
@@ -386,7 +387,9 @@ impl ExchangeParser for MexcStatementParser {
                     symbol: symbol.clone(),
                     amount: signed_quantity.abs(),
                 };
-                let paired_withdraw = pending_withdrawals.get_mut(&key).and_then(|q| q.pop_front());
+                let paired_withdraw = pending_withdrawals
+                    .get_mut(&key)
+                    .and_then(|q| q.pop_front());
                 if let Some(withdraw) = paired_withdraw {
                     emit_withdraw_tx(&mut result, wallet_name, withdraw, Some(fee));
                 } else {
@@ -404,11 +407,16 @@ impl ExchangeParser for MexcStatementParser {
                     amount: signed_quantity.abs(),
                     notes: build_notes(tx_type_raw, direction_raw),
                 };
-                let paired_fee = pending_withdraw_fees.get_mut(&key).and_then(|q| q.pop_front());
+                let paired_fee = pending_withdraw_fees
+                    .get_mut(&key)
+                    .and_then(|q| q.pop_front());
                 if let Some(fee) = paired_fee {
                     emit_withdraw_tx(&mut result, wallet_name, withdraw, Some(fee));
                 } else {
-                    pending_withdrawals.entry(key).or_default().push_back(withdraw);
+                    pending_withdrawals
+                        .entry(key)
+                        .or_default()
+                        .push_back(withdraw);
                 }
                 continue;
             }
@@ -500,8 +508,7 @@ impl ExchangeParser for MexcStatementParser {
 mod tests {
     use super::*;
 
-    const HEADER: &str =
-        "UID,Creation Time(UTC+00:00),Crypto,Transaction Type,Direction,Quantity";
+    const HEADER: &str = "UID,Creation Time(UTC+00:00),Crypto,Transaction Type,Direction,Quantity";
 
     #[test]
     fn interest_row_maps_to_income_interest() {
@@ -637,6 +644,10 @@ mod tests {
 
         assert!(result.items.is_empty());
         assert_eq!(result.errors.len(), 1);
-        assert!(result.errors[0].message.contains("Unpaired withdrawal fee row"));
+        assert!(
+            result.errors[0]
+                .message
+                .contains("Unpaired withdrawal fee row")
+        );
     }
 }

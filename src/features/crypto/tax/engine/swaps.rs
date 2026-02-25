@@ -24,6 +24,37 @@ use crate::features::crypto::{TaxDisposal, TaxReport, TaxWarning};
 use crate::models::CryptoTransaction;
 use std::collections::HashMap;
 
+fn is_stablecoin_symbol(raw: &str) -> bool {
+    matches!(
+        raw.trim().to_ascii_uppercase().as_str(),
+        "USDT"
+            | "USDC"
+            | "BUSD"
+            | "DAI"
+            | "TUSD"
+            | "FDUSD"
+            | "USDD"
+            | "USDP"
+            | "PYUSD"
+            | "UST"
+            | "FRAX"
+    )
+}
+
+fn is_usd_pricing_symbol(raw: &str) -> bool {
+    raw.trim().eq_ignore_ascii_case("USD") || is_stablecoin_symbol(raw)
+}
+
+fn swap_pricing_leg_value_usd(tx: &CryptoTransaction) -> Option<f64> {
+    if tx.amount <= f64::EPSILON {
+        return None;
+    }
+    if is_usd_pricing_symbol(&tx.symbol) {
+        return Some(tx.amount);
+    }
+    None
+}
+
 pub(super) fn apply_swap_pair(
     report: &mut TaxReport,
     lots: &mut HashMap<String, Vec<Lot>>,
@@ -135,13 +166,11 @@ pub(super) fn compute_swap_proceeds(
     if let Some(override_proceeds) = source.override_proceeds {
         return Some(override_proceeds);
     }
-    if let Some(price) = source.price_per_coin {
-        return Some(source.amount * price);
-    }
-    if let Some(price) = target.price_per_coin {
-        return Some(target.amount * price);
-    }
-    None
+
+    // Swaps are valued from a USD pricing leg only.
+    // This avoids treating cross-asset ratios (e.g. LTC/USDT quantity ratios)
+    // as if they were USD prices.
+    swap_pricing_leg_value_usd(source).or_else(|| swap_pricing_leg_value_usd(target))
 }
 
 pub(super) fn resolve_swap_pair(
@@ -188,10 +217,10 @@ pub(super) fn resolve_swap_pair(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::types::TaxPeriod;
-    use crate::features::crypto::tax::{TaxJurisdiction, TaxMethod};
+    use super::*;
     use crate::features::crypto::TaxReportSummary;
+    use crate::features::crypto::tax::{TaxJurisdiction, TaxMethod};
     use chrono::NaiveDate;
     use std::collections::BTreeMap;
 
@@ -234,17 +263,26 @@ mod tests {
     }
 
     #[test]
-    fn compute_swap_proceeds_prefers_source_price() {
-        let source = swap_tx("s1", 1.0, Some(150.0));
+    fn compute_swap_proceeds_prefers_usd_stablecoin_leg_from_source() {
+        let mut source = swap_tx("s1", 150.0, None);
+        source.symbol = "USDT".to_string();
         let target = swap_tx("s2", 2.0, None);
         assert_eq!(compute_swap_proceeds(&source, &target), Some(150.0));
     }
 
     #[test]
-    fn compute_swap_proceeds_uses_target_price() {
+    fn compute_swap_proceeds_prefers_usd_stablecoin_leg_from_target() {
         let source = swap_tx("s1", 1.0, None);
+        let mut target = swap_tx("s2", 200.0, None);
+        target.symbol = "USDT".to_string();
+        assert_eq!(compute_swap_proceeds(&source, &target), Some(200.0));
+    }
+
+    #[test]
+    fn compute_swap_proceeds_ignores_non_pricing_side_price_ratios() {
+        let source = swap_tx("s1", 1.0, Some(150.0));
         let target = swap_tx("s2", 2.0, Some(200.0));
-        assert_eq!(compute_swap_proceeds(&source, &target), Some(400.0));
+        assert_eq!(compute_swap_proceeds(&source, &target), None);
     }
 
     #[test]
@@ -349,7 +387,12 @@ mod tests {
 
         apply_swap_pair(&mut report, &mut lots, &cfg, &source, &target, true);
 
-        assert!(report.warnings.iter().any(|w| w.code == "swap_missing_price"));
+        assert!(
+            report
+                .warnings
+                .iter()
+                .any(|w| w.code == "swap_missing_price")
+        );
         assert!(report.disposals.is_empty());
     }
 

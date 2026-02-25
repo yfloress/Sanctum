@@ -85,7 +85,8 @@ impl JsonParser {
     }
 
     fn parse_raw(&self, content: &str) -> Result<JsonFileRaw, RowError> {
-        serde_json::from_str(content).map_err(|e| RowError::new(1, None, format!("Invalid JSON: {}", e)))
+        serde_json::from_str(content)
+            .map_err(|e| RowError::new(1, None, format!("Invalid JSON: {}", e)))
     }
 }
 

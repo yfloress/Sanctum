@@ -365,11 +365,9 @@ impl PendingConvert {
         if effective_outgoing.len() > 1 && effective_incoming.len() > 1 {
             let pair_count = effective_outgoing.len().min(effective_incoming.len());
             for i in 0..pair_count {
-                if let Some(tx) = resolve_single_pair(
-                    effective_outgoing[i],
-                    effective_incoming[i],
-                    wallet_name,
-                ) {
+                if let Some(tx) =
+                    resolve_single_pair(effective_outgoing[i], effective_incoming[i], wallet_name)
+                {
                     results.push(tx);
                 }
             }
@@ -578,13 +576,12 @@ fn resolve_single_pair(
     }
 }
 
-
 mod all_statements;
 mod mapping;
 mod spot;
 
-use mapping::{single_row_to_transaction, unpaired_row_to_transaction};
 pub use all_statements::BinanceAllStatementsParser;
+use mapping::{single_row_to_transaction, unpaired_row_to_transaction};
 pub use spot::BinanceSpotParser;
 
 #[cfg(test)]

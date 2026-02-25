@@ -17,7 +17,7 @@
 
 //! Coin catalog and ticker configuration callbacks
 
-use super::helpers::{reload_portfolio, SETTING_CRYPTO_LAST_COIN_ID};
+use super::helpers::{SETTING_CRYPTO_LAST_COIN_ID, reload_portfolio};
 use crate::controller::AppController;
 use crate::{AppWindow, CatalogCoin, CryptoAdapter, TickerOption};
 use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel, Weak};

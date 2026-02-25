@@ -116,7 +116,11 @@ fn is_success_status(raw: &str) -> bool {
         || status.contains("withdrawal successful")
 }
 
-fn resolve_transfer_amount(request_amount: f64, settlement_amount: Option<f64>, fee: Option<f64>) -> f64 {
+fn resolve_transfer_amount(
+    request_amount: f64,
+    settlement_amount: Option<f64>,
+    fee: Option<f64>,
+) -> f64 {
     let epsilon = 1e-12;
 
     if let Some(settlement) = settlement_amount
@@ -260,7 +264,9 @@ impl ExchangeParser for MexcWithdrawalParser {
                 }
             };
 
-            let fee_amount = parse_decimal(trading_fee_raw).map(f64::abs).filter(|v| *v > 0.0);
+            let fee_amount = parse_decimal(trading_fee_raw)
+                .map(f64::abs)
+                .filter(|v| *v > 0.0);
             let settlement_amount = parse_decimal(settlement_amount_raw)
                 .map(f64::abs)
                 .filter(|v| *v > 0.0);
@@ -308,8 +314,7 @@ impl ExchangeParser for MexcWithdrawalParser {
 mod tests {
     use super::*;
 
-    const HEADER: &str =
-        "UID,Status,Time,Crypto,Network,Request Amount,Withdrawal Address,memo,TxID,Trading Fee,Settlement Amount,Withdrawal Descriptions";
+    const HEADER: &str = "UID,Status,Time,Crypto,Network,Request Amount,Withdrawal Address,memo,TxID,Trading Fee,Settlement Amount,Withdrawal Descriptions";
 
     #[test]
     fn successful_withdrawal_is_transfer_out_with_fee() {
@@ -382,7 +387,8 @@ mod tests {
 
     #[test]
     fn missing_required_column_returns_error() {
-        let csv = "UID,Status,Time,Crypto\n11111111,Withdrawal Successful,2025-06-02 17:45:12,BTC\n";
+        let csv =
+            "UID,Status,Time,Crypto\n11111111,Withdrawal Successful,2025-06-02 17:45:12,BTC\n";
 
         let parser = MexcWithdrawalParser;
         let err = parser.parse(csv, "MEXC").unwrap_err();

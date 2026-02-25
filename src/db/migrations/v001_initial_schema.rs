@@ -26,7 +26,7 @@
 
 use crate::db::DbError;
 use chrono::Utc;
-use rusqlite::{params, Connection};
+use rusqlite::{Connection, params};
 
 pub fn up(conn: &Connection) -> Result<(), DbError> {
     // === FIAT Finance System ===
@@ -137,10 +137,9 @@ fn create_transaction_categories_table(conn: &Connection) -> Result<(), DbError>
 }
 
 fn initialize_default_categories(conn: &Connection) -> Result<(), DbError> {
-    let count: i64 =
-        conn.query_row("SELECT COUNT(*) FROM transaction_categories", [], |row| {
-            row.get(0)
-        })?;
+    let count: i64 = conn.query_row("SELECT COUNT(*) FROM transaction_categories", [], |row| {
+        row.get(0)
+    })?;
 
     if count > 0 {
         return Ok(());

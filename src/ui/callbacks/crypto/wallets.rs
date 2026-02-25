@@ -17,9 +17,7 @@
 
 //! Wallet CRUD callbacks
 
-use super::helpers::{
-    format_compact_asset_amount, format_compact_price_preferred, reload_wallets,
-};
+use super::helpers::{format_compact_asset_amount, format_compact_price_preferred, reload_wallets};
 use crate::controller::AppController;
 use crate::models::{CryptoAsset, CryptoTransaction};
 use crate::ui::{

@@ -90,7 +90,11 @@ impl DashboardCharts {
                 .get(account_id)
                 .map(|s| s.as_str())
                 .unwrap_or("USD");
-            let rate = usd_rates.get(currency).copied().filter(|r| *r > 0.0).unwrap_or(1.0);
+            let rate = usd_rates
+                .get(currency)
+                .copied()
+                .filter(|r| *r > 0.0)
+                .unwrap_or(1.0);
             ((amount as f64) / rate).round() as i64
         };
 
@@ -148,7 +152,10 @@ impl DashboardCharts {
             let crypto_at_date = if date_str == today_str {
                 crypto_cents // Always use current value for today
             } else {
-                crypto_by_date.get(&date_str).copied().unwrap_or(crypto_cents)
+                crypto_by_date
+                    .get(&date_str)
+                    .copied()
+                    .unwrap_or(crypto_cents)
             };
 
             let total_at_date = balance + crypto_at_date;
@@ -209,7 +216,11 @@ impl DashboardCharts {
                 .get(account_id)
                 .map(|s| s.as_str())
                 .unwrap_or("USD");
-            let rate = usd_rates.get(currency).copied().filter(|r| *r > 0.0).unwrap_or(1.0);
+            let rate = usd_rates
+                .get(currency)
+                .copied()
+                .filter(|r| *r > 0.0)
+                .unwrap_or(1.0);
             ((amount as f64) / rate).round() as i64
         };
 
@@ -239,7 +250,11 @@ impl DashboardCharts {
                 .get(account_id)
                 .map(|s| s.as_str())
                 .unwrap_or("USD");
-            let rate = usd_rates.get(currency).copied().filter(|r| *r > 0.0).unwrap_or(1.0);
+            let rate = usd_rates
+                .get(currency)
+                .copied()
+                .filter(|r| *r > 0.0)
+                .unwrap_or(1.0);
             ((amount as f64) / rate).round() as i64
         };
 
@@ -347,7 +362,12 @@ mod tests {
     fn test_get_expenses_by_category_single_expense() {
         let accounts = vec![make_account("acc1", "USD", 0)];
         let transactions = vec![make_transaction(
-            "tx1", "acc1", 5000, "Food", "expense", "2024-12-01",
+            "tx1",
+            "acc1",
+            5000,
+            "Food",
+            "expense",
+            "2024-12-01",
         )];
 
         let rates = usd_rates(&[]);
@@ -361,7 +381,12 @@ mod tests {
     fn test_get_expenses_by_category_converts_non_usd_with_cached_rate() {
         let accounts = vec![make_account("acc1", "EUR", 0)];
         let transactions = vec![make_transaction(
-            "tx1", "acc1", 9200, "Food", "expense", "2024-12-01",
+            "tx1",
+            "acc1",
+            9200,
+            "Food",
+            "expense",
+            "2024-12-01",
         )];
         let rates = usd_rates(&[("EUR", 0.92)]);
 

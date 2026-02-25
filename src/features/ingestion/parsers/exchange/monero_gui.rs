@@ -342,6 +342,5 @@ impl ExchangeParser for MoneroGuiParser {
 //  Tests
 // ═══════════════════════════════════════════════════════════════════════════
 
-
 #[cfg(test)]
 mod tests;

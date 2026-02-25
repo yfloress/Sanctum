@@ -80,8 +80,8 @@ fn parse_compact_pair(raw: &str) -> Option<(String, String)> {
 
     let upper = normalize_symbol(trimmed);
     const QUOTE_SUFFIXES: &[&str] = &[
-        "USDT", "USDC", "BUSD", "FDUSD", "TUSD", "USDD", "USDP", "DAI", "CLP", "ARS", "BRL",
-        "MXN", "USD", "EUR", "GBP", "JPY", "BTC", "ETH", "LTC", "XMR",
+        "USDT", "USDC", "BUSD", "FDUSD", "TUSD", "USDD", "USDP", "DAI", "CLP", "ARS", "BRL", "MXN",
+        "USD", "EUR", "GBP", "JPY", "BTC", "ETH", "LTC", "XMR",
     ];
 
     for quote in QUOTE_SUFFIXES {

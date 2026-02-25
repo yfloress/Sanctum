@@ -21,8 +21,8 @@
 
 use crate::db::{Database, DbError};
 // Use shared models from the central domain layer
-use crate::models::{Habit, HabitLog};
 use super::repository::HabitsRepository;
+use crate::models::{Habit, HabitLog};
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
@@ -88,23 +88,21 @@ impl HabitService {
         category: String,
         is_archived: bool,
     ) -> Result<(), DbError> {
-        self.with_db(|db| {
-            match HabitsRepository::get_habit(db, &id)? {
-                Some(mut habit) => {
-                    habit.name = name;
-                    habit.description = description;
-                    habit.color = color;
-                    habit.category = category;
+        self.with_db(|db| match HabitsRepository::get_habit(db, &id)? {
+            Some(mut habit) => {
+                habit.name = name;
+                habit.description = description;
+                habit.color = color;
+                habit.category = category;
 
-                    HabitsRepository::update_habit(db, &habit)?;
+                HabitsRepository::update_habit(db, &habit)?;
 
-                    if is_archived {
-                        HabitsRepository::archive_habit(db, &id)?;
-                    }
-                    Ok(())
+                if is_archived {
+                    HabitsRepository::archive_habit(db, &id)?;
                 }
-                None => Err(DbError::Sqlite(rusqlite::Error::QueryReturnedNoRows)),
+                Ok(())
             }
+            None => Err(DbError::Sqlite(rusqlite::Error::QueryReturnedNoRows)),
         })
     }
 
@@ -117,11 +115,16 @@ impl HabitService {
     }
 
     pub fn toggle_habit_completion(&self, habit_id: String, date: String) -> Result<bool, DbError> {
-        let (active, _id) = self.with_db(|db| HabitsRepository::toggle_habit_log(db, &habit_id, &date))?;
+        let (active, _id) =
+            self.with_db(|db| HabitsRepository::toggle_habit_log(db, &habit_id, &date))?;
         Ok(active)
     }
 
-    pub fn get_habit_logs(&self, start_date: String, end_date: String) -> Result<Vec<HabitLog>, DbError> {
+    pub fn get_habit_logs(
+        &self,
+        start_date: String,
+        end_date: String,
+    ) -> Result<Vec<HabitLog>, DbError> {
         self.with_db(|db| HabitsRepository::get_habit_logs(db, &start_date, &end_date))
     }
 }

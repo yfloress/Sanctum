@@ -364,48 +364,49 @@ fn setup_goal_callbacks<N>(
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         let notify = notify.clone();
-        ui.global::<RewardsAdapter>().on_update_goal_with_checkpoints(
-            move |id: SharedString,
-                  name: SharedString,
-                  description: SharedString,
-                  reward_text: SharedString,
-                  deadline: SharedString,
-                  checkpoint_count: i32,
-                  cp1_id: SharedString,
-                  cp1_text: SharedString,
-                  cp2_id: SharedString,
-                  cp2_text: SharedString,
-                  cp3_id: SharedString,
-                  cp3_text: SharedString,
-                  cp4_id: SharedString,
-                  cp4_text: SharedString|
-                  -> SharedString {
-                let result = controller.update_goal_with_checkpoints(
-                    id.to_string(),
-                    name.to_string(),
-                    description.to_string(),
-                    reward_text.to_string(),
-                    deadline.to_string(),
-                    checkpoint_count,
-                    cp1_id.to_string(),
-                    cp1_text.to_string(),
-                    cp2_id.to_string(),
-                    cp2_text.to_string(),
-                    cp3_id.to_string(),
-                    cp3_text.to_string(),
-                    cp4_id.to_string(),
-                    cp4_text.to_string(),
-                );
+        ui.global::<RewardsAdapter>()
+            .on_update_goal_with_checkpoints(
+                move |id: SharedString,
+                      name: SharedString,
+                      description: SharedString,
+                      reward_text: SharedString,
+                      deadline: SharedString,
+                      checkpoint_count: i32,
+                      cp1_id: SharedString,
+                      cp1_text: SharedString,
+                      cp2_id: SharedString,
+                      cp2_text: SharedString,
+                      cp3_id: SharedString,
+                      cp3_text: SharedString,
+                      cp4_id: SharedString,
+                      cp4_text: SharedString|
+                      -> SharedString {
+                    let result = controller.update_goal_with_checkpoints(
+                        id.to_string(),
+                        name.to_string(),
+                        description.to_string(),
+                        reward_text.to_string(),
+                        deadline.to_string(),
+                        checkpoint_count,
+                        cp1_id.to_string(),
+                        cp1_text.to_string(),
+                        cp2_id.to_string(),
+                        cp2_text.to_string(),
+                        cp3_id.to_string(),
+                        cp3_text.to_string(),
+                        cp4_id.to_string(),
+                        cp4_text.to_string(),
+                    );
 
-                match result {
-                    Ok(_) => {
-                        schedule_goals_refresh(&ui_weak, &controller, &notify, "Goal updated");
-                        SharedString::from("")
+                    match result {
+                        Ok(_) => {
+                            schedule_goals_refresh(&ui_weak, &controller, &notify, "Goal updated");
+                            SharedString::from("")
+                        }
+                        Err(e) => SharedString::from(e.to_string()),
                     }
-                    Err(e) => SharedString::from(e.to_string()),
-                }
-            },
-        );
+                },
+            );
     }
 
     // on_delete_goal
@@ -543,8 +544,8 @@ fn setup_checkpoint_callbacks<N>(
         let notify = notify.clone();
         ui.global::<RewardsAdapter>().on_update_checkpoint(
             move |checkpoint_id: SharedString, description: SharedString| -> SharedString {
-                let result =
-                    controller.update_checkpoint(checkpoint_id.to_string(), description.to_string());
+                let result = controller
+                    .update_checkpoint(checkpoint_id.to_string(), description.to_string());
                 match result {
                     Ok(_) => {
                         let ui_weak = ui_weak.clone();

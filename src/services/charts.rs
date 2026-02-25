@@ -39,10 +39,7 @@ impl ChartsService {
         Self
     }
 
-    pub fn render_habit_radar_chart(
-        &self,
-        categories: &[(String, String, f32)],
-    ) -> Option<Image> {
+    pub fn render_habit_radar_chart(&self, categories: &[(String, String, f32)]) -> Option<Image> {
         if categories.is_empty() {
             return None;
         }

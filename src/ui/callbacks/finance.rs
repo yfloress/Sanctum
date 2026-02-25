@@ -139,27 +139,26 @@ pub fn setup_account_callbacks<F, G, H, N>(
                 let mut account_lookup: HashMap<String, (String, String)> = HashMap::new();
                 let mut account_index_map: HashMap<String, i32> = HashMap::new();
                 for (idx, acc) in accounts.iter().enumerate() {
-                    account_lookup.insert(
-                        acc.id.clone(),
-                        (acc.currency.clone(), acc.name.clone()),
-                    );
+                    account_lookup.insert(acc.id.clone(), (acc.currency.clone(), acc.name.clone()));
                     account_index_map.insert(acc.id.clone(), idx as i32);
                 }
 
-                let expense_categories = match controller.get_transaction_categories("expense".to_string()) {
-                    Ok(list) => list,
-                    Err(e) => {
-                        notify(format!("Failed to load categories: {}", e), true);
-                        return;
-                    }
-                };
-                let income_categories = match controller.get_transaction_categories("income".to_string()) {
-                    Ok(list) => list,
-                    Err(e) => {
-                        notify(format!("Failed to load categories: {}", e), true);
-                        return;
-                    }
-                };
+                let expense_categories =
+                    match controller.get_transaction_categories("expense".to_string()) {
+                        Ok(list) => list,
+                        Err(e) => {
+                            notify(format!("Failed to load categories: {}", e), true);
+                            return;
+                        }
+                    };
+                let income_categories =
+                    match controller.get_transaction_categories("income".to_string()) {
+                        Ok(list) => list,
+                        Err(e) => {
+                            notify(format!("Failed to load categories: {}", e), true);
+                            return;
+                        }
+                    };
 
                 let expense_index_map: HashMap<String, i32> = expense_categories
                     .iter()
@@ -233,8 +232,15 @@ pub fn setup_account_callbacks<F, G, H, N>(
                         Some(TransactionData {
                             id: tx.id.clone().into(),
                             account_id: tx.account_id.clone().into(),
-                            account_index: account_index_map.get(&tx.account_id).cloned().unwrap_or(0),
-                            transfer_account_id: tx.transfer_account_id.clone().unwrap_or_default().into(),
+                            account_index: account_index_map
+                                .get(&tx.account_id)
+                                .cloned()
+                                .unwrap_or(0),
+                            transfer_account_id: tx
+                                .transfer_account_id
+                                .clone()
+                                .unwrap_or_default()
+                                .into(),
                             transfer_account_index: tx
                                 .transfer_account_id
                                 .as_ref()
@@ -506,7 +512,8 @@ pub fn setup_account_callbacks<F, G, H, N>(
                         if let Some(ui) = ui_weak.upgrade()
                             && ui.global::<AccountAdapter>().get_show_account_detail()
                         {
-                            ui.global::<AccountAdapter>().invoke_fetch_account_details(id);
+                            ui.global::<AccountAdapter>()
+                                .invoke_fetch_account_details(id);
                         }
                         notify("Account icon updated".to_string(), false);
                         SharedString::from("")
@@ -638,7 +645,14 @@ pub fn setup_transaction_callbacks<F, G, H, N>(
         let reload_recent = reload_recent.clone();
         let notify = notify.clone();
         ui.global::<TransactionAdapter>().on_update_transaction(
-            move |id, account_id, amount, category, description, date, is_expense| -> SharedString {
+            move |id,
+                  account_id,
+                  amount,
+                  category,
+                  description,
+                  date,
+                  is_expense|
+                  -> SharedString {
                 let amount_cents = match parse_amount_input(&amount) {
                     Some(v) if v > 0 => v,
                     _ => return SharedString::from("Amount must be greater than zero"),

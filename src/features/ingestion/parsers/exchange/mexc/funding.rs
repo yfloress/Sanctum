@@ -148,14 +148,10 @@ fn map_transfer_subtype(transfer_type_raw: &str, signed_amount: f64) -> String {
         .split(|c: char| !c.is_ascii_alphanumeric())
         .filter(|s| !s.is_empty())
         .collect();
-    if normalized.contains("withdraw")
-        || tokens.iter().any(|t| *t == "out" || *t == "outflow")
-    {
+    if normalized.contains("withdraw") || tokens.iter().any(|t| *t == "out" || *t == "outflow") {
         return "withdrawal".to_string();
     }
-    if normalized.contains("deposit")
-        || tokens.iter().any(|t| *t == "in" || *t == "inflow")
-    {
+    if normalized.contains("deposit") || tokens.iter().any(|t| *t == "in" || *t == "inflow") {
         return "deposit".to_string();
     }
     if signed_amount < 0.0 {

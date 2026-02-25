@@ -75,6 +75,95 @@ fn parse_side(raw: &str) -> Option<bool> {
     }
 }
 
+fn is_stablecoin_symbol(raw: &str) -> bool {
+    matches!(
+        raw.trim().to_ascii_uppercase().as_str(),
+        "USDT"
+            | "USDC"
+            | "BUSD"
+            | "DAI"
+            | "TUSD"
+            | "FDUSD"
+            | "USDD"
+            | "USDP"
+            | "PYUSD"
+            | "UST"
+            | "FRAX"
+    )
+}
+
+fn is_usd_symbol(raw: &str) -> bool {
+    raw.trim().eq_ignore_ascii_case("USD")
+}
+
+fn is_non_usd_fiat_symbol(raw: &str) -> bool {
+    is_fiat(raw) && !is_usd_symbol(raw)
+}
+
+fn update_quote_to_usd_rate(
+    quote_to_usd: &mut HashMap<String, f64>,
+    spent_symbol: &str,
+    spent_amount: f64,
+    received_symbol: &str,
+    received_amount: f64,
+) {
+    let (fiat_symbol, fiat_amount, stable_amount) =
+        if is_non_usd_fiat_symbol(spent_symbol) && is_stablecoin_symbol(received_symbol) {
+            (spent_symbol, spent_amount, received_amount)
+        } else if is_non_usd_fiat_symbol(received_symbol) && is_stablecoin_symbol(spent_symbol) {
+            (received_symbol, received_amount, spent_amount)
+        } else {
+            return;
+        };
+
+    if fiat_amount > f64::EPSILON && stable_amount > f64::EPSILON {
+        quote_to_usd.insert(
+            fiat_symbol.trim().to_ascii_uppercase(),
+            stable_amount / fiat_amount,
+        );
+    }
+}
+
+fn convert_fiat_amount_to_usd(
+    amount: f64,
+    fiat_symbol: &str,
+    quote_to_usd: &HashMap<String, f64>,
+) -> Option<f64> {
+    if amount <= f64::EPSILON {
+        return None;
+    }
+
+    if is_usd_symbol(fiat_symbol) {
+        return Some(amount);
+    }
+
+    let key = fiat_symbol.trim().to_ascii_uppercase();
+    quote_to_usd.get(&key).map(|rate| amount * *rate)
+}
+
+fn normalize_fiat_trade_price_to_usd(
+    crypto_symbol: &str,
+    fiat_symbol: &str,
+    fiat_per_coin: f64,
+    quote_to_usd: &HashMap<String, f64>,
+) -> Option<f64> {
+    if fiat_per_coin <= f64::EPSILON {
+        return None;
+    }
+
+    if is_usd_symbol(fiat_symbol) {
+        return Some(fiat_per_coin);
+    }
+
+    // Stablecoins are treated as USD-pegged for tax valuation fallback.
+    if is_stablecoin_symbol(crypto_symbol) {
+        return Some(1.0);
+    }
+
+    let key = fiat_symbol.trim().to_ascii_uppercase();
+    quote_to_usd.get(&key).map(|rate| fiat_per_coin * *rate)
+}
+
 #[allow(clippy::too_many_arguments)]
 fn build_trade_notes(
     instrument_raw: &str,
@@ -105,11 +194,7 @@ fn build_trade_notes(
     }
     if !fee_raw.trim().is_empty() {
         if !fee_product_raw.trim().is_empty() {
-            parts.push(format!(
-                "fee={} {}",
-                fee_raw.trim(),
-                fee_product_raw.trim()
-            ));
+            parts.push(format!("fee={} {}", fee_raw.trim(), fee_product_raw.trim()));
         } else {
             parts.push(format!("fee={}", fee_raw.trim()));
         }
@@ -151,6 +236,7 @@ impl ExchangeParser for NotBankTradeParser {
         }
 
         let mut result: ParseResult<ImportCryptoTransaction> = ParseResult::default();
+        let mut quote_to_usd: HashMap<String, f64> = HashMap::new();
 
         for (idx, record) in reader.records().enumerate() {
             let record = match record {
@@ -271,6 +357,14 @@ impl ExchangeParser for NotBankTradeParser {
                 continue;
             }
 
+            update_quote_to_usd_rate(
+                &mut quote_to_usd,
+                &spent_symbol,
+                spent_amount,
+                &received_symbol,
+                received_amount,
+            );
+
             let parsed_fee_amount = parse_decimal(fee_raw)
                 .map(f64::abs)
                 .filter(|v| *v > f64::EPSILON);
@@ -296,6 +390,12 @@ impl ExchangeParser for NotBankTradeParser {
             );
 
             if is_fiat(&spent_symbol) && !is_fiat(&received_symbol) {
+                let price_per_coin = normalize_fiat_trade_price_to_usd(
+                    &received_symbol,
+                    &spent_symbol,
+                    spent_amount / received_amount,
+                    &quote_to_usd,
+                );
                 let mut tx = ImportCryptoTransaction {
                     date: format_datetime(timestamp),
                     wallet: wallet_name.to_string(),
@@ -303,7 +403,7 @@ impl ExchangeParser for NotBankTradeParser {
                     transaction_type: "trade".to_string(),
                     amount: received_amount,
                     subtype: Some("buy".to_string()),
-                    price_per_coin: Some(spent_amount / received_amount),
+                    price_per_coin,
                     fee: None,
                     override_proceeds: None,
                     override_cost_basis: None,
@@ -316,7 +416,7 @@ impl ExchangeParser for NotBankTradeParser {
 
                 if let (Some(fa), Some(fs)) = (fee_amount, fee_symbol.clone()) {
                     if is_fiat(&fs) {
-                        tx.fee = Some(fa);
+                        tx.fee = convert_fiat_amount_to_usd(fa, &fs, &quote_to_usd);
                     } else {
                         tx.fee_coin_symbol = Some(fs);
                         tx.fee_amount = Some(fa);
@@ -328,6 +428,12 @@ impl ExchangeParser for NotBankTradeParser {
             }
 
             if !is_fiat(&spent_symbol) && is_fiat(&received_symbol) {
+                let price_per_coin = normalize_fiat_trade_price_to_usd(
+                    &spent_symbol,
+                    &received_symbol,
+                    received_amount / spent_amount,
+                    &quote_to_usd,
+                );
                 let mut tx = ImportCryptoTransaction {
                     date: format_datetime(timestamp),
                     wallet: wallet_name.to_string(),
@@ -335,7 +441,7 @@ impl ExchangeParser for NotBankTradeParser {
                     transaction_type: "trade".to_string(),
                     amount: spent_amount,
                     subtype: Some("sell".to_string()),
-                    price_per_coin: Some(received_amount / spent_amount),
+                    price_per_coin,
                     fee: None,
                     override_proceeds: None,
                     override_cost_basis: None,
@@ -348,7 +454,7 @@ impl ExchangeParser for NotBankTradeParser {
 
                 if let (Some(fa), Some(fs)) = (fee_amount, fee_symbol.clone()) {
                     if is_fiat(&fs) {
-                        tx.fee = Some(fa);
+                        tx.fee = convert_fiat_amount_to_usd(fa, &fs, &quote_to_usd);
                     } else {
                         tx.fee_coin_symbol = Some(fs);
                         tx.fee_amount = Some(fa);
@@ -407,7 +513,7 @@ mod tests {
         assert_eq!(tx.subtype.as_deref(), Some("buy"));
         assert_eq!(tx.symbol, "USDT");
         assert_eq!(tx.amount, 100.0);
-        assert_eq!(tx.price_per_coin, Some(945.0));
+        assert_eq!(tx.price_per_coin, Some(1.0));
     }
 
     #[test]
@@ -460,5 +566,37 @@ mod tests {
         assert_eq!(tx.fee_coin_symbol.as_deref(), Some("USDT"));
         assert_eq!(tx.fee_amount, Some(0.095));
         assert!(tx.fee.is_none());
+    }
+
+    #[test]
+    fn trade_parser_converts_non_usd_fiat_price_using_stablecoin_anchor() {
+        let csv = "\"RegisteredEntityId\",\"TransReportId\",\"TransReportRevision\",\"TransReportType\",\"OrderId\",\"ClientOrderId\",\"QuoteId\",\"ExtTradeReportId\",\"TradeId\",\"TransReportDatetime\",\"Side\",\"Quantity\",\"Instrument\",\"Price\",\"InsideBid\",\"InsideBidSize\",\"InsideOffer\",\"InsideOfferSize\",\"LeavesSize\",\"MakerTaker\",\"Trader\",\"AccountId\",\"AccountName\",\"Fee\",\"FeeProduct\",\"Notional\",\"BaseSettlementAmount\",\"CounterpartySettlementAmount\",\"OMSId\"\n\
+\"\",\"1\",\"1\",\"QuoteExecution\",\"\",\"\",\"\",\"\",\"1001\",\"2025-10-30T19:53:11.325Z\",\"Buy\",\"100\",\"USDTCLP\",\"945\",\"0\",\"0\",\"0\",\"0\",\"0\",\"Maker\",\"1\",\"100\",\"Primary\",\"0.10\",\"CLP\",\"94500\",\"100\",\"-94500\",\"1\"\n\
+\"\",\"2\",\"1\",\"QuoteExecution\",\"\",\"\",\"\",\"\",\"1002\",\"2025-10-30T20:19:39.450Z\",\"Buy\",\"0.001\",\"BTCCLP\",\"63000000\",\"0\",\"0\",\"0\",\"0\",\"0\",\"Maker\",\"1\",\"100\",\"Primary\",\"0\",\"CLP\",\"63000\",\"0.001\",\"-63000\",\"1\"\n";
+
+        let parser = NotBankTradeParser;
+        let result = parser.parse(csv, "NotBank").unwrap();
+        assert_eq!(result.errors.len(), 0);
+        assert_eq!(result.items.len(), 2);
+
+        let btc_buy = &result.items[1].1;
+        assert_eq!(btc_buy.transaction_type, "trade");
+        assert_eq!(btc_buy.subtype.as_deref(), Some("buy"));
+        assert_eq!(btc_buy.symbol, "BTC");
+        assert!((btc_buy.price_per_coin.unwrap_or_default() - 66666.6667).abs() < 0.01);
+    }
+
+    #[test]
+    fn trade_parser_leaves_non_usd_fiat_price_empty_without_anchor() {
+        let csv = "\"RegisteredEntityId\",\"TransReportId\",\"TransReportRevision\",\"TransReportType\",\"OrderId\",\"ClientOrderId\",\"QuoteId\",\"ExtTradeReportId\",\"TradeId\",\"TransReportDatetime\",\"Side\",\"Quantity\",\"Instrument\",\"Price\",\"InsideBid\",\"InsideBidSize\",\"InsideOffer\",\"InsideOfferSize\",\"LeavesSize\",\"MakerTaker\",\"Trader\",\"AccountId\",\"AccountName\",\"Fee\",\"FeeProduct\",\"Notional\",\"BaseSettlementAmount\",\"CounterpartySettlementAmount\",\"OMSId\"\n\
+\"\",\"1\",\"1\",\"QuoteExecution\",\"\",\"\",\"\",\"\",\"1001\",\"2025-10-30T20:19:39.450Z\",\"Buy\",\"0.001\",\"BTCCLP\",\"63000000\",\"0\",\"0\",\"0\",\"0\",\"0\",\"Maker\",\"1\",\"100\",\"Primary\",\"0\",\"CLP\",\"63000\",\"0.001\",\"-63000\",\"1\"\n";
+
+        let parser = NotBankTradeParser;
+        let result = parser.parse(csv, "NotBank").unwrap();
+        assert_eq!(result.errors.len(), 0);
+        assert_eq!(result.items.len(), 1);
+        let tx = &result.items[0].1;
+        assert_eq!(tx.symbol, "BTC");
+        assert!(tx.price_per_coin.is_none());
     }
 }

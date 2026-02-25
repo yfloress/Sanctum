@@ -25,6 +25,40 @@ use crate::models::CryptoTransaction;
 use chrono::Datelike;
 use std::collections::HashMap;
 
+fn is_stablecoin_symbol(raw: &str) -> bool {
+    matches!(
+        raw.trim().to_ascii_uppercase().as_str(),
+        "USDT"
+            | "USDC"
+            | "BUSD"
+            | "DAI"
+            | "TUSD"
+            | "FDUSD"
+            | "USDD"
+            | "USDP"
+            | "PYUSD"
+            | "UST"
+            | "FRAX"
+    )
+}
+
+fn is_stablecoin_coin_id(raw: &str) -> bool {
+    matches!(
+        raw.trim().to_ascii_lowercase().as_str(),
+        "tether"
+            | "usd-coin"
+            | "binance-usd"
+            | "dai"
+            | "true-usd"
+            | "first-digital-usd"
+            | "usdd"
+            | "pax-dollar"
+            | "paypal-usd"
+            | "terrausd"
+            | "frax"
+    )
+}
+
 // ---------------------------------------------------------------------------
 // Lot creation
 // ---------------------------------------------------------------------------
@@ -47,10 +81,7 @@ pub(super) fn add_lot(
 ) {
     // Chile: airdrops, staking and forks are recognised at cost $0.
     let force_zero_cost = matches!(jurisdiction, TaxJurisdiction::Chile)
-        && matches!(
-            subtype,
-            Some("airdrop") | Some("staking") | Some("fork")
-        );
+        && matches!(subtype, Some("airdrop") | Some("staking") | Some("fork"));
 
     let price = if force_zero_cost {
         0.0
@@ -188,8 +219,23 @@ pub(super) fn apply_fee_disposal(
     };
 
     let mut fee_price = None;
-    if fee_coin_id == tx.coin_id {
+    if fee_coin_id.trim().eq_ignore_ascii_case("usd")
+        || is_stablecoin_symbol(fee_coin_id)
+        || is_stablecoin_coin_id(fee_coin_id)
+    {
+        fee_price = Some(1.0);
+    } else if fee_coin_id == tx.coin_id && tx.subtype.as_deref() != Some("swap") {
         fee_price = tx.price_per_coin;
+    }
+
+    if fee_price.is_none()
+        && let Some(fee_usd) = tx.fee
+        && fee_usd > 0.0
+    {
+        let inferred = fee_usd / fee_amount;
+        if inferred.is_finite() && inferred > 0.0 {
+            fee_price = Some(inferred);
+        }
     }
 
     let proceeds = match fee_price {
@@ -644,7 +690,6 @@ pub(super) fn update_summary(
 // ===========================================================================
 // Tests
 // ===========================================================================
-
 
 #[cfg(test)]
 mod tests;

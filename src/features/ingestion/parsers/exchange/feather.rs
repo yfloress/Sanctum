@@ -346,6 +346,5 @@ impl ExchangeParser for FeatherParser {
 //  Tests
 // ═══════════════════════════════════════════════════════════════════════════
 
-
 #[cfg(test)]
 mod tests;

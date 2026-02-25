@@ -692,6 +692,9 @@ export global CryptoAdapter {
     in-out property <string> tax-summary-volume: "";
     in-out property <string> tax-summary-warnings: "";
     in-out property <int> tax-readiness-issues: 0;
+    in-out property <bool> tax-can-resolve-prices: false;
+    in-out property <int> tax-missing-price-count: 0;
+    in-out property <bool> tax-price-syncing: false;
     in-out property <[TaxReadinessItem]> tax-readiness: [];
     in-out property <[TaxWalletEntry]> tax-wallet-list: [];
 
@@ -729,6 +732,7 @@ export global CryptoAdapter {
     callback copy-ipc-url();
     callback save-tax-settings();
     callback toggle-tax-wallet-exclusion(string); // wallet_id
+    callback sync-tax-missing-prices(bool); // user_initiated
     callback generate-tax-report();
     callback export-tax-report();
     callback export-tax-history();

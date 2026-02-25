@@ -217,14 +217,12 @@ impl Database {
                 Err(_) => continue,
             };
 
-            let entry = assets
-                .entry(tx.coin_id.clone())
-                .or_insert_with(|| {
-                    AggregatedAsset::new(
-                        tx.coin_id.clone(),
-                        canonical_symbol_for_coin(&tx.coin_id, &tx.symbol),
-                    )
-                });
+            let entry = assets.entry(tx.coin_id.clone()).or_insert_with(|| {
+                AggregatedAsset::new(
+                    tx.coin_id.clone(),
+                    canonical_symbol_for_coin(&tx.coin_id, &tx.symbol),
+                )
+            });
 
             if matches!(tx_type, CryptoTransactionType::Buy) {
                 entry.total_amount += tx.amount;
@@ -293,14 +291,12 @@ impl Database {
         source: &CryptoTransaction,
         target: &CryptoTransaction,
     ) {
-        let source_entry = assets
-            .entry(source.coin_id.clone())
-            .or_insert_with(|| {
-                AggregatedAsset::new(
-                    source.coin_id.clone(),
-                    canonical_symbol_for_coin(&source.coin_id, &source.symbol),
-                )
-            });
+        let source_entry = assets.entry(source.coin_id.clone()).or_insert_with(|| {
+            AggregatedAsset::new(
+                source.coin_id.clone(),
+                canonical_symbol_for_coin(&source.coin_id, &source.symbol),
+            )
+        });
 
         // Capture state before the swap to compute proportional cost
         let prev_amount = source_entry.total_amount;
@@ -322,14 +318,12 @@ impl Database {
         source_entry.total_cost_basis = (source_entry.total_cost_basis - cost_transferred).max(0.0);
 
         // Apply inflow on target asset
-        let target_entry = assets
-            .entry(target.coin_id.clone())
-            .or_insert_with(|| {
-                AggregatedAsset::new(
-                    target.coin_id.clone(),
-                    canonical_symbol_for_coin(&target.coin_id, &target.symbol),
-                )
-            });
+        let target_entry = assets.entry(target.coin_id.clone()).or_insert_with(|| {
+            AggregatedAsset::new(
+                target.coin_id.clone(),
+                canonical_symbol_for_coin(&target.coin_id, &target.symbol),
+            )
+        });
         target_entry.total_amount += target.amount;
         target_entry.total_cost_basis += cost_transferred.max(0.0);
 
@@ -497,14 +491,12 @@ impl Database {
             return false;
         }
 
-        let entry = assets
-            .entry(source.coin_id.clone())
-            .or_insert_with(|| {
-                AggregatedAsset::new(
-                    source.coin_id.clone(),
-                    canonical_symbol_for_coin(&source.coin_id, &source.symbol),
-                )
-            });
+        let entry = assets.entry(source.coin_id.clone()).or_insert_with(|| {
+            AggregatedAsset::new(
+                source.coin_id.clone(),
+                canonical_symbol_for_coin(&source.coin_id, &source.symbol),
+            )
+        });
 
         let prev_amount = entry.total_amount;
         let prev_cost = entry.total_cost_basis;
@@ -640,14 +632,12 @@ impl Database {
                 Err(_) => continue, // Skip invalid transaction types
             };
 
-            let entry = assets
-                .entry(tx.coin_id.clone())
-                .or_insert_with(|| {
-                    AggregatedAsset::new(
-                        tx.coin_id.clone(),
-                        canonical_symbol_for_coin(&tx.coin_id, &tx.symbol),
-                    )
-                });
+            let entry = assets.entry(tx.coin_id.clone()).or_insert_with(|| {
+                AggregatedAsset::new(
+                    tx.coin_id.clone(),
+                    canonical_symbol_for_coin(&tx.coin_id, &tx.symbol),
+                )
+            });
 
             match tx_type {
                 CryptoTransactionType::Buy => {

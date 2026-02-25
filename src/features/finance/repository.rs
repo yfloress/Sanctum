@@ -70,7 +70,10 @@ impl FinanceRepository {
         db.get_transactions()
     }
 
-    pub fn get_transactions_by_account(db: &Database, account_id: &str) -> Result<Vec<Transaction>, DbError> {
+    pub fn get_transactions_by_account(
+        db: &Database,
+        account_id: &str,
+    ) -> Result<Vec<Transaction>, DbError> {
         db.get_transactions_by_account(account_id)
     }
 
@@ -102,15 +105,26 @@ impl FinanceRepository {
     }
 
     // Category operations
-    pub fn get_transaction_categories(db: &Database, category_type: &str) -> Result<Vec<TransactionCategory>, DbError> {
+    pub fn get_transaction_categories(
+        db: &Database,
+        category_type: &str,
+    ) -> Result<Vec<TransactionCategory>, DbError> {
         db.get_transaction_categories(category_type)
     }
 
-    pub fn add_transaction_category(db: &Database, name: &str, category_type: &str) -> Result<String, DbError> {
+    pub fn add_transaction_category(
+        db: &Database,
+        name: &str,
+        category_type: &str,
+    ) -> Result<String, DbError> {
         db.add_transaction_category(name, category_type)
     }
 
-    pub fn update_transaction_category(db: &Database, id: &str, new_name: &str) -> Result<(), DbError> {
+    pub fn update_transaction_category(
+        db: &Database,
+        id: &str,
+        new_name: &str,
+    ) -> Result<(), DbError> {
         db.update_transaction_category(id, new_name)
     }
 

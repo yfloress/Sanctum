@@ -527,7 +527,6 @@ fn get_field<'a>(record: &'a StringRecord, cols: &HashMap<&str, usize>, name: &s
         .unwrap_or("")
 }
 
-
 mod ledger;
 mod trades;
 

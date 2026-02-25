@@ -21,16 +21,16 @@
 
 use crate::db::{Database, DbError};
 use crate::models::{Transaction, TransactionCategory};
-use crate::security_log::{log_security_event, SecurityEvent};
+use crate::security_log::{SecurityEvent, log_security_event};
 use rusqlite::Error as RusqliteError;
 use uuid::Uuid;
 
+use super::FinanceError;
 use super::repository::FinanceRepository;
 use super::validation::{
-    sanitize_string, validate_category_id, validate_date, validate_field_length, validate_uuid,
-    MAX_CATEGORY_LENGTH, MAX_DESCRIPTION_LENGTH,
+    MAX_CATEGORY_LENGTH, MAX_DESCRIPTION_LENGTH, sanitize_string, validate_category_id,
+    validate_date, validate_field_length, validate_uuid,
 };
-use super::FinanceError;
 
 /// Transaction operations for FinanceService
 pub struct TransactionOps;
@@ -46,7 +46,9 @@ impl TransactionOps {
         is_expense: bool,
     ) -> Result<String, FinanceError>
     where
-        F: FnOnce(&dyn Fn(&Database) -> Result<String, FinanceError>) -> Result<String, FinanceError>,
+        F: FnOnce(
+            &dyn Fn(&Database) -> Result<String, FinanceError>,
+        ) -> Result<String, FinanceError>,
     {
         with_db(&|db| {
             let account_id = validate_uuid(&account_id)?;
@@ -166,7 +168,9 @@ impl TransactionOps {
         date: String,
     ) -> Result<String, FinanceError>
     where
-        F: FnOnce(&dyn Fn(&Database) -> Result<String, FinanceError>) -> Result<String, FinanceError>,
+        F: FnOnce(
+            &dyn Fn(&Database) -> Result<String, FinanceError>,
+        ) -> Result<String, FinanceError>,
     {
         with_db(&|db| {
             let from_id = validate_uuid(&from_account_id)?;
@@ -191,8 +195,14 @@ impl TransactionOps {
             let description = sanitize_string(&description);
             let date = validate_date(&date)?;
 
-            let tx_id =
-                FinanceRepository::create_transfer(db, &from_id, &to_id, amount, &description, &date)?;
+            let tx_id = FinanceRepository::create_transfer(
+                db,
+                &from_id,
+                &to_id,
+                amount,
+                &description,
+                &date,
+            )?;
             log_security_event(SecurityEvent::TransactionCreated, Some("transfer"));
             Ok(tx_id)
         })
@@ -234,7 +244,15 @@ impl TransactionOps {
             let description = sanitize_string(&description);
             let date = validate_date(&date)?;
 
-            FinanceRepository::update_transfer(db, &id, &from_id, &to_id, amount, &description, &date)?;
+            FinanceRepository::update_transfer(
+                db,
+                &id,
+                &from_id,
+                &to_id,
+                amount,
+                &description,
+                &date,
+            )?;
             Ok(())
         })
     }

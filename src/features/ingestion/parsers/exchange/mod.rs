@@ -155,9 +155,7 @@ impl ExchangeSource {
             | ExchangeSource::MexcFuturesCapitalFlow
             | ExchangeSource::MexcFuturesOrderHistory
             | ExchangeSource::MexcFuturesPositionHistory
-            | ExchangeSource::MexcFuturesTradeHistory => {
-                "MEXC"
-            }
+            | ExchangeSource::MexcFuturesTradeHistory => "MEXC",
             ExchangeSource::NotBankTransactions
             | ExchangeSource::NotBankTradeActivity
             | ExchangeSource::NotBankPnlReport => "NotBank",
@@ -450,7 +448,9 @@ const EXCHANGE_SIGNATURES: &[(&[&str], ExchangeSource)] = &[
     ),
     // MEXC Funding Other History
     (
-        &["UID", "Time", "Crypto", "Type", "Quantity", "Status", "Remark"],
+        &[
+            "UID", "Time", "Crypto", "Type", "Quantity", "Status", "Remark",
+        ],
         ExchangeSource::MexcFundingOtherHistory,
     ),
     // MEXC Funding Transfer History
@@ -882,8 +882,7 @@ mod tests {
 
     #[test]
     fn detect_mexc_statement() {
-        let csv =
-            "UID,Creation Time(UTC+00:00),Crypto,Transaction Type,Direction,Quantity\n";
+        let csv = "UID,Creation Time(UTC+00:00),Crypto,Transaction Type,Direction,Quantity\n";
         assert_eq!(
             detect_exchange_source(csv),
             Some(ExchangeSource::MexcStatementHistory)
@@ -937,7 +936,8 @@ mod tests {
 
     #[test]
     fn detect_mexc_futures_capital_flow() {
-        let csv = "UID,Time(UTC+00:00),Futures Trading Pair,Crypto,Fund Type,Fund Flow Type,Amount\n";
+        let csv =
+            "UID,Time(UTC+00:00),Futures Trading Pair,Crypto,Fund Type,Fund Flow Type,Amount\n";
         assert_eq!(
             detect_exchange_source(csv),
             Some(ExchangeSource::MexcFuturesCapitalFlow)

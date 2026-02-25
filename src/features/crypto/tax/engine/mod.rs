@@ -452,7 +452,8 @@ mod tests {
             excluded_wallet_ids: Vec::new(),
         };
 
-        let report = build_tax_report(vec![buy, swap_out, swap_in], settings, vec![]).expect("report");
+        let report =
+            build_tax_report(vec![buy, swap_out, swap_in], settings, vec![]).expect("report");
         assert_eq!(report.summary.disposals, 0);
         assert!(report.disposals.is_empty());
     }

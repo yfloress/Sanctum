@@ -461,11 +461,7 @@ impl AppController {
         let config = self.load_config().ok()?;
         let raw = config.login_wallpaper_path?;
         let path = PathBuf::from(raw);
-        if path.is_file() {
-            Some(path)
-        } else {
-            None
-        }
+        if path.is_file() { Some(path) } else { None }
     }
 
     /// Persists the login wallpaper path (stored in config.toml, not encrypted)

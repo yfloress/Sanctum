@@ -21,7 +21,9 @@
 
 use crate::controller::{AppController, SETTING_PREFERRED_CURRENCY};
 use crate::ui::{color_from_hex, convert_usd_to_preferred, format_preferred};
-use crate::{AnalyticsAdapter, AnalyticsData, AppWindow, BalanceData, CategoryData, DashboardAdapter};
+use crate::{
+    AnalyticsAdapter, AnalyticsData, AppWindow, BalanceData, CategoryData, DashboardAdapter,
+};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel, Weak};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -78,8 +80,8 @@ pub fn setup_dashboard_callbacks<F>(
             // Load preferred currency setting
             let preferred_currency = normalize_currency_code(
                 &controller
-                .get_app_setting(SETTING_PREFERRED_CURRENCY)
-                .unwrap_or_else(|_| "USD".to_string()),
+                    .get_app_setting(SETTING_PREFERRED_CURRENCY)
+                    .unwrap_or_else(|_| "USD".to_string()),
             );
             let preferred_rate = load_cached_usd_rate(&controller, &preferred_currency);
 
@@ -230,12 +232,11 @@ pub fn setup_dashboard_callbacks<F>(
                             .map(|slice| {
                                 // Convert expense amount to preferred currency
                                 let amount_usd = slice.amount as f64 / 100.0;
-                                let amount_display =
-                                    convert_usd_to_preferred(
-                                        amount_usd,
-                                        &preferred_currency,
-                                        preferred_rate,
-                                    );
+                                let amount_display = convert_usd_to_preferred(
+                                    amount_usd,
+                                    &preferred_currency,
+                                    preferred_rate,
+                                );
                                 CategoryData {
                                     name: SharedString::from(&slice.category),
                                     amount: SharedString::from(format_preferred(

@@ -245,5 +245,9 @@ pub(super) fn push_pnl_and_fee(
 }
 
 pub(super) fn missing_required(display: &str) -> RowError {
-    RowError::new(1, None, format!("Missing required MEXC column: '{display}'"))
+    RowError::new(
+        1,
+        None,
+        format!("Missing required MEXC column: '{display}'"),
+    )
 }

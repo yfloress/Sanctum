@@ -25,7 +25,9 @@ use crate::controller::{
     SETTING_SESSION_TIMEOUT, SETTING_SIDEBAR_COLLAPSED,
 };
 use crate::ui::callbacks::translations::{change_language, load_all_translations};
-use crate::{AccountAdapter, AppState, AppWindow, CryptoAdapter, DashboardAdapter, SettingsAdapter};
+use crate::{
+    AccountAdapter, AppState, AppWindow, CryptoAdapter, DashboardAdapter, SettingsAdapter,
+};
 use rfd::FileDialog;
 use slint::{ComponentHandle, Image, SharedString, Weak};
 use std::rc::Rc;
@@ -299,9 +301,10 @@ pub fn setup_settings_callbacks<N>(
 
                 // Change language in i18n service and reload translations
                 if change_language(language.as_str())
-                    && let Some(ui) = ui_weak.upgrade() {
-                        load_all_translations(&ui);
-                    }
+                    && let Some(ui) = ui_weak.upgrade()
+                {
+                    load_all_translations(&ui);
+                }
             });
     }
 
@@ -319,7 +322,9 @@ pub fn setup_settings_callbacks<N>(
                     )
                     .pick_file();
 
-                let Some(path) = file_path else { return; };
+                let Some(path) = file_path else {
+                    return;
+                };
 
                 match Image::load_from_path(&path) {
                     Ok(image) => {

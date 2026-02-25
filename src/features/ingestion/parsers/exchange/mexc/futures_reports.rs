@@ -20,8 +20,8 @@ use csv::{ReaderBuilder, Trim};
 use super::super::common::{format_datetime, is_fiat, parse_decimal, parse_timestamp};
 use super::super::{ExchangeParser, ExchangeSource, ParseResult};
 use super::futures_common::{
-    get_field, missing_required, parse_pair_quote_symbol, pick_time, push_pnl_and_fee,
-    resolve_columns, status_is_final, PnlFeeContext,
+    PnlFeeContext, get_field, missing_required, parse_pair_quote_symbol, pick_time,
+    push_pnl_and_fee, resolve_columns, status_is_final,
 };
 use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
 
@@ -126,7 +126,9 @@ impl ExchangeParser for MexcFuturesOrderHistoryParser {
             }
 
             let pnl = parse_decimal(pnl_raw);
-            let fee = parse_decimal(trading_fee_raw).map(f64::abs).filter(|v| *v > 0.0);
+            let fee = parse_decimal(trading_fee_raw)
+                .map(f64::abs)
+                .filter(|v| *v > 0.0);
 
             let notes = format!(
                 "MEXC futures order | pair={} | status={}",
@@ -141,12 +143,7 @@ impl ExchangeParser for MexcFuturesOrderHistoryParser {
                 fee_symbol: &fee_symbol,
                 note_prefix: &notes,
             };
-            push_pnl_and_fee(
-                &mut result.items,
-                &ctx,
-                pnl,
-                fee,
-            );
+            push_pnl_and_fee(&mut result.items, &ctx, pnl, fee);
         }
 
         Ok(result)
@@ -265,12 +262,7 @@ impl ExchangeParser for MexcFuturesPositionHistoryParser {
                 fee_symbol: &quote_symbol,
                 note_prefix: &notes,
             };
-            push_pnl_and_fee(
-                &mut result.items,
-                &ctx,
-                pnl,
-                fee,
-            );
+            push_pnl_and_fee(&mut result.items, &ctx, pnl, fee);
         }
 
         Ok(result)
@@ -372,7 +364,9 @@ impl ExchangeParser for MexcFuturesTradeHistoryParser {
             }
 
             let pnl = parse_decimal(pnl_raw);
-            let fee = parse_decimal(trading_fee_raw).map(f64::abs).filter(|v| *v > 0.0);
+            let fee = parse_decimal(trading_fee_raw)
+                .map(f64::abs)
+                .filter(|v| *v > 0.0);
 
             let notes = format!("MEXC futures trade | pair={}", pair_raw.trim());
             let ctx = PnlFeeContext {
@@ -383,12 +377,7 @@ impl ExchangeParser for MexcFuturesTradeHistoryParser {
                 fee_symbol: &fee_symbol,
                 note_prefix: &notes,
             };
-            push_pnl_and_fee(
-                &mut result.items,
-                &ctx,
-                pnl,
-                fee,
-            );
+            push_pnl_and_fee(&mut result.items, &ctx, pnl, fee);
         }
 
         Ok(result)
@@ -432,7 +421,12 @@ mod tests {
         let result = parser.parse(&csv, "MEXC").unwrap();
 
         assert_eq!(result.items.len(), 2);
-        assert!(result.items.iter().any(|(_, tx)| tx.transaction_type == "income"));
+        assert!(
+            result
+                .items
+                .iter()
+                .any(|(_, tx)| tx.transaction_type == "income")
+        );
     }
 
     #[test]

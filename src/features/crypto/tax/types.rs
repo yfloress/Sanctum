@@ -199,10 +199,7 @@ mod tests {
             normalize_subtype("transfer", "deposit").as_deref(),
             Some("deposit")
         );
-        assert_eq!(
-            normalize_subtype("trade", "swap").as_deref(),
-            Some("swap")
-        );
+        assert_eq!(normalize_subtype("trade", "swap").as_deref(), Some("swap"));
         assert!(normalize_subtype("income", "sell").is_none());
         assert!(normalize_subtype("trade", "airdrop").is_none());
     }
@@ -233,7 +230,10 @@ mod tests {
         assert_eq!(derive_mechanical_type("trade", Some("buy")), "buy");
         assert_eq!(derive_mechanical_type("trade", Some("sell")), "sell");
         assert_eq!(derive_mechanical_type("trade", Some("swap")), "swap");
-        assert_eq!(derive_mechanical_type("transfer", Some("deposit")), "transfer_in");
+        assert_eq!(
+            derive_mechanical_type("transfer", Some("deposit")),
+            "transfer_in"
+        );
         assert_eq!(
             derive_mechanical_type("transfer", Some("withdrawal")),
             "transfer_out"

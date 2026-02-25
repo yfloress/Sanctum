@@ -44,7 +44,10 @@ pub fn validate_category_id(id: &str) -> Result<String, String> {
         return Ok(trimmed.to_string());
     }
 
-    if let Some(rest) = trimmed.strip_prefix("exp_").or_else(|| trimmed.strip_prefix("inc_")) {
+    if let Some(rest) = trimmed
+        .strip_prefix("exp_")
+        .or_else(|| trimmed.strip_prefix("inc_"))
+    {
         validate_uuid(rest)?;
         return Ok(trimmed.to_string());
     }

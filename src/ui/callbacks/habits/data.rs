@@ -101,7 +101,10 @@ fn build_habit_summary(
         .unwrap_or((0, &0));
 
     let best_day = if *best_count > 0 {
-        format!("Best day (30d): {} ({})", weekday_names[best_idx], best_count)
+        format!(
+            "Best day (30d): {} ({})",
+            weekday_names[best_idx], best_count
+        )
     } else {
         "Best day (30d): No data yet".to_string()
     };
@@ -128,7 +131,11 @@ fn clear_habit_summary(adapter: &HabitAdapter) {
     adapter.set_summary_best_day(SharedString::default());
 }
 
-fn apply_habit_summary(adapter: &HabitAdapter, habit: &crate::models::Habit, summary: HabitSummary) {
+fn apply_habit_summary(
+    adapter: &HabitAdapter,
+    habit: &crate::models::Habit,
+    summary: HabitSummary,
+) {
     adapter.set_summary_habit_name(SharedString::from(habit.name.clone()));
     adapter.set_summary_habit_color(color_from_hex(&habit.color));
     adapter.set_summary_current_streak(summary.current_streak);
@@ -183,8 +190,7 @@ pub fn reload_habits<N>(
         .get_habit_logs(start_str, end_str)
         .unwrap_or_default();
 
-    let mut log_map: std::collections::HashSet<(String, String)> =
-        std::collections::HashSet::new();
+    let mut log_map: std::collections::HashSet<(String, String)> = std::collections::HashSet::new();
     for log in logs {
         log_map.insert((log.habit_id, log.completed_date));
     }
@@ -314,9 +320,7 @@ pub fn reload_habits<N>(
             } else {
                 days_in_month
             };
-            let monthly_completed = *monthly_completion_map
-                .get(&selected_habit.id)
-                .unwrap_or(&0);
+            let monthly_completed = *monthly_completion_map.get(&selected_habit.id).unwrap_or(&0);
             let summary = build_habit_summary(
                 &habit_dates,
                 monthly_completed,

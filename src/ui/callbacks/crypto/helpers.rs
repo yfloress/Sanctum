@@ -75,7 +75,10 @@ pub(super) fn format_compact_asset_amount(amount: f64) -> String {
     }
 }
 
-pub(super) fn format_compact_price_preferred(price_preferred: f64, preferred_currency: &str) -> String {
+pub(super) fn format_compact_price_preferred(
+    price_preferred: f64,
+    preferred_currency: &str,
+) -> String {
     if !price_preferred.is_finite() || price_preferred <= 0.0 {
         return "N/A".to_string();
     }
@@ -164,12 +167,19 @@ fn set_portfolio_summary(adapter: &CryptoAdapter, assets: usize, wallets: usize)
     let wallets_str = wallets.to_string();
     let summary = i18n::t_args(
         "crypto-assets-across-wallets",
-        &[("assets", assets_str.as_str()), ("wallets", wallets_str.as_str())],
+        &[
+            ("assets", assets_str.as_str()),
+            ("wallets", wallets_str.as_str()),
+        ],
     );
     adapter.set_portfolio_summary(SharedString::from(summary));
 }
 
-fn format_signed_preferred(value_usd: f64, preferred_currency: &str, usd_rate: f64) -> (String, bool) {
+fn format_signed_preferred(
+    value_usd: f64,
+    preferred_currency: &str,
+    usd_rate: f64,
+) -> (String, bool) {
     let positive = value_usd >= 0.0;
     let value_preferred = convert_usd_to_preferred(value_usd.abs(), preferred_currency, usd_rate);
     let sign = if positive { "+" } else { "-" };
@@ -197,8 +207,11 @@ fn format_roi(total_value: f64, total_cost: f64) -> String {
 
 /// Reload wallets list
 /// Optionally accepts a notify closure to report errors
-pub fn reload_wallets<N>(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>, notify: Option<&N>)
-where
+pub fn reload_wallets<N>(
+    ui_weak: &Weak<AppWindow>,
+    controller: &Arc<AppController>,
+    notify: Option<&N>,
+) where
     N: Fn(String, bool),
 {
     let wallets = match controller.get_wallets() {
@@ -279,8 +292,11 @@ where
 
 /// Reload portfolio with prices and charts
 /// Optionally accepts a notify closure to report errors
-pub fn reload_portfolio<N>(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>, notify: Option<&N>)
-where
+pub fn reload_portfolio<N>(
+    ui_weak: &Weak<AppWindow>,
+    controller: &Arc<AppController>,
+    notify: Option<&N>,
+) where
     N: Fn(String, bool),
 {
     let mut assets = match controller.get_aggregated_portfolio() {
@@ -351,7 +367,10 @@ where
                 let (r, g, b) = controller.chart_color_for_symbol(label, idx);
                 CryptoDistributionSlice {
                     label: SharedString::from(label),
-                    value: SharedString::from(format_preferred(value_preferred, &preferred_currency)),
+                    value: SharedString::from(format_preferred(
+                        value_preferred,
+                        &preferred_currency,
+                    )),
                     percent: SharedString::from(format!("{:.1}%", percent)),
                     color: slint::Color::from_rgb_u8(r, g, b),
                 }
@@ -554,9 +573,7 @@ where
         .or_else(|| {
             prices
                 .iter()
-                .filter_map(|price| {
-                    chrono::DateTime::parse_from_rfc3339(&price.last_updated).ok()
-                })
+                .filter_map(|price| chrono::DateTime::parse_from_rfc3339(&price.last_updated).ok())
                 .max()
                 .map(|dt| {
                     let local = dt.with_timezone(&chrono::Local);

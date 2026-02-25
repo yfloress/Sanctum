@@ -178,11 +178,9 @@ pub fn init_security_logger() {
         // This filters out verbose D-Bus/portal messages from rfd and other libs
         let default_filter = "warn,sanctum=info";
 
-        env_logger::Builder::from_env(
-            env_logger::Env::default().default_filter_or(default_filter),
-        )
-        .format_timestamp_millis()
-        .init();
+        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(default_filter))
+            .format_timestamp_millis()
+            .init();
 
         info!(
             "[SECURITY] id=0 ts={} event=LOGGER_INITIALIZED version={}",

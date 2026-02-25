@@ -316,7 +316,8 @@ impl AppController {
         }
 
         let count = checkpoint_count.clamp(1, 4);
-        let mut checkpoints: Vec<(Option<String>, String, i32)> = Vec::with_capacity(count as usize);
+        let mut checkpoints: Vec<(Option<String>, String, i32)> =
+            Vec::with_capacity(count as usize);
 
         let entries = [
             (cp1_id, cp1_text),

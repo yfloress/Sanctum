@@ -43,9 +43,7 @@ impl From<VaultError> for ControllerError {
             VaultError::FileExists => {
                 ControllerError::Validation("File already exists".to_string())
             }
-            VaultError::Io(e) => {
-                ControllerError::Validation(format!("IO error: {}", e))
-            }
+            VaultError::Io(e) => ControllerError::Validation(format!("IO error: {}", e)),
         }
     }
 }

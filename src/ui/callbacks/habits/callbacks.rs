@@ -322,7 +322,8 @@ pub fn setup_habit_callbacks<N>(
                     if let Some(habit) = habits.row_data(i)
                         && habit.id == id
                     {
-                        ui.global::<HabitAdapter>().set_selected_habit_index(i as i32);
+                        ui.global::<HabitAdapter>()
+                            .set_selected_habit_index(i as i32);
                         break;
                     }
                 }

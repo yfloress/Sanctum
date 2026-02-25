@@ -19,8 +19,8 @@
 //!
 //! Habit CRUD, logs, and analytics.
 
-use super::{validate_uuid, normalize_habit_category, AppController, ControllerError};
-use super::{HabitAnalytics, WeekdayEfficiency, MonthlyTrendPoint};
+use super::{AppController, ControllerError, normalize_habit_category, validate_uuid};
+use super::{HabitAnalytics, MonthlyTrendPoint, WeekdayEfficiency};
 use crate::models::{Habit, HabitLog};
 use chrono::{Datelike, NaiveDate};
 use regex::Regex;
@@ -49,9 +49,8 @@ impl AppController {
             ));
         }
 
-        let category = normalize_habit_category(&category).ok_or_else(|| {
-            ControllerError::Validation("Invalid habit category".to_string())
-        })?;
+        let category = normalize_habit_category(&category)
+            .ok_or_else(|| ControllerError::Validation("Invalid habit category".to_string()))?;
 
         self.habit_service
             .create_habit(name, description, color, category)
@@ -92,9 +91,8 @@ impl AppController {
             ));
         }
 
-        let category = normalize_habit_category(&category).ok_or_else(|| {
-            ControllerError::Validation("Invalid habit category".to_string())
-        })?;
+        let category = normalize_habit_category(&category)
+            .ok_or_else(|| ControllerError::Validation("Invalid habit category".to_string()))?;
 
         self.habit_service
             .update_habit(id, name, description, color, category, is_archived)
@@ -231,7 +229,15 @@ impl AppController {
             .map(|(_, avg)| *avg)
             .fold(0.0_f32, f32::max);
 
-        let day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+        let day_names = [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday",
+        ];
         let day_shorts = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
         let weekday_data: Vec<WeekdayEfficiency> = weekday_avgs
@@ -264,8 +270,8 @@ impl AppController {
             (current_year, current_month - 11)
         };
 
-        let twelve_months_ago_start = NaiveDate::from_ymd_opt(start_year, start_month_num, 1)
-            .unwrap_or(start_date);
+        let twelve_months_ago_start =
+            NaiveDate::from_ymd_opt(start_year, start_month_num, 1).unwrap_or(start_date);
 
         // Group by month and calculate average habits per day
         let mut monthly_data_map: std::collections::BTreeMap<(i32, u32), (i32, i32)> =

@@ -32,7 +32,7 @@ mod transactions;
 mod wallets;
 
 use crate::controller::AppController;
-use crate::{CryptoAdapter, AppWindow};
+use crate::{AppWindow, CryptoAdapter};
 use helpers::{SETTING_CRYPTO_LAST_UPDATED, load_crypto_badge_state};
 use slint::{ComponentHandle, SharedString, Weak};
 use std::sync::Arc;

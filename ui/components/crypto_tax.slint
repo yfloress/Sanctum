@@ -679,6 +679,29 @@ export component CryptoTaxTab inherits Rectangle {
                                 item: item;
                             }
                         }
+
+                        if CryptoAdapter.tax-can-resolve-prices: HorizontalLayout {
+                            spacing: 10px;
+                            alignment: start;
+
+                            BorderButton {
+                                enabled: !CryptoAdapter.tax-price-syncing;
+                                text: CryptoAdapter.tax-price-syncing
+                                    ? Translations.crypto-syncing-prices
+                                    : Translations.crypto-tax-readiness-prices;
+                                clicked => {
+                                    CryptoAdapter.sync-tax-missing-prices(true);
+                                }
+                            }
+
+                            if !CryptoAdapter.tax-price-syncing && CryptoAdapter.tax-missing-price-count > 0: Text {
+                                text: CryptoAdapter.tax-missing-price-count + " " + Translations.crypto-tax-readiness-prices-warn-suffix;
+                                color: Theme.text-muted;
+                                font-size: 10.5px;
+                                wrap: word-wrap;
+                                vertical-alignment: center;
+                            }
+                        }
                     }
                 }
 

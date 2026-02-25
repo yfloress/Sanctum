@@ -18,20 +18,18 @@
 //! Portfolio and price-related crypto callbacks
 
 use super::helpers::{
-    SETTING_CRYPTO_LAST_UPDATED, badge_currency_for_preferred, format_compact_price_preferred,
-    format_compact_asset_amount, load_preferred_usd_rate, reload_portfolio,
-    resolve_preferred_currency,
-    usd_pair_for_target_currency,
+    SETTING_CRYPTO_LAST_UPDATED, badge_currency_for_preferred, format_compact_asset_amount,
+    format_compact_price_preferred, load_preferred_usd_rate, reload_portfolio,
+    resolve_preferred_currency, usd_pair_for_target_currency,
 };
 use crate::controller::AppController;
 use crate::models::CryptoTransaction;
 use crate::services::i18n::{t, t_args};
 use crate::ui::{
     convert_usd_to_preferred, crypto_icon_for_symbol, format_crypto_tx_display, format_fee_display,
-    format_fx_rate,
-    format_preferred,
+    format_fx_rate, format_preferred,
 };
-use crate::{AssetTransaction, AssetWalletBreakdown, AppWindow, CryptoAdapter, CryptoAssetData};
+use crate::{AppWindow, AssetTransaction, AssetWalletBreakdown, CryptoAdapter, CryptoAssetData};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel, Weak};
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -76,10 +74,7 @@ fn try_acquire_manual_refresh_slot() -> Option<u64> {
     }
 }
 
-fn is_suspicious_fx_jump(
-    new_rate: f64,
-    cached: Option<&(f64, String)>,
-) -> Option<f64> {
+fn is_suspicious_fx_jump(new_rate: f64, cached: Option<&(f64, String)>) -> Option<f64> {
     let (old_rate, updated_at) = cached?;
     if *old_rate <= 0.0 || !new_rate.is_finite() || new_rate <= 0.0 {
         return None;
@@ -303,7 +298,10 @@ pub fn setup_portfolio_callbacks<N>(
             };
             let last_updated_label = if prices_updated {
                 let time = now.format("%H:%M").to_string();
-                Some(t_args("crypto-last-updated-today-at", &[("time", time.as_str())]))
+                Some(t_args(
+                    "crypto-last-updated-today-at",
+                    &[("time", time.as_str())],
+                ))
             } else {
                 None
             };
@@ -388,8 +386,8 @@ pub fn setup_portfolio_callbacks<N>(
         let controller = controller.clone();
         let ui_weak = ui_weak.clone();
         let notify = notify.clone();
-        ui.global::<CryptoAdapter>()
-            .on_request_historical_price(move |coin_id, date, user_initiated| {
+        ui.global::<CryptoAdapter>().on_request_historical_price(
+            move |coin_id, date, user_initiated| {
                 let coin_id_str = coin_id.to_string();
                 let date_str = date.to_string();
                 let request_key = format!("{}|{}", coin_id_str, date_str);
@@ -399,7 +397,8 @@ pub fn setup_portfolio_callbacks<N>(
                         let request_key_cached = request_key.clone();
                         let _ = ui_weak.upgrade_in_event_loop(move |ui| {
                             let adapter = ui.global::<CryptoAdapter>();
-                            adapter.set_historical_price_key(SharedString::from(request_key_cached));
+                            adapter
+                                .set_historical_price_key(SharedString::from(request_key_cached));
                             adapter.set_historical_price_value(SharedString::from(cached_value));
                         });
                     }
@@ -462,27 +461,29 @@ pub fn setup_portfolio_callbacks<N>(
                         adapter.set_historical_price_value(SharedString::from(value));
                     });
                 });
-            });
+            },
+        );
     }
 
     // on_show_last_updated_info
     {
         let ui_weak = ui_weak.clone();
         let notify = notify.clone();
-        ui.global::<CryptoAdapter>().on_show_last_updated_info(move || {
-            let Some(ui) = ui_weak.upgrade() else {
-                return;
-            };
-            let adapter = ui.global::<CryptoAdapter>();
-            let raw = adapter.get_last_updated().trim().to_string();
-            let value = if raw.is_empty() {
-                t("crypto-last-updated-never")
-            } else {
-                raw
-            };
-            let msg = t_args("crypto-last-updated-info", &[("value", value.as_str())]);
-            notify(msg, false);
-        });
+        ui.global::<CryptoAdapter>()
+            .on_show_last_updated_info(move || {
+                let Some(ui) = ui_weak.upgrade() else {
+                    return;
+                };
+                let adapter = ui.global::<CryptoAdapter>();
+                let raw = adapter.get_last_updated().trim().to_string();
+                let value = if raw.is_empty() {
+                    t("crypto-last-updated-never")
+                } else {
+                    raw
+                };
+                let msg = t_args("crypto-last-updated-info", &[("value", value.as_str())]);
+                notify(msg, false);
+            });
     }
 
     // on_get_swap_quote
@@ -605,10 +606,16 @@ pub fn setup_portfolio_callbacks<N>(
                     };
 
                     // Convert price and value to preferred currency
-                    let price_preferred =
-                        convert_usd_to_preferred(updated_asset.current_price, &preferred_currency, usd_rate);
-                    let value_preferred =
-                        convert_usd_to_preferred(updated_asset.current_value, &preferred_currency, usd_rate);
+                    let price_preferred = convert_usd_to_preferred(
+                        updated_asset.current_price,
+                        &preferred_currency,
+                        usd_rate,
+                    );
+                    let value_preferred = convert_usd_to_preferred(
+                        updated_asset.current_value,
+                        &preferred_currency,
+                        usd_rate,
+                    );
 
                     let price_fmt = if missing_price {
                         "N/A".to_string()

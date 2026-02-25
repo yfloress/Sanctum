@@ -20,8 +20,8 @@ use csv::{ReaderBuilder, Trim};
 use super::super::common::{format_datetime, is_fiat, parse_decimal, parse_timestamp};
 use super::super::{ExchangeParser, ExchangeSource, ParseResult};
 use super::futures_common::{
-    get_field, missing_required, parse_pair_quote_symbol, pick_time, push_pnl_and_fee,
-    resolve_columns, PnlFeeContext,
+    PnlFeeContext, get_field, missing_required, parse_pair_quote_symbol, pick_time,
+    push_pnl_and_fee, resolve_columns,
 };
 use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
 
@@ -132,12 +132,7 @@ impl ExchangeParser for MexcFuturesCopyTradeOrderParser {
                 fee_symbol: &quote_symbol,
                 note_prefix: &notes,
             };
-            push_pnl_and_fee(
-                &mut result.items,
-                &ctx,
-                pnl,
-                fee,
-            );
+            push_pnl_and_fee(&mut result.items, &ctx, pnl, fee);
         }
 
         Ok(result)

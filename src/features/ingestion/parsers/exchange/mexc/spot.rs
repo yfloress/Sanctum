@@ -124,8 +124,8 @@ pub(super) fn parse_mexc_pair(pair: &str) -> Option<(String, String)> {
     // Compact pair fallback (e.g. BTCUSDT, ETHBTC)
     let upper = trimmed.to_uppercase();
     const QUOTE_SUFFIXES: &[&str] = &[
-        "USDT", "USDC", "BUSD", "FDUSD", "TUSD", "USDD", "USDP", "DAI", "BTC", "ETH", "USD",
-        "EUR", "GBP", "JPY", "AUD", "CAD", "MXN", "BRL", "CLP", "ARS",
+        "USDT", "USDC", "BUSD", "FDUSD", "TUSD", "USDD", "USDP", "DAI", "BTC", "ETH", "USD", "EUR",
+        "GBP", "JPY", "AUD", "CAD", "MXN", "BRL", "CLP", "ARS",
     ];
     for quote in QUOTE_SUFFIXES {
         if let Some(base_raw) = upper.strip_suffix(quote) {

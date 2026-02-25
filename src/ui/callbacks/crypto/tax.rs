@@ -21,10 +21,13 @@ use crate::controller::{AppController, SETTING_PREFERRED_CURRENCY};
 use crate::features::crypto::tax::types::{TaxJurisdiction, TaxMethod};
 use crate::services::i18n::{t, t_args};
 use crate::ui::{convert_usd_to_preferred, format_preferred};
-use crate::{AppWindow, CryptoAdapter, TaxReadinessItem, TaxWalletEntry, Translations};
+use crate::{
+    AppWindow, CryptoAdapter, SettingsAdapter, TaxReadinessItem, TaxWalletEntry, Translations,
+};
 use slint::platform::Clipboard;
 use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel, Weak};
-use std::sync::Arc;
+use std::collections::{HashMap, HashSet};
+use std::sync::{Arc, LazyLock, Mutex};
 
 /// Resolves the display currency and USD/target exchange rate from the controller.
 /// Chile tax views are always displayed in CLP.
@@ -62,8 +65,7 @@ fn resolve_display_currency(
             return Ok((preferred, value));
         }
         return Err(
-            "CLP tax display requires a valid USD/CLP rate. Please sync prices first."
-                .to_string(),
+            "CLP tax display requires a valid USD/CLP rate. Please sync prices first.".to_string(),
         );
     }
 
@@ -126,6 +128,479 @@ fn export_period_label(effective_period: &str, jurisdiction: TaxJurisdiction) ->
             .unwrap_or_else(|| effective_period.to_string());
     }
     effective_period.to_string()
+}
+
+static TAX_PRICE_SYNC_IN_FLIGHT: LazyLock<Mutex<bool>> = LazyLock::new(|| Mutex::new(false));
+static TAX_HISTORICAL_PRICE_CACHE: LazyLock<Mutex<HashMap<String, f64>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum MissingPriceField {
+    PricePerCoin,
+    FeeUsd,
+    SwapOverrideProceeds,
+}
+
+#[derive(Clone)]
+struct MissingPriceRequest {
+    tx_id: String,
+    coin_id: String,
+    date: String,
+    field: MissingPriceField,
+    amount: Option<f64>,
+    fee_amount: Option<f64>,
+}
+
+fn try_start_tax_price_sync() -> bool {
+    let Ok(mut in_flight) = TAX_PRICE_SYNC_IN_FLIGHT.lock() else {
+        return false;
+    };
+    if *in_flight {
+        return false;
+    }
+    *in_flight = true;
+    true
+}
+
+fn finish_tax_price_sync(ui_weak: &Weak<AppWindow>) {
+    if let Ok(mut in_flight) = TAX_PRICE_SYNC_IN_FLIGHT.lock() {
+        *in_flight = false;
+    }
+
+    let _ = ui_weak.upgrade_in_event_loop(move |ui| {
+        ui.global::<CryptoAdapter>().set_tax_price_syncing(false);
+    });
+}
+
+fn get_cached_tax_historical_price(cache_key: &str) -> Option<f64> {
+    let Ok(cache) = TAX_HISTORICAL_PRICE_CACHE.lock() else {
+        return None;
+    };
+    cache.get(cache_key).copied()
+}
+
+fn cache_tax_historical_price(cache_key: &str, price: f64) {
+    if !price.is_finite() || price <= 0.0 {
+        return;
+    }
+    if let Ok(mut cache) = TAX_HISTORICAL_PRICE_CACHE.lock() {
+        cache.insert(cache_key.to_string(), price);
+    }
+}
+
+fn is_usd_stablecoin_coin_id(raw: &str) -> bool {
+    matches!(
+        raw.trim().to_ascii_lowercase().as_str(),
+        "usd"
+            | "usdt"
+            | "usdc"
+            | "busd"
+            | "dai"
+            | "tusd"
+            | "fdusd"
+            | "usdd"
+            | "usdp"
+            | "pyusd"
+            | "ust"
+            | "frax"
+            | "tether"
+            | "usd-coin"
+            | "binance-usd"
+            | "true-usd"
+            | "first-digital-usd"
+            | "pax-dollar"
+            | "paypal-usd"
+            | "terrausd"
+    )
+}
+
+fn normalize_history_date(raw: &str) -> Option<String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    let date_part = if trimmed.len() >= 10 {
+        &trimmed[..10]
+    } else {
+        trimmed
+    };
+
+    chrono::NaiveDate::parse_from_str(date_part, "%Y-%m-%d")
+        .or_else(|_| chrono::NaiveDate::parse_from_str(trimmed, "%d-%m-%Y"))
+        .ok()
+        .map(|date| date.format("%Y-%m-%d").to_string())
+}
+
+fn collect_missing_price_requests(
+    controller: &AppController,
+    warnings: &[crate::features::crypto::TaxWarning],
+) -> Vec<MissingPriceRequest> {
+    let mut requests = Vec::new();
+    let mut seen: HashSet<String> = HashSet::new();
+
+    for warning in warnings {
+        let code = warning.code.as_str();
+        if !matches!(
+            code,
+            "missing_price" | "swap_missing_price" | "income_missing_price" | "fee_missing_price"
+        ) {
+            continue;
+        }
+
+        let Some(tx_id) = warning.tx_id.as_deref() else {
+            continue;
+        };
+
+        let Ok(Some(tx)) = controller.get_crypto_transaction(tx_id.to_string()) else {
+            continue;
+        };
+        let Some(date) = normalize_history_date(&tx.date) else {
+            continue;
+        };
+
+        match code {
+            "fee_missing_price" => {
+                let (Some(fee_coin_id), Some(fee_amount)) = (tx.fee_coin_id.clone(), tx.fee_amount)
+                else {
+                    continue;
+                };
+                if fee_amount <= 0.0 || tx.fee.unwrap_or(0.0) > 0.0 {
+                    continue;
+                }
+                let request_key = format!("fee:{}:{}:{}", tx.id, fee_coin_id, date);
+                if seen.insert(request_key) {
+                    requests.push(MissingPriceRequest {
+                        tx_id: tx.id,
+                        coin_id: fee_coin_id,
+                        date,
+                        field: MissingPriceField::FeeUsd,
+                        amount: None,
+                        fee_amount: Some(fee_amount),
+                    });
+                }
+            }
+            "swap_missing_price" => {
+                if tx.override_proceeds.unwrap_or(0.0) > 0.0 {
+                    continue;
+                }
+                let request_key = format!("swap:{}:{}:{}", tx.id, tx.coin_id, date);
+                if seen.insert(request_key) {
+                    requests.push(MissingPriceRequest {
+                        tx_id: tx.id,
+                        coin_id: tx.coin_id,
+                        date,
+                        field: MissingPriceField::SwapOverrideProceeds,
+                        amount: Some(tx.amount),
+                        fee_amount: None,
+                    });
+                }
+            }
+            _ => {
+                if tx.price_per_coin.unwrap_or(0.0) > 0.0 {
+                    continue;
+                }
+                let request_key = format!("price:{}:{}:{}", tx.id, tx.coin_id, date);
+                if seen.insert(request_key) {
+                    requests.push(MissingPriceRequest {
+                        tx_id: tx.id,
+                        coin_id: tx.coin_id,
+                        date,
+                        field: MissingPriceField::PricePerCoin,
+                        amount: Some(tx.amount),
+                        fee_amount: None,
+                    });
+                }
+            }
+        }
+    }
+
+    requests
+}
+
+fn infer_swap_unit_price_from_pair(
+    controller: &AppController,
+    tx_id: &str,
+    target_coin_id: &str,
+) -> Option<f64> {
+    let tx = controller
+        .get_crypto_transaction(tx_id.to_string())
+        .ok()
+        .flatten()?;
+    if tx.subtype.as_deref() != Some("swap") {
+        return None;
+    }
+
+    if tx.coin_id == target_coin_id
+        && let Some(price) = tx.price_per_coin
+        && price.is_finite()
+        && price > 0.0
+    {
+        return Some(price);
+    }
+    if tx.coin_id == target_coin_id
+        && let Some(proceeds) = tx.override_proceeds
+        && tx.amount > 0.0
+    {
+        let price = proceeds / tx.amount;
+        if price.is_finite() && price > 0.0 {
+            return Some(price);
+        }
+    }
+
+    let related_id = tx.related_tx_id.as_deref()?;
+    let related = controller
+        .get_crypto_transaction(related_id.to_string())
+        .ok()
+        .flatten()?;
+
+    if related.coin_id == target_coin_id
+        && let Some(price) = related.price_per_coin
+        && price.is_finite()
+        && price > 0.0
+    {
+        return Some(price);
+    }
+    if related.coin_id == target_coin_id
+        && let Some(proceeds) = related.override_proceeds
+        && related.amount > 0.0
+    {
+        let price = proceeds / related.amount;
+        if price.is_finite() && price > 0.0 {
+            return Some(price);
+        }
+    }
+
+    let tx_stable = is_usd_stablecoin_coin_id(&tx.coin_id);
+    let related_stable = is_usd_stablecoin_coin_id(&related.coin_id);
+
+    if tx_stable
+        && !related_stable
+        && related.coin_id == target_coin_id
+        && related.amount > 0.0
+        && tx.amount > 0.0
+    {
+        let price = tx.amount / related.amount;
+        if price.is_finite() && price > 0.0 {
+            return Some(price);
+        }
+    }
+
+    if related_stable
+        && !tx_stable
+        && tx.coin_id == target_coin_id
+        && tx.amount > 0.0
+        && related.amount > 0.0
+    {
+        let price = related.amount / tx.amount;
+        if price.is_finite() && price > 0.0 {
+            return Some(price);
+        }
+    }
+
+    None
+}
+
+async fn resolve_historical_unit_price(
+    controller: &Arc<AppController>,
+    request: &MissingPriceRequest,
+) -> Result<f64, String> {
+    if is_usd_stablecoin_coin_id(&request.coin_id) {
+        return Ok(1.0);
+    }
+
+    let cache_key = format!("{}|{}", request.coin_id, request.date);
+    if let Some(price) = get_cached_tax_historical_price(&cache_key) {
+        return Ok(price);
+    }
+
+    let price = controller
+        .get_crypto_historical_price_usd(request.coin_id.clone(), request.date.clone())
+        .await
+        .map_err(|err| err.to_string())?;
+
+    if !price.is_finite() || price <= 0.0 {
+        return Err("Historical price is invalid".to_string());
+    }
+
+    cache_tax_historical_price(&cache_key, price);
+    Ok(price)
+}
+
+fn start_tax_missing_price_sync<N>(
+    ui_weak: &Weak<AppWindow>,
+    controller: &Arc<AppController>,
+    notify: N,
+    user_initiated: bool,
+) where
+    N: Fn(String, bool) + Clone + Send + 'static,
+{
+    let Some(ui) = ui_weak.upgrade() else {
+        return;
+    };
+
+    let adapter = ui.global::<CryptoAdapter>();
+    let period_raw = adapter.get_tax_period();
+    let jurisdiction = TaxJurisdiction::parse_or_default(&adapter.get_tax_jurisdiction());
+    let period = match effective_period_id(&period_raw, jurisdiction) {
+        Ok(value) => value,
+        Err(err) => {
+            if user_initiated {
+                notify(err, true);
+            }
+            return;
+        }
+    };
+
+    if !try_start_tax_price_sync() {
+        if user_initiated {
+            notify(t("crypto-tax-price-sync-running"), true);
+        }
+        return;
+    }
+
+    adapter.set_tax_price_syncing(true);
+    let controller_async = controller.clone();
+    let ui_weak_async = ui_weak.clone();
+    let notify_async = notify.clone();
+
+    tokio::spawn(async move {
+        let summary = match controller_async.generate_tax_summary(period.clone()) {
+            Ok(value) => value,
+            Err(err) => {
+                if user_initiated {
+                    let notify_for_ui = notify_async.clone();
+                    let message = format!("Failed to load tax warnings: {}", err);
+                    let _ = ui_weak_async.upgrade_in_event_loop(move |_| {
+                        notify_for_ui(message, true);
+                    });
+                }
+                finish_tax_price_sync(&ui_weak_async);
+                return;
+            }
+        };
+
+        let requests = collect_missing_price_requests(&controller_async, &summary.report.warnings);
+        if requests.is_empty() {
+            if user_initiated {
+                let notify_for_ui = notify_async.clone();
+                let _ = ui_weak_async.upgrade_in_event_loop(move |_| {
+                    notify_for_ui(t("crypto-tax-price-sync-no-missing"), false);
+                });
+            }
+            finish_tax_price_sync(&ui_weak_async);
+            return;
+        }
+
+        let mut updated = 0usize;
+        let mut unresolved = 0usize;
+
+        for request in requests {
+            let inferred_price = if matches!(
+                request.field,
+                MissingPriceField::FeeUsd | MissingPriceField::SwapOverrideProceeds
+            ) {
+                infer_swap_unit_price_from_pair(&controller_async, &request.tx_id, &request.coin_id)
+            } else {
+                None
+            };
+
+            let unit_price = match inferred_price {
+                Some(value) => value,
+                None => match resolve_historical_unit_price(&controller_async, &request).await {
+                    Ok(value) => value,
+                    Err(_) => {
+                        unresolved += 1;
+                        continue;
+                    }
+                },
+            };
+
+            let (price_per_coin, fee_usd, override_proceeds) = match request.field {
+                MissingPriceField::PricePerCoin => (Some(unit_price), None, None),
+                MissingPriceField::FeeUsd => {
+                    let fee_amount = request.fee_amount.unwrap_or(0.0);
+                    if fee_amount <= 0.0 {
+                        unresolved += 1;
+                        continue;
+                    }
+                    let fee_value = fee_amount * unit_price;
+                    if !fee_value.is_finite() || fee_value < 0.0 {
+                        unresolved += 1;
+                        continue;
+                    }
+                    (None, Some(fee_value), None)
+                }
+                MissingPriceField::SwapOverrideProceeds => {
+                    let amount = request.amount.unwrap_or(0.0);
+                    if amount <= 0.0 {
+                        unresolved += 1;
+                        continue;
+                    }
+                    let proceeds = amount * unit_price;
+                    if !proceeds.is_finite() || proceeds <= 0.0 {
+                        unresolved += 1;
+                        continue;
+                    }
+                    (None, None, Some(proceeds))
+                }
+            };
+
+            match controller_async.fill_missing_tax_price_fields(
+                request.tx_id,
+                price_per_coin,
+                fee_usd,
+                override_proceeds,
+            ) {
+                Ok(true) => updated += 1,
+                Ok(false) => {}
+                Err(_) => unresolved += 1,
+            }
+        }
+
+        if updated > 0
+            && let Ok(refreshed_summary) = controller_async.generate_tax_summary(period.clone())
+        {
+            let report_jurisdiction =
+                TaxJurisdiction::parse_or_default(&refreshed_summary.report.jurisdiction);
+            if let Ok((currency, clp_rate)) =
+                resolve_display_currency(&controller_async, report_jurisdiction)
+            {
+                let _ = ui_weak_async.upgrade_in_event_loop(move |ui| {
+                    let adapter = ui.global::<CryptoAdapter>();
+                    update_report_state(&adapter, &refreshed_summary.report, &currency, clp_rate);
+                    update_summary_state(&adapter, &refreshed_summary, &currency, clp_rate);
+                });
+            }
+        }
+
+        if user_initiated {
+            if updated > 0 {
+                let notify_for_ui = notify_async.clone();
+                let count = updated.to_string();
+                let message = t_args(
+                    "crypto-tax-price-sync-finished",
+                    &[("count", count.as_str())],
+                );
+                let _ = ui_weak_async.upgrade_in_event_loop(move |_| {
+                    notify_for_ui(message, false);
+                });
+            }
+            if unresolved > 0 {
+                let notify_for_ui = notify_async.clone();
+                let count = unresolved.to_string();
+                let message = t_args(
+                    "crypto-tax-price-sync-unresolved",
+                    &[("count", count.as_str())],
+                );
+                let _ = ui_weak_async.upgrade_in_event_loop(move |_| {
+                    notify_for_ui(message, true);
+                });
+            }
+        }
+
+        finish_tax_price_sync(&ui_weak_async);
+    });
 }
 
 pub fn setup_tax_callbacks<N>(
@@ -207,6 +682,18 @@ pub fn setup_tax_callbacks<N>(
         });
     }
 
+    // Resolve missing tax prices (manual/auto)
+    {
+        let controller = controller.clone();
+        let ui_weak = ui_weak.clone();
+        let notify = notify.clone();
+
+        ui.global::<CryptoAdapter>()
+            .on_sync_tax_missing_prices(move |user_initiated| {
+                start_tax_missing_price_sync(&ui_weak, &controller, notify.clone(), user_initiated);
+            });
+    }
+
     // Generate tax report
     {
         let controller = controller.clone();
@@ -246,6 +733,13 @@ pub fn setup_tax_callbacks<N>(
                         update_report_state(&adapter, &summary.report, &currency, clp_rate);
                         update_summary_state(&adapter, &summary, &currency, clp_rate);
                         notify(t("crypto-tax-report-generated"), false);
+
+                        if ui.global::<SettingsAdapter>().get_auto_fetch_enabled()
+                            && adapter.get_tax_can_resolve_prices()
+                            && !adapter.get_tax_price_syncing()
+                        {
+                            adapter.invoke_sync_tax_missing_prices(false);
+                        }
                     }
                     Err(err) => {
                         notify(format!("Failed to generate report: {}", err), true);
@@ -636,7 +1130,16 @@ fn update_summary_state(
         .iter()
         .filter(|item| item.status != "ok" && item.status != "info")
         .count();
+    let missing_price_count = summary
+        .readiness
+        .iter()
+        .find(|item| item.code == "prices" && item.status == "warn" && item.detail != "invalid")
+        .and_then(|item| item.detail.parse::<i32>().ok())
+        .filter(|count| *count > 0)
+        .unwrap_or(0);
     adapter.set_tax_readiness_issues(issue_count as i32);
+    adapter.set_tax_missing_price_count(missing_price_count);
+    adapter.set_tax_can_resolve_prices(missing_price_count > 0);
 
     adapter.set_tax_readiness(ModelRc::new(VecModel::from(readiness_items)));
 }

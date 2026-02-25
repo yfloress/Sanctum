@@ -137,8 +137,7 @@ pub fn validate_subtype(
     }
     let resolved = tx_type.and_then(TaxTxType::parse).ok_or_else(|| {
         CryptoError::Validation(
-            "Subtype requires a valid type (trade, income, expense, or transfer)"
-                .to_string(),
+            "Subtype requires a valid type (trade, income, expense, or transfer)".to_string(),
         )
     })?;
     let normalized = normalize_subtype(resolved.as_str(), trimmed).ok_or_else(|| {
@@ -340,8 +339,8 @@ mod tests {
 
     #[test]
     fn normalize_fee_coin_requires_both_fields_or_none() {
-        let normalized = normalize_fee_coin(Some(" bitcoin ".to_string()), Some(0.001))
-            .expect("valid fee pair");
+        let normalized =
+            normalize_fee_coin(Some(" bitcoin ".to_string()), Some(0.001)).expect("valid fee pair");
         assert_eq!(normalized.0.as_deref(), Some("bitcoin"));
         assert_eq!(normalized.1, Some(0.001));
 

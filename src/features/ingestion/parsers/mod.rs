@@ -259,7 +259,9 @@ mod tests {
         let csv = "UID,Status,Time,Crypto,Network,Deposit Amount,TxID,Progress\n10000000,Credited Successfully,2025-12-19 21:39:59,USDT,Polygon(MATIC),27,0xa1b2:0,(465/450)\n";
         assert_eq!(
             detect_format(csv, "mexc-deposits.csv"),
-            Some(ImportFormat::ExchangeCsv(ExchangeSource::MexcDepositHistory))
+            Some(ImportFormat::ExchangeCsv(
+                ExchangeSource::MexcDepositHistory
+            ))
         );
     }
 
@@ -274,8 +276,7 @@ mod tests {
 
     #[test]
     fn test_detect_mexc_statement_csv() {
-        let csv =
-            "UID,Creation Time(UTC+00:00),Crypto,Transaction Type,Direction,Quantity\nUSER_001,2025-10-01 00:00:01,USDT,Deposit,Inflow,1000.00\n";
+        let csv = "UID,Creation Time(UTC+00:00),Crypto,Transaction Type,Direction,Quantity\nUSER_001,2025-10-01 00:00:01,USDT,Deposit,Inflow,1000.00\n";
         assert_eq!(
             detect_format(csv, "mexc-statement.csv"),
             Some(ImportFormat::ExchangeCsv(
@@ -320,7 +321,9 @@ mod tests {
         let csv = "\"RegisteredEntityId\",\"PostingEntryId\",\"PostingEntryType\",\"PostingDatetime\",\"AccountId\",\"AccountName\",\"Product\",\"CR\",\"DR\",\"ReferenceTransactionType\",\"ReferenceTransactionId\",\"SystemRecordReference\",\"OMSId\",\"Balance\"\n";
         assert_eq!(
             detect_format(csv, "Transaction.csv"),
-            Some(ImportFormat::ExchangeCsv(ExchangeSource::NotBankTransactions))
+            Some(ImportFormat::ExchangeCsv(
+                ExchangeSource::NotBankTransactions
+            ))
         );
     }
 

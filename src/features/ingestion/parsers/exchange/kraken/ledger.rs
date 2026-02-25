@@ -184,4 +184,3 @@ impl ExchangeParser for KrakenLedgerParser {
         ExchangeSource::KrakenLedger
     }
 }
-

@@ -299,6 +299,5 @@ pub fn non_empty(value: &str) -> Option<&str> {
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
-
 #[cfg(test)]
 mod tests;

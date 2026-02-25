@@ -577,7 +577,8 @@ impl CryptoService {
             );
             if next_mech != existing_mech {
                 return Err(CryptoError::Validation(
-                    "Changing subtype that alters transaction direction is not supported".to_string(),
+                    "Changing subtype that alters transaction direction is not supported"
+                        .to_string(),
                 ));
             }
 

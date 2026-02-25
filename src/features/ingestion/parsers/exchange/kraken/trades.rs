@@ -197,9 +197,10 @@ impl ExchangeParser for KrakenTradesParser {
                     pair_raw, txid, ordertxid
                 )),
                 (false, true) => Some(format!("Kraken trade | {} | Ref: {}", pair_raw, txid)),
-                (true, false) => {
-                    Some(format!("Kraken trade | {} | Order: {}", pair_raw, ordertxid))
-                }
+                (true, false) => Some(format!(
+                    "Kraken trade | {} | Order: {}",
+                    pair_raw, ordertxid
+                )),
                 (true, true) => Some(format!("Kraken trade | {}", pair_raw)),
             };
 

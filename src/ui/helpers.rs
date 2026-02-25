@@ -26,8 +26,10 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 pub const CRYPTO_ICON_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/ui/assets/crypto-icons");
-pub const MEXC_EXCHANGE_ICON_PATH: &str =
-    concat!(env!("CARGO_MANIFEST_DIR"), "/ui/assets/exchange-icons/mexc.svg");
+pub const MEXC_EXCHANGE_ICON_PATH: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/ui/assets/exchange-icons/mexc.svg"
+);
 pub const GENERIC_BANK_ICON_PATH: &str = "../assets/icons/landmark.svg";
 
 pub const HABIT_COLOR_CHOICES: [&str; 16] = [

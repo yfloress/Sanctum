@@ -22,19 +22,19 @@
 
 use crate::db::{Database, DbError};
 use crate::models::{Account, AccountBalance, BalanceSummary, Transaction, TransactionCategory};
-use crate::security_log::{log_security_event, SecurityEvent};
+use crate::security_log::{SecurityEvent, log_security_event};
 use chrono::Utc;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
-use crate::features::dashboard::DashboardCharts;
 use super::repository::FinanceRepository;
 use super::transactions::{CategoryOps, TransactionOps};
 use super::validation::{
-    sanitize_string, validate_color, validate_field_length, validate_uuid, EXCHANGE_RATE_TTL_SECS,
-    MAX_ACCOUNT_NAME_LENGTH, MAX_CURRENCY_LENGTH, MAX_ICON_LENGTH,
+    EXCHANGE_RATE_TTL_SECS, MAX_ACCOUNT_NAME_LENGTH, MAX_CURRENCY_LENGTH, MAX_ICON_LENGTH,
+    sanitize_string, validate_color, validate_field_length, validate_uuid,
 };
+use crate::features::dashboard::DashboardCharts;
 
 #[derive(thiserror::Error, Debug)]
 pub enum FinanceError {
@@ -123,11 +123,7 @@ impl FinanceService {
 
             let icon = if let Some(i) = icon {
                 let i = validate_field_length(&i, MAX_ICON_LENGTH, "Icon")?;
-                if i.is_empty() {
-                    None
-                } else {
-                    Some(i)
-                }
+                if i.is_empty() { None } else { Some(i) }
             } else {
                 None
             };
@@ -190,11 +186,7 @@ impl FinanceService {
 
             let icon = if let Some(i) = icon {
                 let i = validate_field_length(&i, MAX_ICON_LENGTH, "Icon")?;
-                if i.is_empty() {
-                    None
-                } else {
-                    Some(i)
-                }
+                if i.is_empty() { None } else { Some(i) }
             } else {
                 None
             };
@@ -216,18 +208,18 @@ impl FinanceService {
         })
     }
 
-    pub fn update_account_icon(&self, id: String, icon: Option<String>) -> Result<(), FinanceError> {
+    pub fn update_account_icon(
+        &self,
+        id: String,
+        icon: Option<String>,
+    ) -> Result<(), FinanceError> {
         self.with_db(|db| {
             let validated_id = validate_uuid(&id)?;
             let mut account = FinanceRepository::get_account(db, &validated_id)?;
 
             let icon = if let Some(i) = icon {
                 let i = validate_field_length(&i, MAX_ICON_LENGTH, "Icon")?;
-                if i.is_empty() {
-                    None
-                } else {
-                    Some(i)
-                }
+                if i.is_empty() { None } else { Some(i) }
             } else {
                 None
             };
@@ -240,11 +232,14 @@ impl FinanceService {
     pub fn update_account_name(&self, id: String, new_name: String) -> Result<(), FinanceError> {
         self.with_db(|db| {
             let validated_id = validate_uuid(&id)?;
-            let validated_name = validate_field_length(&new_name, MAX_ACCOUNT_NAME_LENGTH, "Account name")?;
+            let validated_name =
+                validate_field_length(&new_name, MAX_ACCOUNT_NAME_LENGTH, "Account name")?;
             let sanitized_name = sanitize_string(&validated_name);
 
             if sanitized_name.is_empty() {
-                return Err(FinanceError::Validation("Account name cannot be empty".to_string()));
+                return Err(FinanceError::Validation(
+                    "Account name cannot be empty".to_string(),
+                ));
             }
 
             let mut account = FinanceRepository::get_account(db, &validated_id)?;

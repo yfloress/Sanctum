@@ -20,9 +20,7 @@
 //! FIAT accounts, transactions, and categories.
 
 use super::{AppController, ControllerError};
-use crate::models::{
-    Account, AccountBalance, BalanceSummary, Transaction, TransactionCategory,
-};
+use crate::models::{Account, AccountBalance, BalanceSummary, Transaction, TransactionCategory};
 
 impl AppController {
     // ==================== FIAT Account Methods ====================
@@ -38,14 +36,7 @@ impl AppController {
         icon: Option<String>,
     ) -> Result<String, ControllerError> {
         self.finance_service
-            .create_account(
-                name,
-                account_type,
-                currency,
-                initial_balance,
-                color,
-                icon,
-            )
+            .create_account(name, account_type, currency, initial_balance, color, icon)
             .map_err(ControllerError::from)
     }
 
@@ -139,7 +130,14 @@ impl AppController {
         date: String,
     ) -> Result<(), ControllerError> {
         self.finance_service
-            .update_transfer(id, from_account_id, to_account_id, amount, description, date)
+            .update_transfer(
+                id,
+                from_account_id,
+                to_account_id,
+                amount,
+                description,
+                date,
+            )
             .map_err(ControllerError::from)
     }
 

@@ -213,6 +213,78 @@ impl CryptoService {
         })
     }
 
+    /// Fills missing tax pricing fields on a transaction without changing other
+    /// user-provided values.
+    ///
+    /// This is used by automated/manual tax price sync to patch historical
+    /// prices for tax calculations, including paired swap rows that are not
+    /// editable from the regular transaction modal.
+    pub fn fill_missing_tax_price_fields(
+        &self,
+        tx_id: String,
+        price_per_coin: Option<f64>,
+        fee_usd: Option<f64>,
+        override_proceeds: Option<f64>,
+    ) -> Result<bool, CryptoError> {
+        let tx_id = tx_id.trim().to_string();
+        if tx_id.is_empty() {
+            return Err(CryptoError::Validation(
+                "Transaction ID is required".to_string(),
+            ));
+        }
+
+        self.with_db(|db| {
+            let Some(existing) = db
+                .get_crypto_transaction(&tx_id)
+                .map_err(CryptoError::Database)?
+            else {
+                return Ok(false);
+            };
+
+            let next_price = if existing.price_per_coin.is_some() {
+                existing.price_per_coin
+            } else {
+                price_per_coin.filter(|value| value.is_finite() && *value > 0.0)
+            };
+
+            let next_fee = if existing.fee.is_some() {
+                existing.fee
+            } else {
+                fee_usd.filter(|value| value.is_finite() && *value >= 0.0)
+            };
+
+            let next_override_proceeds = if existing.override_proceeds.is_some() {
+                existing.override_proceeds
+            } else {
+                override_proceeds.filter(|value| value.is_finite() && *value >= 0.0)
+            };
+
+            if next_price == existing.price_per_coin
+                && next_fee == existing.fee
+                && next_override_proceeds == existing.override_proceeds
+            {
+                return Ok(false);
+            }
+
+            db.update_crypto_transaction_fields(
+                &existing.id,
+                existing.amount,
+                next_price,
+                next_fee,
+                existing.fee_coin_id.as_deref(),
+                existing.fee_amount,
+                &existing.date,
+                existing.notes.as_deref(),
+                existing.subtype.as_deref(),
+                next_override_proceeds,
+                existing.override_cost_basis,
+            )
+            .map_err(CryptoError::Database)?;
+
+            Ok(true)
+        })
+    }
+
     pub fn export_tax_report_csv(&self, period_id: String, path: &str) -> Result<(), CryptoError> {
         let report = self.generate_tax_report(period_id)?;
         let jurisdiction = TaxJurisdiction::parse_or_default(&report.jurisdiction);
@@ -391,11 +463,30 @@ fn compute_end_balance(
 }
 
 fn count_unpaired_transfers(transactions: &[CryptoTransaction]) -> usize {
+    let by_id: std::collections::HashMap<&str, &CryptoTransaction> =
+        transactions.iter().map(|tx| (tx.id.as_str(), tx)).collect();
+
     transactions
         .iter()
         .filter(|tx| {
             let mech = tx.mechanical_type();
-            (mech == "transfer_in" || mech == "transfer_out") && tx.related_tx_id.is_none()
+            if mech != "transfer_in" && mech != "transfer_out" {
+                return false;
+            }
+
+            let Some(related_id) = tx.related_tx_id.as_deref() else {
+                // External deposits/withdrawals imported from exchanges are expected
+                // to have no related transfer leg.
+                return false;
+            };
+
+            let Some(related) = by_id.get(related_id).copied() else {
+                return true;
+            };
+
+            let related_mech = related.mechanical_type();
+            !((mech == "transfer_in" && related_mech == "transfer_out")
+                || (mech == "transfer_out" && related_mech == "transfer_in"))
         })
         .count()
 }
@@ -578,7 +669,6 @@ fn build_transaction_history_csv(
 
     out
 }
-
 
 #[cfg(test)]
 mod tests;

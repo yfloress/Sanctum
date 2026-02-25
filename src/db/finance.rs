@@ -21,7 +21,7 @@
 
 use super::{Database, DbError};
 use crate::models::{Account, AccountBalance, BalanceSummary, Transaction, TransactionCategory};
-use rusqlite::{params, Error as RusqliteError};
+use rusqlite::{Error as RusqliteError, params};
 
 impl Database {
     // ==================== FIAT Accounts CRUD ====================

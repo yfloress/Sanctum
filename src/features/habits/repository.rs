@@ -51,11 +51,19 @@ impl HabitsRepository {
         db.delete_habit(id)
     }
 
-    pub fn toggle_habit_log(db: &Database, habit_id: &str, date: &str) -> Result<(bool, Option<String>), DbError> {
+    pub fn toggle_habit_log(
+        db: &Database,
+        habit_id: &str,
+        date: &str,
+    ) -> Result<(bool, Option<String>), DbError> {
         db.toggle_habit_log(habit_id, date)
     }
 
-    pub fn get_habit_logs(db: &Database, start_date: &str, end_date: &str) -> Result<Vec<HabitLog>, DbError> {
+    pub fn get_habit_logs(
+        db: &Database,
+        start_date: &str,
+        end_date: &str,
+    ) -> Result<Vec<HabitLog>, DbError> {
         db.get_habit_logs(start_date, end_date)
     }
 }

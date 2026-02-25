@@ -77,8 +77,12 @@ fn historical_price_cache_ignores_empty_values() {
 
 #[test]
 fn historical_price_error_suppression_matches_validation_errors() {
-    assert!(should_suppress_historical_price_error("Invalid date format"));
-    assert!(should_suppress_historical_price_error("Coin ID cannot be empty"));
+    assert!(should_suppress_historical_price_error(
+        "Invalid date format"
+    ));
+    assert!(should_suppress_historical_price_error(
+        "Coin ID cannot be empty"
+    ));
     assert!(!should_suppress_historical_price_error("Network timeout"));
 }
 

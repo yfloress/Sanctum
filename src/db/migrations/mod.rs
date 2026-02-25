@@ -42,13 +42,11 @@ pub struct Migration {
 
 /// Returns all migrations in version order
 pub fn get_migrations() -> Vec<Migration> {
-    vec![
-        Migration {
-            version: 1,
-            name: "initial_schema",
-            up: v001_initial_schema::up,
-        },
-    ]
+    vec![Migration {
+        version: 1,
+        name: "initial_schema",
+        up: v001_initial_schema::up,
+    }]
 }
 
 /// Gets the current schema version from database

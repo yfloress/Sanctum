@@ -146,6 +146,18 @@ impl AppController {
             .map_err(ControllerError::from)
     }
 
+    pub fn fill_missing_tax_price_fields(
+        &self,
+        tx_id: String,
+        price_per_coin: Option<f64>,
+        fee_usd: Option<f64>,
+        override_proceeds: Option<f64>,
+    ) -> Result<bool, ControllerError> {
+        self.crypto_service
+            .fill_missing_tax_price_fields(tx_id, price_per_coin, fee_usd, override_proceeds)
+            .map_err(ControllerError::from)
+    }
+
     pub fn export_tax_report_csv(
         &self,
         period_id: String,

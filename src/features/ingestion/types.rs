@@ -303,12 +303,12 @@ pub struct CryptoDedupKey {
     pub date: String,
     pub wallet_id: String,
     pub coin_id: String,
-    pub transaction_type: String, // mechanical type: buy/sell/swap/...
-    pub category_type: String,    // category type: trade/income/expense/transfer
-    pub subtype: String,          // normalized subtype, empty when absent
-    pub amount_satoshis: i64, // amount * 10^8 for precision
+    pub transaction_type: String,  // mechanical type: buy/sell/swap/...
+    pub category_type: String,     // category type: trade/income/expense/transfer
+    pub subtype: String,           // normalized subtype, empty when absent
+    pub amount_satoshis: i64,      // amount * 10^8 for precision
     pub price_micros: Option<i64>, // price_per_coin * 10^6
-    pub pair_coin_id: String, // for swaps, track the counterpart asset
+    pub pair_coin_id: String,      // for swaps, track the counterpart asset
 }
 
 impl CryptoDedupKey {

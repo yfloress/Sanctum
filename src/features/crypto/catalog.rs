@@ -24,13 +24,12 @@ use std::collections::HashSet;
 
 use super::api::default_coin_catalog;
 use super::service::{
-    CryptoError, CryptoService,
-    SETTING_CRYPTO_CUSTOM_COINS, SETTING_CRYPTO_FAVORITE_COINS, SETTING_CRYPTO_HIDDEN_COINS,
-    SETTING_TICKER_COINS,
+    CryptoError, CryptoService, SETTING_CRYPTO_CUSTOM_COINS, SETTING_CRYPTO_FAVORITE_COINS,
+    SETTING_CRYPTO_HIDDEN_COINS, SETTING_TICKER_COINS,
 };
 use super::validation::{
-    validate_coin_id_str, validate_field_length, validate_symbol, sanitize_string,
-    MAX_COIN_NAME_LENGTH,
+    MAX_COIN_NAME_LENGTH, sanitize_string, validate_coin_id_str, validate_field_length,
+    validate_symbol,
 };
 
 impl CryptoService {
@@ -82,9 +81,12 @@ impl CryptoService {
             .unwrap_or_default()
     }
 
-    pub(crate) fn save_custom_coin_catalog(&self, coins: Vec<CryptoCatalogCoin>) -> Result<(), CryptoError> {
-        let json = serde_json::to_string(&coins)
-            .map_err(|e| CryptoError::Validation(e.to_string()))?;
+    pub(crate) fn save_custom_coin_catalog(
+        &self,
+        coins: Vec<CryptoCatalogCoin>,
+    ) -> Result<(), CryptoError> {
+        let json =
+            serde_json::to_string(&coins).map_err(|e| CryptoError::Validation(e.to_string()))?;
         self.set_app_setting(SETTING_CRYPTO_CUSTOM_COINS, &json)
     }
 

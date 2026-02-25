@@ -119,9 +119,7 @@ pub fn validate_date(date: &str) -> Result<String, String> {
     }
 
     // Try YYYY-MM-DD HH:MM:SS (full datetime from exchange imports)
-    if trimmed.len() >= 10
-        && NaiveDate::parse_from_str(&trimmed[..10], "%Y-%m-%d").is_ok()
-    {
+    if trimmed.len() >= 10 && NaiveDate::parse_from_str(&trimmed[..10], "%Y-%m-%d").is_ok() {
         return Ok(trimmed.to_string());
     }
 

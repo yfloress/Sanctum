@@ -314,7 +314,8 @@ mod tests {
 
     #[test]
     fn missing_required_column_returns_error() {
-        let csv = "UID,Status,Time,Crypto\n10000000,Credited Successfully,2025-12-19 21:39:59,USDT\n";
+        let csv =
+            "UID,Status,Time,Crypto\n10000000,Credited Successfully,2025-12-19 21:39:59,USDT\n";
 
         let parser = MexcDepositParser;
         let err = parser.parse(csv, "MEXC").unwrap_err();

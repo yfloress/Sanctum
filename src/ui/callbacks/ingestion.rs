@@ -253,8 +253,7 @@ pub fn setup_ingestion_callbacks(
                     return;
                 }
 
-                let (pending_files, preflight_skips) =
-                    apply_exchange_batch_filters(pending_files);
+                let (pending_files, preflight_skips) = apply_exchange_batch_filters(pending_files);
 
                 let combined_format = combine_exchange_labels(&detected_labels);
                 let combined_display = build_batch_display_name(&selected_names);
@@ -280,7 +279,8 @@ pub fn setup_ingestion_callbacks(
                 ui.global::<CryptoAdapter>().invoke_fetch_wallets();
 
                 // Show wallet selection modal instead of going to preview
-                ui.global::<AppState>().set_show_exchange_wallet_select(true);
+                ui.global::<AppState>()
+                    .set_show_exchange_wallet_select(true);
             });
     }
 
@@ -577,7 +577,10 @@ fn extract_missing_coin_symbol(err: &RowError) -> Option<String> {
 
 fn build_custom_coin_id(catalog: &[crate::models::CryptoCatalogCoin], symbol: &str) -> String {
     let base = symbol.to_ascii_lowercase();
-    let existing: HashSet<String> = catalog.iter().map(|coin| coin.id.to_ascii_lowercase()).collect();
+    let existing: HashSet<String> = catalog
+        .iter()
+        .map(|coin| coin.id.to_ascii_lowercase())
+        .collect();
 
     if !existing.contains(&base) {
         return base;
@@ -780,11 +783,7 @@ mod tests {
 
     #[test]
     fn combine_exchange_labels_deduplicates_preserving_order() {
-        let labels = vec![
-            "MEXC".to_string(),
-            "Kraken".to_string(),
-            "MEXC".to_string(),
-        ];
+        let labels = vec!["MEXC".to_string(), "Kraken".to_string(), "MEXC".to_string()];
         assert_eq!(combine_exchange_labels(&labels), "MEXC / Kraken");
     }
 
@@ -914,11 +913,7 @@ mod tests {
 
     #[test]
     fn extract_missing_coin_symbol_from_catalog_error() {
-        let err = RowError::new(
-            7,
-            Some("symbol"),
-            "Crypto asset not found in catalog: pepe",
-        );
+        let err = RowError::new(7, Some("symbol"), "Crypto asset not found in catalog: pepe");
         assert_eq!(extract_missing_coin_symbol(&err), Some("PEPE".to_string()));
     }
 
