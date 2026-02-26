@@ -14,6 +14,7 @@ Status: Audit complete, implementation pending
 - Done: non-USD fiat quotes/fees are no longer injected as USD valuation inputs in Binance/Kraken/MEXC trade paths (kept as missing valuation instead of wrong USD).
 - Done: this guard now also covers Binance All Statements paired conversions and MEXC Spot/Trade history fiat-quoted rows, with explicit non-USD quote annotations in notes.
 - Done: missing-price tax warnings now differentiate non-USD quote normalization cases, and readiness UI surfaces a dedicated FX-normalization item.
+- Done: automatic tax missing-price sync excludes non-USD quote warnings, avoiding accidental USD imputation for FX-priced trades.
 - Added regression tests for all points above.
 
 ## 1) Scope

@@ -197,6 +197,39 @@ fn build_readiness_adds_fx_prices_item_for_non_usd_quote_warnings() {
 }
 
 #[test]
+fn readiness_fx_warnings_do_not_count_as_resolvable_prices() {
+    let report = TaxReport {
+        period_id: "2024".to_string(),
+        period_start: "2024-01-01".to_string(),
+        period_end: "2024-12-31".to_string(),
+        jurisdiction: "chile".to_string(),
+        method: "fifo".to_string(),
+        summary: TaxReportSummary::default(),
+        disposals: Vec::new(),
+        warnings: vec![crate::features::crypto::TaxWarning {
+            code: "swap_missing_price_non_usd_quote".to_string(),
+            message: "Swap s1 missing price; excluded from report".to_string(),
+            tx_id: Some("s1".to_string()),
+        }],
+    };
+
+    let readiness = build_readiness(&report, 3, 0, 0, TaxJurisdiction::Chile);
+    let prices = readiness
+        .iter()
+        .find(|r| r.code == "prices")
+        .expect("prices readiness item");
+    assert_eq!(prices.status, "warn");
+    assert_eq!(prices.detail, "1");
+
+    let prices_fx = readiness
+        .iter()
+        .find(|r| r.code == "prices_fx")
+        .expect("prices_fx readiness item");
+    assert_eq!(prices_fx.status, "warn");
+    assert_eq!(prices_fx.detail, "1");
+}
+
+#[test]
 fn history_csv_includes_type_subtype_and_mechanical_type() {
     let period = parse_period("2024").expect("valid period");
     let tx = tx(

@@ -244,11 +244,8 @@ fn collect_missing_price_requests(
         if !matches!(
             code,
             "missing_price"
-                | "missing_price_non_usd_quote"
                 | "swap_missing_price"
-                | "swap_missing_price_non_usd_quote"
                 | "income_missing_price"
-                | "income_missing_price_non_usd_quote"
                 | "fee_missing_price"
         ) {
             continue;
@@ -322,6 +319,20 @@ fn collect_missing_price_requests(
     }
 
     requests
+}
+
+fn count_resolvable_missing_price_warnings(
+    warnings: &[crate::features::crypto::TaxWarning],
+) -> i32 {
+    warnings
+        .iter()
+        .filter(|warning| {
+            matches!(
+                warning.code.as_str(),
+                "missing_price" | "swap_missing_price" | "income_missing_price" | "fee_missing_price"
+            )
+        })
+        .count() as i32
 }
 
 fn infer_swap_unit_price_from_pair(
@@ -1136,13 +1147,8 @@ fn update_summary_state(
         .iter()
         .filter(|item| item.status != "ok" && item.status != "info")
         .count();
-    let missing_price_count = summary
-        .readiness
-        .iter()
-        .find(|item| item.code == "prices" && item.status == "warn" && item.detail != "invalid")
-        .and_then(|item| item.detail.parse::<i32>().ok())
-        .filter(|count| *count > 0)
-        .unwrap_or(0);
+    let missing_price_count =
+        count_resolvable_missing_price_warnings(&summary.report.warnings).max(0);
     adapter.set_tax_readiness_issues(issue_count as i32);
     adapter.set_tax_missing_price_count(missing_price_count);
     adapter.set_tax_can_resolve_prices(missing_price_count > 0);
