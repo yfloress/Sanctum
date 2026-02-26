@@ -104,6 +104,24 @@ fn note_starts_with_lowercase(note: Option<&str>, expected_prefix: &str) -> bool
         .unwrap_or(false)
 }
 
+fn uses_price_agnostic_dedup(format_name: &str) -> bool {
+    matches!(
+        format_name.trim().to_ascii_lowercase().as_str(),
+        "kraken ledger"
+            | "kraken trades"
+            | "binance all statements"
+            | "binance spot trade history"
+            | "mexc spot trade history"
+            | "mexc trade history"
+    )
+}
+
+fn note_is_exchange_overlap_prone(note: Option<&str>) -> bool {
+    note_starts_with_lowercase(note, "kraken")
+        || note_starts_with_lowercase(note, "binance")
+        || note_starts_with_lowercase(note, "mexc")
+}
+
 fn extract_kraken_trade_ref(note: &str) -> Option<String> {
     let trimmed = note.trim();
     if trimmed.is_empty() {
@@ -1206,6 +1224,7 @@ impl IngestionService {
         let skipped_missing_coin = t("import-skipped-crypto-not-found");
         let is_mexc_spot_order_history_source =
             format_name.eq_ignore_ascii_case("MEXC Spot Trade History");
+        let use_price_agnostic_dedup = uses_price_agnostic_dedup(format_name);
 
         let wallet_lookup =
             IngestionRepository::build_wallet_lookup(db).map_err(IngestionError::Database)?;
@@ -1262,6 +1281,31 @@ impl IngestionService {
                     tx.subtype.as_deref(),
                     tx.amount,
                     tx.price_per_coin,
+                    pair_coin_id,
+                )
+            })
+            .collect();
+        let mut dedup_set_price_agnostic: HashSet<CryptoDedupKey> = existing
+            .iter()
+            .filter(|tx| note_is_exchange_overlap_prone(tx.notes.as_deref()))
+            .map(|tx| {
+                let pair_coin_id = if tx.mechanical_type() == "swap" {
+                    tx.related_tx_id
+                        .as_ref()
+                        .and_then(|id| existing_map.get(id))
+                        .map(|related| related.coin_id.as_str())
+                } else {
+                    None
+                };
+                CryptoDedupKey::new(
+                    &tx.date,
+                    &tx.wallet_id,
+                    &tx.coin_id,
+                    tx.mechanical_type(),
+                    &tx.transaction_type,
+                    tx.subtype.as_deref(),
+                    tx.amount,
+                    None,
                     pair_coin_id,
                 )
             })
@@ -1763,6 +1807,17 @@ impl IngestionService {
                     source_price_for_dedup,
                     Some(&to_coin.id),
                 );
+                let from_key_price_agnostic = CryptoDedupKey::new(
+                    &import_tx.date,
+                    &wallet.id,
+                    &coin.id,
+                    mechanical_type,
+                    &category_type,
+                    normalized_subtype.as_deref(),
+                    import_tx.amount,
+                    None,
+                    Some(&to_coin.id),
+                );
                 let to_key = CryptoDedupKey::new(
                     &import_tx.date,
                     &wallet.id,
@@ -1774,7 +1829,12 @@ impl IngestionService {
                     None,
                     Some(&coin.id),
                 );
-                if dedup_set.contains(&from_key) || dedup_set.contains(&to_key) {
+                if dedup_set.contains(&from_key)
+                    || dedup_set.contains(&to_key)
+                    || (use_price_agnostic_dedup
+                        && (dedup_set_price_agnostic.contains(&from_key_price_agnostic)
+                            || dedup_set_price_agnostic.contains(&to_key)))
+                {
                     summary.record_skipped(&skipped_duplicate);
                     continue;
                 }
@@ -1792,7 +1852,21 @@ impl IngestionService {
                     import_tx.price_per_coin,
                     None,
                 );
-                if dedup_set.contains(&key) {
+                let key_price_agnostic = CryptoDedupKey::new(
+                    &import_tx.date,
+                    &wallet.id,
+                    &coin.id,
+                    mechanical_type,
+                    &category_type,
+                    normalized_subtype.as_deref(),
+                    import_tx.amount,
+                    None,
+                    None,
+                );
+                if dedup_set.contains(&key)
+                    || (use_price_agnostic_dedup
+                        && dedup_set_price_agnostic.contains(&key_price_agnostic))
+                {
                     summary.record_skipped(&skipped_duplicate);
                     continue;
                 }
@@ -1847,6 +1921,31 @@ impl IngestionService {
                         Some(c) => c,
                         None => continue,
                     };
+                    if use_price_agnostic_dedup {
+                        let from_key_price_agnostic = CryptoDedupKey::new(
+                            &import_tx.date,
+                            &wallet.id,
+                            &coin.id,
+                            mechanical_type,
+                            &category_type,
+                            normalized_subtype.as_deref(),
+                            import_tx.amount,
+                            None,
+                            Some(&to_coin.id),
+                        );
+                        dedup_set_price_agnostic.insert(from_key_price_agnostic);
+                        dedup_set_price_agnostic.insert(CryptoDedupKey::new(
+                            &import_tx.date,
+                            &wallet.id,
+                            &to_coin.id,
+                            mechanical_type,
+                            &category_type,
+                            normalized_subtype.as_deref(),
+                            import_tx.swap_to_amount.unwrap_or(0.0),
+                            None,
+                            Some(&coin.id),
+                        ));
+                    }
                     summary.record_preview_change(
                         &t("import-preview-change-crypto"),
                         format!(
@@ -1871,6 +1970,19 @@ impl IngestionService {
                         None,
                     );
                     dedup_set.insert(key);
+                    if use_price_agnostic_dedup {
+                        dedup_set_price_agnostic.insert(CryptoDedupKey::new(
+                            &import_tx.date,
+                            &wallet.id,
+                            &coin.id,
+                            mechanical_type,
+                            &category_type,
+                            normalized_subtype.as_deref(),
+                            import_tx.amount,
+                            None,
+                            None,
+                        ));
+                    }
                     summary.record_preview_change(
                         &t("import-preview-change-crypto"),
                         format!(
@@ -1972,6 +2084,30 @@ impl IngestionService {
                 if let Some((from_key, to_key)) = dedup_key {
                     dedup_set.insert(from_key);
                     dedup_set.insert(to_key);
+                    if use_price_agnostic_dedup {
+                        dedup_set_price_agnostic.insert(CryptoDedupKey::new(
+                            &import_tx.date,
+                            &wallet.id,
+                            &coin.id,
+                            mechanical_type,
+                            &category_type,
+                            normalized_subtype.as_deref(),
+                            import_tx.amount,
+                            None,
+                            Some(&to_coin.id),
+                        ));
+                        dedup_set_price_agnostic.insert(CryptoDedupKey::new(
+                            &import_tx.date,
+                            &wallet.id,
+                            &to_coin.id,
+                            mechanical_type,
+                            &category_type,
+                            normalized_subtype.as_deref(),
+                            to_amount,
+                            None,
+                            Some(&coin.id),
+                        ));
+                    }
                 }
                 if let Some(ref_key) = kraken_ref_key.clone() {
                     kraken_trade_ref_set.insert(ref_key);
@@ -2012,6 +2148,19 @@ impl IngestionService {
                         None,
                     );
                     dedup_set.insert(key);
+                    if use_price_agnostic_dedup {
+                        dedup_set_price_agnostic.insert(CryptoDedupKey::new(
+                            &import_tx.date,
+                            &wallet.id,
+                            &coin.id,
+                            transaction.mechanical_type(),
+                            &transaction.transaction_type,
+                            transaction.subtype.as_deref(),
+                            import_tx.amount,
+                            None,
+                            None,
+                        ));
+                    }
                     if let Some(ref_key) = kraken_ref_key {
                         kraken_trade_ref_set.insert(ref_key);
                     }
@@ -2036,6 +2185,7 @@ mod tests {
     use super::{
         extract_kraken_trade_ref, has_mexc_transfer_overlap_duplicate, kraken_trade_ref_key,
         matches_swap_rollup_duplicate, normalize_import_symbol_key,
+        note_is_exchange_overlap_prone, uses_price_agnostic_dedup,
     };
     use crate::models::CryptoTransaction;
 
@@ -2131,6 +2281,28 @@ mod tests {
             kraken_trade_ref_key("wallet-1", Some("Kraken deposit | Ref: TX-777")),
             None
         );
+    }
+
+    #[test]
+    fn uses_price_agnostic_dedup_for_overlap_prone_exchange_sources() {
+        assert!(uses_price_agnostic_dedup("Kraken Ledger"));
+        assert!(uses_price_agnostic_dedup("Kraken Trades"));
+        assert!(uses_price_agnostic_dedup("Binance All Statements"));
+        assert!(uses_price_agnostic_dedup("Binance Spot Trade History"));
+        assert!(uses_price_agnostic_dedup("MEXC Spot Trade History"));
+        assert!(uses_price_agnostic_dedup("MEXC Trade History"));
+        assert!(!uses_price_agnostic_dedup("NotBank Transaction Report"));
+    }
+
+    #[test]
+    fn note_is_exchange_overlap_prone_matches_supported_prefixes() {
+        assert!(note_is_exchange_overlap_prone(Some("Kraken trade | Ref: TX-1")));
+        assert!(note_is_exchange_overlap_prone(Some("Binance Spot BUY | BTCUSDT")));
+        assert!(note_is_exchange_overlap_prone(Some(
+            "MEXC trade | BTC_USDT | Ref=123"
+        )));
+        assert!(!note_is_exchange_overlap_prone(Some("NotBank trade | id=1")));
+        assert!(!note_is_exchange_overlap_prone(None));
     }
 
     #[test]
