@@ -243,7 +243,13 @@ fn collect_missing_price_requests(
         let code = warning.code.as_str();
         if !matches!(
             code,
-            "missing_price" | "swap_missing_price" | "income_missing_price" | "fee_missing_price"
+            "missing_price"
+                | "missing_price_non_usd_quote"
+                | "swap_missing_price"
+                | "swap_missing_price_non_usd_quote"
+                | "income_missing_price"
+                | "income_missing_price_non_usd_quote"
+                | "fee_missing_price"
         ) {
             continue;
         }

@@ -285,5 +285,7 @@ mod tests {
         assert_eq!(tx.subtype.as_deref(), Some("buy"));
         assert_eq!(tx.symbol, "USDT");
         assert!(tx.price_per_coin.is_none());
+        let note = tx.notes.as_deref().unwrap_or_default();
+        assert!(note.contains("tax_reason=non_usd_quote:EUR"));
     }
 }

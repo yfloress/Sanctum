@@ -45,6 +45,13 @@ fn is_usd_pricing_symbol(raw: &str) -> bool {
     raw.trim().eq_ignore_ascii_case("USD") || is_stablecoin_symbol(raw)
 }
 
+fn has_non_usd_quote_marker(tx: &CryptoTransaction) -> bool {
+    tx.notes
+        .as_deref()
+        .map(|notes| notes.contains("tax_reason=non_usd_quote"))
+        .unwrap_or(false)
+}
+
 fn swap_pricing_leg_value_usd(tx: &CryptoTransaction) -> Option<f64> {
     if tx.amount <= f64::EPSILON {
         return None;
@@ -117,8 +124,14 @@ pub(super) fn apply_swap_pair(
             long_gain,
         );
     } else if taxable_swap && proceeds.is_none() {
+        let warning_code =
+            if has_non_usd_quote_marker(source) || has_non_usd_quote_marker(target) {
+                "swap_missing_price_non_usd_quote"
+            } else {
+                "swap_missing_price"
+            };
         report.warnings.push(TaxWarning {
-            code: "swap_missing_price".to_string(),
+            code: warning_code.to_string(),
             message: format!("Swap {} missing price; excluded from report", source.id),
             tx_id: Some(source.id.clone()),
         });
@@ -392,6 +405,48 @@ mod tests {
                 .warnings
                 .iter()
                 .any(|w| w.code == "swap_missing_price")
+        );
+        assert!(report.disposals.is_empty());
+    }
+
+    #[test]
+    fn apply_swap_pair_warns_with_non_usd_quote_code_when_marked() {
+        let mut report = base_report();
+        let mut lots = HashMap::<String, Vec<Lot>>::new();
+        lots.insert(
+            "btc".to_string(),
+            vec![Lot {
+                lot_id: "b1".to_string(),
+                acquired_date: NaiveDate::from_ymd_opt(2024, 1, 1).expect("valid date"),
+                acquired_date_raw: "2024-01-01".to_string(),
+                acquired_prev_month: "2023-12".to_string(),
+                quantity: 1.0,
+                unit_cost: 80.0,
+            }],
+        );
+
+        let period = period_2024();
+        let ipc = BTreeMap::new();
+        let cfg = TaxConfig {
+            period: &period,
+            method: TaxMethod::Fifo,
+            jurisdiction: TaxJurisdiction::Chile,
+            ipc_map: &ipc,
+        };
+
+        let mut source = swap_tx("s1", 1.0, None);
+        source.notes = Some("tax_reason=non_usd_quote:EUR".to_string());
+        let mut target = swap_tx("s2", 2.0, None);
+        target.coin_id = "eth".to_string();
+        target.symbol = "ETH".to_string();
+
+        apply_swap_pair(&mut report, &mut lots, &cfg, &source, &target, true);
+
+        assert!(
+            report
+                .warnings
+                .iter()
+                .any(|w| w.code == "swap_missing_price_non_usd_quote")
         );
         assert!(report.disposals.is_empty());
     }

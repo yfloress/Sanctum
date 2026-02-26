@@ -43,8 +43,9 @@ use chrono::NaiveDateTime;
 use csv::StringRecord;
 
 use super::common::{
-    format_datetime, is_fiat, is_quote_currency, normalize_binance_currency,
-    is_usd_valued_quote, parse_amount_with_unit, parse_decimal, parse_timestamp,
+    append_tax_non_usd_quote_reason, format_datetime, is_fiat, is_quote_currency,
+    is_usd_valued_quote, normalize_binance_currency, parse_amount_with_unit, parse_decimal,
+    parse_timestamp,
     should_rename_luna_to_lunc,
 };
 use super::{ExchangeParser, ExchangeSource, ParseResult};
@@ -183,6 +184,10 @@ fn normalise_coin(raw: &str, timestamp: NaiveDateTime) -> String {
 
 fn is_usd_valued_for_tax(symbol: &str) -> bool {
     is_usd_valued_quote(symbol)
+}
+
+fn annotate_non_usd_quote_note(notes: Option<String>, quote_symbol: &str) -> Option<String> {
+    append_tax_non_usd_quote_reason(notes, quote_symbol)
 }
 
 // ─── Column index helpers ───────────────────────────────────────────────────

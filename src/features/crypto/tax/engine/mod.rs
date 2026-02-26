@@ -404,6 +404,31 @@ mod tests {
     }
 
     #[test]
+    fn build_report_warns_with_non_usd_quote_code_when_marked() {
+        let buy = tx("b1", "buy", 1.0, Some(100.0), "2024-01-10");
+        let mut sell = tx("s1", "sell", 1.0, None, "2024-02-10");
+        sell.notes = Some("tax_reason=non_usd_quote:EUR".to_string());
+
+        let settings = TaxPeriodSettings {
+            period_id: "2024".to_string(),
+            jurisdiction: TaxJurisdiction::Usa,
+            method: TaxMethod::Fifo,
+            include_swaps: false,
+            include_fee_crypto: false,
+            excluded_wallet_ids: Vec::new(),
+        };
+
+        let report = build_tax_report(vec![buy, sell], settings, vec![]).expect("report");
+        assert!(report.disposals.is_empty());
+        assert!(
+            report
+                .warnings
+                .iter()
+                .any(|w| w.code == "missing_price_non_usd_quote")
+        );
+    }
+
+    #[test]
     fn chile_missing_ipc_emits_warning() {
         let buy = tx("b1", "buy", 1.0, Some(100.0), "2024-01-10");
         let sell = tx("s1", "sell", 1.0, Some(150.0), "2024-02-10");

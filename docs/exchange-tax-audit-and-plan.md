@@ -11,6 +11,7 @@ Status: Audit complete, implementation pending
 - Done: batch import now skips `Binance Spot Trade History` when `Binance All Statements` is in the same batch to prevent overlap duplication.
 - Done: batch import now skips `Kraken Trades` when `Kraken Ledger` is in the same batch to prevent overlap duplication.
 - Done: non-USD fiat quotes/fees are no longer injected as USD valuation inputs in Binance/Kraken/MEXC trade paths (kept as missing valuation instead of wrong USD).
+- Done: missing-price tax warnings now differentiate non-USD quote normalization cases, and readiness UI surfaces a dedicated FX-normalization item.
 - Added regression tests for all points above.
 
 ## 1) Scope

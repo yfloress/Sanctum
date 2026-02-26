@@ -386,6 +386,13 @@ fn compute_taxable_income(
     transactions: &[CryptoTransaction],
     period: &TaxPeriod,
 ) -> (f64, usize, Vec<crate::features::crypto::TaxWarning>) {
+    let has_non_usd_quote_marker = |tx: &CryptoTransaction| {
+        tx.notes
+            .as_deref()
+            .map(|notes| notes.contains("tax_reason=non_usd_quote"))
+            .unwrap_or(false)
+    };
+
     let mut total = 0.0;
     let mut count = 0;
     let mut warnings = Vec::new();
@@ -411,8 +418,13 @@ fn compute_taxable_income(
         if let Some(price) = tx.price_per_coin {
             total += price * tx.amount;
         } else {
+            let warning_code = if has_non_usd_quote_marker(tx) {
+                "income_missing_price_non_usd_quote"
+            } else {
+                "income_missing_price"
+            };
             warnings.push(crate::features::crypto::TaxWarning {
-                code: "income_missing_price".to_string(),
+                code: warning_code.to_string(),
                 message: format!("Missing price for income {}", tx.id),
                 tx_id: Some(tx.id.clone()),
             });
@@ -506,10 +518,18 @@ fn build_readiness(
 
     let missing_price_codes = [
         "missing_price",
+        "missing_price_non_usd_quote",
         "fee_missing_price",
         "swap_missing_price",
+        "swap_missing_price_non_usd_quote",
         "income_missing_price",
+        "income_missing_price_non_usd_quote",
         "ipc_missing",
+    ];
+    let non_usd_quote_missing_price_codes = [
+        "missing_price_non_usd_quote",
+        "swap_missing_price_non_usd_quote",
+        "income_missing_price_non_usd_quote",
     ];
     let has_missing_prices = missing_price_codes
         .iter()
@@ -524,6 +544,11 @@ fn build_readiness(
         .filter(|w| missing_price_codes.contains(&w.code.as_str()))
         .count()
         + end_balance_missing;
+    let non_usd_quote_missing_price_count = report
+        .warnings
+        .iter()
+        .filter(|w| non_usd_quote_missing_price_codes.contains(&w.code.as_str()))
+        .count();
 
     let insufficient_count = report
         .warnings
@@ -531,7 +556,7 @@ fn build_readiness(
         .filter(|w| w.code == "insufficient_lots")
         .count();
 
-    vec![
+    let mut items = vec![
         TaxReadinessItem {
             code: "settings".to_string(),
             status: if transactions_in_period > 0 {
@@ -573,6 +598,17 @@ fn build_readiness(
                 missing_price_count.to_string()
             },
         },
+    ];
+
+    if non_usd_quote_missing_price_count > 0 {
+        items.push(TaxReadinessItem {
+            code: "prices_fx".to_string(),
+            status: "warn".to_string(),
+            detail: non_usd_quote_missing_price_count.to_string(),
+        });
+    }
+
+    items.extend([
         TaxReadinessItem {
             code: "transfers".to_string(),
             status: if unpaired_transfers > 0 { "warn" } else { "ok" }.to_string(),
@@ -606,7 +642,9 @@ fn build_readiness(
                 detail: "other".to_string(),
             }
         },
-    ]
+    ]);
+
+    items
 }
 
 fn convert_usd_for_export(value: f64, currency: &str, clp_rate: f64) -> f64 {

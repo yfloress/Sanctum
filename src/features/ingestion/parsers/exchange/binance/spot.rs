@@ -169,7 +169,7 @@ impl ExchangeParser for BinanceSpotParser {
             let quote_is_pricing = is_quote_currency(&quote_symbol);
             let base_is_pricing = is_quote_currency(&base_symbol);
 
-            let notes = if pair_raw.is_empty() {
+            let mut notes = if pair_raw.is_empty() {
                 Some(format!(
                     "Binance Spot {} | {}/{}",
                     side_raw, base_symbol, quote_symbol
@@ -200,11 +200,15 @@ impl ExchangeParser for BinanceSpotParser {
 
             if quote_is_pricing && !base_is_pricing {
                 // Standard pair: BTC/USD, BTC/USDT, etc.
-                let price = if executed_qty > 0.0 && is_usd_valued_for_tax(&quote_symbol) {
+                let quote_is_usd_valued = is_usd_valued_for_tax(&quote_symbol);
+                let price = if executed_qty > 0.0 && quote_is_usd_valued {
                     Some(amount_qty / executed_qty)
                 } else {
                     None
                 };
+                if !quote_is_usd_valued {
+                    notes = annotate_non_usd_quote_note(notes, &quote_symbol);
+                }
 
                 let subtype = if is_buy { "buy" } else { "sell" };
 
@@ -230,6 +234,9 @@ impl ExchangeParser for BinanceSpotParser {
             } else if base_is_pricing && !quote_is_pricing {
                 // Inverted pair: USD/BTC, USDT/BTC (rare but possible)
                 let subtype = if is_buy { "sell" } else { "buy" };
+                if !is_usd_valued_for_tax(&base_symbol) {
+                    notes = annotate_non_usd_quote_note(notes, &base_symbol);
+                }
 
                 let tx = ImportCryptoTransaction {
                     date,

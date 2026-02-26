@@ -131,6 +131,20 @@ fn compute_taxable_income_warns_when_price_missing() {
 }
 
 #[test]
+fn compute_taxable_income_warns_with_non_usd_quote_code_when_marked() {
+    let period = parse_period("2024").expect("valid period");
+    let mut income_missing_price = tx("i1", "income", Some("gift"), 1.0, None, "2024-01-10");
+    income_missing_price.notes = Some("tax_reason=non_usd_quote:EUR".to_string());
+
+    let (total, count, warnings) = compute_taxable_income(&[income_missing_price], &period);
+    assert_eq!(total, 0.0);
+    assert_eq!(count, 1);
+    assert_eq!(warnings.len(), 1);
+    assert_eq!(warnings[0].code, "income_missing_price_non_usd_quote");
+    assert_eq!(warnings[0].tx_id.as_deref(), Some("i1"));
+}
+
+#[test]
 fn build_readiness_sets_prices_error_on_invalid_warning() {
     let report = TaxReport {
         period_id: "2024".to_string(),
@@ -154,6 +168,32 @@ fn build_readiness_sets_prices_error_on_invalid_warning() {
         .expect("prices readiness item");
     assert_eq!(prices.status, "error");
     assert_eq!(prices.detail, "invalid");
+}
+
+#[test]
+fn build_readiness_adds_fx_prices_item_for_non_usd_quote_warnings() {
+    let report = TaxReport {
+        period_id: "2024".to_string(),
+        period_start: "2024-01-01".to_string(),
+        period_end: "2024-12-31".to_string(),
+        jurisdiction: "chile".to_string(),
+        method: "fifo".to_string(),
+        summary: TaxReportSummary::default(),
+        disposals: Vec::new(),
+        warnings: vec![crate::features::crypto::TaxWarning {
+            code: "missing_price_non_usd_quote".to_string(),
+            message: "Missing price for disposal s1".to_string(),
+            tx_id: Some("s1".to_string()),
+        }],
+    };
+
+    let readiness = build_readiness(&report, 3, 0, 0, TaxJurisdiction::Chile);
+    let prices_fx = readiness
+        .iter()
+        .find(|r| r.code == "prices_fx")
+        .expect("prices_fx readiness item");
+    assert_eq!(prices_fx.status, "warn");
+    assert_eq!(prices_fx.detail, "1");
 }
 
 #[test]

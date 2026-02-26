@@ -526,6 +526,9 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_crypto_tax_readiness_prices_warn_suffix(s(&t(
         "crypto-tax-readiness-prices-warn-suffix",
     )));
+    tr.set_crypto_tax_readiness_prices_fx_warn_suffix(s(&t(
+        "crypto-tax-readiness-prices-fx-warn-suffix",
+    )));
     tr.set_crypto_tax_readiness_transfers_warn_suffix(s(&t(
         "crypto-tax-readiness-transfers-warn-suffix",
     )));
@@ -547,6 +550,7 @@ pub fn load_all_translations(ui: &AppWindow) {
     tr.set_crypto_tax_readiness_history(s(&t("crypto-tax-readiness-history")));
     tr.set_crypto_tax_readiness_balances(s(&t("crypto-tax-readiness-balances")));
     tr.set_crypto_tax_readiness_prices(s(&t("crypto-tax-readiness-prices")));
+    tr.set_crypto_tax_readiness_prices_fx(s(&t("crypto-tax-readiness-prices-fx")));
     tr.set_crypto_tax_readiness_transfers(s(&t("crypto-tax-readiness-transfers")));
     tr.set_crypto_tax_readiness_filing(s(&t("crypto-tax-readiness-filing")));
     tr.set_crypto_tax_ipc_title(s(&t("crypto-tax-ipc-title")));

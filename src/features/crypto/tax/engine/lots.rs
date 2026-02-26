@@ -59,6 +59,21 @@ fn is_stablecoin_coin_id(raw: &str) -> bool {
     )
 }
 
+fn has_non_usd_quote_marker(tx: &CryptoTransaction) -> bool {
+    tx.notes
+        .as_deref()
+        .map(|notes| notes.contains("tax_reason=non_usd_quote"))
+        .unwrap_or(false)
+}
+
+fn missing_price_code(tx: &CryptoTransaction) -> &'static str {
+    if has_non_usd_quote_marker(tx) {
+        "missing_price_non_usd_quote"
+    } else {
+        "missing_price"
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Lot creation
 // ---------------------------------------------------------------------------
@@ -90,8 +105,9 @@ pub(super) fn add_lot(
     };
 
     if !force_zero_cost && tx.price_per_coin.is_none() && tx.override_cost_basis.is_none() {
+        let code = missing_price_code(tx);
         report.warnings.push(TaxWarning {
-            code: "missing_price".to_string(),
+            code: code.to_string(),
             message: format!("Missing price for acquisition {}", tx.id),
             tx_id: Some(tx.id.clone()),
         });
@@ -144,8 +160,9 @@ pub(super) fn apply_disposal(
         None => 0.0,
     };
     if tx.price_per_coin.is_none() && tx.override_proceeds.is_none() && taxable {
+        let code = missing_price_code(tx);
         report.warnings.push(TaxWarning {
-            code: "missing_price".to_string(),
+            code: code.to_string(),
             message: format!("Missing price for disposal {}", tx.id),
             tx_id: Some(tx.id.clone()),
         });

@@ -35,11 +35,15 @@ use chrono::NaiveDateTime;
 use csv::StringRecord;
 
 use super::common::{
-    format_datetime, is_fiat, is_usd_valued_quote, normalize_kraken_currency, parse_decimal,
-    parse_kraken_pair, parse_timestamp,
+    append_tax_non_usd_quote_reason, format_datetime, is_fiat, is_usd_valued_quote,
+    normalize_kraken_currency, parse_decimal, parse_kraken_pair, parse_timestamp,
 };
 use super::{ExchangeParser, ExchangeSource, ParseResult};
 use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
+
+fn annotate_non_usd_quote_note(notes: Option<String>, quote_symbol: &str) -> Option<String> {
+    append_tax_non_usd_quote_reason(notes, quote_symbol)
+}
 
 // ─── Kraken Ledger types ────────────────────────────────────────────────────
 
@@ -257,7 +261,7 @@ impl PendingTrade {
         }
 
         let date = format_datetime(outgoing.time);
-        let notes = Some(format!(
+        let mut notes = Some(format!(
             "Kraken {} | Ref: {}",
             outgoing.ledger_type.label(),
             refid
@@ -266,6 +270,9 @@ impl PendingTrade {
         // Fiat -> Crypto = buy
         if out_is_pricing && !in_is_pricing {
             let out_is_usd_valued = is_usd_valued_quote(&outgoing.symbol);
+            if !out_is_usd_valued {
+                notes = annotate_non_usd_quote_note(notes, &outgoing.symbol);
+            }
             let price = if incoming.abs_amount() > 0.0 && out_is_usd_valued {
                 Some(outgoing.abs_amount() / incoming.abs_amount())
             } else {
@@ -311,6 +318,9 @@ impl PendingTrade {
         // Crypto -> Fiat = sell
         if !out_is_pricing && in_is_pricing {
             let in_is_usd_valued = is_usd_valued_quote(&incoming.symbol);
+            if !in_is_usd_valued {
+                notes = annotate_non_usd_quote_note(notes, &incoming.symbol);
+            }
             let price = if outgoing.abs_amount() > 0.0 && in_is_usd_valued {
                 Some(incoming.abs_amount() / outgoing.abs_amount())
             } else {

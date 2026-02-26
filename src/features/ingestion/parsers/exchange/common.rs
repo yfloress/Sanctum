@@ -177,6 +177,33 @@ pub fn is_usd_valued_quote(symbol: &str) -> bool {
     symbol.eq_ignore_ascii_case("USD") || is_stablecoin(symbol)
 }
 
+/// Appends a structured tax annotation indicating that price normalization to
+/// USD could not be derived from the exchange quote currency.
+pub fn append_tax_non_usd_quote_reason(
+    notes: Option<String>,
+    quote_symbol: &str,
+) -> Option<String> {
+    let normalized_quote = quote_symbol.trim().to_uppercase();
+    let marker = if normalized_quote.is_empty() {
+        "tax_reason=non_usd_quote".to_string()
+    } else {
+        format!("tax_reason=non_usd_quote:{normalized_quote}")
+    };
+
+    match notes {
+        Some(mut existing) => {
+            if !existing.contains("tax_reason=non_usd_quote") {
+                if !existing.trim().is_empty() {
+                    existing.push_str(" | ");
+                }
+                existing.push_str(&marker);
+            }
+            Some(existing)
+        }
+        None => Some(marker),
+    }
+}
+
 // ─── Binance currency normalisation ─────────────────────────────────────────
 
 /// Normalises Binance-specific asset names.

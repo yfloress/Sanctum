@@ -191,7 +191,7 @@ impl ExchangeParser for KrakenTradesParser {
             let quote_is_pricing = quote_fiat;
             let base_is_pricing = base_fiat;
 
-            let notes = match (txid.is_empty(), ordertxid.is_empty()) {
+            let mut notes = match (txid.is_empty(), ordertxid.is_empty()) {
                 (false, false) => Some(format!(
                     "Kraken trade | {} | Ref: {} | Order: {}",
                     pair_raw, txid, ordertxid
@@ -212,16 +212,20 @@ impl ExchangeParser for KrakenTradesParser {
 
             if quote_is_pricing && !base_is_pricing {
                 // Standard fiat pair: BTC/USD, ETH/EUR, etc.
-                let price = if volume > 0.0 && is_usd_valued_quote(&quote) {
+                let quote_is_usd_valued = is_usd_valued_quote(&quote);
+                let price = if volume > 0.0 && quote_is_usd_valued {
                     Some(cost / volume)
                 } else {
                     None
                 };
-                let fee_usd = if fee.abs() > f64::EPSILON && is_usd_valued_quote(&quote) {
+                let fee_usd = if fee.abs() > f64::EPSILON && quote_is_usd_valued {
                     Some(fee)
                 } else {
                     None
                 };
+                if !quote_is_usd_valued {
+                    notes = annotate_non_usd_quote_note(notes, &quote);
+                }
 
                 let tx = ImportCryptoTransaction {
                     date,
@@ -245,11 +249,15 @@ impl ExchangeParser for KrakenTradesParser {
             } else if base_is_pricing && !quote_is_pricing {
                 // Inverted fiat pair: USD/BTC (rare but possible)
                 let subtype_str = if is_buy { "sell" } else { "buy" };
-                let price = if cost > 0.0 && is_usd_valued_quote(&base) {
+                let base_is_usd_valued = is_usd_valued_quote(&base);
+                let price = if cost > 0.0 && base_is_usd_valued {
                     Some(volume / cost)
                 } else {
                     None
                 };
+                if !base_is_usd_valued {
+                    notes = annotate_non_usd_quote_note(notes, &base);
+                }
                 let (fee_coin_symbol, fee_amount) = if fee.abs() > f64::EPSILON {
                     (Some(quote.clone()), Some(fee))
                 } else {

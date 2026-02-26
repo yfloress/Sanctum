@@ -19,7 +19,9 @@ use std::collections::HashMap;
 
 use csv::StringRecord;
 
-use super::super::common::{is_fiat, is_quote_currency, is_usd_valued_quote};
+use super::super::common::{
+    append_tax_non_usd_quote_reason, is_fiat, is_quote_currency, is_usd_valued_quote,
+};
 use crate::features::ingestion::types::ImportCryptoTransaction;
 
 pub(super) fn resolve_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
@@ -133,11 +135,14 @@ pub(super) fn map_spent_received_to_tx(
         return None;
     }
 
-    let notes = Some(format!(
+    let mut notes = Some(format!(
         "MEXC {source_label} | {notes_context} | {spent_amount} {spent_symbol} -> {recv_amount} {recv_symbol}"
     ));
 
     if spent_fiat && !recv_fiat {
+        if !spent_is_usd_valued {
+            notes = append_tax_non_usd_quote_reason(notes, &spent_symbol);
+        }
         let price_per_coin = if spent_is_usd_valued {
             Some(spent_amount / recv_amount)
         } else {
@@ -163,6 +168,9 @@ pub(super) fn map_spent_received_to_tx(
     }
 
     if !spent_fiat && recv_fiat {
+        if !recv_is_usd_valued {
+            notes = append_tax_non_usd_quote_reason(notes, &recv_symbol);
+        }
         let price_per_coin = if recv_is_usd_valued {
             Some(recv_amount / spent_amount)
         } else {
@@ -191,6 +199,9 @@ pub(super) fn map_spent_received_to_tx(
     let recv_quote = is_quote_currency(&recv_symbol);
 
     if spent_quote && !recv_quote {
+        if !spent_is_usd_valued {
+            notes = append_tax_non_usd_quote_reason(notes, &spent_symbol);
+        }
         let price_per_coin = if spent_is_usd_valued {
             Some(spent_amount / recv_amount)
         } else {
@@ -216,6 +227,9 @@ pub(super) fn map_spent_received_to_tx(
     }
 
     if !spent_quote && recv_quote {
+        if !recv_is_usd_valued {
+            notes = append_tax_non_usd_quote_reason(notes, &recv_symbol);
+        }
         let price_per_coin = if recv_is_usd_valued {
             Some(recv_amount / spent_amount)
         } else {

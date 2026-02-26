@@ -102,6 +102,8 @@ fn trades_sell_eth_eur() {
     assert!((tx.amount - 2.0).abs() < f64::EPSILON);
     assert!(tx.price_per_coin.is_none());
     assert!(tx.fee.is_none());
+    let note = tx.notes.as_deref().unwrap_or_default();
+    assert!(note.contains("tax_reason=non_usd_quote:EUR"));
 }
 
 #[test]
