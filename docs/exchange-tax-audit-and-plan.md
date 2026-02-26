@@ -22,6 +22,7 @@ Status: Audit complete, implementation pending
 - Done: batch import now skips NotBank PnL report when NotBank transactional CSVs are present (PnL CSV is informational only).
 - Done: NotBank Trade Activity is now included in price-agnostic overlap dedup to prevent duplicate rows when the same trade is re-imported with changed USD normalization context.
 - Done: ingestion now deduplicates NotBank Trade Activity rows by `trade_id` + wallet (when present), reducing duplicate inserts on repeated imports.
+- Done: NotBank Transaction rows now include `entry_id` notes and are deduplicated by `entry_id` + wallet when present.
 - Added regression tests for all points above.
 
 ## 1) Scope

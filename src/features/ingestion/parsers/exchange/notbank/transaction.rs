@@ -25,6 +25,9 @@ fn resolve_transaction_columns(headers: &StringRecord) -> HashMap<&'static str, 
     let mut map = HashMap::new();
     for (idx, col) in headers.iter().enumerate() {
         match col.trim().trim_matches('"').to_lowercase().as_str() {
+            "postingentryid" => {
+                map.insert("posting_entry_id", idx);
+            }
             "postingentrytype" => {
                 map.insert("posting_entry_type", idx);
             }
@@ -89,8 +92,15 @@ fn map_transaction_kind(
     ("expense".to_string(), Some("other".to_string()))
 }
 
-fn build_transaction_notes(reference_type_raw: &str, reference_id_raw: &str) -> Option<String> {
+fn build_transaction_notes(
+    posting_entry_id_raw: &str,
+    reference_type_raw: &str,
+    reference_id_raw: &str,
+) -> Option<String> {
     let mut parts = vec!["NotBank transaction".to_string()];
+    if !posting_entry_id_raw.trim().is_empty() {
+        parts.push(format!("entry_id={}", posting_entry_id_raw.trim()));
+    }
     if !reference_type_raw.trim().is_empty() {
         parts.push(format!("type={}", reference_type_raw.trim()));
     }
@@ -155,6 +165,7 @@ impl ExchangeParser for NotBankTransactionParser {
                 .unwrap_or((idx + 2) as u64) as usize;
 
             let posting_datetime_raw = get_field(&record, &cols, "posting_datetime");
+            let posting_entry_id_raw = get_field(&record, &cols, "posting_entry_id");
             let product_raw = get_field(&record, &cols, "product");
             let cr_raw = get_field(&record, &cols, "cr");
             let dr_raw = get_field(&record, &cols, "dr");
@@ -215,7 +226,11 @@ impl ExchangeParser for NotBankTransactionParser {
 
             let (transaction_type, subtype) =
                 map_transaction_kind(signed_amount, posting_entry_type_raw, reference_type_raw);
-            let notes = build_transaction_notes(reference_type_raw, reference_id_raw);
+            let notes = build_transaction_notes(
+                posting_entry_id_raw,
+                reference_type_raw,
+                reference_id_raw,
+            );
 
             result.items.push((
                 line_number,
@@ -263,8 +278,12 @@ mod tests {
         assert_eq!(result.items.len(), 2);
         assert_eq!(result.items[0].1.transaction_type, "transfer");
         assert_eq!(result.items[0].1.subtype.as_deref(), Some("deposit"));
+        let first_note = result.items[0].1.notes.as_deref().unwrap_or_default();
+        assert!(first_note.contains("entry_id=1"));
         assert_eq!(result.items[1].1.transaction_type, "transfer");
         assert_eq!(result.items[1].1.subtype.as_deref(), Some("withdrawal"));
+        let second_note = result.items[1].1.notes.as_deref().unwrap_or_default();
+        assert!(second_note.contains("entry_id=2"));
     }
 
     #[test]

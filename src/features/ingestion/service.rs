@@ -185,6 +185,36 @@ fn notbank_trade_ref_key(wallet_id: &str, note: Option<&str>) -> Option<(String,
     Some((wallet_id.to_string(), reference))
 }
 
+fn extract_notbank_transaction_entry_id(note: &str) -> Option<String> {
+    let trimmed = note.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    let lower = trimmed.to_ascii_lowercase();
+    if !lower.starts_with("notbank transaction") {
+        return None;
+    }
+
+    let marker = "| entry_id=";
+    if let Some(pos) = lower.find(marker) {
+        let start = pos + marker.len();
+        if let Some(tail) = trimmed.get(start..) {
+            let value = tail.split('|').next().unwrap_or("").trim();
+            if !value.is_empty() {
+                return Some(value.to_string());
+            }
+        }
+    }
+
+    None
+}
+
+fn notbank_transaction_ref_key(wallet_id: &str, note: Option<&str>) -> Option<(String, String)> {
+    let reference = note.and_then(extract_notbank_transaction_entry_id)?;
+    Some((wallet_id.to_string(), reference))
+}
+
 fn has_mexc_transfer_overlap_duplicate(
     existing: &[CryptoTransaction],
     format_name: &str,
@@ -1350,6 +1380,10 @@ impl IngestionService {
             .iter()
             .filter_map(|tx| notbank_trade_ref_key(&tx.wallet_id, tx.notes.as_deref()))
             .collect();
+        let mut notbank_transaction_ref_set: HashSet<(String, String)> = existing
+            .iter()
+            .filter_map(|tx| notbank_transaction_ref_key(&tx.wallet_id, tx.notes.as_deref()))
+            .collect();
 
         // Track pending balance changes for dry_run validation
         // Key: (wallet_id, coin_id), Value: pending balance delta
@@ -1397,6 +1431,14 @@ impl IngestionService {
             let notbank_ref_key = notbank_trade_ref_key(&wallet.id, import_tx.notes.as_deref());
             if let Some(ref_key) = notbank_ref_key.as_ref() {
                 if notbank_trade_ref_set.contains(ref_key) {
+                    summary.record_skipped(&skipped_duplicate);
+                    continue;
+                }
+            }
+            let notbank_tx_ref_key =
+                notbank_transaction_ref_key(&wallet.id, import_tx.notes.as_deref());
+            if let Some(ref_key) = notbank_tx_ref_key.as_ref() {
+                if notbank_transaction_ref_set.contains(ref_key) {
                     summary.record_skipped(&skipped_duplicate);
                     continue;
                 }
@@ -2041,6 +2083,9 @@ impl IngestionService {
                 if let Some(ref_key) = notbank_ref_key.clone() {
                     notbank_trade_ref_set.insert(ref_key);
                 }
+                if let Some(ref_key) = notbank_tx_ref_key.clone() {
+                    notbank_transaction_ref_set.insert(ref_key);
+                }
                 continue;
             }
 
@@ -2161,6 +2206,9 @@ impl IngestionService {
                 if let Some(ref_key) = notbank_ref_key.clone() {
                     notbank_trade_ref_set.insert(ref_key);
                 }
+                if let Some(ref_key) = notbank_tx_ref_key.clone() {
+                    notbank_transaction_ref_set.insert(ref_key);
+                }
                 summary.record_inserted();
                 continue;
             }
@@ -2216,6 +2264,9 @@ impl IngestionService {
                     if let Some(ref_key) = notbank_ref_key {
                         notbank_trade_ref_set.insert(ref_key);
                     }
+                    if let Some(ref_key) = notbank_tx_ref_key {
+                        notbank_transaction_ref_set.insert(ref_key);
+                    }
                     summary.record_inserted();
                 }
                 Err(e) => {
@@ -2235,9 +2286,11 @@ impl IngestionService {
 #[cfg(test)]
 mod tests {
     use super::{
-        extract_kraken_trade_ref, extract_notbank_trade_ref, has_mexc_transfer_overlap_duplicate,
+        extract_kraken_trade_ref, extract_notbank_trade_ref,
+        extract_notbank_transaction_entry_id, has_mexc_transfer_overlap_duplicate,
         kraken_trade_ref_key, matches_swap_rollup_duplicate, normalize_import_symbol_key,
-        notbank_trade_ref_key, note_is_exchange_overlap_prone, uses_price_agnostic_dedup,
+        notbank_trade_ref_key, notbank_transaction_ref_key, note_is_exchange_overlap_prone,
+        uses_price_agnostic_dedup,
     };
     use crate::models::CryptoTransaction;
 
@@ -2366,6 +2419,43 @@ mod tests {
                 "wallet-1",
                 Some("NotBank transaction | type=Deposit | ref=A001"),
             ),
+            None
+        );
+    }
+
+    #[test]
+    fn extract_notbank_transaction_entry_id_accepts_entry_id_marker() {
+        assert_eq!(
+            extract_notbank_transaction_entry_id(
+                "NotBank transaction | entry_id=10000123 | type=Deposit | ref=A001",
+            ),
+            Some("10000123".to_string())
+        );
+    }
+
+    #[test]
+    fn extract_notbank_transaction_entry_id_ignores_non_transaction_notes() {
+        assert_eq!(
+            extract_notbank_transaction_entry_id("NotBank trade | trade_id=300001"),
+            None
+        );
+        assert_eq!(
+            extract_notbank_transaction_entry_id("Kraken ledger | Ref: TX-1"),
+            None
+        );
+    }
+
+    #[test]
+    fn notbank_transaction_ref_key_binds_entry_id_to_wallet() {
+        assert_eq!(
+            notbank_transaction_ref_key(
+                "wallet-1",
+                Some("NotBank transaction | entry_id=10000123 | type=Deposit"),
+            ),
+            Some(("wallet-1".to_string(), "10000123".to_string()))
+        );
+        assert_eq!(
+            notbank_transaction_ref_key("wallet-1", Some("NotBank trade | trade_id=300001")),
             None
         );
     }
