@@ -166,13 +166,14 @@ fn extract_notbank_trade_ref(note: &str) -> Option<String> {
         return None;
     }
 
-    let marker = "| trade_id=";
-    if let Some(pos) = lower.find(marker) {
-        let start = pos + marker.len();
-        if let Some(tail) = trimmed.get(start..) {
-            let value = tail.split('|').next().unwrap_or("").trim();
-            if !value.is_empty() {
-                return Some(value.to_string());
+    for marker in ["| trade_id=", "| trans_report_id="] {
+        if let Some(pos) = lower.find(marker) {
+            let start = pos + marker.len();
+            if let Some(tail) = trimmed.get(start..) {
+                let value = tail.split('|').next().unwrap_or("").trim();
+                if !value.is_empty() {
+                    return Some(value.to_string());
+                }
             }
         }
     }
@@ -2393,6 +2394,16 @@ mod tests {
         assert_eq!(
             extract_notbank_trade_ref("NotBank trade | Buy BTCUSDT | trade_id=300001 | order_id=1"),
             Some("300001".to_string())
+        );
+    }
+
+    #[test]
+    fn extract_notbank_trade_ref_falls_back_to_trans_report_id_marker() {
+        assert_eq!(
+            extract_notbank_trade_ref(
+                "NotBank trade | Buy BTCUSDT | trans_report_id=200001 | order_id=1",
+            ),
+            Some("200001".to_string())
         );
     }
 

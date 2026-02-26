@@ -52,6 +52,9 @@ fn resolve_trade_columns(headers: &StringRecord) -> HashMap<&'static str, usize>
             "transreporttype" => {
                 map.insert("report_type", idx);
             }
+            "transreportid" => {
+                map.insert("trans_report_id", idx);
+            }
             "tradeid" => {
                 map.insert("trade_id", idx);
             }
@@ -179,6 +182,7 @@ fn annotate_missing_non_usd_quote(
 fn build_trade_notes(
     instrument_raw: &str,
     side_raw: &str,
+    trans_report_id_raw: &str,
     report_type_raw: &str,
     trade_id_raw: &str,
     order_id_raw: &str,
@@ -191,6 +195,9 @@ fn build_trade_notes(
         side_raw.trim(),
         instrument_raw.trim()
     )];
+    if !trans_report_id_raw.trim().is_empty() {
+        parts.push(format!("trans_report_id={}", trans_report_id_raw.trim()));
+    }
     if !report_type_raw.trim().is_empty() {
         parts.push(format!("report_type={}", report_type_raw.trim()));
     }
@@ -276,6 +283,7 @@ impl ExchangeParser for NotBankTradeParser {
             let notional_raw = get_field(&record, &cols, "notional");
             let fee_raw = get_field(&record, &cols, "fee");
             let fee_product_raw = get_field(&record, &cols, "fee_product");
+            let trans_report_id_raw = get_field(&record, &cols, "trans_report_id");
             let report_type_raw = get_field(&record, &cols, "report_type");
             let trade_id_raw = get_field(&record, &cols, "trade_id");
             let order_id_raw = get_field(&record, &cols, "order_id");
@@ -392,6 +400,7 @@ impl ExchangeParser for NotBankTradeParser {
             let base_notes = build_trade_notes(
                 instrument_raw,
                 side_raw,
+                trans_report_id_raw,
                 report_type_raw,
                 trade_id_raw,
                 order_id_raw,
@@ -532,6 +541,8 @@ mod tests {
         assert_eq!(tx.symbol, "USDT");
         assert_eq!(tx.amount, 100.0);
         assert_eq!(tx.price_per_coin, Some(1.0));
+        let note = tx.notes.as_deref().unwrap_or_default();
+        assert!(note.contains("trans_report_id=1"));
     }
 
     #[test]
