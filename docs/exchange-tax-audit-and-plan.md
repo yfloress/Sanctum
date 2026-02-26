@@ -21,6 +21,7 @@ Status: Audit complete, implementation pending
 - Done: NotBank Trade rows now add non-USD quote tax marker when fiat->USD normalization anchor is missing (prevents accidental USD auto-imputation).
 - Done: batch import now skips NotBank PnL report when NotBank transactional CSVs are present (PnL CSV is informational only).
 - Done: NotBank Trade Activity is now included in price-agnostic overlap dedup to prevent duplicate rows when the same trade is re-imported with changed USD normalization context.
+- Done: ingestion now deduplicates NotBank Trade Activity rows by `trade_id` + wallet (when present), reducing duplicate inserts on repeated imports.
 - Added regression tests for all points above.
 
 ## 1) Scope
