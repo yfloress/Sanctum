@@ -18,6 +18,8 @@ Status: Audit complete, implementation pending
 - Done: UI tax callbacks now have regression tests ensuring resolvable missing-price counts exclude FX-normalization and IPC warnings.
 - Done: readiness `prices` now tracks resolvable/IPC/end-balance gaps only; FX-only gaps are isolated under `prices_fx` to avoid double counting.
 - Done: missing-price warning classification is centralized in shared tax helpers, reducing drift/hardcoded code paths between service and UI.
+- Done: NotBank Trade rows now add non-USD quote tax marker when fiat->USD normalization anchor is missing (prevents accidental USD auto-imputation).
+- Done: batch import now skips NotBank PnL report when NotBank transactional CSVs are present (PnL CSV is informational only).
 - Added regression tests for all points above.
 
 ## 1) Scope

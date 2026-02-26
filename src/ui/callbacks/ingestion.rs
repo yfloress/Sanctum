@@ -720,6 +720,9 @@ fn apply_exchange_batch_filters(
     let has_mexc_futures_trades = files.iter().any(|f| f.source_id == "mexc_futures_trades");
     let has_mexc_trade_history = files.iter().any(|f| f.source_id == "mexc_trades");
     let has_binance_all = files.iter().any(|f| f.source_id == "binance_all");
+    let has_notbank_transactional = files
+        .iter()
+        .any(|f| f.source_id == "notbank_transaction" || f.source_id == "notbank_trade");
 
     let mut filtered = Vec::with_capacity(files.len());
     let mut skipped = Vec::new();
@@ -742,6 +745,13 @@ fn apply_exchange_batch_filters(
         if has_binance_all && file.source_id == "binance_spot" {
             skipped.push(format!(
                 "{}: skipped overlapping source (covered by Binance All Statements)",
+                file.display_name
+            ));
+            continue;
+        }
+        if has_notbank_transactional && file.source_id == "notbank_pnl" {
+            skipped.push(format!(
+                "{}: skipped informational source (PnL report does not include transaction rows)",
                 file.display_name
             ));
             continue;
@@ -956,6 +966,48 @@ mod tests {
         assert_eq!(filtered.len(), 2);
         assert_eq!(filtered[0].source_id, "notbank_transaction");
         assert_eq!(filtered[1].source_id, "notbank_trade");
+        assert!(skipped.is_empty());
+    }
+
+    #[test]
+    fn batch_filter_skips_notbank_pnl_when_transactional_reports_present() {
+        let files = vec![
+            PendingExchangeFile {
+                display_name: "Transaction.csv".to_string(),
+                source_id: "notbank_transaction".to_string(),
+                content: "transaction".to_string(),
+            },
+            PendingExchangeFile {
+                display_name: "Trade Activity.csv".to_string(),
+                source_id: "notbank_trade".to_string(),
+                content: "trade".to_string(),
+            },
+            PendingExchangeFile {
+                display_name: "Profit And Loss.csv".to_string(),
+                source_id: "notbank_pnl".to_string(),
+                content: "pnl".to_string(),
+            },
+        ];
+
+        let (filtered, skipped) = apply_exchange_batch_filters(files);
+        assert_eq!(filtered.len(), 2);
+        assert!(filtered.iter().any(|f| f.source_id == "notbank_transaction"));
+        assert!(filtered.iter().any(|f| f.source_id == "notbank_trade"));
+        assert_eq!(skipped.len(), 1);
+        assert!(skipped[0].contains("informational source"));
+    }
+
+    #[test]
+    fn batch_filter_keeps_notbank_pnl_when_only_file() {
+        let files = vec![PendingExchangeFile {
+            display_name: "Profit And Loss.csv".to_string(),
+            source_id: "notbank_pnl".to_string(),
+            content: "pnl".to_string(),
+        }];
+
+        let (filtered, skipped) = apply_exchange_batch_filters(files);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].source_id, "notbank_pnl");
         assert!(skipped.is_empty());
     }
 

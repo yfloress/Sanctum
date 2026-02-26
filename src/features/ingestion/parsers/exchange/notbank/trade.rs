@@ -164,6 +164,17 @@ fn normalize_fiat_trade_price_to_usd(
     quote_to_usd.get(&key).map(|rate| fiat_per_coin * *rate)
 }
 
+fn annotate_missing_non_usd_quote(
+    notes: Option<String>,
+    quote_symbol: &str,
+    price_per_coin: Option<f64>,
+) -> Option<String> {
+    if price_per_coin.is_some() || !is_non_usd_fiat_symbol(quote_symbol) {
+        return notes;
+    }
+    append_tax_non_usd_quote_reason(notes, quote_symbol)
+}
+
 #[allow(clippy::too_many_arguments)]
 fn build_trade_notes(
     instrument_raw: &str,
@@ -378,7 +389,7 @@ impl ExchangeParser for NotBankTradeParser {
                 _ => (None, None),
             };
 
-            let notes = build_trade_notes(
+            let base_notes = build_trade_notes(
                 instrument_raw,
                 side_raw,
                 report_type_raw,
@@ -396,6 +407,8 @@ impl ExchangeParser for NotBankTradeParser {
                     spent_amount / received_amount,
                     &quote_to_usd,
                 );
+                let notes =
+                    annotate_missing_non_usd_quote(base_notes.clone(), &spent_symbol, price_per_coin);
                 let mut tx = ImportCryptoTransaction {
                     date: format_datetime(timestamp),
                     wallet: wallet_name.to_string(),
@@ -433,6 +446,11 @@ impl ExchangeParser for NotBankTradeParser {
                     &received_symbol,
                     received_amount / spent_amount,
                     &quote_to_usd,
+                );
+                let notes = annotate_missing_non_usd_quote(
+                    base_notes.clone(),
+                    &received_symbol,
+                    price_per_coin,
                 );
                 let mut tx = ImportCryptoTransaction {
                     date: format_datetime(timestamp),
@@ -482,7 +500,7 @@ impl ExchangeParser for NotBankTradeParser {
                     swap_to_amount: Some(received_amount),
                     fee_coin_symbol: fee_symbol.clone(),
                     fee_amount,
-                    notes,
+                    notes: base_notes,
                 },
             ));
         }
@@ -584,6 +602,8 @@ mod tests {
         assert_eq!(btc_buy.subtype.as_deref(), Some("buy"));
         assert_eq!(btc_buy.symbol, "BTC");
         assert!((btc_buy.price_per_coin.unwrap_or_default() - 66666.6667).abs() < 0.01);
+        let note = btc_buy.notes.as_deref().unwrap_or_default();
+        assert!(!note.contains("tax_reason=non_usd_quote"));
     }
 
     #[test]
@@ -598,5 +618,24 @@ mod tests {
         let tx = &result.items[0].1;
         assert_eq!(tx.symbol, "BTC");
         assert!(tx.price_per_coin.is_none());
+        let note = tx.notes.as_deref().unwrap_or_default();
+        assert!(note.contains("tax_reason=non_usd_quote:CLP"));
+    }
+
+    #[test]
+    fn trade_parser_marks_non_usd_quote_when_sell_price_anchor_missing() {
+        let csv = "\"RegisteredEntityId\",\"TransReportId\",\"TransReportRevision\",\"TransReportType\",\"OrderId\",\"ClientOrderId\",\"QuoteId\",\"ExtTradeReportId\",\"TradeId\",\"TransReportDatetime\",\"Side\",\"Quantity\",\"Instrument\",\"Price\",\"InsideBid\",\"InsideBidSize\",\"InsideOffer\",\"InsideOfferSize\",\"LeavesSize\",\"MakerTaker\",\"Trader\",\"AccountId\",\"AccountName\",\"Fee\",\"FeeProduct\",\"Notional\",\"BaseSettlementAmount\",\"CounterpartySettlementAmount\",\"OMSId\"\n\
+\"\",\"1\",\"1\",\"QuoteExecution\",\"\",\"\",\"\",\"\",\"1001\",\"2025-10-30T20:19:39.450Z\",\"Sell\",\"0.001\",\"BTCCLP\",\"63000000\",\"0\",\"0\",\"0\",\"0\",\"0\",\"Maker\",\"1\",\"100\",\"Primary\",\"0\",\"CLP\",\"63000\",\"0.001\",\"-63000\",\"1\"\n";
+
+        let parser = NotBankTradeParser;
+        let result = parser.parse(csv, "NotBank").unwrap();
+        assert_eq!(result.errors.len(), 0);
+        assert_eq!(result.items.len(), 1);
+        let tx = &result.items[0].1;
+        assert_eq!(tx.symbol, "BTC");
+        assert_eq!(tx.subtype.as_deref(), Some("sell"));
+        assert!(tx.price_per_coin.is_none());
+        let note = tx.notes.as_deref().unwrap_or_default();
+        assert!(note.contains("tax_reason=non_usd_quote:CLP"));
     }
 }

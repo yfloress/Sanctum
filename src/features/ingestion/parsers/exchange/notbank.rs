@@ -26,7 +26,9 @@ use std::collections::HashMap;
 
 use csv::StringRecord;
 
-use super::common::{format_datetime, is_fiat, parse_decimal, parse_timestamp};
+use super::common::{
+    append_tax_non_usd_quote_reason, format_datetime, is_fiat, parse_decimal, parse_timestamp,
+};
 use super::{ExchangeParser, ExchangeSource, ParseResult};
 use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
 
