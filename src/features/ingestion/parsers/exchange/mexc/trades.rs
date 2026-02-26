@@ -24,7 +24,10 @@ use std::collections::HashMap;
 
 use csv::{ReaderBuilder, StringRecord, Trim};
 
-use super::super::common::{format_datetime, is_fiat, parse_decimal, parse_timestamp};
+use super::super::common::{
+    append_tax_non_usd_quote_reason, format_datetime, is_fiat, is_usd_valued_quote, parse_decimal,
+    parse_timestamp,
+};
 use super::super::{ExchangeParser, ExchangeSource, ParseResult};
 use super::spot::parse_mexc_pair;
 use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
@@ -259,10 +262,18 @@ impl ExchangeParser for MexcTradeParser {
                 None => (None, None),
             };
 
-            let notes = build_notes(pair_raw, side_raw, role_raw);
+            let mut notes = build_notes(pair_raw, side_raw, role_raw);
 
             if quote_is_pricing && !base_is_pricing {
-                let price = filled_price.or_else(|| Some(quote_amount / executed_amount));
+                let quote_is_usd_valued = is_usd_valued_quote(&quote_symbol);
+                let price = if quote_is_usd_valued {
+                    filled_price.or_else(|| Some(quote_amount / executed_amount))
+                } else {
+                    None
+                };
+                if !quote_is_usd_valued {
+                    notes = append_tax_non_usd_quote_reason(notes, &quote_symbol);
+                }
                 let subtype = if is_buy { "buy" } else { "sell" };
 
                 result.items.push((
@@ -287,6 +298,9 @@ impl ExchangeParser for MexcTradeParser {
                 ));
             } else if base_is_pricing && !quote_is_pricing {
                 let subtype = if is_buy { "sell" } else { "buy" };
+                if !is_usd_valued_quote(&base_symbol) {
+                    notes = append_tax_non_usd_quote_reason(notes, &base_symbol);
+                }
 
                 result.items.push((
                     line_number,
@@ -397,6 +411,27 @@ mod tests {
         assert!((tx.amount - 0.138).abs() < f64::EPSILON);
         assert_eq!(tx.swap_to_symbol.as_deref(), Some("USDT"));
         assert!((tx.swap_to_amount.unwrap() - 5.045).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn buy_trade_with_non_usd_fiat_quote_keeps_price_empty_and_marks_note() {
+        let csv = format!(
+            "{}\n11111111,BTC_EUR,2025-11-06 11:57:31,Buy,90000,0.01,900,0.10EUR,Taker\n",
+            HEADER
+        );
+
+        let parser = MexcTradeParser;
+        let result = parser.parse(&csv, "MEXC").unwrap();
+
+        assert_eq!(result.items.len(), 1);
+        assert!(result.errors.is_empty());
+        let tx = &result.items[0].1;
+        assert_eq!(tx.symbol, "BTC");
+        assert_eq!(tx.subtype.as_deref(), Some("buy"));
+        assert!((tx.amount - 0.01).abs() < f64::EPSILON);
+        assert!(tx.price_per_coin.is_none());
+        let note = tx.notes.as_deref().unwrap_or_default();
+        assert!(note.contains("tax_reason=non_usd_quote:EUR"));
     }
 
     #[test]

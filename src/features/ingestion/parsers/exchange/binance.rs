@@ -505,15 +505,19 @@ fn resolve_single_pair(
 
     let date = format_datetime(out.timestamp);
     let line = out.line_number;
-    let notes = Some(format!("Binance {} | {}", out.operation_raw, out.remark));
+    let mut notes = Some(format!("Binance {} | {}", out.operation_raw, out.remark));
 
     if out_is_pricing && !in_is_pricing {
         // Fiat/stablecoin -> Crypto = buy
-        let price = if inc.change.abs() > 0.0 {
+        let out_is_usd_valued = is_usd_valued_for_tax(&out.symbol);
+        let price = if inc.change.abs() > 0.0 && out_is_usd_valued {
             Some(out.change.abs() / inc.change.abs())
         } else {
             None
         };
+        if !out_is_usd_valued {
+            notes = annotate_non_usd_quote_note(notes, &out.symbol);
+        }
         Some((
             line,
             ImportCryptoTransaction {
@@ -536,11 +540,15 @@ fn resolve_single_pair(
         ))
     } else if !out_is_pricing && in_is_pricing {
         // Crypto -> Fiat/stablecoin = sell
-        let price = if out.change.abs() > 0.0 {
+        let in_is_usd_valued = is_usd_valued_for_tax(&inc.symbol);
+        let price = if out.change.abs() > 0.0 && in_is_usd_valued {
             Some(inc.change.abs() / out.change.abs())
         } else {
             None
         };
+        if !in_is_usd_valued {
+            notes = annotate_non_usd_quote_note(notes, &inc.symbol);
+        }
         Some((
             line,
             ImportCryptoTransaction {

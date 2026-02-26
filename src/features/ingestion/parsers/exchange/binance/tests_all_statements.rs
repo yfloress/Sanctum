@@ -55,6 +55,27 @@ fn all_statements_sell_becomes_trade_sell() {
 }
 
 #[test]
+fn all_statements_convert_with_non_usd_fiat_quote_keeps_price_empty_and_marks_note() {
+    let csv = concat!(
+        "User_ID,UTC_Time,Account,Operation,Coin,Change,Remark\n",
+        "12345,2024-01-15 10:30:45,Spot,Binance Convert,EUR,-1000,convert-eur-btc\n",
+        "12345,2024-01-15 10:30:45,Spot,Binance Convert,BTC,0.02,convert-eur-btc\n",
+    );
+
+    let parser = BinanceAllStatementsParser;
+    let result = parser.parse(csv, "Binance").unwrap();
+
+    assert_eq!(result.items.len(), 1);
+    let tx = &result.items[0].1;
+    assert_eq!(tx.symbol, "BTC");
+    assert_eq!(tx.transaction_type, "trade");
+    assert_eq!(tx.subtype.as_deref(), Some("buy"));
+    assert!(tx.price_per_coin.is_none());
+    let note = tx.notes.as_deref().unwrap_or_default();
+    assert!(note.contains("tax_reason=non_usd_quote:EUR"));
+}
+
+#[test]
 fn all_statements_deposit_becomes_transfer_deposit() {
     let csv = concat!(
         "User_ID,UTC_Time,Account,Operation,Coin,Change,Remark\n",

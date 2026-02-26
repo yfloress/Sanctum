@@ -12,6 +12,7 @@ Status: Audit complete, implementation pending
 - Done: batch import now skips `Kraken Trades` when `Kraken Ledger` is in the same batch to prevent overlap duplication.
 - Done: ingestion service now uses additional price-agnostic dedup keys for overlap-prone exchange imports (Kraken/Binance/MEXC), reducing duplicate events when the same trade is re-imported with/without explicit price in separate sessions.
 - Done: non-USD fiat quotes/fees are no longer injected as USD valuation inputs in Binance/Kraken/MEXC trade paths (kept as missing valuation instead of wrong USD).
+- Done: this guard now also covers Binance All Statements paired conversions and MEXC Spot/Trade history fiat-quoted rows, with explicit non-USD quote annotations in notes.
 - Done: missing-price tax warnings now differentiate non-USD quote normalization cases, and readiness UI surfaces a dedicated FX-normalization item.
 - Added regression tests for all points above.
 

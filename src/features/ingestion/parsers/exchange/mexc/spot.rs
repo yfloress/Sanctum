@@ -47,7 +47,10 @@ use std::collections::HashMap;
 
 use csv::{ReaderBuilder, StringRecord, Trim};
 
-use super::super::common::{format_datetime, is_fiat, parse_decimal, parse_timestamp};
+use super::super::common::{
+    append_tax_non_usd_quote_reason, format_datetime, is_fiat, is_usd_valued_quote, parse_decimal,
+    parse_timestamp,
+};
 use super::super::{ExchangeParser, ExchangeSource, ParseResult};
 use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
 
@@ -306,7 +309,7 @@ impl ExchangeParser for MexcSpotParser {
             let quote_is_pricing = quote_fiat;
             let base_is_pricing = base_fiat;
 
-            let notes = Some(format!(
+            let mut notes = Some(format!(
                 "MEXC {} {} | {}/{}",
                 order_type_raw, direction_raw, base_symbol, quote_symbol,
             ));
@@ -333,13 +336,25 @@ impl ExchangeParser for MexcSpotParser {
 
             // Quote is true fiat and base is crypto -> standard buy/sell.
             if quote_is_pricing && !base_is_pricing {
+                let quote_is_usd_valued = is_usd_valued_quote(&quote_symbol);
                 let price = if avg_price.is_some() {
-                    avg_price
+                    if quote_is_usd_valued {
+                        avg_price
+                    } else {
+                        None
+                    }
                 } else if filled_qty > 0.0 && filled_value > 0.0 {
-                    Some(filled_value / filled_qty)
+                    if quote_is_usd_valued {
+                        Some(filled_value / filled_qty)
+                    } else {
+                        None
+                    }
                 } else {
                     None
                 };
+                if !quote_is_usd_valued {
+                    notes = append_tax_non_usd_quote_reason(notes, &quote_symbol);
+                }
 
                 let subtype = if is_buy { "buy" } else { "sell" };
 
@@ -366,6 +381,9 @@ impl ExchangeParser for MexcSpotParser {
                 // Inverted fiat pair (rare): USD/BTC.
                 // Buying base(fiat-like) with quote(crypto) = selling crypto
                 let subtype = if is_buy { "sell" } else { "buy" };
+                if !is_usd_valued_quote(&base_symbol) {
+                    notes = append_tax_non_usd_quote_reason(notes, &base_symbol);
+                }
 
                 let tx = ImportCryptoTransaction {
                     date,

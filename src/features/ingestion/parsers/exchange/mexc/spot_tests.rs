@@ -127,6 +127,27 @@ fn sell_btc_usd_fiat_is_trade_sell() {
 }
 
 #[test]
+fn buy_btc_eur_fiat_is_trade_buy_without_usd_price() {
+    let csv = format!(
+        "{}\n11111111,BTC_EUR,2024-01-15 10:30:45,Limit,Buy,50000.00,50000.00,0.5,0.5,25000.00,Filled\n",
+        HEADER
+    );
+
+    let parser = MexcSpotParser;
+    let result = parser.parse(&csv, "MEXC").unwrap();
+
+    assert_eq!(result.items.len(), 1);
+    let tx = &result.items[0].1;
+    assert_eq!(tx.symbol, "BTC");
+    assert_eq!(tx.transaction_type, "trade");
+    assert_eq!(tx.subtype.as_deref(), Some("buy"));
+    assert!((tx.amount - 0.5).abs() < f64::EPSILON);
+    assert!(tx.price_per_coin.is_none());
+    let note = tx.notes.as_deref().unwrap_or_default();
+    assert!(note.contains("tax_reason=non_usd_quote:EUR"));
+}
+
+#[test]
 fn buy_usdc_usdt_stablecoin_pair_is_swap() {
     // Both sides are stablecoins → crypto-to-crypto swap
     let csv = format!(
