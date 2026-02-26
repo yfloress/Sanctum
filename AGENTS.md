@@ -88,6 +88,7 @@ Always ask the user if they want to run any of these commands:
 - Avoid network calls in tests.
 
 ## Commit Guidelines
+- Do not create commits unless the user explicitly asks for a commit.
 - Git-flow style: `feat:`, `fix:`, `docs:`, `chore:`, etc.
   Example: `feat(habits): add radar analytics`.
 

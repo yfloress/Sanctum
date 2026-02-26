@@ -917,7 +917,7 @@ mod tests {
     }
 
     #[test]
-    fn batch_filter_orders_kraken_ledger_before_kraken_trades() {
+    fn batch_filter_prefers_kraken_ledger_over_kraken_trades() {
         let files = vec![
             PendingExchangeFile {
                 display_name: "trades.csv".to_string(),
@@ -932,10 +932,9 @@ mod tests {
         ];
 
         let (filtered, skipped) = apply_exchange_batch_filters(files);
-        assert!(skipped.is_empty());
-        assert_eq!(filtered.len(), 2);
+        assert_eq!(skipped.len(), 1);
+        assert_eq!(filtered.len(), 1);
         assert_eq!(filtered[0].source_id, "kraken_ledger");
-        assert_eq!(filtered[1].source_id, "kraken_trades");
     }
 
     #[test]
