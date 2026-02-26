@@ -113,6 +113,7 @@ fn uses_price_agnostic_dedup(format_name: &str) -> bool {
             | "binance spot trade history"
             | "mexc spot trade history"
             | "mexc trade history"
+            | "notbank trade activity report"
     )
 }
 
@@ -120,6 +121,7 @@ fn note_is_exchange_overlap_prone(note: Option<&str>) -> bool {
     note_starts_with_lowercase(note, "kraken")
         || note_starts_with_lowercase(note, "binance")
         || note_starts_with_lowercase(note, "mexc")
+        || note_starts_with_lowercase(note, "notbank trade")
 }
 
 fn extract_kraken_trade_ref(note: &str) -> Option<String> {
@@ -2291,6 +2293,7 @@ mod tests {
         assert!(uses_price_agnostic_dedup("Binance Spot Trade History"));
         assert!(uses_price_agnostic_dedup("MEXC Spot Trade History"));
         assert!(uses_price_agnostic_dedup("MEXC Trade History"));
+        assert!(uses_price_agnostic_dedup("NotBank Trade Activity Report"));
         assert!(!uses_price_agnostic_dedup("NotBank Transaction Report"));
     }
 
@@ -2301,7 +2304,10 @@ mod tests {
         assert!(note_is_exchange_overlap_prone(Some(
             "MEXC trade | BTC_USDT | Ref=123"
         )));
-        assert!(!note_is_exchange_overlap_prone(Some("NotBank trade | id=1")));
+        assert!(note_is_exchange_overlap_prone(Some("NotBank trade | id=1")));
+        assert!(!note_is_exchange_overlap_prone(Some(
+            "NotBank transaction | type=Deposit"
+        )));
         assert!(!note_is_exchange_overlap_prone(None));
     }
 

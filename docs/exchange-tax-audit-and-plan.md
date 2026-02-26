@@ -20,6 +20,7 @@ Status: Audit complete, implementation pending
 - Done: missing-price warning classification is centralized in shared tax helpers, reducing drift/hardcoded code paths between service and UI.
 - Done: NotBank Trade rows now add non-USD quote tax marker when fiat->USD normalization anchor is missing (prevents accidental USD auto-imputation).
 - Done: batch import now skips NotBank PnL report when NotBank transactional CSVs are present (PnL CSV is informational only).
+- Done: NotBank Trade Activity is now included in price-agnostic overlap dedup to prevent duplicate rows when the same trade is re-imported with changed USD normalization context.
 - Added regression tests for all points above.
 
 ## 1) Scope
