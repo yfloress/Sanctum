@@ -160,11 +160,13 @@ impl CryptoService {
         let period = parse_period(&period_id).map_err(CryptoError::Validation)?;
 
         self.with_db(|db| {
-            let transactions: Vec<CryptoTransaction> = db
+            let all_transactions: Vec<CryptoTransaction> = db
                 .get_all_crypto_transactions()
-                .map_err(CryptoError::Database)?
-                .into_iter()
+                .map_err(CryptoError::Database)?;
+            let transactions: Vec<CryptoTransaction> = all_transactions
+                .iter()
                 .filter(|tx| !excluded.contains(&tx.wallet_id))
+                .cloned()
                 .collect();
             let ipc_entries = load_ipc_entries(db)?;
 
@@ -181,6 +183,16 @@ impl CryptoService {
                         .unwrap_or(false)
                 })
                 .count();
+            let transactions_total_in_period = all_transactions
+                .iter()
+                .filter(|tx| {
+                    parse_date(&tx.date)
+                        .map(|date| is_in_period(&period, date))
+                        .unwrap_or(false)
+                })
+                .count();
+            let excluded_transactions_in_period = transactions_total_in_period
+                .saturating_sub(transactions_in_period);
 
             let unpaired_transfers = count_unpaired_transfers(&transactions);
 
@@ -195,6 +207,7 @@ impl CryptoService {
             let readiness = build_readiness(
                 &report,
                 transactions_in_period,
+                excluded_transactions_in_period,
                 end_balance_missing,
                 unpaired_transfers,
                 jurisdiction,
@@ -508,6 +521,7 @@ fn count_unpaired_transfers(transactions: &[CryptoTransaction]) -> usize {
 fn build_readiness(
     report: &TaxReport,
     transactions_in_period: usize,
+    excluded_transactions_in_period: usize,
     end_balance_missing: usize,
     unpaired_transfers: usize,
     jurisdiction: TaxJurisdiction,
@@ -551,16 +565,29 @@ fn build_readiness(
         .filter(|w| w.code == "insufficient_lots")
         .count();
 
+    let settings_code = if transactions_in_period == 0 && excluded_transactions_in_period > 0 {
+        "settings_excluded"
+    } else {
+        "settings"
+    };
+    let settings_detail = if transactions_in_period > 0 {
+        transactions_in_period.to_string()
+    } else if excluded_transactions_in_period > 0 {
+        excluded_transactions_in_period.to_string()
+    } else {
+        "0".to_string()
+    };
+
     let mut items = vec![
         TaxReadinessItem {
-            code: "settings".to_string(),
+            code: settings_code.to_string(),
             status: if transactions_in_period > 0 {
                 "ok"
             } else {
                 "warn"
             }
             .to_string(),
-            detail: transactions_in_period.to_string(),
+            detail: settings_detail,
         },
         TaxReadinessItem {
             code: "history".to_string(),

@@ -161,7 +161,7 @@ fn build_readiness_sets_prices_error_on_invalid_warning() {
         }],
     };
 
-    let readiness = build_readiness(&report, 3, 0, 0, TaxJurisdiction::Chile);
+    let readiness = build_readiness(&report, 3, 0, 0, 0, TaxJurisdiction::Chile);
     let prices = readiness
         .iter()
         .find(|r| r.code == "prices")
@@ -187,7 +187,7 @@ fn build_readiness_adds_fx_prices_item_for_non_usd_quote_warnings() {
         }],
     };
 
-    let readiness = build_readiness(&report, 3, 0, 0, TaxJurisdiction::Chile);
+    let readiness = build_readiness(&report, 3, 0, 0, 0, TaxJurisdiction::Chile);
     let prices = readiness
         .iter()
         .find(|r| r.code == "prices")
@@ -220,7 +220,7 @@ fn readiness_fx_warnings_do_not_count_as_resolvable_prices() {
         }],
     };
 
-    let readiness = build_readiness(&report, 3, 0, 0, TaxJurisdiction::Chile);
+    let readiness = build_readiness(&report, 3, 0, 0, 0, TaxJurisdiction::Chile);
     let prices = readiness
         .iter()
         .find(|r| r.code == "prices")
@@ -253,13 +253,35 @@ fn build_readiness_counts_ipc_missing_under_prices() {
         }],
     };
 
-    let readiness = build_readiness(&report, 3, 0, 0, TaxJurisdiction::Chile);
+    let readiness = build_readiness(&report, 3, 0, 0, 0, TaxJurisdiction::Chile);
     let prices = readiness
         .iter()
         .find(|r| r.code == "prices")
         .expect("prices readiness item");
     assert_eq!(prices.status, "warn");
     assert_eq!(prices.detail, "1");
+}
+
+#[test]
+fn build_readiness_marks_settings_as_excluded_when_period_only_has_excluded_wallets() {
+    let report = TaxReport {
+        period_id: "2024".to_string(),
+        period_start: "2024-01-01".to_string(),
+        period_end: "2024-12-31".to_string(),
+        jurisdiction: "chile".to_string(),
+        method: "fifo".to_string(),
+        summary: TaxReportSummary::default(),
+        disposals: Vec::new(),
+        warnings: Vec::new(),
+    };
+
+    let readiness = build_readiness(&report, 0, 5, 0, 0, TaxJurisdiction::Chile);
+    let settings = readiness
+        .iter()
+        .find(|r| r.code == "settings_excluded")
+        .expect("settings readiness item");
+    assert_eq!(settings.status, "warn");
+    assert_eq!(settings.detail, "5");
 }
 
 #[test]

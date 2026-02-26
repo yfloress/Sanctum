@@ -1178,6 +1178,21 @@ mod tests {
     use super::*;
 
     #[test]
+    fn effective_period_id_maps_chile_assessment_year_to_previous_year() {
+        let period = effective_period_id("2026", TaxJurisdiction::Chile).expect("valid period");
+        assert_eq!(period, "2025");
+    }
+
+    #[test]
+    fn effective_period_id_keeps_year_for_non_chile_jurisdictions() {
+        let usa = effective_period_id("2026", TaxJurisdiction::Usa).expect("valid usa period");
+        let other =
+            effective_period_id("2026", TaxJurisdiction::Other).expect("valid other period");
+        assert_eq!(usa, "2026");
+        assert_eq!(other, "2026");
+    }
+
+    #[test]
     fn count_resolvable_missing_price_warnings_filters_fx_and_ipc_codes() {
         let warnings = vec![
             crate::features::crypto::TaxWarning {

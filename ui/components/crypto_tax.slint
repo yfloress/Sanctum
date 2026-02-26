@@ -109,7 +109,7 @@ component ReadinessRow inherits Rectangle {
     in property <TaxReadinessItem> item;
 
     // Resolved translated title
-    property <string> resolved-title: root.item.code == "settings"
+    property <string> resolved-title: (root.item.code == "settings" || root.item.code == "settings_excluded")
         ? Translations.crypto-tax-readiness-settings
         : root.item.code == "history"
             ? Translations.crypto-tax-readiness-history
@@ -129,15 +129,20 @@ component ReadinessRow inherits Rectangle {
 
     // Resolved translated detail — composed from Translations.* + raw data
     property <string> resolved-detail:
+        // settings warn: explain why user must review configuration
+        root.item.code == "settings_excluded" && root.item.status == "warn" && root.item.detail != "0"
+            ? root.item.detail + " " + Translations.crypto-tax-readiness-settings-excluded-warn-suffix
+        : root.item.code == "settings" && root.item.status == "warn"
+            ? Translations.crypto-tax-readiness-settings-warn-detail
         // settings: "N transactions in period"
-        root.item.code == "settings" && root.item.detail != "" && root.item.detail != "0"
+        : root.item.code == "settings" && root.item.detail != "" && root.item.detail != "0"
             ? root.item.detail + " " + Translations.crypto-tax-readiness-settings-suffix
         // history warn: "N disposals with insufficient lots"
         : root.item.code == "history" && root.item.status == "warn" && root.item.detail != "0"
             ? root.item.detail + " " + Translations.crypto-tax-readiness-history-warn-suffix
         // balances warn
-        : root.item.code == "balances" && root.item.status == "warn"
-            ? Translations.crypto-tax-readiness-balances-warn-detail
+        : root.item.code == "balances" && root.item.status == "warn" && root.item.detail != "0"
+            ? root.item.detail + " " + Translations.crypto-tax-readiness-balances-warn-suffix
         // prices error (invalid)
         : root.item.code == "prices" && root.item.detail == "invalid"
             ? Translations.crypto-tax-readiness-prices-invalid-suffix

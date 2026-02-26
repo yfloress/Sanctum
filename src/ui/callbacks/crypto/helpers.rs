@@ -18,6 +18,7 @@
 //! Shared helpers for crypto callbacks
 
 use crate::controller::{AppController, SETTING_PREFERRED_CURRENCY};
+use crate::features::crypto::TaxJurisdiction;
 use crate::models::CryptoAsset;
 use crate::services::i18n;
 use crate::ui::{
@@ -36,6 +37,25 @@ use std::sync::Arc;
 pub const SETTING_CRYPTO_LAST_WALLET_ID: &str = "crypto_last_wallet_id";
 pub const SETTING_CRYPTO_LAST_COIN_ID: &str = "crypto_last_coin_id";
 pub const SETTING_CRYPTO_LAST_UPDATED: &str = "crypto_last_updated";
+
+fn current_tax_summary_period(controller: &AppController) -> String {
+    let display_year = chrono::Local::now().format("%Y").to_string();
+    let jurisdiction = controller
+        .load_tax_settings(display_year.clone())
+        .map(|settings| settings.jurisdiction)
+        .unwrap_or(TaxJurisdiction::Chile);
+
+    if matches!(jurisdiction, TaxJurisdiction::Chile) {
+        return display_year
+            .parse::<i32>()
+            .ok()
+            .and_then(|year| year.checked_sub(1))
+            .map(|year| year.to_string())
+            .unwrap_or(display_year);
+    }
+
+    display_year
+}
 
 fn normalize_currency_code(code: &str) -> String {
     code.trim().to_uppercase()
@@ -518,7 +538,7 @@ pub fn reload_portfolio<N>(
         ("N/A".to_string(), true, "N/A".to_string())
     };
 
-    let current_period = chrono::Local::now().format("%Y").to_string();
+    let current_period = current_tax_summary_period(controller);
     let (total_realized_label, total_realized_positive) = controller
         .generate_tax_summary(current_period)
         .ok()
