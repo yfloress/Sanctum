@@ -104,6 +104,24 @@ fn trades_sell_eth_eur() {
 }
 
 #[test]
+fn trades_inverted_fiat_pair_without_fee_keeps_fee_fields_empty() {
+    let csv = concat!(
+        "\"txid\",\"ordertxid\",\"pair\",\"time\",\"type\",\"ordertype\",\"price\",\"cost\",\"fee\",\"vol\",\"margin\",\"misc\",\"ledgers\"\n",
+        "\"TX1\",\"ORD1\",\"USD/BTC\",\"2024-02-01 08:00:00\",\"buy\",\"market\",\"0.00002000\",\"1000.00\",\"0.00\",\"0.02\",\"0\",\"\",\"L1,L2\"\n",
+    );
+
+    let parser = KrakenTradesParser;
+    let result = parser.parse(csv, "Kraken").unwrap();
+
+    assert_eq!(result.items.len(), 1);
+    let tx = &result.items[0].1;
+    assert_eq!(tx.symbol, "BTC");
+    assert_eq!(tx.subtype.as_deref(), Some("sell"));
+    assert!(tx.fee_coin_symbol.is_none());
+    assert!(tx.fee_amount.is_none());
+}
+
+#[test]
 fn trades_crypto_to_crypto_becomes_swap() {
     let csv = concat!(
         "\"txid\",\"ordertxid\",\"pair\",\"time\",\"type\",\"ordertype\",\"price\",\"cost\",\"fee\",\"vol\",\"margin\",\"misc\",\"ledgers\"\n",

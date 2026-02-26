@@ -249,6 +249,11 @@ impl ExchangeParser for KrakenTradesParser {
                 } else {
                     None
                 };
+                let (fee_coin_symbol, fee_amount) = if fee.abs() > f64::EPSILON {
+                    (Some(quote.clone()), Some(fee))
+                } else {
+                    (None, None)
+                };
 
                 let tx = ImportCryptoTransaction {
                     date,
@@ -263,12 +268,8 @@ impl ExchangeParser for KrakenTradesParser {
                     override_cost_basis: None,
                     swap_to_symbol: None,
                     swap_to_amount: None,
-                    fee_coin_symbol: Some(quote.clone()),
-                    fee_amount: if fee.abs() > f64::EPSILON {
-                        Some(fee)
-                    } else {
-                        None
-                    },
+                    fee_coin_symbol,
+                    fee_amount,
                     notes,
                 };
 

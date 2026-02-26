@@ -718,6 +718,7 @@ fn apply_exchange_batch_filters(
 ) -> (Vec<PendingExchangeFile>, Vec<String>) {
     let has_mexc_futures_trades = files.iter().any(|f| f.source_id == "mexc_futures_trades");
     let has_mexc_trade_history = files.iter().any(|f| f.source_id == "mexc_trades");
+    let has_binance_all = files.iter().any(|f| f.source_id == "binance_all");
 
     let mut filtered = Vec::with_capacity(files.len());
     let mut skipped = Vec::new();
@@ -726,6 +727,13 @@ fn apply_exchange_batch_filters(
         if has_mexc_trade_history && file.source_id == "mexc_spot" {
             skipped.push(format!(
                 "{}: skipped overlapping source (covered by MEXC Trade History)",
+                file.display_name
+            ));
+            continue;
+        }
+        if has_binance_all && file.source_id == "binance_spot" {
+            skipped.push(format!(
+                "{}: skipped overlapping source (covered by Binance All Statements)",
                 file.display_name
             ));
             continue;
@@ -856,6 +864,27 @@ mod tests {
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered[0].source_id, "mexc_futures_trades");
         assert_eq!(skipped.len(), 2);
+    }
+
+    #[test]
+    fn batch_filter_skips_binance_spot_when_all_statements_present() {
+        let files = vec![
+            PendingExchangeFile {
+                display_name: "binance-all.csv".to_string(),
+                source_id: "binance_all".to_string(),
+                content: "all".to_string(),
+            },
+            PendingExchangeFile {
+                display_name: "binance-spot.csv".to_string(),
+                source_id: "binance_spot".to_string(),
+                content: "spot".to_string(),
+            },
+        ];
+
+        let (filtered, skipped) = apply_exchange_batch_filters(files);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].source_id, "binance_all");
+        assert_eq!(skipped.len(), 1);
     }
 
     #[test]

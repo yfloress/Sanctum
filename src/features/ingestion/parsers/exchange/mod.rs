@@ -633,26 +633,28 @@ const EXCHANGE_SIGNATURES: &[(&[&str], ExchangeSource)] = &[
 ];
 
 /// Attempts to identify the exchange source from CSV content by inspecting
-/// the first few non-empty lines for a matching header. Returns `None` if
+/// the first non-empty lines for a matching header. Returns `None` if
 /// the format is not recognized.
 ///
 /// Leading BOM characters are stripped automatically.
 pub fn detect_exchange_source(content: &str) -> Option<ExchangeSource> {
+    const MAX_HEADER_SCAN_LINES: usize = 32;
+
     let lines: Vec<&str> = content
         .trim_start_matches('\u{feff}') // strip UTF-8 BOM
         .lines()
         .map(str::trim)
         .filter(|line| !line.is_empty())
-        .take(5)
+        .take(MAX_HEADER_SCAN_LINES)
         .collect();
 
     if lines.is_empty() {
         return None;
     }
 
-    // Some files (e.g., NotBank PnL) include a non-CSV section title before
-    // the actual header. We inspect the first few non-empty lines to find the
-    // first matching header signature.
+    // Some files (e.g., NotBank PnL) include one or more non-CSV preamble
+    // lines before the actual header. We inspect an initial non-empty window
+    // to find the first matching header signature.
     for line in lines {
         let headers: Vec<&str> = line
             .split(',')
@@ -810,6 +812,23 @@ mod tests {
     #[test]
     fn detect_notbank_pnl_with_section_header() {
         let csv = "Unrealized Gain/Loss\n\"AccountId\",\"AccountName\",\"Product\",\"FullName\",\"TimeStamp\",\"ProductQuantity\",\"PurchasePrice\",\"TotalFeeAsProduct\",\"TotalQuantityMinusFee\",\"TotalPurchaseValue\",\"ProductEndPrice\",\"TotalSaleValue\",\"P/L\",\"%Return\"\n";
+        assert_eq!(
+            detect_exchange_source(csv),
+            Some(ExchangeSource::NotBankPnlReport)
+        );
+    }
+
+    #[test]
+    fn detect_notbank_pnl_with_long_preamble() {
+        let csv = concat!(
+            "Report generated at: 2026-02-23 02:31:37\n",
+            "Account: Example Account\n",
+            "Jurisdiction: CL\n",
+            "Currency: CLP\n",
+            "----\n",
+            "Unrealized Gain/Loss\n",
+            "\"AccountId\",\"AccountName\",\"Product\",\"FullName\",\"TimeStamp\",\"ProductQuantity\",\"PurchasePrice\",\"TotalFeeAsProduct\",\"TotalQuantityMinusFee\",\"TotalPurchaseValue\",\"ProductEndPrice\",\"TotalSaleValue\",\"P/L\",\"%Return\"\n",
+        );
         assert_eq!(
             detect_exchange_source(csv),
             Some(ExchangeSource::NotBankPnlReport)
