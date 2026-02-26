@@ -716,6 +716,7 @@ fn combine_exchange_labels(labels: &[String]) -> String {
 fn apply_exchange_batch_filters(
     files: Vec<PendingExchangeFile>,
 ) -> (Vec<PendingExchangeFile>, Vec<String>) {
+    let has_kraken_ledger = files.iter().any(|f| f.source_id == "kraken_ledger");
     let has_mexc_futures_trades = files.iter().any(|f| f.source_id == "mexc_futures_trades");
     let has_mexc_trade_history = files.iter().any(|f| f.source_id == "mexc_trades");
     let has_binance_all = files.iter().any(|f| f.source_id == "binance_all");
@@ -724,6 +725,13 @@ fn apply_exchange_batch_filters(
     let mut skipped = Vec::new();
 
     for file in files {
+        if has_kraken_ledger && file.source_id == "kraken_trades" {
+            skipped.push(format!(
+                "{}: skipped overlapping source (covered by Kraken Ledger)",
+                file.display_name
+            ));
+            continue;
+        }
         if has_mexc_trade_history && file.source_id == "mexc_spot" {
             skipped.push(format!(
                 "{}: skipped overlapping source (covered by MEXC Trade History)",
@@ -884,6 +892,27 @@ mod tests {
         let (filtered, skipped) = apply_exchange_batch_filters(files);
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered[0].source_id, "binance_all");
+        assert_eq!(skipped.len(), 1);
+    }
+
+    #[test]
+    fn batch_filter_skips_kraken_trades_when_ledger_present() {
+        let files = vec![
+            PendingExchangeFile {
+                display_name: "kraken-ledger.csv".to_string(),
+                source_id: "kraken_ledger".to_string(),
+                content: "ledger".to_string(),
+            },
+            PendingExchangeFile {
+                display_name: "kraken-trades.csv".to_string(),
+                source_id: "kraken_trades".to_string(),
+                content: "trades".to_string(),
+            },
+        ];
+
+        let (filtered, skipped) = apply_exchange_batch_filters(files);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].source_id, "kraken_ledger");
         assert_eq!(skipped.len(), 1);
     }
 
