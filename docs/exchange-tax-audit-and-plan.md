@@ -17,6 +17,7 @@ Status: Audit complete, implementation pending
 - Done: automatic tax missing-price sync excludes non-USD quote warnings, avoiding accidental USD imputation for FX-priced trades.
 - Done: UI tax callbacks now have regression tests ensuring resolvable missing-price counts exclude FX-normalization and IPC warnings.
 - Done: readiness `prices` now tracks resolvable/IPC/end-balance gaps only; FX-only gaps are isolated under `prices_fx` to avoid double counting.
+- Done: missing-price warning classification is centralized in shared tax helpers, reducing drift/hardcoded code paths between service and UI.
 - Added regression tests for all points above.
 
 ## 1) Scope

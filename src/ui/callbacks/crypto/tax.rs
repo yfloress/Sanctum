@@ -18,6 +18,7 @@
 //! Crypto tax UI callbacks (IPC import + summary)
 
 use crate::controller::{AppController, SETTING_PREFERRED_CURRENCY};
+use crate::features::crypto::tax::is_resolvable_missing_price_warning;
 use crate::features::crypto::tax::types::{TaxJurisdiction, TaxMethod};
 use crate::services::i18n::{t, t_args};
 use crate::ui::{convert_usd_to_preferred, format_preferred};
@@ -241,13 +242,7 @@ fn collect_missing_price_requests(
 
     for warning in warnings {
         let code = warning.code.as_str();
-        if !matches!(
-            code,
-            "missing_price"
-                | "swap_missing_price"
-                | "income_missing_price"
-                | "fee_missing_price"
-        ) {
+        if !is_resolvable_missing_price_warning(code) {
             continue;
         }
 
@@ -326,12 +321,7 @@ fn count_resolvable_missing_price_warnings(
 ) -> i32 {
     warnings
         .iter()
-        .filter(|warning| {
-            matches!(
-                warning.code.as_str(),
-                "missing_price" | "swap_missing_price" | "income_missing_price" | "fee_missing_price"
-            )
-        })
+        .filter(|warning| is_resolvable_missing_price_warning(&warning.code))
         .count() as i32
 }
 

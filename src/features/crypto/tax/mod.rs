@@ -22,6 +22,7 @@ pub mod ipc;
 pub mod report;
 pub mod summary;
 pub mod types;
+pub mod warnings;
 
 pub use ipc::{
     IpcEntry, IpcImportSummary, IpcParsed, IpcSummary, build_import_summary, map_to_entries,
@@ -35,6 +36,10 @@ pub use summary::{TaxReadinessItem, TaxSummaryPayload};
 pub use types::{
     TaxJurisdiction, TaxMethod, TaxPeriodSettings, TaxSettingsStore, TaxTxType,
     is_loss_only_subtype, normalize_subtype,
+};
+pub use warnings::{
+    is_ipc_missing_warning, is_non_usd_quote_missing_price_warning,
+    is_resolvable_missing_price_warning,
 };
 
 use crate::models::CryptoTransaction;

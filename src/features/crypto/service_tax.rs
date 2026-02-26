@@ -24,7 +24,9 @@ use super::service::{
 use super::tax::{
     IpcEntry, IpcImportSummary, IpcSummary, TaxJurisdiction, TaxPeriodSettings, TaxReadinessItem,
     TaxReport, TaxSettingsStore, TaxSummaryPayload, TaxTxType, build_import_summary,
-    build_tax_report, map_to_entries, parse_ipc_csv, resolve_type, summarize_ipc,
+    build_tax_report, is_ipc_missing_warning, is_non_usd_quote_missing_price_warning,
+    is_resolvable_missing_price_warning, map_to_entries, parse_ipc_csv, resolve_type,
+    summarize_ipc,
 };
 use crate::core::csv_escape;
 use crate::features::crypto::tax::engine::{TaxPeriod, is_in_period, parse_date, parse_period};
@@ -516,25 +518,15 @@ fn build_readiness(
     let has_invalid =
         warning_codes.contains("invalid_date") || warning_codes.contains("invalid_type");
 
-    let resolvable_missing_price_codes = [
-        "missing_price",
-        "fee_missing_price",
-        "swap_missing_price",
-        "income_missing_price",
-    ];
-    let non_usd_quote_missing_price_codes = [
-        "missing_price_non_usd_quote",
-        "swap_missing_price_non_usd_quote",
-        "income_missing_price_non_usd_quote",
-    ];
     let ipc_missing_count = report
         .warnings
         .iter()
-        .filter(|w| w.code == "ipc_missing")
+        .filter(|w| is_ipc_missing_warning(&w.code))
         .count();
-    let has_missing_prices = resolvable_missing_price_codes
+    let has_missing_prices = report
+        .warnings
         .iter()
-        .any(|c| warning_codes.contains(c))
+        .any(|w| is_resolvable_missing_price_warning(&w.code))
         || ipc_missing_count > 0
         || end_balance_missing > 0;
 
@@ -543,14 +535,14 @@ fn build_readiness(
     let missing_price_count = report
         .warnings
         .iter()
-        .filter(|w| resolvable_missing_price_codes.contains(&w.code.as_str()))
+        .filter(|w| is_resolvable_missing_price_warning(&w.code))
         .count()
         + ipc_missing_count
         + end_balance_missing;
     let non_usd_quote_missing_price_count = report
         .warnings
         .iter()
-        .filter(|w| non_usd_quote_missing_price_codes.contains(&w.code.as_str()))
+        .filter(|w| is_non_usd_quote_missing_price_warning(&w.code))
         .count();
 
     let insufficient_count = report
