@@ -254,11 +254,15 @@ impl ExchangeParser for NotBankTradeParser {
         }
 
         let mut result: ParseResult<ImportCryptoTransaction> = ParseResult::default();
-        let mut quote_to_usd: HashMap<String, f64> = HashMap::new();
+        let mut raw_records: Vec<(usize, StringRecord)> = Vec::new();
 
         for (idx, record) in reader.records().enumerate() {
-            let record = match record {
-                Ok(r) => r,
+            match record {
+                Ok(r) => {
+                    let line_number =
+                        r.position().map(|p| p.line()).unwrap_or((idx + 2) as u64) as usize;
+                    raw_records.push((line_number, r));
+                }
                 Err(err) => {
                     let line = err.position().map(|p| p.line()).unwrap_or((idx + 2) as u64);
                     result.errors.push(RowError::new(
@@ -266,14 +270,77 @@ impl ExchangeParser for NotBankTradeParser {
                         None,
                         format!("Invalid CSV record: {err}"),
                     ));
-                    continue;
                 }
+            }
+        }
+
+        // Pass 1: build fiat->USD anchors from the full file so conversion does
+        // not depend on row order.
+        let mut quote_to_usd: HashMap<String, f64> = HashMap::new();
+        for (_, record) in &raw_records {
+            let side_raw = get_field(record, &cols, "side");
+            let quantity_raw = get_field(record, &cols, "quantity");
+            let instrument_raw = get_field(record, &cols, "instrument");
+            let price_raw = get_field(record, &cols, "price");
+            let notional_raw = get_field(record, &cols, "notional");
+
+            let is_buy = match parse_side(side_raw) {
+                Some(v) => v,
+                None => continue,
+            };
+            let quantity = match parse_decimal(quantity_raw).map(f64::abs) {
+                Some(v) if v > 0.0 => v,
+                _ => continue,
+            };
+            let (base_symbol, quote_symbol) = match parse_compact_pair(instrument_raw) {
+                Some(pair) => pair,
+                None => continue,
             };
 
-            let line_number = record
-                .position()
-                .map(|p| p.line())
-                .unwrap_or((idx + 2) as u64) as usize;
+            let price = parse_decimal(price_raw).map(f64::abs);
+            let notional = parse_decimal(notional_raw).map(f64::abs).unwrap_or(0.0);
+            let quote_amount = if notional > 0.0 {
+                notional
+            } else if let Some(p) = price {
+                quantity * p
+            } else {
+                continue;
+            };
+
+            let (spent_symbol, spent_amount, received_symbol, received_amount) = if is_buy {
+                (
+                    quote_symbol.clone(),
+                    quote_amount,
+                    base_symbol.clone(),
+                    quantity,
+                )
+            } else {
+                (
+                    base_symbol.clone(),
+                    quantity,
+                    quote_symbol.clone(),
+                    quote_amount,
+                )
+            };
+
+            if spent_symbol.eq_ignore_ascii_case(&received_symbol) {
+                continue;
+            }
+            if is_fiat(&spent_symbol) && is_fiat(&received_symbol) {
+                continue;
+            }
+
+            update_quote_to_usd_rate(
+                &mut quote_to_usd,
+                &spent_symbol,
+                spent_amount,
+                &received_symbol,
+                received_amount,
+            );
+        }
+
+        // Pass 2: parse rows into import transactions using the complete anchor map.
+        for (line_number, record) in raw_records {
 
             let time_raw = get_field(&record, &cols, "time");
             let side_raw = get_field(&record, &cols, "side");
@@ -648,5 +715,25 @@ mod tests {
         assert!(tx.price_per_coin.is_none());
         let note = tx.notes.as_deref().unwrap_or_default();
         assert!(note.contains("tax_reason=non_usd_quote:CLP"));
+    }
+
+    #[test]
+    fn trade_parser_uses_anchor_defined_later_in_file() {
+        let csv = "\"RegisteredEntityId\",\"TransReportId\",\"TransReportRevision\",\"TransReportType\",\"OrderId\",\"ClientOrderId\",\"QuoteId\",\"ExtTradeReportId\",\"TradeId\",\"TransReportDatetime\",\"Side\",\"Quantity\",\"Instrument\",\"Price\",\"InsideBid\",\"InsideBidSize\",\"InsideOffer\",\"InsideOfferSize\",\"LeavesSize\",\"MakerTaker\",\"Trader\",\"AccountId\",\"AccountName\",\"Fee\",\"FeeProduct\",\"Notional\",\"BaseSettlementAmount\",\"CounterpartySettlementAmount\",\"OMSId\"\n\
+\"\",\"2\",\"1\",\"QuoteExecution\",\"\",\"\",\"\",\"\",\"1002\",\"2025-10-30T20:19:39.450Z\",\"Buy\",\"0.001\",\"BTCCLP\",\"63000000\",\"0\",\"0\",\"0\",\"0\",\"0\",\"Maker\",\"1\",\"100\",\"Primary\",\"63\",\"CLP\",\"63000\",\"0.001\",\"-63000\",\"1\"\n\
+\"\",\"1\",\"1\",\"QuoteExecution\",\"\",\"\",\"\",\"\",\"1001\",\"2025-10-30T19:53:11.325Z\",\"Buy\",\"100\",\"USDTCLP\",\"945\",\"0\",\"0\",\"0\",\"0\",\"0\",\"Maker\",\"1\",\"100\",\"Primary\",\"0\",\"CLP\",\"94500\",\"100\",\"-94500\",\"1\"\n";
+
+        let parser = NotBankTradeParser;
+        let result = parser.parse(csv, "NotBank").unwrap();
+        assert_eq!(result.errors.len(), 0);
+        assert_eq!(result.items.len(), 2);
+
+        let btc_buy = &result.items[0].1;
+        assert_eq!(btc_buy.symbol, "BTC");
+        assert_eq!(btc_buy.subtype.as_deref(), Some("buy"));
+        assert!((btc_buy.price_per_coin.unwrap_or_default() - 66666.6667).abs() < 0.01);
+        assert!((btc_buy.fee.unwrap_or_default() - 0.0666667).abs() < 0.0001);
+        let note = btc_buy.notes.as_deref().unwrap_or_default();
+        assert!(!note.contains("tax_reason=non_usd_quote"));
     }
 }

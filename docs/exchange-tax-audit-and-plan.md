@@ -24,6 +24,7 @@ Status: Audit complete, implementation pending
 - Done: ingestion now deduplicates NotBank Trade Activity rows by `trade_id` + wallet (when present), reducing duplicate inserts on repeated imports.
 - Done: NotBank Transaction rows now include `entry_id` notes and are deduplicated by `entry_id` + wallet when present.
 - Done: NotBank Trade dedup fallback now also accepts `trans_report_id` when `trade_id` is absent.
+- Done: NotBank Trade parser now builds fiat->USD anchors in a first pass, so normalization works even when anchor rows appear later in the CSV.
 - Added regression tests for all points above.
 
 ## 1) Scope
