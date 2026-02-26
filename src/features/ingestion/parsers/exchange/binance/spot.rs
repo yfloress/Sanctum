@@ -200,7 +200,7 @@ impl ExchangeParser for BinanceSpotParser {
 
             if quote_is_pricing && !base_is_pricing {
                 // Standard pair: BTC/USD, BTC/USDT, etc.
-                let price = if executed_qty > 0.0 && is_usd_valued_quote(&quote_symbol) {
+                let price = if executed_qty > 0.0 && is_usd_valued_for_tax(&quote_symbol) {
                     Some(amount_qty / executed_qty)
                 } else {
                     None

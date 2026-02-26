@@ -274,4 +274,23 @@ mod tests {
         assert_eq!(tx.symbol, "USDT");
         assert!((tx.amount - 300.0).abs() < f64::EPSILON);
     }
+
+    #[test]
+    fn p2p_non_usd_fiat_quote_does_not_set_usd_price() {
+        let csv = format!(
+            "{}\nUSER_001,Sell,USER_001,OPP_002,2025-11-20 13:20:00,2025-11-20 13:35:00,USDT,Sell,Completed,300,0.98,3,EUR,294\n",
+            P2P_HEADER
+        );
+
+        let parser = MexcFiatP2pParser;
+        let result = parser.parse(&csv, "MEXC").unwrap();
+
+        assert_eq!(result.items.len(), 1);
+        assert!(result.errors.is_empty());
+        let tx = &result.items[0].1;
+        assert_eq!(tx.transaction_type, "trade");
+        assert_eq!(tx.subtype.as_deref(), Some("sell"));
+        assert_eq!(tx.symbol, "USDT");
+        assert!(tx.price_per_coin.is_none());
+    }
 }

@@ -267,4 +267,23 @@ mod tests {
         assert_eq!(tx.symbol, "USDT");
         assert!((tx.amount - 500.0).abs() < f64::EPSILON);
     }
+
+    #[test]
+    fn otc_non_usd_fiat_quote_does_not_set_usd_price() {
+        let csv = format!(
+            "{}\nUSER_001,OTC-004,2025-10-07 10:00:00,2025-10-07 10:05:00,EUR,Buy,Completed,900,USDT,1000.00,SEPA\n",
+            OTC_HEADER
+        );
+
+        let parser = MexcFiatOtcParser;
+        let result = parser.parse(&csv, "MEXC").unwrap();
+
+        assert_eq!(result.items.len(), 1);
+        assert!(result.errors.is_empty());
+        let tx = &result.items[0].1;
+        assert_eq!(tx.transaction_type, "trade");
+        assert_eq!(tx.subtype.as_deref(), Some("buy"));
+        assert_eq!(tx.symbol, "USDT");
+        assert!(tx.price_per_coin.is_none());
+    }
 }

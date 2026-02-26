@@ -181,6 +181,10 @@ fn normalise_coin(raw: &str, timestamp: NaiveDateTime) -> String {
     }
 }
 
+fn is_usd_valued_for_tax(symbol: &str) -> bool {
+    is_usd_valued_quote(symbol)
+}
+
 // ─── Column index helpers ───────────────────────────────────────────────────
 
 fn resolve_all_statements_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {

@@ -19,7 +19,7 @@ use std::collections::HashMap;
 
 use csv::StringRecord;
 
-use super::super::common::{is_fiat, is_quote_currency};
+use super::super::common::{is_fiat, is_quote_currency, is_usd_valued_quote};
 use crate::features::ingestion::types::ImportCryptoTransaction;
 
 pub(super) fn resolve_columns(headers: &StringRecord) -> HashMap<&'static str, usize> {
@@ -127,6 +127,8 @@ pub(super) fn map_spent_received_to_tx(
 
     let spent_fiat = is_fiat(&spent_symbol);
     let recv_fiat = is_fiat(&recv_symbol);
+    let spent_is_usd_valued = is_usd_valued_quote(&spent_symbol);
+    let recv_is_usd_valued = is_usd_valued_quote(&recv_symbol);
     if spent_fiat && recv_fiat {
         return None;
     }
@@ -136,6 +138,11 @@ pub(super) fn map_spent_received_to_tx(
     ));
 
     if spent_fiat && !recv_fiat {
+        let price_per_coin = if spent_is_usd_valued {
+            Some(spent_amount / recv_amount)
+        } else {
+            None
+        };
         return Some(ImportCryptoTransaction {
             date,
             wallet: wallet_name.to_string(),
@@ -143,7 +150,7 @@ pub(super) fn map_spent_received_to_tx(
             transaction_type: "trade".to_string(),
             amount: recv_amount,
             subtype: Some("buy".to_string()),
-            price_per_coin: Some(spent_amount / recv_amount),
+            price_per_coin,
             fee: None,
             override_proceeds: None,
             override_cost_basis: None,
@@ -156,6 +163,11 @@ pub(super) fn map_spent_received_to_tx(
     }
 
     if !spent_fiat && recv_fiat {
+        let price_per_coin = if recv_is_usd_valued {
+            Some(recv_amount / spent_amount)
+        } else {
+            None
+        };
         return Some(ImportCryptoTransaction {
             date,
             wallet: wallet_name.to_string(),
@@ -163,7 +175,7 @@ pub(super) fn map_spent_received_to_tx(
             transaction_type: "trade".to_string(),
             amount: spent_amount,
             subtype: Some("sell".to_string()),
-            price_per_coin: Some(recv_amount / spent_amount),
+            price_per_coin,
             fee: None,
             override_proceeds: None,
             override_cost_basis: None,
@@ -179,6 +191,11 @@ pub(super) fn map_spent_received_to_tx(
     let recv_quote = is_quote_currency(&recv_symbol);
 
     if spent_quote && !recv_quote {
+        let price_per_coin = if spent_is_usd_valued {
+            Some(spent_amount / recv_amount)
+        } else {
+            None
+        };
         return Some(ImportCryptoTransaction {
             date,
             wallet: wallet_name.to_string(),
@@ -186,7 +203,7 @@ pub(super) fn map_spent_received_to_tx(
             transaction_type: "trade".to_string(),
             amount: recv_amount,
             subtype: Some("buy".to_string()),
-            price_per_coin: Some(spent_amount / recv_amount),
+            price_per_coin,
             fee: None,
             override_proceeds: None,
             override_cost_basis: None,
@@ -199,6 +216,11 @@ pub(super) fn map_spent_received_to_tx(
     }
 
     if !spent_quote && recv_quote {
+        let price_per_coin = if recv_is_usd_valued {
+            Some(recv_amount / spent_amount)
+        } else {
+            None
+        };
         return Some(ImportCryptoTransaction {
             date,
             wallet: wallet_name.to_string(),
@@ -206,7 +228,7 @@ pub(super) fn map_spent_received_to_tx(
             transaction_type: "trade".to_string(),
             amount: spent_amount,
             subtype: Some("sell".to_string()),
-            price_per_coin: Some(recv_amount / spent_amount),
+            price_per_coin,
             fee: None,
             override_proceeds: None,
             override_cost_basis: None,
