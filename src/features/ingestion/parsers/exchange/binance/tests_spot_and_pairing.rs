@@ -62,6 +62,26 @@ fn spot_sell_eth_usd() {
 }
 
 #[test]
+fn spot_sell_eth_eur_does_not_set_usd_price_or_fee() {
+    let csv = concat!(
+        "Date(UTC),Pair,Side,Price,Executed,Amount,Fee\n",
+        "2024-02-01 08:00:00,ETHEUR,SELL,2000.00,2.0ETH,4000EUR,3.50EUR\n",
+    );
+
+    let parser = BinanceSpotParser;
+    let result = parser.parse(csv, "Binance").unwrap();
+
+    assert_eq!(result.items.len(), 1);
+    let tx = &result.items[0].1;
+    assert_eq!(tx.symbol, "ETH");
+    assert_eq!(tx.transaction_type, "trade");
+    assert_eq!(tx.subtype.as_deref(), Some("sell"));
+    assert!((tx.amount - 2.0).abs() < f64::EPSILON);
+    assert!(tx.price_per_coin.is_none());
+    assert!(tx.fee.is_none());
+}
+
+#[test]
 fn spot_buy_with_fiat_quote() {
     let csv = concat!(
         "Date(UTC),Pair,Side,Price,Executed,Amount,Fee\n",

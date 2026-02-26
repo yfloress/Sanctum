@@ -9,7 +9,8 @@ Status: Audit complete, implementation pending
 - Done: source detection now scans a wider preamble window (up to 32 non-empty lines), reducing false negatives for report files with section titles/metadata before headers.
 - Done: Kraken inverted-fiat parsing now keeps `fee_coin_symbol` and `fee_amount` strictly paired (both set or both empty).
 - Done: batch import now skips `Binance Spot Trade History` when `Binance All Statements` is in the same batch to prevent overlap duplication.
-- Added regression tests for all three points above.
+- Done: non-USD fiat quotes/fees are no longer injected as USD valuation inputs in Binance/Kraken trade paths (kept as missing valuation instead of wrong USD).
+- Added regression tests for all points above.
 
 ## 1) Scope
 

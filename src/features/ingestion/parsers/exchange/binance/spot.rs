@@ -180,8 +180,12 @@ impl ExchangeParser for BinanceSpotParser {
 
             // Determine fee fields
             let (fee_usd, fee_coin_sym, fee_coin_amt) = if fee_qty.abs() > f64::EPSILON {
-                if is_fiat(&fee_symbol) {
+                if fee_symbol.eq_ignore_ascii_case("USD") {
                     (Some(fee_qty), None, None)
+                } else if is_fiat(&fee_symbol) {
+                    // Non-USD fiat fees (e.g. EUR) cannot be represented safely
+                    // as USD here; leave fee fields empty.
+                    (None, None, None)
                 } else {
                     (None, Some(fee_symbol.clone()), Some(fee_qty))
                 }
@@ -196,7 +200,7 @@ impl ExchangeParser for BinanceSpotParser {
 
             if quote_is_pricing && !base_is_pricing {
                 // Standard pair: BTC/USD, BTC/USDT, etc.
-                let price = if executed_qty > 0.0 {
+                let price = if executed_qty > 0.0 && is_usd_valued_quote(&quote_symbol) {
                     Some(amount_qty / executed_qty)
                 } else {
                     None

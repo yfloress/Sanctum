@@ -35,8 +35,8 @@ use chrono::NaiveDateTime;
 use csv::StringRecord;
 
 use super::common::{
-    format_datetime, is_fiat, normalize_kraken_currency, parse_decimal, parse_kraken_pair,
-    parse_timestamp,
+    format_datetime, is_fiat, is_usd_valued_quote, normalize_kraken_currency, parse_decimal,
+    parse_kraken_pair, parse_timestamp,
 };
 use super::{ExchangeParser, ExchangeSource, ParseResult};
 use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
@@ -265,13 +265,14 @@ impl PendingTrade {
 
         // Fiat -> Crypto = buy
         if out_is_pricing && !in_is_pricing {
-            let price = if incoming.abs_amount() > 0.0 {
+            let out_is_usd_valued = is_usd_valued_quote(&outgoing.symbol);
+            let price = if incoming.abs_amount() > 0.0 && out_is_usd_valued {
                 Some(outgoing.abs_amount() / incoming.abs_amount())
             } else {
                 None
             };
 
-            let fee = if outgoing.fee.abs() > f64::EPSILON {
+            let fee = if outgoing.fee.abs() > f64::EPSILON && out_is_usd_valued {
                 Some(outgoing.fee.abs())
             } else if incoming.fee.abs() > f64::EPSILON {
                 // Fee in crypto
@@ -309,13 +310,14 @@ impl PendingTrade {
 
         // Crypto -> Fiat = sell
         if !out_is_pricing && in_is_pricing {
-            let price = if outgoing.abs_amount() > 0.0 {
+            let in_is_usd_valued = is_usd_valued_quote(&incoming.symbol);
+            let price = if outgoing.abs_amount() > 0.0 && in_is_usd_valued {
                 Some(incoming.abs_amount() / outgoing.abs_amount())
             } else {
                 None
             };
 
-            let fee = if incoming.fee.abs() > f64::EPSILON {
+            let fee = if incoming.fee.abs() > f64::EPSILON && in_is_usd_valued {
                 Some(incoming.fee.abs())
             } else {
                 None

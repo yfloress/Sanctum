@@ -212,8 +212,13 @@ impl ExchangeParser for KrakenTradesParser {
 
             if quote_is_pricing && !base_is_pricing {
                 // Standard fiat pair: BTC/USD, ETH/EUR, etc.
-                let price = if volume > 0.0 {
+                let price = if volume > 0.0 && is_usd_valued_quote(&quote) {
                     Some(cost / volume)
+                } else {
+                    None
+                };
+                let fee_usd = if fee.abs() > f64::EPSILON && is_usd_valued_quote(&quote) {
+                    Some(fee)
                 } else {
                     None
                 };
@@ -226,11 +231,7 @@ impl ExchangeParser for KrakenTradesParser {
                     amount: volume,
                     subtype: Some(side.to_string()),
                     price_per_coin: price,
-                    fee: if fee.abs() > f64::EPSILON {
-                        Some(fee)
-                    } else {
-                        None
-                    },
+                    fee: fee_usd,
                     override_proceeds: None,
                     override_cost_basis: None,
                     swap_to_symbol: None,
@@ -244,7 +245,7 @@ impl ExchangeParser for KrakenTradesParser {
             } else if base_is_pricing && !quote_is_pricing {
                 // Inverted fiat pair: USD/BTC (rare but possible)
                 let subtype_str = if is_buy { "sell" } else { "buy" };
-                let price = if cost > 0.0 {
+                let price = if cost > 0.0 && is_usd_valued_quote(&base) {
                     Some(volume / cost)
                 } else {
                     None

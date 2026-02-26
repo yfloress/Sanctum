@@ -163,6 +163,20 @@ pub fn is_quote_currency(symbol: &str) -> bool {
     is_fiat(symbol) || is_stablecoin(symbol)
 }
 
+/// Returns `true` when a quote/fee currency can be treated as USD-valued in
+/// the current tax pipeline.
+///
+/// At the moment, tax valuation expects USD-denominated price inputs.
+/// We therefore accept:
+/// - `USD` fiat
+/// - USD-pegged stablecoins
+///
+/// Other fiat currencies (EUR, CLP, etc.) must be normalized elsewhere
+/// before they can be used as `price_per_coin`/fiat fee in taxes.
+pub fn is_usd_valued_quote(symbol: &str) -> bool {
+    symbol.eq_ignore_ascii_case("USD") || is_stablecoin(symbol)
+}
+
 // ─── Binance currency normalisation ─────────────────────────────────────────
 
 /// Normalises Binance-specific asset names.

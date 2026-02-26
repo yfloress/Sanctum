@@ -123,6 +123,27 @@ fn ledger_trade_pair_becomes_sell() {
 }
 
 #[test]
+fn ledger_trade_pair_with_non_usd_fiat_has_no_usd_price_or_fee() {
+    let csv = concat!(
+        "\"txid\",\"refid\",\"time\",\"type\",\"subtype\",\"aclass\",\"asset\",\"amount\",\"fee\",\"balance\"\n",
+        "\"TX-OUT\",\"REF-EUR-BUY\",\"2024-02-01 08:00:00\",\"trade\",\"\",\"currency\",\"ZEUR\",\"-4000\",\"3.50\",\"0\"\n",
+        "\"TX-IN\",\"REF-EUR-BUY\",\"2024-02-01 08:00:00\",\"trade\",\"\",\"currency\",\"XETH\",\"2.0\",\"0\",\"2.0\"\n",
+    );
+
+    let parser = KrakenLedgerParser;
+    let result = parser.parse(csv, "Kraken").unwrap();
+
+    assert_eq!(result.items.len(), 1);
+    let tx = &result.items[0].1;
+    assert_eq!(tx.symbol, "ETH");
+    assert_eq!(tx.transaction_type, "trade");
+    assert_eq!(tx.subtype.as_deref(), Some("buy"));
+    assert!((tx.amount - 2.0).abs() < f64::EPSILON);
+    assert!(tx.price_per_coin.is_none());
+    assert!(tx.fee.is_none());
+}
+
+#[test]
 fn ledger_sell_for_usdt_becomes_swap() {
     // Selling ETH for USDT: both sides are crypto -> swap.
     let csv = concat!(
