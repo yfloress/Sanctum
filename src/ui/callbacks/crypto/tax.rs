@@ -1182,3 +1182,74 @@ fn load_tax_settings(ui_weak: &Weak<AppWindow>, controller: &Arc<AppController>)
         adapter.set_tax_include_fee_crypto(settings.include_fee_crypto);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn count_resolvable_missing_price_warnings_filters_fx_and_ipc_codes() {
+        let warnings = vec![
+            crate::features::crypto::TaxWarning {
+                code: "missing_price".to_string(),
+                message: "missing".to_string(),
+                tx_id: Some("a".to_string()),
+            },
+            crate::features::crypto::TaxWarning {
+                code: "swap_missing_price".to_string(),
+                message: "swap missing".to_string(),
+                tx_id: Some("b".to_string()),
+            },
+            crate::features::crypto::TaxWarning {
+                code: "income_missing_price".to_string(),
+                message: "income missing".to_string(),
+                tx_id: Some("c".to_string()),
+            },
+            crate::features::crypto::TaxWarning {
+                code: "fee_missing_price".to_string(),
+                message: "fee missing".to_string(),
+                tx_id: Some("d".to_string()),
+            },
+            crate::features::crypto::TaxWarning {
+                code: "missing_price_non_usd_quote".to_string(),
+                message: "fx missing".to_string(),
+                tx_id: Some("e".to_string()),
+            },
+            crate::features::crypto::TaxWarning {
+                code: "swap_missing_price_non_usd_quote".to_string(),
+                message: "fx swap missing".to_string(),
+                tx_id: Some("f".to_string()),
+            },
+            crate::features::crypto::TaxWarning {
+                code: "income_missing_price_non_usd_quote".to_string(),
+                message: "fx income missing".to_string(),
+                tx_id: Some("g".to_string()),
+            },
+            crate::features::crypto::TaxWarning {
+                code: "ipc_missing".to_string(),
+                message: "ipc missing".to_string(),
+                tx_id: None,
+            },
+        ];
+
+        assert_eq!(count_resolvable_missing_price_warnings(&warnings), 4);
+    }
+
+    #[test]
+    fn count_resolvable_missing_price_warnings_returns_zero_for_fx_only() {
+        let warnings = vec![
+            crate::features::crypto::TaxWarning {
+                code: "missing_price_non_usd_quote".to_string(),
+                message: "fx missing".to_string(),
+                tx_id: Some("x".to_string()),
+            },
+            crate::features::crypto::TaxWarning {
+                code: "swap_missing_price_non_usd_quote".to_string(),
+                message: "fx swap missing".to_string(),
+                tx_id: Some("y".to_string()),
+            },
+        ];
+
+        assert_eq!(count_resolvable_missing_price_warnings(&warnings), 0);
+    }
+}

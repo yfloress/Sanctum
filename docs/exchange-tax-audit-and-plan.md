@@ -15,6 +15,8 @@ Status: Audit complete, implementation pending
 - Done: this guard now also covers Binance All Statements paired conversions and MEXC Spot/Trade history fiat-quoted rows, with explicit non-USD quote annotations in notes.
 - Done: missing-price tax warnings now differentiate non-USD quote normalization cases, and readiness UI surfaces a dedicated FX-normalization item.
 - Done: automatic tax missing-price sync excludes non-USD quote warnings, avoiding accidental USD imputation for FX-priced trades.
+- Done: UI tax callbacks now have regression tests ensuring resolvable missing-price counts exclude FX-normalization and IPC warnings.
+- Done: readiness `prices` now tracks resolvable/IPC/end-balance gaps only; FX-only gaps are isolated under `prices_fx` to avoid double counting.
 - Added regression tests for all points above.
 
 ## 1) Scope

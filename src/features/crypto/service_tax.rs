@@ -516,24 +516,26 @@ fn build_readiness(
     let has_invalid =
         warning_codes.contains("invalid_date") || warning_codes.contains("invalid_type");
 
-    let missing_price_codes = [
+    let resolvable_missing_price_codes = [
         "missing_price",
-        "missing_price_non_usd_quote",
         "fee_missing_price",
         "swap_missing_price",
-        "swap_missing_price_non_usd_quote",
         "income_missing_price",
-        "income_missing_price_non_usd_quote",
-        "ipc_missing",
     ];
     let non_usd_quote_missing_price_codes = [
         "missing_price_non_usd_quote",
         "swap_missing_price_non_usd_quote",
         "income_missing_price_non_usd_quote",
     ];
-    let has_missing_prices = missing_price_codes
+    let ipc_missing_count = report
+        .warnings
+        .iter()
+        .filter(|w| w.code == "ipc_missing")
+        .count();
+    let has_missing_prices = resolvable_missing_price_codes
         .iter()
         .any(|c| warning_codes.contains(c))
+        || ipc_missing_count > 0
         || end_balance_missing > 0;
 
     let has_insufficient = warning_codes.contains("insufficient_lots");
@@ -541,8 +543,9 @@ fn build_readiness(
     let missing_price_count = report
         .warnings
         .iter()
-        .filter(|w| missing_price_codes.contains(&w.code.as_str()))
+        .filter(|w| resolvable_missing_price_codes.contains(&w.code.as_str()))
         .count()
+        + ipc_missing_count
         + end_balance_missing;
     let non_usd_quote_missing_price_count = report
         .warnings

@@ -188,6 +188,13 @@ fn build_readiness_adds_fx_prices_item_for_non_usd_quote_warnings() {
     };
 
     let readiness = build_readiness(&report, 3, 0, 0, TaxJurisdiction::Chile);
+    let prices = readiness
+        .iter()
+        .find(|r| r.code == "prices")
+        .expect("prices readiness item");
+    assert_eq!(prices.status, "ok");
+    assert_eq!(prices.detail, "0");
+
     let prices_fx = readiness
         .iter()
         .find(|r| r.code == "prices_fx")
@@ -218,8 +225,8 @@ fn readiness_fx_warnings_do_not_count_as_resolvable_prices() {
         .iter()
         .find(|r| r.code == "prices")
         .expect("prices readiness item");
-    assert_eq!(prices.status, "warn");
-    assert_eq!(prices.detail, "1");
+    assert_eq!(prices.status, "ok");
+    assert_eq!(prices.detail, "0");
 
     let prices_fx = readiness
         .iter()
@@ -227,6 +234,32 @@ fn readiness_fx_warnings_do_not_count_as_resolvable_prices() {
         .expect("prices_fx readiness item");
     assert_eq!(prices_fx.status, "warn");
     assert_eq!(prices_fx.detail, "1");
+}
+
+#[test]
+fn build_readiness_counts_ipc_missing_under_prices() {
+    let report = TaxReport {
+        period_id: "2024".to_string(),
+        period_start: "2024-01-01".to_string(),
+        period_end: "2024-12-31".to_string(),
+        jurisdiction: "chile".to_string(),
+        method: "fifo".to_string(),
+        summary: TaxReportSummary::default(),
+        disposals: Vec::new(),
+        warnings: vec![crate::features::crypto::TaxWarning {
+            code: "ipc_missing".to_string(),
+            message: "Missing IPC factor for period 2024-01".to_string(),
+            tx_id: None,
+        }],
+    };
+
+    let readiness = build_readiness(&report, 3, 0, 0, TaxJurisdiction::Chile);
+    let prices = readiness
+        .iter()
+        .find(|r| r.code == "prices")
+        .expect("prices readiness item");
+    assert_eq!(prices.status, "warn");
+    assert_eq!(prices.detail, "1");
 }
 
 #[test]
