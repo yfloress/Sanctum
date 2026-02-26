@@ -216,17 +216,21 @@ fn notbank_transaction_ref_key(wallet_id: &str, note: Option<&str>) -> Option<(S
     Some((wallet_id.to_string(), reference))
 }
 
+struct MexcTransferOverlapProbe<'a> {
+    wallet_id: &'a str,
+    coin_id: &'a str,
+    mechanical_type: &'a str,
+    amount: f64,
+    fee_amount: Option<f64>,
+    date: &'a str,
+}
+
 fn has_mexc_transfer_overlap_duplicate(
     existing: &[CryptoTransaction],
     format_name: &str,
-    wallet_id: &str,
-    coin_id: &str,
-    mechanical_type: &str,
-    amount: f64,
-    fee_amount: Option<f64>,
-    date: &str,
+    probe: &MexcTransferOverlapProbe<'_>,
 ) -> bool {
-    if mechanical_type != "transfer_in" && mechanical_type != "transfer_out" {
+    if probe.mechanical_type != "transfer_in" && probe.mechanical_type != "transfer_out" {
         return false;
     }
 
@@ -235,7 +239,7 @@ fn has_mexc_transfer_overlap_duplicate(
     let incoming_is_withdrawal = format_name.eq_ignore_ascii_case("MEXC Withdrawal History");
 
     let required_existing_note_prefix = if incoming_is_statement {
-        if mechanical_type == "transfer_in" {
+        if probe.mechanical_type == "transfer_in" {
             "mexc deposit"
         } else {
             "mexc withdrawal"
@@ -246,7 +250,7 @@ fn has_mexc_transfer_overlap_duplicate(
         return false;
     };
 
-    let import_dt = match parse_ingestion_datetime(date) {
+    let import_dt = match parse_ingestion_datetime(probe.date) {
         Some(dt) => dt,
         None => return false,
     };
@@ -254,18 +258,18 @@ fn has_mexc_transfer_overlap_duplicate(
     const OVERLAP_WINDOW_SECONDS: i64 = 15 * 60;
 
     existing.iter().any(|tx| {
-        if tx.wallet_id != wallet_id || tx.coin_id != coin_id {
+        if tx.wallet_id != probe.wallet_id || tx.coin_id != probe.coin_id {
             return false;
         }
-        if tx.mechanical_type() != mechanical_type {
+        if tx.mechanical_type() != probe.mechanical_type {
             return false;
         }
-        if (tx.amount - amount).abs() > 1e-8 {
+        if (tx.amount - probe.amount).abs() > 1e-8 {
             return false;
         }
 
-        if fee_amount.is_some() || tx.fee_amount.is_some() {
-            match (fee_amount, tx.fee_amount) {
+        if probe.fee_amount.is_some() || tx.fee_amount.is_some() {
+            match (probe.fee_amount, tx.fee_amount) {
                 (Some(incoming_fee), Some(existing_fee))
                     if (incoming_fee - existing_fee).abs() <= 1e-8 => {}
                 _ => return false,
@@ -1423,26 +1427,26 @@ impl IngestionService {
                 }
             };
             let kraken_ref_key = kraken_trade_ref_key(&wallet.id, import_tx.notes.as_deref());
-            if let Some(ref_key) = kraken_ref_key.as_ref() {
-                if kraken_trade_ref_set.contains(ref_key) {
-                    summary.record_skipped(&skipped_duplicate);
-                    continue;
-                }
+            if let Some(ref_key) = kraken_ref_key.as_ref()
+                && kraken_trade_ref_set.contains(ref_key)
+            {
+                summary.record_skipped(&skipped_duplicate);
+                continue;
             }
             let notbank_ref_key = notbank_trade_ref_key(&wallet.id, import_tx.notes.as_deref());
-            if let Some(ref_key) = notbank_ref_key.as_ref() {
-                if notbank_trade_ref_set.contains(ref_key) {
-                    summary.record_skipped(&skipped_duplicate);
-                    continue;
-                }
+            if let Some(ref_key) = notbank_ref_key.as_ref()
+                && notbank_trade_ref_set.contains(ref_key)
+            {
+                summary.record_skipped(&skipped_duplicate);
+                continue;
             }
             let notbank_tx_ref_key =
                 notbank_transaction_ref_key(&wallet.id, import_tx.notes.as_deref());
-            if let Some(ref_key) = notbank_tx_ref_key.as_ref() {
-                if notbank_transaction_ref_set.contains(ref_key) {
-                    summary.record_skipped(&skipped_duplicate);
-                    continue;
-                }
+            if let Some(ref_key) = notbank_tx_ref_key.as_ref()
+                && notbank_transaction_ref_set.contains(ref_key)
+            {
+                summary.record_skipped(&skipped_duplicate);
+                continue;
             }
 
             // Resolve coin (source)
@@ -1506,12 +1510,14 @@ impl IngestionService {
             if has_mexc_transfer_overlap_duplicate(
                 &existing,
                 format_name,
-                &wallet.id,
-                &coin.id,
-                mechanical_type,
-                import_tx.amount,
-                resolved_fee_amount,
-                &import_tx.date,
+                &MexcTransferOverlapProbe {
+                    wallet_id: &wallet.id,
+                    coin_id: &coin.id,
+                    mechanical_type,
+                    amount: import_tx.amount,
+                    fee_amount: resolved_fee_amount,
+                    date: &import_tx.date,
+                },
             ) {
                 summary.record_skipped(&skipped_duplicate);
                 continue;
@@ -2291,7 +2297,7 @@ mod tests {
         extract_notbank_transaction_entry_id, has_mexc_transfer_overlap_duplicate,
         kraken_trade_ref_key, matches_swap_rollup_duplicate, normalize_import_symbol_key,
         notbank_trade_ref_key, notbank_transaction_ref_key, note_is_exchange_overlap_prone,
-        uses_price_agnostic_dedup,
+        uses_price_agnostic_dedup, MexcTransferOverlapProbe,
     };
     use crate::models::CryptoTransaction;
 
@@ -2513,12 +2519,14 @@ mod tests {
         assert!(has_mexc_transfer_overlap_duplicate(
             &existing,
             "MEXC Statement History",
-            "wallet-1",
-            "tether",
-            "transfer_in",
-            100.0,
-            None,
-            "2026-01-12 10:07:00",
+            &MexcTransferOverlapProbe {
+                wallet_id: "wallet-1",
+                coin_id: "tether",
+                mechanical_type: "transfer_in",
+                amount: 100.0,
+                fee_amount: None,
+                date: "2026-01-12 10:07:00",
+            },
         ));
     }
 
@@ -2538,12 +2546,14 @@ mod tests {
         assert!(!has_mexc_transfer_overlap_duplicate(
             &existing,
             "MEXC Statement History",
-            "wallet-1",
-            "tether",
-            "transfer_in",
-            100.0,
-            None,
-            "2026-01-12 10:30:01",
+            &MexcTransferOverlapProbe {
+                wallet_id: "wallet-1",
+                coin_id: "tether",
+                mechanical_type: "transfer_in",
+                amount: 100.0,
+                fee_amount: None,
+                date: "2026-01-12 10:30:01",
+            },
         ));
     }
 
@@ -2563,12 +2573,14 @@ mod tests {
         assert!(has_mexc_transfer_overlap_duplicate(
             &existing,
             "MEXC Withdrawal History",
-            "wallet-1",
-            "litecoin",
-            "transfer_out",
-            0.5,
-            Some(0.0001),
-            "2026-01-12 12:12:30",
+            &MexcTransferOverlapProbe {
+                wallet_id: "wallet-1",
+                coin_id: "litecoin",
+                mechanical_type: "transfer_out",
+                amount: 0.5,
+                fee_amount: Some(0.0001),
+                date: "2026-01-12 12:12:30",
+            },
         ));
     }
 }
