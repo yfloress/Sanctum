@@ -419,6 +419,216 @@ fn generate_tax_report_excludes_wallet_ids_from_settings() {
 }
 
 #[test]
+fn generate_tax_summary_marks_settings_excluded_when_all_period_txs_are_excluded() {
+    let harness = new_test_service();
+    let service = &harness.service;
+
+    let wallet_excluded = service
+        .add_wallet("Excluded wallet".to_string(), "exchange".to_string(), None)
+        .expect("create excluded wallet");
+
+    service
+        .add_crypto_transaction(
+            wallet_excluded.clone(),
+            "bitcoin".to_string(),
+            "BTC".to_string(),
+            "trade".to_string(),
+            1.0,
+            Some(100.0),
+            None,
+            None,
+            None,
+            "2024-01-10".to_string(),
+            None,
+            Some("buy".to_string()),
+            None,
+            None,
+        )
+        .expect("buy in excluded wallet");
+    service
+        .add_crypto_transaction(
+            wallet_excluded.clone(),
+            "bitcoin".to_string(),
+            "BTC".to_string(),
+            "trade".to_string(),
+            1.0,
+            Some(150.0),
+            None,
+            None,
+            None,
+            "2024-02-10".to_string(),
+            None,
+            Some("sell".to_string()),
+            None,
+            None,
+        )
+        .expect("sell in excluded wallet");
+    // Outside period should not affect excluded count for 2024.
+    service
+        .add_crypto_transaction(
+            wallet_excluded.clone(),
+            "bitcoin".to_string(),
+            "BTC".to_string(),
+            "trade".to_string(),
+            1.0,
+            Some(90.0),
+            None,
+            None,
+            None,
+            "2023-12-30".to_string(),
+            None,
+            Some("buy".to_string()),
+            None,
+            None,
+        )
+        .expect("buy outside period");
+
+    let mut settings = TaxPeriodSettings::defaults_for("2024");
+    settings.jurisdiction = TaxJurisdiction::Usa;
+    settings.excluded_wallet_ids = vec![wallet_excluded];
+    service
+        .save_tax_settings(settings)
+        .expect("save tax settings with exclusion");
+
+    let summary = service
+        .generate_tax_summary("2024".to_string())
+        .expect("generate tax summary");
+
+    assert_eq!(summary.transactions_in_period, 0);
+    let settings_excluded = summary
+        .readiness
+        .iter()
+        .find(|item| item.code == "settings_excluded")
+        .expect("settings_excluded readiness item");
+    assert_eq!(settings_excluded.status, "warn");
+    assert_eq!(settings_excluded.detail, "2");
+    assert!(
+        summary
+            .readiness
+            .iter()
+            .all(|item| item.code != "settings")
+    );
+
+    drop(harness);
+}
+
+#[test]
+fn generate_tax_summary_keeps_settings_ok_when_included_transactions_exist() {
+    let harness = new_test_service();
+    let service = &harness.service;
+
+    let wallet_excluded = service
+        .add_wallet("Excluded wallet".to_string(), "exchange".to_string(), None)
+        .expect("create excluded wallet");
+    let wallet_included = service
+        .add_wallet("Included wallet".to_string(), "exchange".to_string(), None)
+        .expect("create included wallet");
+
+    service
+        .add_crypto_transaction(
+            wallet_excluded.clone(),
+            "bitcoin".to_string(),
+            "BTC".to_string(),
+            "trade".to_string(),
+            1.0,
+            Some(100.0),
+            None,
+            None,
+            None,
+            "2024-01-10".to_string(),
+            None,
+            Some("buy".to_string()),
+            None,
+            None,
+        )
+        .expect("buy in excluded wallet");
+    service
+        .add_crypto_transaction(
+            wallet_excluded.clone(),
+            "bitcoin".to_string(),
+            "BTC".to_string(),
+            "trade".to_string(),
+            1.0,
+            Some(150.0),
+            None,
+            None,
+            None,
+            "2024-02-10".to_string(),
+            None,
+            Some("sell".to_string()),
+            None,
+            None,
+        )
+        .expect("sell in excluded wallet");
+
+    service
+        .add_crypto_transaction(
+            wallet_included.clone(),
+            "bitcoin".to_string(),
+            "BTC".to_string(),
+            "trade".to_string(),
+            1.0,
+            Some(200.0),
+            None,
+            None,
+            None,
+            "2024-03-10".to_string(),
+            None,
+            Some("buy".to_string()),
+            None,
+            None,
+        )
+        .expect("buy in included wallet");
+    service
+        .add_crypto_transaction(
+            wallet_included,
+            "bitcoin".to_string(),
+            "BTC".to_string(),
+            "trade".to_string(),
+            1.0,
+            Some(260.0),
+            None,
+            None,
+            None,
+            "2024-04-10".to_string(),
+            None,
+            Some("sell".to_string()),
+            None,
+            None,
+        )
+        .expect("sell in included wallet");
+
+    let mut settings = TaxPeriodSettings::defaults_for("2024");
+    settings.jurisdiction = TaxJurisdiction::Usa;
+    settings.excluded_wallet_ids = vec![wallet_excluded];
+    service
+        .save_tax_settings(settings)
+        .expect("save tax settings with exclusion");
+
+    let summary = service
+        .generate_tax_summary("2024".to_string())
+        .expect("generate tax summary");
+
+    assert_eq!(summary.transactions_in_period, 2);
+    let settings_ok = summary
+        .readiness
+        .iter()
+        .find(|item| item.code == "settings")
+        .expect("settings readiness item");
+    assert_eq!(settings_ok.status, "ok");
+    assert_eq!(settings_ok.detail, "2");
+    assert!(
+        summary
+            .readiness
+            .iter()
+            .all(|item| item.code != "settings_excluded")
+    );
+    assert_eq!(summary.report.summary.disposals, 1);
+
+    drop(harness);
+}
+
+#[test]
 fn resolve_export_currency_forces_clp_for_chile() {
     let harness = new_test_service();
     let service = &harness.service;
