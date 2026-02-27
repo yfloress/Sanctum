@@ -72,6 +72,29 @@ Sanctum acepta formatos offline pensados para viajes o baja conectividad:
 Todos los imports son **best-effort**, se validan por fila y hacen deduplicación.
 No se realizan llamadas de red durante la ingesta.
 
+## Integraciones de Exchange/Wallet
+
+Todos los CSV de exchange/wallet se procesan localmente en tu dispositivo y no se suben a servidores de Sanctum.
+
+| Integración | Estado | Entrada | Descripción |
+| :-- | :-- | :-- | :-- |
+| Kraken | Disponible | CSV (`Ledgers`, `Trades`) | Puedes subir uno o ambos archivos para cubrir la actividad spot completa. |
+| Binance | Disponible | CSV (`All Statements`, `Spot Trade History`) | Importa balances, actividad spot y movimientos de ledger asociados en formatos soportados. |
+| MEXC | Disponible | CSV (17 tipos de reporte) | Soporta Spot, Statement, Funding, Fiat, Futures y exportes relacionados. |
+| NotBank (ex-CryptoMarket) | Disponible | CSV (`Transaction`, `Trade Activity`) | Soporta movimientos de cuenta y actividad de trading desde reportes Exchange Pro. |
+| Feather Wallet | Disponible | CSV (export de historial) | Importa historial de transacciones de wallet Monero en formato Feather. |
+| Monero GUI Wallet | Disponible | CSV (export de historial) | Importa historial de transacciones de wallet Monero en formato Monero GUI. |
+| Coinbase | Planificado | CSV | Soporte planificado para flujos CSV de estados de cuenta y trades. |
+| Bybit | Planificado | CSV | Soporte planificado para reportes de exportación de spot/funding. |
+| OKX | Planificado | CSV | Soporte planificado para formatos de exportación de cuenta y trades. |
+| KuCoin | Planificado | CSV | Soporte planificado para importación de reportes de estado y trades. |
+| Bitget | Planificado | CSV | Soporte planificado para reportes de wallet y spot. |
+| Buda | Planificado | CSV | Soporte planificado para exportes de transacciones/trades de Buda. |
+| Orionx | Planificado | CSV | Soporte planificado para exportes de transacciones/trades de Orionx. |
+| APIs de Exchange (solo lectura) | Planificado | API (futuro) | La sincronización directa está planificada para versiones futuras (sin trading/retiros). |
+
+Actualmente la ingesta de exchanges sigue un enfoque CSV-first; las integraciones por API aún no están disponibles.
+
 ## Seguridad y Privacidad
 
 Sanctum se basa en tres pilares fundamentales:

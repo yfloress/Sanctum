@@ -72,6 +72,29 @@ Sanctum accepts multiple offline formats, designed for travel or low-connectivit
 All imports are **best-effort**, validated per row, and include duplicate detection.
 No network calls are made during ingestion.
 
+## Exchange/Wallet Integrations
+
+All exchange/wallet CSV files are processed locally on your device and are not uploaded to Sanctum servers.
+
+| Integration | Status | Input | Description |
+| :-- | :-- | :-- | :-- |
+| Kraken | Available | CSV (`Ledgers`, `Trades`) | Upload one or both files together for complete spot activity coverage. |
+| Binance | Available | CSV (`All Statements`, `Spot Trade History`) | Imports balances, spot activity, and related ledger movements from supported exports. |
+| MEXC | Available | CSV (17 report types) | Supports Spot, Statement, Funding, Fiat, Futures, and related report exports. |
+| NotBank (ex-CryptoMarket) | Available | CSV (`Transaction`, `Trade Activity`) | Supports core account movements and trading activity from Exchange Pro reports. |
+| Feather Wallet | Available | CSV (wallet history export) | Imports Monero wallet transaction history from Feather export format. |
+| Monero GUI Wallet | Available | CSV (wallet history export) | Imports Monero wallet transaction history from Monero GUI export format. |
+| Coinbase | Planned | CSV | Planned support for account statement and trade history CSV flows. |
+| Bybit | Planned | CSV | Planned support for exchange export reports used for spot/funding history. |
+| OKX | Planned | CSV | Planned support for account and trade export formats. |
+| KuCoin | Planned | CSV | Planned support for statement/trade CSV imports. |
+| Bitget | Planned | CSV | Planned support for wallet and spot export reports. |
+| Buda | Planned | CSV | Planned support for Buda exchange transaction/trade exports. |
+| Orionx | Planned | CSV | Planned support for Orionx exchange transaction/trade exports. |
+| Exchange APIs (read-only) | Planned | API (future) | Direct sync is planned for future releases and will be read-only (no trading/withdrawals). |
+
+Exchange ingestion remains CSV-first today; API integrations are not available yet.
+
 ## Security & Privacy
 
 Sanctum is built on three core pillars:
