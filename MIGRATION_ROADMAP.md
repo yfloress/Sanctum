@@ -19,7 +19,6 @@
 **Objetivo:** dejar el entorno listo antes de modificar nada.
 
 - [ ] Verificar que `flake.nix` nuevo compila correctamente (`nix develop`)
-- [ ] Revisar branch legacy de Tauri para rescatar configuraciones útiles
 - [ ] Decidir estructura de directorios: `src-tauri/` (backend Rust) + `ui-svelte/` (frontend)
 - [ ] Definir convención de nombres para Tauri commands (snake_case)
 - [ ] Listar todos los tipos de datos que cruzan la frontera IPC (modelos Slint actuales)
@@ -179,7 +178,8 @@ Estrategia recomendada: **un solo command `get_translations()` que devuelve toda
 
 ## Reglas durante la migración
 
-1. **Una fase a la vez** — no empezar Fase 3 sin terminar Fase 2
+1. **Ignorar el legacy de Tauri** — el proyecto era otro entonces, sin arquitectura feature-sliced ni los dominios actuales. Usarlo como referencia generaría errores y decisiones inconsistentes. La fuente de verdad es el código Slint actual.
+2. **Una fase a la vez** — no empezar Fase 3 sin terminar Fase 2
 2. **Slint funciona hasta el final** — no romper nada existente hasta Fase 7
 3. **DTOs primero** — si un command necesita un tipo nuevo, definirlo en `dto/` antes de escribir el command
 4. **Sin estilo hasta Fase 9** — funcionalidad antes que apariencia
