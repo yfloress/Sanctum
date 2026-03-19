@@ -1,5 +1,5 @@
 {
-  description = "Sanctum Dev Shell - Rust + Slint (Rust-only UI)";
+  description = "Sanctum Dev Shell - Rust + Tauri + Svelte (Deno)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -24,14 +24,18 @@
 
         libraries = with pkgs; [
           stdenv.cc.cc.lib
-          libGL
+          # Tauri / WebKit
+          webkitgtk_4_1
+          gtk3
+          glib
+          cairo
+          pango
+          gdk-pixbuf
+          # System
+          openssl
+          dbus
           wayland
           libxkbcommon
-          harfbuzz
-          openssl
-          fontconfig
-          freetype
-          dbus
         ];
 
         packages = with pkgs; [
@@ -39,10 +43,9 @@
           wget
           pkg-config
           sqlite
+          deno
           cargo-audit
           cargo-edit
-          slint-lsp
-          slint-viewer
           cargo-modules
           python314
         ];
@@ -61,9 +64,11 @@
           shellHook = ''
             export LIBRARY_PATH=${pkgs.lib.makeLibraryPath libraries}:$LIBRARY_PATH
             export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath libraries}:$LD_LIBRARY_PATH
+            export PKG_CONFIG_PATH=${pkgs.lib.makeSearchPathOutput "dev" "lib/pkgconfig" libraries}:$PKG_CONFIG_PATH
 
             echo "> SANCTUM DEV SHELL ACTIVE"
             echo "   Compiler:  Rust $(rustc --version)"
+            echo "   Runtime:   Deno $(deno --version | head -1)"
           '';
         };
       }
