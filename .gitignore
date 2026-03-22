@@ -62,3 +62,14 @@ src-tauri/
 
 .astro/
 
+*.tsbuildinfo
+
+.cache/
+.parcel-cache/
+
+.env.*
+!.env.example
+
+*.log
+npm-debug.log*
+pnpm-debug.log*
