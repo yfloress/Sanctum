@@ -8,14 +8,14 @@
 - **Tauri** — shell nativo
 - **Svelte 5 + TypeScript** — compila a vanilla JS, runtime mínimo
 - **Vite** — build tool (default de Tauri)
-- **Deno** — package manager sin node_modules, verificación de integridad nativa
+- **pnpm** — package manager con lockfile estricto, sin phantom dependencies, `ignore-scripts=true` por defecto (`.npmrc`)
 - **Apache ECharts** — gráficos financieros de calidad
 
 ## Motivación
 - Slint tiene techo bajo para UIs ricas y gráficos complejos
 - plotters renderizando imágenes estáticas es el techo de Slint para charts
 - Tauri fue el stack original del proyecto (existe branch legacy)
-- Deno es coherente con la filosofía de seguridad/privacidad de Sanctum
+- pnpm con `ignore-scripts=true` mitiga riesgos de supply chain (post-install scripts maliciosos)
 - ECharts tiene excelente soporte para gráficos financieros (candlestick, área, línea)
 
 ## Lo que NO cambia

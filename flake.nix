@@ -1,5 +1,5 @@
 {
-  description = "Sanctum Dev Shell - Rust + Tauri + Svelte (Deno)";
+  description = "Sanctum Dev Shell - Rust + Tauri + Svelte (pnpm)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -43,7 +43,8 @@
           wget
           pkg-config
           sqlite
-          deno
+          nodePackages.pnpm
+          nodejs
           cargo-audit
           cargo-edit
           cargo-modules
@@ -68,7 +69,7 @@
 
             echo "> SANCTUM DEV SHELL ACTIVE"
             echo "   Compiler:  Rust $(rustc --version)"
-            echo "   Runtime:   Deno $(deno --version | head -1)"
+            echo "   Runtime:   pnpm $(pnpm --version)"
           '';
         };
       }

@@ -7,7 +7,7 @@
 | Shell | Slint | Tauri |
 | UI | Slint (.slint) | Svelte 5 + TypeScript |
 | Gráficos | plotters (PNG estático) | Apache ECharts |
-| Package mgr | — | Deno |
+| Package mgr | — | pnpm (`ignore-scripts=true`) |
 | IPC | callbacks Slint | Tauri commands (serde JSON) |
 
 **Lo que NO cambia:** todo `src/features/`, `src/controller/`, `src/services/` (excepto charts.rs), `db/`, `locales/`.
@@ -39,7 +39,7 @@ Estos documentos mapean la UI y el IPC actuales. Son la fuente de verdad para la
 - [ ] Agregar dependencia `tauri` a `Cargo.toml`, mantener `slint` temporalmente
 - [ ] Crear `src-tauri/tauri.conf.json` con configuración base (sin CSP estricto aún)
 - [ ] Adaptar `src/main.rs` para arrancar Tauri en lugar de Slint
-- [ ] Crear `ui-svelte/` con scaffold Svelte 5 + Vite + Deno (`deno.json`)
+- [ ] Crear `ui-svelte/` con scaffold Svelte 5 + Vite + pnpm
 - [ ] Verificar que `nix develop -c cargo check` pasa
 - [ ] Verificar que el WebView carga la pantalla en blanco sin errores
 
@@ -119,7 +119,7 @@ Para cada página:
 
 **Objetivo:** reemplazar plotters por ECharts en todos los gráficos.
 
-- [ ] Instalar Apache ECharts via Deno
+- [ ] Instalar Apache ECharts via pnpm
 - [ ] Crear componente Svelte `<Chart>` wrapper genérico
 - [ ] Migrar por tipo de gráfico:
   - [ ] Línea / área (portfolio value, finance balance)
