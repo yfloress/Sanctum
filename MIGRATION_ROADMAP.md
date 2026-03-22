@@ -12,6 +12,13 @@
 
 **Lo que NO cambia:** todo `src/features/`, `src/controller/`, `src/services/` (excepto charts.rs), `db/`, `locales/`.
 
+## Documentación de referencia
+
+Estos documentos mapean la UI y el IPC actuales. Son la fuente de verdad para las fases 2, 3 y 4:
+
+- `docs/slint-ui-map.md` — mapa completo de las 6 páginas, 17 modales, componentes y patrones de UI
+- `docs/slint-callback-inventory.md` — inventario de los 121 callbacks (IPC boundary), agrupados por dominio con inputs/outputs y notas de migración
+
 ---
 
 ## Fase 0 — Preparación (sin tocar código existente)
