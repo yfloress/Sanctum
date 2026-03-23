@@ -10,7 +10,6 @@
     "beforeBuildCommand": "cd ../ui-svelte && pnpm build"
   },
   "app": {
-    "title": "Sanctum",
     "windows": [
       {
         "title": "Sanctum",
