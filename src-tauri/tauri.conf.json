@@ -1,0 +1,35 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicotsx/tauri/tauri-v2/crates/tauri-config-schema/schema.json",
+  "productName": "Sanctum",
+  "version": "0.1.0",
+  "identifier": "org.kyronix.sanctum",
+  "build": {
+    "frontendDist": "../ui-svelte/dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "cd ../ui-svelte && pnpm dev",
+    "beforeBuildCommand": "cd ../ui-svelte && pnpm build"
+  },
+  "app": {
+    "title": "Sanctum",
+    "windows": [
+      {
+        "title": "Sanctum",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/icon.png"
+    ]
+  }
+}

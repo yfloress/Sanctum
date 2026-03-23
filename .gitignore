@@ -53,12 +53,11 @@ result-*
 ._*
 
 # ===========================
-# Legacy cleanup
+# Frontend (Svelte + pnpm)
 # ===========================
 node_modules/
 dist/
 build/
-src-tauri/
 
 .astro/
 

@@ -15,17 +15,17 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
 //
 
-//! UI layer module
+//! Data Transfer Objects for the Tauri IPC boundary.
 //!
-//! Contains Slint UI helpers, data types, callback setup, and shared utilities.
+//! These structs define the contract between the Rust backend and the Svelte frontend.
+//! They are serialized to JSON via serde. Each DTO maps 1:1 with what the frontend
+//! needs — no internal types are exposed.
 
-pub mod callbacks;
-pub mod currency;
-pub mod data;
-pub mod dto;
-pub mod helpers;
-
-pub use callbacks::*;
-pub use currency::*;
-pub use data::*;
-pub use helpers::*;
+pub mod charts;
+pub mod crypto;
+pub mod dashboard;
+pub mod finance;
+pub mod habits;
+pub mod ingestion;
+pub mod settings;
+pub mod vault;

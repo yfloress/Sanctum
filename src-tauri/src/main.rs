@@ -15,17 +15,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
 //
 
-//! UI layer module
-//!
-//! Contains Slint UI helpers, data types, callback setup, and shared utilities.
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-pub mod callbacks;
-pub mod currency;
-pub mod data;
-pub mod dto;
-pub mod helpers;
-
-pub use callbacks::*;
-pub use currency::*;
-pub use data::*;
-pub use helpers::*;
+fn main() {
+    sanctum_tauri::run();
+}

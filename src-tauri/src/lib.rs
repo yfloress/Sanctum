@@ -15,17 +15,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
 //
 
-//! UI layer module
-//!
-//! Contains Slint UI helpers, data types, callback setup, and shared utilities.
-
-pub mod callbacks;
-pub mod currency;
-pub mod data;
-pub mod dto;
-pub mod helpers;
-
-pub use callbacks::*;
-pub use currency::*;
-pub use data::*;
-pub use helpers::*;
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
