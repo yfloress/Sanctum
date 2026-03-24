@@ -48,6 +48,7 @@
           cargo-audit
           cargo-edit
           cargo-modules
+          cargo-tauri
           python314
         ];
       in
@@ -66,6 +67,7 @@
             export LIBRARY_PATH=${pkgs.lib.makeLibraryPath libraries}:$LIBRARY_PATH
             export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath libraries}:$LD_LIBRARY_PATH
             export PKG_CONFIG_PATH=${pkgs.lib.makeSearchPathOutput "dev" "lib/pkgconfig" libraries}:$PKG_CONFIG_PATH
+            export WEBKIT_DISABLE_DMABUF_RENDERER=1
 
             echo "> SANCTUM DEV SHELL ACTIVE"
             echo "   Compiler:  Rust $(rustc --version)"
