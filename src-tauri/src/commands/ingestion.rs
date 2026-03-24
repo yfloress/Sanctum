@@ -54,9 +54,11 @@ pub fn detect_exchange_source(
     controller: State<'_, Arc<AppController>>,
     content: String,
 ) -> Option<ExchangeDetectionResult> {
-    controller.detect_exchange_source(&content).map(|(_id, label, _wallet)| {
+    controller.detect_exchange_source(&content).map(|(id, label, wallet)| {
         ExchangeDetectionResult {
+            exchange_id: id,
             exchange: label,
+            suggested_wallet: wallet,
             file_count: 1,
             total_records: content.lines().count().saturating_sub(1),
         }

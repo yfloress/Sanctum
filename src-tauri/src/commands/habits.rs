@@ -498,7 +498,17 @@ pub fn update_goal(
         .map_err(|e| e.to_string())
 }
 
-/// Update a goal with inline checkpoints.
+/// Checkpoint data for update_goal_with_checkpoints.
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct GoalCheckpointInput {
+    pub id: String,
+    pub text: String,
+}
+
+/// Update a goal with its checkpoints.
+///
+/// Accepts a clean Vec of checkpoints and maps to the controller's
+/// positional API (legacy Slint compat, max 4 checkpoints).
 #[tauri::command]
 pub fn update_goal_with_checkpoints(
     controller: State<'_, Arc<AppController>>,
@@ -507,20 +517,22 @@ pub fn update_goal_with_checkpoints(
     description: String,
     reward_text: String,
     deadline: String,
-    checkpoint_count: i32,
-    cp1_id: String,
-    cp1_text: String,
-    cp2_id: String,
-    cp2_text: String,
-    cp3_id: String,
-    cp3_text: String,
-    cp4_id: String,
-    cp4_text: String,
+    checkpoints: Vec<GoalCheckpointInput>,
 ) -> Result<(), String> {
+    let count = checkpoints.len().min(4) as i32;
+    let get = |i: usize| -> (String, String) {
+        checkpoints.get(i).map(|c| (c.id.clone(), c.text.clone()))
+            .unwrap_or_default()
+    };
+    let (cp1_id, cp1_text) = get(0);
+    let (cp2_id, cp2_text) = get(1);
+    let (cp3_id, cp3_text) = get(2);
+    let (cp4_id, cp4_text) = get(3);
+
     controller
         .update_goal_with_checkpoints(
             id, name, description, reward_text, deadline,
-            checkpoint_count,
+            count,
             cp1_id, cp1_text, cp2_id, cp2_text,
             cp3_id, cp3_text, cp4_id, cp4_text,
         )

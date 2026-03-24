@@ -61,7 +61,9 @@ pub struct ImportErrorDto {
 /// Detected exchange source after CSV analysis.
 #[derive(Debug, Clone, Serialize)]
 pub struct ExchangeDetectionResult {
+    pub exchange_id: String,
     pub exchange: String,
+    pub suggested_wallet: String,
     pub file_count: usize,
     pub total_records: usize,
 }

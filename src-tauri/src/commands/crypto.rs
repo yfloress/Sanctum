@@ -17,13 +17,13 @@
 
 //! Crypto domain Tauri commands.
 
-use sanctum::controller::AppController;
-use sanctum::models::{CryptoAsset, CryptoTransaction, CryptoWallet};
+use sanctum::controller::{AppController, SETTING_PREFERRED_CURRENCY};
+use sanctum::models::{CryptoTransaction, CryptoWallet};
 use sanctum::ui::dto::crypto::{
     CoinCatalogDto, CryptoTransactionDto, CryptoTransactionEditData,
     CryptoTransactionInput, CryptoTransferInput, CryptoSwapInput,
-    CryptoTransactionUpdateInput, DistributionItem, IpcSummaryDto,
-    PortfolioAssetDto, PortfolioResponse, PortfolioTrendData,
+    CryptoAssetPriceDto, CryptoTransactionUpdateInput, DistributionItem, FxRateDto,
+    IpcSummaryDto, PortfolioAssetDto, PortfolioResponse, PortfolioTrendData,
     TaxReportDto, TaxSettingsDto, WalletDetailResponse, WalletDto,
     WalletHoldingDto, WalletSimpleDto, WalletsResponse,
 };
@@ -82,13 +82,33 @@ pub fn fetch_portfolio(
         })
     }).collect();
 
+    // Calculate unrealized PnL and ROI from aggregated assets
+    let total_cost_basis: f64 = assets.iter().map(|a| a.total_cost_basis).sum();
+    let unrealized_pnl = total_usd - total_cost_basis;
+    let roi = if total_cost_basis > 0.0 {
+        (unrealized_pnl / total_cost_basis) * 100.0
+    } else {
+        0.0
+    };
+
+    // Calculate realized gains YTD via tax summary
+    let current_year = chrono::Local::now().format("%Y").to_string();
+    let (realized_ytd_val, realized_ytd_neg) = controller
+        .generate_tax_summary(current_year)
+        .map(|s| (s.report.summary.total_gain, s.report.summary.total_gain < 0.0))
+        .unwrap_or((0.0, false));
+
     Ok(PortfolioResponse {
         total_value: format!("${:.2}", total_usd),
-        unrealized_pnl: String::new(), unrealized_pnl_negative: false,
-        realized_ytd: String::new(), realized_ytd_negative: false,
-        roi: String::new(), roi_negative: false,
+        unrealized_pnl: format!("${:.2}", unrealized_pnl.abs()),
+        unrealized_pnl_negative: unrealized_pnl < 0.0,
+        realized_ytd: format!("${:.2}", realized_ytd_val.abs()),
+        realized_ytd_negative: realized_ytd_neg,
+        roi: format!("{:.2}%", roi),
+        roi_negative: roi < 0.0,
         assets: portfolio_assets, distribution,
-        fx_rate: None, last_updated: None,
+        fx_rate: build_fx_rate_badge(&controller),
+        last_updated: None,
     })
 }
 
@@ -109,9 +129,20 @@ pub fn fetch_portfolio_trend(
 #[tauri::command]
 pub fn fetch_wallets(controller: State<'_, Arc<AppController>>) -> Result<WalletsResponse, String> {
     let wallets = controller.get_wallets().map_err(|e| e.to_string())?;
-    let dtos: Vec<WalletDto> = wallets.iter().map(|w| WalletDto {
-        id: w.id.clone(), name: w.name.clone(), category: w.category.clone(),
-        icon_path: w.icon.clone(), total_value: String::new(), assets_count: 0,
+    let prices = controller.load_crypto_prices().unwrap_or_default();
+    let pm: HashMap<String, f64> = prices.into_iter().map(|p| (p.id, p.current_price)).collect();
+
+    let dtos: Vec<WalletDto> = wallets.iter().map(|w| {
+        let holdings = controller.get_wallet_holdings(w.id.clone()).unwrap_or_default();
+        let total: f64 = holdings.iter().map(|h| {
+            h.total_amount * pm.get(&h.coin_id).copied().unwrap_or(0.0)
+        }).sum();
+        WalletDto {
+            id: w.id.clone(), name: w.name.clone(), category: w.category.clone(),
+            icon_path: w.icon.clone(),
+            total_value: format!("${:.2}", total),
+            assets_count: holdings.len() as i32,
+        }
     }).collect();
     let simple: Vec<WalletSimpleDto> = wallets.iter().map(|w| WalletSimpleDto {
         id: w.id.clone(), name: w.name.clone(), category: w.category.clone(),
@@ -353,16 +384,30 @@ pub fn save_active_ticker_ids(
 
 #[tauri::command]
 pub fn save_crypto_prices(
-    controller: State<'_, Arc<AppController>>, prices: Vec<CryptoAsset>,
+    controller: State<'_, Arc<AppController>>, prices: Vec<CryptoAssetPriceDto>,
 ) -> Result<(), String> {
-    controller.save_crypto_prices(prices).map_err(|e| e.to_string())
+    let internal: Vec<sanctum::models::CryptoAsset> = prices.into_iter().map(|p| {
+        sanctum::models::CryptoAsset {
+            id: p.id, symbol: p.symbol, name: p.name,
+            current_price: p.current_price,
+            price_change_percentage_24h: p.price_change_percentage_24h,
+            last_updated: p.last_updated,
+        }
+    }).collect();
+    controller.save_crypto_prices(internal).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn load_crypto_prices(
     controller: State<'_, Arc<AppController>>,
-) -> Result<Vec<CryptoAsset>, String> {
-    controller.load_crypto_prices().map_err(|e| e.to_string())
+) -> Result<Vec<CryptoAssetPriceDto>, String> {
+    let prices = controller.load_crypto_prices().map_err(|e| e.to_string())?;
+    Ok(prices.into_iter().map(|p| CryptoAssetPriceDto {
+        id: p.id, symbol: p.symbol, name: p.name,
+        current_price: p.current_price,
+        price_change_percentage_24h: p.price_change_percentage_24h,
+        last_updated: p.last_updated,
+    }).collect())
 }
 
 #[tauri::command]
@@ -505,6 +550,26 @@ pub fn load_exchange_rate(
 
 fn trim_amount(v: f64) -> String {
     format!("{:.8}", v).trim_end_matches('0').trim_end_matches('.').to_string()
+}
+
+fn build_fx_rate_badge(controller: &AppController) -> Option<FxRateDto> {
+    let preferred = controller
+        .get_app_setting(SETTING_PREFERRED_CURRENCY)
+        .unwrap_or_else(|_| "USD".to_string())
+        .trim()
+        .to_uppercase();
+    let target = if preferred == "USD" { "CLP".to_string() } else { preferred };
+    let pair = format!("{}_USD", target);
+    controller
+        .load_exchange_rate_allow_stale(pair)
+        .ok()
+        .flatten()
+        .filter(|(rate, _)| *rate > 0.0)
+        .map(|(rate, _)| FxRateDto {
+            pair: format!("USD/{}", target),
+            rate: format!("{:.2}", rate),
+            is_live: true,
+        })
 }
 
 fn map_crypto_transactions(txs: &[CryptoTransaction], wallets: &[CryptoWallet]) -> Vec<CryptoTransactionDto> {

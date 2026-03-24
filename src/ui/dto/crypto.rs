@@ -414,3 +414,15 @@ pub struct PortfolioTrendData {
     pub dates: Vec<String>,
     pub values: Vec<f64>,
 }
+
+/// Crypto asset price data for the IPC boundary.
+/// Replaces direct use of `models::CryptoAsset` in commands.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CryptoAssetPriceDto {
+    pub id: String,
+    pub symbol: String,
+    pub name: String,
+    pub current_price: f64,
+    pub price_change_percentage_24h: f64,
+    pub last_updated: String,
+}
