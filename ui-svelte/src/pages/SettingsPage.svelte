@@ -2,6 +2,7 @@
   import { app } from '../lib/stores/app.svelte'
   import * as settingsApi from '../lib/api/settings'
   import * as vaultApi from '../lib/api/vault'
+  import { save } from '@tauri-apps/plugin-dialog'
   import type { AppInfo } from '../lib/types'
 
   let info = $state<AppInfo | null>(null)
@@ -18,7 +19,7 @@
     if (!app.settings) return
     const next = !app.settings.dark_mode
     app.settings.dark_mode = next
-    await settingsApi.setDarkMode(next)
+    await settingsApi.setDarkMode(next).catch(e => app.showToast(String(e), true))
   }
 
   async function changeCurrency(e: Event) {
@@ -53,7 +54,7 @@
     if (!app.settings) return
     const next = !app.settings.proxy_enabled
     app.settings.proxy_enabled = next
-    await settingsApi.setProxyEnabled(next)
+    await settingsApi.setProxyEnabled(next, app.settings.proxy_url)
   }
 
   async function updateProxyUrl() {
@@ -63,7 +64,12 @@
 
   async function exportVault() {
     try {
-      const result = await vaultApi.exportVault()
+      const path = await save({
+        title: 'Export Vault Backup',
+        filters: [{ name: 'Sanctum Backup', extensions: ['db'] }],
+      })
+      if (!path) return
+      const result = await vaultApi.exportVault(path)
       app.showToast(`Backup saved to ${result.path}`)
     } catch (e) {
       app.showToast(String(e), true)

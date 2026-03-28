@@ -4,12 +4,12 @@ import type {
   ExchangeDetectionResult
 } from '../types'
 
-export async function previewImport(content: string): Promise<ImportPreviewResponse> {
-  return invoke<ImportPreviewResponse>('preview_import', { content })
+export async function previewImport(content: string, filename: string): Promise<ImportPreviewResponse> {
+  return invoke<ImportPreviewResponse>('preview_import', { content, filename })
 }
 
-export async function importData(content: string): Promise<ImportResultsResponse> {
-  return invoke<ImportResultsResponse>('import_data', { content })
+export async function importData(content: string, filename: string): Promise<ImportResultsResponse> {
+  return invoke<ImportResultsResponse>('import_data', { content, filename })
 }
 
 export async function maxImportFileSize(): Promise<number> {
@@ -21,13 +21,13 @@ export async function detectExchangeSource(content: string): Promise<ExchangeDet
 }
 
 export async function previewExchangeCsv(
-  exchangeId: string, walletName: string, content: string
+  content: string, wallet_name: string
 ): Promise<ImportPreviewResponse> {
-  return invoke<ImportPreviewResponse>('preview_exchange_csv', { exchangeId, walletName, content })
+  return invoke<ImportPreviewResponse>('preview_exchange_csv', { content, wallet_name })
 }
 
 export async function importExchangeCsv(
-  exchangeId: string, walletName: string, content: string
+  content: string, wallet_name: string
 ): Promise<ImportResultsResponse> {
-  return invoke<ImportResultsResponse>('import_exchange_csv', { exchangeId, walletName, content })
+  return invoke<ImportResultsResponse>('import_exchange_csv', { content, wallet_name })
 }

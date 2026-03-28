@@ -130,17 +130,11 @@
 
   async function submitHabit() {
     try {
-      const input = {
-        id: editingHabit?.id,
-        name: habitName,
-        description: habitDescription || undefined,
-        color: habitColor,
-        category: habitCategory,
-      }
+      const desc = habitDescription || null
       if (editingHabit) {
-        await habitsApi.updateHabit(input)
+        await habitsApi.updateHabit(editingHabit.id, habitName, desc, habitColor, habitCategory)
       } else {
-        await habitsApi.createHabit(input)
+        await habitsApi.createHabit(habitName, desc, habitColor, habitCategory)
       }
       showAddHabit = false
       await load()
@@ -161,9 +155,9 @@
     }
   }
 
-  async function toggleCheckpoint(id: string) {
+  async function toggleCheckpoint(goalId: string, checkpointId: string) {
     try {
-      await habitsApi.toggleCheckpoint(id)
+      await habitsApi.toggleCheckpoint(goalId, checkpointId)
       goals = await habitsApi.fetchGoals()
     } catch (e) {
       app.showToast(String(e), true)
@@ -358,7 +352,7 @@
             {/if}
             <div class="checkpoints">
               {#each goal.checkpoints as cp}
-                <button class="checkpoint" class:done={cp.completed} onclick={() => toggleCheckpoint(cp.id)}>
+                <button class="checkpoint" class:done={cp.completed} onclick={() => toggleCheckpoint(goal.id, cp.id)}>
                   <span class="check-icon">{cp.completed ? '[x]' : '[ ]'}</span>
                   <span>{cp.description}</span>
                 </button>

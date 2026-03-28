@@ -21,12 +21,12 @@ export async function checkPasswordStrength(password: string): Promise<PasswordS
   return invoke<PasswordStrengthResult>('check_password_strength', { password })
 }
 
-export async function exportVault(): Promise<VaultExportResult> {
-  return invoke<VaultExportResult>('export_vault')
+export async function exportVault(path: string): Promise<VaultExportResult> {
+  return invoke<VaultExportResult>('export_vault', { path })
 }
 
-export async function restoreVault(backupPath: string): Promise<void> {
-  return invoke('restore_vault', { backupPath })
+export async function restoreVault(backup_path: string): Promise<void> {
+  return invoke('restore_vault', { backup_path })
 }
 
 export async function rollbackRestore(): Promise<void> {

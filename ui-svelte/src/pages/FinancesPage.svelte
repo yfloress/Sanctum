@@ -2,9 +2,8 @@
   import { app } from '../lib/stores/app.svelte'
   import * as financeApi from '../lib/api/finance'
   import type {
-    AccountsResponse, TransactionDto,
-    TransactionFilter, CategoriesResponse, CategoryDto,
-    AccountDetailResponse
+    TransactionDto, CategoriesResponse, CategoryDto,
+    AccountsResponse, AccountDetailResponse
   } from '../lib/types'
 
   type Tab = 'activity' | 'accounts' | 'settings'
@@ -71,12 +70,11 @@
   }
 
   async function loadTransactions() {
-    const filter: TransactionFilter = { limit: 100 }
-    if (filterQuery) filter.query = filterQuery
-    if (filterAccountId) filter.account_id = filterAccountId
-    if (filterCategory) filter.category = filterCategory
     try {
-      const res = await financeApi.fetchTransactions(filter)
+      const res = await financeApi.fetchTransactions(
+        filterQuery || undefined, filterAccountId || undefined,
+        filterCategory || undefined, 100
+      )
       transactions = res.transactions
       hasMore = res.has_more
     } catch (e) {
@@ -85,14 +83,11 @@
   }
 
   async function loadMoreTransactions() {
-    const filter: TransactionFilter = {
-      limit: transactions.length + 100
-    }
-    if (filterQuery) filter.query = filterQuery
-    if (filterAccountId) filter.account_id = filterAccountId
-    if (filterCategory) filter.category = filterCategory
     try {
-      const res = await financeApi.fetchTransactions(filter)
+      const res = await financeApi.fetchTransactions(
+        filterQuery || undefined, filterAccountId || undefined,
+        filterCategory || undefined, transactions.length + 100
+      )
       transactions = res.transactions
       hasMore = res.has_more
     } catch (e) {
@@ -139,19 +134,14 @@
 
   async function submitTransaction() {
     try {
-      const input = {
-        id: editingTransaction?.id,
-        account_id: txAccountId,
-        amount: txAmount,
-        category: txCategory,
-        description: txDescription,
-        date: txDate,
-        is_expense: txIsExpense,
-      }
       if (editingTransaction) {
-        await financeApi.updateTransaction(input)
+        await financeApi.updateTransaction(
+          editingTransaction.id, txAccountId, txAmount, txCategory, txDescription, txDate, txIsExpense
+        )
       } else {
-        await financeApi.addTransaction(input)
+        await financeApi.addTransaction(
+          txAccountId, txAmount, txCategory, txDescription, txDate, txIsExpense
+        )
       }
       showAddTransaction = false
       await Promise.all([loadTransactions(), refreshAccounts()])
@@ -181,12 +171,7 @@
 
   async function submitAccount() {
     try {
-      await financeApi.createAccount({
-        name: accName,
-        account_type: accType,
-        currency: accCurrency,
-        initial_balance: accInitialBalance,
-      })
+      await financeApi.createAccount(accName, accType, accCurrency, accInitialBalance)
       showAddAccount = false
       await refreshAccounts()
       app.showToast('Account created')

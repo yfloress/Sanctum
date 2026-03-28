@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import type {
   PortfolioResponse, PortfolioTrendData,
-  WalletsResponse, WalletDetailResponse, WalletInput,
+  WalletsResponse, WalletDetailResponse,
   CryptoTransactionDto, CryptoTransactionInput,
   CryptoTransferInput, CryptoSwapInput,
   CryptoTransactionUpdateInput, CryptoTransactionEditData,
@@ -13,20 +13,20 @@ export async function fetchPortfolio(): Promise<PortfolioResponse> {
   return invoke<PortfolioResponse>('fetch_portfolio')
 }
 
-export async function fetchPortfolioTrend(): Promise<PortfolioTrendData> {
-  return invoke<PortfolioTrendData>('fetch_portfolio_trend')
+export async function fetchPortfolioTrend(days: number = 30): Promise<PortfolioTrendData> {
+  return invoke<PortfolioTrendData>('fetch_portfolio_trend', { days })
 }
 
 export async function fetchWallets(): Promise<WalletsResponse> {
   return invoke<WalletsResponse>('fetch_wallets')
 }
 
-export async function fetchWalletDetail(id: string): Promise<WalletDetailResponse> {
-  return invoke<WalletDetailResponse>('fetch_wallet_detail', { id })
+export async function fetchWalletDetail(wallet_id: string): Promise<WalletDetailResponse> {
+  return invoke<WalletDetailResponse>('fetch_wallet_detail', { wallet_id })
 }
 
-export async function addWallet(input: WalletInput): Promise<void> {
-  return invoke('add_wallet', { ...input })
+export async function addWallet(name: string, category: string, icon?: string): Promise<void> {
+  return invoke('add_wallet', { name, category, icon: icon ?? null })
 }
 
 export async function deleteWallet(id: string, force: boolean): Promise<void> {
@@ -37,28 +37,28 @@ export async function getWalletTransactionCount(id: string): Promise<number> {
   return invoke<number>('get_wallet_transaction_count', { id })
 }
 
-export async function updateWalletName(id: string, newName: string): Promise<void> {
-  return invoke('update_wallet_name', { id, newName })
+export async function updateWalletName(id: string, new_name: string): Promise<void> {
+  return invoke('update_wallet_name', { id, new_name })
 }
 
-export async function updateWalletIcon(id: string, icon: string): Promise<void> {
+export async function updateWalletIcon(id: string, icon: string | null): Promise<void> {
   return invoke('update_wallet_icon', { id, icon })
 }
 
 export async function addCryptoTransaction(input: CryptoTransactionInput): Promise<void> {
-  return invoke('add_crypto_transaction', { ...input })
+  return invoke('add_crypto_transaction', { input })
 }
 
 export async function addCryptoTransfer(input: CryptoTransferInput): Promise<void> {
-  return invoke('add_crypto_transfer', { ...input })
+  return invoke('add_crypto_transfer', { input })
 }
 
 export async function addCryptoSwap(input: CryptoSwapInput): Promise<void> {
-  return invoke('add_crypto_swap', { ...input })
+  return invoke('add_crypto_swap', { input })
 }
 
 export async function updateCryptoTransaction(input: CryptoTransactionUpdateInput): Promise<void> {
-  return invoke('update_crypto_transaction', { ...input })
+  return invoke('update_crypto_transaction', { input })
 }
 
 export async function deleteCryptoTransaction(id: string): Promise<void> {
@@ -69,16 +69,16 @@ export async function getCryptoTransaction(id: string): Promise<CryptoTransactio
   return invoke<CryptoTransactionEditData>('get_crypto_transaction', { id })
 }
 
-export async function getCryptoTransactionsByCoin(coinId: string): Promise<CryptoTransactionDto[]> {
-  return invoke<CryptoTransactionDto[]>('get_crypto_transactions_by_coin', { coinId })
+export async function getCryptoTransactionsByCoin(coin_id: string): Promise<CryptoTransactionDto[]> {
+  return invoke<CryptoTransactionDto[]>('get_crypto_transactions_by_coin', { coin_id })
 }
 
 export async function getCoinCatalog(): Promise<CoinCatalogDto[]> {
   return invoke<CoinCatalogDto[]>('get_coin_catalog')
 }
 
-export async function setFavoriteCoin(coinId: string, favorite: boolean): Promise<void> {
-  return invoke('set_favorite_coin', { coinId, favorite })
+export async function setFavoriteCoin(id: string, favorite: boolean): Promise<void> {
+  return invoke('set_favorite_coin', { id, favorite })
 }
 
 export async function addCustomCoin(id: string, name: string, symbol: string): Promise<void> {
@@ -109,24 +109,24 @@ export async function getMonitoredCoinIds(): Promise<string[]> {
   return invoke<string[]>('get_monitored_coin_ids')
 }
 
-export async function loadTaxSettings(periodId: string): Promise<TaxSettingsDto> {
-  return invoke<TaxSettingsDto>('load_tax_settings', { periodId })
+export async function loadTaxSettings(period_id: string): Promise<TaxSettingsDto> {
+  return invoke<TaxSettingsDto>('load_tax_settings', { period_id })
 }
 
 export async function saveTaxSettings(settings: TaxSettingsDto): Promise<void> {
-  return invoke('save_tax_settings', { ...settings })
+  return invoke('save_tax_settings', { settings })
 }
 
-export async function generateTaxReport(periodId: string): Promise<TaxReportDto> {
-  return invoke<TaxReportDto>('generate_tax_report', { periodId })
+export async function generateTaxReport(period_id: string): Promise<TaxReportDto> {
+  return invoke<TaxReportDto>('generate_tax_report', { period_id })
 }
 
-export async function exportTaxReportCsv(periodId: string): Promise<string> {
-  return invoke<string>('export_tax_report_csv', { periodId })
+export async function exportTaxReportCsv(period_id: string, path: string): Promise<string> {
+  return invoke<string>('export_tax_report_csv', { period_id, path })
 }
 
-export async function exportTaxHistoryCsv(): Promise<string> {
-  return invoke<string>('export_tax_history_csv')
+export async function exportTaxHistoryCsv(period_id: string, path: string): Promise<string> {
+  return invoke<string>('export_tax_history_csv', { period_id, path })
 }
 
 export async function importIpcCsv(content: string): Promise<number> {
@@ -137,8 +137,15 @@ export async function getIpcSummary(): Promise<IpcSummaryDto> {
   return invoke<IpcSummaryDto>('get_ipc_summary')
 }
 
-export async function fillMissingTaxPrices(periodId: string): Promise<number> {
-  return invoke<number>('fill_missing_tax_prices', { periodId })
+export async function fillMissingTaxPrices(
+  tx_id: string, price_per_coin?: number, fee_usd?: number, override_proceeds?: number
+): Promise<number> {
+  return invoke<number>('fill_missing_tax_prices', {
+    tx_id,
+    price_per_coin: price_per_coin ?? null,
+    fee_usd: fee_usd ?? null,
+    override_proceeds: override_proceeds ?? null,
+  })
 }
 
 export async function saveExchangeRate(pair: string, rate: number): Promise<void> {

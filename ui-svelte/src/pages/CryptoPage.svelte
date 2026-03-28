@@ -75,7 +75,7 @@
 
   async function submitWallet() {
     try {
-      await cryptoApi.addWallet({ name: walletName, category: walletCategory })
+      await cryptoApi.addWallet(walletName, walletCategory)
       showAddWallet = false
       walletName = ''
       await loadWallets()

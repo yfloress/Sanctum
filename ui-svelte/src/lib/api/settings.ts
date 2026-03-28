@@ -5,36 +5,36 @@ export async function loadSettings(): Promise<AppSettings> {
   return invoke<AppSettings>('load_settings')
 }
 
-export async function setDarkMode(value: boolean): Promise<void> {
-  return invoke('set_dark_mode', { value })
+export async function setDarkMode(enabled: boolean): Promise<void> {
+  return invoke('set_dark_mode', { enabled })
 }
 
-export async function setAutoFetch(value: boolean): Promise<void> {
-  return invoke('set_auto_fetch', { value })
+export async function setAutoFetch(enabled: boolean): Promise<void> {
+  return invoke('set_auto_fetch', { enabled })
 }
 
-export async function setProxyEnabled(value: boolean): Promise<void> {
-  return invoke('set_proxy_enabled', { value })
+export async function setProxyEnabled(enabled: boolean, current_url: string): Promise<void> {
+  return invoke('set_proxy_enabled', { enabled, current_url })
 }
 
-export async function setProxyUrl(value: string): Promise<void> {
-  return invoke('set_proxy_url', { value })
+export async function setProxyUrl(url: string): Promise<void> {
+  return invoke('set_proxy_url', { url })
 }
 
-export async function setSessionTimeout(timeoutSecs: number): Promise<void> {
-  return invoke('set_session_timeout', { timeoutSecs })
+export async function setSessionTimeout(timeout_secs: number): Promise<void> {
+  return invoke('set_session_timeout', { timeout_secs })
 }
 
-export async function setPreferredCurrency(value: string): Promise<void> {
-  return invoke('set_preferred_currency', { value })
+export async function setPreferredCurrency(currency: string): Promise<void> {
+  return invoke('set_preferred_currency', { currency })
 }
 
-export async function setPreferredLanguage(value: string): Promise<void> {
-  return invoke('set_preferred_language', { value })
+export async function setPreferredLanguage(language: string): Promise<void> {
+  return invoke('set_preferred_language', { language })
 }
 
-export async function setSidebarCollapsed(value: boolean): Promise<void> {
-  return invoke('set_sidebar_collapsed', { value })
+export async function setSidebarCollapsed(collapsed: boolean): Promise<void> {
+  return invoke('set_sidebar_collapsed', { collapsed })
 }
 
 export async function resetSettings(): Promise<void> {
