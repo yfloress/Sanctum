@@ -1,3 +1,7 @@
+[workspace]
+members = ["src-tauri"]
+resolver = "3"
+
 [package]
 name = "sanctum"
 version = "0.1.0"
@@ -16,25 +20,24 @@ exclude = [
 ]
 
 [dependencies]
-tokio = { version = "1.49.0", features = ["full"] }
-rusqlite = { version = "0.38.0", features = ["bundled-sqlcipher"] }
-serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.149"
-csv = "1.4.0"
-toml = "1.0.3"
-uuid = { version = "1.21.0", features = ["v4", "serde"] }
-chrono = { version = "0.4.44", features = ["serde"] }
-secrecy = "0.10.3"
-thiserror = "2.0.18"
-log = "0.4.29"
-env_logger = "0.11.9"
-directories = "6.0.0"
-reqwest = { version = "0.13.2", features = ["json", "stream", "socks"] }
-futures = "0.3.32"
-regex = "1.12.3"
-rand = "0.10.0"
-plotters = { version = "0.3.7", default-features = false, features = ["svg_backend", "area_series", "line_series"] }
+chrono = { version = "0.4", features = ["serde"] }
+csv = "1.4"
+directories = "6"
+env_logger = "0.11"
 fluent-bundle = "0.16"
 fluent-syntax = "0.12"
+futures = "0.3"
+log = "0.4"
+rand = "0.10"
+regex = "1.12"
+reqwest = { version = "0.13", features = ["json", "stream", "socks"] }
+rusqlite = { version = "0.38", features = ["bundled-sqlcipher"] }
+secrecy = "0.10"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 sys-locale = "0.3"
+thiserror = "2"
+tokio = { version = "1", features = ["full"] }
+toml = "1"
 unic-langid = "0.9"
+uuid = { version = "1", features = ["v4", "serde"] }

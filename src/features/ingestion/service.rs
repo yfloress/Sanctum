@@ -592,7 +592,7 @@ impl IngestionService {
     /// Import exchange CSV with explicit wallet name and source.
     ///
     /// This is the main entry point used by both the generic `import_from_content`
-    /// path (with default wallet name) and the dedicated exchange import callback
+    /// path (with default wallet name) and the dedicated exchange import command
     /// (with user-provided wallet name).
     ///
     /// Balance validation is skipped for exchange imports because the wallet

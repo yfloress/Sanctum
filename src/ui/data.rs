@@ -18,7 +18,7 @@
 //! UI data types
 //!
 //! Intermediate data structures for UI display.
-//! These are mapped to Slint-generated types in main.rs.
+//! Used by DTOs and Tauri commands for data transformation.
 
 use crate::controller::AppController;
 use crate::ui::{

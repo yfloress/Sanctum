@@ -19,10 +19,10 @@
       <img src="https://img.shields.io/badge/Core-Rust-orange?style=for-the-badge&logo=rust" alt="Rust" />
     </a>
     <a href="">
-      <img src="https://img.shields.io/badge/GUI-Slint-blue?style=for-the-badge" alt="Slint" />
+      <img src="https://img.shields.io/badge/Shell-Tauri%202-blue?style=for-the-badge" alt="Tauri" />
     </a>
     <a href="">
-      <img src="https://img.shields.io/badge/Render-Skia%20%2B%20OpenGL-informational?style=for-the-badge" alt="Skia" />
+      <img src="https://img.shields.io/badge/UI-Svelte%205-orange?style=for-the-badge" alt="Svelte" />
     </a>
     <a href="">
       <img src="https://img.shields.io/badge/Security-SQLCipher-green?style=for-the-badge&logo=sqlite" alt="SQLCipher" />
@@ -112,8 +112,8 @@ Sanctum prioritizes performance, type safety, and auditability.
 | Component            | Technology             | Description                                                       |
 | :------------------- | :--------------------- | :---------------------------------------------------------------- |
 | **Core**             | **Rust**               | Business logic, validation, and calculations.                     |
-| **GUI Framework**    | **Slint**              | Native Rust UI toolkit. Lightweight and type-safe.                |
-| **Renderer**         | **Skia / OpenGL**       | High-performance 2D rendering via Winit.                          |
+| **Shell**            | **Tauri 2**            | Lightweight native shell with WebView.                            |
+| **Frontend**         | **Svelte 5 + TS**      | Reactive UI with TypeScript and Vite.                             |
 | **Database**         | **SQLite + SQLCipher**  | Locally encrypted relational storage.                             |
 | **Environment**      | **Nix + Direnv**        | Reproducible dev environment.                                     |
 

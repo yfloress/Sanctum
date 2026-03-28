@@ -15,6 +15,5 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
 //
 
-pub mod charts;
 pub mod i18n;
 pub mod vault;

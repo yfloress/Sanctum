@@ -17,7 +17,7 @@
 
 //! Application Controller for Sanctum
 //!
-//! This module provides a pure Rust API that can be consumed by any UI framework (Slint, etc.)
+//! This module provides the Rust API consumed by Tauri commands.
 //! Split into domain-specific submodules for maintainability.
 
 mod crypto;
@@ -42,7 +42,6 @@ use crate::features::finance::{FinanceError, FinanceService};
 use crate::features::habits::{HabitService, RewardsService};
 use crate::features::ingestion::IngestionService;
 use crate::security_log::{SecurityEvent, log_auth_failure, log_security_event};
-use crate::services::charts::ChartsService;
 use rusqlite::Connection;
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
@@ -304,7 +303,6 @@ struct AppConfig {
 pub struct AppController {
     db: Arc<Mutex<Option<Database>>>,
     pub finance_service: FinanceService,
-    charts_service: ChartsService,
     crypto_service: CryptoService,
     pub habit_service: HabitService,
     pub rewards_service: RewardsService,
@@ -321,12 +319,10 @@ impl AppController {
         let habit_service = HabitService::new(db.clone());
         let rewards_service = RewardsService::new(db.clone());
         let ingestion_service = IngestionService::new(db.clone());
-        let charts_service = ChartsService::new();
 
         Self {
             db,
             finance_service,
-            charts_service,
             crypto_service,
             habit_service,
             rewards_service,
@@ -770,32 +766,6 @@ impl AppController {
         Ok(())
     }
 
-    // ==================== Chart Rendering ====================
-
-    pub fn render_habit_radar_chart(&self, data: &[(String, String, f32)]) -> Option<String> {
-        self.charts_service.render_habit_radar_chart(data)
-    }
-
-    pub fn render_weekday_efficiency_chart(&self, data: &[(String, f32, bool)]) -> Option<String> {
-        self.charts_service.render_weekday_efficiency_chart(data)
-    }
-
-    pub fn render_portfolio_distribution_chart(&self, data: &[(String, f64)]) -> Option<String> {
-        self.charts_service
-            .render_portfolio_distribution_chart(data)
-    }
-
-    pub fn render_portfolio_trend_chart(&self, data: &[(String, f64, f64)]) -> Option<String> {
-        self.charts_service.render_portfolio_trend_chart(data)
-    }
-
-    pub fn chart_color_for_symbol(&self, symbol: &str, index: usize) -> (u8, u8, u8) {
-        self.charts_service.chart_color_for_symbol(symbol, index)
-    }
-
-    pub fn render_net_worth_chart(&self, values: &[i64]) -> Option<String> {
-        self.charts_service.render_net_worth_chart(values)
-    }
 
     // ==================== Vault Path Methods ====================
 

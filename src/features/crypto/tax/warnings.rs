@@ -15,7 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
 //
 
-//! Tax warning code helpers shared across tax service and UI callbacks.
+//! Tax warning code helpers shared across tax service and UI layer.
 
 /// Missing-price warning codes that can be resolved with USD price sync.
 pub const RESOLVABLE_MISSING_PRICE_WARNING_CODES: &[&str] = &[

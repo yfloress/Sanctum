@@ -59,13 +59,6 @@ locales/
 └── es.ftl       # Spanish translations
 ```
 
-`docs/` (Migration reference)
-```
-docs/
-├── slint-ui-map.md              # UI map of all Slint pages/modals/components
-└── slint-callback-inventory.md  # 121 callbacks inventory with IPC boundary details
-```
-
 ## Workflow Rules (Important)
 - Controllers coordinate only; business logic must live in `features/*/service.rs` or `services/*`.
 - Validation: shared rules in `src/core/validation.rs`, domain wrappers in `features/*/validation.rs`.

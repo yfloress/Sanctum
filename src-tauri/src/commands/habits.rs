@@ -508,7 +508,7 @@ pub struct GoalCheckpointInput {
 /// Update a goal with its checkpoints.
 ///
 /// Accepts a clean Vec of checkpoints and maps to the controller's
-/// positional API (legacy Slint compat, max 4 checkpoints).
+/// positional API (max 4 checkpoints).
 #[tauri::command]
 pub fn update_goal_with_checkpoints(
     controller: State<'_, Arc<AppController>>,
