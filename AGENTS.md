@@ -9,9 +9,6 @@ preserve user trust. When in doubt, prioritize privacy and data integrity over c
 This repo uses a **feature-sliced** layout with strict layer separation:
 `UI → IPC (Tauri commands) → Controller → Features (service/repository) → DB`.
 
-**Migration in progress:** Slint → Tauri + Svelte 5. Both coexist until migration completes.
-See `MIGRATION_ROADMAP.md` for the full plan.
-
 `src/` (Rust — business logic crate)
 ```
 src/
@@ -19,15 +16,13 @@ src/
 ├── features/        # finance/, crypto/, habits/, dashboard/, ingestion/ (service + repository + validation)
 ├── controller/      # Orchestration per domain + settings
 ├── db/              # Domain SQL + migrations (finance, crypto, habits, rewards)
-├── services/        # Cross-cutting services (charts)
+├── services/        # Cross-cutting services (charts, i18n)
 ├── ui/              # UI layer
-│   ├── callbacks/   # Slint callbacks (legacy, being replaced)
 │   ├── dto/         # Tauri IPC DTOs (Serialize/Deserialize structs per domain)
 │   ├── data.rs      # Intermediate display data types
-│   ├── helpers.rs   # Formatting, icon loading, i18n
+│   ├── helpers.rs   # Formatting, color utils
 │   ├── currency.rs  # Currency formatting
 │   └── mod.rs
-├── main.rs          # Slint bootstrap (legacy)
 ├── lib.rs           # Crate exports
 └── models.rs        # Domain models
 ```
@@ -57,17 +52,6 @@ ui-svelte/
     └── App.svelte      # Root component
 ```
 
-`ui/` (Slint — legacy, will be removed in Fase 7)
-```
-ui/
-├── pages/       # One file per page
-├── modals/      # Dialogs
-├── components/  # Reusable UI blocks (+ subfolders)
-├── globals.slint
-├── widgets.slint
-└── app.slint
-```
-
 `locales/` (i18n)
 ```
 locales/
@@ -88,22 +72,14 @@ docs/
 - Use `nix develop -c ...` for Rust commands (build/test).
 - Never run cargo run or cargo build.
 - Tax rule: for Chile jurisdiction, tax reports, tax history exports, and displayed tax totals must always use CLP.
-- Crypto icons live in `ui/assets/crypto-icons`; the base path is defined in `src/ui/helpers.rs`.
-
-### Tauri migration rules
-- New IPC types go in `src/ui/dto/` — one file per domain, `#[derive(Serialize, Deserialize)]`.
-- New Tauri commands go in `src/ui/commands/` (Fase 3) — `#[tauri::command]` functions.
+### IPC rules
+- IPC types go in `src/ui/dto/` — one file per domain, `#[derive(Serialize, Deserialize)]`.
+- Tauri commands go in `src-tauri/src/commands/` — `#[tauri::command]` functions.
 - DTOs must map 1:1 with what the frontend needs — never expose internal models directly.
-- Slint callbacks (`src/ui/callbacks/`) stay untouched until their domain is fully migrated.
 - Frontend uses `@tauri-apps/api` `invoke()` to call Rust commands.
+- Tauri invoke parameter names must exactly match Rust function parameter names (snake_case).
 - No external CDN or runtime network resources in the frontend.
 - pnpm with `ignore-scripts=true` (`.npmrc`) for supply chain security.
-
-### Slint rules (legacy, until Fase 7)
-- Slint UI logic lives in `src/ui/callbacks/`; keep `src/main.rs` as bootstrap + wiring only.
-- All chart rendering (`plotters`) goes in `src/services/charts.rs` only.
-- UI text must use i18n: add keys to `locales/*.ftl` and use `Translations.*` in Slint.
-- Use `ui/globals.slint` (Palette) for colors/spacing; avoid hardcoded styling values.
 - Every source file (including tests) must start with this exact AGPL header:
 ```rust
 // Sanctum — a privacy-first personal finance, crypto, and habits vault.
@@ -126,7 +102,7 @@ docs/
 
 ## Build, Test, and Development Commands
 Always ask the user if they want to run any of these commands:
-- `nix develop -c cargo check -j 2` (main Slint crate)
+- `nix develop -c cargo check -j 2` (library crate)
 - `nix develop -c cargo check -j 2 --manifest-path src-tauri/Cargo.toml` (Tauri crate)
 - `nix develop -c cargo clippy -j 2`
 - `nix develop -c cargo test -j 2`
@@ -136,7 +112,6 @@ Always ask the user if they want to run any of these commands:
 ## Coding Style and Naming Conventions
 - Rust: `rustfmt` defaults (4-space).
 - Svelte/TypeScript: 2-space indent, single quotes, no semicolons in TS.
-- Slint (legacy): align properties, keep layout readable.
 - Naming: snake_case (Rust + Tauri commands), PascalCase (types), kebab-case (files when adding new ones).
 
 ## Testing Guidelines

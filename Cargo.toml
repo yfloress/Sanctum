@@ -2,27 +2,20 @@
 name = "sanctum"
 version = "0.1.0"
 edition = "2024"
-build = "build.rs"
 authors = ["Kyronix"]
 license = "AGPL-3.0-or-later"
 description = "Your personal financial fortress. Private. Encrypted. Local-first."
 repository = "https://codeberg.org/Kyronix/Sanctum"
 homepage = "https://codeberg.org/Kyronix/Sanctum"
 readme = "README.md"
-keywords = ["finance", "privacy", "crypto", "slint", "sqlite"]
+keywords = ["finance", "privacy", "crypto", "tauri", "sqlite"]
 categories = ["cryptography", "database"]
 exclude = [
     "assets/*",
     ".envrc"
 ]
 
-[[bin]]
-name = "sanctum"
-path = "src/main.rs"
-
 [dependencies]
-slint = { version = "1.15.1", features = ["renderer-winit-skia"] }
-i-slint-backend-selector = "1.15.1"
 tokio = { version = "1.49.0", features = ["full"] }
 rusqlite = { version = "0.38.0", features = ["bundled-sqlcipher"] }
 serde = { version = "1.0.228", features = ["derive"] }
@@ -40,14 +33,8 @@ reqwest = { version = "0.13.2", features = ["json", "stream", "socks"] }
 futures = "0.3.32"
 regex = "1.12.3"
 rand = "0.10.0"
-rfd = "0.17"
 plotters = { version = "0.3.7", default-features = false, features = ["svg_backend", "area_series", "line_series"] }
-fontdb = "0.23.0"
-usvg = "0.47.0"
 fluent-bundle = "0.16"
 fluent-syntax = "0.12"
 sys-locale = "0.3"
 unic-langid = "0.9"
-
-[build-dependencies]
-slint-build = "1.15.1"

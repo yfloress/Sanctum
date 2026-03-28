@@ -18,7 +18,6 @@
 use plotters::prelude::*;
 use plotters::series::{AreaSeries, LineSeries};
 use plotters::style::text_anchor::{HPos, Pos, VPos};
-use slint::Image;
 use std::fs::{self, OpenOptions};
 use std::path::Path;
 use uuid::Uuid;
@@ -39,7 +38,7 @@ impl ChartsService {
         Self
     }
 
-    pub fn render_habit_radar_chart(&self, categories: &[(String, String, f32)]) -> Option<Image> {
+    pub fn render_habit_radar_chart(&self, categories: &[(String, String, f32)]) -> Option<String> {
         if categories.is_empty() {
             return None;
         }
@@ -158,7 +157,7 @@ impl ChartsService {
     pub fn render_weekday_efficiency_chart(
         &self,
         weekdays: &[(String, f32, bool)],
-    ) -> Option<Image> {
+    ) -> Option<String> {
         if weekdays.is_empty() {
             return None;
         }
@@ -249,7 +248,7 @@ impl ChartsService {
         render_svg_image(&temp_svg)
     }
 
-    pub fn render_portfolio_distribution_chart(&self, data: &[(String, f64)]) -> Option<Image> {
+    pub fn render_portfolio_distribution_chart(&self, data: &[(String, f64)]) -> Option<String> {
         if data.is_empty() {
             return None;
         }
@@ -285,7 +284,7 @@ impl ChartsService {
         render_svg_image(&temp_svg)
     }
 
-    pub fn render_portfolio_trend_chart(&self, data: &[(String, f64, f64)]) -> Option<Image> {
+    pub fn render_portfolio_trend_chart(&self, data: &[(String, f64, f64)]) -> Option<String> {
         if data.len() < 2 {
             return None;
         }
@@ -377,7 +376,7 @@ impl ChartsService {
     }
 
     /// Renders net worth line chart for dashboard (same style as portfolio trend)
-    pub fn render_net_worth_chart(&self, values: &[i64]) -> Option<Image> {
+    pub fn render_net_worth_chart(&self, values: &[i64]) -> Option<String> {
         if values.len() < 2 {
             return None;
         }
@@ -473,19 +472,7 @@ fn create_secure_temp_svg(prefix: &str) -> Option<std::path::PathBuf> {
     None
 }
 
-fn render_svg_image(temp_svg: &Path) -> Option<Image> {
-    let mut fontdb = fontdb::Database::new();
-    let font_path = std::path::PathBuf::from("ui/fonts/DejaVuSans.ttf");
-    if font_path.exists() {
-        fontdb.load_font_file(&font_path).ok()?;
-    } else {
-        fontdb.load_system_fonts();
-    }
-
-    fontdb.set_serif_family("DejaVu Sans");
-    fontdb.set_sans_serif_family("DejaVu Sans");
-    fontdb.set_monospace_family("DejaVu Sans");
-
+fn render_svg_image(temp_svg: &Path) -> Option<String> {
     let svg_data = match fs::read_to_string(temp_svg) {
         Ok(data) => data,
         Err(_) => {
@@ -493,36 +480,8 @@ fn render_svg_image(temp_svg: &Path) -> Option<Image> {
             return None;
         }
     };
-    let opt = usvg::Options {
-        fontdb: std::sync::Arc::new(fontdb),
-        ..Default::default()
-    };
-    let tree = match usvg::Tree::from_str(&svg_data, &opt) {
-        Ok(tree) => tree,
-        Err(_) => {
-            let _ = fs::remove_file(temp_svg);
-            return None;
-        }
-    };
-
-    let final_svg = match create_secure_temp_svg("sanctum_chart_render") {
-        Some(path) => path,
-        None => {
-            let _ = fs::remove_file(temp_svg);
-            return None;
-        }
-    };
-
-    let write_result = fs::write(&final_svg, tree.to_string(&usvg::WriteOptions::default()));
-    let image = if write_result.is_ok() {
-        Image::load_from_path(&final_svg).ok()
-    } else {
-        None
-    };
-
     let _ = fs::remove_file(temp_svg);
-    let _ = fs::remove_file(&final_svg);
-    image
+    Some(svg_data)
 }
 
 fn fallback_chart_color(index: usize) -> (u8, u8, u8) {

@@ -21,25 +21,14 @@
 
 use crate::models::CryptoTransaction;
 use crate::ui::currency::format_money;
-use slint::Image;
-use std::cell::RefCell;
 use std::collections::HashMap;
 
-pub const CRYPTO_ICON_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/ui/assets/crypto-icons");
-pub const MEXC_EXCHANGE_ICON_PATH: &str = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/ui/assets/exchange-icons/mexc.svg"
-);
 pub const GENERIC_BANK_ICON_PATH: &str = "../assets/icons/landmark.svg";
 
 pub const HABIT_COLOR_CHOICES: [&str; 16] = [
     "#8b5cf6", "#ec4899", "#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16", "#22c55e",
     "#10b981", "#14b8a6", "#06b6d4", "#0ea5e9", "#3b82f6", "#6366f1", "#a16207", "#64748b",
 ];
-
-thread_local! {
-    pub static CRYPTO_ICON_CACHE: RefCell<HashMap<String, Image>> = RefCell::new(HashMap::new());
-}
 
 // ==================== Amount Formatting ====================
 
@@ -382,8 +371,8 @@ pub fn format_crypto_tx_display(
 
 // ==================== Color Helpers ====================
 
-/// Converts hex color string to slint::Color
-pub fn color_from_hex(hex: &str) -> slint::Color {
+/// Converts hex color string to (r, g, b) tuple
+pub fn color_from_hex(hex: &str) -> (u8, u8, u8) {
     if let Some(stripped) = hex.strip_prefix('#')
         && stripped.len() == 6
         && let (Ok(r), Ok(g), Ok(b)) = (
@@ -392,82 +381,7 @@ pub fn color_from_hex(hex: &str) -> slint::Color {
             u8::from_str_radix(&stripped[4..6], 16),
         )
     {
-        return slint::Color::from_rgb_u8(r, g, b);
+        return (r, g, b);
     }
-    slint::Color::from_rgb_u8(139, 92, 246)
-}
-
-/// Loads crypto icon for symbol with caching
-pub fn crypto_icon_for_symbol(symbol: &str) -> Image {
-    let key = symbol.trim().to_lowercase();
-    if let Some(icon) = CRYPTO_ICON_CACHE.with(|cache| cache.borrow().get(&key).cloned()) {
-        return icon;
-    }
-
-    let base_dir = std::path::Path::new(CRYPTO_ICON_DIR);
-    let icon_path = if key.is_empty() {
-        base_dir.join("generic.svg")
-    } else {
-        let svg_path = base_dir.join(format!("{key}.svg"));
-        if svg_path.exists() {
-            svg_path
-        } else if key == "mx" {
-            std::path::PathBuf::from(MEXC_EXCHANGE_ICON_PATH)
-        } else {
-            base_dir.join("generic.svg")
-        }
-    };
-
-    let icon = if icon_path.exists() {
-        Image::load_from_path(&icon_path).unwrap_or_default()
-    } else {
-        Image::default()
-    };
-
-    CRYPTO_ICON_CACHE.with(|cache| {
-        cache.borrow_mut().insert(key, icon.clone());
-    });
-
-    icon
-}
-
-/// Loads wallet icon from path, returns empty image if path is invalid
-pub fn load_wallet_icon(icon_path: Option<String>, category: &str) -> Image {
-    // If we have a custom icon path, try to load it
-    if let Some(path) = icon_path
-        && !path.is_empty()
-    {
-        // Try to load from ui/assets (path is relative like "../assets/icons/wallet.svg")
-        let full_path = std::path::Path::new("ui").join(path.trim_start_matches("../"));
-        if full_path.exists()
-            && let Ok(icon) = Image::load_from_path(&full_path)
-        {
-            return icon;
-        }
-    }
-
-    // Fall back to category defaults
-    let default_path = match category {
-        "exchange" => "ui/assets/icons/building-2.svg",
-        "wallet_multi" => "ui/assets/icons/shield.svg",
-        _ => "ui/assets/icons/wallet.svg",
-    };
-
-    Image::load_from_path(std::path::Path::new(default_path)).unwrap_or_default()
-}
-
-/// Loads account icon from a stored path (bank icons); returns empty image if invalid.
-pub fn load_account_icon(icon_path: Option<String>) -> Image {
-    if let Some(path) = icon_path
-        && !path.is_empty()
-    {
-        let full_path = std::path::Path::new("ui").join(path.trim_start_matches("../"));
-        if full_path.exists()
-            && let Ok(icon) = Image::load_from_path(&full_path)
-        {
-            return icon;
-        }
-    }
-
-    Image::default()
+    (139, 92, 246)
 }

@@ -46,7 +46,6 @@ use crate::services::charts::ChartsService;
 use rusqlite::Connection;
 use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
-use slint::Image;
 use std::fs::{self, Permissions};
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -773,20 +772,20 @@ impl AppController {
 
     // ==================== Chart Rendering ====================
 
-    pub fn render_habit_radar_chart(&self, data: &[(String, String, f32)]) -> Option<Image> {
+    pub fn render_habit_radar_chart(&self, data: &[(String, String, f32)]) -> Option<String> {
         self.charts_service.render_habit_radar_chart(data)
     }
 
-    pub fn render_weekday_efficiency_chart(&self, data: &[(String, f32, bool)]) -> Option<Image> {
+    pub fn render_weekday_efficiency_chart(&self, data: &[(String, f32, bool)]) -> Option<String> {
         self.charts_service.render_weekday_efficiency_chart(data)
     }
 
-    pub fn render_portfolio_distribution_chart(&self, data: &[(String, f64)]) -> Option<Image> {
+    pub fn render_portfolio_distribution_chart(&self, data: &[(String, f64)]) -> Option<String> {
         self.charts_service
             .render_portfolio_distribution_chart(data)
     }
 
-    pub fn render_portfolio_trend_chart(&self, data: &[(String, f64, f64)]) -> Option<Image> {
+    pub fn render_portfolio_trend_chart(&self, data: &[(String, f64, f64)]) -> Option<String> {
         self.charts_service.render_portfolio_trend_chart(data)
     }
 
@@ -794,7 +793,7 @@ impl AppController {
         self.charts_service.chart_color_for_symbol(symbol, index)
     }
 
-    pub fn render_net_worth_chart(&self, values: &[i64]) -> Option<Image> {
+    pub fn render_net_worth_chart(&self, values: &[i64]) -> Option<String> {
         self.charts_service.render_net_worth_chart(values)
     }
 
