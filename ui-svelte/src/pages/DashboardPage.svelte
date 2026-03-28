@@ -1,6 +1,7 @@
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte'
   import * as dashboardApi from '../lib/api/dashboard'
+  import NetWorthChart from '../components/charts/NetWorthChart.svelte'
   import type { BalanceOverview, RecentTransaction, AnalyticsData } from '../lib/types'
 
   let balance = $state<BalanceOverview | null>(null)
@@ -78,9 +79,15 @@
     </section>
 
     {#if analytics}
-      <section class="chart-placeholder">
-        <p class="placeholder-text">Chart: {analytics.chart.dates.length} data points</p>
-      </section>
+      {#if analytics.chart.dates.length > 0}
+        <section class="chart-section">
+          <NetWorthChart data={analytics.chart} />
+        </section>
+      {:else}
+        <section class="chart-placeholder">
+          <p class="placeholder-text">No chart data available for this range</p>
+        </section>
+      {/if}
 
       {#if analytics.expense_breakdown.length > 0}
         <section class="breakdown">
@@ -222,6 +229,14 @@
   .range-btn.active {
     background: #1a1a1a;
     color: #e0e0e0;
+  }
+
+  .chart-section {
+    background: #111;
+    border: 1px solid #222;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 24px;
   }
 
   .chart-placeholder {

@@ -1,6 +1,8 @@
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte'
   import * as habitsApi from '../lib/api/habits'
+  import RadarChart from '../components/charts/RadarChart.svelte'
+  import WeekdayChart from '../components/charts/WeekdayChart.svelte'
   import type {
     HabitDto, HabitsResponse, HabitSummary,
     HeatmapResponse, HabitAnalyticsResponse,
@@ -288,9 +290,23 @@
 
       <!-- Analytics -->
       {#if analytics}
-        <div class="analytics-card">
-          <p class="insight">{analytics.weekly_summary}</p>
-          <p class="insight">{analytics.insight}</p>
+        <div class="analytics-section">
+          {#if analytics.radar.categories.length > 0}
+            <div class="chart-card">
+              <h3>Habit Radar</h3>
+              <RadarChart data={analytics.radar} />
+            </div>
+          {/if}
+          {#if analytics.weekday_efficiency.labels.length > 0}
+            <div class="chart-card">
+              <h3>Weekday Efficiency</h3>
+              <WeekdayChart data={analytics.weekday_efficiency} />
+            </div>
+          {/if}
+          <div class="analytics-card">
+            <p class="insight">{analytics.weekly_summary}</p>
+            <p class="insight">{analytics.insight}</p>
+          </div>
         </div>
       {/if}
     {:else}
@@ -486,7 +502,10 @@
   .stat-val { font-size: 1.4rem; font-weight: 700; color: #e0e0e0; }
   .stat-lbl { font-size: 0.7rem; color: #666; margin-top: 2px; }
 
-  .analytics-card { background: #111; border: 1px solid #222; border-radius: 10px; padding: 16px; margin-bottom: 20px; }
+  .analytics-section { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .chart-card { background: #111; border: 1px solid #222; border-radius: 10px; padding: 16px; }
+  .chart-card h3 { font-size: 0.8rem; color: #666; text-transform: uppercase; margin: 0 0 8px; }
+  .analytics-card { background: #111; border: 1px solid #222; border-radius: 10px; padding: 16px; grid-column: 1 / -1; }
   .insight { font-size: 0.85rem; color: #aaa; margin: 4px 0; }
 
   /* Rewards */

@@ -1,6 +1,8 @@
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte'
   import * as cryptoApi from '../lib/api/crypto'
+  import PortfolioTrendChart from '../components/charts/PortfolioTrendChart.svelte'
+  import DistributionChart from '../components/charts/DistributionChart.svelte'
   import type {
     PortfolioResponse, PortfolioTrendData,
     WalletsResponse, WalletDetailResponse,
@@ -181,29 +183,19 @@
         {/each}
       </div>
 
-      <!-- Trend placeholder -->
+      <!-- Portfolio Trend Chart -->
       {#if trend && trend.dates.length > 0}
-        <div class="chart-placeholder">
+        <div class="chart-section">
           <h3>Portfolio Trend</h3>
-          <p class="placeholder-text">{trend.dates.length} data points (ECharts integration pending)</p>
+          <PortfolioTrendChart data={trend} />
         </div>
       {/if}
 
-      <!-- Distribution -->
+      <!-- Distribution Chart -->
       {#if portfolio.distribution.length > 0}
-        <div class="distribution">
+        <div class="chart-section">
           <h3>Distribution</h3>
-          <div class="dist-list">
-            {#each portfolio.distribution as item}
-              <div class="dist-row">
-                <span class="dist-symbol">{item.symbol}</span>
-                <div class="dist-bar-wrap">
-                  <div class="dist-bar" style="width: {item.percentage}%"></div>
-                </div>
-                <span class="dist-pct">{item.percentage.toFixed(1)}%</span>
-              </div>
-            {/each}
-          </div>
+          <DistributionChart data={portfolio.distribution} />
         </div>
       {/if}
     {/if}
@@ -404,22 +396,12 @@
   .asset-amount { font-size: 0.8rem; color: #888; }
   .asset-value { font-size: 0.85rem; font-weight: 500; color: #e0e0e0; }
 
-  /* Chart placeholder */
-  .chart-placeholder {
+  /* Charts */
+  .chart-section {
     background: #111; border: 1px solid #222; border-radius: 10px;
-    padding: 32px; text-align: center; margin-bottom: 24px;
+    padding: 16px; margin-bottom: 24px;
   }
-  .chart-placeholder h3 { font-size: 0.8rem; color: #666; text-transform: uppercase; margin-bottom: 8px; }
-  .placeholder-text { color: #555; font-size: 0.8rem; }
-
-  /* Distribution */
-  .distribution { margin-bottom: 24px; }
-  .distribution h3 { font-size: 0.8rem; color: #666; text-transform: uppercase; margin-bottom: 12px; }
-  .dist-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
-  .dist-symbol { font-size: 0.85rem; color: #ccc; width: 50px; }
-  .dist-bar-wrap { flex: 1; height: 8px; background: #1a1a1a; border-radius: 4px; overflow: hidden; }
-  .dist-bar { height: 100%; background: #4f9cf7; border-radius: 4px; }
-  .dist-pct { font-size: 0.8rem; color: #888; width: 48px; text-align: right; }
+  .chart-section h3 { font-size: 0.8rem; color: #666; text-transform: uppercase; margin: 0 0 8px; }
 
   /* Wallets */
   .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }

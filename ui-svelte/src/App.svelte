@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app } from './lib/stores/app.svelte'
+  import { startSessionMonitor } from './lib/stores/session.svelte'
   import Sidebar from './components/Sidebar.svelte'
   import Toast from './components/Toast.svelte'
   import LoginPage from './pages/LoginPage.svelte'
@@ -8,6 +9,12 @@
   import HabitsPage from './pages/HabitsPage.svelte'
   import CryptoPage from './pages/CryptoPage.svelte'
   import SettingsPage from './pages/SettingsPage.svelte'
+
+  $effect(() => {
+    if (app.isLoggedIn) {
+      return startSessionMonitor()
+    }
+  })
 </script>
 
 {#if !app.isLoggedIn}
