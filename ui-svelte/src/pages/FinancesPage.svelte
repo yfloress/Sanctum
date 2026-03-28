@@ -323,7 +323,7 @@
       {:else}
         <div class="tx-list">
           {#each transactions as tx}
-            <div class="tx-row" onclick={() => openEditTransaction(tx)}>
+            <div class="tx-row" role="button" tabindex="0" onclick={() => openEditTransaction(tx)} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') openEditTransaction(tx) }}>
               <span class="tx-date">{tx.date}</span>
               <span class="tx-desc">{tx.description}</span>
               <span class="tx-cat">{tx.category}</span>
@@ -418,11 +418,11 @@
 
 <!-- Account detail panel -->
 {#if selectedAccount}
-  <div class="overlay-backdrop" onclick={() => selectedAccount = null}></div>
+  <div class="overlay-backdrop" role="presentation" onclick={() => selectedAccount = null} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') selectedAccount = null }}></div>
   <aside class="detail-panel">
     <div class="panel-header">
       <h3>{selectedAccount.name}</h3>
-      <button class="close-panel" onclick={() => selectedAccount = null}>
+      <button class="close-panel" aria-label="Close panel" onclick={() => selectedAccount = null}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
     </div>
@@ -454,7 +454,7 @@
 
 <!-- Add/Edit Transaction Modal -->
 {#if showAddTransaction}
-  <div class="modal-backdrop" onclick={() => showAddTransaction = false}></div>
+  <div class="modal-backdrop" role="presentation" onclick={() => showAddTransaction = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddTransaction = false }}></div>
   <div class="modal">
     <h3>{editingTransaction ? 'Edit Transaction' : 'Add Transaction'}</h3>
     <div class="form-grid">
@@ -506,7 +506,7 @@
 
 <!-- Add Account Modal -->
 {#if showAddAccount}
-  <div class="modal-backdrop" onclick={() => showAddAccount = false}></div>
+  <div class="modal-backdrop" role="presentation" onclick={() => showAddAccount = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddAccount = false }}></div>
   <div class="modal">
     <h3>New Account</h3>
     <div class="form-grid">
@@ -546,7 +546,7 @@
 
 <!-- Transfer Modal -->
 {#if showTransfer}
-  <div class="modal-backdrop" onclick={() => showTransfer = false}></div>
+  <div class="modal-backdrop" role="presentation" onclick={() => showTransfer = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showTransfer = false }}></div>
   <div class="modal">
     <h3>Transfer Funds</h3>
     <div class="form-grid">

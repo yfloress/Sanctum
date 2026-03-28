@@ -186,11 +186,11 @@
     <h2>HABITS</h2>
     {#if activeTab === 'habits'}
       <div class="month-nav">
-        <button class="nav-arrow" onclick={prevMonth}>
+        <button class="nav-arrow" aria-label="Previous month" onclick={prevMonth}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 19l-7-7 7-7"/></svg>
         </button>
         <span class="month-label">{monthNames[month - 1]} {year}</span>
-        <button class="nav-arrow" onclick={nextMonth}>
+        <button class="nav-arrow" aria-label="Next month" onclick={nextMonth}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg>
         </button>
       </div>
@@ -236,6 +236,7 @@
                 class:done
                 style={done ? `background: ${habit.color}` : ''}
                 onclick={() => toggleDay(habit.id, i + 1)}
+                aria-label="Day {i + 1}"
               ></button>
             {/each}
           </div>
@@ -389,7 +390,7 @@
 
 <!-- Add/Edit Habit Modal -->
 {#if showAddHabit}
-  <div class="modal-backdrop" onclick={() => showAddHabit = false}></div>
+  <div class="modal-backdrop" role="presentation" onclick={() => showAddHabit = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddHabit = false }}></div>
   <div class="modal">
     <h3>{editingHabit ? 'Edit Habit' : 'New Habit'}</h3>
     <div class="form-grid">
@@ -409,6 +410,7 @@
               class="color-swatch"
               class:selected={habitColor === c}
               style="background: {c}"
+              aria-label="Color {c}"
               onclick={() => habitColor = c}
             ></button>
           {/each}

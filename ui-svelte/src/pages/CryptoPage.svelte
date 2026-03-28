@@ -233,11 +233,11 @@
 
 <!-- Wallet Detail Panel -->
 {#if selectedWallet}
-  <div class="overlay-backdrop" onclick={() => selectedWallet = null}></div>
+  <div class="overlay-backdrop" role="presentation" onclick={() => selectedWallet = null} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') selectedWallet = null }}></div>
   <aside class="detail-panel">
     <div class="panel-header">
       <h3>{selectedWallet.name}</h3>
-      <button class="close-panel" onclick={() => selectedWallet = null}>
+      <button class="close-panel" aria-label="Close panel" onclick={() => selectedWallet = null}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
     </div>
@@ -276,11 +276,11 @@
 
 <!-- Asset Detail Overlay -->
 {#if showAssetDetail && assetInView}
-  <div class="overlay-backdrop" onclick={() => showAssetDetail = false}></div>
+  <div class="overlay-backdrop" role="presentation" onclick={() => showAssetDetail = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAssetDetail = false }}></div>
   <aside class="detail-panel">
     <div class="panel-header">
       <h3>{assetInView.symbol} - {assetInView.name}</h3>
-      <button class="close-panel" onclick={() => showAssetDetail = false}>
+      <button class="close-panel" aria-label="Close panel" onclick={() => showAssetDetail = false}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
     </div>
@@ -309,7 +309,7 @@
 
 <!-- Add Wallet Modal -->
 {#if showAddWallet}
-  <div class="modal-backdrop" onclick={() => showAddWallet = false}></div>
+  <div class="modal-backdrop" role="presentation" onclick={() => showAddWallet = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddWallet = false }}></div>
   <div class="modal">
     <h3>New Wallet</h3>
     <div class="form-grid">
