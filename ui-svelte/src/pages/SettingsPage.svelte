@@ -201,8 +201,8 @@
         filters: [{ name: 'Sanctum Backup', extensions: ['db'] }],
       })
       if (!path) return
-      const result = await vaultApi.exportVault(path)
-      app.showToast(`Backup saved to ${result.path}`)
+      await vaultApi.exportVault(path)
+      app.showToast('Backup saved successfully')
     } catch (e) {
       app.showToast(String(e), true)
     }

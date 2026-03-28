@@ -57,6 +57,7 @@ pub fn load_settings(controller: State<'_, Arc<AppController>>) -> Result<AppSet
         .get_app_setting(SETTING_SESSION_TIMEOUT)
         .ok()
         .and_then(|s| s.parse::<i32>().ok())
+        .map(|v| v.clamp(60, 3600))
         .unwrap_or(900);
 
     let preferred_currency = controller
@@ -143,14 +144,15 @@ pub fn set_proxy_url(
         .map_err(|e| e.to_string())
 }
 
-/// Set the vault auto-lock timeout in seconds.
+/// Set the vault auto-lock timeout in seconds (60–3600).
 #[tauri::command]
 pub fn set_session_timeout(
     controller: State<'_, Arc<AppController>>,
     timeout_secs: i32,
 ) -> Result<(), String> {
+    let clamped = timeout_secs.clamp(60, 3600);
     controller
-        .set_session_timeout(timeout_secs as i64)
+        .set_session_timeout(clamped as i64)
         .map_err(|e| e.to_string())
 }
 

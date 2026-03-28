@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
-import type { PasswordStrengthResult, VaultExportResult } from '../types'
+import type { PasswordStrengthResult } from '../types'
 
 export async function checkVaultExists(): Promise<boolean> {
   return invoke<boolean>('check_vault_exists')
@@ -21,8 +21,8 @@ export async function checkPasswordStrength(password: string): Promise<PasswordS
   return invoke<PasswordStrengthResult>('check_password_strength', { password })
 }
 
-export async function exportVault(path: string): Promise<VaultExportResult> {
-  return invoke<VaultExportResult>('export_vault', { path })
+export async function exportVault(path: string): Promise<void> {
+  return invoke('export_vault', { path })
 }
 
 export async function restoreVault(backup_path: string): Promise<void> {
