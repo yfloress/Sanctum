@@ -1,17 +1,148 @@
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte'
+  import { i18n } from '../lib/stores/i18n.svelte'
   import * as settingsApi from '../lib/api/settings'
   import * as vaultApi from '../lib/api/vault'
+  import * as ingestionApi from '../lib/api/ingestion'
   import { save } from '@tauri-apps/plugin-dialog'
-  import type { AppInfo } from '../lib/types'
+  import type {
+    AppInfo, ImportPreviewResponse, ImportResultsResponse,
+    ExchangeDetectionResult
+  } from '../lib/types'
 
   let info = $state<AppInfo | null>(null)
+  let maxFileSize = $state(0)
+
+  // Import state
+  type ImportStep = 'idle' | 'preview' | 'results'
+  let importStep = $state<ImportStep>('idle')
+  let importMode = $state<'generic' | 'exchange'>('generic')
+  let importFilename = $state('')
+  let importContent = $state('')
+  let importPreview = $state<ImportPreviewResponse | null>(null)
+  let importResults = $state<ImportResultsResponse | null>(null)
+  let importLoading = $state(false)
+
+  // Exchange detection
+  let exchangeDetection = $state<ExchangeDetectionResult | null>(null)
+  let exchangeWalletName = $state('')
 
   async function load() {
     try {
-      info = await settingsApi.getAppInfo()
+      const [appInfo, maxSize] = await Promise.all([
+        settingsApi.getAppInfo(),
+        ingestionApi.maxImportFileSize(),
+      ])
+      info = appInfo
+      maxFileSize = maxSize
     } catch (e) {
       app.showToast(String(e), true)
+    }
+  }
+
+  function resetImport() {
+    importStep = 'idle'
+    importMode = 'generic'
+    importFilename = ''
+    importContent = ''
+    importPreview = null
+    importResults = null
+    exchangeDetection = null
+    exchangeWalletName = ''
+  }
+
+  let genericFileInput = $state<HTMLInputElement>(null!)
+  let exchangeFileInput = $state<HTMLInputElement>(null!)
+
+  function readFile(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = () => reject(reader.error)
+      reader.readAsText(file)
+    })
+  }
+
+  async function handleGenericFile(e: Event) {
+    const file = (e.target as HTMLInputElement).files?.[0]
+    if (!file) return
+    try {
+      const content = await readFile(file)
+      if (maxFileSize > 0 && content.length > maxFileSize) {
+        app.showToast(`File too large (max ${Math.round(maxFileSize / 1024)}KB)`, true)
+        return
+      }
+      importContent = content
+      importFilename = file.name
+      importMode = 'generic'
+      importLoading = true
+      importPreview = await ingestionApi.previewImport(content, file.name)
+      importStep = 'preview'
+    } catch (e) {
+      app.showToast(String(e), true)
+    } finally {
+      importLoading = false
+      genericFileInput.value = ''
+    }
+  }
+
+  async function handleExchangeFile(e: Event) {
+    const file = (e.target as HTMLInputElement).files?.[0]
+    if (!file) return
+    try {
+      const content = await readFile(file)
+      if (maxFileSize > 0 && content.length > maxFileSize) {
+        app.showToast(`File too large (max ${Math.round(maxFileSize / 1024)}KB)`, true)
+        return
+      }
+      importContent = content
+      importMode = 'exchange'
+      importLoading = true
+      const detection = await ingestionApi.detectExchangeSource(content)
+      if (!detection) {
+        app.showToast('Could not detect exchange format', true)
+        importLoading = false
+        return
+      }
+      exchangeDetection = detection
+      exchangeWalletName = detection.suggested_wallet
+    } catch (e) {
+      app.showToast(String(e), true)
+    } finally {
+      importLoading = false
+      exchangeFileInput.value = ''
+    }
+  }
+
+  async function previewExchange() {
+    if (!exchangeWalletName.trim()) {
+      app.showToast('Wallet name is required', true)
+      return
+    }
+    try {
+      importLoading = true
+      importPreview = await ingestionApi.previewExchangeCsv(importContent, exchangeWalletName.trim())
+      importStep = 'preview'
+    } catch (e) {
+      app.showToast(String(e), true)
+    } finally {
+      importLoading = false
+    }
+  }
+
+  async function confirmImport() {
+    try {
+      importLoading = true
+      if (importMode === 'generic') {
+        importResults = await ingestionApi.importData(importContent, importFilename)
+      } else {
+        importResults = await ingestionApi.importExchangeCsv(importContent, exchangeWalletName.trim())
+      }
+      importStep = 'results'
+    } catch (e) {
+      app.showToast(String(e), true)
+    } finally {
+      importLoading = false
     }
   }
 
@@ -34,6 +165,7 @@
     if (!app.settings) return
     app.settings.preferred_language = val
     await settingsApi.setPreferredLanguage(val)
+    await i18n.load()
   }
 
   async function changeTimeout(e: Event) {
@@ -155,6 +287,108 @@
       </div>
     </section>
 
+    <!-- Data Import -->
+    <section class="section">
+      <h3>Data Import</h3>
+
+      {#if importStep === 'idle'}
+        {#if exchangeDetection}
+          <!-- Exchange detected, ask for wallet name -->
+          <div class="import-card">
+            <p class="import-info">
+              Detected: <strong>{exchangeDetection.exchange}</strong>
+              ({exchangeDetection.total_records} records)
+            </p>
+            <div class="setting-row">
+              <span class="setting-label">Target Wallet</span>
+              <input
+                type="text"
+                bind:value={exchangeWalletName}
+                placeholder="Wallet name"
+              />
+            </div>
+            <div class="import-actions">
+              <button class="secondary-btn" onclick={resetImport}>Cancel</button>
+              <button class="primary-btn" onclick={previewExchange} disabled={importLoading}>
+                {importLoading ? 'Loading...' : 'Preview'}
+              </button>
+            </div>
+          </div>
+        {:else}
+          <input type="file" accept=".csv" class="hidden-input" bind:this={genericFileInput} onchange={handleGenericFile} />
+          <input type="file" accept=".csv" class="hidden-input" bind:this={exchangeFileInput} onchange={handleExchangeFile} />
+          <div class="setting-row">
+            <div>
+              <span class="setting-label">Generic CSV</span>
+              <span class="setting-desc">Import transactions from a CSV file</span>
+            </div>
+            <button class="secondary-btn" onclick={() => genericFileInput.click()} disabled={importLoading}>
+              {importLoading ? 'Loading...' : 'Select File'}
+            </button>
+          </div>
+          <div class="setting-row">
+            <div>
+              <span class="setting-label">Exchange CSV</span>
+              <span class="setting-desc">Import from Kraken, Binance, MEXC, and more</span>
+            </div>
+            <button class="secondary-btn" onclick={() => exchangeFileInput.click()} disabled={importLoading}>
+              {importLoading ? 'Loading...' : 'Select File'}
+            </button>
+          </div>
+        {/if}
+
+      {:else if importStep === 'preview' && importPreview}
+        <!-- Preview results -->
+        <div class="import-card">
+          <p class="import-info">
+            Source: <strong>{importPreview.source}</strong> |
+            {importPreview.total_records} records |
+            {importPreview.to_add} to add |
+            {importPreview.to_skip} to skip
+          </p>
+          {#if importPreview.changes.length > 0}
+            <div class="import-changes">
+              {#each importPreview.changes as change}
+                <div class="change-row">
+                  <span class="change-action">{change.action}</span>
+                  <span class="change-desc">{change.description}</span>
+                </div>
+              {/each}
+            </div>
+          {/if}
+          <div class="import-actions">
+            <button class="secondary-btn" onclick={resetImport}>Cancel</button>
+            <button class="primary-btn" onclick={confirmImport} disabled={importLoading}>
+              {importLoading ? 'Importing...' : 'Confirm Import'}
+            </button>
+          </div>
+        </div>
+
+      {:else if importStep === 'results' && importResults}
+        <!-- Import results -->
+        <div class="import-card">
+          <p class="import-info">
+            Processed: {importResults.total_processed} |
+            Inserted: {importResults.inserted} |
+            Skipped: {importResults.skipped}
+          </p>
+          {#if importResults.errors.length > 0}
+            <div class="import-errors">
+              <p class="error-heading">Errors ({importResults.errors.length}):</p>
+              {#each importResults.errors as err}
+                <p class="error-line">
+                  {#if err.line}Line {err.line}: {/if}{err.message}
+                </p>
+              {/each}
+            </div>
+          {/if}
+          <div class="import-actions">
+            <button class="secondary-btn" onclick={resetImport}>Done</button>
+          </div>
+        </div>
+      {/if}
+    </section>
+
     <!-- Data Sync -->
     <section class="section">
       <h3>Data Sync</h3>
@@ -272,4 +506,40 @@
     font-size: 0.85rem; color: #ccc;
   }
   .about-label { color: #666; }
+
+  .hidden-input { display: none; }
+  .import-card {
+    background: #111; border: 1px solid #222; border-radius: 8px;
+    padding: 16px; margin-top: 8px;
+  }
+  .import-info { font-size: 0.85rem; color: #aaa; margin: 0 0 12px; }
+  .import-info strong { color: #e0e0e0; }
+  .import-actions {
+    display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px;
+  }
+  .primary-btn {
+    padding: 8px 18px; border: 1px solid #4f9cf7; border-radius: 6px;
+    background: #4f9cf7; color: #fff; cursor: pointer; font-size: 0.85rem;
+  }
+  .primary-btn:hover { background: #3b8ae6; }
+  .primary-btn:disabled, .secondary-btn:disabled {
+    opacity: 0.5; cursor: not-allowed;
+  }
+  .import-changes {
+    max-height: 200px; overflow-y: auto; margin-bottom: 8px;
+    border: 1px solid #1a1a1a; border-radius: 4px;
+  }
+  .change-row {
+    display: flex; gap: 10px; padding: 6px 10px;
+    font-size: 0.8rem; border-bottom: 1px solid #1a1a1a;
+  }
+  .change-row:last-child { border-bottom: none; }
+  .change-action {
+    color: #4f9cf7; font-weight: 600; min-width: 60px; text-transform: uppercase;
+    font-size: 0.7rem;
+  }
+  .change-desc { color: #aaa; }
+  .import-errors { margin-top: 8px; }
+  .error-heading { color: #f87171; font-size: 0.85rem; margin: 0 0 6px; font-weight: 600; }
+  .error-line { color: #ccc; font-size: 0.8rem; margin: 2px 0; padding-left: 8px; }
 </style>

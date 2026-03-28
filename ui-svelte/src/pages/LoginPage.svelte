@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte'
+  import { i18n } from '../lib/stores/i18n.svelte'
   import * as vaultApi from '../lib/api/vault'
   import * as settingsApi from '../lib/api/settings'
 
@@ -40,6 +41,7 @@
 
       const settings = await settingsApi.loadSettings()
       app.settings = settings
+      await i18n.load()
       app.login()
     } catch (e) {
       error = String(e)

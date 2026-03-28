@@ -48,3 +48,7 @@ export async function getAppInfo(): Promise<AppInfo> {
 export async function getSessionRemaining(): Promise<number> {
   return invoke<number>('get_session_remaining')
 }
+
+export async function getTranslations(): Promise<Record<string, string>> {
+  return invoke<Record<string, string>>('get_translations')
+}

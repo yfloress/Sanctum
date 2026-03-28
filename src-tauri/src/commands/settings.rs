@@ -165,7 +165,7 @@ pub fn set_preferred_currency(
         .map_err(|e| e.to_string())
 }
 
-/// Change the preferred UI language.
+/// Change the preferred UI language and switch the i18n bundle.
 #[tauri::command]
 pub fn set_preferred_language(
     controller: State<'_, Arc<AppController>>,
@@ -173,7 +173,9 @@ pub fn set_preferred_language(
 ) -> Result<(), String> {
     controller
         .set_app_setting(SETTING_PREFERRED_LANGUAGE, &language)
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    sanctum::services::i18n::set_language(&language);
+    Ok(())
 }
 
 /// Persist sidebar collapsed/expanded state.
@@ -240,4 +242,12 @@ pub fn get_session_remaining(
     controller
         .get_session_remaining()
         .map_err(|e| e.to_string())
+}
+
+/// Returns all translation key-value pairs for the current language.
+///
+/// The frontend stores these in a reactive map and uses them for i18n.
+#[tauri::command]
+pub fn get_translations() -> std::collections::HashMap<String, String> {
+    sanctum::services::i18n::get_all_translations()
 }

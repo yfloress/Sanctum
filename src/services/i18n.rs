@@ -190,6 +190,27 @@ pub fn t_args(key: &str, args: &[(&str, &str)]) -> String {
     key.to_string()
 }
 
+/// Returns all translation key-value pairs for the current language.
+/// Keys with arguments are returned with their raw pattern (variables unresolved).
+pub fn get_all_translations() -> std::collections::HashMap<String, String> {
+    let lang = current_language();
+    let ftl = get_ftl_content(&lang);
+    let mut map = std::collections::HashMap::new();
+    for line in ftl.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with('.') {
+            continue;
+        }
+        if let Some(eq_pos) = trimmed.find(" = ") {
+            let key = &trimmed[..eq_pos];
+            if key.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') {
+                map.insert(key.to_string(), t(key));
+            }
+        }
+    }
+    map
+}
+
 /// Detects system language and returns best match
 pub fn detect_system_language() -> String {
     if let Some(locale) = sys_locale::get_locale() {
