@@ -1,10 +1,37 @@
 <script lang="ts">
+  import { app } from './lib/stores/app.svelte'
+  import Sidebar from './components/Sidebar.svelte'
+  import Toast from './components/Toast.svelte'
+  import LoginPage from './pages/LoginPage.svelte'
+  import DashboardPage from './pages/DashboardPage.svelte'
+  import FinancesPage from './pages/FinancesPage.svelte'
+  import HabitsPage from './pages/HabitsPage.svelte'
+  import CryptoPage from './pages/CryptoPage.svelte'
+  import SettingsPage from './pages/SettingsPage.svelte'
 </script>
 
-<main>
-  <h1>Sanctum</h1>
-  <p>Tauri + Svelte scaffold ready.</p>
-</main>
+{#if !app.isLoggedIn}
+  <LoginPage />
+{:else}
+  <div class="shell">
+    <Sidebar />
+    <main class="content">
+      {#if app.activePage === 'dashboard'}
+        <DashboardPage />
+      {:else if app.activePage === 'finances'}
+        <FinancesPage />
+      {:else if app.activePage === 'habits'}
+        <HabitsPage />
+      {:else if app.activePage === 'crypto'}
+        <CryptoPage />
+      {:else if app.activePage === 'settings'}
+        <SettingsPage />
+      {/if}
+    </main>
+  </div>
+{/if}
+
+<Toast />
 
 <style>
   :global(body) {
@@ -15,17 +42,31 @@
     color: #e0e0e0;
   }
 
-  main {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
+  :global(*) {
+    box-sizing: border-box;
   }
 
-  h1 {
-    font-size: 2rem;
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
+  :global(::-webkit-scrollbar) {
+    width: 6px;
+  }
+
+  :global(::-webkit-scrollbar-track) {
+    background: transparent;
+  }
+
+  :global(::-webkit-scrollbar-thumb) {
+    background: #333;
+    border-radius: 3px;
+  }
+
+  .shell {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 100vh;
   }
 </style>
