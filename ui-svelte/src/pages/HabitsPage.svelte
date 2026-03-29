@@ -441,7 +441,7 @@
 {/if}
 
 <style>
-  .page { padding: 24px 32px; max-width: 1000px; }
+  .page { padding: 24px 32px; max-width: 1000px; width: 100%; margin: 0 auto; }
 
   .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
   h2 { font-size: 1.3rem; letter-spacing: 0.2em; color: var(--text-primary); margin: 0; }

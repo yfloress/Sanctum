@@ -126,6 +126,8 @@
   .page {
     padding: 24px 32px;
     max-width: 960px;
+    width: 100%;
+    margin: 0 auto;
   }
 
   .loading, .error-state {

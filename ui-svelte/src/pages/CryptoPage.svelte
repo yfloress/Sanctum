@@ -623,7 +623,7 @@
 {/if}
 
 <style>
-  .page { padding: 24px 32px; max-width: 960px; }
+  .page { padding: 24px 32px; max-width: 960px; width: 100%; margin: 0 auto; }
 
   .fx-badge {
     display: inline-flex; align-items: center; gap: 8px;

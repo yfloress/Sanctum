@@ -451,7 +451,7 @@
 </div>
 
 <style>
-  .page { padding: 24px 32px; max-width: 640px; }
+  .page { padding: 24px 32px; max-width: 640px; width: 100%; margin: 0 auto; }
   h2 { font-size: 1.3rem; letter-spacing: 0.15em; color: var(--text-primary); margin-bottom: 28px; }
 
   .section {

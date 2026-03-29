@@ -114,5 +114,9 @@
     overflow-y: auto;
     overflow-x: hidden;
     height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
   }
 </style>

@@ -123,3 +123,4 @@ Always ask the user if they want to run any of these commands:
 ## Extra
 - NEVER use emojis. Use SVG icons from `ui/assets/icons/` instead.
 - If you cannot find the icon you need, there is an older commit where many SVGs were imported from the Lucide repository. Find it and bring the icon back.
+- DO NOT USE NPM ONLY PNPM

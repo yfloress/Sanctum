@@ -599,7 +599,7 @@
 {/if}
 
 <style>
-  .page { padding: 24px 32px; max-width: 960px; }
+  .page { padding: 24px 32px; max-width: 960px; width: 100%; margin: 0 auto; }
 
   .hero { text-align: center; padding: 16px 0 24px; }
   .balance { font-size: 2rem; font-weight: 700; color: var(--text-primary); margin: 0; }
