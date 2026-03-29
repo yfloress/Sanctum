@@ -190,6 +190,11 @@
     }
   }
 
+  function getCryptoIconPath(symbol: string): string {
+    const normalized = symbol.toLowerCase().replace(/\s+/g, '')
+    return `/src/assets/crypto-icons/${normalized}.svg`
+  }
+
   $effect(() => { load() })
   $effect(() => { if (activeTab === 'wallets') loadWallets() })
 </script>
@@ -259,9 +264,12 @@
       <div class="holdings-grid">
         {#each portfolio.assets as asset}
           <button class="asset-card" onclick={() => openAssetDetail(asset.coin_id)}>
-            <div class="asset-top">
-              <span class="asset-symbol">{asset.symbol}</span>
-              <span class="asset-name">{asset.name}</span>
+            <div class="asset-header">
+              <img src={getCryptoIconPath(asset.symbol)} alt={asset.symbol} class="asset-icon" onerror={(e) => e.target.style.display='none'} />
+              <div class="asset-top">
+                <span class="asset-symbol">{asset.symbol}</span>
+                <span class="asset-name">{asset.name}</span>
+              </div>
             </div>
             <div class="asset-price">
               <span>{asset.price}</span>
@@ -668,7 +676,9 @@
     transition: all 0.2s; box-shadow: var(--glass-glow);
   }
   .asset-card:hover { border-color: var(--glass-border-hover); background: var(--glass-hover); box-shadow: var(--glass-shadow); }
-  .asset-top { display: flex; align-items: baseline; gap: 6px; }
+  .asset-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .asset-icon { width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%; }
+  .asset-top { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
   .asset-symbol { font-weight: 700; color: var(--text-primary); font-size: 0.95rem; }
   .asset-name { font-size: 0.7rem; color: var(--text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .asset-price { display: flex; align-items: baseline; gap: 6px; }
