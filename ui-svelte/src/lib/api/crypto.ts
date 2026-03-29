@@ -121,16 +121,16 @@ export async function generateTaxReport(period_id: string): Promise<TaxReportDto
   return invoke<TaxReportDto>('generate_tax_report', { period_id })
 }
 
-export async function exportTaxReportCsv(period_id: string, path: string): Promise<string> {
-  return invoke<string>('export_tax_report_csv', { period_id, path })
+export async function exportTaxReportCsv(period_id: string, path: string): Promise<void> {
+  return invoke('export_tax_report_csv', { period_id, path })
 }
 
-export async function exportTaxHistoryCsv(period_id: string, path: string): Promise<string> {
-  return invoke<string>('export_tax_history_csv', { period_id, path })
+export async function exportTaxHistoryCsv(period_id: string, path: string): Promise<void> {
+  return invoke('export_tax_history_csv', { period_id, path })
 }
 
-export async function importIpcCsv(content: string): Promise<number> {
-  return invoke<number>('import_ipc_csv', { content })
+export async function importIpcCsv(content: string): Promise<IpcSummaryDto> {
+  return invoke<IpcSummaryDto>('import_ipc_csv', { content })
 }
 
 export async function getIpcSummary(): Promise<IpcSummaryDto> {
@@ -139,8 +139,8 @@ export async function getIpcSummary(): Promise<IpcSummaryDto> {
 
 export async function fillMissingTaxPrices(
   tx_id: string, price_per_coin?: number, fee_usd?: number, override_proceeds?: number
-): Promise<number> {
-  return invoke<number>('fill_missing_tax_prices', {
+): Promise<boolean> {
+  return invoke<boolean>('fill_missing_tax_prices', {
     tx_id,
     price_per_coin: price_per_coin ?? null,
     fee_usd: fee_usd ?? null,

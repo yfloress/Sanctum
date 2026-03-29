@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core'
 import type {
   HabitsResponse, HabitSummary,
   HeatmapResponse, HabitAnalyticsResponse,
-  StreakRewardDto, GoalDto, AchievementDto
+  StreakRewardDto, GoalDto, AchievementDto, MilestoneDto
 } from '../types'
 
 export async function fetchHabits(month: number, year: number): Promise<HabitsResponse> {
@@ -61,6 +61,10 @@ export async function updateStreakReward(
 
 export async function deleteStreakReward(id: string): Promise<void> {
   return invoke('delete_streak_reward', { id })
+}
+
+export async function addMilestone(reward_id: string, target_days: number, reward_text: string): Promise<MilestoneDto> {
+  return invoke<MilestoneDto>('add_milestone', { reward_id, target_days, reward_text })
 }
 
 export async function fetchGoals(): Promise<GoalDto[]> {
