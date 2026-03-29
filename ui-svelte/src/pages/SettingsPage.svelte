@@ -7,7 +7,7 @@
   import * as ingestionApi from '../lib/api/ingestion'
   import { save } from '@tauri-apps/plugin-dialog'
   import type {
-    AppInfo, ImportPreviewResponse, ImportResultsResponse,
+    AppInfo, ImportResultsResponse,
     ExchangeDetectionResult
   } from '../lib/types'
 
@@ -20,7 +20,7 @@
   let importMode = $state<'generic' | 'exchange'>('generic')
   let importFilename = $state('')
   let importContent = $state('')
-  let importPreview = $state<ImportPreviewResponse | null>(null)
+  let importPreview = $state<ImportResultsResponse | null>(null)
   let importResults = $state<ImportResultsResponse | null>(null)
   let importLoading = $state(false)
 
