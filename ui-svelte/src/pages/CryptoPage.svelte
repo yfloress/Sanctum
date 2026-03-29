@@ -9,7 +9,7 @@
   import type {
     PortfolioResponse, PortfolioTrendData,
     WalletsResponse, WalletDetailResponse,
-    CryptoTransactionDto
+    CryptoTransactionDto, TaxSettingsDto, TaxReportDto
   } from '../lib/types'
 
   type Tab = 'portfolio' | 'wallets' | 'tax'
@@ -102,6 +102,93 @@
   let assetInView = $derived(
     portfolio?.assets.find(a => a.coin_id === assetCoinId)
   )
+
+  // Tax state
+  let taxPeriodId = $state('')
+  let taxReport = $state<any>(null)
+  let taxSettings = $state<any>(null)
+  let showTaxSettings = $state(false)
+  let taxLoading = $state(false)
+  let taxJurisdiction = $state('US')
+  let taxMethod = $state('fifo')
+  let taxIncludeSwaps = $state(true)
+  let taxIncludeFeeCrypto = $state(false)
+
+  async function loadTaxSettings() {
+    if (!taxPeriodId.trim()) {
+      app.showToast('Please enter a period ID', true)
+      return
+    }
+    taxLoading = true
+    try {
+      taxSettings = await cryptoApi.loadTaxSettings(taxPeriodId)
+      taxJurisdiction = taxSettings.jurisdiction
+      taxMethod = taxSettings.method
+      taxIncludeSwaps = taxSettings.include_swaps
+      taxIncludeFeeCrypto = taxSettings.include_fee_crypto
+    } catch (e) {
+      app.showToast(String(e), true)
+    } finally {
+      taxLoading = false
+    }
+  }
+
+  async function saveTaxSettings() {
+    if (!taxPeriodId.trim()) {
+      app.showToast('Please enter a period ID', true)
+      return
+    }
+    taxLoading = true
+    try {
+      await cryptoApi.saveTaxSettings({
+        period_id: taxPeriodId,
+        jurisdiction: taxJurisdiction,
+        method: taxMethod,
+        include_swaps: taxIncludeSwaps,
+        include_fee_crypto: taxIncludeFeeCrypto,
+        excluded_wallet_ids: []
+      })
+      showTaxSettings = false
+      app.showToast('Settings saved')
+    } catch (e) {
+      app.showToast(String(e), true)
+    } finally {
+      taxLoading = false
+    }
+  }
+
+  async function generateTaxReport() {
+    if (!taxPeriodId.trim()) {
+      app.showToast('Please enter a period ID', true)
+      return
+    }
+    taxLoading = true
+    try {
+      taxReport = await cryptoApi.generateTaxReport(taxPeriodId)
+    } catch (e) {
+      app.showToast(String(e), true)
+    } finally {
+      taxLoading = false
+    }
+  }
+
+  async function exportTaxReport(format: 'csv' | 'history') {
+    if (!taxPeriodId.trim()) {
+      app.showToast('Please enter a period ID', true)
+      return
+    }
+    try {
+      const path = `tax_report_${taxPeriodId}_${new Date().getTime()}.csv`
+      if (format === 'csv') {
+        await cryptoApi.exportTaxReportCsv(taxPeriodId, path)
+      } else {
+        await cryptoApi.exportTaxHistoryCsv(taxPeriodId, path)
+      }
+      app.showToast(`Exported to ${path}`)
+    } catch (e) {
+      app.showToast(String(e), true)
+    }
+  }
 
   $effect(() => { load() })
   $effect(() => { if (activeTab === 'wallets') loadWallets() })
@@ -231,10 +318,200 @@
 
   <!-- TAX TAB -->
   {:else if activeTab === 'tax'}
-    <div class="tax-placeholder">
-      <h3>Tax Tools</h3>
-      <p class="empty">Tax settings, reports, and IPC import coming soon.</p>
+    <div class="tax-section">
+      <!-- Period selector -->
+      <div class="period-selector">
+        <label>
+          Tax Period ID
+          <input type="text" bind:value={taxPeriodId} placeholder="e.g., 2024" />
+        </label>
+        <div class="period-actions">
+          <LiquidGlassButton text="Load Settings" contrast="dark" onclick={loadTaxSettings} />
+          {#if taxSettings}
+            <LiquidGlassButton text="Configure" contrast="dark" onclick={() => showTaxSettings = true} />
+          {/if}
+        </div>
+      </div>
+
+      {#if taxSettings}
+        <!-- Settings info -->
+        <div class="settings-info">
+          <div class="info-item">
+            <span class="label">Jurisdiction</span>
+            <span class="value">{taxSettings.jurisdiction}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Method</span>
+            <span class="value">{taxSettings.method}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Include Swaps</span>
+            <span class="value">{taxSettings.include_swaps ? 'Yes' : 'No'}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Include Fee Crypto</span>
+            <span class="value">{taxSettings.include_fee_crypto ? 'Yes' : 'No'}</span>
+          </div>
+        </div>
+
+        <!-- Generate report button -->
+        <div class="report-actions">
+          <LiquidGlassButton text="Generate Report" contrast="dark" onclick={generateTaxReport} />
+        </div>
+      {/if}
+
+      {#if taxReport}
+        <!-- Report summary -->
+        <div class="report-summary">
+          <h3>Report Summary</h3>
+          <div class="summary-grid">
+            <div class="summary-item">
+              <span class="label">Disposals</span>
+              <span class="value">{taxReport.disposals_count}</span>
+            </div>
+            <div class="summary-item">
+              <span class="label">Total Proceeds</span>
+              <span class="value">{taxReport.total_proceeds}</span>
+            </div>
+            <div class="summary-item">
+              <span class="label">Total Cost</span>
+              <span class="value">{taxReport.total_cost}</span>
+            </div>
+            <div class="summary-item">
+              <span class="label">Total Gain</span>
+              <span class="value" class:negative={taxReport.total_gain_negative}>{taxReport.total_gain}</span>
+            </div>
+            {#if taxReport.short_term_gain}
+              <div class="summary-item">
+                <span class="label">Short-term Gain</span>
+                <span class="value">{taxReport.short_term_gain}</span>
+              </div>
+            {/if}
+            {#if taxReport.long_term_gain}
+              <div class="summary-item">
+                <span class="label">Long-term Gain</span>
+                <span class="value">{taxReport.long_term_gain}</span>
+              </div>
+            {/if}
+          </div>
+        </div>
+
+        <!-- Warnings -->
+        {#if taxReport.warnings && taxReport.warnings.length > 0}
+          <div class="warnings">
+            <h4>Warnings</h4>
+            {#each taxReport.warnings as w}
+              <div class="warning-item">
+                <span class="warning-code">{w.code}</span>
+                <span class="warning-msg">{w.message}</span>
+              </div>
+            {/each}
+          </div>
+        {/if}
+
+        <!-- Readiness -->
+        {#if taxReport.readiness && taxReport.readiness.length > 0}
+          <div class="readiness">
+            <h4>Readiness</h4>
+            {#each taxReport.readiness as r}
+              <div class="readiness-item" class:complete={r.status === 'complete'} class:incomplete={r.status === 'incomplete'}>
+                <span class="status-badge" class:complete={r.status === 'complete'}>{r.status}</span>
+                <span class="detail">{r.detail}</span>
+              </div>
+            {/each}
+          </div>
+        {/if}
+
+        <!-- Export -->
+        <div class="export-actions">
+          <button onclick={() => exportTaxReport('csv')} class="export-btn">Export Events CSV</button>
+          <button onclick={() => exportTaxReport('history')} class="export-btn">Export History CSV</button>
+        </div>
+
+        <!-- Events table (first 50) -->
+        {#if taxReport.events && taxReport.events.length > 0}
+          <div class="events-table">
+            <h4>Events (showing first 50)</h4>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Coin</th>
+                    <th>Amount</th>
+                    <th>Proceeds</th>
+                    <th>Cost Basis</th>
+                    <th>Gain</th>
+                    <th>Term</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {#each taxReport.events.slice(0, 50) as e}
+                    <tr class:loss={e.gain_negative}>
+                      <td>{e.date}</td>
+                      <td>{e.symbol}</td>
+                      <td>{e.amount}</td>
+                      <td>{e.proceeds}</td>
+                      <td>{e.cost_basis}</td>
+                      <td class:negative={e.gain_negative}>{e.gain}</td>
+                      <td>{e.term ?? '-'}</td>
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        {/if}
+      {/if}
+
+      {#if taxLoading}
+        <div class="loading">Processing tax data...</div>
+      {/if}
     </div>
+
+    <!-- Tax Settings Modal -->
+    {#if showTaxSettings}
+      <div class="modal-backdrop" role="presentation" onclick={() => showTaxSettings = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showTaxSettings = false }}></div>
+      <div class="modal-wrapper">
+        <div class="modal">
+          <LiquidGlassBackground />
+          <h3>Tax Settings</h3>
+          <div class="form-grid">
+            <label>
+              Jurisdiction
+              <select bind:value={taxJurisdiction}>
+                <option value="US">United States</option>
+                <option value="CA">Canada</option>
+                <option value="UK">United Kingdom</option>
+                <option value="AU">Australia</option>
+                <option value="OTHER">Other</option>
+              </select>
+            </label>
+            <label>
+              Cost Basis Method
+              <select bind:value={taxMethod}>
+                <option value="fifo">FIFO</option>
+                <option value="lifo">LIFO</option>
+                <option value="hifo">HIFO</option>
+                <option value="average">Average Cost</option>
+              </select>
+            </label>
+            <label>
+              <input type="checkbox" bind:checked={taxIncludeSwaps} />
+              Include Swaps in Disposals
+            </label>
+            <label>
+              <input type="checkbox" bind:checked={taxIncludeFeeCrypto} />
+              Include Fee Crypto as Disposal
+            </label>
+          </div>
+          <div class="modal-actions">
+            <button class="secondary-btn" onclick={() => showTaxSettings = false}>Cancel</button>
+            <button class="primary-btn" onclick={saveTaxSettings} disabled={taxLoading}>Save</button>
+          </div>
+        </div>
+      </div>
+    {/if}
   {/if}
 </div>
 
@@ -535,4 +812,132 @@
     transition: all 0.15s;
   }
   .danger-btn:hover { background: rgba(248, 113, 113, 0.15); border-color: rgba(248, 113, 113, 0.3); }
+
+  /* Tax Section */
+  .tax-section { display: flex; flex-direction: column; gap: 24px; }
+
+  .period-selector {
+    display: flex; flex-direction: column; gap: 12px;
+    padding: 16px; background: var(--glass);
+    backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border); border-radius: var(--radius-md);
+    box-shadow: var(--glass-glow);
+  }
+  .period-selector label {
+    display: flex; flex-direction: column; gap: 6px;
+    font-size: 0.8rem; color: var(--text-secondary);
+  }
+  .period-selector input {
+    padding: 8px 12px; border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm); background: rgba(0, 0, 0, 0.25);
+    color: var(--text-primary); font-size: 0.9rem;
+    transition: border-color 0.2s;
+  }
+  .period-selector input:focus {
+    border-color: var(--accent); outline: none;
+  }
+  .period-actions { display: flex; gap: 8px; }
+
+  .settings-info {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px; padding: 16px;
+    background: var(--glass); backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border); border-radius: var(--radius-md);
+    box-shadow: var(--glass-glow);
+  }
+  .info-item { display: flex; flex-direction: column; gap: 4px; }
+  .info-item .label { font-size: 0.7rem; color: var(--text-tertiary); text-transform: uppercase; }
+  .info-item .value { font-size: 0.95rem; color: var(--text-primary); font-weight: 500; }
+
+  .report-actions { display: flex; gap: 8px; }
+  .report-summary {
+    padding: 16px; background: var(--glass);
+    backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border); border-radius: var(--radius-md);
+    box-shadow: var(--glass-glow);
+  }
+  .report-summary h3 { margin: 0 0 16px; color: var(--text-primary); font-size: 0.9rem; }
+  .summary-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;
+  }
+  .summary-item { display: flex; flex-direction: column; gap: 4px; }
+  .summary-item .label { font-size: 0.7rem; color: var(--text-tertiary); text-transform: uppercase; }
+  .summary-item .value { font-size: 1rem; font-weight: 600; color: var(--text-primary); }
+  .summary-item .value.negative { color: var(--danger); }
+
+  .warnings {
+    padding: 16px; background: var(--glass);
+    backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid rgba(248, 113, 113, 0.2); border-radius: var(--radius-md);
+    box-shadow: var(--glass-glow);
+  }
+  .warnings h4 { margin: 0 0 12px; color: var(--danger); font-size: 0.85rem; }
+  .warning-item { display: flex; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(248, 113, 113, 0.1); font-size: 0.85rem; }
+  .warning-code { color: #ccc; font-weight: 500; min-width: 80px; }
+  .warning-msg { color: var(--text-secondary); }
+
+  .readiness {
+    padding: 16px; background: var(--glass);
+    backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border); border-radius: var(--radius-md);
+    box-shadow: var(--glass-glow);
+  }
+  .readiness h4 { margin: 0 0 12px; color: var(--text-primary); font-size: 0.85rem; }
+  .readiness-item {
+    display: flex; align-items: center; gap: 8px; padding: 8px;
+    border-radius: var(--radius-sm); margin-bottom: 6px;
+  }
+  .readiness-item.complete { background: rgba(74, 222, 128, 0.05); }
+  .readiness-item.incomplete { background: rgba(248, 113, 113, 0.05); }
+  .status-badge {
+    font-size: 0.65rem; text-transform: uppercase; font-weight: 600;
+    padding: 2px 6px; border-radius: 3px; color: #999;
+  }
+  .status-badge.complete { background: rgba(74, 222, 128, 0.2); color: var(--success); }
+  .readiness-item.incomplete .status-badge { background: rgba(248, 113, 113, 0.2); color: var(--danger); }
+  .readiness-item .detail { font-size: 0.85rem; color: var(--text-secondary); }
+
+  .export-actions { display: flex; gap: 8px; }
+  .export-btn {
+    padding: 8px 14px; border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm); background: rgba(0, 0, 0, 0.2);
+    color: var(--text-secondary); cursor: pointer; font-size: 0.85rem;
+    transition: all 0.15s;
+  }
+  .export-btn:hover { border-color: var(--glass-border-hover); background: rgba(0, 0, 0, 0.3); }
+
+  .events-table {
+    padding: 16px; background: var(--glass);
+    backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border); border-radius: var(--radius-md);
+    box-shadow: var(--glass-glow);
+  }
+  .events-table h4 { margin: 0 0 12px; color: var(--text-primary); font-size: 0.85rem; }
+  .table-wrapper { overflow-x: auto; }
+  .events-table table {
+    width: 100%; border-collapse: collapse; font-size: 0.8rem;
+  }
+  .events-table thead {
+    background: rgba(0, 0, 0, 0.1); border-bottom: 1px solid var(--glass-border);
+  }
+  .events-table th {
+    padding: 8px; text-align: left; color: var(--text-tertiary);
+    text-transform: uppercase; font-weight: 500;
+  }
+  .events-table td {
+    padding: 8px; border-bottom: 1px solid var(--glass-border);
+    color: var(--text-secondary);
+  }
+  .events-table tr:hover { background: rgba(0, 0, 0, 0.1); }
+  .events-table td.negative { color: var(--danger); }
+
+  /* Form */
+  select {
+    padding: 8px 12px; border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm); background: rgba(0, 0, 0, 0.25);
+    color: var(--text-primary); font-size: 0.9rem;
+    transition: border-color 0.2s;
+  }
+  select:focus { border-color: var(--accent); outline: none; }
+  select option { background: #1a1a1a; color: #fff; }
 </style>

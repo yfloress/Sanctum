@@ -50,32 +50,6 @@
 	onmouseleave={toggleHover}
 	role="presentation"
 	class="button-wrap relative overscroll-contain">
-	{#if isHovering}
-		<div transition:fade class="hoverstyle absolute top-0 h-full w-full bg-[#e4fbfbb8] opacity-[60%]">
-			<div
-				class="rotating-gradient pointer-events-none absolute inset-0 rounded-full"
-				style="
-                border-radius: inherit;
-                mix-blend-mode: lighten;
-                opacity: 0.7;
-                background: conic-gradient(
-                    from 0deg,
-                    #e7ffff 0%,
-                    {accentColor} 25%,
-                    #fff 50%,
-                    {accentColor} 75%,
-                    #e7ffff 100%
-                );
-                animation: rotate-gradient 4s ease-in-out infinite;
-            ">
-			</div>
-		</div>
-	{/if}
-
-	<div
-		class="tint absolute top-0 h-full w-full opacity-[30%]"
-		style="background-color:{accentColor};">
-	</div>
 
 	<button
 		class="glassy-button overflow-hidden {isDark ? 'dark-glassy-button' : 'light-glassy-button'}"
