@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 31.09 31.09"
+   version="1.1"
+   id="svg11"
+   sodipodi:docname="Logo_BancoEstado.svg"
+   width="31.09"
+   height="31.09"
+   inkscape:version="1.3.2 (091e20e, 2023-11-25, custom)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <sodipodi:namedview
+     id="namedview11"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="14.922751"
+     inkscape:cx="12.263154"
+     inkscape:cy="18.260708"
+     inkscape:window-width="1920"
+     inkscape:window-height="974"
+     inkscape:window-x="-11"
+     inkscape:window-y="-11"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg11" />
+  <defs
+     id="defs1">
+    <style
+       id="style1">.cls-1{fill:#323e48;}.cls-2{fill:#fff;}.cls-3{fill:#d70032;}.cls-4{fill:#ee801d;}.cls-5{fill:#ff6b00;}.cls-6{fill:#074c96;}.cls-7{fill:#0257a0;}.cls-8{fill:none;}</style>
+  </defs>
+  <title
+     id="title1">Logo_BancoEstado</title>
+  <g
+     id="Capa_2"
+     data-name="Capa 2">
+    <g
+       id="Capa_1-2"
+       data-name="Capa 1">
+      <rect
+         class="cls-2"
+         width="31.09"
+         height="31.09"
+         id="rect11"
+         x="0"
+         y="0" />
+      <path
+         id="_Trazado_10"
+         data-name=" Trazado 10"
+         class="cls-3"
+         d="M 0.74,15.63 11.29,11 v -3.35 0 a 14,14 0 0 0 8.5,-4.75 v 0 l 10.56,8.62 V 0.74 H 0.74 Z" />
+      <path
+         id="_Trazado_11"
+         data-name=" Trazado 11"
+         class="cls-2"
+         d="m 11.31,25.41 h 8.48 v -22.5 0 A 14,14 0 0 1 11.3,7.65 v 0 V 11 L 0.74,15.63 v 3.31 L 11.3,14.31 V 11 l 3.39,-1.48 v 3.28 l -3.38,1.5 v 3.24 l 3.39,-1.48 v 3.23 l -3.39,1.49 V 17.54 L 0.74,22.17 v 3.24 l 10.57,-4.63 z" />
+      <polygon
+         id="_Trazado_12"
+         data-name=" Trazado 12"
+         class="cls-4"
+         points="11.31,14.3 11.3,14.31 11.3,14.31 0.74,18.94 0.74,22.18 11.31,17.54 " />
+      <polygon
+         id="_Trazado_13"
+         data-name=" Trazado 13"
+         class="cls-4"
+         points="0.74,25.41 11.31,25.41 11.31,20.78 0.74,25.41 " />
+      <polygon
+         id="_Trazado_14"
+         data-name=" Trazado 14"
+         class="cls-4"
+         points="14.69,9.56 11.3,11.05 11.3,14.31 11.31,14.3 14.69,12.83 " />
+      <polygon
+         id="_Trazado_15"
+         data-name=" Trazado 15"
+         class="cls-5"
+         points="11.3,14.31 11.3,14.31 11.31,14.3 " />
+      <polygon
+         id="_Trazado_16"
+         data-name=" Trazado 16"
+         class="cls-4"
+         points="14.7,19.29 14.7,16.06 11.31,17.54 11.31,17.54 11.31,20.78 " />
+      <polygon
+         id="_Trazado_18"
+         data-name=" Trazado 18"
+         class="cls-4"
+         points="30.35,11.53 19.79,2.91 19.8,25.41 30.35,25.41 " />
+      <polygon
+         id="_Trazado_19"
+         data-name=" Trazado 19"
+         class="cls-5"
+         points="19.79,2.91 19.79,25.41 19.8,25.41 " />
+      <polygon
+         id="_Trazado_20"
+         data-name=" Trazado 20"
+         class="cls-6"
+         points="30.35,30.34 0.74,30.34 30.35,30.34 " />
+      <polygon
+         id="_Trazado_21"
+         data-name=" Trazado 21"
+         class="cls-7"
+         points="11.31,25.41 0.74,25.41 0.74,30.34 30.35,30.34 30.35,25.41 19.8,25.41 19.79,25.41 " />
+      <line
+         id="_Trazado_22"
+         data-name=" Trazado 22"
+         class="cls-8"
+         x1="19.799999"
+         y1="25.41"
+         x2="19.790001"
+         y2="25.41" />
+    </g>
+  </g>
+  <metadata
+     id="metadata11">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:title>Logo_BancoEstado</dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+</svg>
