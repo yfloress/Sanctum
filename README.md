@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./ui/assets/logo/sanctum_logo.svg" alt="Sanctum Logo" width="120" height="120" />
+<img src="./assets/sanctum.jpg" alt="Sanctum" width="120" height="120" />
 
 <h1>SANCTUM</h1>
 
@@ -119,12 +119,15 @@ Sanctum prioritizes performance, type safety, and auditability.
 
 ### Installation & Development
 
-This project uses **Nix Flakes** to guarantee a reproducible environment without
-polluting your global system.
+This project uses **Nix Flakes** for a reproducible environment. You also need
+**Node.js** and **pnpm** for the Svelte frontend.
 
-> **Note:** For manual installation on Linux, macOS, or Windows, please see the complete [Building Guide](docs/BUILDING.md).
+> **Note:** For manual installation on Linux, macOS, or Windows, see the
+> complete [Building Guide](docs/BUILDING.md).
 
 ### Quick Start (Nix)
+
+All commands are run from the **repository root**.
 
 1. **Clone the repository:**
    ```bash
@@ -132,15 +135,25 @@ polluting your global system.
    cd Sanctum
    ```
 
-2. **Activate the Environment:**
+2. **Activate the Nix environment:**
    ```bash
    direnv allow
+   # or: nix develop
    ```
 
-3. **Verify the workspace:**
+3. **Install frontend dependencies (first time only):**
    ```bash
-   # Or without --release
-   nix develop -c cargo run --release
+   cd ui-svelte && pnpm install && cd ..
+   ```
+
+4. **Run in development mode:**
+   ```bash
+   cargo tauri dev
+   ```
+
+5. **Build a production binary:**
+   ```bash
+   cargo tauri build
    ```
 
 For detailed setup on other platforms, see [docs/BUILDING.md](docs/BUILDING.md).

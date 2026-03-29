@@ -1,6 +1,7 @@
 # Building Sanctum
 
 ## Table of Contents
+- [Prerequisites](#prerequisites)
 - [Getting the Source Code](#getting-the-source-code)
 - [Linux](#linux)
   - [Option A: Nix (Recommended)](#option-a-nix-recommended)
@@ -8,96 +9,144 @@
 - [macOS](#macos)
 - [Windows](#windows)
 
-Sanctum includes a reproducible Nix environment, but you can also build it manually on your preferred operating system.
+> **All commands are run from the repository root**, not from `src-tauri/`.
+
+Sanctum is a **Tauri 2 + Svelte 5** desktop app. The build requires both
+a Rust toolchain (for the core + Tauri shell) and a Node.js/pnpm setup
+(for the Svelte frontend).
+
+---
+
+## Prerequisites
+
+| Tool | Version | Notes |
+|------|---------|-------|
+| Rust | stable ≥ 1.77 | via [rustup](https://rustup.rs/) |
+| Node.js | ≥ 20 LTS | |
+| pnpm | ≥ 9 | `npm install -g pnpm` |
+| Tauri CLI | 2.x | installed via cargo (see below) |
+
+Install the Tauri CLI once:
+```bash
+cargo install tauri-cli --version "^2"
+```
+
+---
 
 ## Getting the Source Code
-First, download the repository to your machine:
+
 ```bash
 git clone https://codeberg.org/Kyronix/Sanctum.git
 cd Sanctum
 ```
 
+Install frontend dependencies (first time only):
+```bash
+cd ui-svelte && pnpm install && cd ..
+```
+
+---
+
 ## Linux
 
 ### Option A: Nix (Recommended)
-This is the easiest way to run Sanctum without worrying about system libraries.
-1. Install Nix.
-2. From the project folder, simply run:
+
+Nix handles all system libraries automatically.
+
+1. [Install Nix](https://nixos.org/download) with flakes enabled.
+2. From the repository root:
    ```bash
-   nix develop -c cargo run --release
+   direnv allow   # or: nix develop
+   cd ui-svelte && pnpm install && cd ..
+   cargo tauri dev      # development
+   cargo tauri build    # production binary
    ```
 
 ### Option B: Manual Setup
-If you prefer not to use Nix, you must install the required system libraries first.
+
+Install the WebKit/GTK system libraries required by Tauri:
 
 **Debian/Ubuntu**
 ```bash
 sudo apt update
-sudo apt install -y build-essential pkg-config cmake ninja-build \
-    libssl-dev libfontconfig1-dev libfreetype-dev libharfbuzz-dev \
-    libx11-dev libxext-dev libxi-dev libxrandr-dev libxcursor-dev \
-    libxkbcommon-dev libwayland-dev libgl1-mesa-dev libegl1-mesa-dev
+sudo apt install -y build-essential pkg-config \
+    libssl-dev libgtk-3-dev libwebkit2gtk-4.1-dev \
+    libayatana-appindicator3-dev librsvg2-dev \
+    libdbus-1-dev libxdo-dev
 ```
 
 **Fedora**
 ```bash
 sudo dnf groupinstall -y "Development Tools"
-sudo dnf install -y pkg-config cmake ninja-build openssl-devel \
-    fontconfig-devel freetype-devel harfbuzz-devel libX11-devel libXext-devel \
-    libXi-devel libXrandr-devel libXcursor-devel libxkbcommon-devel \
-    wayland-devel mesa-libGL-devel mesa-libEGL-devel
+sudo dnf install -y pkg-config openssl-devel \
+    gtk3-devel webkit2gtk4.1-devel \
+    libappindicator-gtk3-devel librsvg2-devel \
+    dbus-devel xdotool-devel
 ```
 
 **Arch Linux**
 ```bash
-sudo pacman -S --needed base-devel pkgconf cmake ninja \
-    openssl fontconfig freetype2 harfbuzz libx11 libxext libxi libxrandr \
-    libxcursor libxkbcommon wayland mesa
+sudo pacman -S --needed base-devel pkgconf openssl \
+    gtk3 webkit2gtk-4.1 libappindicator-gtk3 librsvg \
+    dbus xdotool
 ```
 
-**Run the App:**
-Ensure you have [Rust installed](https://rustup.rs/), then run:
+Then run:
 ```bash
-cargo run --release
+cargo tauri dev      # development (hot-reload)
+cargo tauri build    # production binary → src-tauri/target/release/bundle/
 ```
+
+---
 
 ## macOS
-**Requirements:** Xcode Command Line Tools and Homebrew.
 
-1. Install system dependencies:
-   ```bash
-   xcode-select --install
-   brew install rustup-init pkg-config cmake ninja openssl@3 fontconfig freetype harfbuzz
-   ```
+**Requirements:** Xcode Command Line Tools, Homebrew, Node.js, pnpm.
 
-2. Initialize Rust (if not already installed):
-   ```bash
-   rustup-init -y
-   source $HOME/.cargo/env
-   ```
+```bash
+xcode-select --install
+brew install rustup-init node
+npm install -g pnpm
+rustup-init -y && source $HOME/.cargo/env
+cargo install tauri-cli --version "^2"
+```
 
-3. Run the App:
-   ```bash
-   cargo run --release
-   ```
+Then from the repository root:
+```bash
+cd ui-svelte && pnpm install && cd ..
+cargo tauri dev      # development
+cargo tauri build    # production .app bundle
+```
+
+---
 
 ## Windows
 
-### Option A: WSL (Windows Subsystem for Linux)
-Requires Windows 10 or 11 with WSLg (GUI support) enabled.
-1. Install a distro like Ubuntu or Fedora from the Microsoft Store.
-2. Follow the **Linux (Option B: Manual Setup)** instructions above for your chosen distro.
-3. Run `cargo run --release` inside the WSL terminal.
+### Option A: WSL (Recommended)
+
+Requires Windows 10/11 with WSLg enabled.
+
+1. Install Ubuntu or Fedora from the Microsoft Store.
+2. Follow the **Linux (Option B)** instructions inside the WSL terminal.
 
 ### Option B: Native Windows
-1. Install **Visual Studio Build Tools** (select the "Desktop development with C++" workload).
-2. Install **Rust** (MSVC) via [rustup.rs](https://rustup.rs/).
-3. Install **Git**, **CMake**, and **Ninja** (using a package manager like Chocolatey is recommended):
+
+1. Install **Visual Studio Build Tools** with the
+   "Desktop development with C++" workload.
+2. Install **Rust (MSVC target)** via [rustup.rs](https://rustup.rs/).
+3. Install **Node.js** (LTS) and **pnpm**:
    ```powershell
-   choco install -y git cmake ninja
+   npm install -g pnpm
    ```
-4. **Run the App:**
-   Open the "x64 Native Tools Command Prompt for VS", navigate to the Sanctum folder, and run:
+4. Install **WebView2** (pre-installed on Windows 11; download from
+   Microsoft for Windows 10).
+5. Install the Tauri CLI:
    ```powershell
-   cargo run --release
+   cargo install tauri-cli --version "^2"
+   ```
+6. From the repository root:
+   ```powershell
+   cd ui-svelte; pnpm install; cd ..
+   cargo tauri dev      # development
+   cargo tauri build    # production installer
    ```

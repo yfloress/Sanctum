@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./ui/assets/logo/sanctum_logo.svg" alt="Sanctum Logo" width="120" height="120" />
+<img src="./assets/sanctum.jpg" alt="Sanctum" width="120" height="120" />
 
 <h1>SANCTUM</h1>
 
@@ -119,11 +119,15 @@ Sanctum está construido priorizando el rendimiento, la seguridad de tipos y la 
 
 ## Instalación y Desarrollo
 
-Este proyecto utiliza **Nix Flakes** para garantizar un entorno reproducible sin contaminar tu sistema global.
+Este proyecto usa **Nix Flakes** para un entorno reproducible. También necesitas
+**Node.js** y **pnpm** para el frontend Svelte.
 
-> **Nota:** Para instalación manual en Linux, macOS o Windows, consulta la [Guía de Compilación](docs/BUILDING_ES.md).
+> **Nota:** Para instalación manual en Linux, macOS o Windows, consulta la
+> [Guía de Compilación](docs/BUILDING_ES.md).
 
 ### Inicio Rápido (Nix)
+
+Todos los comandos se ejecutan desde la **raíz del repositorio**.
 
 1. **Clonar el repositorio:**
    ```bash
@@ -131,18 +135,28 @@ Este proyecto utiliza **Nix Flakes** para garantizar un entorno reproducible sin
    cd Sanctum
    ```
 
-2.  **Activar el Entorno:**
-    ```bash
-    direnv allow
-    ```
-
-3. **Verificar el entorno:**
+2. **Activar el entorno Nix:**
    ```bash
-   # Or without --release
-   nix develop -c cargo run --release
+   direnv allow
+   # o: nix develop
    ```
 
-Para instrucciones detalladas en otras plataformas (Linux manual, macOS, Windows), revisa [docs/BUILDING_ES.md](docs/BUILDING_ES.md).
+3. **Instalar dependencias del frontend (solo la primera vez):**
+   ```bash
+   cd ui-svelte && pnpm install && cd ..
+   ```
+
+4. **Ejecutar en modo desarrollo:**
+   ```bash
+   cargo tauri dev
+   ```
+
+5. **Compilar binario de producción:**
+   ```bash
+   cargo tauri build
+   ```
+
+Para instrucciones detalladas en otras plataformas, revisa [docs/BUILDING_ES.md](docs/BUILDING_ES.md).
 
 ## Transparencia en el Desarrollo
 
