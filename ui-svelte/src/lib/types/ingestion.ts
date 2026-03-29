@@ -3,6 +3,16 @@ export interface ImportResultsResponse {
   inserted: number
   skipped: number
   errors: ImportErrorDto[]
+  source?: string
+  total_records?: number
+  to_add?: number
+  to_skip?: number
+  changes?: ImportChangeDto[]
+}
+
+export interface ImportChangeDto {
+  action: string
+  description: string
 }
 
 export interface ImportErrorDto {
