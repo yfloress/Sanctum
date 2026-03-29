@@ -14,7 +14,7 @@ export async function setAutoFetch(enabled: boolean): Promise<void> {
 }
 
 export async function setProxyEnabled(enabled: boolean, current_url: string): Promise<void> {
-  return invoke('set_proxy_enabled', { enabled, current_url })
+  return invoke('set_proxy_enabled', { enabled, currentUrl: current_url })
 }
 
 export async function setProxyUrl(url: string): Promise<void> {
@@ -22,7 +22,7 @@ export async function setProxyUrl(url: string): Promise<void> {
 }
 
 export async function setSessionTimeout(timeout_secs: number): Promise<void> {
-  return invoke('set_session_timeout', { timeout_secs })
+  return invoke('set_session_timeout', { timeoutSecs: timeout_secs })
 }
 
 export async function setPreferredCurrency(currency: string): Promise<void> {

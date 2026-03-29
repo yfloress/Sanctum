@@ -23,11 +23,11 @@ export async function detectExchangeSource(content: string): Promise<ExchangeDet
 export async function previewExchangeCsv(
   content: string, wallet_name: string
 ): Promise<ImportResultsResponse> {
-  return invoke<ImportResultsResponse>('preview_exchange_csv', { content, wallet_name })
+  return invoke<ImportResultsResponse>('preview_exchange_csv', { content, walletName: wallet_name })
 }
 
 export async function importExchangeCsv(
   content: string, wallet_name: string
 ): Promise<ImportResultsResponse> {
-  return invoke<ImportResultsResponse>('import_exchange_csv', { content, wallet_name })
+  return invoke<ImportResultsResponse>('import_exchange_csv', { content, walletName: wallet_name })
 }

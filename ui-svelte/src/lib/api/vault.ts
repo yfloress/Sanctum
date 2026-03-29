@@ -26,7 +26,7 @@ export async function exportVault(path: string): Promise<void> {
 }
 
 export async function restoreVault(backup_path: string): Promise<void> {
-  return invoke('restore_vault', { backup_path })
+  return invoke('restore_vault', { backupPath: backup_path })
 }
 
 export async function rollbackRestore(): Promise<void> {

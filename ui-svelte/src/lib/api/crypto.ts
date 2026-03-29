@@ -22,7 +22,7 @@ export async function fetchWallets(): Promise<WalletsResponse> {
 }
 
 export async function fetchWalletDetail(wallet_id: string): Promise<WalletDetailResponse> {
-  return invoke<WalletDetailResponse>('fetch_wallet_detail', { wallet_id })
+  return invoke<WalletDetailResponse>('fetch_wallet_detail', { walletId: wallet_id })
 }
 
 export async function addWallet(name: string, category: string, icon?: string): Promise<void> {
@@ -38,7 +38,7 @@ export async function getWalletTransactionCount(id: string): Promise<number> {
 }
 
 export async function updateWalletName(id: string, new_name: string): Promise<void> {
-  return invoke('update_wallet_name', { id, new_name })
+  return invoke('update_wallet_name', { id, newName: new_name })
 }
 
 export async function updateWalletIcon(id: string, icon: string | null): Promise<void> {
@@ -70,7 +70,7 @@ export async function getCryptoTransaction(id: string): Promise<CryptoTransactio
 }
 
 export async function getCryptoTransactionsByCoin(coin_id: string): Promise<CryptoTransactionDto[]> {
-  return invoke<CryptoTransactionDto[]>('get_crypto_transactions_by_coin', { coin_id })
+  return invoke<CryptoTransactionDto[]>('get_crypto_transactions_by_coin', { coinId: coin_id })
 }
 
 export async function getCoinCatalog(): Promise<CoinCatalogDto[]> {
@@ -110,7 +110,7 @@ export async function getMonitoredCoinIds(): Promise<string[]> {
 }
 
 export async function loadTaxSettings(period_id: string): Promise<TaxSettingsDto> {
-  return invoke<TaxSettingsDto>('load_tax_settings', { period_id })
+  return invoke<TaxSettingsDto>('load_tax_settings', { periodId: period_id })
 }
 
 export async function saveTaxSettings(settings: TaxSettingsDto): Promise<void> {
@@ -118,15 +118,15 @@ export async function saveTaxSettings(settings: TaxSettingsDto): Promise<void> {
 }
 
 export async function generateTaxReport(period_id: string): Promise<TaxReportDto> {
-  return invoke<TaxReportDto>('generate_tax_report', { period_id })
+  return invoke<TaxReportDto>('generate_tax_report', { periodId: period_id })
 }
 
 export async function exportTaxReportCsv(period_id: string, path: string): Promise<void> {
-  return invoke('export_tax_report_csv', { period_id, path })
+  return invoke('export_tax_report_csv', { periodId: period_id, path })
 }
 
 export async function exportTaxHistoryCsv(period_id: string, path: string): Promise<void> {
-  return invoke('export_tax_history_csv', { period_id, path })
+  return invoke('export_tax_history_csv', { periodId: period_id, path })
 }
 
 export async function importIpcCsv(content: string): Promise<IpcSummaryDto> {
@@ -141,10 +141,10 @@ export async function fillMissingTaxPrices(
   tx_id: string, price_per_coin?: number, fee_usd?: number, override_proceeds?: number
 ): Promise<boolean> {
   return invoke<boolean>('fill_missing_tax_prices', {
-    tx_id,
-    price_per_coin: price_per_coin ?? null,
-    fee_usd: fee_usd ?? null,
-    override_proceeds: override_proceeds ?? null,
+    txId: tx_id,
+    pricePerCoin: price_per_coin ?? null,
+    feeUsd: fee_usd ?? null,
+    overrideProceeds: override_proceeds ?? null,
   })
 }
 
