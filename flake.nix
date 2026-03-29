@@ -49,7 +49,8 @@
           cargo-edit
           cargo-modules
           cargo-tauri
-          python314
+          python315
+          nix-output-monitor
         ];
       in
       {

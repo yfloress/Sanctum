@@ -31,7 +31,7 @@ log = "0.4"
 rand = "0.10"
 regex = "1.12"
 reqwest = { version = "0.13", features = ["json", "stream", "socks"] }
-rusqlite = { version = "0.38", features = ["bundled-sqlcipher"] }
+rusqlite = { version = "0.39", features = ["bundled-sqlcipher"] }
 secrecy = "0.10"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
