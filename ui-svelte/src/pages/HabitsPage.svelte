@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte'
+  import LiquidGlassButton from '../components/LiquidGlassButton.svelte'
   import * as habitsApi from '../lib/api/habits'
   import RadarChart from '../components/charts/RadarChart.svelte'
   import WeekdayChart from '../components/charts/WeekdayChart.svelte'
@@ -210,7 +211,7 @@
   {:else if activeTab === 'habits'}
     <div class="section-header">
       <h3>Daily Tracking</h3>
-      <button class="primary-btn" onclick={openAddHabit}>New Habit</button>
+      <LiquidGlassButton text="New Habit" contrast="dark" onclick={openAddHabit} />
     </div>
 
     {#if habitsData && habitsData.habits.length > 0}

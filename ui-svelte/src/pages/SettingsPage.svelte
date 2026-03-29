@@ -1,6 +1,7 @@
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte'
   import { i18n } from '../lib/stores/i18n.svelte'
+  import LiquidGlassButton from '../components/LiquidGlassButton.svelte'
   import * as settingsApi from '../lib/api/settings'
   import * as vaultApi from '../lib/api/vault'
   import * as ingestionApi from '../lib/api/ingestion'
@@ -283,7 +284,7 @@
       <p class="section-note">Your vault is encrypted with SQLCipher (AES-256).</p>
       <div class="setting-row">
         <span class="setting-label">Export Vault</span>
-        <button class="secondary-btn" onclick={exportVault}>Export</button>
+        <LiquidGlassButton text="Export" contrast="dark" onclick={exportVault} />
       </div>
     </section>
 

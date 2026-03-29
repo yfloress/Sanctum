@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte'
+  import LiquidGlassButton from '../components/LiquidGlassButton.svelte'
   import * as cryptoApi from '../lib/api/crypto'
   import PortfolioTrendChart from '../components/charts/PortfolioTrendChart.svelte'
   import DistributionChart from '../components/charts/DistributionChart.svelte'
@@ -204,7 +205,7 @@
   {:else if activeTab === 'wallets'}
     <div class="section-header">
       <h3>Wallets</h3>
-      <button class="primary-btn" onclick={() => { showAddWallet = true; walletName = '' }}>Add Wallet</button>
+      <LiquidGlassButton text="Add Wallet" contrast="dark" onclick={() => { showAddWallet = true; walletName = '' }} />
     </div>
 
     {#if (walletsData?.wallets ?? []).length === 0}

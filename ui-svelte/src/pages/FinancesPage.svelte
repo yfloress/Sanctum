@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte'
+  import LiquidGlassButton from '../components/LiquidGlassButton.svelte'
   import * as financeApi from '../lib/api/finance'
   import type {
     TransactionDto, CategoriesResponse, CategoryDto,
@@ -291,7 +292,7 @@
     <section class="tab-content">
       <div class="section-header">
         <h3>Transactions</h3>
-        <button class="primary-btn" onclick={openAddTransaction}>New Entry</button>
+        <LiquidGlassButton text="New Entry" contrast="dark" onclick={openAddTransaction} />
       </div>
 
       <div class="filters">
@@ -349,8 +350,8 @@
       <div class="section-header">
         <h3>My Accounts</h3>
         <div class="header-actions">
-          <button class="secondary-btn" onclick={openTransfer}>Transfer</button>
-          <button class="primary-btn" onclick={openAddAccount}>New Account</button>
+          <LiquidGlassButton text="Transfer" contrast="dark" onclick={openTransfer} />
+          <LiquidGlassButton text="New Account" contrast="dark" onclick={openAddAccount} />
         </div>
       </div>
 
