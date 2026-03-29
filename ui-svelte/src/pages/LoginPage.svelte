@@ -1,6 +1,7 @@
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte'
   import { i18n } from '../lib/stores/i18n.svelte'
+  import LiquidGlassButton from '../components/LiquidGlassButton.svelte'
   import * as vaultApi from '../lib/api/vault'
   import * as settingsApi from '../lib/api/settings'
 
@@ -104,21 +105,13 @@
           <div class="error-banner">{error}</div>
         {/if}
 
-        <button
-          class="submit-btn"
-          onclick={handleSubmit}
-          disabled={loading || !password.trim()}
-        >
-          {#if loading}
-            Authenticating...
-          {:else if vaultExists}
-            Unlock
-          {:else if confirmWeak}
-            Confirm Create
-          {:else}
-            Create Vault
-          {/if}
-        </button>
+        <div class="button-container">
+          <LiquidGlassButton
+            contrast="dark"
+            text={loading ? 'Authenticating...' : vaultExists ? 'Unlock' : confirmWeak ? 'Confirm Create' : 'Create Vault'}
+            onclick={handleSubmit}
+          />
+        </div>
       </div>
     {/if}
   </div>
@@ -151,6 +144,13 @@
   @keyframes auroraShift {
     0% { transform: translate(0, 0) rotate(0deg); }
     100% { transform: translate(2%, -2%) rotate(3deg); }
+  }
+
+  .button-container {
+    display: flex;
+    justify-content: center;
+    padding-top: 16px;
+    margin-top: 8px;
   }
 
   .login-card {
@@ -280,28 +280,4 @@
     font-size: 0.825rem;
   }
 
-  .submit-btn {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid rgba(79, 156, 247, 0.3);
-    border-radius: var(--radius-sm);
-    background: rgba(79, 156, 247, 0.2);
-    backdrop-filter: blur(8px);
-    color: #fff;
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .submit-btn:hover:not(:disabled) {
-    background: rgba(79, 156, 247, 0.3);
-    border-color: rgba(79, 156, 247, 0.5);
-    box-shadow: 0 0 20px var(--accent-glow);
-  }
-
-  .submit-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
 </style>
