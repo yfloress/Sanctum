@@ -1,11 +1,11 @@
 import { invoke } from '@tauri-apps/api/core'
 import type {
-  ImportPreviewResponse, ImportResultsResponse,
+  ImportResultsResponse,
   ExchangeDetectionResult
 } from '../types'
 
-export async function previewImport(content: string, filename: string): Promise<ImportPreviewResponse> {
-  return invoke<ImportPreviewResponse>('preview_import', { content, filename })
+export async function previewImport(content: string, filename: string): Promise<ImportResultsResponse> {
+  return invoke<ImportResultsResponse>('preview_import', { content, filename })
 }
 
 export async function importData(content: string, filename: string): Promise<ImportResultsResponse> {
@@ -22,8 +22,8 @@ export async function detectExchangeSource(content: string): Promise<ExchangeDet
 
 export async function previewExchangeCsv(
   content: string, wallet_name: string
-): Promise<ImportPreviewResponse> {
-  return invoke<ImportPreviewResponse>('preview_exchange_csv', { content, wallet_name })
+): Promise<ImportResultsResponse> {
+  return invoke<ImportResultsResponse>('preview_exchange_csv', { content, wallet_name })
 }
 
 export async function importExchangeCsv(

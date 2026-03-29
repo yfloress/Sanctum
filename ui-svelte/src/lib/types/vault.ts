@@ -5,7 +5,3 @@ export interface VaultStatus {
 export interface PasswordStrengthResult {
   warning: string
 }
-
-export interface VaultExportResult {
-  path: string
-}
