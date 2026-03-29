@@ -263,6 +263,18 @@
     txIsExpense ? (categories?.expense ?? []) : (categories?.income ?? [])
   )
 
+  function getBankIconPath(accountType: string): string {
+    const iconMap: { [key: string]: string } = {
+      'checking': 'banco-chile.svg',
+      'savings': 'banco-estado.svg',
+      'credit': 'citibank.svg',
+      'cash': 'wf.svg',
+      'investment': 'jpmorgan.svg',
+    }
+    const icon = iconMap[accountType.toLowerCase()] || 'bank-of-america.svg'
+    return `/src/assets/bank-icons/${icon}`
+  }
+
   $effect(() => { loadAll() })
 </script>
 
@@ -363,10 +375,15 @@
         <div class="account-grid">
           {#each accountsData?.accounts ?? [] as acc}
             <button class="account-card" onclick={() => openAccountDetail(acc.id)}>
-              <div class="acc-name">{acc.name}</div>
-              <div class="acc-type">{acc.account_type}</div>
-              <div class="acc-balance" class:negative={acc.balance_negative}>{acc.balance}</div>
-              <div class="acc-currency">{acc.currency}</div>
+              <img src={getBankIconPath(acc.account_type)} alt={acc.account_type} class="acc-icon" onerror={(e) => e.target.style.display='none'} />
+              <div class="acc-info">
+                <div class="acc-name">{acc.name}</div>
+                <div class="acc-type">{acc.account_type}</div>
+              </div>
+              <div class="acc-footer">
+                <div class="acc-balance" class:negative={acc.balance_negative}>{acc.balance}</div>
+                <div class="acc-currency">{acc.currency}</div>
+              </div>
             </button>
           {/each}
         </div>
@@ -810,4 +827,26 @@
     transition: all 0.15s;
   }
   .danger-btn:hover { background: rgba(248, 113, 113, 0.15); border-color: rgba(248, 113, 113, 0.3); }
+
+  /* Accounts */
+  .account-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px;
+  }
+  .account-card {
+    display: flex; flex-direction: column; gap: 12px; padding: 16px;
+    background: var(--glass); backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border); border-radius: var(--radius-md);
+    cursor: pointer; text-align: left; color: inherit; transition: all 0.2s;
+    box-shadow: var(--glass-glow);
+  }
+  .account-card:hover { border-color: var(--glass-border-hover); background: var(--glass-hover); box-shadow: var(--glass-shadow); }
+  .acc-icon { width: 32px; height: 32px; border-radius: 4px; }
+  .acc-info { display: flex; flex-direction: column; gap: 4px; }
+  .acc-name { font-weight: 600; color: var(--text-primary); font-size: 0.95rem; }
+  .acc-type { font-size: 0.75rem; color: var(--text-tertiary); text-transform: capitalize; }
+  .acc-footer { display: flex; justify-content: space-between; align-items: center; }
+  .acc-balance { font-size: 1rem; font-weight: 600; color: var(--text-primary); }
+  .acc-balance.negative { color: var(--danger); }
+  .acc-currency { font-size: 0.75rem; color: var(--text-tertiary); }
 </style>
