@@ -26,11 +26,11 @@ export async function deleteHabit(id: string): Promise<void> {
 }
 
 export async function toggleHabit(habit_id: string, date: string): Promise<void> {
-  return invoke('toggle_habit', { habit_id, date })
+  return invoke('toggle_habit', { habitId: habit_id, date })
 }
 
 export async function fetchHabitSummary(habit_id: string): Promise<HabitSummary> {
-  return invoke<HabitSummary>('fetch_habit_summary', { habit_id })
+  return invoke<HabitSummary>('fetch_habit_summary', { habitId: habit_id })
 }
 
 export async function fetchHeatmap(year: number): Promise<HeatmapResponse> {
@@ -48,7 +48,7 @@ export async function fetchRewards(): Promise<StreakRewardDto[]> {
 export async function createStreakReward(
   habit_id: string, is_consecutive: boolean, target_days: number, target_total: number
 ): Promise<void> {
-  return invoke('create_streak_reward', { habit_id, is_consecutive, target_days, target_total })
+  return invoke('create_streak_reward', { habitId: habit_id, isConsecutive: is_consecutive, targetDays: target_days, targetTotal: target_total })
 }
 
 export async function updateStreakReward(
@@ -56,7 +56,7 @@ export async function updateStreakReward(
   target_days: number, target_total: number,
   milestones: [number, string][]
 ): Promise<void> {
-  return invoke('update_streak_reward', { id, habit_id, is_consecutive, target_days, target_total, milestones })
+  return invoke('update_streak_reward', { id, habitId: habit_id, isConsecutive: is_consecutive, targetDays: target_days, targetTotal: target_total, milestones })
 }
 
 export async function deleteStreakReward(id: string): Promise<void> {
@@ -64,7 +64,7 @@ export async function deleteStreakReward(id: string): Promise<void> {
 }
 
 export async function addMilestone(reward_id: string, target_days: number, reward_text: string): Promise<MilestoneDto> {
-  return invoke<MilestoneDto>('add_milestone', { reward_id, target_days, reward_text })
+  return invoke<MilestoneDto>('add_milestone', { rewardId: reward_id, targetDays: target_days, rewardText: reward_text })
 }
 
 export async function fetchGoals(): Promise<GoalDto[]> {
@@ -74,13 +74,13 @@ export async function fetchGoals(): Promise<GoalDto[]> {
 export async function createGoal(
   name: string, description: string, reward_text: string, deadline: string
 ): Promise<void> {
-  return invoke('create_goal', { name, description, reward_text, deadline })
+  return invoke('create_goal', { name, description, rewardText: reward_text, deadline })
 }
 
 export async function updateGoal(
   id: string, name: string, description: string, reward_text: string, deadline: string
 ): Promise<void> {
-  return invoke('update_goal', { id, name, description, reward_text, deadline })
+  return invoke('update_goal', { id, name, description, rewardText: reward_text, deadline })
 }
 
 export async function deleteGoal(id: string): Promise<void> {
@@ -96,7 +96,7 @@ export async function archiveGoal(id: string): Promise<void> {
 }
 
 export async function toggleCheckpoint(goal_id: string, checkpoint_id: string): Promise<void> {
-  return invoke('toggle_checkpoint', { goal_id, checkpoint_id })
+  return invoke('toggle_checkpoint', { goalId: goal_id, checkpointId: checkpoint_id })
 }
 
 export async function fetchAchievements(): Promise<AchievementDto[]> {
