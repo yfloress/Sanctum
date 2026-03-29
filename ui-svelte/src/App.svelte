@@ -104,12 +104,15 @@
 
   .shell {
     display: flex;
-    min-height: 100vh;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
   }
 
   .content {
     flex: 1;
     overflow-y: auto;
-    max-height: 100vh;
+    overflow-x: hidden;
+    height: 100vh;
   }
 </style>
