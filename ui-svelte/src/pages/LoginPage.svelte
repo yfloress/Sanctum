@@ -130,7 +130,27 @@
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    background: linear-gradient(135deg, #0a0a0a 0%, #111827 100%);
+    background: var(--bg-gradient);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .login-page::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(ellipse at 30% 20%, rgba(79, 156, 247, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(74, 222, 128, 0.04) 0%, transparent 50%);
+    animation: auroraShift 20s ease-in-out infinite alternate;
+    pointer-events: none;
+  }
+
+  @keyframes auroraShift {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    100% { transform: translate(2%, -2%) rotate(3deg); }
   }
 
   .login-card {
@@ -139,7 +159,15 @@
     align-items: center;
     gap: 32px;
     padding: 48px 40px;
-    width: 380px;
+    width: 400px;
+    background: var(--glass);
+    backdrop-filter: var(--glass-blur-heavy);
+    -webkit-backdrop-filter: var(--glass-blur-heavy);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--glass-shadow-lg), var(--glass-glow);
+    position: relative;
+    z-index: 1;
   }
 
   .logo-section {
@@ -150,19 +178,20 @@
     font-size: 2.2rem;
     font-weight: 700;
     letter-spacing: 0.35em;
-    color: #e0e0e0;
+    color: var(--text-primary);
     margin: 0;
+    text-shadow: 0 0 30px var(--accent-glow);
   }
 
   .subtitle {
-    color: #666;
+    color: var(--text-tertiary);
     font-size: 0.85rem;
     margin-top: 8px;
     letter-spacing: 0.1em;
   }
 
   .loading-state {
-    color: #666;
+    color: var(--text-tertiary);
     font-size: 0.9rem;
   }
 
@@ -182,22 +211,24 @@
   input {
     width: 100%;
     padding: 12px 44px 12px 16px;
-    border: 1px solid #333;
-    border-radius: 8px;
-    background: #111;
-    color: #e0e0e0;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    background: rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(8px);
+    color: var(--text-primary);
     font-size: 0.95rem;
     outline: none;
-    transition: border-color 0.15s;
+    transition: border-color 0.2s, box-shadow 0.2s;
     box-sizing: border-box;
   }
 
   input:focus {
-    border-color: #4f9cf7;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
   }
 
   input::placeholder {
-    color: #555;
+    color: var(--text-tertiary);
   }
 
   .toggle-vis {
@@ -205,14 +236,15 @@
     right: 8px;
     background: none;
     border: none;
-    color: #666;
+    color: var(--text-tertiary);
     cursor: pointer;
     padding: 6px;
     display: flex;
+    transition: color 0.15s;
   }
 
   .toggle-vis:hover {
-    color: #999;
+    color: var(--text-secondary);
   }
 
   .toggle-vis svg {
@@ -225,10 +257,11 @@
     flex-direction: column;
     gap: 4px;
     padding: 10px 14px;
-    border-radius: 6px;
-    background: #3a2a0a;
-    color: #fbbf24;
-    border: 1px solid #5a3a0d;
+    border-radius: var(--radius-sm);
+    background: rgba(58, 42, 10, 0.6);
+    backdrop-filter: blur(8px);
+    color: var(--warning);
+    border: 1px solid rgba(251, 191, 36, 0.2);
     font-size: 0.825rem;
   }
 
@@ -239,32 +272,36 @@
 
   .error-banner {
     padding: 10px 14px;
-    border-radius: 6px;
-    background: #3a1a1a;
-    color: #f87171;
-    border: 1px solid #5a2d2d;
+    border-radius: var(--radius-sm);
+    background: rgba(58, 26, 26, 0.6);
+    backdrop-filter: blur(8px);
+    color: var(--danger);
+    border: 1px solid rgba(248, 113, 113, 0.2);
     font-size: 0.825rem;
   }
 
   .submit-btn {
     width: 100%;
     padding: 12px;
-    border: none;
-    border-radius: 8px;
-    background: #4f9cf7;
+    border: 1px solid rgba(79, 156, 247, 0.3);
+    border-radius: var(--radius-sm);
+    background: rgba(79, 156, 247, 0.2);
+    backdrop-filter: blur(8px);
     color: #fff;
     font-size: 0.95rem;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.15s;
+    transition: all 0.2s;
   }
 
   .submit-btn:hover:not(:disabled) {
-    background: #3b82f6;
+    background: rgba(79, 156, 247, 0.3);
+    border-color: rgba(79, 156, 247, 0.5);
+    box-shadow: 0 0 20px var(--accent-glow);
   }
 
   .submit-btn:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
   }
 </style>

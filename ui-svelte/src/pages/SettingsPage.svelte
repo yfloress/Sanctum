@@ -451,53 +451,63 @@
 
 <style>
   .page { padding: 24px 32px; max-width: 640px; }
-  h2 { font-size: 1.3rem; letter-spacing: 0.15em; color: #e0e0e0; margin-bottom: 28px; }
+  h2 { font-size: 1.3rem; letter-spacing: 0.15em; color: var(--text-primary); margin-bottom: 28px; }
 
   .section {
-    margin-bottom: 28px; padding-bottom: 24px; border-bottom: 1px solid #1a1a1a;
+    margin-bottom: 28px; padding-bottom: 24px; border-bottom: 1px solid var(--glass-border);
   }
   .section h3 {
-    font-size: 0.8rem; color: #666; text-transform: uppercase;
+    font-size: 0.8rem; color: var(--text-tertiary); text-transform: uppercase;
     letter-spacing: 0.08em; margin-bottom: 14px;
   }
-  .section-note { font-size: 0.8rem; color: #555; margin-bottom: 12px; }
+  .section-note { font-size: 0.8rem; color: var(--text-tertiary); margin-bottom: 12px; }
 
   .setting-row {
     display: flex; justify-content: space-between; align-items: center;
     padding: 10px 0; gap: 16px;
   }
   .setting-label { font-size: 0.9rem; color: #ccc; display: block; }
-  .setting-desc { font-size: 0.75rem; color: #555; display: block; margin-top: 2px; }
+  .setting-desc { font-size: 0.75rem; color: var(--text-tertiary); display: block; margin-top: 2px; }
 
   select, input[type="text"] {
-    padding: 8px 12px; border: 1px solid #333; border-radius: 6px;
-    background: #111; color: #e0e0e0; font-size: 0.85rem;
+    padding: 8px 12px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+    background: var(--glass); backdrop-filter: var(--glass-blur);
+    color: var(--text-primary); font-size: 0.85rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
   }
-  input[type="text"]:focus, select:focus { border-color: #4f9cf7; outline: none; }
+  input[type="text"]:focus, select:focus {
+    border-color: var(--accent); outline: none;
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
 
   .toggle-switch {
     position: relative; width: 44px; height: 24px; border-radius: 12px;
-    border: none; background: #333; cursor: pointer; padding: 0;
-    transition: background 0.2s;
+    border: 1px solid var(--glass-border); background: var(--glass); cursor: pointer; padding: 0;
+    transition: all 0.25s;
   }
-  .toggle-switch.on { background: #4f9cf7; }
+  .toggle-switch.on {
+    background: rgba(79, 156, 247, 0.25); border-color: rgba(79, 156, 247, 0.3);
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
   .toggle-knob {
-    position: absolute; top: 2px; left: 2px; width: 20px; height: 20px;
-    border-radius: 50%; background: #e0e0e0; transition: transform 0.2s;
+    position: absolute; top: 2px; left: 2px; width: 18px; height: 18px;
+    border-radius: 50%; background: var(--text-primary); transition: transform 0.25s;
   }
   .toggle-switch.on .toggle-knob { transform: translateX(20px); }
 
   .secondary-btn {
-    padding: 8px 18px; border: 1px solid #333; border-radius: 6px;
+    padding: 8px 18px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
     background: none; color: #ccc; cursor: pointer; font-size: 0.85rem;
+    transition: all 0.15s;
   }
-  .secondary-btn:hover { border-color: #555; }
+  .secondary-btn:hover { border-color: var(--glass-border-hover); }
 
   .danger-btn {
-    padding: 8px 18px; border: 1px solid #5a2d2d; border-radius: 6px;
-    background: #3a1a1a; color: #f87171; cursor: pointer; font-size: 0.85rem;
+    padding: 8px 18px; border: 1px solid rgba(248, 113, 113, 0.2); border-radius: var(--radius-sm);
+    background: rgba(248, 113, 113, 0.08); color: var(--danger); cursor: pointer; font-size: 0.85rem;
+    transition: all 0.15s;
   }
-  .danger-btn:hover { background: #4a2020; }
+  .danger-btn:hover { background: rgba(248, 113, 113, 0.15); border-color: rgba(248, 113, 113, 0.3); }
 
   .danger-section { border-bottom: none; }
 
@@ -505,41 +515,45 @@
     display: grid; grid-template-columns: 100px 1fr; gap: 8px;
     font-size: 0.85rem; color: #ccc;
   }
-  .about-label { color: #666; }
+  .about-label { color: var(--text-tertiary); }
 
   .hidden-input { display: none; }
   .import-card {
-    background: #111; border: 1px solid #222; border-radius: 8px;
-    padding: 16px; margin-top: 8px;
+    background: var(--glass); backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+    padding: 16px; margin-top: 8px; box-shadow: var(--glass-glow);
   }
   .import-info { font-size: 0.85rem; color: #aaa; margin: 0 0 12px; }
-  .import-info strong { color: #e0e0e0; }
+  .import-info strong { color: var(--text-primary); }
   .import-actions {
     display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px;
   }
   .primary-btn {
-    padding: 8px 18px; border: 1px solid #4f9cf7; border-radius: 6px;
-    background: #4f9cf7; color: #fff; cursor: pointer; font-size: 0.85rem;
+    padding: 8px 18px; border: 1px solid rgba(79, 156, 247, 0.3); border-radius: var(--radius-sm);
+    background: rgba(79, 156, 247, 0.2); backdrop-filter: blur(8px);
+    color: #fff; cursor: pointer; font-size: 0.85rem;
+    transition: all 0.2s;
   }
-  .primary-btn:hover { background: #3b8ae6; }
+  .primary-btn:hover:not(:disabled) { background: rgba(79, 156, 247, 0.3); box-shadow: 0 0 16px var(--accent-glow); }
   .primary-btn:disabled, .secondary-btn:disabled {
-    opacity: 0.5; cursor: not-allowed;
+    opacity: 0.4; cursor: not-allowed;
   }
   .import-changes {
     max-height: 200px; overflow-y: auto; margin-bottom: 8px;
-    border: 1px solid #1a1a1a; border-radius: 4px;
+    border: 1px solid var(--glass-border); border-radius: 4px;
   }
   .change-row {
     display: flex; gap: 10px; padding: 6px 10px;
-    font-size: 0.8rem; border-bottom: 1px solid #1a1a1a;
+    font-size: 0.8rem; border-bottom: 1px solid var(--glass-border);
   }
   .change-row:last-child { border-bottom: none; }
   .change-action {
-    color: #4f9cf7; font-weight: 600; min-width: 60px; text-transform: uppercase;
+    color: var(--accent); font-weight: 600; min-width: 60px; text-transform: uppercase;
     font-size: 0.7rem;
   }
   .change-desc { color: #aaa; }
   .import-errors { margin-top: 8px; }
-  .error-heading { color: #f87171; font-size: 0.85rem; margin: 0 0 6px; font-weight: 600; }
+  .error-heading { color: var(--danger); font-size: 0.85rem; margin: 0 0 6px; font-weight: 600; }
   .error-line { color: #ccc; font-size: 0.8rem; margin: 2px 0; padding-left: 8px; }
 </style>

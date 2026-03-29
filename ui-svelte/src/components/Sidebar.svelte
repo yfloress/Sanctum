@@ -74,9 +74,11 @@
     flex-direction: column;
     width: 220px;
     min-height: 100vh;
-    background: #111111;
-    border-right: 1px solid #222;
-    transition: width 0.2s ease;
+    background: var(--glass);
+    backdrop-filter: var(--glass-blur-heavy);
+    -webkit-backdrop-filter: var(--glass-blur-heavy);
+    border-right: 1px solid var(--glass-border);
+    transition: width 0.25s ease;
   }
 
   .sidebar.collapsed {
@@ -88,7 +90,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 16px 12px;
-    border-bottom: 1px solid #222;
+    border-bottom: 1px solid var(--glass-border);
     min-height: 56px;
   }
 
@@ -96,21 +98,23 @@
     font-size: 1.1rem;
     font-weight: 700;
     letter-spacing: 0.25em;
-    color: #e0e0e0;
+    color: var(--text-primary);
+    text-shadow: 0 0 20px var(--accent-glow);
   }
 
   .collapse-btn {
     background: none;
     border: none;
-    color: #888;
+    color: var(--text-tertiary);
     cursor: pointer;
     padding: 4px;
     display: flex;
     align-items: center;
+    transition: color 0.15s;
   }
 
   .collapse-btn:hover {
-    color: #e0e0e0;
+    color: var(--text-primary);
   }
 
   .collapse-btn svg {
@@ -131,25 +135,28 @@
     align-items: center;
     gap: 12px;
     padding: 10px 12px;
-    border: none;
-    border-radius: 8px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
     background: none;
-    color: #999;
+    color: var(--text-secondary);
     cursor: pointer;
     font-size: 0.9rem;
     text-align: left;
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
     position: relative;
   }
 
   .nav-item:hover {
-    background: #1a1a1a;
-    color: #e0e0e0;
+    background: var(--glass-hover);
+    border-color: var(--glass-border);
+    color: var(--text-primary);
   }
 
   .nav-item.active {
-    background: #1a1a1a;
-    color: #e0e0e0;
+    background: var(--glass-active);
+    border-color: var(--glass-border);
+    color: var(--text-primary);
+    box-shadow: var(--glass-glow);
   }
 
   .nav-item.active::before {
@@ -160,7 +167,8 @@
     bottom: 4px;
     width: 3px;
     border-radius: 0 3px 3px 0;
-    background: #4f9cf7;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent-glow);
   }
 
   .nav-item svg {
@@ -171,11 +179,12 @@
 
   .sidebar-footer {
     padding: 8px;
-    border-top: 1px solid #222;
+    border-top: 1px solid var(--glass-border);
   }
 
   .lock-btn:hover {
-    color: #f87171;
-    background: rgba(248, 113, 113, 0.1);
+    color: var(--danger);
+    background: rgba(248, 113, 113, 0.08);
+    border-color: rgba(248, 113, 113, 0.15);
   }
 </style>

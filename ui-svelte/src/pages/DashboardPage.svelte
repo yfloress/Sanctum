@@ -132,17 +132,24 @@
     align-items: center;
     justify-content: center;
     padding: 64px 0;
-    color: #888;
+    color: var(--text-secondary);
   }
 
   .error-state button {
     margin-top: 12px;
     padding: 8px 16px;
-    border: 1px solid #333;
-    border-radius: 6px;
-    background: #1a1a1a;
-    color: #e0e0e0;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    background: var(--glass);
+    backdrop-filter: var(--glass-blur);
+    color: var(--text-primary);
     cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .error-state button:hover {
+    background: var(--glass-hover);
+    border-color: var(--glass-border-hover);
   }
 
   .hero {
@@ -153,14 +160,14 @@
   .net-worth {
     font-size: 2.4rem;
     font-weight: 700;
-    color: #e0e0e0;
+    color: var(--text-primary);
     margin: 0;
   }
 
-  .net-worth.negative { color: #f87171; }
+  .net-worth.negative { color: var(--danger); }
 
   .label {
-    color: #666;
+    color: var(--text-tertiary);
     font-size: 0.85rem;
     margin-top: 4px;
   }
@@ -177,15 +184,24 @@
     flex-direction: column;
     align-items: center;
     padding: 14px 28px;
-    background: #111;
-    border: 1px solid #222;
-    border-radius: 10px;
+    background: var(--glass);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
     min-width: 140px;
+    box-shadow: var(--glass-glow);
+    transition: all 0.2s;
+  }
+
+  .stat-card:hover {
+    background: var(--glass-hover);
+    border-color: var(--glass-border-hover);
   }
 
   .stat-label {
     font-size: 0.75rem;
-    color: #666;
+    color: var(--text-tertiary);
     text-transform: uppercase;
     letter-spacing: 0.08em;
   }
@@ -193,11 +209,11 @@
   .stat-value {
     font-size: 1.2rem;
     font-weight: 600;
-    color: #e0e0e0;
+    color: var(--text-primary);
     margin-top: 4px;
   }
 
-  .stat-value.negative { color: #f87171; }
+  .stat-value.negative { color: var(--danger); }
 
   .controls {
     display: flex;
@@ -209,10 +225,11 @@
   .range-selector {
     display: flex;
     gap: 4px;
-    background: #111;
-    border-radius: 8px;
+    background: var(--glass);
+    backdrop-filter: var(--glass-blur);
+    border-radius: var(--radius-sm);
     padding: 3px;
-    border: 1px solid #222;
+    border: 1px solid var(--glass-border);
   }
 
   .range-btn {
@@ -220,35 +237,40 @@
     border: none;
     border-radius: 6px;
     background: none;
-    color: #888;
+    color: var(--text-secondary);
     cursor: pointer;
     font-size: 0.8rem;
     font-weight: 500;
+    transition: all 0.15s;
   }
 
   .range-btn.active {
-    background: #1a1a1a;
-    color: #e0e0e0;
+    background: var(--glass-active);
+    color: var(--text-primary);
+    box-shadow: var(--glass-glow);
   }
 
   .chart-section {
-    background: #111;
-    border: 1px solid #222;
-    border-radius: 10px;
+    background: var(--glass);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
     padding: 16px;
     margin-bottom: 24px;
+    box-shadow: var(--glass-shadow);
   }
 
   .chart-placeholder {
-    background: #111;
-    border: 1px solid #222;
-    border-radius: 10px;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
     padding: 48px;
     text-align: center;
     margin-bottom: 24px;
   }
 
-  .placeholder-text { color: #555; font-size: 0.85rem; }
+  .placeholder-text { color: var(--text-tertiary); font-size: 0.85rem; }
 
   .breakdown {
     margin-bottom: 24px;
@@ -256,7 +278,7 @@
 
   .breakdown h3, .recent h3 {
     font-size: 0.9rem;
-    color: #888;
+    color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.08em;
     margin-bottom: 12px;
@@ -268,7 +290,7 @@
     gap: 12px;
     align-items: center;
     padding: 8px 0;
-    border-bottom: 1px solid #1a1a1a;
+    border-bottom: 1px solid var(--glass-border);
     position: relative;
   }
 
@@ -282,8 +304,8 @@
   }
 
   .breakdown-cat { color: #ccc; font-size: 0.85rem; }
-  .breakdown-amount { color: #e0e0e0; font-size: 0.85rem; font-weight: 500; }
-  .breakdown-pct { color: #666; font-size: 0.8rem; min-width: 48px; text-align: right; }
+  .breakdown-amount { color: var(--text-primary); font-size: 0.85rem; font-weight: 500; }
+  .breakdown-pct { color: var(--text-tertiary); font-size: 0.8rem; min-width: 48px; text-align: right; }
 
   .recent { margin-bottom: 24px; }
 
@@ -292,13 +314,13 @@
     grid-template-columns: 80px 1fr auto auto;
     gap: 12px;
     padding: 10px 0;
-    border-bottom: 1px solid #1a1a1a;
+    border-bottom: 1px solid var(--glass-border);
     align-items: center;
   }
 
-  .tx-date { color: #666; font-size: 0.8rem; }
+  .tx-date { color: var(--text-tertiary); font-size: 0.8rem; }
   .tx-desc { color: #ccc; font-size: 0.85rem; }
-  .tx-cat { color: #888; font-size: 0.8rem; }
-  .tx-amount { color: #4ade80; font-size: 0.85rem; font-weight: 500; text-align: right; }
-  .tx-amount.expense { color: #f87171; }
+  .tx-cat { color: var(--text-secondary); font-size: 0.8rem; }
+  .tx-amount { color: var(--success); font-size: 0.85rem; font-weight: 500; text-align: right; }
+  .tx-amount.expense { color: var(--danger); }
 </style>

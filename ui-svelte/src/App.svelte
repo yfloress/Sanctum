@@ -41,12 +41,44 @@
 <Toast />
 
 <style>
+  :global(:root) {
+    --bg-base: #07080f;
+    --bg-gradient: linear-gradient(135deg, #07080f 0%, #0d1117 40%, #101520 100%);
+    --glass: rgba(255, 255, 255, 0.035);
+    --glass-hover: rgba(255, 255, 255, 0.06);
+    --glass-active: rgba(255, 255, 255, 0.08);
+    --glass-elevated: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-border-hover: rgba(255, 255, 255, 0.14);
+    --glass-blur: blur(16px);
+    --glass-blur-heavy: blur(24px);
+    --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+    --glass-shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.45);
+    --glass-glow: 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+    --accent: #4f9cf7;
+    --accent-glow: rgba(79, 156, 247, 0.15);
+    --accent-hover: #6aafff;
+    --success: #4ade80;
+    --danger: #f87171;
+    --warning: #fbbf24;
+    --text-primary: #e8eaed;
+    --text-secondary: #9aa0a6;
+    --text-tertiary: #5f6368;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+  }
+
   :global(body) {
     margin: 0;
     padding: 0;
-    font-family: system-ui, -apple-system, sans-serif;
-    background: #0a0a0a;
-    color: #e0e0e0;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg-base);
+    background-image: var(--bg-gradient);
+    background-attachment: fixed;
+    color: var(--text-primary);
+    min-height: 100vh;
   }
 
   :global(*) {
@@ -62,8 +94,12 @@
   }
 
   :global(::-webkit-scrollbar-thumb) {
-    background: #333;
+    background: rgba(255, 255, 255, 0.1);
     border-radius: 3px;
+  }
+
+  :global(::-webkit-scrollbar-thumb:hover) {
+    background: rgba(255, 255, 255, 0.18);
   }
 
   .shell {
