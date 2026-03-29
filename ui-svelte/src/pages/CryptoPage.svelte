@@ -2,6 +2,7 @@
   import { app } from '../lib/stores/app.svelte'
   import LiquidGlassButton from '../components/LiquidGlassButton.svelte'
   import LiquidGlassTab from '../components/LiquidGlassTab.svelte'
+  import LiquidGlassBackground from '../components/LiquidGlassBackground.svelte'
   import * as cryptoApi from '../lib/api/crypto'
   import PortfolioTrendChart from '../components/charts/PortfolioTrendChart.svelte'
   import DistributionChart from '../components/charts/DistributionChart.svelte'
@@ -316,8 +317,10 @@
 <!-- Add Wallet Modal -->
 {#if showAddWallet}
   <div class="modal-backdrop" role="presentation" onclick={() => showAddWallet = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddWallet = false }}></div>
-  <div class="modal">
-    <h3>New Wallet</h3>
+  <div class="modal-wrapper">
+    <div class="modal">
+      <LiquidGlassBackground />
+      <h3>New Wallet</h3>
     <div class="form-grid">
       <label>
         Name
@@ -334,9 +337,10 @@
         </div>
       </label>
     </div>
-    <div class="modal-actions">
-      <button class="secondary-btn" onclick={() => showAddWallet = false}>Cancel</button>
-      <button class="primary-btn" onclick={submitWallet} disabled={!walletName.trim()}>Create</button>
+      <div class="modal-actions">
+        <button class="secondary-btn" onclick={() => showAddWallet = false}>Cancel</button>
+        <button class="primary-btn" onclick={submitWallet} disabled={!walletName.trim()}>Create</button>
+      </div>
     </div>
   </div>
 {/if}
@@ -473,17 +477,23 @@
 
   /* Modal */
   .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 100; }
-  .modal {
+  .modal-wrapper {
     position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    background: var(--glass-elevated); backdrop-filter: var(--glass-blur-heavy);
-    -webkit-backdrop-filter: var(--glass-blur-heavy);
+    z-index: 101; pointer-events: none;
+  }
+  .modal-wrapper .modal {
+    pointer-events: auto;
+  }
+  .modal {
+    position: relative;
+    background: linear-gradient(-75deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.05));
     border: 1px solid var(--glass-border); border-radius: var(--radius-lg);
     padding: 28px; width: 400px; z-index: 101;
-    box-shadow: var(--glass-shadow-lg), var(--glass-glow);
+    box-shadow: inset 0 0.125em 0.125em rgba(254, 254, 254, 0.05), inset 0 -0.125em 0.125em rgba(0, 0, 0, 0.5), 0 0.25em 0.125em -0.125em rgba(254, 254, 254, 0.2), 0 0 0.1em 0.25em inset rgba(0, 0, 0, 0.2);
   }
-  .modal h3 { margin: 0 0 20px; color: var(--text-primary); }
+  .modal h3 { margin: 0 0 20px; color: var(--text-primary); position: relative; z-index: 10; }
 
-  .form-grid { display: flex; flex-direction: column; gap: 14px; }
+  .form-grid { display: flex; flex-direction: column; gap: 14px; position: relative; z-index: 10; }
   .form-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: var(--text-secondary); }
   .form-grid input {
     padding: 10px 12px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
@@ -504,7 +514,7 @@
     background: var(--glass-active); box-shadow: 0 0 0 1px var(--accent-glow) inset;
   }
 
-  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; position: relative; z-index: 10; }
   .primary-btn {
     padding: 8px 18px; border: 1px solid rgba(79, 156, 247, 0.3); border-radius: var(--radius-sm);
     background: rgba(79, 156, 247, 0.2); backdrop-filter: blur(8px);

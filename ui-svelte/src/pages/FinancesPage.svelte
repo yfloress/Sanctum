@@ -513,8 +513,10 @@
 <!-- Add Account Modal -->
 {#if showAddAccount}
   <div class="modal-backdrop" role="presentation" onclick={() => showAddAccount = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddAccount = false }}></div>
-  <div class="modal">
-    <h3>New Account</h3>
+  <div class="modal-wrapper">
+    <div class="modal">
+      <LiquidGlassBackground />
+      <h3>New Account</h3>
     <div class="form-grid">
       <label>
         Name
@@ -543,9 +545,10 @@
         <input type="text" bind:value={accInitialBalance} placeholder="0.00" />
       </label>
     </div>
-    <div class="modal-actions">
-      <button class="secondary-btn" onclick={() => showAddAccount = false}>Cancel</button>
-      <button class="primary-btn" onclick={submitAccount} disabled={!accName.trim()}>Create</button>
+      <div class="modal-actions">
+        <button class="secondary-btn" onclick={() => showAddAccount = false}>Cancel</button>
+        <button class="primary-btn" onclick={submitAccount} disabled={!accName.trim()}>Create</button>
+      </div>
     </div>
   </div>
 {/if}
@@ -553,8 +556,10 @@
 <!-- Transfer Modal -->
 {#if showTransfer}
   <div class="modal-backdrop" role="presentation" onclick={() => showTransfer = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showTransfer = false }}></div>
-  <div class="modal">
-    <h3>Transfer Funds</h3>
+  <div class="modal-wrapper">
+    <div class="modal">
+      <LiquidGlassBackground />
+      <h3>Transfer Funds</h3>
     <div class="form-grid">
       <label>
         From
@@ -585,9 +590,10 @@
         <input type="date" bind:value={tfDate} />
       </label>
     </div>
-    <div class="modal-actions">
-      <button class="secondary-btn" onclick={() => showTransfer = false}>Cancel</button>
-      <button class="primary-btn" onclick={submitTransfer} disabled={!tfAmount || tfFromId === tfToId}>Transfer</button>
+      <div class="modal-actions">
+        <button class="secondary-btn" onclick={() => showTransfer = false}>Cancel</button>
+        <button class="primary-btn" onclick={submitTransfer} disabled={!tfAmount || tfFromId === tfToId}>Transfer</button>
+      </div>
     </div>
   </div>
 {/if}
