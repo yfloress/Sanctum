@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte'
+  import LiquidGlassTab from '../components/LiquidGlassTab.svelte'
   import * as dashboardApi from '../lib/api/dashboard'
   import NetWorthChart from '../components/charts/NetWorthChart.svelte'
   import type { BalanceOverview, RecentTransaction, AnalyticsData } from '../lib/types'
@@ -67,15 +68,16 @@
     </section>
 
     <section class="controls">
-      <div class="range-selector">
-        {#each ['1M', '6M', '1Y', 'ALL'] as range}
-          <button
-            class="range-btn"
-            class:active={selectedRange === range}
-            onclick={() => changeRange(range)}
-          >{range}</button>
-        {/each}
-      </div>
+      <LiquidGlassTab
+        options={[
+          { label: '1M', value: '1M' },
+          { label: '6M', value: '6M' },
+          { label: '1Y', value: '1Y' },
+          { label: 'ALL', value: 'ALL' }
+        ]}
+        active={selectedRange}
+        onchange={changeRange}
+      />
     </section>
 
     {#if analytics}
@@ -220,34 +222,6 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
-  }
-
-  .range-selector {
-    display: flex;
-    gap: 4px;
-    background: var(--glass);
-    backdrop-filter: var(--glass-blur);
-    border-radius: var(--radius-sm);
-    padding: 3px;
-    border: 1px solid var(--glass-border);
-  }
-
-  .range-btn {
-    padding: 6px 14px;
-    border: none;
-    border-radius: 6px;
-    background: none;
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 0.8rem;
-    font-weight: 500;
-    transition: all 0.15s;
-  }
-
-  .range-btn.active {
-    background: var(--glass-active);
-    color: var(--text-primary);
-    box-shadow: var(--glass-glow);
   }
 
   .chart-section {

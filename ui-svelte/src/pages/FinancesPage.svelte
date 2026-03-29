@@ -1,6 +1,7 @@
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte'
   import LiquidGlassButton from '../components/LiquidGlassButton.svelte'
+  import LiquidGlassTab from '../components/LiquidGlassTab.svelte'
   import * as financeApi from '../lib/api/finance'
   import type {
     TransactionDto, CategoriesResponse, CategoryDto,
@@ -274,15 +275,15 @@
   </section>
 
   <!-- Tab selector -->
-  <div class="tabs">
-    {#each [['activity', 'Activity'], ['accounts', 'Accounts'], ['settings', 'Settings']] as [key, label]}
-      <button
-        class="tab-btn"
-        class:active={activeTab === key}
-        onclick={() => activeTab = key as Tab}
-      >{label}</button>
-    {/each}
-  </div>
+  <LiquidGlassTab
+    options={[
+      { label: 'Activity', value: 'activity' },
+      { label: 'Accounts', value: 'accounts' },
+      { label: 'Settings', value: 'settings' }
+    ]}
+    active={activeTab}
+    onchange={(value) => activeTab = value as Tab}
+  />
 
   {#if loading}
     <div class="loading">Loading...</div>
@@ -594,24 +595,6 @@
   .balance { font-size: 2rem; font-weight: 700; color: var(--text-primary); margin: 0; }
   .balance.negative { color: var(--danger); }
   .label { color: var(--text-tertiary); font-size: 0.8rem; margin-top: 4px; }
-
-  .tabs {
-    display: flex; gap: 4px;
-    background: var(--glass);
-    backdrop-filter: var(--glass-blur);
-    border-radius: var(--radius-sm);
-    padding: 3px; border: 1px solid var(--glass-border);
-    margin-bottom: 24px; width: fit-content;
-  }
-  .tab-btn {
-    padding: 8px 20px; border: none; border-radius: 6px; background: none;
-    color: var(--text-secondary); cursor: pointer; font-size: 0.85rem; font-weight: 500;
-    transition: all 0.15s;
-  }
-  .tab-btn.active {
-    background: var(--glass-active); color: var(--text-primary);
-    box-shadow: var(--glass-glow);
-  }
 
   .loading { text-align: center; padding: 48px; color: var(--text-tertiary); }
   .empty { text-align: center; padding: 48px; color: var(--text-tertiary); }

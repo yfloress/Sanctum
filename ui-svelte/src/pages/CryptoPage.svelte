@@ -1,6 +1,7 @@
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte'
   import LiquidGlassButton from '../components/LiquidGlassButton.svelte'
+  import LiquidGlassTab from '../components/LiquidGlassTab.svelte'
   import * as cryptoApi from '../lib/api/crypto'
   import PortfolioTrendChart from '../components/charts/PortfolioTrendChart.svelte'
   import DistributionChart from '../components/charts/DistributionChart.svelte'
@@ -125,11 +126,15 @@
 
   <!-- Tabs -->
   <div class="tab-row">
-    <div class="tabs">
-      {#each [['portfolio', 'Portfolio'], ['wallets', 'Wallets'], ['tax', 'Tax']] as [key, label]}
-        <button class="tab-btn" class:active={activeTab === key} onclick={() => activeTab = key as Tab}>{label}</button>
-      {/each}
-    </div>
+    <LiquidGlassTab
+      options={[
+        { label: 'Portfolio', value: 'portfolio' },
+        { label: 'Wallets', value: 'wallets' },
+        { label: 'Tax', value: 'tax' }
+      ]}
+      active={activeTab}
+      onchange={(value) => activeTab = value as Tab}
+    />
   </div>
 
   {#if loading}
@@ -356,18 +361,6 @@
   .label { color: var(--text-tertiary); font-size: 0.8rem; margin-top: 4px; }
 
   .tab-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-  .tabs {
-    display: flex; gap: 4px;
-    background: var(--glass); backdrop-filter: var(--glass-blur);
-    border-radius: var(--radius-sm);
-    padding: 3px; border: 1px solid var(--glass-border);
-  }
-  .tab-btn {
-    padding: 8px 20px; border: none; border-radius: 6px; background: none;
-    color: var(--text-secondary); cursor: pointer; font-size: 0.85rem; font-weight: 500;
-    transition: all 0.15s;
-  }
-  .tab-btn.active { background: var(--glass-active); color: var(--text-primary); box-shadow: var(--glass-glow); }
 
   .loading { text-align: center; padding: 48px; color: var(--text-tertiary); }
   .empty { text-align: center; padding: 48px; color: var(--text-tertiary); }
