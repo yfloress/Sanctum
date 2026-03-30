@@ -1,6 +1,5 @@
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte'
-  import LiquidGlassTab from '../components/LiquidGlassTab.svelte'
   import * as dashboardApi from '../lib/api/dashboard'
   import NetWorthChart from '../components/charts/NetWorthChart.svelte'
   import type { BalanceOverview, RecentTransaction, AnalyticsData } from '../lib/types'
@@ -68,16 +67,12 @@
     </section>
 
     <section class="controls">
-      <LiquidGlassTab
-        options={[
-          { label: '1M', value: '1M' },
-          { label: '6M', value: '6M' },
-          { label: '1Y', value: '1Y' },
-          { label: 'ALL', value: 'ALL' }
-        ]}
-        active={selectedRange}
-        onchange={changeRange}
-      />
+      <div class="tab-bar">
+        <button class:active={selectedRange === '1M'} onclick={() => changeRange('1M')}>1M</button>
+        <button class:active={selectedRange === '6M'} onclick={() => changeRange('6M')}>6M</button>
+        <button class:active={selectedRange === '1Y'} onclick={() => changeRange('1Y')}>1Y</button>
+        <button class:active={selectedRange === 'ALL'} onclick={() => changeRange('ALL')}>ALL</button>
+      </div>
     </section>
 
     {#if analytics}

@@ -1,8 +1,5 @@
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte'
-  import LiquidGlassButton from '../components/LiquidGlassButton.svelte'
-  import LiquidGlassTab from '../components/LiquidGlassTab.svelte'
-  import LiquidGlassBackground from '../components/LiquidGlassBackground.svelte'
   import * as habitsApi from '../lib/api/habits'
   import RadarChart from '../components/charts/RadarChart.svelte'
   import WeekdayChart from '../components/charts/WeekdayChart.svelte'
@@ -29,8 +26,6 @@
   let goals = $state<GoalDto[]>([])
   let showAddReward = $state(false)
   let showAddGoal = $state(false)
-  let editingReward = $state<StreakRewardDto | null>(null)
-  let editingGoal = $state<GoalDto | null>(null)
 
   // Reward form
   let rewardHabitId = $state('')
@@ -175,7 +170,6 @@
   }
 
   function openAddReward() {
-    editingReward = null
     rewardHabitId = habitsData?.habits[0]?.id ?? ''
     rewardConsecutive = true
     rewardTargetDays = ''
@@ -214,7 +208,6 @@
   }
 
   function openAddGoal() {
-    editingGoal = null
     goalName = ''
     goalDescription = ''
     goalRewardText = ''
@@ -273,7 +266,7 @@
   $effect(() => { if (activeTab === 'history') loadHistory() })
 </script>
 
-<div class="page">
+<div class="page" class:blurred={showAddHabit || showAddReward || showAddGoal}>
   <div class="page-header">
     <h2>HABITS</h2>
     {#if activeTab === 'habits'}
@@ -289,15 +282,11 @@
     {/if}
   </div>
 
-  <LiquidGlassTab
-    options={[
-      { label: 'Habits', value: 'habits' },
-      { label: 'Rewards', value: 'rewards' },
-      { label: 'History', value: 'history' }
-    ]}
-    active={activeTab}
-    onchange={(value) => activeTab = value as Tab}
-  />
+  <div class="tab-bar">
+    <button class:active={activeTab === 'habits'} onclick={() => activeTab = 'habits'}>Habits</button>
+    <button class:active={activeTab === 'rewards'} onclick={() => activeTab = 'rewards'}>Rewards</button>
+    <button class:active={activeTab === 'history'} onclick={() => activeTab = 'history'}>History</button>
+  </div>
 
   {#if loading}
     <div class="loading">Loading...</div>
@@ -306,7 +295,7 @@
   {:else if activeTab === 'habits'}
     <div class="section-header">
       <h3>Daily Tracking</h3>
-      <LiquidGlassButton text="New Habit" contrast="dark" onclick={openAddHabit} />
+      <button class="glass-btn" onclick={openAddHabit}>New Habit</button>
     </div>
 
     {#if habitsData && habitsData.habits.length > 0}
@@ -409,7 +398,7 @@
     <div class="rewards-section">
       <div class="section-header">
         <h3>Streak Rewards</h3>
-        <LiquidGlassButton text="New Reward" contrast="dark" onclick={openAddReward} />
+        <button class="glass-btn" onclick={openAddReward}>New Reward</button>
       </div>
       {#if rewards.length === 0}
         <p class="empty">No streak rewards configured.</p>
@@ -440,7 +429,7 @@
 
       <div class="section-header" style="margin-top: 24px">
         <h3>Goals</h3>
-        <LiquidGlassButton text="New Goal" contrast="dark" onclick={openAddGoal} />
+        <button class="glass-btn" onclick={openAddGoal}>New Goal</button>
       </div>
       {#if goals.length === 0}
         <p class="empty">No goals set.</p>
@@ -501,7 +490,6 @@
   <div class="modal-backdrop" role="presentation" onclick={() => showAddHabit = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddHabit = false }}></div>
   <div class="modal-wrapper">
     <div class="modal">
-      <LiquidGlassBackground />
       <h3>{editingHabit ? 'Edit Habit' : 'New Habit'}</h3>
     <div class="form-grid">
       <label>
@@ -546,7 +534,6 @@
   <div class="modal-backdrop" role="presentation" onclick={() => showAddReward = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddReward = false }}></div>
   <div class="modal-wrapper">
     <div class="modal">
-      <LiquidGlassBackground />
       <h3>New Streak Reward</h3>
       <div class="form-grid">
         <label>
@@ -587,7 +574,6 @@
   <div class="modal-backdrop" role="presentation" onclick={() => showAddGoal = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddGoal = false }}></div>
   <div class="modal-wrapper">
     <div class="modal">
-      <LiquidGlassBackground />
       <h3>New Goal</h3>
       <div class="form-grid">
         <label>
@@ -757,10 +743,10 @@
   }
   .modal {
     position: relative;
-    background: linear-gradient(-75deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.05));
-    border: 1px solid var(--glass-border); border-radius: var(--radius-lg);
+    background: linear-gradient(145deg, rgba(26, 26, 31, 0.75) 0%, rgba(20, 20, 24, 0.72) 50%, rgba(17, 17, 21, 0.7) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-lg);
     padding: 28px; width: 400px; z-index: 101;
-    box-shadow: inset 0 0.125em 0.125em rgba(254, 254, 254, 0.05), inset 0 -0.125em 0.125em rgba(0, 0, 0, 0.5), 0 0.25em 0.125em -0.125em rgba(254, 254, 254, 0.2), 0 0 0.1em 0.25em inset rgba(0, 0, 0, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   }
   .modal h3 { margin: 0 0 20px; color: var(--text-primary); position: relative; z-index: 10; }
 

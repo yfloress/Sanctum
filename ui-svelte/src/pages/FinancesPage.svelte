@@ -1,8 +1,5 @@
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte'
-  import LiquidGlassButton from '../components/LiquidGlassButton.svelte'
-  import LiquidGlassTab from '../components/LiquidGlassTab.svelte'
-  import LiquidGlassBackground from '../components/LiquidGlassBackground.svelte'
   import * as financeApi from '../lib/api/finance'
   import type {
     TransactionDto, CategoriesResponse, CategoryDto,
@@ -278,7 +275,7 @@
   $effect(() => { loadAll() })
 </script>
 
-<div class="page">
+<div class="page" class:blurred={showAddTransaction || showAddAccount || showTransfer}>
   <!-- Hero -->
   <section class="hero">
     <h2 class="balance" class:negative={accountsData?.total_balance_negative}>
@@ -288,15 +285,11 @@
   </section>
 
   <!-- Tab selector -->
-  <LiquidGlassTab
-    options={[
-      { label: 'Activity', value: 'activity' },
-      { label: 'Accounts', value: 'accounts' },
-      { label: 'Settings', value: 'settings' }
-    ]}
-    active={activeTab}
-    onchange={(value) => activeTab = value as Tab}
-  />
+  <div class="tab-bar">
+    <button class:active={activeTab === 'activity'} onclick={() => activeTab = 'activity'}>Activity</button>
+    <button class:active={activeTab === 'accounts'} onclick={() => activeTab = 'accounts'}>Accounts</button>
+    <button class:active={activeTab === 'settings'} onclick={() => activeTab = 'settings'}>Settings</button>
+  </div>
 
   {#if loading}
     <div class="loading">Loading...</div>
@@ -306,7 +299,7 @@
     <section class="tab-content">
       <div class="section-header">
         <h3>Transactions</h3>
-        <LiquidGlassButton text="New Entry" contrast="dark" onclick={openAddTransaction} />
+        <button class="glass-btn" onclick={openAddTransaction}>New Entry</button>
       </div>
 
       <div class="filters">
@@ -364,8 +357,8 @@
       <div class="section-header">
         <h3>My Accounts</h3>
         <div class="header-actions">
-          <LiquidGlassButton text="Transfer" contrast="dark" onclick={openTransfer} />
-          <LiquidGlassButton text="New Account" contrast="dark" onclick={openAddAccount} />
+          <button class="glass-btn" onclick={openTransfer}>Transfer</button>
+          <button class="glass-btn" onclick={openAddAccount}>New Account</button>
         </div>
       </div>
 
@@ -375,7 +368,7 @@
         <div class="account-grid">
           {#each accountsData?.accounts ?? [] as acc}
             <button class="account-card" onclick={() => openAccountDetail(acc.id)}>
-              <img src={getBankIconPath(acc.account_type)} alt={acc.account_type} class="acc-icon" onerror={(e) => e.target.style.display='none'} />
+              <img src={getBankIconPath(acc.account_type)} alt={acc.account_type} class="acc-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
               <div class="acc-info">
                 <div class="acc-name">{acc.name}</div>
                 <div class="acc-type">{acc.account_type}</div>
@@ -477,7 +470,6 @@
   <div class="modal-backdrop" role="presentation" onclick={() => showAddTransaction = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddTransaction = false }}></div>
   <div class="modal-wrapper">
     <div class="modal">
-    <LiquidGlassBackground />
     <h3>{editingTransaction ? 'Edit Transaction' : 'Add Transaction'}</h3>
     <div class="form-grid">
       <label>
@@ -532,8 +524,7 @@
   <div class="modal-backdrop" role="presentation" onclick={() => showAddAccount = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddAccount = false }}></div>
   <div class="modal-wrapper">
     <div class="modal">
-      <LiquidGlassBackground />
-      <h3>New Account</h3>
+        <h3>New Account</h3>
     <div class="form-grid">
       <label>
         Name
@@ -575,8 +566,7 @@
   <div class="modal-backdrop" role="presentation" onclick={() => showTransfer = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showTransfer = false }}></div>
   <div class="modal-wrapper">
     <div class="modal">
-      <LiquidGlassBackground />
-      <h3>Transfer Funds</h3>
+        <h3>Transfer Funds</h3>
     <div class="form-grid">
       <label>
         From
@@ -763,9 +753,10 @@
   }
   .modal {
     position: relative;
-    background: linear-gradient(-75deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.05));
-    border: 1px solid var(--glass-border); border-radius: var(--radius-lg);
+    background: linear-gradient(145deg, rgba(26, 26, 31, 0.75) 0%, rgba(20, 20, 24, 0.72) 50%, rgba(17, 17, 21, 0.7) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-lg);
     padding: 28px; width: 420px; max-height: 85vh; overflow-y: auto; z-index: 101;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
     box-shadow: inset 0 0.125em 0.125em rgba(254, 254, 254, 0.05), inset 0 -0.125em 0.125em rgba(0, 0, 0, 0.5), 0 0.25em 0.125em -0.125em rgba(254, 254, 254, 0.2), 0 0 0.1em 0.25em inset rgba(0, 0, 0, 0.2);
   }
   .modal-wrapper {

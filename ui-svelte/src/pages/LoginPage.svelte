@@ -1,7 +1,6 @@
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte'
   import { i18n } from '../lib/stores/i18n.svelte'
-  import LiquidGlassButton from '../components/LiquidGlassButton.svelte'
   import * as vaultApi from '../lib/api/vault'
   import * as settingsApi from '../lib/api/settings'
 
@@ -106,11 +105,9 @@
         {/if}
 
         <div class="button-container">
-          <LiquidGlassButton
-            contrast="dark"
-            text={loading ? 'Authenticating...' : vaultExists ? 'Unlock' : confirmWeak ? 'Confirm Create' : 'Create Vault'}
-            onclick={handleSubmit}
-          />
+          <button class="glass-btn" onclick={handleSubmit}>
+            {loading ? 'Authenticating...' : vaultExists ? 'Unlock' : confirmWeak ? 'Confirm Create' : 'Create Vault'}
+          </button>
         </div>
       </div>
     {/if}

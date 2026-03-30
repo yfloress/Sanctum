@@ -1,15 +1,12 @@
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte'
-  import LiquidGlassButton from '../components/LiquidGlassButton.svelte'
-  import LiquidGlassTab from '../components/LiquidGlassTab.svelte'
-  import LiquidGlassBackground from '../components/LiquidGlassBackground.svelte'
   import * as cryptoApi from '../lib/api/crypto'
   import PortfolioTrendChart from '../components/charts/PortfolioTrendChart.svelte'
   import DistributionChart from '../components/charts/DistributionChart.svelte'
   import type {
     PortfolioResponse, PortfolioTrendData,
     WalletsResponse, WalletDetailResponse,
-    CryptoTransactionDto, TaxSettingsDto, TaxReportDto
+    CryptoTransactionDto
   } from '../lib/types'
 
   type Tab = 'portfolio' | 'wallets' | 'tax'
@@ -199,7 +196,7 @@
   $effect(() => { if (activeTab === 'wallets') loadWallets() })
 </script>
 
-<div class="page">
+<div class="page" class:blurred={showAddWallet || showTaxSettings}>
   <!-- FX Rate Badge -->
   {#if portfolio?.fx_rate}
     <div class="fx-badge">
@@ -219,15 +216,11 @@
 
   <!-- Tabs -->
   <div class="tab-row">
-    <LiquidGlassTab
-      options={[
-        { label: 'Portfolio', value: 'portfolio' },
-        { label: 'Wallets', value: 'wallets' },
-        { label: 'Tax', value: 'tax' }
-      ]}
-      active={activeTab}
-      onchange={(value) => activeTab = value as Tab}
-    />
+    <div class="tab-bar">
+      <button class:active={activeTab === 'portfolio'} onclick={() => activeTab = 'portfolio'}>Portfolio</button>
+      <button class:active={activeTab === 'wallets'} onclick={() => activeTab = 'wallets'}>Wallets</button>
+      <button class:active={activeTab === 'tax'} onclick={() => activeTab = 'tax'}>Tax</button>
+    </div>
   </div>
 
   {#if loading}
@@ -265,7 +258,7 @@
         {#each portfolio.assets as asset}
           <button class="asset-card" onclick={() => openAssetDetail(asset.coin_id)}>
             <div class="asset-header">
-              <img src={getCryptoIconPath(asset.symbol)} alt={asset.symbol} class="asset-icon" onerror={(e) => e.target.style.display='none'} />
+              <img src={getCryptoIconPath(asset.symbol)} alt={asset.symbol} class="asset-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
               <div class="asset-top">
                 <span class="asset-symbol">{asset.symbol}</span>
                 <span class="asset-name">{asset.name}</span>
@@ -306,7 +299,7 @@
   {:else if activeTab === 'wallets'}
     <div class="section-header">
       <h3>Wallets</h3>
-      <LiquidGlassButton text="Add Wallet" contrast="dark" onclick={() => { showAddWallet = true; walletName = '' }} />
+      <button class="glass-btn" onclick={() => { showAddWallet = true; walletName = '' }}>Add Wallet</button>
     </div>
 
     {#if (walletsData?.wallets ?? []).length === 0}
@@ -334,9 +327,9 @@
           <input type="text" bind:value={taxPeriodId} placeholder="e.g., 2024" />
         </label>
         <div class="period-actions">
-          <LiquidGlassButton text="Load Settings" contrast="dark" onclick={loadTaxSettings} />
+          <button class="glass-btn" onclick={loadTaxSettings}>Load Settings</button>
           {#if taxSettings}
-            <LiquidGlassButton text="Configure" contrast="dark" onclick={() => showTaxSettings = true} />
+            <button class="glass-btn" onclick={() => showTaxSettings = true}>Configure</button>
           {/if}
         </div>
       </div>
@@ -364,7 +357,7 @@
 
         <!-- Generate report button -->
         <div class="report-actions">
-          <LiquidGlassButton text="Generate Report" contrast="dark" onclick={generateTaxReport} />
+          <button class="glass-btn" onclick={generateTaxReport}>Generate Report</button>
         </div>
       {/if}
 
@@ -482,7 +475,6 @@
       <div class="modal-backdrop" role="presentation" onclick={() => showTaxSettings = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showTaxSettings = false }}></div>
       <div class="modal-wrapper">
         <div class="modal">
-          <LiquidGlassBackground />
           <h3>Tax Settings</h3>
           <div class="form-grid">
             <label>
@@ -604,7 +596,6 @@
   <div class="modal-backdrop" role="presentation" onclick={() => showAddWallet = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddWallet = false }}></div>
   <div class="modal-wrapper">
     <div class="modal">
-      <LiquidGlassBackground />
       <h3>New Wallet</h3>
     <div class="form-grid">
       <label>
@@ -720,8 +711,7 @@
   .wallet-val { font-size: 1.1rem; font-weight: 600; color: var(--text-primary); margin-top: 6px; }
   .wallet-count { font-size: 0.75rem; color: var(--text-tertiary); }
 
-  .tax-placeholder { text-align: center; }
-  .tax-placeholder h3 { font-size: 0.9rem; color: var(--text-secondary); }
+
 
   /* Detail panel */
   .overlay-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); z-index: 50; }
@@ -773,9 +763,10 @@
   }
   .modal {
     position: relative;
-    background: linear-gradient(-75deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.05));
-    border: 1px solid var(--glass-border); border-radius: var(--radius-lg);
+    background: linear-gradient(145deg, rgba(26, 26, 31, 0.75) 0%, rgba(20, 20, 24, 0.72) 50%, rgba(17, 17, 21, 0.7) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-lg);
     padding: 28px; width: 400px; z-index: 101;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
     box-shadow: inset 0 0.125em 0.125em rgba(254, 254, 254, 0.05), inset 0 -0.125em 0.125em rgba(0, 0, 0, 0.5), 0 0.25em 0.125em -0.125em rgba(254, 254, 254, 0.2), 0 0 0.1em 0.25em inset rgba(0, 0, 0, 0.2);
   }
   .modal h3 { margin: 0 0 20px; color: var(--text-primary); position: relative; z-index: 10; }

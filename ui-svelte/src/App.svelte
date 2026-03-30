@@ -135,6 +135,66 @@
     color: #e8eaed;
   }
 
+  :global(.blurred) {
+    filter: blur(6px);
+    pointer-events: none;
+    transition: filter 0.2s ease;
+  }
+
+  :global(.glass-btn) {
+    padding: 8px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #e8eaed;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+  }
+
+  :global(.glass-btn:hover) {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.18);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  :global(.glass-btn:active) {
+    background: rgba(255, 255, 255, 0.04);
+    transform: scale(0.98);
+  }
+
+  :global(.tab-bar) {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    width: fit-content;
+  }
+
+  :global(.tab-bar button) {
+    padding: 8px 18px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: #9aa0a6;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  :global(.tab-bar button:hover) {
+    color: #e8eaed;
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  :global(.tab-bar button.active) {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
   .shell {
     display: flex;
     height: 100vh;
