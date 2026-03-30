@@ -25,18 +25,12 @@
 
 <aside class="sidebar" class:collapsed={app.sidebarCollapsed}>
   <div class="sidebar-header">
-    {#if !app.sidebarCollapsed}
+    {#if app.sidebarCollapsed}
+      <img src="/src/assets/logo/sanctum_logo.svg" alt="Sanctum" class="logo-icon" />
+    {:else}
+      <img src="/src/assets/logo/sanctum_logo.svg" alt="Sanctum" class="logo-icon" />
       <span class="logo-text">SANCTUM</span>
     {/if}
-    <button class="collapse-btn" onclick={toggleCollapsed} aria-label="Toggle sidebar">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        {#if app.sidebarCollapsed}
-          <path d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-        {:else}
-          <path d="M11 19l-7-7 7-7M19 19l-7-7 7-7" />
-        {/if}
-      </svg>
-    </button>
   </div>
 
   <nav class="nav-items">
@@ -57,6 +51,18 @@
   </nav>
 
   <div class="sidebar-footer">
+    <button class="nav-item collapse-btn" onclick={toggleCollapsed} aria-label="Toggle sidebar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        {#if app.sidebarCollapsed}
+          <path d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+        {:else}
+          <path d="M11 19l-7-7 7-7M19 19l-7-7 7-7" />
+        {/if}
+      </svg>
+      {#if !app.sidebarCollapsed}
+        <span>Collapse</span>
+      {/if}
+    </button>
     <button class="nav-item lock-btn" onclick={handleLock}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -87,10 +93,21 @@
   .sidebar-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 10px;
     padding: 16px 12px;
     border-bottom: 1px solid var(--glass-border);
     min-height: 56px;
+    justify-content: center;
+  }
+
+  .collapsed .sidebar-header {
+    padding: 16px 0;
+  }
+
+  .logo-icon {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
   }
 
   .logo-text {
@@ -101,24 +118,9 @@
     text-shadow: 0 0 20px var(--accent-glow);
   }
 
-  .collapse-btn {
-    background: none;
-    border: none;
-    color: var(--text-tertiary);
-    cursor: pointer;
-    padding: 4px;
-    display: flex;
-    align-items: center;
-    transition: color 0.15s;
-  }
-
-  .collapse-btn:hover {
-    color: var(--text-primary);
-  }
-
   .collapse-btn svg {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
   }
 
   .nav-items {

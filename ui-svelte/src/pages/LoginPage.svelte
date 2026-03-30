@@ -59,6 +59,7 @@
 <div class="login-page">
   <div class="login-card">
     <div class="logo-section">
+      <img src="/src/assets/logo/sanctum_logo.svg" alt="Sanctum" class="login-logo" />
       <h1 class="title">SANCTUM</h1>
       <p class="subtitle">Privacy-first personal vault</p>
     </div>
@@ -169,6 +170,15 @@
 
   .logo-section {
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .login-logo {
+    width: 64px;
+    height: 64px;
   }
 
   .title {
