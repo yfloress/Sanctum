@@ -274,7 +274,7 @@
     border-radius: 4px;
   }
 
-  .breakdown-cat { color: #ccc; font-size: 0.85rem; }
+  .breakdown-cat { color: var(--text-secondary); font-size: 0.85rem; }
   .breakdown-amount { color: var(--text-primary); font-size: 0.85rem; font-weight: 500; }
   .breakdown-pct { color: var(--text-tertiary); font-size: 0.8rem; min-width: 48px; text-align: right; }
 
@@ -290,7 +290,7 @@
   }
 
   .tx-date { color: var(--text-tertiary); font-size: 0.8rem; }
-  .tx-desc { color: #ccc; font-size: 0.85rem; }
+  .tx-desc { color: var(--text-secondary); font-size: 0.85rem; }
   .tx-cat { color: var(--text-secondary); font-size: 0.8rem; }
   .tx-amount { color: var(--success); font-size: 0.85rem; font-weight: 500; text-align: right; }
   .tx-amount.expense { color: var(--danger); }

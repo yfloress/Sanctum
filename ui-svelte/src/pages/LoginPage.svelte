@@ -246,7 +246,7 @@
     padding: 12px 44px 12px 16px;
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-sm);
-    background: rgba(0, 0, 0, 0.25);
+    background: var(--select-bg);
     backdrop-filter: blur(8px);
     color: var(--text-primary);
     font-size: 0.95rem;

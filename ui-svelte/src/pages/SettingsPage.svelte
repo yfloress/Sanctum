@@ -551,8 +551,8 @@
     color: var(--accent); font-weight: 600; min-width: 60px; text-transform: uppercase;
     font-size: 0.7rem;
   }
-  .change-desc { color: #aaa; }
+  .change-desc { color: var(--text-secondary); }
   .import-errors { margin-top: 8px; }
   .error-heading { color: var(--danger); font-size: 0.85rem; margin: 0 0 6px; font-weight: 600; }
-  .error-line { color: #ccc; font-size: 0.8rem; margin: 2px 0; padding-left: 8px; }
+  .error-line { color: var(--text-secondary); font-size: 0.8rem; margin: 2px 0; padding-left: 8px; }
 </style>

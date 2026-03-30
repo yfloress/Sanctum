@@ -92,43 +92,43 @@
   }
 
   :global(.light-mode) {
-    --bg-base: #fdfaf3;
-    --bg-gradient: linear-gradient(135deg, #fdfaf3 0%, #f7f2e1 40%, #eee8d5 100%);
+    --bg-base: #fafafa;
+    --bg-gradient: linear-gradient(135deg, #fafafa 0%, #f5f3ff 40%, #ede9fe 100%);
     --glass: rgba(0, 0, 0, 0.03);
     --glass-hover: rgba(0, 0, 0, 0.05);
     --glass-active: rgba(0, 0, 0, 0.08);
-    --glass-elevated: rgba(255, 255, 255, 0.6);
+    --glass-elevated: rgba(255, 255, 255, 0.7);
     --glass-border: rgba(0, 0, 0, 0.08);
-    --glass-border-hover: rgba(0, 0, 0, 0.12);
-    --glass-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-    --glass-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.08);
-    --glass-glow: 0 0 0 1px rgba(212, 175, 55, 0.05) inset;
-    --accent: #b8860b;
-    --accent-glow: rgba(184, 134, 11, 0.12);
-    --accent-hover: #996515;
-    --success: #15803d;
-    --danger: #b91c1c;
-    --warning: #b45309;
-    --text-primary: #2d2a24;
-    --text-secondary: #5c574c;
-    --text-tertiary: #8c8678;
+    --glass-border-hover: rgba(0, 0, 0, 0.14);
+    --glass-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    --glass-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.1);
+    --glass-glow: 0 0 0 1px rgba(168, 85, 247, 0.05) inset;
+    --accent: #9333ea;
+    --accent-glow: rgba(147, 51, 234, 0.12);
+    --accent-hover: #7e22ce;
+    --success: #16a34a;
+    --danger: #dc2626;
+    --warning: #d97706;
+    --text-primary: #1a1a2e;
+    --text-secondary: #4a4a5a;
+    --text-tertiary: #8888a0;
     --scrollbar-thumb: rgba(0, 0, 0, 0.1);
-    --scrollbar-thumb-hover: rgba(0, 0, 0, 0.18);
-    --select-bg: rgba(255, 255, 255, 0.5);
-    --select-bg-hover: rgba(255, 255, 255, 0.7);
-    --option-bg: #fdfaf3;
-    --sidebar-bg: linear-gradient(180deg, #f7f2e1 0%, #eee8d5 100%);
+    --scrollbar-thumb-hover: rgba(0, 0, 0, 0.2);
+    --select-bg: rgba(255, 255, 255, 0.6);
+    --select-bg-hover: rgba(255, 255, 255, 0.8);
+    --option-bg: #ffffff;
+    --sidebar-bg: linear-gradient(180deg, #f8f7ff 0%, #f0ecfe 100%);
     --sidebar-border: rgba(0, 0, 0, 0.06);
-    --nav-active-bg: rgba(0, 0, 0, 0.05);
-    --nav-active-border: rgba(0, 0, 0, 0.08);
+    --nav-active-bg: rgba(147, 51, 234, 0.08);
+    --nav-active-border: rgba(147, 51, 234, 0.12);
     --danger-bg: rgba(220, 38, 38, 0.08);
     --danger-border: rgba(220, 38, 38, 0.15);
-    --modal-bg: linear-gradient(145deg, rgba(253, 250, 243, 0.95) 0%, rgba(247, 242, 225, 0.9) 50%, rgba(238, 232, 213, 0.85) 100%);
-    --modal-border: rgba(0, 0, 0, 0.08);
+    --modal-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.95) 0%, rgba(250, 248, 255, 0.92) 50%, rgba(245, 243, 255, 0.9) 100%);
+    --modal-border: rgba(0, 0, 0, 0.1);
     --modal-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    --accent-bg: rgba(184, 134, 11, 0.15);
-    --accent-border: rgba(184, 134, 11, 0.25);
-    --text-on-accent: #2d2a24;
+    --accent-bg: rgba(147, 51, 234, 0.12);
+    --accent-border: rgba(147, 51, 234, 0.25);
+    --text-on-accent: #ffffff;
   }
 
   :global(body) {

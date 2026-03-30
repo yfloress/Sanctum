@@ -694,7 +694,7 @@
   .nav-arrow { background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px; display: flex; transition: color 0.15s; }
   .nav-arrow:hover { color: var(--text-primary); }
   .nav-arrow svg { width: 18px; height: 18px; }
-  .month-label { font-size: 0.9rem; color: #ccc; min-width: 140px; text-align: center; }
+  .month-label { font-size: 0.9rem; color: var(--text-secondary); min-width: 140px; text-align: center; }
 
   .loading { text-align: center; padding: 48px; color: var(--text-tertiary); }
   .empty { text-align: center; padding: 48px; color: var(--text-tertiary); }

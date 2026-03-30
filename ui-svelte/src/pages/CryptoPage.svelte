@@ -1259,7 +1259,7 @@
   .asset-symbol { font-weight: 700; color: var(--text-primary); font-size: 0.95rem; }
   .asset-name { font-size: 0.7rem; color: var(--text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .asset-price { display: flex; align-items: baseline; gap: 6px; }
-  .asset-price span:first-child { font-size: 0.85rem; color: #ccc; }
+  .asset-price span:first-child { font-size: 0.85rem; color: var(--text-secondary); }
   .change { font-size: 0.75rem; color: var(--success); }
   .change.negative { color: var(--danger); }
   .asset-bottom { display: flex; justify-content: space-between; }
@@ -1317,25 +1317,25 @@
   .close-panel:hover { color: var(--text-primary); }
   .close-panel svg { width: 20px; height: 20px; }
 
-  .panel-meta { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; font-size: 0.9rem; color: #ccc; }
+  .panel-meta { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; font-size: 0.9rem; color: var(--text-secondary); }
   .panel-total { font-weight: 600; font-size: 1.1rem; }
 
   .detail-panel h4 { font-size: 0.8rem; color: var(--text-tertiary); text-transform: uppercase; margin: 16px 0 8px; }
 
   .holding-row { display: grid; grid-template-columns: 60px 1fr auto; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--glass-border); font-size: 0.85rem; }
-  .h-symbol { color: #ccc; font-weight: 500; }
+  .h-symbol { color: var(--text-secondary); font-weight: 500; }
   .h-amount { color: var(--text-secondary); }
   .h-value { color: var(--text-primary); text-align: right; }
 
   .panel-tx { display: grid; grid-template-columns: 70px auto 1fr; gap: 8px; font-size: 0.8rem; padding: 6px 0; border-bottom: 1px solid var(--glass-border); }
   .tx-date { color: var(--text-tertiary); }
   .tx-type { color: var(--text-secondary); text-transform: capitalize; }
-  .tx-amount { color: #ccc; text-align: right; }
+  .tx-amount { color: var(--text-secondary); text-align: right; }
 
   .panel-actions { margin-top: 20px; }
 
   .asset-stats { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-  .asset-stats div { display: flex; justify-content: space-between; font-size: 0.85rem; color: #ccc; }
+  .asset-stats div { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-secondary); }
 
   /* Modal */
   .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 100; }
@@ -1360,7 +1360,7 @@
   .form-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: var(--text-secondary); }
   .form-grid input {
     padding: 10px 12px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    background: rgba(0, 0, 0, 0.25); color: var(--text-primary); font-size: 0.9rem;
+    background: var(--select-bg); color: var(--text-primary); font-size: 0.9rem;
     transition: border-color 0.2s, box-shadow 0.2s;
   }
   .form-grid input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-glow); }
@@ -1373,22 +1373,22 @@
   }
   .cat-card:hover { border-color: var(--glass-border-hover); }
   .cat-card.selected {
-    border-color: rgba(168, 85, 247, 0.3); color: var(--text-primary);
+    border-color: var(--accent-border); color: var(--text-primary);
     background: var(--glass-active); box-shadow: 0 0 0 1px var(--accent-glow) inset;
   }
 
   .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; position: relative; z-index: 10; }
   .primary-btn {
-    padding: 8px 18px; border: 1px solid rgba(168, 85, 247, 0.3); border-radius: var(--radius-sm);
-    background: rgba(168, 85, 247, 0.2); backdrop-filter: blur(8px);
-    color: #fff; cursor: pointer; font-size: 0.85rem; font-weight: 500;
+    padding: 8px 18px; border: 1px solid var(--accent-border); border-radius: var(--radius-sm);
+    background: var(--accent-bg); backdrop-filter: blur(8px);
+    color: var(--text-on-accent); cursor: pointer; font-size: 0.85rem; font-weight: 500;
     transition: all 0.2s;
   }
-  .primary-btn:hover:not(:disabled) { background: rgba(168, 85, 247, 0.3); box-shadow: 0 0 16px var(--accent-glow); }
+  .primary-btn:hover:not(:disabled) { background: var(--accent); box-shadow: 0 0 16px var(--accent-glow); }
   .primary-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .secondary-btn {
     padding: 8px 18px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    background: none; color: #ccc; cursor: pointer; font-size: 0.85rem;
+    background: none; color: var(--text-secondary); cursor: pointer; font-size: 0.85rem;
     transition: all 0.15s;
   }
   .secondary-btn:hover { border-color: var(--glass-border-hover); }
@@ -1415,7 +1415,7 @@
   }
   .period-selector input {
     padding: 8px 12px; border: 1px solid var(--glass-border);
-    border-radius: var(--radius-sm); background: rgba(0, 0, 0, 0.25);
+    border-radius: var(--radius-sm); background: var(--select-bg);
     color: var(--text-primary); font-size: 0.9rem;
     transition: border-color 0.2s;
   }
@@ -1459,7 +1459,7 @@
   }
   .warnings h4 { margin: 0 0 12px; color: var(--danger); font-size: 0.85rem; }
   .warning-item { display: flex; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(248, 113, 113, 0.1); font-size: 0.85rem; }
-  .warning-code { color: #ccc; font-weight: 500; min-width: 80px; }
+  .warning-code { color: var(--text-secondary); font-weight: 500; min-width: 80px; }
   .warning-msg { color: var(--text-secondary); }
 
   .readiness {
@@ -1520,12 +1520,12 @@
   /* Form */
   select {
     padding: 8px 12px; border: 1px solid var(--glass-border);
-    border-radius: var(--radius-sm); background: rgba(0, 0, 0, 0.25);
+    border-radius: var(--radius-sm); background: var(--select-bg);
     color: var(--text-primary); font-size: 0.9rem;
     transition: border-color 0.2s;
   }
   select:focus { border-color: var(--accent); outline: none; }
-  select option { background: #1a1a1a; color: #fff; }
+  select option { background: var(--option-bg); color: var(--text-primary); }
 
   .header-actions { display: flex; gap: 8px; }
 
@@ -1540,11 +1540,11 @@
   .tx-type-btn:hover { border-color: var(--glass-border-hover); color: var(--text-primary); }
   .tx-type-btn.active {
     background: var(--glass-active); color: var(--text-primary);
-    border-color: rgba(168, 85, 247, 0.3); box-shadow: 0 0 0 1px var(--accent-glow) inset;
+    border-color: var(--accent-border); box-shadow: 0 0 0 1px var(--accent-glow) inset;
   }
   .coin-selected {
     display: flex; align-items: center; gap: 8px; padding: 8px 12px;
-    background: rgba(0, 0, 0, 0.25); border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+    background: var(--select-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
     color: var(--text-primary); font-size: 0.9rem;
   }
   .coin-selected span { font-weight: 500; }
@@ -1577,7 +1577,7 @@
   .inline-edit { display: flex; align-items: center; gap: 6px; flex: 1; }
   .edit-name-input {
     padding: 6px 10px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    background: rgba(0, 0, 0, 0.25); color: var(--text-primary); font-size: 0.9rem; flex: 1;
+    background: var(--select-bg); color: var(--text-primary); font-size: 0.9rem; flex: 1;
   }
   .edit-name-input:focus { border-color: var(--accent); outline: none; }
   .icon-btn-sm {
@@ -1626,7 +1626,7 @@
   /* Coin catalog */
   .catalog-search {
     width: 100%; padding: 10px 12px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    background: rgba(0, 0, 0, 0.25); color: var(--text-primary); font-size: 0.9rem; margin-bottom: 12px;
+    background: var(--select-bg); color: var(--text-primary); font-size: 0.9rem; margin-bottom: 12px;
     box-sizing: border-box;
   }
   .catalog-search:focus { border-color: var(--accent); outline: none; }
@@ -1649,7 +1649,7 @@
   .custom-coin-row { display: flex; gap: 6px; }
   .custom-coin-row input {
     flex: 1; padding: 8px 10px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    background: rgba(0, 0, 0, 0.25); color: var(--text-primary); font-size: 0.8rem;
+    background: var(--select-bg); color: var(--text-primary); font-size: 0.8rem;
   }
   .custom-coin-row input:focus { border-color: var(--accent); outline: none; }
 </style>

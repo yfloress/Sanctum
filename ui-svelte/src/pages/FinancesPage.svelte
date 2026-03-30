@@ -676,7 +676,7 @@
   }
   .tx-row:hover { background: var(--glass-hover); }
   .tx-date { color: var(--text-tertiary); font-size: 0.8rem; }
-  .tx-desc { color: #ccc; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tx-desc { color: var(--text-secondary); font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tx-cat { color: var(--text-secondary); font-size: 0.8rem; }
   .tx-acc { color: var(--text-tertiary); font-size: 0.75rem; }
   .tx-amount { font-size: 0.85rem; font-weight: 500; text-align: right; color: var(--success); }
@@ -730,7 +730,7 @@
   .cat-section h4 { font-size: 0.8rem; color: var(--text-tertiary); text-transform: uppercase; margin-bottom: 8px; }
   .cat-row {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 8px 12px; border-bottom: 1px solid var(--glass-border); font-size: 0.85rem; color: #ccc;
+    padding: 8px 12px; border-bottom: 1px solid var(--glass-border); font-size: 0.85rem; color: var(--text-secondary);
   }
   .delete-btn-sm {
     background: none; border: none; color: var(--text-tertiary); cursor: pointer; font-size: 0.75rem;
@@ -760,7 +760,7 @@
   .close-panel svg { width: 20px; height: 20px; }
 
   .panel-info { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
-  .info-row { display: flex; justify-content: space-between; font-size: 0.85rem; color: #ccc; }
+  .info-row { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-secondary); }
   .info-row .negative { color: var(--danger); }
 
   .detail-panel h4 { font-size: 0.8rem; color: var(--text-tertiary); text-transform: uppercase; margin-bottom: 8px; }
@@ -794,7 +794,7 @@
   .form-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: var(--text-secondary); }
   .form-grid input, .form-grid select {
     padding: 10px 12px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    background: rgba(0, 0, 0, 0.25); color: var(--text-primary); font-size: 0.9rem;
+    background: var(--select-bg); color: var(--text-primary); font-size: 0.9rem;
     transition: border-color 0.2s, box-shadow 0.2s;
   }
   .form-grid input:focus, .form-grid select:focus {
@@ -810,26 +810,26 @@
   }
   .toggle-btn.active {
     background: var(--glass-active); color: var(--text-primary);
-    border-color: rgba(168, 85, 247, 0.3); box-shadow: 0 0 0 1px var(--accent-glow) inset;
+    border-color: var(--accent-border); box-shadow: 0 0 0 1px var(--accent-glow) inset;
   }
 
   .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; position: relative; z-index: 10; }
 
   .primary-btn {
-    padding: 8px 18px; border: 1px solid rgba(168, 85, 247, 0.3); border-radius: var(--radius-sm);
-    background: rgba(168, 85, 247, 0.2); backdrop-filter: blur(8px);
-    color: #fff; cursor: pointer; font-size: 0.85rem; font-weight: 500;
+    padding: 8px 18px; border: 1px solid var(--accent-border); border-radius: var(--radius-sm);
+    background: var(--accent-bg); backdrop-filter: blur(8px);
+    color: var(--text-on-accent); cursor: pointer; font-size: 0.85rem; font-weight: 500;
     transition: all 0.2s;
   }
   .primary-btn:hover:not(:disabled) {
-    background: rgba(168, 85, 247, 0.3); border-color: rgba(168, 85, 247, 0.5);
+    background: var(--accent); border-color: var(--accent);
     box-shadow: 0 0 16px var(--accent-glow);
   }
   .primary-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
   .secondary-btn {
     padding: 8px 18px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    background: none; color: #ccc; cursor: pointer; font-size: 0.85rem;
+    background: none; color: var(--text-secondary); cursor: pointer; font-size: 0.85rem;
     transition: all 0.15s;
   }
   .secondary-btn:hover { border-color: var(--glass-border-hover); }
