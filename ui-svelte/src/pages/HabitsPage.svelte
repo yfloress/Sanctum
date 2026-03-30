@@ -26,6 +26,8 @@
   let goals = $state<GoalDto[]>([])
   let showAddReward = $state(false)
   let showAddGoal = $state(false)
+  let editingReward = $state<StreakRewardDto | null>(null)
+  let editingGoal = $state<GoalDto | null>(null)
 
   // Reward form
   let rewardHabitId = $state('')
@@ -170,10 +172,20 @@
   }
 
   function openAddReward() {
+    editingReward = null
     rewardHabitId = habitsData?.habits[0]?.id ?? ''
     rewardConsecutive = true
     rewardTargetDays = ''
     rewardTargetTotal = ''
+    showAddReward = true
+  }
+
+  function openEditReward(r: StreakRewardDto) {
+    editingReward = r
+    rewardHabitId = r.habit_id
+    rewardConsecutive = r.is_consecutive
+    rewardTargetDays = String(r.target_days ?? '')
+    rewardTargetTotal = String(r.target_total ?? '')
     showAddReward = true
   }
 
@@ -183,15 +195,28 @@
       return
     }
     try {
-      await habitsApi.createStreakReward(
-        rewardHabitId,
-        rewardConsecutive,
-        parseInt(rewardTargetDays),
-        rewardTargetTotal ? parseInt(rewardTargetTotal) : 0
-      )
+      const isEditing = !!editingReward
+      if (editingReward) {
+        await habitsApi.updateStreakReward(
+          editingReward.id,
+          rewardHabitId,
+          rewardConsecutive,
+          parseInt(rewardTargetDays),
+          rewardTargetTotal ? parseInt(rewardTargetTotal) : 0,
+          editingReward.milestones.map(m => [m.target_days, m.reward_text] as [number, string])
+        )
+      } else {
+        await habitsApi.createStreakReward(
+          rewardHabitId,
+          rewardConsecutive,
+          parseInt(rewardTargetDays),
+          rewardTargetTotal ? parseInt(rewardTargetTotal) : 0
+        )
+      }
       showAddReward = false
+      editingReward = null
       await loadRewards()
-      app.showToast('Reward created')
+      app.showToast(isEditing ? 'Reward updated' : 'Reward created')
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -208,10 +233,20 @@
   }
 
   function openAddGoal() {
+    editingGoal = null
     goalName = ''
     goalDescription = ''
     goalRewardText = ''
     goalDeadline = ''
+    showAddGoal = true
+  }
+
+  function openEditGoal(g: GoalDto) {
+    editingGoal = g
+    goalName = g.name
+    goalDescription = g.description ?? ''
+    goalRewardText = g.reward_text ?? ''
+    goalDeadline = g.deadline ?? ''
     showAddGoal = true
   }
 
@@ -221,10 +256,16 @@
       return
     }
     try {
-      await habitsApi.createGoal(goalName, goalDescription, goalRewardText, goalDeadline)
+      const isEditing = !!editingGoal
+      if (editingGoal) {
+        await habitsApi.updateGoal(editingGoal.id, goalName, goalDescription, goalRewardText, goalDeadline)
+      } else {
+        await habitsApi.createGoal(goalName, goalDescription, goalRewardText, goalDeadline)
+      }
       showAddGoal = false
+      editingGoal = null
       await loadRewards()
-      app.showToast('Goal created')
+      app.showToast(isEditing ? 'Goal updated' : 'Goal created')
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -257,6 +298,26 @@
     } catch (e) {
       app.showToast(String(e), true)
     }
+  }
+
+  async function archiveGoal(id: string) {
+    try {
+      await habitsApi.archiveGoal(id)
+      await loadRewards()
+      app.showToast('Goal archived')
+    } catch (e) {
+      app.showToast(String(e), true)
+    }
+  }
+
+  async function prevHeatmapYear() {
+    heatmapYear--
+    try { heatmap = await habitsApi.fetchHeatmap(heatmapYear) } catch (e) { app.showToast(String(e), true) }
+  }
+
+  async function nextHeatmapYear() {
+    heatmapYear++
+    try { heatmap = await habitsApi.fetchHeatmap(heatmapYear) } catch (e) { app.showToast(String(e), true) }
   }
 
   const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December']
@@ -331,7 +392,18 @@
       <!-- Heatmap placeholder -->
       {#if heatmap}
         <div class="chart-section">
-          <h3>Activity Heatmap ({heatmap.year})</h3>
+          <div class="heatmap-header">
+            <h3>Activity Heatmap</h3>
+            <div class="heatmap-nav">
+              <button class="nav-arrow" aria-label="Previous year" onclick={prevHeatmapYear}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 19l-7-7 7-7"/></svg>
+              </button>
+              <span class="heatmap-year">{heatmapYear}</span>
+              <button class="nav-arrow" aria-label="Next year" onclick={nextHeatmapYear}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg>
+              </button>
+            </div>
+          </div>
           <div class="heatmap">
             {#each heatmap.data as day}
               <div
@@ -410,7 +482,10 @@
                 <span class="reward-habit">{reward.habit_name}</span>
                 <span class="reward-type">{reward.is_consecutive ? 'Consecutive' : 'Accumulative'}</span>
               </div>
-              <button class="icon-btn danger" onclick={() => deleteReward(reward.id)}>Delete</button>
+              <div class="reward-actions">
+                <button class="icon-btn" onclick={() => openEditReward(reward)}>Edit</button>
+                <button class="icon-btn danger" onclick={() => deleteReward(reward.id)}>Delete</button>
+              </div>
             </div>
             <div class="reward-progress">
               Progress: {reward.current_progress} / {reward.target_days ?? reward.target_total ?? '?'} days
@@ -443,7 +518,13 @@
                   <span class="goal-deadline">Due: {goal.deadline}</span>
                 {/if}
               </div>
-              <button class="icon-btn danger" onclick={() => deleteGoal(goal.id)}>Delete</button>
+              <div class="goal-actions">
+                <button class="icon-btn" onclick={() => openEditGoal(goal)}>Edit</button>
+                {#if goal.is_completed}
+                  <button class="icon-btn" onclick={() => archiveGoal(goal.id)}>Archive</button>
+                {/if}
+                <button class="icon-btn danger" onclick={() => deleteGoal(goal.id)}>Delete</button>
+              </div>
             </div>
             {#if goal.description}
               <p class="goal-desc">{goal.description}</p>
@@ -534,7 +615,7 @@
   <div class="modal-backdrop" role="presentation" onclick={() => showAddReward = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddReward = false }}></div>
   <div class="modal-wrapper">
     <div class="modal">
-      <h3>New Streak Reward</h3>
+      <h3>{editingReward ? 'Edit Streak Reward' : 'New Streak Reward'}</h3>
       <div class="form-grid">
         <label>
           Habit
@@ -562,7 +643,7 @@
       <div class="modal-actions">
         <button class="secondary-btn" onclick={() => showAddReward = false}>Cancel</button>
         <button class="primary-btn" onclick={submitReward} disabled={!rewardHabitId || !rewardTargetDays}>
-          Create
+          {editingReward ? 'Update' : 'Create'}
         </button>
       </div>
     </div>
@@ -574,7 +655,7 @@
   <div class="modal-backdrop" role="presentation" onclick={() => showAddGoal = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddGoal = false }}></div>
   <div class="modal-wrapper">
     <div class="modal">
-      <h3>New Goal</h3>
+      <h3>{editingGoal ? 'Edit Goal' : 'New Goal'}</h3>
       <div class="form-grid">
         <label>
           Goal Name
@@ -596,7 +677,7 @@
       <div class="modal-actions">
         <button class="secondary-btn" onclick={() => showAddGoal = false}>Cancel</button>
         <button class="primary-btn" onclick={submitGoal} disabled={!goalName.trim()}>
-          Create
+          {editingGoal ? 'Update' : 'Create'}
         </button>
       </div>
     </div>
@@ -626,8 +707,8 @@
   .grid-header, .grid-row { display: flex; align-items: center; gap: 2px; min-width: max-content; }
   .grid-header { margin-bottom: 4px; }
   .habit-name-col { width: 120px; flex-shrink: 0; font-size: 0.8rem; color: var(--text-secondary); padding: 4px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .habit-name-col.clickable { background: none; border: none; cursor: pointer; color: #ccc; text-align: left; border-radius: 4px; transition: background 0.15s; }
-  .habit-name-col.clickable:hover { background: var(--glass-hover); }
+  .habit-name-col.clickable { background: none; border: none; cursor: pointer; color: var(--text-secondary); text-align: left; border-radius: 4px; transition: background 0.15s; }
+  .habit-name-col.clickable:hover { background: var(--glass-hover); color: var(--text-primary); }
   .day-num { width: 24px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: var(--text-tertiary); }
   .day-cell {
     width: 24px; height: 24px; border-radius: 4px; border: 1px solid var(--glass-border);
@@ -635,17 +716,20 @@
     transition: all 0.15s;
   }
   .day-cell:hover { border-color: var(--glass-border-hover); background: var(--glass-hover); }
-  .day-cell.done { border-color: transparent; box-shadow: 0 0 6px rgba(255,255,255,0.1); }
+  .day-cell.done { border-color: transparent; box-shadow: 0 0 6px var(--accent-glow); }
 
   /* Heatmap */
   .chart-section { margin-bottom: 24px; }
-  .chart-section h3 { font-size: 0.8rem; color: var(--text-tertiary); text-transform: uppercase; margin-bottom: 8px; }
+  .chart-section h3 { font-size: 0.8rem; color: var(--text-tertiary); text-transform: uppercase; margin: 0; }
+  .heatmap-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .heatmap-nav { display: flex; align-items: center; gap: 8px; }
+  .heatmap-year { font-size: 0.85rem; color: var(--text-secondary); min-width: 40px; text-align: center; }
   .heatmap { display: flex; flex-wrap: wrap; gap: 2px; }
   .heatmap-cell { width: 12px; height: 12px; border-radius: 2px; background: var(--glass); }
-  .heatmap-cell.l1 { background: rgba(14, 68, 41, 0.7); }
-  .heatmap-cell.l2 { background: rgba(0, 109, 50, 0.7); }
-  .heatmap-cell.l3 { background: rgba(38, 166, 65, 0.7); }
-  .heatmap-cell.l4 { background: rgba(57, 211, 83, 0.8); box-shadow: 0 0 4px rgba(57, 211, 83, 0.3); }
+  .heatmap-cell.l1 { background: rgba(14, 68, 41, 0.4); }
+  .heatmap-cell.l2 { background: rgba(0, 109, 50, 0.6); }
+  .heatmap-cell.l3 { background: rgba(38, 166, 65, 0.8); }
+  .heatmap-cell.l4 { background: rgba(57, 211, 83, 1.0); box-shadow: 0 0 4px rgba(57, 211, 83, 0.3); }
 
   /* Summary card */
   .summary-card {
@@ -662,8 +746,8 @@
     color: var(--text-secondary); cursor: pointer; padding: 4px 12px; font-size: 0.8rem;
     transition: all 0.15s;
   }
-  .icon-btn:hover { border-color: var(--glass-border-hover); color: #ccc; }
-  .icon-btn.danger:hover { color: var(--danger); border-color: rgba(248, 113, 113, 0.3); }
+  .icon-btn:hover { border-color: var(--glass-border-hover); color: var(--text-primary); }
+  .icon-btn.danger:hover { color: var(--danger); border-color: var(--danger-border); background: var(--danger-bg); }
 
   .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
   .stat { display: flex; flex-direction: column; align-items: center; }
@@ -682,7 +766,7 @@
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
     padding: 16px; grid-column: 1 / -1; box-shadow: var(--glass-glow);
   }
-  .insight { font-size: 0.85rem; color: #aaa; margin: 4px 0; }
+  .insight { font-size: 0.85rem; color: var(--text-secondary); margin: 4px 0; }
 
   /* Rewards */
   .rewards-section h3 { font-size: 0.85rem; color: var(--text-tertiary); text-transform: uppercase; margin: 20px 0 12px; }
@@ -692,6 +776,7 @@
     padding: 16px; margin-bottom: 12px; box-shadow: var(--glass-glow);
   }
   .reward-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+  .reward-actions, .goal-actions { display: flex; gap: 4px; }
   .reward-habit { font-weight: 600; color: var(--text-primary); }
   .reward-type { font-size: 0.75rem; color: var(--text-tertiary); }
   .reward-progress { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; }
@@ -743,10 +828,10 @@
   }
   .modal {
     position: relative;
-    background: linear-gradient(145deg, rgba(26, 26, 31, 0.75) 0%, rgba(20, 20, 24, 0.72) 50%, rgba(17, 17, 21, 0.7) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-lg);
+    background: var(--modal-bg);
+    border: 1px solid var(--modal-border); border-radius: var(--radius-lg);
     padding: 28px; width: 400px; z-index: 101;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    box-shadow: var(--modal-shadow);
   }
   .modal h3 { margin: 0 0 20px; color: var(--text-primary); position: relative; z-index: 10; }
 
@@ -756,7 +841,7 @@
   .form-grid input[type="number"],
   .form-grid input[type="date"] {
     padding: 10px 12px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    background: rgba(0, 0, 0, 0.25); color: var(--text-primary); font-size: 0.9rem;
+    background: var(--select-bg); color: var(--text-primary); font-size: 0.9rem;
     transition: border-color 0.2s, box-shadow 0.2s;
   }
   .form-grid input[type="text"]:focus,
@@ -780,23 +865,23 @@
     cursor: pointer; padding: 0; transition: transform 0.15s, box-shadow 0.15s;
   }
   .color-swatch:hover { transform: scale(1.15); }
-  .color-swatch.selected { border-color: #fff; box-shadow: 0 0 10px rgba(255,255,255,0.2); }
+  .color-swatch.selected { border-color: var(--text-primary); box-shadow: 0 0 10px var(--accent-glow); }
 
   .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; position: relative; z-index: 10; }
 
   .primary-btn {
-    padding: 8px 18px; border: 1px solid rgba(168, 85, 247, 0.3); border-radius: var(--radius-sm);
-    background: rgba(168, 85, 247, 0.2); backdrop-filter: blur(8px);
-    color: #fff; cursor: pointer; font-size: 0.85rem; font-weight: 500;
+    padding: 8px 18px; border: 1px solid var(--accent-border); border-radius: var(--radius-sm);
+    background: var(--accent-bg); backdrop-filter: blur(8px);
+    color: var(--text-on-accent); cursor: pointer; font-size: 0.85rem; font-weight: 500;
     transition: all 0.2s;
   }
-  .primary-btn:hover:not(:disabled) { background: rgba(168, 85, 247, 0.3); box-shadow: 0 0 16px var(--accent-glow); }
+  .primary-btn:hover:not(:disabled) { background: var(--accent-border); box-shadow: 0 0 16px var(--accent-glow); }
   .primary-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   .secondary-btn {
     padding: 8px 18px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    background: none; color: #ccc; cursor: pointer; font-size: 0.85rem;
+    background: none; color: var(--text-secondary); cursor: pointer; font-size: 0.85rem;
     transition: all 0.15s;
   }
-  .secondary-btn:hover { border-color: var(--glass-border-hover); }
+  .secondary-btn:hover { border-color: var(--glass-border-hover); color: var(--text-primary); }
   .secondary-btn.small { padding: 6px 14px; font-size: 0.8rem; }
 </style>

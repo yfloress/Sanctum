@@ -80,8 +80,8 @@
     flex-direction: column;
     width: 220px;
     height: 100vh;
-    background: linear-gradient(180deg, #111116 0%, #0d0d11 100%);
-    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--sidebar-border);
     transition: width 0.25s ease;
     flex-shrink: 0;
   }
@@ -154,8 +154,8 @@
   }
 
   .nav-item.active {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.1);
+    background: var(--nav-active-bg);
+    border-color: var(--nav-active-border);
     color: var(--text-primary);
   }
 
@@ -184,7 +184,7 @@
 
   .lock-btn:hover {
     color: var(--danger);
-    background: rgba(248, 113, 113, 0.08);
-    border-color: rgba(248, 113, 113, 0.15);
+    background: var(--danger-bg);
+    border-color: var(--danger-border);
   }
 </style>

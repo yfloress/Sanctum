@@ -15,6 +15,10 @@
       return startSessionMonitor()
     }
   })
+
+  $effect(() => {
+    document.documentElement.classList.toggle('light-mode', !app.darkMode)
+  })
 </script>
 
 {#if !app.isLoggedIn}
@@ -68,6 +72,63 @@
     --radius-md: 12px;
     --radius-lg: 16px;
     --radius-xl: 20px;
+    --scrollbar-thumb: rgba(255, 255, 255, 0.1);
+    --scrollbar-thumb-hover: rgba(255, 255, 255, 0.18);
+    --select-bg: rgba(0, 0, 0, 0.25);
+    --select-bg-hover: rgba(0, 0, 0, 0.35);
+    --option-bg: #1a1a1a;
+    --sidebar-bg: linear-gradient(180deg, #111116 0%, #0d0d11 100%);
+    --sidebar-border: rgba(255, 255, 255, 0.06);
+    --nav-active-bg: rgba(255, 255, 255, 0.08);
+    --nav-active-border: rgba(255, 255, 255, 0.1);
+    --danger-bg: rgba(248, 113, 113, 0.08);
+    --danger-border: rgba(248, 113, 113, 0.15);
+    --modal-bg: linear-gradient(145deg, rgba(26, 26, 31, 0.9) 0%, rgba(20, 20, 24, 0.85) 50%, rgba(17, 17, 21, 0.8) 100%);
+    --modal-border: rgba(255, 255, 255, 0.1);
+    --modal-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    --accent-bg: rgba(168, 85, 247, 0.2);
+    --accent-border: rgba(168, 85, 247, 0.3);
+    --text-on-accent: #ffffff;
+  }
+
+  :global(.light-mode) {
+    --bg-base: #fdfaf3;
+    --bg-gradient: linear-gradient(135deg, #fdfaf3 0%, #f7f2e1 40%, #eee8d5 100%);
+    --glass: rgba(0, 0, 0, 0.03);
+    --glass-hover: rgba(0, 0, 0, 0.05);
+    --glass-active: rgba(0, 0, 0, 0.08);
+    --glass-elevated: rgba(255, 255, 255, 0.6);
+    --glass-border: rgba(0, 0, 0, 0.08);
+    --glass-border-hover: rgba(0, 0, 0, 0.12);
+    --glass-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    --glass-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.08);
+    --glass-glow: 0 0 0 1px rgba(212, 175, 55, 0.05) inset;
+    --accent: #b8860b;
+    --accent-glow: rgba(184, 134, 11, 0.12);
+    --accent-hover: #996515;
+    --success: #15803d;
+    --danger: #b91c1c;
+    --warning: #b45309;
+    --text-primary: #2d2a24;
+    --text-secondary: #5c574c;
+    --text-tertiary: #8c8678;
+    --scrollbar-thumb: rgba(0, 0, 0, 0.1);
+    --scrollbar-thumb-hover: rgba(0, 0, 0, 0.18);
+    --select-bg: rgba(255, 255, 255, 0.5);
+    --select-bg-hover: rgba(255, 255, 255, 0.7);
+    --option-bg: #fdfaf3;
+    --sidebar-bg: linear-gradient(180deg, #f7f2e1 0%, #eee8d5 100%);
+    --sidebar-border: rgba(0, 0, 0, 0.06);
+    --nav-active-bg: rgba(0, 0, 0, 0.05);
+    --nav-active-border: rgba(0, 0, 0, 0.08);
+    --danger-bg: rgba(220, 38, 38, 0.08);
+    --danger-border: rgba(220, 38, 38, 0.15);
+    --modal-bg: linear-gradient(145deg, rgba(253, 250, 243, 0.95) 0%, rgba(247, 242, 225, 0.9) 50%, rgba(238, 232, 213, 0.85) 100%);
+    --modal-border: rgba(0, 0, 0, 0.08);
+    --modal-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    --accent-bg: rgba(184, 134, 11, 0.15);
+    --accent-border: rgba(184, 134, 11, 0.25);
+    --text-on-accent: #2d2a24;
   }
 
   :global(body) {
@@ -94,24 +155,24 @@
   }
 
   :global(::-webkit-scrollbar-thumb) {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--scrollbar-thumb);
     border-radius: 3px;
   }
 
   :global(::-webkit-scrollbar-thumb:hover) {
-    background: rgba(255, 255, 255, 0.18);
+    background: var(--scrollbar-thumb-hover);
   }
 
   :global(select) {
     padding: 8px 12px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--glass-border);
     border-radius: 8px;
-    background: rgba(0, 0, 0, 0.25);
-    color: #e8eaed;
+    background: var(--select-bg);
+    color: var(--text-primary);
     font-size: 0.9rem;
     cursor: pointer;
     appearance: none;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ccc' stroke-width='2'%3e%3cpath d='M6 9l6 6 6-6'/%3e%3c/svg%3e");
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3e%3cpath d='M6 9l6 6 6-6'/%3e%3c/svg%3e");
     background-repeat: no-repeat;
     background-position: right 8px center;
     background-size: 20px;
@@ -120,19 +181,19 @@
   }
 
   :global(select:hover) {
-    border-color: rgba(255, 255, 255, 0.14);
-    background-color: rgba(0, 0, 0, 0.35);
+    border-color: var(--glass-border-hover);
+    background-color: var(--select-bg-hover);
   }
 
   :global(select:focus) {
-    border-color: #a855f7;
+    border-color: var(--accent);
     outline: none;
-    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.15);
+    box-shadow: 0 0 0 3px var(--accent-glow);
   }
 
   :global(select option) {
-    background: #1a1a1a;
-    color: #e8eaed;
+    background: var(--option-bg);
+    color: var(--text-primary);
   }
 
   :global(.blurred) {
@@ -143,23 +204,23 @@
 
   :global(.glass-btn) {
     padding: 8px 16px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--glass-border);
     border-radius: 10px;
-    background: rgba(255, 255, 255, 0.06);
-    color: #e8eaed;
+    background: var(--glass);
+    color: var(--text-primary);
     font-size: 0.85rem;
     cursor: pointer;
     transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
   }
 
   :global(.glass-btn:hover) {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.18);
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+    background: var(--glass-hover);
+    border-color: var(--glass-border-hover);
+    box-shadow: var(--glass-shadow);
   }
 
   :global(.glass-btn:active) {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--glass-active);
     transform: scale(0.98);
   }
 
@@ -168,8 +229,8 @@
     gap: 4px;
     padding: 4px;
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
     width: fit-content;
   }
 
@@ -178,21 +239,21 @@
     border: 1px solid transparent;
     border-radius: 8px;
     background: transparent;
-    color: #9aa0a6;
+    color: var(--text-secondary);
     font-size: 0.85rem;
     cursor: pointer;
     transition: all 0.2s;
   }
 
   :global(.tab-bar button:hover) {
-    color: #e8eaed;
-    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+    background: var(--glass-hover);
   }
 
   :global(.tab-bar button.active) {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.12);
+    color: var(--text-primary);
+    background: var(--nav-active-bg);
+    border-color: var(--nav-active-border);
   }
 
   .shell {
