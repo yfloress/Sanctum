@@ -39,7 +39,7 @@
       type: 'bar',
       data: data.values,
       barWidth: '50%',
-      itemStyle: { color: '#4f9cf7', borderRadius: [4, 4, 0, 0] },
+      itemStyle: { color: '#a855f7', borderRadius: [4, 4, 0, 0] },
     }],
   })
 </script>

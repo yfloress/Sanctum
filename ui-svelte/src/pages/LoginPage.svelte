@@ -132,7 +132,7 @@
     left: -50%;
     width: 200%;
     height: 200%;
-    background: radial-gradient(ellipse at 30% 20%, rgba(79, 156, 247, 0.06) 0%, transparent 50%),
+    background: radial-gradient(ellipse at 30% 20%, rgba(168, 85, 247, 0.06) 0%, transparent 50%),
                 radial-gradient(ellipse at 70% 80%, rgba(74, 222, 128, 0.04) 0%, transparent 50%);
     animation: auroraShift 20s ease-in-out infinite alternate;
     pointer-events: none;

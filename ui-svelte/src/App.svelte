@@ -42,8 +42,8 @@
 
 <style>
   :global(:root) {
-    --bg-base: #07080f;
-    --bg-gradient: linear-gradient(135deg, #07080f 0%, #0d1117 40%, #101520 100%);
+    --bg-base: #09090f;
+    --bg-gradient: linear-gradient(135deg, #09090f 0%, #0e0b14 40%, #12101a 100%);
     --glass: rgba(255, 255, 255, 0.035);
     --glass-hover: rgba(255, 255, 255, 0.06);
     --glass-active: rgba(255, 255, 255, 0.08);
@@ -55,9 +55,9 @@
     --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
     --glass-shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.45);
     --glass-glow: 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
-    --accent: #4f9cf7;
-    --accent-glow: rgba(79, 156, 247, 0.15);
-    --accent-hover: #6aafff;
+    --accent: #a855f7;
+    --accent-glow: rgba(168, 85, 247, 0.15);
+    --accent-hover: #c084fc;
     --success: #4ade80;
     --danger: #f87171;
     --warning: #fbbf24;
@@ -125,9 +125,9 @@
   }
 
   :global(select:focus) {
-    border-color: #4f9cf7;
+    border-color: #a855f7;
     outline: none;
-    box-shadow: 0 0 0 3px rgba(79, 156, 247, 0.15);
+    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.15);
   }
 
   :global(select option) {

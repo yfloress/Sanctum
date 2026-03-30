@@ -22,9 +22,9 @@
       type: 'radar',
       data: [{
         value: data.values,
-        areaStyle: { color: 'rgba(79, 156, 247, 0.2)' },
-        lineStyle: { color: '#4f9cf7', width: 2 },
-        itemStyle: { color: '#4f9cf7' },
+        areaStyle: { color: 'rgba(168, 85, 247, 0.2)' },
+        lineStyle: { color: '#a855f7', width: 2 },
+        itemStyle: { color: '#a855f7' },
       }],
     }],
   })

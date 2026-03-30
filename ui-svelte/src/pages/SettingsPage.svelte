@@ -486,7 +486,7 @@
     transition: all 0.25s;
   }
   .toggle-switch.on {
-    background: rgba(79, 156, 247, 0.25); border-color: rgba(79, 156, 247, 0.3);
+    background: rgba(168, 85, 247, 0.25); border-color: rgba(168, 85, 247, 0.3);
     box-shadow: 0 0 12px var(--accent-glow);
   }
   .toggle-knob {
@@ -530,12 +530,12 @@
     display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px;
   }
   .primary-btn {
-    padding: 8px 18px; border: 1px solid rgba(79, 156, 247, 0.3); border-radius: var(--radius-sm);
-    background: rgba(79, 156, 247, 0.2); backdrop-filter: blur(8px);
+    padding: 8px 18px; border: 1px solid rgba(168, 85, 247, 0.3); border-radius: var(--radius-sm);
+    background: rgba(168, 85, 247, 0.2); backdrop-filter: blur(8px);
     color: #fff; cursor: pointer; font-size: 0.85rem;
     transition: all 0.2s;
   }
-  .primary-btn:hover:not(:disabled) { background: rgba(79, 156, 247, 0.3); box-shadow: 0 0 16px var(--accent-glow); }
+  .primary-btn:hover:not(:disabled) { background: rgba(168, 85, 247, 0.3); box-shadow: 0 0 16px var(--accent-glow); }
   .primary-btn:disabled, .secondary-btn:disabled {
     opacity: 0.4; cursor: not-allowed;
   }

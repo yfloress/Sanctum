@@ -786,19 +786,19 @@
   }
   .toggle-btn.active {
     background: var(--glass-active); color: var(--text-primary);
-    border-color: rgba(79, 156, 247, 0.3); box-shadow: 0 0 0 1px var(--accent-glow) inset;
+    border-color: rgba(168, 85, 247, 0.3); box-shadow: 0 0 0 1px var(--accent-glow) inset;
   }
 
   .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; position: relative; z-index: 10; }
 
   .primary-btn {
-    padding: 8px 18px; border: 1px solid rgba(79, 156, 247, 0.3); border-radius: var(--radius-sm);
-    background: rgba(79, 156, 247, 0.2); backdrop-filter: blur(8px);
+    padding: 8px 18px; border: 1px solid rgba(168, 85, 247, 0.3); border-radius: var(--radius-sm);
+    background: rgba(168, 85, 247, 0.2); backdrop-filter: blur(8px);
     color: #fff; cursor: pointer; font-size: 0.85rem; font-weight: 500;
     transition: all 0.2s;
   }
   .primary-btn:hover:not(:disabled) {
-    background: rgba(79, 156, 247, 0.3); border-color: rgba(79, 156, 247, 0.5);
+    background: rgba(168, 85, 247, 0.3); border-color: rgba(168, 85, 247, 0.5);
     box-shadow: 0 0 16px var(--accent-glow);
   }
   .primary-btn:disabled { opacity: 0.4; cursor: not-allowed; }

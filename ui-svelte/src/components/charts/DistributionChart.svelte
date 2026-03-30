@@ -8,7 +8,7 @@
 
   let { data }: Props = $props()
 
-  const colors = ['#4f9cf7', '#4ade80', '#fbbf24', '#f87171', '#a78bfa', '#f472b6', '#34d399', '#fb923c', '#60a5fa', '#e879f9']
+  const colors = ['#a855f7', '#4ade80', '#fbbf24', '#f87171', '#a78bfa', '#f472b6', '#34d399', '#fb923c', '#60a5fa', '#e879f9']
 
   let option = $derived({
     backgroundColor: 'transparent',
