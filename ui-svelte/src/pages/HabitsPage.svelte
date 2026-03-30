@@ -27,6 +27,22 @@
   // Rewards tab state
   let rewards = $state<StreakRewardDto[]>([])
   let goals = $state<GoalDto[]>([])
+  let showAddReward = $state(false)
+  let showAddGoal = $state(false)
+  let editingReward = $state<StreakRewardDto | null>(null)
+  let editingGoal = $state<GoalDto | null>(null)
+
+  // Reward form
+  let rewardHabitId = $state('')
+  let rewardConsecutive = $state(true)
+  let rewardTargetDays = $state('')
+  let rewardTargetTotal = $state('')
+
+  // Goal form
+  let goalName = $state('')
+  let goalDescription = $state('')
+  let goalRewardText = $state('')
+  let goalDeadline = $state('')
 
   // History tab state
   let achievements = $state<AchievementDto[]>([])
@@ -153,6 +169,79 @@
       if (selectedHabit?.id === id) { selectedHabit = null; summary = null }
       await load()
       app.showToast('Habit deleted')
+    } catch (e) {
+      app.showToast(String(e), true)
+    }
+  }
+
+  function openAddReward() {
+    editingReward = null
+    rewardHabitId = habitsData?.habits[0]?.id ?? ''
+    rewardConsecutive = true
+    rewardTargetDays = ''
+    rewardTargetTotal = ''
+    showAddReward = true
+  }
+
+  async function submitReward() {
+    if (!rewardHabitId || !rewardTargetDays) {
+      app.showToast('Please fill required fields', true)
+      return
+    }
+    try {
+      await habitsApi.createStreakReward(
+        rewardHabitId,
+        rewardConsecutive,
+        parseInt(rewardTargetDays),
+        rewardTargetTotal ? parseInt(rewardTargetTotal) : 0
+      )
+      showAddReward = false
+      await loadRewards()
+      app.showToast('Reward created')
+    } catch (e) {
+      app.showToast(String(e), true)
+    }
+  }
+
+  async function deleteReward(id: string) {
+    try {
+      await habitsApi.deleteStreakReward(id)
+      await loadRewards()
+      app.showToast('Reward deleted')
+    } catch (e) {
+      app.showToast(String(e), true)
+    }
+  }
+
+  function openAddGoal() {
+    editingGoal = null
+    goalName = ''
+    goalDescription = ''
+    goalRewardText = ''
+    goalDeadline = ''
+    showAddGoal = true
+  }
+
+  async function submitGoal() {
+    if (!goalName) {
+      app.showToast('Please enter a goal name', true)
+      return
+    }
+    try {
+      await habitsApi.createGoal(goalName, goalDescription, goalRewardText, goalDeadline)
+      showAddGoal = false
+      await loadRewards()
+      app.showToast('Goal created')
+    } catch (e) {
+      app.showToast(String(e), true)
+    }
+  }
+
+  async function deleteGoal(id: string) {
+    try {
+      await habitsApi.deleteGoal(id)
+      await loadRewards()
+      app.showToast('Goal deleted')
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -318,15 +407,21 @@
   <!-- REWARDS TAB -->
   {:else if activeTab === 'rewards'}
     <div class="rewards-section">
-      <h3>Streak Rewards</h3>
+      <div class="section-header">
+        <h3>Streak Rewards</h3>
+        <LiquidGlassButton text="New Reward" contrast="dark" onclick={openAddReward} />
+      </div>
       {#if rewards.length === 0}
         <p class="empty">No streak rewards configured.</p>
       {:else}
         {#each rewards as reward}
           <div class="reward-card">
             <div class="reward-header">
-              <span class="reward-habit">{reward.habit_name}</span>
-              <span class="reward-type">{reward.is_consecutive ? 'Consecutive' : 'Accumulative'}</span>
+              <div>
+                <span class="reward-habit">{reward.habit_name}</span>
+                <span class="reward-type">{reward.is_consecutive ? 'Consecutive' : 'Accumulative'}</span>
+              </div>
+              <button class="icon-btn danger" onclick={() => deleteReward(reward.id)}>Delete</button>
             </div>
             <div class="reward-progress">
               Progress: {reward.current_progress} / {reward.target_days ?? reward.target_total ?? '?'} days
@@ -343,27 +438,33 @@
         {/each}
       {/if}
 
-      <h3>Goals</h3>
+      <div class="section-header" style="margin-top: 24px">
+        <h3>Goals</h3>
+        <LiquidGlassButton text="New Goal" contrast="dark" onclick={openAddGoal} />
+      </div>
       {#if goals.length === 0}
         <p class="empty">No goals set.</p>
       {:else}
         {#each goals as goal}
           <div class="goal-card" class:completed={goal.is_completed}>
             <div class="goal-header">
-              <span class="goal-name">{goal.name}</span>
-              {#if goal.deadline}
-                <span class="goal-deadline">Due: {goal.deadline}</span>
-              {/if}
+              <div>
+                <span class="goal-name">{goal.name}</span>
+                {#if goal.deadline}
+                  <span class="goal-deadline">Due: {goal.deadline}</span>
+                {/if}
+              </div>
+              <button class="icon-btn danger" onclick={() => deleteGoal(goal.id)}>Delete</button>
             </div>
             {#if goal.description}
               <p class="goal-desc">{goal.description}</p>
             {/if}
             <div class="checkpoints">
               {#each goal.checkpoints as cp}
-                <button class="checkpoint" class:done={cp.completed} onclick={() => toggleCheckpoint(goal.id, cp.id)}>
-                  <span class="check-icon">{cp.completed ? '[x]' : '[ ]'}</span>
+                <label class="checkpoint">
+                  <input type="checkbox" checked={cp.completed} onchange={() => toggleCheckpoint(goal.id, cp.id)} />
                   <span>{cp.description}</span>
-                </button>
+                </label>
               {/each}
             </div>
             {#if !goal.is_completed}
@@ -434,6 +535,82 @@
         <button class="secondary-btn" onclick={() => showAddHabit = false}>Cancel</button>
         <button class="primary-btn" onclick={submitHabit} disabled={!habitName.trim()}>
           {editingHabit ? 'Update' : 'Create'}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Add Reward Modal -->
+{#if showAddReward}
+  <div class="modal-backdrop" role="presentation" onclick={() => showAddReward = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddReward = false }}></div>
+  <div class="modal-wrapper">
+    <div class="modal">
+      <LiquidGlassBackground />
+      <h3>New Streak Reward</h3>
+      <div class="form-grid">
+        <label>
+          Habit
+          <select bind:value={rewardHabitId}>
+            {#if habitsData?.habits}
+              {#each habitsData.habits as habit}
+                <option value={habit.id}>{habit.name}</option>
+              {/each}
+            {/if}
+          </select>
+        </label>
+        <label>
+          <input type="checkbox" bind:checked={rewardConsecutive} />
+          <span>Consecutive days (vs Accumulative)</span>
+        </label>
+        <label>
+          Target Days
+          <input type="number" bind:value={rewardTargetDays} placeholder="e.g., 7, 30, 100" />
+        </label>
+        <label>
+          Target Total (optional)
+          <input type="number" bind:value={rewardTargetTotal} placeholder="Alternative count metric" />
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button class="secondary-btn" onclick={() => showAddReward = false}>Cancel</button>
+        <button class="primary-btn" onclick={submitReward} disabled={!rewardHabitId || !rewardTargetDays}>
+          Create
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Add Goal Modal -->
+{#if showAddGoal}
+  <div class="modal-backdrop" role="presentation" onclick={() => showAddGoal = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddGoal = false }}></div>
+  <div class="modal-wrapper">
+    <div class="modal">
+      <LiquidGlassBackground />
+      <h3>New Goal</h3>
+      <div class="form-grid">
+        <label>
+          Goal Name
+          <input type="text" bind:value={goalName} placeholder="e.g., Complete certification" />
+        </label>
+        <label>
+          Description
+          <input type="text" bind:value={goalDescription} placeholder="Optional details" />
+        </label>
+        <label>
+          Reward Text
+          <input type="text" bind:value={goalRewardText} placeholder="What you'll reward yourself with" />
+        </label>
+        <label>
+          Deadline (optional)
+          <input type="date" bind:value={goalDeadline} />
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button class="secondary-btn" onclick={() => showAddGoal = false}>Cancel</button>
+        <button class="primary-btn" onclick={submitGoal} disabled={!goalName.trim()}>
+          Create
         </button>
       </div>
     </div>
@@ -546,10 +723,15 @@
   .goal-name { font-weight: 600; color: var(--text-primary); }
   .goal-deadline { font-size: 0.75rem; color: var(--text-secondary); }
   .goal-desc { font-size: 0.85rem; color: var(--text-secondary); margin: 4px 0 8px; }
-  .checkpoints { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
-  .checkpoint { display: flex; align-items: center; gap: 8px; background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px 0; font-size: 0.85rem; text-align: left; transition: color 0.15s; }
-  .checkpoint.done { color: var(--success); }
-  .check-icon { font-family: monospace; }
+  .checkpoints { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .checkpoint { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); cursor: pointer; font-size: 0.85rem; transition: color 0.15s; }
+  .checkpoint input[type="checkbox"] {
+    width: 16px; height: 16px; cursor: pointer; accent-color: var(--success);
+  }
+  .checkpoint input[type="checkbox"]:checked ~ span {
+    color: var(--success);
+    text-decoration: line-through;
+  }
 
   /* Timeline */
   .timeline { display: flex; flex-direction: column; gap: 0; padding-left: 20px; }
@@ -584,12 +766,27 @@
 
   .form-grid { display: flex; flex-direction: column; gap: 14px; position: relative; z-index: 10; }
   .form-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: var(--text-secondary); }
-  .form-grid input {
+  .form-grid input[type="text"],
+  .form-grid input[type="number"],
+  .form-grid input[type="date"] {
     padding: 10px 12px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
     background: rgba(0, 0, 0, 0.25); color: var(--text-primary); font-size: 0.9rem;
     transition: border-color 0.2s, box-shadow 0.2s;
   }
-  .form-grid input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-glow); }
+  .form-grid input[type="text"]:focus,
+  .form-grid input[type="number"]:focus,
+  .form-grid input[type="date"]:focus {
+    border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .form-grid input[type="checkbox"] {
+    width: 18px; height: 18px; cursor: pointer; margin: 0;
+  }
+  .form-grid label:has(input[type="checkbox"]) {
+    flex-direction: row; align-items: center; gap: 8px;
+  }
+  .form-grid label:has(input[type="checkbox"]) span {
+    font-size: 0.9rem; color: var(--text-primary);
+  }
 
   .color-palette { display: flex; gap: 6px; padding: 4px 0; }
   .color-swatch {

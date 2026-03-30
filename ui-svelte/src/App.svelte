@@ -102,6 +102,39 @@
     background: rgba(255, 255, 255, 0.18);
   }
 
+  :global(select) {
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.25);
+    color: #e8eaed;
+    font-size: 0.9rem;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ccc' stroke-width='2'%3e%3cpath d='M6 9l6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 20px;
+    padding-right: 32px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  :global(select:hover) {
+    border-color: rgba(255, 255, 255, 0.14);
+    background-color: rgba(0, 0, 0, 0.35);
+  }
+
+  :global(select:focus) {
+    border-color: #4f9cf7;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(79, 156, 247, 0.15);
+  }
+
+  :global(select option) {
+    background: #1a1a1a;
+    color: #e8eaed;
+  }
+
   .shell {
     display: flex;
     height: 100vh;
