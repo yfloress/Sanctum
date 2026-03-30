@@ -3,6 +3,7 @@
   import { i18n } from '../lib/stores/i18n.svelte'
   import * as vaultApi from '../lib/api/vault'
   import * as settingsApi from '../lib/api/settings'
+  import { open } from '@tauri-apps/plugin-dialog'
 
   let vaultExists = $state<boolean | null>(null)
   let password = $state('')
@@ -53,6 +54,25 @@
 
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Enter') handleSubmit()
+  }
+
+  async function restoreFromBackup() {
+    try {
+      const path = await open({
+        title: 'Select Vault Backup',
+        filters: [{ name: 'Sanctum Backup', extensions: ['db'] }],
+      })
+      if (!path) return
+      loading = true
+      await vaultApi.restoreVault(path as string)
+      vaultExists = await vaultApi.checkVaultExists()
+      error = ''
+      password = ''
+    } catch (e) {
+      error = String(e)
+    } finally {
+      loading = false
+    }
   }
 </script>
 
@@ -110,6 +130,12 @@
             {loading ? 'Authenticating...' : vaultExists ? 'Unlock' : confirmWeak ? 'Confirm Create' : 'Create Vault'}
           </button>
         </div>
+
+        {#if vaultExists}
+          <button class="restore-link" onclick={restoreFromBackup} disabled={loading}>
+            Restore from backup
+          </button>
+        {/if}
       </div>
     {/if}
   </div>
@@ -286,5 +312,13 @@
     border: 1px solid rgba(248, 113, 113, 0.2);
     font-size: 0.825rem;
   }
+
+  .restore-link {
+    background: none; border: none; color: var(--text-tertiary); cursor: pointer;
+    font-size: 0.8rem; text-align: center; padding: 4px; transition: color 0.15s;
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+  .restore-link:hover { color: var(--text-secondary); }
+  .restore-link:disabled { opacity: 0.5; cursor: not-allowed; }
 
 </style>

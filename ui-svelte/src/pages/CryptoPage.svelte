@@ -6,7 +6,8 @@
   import type {
     PortfolioResponse, PortfolioTrendData,
     WalletsResponse, WalletDetailResponse,
-    CryptoTransactionDto
+    CryptoTransactionDto, CoinCatalogDto,
+    IpcSummaryDto
   } from '../lib/types'
 
   type Tab = 'portfolio' | 'wallets' | 'tax'
@@ -30,6 +31,232 @@
   let showAssetDetail = $state(false)
   let assetCoinId = $state('')
   let assetTransactions = $state<CryptoTransactionDto[]>([])
+
+  // Transaction form
+  let showAddTransaction = $state(false)
+  let txMode = $state<'buy' | 'sell' | 'income' | 'fee' | 'transfer' | 'swap'>('buy')
+  let txWalletId = $state('')
+  let txCoinId = $state('')
+  let txSymbol = $state('')
+  let txAmount = $state('')
+  let txPrice = $state('')
+  let txFee = $state('0')
+  let txDate = $state(new Date().toISOString().slice(0, 10))
+  let txNotes = $state('')
+  // Transfer fields
+  let txFromWalletId = $state('')
+  let txToWalletId = $state('')
+  let txFromAmount = $state('')
+  let txToAmount = $state('')
+  // Swap fields
+  let txFromCoinId = $state('')
+  let txFromSymbol = $state('')
+  let txToCoinId = $state('')
+  let txToSymbol = $state('')
+  let txSwapFromAmount = $state('')
+  let txSwapToAmount = $state('')
+
+  // Ticker config
+  let showTickerConfig = $state(false)
+  let tickerIds = $state<string[]>([])
+
+  // Coin catalog modal
+  let showCoinCatalog = $state(false)
+  let catalogSearch = $state('')
+  let customCoinId = $state('')
+  let customCoinName = $state('')
+  let customCoinSymbol = $state('')
+
+  // Coin catalog (shared between transaction form and catalog modal)
+  let coinCatalog = $state<CoinCatalogDto[]>([])
+
+  let filteredCatalog = $derived(
+    catalogSearch.length < 1 ? coinCatalog.slice(0, 100) :
+    coinCatalog.filter(c =>
+      c.symbol.toLowerCase().includes(catalogSearch.toLowerCase()) ||
+      c.name.toLowerCase().includes(catalogSearch.toLowerCase())
+    ).slice(0, 100)
+  )
+
+  async function openTickerConfig() {
+    await loadCoinCatalog()
+    try { tickerIds = await cryptoApi.getActiveTickerIds() } catch (e) { app.showToast(String(e), true) }
+    showTickerConfig = true
+  }
+
+  function toggleTicker(coinId: string) {
+    if (tickerIds.includes(coinId)) {
+      tickerIds = tickerIds.filter(id => id !== coinId)
+    } else {
+      tickerIds = [...tickerIds, coinId]
+    }
+  }
+
+  async function saveTickerConfig() {
+    try {
+      await cryptoApi.saveActiveTickerIds(tickerIds)
+      showTickerConfig = false
+      app.showToast('Ticker config saved')
+    } catch (e) { app.showToast(String(e), true) }
+  }
+
+  async function openCoinCatalog() {
+    await loadCoinCatalog()
+    catalogSearch = ''
+    customCoinId = ''
+    customCoinName = ''
+    customCoinSymbol = ''
+    showCoinCatalog = true
+  }
+
+  async function addCustomCoinSubmit() {
+    if (!customCoinId.trim() || !customCoinName.trim() || !customCoinSymbol.trim()) return
+    try {
+      await cryptoApi.addCustomCoin(customCoinId, customCoinName, customCoinSymbol)
+      coinCatalog = await cryptoApi.getCoinCatalog()
+      customCoinId = ''
+      customCoinName = ''
+      customCoinSymbol = ''
+      app.showToast('Custom coin added')
+    } catch (e) { app.showToast(String(e), true) }
+  }
+
+  async function deleteCustomCoinAction(id: string) {
+    try {
+      await cryptoApi.deleteCustomCoin(id)
+      coinCatalog = await cryptoApi.getCoinCatalog()
+      app.showToast('Custom coin deleted')
+    } catch (e) { app.showToast(String(e), true) }
+  }
+
+  async function toggleFavorite(id: string, current: boolean) {
+    try {
+      await cryptoApi.setFavoriteCoin(id, !current)
+      coinCatalog = await cryptoApi.getCoinCatalog()
+    } catch (e) { app.showToast(String(e), true) }
+  }
+
+  let coinSearch = $state('')
+  let filteredCoins = $derived(
+    coinSearch.length < 1 ? coinCatalog.slice(0, 50) :
+    coinCatalog.filter(c =>
+      c.symbol.toLowerCase().includes(coinSearch.toLowerCase()) ||
+      c.name.toLowerCase().includes(coinSearch.toLowerCase())
+    ).slice(0, 50)
+  )
+
+  async function loadCoinCatalog() {
+    if (coinCatalog.length > 0) return
+    try { coinCatalog = await cryptoApi.getCoinCatalog() } catch (e) { app.showToast(String(e), true) }
+  }
+
+  function openAddTransaction() {
+    txMode = 'buy'
+    txWalletId = walletsData?.simple_list[0]?.id ?? ''
+    txCoinId = ''
+    txSymbol = ''
+    txAmount = ''
+    txPrice = ''
+    txFee = '0'
+    txDate = new Date().toISOString().slice(0, 10)
+    txNotes = ''
+    txFromWalletId = walletsData?.simple_list[0]?.id ?? ''
+    txToWalletId = walletsData?.simple_list[1]?.id ?? walletsData?.simple_list[0]?.id ?? ''
+    txFromAmount = ''
+    txToAmount = ''
+    txFromCoinId = ''
+    txFromSymbol = ''
+    txToCoinId = ''
+    txToSymbol = ''
+    txSwapFromAmount = ''
+    txSwapToAmount = ''
+    coinSearch = ''
+    loadCoinCatalog()
+    showAddTransaction = true
+  }
+
+  function selectCoin(coin: CoinCatalogDto) {
+    txCoinId = coin.id
+    txSymbol = coin.symbol
+    coinSearch = ''
+  }
+
+  function selectFromCoin(coin: CoinCatalogDto) {
+    txFromCoinId = coin.id
+    txFromSymbol = coin.symbol
+    coinSearch = ''
+  }
+
+  function selectToCoin(coin: CoinCatalogDto) {
+    txToCoinId = coin.id
+    txToSymbol = coin.symbol
+    coinSearch = ''
+  }
+
+  async function submitCryptoTransaction() {
+    try {
+      if (txMode === 'transfer') {
+        await cryptoApi.addCryptoTransfer({
+          from_wallet_id: txFromWalletId,
+          to_wallet_id: txToWalletId,
+          coin_id: txCoinId,
+          symbol: txSymbol,
+          from_amount: txFromAmount,
+          to_amount: txToAmount || txFromAmount,
+          fee: txFee,
+          date: txDate,
+          notes: txNotes || undefined,
+        })
+      } else if (txMode === 'swap') {
+        await cryptoApi.addCryptoSwap({
+          wallet_id: txWalletId,
+          from_coin_id: txFromCoinId,
+          from_symbol: txFromSymbol,
+          from_amount: txSwapFromAmount,
+          to_coin_id: txToCoinId,
+          to_symbol: txToSymbol,
+          to_amount: txSwapToAmount,
+          fee: txFee,
+          date: txDate,
+          notes: txNotes || undefined,
+        })
+      } else {
+        await cryptoApi.addCryptoTransaction({
+          wallet_id: txWalletId,
+          coin_id: txCoinId,
+          symbol: txSymbol,
+          transaction_type: txMode,
+          amount: txAmount,
+          price: txPrice,
+          fee: txFee,
+          date: txDate,
+          notes: txNotes || undefined,
+        })
+      }
+      showAddTransaction = false
+      await load()
+      if (activeTab === 'wallets') await loadWallets()
+      app.showToast('Transaction added')
+    } catch (e) {
+      app.showToast(String(e), true)
+    }
+  }
+
+  async function deleteCryptoTx(id: string) {
+    try {
+      await cryptoApi.deleteCryptoTransaction(id)
+      if (showAssetDetail) {
+        assetTransactions = await cryptoApi.getCryptoTransactionsByCoin(assetCoinId)
+      }
+      if (selectedWallet) {
+        selectedWallet = await cryptoApi.fetchWalletDetail(selectedWallet.id)
+      }
+      await load()
+      app.showToast('Transaction deleted')
+    } catch (e) {
+      app.showToast(String(e), true)
+    }
+  }
 
   async function load() {
     loading = true
@@ -100,6 +327,26 @@
     portfolio?.assets.find(a => a.coin_id === assetCoinId)
   )
 
+  // Wallet edit state
+  let editingWalletName = $state('')
+  let showEditWalletName = $state(false)
+
+  async function startEditWalletName() {
+    editingWalletName = selectedWallet?.name ?? ''
+    showEditWalletName = true
+  }
+
+  async function submitWalletName() {
+    if (!selectedWallet || !editingWalletName.trim()) return
+    try {
+      await cryptoApi.updateWalletName(selectedWallet.id, editingWalletName)
+      selectedWallet = await cryptoApi.fetchWalletDetail(selectedWallet.id)
+      await loadWallets()
+      showEditWalletName = false
+      app.showToast('Wallet renamed')
+    } catch (e) { app.showToast(String(e), true) }
+  }
+
   // Tax state
   let taxPeriodId = $state('')
   let taxReport = $state<any>(null)
@@ -110,6 +357,33 @@
   let taxMethod = $state('fifo')
   let taxIncludeSwaps = $state(true)
   let taxIncludeFeeCrypto = $state(false)
+  let taxExcludedWalletIds = $state<string[]>([])
+  let ipcSummary = $state<IpcSummaryDto | null>(null)
+  let ipcFileInput = $state<HTMLInputElement>(null!)
+
+  async function loadIpcSummary() {
+    try { ipcSummary = await cryptoApi.getIpcSummary() } catch (_) { /* ignore */ }
+  }
+
+  async function handleIpcFile(e: Event) {
+    const file = (e.target as HTMLInputElement).files?.[0]
+    if (!file) return
+    try {
+      const content = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = () => reject(reader.error)
+        reader.readAsText(file)
+      })
+      await cryptoApi.importIpcCsv(content)
+      await loadIpcSummary()
+      app.showToast('IPC data imported')
+    } catch (e) {
+      app.showToast(String(e), true)
+    } finally {
+      ipcFileInput.value = ''
+    }
+  }
 
   async function loadTaxSettings() {
     if (!taxPeriodId.trim()) {
@@ -123,6 +397,8 @@
       taxMethod = taxSettings.method
       taxIncludeSwaps = taxSettings.include_swaps
       taxIncludeFeeCrypto = taxSettings.include_fee_crypto
+      taxExcludedWalletIds = taxSettings.excluded_wallet_ids ?? []
+      if (!walletsData) await loadWallets()
     } catch (e) {
       app.showToast(String(e), true)
     } finally {
@@ -143,7 +419,7 @@
         method: taxMethod,
         include_swaps: taxIncludeSwaps,
         include_fee_crypto: taxIncludeFeeCrypto,
-        excluded_wallet_ids: []
+        excluded_wallet_ids: taxExcludedWalletIds
       })
       showTaxSettings = false
       app.showToast('Settings saved')
@@ -194,9 +470,10 @@
 
   $effect(() => { load() })
   $effect(() => { if (activeTab === 'wallets') loadWallets() })
+  $effect(() => { if (activeTab === 'tax') loadIpcSummary() })
 </script>
 
-<div class="page" class:blurred={showAddWallet || showTaxSettings || selectedWallet || showAssetDetail}>
+<div class="page" class:blurred={showAddWallet || showTaxSettings || selectedWallet || showAssetDetail || showAddTransaction || showTickerConfig || showCoinCatalog}>
   <!-- FX Rate Badge -->
   {#if portfolio?.fx_rate}
     <div class="fx-badge">
@@ -212,6 +489,9 @@
   <section class="hero">
     <h2 class="total">{portfolio?.total_value ?? '--'}</h2>
     <p class="label">Portfolio Value</p>
+    {#if portfolio?.last_updated}
+      <p class="last-updated">Last updated: {portfolio.last_updated}</p>
+    {/if}
   </section>
 
   <!-- Tabs -->
@@ -228,6 +508,14 @@
 
   <!-- PORTFOLIO TAB -->
   {:else if activeTab === 'portfolio' && portfolio}
+    <div class="section-header">
+      <span></span>
+      <div class="header-actions">
+        <button class="glass-btn" onclick={openCoinCatalog}>Coins</button>
+        <button class="glass-btn" onclick={openTickerConfig}>Tickers</button>
+        <button class="glass-btn" onclick={openAddTransaction}>New Transaction</button>
+      </div>
+    </div>
     <!-- Stats bar -->
     <div class="stats-bar">
       <div class="stat">
@@ -299,7 +587,10 @@
   {:else if activeTab === 'wallets'}
     <div class="section-header">
       <h3>Wallets</h3>
-      <button class="glass-btn" onclick={() => { showAddWallet = true; walletName = '' }}>Add Wallet</button>
+      <div class="header-actions">
+        <button class="glass-btn" onclick={openAddTransaction}>New Transaction</button>
+        <button class="glass-btn" onclick={() => { showAddWallet = true; walletName = '' }}>Add Wallet</button>
+      </div>
     </div>
 
     {#if (walletsData?.wallets ?? []).length === 0}
@@ -358,6 +649,24 @@
         <!-- Generate report button -->
         <div class="report-actions">
           <button class="glass-btn" onclick={generateTaxReport}>Generate Report</button>
+        </div>
+
+        <!-- IPC Import -->
+        <div class="ipc-section">
+          <div class="setting-row">
+            <div>
+              <span class="ipc-label">IPC Price History</span>
+              {#if ipcSummary && ipcSummary.records_count > 0}
+                <span class="ipc-info">{ipcSummary.records_count} records {ipcSummary.date_range ? `(${ipcSummary.date_range})` : ''}</span>
+              {:else}
+                <span class="ipc-info">No IPC data imported</span>
+              {/if}
+            </div>
+            <div>
+              <input type="file" accept=".csv" class="hidden-input" bind:this={ipcFileInput} onchange={handleIpcFile} />
+              <button class="glass-btn" onclick={() => ipcFileInput.click()}>Import IPC CSV</button>
+            </div>
+          </div>
         </div>
       {/if}
 
@@ -481,6 +790,7 @@
               Jurisdiction
               <select bind:value={taxJurisdiction}>
                 <option value="US">United States</option>
+                <option value="CL">Chile</option>
                 <option value="CA">Canada</option>
                 <option value="UK">United Kingdom</option>
                 <option value="AU">Australia</option>
@@ -504,6 +814,27 @@
               <input type="checkbox" bind:checked={taxIncludeFeeCrypto} />
               Include Fee Crypto as Disposal
             </label>
+            {#if walletsData && walletsData.wallets.length > 0}
+              <div class="exclusion-section">
+                <span class="exclusion-title">Exclude Wallets</span>
+                {#each walletsData.wallets as w}
+                  <label class="exclusion-row">
+                    <input
+                      type="checkbox"
+                      checked={taxExcludedWalletIds.includes(w.id)}
+                      onchange={() => {
+                        if (taxExcludedWalletIds.includes(w.id)) {
+                          taxExcludedWalletIds = taxExcludedWalletIds.filter(x => x !== w.id)
+                        } else {
+                          taxExcludedWalletIds = [...taxExcludedWalletIds, w.id]
+                        }
+                      }}
+                    />
+                    <span>{w.name}</span>
+                  </label>
+                {/each}
+              </div>
+            {/if}
           </div>
           <div class="modal-actions">
             <button class="secondary-btn" onclick={() => showTaxSettings = false}>Cancel</button>
@@ -520,7 +851,15 @@
   <div class="overlay-backdrop" role="presentation" onclick={() => selectedWallet = null} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') selectedWallet = null }}></div>
   <aside class="detail-panel">
     <div class="panel-header">
-      <h3>{selectedWallet.name}</h3>
+      {#if showEditWalletName}
+        <div class="inline-edit">
+          <input type="text" bind:value={editingWalletName} class="edit-name-input" />
+          <button class="icon-btn-sm" onclick={submitWalletName}>Save</button>
+          <button class="icon-btn-sm" onclick={() => showEditWalletName = false}>Cancel</button>
+        </div>
+      {:else}
+        <button class="clickable-name" onclick={startEditWalletName} title="Click to rename">{selectedWallet.name}</button>
+      {/if}
       <button class="close-panel" aria-label="Close panel" onclick={() => selectedWallet = null}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
@@ -548,6 +887,9 @@
           <span class="tx-date">{tx.date}</span>
           <span class="tx-type">{tx.transaction_type}</span>
           <span class="tx-amount">{tx.amount} {tx.symbol}</span>
+          <button class="delete-btn" onclick={() => deleteCryptoTx(tx.id)} aria-label="Delete">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          </button>
         </div>
       {/each}
     {/if}
@@ -585,6 +927,9 @@
           <span class="tx-date">{tx.date}</span>
           <span class="tx-type">{tx.transaction_type}</span>
           <span class="tx-amount">{tx.amount} {tx.symbol}</span>
+          <button class="delete-btn" onclick={() => deleteCryptoTx(tx.id)} aria-label="Delete">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          </button>
         </div>
       {/each}
     {/if}
@@ -616,6 +961,247 @@
       <div class="modal-actions">
         <button class="secondary-btn" onclick={() => showAddWallet = false}>Cancel</button>
         <button class="primary-btn" onclick={submitWallet} disabled={!walletName.trim()}>Create</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Ticker Config Modal -->
+{#if showTickerConfig}
+  <div class="modal-backdrop" role="presentation" onclick={() => showTickerConfig = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showTickerConfig = false }}></div>
+  <div class="modal-wrapper">
+    <div class="modal wide">
+      <h3>Configure Tickers</h3>
+      <p class="modal-desc">Select which coins appear in the ticker bar.</p>
+      <div class="ticker-list">
+        {#each coinCatalog.filter(c => c.is_favorite || tickerIds.includes(c.id)).concat(coinCatalog.filter(c => !c.is_favorite && !tickerIds.includes(c.id))).slice(0, 80) as coin}
+          <label class="ticker-item">
+            <input type="checkbox" checked={tickerIds.includes(coin.id)} onchange={() => toggleTicker(coin.id)} />
+            <span class="ticker-sym">{coin.symbol}</span>
+            <span class="ticker-name">{coin.name}</span>
+          </label>
+        {/each}
+      </div>
+      <div class="modal-actions">
+        <button class="secondary-btn" onclick={() => showTickerConfig = false}>Cancel</button>
+        <button class="primary-btn" onclick={saveTickerConfig}>Save</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Coin Catalog Modal -->
+{#if showCoinCatalog}
+  <div class="modal-backdrop" role="presentation" onclick={() => showCoinCatalog = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showCoinCatalog = false }}></div>
+  <div class="modal-wrapper">
+    <div class="modal wide">
+      <h3>Coin Catalog</h3>
+      <input type="text" class="catalog-search" bind:value={catalogSearch} placeholder="Search coins..." />
+
+      <div class="catalog-list">
+        {#each filteredCatalog as coin}
+          <div class="catalog-item">
+            <button class="fav-btn" class:active={coin.is_favorite} onclick={() => toggleFavorite(coin.id, coin.is_favorite)} aria-label="Toggle favorite">
+              <svg viewBox="0 0 24 24" fill={coin.is_favorite ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="1.5"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"/></svg>
+            </button>
+            <span class="catalog-sym">{coin.symbol}</span>
+            <span class="catalog-name">{coin.name}</span>
+            {#if coin.is_custom}
+              <button class="delete-btn" onclick={() => deleteCustomCoinAction(coin.id)} aria-label="Delete">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            {/if}
+          </div>
+        {/each}
+      </div>
+
+      <div class="custom-coin-form">
+        <span class="form-label">Add Custom Coin</span>
+        <div class="custom-coin-row">
+          <input type="text" bind:value={customCoinId} placeholder="ID" />
+          <input type="text" bind:value={customCoinName} placeholder="Name" />
+          <input type="text" bind:value={customCoinSymbol} placeholder="Symbol" />
+          <button class="primary-btn" onclick={addCustomCoinSubmit} disabled={!customCoinId.trim() || !customCoinSymbol.trim()}>Add</button>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="secondary-btn" onclick={() => showCoinCatalog = false}>Close</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Add Crypto Transaction Modal -->
+{#if showAddTransaction}
+  <div class="modal-backdrop" role="presentation" onclick={() => showAddTransaction = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddTransaction = false }}></div>
+  <div class="modal-wrapper">
+    <div class="modal wide">
+      <h3>New Transaction</h3>
+      <!-- Transaction type selector -->
+      <div class="tx-type-bar">
+        {#each (['buy', 'sell', 'income', 'fee', 'transfer', 'swap'] as const) as t}
+          <button class="tx-type-btn" class:active={txMode === t} onclick={() => txMode = t}>
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        {/each}
+      </div>
+
+      <div class="form-grid">
+        {#if txMode === 'transfer'}
+          <!-- Transfer form -->
+          <label>
+            Coin
+            {#if txCoinId}
+              <div class="coin-selected">
+                <span>{txSymbol}</span>
+                <button class="clear-coin" onclick={() => { txCoinId = ''; txSymbol = '' }}>x</button>
+              </div>
+            {:else}
+              <input type="text" bind:value={coinSearch} placeholder="Search coin..." />
+              {#if coinSearch.length >= 1}
+                <div class="coin-dropdown">
+                  {#each filteredCoins as c}
+                    <button class="coin-option" onclick={() => selectCoin(c)}>{c.symbol} - {c.name}</button>
+                  {/each}
+                </div>
+              {/if}
+            {/if}
+          </label>
+          <label>
+            From Wallet
+            <select bind:value={txFromWalletId}>
+              {#each walletsData?.simple_list ?? [] as w}
+                <option value={w.id}>{w.name}</option>
+              {/each}
+            </select>
+          </label>
+          <label>
+            To Wallet
+            <select bind:value={txToWalletId}>
+              {#each walletsData?.simple_list ?? [] as w}
+                <option value={w.id}>{w.name}</option>
+              {/each}
+            </select>
+          </label>
+          <label>
+            Amount
+            <input type="text" bind:value={txFromAmount} placeholder="0.00" />
+          </label>
+          <label>
+            Received Amount (optional)
+            <input type="text" bind:value={txToAmount} placeholder="Same as sent if empty" />
+          </label>
+        {:else if txMode === 'swap'}
+          <!-- Swap form -->
+          <label>
+            Wallet
+            <select bind:value={txWalletId}>
+              {#each walletsData?.simple_list ?? [] as w}
+                <option value={w.id}>{w.name}</option>
+              {/each}
+            </select>
+          </label>
+          <label>
+            From Coin
+            {#if txFromCoinId}
+              <div class="coin-selected">
+                <span>{txFromSymbol}</span>
+                <button class="clear-coin" onclick={() => { txFromCoinId = ''; txFromSymbol = '' }}>x</button>
+              </div>
+            {:else}
+              <input type="text" bind:value={coinSearch} placeholder="Search coin..." />
+              {#if coinSearch.length >= 1}
+                <div class="coin-dropdown">
+                  {#each filteredCoins as c}
+                    <button class="coin-option" onclick={() => selectFromCoin(c)}>{c.symbol} - {c.name}</button>
+                  {/each}
+                </div>
+              {/if}
+            {/if}
+          </label>
+          <label>
+            From Amount
+            <input type="text" bind:value={txSwapFromAmount} placeholder="0.00" />
+          </label>
+          <label>
+            To Coin
+            {#if txToCoinId}
+              <div class="coin-selected">
+                <span>{txToSymbol}</span>
+                <button class="clear-coin" onclick={() => { txToCoinId = ''; txToSymbol = '' }}>x</button>
+              </div>
+            {:else}
+              <input type="text" bind:value={coinSearch} placeholder="Search coin..." />
+              {#if coinSearch.length >= 1}
+                <div class="coin-dropdown">
+                  {#each filteredCoins as c}
+                    <button class="coin-option" onclick={() => selectToCoin(c)}>{c.symbol} - {c.name}</button>
+                  {/each}
+                </div>
+              {/if}
+            {/if}
+          </label>
+          <label>
+            To Amount
+            <input type="text" bind:value={txSwapToAmount} placeholder="0.00" />
+          </label>
+        {:else}
+          <!-- Buy/Sell/Income/Fee form -->
+          <label>
+            Wallet
+            <select bind:value={txWalletId}>
+              {#each walletsData?.simple_list ?? [] as w}
+                <option value={w.id}>{w.name}</option>
+              {/each}
+            </select>
+          </label>
+          <label>
+            Coin
+            {#if txCoinId}
+              <div class="coin-selected">
+                <span>{txSymbol}</span>
+                <button class="clear-coin" onclick={() => { txCoinId = ''; txSymbol = '' }}>x</button>
+              </div>
+            {:else}
+              <input type="text" bind:value={coinSearch} placeholder="Search coin..." />
+              {#if coinSearch.length >= 1}
+                <div class="coin-dropdown">
+                  {#each filteredCoins as c}
+                    <button class="coin-option" onclick={() => selectCoin(c)}>{c.symbol} - {c.name}</button>
+                  {/each}
+                </div>
+              {/if}
+            {/if}
+          </label>
+          <label>
+            Amount
+            <input type="text" bind:value={txAmount} placeholder="0.00" />
+          </label>
+          <label>
+            Price (per coin)
+            <input type="text" bind:value={txPrice} placeholder="0.00" />
+          </label>
+        {/if}
+
+        <!-- Common fields -->
+        <label>
+          Fee
+          <input type="text" bind:value={txFee} placeholder="0" />
+        </label>
+        <label>
+          Date
+          <input type="date" bind:value={txDate} />
+        </label>
+        <label>
+          Notes (optional)
+          <input type="text" bind:value={txNotes} placeholder="Notes..." />
+        </label>
+      </div>
+
+      <div class="modal-actions">
+        <button class="secondary-btn" onclick={() => showAddTransaction = false}>Cancel</button>
+        <button class="primary-btn" onclick={submitCryptoTransaction}>Add</button>
       </div>
     </div>
   </div>
@@ -940,4 +1526,130 @@
   }
   select:focus { border-color: var(--accent); outline: none; }
   select option { background: #1a1a1a; color: #fff; }
+
+  .header-actions { display: flex; gap: 8px; }
+
+  /* Crypto transaction modal */
+  .modal.wide { width: 480px; }
+  .tx-type-bar { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tx-type-btn {
+    flex: 1; min-width: 60px; padding: 8px 4px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+    background: none; color: var(--text-secondary); cursor: pointer; font-size: 0.8rem; text-align: center;
+    transition: all 0.15s;
+  }
+  .tx-type-btn:hover { border-color: var(--glass-border-hover); color: var(--text-primary); }
+  .tx-type-btn.active {
+    background: var(--glass-active); color: var(--text-primary);
+    border-color: rgba(168, 85, 247, 0.3); box-shadow: 0 0 0 1px var(--accent-glow) inset;
+  }
+  .coin-selected {
+    display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.25); border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+    color: var(--text-primary); font-size: 0.9rem;
+  }
+  .coin-selected span { font-weight: 500; }
+  .clear-coin {
+    background: none; border: none; color: var(--text-tertiary); cursor: pointer; font-size: 0.9rem;
+    margin-left: auto; padding: 0 4px; transition: color 0.15s;
+  }
+  .clear-coin:hover { color: var(--text-primary); }
+  .coin-dropdown {
+    max-height: 150px; overflow-y: auto; border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm); background: rgba(20, 20, 24, 0.95); margin-top: 4px;
+  }
+  .coin-option {
+    display: block; width: 100%; padding: 8px 12px; background: none; border: none;
+    color: var(--text-secondary); cursor: pointer; font-size: 0.8rem; text-align: left;
+    transition: background 0.1s;
+  }
+  .coin-option:hover { background: var(--glass-hover); color: var(--text-primary); }
+
+  .delete-btn {
+    background: none; border: none; color: var(--text-tertiary); cursor: pointer; padding: 2px;
+    display: flex; align-items: center; transition: color 0.15s; flex-shrink: 0;
+  }
+  .delete-btn:hover { color: var(--danger); }
+  .delete-btn svg { width: 14px; height: 14px; }
+
+  .last-updated { font-size: 0.7rem; color: var(--text-tertiary); margin-top: 4px; }
+
+  /* Wallet inline edit */
+  .inline-edit { display: flex; align-items: center; gap: 6px; flex: 1; }
+  .edit-name-input {
+    padding: 6px 10px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+    background: rgba(0, 0, 0, 0.25); color: var(--text-primary); font-size: 0.9rem; flex: 1;
+  }
+  .edit-name-input:focus { border-color: var(--accent); outline: none; }
+  .icon-btn-sm {
+    padding: 4px 10px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+    background: none; color: var(--text-secondary); cursor: pointer; font-size: 0.75rem;
+    transition: all 0.15s;
+  }
+  .icon-btn-sm:hover { border-color: var(--glass-border-hover); color: var(--text-primary); }
+  .clickable-name {
+    cursor: pointer; margin: 0; color: var(--text-primary); background: none; border: none;
+    font-size: 1rem; font-weight: 600; text-align: left; padding: 0;
+  }
+  .clickable-name:hover { color: var(--accent); }
+
+  /* Tax wallet exclusion */
+  .exclusion-section { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+  .exclusion-title { font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; }
+  .exclusion-row {
+    display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-secondary); cursor: pointer;
+  }
+  .exclusion-row input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+
+  /* IPC section */
+  .ipc-section {
+    padding: 16px; background: var(--glass); backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border); border-radius: var(--radius-md);
+    box-shadow: var(--glass-glow);
+  }
+  .setting-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .ipc-label { font-size: 0.85rem; color: var(--text-primary); font-weight: 500; }
+  .ipc-info { font-size: 0.75rem; color: var(--text-tertiary); display: block; margin-top: 2px; }
+  .hidden-input { display: none; }
+
+  /* Ticker config */
+  .modal-desc { font-size: 0.8rem; color: var(--text-tertiary); margin: 0 0 12px; }
+  .ticker-list { max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+  .ticker-item {
+    display: flex; align-items: center; gap: 8px; padding: 6px 8px; cursor: pointer;
+    border-radius: var(--radius-sm); transition: background 0.1s; font-size: 0.85rem;
+  }
+  .ticker-item:hover { background: var(--glass-hover); }
+  .ticker-item input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+  .ticker-sym { font-weight: 600; color: var(--text-primary); min-width: 60px; }
+  .ticker-name { color: var(--text-secondary); }
+
+  /* Coin catalog */
+  .catalog-search {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+    background: rgba(0, 0, 0, 0.25); color: var(--text-primary); font-size: 0.9rem; margin-bottom: 12px;
+    box-sizing: border-box;
+  }
+  .catalog-search:focus { border-color: var(--accent); outline: none; }
+  .catalog-list { max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+  .catalog-item {
+    display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+    border-radius: var(--radius-sm); font-size: 0.85rem;
+  }
+  .catalog-item:hover { background: var(--glass-hover); }
+  .catalog-sym { font-weight: 600; color: var(--text-primary); min-width: 60px; }
+  .catalog-name { color: var(--text-secondary); flex: 1; }
+  .fav-btn {
+    background: none; border: none; cursor: pointer; padding: 2px; display: flex;
+    color: var(--text-tertiary); transition: color 0.15s;
+  }
+  .fav-btn:hover, .fav-btn.active { color: #fbbf24; }
+  .fav-btn svg { width: 16px; height: 16px; }
+  .custom-coin-form { margin-top: 16px; border-top: 1px solid var(--glass-border); padding-top: 12px; }
+  .form-label { font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 8px; }
+  .custom-coin-row { display: flex; gap: 6px; }
+  .custom-coin-row input {
+    flex: 1; padding: 8px 10px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+    background: rgba(0, 0, 0, 0.25); color: var(--text-primary); font-size: 0.8rem;
+  }
+  .custom-coin-row input:focus { border-color: var(--accent); outline: none; }
 </style>

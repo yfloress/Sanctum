@@ -30,6 +30,7 @@
   let showAddAccount = $state(false)
   let showTransfer = $state(false)
   let editingTransaction = $state<TransactionDto | null>(null)
+  let editingAccount = $state<AccountDetailResponse | null>(null)
 
   // Transaction form
   let txAccountId = $state('')
@@ -162,6 +163,7 @@
   }
 
   function openAddAccount() {
+    editingAccount = null
     accName = ''
     accType = 'checking'
     accCurrency = 'USD'
@@ -169,12 +171,31 @@
     showAddAccount = true
   }
 
+  function openEditAccount(detail: AccountDetailResponse) {
+    editingAccount = detail
+    accName = detail.name
+    accType = detail.account_type
+    accCurrency = detail.currency
+    const fullAcc = accountsData?.accounts.find(a => a.id === detail.id)
+    accInitialBalance = fullAcc?.initial_balance ?? '0'
+    showAddAccount = true
+  }
+
   async function submitAccount() {
     try {
-      await financeApi.createAccount(accName, accType, accCurrency, accInitialBalance)
+      const isEditing = !!editingAccount
+      if (editingAccount) {
+        await financeApi.updateAccount(editingAccount.id, accName, accType, accCurrency, accInitialBalance)
+        if (selectedAccount?.id === editingAccount.id) {
+          selectedAccount = await financeApi.fetchAccountDetails(editingAccount.id)
+        }
+      } else {
+        await financeApi.createAccount(accName, accType, accCurrency, accInitialBalance)
+      }
       showAddAccount = false
+      editingAccount = null
       await refreshAccounts()
-      app.showToast('Account created')
+      app.showToast(isEditing ? 'Account updated' : 'Account created')
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -460,6 +481,7 @@
       </div>
     {/if}
     <div class="panel-actions">
+      <button class="primary-btn" onclick={() => openEditAccount(selectedAccount!)}>Edit Account</button>
       <button class="danger-btn" onclick={() => deleteAccount(selectedAccount!.id)}>Delete Account</button>
     </div>
   </aside>
@@ -524,7 +546,7 @@
   <div class="modal-backdrop" role="presentation" onclick={() => showAddAccount = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddAccount = false }}></div>
   <div class="modal-wrapper">
     <div class="modal">
-        <h3>New Account</h3>
+        <h3>{editingAccount ? 'Edit Account' : 'New Account'}</h3>
     <div class="form-grid">
       <label>
         Name
@@ -555,7 +577,9 @@
     </div>
       <div class="modal-actions">
         <button class="secondary-btn" onclick={() => showAddAccount = false}>Cancel</button>
-        <button class="primary-btn" onclick={submitAccount} disabled={!accName.trim()}>Create</button>
+        <button class="primary-btn" onclick={submitAccount} disabled={!accName.trim()}>
+          {editingAccount ? 'Update' : 'Create'}
+        </button>
       </div>
     </div>
   </div>
@@ -742,7 +766,7 @@
   .detail-panel h4 { font-size: 0.8rem; color: var(--text-tertiary); text-transform: uppercase; margin-bottom: 8px; }
   .panel-tx-list { display: flex; flex-direction: column; gap: 4px; }
   .panel-tx { display: grid; grid-template-columns: 70px 1fr auto; gap: 8px; font-size: 0.8rem; padding: 6px 0; border-bottom: 1px solid var(--glass-border); }
-  .panel-actions { margin-top: 24px; }
+  .panel-actions { margin-top: 24px; display: flex; gap: 8px; }
 
   /* Modals */
   .modal-backdrop {
