@@ -196,7 +196,7 @@
   $effect(() => { if (activeTab === 'wallets') loadWallets() })
 </script>
 
-<div class="page" class:blurred={showAddWallet || showTaxSettings}>
+<div class="page" class:blurred={showAddWallet || showTaxSettings || selectedWallet || showAssetDetail}>
   <!-- FX Rate Badge -->
   {#if portfolio?.fx_rate}
     <div class="fx-badge">
@@ -714,12 +714,11 @@
 
 
   /* Detail panel */
-  .overlay-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); z-index: 50; }
+  .overlay-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 50; }
   .detail-panel {
     position: fixed; top: 0; right: 0; bottom: 0; width: 400px;
-    background: var(--glass-elevated); backdrop-filter: var(--glass-blur-heavy);
-    -webkit-backdrop-filter: var(--glass-blur-heavy);
-    border-left: 1px solid var(--glass-border); z-index: 51;
+    background: linear-gradient(180deg, rgba(22, 22, 28, 0.88) 0%, rgba(16, 16, 20, 0.85) 100%);
+    border-left: 1px solid rgba(255, 255, 255, 0.08); z-index: 51;
     padding: 24px; overflow-y: auto;
     box-shadow: var(--glass-shadow-lg);
     animation: slideInRight 0.25s ease;
