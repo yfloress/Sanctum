@@ -2,6 +2,7 @@
   import { app, type Page } from '../lib/stores/app.svelte'
   import * as settingsApi from '../lib/api/settings'
   import * as vaultApi from '../lib/api/vault'
+  import LiquidGlassBackground from './LiquidGlassBackground.svelte'
 
   const navItems: { page: Page, label: string, icon: string }[] = [
     { page: 'dashboard', label: 'Dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
@@ -24,6 +25,7 @@
 </script>
 
 <aside class="sidebar" class:collapsed={app.sidebarCollapsed}>
+  <LiquidGlassBackground />
   <div class="sidebar-header">
     {#if !app.sidebarCollapsed}
       <span class="logo-text">SANCTUM</span>
@@ -46,6 +48,9 @@
         class:active={app.activePage === item.page}
         onclick={() => app.navigate(item.page)}
       >
+        {#if app.activePage === item.page}
+          <LiquidGlassBackground />
+        {/if}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
           <path d={item.icon} />
         </svg>
@@ -74,9 +79,7 @@
     flex-direction: column;
     width: 220px;
     height: 100vh;
-    background: var(--glass);
-    backdrop-filter: var(--glass-blur-heavy);
-    -webkit-backdrop-filter: var(--glass-blur-heavy);
+    position: relative;
     border-right: 1px solid var(--glass-border);
     transition: width 0.25s ease;
     flex-shrink: 0;
@@ -154,10 +157,10 @@
   }
 
   .nav-item.active {
-    background: var(--glass-active);
-    border-color: var(--glass-border);
+    position: relative;
+    border-color: transparent;
     color: var(--text-primary);
-    box-shadow: var(--glass-glow);
+    overflow: hidden;
   }
 
   .nav-item.active::before {
@@ -176,6 +179,13 @@
     width: 20px;
     height: 20px;
     flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  .nav-item span {
+    position: relative;
+    z-index: 1;
   }
 
   .sidebar-footer {
