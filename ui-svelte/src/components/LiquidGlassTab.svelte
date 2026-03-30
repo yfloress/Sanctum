@@ -426,15 +426,15 @@
 	}
 
 	.glassy-button.active {
+		background: linear-gradient(-75deg, rgba(79, 156, 247, 0.08), rgba(79, 156, 247, 0.18), rgba(79, 156, 247, 0.08));
 		box-shadow:
-			inset 0 0.125em 0.125em rgba(254, 254, 254, 0.1),
+			inset 0 0.125em 0.125em rgba(254, 254, 254, 0.05),
 			inset 0 -0.125em 0.125em rgba(0, 0, 0, 0.5),
-			0 0.25em 0.125em -0.125em rgba(254, 254, 254, 0.3),
-			0 0 0.1em 0.25em inset rgba(79, 156, 247, 0.4),
-			0 0 16px rgba(79, 156, 247, 0.3);
+			0 0 0 1px rgba(79, 156, 247, 0.3),
+			0 0 8px rgba(79, 156, 247, 0.15);
 	}
 
 	.glassy-button.active span {
-		color: #4f9cf7;
+		color: #fff;
 	}
 </style>
