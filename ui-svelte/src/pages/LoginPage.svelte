@@ -281,26 +281,36 @@
 
   .card-shimmer {
     position: absolute;
-    top: -1px;
-    left: -1px;
-    right: -1px;
-    bottom: -1px;
+    inset: 0;
     border-radius: inherit;
-    background: linear-gradient(
-      135deg,
-      transparent 40%,
-      rgba(168, 85, 247, 0.08) 50%,
-      transparent 60%
-    );
-    background-size: 200% 200%;
-    animation: shimmer 6s ease-in-out infinite;
+    overflow: hidden;
     pointer-events: none;
-    z-index: -1;
+    z-index: 2;
+  }
+
+  .card-shimmer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(
+      105deg,
+      transparent 0%,
+      transparent 35%,
+      rgba(168, 85, 247, 0.06) 45%,
+      rgba(192, 132, 252, 0.1) 50%,
+      rgba(168, 85, 247, 0.06) 55%,
+      transparent 65%,
+      transparent 100%
+    );
+    animation: shimmer 8s ease-in-out infinite;
   }
 
   @keyframes shimmer {
-    0%, 100% { background-position: 200% 200%; }
-    50% { background-position: 0% 0%; }
+    0% { transform: translateX(-50%); }
+    100% { transform: translateX(500%); }
   }
 
   @keyframes cardEntrance {
