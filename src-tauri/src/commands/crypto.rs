@@ -417,6 +417,30 @@ pub fn get_monitored_coin_ids(
     controller.get_monitored_coin_ids().map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+pub async fn sync_crypto_data(
+    controller: State<'_, Arc<AppController>>,
+) -> Result<String, String> {
+    // 1. Fetch and save crypto prices
+    let ids = controller.get_monitored_coin_ids().map_err(|e| e.to_string())?;
+    if !ids.is_empty() {
+        let prices = controller.get_crypto_prices(ids).await.map_err(|e| e.to_string())?;
+        controller.save_crypto_prices(prices).map_err(|e| e.to_string())?;
+    }
+
+    // 2. Fetch and save CLP rate using backend provider (Mindicador/USDT fallback)
+    match controller.get_usd_fx_rate("CLP".to_string()).await {
+        Ok(rate) => {
+            let _ = controller.save_exchange_rate("USD/CLP".to_string(), rate);
+        }
+        Err(_) => {
+            // Soft failure for fx rate, not fatal
+        }
+    }
+
+    Ok("Synced successfully".to_string())
+}
+
 // ==================== Tax ====================
 
 #[tauri::command]

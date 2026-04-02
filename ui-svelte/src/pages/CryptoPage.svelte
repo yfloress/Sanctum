@@ -131,34 +131,11 @@
         app.showToast('No coins to sync. Configure ticker first.', true)
         return
       }
-      // Fetch prices from CoinGecko
-      const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids.join(',')}&order=market_cap_desc&sparkline=false&price_change_percentage=24h`
-      const resp = await fetch(url)
-      if (!resp.ok) throw new Error(`CoinGecko API error: ${resp.status}`)
-      const data = await resp.json()
-      const prices: CryptoAssetPriceDto[] = data.map((c: any) => ({
-        id: c.id,
-        symbol: c.symbol.toUpperCase(),
-        name: c.name,
-        current_price: c.current_price ?? 0,
-        price_change_percentage_24h: c.price_change_percentage_24h ?? 0,
-        last_updated: c.last_updated ?? new Date().toISOString(),
-      }))
-      await cryptoApi.saveCryptoPrices(prices)
-      // Fetch USD/CLP
-      try {
-        const fxResp = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=usd&vs_currencies=clp')
-        if (fxResp.ok) {
-          const fxData = await fxResp.json()
-          if (fxData.usd?.clp) {
-            await cryptoApi.saveExchangeRate('USD/CLP', fxData.usd.clp)
-            usdClpRate = fxData.usd.clp
-          }
-        }
-      } catch (_) { /* USD/CLP fetch is best-effort */ }
+      
+      const msg = await cryptoApi.syncCryptoData()
       await loadTickerPrices()
       await load()
-      app.showToast('Prices synced')
+      app.showToast(msg)
     } catch (e) {
       app.showToast(String(e), true)
     } finally {

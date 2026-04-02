@@ -161,6 +161,7 @@ pub fn run() {
             commands::crypto::fill_missing_tax_prices,
             commands::crypto::save_exchange_rate,
             commands::crypto::load_exchange_rate,
+            commands::crypto::sync_crypto_data,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

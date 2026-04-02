@@ -155,3 +155,7 @@ export async function saveExchangeRate(pair: string, rate: number): Promise<void
 export async function loadExchangeRate(pair: string): Promise<[number, string] | null> {
   return invoke<[number, string] | null>('load_exchange_rate', { pair })
 }
+
+export async function syncCryptoData(): Promise<string> {
+  return invoke<string>('sync_crypto_data')
+}
