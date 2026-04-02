@@ -62,11 +62,11 @@ pub fn fetch_portfolio(
         PortfolioAssetDto {
             coin_id: a.coin_id.clone(), symbol: sym, name,
             icon_path: None,
-            price: format!("${:.2}", price),
+            price: fmtusd(price),
             price_change_24h: format!("{:.2}%", chg),
             price_change_24h_negative: chg < 0.0,
             amount: trim_amount(a.total_amount),
-            value: format!("${:.2}", val),
+            value: fmtusd(val),
             allocation_pct: alloc,
         }
     }).collect();
@@ -99,12 +99,12 @@ pub fn fetch_portfolio(
         .unwrap_or((0.0, false));
 
     Ok(PortfolioResponse {
-        total_value: format!("${:.2}", total_usd),
-        unrealized_pnl: format!("${:.2}", unrealized_pnl.abs()),
+        total_value: fmtusd(total_usd),
+        unrealized_pnl: fmtusd(unrealized_pnl.abs()),
         unrealized_pnl_negative: unrealized_pnl < 0.0,
-        realized_ytd: format!("${:.2}", realized_ytd_val.abs()),
+        realized_ytd: fmtusd(realized_ytd_val.abs()),
         realized_ytd_negative: realized_ytd_neg,
-        roi: format!("{:.2}%", roi),
+        roi: format!("{:.2}%", if roi == 0.0 { 0.0 } else { roi }),
         roi_negative: roi < 0.0,
         assets: portfolio_assets, distribution,
         fx_rate: build_fx_rate_badge(&controller),
@@ -140,7 +140,7 @@ pub fn fetch_wallets(controller: State<'_, Arc<AppController>>) -> Result<Wallet
         WalletDto {
             id: w.id.clone(), name: w.name.clone(), category: w.category.clone(),
             icon_path: w.icon.clone(),
-            total_value: format!("${:.2}", total),
+            total_value: fmtusd(total),
             assets_count: holdings.len() as i32,
         }
     }).collect();
@@ -167,8 +167,8 @@ pub fn fetch_wallet_detail(
         WalletHoldingDto {
             coin_id: h.coin_id.clone(), symbol: h.symbol.clone(),
             amount: trim_amount(h.total_amount),
-            value: format!("${:.2}", h.total_amount * price),
-            price: format!("${:.2}", price),
+            value: fmtusd(h.total_amount * price),
+            price: fmtusd(price),
         }
     }).collect();
 
@@ -182,7 +182,7 @@ pub fn fetch_wallet_detail(
     Ok(WalletDetailResponse {
         id: wallet.id.clone(), name: wallet.name.clone(),
         category: wallet.category.clone(), icon_path: wallet.icon.clone(),
-        total_value: format!("${:.2}", total),
+        total_value: fmtusd(total),
         holdings: hdtos, transactions: tx_dtos,
     })
 }
@@ -455,19 +455,19 @@ pub fn generate_tax_report(
     Ok(TaxReportDto {
         period_id, jurisdiction: r.jurisdiction, method: r.method,
         disposals_count: r.summary.disposals,
-        total_proceeds: format!("${:.2}", r.summary.total_proceeds),
-        total_cost: format!("${:.2}", r.summary.total_cost),
-        total_gain: format!("${:.2}", r.summary.total_gain.abs()),
+        total_proceeds: fmtusd(r.summary.total_proceeds),
+        total_cost: fmtusd(r.summary.total_cost),
+        total_gain: fmtusd(r.summary.total_gain.abs()),
         total_gain_negative: r.summary.total_gain < 0.0,
-        short_term_gain: r.summary.short_term_gain.map(|v| format!("${:.2}", v)),
-        long_term_gain: r.summary.long_term_gain.map(|v| format!("${:.2}", v)),
+        short_term_gain: r.summary.short_term_gain.map(fmtusd),
+        long_term_gain: r.summary.long_term_gain.map(fmtusd),
         events: r.disposals.into_iter().map(|e| {
             sanctum::ui::dto::crypto::TaxEventDto {
                 tx_id: e.tx_id, date: e.date, coin_id: e.coin_id, symbol: e.symbol,
                 amount: e.amount.to_string(),
-                proceeds: format!("${:.2}", e.proceeds),
-                cost_basis: format!("${:.2}", e.cost_basis),
-                gain: format!("${:.2}", e.gain.abs()),
+                proceeds: fmtusd(e.proceeds),
+                cost_basis: fmtusd(e.cost_basis),
+                gain: fmtusd(e.gain.abs()),
                 gain_negative: e.gain < 0.0,
                 term: e.term, disposal_type: e.disposal_type,
             }
@@ -552,6 +552,12 @@ fn trim_amount(v: f64) -> String {
     format!("{:.8}", v).trim_end_matches('0').trim_end_matches('.').to_string()
 }
 
+/// Format as $X.XX, normalizing -0.0 to 0.0
+fn fmtusd(v: f64) -> String {
+    let n = if v == 0.0 { 0.0 } else { v };
+    format!("${:.2}", n)
+}
+
 fn build_fx_rate_badge(controller: &AppController) -> Option<FxRateDto> {
     let preferred = controller
         .get_app_setting(SETTING_PREFERRED_CURRENCY)
@@ -581,11 +587,11 @@ fn map_crypto_transactions(txs: &[CryptoTransaction], wallets: &[CryptoWallet]) 
         transaction_type: tx.transaction_type.clone(),
         subtype: tx.subtype.clone(),
         amount: tx.amount.to_string(),
-        price: tx.price_per_coin.map(|p| format!("${:.2}", p)).unwrap_or_default(),
-        fee: tx.fee.map(|f| format!("${:.4}", f)).unwrap_or_else(|| "$0.0000".to_string()),
+        price: tx.price_per_coin.map(fmtusd).unwrap_or_default(),
+        fee: tx.fee.map(|f| format!("${:.4}", if f == 0.0 { 0.0 } else { f })).unwrap_or_else(|| "$0.0000".to_string()),
         fee_coin_id: tx.fee_coin_id.clone(),
         fee_amount: tx.fee_amount.map(|f| f.to_string()),
-        value: format!("${:.2}", tx.amount * tx.price_per_coin.unwrap_or(0.0)),
+        value: fmtusd(tx.amount * tx.price_per_coin.unwrap_or(0.0)),
         date: tx.date.clone(), notes: tx.notes.clone(),
         has_related_tx: tx.related_tx_id.is_some(),
     }).collect()
