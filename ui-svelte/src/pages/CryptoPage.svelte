@@ -7,7 +7,7 @@
     PortfolioResponse, PortfolioTrendData,
     WalletsResponse, WalletDetailResponse,
     CryptoTransactionDto, CoinCatalogDto,
-    IpcSummaryDto
+    CryptoAssetPriceDto, IpcSummaryDto
   } from '../lib/types'
 
   type Tab = 'portfolio' | 'wallets' | 'tax'
@@ -56,6 +56,11 @@
   let txSwapFromAmount = $state('')
   let txSwapToAmount = $state('')
 
+  // Ticker bar
+  let tickerPrices = $state<CryptoAssetPriceDto[]>([])
+  let usdClpRate = $state<number | null>(null)
+  let tickerSyncing = $state(false)
+
   // Ticker config
   let showTickerConfig = $state(false)
   let tickerIds = $state<string[]>([])
@@ -97,7 +102,68 @@
       await cryptoApi.saveActiveTickerIds(tickerIds)
       showTickerConfig = false
       app.showToast('Ticker config saved')
+      await loadTickerPrices()
     } catch (e) { app.showToast(String(e), true) }
+  }
+
+  async function loadTickerPrices() {
+    try {
+      const [ids, prices] = await Promise.all([
+        cryptoApi.getActiveTickerIds(),
+        cryptoApi.loadCryptoPrices(),
+      ])
+      tickerIds = ids
+      tickerPrices = prices.filter(p => ids.includes(p.id))
+    } catch (_) { /* silently fail on initial load */ }
+    try {
+      const result = await cryptoApi.loadExchangeRate('USD/CLP')
+      if (result) {
+        usdClpRate = result[0]
+      }
+    } catch (_) { /* ignore */ }
+  }
+
+  async function syncTickerPrices() {
+    tickerSyncing = true
+    try {
+      const ids = await cryptoApi.getMonitoredCoinIds()
+      if (ids.length === 0) {
+        app.showToast('No coins to sync. Configure ticker first.', true)
+        return
+      }
+      // Fetch prices from CoinGecko
+      const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids.join(',')}&order=market_cap_desc&sparkline=false&price_change_percentage=24h`
+      const resp = await fetch(url)
+      if (!resp.ok) throw new Error(`CoinGecko API error: ${resp.status}`)
+      const data = await resp.json()
+      const prices: CryptoAssetPriceDto[] = data.map((c: any) => ({
+        id: c.id,
+        symbol: c.symbol.toUpperCase(),
+        name: c.name,
+        current_price: c.current_price ?? 0,
+        price_change_percentage_24h: c.price_change_percentage_24h ?? 0,
+        last_updated: c.last_updated ?? new Date().toISOString(),
+      }))
+      await cryptoApi.saveCryptoPrices(prices)
+      // Fetch USD/CLP
+      try {
+        const fxResp = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=usd&vs_currencies=clp')
+        if (fxResp.ok) {
+          const fxData = await fxResp.json()
+          if (fxData.usd?.clp) {
+            await cryptoApi.saveExchangeRate('USD/CLP', fxData.usd.clp)
+            usdClpRate = fxData.usd.clp
+          }
+        }
+      } catch (_) { /* USD/CLP fetch is best-effort */ }
+      await loadTickerPrices()
+      await load()
+      app.showToast('Prices synced')
+    } catch (e) {
+      app.showToast(String(e), true)
+    } finally {
+      tickerSyncing = false
+    }
   }
 
   async function openCoinCatalog() {
@@ -468,22 +534,41 @@
     return `/src/assets/crypto-icons/${normalized}.svg`
   }
 
-  $effect(() => { load() })
+  $effect(() => { load(); loadTickerPrices() })
   $effect(() => { if (activeTab === 'wallets') loadWallets() })
   $effect(() => { if (activeTab === 'tax') loadIpcSummary() })
 </script>
 
 <div class="page" class:blurred={showAddWallet || showTaxSettings || selectedWallet || showAssetDetail || showAddTransaction || showTickerConfig || showCoinCatalog}>
-  <!-- FX Rate Badge -->
-  {#if portfolio?.fx_rate}
-    <div class="fx-badge">
-      <span class="fx-pair">{portfolio.fx_rate.pair}</span>
-      <span class="fx-rate">{portfolio.fx_rate.rate}</span>
-      {#if portfolio.fx_rate.is_live}
-        <span class="fx-live"></span>
+  <!-- Ticker Bar -->
+  <div class="ticker-bar">
+    <div class="ticker-fx">
+      <span class="ticker-fx-pair">USD/CLP</span>
+      <span class="ticker-fx-rate">{usdClpRate != null ? `$${usdClpRate.toLocaleString()}` : '--'}</span>
+    </div>
+    <div class="ticker-prices">
+      {#each tickerPrices as coin}
+        <div class="ticker-coin">
+          <span class="ticker-coin-sym">{coin.symbol}</span>
+          <span class="ticker-coin-price">${coin.current_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: coin.current_price < 1 ? 6 : 2 })}</span>
+          <span class="ticker-coin-change" class:negative={coin.price_change_percentage_24h < 0} class:positive={coin.price_change_percentage_24h >= 0}>
+            {coin.price_change_percentage_24h >= 0 ? '+' : ''}{coin.price_change_percentage_24h.toFixed(1)}%
+          </span>
+        </div>
+      {/each}
+      {#if tickerPrices.length === 0}
+        <span class="ticker-empty">No tickers configured</span>
       {/if}
     </div>
-  {/if}
+    <div class="ticker-actions">
+      <button class="ticker-sync-btn" onclick={syncTickerPrices} disabled={tickerSyncing} aria-label="Sync prices" title="Sync prices">
+        <svg class:spinning={tickerSyncing} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m0 0a9 9 0 019-9m-9 9a9 9 0 009 9"/></svg>
+      </button>
+      <button class="ticker-config-btn" onclick={openTickerConfig} aria-label="Configure ticker" title="Configure ticker">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+    </div>
+  </div>
 
   <!-- Hero -->
   <section class="hero">
@@ -1210,17 +1295,52 @@
 <style>
   .page { padding: 24px 32px; max-width: 960px; width: 100%; margin: 0 auto; }
 
-  .fx-badge {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 6px 14px;
+  /* Ticker Bar */
+  .ticker-bar {
+    display: flex; align-items: center; gap: 0;
     background: var(--glass); backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--glass-border);
-    border-radius: 20px; font-size: 0.8rem; margin-bottom: 12px;
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border); border-radius: var(--radius-md);
+    padding: 0; margin-bottom: 16px; overflow: hidden;
     box-shadow: var(--glass-glow);
   }
-  .fx-pair { color: var(--text-secondary); }
-  .fx-rate { color: var(--text-primary); font-weight: 500; }
-  .fx-live { width: 6px; height: 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 6px rgba(74, 222, 128, 0.4); }
+  .ticker-fx {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 16px; border-right: 1px solid var(--glass-border);
+    flex-shrink: 0; white-space: nowrap;
+  }
+  .ticker-fx-pair { font-size: 0.7rem; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; }
+  .ticker-fx-rate { font-size: 0.9rem; font-weight: 600; color: var(--text-primary); }
+  .ticker-prices {
+    display: flex; align-items: center; gap: 0;
+    flex: 1; overflow-x: auto; scrollbar-width: none;
+  }
+  .ticker-prices::-webkit-scrollbar { display: none; }
+  .ticker-coin {
+    display: flex; align-items: center; gap: 6px;
+    padding: 10px 16px; border-right: 1px solid var(--glass-border);
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .ticker-coin-sym { font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); }
+  .ticker-coin-price { font-size: 0.85rem; color: var(--text-primary); font-weight: 500; }
+  .ticker-coin-change { font-size: 0.75rem; }
+  .ticker-coin-change.positive { color: var(--success); }
+  .ticker-coin-change.negative { color: var(--danger); }
+  .ticker-empty { padding: 10px 16px; font-size: 0.8rem; color: var(--text-tertiary); }
+  .ticker-actions {
+    display: flex; align-items: center; gap: 2px;
+    padding: 6px 8px; flex-shrink: 0; border-left: 1px solid var(--glass-border);
+  }
+  .ticker-sync-btn, .ticker-config-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--text-tertiary); padding: 5px; display: flex;
+    border-radius: var(--radius-sm); transition: color 0.15s, background 0.15s;
+  }
+  .ticker-sync-btn:hover, .ticker-config-btn:hover { color: var(--accent); background: var(--accent-bg); }
+  .ticker-sync-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .ticker-sync-btn svg, .ticker-config-btn svg { width: 16px; height: 16px; }
+  .spinning { animation: spin 1s linear infinite; }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
   .hero { text-align: center; padding: 8px 0 20px; }
   .total { font-size: 2.2rem; font-weight: 700; color: var(--text-primary); margin: 0; }
