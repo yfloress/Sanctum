@@ -10,7 +10,7 @@
 
 <div align="center">
 
-[![Español](https://img.shields.io/badge/Idioma-Espa%C3%B1ol-8b5cf6?style=for-the-badge)](README_ES.md) [![Website](https://img.shields.io/badge/🌐_Website-Sanctum-blueviolet?style=for-the-badge)](https://kyronix.codeberg.page/Sanctum/)
+[![Español](https://img.shields.io/badge/En-Espa%C3%B1ol-8b5cf6?style=for-the-badge)](README_ES.md) [![Website](https://img.shields.io/badge/🌐_Website-Sanctum-blueviolet?style=for-the-badge)](https://kyronix.codeberg.page/Sanctum/)
 
 </div>
 
@@ -37,7 +37,7 @@
 
 ---
 
-![Sanctum](assets/sanctum-img.jpg)
+![Sanctum](assets/sanctum-img.png)
 
 ## About
 
