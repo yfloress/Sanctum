@@ -1,5 +1,15 @@
 # Repository Guidelines
 
+## Approach
+- Think before acting. Read existing files before writing code.
+- Be concise in output but thorough in reasoning.
+- Prefer editing over rewriting whole files.
+- Do not re-read files you have already read unless the file may have changed.
+- Test your code before declaring done.
+- No sycophantic openers or closing fluff.
+- Keep solutions simple and direct.
+- User instructions always override this file.
+
 ## Project Intent & Mindset
 Sanctum is a personal finance/crypto/habits app focused on **security and privacy first**.
 Default to safer behavior: minimize data exposure, avoid unnecessary network calls, and
