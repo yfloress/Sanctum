@@ -384,12 +384,12 @@
     return `/src/assets/icons/${icon}.svg`
   }
 
-  function getAccountDisplayIcon(acc: { account_type: string; icon_path: string | null }): string {
+  function getAccountDisplayIcon(acc: { account_type: string; account_type_key?: string; icon_path: string | null }): string {
     if (acc.icon_path) {
       if (acc.icon_path.startsWith('/') || acc.icon_path.startsWith('http')) return acc.icon_path
       return `/src/assets/bank-icons/${acc.icon_path}`
     }
-    return getDefaultIconPath(acc.account_type)
+    return getDefaultIconPath(acc.account_type_key ?? acc.account_type)
   }
 
   $effect(() => { loadAll() })
