@@ -50,7 +50,7 @@
   let editingTransfer = $state<string | null>(null)
   let showIconPicker = $state(false)
 
-  const BANK_ICONS = ['banco-chile', 'banco-estado', 'bank-of-america', 'bci', 'citibank', 'jpmorgan', 'santander', 'wf']
+  const BANK_ICONS = ['banco-chile.svg', 'banco-estado.svg', 'bank-of-america.svg', 'bci.svg', 'citibank.svg', 'jpmorgan.svg', 'santander.svg', 'wf.svg']
 
   // Transaction form
   let txAccountId = $state('')
@@ -539,7 +539,7 @@
         <div class="icon-picker">
           {#each BANK_ICONS as icon}
             <button class="icon-option" onclick={() => changeAccountIcon(icon)} title={icon}>
-              <img src="/src/assets/bank-icons/{icon}.svg" alt={icon} onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
+              <img src="/src/assets/bank-icons/{icon}" alt={icon} onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
             </button>
           {/each}
           <button class="icon-option icon-reset" onclick={() => changeAccountIcon('')} title="Default">
