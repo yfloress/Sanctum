@@ -131,8 +131,34 @@
       await cryptoApi.saveActiveTickerIds(tickerIds)
       showTickerConfig = false
       app.showToast('Ticker config saved')
-      await loadTickerPrices()
+      // Update bar immediately from current tickerIds without re-fetching them from DB
+      await refreshTickerBar()
     } catch (e) { app.showToast(String(e), true) }
+  }
+
+  // Rebuild tickerPrices in the order of current tickerIds.
+  // Uses DB prices when available; falls back to coinCatalog entry (no price) for new coins.
+  async function refreshTickerBar() {
+    try {
+      const prices = await cryptoApi.loadCryptoPrices()
+      const priceMap = new Map(prices.map(p => [p.id, p]))
+      tickerPrices = tickerIds
+        .map(id => {
+          const p = priceMap.get(id)
+          if (p) return p
+          const coin = coinCatalog.find(c => c.id === id)
+          if (!coin) return null
+          return {
+            id: coin.id,
+            symbol: coin.symbol,
+            name: coin.name,
+            current_price: 0,
+            price_change_percentage_24h: 0,
+            last_updated: '',
+          } satisfies CryptoAssetPriceDto
+        })
+        .filter((p): p is CryptoAssetPriceDto => p !== null)
+    } catch (_) { /* ignore */ }
   }
 
   async function loadTickerPrices() {
@@ -142,13 +168,15 @@
         cryptoApi.loadCryptoPrices(),
       ])
       tickerIds = ids
-      tickerPrices = prices.filter(p => ids.includes(p.id))
+      const priceMap = new Map(prices.map(p => [p.id, p]))
+      // Preserve user-configured order
+      tickerPrices = ids
+        .map(id => priceMap.get(id))
+        .filter((p): p is CryptoAssetPriceDto => p !== undefined)
     } catch (_) { /* silently fail on initial load */ }
     try {
       const result = await cryptoApi.loadExchangeRate('USD/CLP')
-      if (result) {
-        usdClpRate = result[0]
-      }
+      if (result) usdClpRate = result[0]
     } catch (_) { /* ignore */ }
   }
 
@@ -162,8 +190,7 @@
       }
       
       const msg = await cryptoApi.syncCryptoData()
-      await loadTickerPrices()
-      await load()
+      await Promise.all([refreshTickerBar(), load()])
       app.showToast(msg)
     } catch (e) {
       app.showToast(String(e), true)
@@ -557,10 +584,14 @@
         <div class="ticker-coin">
           <img src={getCryptoIconPath(coin.symbol)} alt={coin.symbol} class="ticker-coin-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
           <span class="ticker-coin-sym">{coin.symbol}</span>
-          <span class="ticker-coin-price">${coin.current_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: coin.current_price < 1 ? 6 : 2 })}</span>
-          <span class="ticker-coin-change" class:negative={coin.price_change_percentage_24h < 0} class:positive={coin.price_change_percentage_24h >= 0}>
-            {coin.price_change_percentage_24h >= 0 ? '+' : ''}{coin.price_change_percentage_24h.toFixed(1)}%
-          </span>
+          {#if coin.last_updated}
+            <span class="ticker-coin-price">${coin.current_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: coin.current_price < 1 ? 6 : 2 })}</span>
+            <span class="ticker-coin-change" class:negative={coin.price_change_percentage_24h < 0} class:positive={coin.price_change_percentage_24h >= 0}>
+              {coin.price_change_percentage_24h >= 0 ? '+' : ''}{coin.price_change_percentage_24h.toFixed(1)}%
+            </span>
+          {:else}
+            <span class="ticker-coin-price ticker-no-price">--</span>
+          {/if}
         </div>
       {/each}
       {#if tickerPrices.length === 0}
@@ -1366,6 +1397,7 @@
   .ticker-coin-icon { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
   .ticker-coin-sym { font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); }
   .ticker-coin-price { font-size: 0.85rem; color: var(--text-primary); font-weight: 500; }
+  .ticker-no-price { color: var(--text-tertiary); }
   .ticker-coin-change { font-size: 0.75rem; }
   .ticker-coin-change.positive { color: var(--success); }
   .ticker-coin-change.negative { color: var(--danger); }
