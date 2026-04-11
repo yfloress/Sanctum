@@ -50,7 +50,17 @@
   let editingTransfer = $state<string | null>(null)
   let showIconPicker = $state(false)
 
-  const BANK_ICONS = ['banco-chile.svg', 'banco-estado.svg', 'bank-of-america.svg', 'bci.svg', 'citibank.svg', 'jpmorgan.svg', 'santander.svg', 'wf.svg']
+  const ACCOUNT_ICONS: { value: string; src: string; generic: boolean }[] = [
+    ...['banco-chile', 'banco-estado', 'bank-of-america', 'bci', 'citibank', 'jpmorgan', 'santander', 'wf']
+      .map(n => ({ value: `${n}.svg`, src: `/src/assets/bank-icons/${n}.svg`, generic: false })),
+    ...['landmark', 'wallet', 'credit-card', 'piggy-bank', 'briefcase', 'coins', 'banknote', 'building-2']
+      .map(n => ({ value: `/src/assets/icons/${n}.svg`, src: `/src/assets/icons/${n}.svg`, generic: true })),
+  ]
+
+  function isGenericIcon(iconPath: string | null): boolean {
+    if (!iconPath) return true  // fallback is always a generic icon now
+    return iconPath.startsWith('/src/assets/icons/')
+  }
 
   // Transaction form
   let txAccountId = $state('')
@@ -62,9 +72,11 @@
 
   // Account form
   let accName = $state('')
-  let accType = $state('checking')
+  let accType = $state('savings')
   let accCurrency = $state('USD')
   let accInitialBalance = $state('0')
+  let accIcon = $state('')
+  let showAccIconPicker = $state(false)
 
   // Transfer form
   let tfFromId = $state('')
@@ -199,9 +211,11 @@
   function openAddAccount() {
     editingAccount = null
     accName = ''
-    accType = 'checking'
+    accType = 'savings'
     accCurrency = 'USD'
     accInitialBalance = '0'
+    accIcon = ''
+    showAccIconPicker = false
     showAddAccount = true
   }
 
@@ -218,17 +232,26 @@
   async function submitAccount() {
     try {
       const isEditing = !!editingAccount
-      if (editingAccount) {
-        await financeApi.updateAccount(editingAccount.id, accName, accType, accCurrency, accInitialBalance)
-        if (selectedAccount?.id === editingAccount.id) {
-          selectedAccount = await financeApi.fetchAccountDetails(editingAccount.id)
+      if (isEditing) {
+        await financeApi.updateAccount(editingAccount!.id, accName, accType, accCurrency, accInitialBalance)
+        await refreshAccounts()
+        if (selectedAccount?.id === editingAccount!.id) {
+          selectedAccount = await financeApi.fetchAccountDetails(editingAccount!.id)
         }
       } else {
+        const before = new Set(accountsData?.accounts.map(a => a.id) ?? [])
         await financeApi.createAccount(accName, accType, accCurrency, accInitialBalance)
+        await refreshAccounts()
+        if (accIcon) {
+          const newAcc = accountsData?.accounts.find(a => !before.has(a.id))
+          if (newAcc) {
+            await financeApi.updateAccountIcon(newAcc.id, accIcon)
+            await refreshAccounts()
+          }
+        }
       }
       showAddAccount = false
       editingAccount = null
-      await refreshAccounts()
       app.showToast(isEditing ? 'Account updated' : 'Account created')
     } catch (e) {
       app.showToast(String(e), true)
@@ -341,16 +364,16 @@
     txIsExpense ? (categories?.expense ?? []) : (categories?.income ?? [])
   )
 
-  function getBankIconPath(accountType: string): string {
+  function getDefaultIconPath(accountType: string): string {
     const iconMap: { [key: string]: string } = {
-      'checking': 'banco-chile.svg',
-      'savings': 'banco-estado.svg',
-      'credit': 'citibank.svg',
-      'cash': 'wf.svg',
-      'investment': 'jpmorgan.svg',
+      'checking': 'landmark',
+      'savings': 'piggy-bank',
+      'credit': 'credit-card',
+      'cash': 'wallet',
+      'investment': 'briefcase',
     }
-    const icon = iconMap[accountType.toLowerCase()] || 'bank-of-america.svg'
-    return `/src/assets/bank-icons/${icon}`
+    const icon = iconMap[accountType.toLowerCase()] || 'landmark'
+    return `/src/assets/icons/${icon}.svg`
   }
 
   function getAccountDisplayIcon(acc: { account_type: string; icon_path: string | null }): string {
@@ -358,7 +381,7 @@
       if (acc.icon_path.startsWith('/') || acc.icon_path.startsWith('http')) return acc.icon_path
       return `/src/assets/bank-icons/${acc.icon_path}`
     }
-    return getBankIconPath(acc.account_type)
+    return getDefaultIconPath(acc.account_type)
   }
 
   $effect(() => { loadAll() })
@@ -457,7 +480,7 @@
         <div class="account-grid">
           {#each accountsData?.accounts ?? [] as acc}
             <button class="account-card" onclick={() => openAccountDetail(acc.id)}>
-              <img src={getAccountDisplayIcon(acc)} alt={acc.account_type} class="acc-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
+              <img src={getAccountDisplayIcon(acc)} alt={acc.account_type} class="acc-icon" class:themed-icon={isGenericIcon(acc.icon_path)} onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
               <div class="acc-info">
                 <div class="acc-name">{acc.name}</div>
                 <div class="acc-type">{acc.account_type}</div>
@@ -530,16 +553,16 @@
     </div>
     <div class="panel-info">
       <div class="info-row panel-icon-row">
-        <img src={getAccountDisplayIcon(selectedAccount)} alt="" class="panel-acc-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
+        <img src={getAccountDisplayIcon(selectedAccount)} alt="" class="panel-acc-icon" class:themed-icon={isGenericIcon(selectedAccount.icon_path)} onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
         <button class="change-icon-btn" onclick={() => showIconPicker = !showIconPicker}>
           {showIconPicker ? 'Close' : 'Change Icon'}
         </button>
       </div>
       {#if showIconPicker}
         <div class="icon-picker">
-          {#each BANK_ICONS as icon}
-            <button class="icon-option" onclick={() => changeAccountIcon(icon)} title={icon}>
-              <img src="/src/assets/bank-icons/{icon}" alt={icon} onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
+          {#each ACCOUNT_ICONS as icon}
+            <button class="icon-option" onclick={() => changeAccountIcon(icon.value)} title={icon.value}>
+              <img src={icon.src} alt={icon.value} class:themed-icon={icon.generic} onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
             </button>
           {/each}
           <button class="icon-option icon-reset" onclick={() => changeAccountIcon('')} title="Default">
@@ -641,11 +664,9 @@
       <label>
         Type
         <select bind:value={accType}>
-          <option value="checking">Checking</option>
           <option value="savings">Savings</option>
           <option value="credit">Credit Card</option>
           <option value="cash">Cash</option>
-          <option value="investment">Investment</option>
         </select>
       </label>
       <label>
@@ -660,6 +681,30 @@
         Initial Balance
         <input type="text" bind:value={accInitialBalance} placeholder="0.00" />
       </label>
+      {#if !editingAccount}
+        {@const picked = accIcon ? ACCOUNT_ICONS.find(i => i.value === accIcon) : null}
+        <div class="icon-select-label">
+          <span>Icon</span>
+          <button class="change-icon-btn" onclick={() => showAccIconPicker = !showAccIconPicker}>
+            <img
+              src={picked ? picked.src : getDefaultIconPath(accType)}
+              alt=""
+              class="selected-icon-preview"
+              class:themed-icon={picked ? picked.generic : true}
+            />
+            {showAccIconPicker ? 'Close' : 'Change'}
+          </button>
+        </div>
+        {#if showAccIconPicker}
+          <div class="icon-picker">
+            {#each ACCOUNT_ICONS as icon}
+              <button class="icon-option" class:selected={accIcon === icon.value} onclick={() => { accIcon = icon.value; showAccIconPicker = false }} title={icon.value}>
+                <img src={icon.src} alt={icon.value} class:themed-icon={icon.generic} onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
+              </button>
+            {/each}
+          </div>
+        {/if}
+      {/if}
     </div>
       <div class="modal-actions">
         <button class="secondary-btn" onclick={() => showAddAccount = false}>Cancel</button>
@@ -973,4 +1018,16 @@
   .icon-option:hover { border-color: var(--accent-border); background: var(--glass-active); }
   .icon-option img { width: 100%; height: 100%; object-fit: contain; border-radius: 3px; }
   .icon-option.icon-reset svg { width: 18px; height: 18px; color: var(--text-tertiary); }
+
+  /* Generic Lucide icons: invert to white in dark mode, keep dark in light mode */
+  .themed-icon { filter: brightness(0) invert(1); }
+  :global(.light-mode) .themed-icon { filter: brightness(0); }
+
+  /* Icon selector in New Account modal */
+  .icon-select-label {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.8rem; color: var(--text-secondary);
+  }
+  .selected-icon-preview { width: 20px; height: 20px; margin-right: 6px; vertical-align: middle; }
+  .icon-option.selected { border-color: var(--accent-border); background: var(--glass-active); }
 </style>
