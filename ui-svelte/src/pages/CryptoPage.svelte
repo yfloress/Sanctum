@@ -64,6 +64,7 @@
   // Ticker config
   let showTickerConfig = $state(false)
   let tickerIds = $state<string[]>([])
+  let tickerConfigSearch = $state('')
 
   // Coin catalog modal
   let showCoinCatalog = $state(false)
@@ -72,8 +73,20 @@
   let customCoinName = $state('')
   let customCoinSymbol = $state('')
 
-  // Coin catalog (shared between transaction form and catalog modal)
+  // Coin catalog (shared between transaction form, catalog modal and ticker config)
   let coinCatalog = $state<CoinCatalogDto[]>([])
+
+  let tickerConfigAvailable = $derived(
+    coinCatalog.filter(c => !tickerIds.includes(c.id) && (
+      tickerConfigSearch.length < 1 ||
+      c.symbol.toLowerCase().includes(tickerConfigSearch.toLowerCase()) ||
+      c.name.toLowerCase().includes(tickerConfigSearch.toLowerCase())
+    )).slice(0, 60)
+  )
+
+  let tickerConfigActive = $derived(
+    tickerIds.map(id => coinCatalog.find(c => c.id === id)).filter(Boolean) as typeof coinCatalog
+  )
 
   let filteredCatalog = $derived(
     catalogSearch.length < 1 ? coinCatalog.slice(0, 100) :
@@ -86,15 +99,31 @@
   async function openTickerConfig() {
     await loadCoinCatalog()
     try { tickerIds = await cryptoApi.getActiveTickerIds() } catch (e) { app.showToast(String(e), true) }
+    tickerConfigSearch = ''
     showTickerConfig = true
   }
 
-  function toggleTicker(coinId: string) {
-    if (tickerIds.includes(coinId)) {
-      tickerIds = tickerIds.filter(id => id !== coinId)
-    } else {
-      tickerIds = [...tickerIds, coinId]
-    }
+  function addTicker(coinId: string) {
+    if (!tickerIds.includes(coinId)) tickerIds = [...tickerIds, coinId]
+    tickerConfigSearch = ''
+  }
+
+  function removeTicker(coinId: string) {
+    tickerIds = tickerIds.filter(id => id !== coinId)
+  }
+
+  function moveTickerUp(i: number) {
+    if (i === 0) return
+    const arr = [...tickerIds];
+    [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]]
+    tickerIds = arr
+  }
+
+  function moveTickerDown(i: number) {
+    if (i === tickerIds.length - 1) return
+    const arr = [...tickerIds];
+    [arr[i], arr[i + 1]] = [arr[i + 1], arr[i]]
+    tickerIds = arr
   }
 
   async function saveTickerConfig() {
@@ -1038,16 +1067,48 @@
   <div class="modal-wrapper">
     <div class="modal wide">
       <h3>Configure Tickers</h3>
-      <p class="modal-desc">Select which coins appear in the ticker bar.</p>
-      <div class="ticker-list">
-        {#each coinCatalog.filter(c => c.is_favorite || tickerIds.includes(c.id)).concat(coinCatalog.filter(c => !c.is_favorite && !tickerIds.includes(c.id))).slice(0, 80) as coin}
-          <label class="ticker-item">
-            <input type="checkbox" checked={tickerIds.includes(coin.id)} onchange={() => toggleTicker(coin.id)} />
-            <span class="ticker-sym">{coin.symbol}</span>
-            <span class="ticker-name">{coin.name}</span>
-          </label>
+
+      <!-- Active tickers (ordered) -->
+      <p class="tc-section-label">Active — drag to reorder</p>
+      {#if tickerConfigActive.length === 0}
+        <p class="tc-empty">No tickers selected yet.</p>
+      {:else}
+        <div class="tc-active-list">
+          {#each tickerConfigActive as coin, i}
+            <div class="tc-active-item">
+              <div class="tc-order-btns">
+                <button class="tc-arrow" onclick={() => moveTickerUp(i)} disabled={i === 0} aria-label="Move up">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 15l7-7 7 7"/></svg>
+                </button>
+                <button class="tc-arrow" onclick={() => moveTickerDown(i)} disabled={i === tickerIds.length - 1} aria-label="Move down">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 9l-7 7-7-7"/></svg>
+                </button>
+              </div>
+              <img src={getCryptoIconPath(coin.symbol)} alt={coin.symbol} class="tc-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
+              <span class="tc-sym">{coin.symbol}</span>
+              <span class="tc-name">{coin.name}</span>
+              <button class="tc-remove" onclick={() => removeTicker(coin.id)} aria-label="Remove">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+          {/each}
+        </div>
+      {/if}
+
+      <!-- Add coins -->
+      <p class="tc-section-label" style="margin-top: 16px;">Add coins</p>
+      <input type="text" class="catalog-search" bind:value={tickerConfigSearch} placeholder="Search coins..." />
+      <div class="tc-available-list">
+        {#each tickerConfigAvailable as coin}
+          <button class="tc-available-item" onclick={() => addTicker(coin.id)}>
+            <img src={getCryptoIconPath(coin.symbol)} alt={coin.symbol} class="tc-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
+            <span class="tc-sym">{coin.symbol}</span>
+            <span class="tc-name">{coin.name}</span>
+            <svg class="tc-add-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
         {/each}
       </div>
+
       <div class="modal-actions">
         <button class="secondary-btn" onclick={() => showTickerConfig = false}>Cancel</button>
         <button class="primary-btn" onclick={saveTickerConfig}>Save</button>
@@ -1714,17 +1775,46 @@
   .ipc-info { font-size: 0.75rem; color: var(--text-tertiary); display: block; margin-top: 2px; }
   .hidden-input { display: none; }
 
-  /* Ticker config */
-  .modal-desc { font-size: 0.8rem; color: var(--text-tertiary); margin: 0 0 12px; }
-  .ticker-list { max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
-  .ticker-item {
-    display: flex; align-items: center; gap: 8px; padding: 6px 8px; cursor: pointer;
-    border-radius: var(--radius-sm); transition: background 0.1s; font-size: 0.85rem;
+  /* Ticker config modal */
+  .tc-section-label { font-size: 0.7rem; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 8px; }
+  .tc-empty { font-size: 0.85rem; color: var(--text-tertiary); padding: 8px 0; margin: 0; }
+
+  .tc-active-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
+  .tc-active-item {
+    display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+    background: var(--glass); border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm); font-size: 0.85rem;
   }
-  .ticker-item:hover { background: var(--glass-hover); }
-  .ticker-item input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
-  .ticker-sym { font-weight: 600; color: var(--text-primary); min-width: 60px; }
-  .ticker-name { color: var(--text-secondary); }
+  .tc-order-btns { display: flex; flex-direction: column; gap: 1px; flex-shrink: 0; }
+  .tc-arrow {
+    background: none; border: none; cursor: pointer; padding: 1px 3px;
+    color: var(--text-tertiary); display: flex; border-radius: 3px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .tc-arrow:hover:not(:disabled) { color: var(--accent); background: var(--accent-bg); }
+  .tc-arrow:disabled { opacity: 0.2; cursor: not-allowed; }
+  .tc-arrow svg { width: 12px; height: 12px; }
+  .tc-icon { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }
+  .tc-sym { font-weight: 600; color: var(--text-primary); min-width: 52px; }
+  .tc-name { color: var(--text-secondary); flex: 1; font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tc-remove {
+    background: none; border: none; cursor: pointer; padding: 2px;
+    color: var(--text-tertiary); display: flex; flex-shrink: 0;
+    border-radius: 3px; transition: color 0.15s;
+  }
+  .tc-remove:hover { color: var(--danger); }
+  .tc-remove svg { width: 14px; height: 14px; }
+
+  .tc-available-list { max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; }
+  .tc-available-item {
+    display: flex; align-items: center; gap: 8px; padding: 6px 8px; width: 100%;
+    background: none; border: none; cursor: pointer; text-align: left;
+    border-radius: var(--radius-sm); color: inherit; font-size: 0.85rem;
+    transition: background 0.1s;
+  }
+  .tc-available-item:hover { background: var(--glass-hover); }
+  .tc-add-icon { width: 14px; height: 14px; color: var(--accent); flex-shrink: 0; margin-left: auto; opacity: 0; }
+  .tc-available-item:hover .tc-add-icon { opacity: 1; }
 
   /* Coin catalog */
   .catalog-search {
