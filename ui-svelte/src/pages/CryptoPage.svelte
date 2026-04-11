@@ -526,6 +526,7 @@
     <div class="ticker-prices">
       {#each tickerPrices as coin}
         <div class="ticker-coin">
+          <img src={getCryptoIconPath(coin.symbol)} alt={coin.symbol} class="ticker-coin-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
           <span class="ticker-coin-sym">{coin.symbol}</span>
           <span class="ticker-coin-price">${coin.current_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: coin.current_price < 1 ? 6 : 2 })}</span>
           <span class="ticker-coin-change" class:negative={coin.price_change_percentage_24h < 0} class:positive={coin.price_change_percentage_24h >= 0}>
@@ -538,6 +539,9 @@
       {/if}
     </div>
     <div class="ticker-actions">
+      {#if tickerPrices.length > 0 && tickerPrices[0].last_updated}
+        <span class="ticker-updated" title={tickerPrices[0].last_updated}>{new Date(tickerPrices[0].last_updated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+      {/if}
       <button class="ticker-sync-btn" onclick={syncTickerPrices} disabled={tickerSyncing} aria-label="Sync prices" title="Sync prices">
         <svg class:spinning={tickerSyncing} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m0 0a9 9 0 019-9m-9 9a9 9 0 009 9"/></svg>
       </button>
@@ -1298,12 +1302,14 @@
     padding: 10px 16px; border-right: 1px solid var(--glass-border);
     white-space: nowrap; flex-shrink: 0;
   }
+  .ticker-coin-icon { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
   .ticker-coin-sym { font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); }
   .ticker-coin-price { font-size: 0.85rem; color: var(--text-primary); font-weight: 500; }
   .ticker-coin-change { font-size: 0.75rem; }
   .ticker-coin-change.positive { color: var(--success); }
   .ticker-coin-change.negative { color: var(--danger); }
   .ticker-empty { padding: 10px 16px; font-size: 0.8rem; color: var(--text-tertiary); }
+  .ticker-updated { font-size: 0.65rem; color: var(--text-tertiary); white-space: nowrap; }
   .ticker-actions {
     display: flex; align-items: center; gap: 2px;
     padding: 6px 8px; flex-shrink: 0; border-left: 1px solid var(--glass-border);
