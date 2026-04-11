@@ -72,11 +72,12 @@
 
   // Account form
   let accName = $state('')
-  let accType = $state('savings')
+  let accType = $state('bank')
   let accCurrency = $state('USD')
   let accInitialBalance = $state('0')
   let accIcon = $state('')
   let showAccIconPicker = $state(false)
+  let pickedIcon = $derived(accIcon ? (ACCOUNT_ICONS.find(i => i.value === accIcon) ?? null) : null)
 
   // Transfer form
   let tfFromId = $state('')
@@ -211,7 +212,7 @@
   function openAddAccount() {
     editingAccount = null
     accName = ''
-    accType = 'savings'
+    accType = 'bank'
     accCurrency = 'USD'
     accInitialBalance = '0'
     accIcon = ''
@@ -366,11 +367,12 @@
 
   function getDefaultIconPath(accountType: string): string {
     const iconMap: { [key: string]: string } = {
-      'checking': 'landmark',
       'savings': 'piggy-bank',
       'credit': 'credit-card',
+      'credit_card': 'credit-card',
       'cash': 'wallet',
-      'investment': 'briefcase',
+      'bank': 'landmark',
+      'other': 'coins',
     }
     const icon = iconMap[accountType.toLowerCase()] || 'landmark'
     return `/src/assets/icons/${icon}.svg`
@@ -664,9 +666,11 @@
       <label>
         Type
         <select bind:value={accType}>
+          <option value="bank">Bank</option>
           <option value="savings">Savings</option>
           <option value="credit">Credit Card</option>
           <option value="cash">Cash</option>
+          <option value="other">Other</option>
         </select>
       </label>
       <label>
@@ -682,15 +686,14 @@
         <input type="text" bind:value={accInitialBalance} placeholder="0.00" />
       </label>
       {#if !editingAccount}
-        {@const picked = accIcon ? ACCOUNT_ICONS.find(i => i.value === accIcon) : null}
         <div class="icon-select-label">
           <span>Icon</span>
           <button class="change-icon-btn" onclick={() => showAccIconPicker = !showAccIconPicker}>
             <img
-              src={picked ? picked.src : getDefaultIconPath(accType)}
+              src={pickedIcon ? pickedIcon.src : getDefaultIconPath(accType)}
               alt=""
               class="selected-icon-preview"
-              class:themed-icon={picked ? picked.generic : true}
+              class:themed-icon={pickedIcon ? pickedIcon.generic : true}
             />
             {showAccIconPicker ? 'Close' : 'Change'}
           </button>
