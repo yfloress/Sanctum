@@ -219,12 +219,6 @@
     } catch (e) { app.showToast(String(e), true) }
   }
 
-  async function toggleFavorite(id: string, current: boolean) {
-    try {
-      await cryptoApi.setFavoriteCoin(id, !current)
-      coinCatalog = await cryptoApi.getCoinCatalog()
-    } catch (e) { app.showToast(String(e), true) }
-  }
 
   let coinSearch = $state('')
   let filteredCoins = $derived(
@@ -628,7 +622,6 @@
     <div class="section-header">
       <span></span>
       <div class="header-actions">
-        <button class="glass-btn" onclick={() => { openTickerConfig('coins') }}>Coins</button>
         <button class="glass-btn" onclick={openAddTransaction}>New Transaction</button>
       </div>
     </div>
@@ -1145,9 +1138,7 @@
         <div class="catalog-list">
           {#each filteredCatalog as coin}
             <div class="catalog-item">
-              <button class="fav-btn" class:active={coin.is_favorite} onclick={() => toggleFavorite(coin.id, coin.is_favorite)} aria-label="Toggle favorite">
-                <svg viewBox="0 0 24 24" fill={coin.is_favorite ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="1.5"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"/></svg>
-              </button>
+              <img src={getCryptoIconPath(coin.symbol)} alt={coin.symbol} class="catalog-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
               <span class="catalog-sym">{coin.symbol}</span>
               <span class="catalog-name">{coin.name}</span>
               {#if coin.is_custom}
@@ -1860,14 +1851,9 @@
     border-radius: var(--radius-sm); font-size: 0.85rem;
   }
   .catalog-item:hover { background: var(--glass-hover); }
-  .catalog-sym { font-weight: 600; color: var(--text-primary); min-width: 60px; }
+  .catalog-icon { width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; }
+  .catalog-sym { font-weight: 600; color: var(--text-primary); min-width: 56px; }
   .catalog-name { color: var(--text-secondary); flex: 1; }
-  .fav-btn {
-    background: none; border: none; cursor: pointer; padding: 2px; display: flex;
-    color: var(--text-tertiary); transition: color 0.15s;
-  }
-  .fav-btn:hover, .fav-btn.active { color: #fbbf24; }
-  .fav-btn svg { width: 16px; height: 16px; }
   .custom-coin-form { margin-top: 16px; border-top: 1px solid var(--glass-border); padding-top: 12px; display: flex; flex-direction: column; gap: 6px; }
   .form-label { font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 2px; }
   .custom-coin-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
