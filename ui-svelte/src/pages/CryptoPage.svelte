@@ -61,13 +61,11 @@
   let usdClpRate = $state<number | null>(null)
   let tickerSyncing = $state(false)
 
-  // Ticker config
+  // Ticker config (with Coins tab)
   let showTickerConfig = $state(false)
+  let tickerConfigTab = $state<'ticker' | 'coins'>('ticker')
   let tickerIds = $state<string[]>([])
   let tickerConfigSearch = $state('')
-
-  // Coin catalog modal
-  let showCoinCatalog = $state(false)
   let catalogSearch = $state('')
   let customCoinId = $state('')
   let customCoinName = $state('')
@@ -96,10 +94,12 @@
     ).slice(0, 100)
   )
 
-  async function openTickerConfig() {
+  async function openTickerConfig(tab: 'ticker' | 'coins' = 'ticker') {
     await loadCoinCatalog()
     try { tickerIds = await cryptoApi.getActiveTickerIds() } catch (e) { app.showToast(String(e), true) }
     tickerConfigSearch = ''
+    catalogSearch = ''
+    tickerConfigTab = tab
     showTickerConfig = true
   }
 
@@ -197,15 +197,6 @@
     } finally {
       tickerSyncing = false
     }
-  }
-
-  async function openCoinCatalog() {
-    await loadCoinCatalog()
-    catalogSearch = ''
-    customCoinId = ''
-    customCoinName = ''
-    customCoinSymbol = ''
-    showCoinCatalog = true
   }
 
   async function addCustomCoinSubmit() {
@@ -572,7 +563,7 @@
   $effect(() => { if (activeTab === 'tax') loadIpcSummary() })
 </script>
 
-<div class="page" class:blurred={showAddWallet || showTaxSettings || selectedWallet || showAssetDetail || showAddTransaction || showTickerConfig || showCoinCatalog}>
+<div class="page" class:blurred={showAddWallet || showTaxSettings || selectedWallet || showAssetDetail || showAddTransaction || showTickerConfig}>
   <!-- Ticker Bar -->
   <div class="ticker-bar">
     <div class="ticker-fx">
@@ -605,7 +596,7 @@
       <button class="ticker-sync-btn" onclick={syncTickerPrices} disabled={tickerSyncing} aria-label="Sync prices" title="Sync prices">
         <svg class:spinning={tickerSyncing} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m0 0a9 9 0 019-9m-9 9a9 9 0 009 9"/></svg>
       </button>
-      <button class="ticker-config-btn" onclick={openTickerConfig} aria-label="Configure ticker" title="Configure ticker">
+      <button class="ticker-config-btn" onclick={() => openTickerConfig()} aria-label="Configure ticker" title="Configure ticker">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
       </button>
     </div>
@@ -637,7 +628,7 @@
     <div class="section-header">
       <span></span>
       <div class="header-actions">
-        <button class="glass-btn" onclick={openCoinCatalog}>Coins</button>
+        <button class="glass-btn" onclick={() => { openTickerConfig('coins') }}>Coins</button>
         <button class="glass-btn" onclick={openAddTransaction}>New Transaction</button>
       </div>
     </div>
@@ -1091,102 +1082,99 @@
   </div>
 {/if}
 
-<!-- Ticker Config Modal -->
+<!-- Ticker Config / Coins Modal -->
 {#if showTickerConfig}
   <div class="modal-backdrop" role="presentation" onclick={() => showTickerConfig = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showTickerConfig = false }}></div>
   <div class="modal-wrapper">
     <div class="modal wide">
-      <h3>Configure Tickers</h3>
+      <!-- Tab bar -->
+      <div class="cfg-tabs">
+        <button class="cfg-tab" class:active={tickerConfigTab === 'ticker'} onclick={() => tickerConfigTab = 'ticker'}>Ticker</button>
+        <button class="cfg-tab" class:active={tickerConfigTab === 'coins'} onclick={() => tickerConfigTab = 'coins'}>Coins</button>
+      </div>
 
-      <!-- Active tickers (ordered) -->
-      <p class="tc-section-label">Active — drag to reorder</p>
-      {#if tickerConfigActive.length === 0}
-        <p class="tc-empty">No tickers selected yet.</p>
-      {:else}
-        <div class="tc-active-list">
-          {#each tickerConfigActive as coin, i}
-            <div class="tc-active-item">
-              <div class="tc-order-btns">
-                <button class="tc-arrow" onclick={() => moveTickerUp(i)} disabled={i === 0} aria-label="Move up">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 15l7-7 7 7"/></svg>
-                </button>
-                <button class="tc-arrow" onclick={() => moveTickerDown(i)} disabled={i === tickerIds.length - 1} aria-label="Move down">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 9l-7 7-7-7"/></svg>
+      {#if tickerConfigTab === 'ticker'}
+        <!-- Active tickers (ordered) -->
+        <p class="tc-section-label">Active — use arrows to reorder</p>
+        {#if tickerConfigActive.length === 0}
+          <p class="tc-empty">No tickers selected yet.</p>
+        {:else}
+          <div class="tc-active-list">
+            {#each tickerConfigActive as coin, i}
+              <div class="tc-active-item">
+                <div class="tc-order-btns">
+                  <button class="tc-arrow" onclick={() => moveTickerUp(i)} disabled={i === 0} aria-label="Move up">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 15l7-7 7 7"/></svg>
+                  </button>
+                  <button class="tc-arrow" onclick={() => moveTickerDown(i)} disabled={i === tickerIds.length - 1} aria-label="Move down">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 9l-7 7-7-7"/></svg>
+                  </button>
+                </div>
+                <img src={getCryptoIconPath(coin.symbol)} alt={coin.symbol} class="tc-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
+                <span class="tc-sym">{coin.symbol}</span>
+                <span class="tc-name">{coin.name}</span>
+                <button class="tc-remove" onclick={() => removeTicker(coin.id)} aria-label="Remove">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
               </div>
+            {/each}
+          </div>
+        {/if}
+
+        <p class="tc-section-label" style="margin-top: 16px;">Add coins</p>
+        <input type="text" class="catalog-search" bind:value={tickerConfigSearch} placeholder="Search coins..." />
+        <div class="tc-available-list">
+          {#each tickerConfigAvailable as coin}
+            <button class="tc-available-item" onclick={() => addTicker(coin.id)}>
               <img src={getCryptoIconPath(coin.symbol)} alt={coin.symbol} class="tc-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
               <span class="tc-sym">{coin.symbol}</span>
               <span class="tc-name">{coin.name}</span>
-              <button class="tc-remove" onclick={() => removeTicker(coin.id)} aria-label="Remove">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+              <svg class="tc-add-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+          {/each}
+        </div>
+
+        <div class="modal-actions">
+          <button class="secondary-btn" onclick={() => showTickerConfig = false}>Cancel</button>
+          <button class="primary-btn" onclick={saveTickerConfig}>Save</button>
+        </div>
+
+      {:else}
+        <!-- Coins tab -->
+        <input type="text" class="catalog-search" bind:value={catalogSearch} placeholder="Search coins..." />
+        <div class="catalog-list">
+          {#each filteredCatalog as coin}
+            <div class="catalog-item">
+              <button class="fav-btn" class:active={coin.is_favorite} onclick={() => toggleFavorite(coin.id, coin.is_favorite)} aria-label="Toggle favorite">
+                <svg viewBox="0 0 24 24" fill={coin.is_favorite ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="1.5"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"/></svg>
               </button>
+              <span class="catalog-sym">{coin.symbol}</span>
+              <span class="catalog-name">{coin.name}</span>
+              {#if coin.is_custom}
+                <button class="delete-btn" onclick={() => deleteCustomCoinAction(coin.id)} aria-label="Delete">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              {/if}
             </div>
           {/each}
         </div>
-      {/if}
 
-      <!-- Add coins -->
-      <p class="tc-section-label" style="margin-top: 16px;">Add coins</p>
-      <input type="text" class="catalog-search" bind:value={tickerConfigSearch} placeholder="Search coins..." />
-      <div class="tc-available-list">
-        {#each tickerConfigAvailable as coin}
-          <button class="tc-available-item" onclick={() => addTicker(coin.id)}>
-            <img src={getCryptoIconPath(coin.symbol)} alt={coin.symbol} class="tc-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
-            <span class="tc-sym">{coin.symbol}</span>
-            <span class="tc-name">{coin.name}</span>
-            <svg class="tc-add-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-          </button>
-        {/each}
-      </div>
-
-      <div class="modal-actions">
-        <button class="secondary-btn" onclick={() => showTickerConfig = false}>Cancel</button>
-        <button class="primary-btn" onclick={saveTickerConfig}>Save</button>
-      </div>
-    </div>
-  </div>
-{/if}
-
-<!-- Coin Catalog Modal -->
-{#if showCoinCatalog}
-  <div class="modal-backdrop" role="presentation" onclick={() => showCoinCatalog = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showCoinCatalog = false }}></div>
-  <div class="modal-wrapper">
-    <div class="modal wide">
-      <h3>Coin Catalog</h3>
-      <input type="text" class="catalog-search" bind:value={catalogSearch} placeholder="Search coins..." />
-
-      <div class="catalog-list">
-        {#each filteredCatalog as coin}
-          <div class="catalog-item">
-            <button class="fav-btn" class:active={coin.is_favorite} onclick={() => toggleFavorite(coin.id, coin.is_favorite)} aria-label="Toggle favorite">
-              <svg viewBox="0 0 24 24" fill={coin.is_favorite ? 'currentColor' : 'none'} stroke="currentColor" stroke-width="1.5"><path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"/></svg>
-            </button>
-            <span class="catalog-sym">{coin.symbol}</span>
-            <span class="catalog-name">{coin.name}</span>
-            {#if coin.is_custom}
-              <button class="delete-btn" onclick={() => deleteCustomCoinAction(coin.id)} aria-label="Delete">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 18L18 6M6 6l12 12"/></svg>
-              </button>
-            {/if}
+        <div class="custom-coin-form">
+          <span class="form-label">Add Custom Coin</span>
+          <div class="custom-coin-row">
+            <input type="text" bind:value={customCoinId} placeholder="ID" />
+            <input type="text" bind:value={customCoinName} placeholder="Name" />
           </div>
-        {/each}
-      </div>
-
-      <div class="custom-coin-form">
-        <span class="form-label">Add Custom Coin</span>
-        <div class="custom-coin-row">
-          <input type="text" bind:value={customCoinId} placeholder="ID" />
-          <input type="text" bind:value={customCoinName} placeholder="Name" />
+          <div class="custom-coin-row-bottom">
+            <input type="text" bind:value={customCoinSymbol} placeholder="Symbol" />
+            <button class="primary-btn" onclick={addCustomCoinSubmit} disabled={!customCoinId.trim() || !customCoinSymbol.trim()}>Add</button>
+          </div>
         </div>
-        <div class="custom-coin-row-bottom">
-          <input type="text" bind:value={customCoinSymbol} placeholder="Symbol" />
-          <button class="primary-btn" onclick={addCustomCoinSubmit} disabled={!customCoinId.trim() || !customCoinSymbol.trim()}>Add</button>
-        </div>
-      </div>
 
-      <div class="modal-actions">
-        <button class="secondary-btn" onclick={() => showCoinCatalog = false}>Close</button>
-      </div>
+        <div class="modal-actions">
+          <button class="secondary-btn" onclick={() => showTickerConfig = false}>Close</button>
+        </div>
+      {/if}
     </div>
   </div>
 {/if}
@@ -1807,6 +1795,16 @@
   .ipc-label { font-size: 0.85rem; color: var(--text-primary); font-weight: 500; }
   .ipc-info { font-size: 0.75rem; color: var(--text-tertiary); display: block; margin-top: 2px; }
   .hidden-input { display: none; }
+
+  /* Ticker config tabs */
+  .cfg-tabs { display: flex; gap: 2px; margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); }
+  .cfg-tab {
+    padding: 8px 18px; background: none; border: none; border-bottom: 2px solid transparent;
+    color: var(--text-tertiary); cursor: pointer; font-size: 0.85rem; font-weight: 500;
+    transition: color 0.15s, border-color 0.15s; margin-bottom: -1px;
+  }
+  .cfg-tab:hover { color: var(--text-primary); }
+  .cfg-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
   /* Ticker config modal */
   .tc-section-label { font-size: 0.7rem; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 8px; }
