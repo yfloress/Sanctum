@@ -638,7 +638,6 @@
       <span></span>
       <div class="header-actions">
         <button class="glass-btn" onclick={openCoinCatalog}>Coins</button>
-        <button class="glass-btn" onclick={openTickerConfig}>Tickers</button>
         <button class="glass-btn" onclick={openAddTransaction}>New Transaction</button>
       </div>
     </div>
