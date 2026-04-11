@@ -110,7 +110,7 @@ Always ask the user if they want to run any of these commands:
 - `nix develop -c cargo clippy -j 2`
 - `nix develop -c cargo test -j 2`
 - `cd ui-svelte && pnpm install` (frontend dependencies)
-- `cd ui-svelte && pnpm check` (svelte-check)
+- `cd ui-svelte && pnpm check` (svelte-check, alias: `cd ui-svelte && npx svelte-check --tsconfig ./tsconfig.json`)
 
 ## Coding Style and Naming Conventions
 - Rust: `rustfmt` defaults (4-space).
