@@ -1178,6 +1178,8 @@
         <div class="custom-coin-row">
           <input type="text" bind:value={customCoinId} placeholder="ID" />
           <input type="text" bind:value={customCoinName} placeholder="Name" />
+        </div>
+        <div class="custom-coin-row-bottom">
           <input type="text" bind:value={customCoinSymbol} placeholder="Symbol" />
           <button class="primary-btn" onclick={addCustomCoinSubmit} disabled={!customCoinId.trim() || !customCoinSymbol.trim()}>Add</button>
         </div>
@@ -1869,12 +1871,13 @@
   }
   .fav-btn:hover, .fav-btn.active { color: #fbbf24; }
   .fav-btn svg { width: 16px; height: 16px; }
-  .custom-coin-form { margin-top: 16px; border-top: 1px solid var(--glass-border); padding-top: 12px; }
-  .form-label { font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 8px; }
-  .custom-coin-row { display: flex; gap: 6px; }
-  .custom-coin-row input {
-    flex: 1; padding: 8px 10px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    background: var(--select-bg); color: var(--text-primary); font-size: 0.8rem;
+  .custom-coin-form { margin-top: 16px; border-top: 1px solid var(--glass-border); padding-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+  .form-label { font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 2px; }
+  .custom-coin-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .custom-coin-row-bottom { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
+  .custom-coin-row input, .custom-coin-row-bottom input {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+    background: var(--select-bg); color: var(--text-primary); font-size: 0.8rem; box-sizing: border-box;
   }
-  .custom-coin-row input:focus { border-color: var(--accent); outline: none; }
+  .custom-coin-row input:focus, .custom-coin-row-bottom input:focus { border-color: var(--accent); outline: none; }
 </style>
