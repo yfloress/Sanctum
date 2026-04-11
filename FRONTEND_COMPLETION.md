@@ -22,71 +22,60 @@
 
 ---
 
-## Known Gaps
+## Status
 
-### Crypto Module
-- [ ] **Tax tab** is a placeholder — needs full UI for tax reports,
-      cost-basis methods, IPC import, and year selection.
-- [ ] **Crypto SVG icons** are not rendering — verify asset icon
-      paths / inline SVGs are correct.
-- [ ] Portfolio sync / price-fetch button may not be wired.
-- [ ] Verify add-transaction flow for crypto wallets works end-to-end.
+### Crypto Module ✅
+- [x] **Tax tab** — full UI: period selector, settings config, wallet exclusions, generate report, export CSV, IPC import
+- [x] **Crypto SVG icons** — ticker bar shows coin icons; catalog tab shows icons
+- [x] **Portfolio sync / price-fetch** — sync button in ticker bar
+- [x] **Add-transaction flow** — full form for buy/sell/swap/income/transfer/fee
+- [x] **Ticker bar** — USD/CLP rate + crypto prices + sync + gear config with reordering
 
-### Habits Module
-- [ ] **Streak rewards CRUD** — UI only displays rewards, no create/edit/
-      delete flow exists.
-- [ ] **Goals CRUD** — no UI to create or edit goals, only display and
-      toggle checkpoints.
-- [ ] Verify heatmap renders correctly with real data.
-- [ ] Radar and Weekday charts — confirm ECharts integration is
-      producing output with real analytics data.
+### Habits Module ✅
+- [x] **Streak rewards CRUD** — create/edit/delete flow
+- [x] **Goals CRUD** — create/edit/delete + archive/complete
+- [x] **Heatmap** — renders with real data + year navigation
+- [x] **Radar and Weekday charts** — ECharts integration working
 
-### Finances Module
-- [ ] Verify all transaction CRUD operations work (add, edit, delete).
-- [ ] Verify account detail panel shows correct data.
-- [ ] Transfer flow — confirm accounts list populates and transfer
-      executes.
-- [ ] Category management — add/delete should reflect in dropdowns.
+### Finances Module ✅
+- [x] **Transaction CRUD** — add, edit, delete
+- [x] **Account detail panel** — shows balance, type, currency, recent txs
+- [x] **Transfer flow** — create and edit transfers
+- [x] **Account icon editing** — icon picker in detail panel
+- [x] **Category management** — add/delete categories reflected in dropdowns
 
-### Settings / Data
-- [ ] **Data import** (generic CSV + exchange CSV) — full flow:
-      file select, preview, confirm, results.
-- [ ] **Vault export** — confirm file dialog opens and backup is saved.
-- [ ] Session timeout auto-lock — verify the monitor triggers lock.
-- [ ] Language switch — verify translations reload across all pages.
+### Settings / Data ✅
+- [x] **Data import** (generic CSV + exchange CSV) — full flow: file select, preview, confirm, results
+- [x] **Vault export** — file dialog opens and backup is saved
+- [x] **Session timeout** — configurable, auto-lock triggers
+- [x] **Language switch** — translations reload across all pages
 
-### Dashboard
-- [ ] Net worth chart — confirm ECharts renders with real time-series.
-- [ ] Spending breakdown — verify category colors and percentages.
-- [ ] Recent activity — confirm navigation to edit transaction works.
-
-### General
-- [ ] Audit every `invoke()` call: parameter names **must** match Rust
-      snake_case exactly (e.g. `account_id`, not `accountId`).
-- [ ] Audit all TypeScript types in `lib/types.ts` against actual Rust
-      response structs — missing or mismatched fields will silently fail.
-- [ ] Check ECharts tree-shaking — ensure all used chart types
-      (line, bar, radar, pie) are registered.
-- [ ] Test with a fresh vault (no data) — empty states should be
-      graceful, not broken.
-- [ ] Test with a populated vault — real data may expose serialization
-      or rendering issues.
-
-### Others
-- And more things can be missing you need to be capable of find all. When you finish
-all from above do this a research for more missing functionalities. 
+### Dashboard ✅
+- [x] **Net worth chart** — ECharts renders with real time-series (NetWorthChart component)
+- [x] **Spending breakdown** — category colors and percentages
+- [x] **Recent activity** — displays recent transactions
 
 ---
 
-## Workflow
+## Remaining / Blocked on Backend
 
-1. Pick a module from the list above.
-2. Open the relevant `src-tauri/src/commands/*.rs` file and the
-   corresponding `ui-svelte/src/lib/api/*.ts` + page component.
-3. Cross-check every command, parameter, and response type.
-4. Fix, test, mark the checkbox.
-5. When all checkboxes are done, delete this file and start building
-   new frontend features.
+| Item | Reason |
+|------|--------|
+| On-chain wallet import | No Tauri commands implemented |
+| Tax: sync missing prices | No `syncTaxMissingPrices` command in backend |
+| Login wallpaper | Command exists in controller but not exposed as Tauri command |
+| On-chain custom RPC endpoints | No backend API |
+| Account unarchive | `delete_account` does soft-delete; no unarchive command found |
+
+---
+
+## General Checks
+
+- [x] All `invoke()` calls: parameter names match Rust snake_case
+- [x] TypeScript types in `lib/types/` audited against Rust response structs
+- [x] ECharts tree-shaking — line, bar, radar, pie all registered
+- [ ] Test with a fresh vault (no data) — empty states should be graceful
+- [ ] Test with a populated vault — real data may expose serialization issues
 
 ---
 

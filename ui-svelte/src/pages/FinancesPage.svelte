@@ -31,6 +31,10 @@
   let showTransfer = $state(false)
   let editingTransaction = $state<TransactionDto | null>(null)
   let editingAccount = $state<AccountDetailResponse | null>(null)
+  let editingTransfer = $state<string | null>(null)
+  let showIconPicker = $state(false)
+
+  const BANK_ICONS = ['banco-chile', 'banco-estado', 'bank-of-america', 'bci', 'citibank', 'jpmorgan', 'santander', 'wf']
 
   // Transaction form
   let txAccountId = $state('')
@@ -123,6 +127,10 @@
   }
 
   function openEditTransaction(tx: TransactionDto) {
+    if (tx.is_transfer) {
+      openEditTransfer(tx)
+      return
+    }
     editingTransaction = tx
     txAccountId = tx.account_id
     txAmount = tx.amount_raw
@@ -131,6 +139,16 @@
     txDate = tx.date
     txIsExpense = tx.is_expense
     showAddTransaction = true
+  }
+
+  function openEditTransfer(tx: TransactionDto) {
+    editingTransfer = tx.id
+    tfFromId = tx.account_id
+    tfToId = tx.transfer_account_id ?? ''
+    tfAmount = tx.amount_raw
+    tfDescription = ''
+    tfDate = tx.date
+    showTransfer = true
   }
 
   async function submitTransaction() {
@@ -213,6 +231,7 @@
   }
 
   function openTransfer() {
+    editingTransfer = null
     tfFromId = accountsData?.accounts[0]?.id ?? ''
     tfToId = accountsData?.accounts[1]?.id ?? ''
     tfAmount = ''
@@ -222,17 +241,42 @@
   }
 
   async function submitTransfer() {
+    const isEditing = !!editingTransfer
     try {
-      await financeApi.transferFunds({
-        from_account_id: tfFromId,
-        to_account_id: tfToId,
-        amount: tfAmount,
-        description: tfDescription,
-        date: tfDate,
-      })
+      if (isEditing) {
+        await financeApi.updateTransfer({
+          id: editingTransfer!,
+          from_account_id: tfFromId,
+          to_account_id: tfToId,
+          amount: tfAmount,
+          description: tfDescription,
+          date: tfDate,
+        })
+      } else {
+        await financeApi.transferFunds({
+          from_account_id: tfFromId,
+          to_account_id: tfToId,
+          amount: tfAmount,
+          description: tfDescription,
+          date: tfDate,
+        })
+      }
       showTransfer = false
+      editingTransfer = null
       await Promise.all([loadTransactions(), refreshAccounts()])
-      app.showToast('Transfer completed')
+      app.showToast(isEditing ? 'Transfer updated' : 'Transfer completed')
+    } catch (e) {
+      app.showToast(String(e), true)
+    }
+  }
+
+  async function changeAccountIcon(icon: string) {
+    if (!selectedAccount) return
+    try {
+      await financeApi.updateAccountIcon(selectedAccount.id, icon)
+      selectedAccount = await financeApi.fetchAccountDetails(selectedAccount.id)
+      await refreshAccounts()
+      showIconPicker = false
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -293,10 +337,18 @@
     return `/src/assets/bank-icons/${icon}`
   }
 
+  function getAccountDisplayIcon(acc: { account_type: string; icon_path: string | null }): string {
+    if (acc.icon_path) {
+      if (acc.icon_path.startsWith('/') || acc.icon_path.startsWith('http')) return acc.icon_path
+      return `/src/assets/bank-icons/${acc.icon_path}`
+    }
+    return getBankIconPath(acc.account_type)
+  }
+
   $effect(() => { loadAll() })
 </script>
 
-<div class="page" class:blurred={showAddTransaction || showAddAccount || showTransfer || selectedAccount}>
+<div class="page" class:blurred={showAddTransaction || showAddAccount || showTransfer || !!selectedAccount}>
   <!-- Hero -->
   <section class="hero">
     <h2 class="balance" class:negative={accountsData?.total_balance_negative}>
@@ -389,7 +441,7 @@
         <div class="account-grid">
           {#each accountsData?.accounts ?? [] as acc}
             <button class="account-card" onclick={() => openAccountDetail(acc.id)}>
-              <img src={getBankIconPath(acc.account_type)} alt={acc.account_type} class="acc-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
+              <img src={getAccountDisplayIcon(acc)} alt={acc.account_type} class="acc-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
               <div class="acc-info">
                 <div class="acc-name">{acc.name}</div>
                 <div class="acc-type">{acc.account_type}</div>
@@ -461,6 +513,24 @@
       </button>
     </div>
     <div class="panel-info">
+      <div class="info-row panel-icon-row">
+        <img src={getAccountDisplayIcon(selectedAccount)} alt="" class="panel-acc-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
+        <button class="change-icon-btn" onclick={() => showIconPicker = !showIconPicker}>
+          {showIconPicker ? 'Close' : 'Change Icon'}
+        </button>
+      </div>
+      {#if showIconPicker}
+        <div class="icon-picker">
+          {#each BANK_ICONS as icon}
+            <button class="icon-option" onclick={() => changeAccountIcon(icon)} title={icon}>
+              <img src="/src/assets/bank-icons/{icon}.svg" alt={icon} onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
+            </button>
+          {/each}
+          <button class="icon-option icon-reset" onclick={() => changeAccountIcon('')} title="Default">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12l9-9 9 9M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9"/></svg>
+          </button>
+        </div>
+      {/if}
       <div class="info-row"><span>Type</span><span>{selectedAccount.account_type}</span></div>
       <div class="info-row"><span>Currency</span><span>{selectedAccount.currency}</span></div>
       <div class="info-row">
@@ -587,10 +657,10 @@
 
 <!-- Transfer Modal -->
 {#if showTransfer}
-  <div class="modal-backdrop" role="presentation" onclick={() => showTransfer = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showTransfer = false }}></div>
+  <div class="modal-backdrop" role="presentation" onclick={() => { showTransfer = false; editingTransfer = null }} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') { showTransfer = false; editingTransfer = null } }}></div>
   <div class="modal-wrapper">
     <div class="modal">
-        <h3>Transfer Funds</h3>
+        <h3>{editingTransfer ? 'Edit Transfer' : 'Transfer Funds'}</h3>
     <div class="form-grid">
       <label>
         From
@@ -622,8 +692,10 @@
       </label>
     </div>
       <div class="modal-actions">
-        <button class="secondary-btn" onclick={() => showTransfer = false}>Cancel</button>
-        <button class="primary-btn" onclick={submitTransfer} disabled={!tfAmount || tfFromId === tfToId}>Transfer</button>
+        <button class="secondary-btn" onclick={() => { showTransfer = false; editingTransfer = null }}>Cancel</button>
+        <button class="primary-btn" onclick={submitTransfer} disabled={!tfAmount || tfFromId === tfToId}>
+          {editingTransfer ? 'Update' : 'Transfer'}
+        </button>
       </div>
     </div>
   </div>
@@ -862,4 +934,27 @@
   .acc-balance { font-size: 1rem; font-weight: 600; color: var(--text-primary); }
   .acc-balance.negative { color: var(--danger); }
   .acc-currency { font-size: 0.75rem; color: var(--text-tertiary); }
+
+  /* Icon picker */
+  .panel-icon-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .panel-acc-icon { width: 36px; height: 36px; border-radius: 6px; }
+  .change-icon-btn {
+    background: none; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+    color: var(--text-secondary); cursor: pointer; font-size: 0.75rem; padding: 4px 10px;
+    transition: all 0.15s;
+  }
+  .change-icon-btn:hover { border-color: var(--glass-border-hover); color: var(--text-primary); }
+  .icon-picker {
+    display: flex; flex-wrap: wrap; gap: 6px; padding: 10px;
+    background: var(--glass); border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+  }
+  .icon-option {
+    width: 36px; height: 36px; border-radius: 6px; border: 1px solid var(--glass-border);
+    background: var(--glass-hover); cursor: pointer; display: flex; align-items: center; justify-content: center;
+    padding: 4px; transition: all 0.15s;
+  }
+  .icon-option:hover { border-color: var(--accent-border); background: var(--glass-active); }
+  .icon-option img { width: 100%; height: 100%; object-fit: contain; border-radius: 3px; }
+  .icon-option.icon-reset svg { width: 18px; height: 18px; color: var(--text-tertiary); }
 </style>
