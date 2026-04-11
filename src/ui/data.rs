@@ -135,12 +135,7 @@ pub fn load_accounts_state(
                 _ => acc.account_type.as_str(),
             };
 
-            let is_bank = acc.account_type.eq_ignore_ascii_case("bank");
-            let icon_path = if is_bank {
-                normalize_bank_icon_path(acc.icon.clone())
-            } else {
-                None
-            };
+            let icon_path = normalize_bank_icon_path(acc.icon.clone());
 
             AccountDisplayData {
                 id: acc.id.clone(),

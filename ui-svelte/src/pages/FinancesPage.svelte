@@ -77,7 +77,13 @@
   let accInitialBalance = $state('0')
   let accIcon = $state('')
   let showAccIconPicker = $state(false)
-  let pickedIcon = $derived(accIcon ? (ACCOUNT_ICONS.find(i => i.value === accIcon) ?? null) : null)
+  let pickedIconSrc = $state('')
+  let pickedIconGeneric = $state(true)
+  $effect(() => {
+    const found = accIcon ? ACCOUNT_ICONS.find(i => i.value === accIcon) : null
+    pickedIconSrc = found ? found.src : getDefaultIconPath(accType)
+    pickedIconGeneric = found ? found.generic : true
+  })
 
   // Transfer form
   let tfFromId = $state('')
@@ -690,10 +696,10 @@
           <span>Icon</span>
           <button class="change-icon-btn" onclick={() => showAccIconPicker = !showAccIconPicker}>
             <img
-              src={pickedIcon ? pickedIcon.src : getDefaultIconPath(accType)}
+              src={pickedIconSrc || getDefaultIconPath(accType)}
               alt=""
               class="selected-icon-preview"
-              class:themed-icon={pickedIcon ? pickedIcon.generic : true}
+              class:themed-icon={pickedIconGeneric}
             />
             {showAccIconPicker ? 'Close' : 'Change'}
           </button>
