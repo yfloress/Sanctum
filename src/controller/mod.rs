@@ -142,10 +142,17 @@ pub struct MonthlyTrendPoint {
 }
 
 #[derive(Debug, Clone)]
+pub struct CategoryDistributionPoint {
+    pub category: String,
+    pub count: i32,
+}
+
+#[derive(Debug, Clone)]
 pub struct HabitAnalytics {
     pub weekday_data: Vec<WeekdayEfficiency>,
     pub monthly_data: Vec<MonthlyTrendPoint>,
     pub monthly_path: String,
+    pub category_data: Vec<CategoryDistributionPoint>,
 }
 
 // ==================== Security: Field Length Limits ====================

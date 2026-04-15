@@ -292,8 +292,11 @@ impl AppController {
         crypto_snapshots: &[(String, f64, f64)],
         range: String,
     ) -> Result<super::DashboardData, ControllerError> {
+        let preferred_currency = self
+            .get_app_setting(super::SETTING_PREFERRED_CURRENCY)
+            .unwrap_or_else(|_| "USD".to_string());
         self.finance_service
-            .get_dashboard_data(crypto_total_usd, crypto_snapshots, range)
+            .get_dashboard_data(crypto_total_usd, crypto_snapshots, range, preferred_currency)
             .map_err(ControllerError::from)
     }
 }

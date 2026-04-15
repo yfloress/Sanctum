@@ -17,6 +17,7 @@
 <script lang="ts">
   import BaseChart from './BaseChart.svelte'
   import type { NetWorthChartData } from '../../lib/types'
+  import { formatCurrency } from '../../lib/currency'
 
   interface Props {
     data: NetWorthChartData
@@ -66,8 +67,7 @@
         const pt = params[0]
         if (!pt) return ''
         const dollars = pt.value / 100
-        const formatted = dollars.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-        return `<span style="color:#888;font-size:11px">${formatDate(pt.axisValue)}</span><br/><b>$${formatted}</b>`
+        return `<span style="color:#888;font-size:11px">${formatDate(pt.axisValue)}</span><br/><b>${formatCurrency(dollars)}</b>`
       },
     },
     xAxis: {

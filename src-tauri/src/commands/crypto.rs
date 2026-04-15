@@ -62,11 +62,11 @@ pub fn fetch_portfolio(
         PortfolioAssetDto {
             coin_id: a.coin_id.clone(), symbol: sym, name,
             icon_path: None,
-            price: fmtusd(price),
+            price: fmt_pref(price, &controller),
             price_change_24h: format!("{:.2}%", chg),
             price_change_24h_negative: chg < 0.0,
             amount: trim_amount(a.total_amount),
-            value: fmtusd(val),
+            value: fmt_pref(val, &controller),
             allocation_pct: alloc,
         }
     }).collect();
@@ -99,10 +99,10 @@ pub fn fetch_portfolio(
         .unwrap_or((0.0, false));
 
     Ok(PortfolioResponse {
-        total_value: fmtusd(total_usd),
-        unrealized_pnl: fmtusd(unrealized_pnl.abs()),
+        total_value: fmt_pref(total_usd, &controller),
+        unrealized_pnl: fmt_pref(unrealized_pnl.abs(), &controller),
         unrealized_pnl_negative: unrealized_pnl < 0.0,
-        realized_ytd: fmtusd(realized_ytd_val.abs()),
+        realized_ytd: fmt_pref(realized_ytd_val.abs(), &controller),
         realized_ytd_negative: realized_ytd_neg,
         roi: format!("{:.2}%", if roi == 0.0 { 0.0 } else { roi }),
         roi_negative: roi < 0.0,
@@ -140,7 +140,7 @@ pub fn fetch_wallets(controller: State<'_, Arc<AppController>>) -> Result<Wallet
         WalletDto {
             id: w.id.clone(), name: w.name.clone(), category: w.category.clone(),
             icon_path: w.icon.clone(),
-            total_value: fmtusd(total),
+            total_value: fmt_pref(total, &controller),
             assets_count: holdings.len() as i32,
         }
     }).collect();
@@ -167,8 +167,8 @@ pub fn fetch_wallet_detail(
         WalletHoldingDto {
             coin_id: h.coin_id.clone(), symbol: h.symbol.clone(),
             amount: trim_amount(h.total_amount),
-            value: fmtusd(h.total_amount * price),
-            price: fmtusd(price),
+            value: fmt_pref(h.total_amount * price, &controller),
+            price: fmt_pref(price, &controller),
         }
     }).collect();
 
@@ -177,12 +177,12 @@ pub fn fetch_wallet_detail(
     }).sum();
 
     let txs = controller.get_wallet_transactions(wallet_id).map_err(|e| e.to_string())?;
-    let tx_dtos = map_crypto_transactions(&txs, &wallets);
+    let tx_dtos = map_crypto_transactions(&txs, &wallets, &controller);
 
     Ok(WalletDetailResponse {
         id: wallet.id.clone(), name: wallet.name.clone(),
         category: wallet.category.clone(), icon_path: wallet.icon.clone(),
-        total_value: fmtusd(total),
+        total_value: fmt_pref(total, &controller),
         holdings: hdtos, transactions: tx_dtos,
     })
 }
@@ -327,7 +327,7 @@ pub fn get_crypto_transactions_by_coin(
 ) -> Result<Vec<CryptoTransactionDto>, String> {
     let txs = controller.get_crypto_transactions_by_coin(coin_id).map_err(|e| e.to_string())?;
     let wallets = controller.get_wallets().map_err(|e| e.to_string())?;
-    Ok(map_crypto_transactions(&txs, &wallets))
+    Ok(map_crypto_transactions(&txs, &wallets, &controller))
 }
 
 // ==================== Catalog ====================
@@ -476,22 +476,24 @@ pub fn generate_tax_report(
     controller: State<'_, Arc<AppController>>, period_id: String,
 ) -> Result<TaxReportDto, String> {
     let r = controller.generate_tax_report(period_id.clone()).map_err(|e| e.to_string())?;
+    let override_curr = if r.jurisdiction == "CL" { Some("CLP") } else { None };
+    
     Ok(TaxReportDto {
         period_id, jurisdiction: r.jurisdiction, method: r.method,
         disposals_count: r.summary.disposals,
-        total_proceeds: fmtusd(r.summary.total_proceeds),
-        total_cost: fmtusd(r.summary.total_cost),
-        total_gain: fmtusd(r.summary.total_gain.abs()),
+        total_proceeds: fmt_pref_override(r.summary.total_proceeds, override_curr, &controller),
+        total_cost: fmt_pref_override(r.summary.total_cost, override_curr, &controller),
+        total_gain: fmt_pref_override(r.summary.total_gain.abs(), override_curr, &controller),
         total_gain_negative: r.summary.total_gain < 0.0,
-        short_term_gain: r.summary.short_term_gain.map(fmtusd),
-        long_term_gain: r.summary.long_term_gain.map(fmtusd),
+        short_term_gain: r.summary.short_term_gain.map(|v| fmt_pref_override(v, override_curr, &controller)),
+        long_term_gain: r.summary.long_term_gain.map(|v| fmt_pref_override(v, override_curr, &controller)),
         events: r.disposals.into_iter().map(|e| {
             sanctum::ui::dto::crypto::TaxEventDto {
                 tx_id: e.tx_id, date: e.date, coin_id: e.coin_id, symbol: e.symbol,
                 amount: e.amount.to_string(),
-                proceeds: fmtusd(e.proceeds),
-                cost_basis: fmtusd(e.cost_basis),
-                gain: fmtusd(e.gain.abs()),
+                proceeds: fmt_pref_override(e.proceeds, override_curr, &controller),
+                cost_basis: fmt_pref_override(e.cost_basis, override_curr, &controller),
+                gain: fmt_pref_override(e.gain.abs(), override_curr, &controller),
                 gain_negative: e.gain < 0.0,
                 term: e.term, disposal_type: e.disposal_type,
             }
@@ -576,10 +578,32 @@ fn trim_amount(v: f64) -> String {
     format!("{:.8}", v).trim_end_matches('0').trim_end_matches('.').to_string()
 }
 
-/// Format as $X.XX, normalizing -0.0 to 0.0
-fn fmtusd(v: f64) -> String {
+fn fmt_pref(v: f64, controller: &AppController) -> String {
+    fmt_pref_override(v, None, controller)
+}
+
+fn fmt_pref_override(v: f64, override_curr: Option<&str>, controller: &AppController) -> String {
+    let pref = override_curr.map(|s| s.to_string()).unwrap_or_else(|| {
+        controller
+            .get_app_setting(sanctum::controller::SETTING_PREFERRED_CURRENCY)
+            .unwrap_or_else(|_| "USD".to_string())
+            .trim()
+            .to_uppercase()
+    });
+
     let n = if v == 0.0 { 0.0 } else { v };
-    format!("${:.2}", n)
+    let mut amount = n;
+    
+    if pref != "USD" {
+        let pair = format!("USD/{}", pref);
+        if let Ok(Some((rate, _))) = controller.load_exchange_rate_allow_stale(pair) {
+            if rate > 0.0 {
+                amount = n * rate;
+            }
+        }
+    }
+    
+    sanctum::ui::currency::format_preferred(amount, &pref)
 }
 
 fn build_fx_rate_badge(controller: &AppController) -> Option<FxRateDto> {

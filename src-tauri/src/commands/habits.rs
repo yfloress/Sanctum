@@ -300,9 +300,9 @@ pub fn fetch_habit_analytics(
     let weekday_labels: Vec<String> = analytics.weekday_data.iter().map(|w| w.day_short.clone()).collect();
     let weekday_values: Vec<f64> = analytics.weekday_data.iter().map(|w| w.avg_count as f64).collect();
 
-    // Build radar from monthly data (categories = month names, values = avg_per_day)
-    let radar_categories: Vec<String> = analytics.monthly_data.iter().map(|m| m.month_name.clone()).collect();
-    let radar_values: Vec<f64> = analytics.monthly_data.iter().map(|m| m.avg_per_day as f64).collect();
+    // Build radar from category data (categories = habit categories, values = completion counts)
+    let radar_categories: Vec<String> = analytics.category_data.iter().map(|c| c.category.clone()).collect();
+    let radar_values: Vec<f64> = analytics.category_data.iter().map(|c| c.count as f64).collect();
     let radar_max = radar_values.iter().cloned().fold(0.0_f64, f64::max);
 
     // Generate summary text

@@ -21,7 +21,7 @@
 //! Aggregates financial and crypto data for dashboard visualization.
 //! Note: Actual chart rendering is done by services/charts.rs
 
-use crate::core::validation::format_money_display;
+use crate::ui::currency::format_money;
 use crate::models::{Account, AccountBalance, Transaction};
 use chrono::{Datelike, Local, NaiveDate};
 use std::collections::HashMap;
@@ -91,6 +91,7 @@ impl DashboardCharts {
         crypto_snapshots: &[(String, f64, f64)],
         usd_rates: &HashMap<String, f64>,
         range: &str,
+        preferred_currency: &str,
     ) -> DashboardData {
         let currency_map: HashMap<String, String> = accounts
             .iter()
@@ -257,9 +258,9 @@ impl DashboardCharts {
         DashboardData {
             chart_values: values,
             chart_dates: dates,
-            net_worth: format_money_display(total_balance),
-            max_value: format_money_display(max_val),
-            min_value: format_money_display(min_val),
+            net_worth: format_money(total_balance, preferred_currency),
+            max_value: format_money(max_val, preferred_currency),
+            min_value: format_money(min_val, preferred_currency),
             expense_slices,
             total_income_cents,
             total_expense_cents,
@@ -488,6 +489,7 @@ mod tests {
             &snapshots,
             &rates,
             "1M",
+            "USD",
         );
         assert_eq!(result.net_worth, "$ 100.00");
     }

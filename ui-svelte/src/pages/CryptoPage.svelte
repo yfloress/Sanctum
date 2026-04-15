@@ -17,6 +17,7 @@
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte'
   import { i18n } from '../lib/stores/i18n.svelte'
+  import { formatCurrency } from '../lib/currency'
   import * as cryptoApi from '../lib/api/crypto'
   import PortfolioTrendChart from '../components/charts/PortfolioTrendChart.svelte'
   import DistributionChart from '../components/charts/DistributionChart.svelte'
@@ -579,7 +580,7 @@
   <div class="ticker-bar">
     <div class="ticker-fx">
       <span class="ticker-fx-pair">USD/CLP</span>
-      <span class="ticker-fx-rate">{usdClpRate != null ? `$${usdClpRate.toLocaleString()}` : '--'}</span>
+      <span class="ticker-fx-rate">{usdClpRate != null ? formatCurrency(usdClpRate, 'CLP') : '--'}</span>
     </div>
     <div class="ticker-prices">
       {#each tickerPrices as coin}
@@ -587,7 +588,7 @@
           <img src={getCryptoIconPath(coin.symbol)} alt={coin.symbol} class="ticker-coin-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
           <span class="ticker-coin-sym">{coin.symbol}</span>
           {#if coin.last_updated}
-            <span class="ticker-coin-price">${coin.current_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: coin.current_price < 1 ? 6 : 2 })}</span>
+            <span class="ticker-coin-price">{formatCurrency(coin.current_price, undefined, { minimumFractionDigits: 2, maximumFractionDigits: coin.current_price < 1 ? 6 : 2 })}</span>
             <span class="ticker-coin-change" class:negative={coin.price_change_percentage_24h < 0} class:positive={coin.price_change_percentage_24h >= 0}>
               {coin.price_change_percentage_24h >= 0 ? '+' : ''}{coin.price_change_percentage_24h.toFixed(1)}%
             </span>

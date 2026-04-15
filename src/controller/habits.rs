@@ -20,7 +20,7 @@
 //! Habit CRUD, logs, and analytics.
 
 use super::{AppController, ControllerError, normalize_habit_category, validate_uuid};
-use super::{HabitAnalytics, MonthlyTrendPoint, WeekdayEfficiency};
+use super::{HabitAnalytics, MonthlyTrendPoint, WeekdayEfficiency, CategoryDistributionPoint};
 use crate::models::{Habit, HabitLog};
 use chrono::{Datelike, NaiveDate};
 use regex::Regex;
@@ -323,6 +323,7 @@ impl AppController {
                 weekday_data,
                 monthly_data: vec![],
                 monthly_path: "M 0 50 L 100 50".to_string(),
+                category_data: vec![],
             });
         }
 
@@ -373,10 +374,32 @@ impl AppController {
             path = "M 0 50 L 100 50".to_string();
         }
 
+        // ==================== Category Distribution ====================
+        let mut category_counts: std::collections::HashMap<String, i32> = std::collections::HashMap::new();
+        if let Ok(habits) = self.get_habits() {
+            let mut habit_categories: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+            for habit in habits {
+                habit_categories.insert(habit.id, habit.category);
+            }
+            for log in &logs {
+                if let Some(cat) = habit_categories.get(&log.habit_id) {
+                    *category_counts.entry(cat.clone()).or_insert(0) += 1;
+                }
+            }
+        }
+        
+        let mut category_data: Vec<CategoryDistributionPoint> = category_counts
+            .into_iter()
+            .map(|(category, count)| CategoryDistributionPoint { category, count })
+            .collect();
+            
+        category_data.sort_by(|a, b| b.count.cmp(&a.count)); // Sort descending
+
         Ok(HabitAnalytics {
             weekday_data,
             monthly_data,
             monthly_path: path,
+            category_data,
         })
     }
 }

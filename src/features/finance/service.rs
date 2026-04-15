@@ -505,6 +505,7 @@ impl FinanceService {
         crypto_total_usd: f64,
         crypto_snapshots: &[(String, f64, f64)],
         range: String,
+        preferred_currency: String,
     ) -> Result<DashboardData, FinanceError> {
         let balances = self.get_account_balances()?;
         let accounts = self.get_accounts()?;
@@ -519,6 +520,7 @@ impl FinanceService {
             crypto_snapshots,
             &usd_rates,
             &range,
+            &preferred_currency,
         ))
     }
 
