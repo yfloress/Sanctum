@@ -21,14 +21,19 @@
     TransactionDto, CategoriesResponse, CategoryDto,
     AccountsResponse, AccountDetailResponse
   } from '../lib/types'
+  import FinanceBarChart from '../components/charts/FinanceBarChart.svelte'
+  import FinanceDonutChart from '../components/charts/FinanceDonutChart.svelte'
+  import FinanceCategoryChart from '../components/charts/FinanceCategoryChart.svelte'
 
-  type Tab = 'activity' | 'accounts' | 'settings'
+  type Tab = 'overview' | 'activity' | 'accounts' | 'settings'
 
-  let activeTab = $state<Tab>('activity')
+  let activeTab = $state<Tab>('overview')
   let loading = $state(true)
 
   // Activity state
   let transactions = $state<TransactionDto[]>([])
+  // Unfiltered transactions used for Overview charts
+  let chartTransactions = $state<TransactionDto[]>([])
   let hasMore = $state(false)
   let filterQuery = $state('')
   let filterAccountId = $state('')
@@ -101,11 +106,20 @@
       ])
       accountsData = acc
       categories = cats
-      await loadTransactions()
+      await Promise.all([loadTransactions(), loadChartTransactions()])
     } catch (e) {
       app.showToast(String(e), true)
     } finally {
       loading = false
+    }
+  }
+
+  async function loadChartTransactions() {
+    try {
+      const res = await financeApi.fetchTransactions(undefined, undefined, undefined, 1000)
+      chartTransactions = res.transactions
+    } catch (_) {
+      // charts degrade gracefully
     }
   }
 
@@ -198,7 +212,7 @@
         )
       }
       showAddTransaction = false
-      await Promise.all([loadTransactions(), refreshAccounts()])
+      await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()])
       app.showToast(editingTransaction ? 'Transaction updated' : 'Transaction added')
     } catch (e) {
       app.showToast(String(e), true)
@@ -208,7 +222,7 @@
   async function deleteTransaction(id: string) {
     try {
       await financeApi.deleteTransaction(id)
-      await Promise.all([loadTransactions(), refreshAccounts()])
+      await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()])
       app.showToast('Transaction deleted')
     } catch (e) {
       app.showToast(String(e), true)
@@ -309,7 +323,7 @@
       }
       showTransfer = false
       editingTransfer = null
-      await Promise.all([loadTransactions(), refreshAccounts()])
+      await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()])
       app.showToast(isEditing ? 'Transfer updated' : 'Transfer completed')
     } catch (e) {
       app.showToast(String(e), true)
@@ -371,6 +385,71 @@
     txIsExpense ? (categories?.expense ?? []) : (categories?.income ?? [])
   )
 
+  // ── Overview chart data ────────────────────────────────────────────────────
+
+  const currentMonthKey = new Date().toISOString().slice(0, 7) // "YYYY-MM"
+
+  let barChartData = $derived.by(() => {
+    const now = new Date()
+    const months: string[] = []
+    const income: number[] = []
+    const expenses: number[] = []
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const label = d.toLocaleDateString('en', { month: 'short' })
+      const relevant = chartTransactions.filter(tx => !tx.is_transfer && tx.date.startsWith(key))
+      const inc = relevant.filter(tx => !tx.is_expense).reduce((s, tx) => s + (parseFloat(tx.amount_raw) || 0), 0)
+      const exp = relevant.filter(tx => tx.is_expense).reduce((s, tx) => s + (parseFloat(tx.amount_raw) || 0), 0)
+      months.push(label)
+      income.push(parseFloat(inc.toFixed(2)))
+      expenses.push(parseFloat(exp.toFixed(2)))
+    }
+    return { months, income, expenses }
+  })
+
+  function parseBalanceNum(s: string): number {
+    return parseFloat(s.replace(/[^0-9.]/g, '')) || 0
+  }
+
+  let donutData = $derived(
+    (accountsData?.accounts ?? [])
+      .filter(a => !a.balance_negative && !a.is_archived)
+      .map(a => ({ name: a.name, value: parseBalanceNum(a.balance) }))
+      .filter(a => a.value > 0)
+  )
+
+  let currentMonthTx = $derived(
+    chartTransactions.filter(tx => !tx.is_transfer && tx.date.startsWith(currentMonthKey))
+  )
+  let monthIncome = $derived(
+    currentMonthTx.filter(tx => !tx.is_expense).reduce((s, tx) => s + (parseFloat(tx.amount_raw) || 0), 0)
+  )
+  let monthExpense = $derived(
+    currentMonthTx.filter(tx => tx.is_expense).reduce((s, tx) => s + (parseFloat(tx.amount_raw) || 0), 0)
+  )
+  let monthNet = $derived(monthIncome - monthExpense)
+  let netIsNegative = $derived(monthNet < 0)
+
+  let expenseByCategoryData = $derived.by(() => {
+    const map: Record<string, number> = {}
+    for (const tx of chartTransactions) {
+      if (tx.is_expense && !tx.is_transfer) {
+        map[tx.category] = (map[tx.category] ?? 0) + (parseFloat(tx.amount_raw) || 0)
+      }
+    }
+    return Object.entries(map)
+      .map(([name, value]) => ({ name, value: parseFloat(value.toFixed(2)) }))
+      .sort((a, b) => a.value - b.value)
+      .slice(-8)
+  })
+
+  function fmtStat(n: number): string {
+    return n === 0 ? '—' : n.toFixed(2)
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+
   function getDefaultIconPath(accountType: string): string {
     const iconMap: { [key: string]: string } = {
       'savings': 'piggy-bank',
@@ -406,6 +485,7 @@
 
   <!-- Tab selector -->
   <div class="tab-bar">
+    <button class:active={activeTab === 'overview'} onclick={() => activeTab = 'overview'}>Overview</button>
     <button class:active={activeTab === 'activity'} onclick={() => activeTab = 'activity'}>Activity</button>
     <button class:active={activeTab === 'accounts'} onclick={() => activeTab = 'accounts'}>Accounts</button>
     <button class:active={activeTab === 'settings'} onclick={() => activeTab = 'settings'}>Settings</button>
@@ -413,6 +493,122 @@
 
   {#if loading}
     <div class="loading">Loading...</div>
+
+  <!-- OVERVIEW TAB -->
+  {:else if activeTab === 'overview'}
+    <section class="tab-content">
+
+      <!-- Monthly stat pills -->
+      <div class="overview-stats">
+        <div class="stat-pill income">
+          <span class="pill-label">Income this month</span>
+          <span class="pill-value">{fmtStat(monthIncome)}</span>
+        </div>
+        <div class="stat-pill expense">
+          <span class="pill-label">Expenses this month</span>
+          <span class="pill-value">{fmtStat(monthExpense)}</span>
+        </div>
+        <div class="stat-pill net" class:negative-net={netIsNegative}>
+          <span class="pill-label">Net this month</span>
+          <span class="pill-value">{monthNet >= 0 ? '+' : ''}{fmtStat(monthNet)}</span>
+        </div>
+      </div>
+
+      <!-- Charts row -->
+      <div class="charts-row">
+        <div class="chart-card">
+          <h4>Monthly Overview</h4>
+          <FinanceBarChart
+            months={barChartData.months}
+            income={barChartData.income}
+            expenses={barChartData.expenses}
+          />
+        </div>
+        <div class="chart-card">
+          <h4>Balance Distribution</h4>
+          {#if donutData.length > 0}
+            <FinanceDonutChart data={donutData} />
+          {:else}
+            <p class="empty-chart">No positive balances to display</p>
+          {/if}
+        </div>
+      </div>
+
+      <!-- Expense by category chart -->
+      {#if expenseByCategoryData.length > 0}
+        <div class="chart-card chart-card--wide">
+          <h4>Expenses by Category</h4>
+          <FinanceCategoryChart data={expenseByCategoryData} />
+        </div>
+      {/if}
+
+      <!-- Accounts summary -->
+      <div class="overview-section">
+        <div class="section-header">
+          <h3>Accounts</h3>
+          <div class="header-actions">
+            <button class="glass-btn" onclick={openTransfer}>Transfer</button>
+            <button class="glass-btn" onclick={openAddAccount}>New Account</button>
+          </div>
+        </div>
+        {#if (accountsData?.accounts ?? []).length === 0}
+          <p class="empty">No accounts yet.</p>
+        {:else}
+          <div class="account-strips">
+            {#each accountsData?.accounts ?? [] as acc}
+              <button class="account-strip" onclick={() => openAccountDetail(acc.id)}>
+                <img
+                  src={getAccountDisplayIcon(acc)}
+                  alt=""
+                  class="strip-icon"
+                  class:themed-icon={isGenericIcon(acc.icon_path)}
+                  onerror={(e) => (e.target as HTMLImageElement).style.display='none'}
+                />
+                <div class="strip-info">
+                  <span class="strip-name">{acc.name}</span>
+                  <span class="strip-type">{acc.account_type}</span>
+                </div>
+                <div class="strip-balance">
+                  <span class:negative={acc.balance_negative}>{acc.balance}</span>
+                  <span class="strip-currency">{acc.currency}</span>
+                </div>
+                <svg class="strip-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M9 18l6-6-6-6"/>
+                </svg>
+              </button>
+            {/each}
+          </div>
+        {/if}
+      </div>
+
+      <!-- Recent transactions -->
+      <div class="overview-section">
+        <div class="section-header">
+          <h3>Recent Transactions</h3>
+          <button class="glass-btn" onclick={() => activeTab = 'activity'}>View All</button>
+        </div>
+        {#if chartTransactions.length === 0}
+          <p class="empty">No transactions yet.</p>
+        {:else}
+          <div class="tx-list">
+            {#each chartTransactions.slice(0, 6) as tx}
+              <div class="tx-row" role="button" tabindex="0"
+                onclick={() => openEditTransaction(tx)}
+                onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') openEditTransaction(tx) }}>
+                <span class="tx-date">{tx.date}</span>
+                <span class="tx-desc">{tx.description}</span>
+                <span class="tx-cat">{tx.category}</span>
+                <span class="tx-acc">{tx.account_name}</span>
+                <span class="tx-amount" class:expense={tx.is_expense} class:transfer={tx.is_transfer}>
+                  {tx.amount}
+                </span>
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </div>
+
+    </section>
 
   <!-- ACTIVITY TAB -->
   {:else if activeTab === 'activity'}
@@ -774,10 +970,13 @@
 <style>
   .page { padding: 24px 32px; max-width: 960px; width: 100%; margin: 0 auto; }
 
-  .hero { text-align: center; padding: 16px 0 24px; }
-  .balance { font-size: 2rem; font-weight: 700; color: var(--text-primary); margin: 0; }
+  /* Give every tab's content breathing room from the tab bar */
+  .tab-content { padding-top: 20px; }
+
+  .hero { text-align: center; padding: 20px 0 28px; }
+  .balance { font-size: 2.4rem; font-weight: 700; color: var(--text-primary); margin: 0; letter-spacing: -0.02em; }
   .balance.negative { color: var(--danger); }
-  .label { color: var(--text-tertiary); font-size: 0.8rem; margin-top: 4px; }
+  .label { color: var(--text-tertiary); font-size: 0.78rem; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.08em; }
 
   .loading { text-align: center; padding: 48px; color: var(--text-tertiary); }
   .empty { text-align: center; padding: 48px; color: var(--text-tertiary); }
@@ -1027,6 +1226,152 @@
   .icon-option:hover { border-color: var(--accent-border); background: var(--glass-active); }
   .icon-option img { width: 100%; height: 100%; object-fit: contain; border-radius: 3px; }
   .icon-option.icon-reset svg { width: 18px; height: 18px; color: var(--text-tertiary); }
+
+  /* Overview tab */
+  .overview-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .stat-pill {
+    padding: 18px 20px;
+    background: var(--glass);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-left-width: 3px;
+    border-radius: var(--radius-md);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    box-shadow: var(--glass-shadow);
+  }
+  .stat-pill.income  { border-left-color: #4ade80; }
+  .stat-pill.expense { border-left-color: #f87171; }
+  .stat-pill.net     { border-left-color: var(--accent); }
+  .stat-pill.net.negative-net { border-left-color: #f87171; }
+  .pill-label {
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .pill-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+  }
+  .stat-pill.income  .pill-value { color: #4ade80; }
+  .stat-pill.expense .pill-value { color: #f87171; }
+  .stat-pill.net     .pill-value { color: var(--accent); }
+  .stat-pill.net.negative-net .pill-value { color: #f87171; }
+
+  .charts-row {
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .chart-card {
+    background: var(--glass);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 16px 16px 6px;
+    box-shadow: var(--glass-shadow);
+    margin-bottom: 14px;
+  }
+  .chart-card--wide { grid-column: unset; }
+  .chart-card h4 {
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0 0 2px;
+  }
+  .empty-chart {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 220px;
+    color: var(--text-tertiary);
+    font-size: 0.85rem;
+    margin: 0;
+  }
+
+  .overview-section { margin-bottom: 28px; }
+
+  .account-strips {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .account-strip {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--glass);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    color: inherit;
+    transition: all 0.15s;
+  }
+  .account-strip:hover {
+    background: var(--glass-hover);
+    border-color: var(--glass-border-hover);
+  }
+  .strip-icon {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border-radius: 4px;
+  }
+  .strip-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .strip-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .strip-type {
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    text-transform: capitalize;
+  }
+  .strip-balance {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+  }
+  .strip-balance span {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .strip-balance span.negative { color: var(--danger); }
+  .strip-currency {
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    font-weight: 400 !important;
+  }
+  .strip-chevron {
+    width: 16px;
+    height: 16px;
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+  }
 
   /* Generic Lucide icons: invert to white in dark mode, keep dark in light mode */
   .themed-icon { filter: brightness(0) invert(1); }
