@@ -116,6 +116,32 @@ export async function toggleCheckpoint(goal_id: string, checkpoint_id: string): 
   return invoke('toggle_checkpoint', { goalId: goal_id, checkpointId: checkpoint_id })
 }
 
+export async function addCheckpoint(goal_id: string, description: string): Promise<string> {
+  return invoke<string>('add_checkpoint', { goalId: goal_id, description })
+}
+
+export async function updateCheckpoint(checkpoint_id: string, description: string): Promise<void> {
+  return invoke('update_checkpoint', { checkpointId: checkpoint_id, description })
+}
+
+export async function deleteCheckpoint(checkpoint_id: string): Promise<void> {
+  return invoke('delete_checkpoint', { checkpointId: checkpoint_id })
+}
+
+export interface GoalCheckpointInput {
+  id: string
+  text: string
+}
+
+export async function updateGoalWithCheckpoints(
+  id: string, name: string, description: string, reward_text: string,
+  deadline: string, checkpoints: GoalCheckpointInput[]
+): Promise<void> {
+  return invoke('update_goal_with_checkpoints', {
+    id, name, description, rewardText: reward_text, deadline, checkpoints,
+  })
+}
+
 export async function fetchAchievements(): Promise<AchievementDto[]> {
   return invoke<AchievementDto[]>('fetch_achievements')
 }
