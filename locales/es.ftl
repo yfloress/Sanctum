@@ -253,65 +253,113 @@ crypto-tx-to-amount-required = El monto de destino es obligatorio
 crypto-tx-swap-different-assets = Los activos del intercambio deben ser distintos
 
 # ==================== Habits ====================
-habits-title = HÁBITOS
-habits-my-habits = Mis Hábitos
-habits-add-habit = Agregar Hábito
-habits-no-habits = Sin hábitos aún
-habits-streak = Racha
-habits-best-streak = Mejor
-habits-current-streak = Actual
-habits-completion-rate = Tasa de Completado
-habits-days = { $count ->
-    [one] { $count } día
-   *[other] { $count } días
-}
+# Header & tabs
+habits-title = HABITOS
+habits-tab-habits = Habitos
+habits-tab-rewards = Recompensas
+habits-tab-history = Historial
+habits-loading = Cargando...
 
-# Habit categories
-habit-category-mind = Mente
-habit-category-body = Cuerpo
-habit-category-spirit = Espíritu
+# Habits tab
+habits-daily-tracking = Seguimiento Diario
+habits-new-habit = Nuevo Habito
+habits-habit-col = Habito
+habits-no-habits = Sin habitos aun. Crea tu primer habito para comenzar.
+habits-activity-heatmap = Mapa de Calor de Actividad
 
-# Habit frequency
-habit-frequency-daily = Diario
-habit-frequency-weekly = Semanal
+# Habit summary stats
+habits-current-streak = Racha Actual
+habits-best-streak = Mejor Racha
+habits-completion = Completado
+habits-last-30-days = Ultimos 30 Dias
+habits-edit = Editar
+habits-delete = Eliminar
 
 # Analytics
-habits-analytics = Analíticas
-habits-life-balance = Balance de Vida (Últimos 30 Días)
-habits-weekday-efficiency = Eficiencia por Día
-habits-empty-chart = El gráfico está vacío, pero tu potencial está lleno.
-habits-empty-chart-subtitle = Tu leyenda aparecerá aquí. Empieza a escribirla hoy.
-habits-complete-to-see = Completa hábitos para ver tu patrón semanal.
-habits-discover-days = Descubre en qué días eres más consistente.
+habits-habit-radar = Radar de Habitos
+habits-weekday-efficiency = Eficiencia por Dia
 
-# Habits Tab sections
-habits-add-button = + HÁBITO
-habits-yearly-overview = RESUMEN ANUAL
-habits-my-habits-section = MIS HÁBITOS
-habits-no-tracked-month = No hay hábitos registrados este mes
-habits-create-to-build = Crea un hábito para comenzar a construir consistencia
-habits-analytics-section = ANALÍTICAS
-habits-weekly-report = REPORTE SEMANAL
-habits-insights = PERSPECTIVAS
-habits-summary = RESUMEN DE HÁBITOS
-habits-select-placeholder = Selecciona un hábito...
+# Month names
+month-january = Enero
+month-february = Febrero
+month-march = Marzo
+month-april = Abril
+month-may = Mayo
+month-june = Junio
+month-july = Julio
+month-august = Agosto
+month-september = Septiembre
+month-october = Octubre
+month-november = Noviembre
+month-december = Diciembre
 
-# ==================== Rewards ====================
-rewards-title = Recompensas
-rewards-goals = Metas
-rewards-streak-rewards = Recompensas de Racha
-rewards-history = Historial
-rewards-add-goal = Agregar Meta
-rewards-add-reward = Agregar Recompensa
-rewards-no-goals = Sin metas aún
-rewards-no-rewards = Sin recompensas aún
-rewards-no-history = Sin historial aún
-rewards-progress = Progreso
-rewards-milestones = Hitos
-rewards-unlocked = Desbloqueado
-rewards-locked = Bloqueado
-rewards-claim = Reclamar
-rewards-completed = Completado
+# Rewards tab
+habits-streak-rewards = Recompensas de Racha
+habits-new-reward = Nueva Recompensa
+habits-no-rewards = Sin recompensas de racha configuradas.
+habits-consecutive = Consecutivo
+habits-accumulative = Acumulativo
+habits-progress = Progreso
+habits-days-label = dias
+habits-unlocked = Desbloqueado
+habits-goals = Metas
+habits-new-goal = Nueva Meta
+habits-no-goals = Sin metas establecidas.
+habits-due = Vence:
+habits-mark-complete = Marcar Completo
+habits-archive = Archivar
+
+# History tab
+habits-no-achievements = Sin logros aun.
+
+# Habit modal
+habits-edit-habit = Editar Habito
+habits-new-habit-modal = Nuevo Habito
+habits-name = Nombre
+habits-habit-name-placeholder = Nombre del habito
+habits-description = Descripcion
+habits-desc-placeholder = Descripcion opcional
+habits-color = Color
+habits-category = Categoria
+habits-category-placeholder = ej. salud, aprendizaje
+habits-cancel = Cancelar
+habits-update = Actualizar
+habits-create = Crear
+
+# Reward modal
+habits-edit-reward = Editar Recompensa de Racha
+habits-new-reward-modal = Nueva Recompensa de Racha
+habits-habit = Habito
+habits-consecutive-days = Dias consecutivos (vs Acumulativo)
+habits-target-days = Dias Objetivo
+habits-target-days-placeholder = ej., 7, 30, 100
+habits-target-total = Total Objetivo (opcional)
+habits-target-total-placeholder = Metrica de conteo alternativa
+
+# Goal modal
+habits-edit-goal = Editar Meta
+habits-new-goal-modal = Nueva Meta
+habits-goal-name = Nombre de la Meta
+habits-goal-name-placeholder = ej., Completar certificacion
+habits-goal-desc-placeholder = Detalles opcionales
+habits-reward-text = Texto de Recompensa
+habits-reward-text-placeholder = Con que te recompensaras
+habits-deadline = Fecha limite (opcional)
+
+# Toast messages
+habits-toast-habit-created = Habito creado
+habits-toast-habit-updated = Habito actualizado
+habits-toast-habit-deleted = Habito eliminado
+habits-toast-reward-created = Recompensa creada
+habits-toast-reward-updated = Recompensa actualizada
+habits-toast-reward-deleted = Recompensa eliminada
+habits-toast-goal-created = Meta creada
+habits-toast-goal-updated = Meta actualizada
+habits-toast-goal-deleted = Meta eliminada
+habits-toast-goal-completed = Meta completada!
+habits-toast-goal-archived = Meta archivada
+habits-toast-fill-required = Por favor completa los campos requeridos
+habits-toast-enter-goal-name = Por favor ingresa un nombre para la meta
 
 # ==================== Settings ====================
 settings-title = Ajustes

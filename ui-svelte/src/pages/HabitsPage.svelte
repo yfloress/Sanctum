@@ -16,6 +16,7 @@
 
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte'
+  import { i18n } from '../lib/stores/i18n.svelte'
   import * as habitsApi from '../lib/api/habits'
   import RadarChart from '../components/charts/RadarChart.svelte'
   import WeekdayChart from '../components/charts/WeekdayChart.svelte'
@@ -170,7 +171,7 @@
       }
       showAddHabit = false
       await load()
-      app.showToast(editingHabit ? 'Habit updated' : 'Habit created')
+      app.showToast(editingHabit ? i18n.t('habits-toast-habit-updated', 'Habit updated') : i18n.t('habits-toast-habit-created', 'Habit created'))
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -181,7 +182,7 @@
       await habitsApi.deleteHabit(id)
       if (selectedHabit?.id === id) { selectedHabit = null; summary = null }
       await load()
-      app.showToast('Habit deleted')
+      app.showToast(i18n.t('habits-toast-habit-deleted', 'Habit deleted'))
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -207,7 +208,7 @@
 
   async function submitReward() {
     if (!rewardHabitId || !rewardTargetDays) {
-      app.showToast('Please fill required fields', true)
+      app.showToast(i18n.t('habits-toast-fill-required', 'Please fill required fields'), true)
       return
     }
     try {
@@ -232,7 +233,7 @@
       showAddReward = false
       editingReward = null
       await loadRewards()
-      app.showToast(isEditing ? 'Reward updated' : 'Reward created')
+      app.showToast(isEditing ? i18n.t('habits-toast-reward-updated', 'Reward updated') : i18n.t('habits-toast-reward-created', 'Reward created'))
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -242,7 +243,7 @@
     try {
       await habitsApi.deleteStreakReward(id)
       await loadRewards()
-      app.showToast('Reward deleted')
+      app.showToast(i18n.t('habits-toast-reward-deleted', 'Reward deleted'))
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -268,7 +269,7 @@
 
   async function submitGoal() {
     if (!goalName) {
-      app.showToast('Please enter a goal name', true)
+      app.showToast(i18n.t('habits-toast-enter-goal-name', 'Please enter a goal name'), true)
       return
     }
     try {
@@ -281,7 +282,7 @@
       showAddGoal = false
       editingGoal = null
       await loadRewards()
-      app.showToast(isEditing ? 'Goal updated' : 'Goal created')
+      app.showToast(isEditing ? i18n.t('habits-toast-goal-updated', 'Goal updated') : i18n.t('habits-toast-goal-created', 'Goal created'))
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -291,7 +292,7 @@
     try {
       await habitsApi.deleteGoal(id)
       await loadRewards()
-      app.showToast('Goal deleted')
+      app.showToast(i18n.t('habits-toast-goal-deleted', 'Goal deleted'))
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -310,7 +311,7 @@
     try {
       await habitsApi.completeGoal(id)
       goals = await habitsApi.fetchGoals()
-      app.showToast('Goal completed!')
+      app.showToast(i18n.t('habits-toast-goal-completed', 'Goal completed!'))
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -320,7 +321,7 @@
     try {
       await habitsApi.archiveGoal(id)
       await loadRewards()
-      app.showToast('Goal archived')
+      app.showToast(i18n.t('habits-toast-goal-archived', 'Goal archived'))
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -336,7 +337,12 @@
     try { heatmap = await habitsApi.fetchHeatmap(heatmapYear) } catch (e) { app.showToast(String(e), true) }
   }
 
-  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December']
+  const monthNames = $derived([
+    i18n.t('month-january','January'), i18n.t('month-february','February'), i18n.t('month-march','March'),
+    i18n.t('month-april','April'), i18n.t('month-may','May'), i18n.t('month-june','June'),
+    i18n.t('month-july','July'), i18n.t('month-august','August'), i18n.t('month-september','September'),
+    i18n.t('month-october','October'), i18n.t('month-november','November'), i18n.t('month-december','December'),
+  ])
 
   $effect(() => { load() })
   $effect(() => { if (activeTab === 'rewards') loadRewards() })
@@ -345,7 +351,7 @@
 
 <div class="page" class:blurred={showAddHabit || showAddReward || showAddGoal}>
   <div class="page-header">
-    <h2>HABITS</h2>
+    <h2>{i18n.t('habits-title', 'HABITS')}</h2>
     {#if activeTab === 'habits'}
       <div class="month-nav">
         <button class="nav-arrow" aria-label="Previous month" onclick={prevMonth}>
@@ -360,25 +366,25 @@
   </div>
 
   <div class="tab-bar">
-    <button class:active={activeTab === 'habits'} onclick={() => activeTab = 'habits'}>Habits</button>
-    <button class:active={activeTab === 'rewards'} onclick={() => activeTab = 'rewards'}>Rewards</button>
-    <button class:active={activeTab === 'history'} onclick={() => activeTab = 'history'}>History</button>
+    <button class:active={activeTab === 'habits'} onclick={() => activeTab = 'habits'}>{i18n.t('habits-tab-habits', 'Habits')}</button>
+    <button class:active={activeTab === 'rewards'} onclick={() => activeTab = 'rewards'}>{i18n.t('habits-tab-rewards', 'Rewards')}</button>
+    <button class:active={activeTab === 'history'} onclick={() => activeTab = 'history'}>{i18n.t('habits-tab-history', 'History')}</button>
   </div>
 
   {#if loading}
-    <div class="loading">Loading...</div>
+    <div class="loading">{i18n.t('habits-loading', 'Loading...')}</div>
 
   <!-- HABITS TAB -->
   {:else if activeTab === 'habits'}
     <div class="section-header">
-      <h3>Daily Tracking</h3>
-      <button class="glass-btn" onclick={openAddHabit}>New Habit</button>
+      <h3>{i18n.t('habits-daily-tracking', 'Daily Tracking')}</h3>
+      <button class="glass-btn" onclick={openAddHabit}>{i18n.t('habits-new-habit', 'New Habit')}</button>
     </div>
 
     {#if habitsData && habitsData.habits.length > 0}
       <div class="habit-grid">
         <div class="grid-header">
-          <span class="habit-name-col">Habit</span>
+          <span class="habit-name-col">{i18n.t('habits-habit-col', 'Habit')}</span>
           {#each Array(habitsData.days_in_month) as _, i}
             <span class="day-num">{i + 1}</span>
           {/each}
@@ -409,9 +415,9 @@
       {#if heatmap}
         <div class="chart-section">
           <div class="heatmap-header">
-            <h3>Activity Heatmap</h3>
+            <h3>{i18n.t('habits-activity-heatmap', 'Activity Heatmap')}</h3>
             <div class="heatmap-nav">
-              <button class="nav-arrow" aria-label="Previous year" onclick={prevHeatmapYear}>
+              <button class="nav-arrow" aria-label={i18n.t('habits-prev-year', 'Previous year')} onclick={prevHeatmapYear}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 19l-7-7 7-7"/></svg>
               </button>
               <span class="heatmap-year">{heatmapYear}</span>
@@ -443,15 +449,15 @@
               {selectedHabit.name}
             </h3>
             <div class="summary-actions">
-              <button class="icon-btn" onclick={() => openEditHabit(selectedHabit!)}>Edit</button>
-              <button class="icon-btn danger" onclick={() => deleteHabit(selectedHabit!.id)}>Delete</button>
+              <button class="icon-btn" onclick={() => openEditHabit(selectedHabit!)}>{i18n.t('habits-edit', 'Edit')}</button>
+              <button class="icon-btn danger" onclick={() => deleteHabit(selectedHabit!.id)}>{i18n.t('habits-delete', 'Delete')}</button>
             </div>
           </div>
           <div class="stats-grid">
-            <div class="stat"><span class="stat-val">{summary.current_streak}</span><span class="stat-lbl">Current Streak</span></div>
-            <div class="stat"><span class="stat-val">{summary.best_streak}</span><span class="stat-lbl">Best Streak</span></div>
-            <div class="stat"><span class="stat-val">{(summary.completion_rate * 100).toFixed(0)}%</span><span class="stat-lbl">Completion</span></div>
-            <div class="stat"><span class="stat-val">{summary.last_30_days}</span><span class="stat-lbl">Last 30 Days</span></div>
+            <div class="stat"><span class="stat-val">{summary.current_streak}</span><span class="stat-lbl">{i18n.t('habits-current-streak', 'Current Streak')}</span></div>
+            <div class="stat"><span class="stat-val">{summary.best_streak}</span><span class="stat-lbl">{i18n.t('habits-best-streak', 'Best Streak')}</span></div>
+            <div class="stat"><span class="stat-val">{(summary.completion_rate * 100).toFixed(0)}%</span><span class="stat-lbl">{i18n.t('habits-completion', 'Completion')}</span></div>
+            <div class="stat"><span class="stat-val">{summary.last_30_days}</span><span class="stat-lbl">{i18n.t('habits-last-30-days', 'Last 30 Days')}</span></div>
           </div>
         </div>
       {/if}
@@ -461,13 +467,13 @@
         <div class="analytics-section">
           {#if analytics.radar.categories.length > 0}
             <div class="chart-card">
-              <h3>Habit Radar</h3>
+              <h3>{i18n.t('habits-habit-radar', 'Habit Radar')}</h3>
               <RadarChart data={analytics.radar} />
             </div>
           {/if}
           {#if analytics.weekday_efficiency.labels.length > 0}
             <div class="chart-card">
-              <h3>Weekday Efficiency</h3>
+              <h3>{i18n.t('habits-weekday-efficiency', 'Weekday Efficiency')}</h3>
               <WeekdayChart data={analytics.weekday_efficiency} />
             </div>
           {/if}
@@ -478,39 +484,39 @@
         </div>
       {/if}
     {:else}
-      <p class="empty">No habits yet. Create your first habit to start tracking.</p>
+      <p class="empty">{i18n.t('habits-no-habits', 'No habits yet. Create your first habit to start tracking.')}</p>
     {/if}
 
   <!-- REWARDS TAB -->
   {:else if activeTab === 'rewards'}
     <div class="rewards-section">
       <div class="section-header">
-        <h3>Streak Rewards</h3>
-        <button class="glass-btn" onclick={openAddReward}>New Reward</button>
+        <h3>{i18n.t('habits-streak-rewards', 'Streak Rewards')}</h3>
+        <button class="glass-btn" onclick={openAddReward}>{i18n.t('habits-new-reward', 'New Reward')}</button>
       </div>
       {#if rewards.length === 0}
-        <p class="empty">No streak rewards configured.</p>
+        <p class="empty">{i18n.t('habits-no-rewards', 'No streak rewards configured.')}</p>
       {:else}
         {#each rewards as reward}
           <div class="reward-card">
             <div class="reward-header">
               <div>
                 <span class="reward-habit">{reward.habit_name}</span>
-                <span class="reward-type">{reward.is_consecutive ? 'Consecutive' : 'Accumulative'}</span>
+                <span class="reward-type">{reward.is_consecutive ? i18n.t('habits-consecutive', 'Consecutive') : i18n.t('habits-accumulative', 'Accumulative')}</span>
               </div>
               <div class="reward-actions">
-                <button class="icon-btn" onclick={() => openEditReward(reward)}>Edit</button>
-                <button class="icon-btn danger" onclick={() => deleteReward(reward.id)}>Delete</button>
+                <button class="icon-btn" onclick={() => openEditReward(reward)}>{i18n.t('habits-edit', 'Edit')}</button>
+                <button class="icon-btn danger" onclick={() => deleteReward(reward.id)}>{i18n.t('habits-delete', 'Delete')}</button>
               </div>
             </div>
             <div class="reward-progress">
-              Progress: {reward.current_progress} / {reward.target_days ?? reward.target_total ?? '?'} days
+              {i18n.t('habits-progress', 'Progress')}: {reward.current_progress} / {reward.target_days ?? reward.target_total ?? '?'} {i18n.t('habits-days-label', 'days')}
             </div>
             {#each reward.milestones as ms}
               <div class="milestone" class:unlocked={ms.unlocked}>
                 <span>{ms.target_days}d: {ms.reward_text}</span>
                 {#if ms.unlocked}
-                  <span class="unlocked-badge">Unlocked</span>
+                  <span class="unlocked-badge">{i18n.t('habits-unlocked', 'Unlocked')}</span>
                 {/if}
               </div>
             {/each}
@@ -519,11 +525,11 @@
       {/if}
 
       <div class="section-header" style="margin-top: 24px">
-        <h3>Goals</h3>
-        <button class="glass-btn" onclick={openAddGoal}>New Goal</button>
+        <h3>{i18n.t('habits-goals', 'Goals')}</h3>
+        <button class="glass-btn" onclick={openAddGoal}>{i18n.t('habits-new-goal', 'New Goal')}</button>
       </div>
       {#if goals.length === 0}
-        <p class="empty">No goals set.</p>
+        <p class="empty">{i18n.t('habits-no-goals', 'No goals set.')}</p>
       {:else}
         {#each goals as goal}
           <div class="goal-card" class:completed={goal.is_completed}>
@@ -531,15 +537,15 @@
               <div>
                 <span class="goal-name">{goal.name}</span>
                 {#if goal.deadline}
-                  <span class="goal-deadline">Due: {goal.deadline}</span>
+                  <span class="goal-deadline">{i18n.t('habits-due', 'Due:')} {goal.deadline}</span>
                 {/if}
               </div>
               <div class="goal-actions">
-                <button class="icon-btn" onclick={() => openEditGoal(goal)}>Edit</button>
+                <button class="icon-btn" onclick={() => openEditGoal(goal)}>{i18n.t('habits-edit', 'Edit')}</button>
                 {#if goal.is_completed}
-                  <button class="icon-btn" onclick={() => archiveGoal(goal.id)}>Archive</button>
+                  <button class="icon-btn" onclick={() => archiveGoal(goal.id)}>{i18n.t('habits-archive', 'Archive')}</button>
                 {/if}
-                <button class="icon-btn danger" onclick={() => deleteGoal(goal.id)}>Delete</button>
+                <button class="icon-btn danger" onclick={() => deleteGoal(goal.id)}>{i18n.t('habits-delete', 'Delete')}</button>
               </div>
             </div>
             {#if goal.description}
@@ -554,7 +560,7 @@
               {/each}
             </div>
             {#if !goal.is_completed}
-              <button class="secondary-btn small" onclick={() => completeGoal(goal.id)}>Mark Complete</button>
+              <button class="secondary-btn small" onclick={() => completeGoal(goal.id)}>{i18n.t('habits-mark-complete', 'Mark Complete')}</button>
             {/if}
           </div>
         {/each}
@@ -564,7 +570,7 @@
   <!-- HISTORY TAB -->
   {:else if activeTab === 'history'}
     {#if achievements.length === 0}
-      <p class="empty">No achievements yet.</p>
+      <p class="empty">{i18n.t('habits-no-achievements', 'No achievements yet.')}</p>
     {:else}
       <div class="timeline">
         {#each achievements as ach}
@@ -587,18 +593,18 @@
   <div class="modal-backdrop" role="presentation" onclick={() => showAddHabit = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddHabit = false }}></div>
   <div class="modal-wrapper">
     <div class="modal">
-      <h3>{editingHabit ? 'Edit Habit' : 'New Habit'}</h3>
+      <h3>{editingHabit ? i18n.t('habits-edit-habit', 'Edit Habit') : i18n.t('habits-new-habit-modal', 'New Habit')}</h3>
     <div class="form-grid">
       <label>
-        Name
-        <input type="text" bind:value={habitName} placeholder="Habit name" />
+        {i18n.t('habits-name', 'Name')}
+        <input type="text" bind:value={habitName} placeholder={i18n.t('habits-habit-name-placeholder', 'Habit name')} />
       </label>
       <label>
-        Description
-        <input type="text" bind:value={habitDescription} placeholder="Optional description" />
+        {i18n.t('habits-description', 'Description')}
+        <input type="text" bind:value={habitDescription} placeholder={i18n.t('habits-desc-placeholder', 'Optional description')} />
       </label>
       <label>
-        Color
+        {i18n.t('habits-color', 'Color')}
         <div class="color-palette">
           {#each colors as c}
             <button
@@ -612,14 +618,14 @@
         </div>
       </label>
       <label>
-        Category
-        <input type="text" bind:value={habitCategory} placeholder="e.g. health, learning" />
+        {i18n.t('habits-category', 'Category')}
+        <input type="text" bind:value={habitCategory} placeholder={i18n.t('habits-category-placeholder', 'e.g. health, learning')} />
       </label>
     </div>
       <div class="modal-actions">
-        <button class="secondary-btn" onclick={() => showAddHabit = false}>Cancel</button>
+        <button class="secondary-btn" onclick={() => showAddHabit = false}>{i18n.t('habits-cancel', 'Cancel')}</button>
         <button class="primary-btn" onclick={submitHabit} disabled={!habitName.trim()}>
-          {editingHabit ? 'Update' : 'Create'}
+          {editingHabit ? i18n.t('habits-update', 'Update') : i18n.t('habits-create', 'Create')}
         </button>
       </div>
     </div>
@@ -631,10 +637,10 @@
   <div class="modal-backdrop" role="presentation" onclick={() => showAddReward = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddReward = false }}></div>
   <div class="modal-wrapper">
     <div class="modal">
-      <h3>{editingReward ? 'Edit Streak Reward' : 'New Streak Reward'}</h3>
+      <h3>{editingReward ? i18n.t('habits-edit-reward', 'Edit Streak Reward') : i18n.t('habits-new-reward-modal', 'New Streak Reward')}</h3>
       <div class="form-grid">
         <label>
-          Habit
+          {i18n.t('habits-habit', 'Habit')}
           <select bind:value={rewardHabitId}>
             {#if habitsData?.habits}
               {#each habitsData.habits as habit}
@@ -645,21 +651,21 @@
         </label>
         <label>
           <input type="checkbox" bind:checked={rewardConsecutive} />
-          <span>Consecutive days (vs Accumulative)</span>
+          <span>{i18n.t('habits-consecutive-days', 'Consecutive days (vs Accumulative)')}</span>
         </label>
         <label>
-          Target Days
-          <input type="number" bind:value={rewardTargetDays} placeholder="e.g., 7, 30, 100" />
+          {i18n.t('habits-target-days', 'Target Days')}
+          <input type="number" bind:value={rewardTargetDays} placeholder={i18n.t('habits-target-days-placeholder', 'e.g., 7, 30, 100')} />
         </label>
         <label>
-          Target Total (optional)
-          <input type="number" bind:value={rewardTargetTotal} placeholder="Alternative count metric" />
+          {i18n.t('habits-target-total', 'Target Total (optional)')}
+          <input type="number" bind:value={rewardTargetTotal} placeholder={i18n.t('habits-target-total-placeholder', 'Alternative count metric')} />
         </label>
       </div>
       <div class="modal-actions">
-        <button class="secondary-btn" onclick={() => showAddReward = false}>Cancel</button>
+        <button class="secondary-btn" onclick={() => showAddReward = false}>{i18n.t('habits-cancel', 'Cancel')}</button>
         <button class="primary-btn" onclick={submitReward} disabled={!rewardHabitId || !rewardTargetDays}>
-          {editingReward ? 'Update' : 'Create'}
+          {editingReward ? i18n.t('habits-update', 'Update') : i18n.t('habits-create', 'Create')}
         </button>
       </div>
     </div>
@@ -671,29 +677,29 @@
   <div class="modal-backdrop" role="presentation" onclick={() => showAddGoal = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddGoal = false }}></div>
   <div class="modal-wrapper">
     <div class="modal">
-      <h3>{editingGoal ? 'Edit Goal' : 'New Goal'}</h3>
+      <h3>{editingGoal ? i18n.t('habits-edit-goal', 'Edit Goal') : i18n.t('habits-new-goal-modal', 'New Goal')}</h3>
       <div class="form-grid">
         <label>
-          Goal Name
-          <input type="text" bind:value={goalName} placeholder="e.g., Complete certification" />
+          {i18n.t('habits-goal-name', 'Goal Name')}
+          <input type="text" bind:value={goalName} placeholder={i18n.t('habits-goal-name-placeholder', 'e.g., Complete certification')} />
         </label>
         <label>
-          Description
-          <input type="text" bind:value={goalDescription} placeholder="Optional details" />
+          {i18n.t('habits-description', 'Description')}
+          <input type="text" bind:value={goalDescription} placeholder={i18n.t('habits-goal-desc-placeholder', 'Optional details')} />
         </label>
         <label>
-          Reward Text
-          <input type="text" bind:value={goalRewardText} placeholder="What you'll reward yourself with" />
+          {i18n.t('habits-reward-text', 'Reward Text')}
+          <input type="text" bind:value={goalRewardText} placeholder={i18n.t('habits-reward-text-placeholder', "What you'll reward yourself with")} />
         </label>
         <label>
-          Deadline (optional)
+          {i18n.t('habits-deadline', 'Deadline (optional)')}
           <input type="date" bind:value={goalDeadline} />
         </label>
       </div>
       <div class="modal-actions">
-        <button class="secondary-btn" onclick={() => showAddGoal = false}>Cancel</button>
+        <button class="secondary-btn" onclick={() => showAddGoal = false}>{i18n.t('habits-cancel', 'Cancel')}</button>
         <button class="primary-btn" onclick={submitGoal} disabled={!goalName.trim()}>
-          {editingGoal ? 'Update' : 'Create'}
+          {editingGoal ? i18n.t('habits-update', 'Update') : i18n.t('habits-create', 'Create')}
         </button>
       </div>
     </div>

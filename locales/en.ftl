@@ -253,65 +253,113 @@ crypto-tx-to-amount-required = To amount is required
 crypto-tx-swap-different-assets = Swap assets must be different
 
 # ==================== Habits ====================
+# Header & tabs
 habits-title = HABITS
-habits-my-habits = My Habits
-habits-add-habit = Add Habit
-habits-no-habits = No habits yet
-habits-streak = Streak
-habits-best-streak = Best
-habits-current-streak = Current
-habits-completion-rate = Completion Rate
-habits-days = { $count ->
-    [one] { $count } day
-   *[other] { $count } days
-}
+habits-tab-habits = Habits
+habits-tab-rewards = Rewards
+habits-tab-history = History
+habits-loading = Loading...
 
-# Habit categories
-habit-category-mind = Mind
-habit-category-body = Body
-habit-category-spirit = Spirit
+# Habits tab
+habits-daily-tracking = Daily Tracking
+habits-new-habit = New Habit
+habits-habit-col = Habit
+habits-no-habits = No habits yet. Create your first habit to start tracking.
+habits-activity-heatmap = Activity Heatmap
 
-# Habit frequency
-habit-frequency-daily = Daily
-habit-frequency-weekly = Weekly
+# Habit summary stats
+habits-current-streak = Current Streak
+habits-best-streak = Best Streak
+habits-completion = Completion
+habits-last-30-days = Last 30 Days
+habits-edit = Edit
+habits-delete = Delete
 
 # Analytics
-habits-analytics = Analytics
-habits-life-balance = Life Balance (Last 30 Days)
+habits-habit-radar = Habit Radar
 habits-weekday-efficiency = Weekday Efficiency
-habits-empty-chart = The chart is empty, but your potential is full.
-habits-empty-chart-subtitle = Your legend will appear here. Start writing it today.
-habits-complete-to-see = Complete habits to see your weekly pattern.
-habits-discover-days = Discover which days you're most consistent.
 
-# Habits Tab sections
-habits-add-button = + HABIT
-habits-yearly-overview = YEARLY OVERVIEW
-habits-my-habits-section = MY HABITS
-habits-no-tracked-month = No habits tracked this month
-habits-create-to-build = Create a habit to start building consistency
-habits-analytics-section = ANALYTICS
-habits-weekly-report = WEEKLY REPORT
-habits-insights = INSIGHTS
-habits-summary = HABIT SUMMARY
-habits-select-placeholder = Select a habit...
+# Month names
+month-january = January
+month-february = February
+month-march = March
+month-april = April
+month-may = May
+month-june = June
+month-july = July
+month-august = August
+month-september = September
+month-october = October
+month-november = November
+month-december = December
 
-# ==================== Rewards ====================
-rewards-title = Rewards
-rewards-goals = Goals
-rewards-streak-rewards = Streak Rewards
-rewards-history = History
-rewards-add-goal = Add Goal
-rewards-add-reward = Add Streak Reward
-rewards-no-goals = No goals yet
-rewards-no-rewards = No streak rewards yet
-rewards-no-history = No history yet
-rewards-progress = Progress
-rewards-milestones = Milestones
-rewards-unlocked = Unlocked
-rewards-locked = Locked
-rewards-claim = Claim
-rewards-completed = Completed
+# Rewards tab
+habits-streak-rewards = Streak Rewards
+habits-new-reward = New Reward
+habits-no-rewards = No streak rewards configured.
+habits-consecutive = Consecutive
+habits-accumulative = Accumulative
+habits-progress = Progress
+habits-days-label = days
+habits-unlocked = Unlocked
+habits-goals = Goals
+habits-new-goal = New Goal
+habits-no-goals = No goals set.
+habits-due = Due:
+habits-mark-complete = Mark Complete
+habits-archive = Archive
+
+# History tab
+habits-no-achievements = No achievements yet.
+
+# Habit modal
+habits-edit-habit = Edit Habit
+habits-new-habit-modal = New Habit
+habits-name = Name
+habits-habit-name-placeholder = Habit name
+habits-description = Description
+habits-desc-placeholder = Optional description
+habits-color = Color
+habits-category = Category
+habits-category-placeholder = e.g. health, learning
+habits-cancel = Cancel
+habits-update = Update
+habits-create = Create
+
+# Reward modal
+habits-edit-reward = Edit Streak Reward
+habits-new-reward-modal = New Streak Reward
+habits-habit = Habit
+habits-consecutive-days = Consecutive days (vs Accumulative)
+habits-target-days = Target Days
+habits-target-days-placeholder = e.g., 7, 30, 100
+habits-target-total = Target Total (optional)
+habits-target-total-placeholder = Alternative count metric
+
+# Goal modal
+habits-edit-goal = Edit Goal
+habits-new-goal-modal = New Goal
+habits-goal-name = Goal Name
+habits-goal-name-placeholder = e.g., Complete certification
+habits-goal-desc-placeholder = Optional details
+habits-reward-text = Reward Text
+habits-reward-text-placeholder = What you'll reward yourself with
+habits-deadline = Deadline (optional)
+
+# Toast messages
+habits-toast-habit-created = Habit created
+habits-toast-habit-updated = Habit updated
+habits-toast-habit-deleted = Habit deleted
+habits-toast-reward-created = Reward created
+habits-toast-reward-updated = Reward updated
+habits-toast-reward-deleted = Reward deleted
+habits-toast-goal-created = Goal created
+habits-toast-goal-updated = Goal updated
+habits-toast-goal-deleted = Goal deleted
+habits-toast-goal-completed = Goal completed!
+habits-toast-goal-archived = Goal archived
+habits-toast-fill-required = Please fill required fields
+habits-toast-enter-goal-name = Please enter a goal name
 
 # ==================== Settings ====================
 settings-title = Settings
