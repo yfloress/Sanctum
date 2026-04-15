@@ -233,36 +233,27 @@ rewards-claim = Claim
 rewards-completed = Completed
 
 # ==================== Settings ====================
-# NOTE: Settings section titles should be uppercase.
 settings-title = Settings
-settings-general = GENERAL
-settings-appearance = APPEARANCE
-settings-security = SECURITY
-settings-data = DATA
-settings-about = ABOUT
 
-# General settings
-settings-language = Language
-settings-language-desc = Application interface language
-settings-currency = Currency
-settings-currency-desc = Default currency for display
-settings-preferred-currency = Preferred Currency
-settings-preferred-currency-desc = Base currency for displaying amounts (UI only)
+# Section headers
+settings-appearance = Appearance
+settings-regional = Regional
+settings-security = Security
+settings-vault-backup = Vault Backup
+settings-data-import = Data Import
+settings-data-sync = Data Sync
+settings-about = About
+settings-reset-section = Reset
 
-# Appearance settings
+# Appearance
 settings-dark-mode = Dark Mode
-settings-dark-mode-desc = Enable dark theme
-settings-dark-mode-title = Dark Mode
-settings-dark-mode-toggle-desc = Switch between dark and light (cream/gold) themes
-settings-wallpaper-title = Login Wallpaper
-settings-wallpaper-desc = Background image for the vault lock screen
-settings-wallpaper-default = Default
-settings-wallpaper-select = SELECT IMAGE
-settings-wallpaper-reset = RESET
-settings-wallpaper-note = Stored in config.toml (not encrypted).
-settings-wallpaper-formats = Supported formats: PNG, JPG, JPEG, WEBP, BMP, GIF, TIFF
+settings-dark-mode-desc = Toggle dark/light theme
 
-# Security settings
+# Regional
+settings-preferred-currency = Preferred Currency
+settings-language = Language
+
+# Security
 settings-session-timeout = Session Timeout
 settings-session-timeout-desc = Auto-lock after inactivity
 settings-timeout-5min = 5 minutes
@@ -270,24 +261,60 @@ settings-timeout-15min = 15 minutes
 settings-timeout-30min = 30 minutes
 settings-timeout-1hour = 1 hour
 settings-timeout-never = Never
-settings-timeout-warning = Timeout changes will apply on next vault open.
 
-# Crypto settings
+# Vault Backup
+settings-vault-note = Your vault is encrypted with SQLCipher (AES-256).
+settings-export-vault = Export Vault
+settings-export-btn = Export
+settings-export-success = Backup saved successfully
+
+# Data Import
+settings-import-generic = Generic CSV
+settings-import-generic-desc = Import transactions from a CSV file
+settings-import-exchange = Exchange CSV
+settings-import-exchange-desc = Import from Kraken, Binance, MEXC, and more
+settings-import-select-file = Select File
+settings-import-loading = Loading...
+settings-import-detected = Detected:
+settings-import-records = records
+settings-import-target-wallet = Target Wallet
+settings-import-wallet-placeholder = Wallet name
+settings-import-wallet-required = Wallet name is required
+settings-import-no-detection = Could not detect exchange format
+settings-import-preview-btn = Preview
+settings-import-source = Source:
+settings-import-to-add = to add
+settings-import-to-skip = to skip
+settings-import-importing = Importing...
+settings-import-confirm = Confirm Import
+settings-import-processed = Processed:
+settings-import-inserted = Inserted:
+settings-import-skipped = Skipped:
+settings-import-errors = Errors
+settings-import-line = Line
+settings-import-done = Done
+settings-import-file-too-large = File too large
+
+# Data Sync
 settings-auto-fetch = Auto-fetch Prices
-settings-auto-fetch-desc = Automatically update crypto prices
-settings-auto-fetch-title = Auto-fetch Crypto Prices
-settings-auto-fetch-toggle-desc = Refresh prices every minute while app is running (uses network)
-settings-proxy = Proxy
-settings-proxy-enabled = Enable Proxy
+settings-auto-fetch-desc = Automatically fetch crypto prices on sync
+settings-use-proxy = Use Proxy
+settings-use-proxy-desc = Route API calls through a proxy
 settings-proxy-url = Proxy URL
-settings-proxy-title = Use Network Proxy
-settings-proxy-toggle-desc = Route crypto price requests through a proxy (optional)
-settings-proxy-placeholder = http://127.0.0.1:8080 or socks5h://127.0.0.1:9050
 
-# Data settings
-settings-reset = Reset Settings
-settings-reset-desc = Reset all settings to defaults
-settings-reset-confirm = Are you sure you want to reset all settings?
+# About
+settings-about-version = Version
+settings-about-encryption = Encryption
+settings-about-storage = Storage
+
+# Reset
+settings-reset-all = Reset All Settings
+settings-reset-all-desc = Restore default values for all settings
+settings-reset-btn = Reset
+settings-reset-success = Settings reset to defaults
+
+# Common actions
+settings-cancel = Cancel
 
 # ==================== Modals ====================
 modal-add-account-title = Add Account

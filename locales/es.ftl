@@ -233,61 +233,88 @@ rewards-claim = Reclamar
 rewards-completed = Completado
 
 # ==================== Settings ====================
-# NOTA: Los titulos de secciones de Settings deben ir en MAYUSCULAS.
 settings-title = Ajustes
-settings-general = GENERAL
-settings-appearance = APARIENCIA
-settings-security = SEGURIDAD
-settings-data = DATOS
-settings-about = ACERCA DE
 
-# General settings
-settings-language = Idioma
-settings-language-desc = Idioma de la interfaz
-settings-currency = Moneda
-settings-currency-desc = Moneda predeterminada
-settings-preferred-currency = Moneda Preferida
-settings-preferred-currency-desc = Moneda base para mostrar montos (solo UI)
+# Section headers
+settings-appearance = Apariencia
+settings-regional = Regional
+settings-security = Seguridad
+settings-vault-backup = Respaldo de Boveda
+settings-data-import = Importar Datos
+settings-data-sync = Sincronizacion
+settings-about = Acerca de
+settings-reset-section = Restablecer
 
-# Appearance settings
+# Appearance
 settings-dark-mode = Modo Oscuro
-settings-dark-mode-desc = Activar tema oscuro
-settings-dark-mode-title = Modo Oscuro
-settings-dark-mode-toggle-desc = Cambiar entre temas oscuro y claro (crema/dorado)
-settings-wallpaper-title = Fondo de inicio de sesión
-settings-wallpaper-desc = Imagen de fondo para la pantalla de bloqueo
-settings-wallpaper-default = Predeterminado
-settings-wallpaper-select = SELECCIONAR IMAGEN
-settings-wallpaper-reset = RESTABLECER
-settings-wallpaper-note = Se guarda en config.toml (no está cifrado).
-settings-wallpaper-formats = Formatos admitidos: PNG, JPG, JPEG, WEBP, BMP, GIF, TIFF
+settings-dark-mode-desc = Alternar tema oscuro/claro
 
-# Security settings
-settings-session-timeout = Tiempo de Sesión
-settings-session-timeout-desc = Bloqueo automático por inactividad
+# Regional
+settings-preferred-currency = Moneda Preferida
+settings-language = Idioma
+
+# Security
+settings-session-timeout = Tiempo de Sesion
+settings-session-timeout-desc = Bloqueo automatico por inactividad
 settings-timeout-5min = 5 minutos
 settings-timeout-15min = 15 minutos
 settings-timeout-30min = 30 minutos
 settings-timeout-1hour = 1 hora
 settings-timeout-never = Nunca
-settings-timeout-warning = Los cambios de tiempo se aplicarán en la próxima apertura de bóveda.
 
-# Crypto settings
-settings-auto-fetch = Actualizar Precios
-settings-auto-fetch-desc = Actualizar precios de crypto automáticamente
-settings-auto-fetch-title = Actualizar Precios de Crypto Automáticamente
-settings-auto-fetch-toggle-desc = Actualizar precios cada minuto mientras la app está activa (usa red)
-settings-proxy = Proxy
-settings-proxy-enabled = Habilitar Proxy
+# Vault Backup
+settings-vault-note = Tu boveda esta cifrada con SQLCipher (AES-256).
+settings-export-vault = Exportar Boveda
+settings-export-btn = Exportar
+settings-export-success = Respaldo guardado exitosamente
+
+# Data Import
+settings-import-generic = CSV Generico
+settings-import-generic-desc = Importar transacciones desde un archivo CSV
+settings-import-exchange = CSV de Exchange
+settings-import-exchange-desc = Importar desde Kraken, Binance, MEXC, y mas
+settings-import-select-file = Seleccionar Archivo
+settings-import-loading = Cargando...
+settings-import-detected = Detectado:
+settings-import-records = registros
+settings-import-target-wallet = Billetera Destino
+settings-import-wallet-placeholder = Nombre de billetera
+settings-import-wallet-required = El nombre de billetera es obligatorio
+settings-import-no-detection = No se pudo detectar el formato del exchange
+settings-import-preview-btn = Vista Previa
+settings-import-source = Origen:
+settings-import-to-add = por agregar
+settings-import-to-skip = por omitir
+settings-import-importing = Importando...
+settings-import-confirm = Confirmar Importacion
+settings-import-processed = Procesados:
+settings-import-inserted = Insertados:
+settings-import-skipped = Omitidos:
+settings-import-errors = Errores
+settings-import-line = Linea
+settings-import-done = Listo
+settings-import-file-too-large = Archivo muy grande
+
+# Data Sync
+settings-auto-fetch = Auto-actualizar Precios
+settings-auto-fetch-desc = Obtener precios de crypto automaticamente al sincronizar
+settings-use-proxy = Usar Proxy
+settings-use-proxy-desc = Enrutar llamadas API a traves de un proxy
 settings-proxy-url = URL del Proxy
-settings-proxy-title = Usar Proxy de Red
-settings-proxy-toggle-desc = Enrutar solicitudes de precios de crypto a través de un proxy (opcional)
-settings-proxy-placeholder = http://127.0.0.1:8080 o socks5h://127.0.0.1:9050
 
-# Data settings
-settings-reset = Restablecer Ajustes
-settings-reset-desc = Restablecer todos los ajustes
-settings-reset-confirm = ¿Estás seguro de que quieres restablecer todos los ajustes?
+# About
+settings-about-version = Version
+settings-about-encryption = Cifrado
+settings-about-storage = Almacenamiento
+
+# Reset
+settings-reset-all = Restablecer Todos los Ajustes
+settings-reset-all-desc = Restaurar valores predeterminados para todos los ajustes
+settings-reset-btn = Restablecer
+settings-reset-success = Ajustes restablecidos a valores predeterminados
+
+# Common actions
+settings-cancel = Cancelar
 
 # ==================== Modals ====================
 modal-add-account-title = Agregar Cuenta

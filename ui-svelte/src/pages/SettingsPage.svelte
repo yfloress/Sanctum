@@ -116,7 +116,7 @@
       importLoading = true
       const detection = await ingestionApi.detectExchangeSource(content)
       if (!detection) {
-        app.showToast('Could not detect exchange format', true)
+        app.showToast(i18n.t('settings-import-no-detection', 'Could not detect exchange format'), true)
         importLoading = false
         return
       }
@@ -132,7 +132,7 @@
 
   async function previewExchange() {
     if (!exchangeWalletName.trim()) {
-      app.showToast('Wallet name is required', true)
+      app.showToast(i18n.t('settings-import-wallet-required', 'Wallet name is required'), true)
       return
     }
     try {
@@ -218,7 +218,7 @@
       })
       if (!path) return
       await vaultApi.exportVault(path)
-      app.showToast('Backup saved successfully')
+      app.showToast(i18n.t('settings-export-success', 'Backup saved successfully'))
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -228,7 +228,7 @@
     try {
       await settingsApi.resetSettings()
       app.settings = await settingsApi.loadSettings()
-      app.showToast('Settings reset to defaults')
+      app.showToast(i18n.t('settings-reset-success', 'Settings reset to defaults'))
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -238,16 +238,16 @@
 </script>
 
 <div class="page">
-  <h2>Settings</h2>
+  <h2>{i18n.t('settings-title', 'Settings')}</h2>
 
   {#if app.settings}
     <!-- Appearance -->
     <section class="section">
-      <h3>Appearance</h3>
+      <h3>{i18n.t('settings-appearance', 'Appearance')}</h3>
       <div class="setting-row">
         <div>
-          <span class="setting-label">Dark Mode</span>
-          <span class="setting-desc">Toggle dark/light theme</span>
+          <span class="setting-label">{i18n.t('settings-dark-mode', 'Dark Mode')}</span>
+          <span class="setting-desc">{i18n.t('settings-dark-mode-desc', 'Toggle dark/light theme')}</span>
         </div>
         <button class="toggle-switch" class:on={app.settings.dark_mode} onclick={toggleDarkMode} aria-label="Toggle dark mode">
           <span class="toggle-knob"></span>
@@ -257,9 +257,9 @@
 
     <!-- Regional -->
     <section class="section">
-      <h3>Regional</h3>
+      <h3>{i18n.t('settings-regional', 'Regional')}</h3>
       <div class="setting-row">
-        <span class="setting-label">Preferred Currency</span>
+        <span class="setting-label">{i18n.t('settings-preferred-currency', 'Preferred Currency')}</span>
         <select value={app.settings.preferred_currency} onchange={changeCurrency}>
           {#each ['USD', 'CLP', 'EUR', 'GBP', 'BRL', 'MXN', 'ARS', 'CAD', 'AUD', 'CHF', 'JPY'] as cur}
             <option value={cur}>{cur}</option>
@@ -267,7 +267,7 @@
         </select>
       </div>
       <div class="setting-row">
-        <span class="setting-label">Language</span>
+        <span class="setting-label">{i18n.t('settings-language', 'Language')}</span>
         <select value={app.settings.preferred_language} onchange={changeLanguage}>
           <option value="en">English</option>
           <option value="es">Espanol</option>
@@ -277,56 +277,56 @@
 
     <!-- Security -->
     <section class="section">
-      <h3>Security</h3>
+      <h3>{i18n.t('settings-security', 'Security')}</h3>
       <div class="setting-row">
         <div>
-          <span class="setting-label">Session Timeout</span>
-          <span class="setting-desc">Auto-lock after inactivity</span>
+          <span class="setting-label">{i18n.t('settings-session-timeout', 'Session Timeout')}</span>
+          <span class="setting-desc">{i18n.t('settings-session-timeout-desc', 'Auto-lock after inactivity')}</span>
         </div>
         <select value={app.settings.session_timeout_secs} onchange={changeTimeout}>
-          <option value={300}>5 minutes</option>
-          <option value={900}>15 minutes</option>
-          <option value={1800}>30 minutes</option>
-          <option value={3600}>1 hour</option>
-          <option value={0}>Never</option>
+          <option value={300}>{i18n.t('settings-timeout-5min', '5 minutes')}</option>
+          <option value={900}>{i18n.t('settings-timeout-15min', '15 minutes')}</option>
+          <option value={1800}>{i18n.t('settings-timeout-30min', '30 minutes')}</option>
+          <option value={3600}>{i18n.t('settings-timeout-1hour', '1 hour')}</option>
+          <option value={0}>{i18n.t('settings-timeout-never', 'Never')}</option>
         </select>
       </div>
     </section>
 
     <!-- Vault Backup -->
     <section class="section">
-      <h3>Vault Backup</h3>
-      <p class="section-note">Your vault is encrypted with SQLCipher (AES-256).</p>
+      <h3>{i18n.t('settings-vault-backup', 'Vault Backup')}</h3>
+      <p class="section-note">{i18n.t('settings-vault-note', 'Your vault is encrypted with SQLCipher (AES-256).')}</p>
       <div class="setting-row">
-        <span class="setting-label">Export Vault</span>
-        <button class="glass-btn" onclick={exportVault}>Export</button>
+        <span class="setting-label">{i18n.t('settings-export-vault', 'Export Vault')}</span>
+        <button class="glass-btn" onclick={exportVault}>{i18n.t('settings-export-btn', 'Export')}</button>
       </div>
     </section>
 
     <!-- Data Import -->
     <section class="section">
-      <h3>Data Import</h3>
+      <h3>{i18n.t('settings-data-import', 'Data Import')}</h3>
 
       {#if importStep === 'idle'}
         {#if exchangeDetection}
           <!-- Exchange detected, ask for wallet name -->
           <div class="import-card">
             <p class="import-info">
-              Detected: <strong>{exchangeDetection.exchange}</strong>
-              ({exchangeDetection.total_records} records)
+              {i18n.t('settings-import-detected', 'Detected:')} <strong>{exchangeDetection.exchange}</strong>
+              ({exchangeDetection.total_records} {i18n.t('settings-import-records', 'records')})
             </p>
             <div class="setting-row">
-              <span class="setting-label">Target Wallet</span>
+              <span class="setting-label">{i18n.t('settings-import-target-wallet', 'Target Wallet')}</span>
               <input
                 type="text"
                 bind:value={exchangeWalletName}
-                placeholder="Wallet name"
+                placeholder={i18n.t('settings-import-wallet-placeholder', 'Wallet name')}
               />
             </div>
             <div class="import-actions">
-              <button class="secondary-btn" onclick={resetImport}>Cancel</button>
+              <button class="secondary-btn" onclick={resetImport}>{i18n.t('settings-cancel', 'Cancel')}</button>
               <button class="primary-btn" onclick={previewExchange} disabled={importLoading}>
-                {importLoading ? 'Loading...' : 'Preview'}
+                {importLoading ? i18n.t('settings-import-loading', 'Loading...') : i18n.t('settings-import-preview-btn', 'Preview')}
               </button>
             </div>
           </div>
@@ -335,20 +335,20 @@
           <input type="file" accept=".csv" class="hidden-input" bind:this={exchangeFileInput} onchange={handleExchangeFile} />
           <div class="setting-row">
             <div>
-              <span class="setting-label">Generic CSV</span>
-              <span class="setting-desc">Import transactions from a CSV file</span>
+              <span class="setting-label">{i18n.t('settings-import-generic', 'Generic CSV')}</span>
+              <span class="setting-desc">{i18n.t('settings-import-generic-desc', 'Import transactions from a CSV file')}</span>
             </div>
             <button class="secondary-btn" onclick={() => genericFileInput.click()} disabled={importLoading}>
-              {importLoading ? 'Loading...' : 'Select File'}
+              {importLoading ? i18n.t('settings-import-loading', 'Loading...') : i18n.t('settings-import-select-file', 'Select File')}
             </button>
           </div>
           <div class="setting-row">
             <div>
-              <span class="setting-label">Exchange CSV</span>
-              <span class="setting-desc">Import from Kraken, Binance, MEXC, and more</span>
+              <span class="setting-label">{i18n.t('settings-import-exchange', 'Exchange CSV')}</span>
+              <span class="setting-desc">{i18n.t('settings-import-exchange-desc', 'Import from Kraken, Binance, MEXC, and more')}</span>
             </div>
             <button class="secondary-btn" onclick={() => exchangeFileInput.click()} disabled={importLoading}>
-              {importLoading ? 'Loading...' : 'Select File'}
+              {importLoading ? i18n.t('settings-import-loading', 'Loading...') : i18n.t('settings-import-select-file', 'Select File')}
             </button>
           </div>
         {/if}
@@ -357,10 +357,10 @@
         <!-- Preview results -->
         <div class="import-card">
           <p class="import-info">
-            Source: <strong>{importPreview.source}</strong> |
-            {importPreview.total_records} records |
-            {importPreview.to_add} to add |
-            {importPreview.to_skip} to skip
+            {i18n.t('settings-import-source', 'Source:')} <strong>{importPreview.source}</strong> |
+            {importPreview.total_records} {i18n.t('settings-import-records', 'records')} |
+            {importPreview.to_add} {i18n.t('settings-import-to-add', 'to add')} |
+            {importPreview.to_skip} {i18n.t('settings-import-to-skip', 'to skip')}
           </p>
           {#if importPreview.changes && importPreview.changes.length > 0}
             <div class="import-changes">
@@ -373,9 +373,9 @@
             </div>
           {/if}
           <div class="import-actions">
-            <button class="secondary-btn" onclick={resetImport}>Cancel</button>
+            <button class="secondary-btn" onclick={resetImport}>{i18n.t('settings-cancel', 'Cancel')}</button>
             <button class="primary-btn" onclick={confirmImport} disabled={importLoading}>
-              {importLoading ? 'Importing...' : 'Confirm Import'}
+              {importLoading ? i18n.t('settings-import-importing', 'Importing...') : i18n.t('settings-import-confirm', 'Confirm Import')}
             </button>
           </div>
         </div>
@@ -384,22 +384,22 @@
         <!-- Import results -->
         <div class="import-card">
           <p class="import-info">
-            Processed: {importResults.total_processed} |
-            Inserted: {importResults.inserted} |
-            Skipped: {importResults.skipped}
+            {i18n.t('settings-import-processed', 'Processed:')} {importResults.total_processed} |
+            {i18n.t('settings-import-inserted', 'Inserted:')} {importResults.inserted} |
+            {i18n.t('settings-import-skipped', 'Skipped:')} {importResults.skipped}
           </p>
           {#if importResults.errors.length > 0}
             <div class="import-errors">
-              <p class="error-heading">Errors ({importResults.errors.length}):</p>
+              <p class="error-heading">{i18n.t('settings-import-errors', 'Errors')} ({importResults.errors.length}):</p>
               {#each importResults.errors as err}
                 <p class="error-line">
-                  {#if err.line}Line {err.line}: {/if}{err.message}
+                  {#if err.line}{i18n.t('settings-import-line', 'Line')} {err.line}: {/if}{err.message}
                 </p>
               {/each}
             </div>
           {/if}
           <div class="import-actions">
-            <button class="secondary-btn" onclick={resetImport}>Done</button>
+            <button class="secondary-btn" onclick={resetImport}>{i18n.t('settings-import-done', 'Done')}</button>
           </div>
         </div>
       {/if}
@@ -407,11 +407,11 @@
 
     <!-- Data Sync -->
     <section class="section">
-      <h3>Data Sync</h3>
+      <h3>{i18n.t('settings-data-sync', 'Data Sync')}</h3>
       <div class="setting-row">
         <div>
-          <span class="setting-label">Auto-fetch Prices</span>
-          <span class="setting-desc">Automatically fetch crypto prices on sync</span>
+          <span class="setting-label">{i18n.t('settings-auto-fetch', 'Auto-fetch Prices')}</span>
+          <span class="setting-desc">{i18n.t('settings-auto-fetch-desc', 'Automatically fetch crypto prices on sync')}</span>
         </div>
         <button class="toggle-switch" class:on={app.settings.auto_fetch} onclick={toggleAutoFetch} aria-label="Toggle auto-fetch">
           <span class="toggle-knob"></span>
@@ -419,8 +419,8 @@
       </div>
       <div class="setting-row">
         <div>
-          <span class="setting-label">Use Proxy</span>
-          <span class="setting-desc">Route API calls through a proxy</span>
+          <span class="setting-label">{i18n.t('settings-use-proxy', 'Use Proxy')}</span>
+          <span class="setting-desc">{i18n.t('settings-use-proxy-desc', 'Route API calls through a proxy')}</span>
         </div>
         <button class="toggle-switch" class:on={app.settings.proxy_enabled} onclick={toggleProxy} aria-label="Toggle proxy">
           <span class="toggle-knob"></span>
@@ -428,7 +428,7 @@
       </div>
       {#if app.settings.proxy_enabled}
         <div class="setting-row">
-          <span class="setting-label">Proxy URL</span>
+          <span class="setting-label">{i18n.t('settings-proxy-url', 'Proxy URL')}</span>
           <input
             type="text"
             bind:value={app.settings.proxy_url}
@@ -442,24 +442,24 @@
     <!-- About -->
     {#if info}
       <section class="section">
-        <h3>About</h3>
+        <h3>{i18n.t('settings-about', 'About')}</h3>
         <div class="about-grid">
-          <span class="about-label">Version</span><span>{info.version}</span>
-          <span class="about-label">Encryption</span><span>{info.encryption}</span>
-          <span class="about-label">Storage</span><span>{info.storage}</span>
+          <span class="about-label">{i18n.t('settings-about-version', 'Version')}</span><span>{info.version}</span>
+          <span class="about-label">{i18n.t('settings-about-encryption', 'Encryption')}</span><span>{info.encryption}</span>
+          <span class="about-label">{i18n.t('settings-about-storage', 'Storage')}</span><span>{info.storage}</span>
         </div>
       </section>
     {/if}
 
     <!-- Danger Zone -->
     <section class="section danger-section">
-      <h3>Reset</h3>
+      <h3>{i18n.t('settings-reset-section', 'Reset')}</h3>
       <div class="setting-row">
         <div>
-          <span class="setting-label">Reset All Settings</span>
-          <span class="setting-desc">Restore default values for all settings</span>
+          <span class="setting-label">{i18n.t('settings-reset-all', 'Reset All Settings')}</span>
+          <span class="setting-desc">{i18n.t('settings-reset-all-desc', 'Restore default values for all settings')}</span>
         </div>
-        <button class="danger-btn" onclick={resetAllSettings}>Reset</button>
+        <button class="danger-btn" onclick={resetAllSettings}>{i18n.t('settings-reset-btn', 'Reset')}</button>
       </div>
     </section>
   {/if}
