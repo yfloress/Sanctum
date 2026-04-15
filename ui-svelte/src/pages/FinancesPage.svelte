@@ -595,13 +595,16 @@
               <div class="tx-row" role="button" tabindex="0"
                 onclick={() => openEditTransaction(tx)}
                 onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') openEditTransaction(tx) }}>
-                <span class="tx-date">{tx.date}</span>
-                <span class="tx-desc">{tx.description}</span>
-                <span class="tx-cat">{tx.category}</span>
-                <span class="tx-acc">{tx.account_name}</span>
-                <span class="tx-amount" class:expense={tx.is_expense} class:transfer={tx.is_transfer}>
-                  {tx.amount}
-                </span>
+                <span class="tx-type-dot" class:expense={tx.is_expense} class:transfer={tx.is_transfer}></span>
+                <div class="tx-main">
+                  <span class="tx-desc">{tx.description || tx.category}</span>
+                  <div class="tx-meta">
+                    <span class="tx-cat-badge">{tx.category}</span>
+                    <span class="tx-acc">{tx.account_name}</span>
+                    <span class="tx-date">{tx.date}</span>
+                  </div>
+                </div>
+                <span class="tx-amount" class:expense={tx.is_expense} class:transfer={tx.is_transfer}>{tx.amount}</span>
               </div>
             {/each}
           </div>
@@ -613,33 +616,46 @@
   <!-- ACTIVITY TAB -->
   {:else if activeTab === 'activity'}
     <section class="tab-content">
-      <div class="section-header">
-        <h3>Transactions</h3>
-        <button class="glass-btn" onclick={openAddTransaction}>New Entry</button>
-      </div>
-
-      <div class="filters">
-        <input
-          type="text"
-          placeholder="Search..."
-          bind:value={filterQuery}
-          oninput={() => loadTransactions()}
-        />
-        <select bind:value={filterAccountId} onchange={() => loadTransactions()}>
-          <option value="">All Accounts</option>
-          {#each accountsData?.accounts ?? [] as acc}
-            <option value={acc.id}>{acc.name}</option>
-          {/each}
-        </select>
-        <select bind:value={filterCategory} onchange={() => loadTransactions()}>
-          <option value="">All Categories</option>
-          {#each allCategories as cat}
-            <option value={cat.name}>{cat.name}</option>
-          {/each}
-        </select>
-        {#if filterQuery || filterAccountId || filterCategory}
-          <button class="clear-btn" onclick={clearFilters}>Clear</button>
-        {/if}
+      <div class="activity-toolbar">
+        <div class="activity-filters">
+          <div class="filter-search">
+            <svg class="filter-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input
+              type="text"
+              placeholder="Search transactions…"
+              bind:value={filterQuery}
+              oninput={() => loadTransactions()}
+            />
+          </div>
+          <select bind:value={filterAccountId} onchange={() => loadTransactions()}>
+            <option value="">All Accounts</option>
+            {#each accountsData?.accounts ?? [] as acc}
+              <option value={acc.id}>{acc.name}</option>
+            {/each}
+          </select>
+          <select bind:value={filterCategory} onchange={() => loadTransactions()}>
+            <option value="">All Categories</option>
+            {#each allCategories as cat}
+              <option value={cat.name}>{cat.name}</option>
+            {/each}
+          </select>
+          {#if filterQuery || filterAccountId || filterCategory}
+            <button class="clear-btn" onclick={clearFilters}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+              Clear
+            </button>
+          {/if}
+        </div>
+        <button class="primary-btn activity-add-btn" onclick={openAddTransaction}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          New Entry
+        </button>
       </div>
 
       {#if transactions.length === 0}
@@ -647,14 +663,19 @@
       {:else}
         <div class="tx-list">
           {#each transactions as tx}
-            <div class="tx-row" role="button" tabindex="0" onclick={() => openEditTransaction(tx)} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') openEditTransaction(tx) }}>
-              <span class="tx-date">{tx.date}</span>
-              <span class="tx-desc">{tx.description}</span>
-              <span class="tx-cat">{tx.category}</span>
-              <span class="tx-acc">{tx.account_name}</span>
-              <span class="tx-amount" class:expense={tx.is_expense} class:transfer={tx.is_transfer}>
-                {tx.amount}
-              </span>
+            <div class="tx-row" role="button" tabindex="0"
+              onclick={() => openEditTransaction(tx)}
+              onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') openEditTransaction(tx) }}>
+              <span class="tx-type-dot" class:expense={tx.is_expense} class:transfer={tx.is_transfer}></span>
+              <div class="tx-main">
+                <span class="tx-desc">{tx.description || tx.category}</span>
+                <div class="tx-meta">
+                  <span class="tx-cat-badge">{tx.category}</span>
+                  <span class="tx-acc">{tx.account_name}</span>
+                  <span class="tx-date">{tx.date}</span>
+                </div>
+              </div>
+              <span class="tx-amount" class:expense={tx.is_expense} class:transfer={tx.is_transfer}>{tx.amount}</span>
               <button class="delete-btn" onclick={(e: MouseEvent) => { e.stopPropagation(); deleteTransaction(tx.id) }} aria-label="Delete">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
               </button>
@@ -702,43 +723,83 @@
   <!-- SETTINGS TAB -->
   {:else if activeTab === 'settings'}
     <section class="tab-content">
-      <h3>Transaction Categories</h3>
 
-      <div class="cat-add-form">
-        <input type="text" placeholder="Category name" bind:value={newCatName} />
-        <select bind:value={newCatType}>
-          <option value="expense">Expense</option>
-          <option value="income">Income</option>
-        </select>
-        <button class="primary-btn" onclick={addCategory} disabled={!newCatName.trim()}>Add</button>
+      <!-- Add category card -->
+      <div class="settings-card">
+        <span class="settings-card-label">New Category</span>
+        <div class="cat-add-row">
+          <input
+            class="cat-name-input"
+            type="text"
+            placeholder="Category name…"
+            bind:value={newCatName}
+            onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter' && newCatName.trim()) addCategory() }}
+          />
+          <div class="toggle-row cat-type-toggle">
+            <button class="toggle-btn" class:active={newCatType === 'expense'} onclick={() => newCatType = 'expense'}>Expense</button>
+            <button class="toggle-btn" class:active={newCatType === 'income'} onclick={() => newCatType = 'income'}>Income</button>
+          </div>
+          <button class="primary-btn" onclick={addCategory} disabled={!newCatName.trim()}>Add</button>
+        </div>
       </div>
 
       {#if categories}
-        <div class="cat-section">
-          <h4>Expense</h4>
-          {#each categories.expense as cat}
-            <div class="cat-row">
-              <span>{cat.name}</span>
-              {#if !cat.is_default}
-                <button class="delete-btn-sm" onclick={() => deleteCat(cat.id)}>Delete</button>
-              {:else}
-                <span class="default-badge">Default</span>
-              {/if}
+        <div class="cat-columns">
+
+          <!-- Expense column -->
+          <div class="cat-col">
+            <div class="cat-col-header">
+              <span class="cat-col-dot cat-col-dot--expense"></span>
+              <h4>Expense</h4>
+              <span class="cat-count">{categories.expense.length}</span>
             </div>
-          {/each}
-        </div>
-        <div class="cat-section">
-          <h4>Income</h4>
-          {#each categories.income as cat}
-            <div class="cat-row">
-              <span>{cat.name}</span>
-              {#if !cat.is_default}
-                <button class="delete-btn-sm" onclick={() => deleteCat(cat.id)}>Delete</button>
-              {:else}
-                <span class="default-badge">Default</span>
-              {/if}
+            <div class="cat-chips">
+              {#each categories.expense as cat}
+                <div class="cat-chip" class:cat-chip--default={cat.is_default}>
+                  <span class="cat-chip-name">{cat.name}</span>
+                  {#if cat.is_default}
+                    <svg class="cat-chip-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+                    </svg>
+                  {:else}
+                    <button class="cat-chip-del" onclick={() => deleteCat(cat.id)} aria-label="Delete {cat.name}">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                      </svg>
+                    </button>
+                  {/if}
+                </div>
+              {/each}
             </div>
-          {/each}
+          </div>
+
+          <!-- Income column -->
+          <div class="cat-col">
+            <div class="cat-col-header">
+              <span class="cat-col-dot cat-col-dot--income"></span>
+              <h4>Income</h4>
+              <span class="cat-count">{categories.income.length}</span>
+            </div>
+            <div class="cat-chips">
+              {#each categories.income as cat}
+                <div class="cat-chip" class:cat-chip--default={cat.is_default}>
+                  <span class="cat-chip-name">{cat.name}</span>
+                  {#if cat.is_default}
+                    <svg class="cat-chip-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+                    </svg>
+                  {:else}
+                    <button class="cat-chip-del" onclick={() => deleteCat(cat.id)} aria-label="Delete {cat.name}">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                      </svg>
+                    </button>
+                  {/if}
+                </div>
+              {/each}
+            </div>
+          </div>
+
         </div>
       {/if}
     </section>
@@ -987,41 +1048,156 @@
   .section-header h3 { font-size: 0.9rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.08em; margin: 0; }
   .header-actions { display: flex; gap: 8px; }
 
-  .filters {
-    display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;
+  /* Activity toolbar */
+  .activity-toolbar {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
   }
-  .filters input, .filters select {
-    padding: 8px 12px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    background: var(--glass); backdrop-filter: var(--glass-blur);
-    color: var(--text-primary); font-size: 0.85rem;
+  .activity-filters {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .filter-search {
+    position: relative;
+    flex: 1;
+    min-width: 160px;
+  }
+  .filter-search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    color: var(--text-tertiary);
+    pointer-events: none;
+  }
+  .filter-search input {
+    width: 100%;
+    padding: 8px 12px 8px 32px;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    background: var(--glass);
+    backdrop-filter: var(--glass-blur);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    box-sizing: border-box;
     transition: border-color 0.2s;
   }
-  .filters input:focus, .filters select:focus {
-    border-color: var(--accent); outline: none;
+  .filter-search input:focus {
+    border-color: var(--accent);
+    outline: none;
     box-shadow: 0 0 0 3px var(--accent-glow);
   }
-  .filters input { flex: 1; min-width: 150px; }
-  .clear-btn {
-    padding: 8px 12px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    background: none; color: var(--text-secondary); cursor: pointer; font-size: 0.8rem;
-    transition: all 0.15s;
+  .activity-filters select {
+    padding: 8px 12px;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    background: var(--glass);
+    color: var(--text-primary);
+    font-size: 0.82rem;
+    transition: border-color 0.2s;
   }
-  .clear-btn:hover { border-color: var(--glass-border-hover); color: var(--text-primary); }
+  .activity-filters select:focus {
+    border-color: var(--accent);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .clear-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 12px;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    font-size: 0.78rem;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .clear-btn:hover { border-color: var(--danger); color: var(--danger); }
+  .activity-add-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
 
+  /* Transaction list */
   .tx-list { display: flex; flex-direction: column; }
   .tx-row {
-    display: grid; grid-template-columns: 80px 1fr auto auto auto 32px;
-    gap: 12px; padding: 10px 8px; border-bottom: 1px solid var(--glass-border);
-    align-items: center; cursor: pointer; border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 8px;
+    border-bottom: 1px solid var(--glass-border);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
     transition: background 0.15s;
   }
+  .tx-row:last-child { border-bottom: none; }
   .tx-row:hover { background: var(--glass-hover); }
-  .tx-date { color: var(--text-tertiary); font-size: 0.8rem; }
-  .tx-desc { color: var(--text-secondary); font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .tx-cat { color: var(--text-secondary); font-size: 0.8rem; }
-  .tx-acc { color: var(--text-tertiary); font-size: 0.75rem; }
-  .tx-amount { font-size: 0.85rem; font-weight: 500; text-align: right; color: var(--success); }
-  .tx-amount.expense { color: var(--danger); }
+
+  .tx-type-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+    flex-shrink: 0;
+  }
+  .tx-type-dot.expense  { background: var(--danger); }
+  .tx-type-dot.transfer { background: #60a5fa; }
+
+  .tx-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .tx-desc {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tx-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .tx-cat-badge {
+    font-size: 0.67rem;
+    padding: 1px 7px;
+    border-radius: 20px;
+    background: var(--glass-active);
+    border: 1px solid var(--glass-border);
+    color: var(--text-tertiary);
+    white-space: nowrap;
+  }
+  .tx-acc  { font-size: 0.71rem; color: var(--text-tertiary); }
+  .tx-date { font-size: 0.71rem; color: var(--text-tertiary); }
+  .tx-amount {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--success);
+    white-space: nowrap;
+    text-align: right;
+    min-width: 80px;
+  }
+  .tx-amount.expense  { color: var(--danger); }
   .tx-amount.transfer { color: #60a5fa; }
 
   .delete-btn {
@@ -1056,29 +1232,124 @@
   .acc-balance.negative { color: var(--danger); }
   .acc-currency { font-size: 0.7rem; color: var(--text-tertiary); }
 
-  /* Categories */
-  .cat-add-form {
-    display: flex; gap: 8px; margin-bottom: 20px;
+  /* Settings tab */
+  .settings-card {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--glass-shadow);
   }
-  .cat-add-form input, .cat-add-form select {
-    padding: 8px 12px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    background: var(--glass); color: var(--text-primary); font-size: 0.85rem;
+  .settings-card-label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 12px;
   }
-  .cat-add-form input:focus, .cat-add-form select:focus { border-color: var(--accent); outline: none; }
-  .cat-add-form input { flex: 1; }
+  .cat-add-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .cat-name-input {
+    flex: 1;
+    min-width: 140px;
+    padding: 9px 12px;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    background: var(--glass-active);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    transition: border-color 0.2s;
+  }
+  .cat-name-input:focus {
+    border-color: var(--accent);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .cat-type-toggle { flex-shrink: 0; }
 
-  .cat-section { margin-bottom: 20px; }
-  .cat-section h4 { font-size: 0.8rem; color: var(--text-tertiary); text-transform: uppercase; margin-bottom: 8px; }
-  .cat-row {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 8px 12px; border-bottom: 1px solid var(--glass-border); font-size: 0.85rem; color: var(--text-secondary);
+  .cat-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
   }
-  .delete-btn-sm {
-    background: none; border: none; color: var(--text-tertiary); cursor: pointer; font-size: 0.75rem;
+  .cat-col {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 18px;
+    box-shadow: var(--glass-shadow);
+  }
+  .cat-col-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .cat-col-header h4 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    flex: 1;
+  }
+  .cat-col-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .cat-col-dot--expense { background: var(--danger); }
+  .cat-col-dot--income  { background: var(--success); }
+  .cat-count {
+    font-size: 0.68rem;
+    color: var(--text-tertiary);
+    background: var(--glass-active);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 1px 8px;
+  }
+  .cat-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .cat-chip {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 8px 5px 12px;
+    background: var(--glass-active);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    transition: border-color 0.15s;
+  }
+  .cat-chip--default {
+    border-color: rgba(168, 85, 247, 0.2);
+    background: rgba(168, 85, 247, 0.06);
+    padding-right: 12px;
+  }
+  .cat-chip-name {
+    font-size: 0.8rem;
+    color: var(--text-primary);
+  }
+  .cat-chip-del {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    color: var(--text-tertiary);
     transition: color 0.15s;
+    line-height: 0;
   }
-  .delete-btn-sm:hover { color: var(--danger); }
-  .default-badge { font-size: 0.7rem; color: var(--text-tertiary); }
+  .cat-chip-del:hover { color: var(--danger); }
+  .cat-chip-del svg { width: 11px; height: 11px; }
+  .cat-chip-lock { width: 11px; height: 11px; color: var(--accent); flex-shrink: 0; }
 
   /* Overlay & detail panel */
   .overlay-backdrop {
