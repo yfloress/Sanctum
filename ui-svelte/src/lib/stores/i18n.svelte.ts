@@ -30,8 +30,26 @@ class I18nStore {
     }
   }
 
+  /** Simple key lookup with optional fallback. */
   t(key: string, fallback?: string): string {
     return this.strings[key] ?? fallback ?? key
+  }
+
+  /** Parameterized translation: replaces {$var} placeholders with values. */
+  tArgs(key: string, args: Record<string, string | number>, fallback?: string): string {
+    let text = this.strings[key] ?? fallback ?? key
+    for (const [k, v] of Object.entries(args)) {
+      text = text.replaceAll(`{$${k}}`, String(v))
+    }
+    return text
+  }
+
+  /** Plural-aware translation: resolves {key}-one or {key}-other variant. */
+  tPlural(key: string, count: number, args?: Record<string, string | number>): string {
+    const variant = count === 1 ? 'one' : 'other'
+    const fullKey = `${key}-${variant}`
+    const merged = { count, ...args }
+    return this.tArgs(fullKey, merged, this.tArgs(key, merged))
   }
 }
 

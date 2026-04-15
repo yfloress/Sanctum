@@ -111,13 +111,13 @@
         <img src="/src/assets/logo/sanctum_logo.svg" alt="Sanctum" class="login-logo" />
       </div>
       <h1 class="title">SANCTUM</h1>
-      <p class="subtitle">Privacy-first personal vault</p>
+      <p class="subtitle">{i18n.t('login-subtitle', 'Privacy-first personal vault')}</p>
     </div>
 
     {#if vaultExists === null}
       <div class="loading-state">
         <div class="loading-spinner"></div>
-        <span>Initializing...</span>
+        <span>{i18n.t('login-initializing', 'Initializing...')}</span>
       </div>
     {:else}
       <div class="form-section">
@@ -129,7 +129,7 @@
             type={showPassword ? 'text' : 'password'}
             bind:value={password}
             onkeydown={handleKeydown}
-            placeholder={vaultExists ? 'Enter master password' : 'Create master password'}
+            placeholder={vaultExists ? i18n.t('login-placeholder-unlock', 'Enter master password') : i18n.t('login-placeholder-create', 'Create master password')}
             disabled={loading}
             autocomplete="off"
             id="master-password"
@@ -159,7 +159,7 @@
             </svg>
             <div class="banner-text">
               <span>{weakWarning}</span>
-              <span class="weak-hint">Press again to confirm with weak password</span>
+              <span class="weak-hint">{i18n.t('login-weak-hint', 'Press again to confirm with weak password')}</span>
             </div>
           </div>
         {/if}
@@ -181,7 +181,7 @@
         >
           {#if loading}
             <div class="btn-spinner"></div>
-            <span>Authenticating...</span>
+            <span>{i18n.t('login-authenticating', 'Authenticating...')}</span>
           {:else}
             <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               {#if vaultExists}
@@ -192,20 +192,20 @@
                 <path d="M12 4.5v15m7.5-7.5h-15" />
               {/if}
             </svg>
-            <span>{vaultExists ? 'Unlock Vault' : confirmWeak ? 'Confirm Create' : 'Create Vault'}</span>
+            <span>{vaultExists ? i18n.t('login-unlock', 'Unlock Vault') : confirmWeak ? i18n.t('login-confirm-create', 'Confirm Create') : i18n.t('login-create', 'Create Vault')}</span>
           {/if}
         </button>
 
         {#if vaultExists}
           <button class="restore-link" onclick={restoreFromBackup} disabled={loading} id="restore-backup">
-            Restore from backup
+            {i18n.t('login-restore', 'Restore from backup')}
           </button>
         {/if}
       </div>
     {/if}
   </div>
 
-  <div class="version-tag">Sanctum v0.1.0</div>
+  <div class="version-tag">{i18n.t('login-version', 'Sanctum v0.1.0')}</div>
 </div>
 
 <style>

@@ -62,26 +62,26 @@ validation-invalid-date = Fecha inválida
 
 # ==================== Login Page ====================
 login-title = SANCTUM
-login-subtitle = Tu Fortaleza Financiera Personal
-login-password-placeholder = contraseña
-login-password-create-placeholder = crear contraseña
-login-unlock = DESBLOQUEAR
-login-create = CREAR BÓVEDA
-login-unlocking = DESBLOQUEANDO...
-login-creating = CREANDO...
-login-password-required = Contraseña requerida
-login-encryption-note = CIFRADO AES-256
-login-weak-password-confirm = Contraseña débil: haz clic en crear nuevamente para confirmar.
-login-show = VER
-login-hide = OCULTAR
+login-subtitle = Tu boveda personal privada
+login-placeholder-unlock = Ingresa tu contrasena maestra
+login-placeholder-create = Crea tu contrasena maestra
+login-unlock = Desbloquear
+login-create = Crear Boveda
+login-confirm-create = Confirmar Creacion
+login-authenticating = Autenticando...
+login-initializing = Inicializando...
+login-weak-hint = Presiona de nuevo para confirmar con contrasena debil
+login-restore = Restaurar desde respaldo
+login-version = Sanctum v0.1.0
 
 # ==================== Sidebar ====================
-nav-dashboard = PANEL
-nav-finances = FINANZAS
-nav-crypto = CRYPTO
-nav-habits = HÁBITOS
-nav-settings = AJUSTES
-nav-lock = BLOQUEAR
+nav-dashboard = Panel
+nav-finances = Finanzas
+nav-crypto = Crypto
+nav-habits = Hábitos
+nav-settings = Ajustes
+nav-lock = Bloquear
+nav-collapse = Contraer
 
 # ==================== Dashboard ====================
 dashboard-title = Panel

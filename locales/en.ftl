@@ -62,26 +62,26 @@ validation-invalid-date = Invalid date
 
 # ==================== Login Page ====================
 login-title = SANCTUM
-login-subtitle = Personal Financial Fortress
-login-password-placeholder = password
-login-password-create-placeholder = create password
-login-unlock = UNLOCK VAULT
-login-create = CREATE VAULT
-login-unlocking = UNLOCKING...
-login-creating = CREATING...
-login-password-required = Password required
-login-encryption-note = AES-256 ENCRYPTED
-login-weak-password-confirm = Weak password: click create again to confirm.
-login-show = SHOW
-login-hide = HIDE
+login-subtitle = Privacy-first personal vault
+login-placeholder-unlock = Enter master password
+login-placeholder-create = Create master password
+login-unlock = Unlock Vault
+login-create = Create Vault
+login-confirm-create = Confirm Create
+login-authenticating = Authenticating...
+login-initializing = Initializing...
+login-weak-hint = Press again to confirm with weak password
+login-restore = Restore from backup
+login-version = Sanctum v0.1.0
 
 # ==================== Sidebar ====================
-nav-dashboard = DASHBOARD
-nav-finances = FINANCES
-nav-crypto = CRYPTO
-nav-habits = HABITS
-nav-settings = SETTINGS
-nav-lock = LOCK VAULT
+nav-dashboard = Dashboard
+nav-finances = Finances
+nav-crypto = Crypto
+nav-habits = Habits
+nav-settings = Settings
+nav-lock = Lock
+nav-collapse = Collapse
 
 # ==================== Dashboard ====================
 dashboard-title = Dashboard
