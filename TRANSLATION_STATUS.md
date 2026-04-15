@@ -55,7 +55,7 @@
 | `LoginPage.svelte` | [x] | [x] | [x] | 8 strings wired (`5ad1d16`) |
 | `SettingsPage.svelte` | [x] | [x] | [x] | ~45 strings wired (`f986045`). Includes import flow, toasts. |
 | `DashboardPage.svelte` | [x] | [x] | [x] | ~15 strings wired. Hero, stats, charts, loading. |
-| `FinancesPage.svelte` | [ ] | [ ] | [ ] | ~80 strings. Largest page. Tabs, modals, forms, categories. |
+| `FinancesPage.svelte` | [x] | [x] | [x] | ~80 strings wired. Tabs, stats, charts, modals, toasts. |
 | `HabitsPage.svelte` | [ ] | [ ] | [ ] | ~60 strings. Heatmap, analytics, rewards, goals. |
 | `CryptoPage.svelte` | [ ] | [ ] | [ ] | ~120 strings. Tax UI, modals, ticker config, portfolio. |
 | `Toast.svelte` | [ ] | [ ] | [ ] | ~2 strings. Minimal. |
