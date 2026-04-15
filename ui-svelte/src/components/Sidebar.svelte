@@ -245,6 +245,11 @@
     pointer-events: none;
   }
 
+  .collapsed .nav-item {
+    justify-content: center;
+    padding: 0;
+  }
+
   /* ── Icon ────────────────────────────────────────────── */
   .nav-icon-wrap {
     width: 20px;
@@ -263,39 +268,39 @@
 
   /* ── Hover ───────────────────────────────────────────── */
   .nav-item:hover {
-    background: rgba(168, 85, 247, 0.08);
+    background: rgba(255, 255, 255, 0.04);
     color: var(--text-primary);
   }
 
   .nav-item:hover .nav-icon-wrap {
-    transform: scale(1.1);
+    transform: scale(1.08);
+    color: rgba(196, 181, 253, 0.8);
   }
 
   /* ── Active ──────────────────────────────────────────── */
   .nav-item.active {
-    background: rgba(168, 85, 247, 0.12);
+    background: linear-gradient(90deg, rgba(168, 85, 247, 0.16) 0%, rgba(168, 85, 247, 0.04) 100%);
     color: var(--text-primary);
   }
 
   .nav-item.active .nav-icon-wrap {
-    color: var(--accent);
-    filter: drop-shadow(0 0 6px rgba(168, 85, 247, 0.35));
+    color: #c084fc;
   }
 
   .nav-item.active .nav-label {
-    color: #c4b5fd;
+    color: #e2d9f3;
     font-weight: 500;
   }
 
   .active-indicator {
     position: absolute;
     left: 0;
-    top: 7px;
-    bottom: 7px;
-    width: 3px;
-    border-radius: 0 3px 3px 0;
-    background: linear-gradient(180deg, #c084fc, #a855f7);
-    box-shadow: 0 0 10px rgba(168, 85, 247, 0.6), 0 0 4px rgba(168, 85, 247, 0.8);
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    border-radius: 0 2px 2px 0;
+    background: linear-gradient(180deg, #d8b4fe, #a855f7);
+    box-shadow: 0 0 8px rgba(168, 85, 247, 0.5);
   }
 
   /* ── Footer ──────────────────────────────────────────── */
