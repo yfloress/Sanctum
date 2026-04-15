@@ -20,24 +20,35 @@ import * as settingsApi from '../api/settings'
 class I18nStore {
   strings = $state<Record<string, string>>({})
   loaded = $state(false)
+  /** Bumped on every load — forces Svelte to re-render all t() calls. */
+  version = $state(0)
 
   async load() {
     try {
       this.strings = await settingsApi.getTranslations()
+      this.version++
       this.loaded = true
     } catch (e) {
       console.error('Failed to load translations:', e)
     }
   }
 
-  /** Simple key lookup with optional fallback. */
+  /** Simple key lookup with optional fallback.
+   *  The Rust backend returns key-as-value for missing keys,
+   *  so we treat value === key as "not found". */
   t(key: string, fallback?: string): string {
-    return this.strings[key] ?? fallback ?? key
+    // Read version to create reactive dependency
+    void this.version
+    const val = this.strings[key]
+    if (val != null && val !== key) return val
+    return fallback ?? key
   }
 
   /** Parameterized translation: replaces {$var} placeholders with values. */
   tArgs(key: string, args: Record<string, string | number>, fallback?: string): string {
-    let text = this.strings[key] ?? fallback ?? key
+    void this.version
+    const raw = this.strings[key]
+    let text = (raw != null && raw !== key) ? raw : (fallback ?? key)
     for (const [k, v] of Object.entries(args)) {
       text = text.replaceAll(`{$${k}}`, String(v))
     }

@@ -503,16 +503,9 @@ confirm-delete-generic = This will permanently delete
 # ==================== Dashboard Extended ====================
 dashboard-total-net-worth = TOTAL NET WORTH
 dashboard-exchange-rate-warning = Exchange rate unavailable for some currencies. Balances shown with fallback 1:1 rate.
-dashboard-loading = Loading dashboard...
-dashboard-retry = RETRY
 dashboard-usd-clp = USD/CLP
 
 # ==================== Finances Extended ====================
-finances-activity = ACTIVITY
-finances-account = ACCOUNT
-finances-all-accounts = All accounts
-finances-all-categories = All categories
-finances-load-more = LOAD MORE
 finances-configure = CONFIGURE
 finances-transaction-categories = Transaction Categories
 finances-manage-categories = Manage income and expense categories
@@ -1006,9 +999,6 @@ modal-save-entry = SAVE ENTRY
 modal-add-note = Add a note...
 
 # ==================== Finances Extended (Search/Empty States) ====================
-finances-search-placeholder = Search by description, category, date...
-finances-no-matching = No matching transactions
-finances-no-transactions-yet = No transactions yet
 finances-try-adjusting = Try clearing or adjusting your filters
 finances-add-first-entry = Add your first entry to start tracking your finances
 finances-no-accounts-configured = No accounts configured
@@ -1020,7 +1010,6 @@ crypto-add-wallet-button = + NEW WALLET
 # ==================== Habits Extended (Summary Labels) ====================
 habits-current-streak-label = CURRENT STREAK
 habits-best-streak-label = BEST STREAK (365D)
-habits-days-label = days
 habits-completion-rate-label = COMPLETION RATE
 habits-completions-label = COMPLETIONS (30D)
 

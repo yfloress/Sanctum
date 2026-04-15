@@ -68,6 +68,9 @@ pub fn load_settings(controller: State<'_, Arc<AppController>>) -> Result<AppSet
         .get_app_setting(SETTING_PREFERRED_LANGUAGE)
         .unwrap_or_else(|_| "en".to_string());
 
+    // Switch the i18n bundle to the user's saved preference
+    sanctum::services::i18n::set_language(&preferred_language);
+
     let sidebar_collapsed = controller
         .get_app_setting(SETTING_SIDEBAR_COLLAPSED)
         .map(|v| v == "true")

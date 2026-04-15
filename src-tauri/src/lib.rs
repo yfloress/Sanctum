@@ -42,6 +42,10 @@ pub fn run() {
     let app_data_dir = get_app_data_dir();
     let controller = Arc::new(AppController::new(app_data_dir));
 
+    // Initialize i18n with system-detected language (must happen before any t() call)
+    let detected_lang = sanctum::services::i18n::detect_system_language();
+    sanctum::services::i18n::init(&detected_lang);
+
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())

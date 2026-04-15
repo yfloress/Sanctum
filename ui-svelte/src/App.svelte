@@ -27,11 +27,9 @@
   import CryptoPage from './pages/CryptoPage.svelte'
   import SettingsPage from './pages/SettingsPage.svelte'
 
-  // Load translations once at startup — must happen before any page renders
-  i18n.load()
-
   $effect(() => {
     if (app.isLoggedIn) {
+      i18n.load()
       return startSessionMonitor()
     }
   })

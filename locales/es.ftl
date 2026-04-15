@@ -503,16 +503,9 @@ confirm-delete-generic = Esto eliminará permanentemente
 # ==================== Dashboard Extended ====================
 dashboard-total-net-worth = PATRIMONIO NETO TOTAL
 dashboard-exchange-rate-warning = Tipo de cambio no disponible para algunas monedas. Saldos mostrados con tasa de respaldo 1:1.
-dashboard-loading = Cargando panel...
-dashboard-retry = REINTENTAR
 dashboard-usd-clp = USD/CLP
 
 # ==================== Finances Extended ====================
-finances-activity = ACTIVIDAD
-finances-account = CUENTA
-finances-all-accounts = Todas las cuentas
-finances-all-categories = Todas las categorías
-finances-load-more = CARGAR MÁS
 finances-configure = CONFIGURAR
 finances-transaction-categories = Categorías de Transacciones
 finances-manage-categories = Administrar categorías de ingresos y gastos
@@ -1006,9 +999,6 @@ modal-save-entry = GUARDAR ENTRADA
 modal-add-note = Agregar una nota...
 
 # ==================== Finances Extended (Search/Empty States) ====================
-finances-search-placeholder = Buscar por descripción, categoría, fecha...
-finances-no-matching = Sin transacciones coincidentes
-finances-no-transactions-yet = Sin transacciones aún
 finances-try-adjusting = Intenta limpiar o ajustar tus filtros
 finances-add-first-entry = Agrega tu primera entrada para empezar a rastrear tus finanzas
 finances-no-accounts-configured = Sin cuentas configuradas
@@ -1020,7 +1010,6 @@ crypto-add-wallet-button = + BILLETERA
 # ==================== Habits Extended (Summary Labels) ====================
 habits-current-streak-label = RACHA ACTUAL
 habits-best-streak-label = MEJOR RACHA (365D)
-habits-days-label = días
 habits-completion-rate-label = TASA DE COMPLETADO
 habits-completions-label = COMPLETADOS (30D)
 

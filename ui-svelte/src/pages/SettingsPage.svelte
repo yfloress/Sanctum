@@ -179,9 +179,14 @@
   async function changeLanguage(e: Event) {
     const val = (e.target as HTMLSelectElement).value
     if (!app.settings) return
-    app.settings.preferred_language = val
-    await settingsApi.setPreferredLanguage(val)
-    await i18n.load()
+    try {
+      app.settings.preferred_language = val
+      await settingsApi.setPreferredLanguage(val)
+      await i18n.load()
+      app.showToast(`Language → ${val} (${Object.keys(i18n.strings).length} keys)`)
+    } catch (err) {
+      app.showToast(`Language change failed: ${err}`, true)
+    }
   }
 
   async function changeTimeout(e: Event) {
@@ -270,7 +275,7 @@
         <span class="setting-label">{i18n.t('settings-language', 'Language')}</span>
         <select value={app.settings.preferred_language} onchange={changeLanguage}>
           <option value="en">English</option>
-          <option value="es">Espanol</option>
+          <option value="es">Español</option>
         </select>
       </div>
     </section>
