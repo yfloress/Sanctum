@@ -402,11 +402,15 @@ pub fn load_crypto_prices(
     controller: State<'_, Arc<AppController>>,
 ) -> Result<Vec<CryptoAssetPriceDto>, String> {
     let prices = controller.load_crypto_prices().map_err(|e| e.to_string())?;
-    Ok(prices.into_iter().map(|p| CryptoAssetPriceDto {
-        id: p.id, symbol: p.symbol, name: p.name,
-        current_price: p.current_price,
-        price_change_percentage_24h: p.price_change_percentage_24h,
-        last_updated: p.last_updated,
+    Ok(prices.into_iter().map(|p| {
+        let display = fmt_pref(p.current_price, &controller);
+        CryptoAssetPriceDto {
+            id: p.id, symbol: p.symbol, name: p.name,
+            current_price: p.current_price,
+            current_price_display: display,
+            price_change_percentage_24h: p.price_change_percentage_24h,
+            last_updated: p.last_updated,
+        }
     }).collect())
 }
 
@@ -431,7 +435,7 @@ pub async fn sync_crypto_data(
     // 2. Fetch and save CLP rate using backend provider (Mindicador/USDT fallback)
     match controller.get_usd_fx_rate("CLP".to_string()).await {
         Ok(rate) => {
-            let _ = controller.save_exchange_rate("USD/CLP".to_string(), rate);
+            let _ = controller.save_exchange_rate("CLP_USD".to_string(), rate);
         }
         Err(_) => {
             // Soft failure for fx rate, not fatal
@@ -595,7 +599,7 @@ fn fmt_pref_override(v: f64, override_curr: Option<&str>, controller: &AppContro
     let mut amount = n;
     
     if pref != "USD" {
-        let pair = format!("USD/{}", pref);
+        let pair = format!("{}_USD", pref);
         if let Ok(Some((rate, _))) = controller.load_exchange_rate_allow_stale(pair) {
             if rate > 0.0 {
                 amount = n * rate;
@@ -626,7 +630,11 @@ fn build_fx_rate_badge(controller: &AppController) -> Option<FxRateDto> {
         })
 }
 
-fn map_crypto_transactions(txs: &[CryptoTransaction], wallets: &[CryptoWallet]) -> Vec<CryptoTransactionDto> {
+fn map_crypto_transactions(
+    txs: &[CryptoTransaction],
+    wallets: &[CryptoWallet],
+    controller: &AppController,
+) -> Vec<CryptoTransactionDto> {
     let wn: HashMap<String, String> = wallets.iter().map(|w| (w.id.clone(), w.name.clone())).collect();
     txs.iter().map(|tx| CryptoTransactionDto {
         id: tx.id.clone(), wallet_id: tx.wallet_id.clone(),
@@ -634,12 +642,16 @@ fn map_crypto_transactions(txs: &[CryptoTransaction], wallets: &[CryptoWallet]) 
         coin_id: tx.coin_id.clone(), symbol: tx.symbol.clone(),
         transaction_type: tx.transaction_type.clone(),
         subtype: tx.subtype.clone(),
-        amount: tx.amount.to_string(),
-        price: tx.price_per_coin.map(fmtusd).unwrap_or_default(),
-        fee: tx.fee.map(|f| format!("${:.4}", if f == 0.0 { 0.0 } else { f })).unwrap_or_else(|| "$0.0000".to_string()),
+        amount: trim_amount(tx.amount),
+        price: tx.price_per_coin
+            .map(|p| fmt_pref(p, controller))
+            .unwrap_or_default(),
+        fee: tx.fee
+            .map(|f| fmt_pref(f, controller))
+            .unwrap_or_else(|| fmt_pref(0.0, controller)),
         fee_coin_id: tx.fee_coin_id.clone(),
-        fee_amount: tx.fee_amount.map(|f| f.to_string()),
-        value: fmtusd(tx.amount * tx.price_per_coin.unwrap_or(0.0)),
+        fee_amount: tx.fee_amount.map(|f| trim_amount(f)),
+        value: fmt_pref(tx.amount * tx.price_per_coin.unwrap_or(0.0), controller),
         date: tx.date.clone(), notes: tx.notes.clone(),
         has_related_tx: tx.related_tx_id.is_some(),
     }).collect()

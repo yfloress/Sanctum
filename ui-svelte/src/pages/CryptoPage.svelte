@@ -171,6 +171,7 @@
             symbol: coin.symbol,
             name: coin.name,
             current_price: 0,
+            current_price_display: '',
             price_change_percentage_24h: 0,
             last_updated: '',
           } satisfies CryptoAssetPriceDto
@@ -588,7 +589,7 @@
           <img src={getCryptoIconPath(coin.symbol)} alt={coin.symbol} class="ticker-coin-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
           <span class="ticker-coin-sym">{coin.symbol}</span>
           {#if coin.last_updated}
-            <span class="ticker-coin-price">{formatCurrency(coin.current_price, undefined, { minimumFractionDigits: 2, maximumFractionDigits: coin.current_price < 1 ? 6 : 2 })}</span>
+            <span class="ticker-coin-price">{coin.current_price_display}</span>
             <span class="ticker-coin-change" class:negative={coin.price_change_percentage_24h < 0} class:positive={coin.price_change_percentage_24h >= 0}>
               {coin.price_change_percentage_24h >= 0 ? '+' : ''}{coin.price_change_percentage_24h.toFixed(1)}%
             </span>

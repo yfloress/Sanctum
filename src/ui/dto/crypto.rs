@@ -422,7 +422,11 @@ pub struct CryptoAssetPriceDto {
     pub id: String,
     pub symbol: String,
     pub name: String,
+    /// Raw price in USD — used for internal calculations.
     pub current_price: f64,
+    /// Price formatted and converted to the user's preferred currency — use this for display.
+    #[serde(default)]
+    pub current_price_display: String,
     pub price_change_percentage_24h: f64,
     pub last_updated: String,
 }

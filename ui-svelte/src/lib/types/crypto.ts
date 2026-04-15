@@ -308,7 +308,10 @@ export interface CryptoAssetPriceDto {
   id: string
   symbol: string
   name: string
+  /** Raw price in USD — for calculations. */
   current_price: number
+  /** Formatted price in preferred currency — use this for display. */
+  current_price_display: string
   price_change_percentage_24h: number
   last_updated: string
 }
