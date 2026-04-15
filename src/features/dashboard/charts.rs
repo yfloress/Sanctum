@@ -23,7 +23,7 @@
 
 use crate::core::validation::format_money_display;
 use crate::models::{Account, AccountBalance, Transaction};
-use chrono::{Local, NaiveDate};
+use chrono::{Datelike, Local, NaiveDate};
 use std::collections::HashMap;
 
 /// Date format used for parsing transaction dates
@@ -54,10 +54,22 @@ pub struct ExpenseSlice {
 pub struct DashboardData {
     /// Raw balance values for chart rendering (call controller.render_net_worth_chart)
     pub chart_values: Vec<i64>,
+    /// ISO date strings corresponding to each chart_values entry.
+    pub chart_dates: Vec<String>,
     pub net_worth: String,
     pub max_value: String,
     pub min_value: String,
     pub expense_slices: Vec<ExpenseSlice>,
+    /// Total income for the selected range, in USD cents.
+    pub total_income_cents: i64,
+    /// Total expenses for the selected range, in USD cents.
+    pub total_expense_cents: i64,
+    /// Last 6 months income in USD cents (oldest → newest).
+    pub monthly_income: Vec<i64>,
+    /// Last 6 months expenses in USD cents (oldest → newest).
+    pub monthly_expense: Vec<i64>,
+    /// Short month labels for monthly_income/monthly_expense (e.g. "Jan").
+    pub monthly_labels: Vec<String>,
 }
 
 /// Chart data calculation for dashboard
@@ -179,6 +191,10 @@ impl DashboardCharts {
             points_rev.push((today, total_balance));
         }
 
+        let dates: Vec<String> = points_rev
+            .iter()
+            .map(|(d, _)| d.format("%Y-%m-%d").to_string())
+            .collect();
         let values: Vec<i64> = points_rev.iter().map(|(_, v)| *v).collect();
         let min_val = *values.iter().min().unwrap_or(&0);
         let max_val = *values.iter().max().unwrap_or(&0);
@@ -191,12 +207,65 @@ impl DashboardCharts {
             today,
         );
 
+        // Total income for the selected range
+        let mut total_income_cents: i64 = 0;
+        let mut total_expense_cents: i64 = 0;
+        for tx in transactions {
+            if let Ok(date) = NaiveDate::parse_from_str(&tx.date, DATE_FORMAT) {
+                if date >= start_date && date <= today {
+                    let amount = normalize(tx.amount, &tx.account_id);
+                    match tx.transaction_type.as_str() {
+                        "income" => total_income_cents += amount,
+                        "expense" => total_expense_cents += amount,
+                        _ => {}
+                    }
+                }
+            }
+        }
+
+        // Last 6 months cash flow (oldest → newest)
+        const MONTH_NAMES: [&str; 12] =
+            ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        let mut monthly_income: Vec<i64> = Vec::with_capacity(6);
+        let mut monthly_expense: Vec<i64> = Vec::with_capacity(6);
+        let mut monthly_labels: Vec<String> = Vec::with_capacity(6);
+        for offset in (0..6i32).rev() {
+            let mut m = today.month() as i32 - offset;
+            let mut y = today.year();
+            while m <= 0 {
+                m += 12;
+                y -= 1;
+            }
+            let month_key = format!("{:04}-{:02}", y, m);
+            let mut inc: i64 = 0;
+            let mut exp: i64 = 0;
+            for tx in transactions {
+                if tx.date.starts_with(&month_key) {
+                    let amount = normalize(tx.amount, &tx.account_id);
+                    match tx.transaction_type.as_str() {
+                        "income" => inc += amount,
+                        "expense" => exp += amount,
+                        _ => {}
+                    }
+                }
+            }
+            monthly_income.push(inc);
+            monthly_expense.push(exp);
+            monthly_labels.push(MONTH_NAMES[(m as usize - 1) % 12].to_string());
+        }
+
         DashboardData {
             chart_values: values,
+            chart_dates: dates,
             net_worth: format_money_display(total_balance),
             max_value: format_money_display(max_val),
             min_value: format_money_display(min_val),
             expense_slices,
+            total_income_cents,
+            total_expense_cents,
+            monthly_income,
+            monthly_expense,
+            monthly_labels,
         }
     }
 

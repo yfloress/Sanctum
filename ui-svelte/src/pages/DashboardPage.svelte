@@ -18,6 +18,7 @@
   import { app } from '../lib/stores/app.svelte'
   import * as dashboardApi from '../lib/api/dashboard'
   import NetWorthChart from '../components/charts/NetWorthChart.svelte'
+  import FinanceBarChart from '../components/charts/FinanceBarChart.svelte'
   import type { BalanceOverview, RecentTransaction, AnalyticsData } from '../lib/types'
 
   let balance = $state<BalanceOverview | null>(null)
@@ -55,259 +56,559 @@
     }
   }
 
+  // % change from start of selected period to today
+  let pctChange = $derived.by(() => {
+    if (!analytics || analytics.chart.values.length < 2) return null
+    const first = analytics.chart.values[0]
+    const last = analytics.chart.values[analytics.chart.values.length - 1]
+    if (first === 0) return null
+    return ((last - first) / Math.abs(first)) * 100
+  })
+
+  let cashFlow = $derived({
+    months:   analytics?.monthly_cash_flow.map(m => m.month)    ?? [],
+    income:   analytics?.monthly_cash_flow.map(m => m.income)   ?? [],
+    expenses: analytics?.monthly_cash_flow.map(m => m.expenses) ?? [],
+  })
+
   $effect(() => { load() })
 </script>
 
 <div class="page">
   {#if loading}
-    <div class="loading">Loading dashboard...</div>
+    <div class="loading">
+      <svg class="loading-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+      </svg>
+      Loading dashboard…
+    </div>
+
   {:else if error}
     <div class="error-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:32px;height:32px;color:var(--danger)">
+        <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+      </svg>
       <p>{error}</p>
       <button onclick={load}>Retry</button>
     </div>
-  {:else if balance}
-    <section class="hero">
-      <h2 class="net-worth" class:negative={balance.total_negative}>{balance.total}</h2>
-      <p class="label">Net Worth ({balance.currency})</p>
-      <div class="stat-cards">
-        <div class="stat-card">
-          <span class="stat-label">Fiat</span>
-          <span class="stat-value" class:negative={balance.fiat_negative}>{balance.fiat_total}</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-label">Crypto</span>
-          <span class="stat-value" class:negative={balance.crypto_negative}>{balance.crypto_total}</span>
-        </div>
-      </div>
-    </section>
 
-    <section class="controls">
-      <div class="tab-bar">
-        <button class:active={selectedRange === '1M'} onclick={() => changeRange('1M')}>1M</button>
-        <button class:active={selectedRange === '6M'} onclick={() => changeRange('6M')}>6M</button>
-        <button class:active={selectedRange === '1Y'} onclick={() => changeRange('1Y')}>1Y</button>
-        <button class:active={selectedRange === 'ALL'} onclick={() => changeRange('ALL')}>ALL</button>
+  {:else if balance}
+
+    <!-- ── Hero ─────────────────────────────────────────────────── -->
+    <section class="hero">
+      <p class="hero-label">Net Worth · {balance.currency}</p>
+      <div class="hero-value-row">
+        <h1 class="net-worth" class:negative={balance.total_negative}>{balance.total}</h1>
+        {#if pctChange !== null}
+          <span class="trend-badge" class:positive={pctChange >= 0} class:negative={pctChange < 0}>
+            {#if pctChange >= 0}
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 12V4M4 8l4-4 4 4"/></svg>
+            {:else}
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 4v8M4 8l4 4 4-4"/></svg>
+            {/if}
+            {Math.abs(pctChange).toFixed(1)}%
+            <span class="trend-period">{selectedRange}</span>
+          </span>
+        {/if}
+      </div>
+
+      {#if analytics && (analytics.net_worth_min || analytics.net_worth_max)}
+        <p class="net-worth-range">
+          {analytics.net_worth_min}
+          <span class="range-sep">——</span>
+          {analytics.net_worth_max}
+          <span class="range-period">({selectedRange})</span>
+        </p>
+      {/if}
+
+      <div class="balance-strip">
+        <div class="balance-cell">
+          <span class="balance-cell-label">Fiat</span>
+          <span class="balance-cell-value" class:negative={balance.fiat_negative}>{balance.fiat_total}</span>
+        </div>
+        <div class="balance-divider"></div>
+        <div class="balance-cell">
+          <span class="balance-cell-label">Crypto</span>
+          <span class="balance-cell-value" class:negative={balance.crypto_negative}>{balance.crypto_total}</span>
+        </div>
       </div>
     </section>
 
     {#if analytics}
-      {#if analytics.chart.dates.length > 0}
-        <section class="chart-section">
-          <NetWorthChart data={analytics.chart} />
-        </section>
-      {:else}
-        <section class="chart-placeholder">
-          <p class="placeholder-text">No chart data available for this range</p>
-        </section>
-      {/if}
+      <!-- ── Stats row ────────────────────────────────────────── -->
+      <div class="stats-row">
+        <div class="stat-card income">
+          <span class="stat-label">Income</span>
+          <span class="stat-value">{analytics.total_income}</span>
+          <span class="stat-period">last {selectedRange}</span>
+        </div>
+        <div class="stat-card expenses">
+          <span class="stat-label">Expenses</span>
+          <span class="stat-value">{analytics.total_expenses}</span>
+          <span class="stat-period">last {selectedRange}</span>
+        </div>
+        <div class="stat-card net" class:negative={analytics.total_net_negative}>
+          <span class="stat-label">Net</span>
+          <span class="stat-value">{analytics.total_net_negative ? '−' : '+'}{analytics.total_net}</span>
+          <span class="stat-period">last {selectedRange}</span>
+        </div>
+      </div>
 
-      {#if analytics.expense_breakdown.length > 0}
-        <section class="breakdown">
-          <h3>Spending Breakdown</h3>
-          {#each analytics.expense_breakdown as item}
-            <div class="breakdown-row">
-              <div class="breakdown-bar" style="width: {item.percentage}%; background: {item.color}"></div>
-              <span class="breakdown-cat">{item.category}</span>
-              <span class="breakdown-amount">{item.amount}</span>
-              <span class="breakdown-pct">{item.percentage.toFixed(1)}%</span>
-            </div>
-          {/each}
-        </section>
-      {/if}
-    {/if}
-
-    {#if recent.length > 0}
-      <section class="recent">
-        <h3>Recent Activity</h3>
-        {#each recent as tx}
-          <div class="tx-row">
-            <span class="tx-date">{tx.date}</span>
-            <span class="tx-desc">{tx.description}</span>
-            <span class="tx-cat">{tx.category}</span>
-            <span class="tx-amount" class:expense={tx.is_expense}>{tx.amount}</span>
+      <!-- ── Net Worth Chart ───────────────────────────────────── -->
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <h4>Net Worth Trend</h4>
+          <div class="range-picker">
+            {#each ['1M','6M','1Y','ALL'] as r}
+              <button class:active={selectedRange === r} onclick={() => changeRange(r)}>{r}</button>
+            {/each}
           </div>
-        {/each}
-      </section>
+        </div>
+        {#if analytics.chart.dates.length > 0}
+          <NetWorthChart data={analytics.chart} range={selectedRange} />
+        {:else}
+          <p class="chart-empty">No data for this range</p>
+        {/if}
+      </div>
+
+      <!-- ── Cash Flow Chart ──────────────────────────────────── -->
+      {#if cashFlow.months.length > 0}
+        <div class="chart-card">
+          <div class="chart-card-header">
+            <h4>Monthly Cash Flow</h4>
+            <span class="chart-subtitle">Last 6 months</span>
+          </div>
+          <FinanceBarChart
+            months={cashFlow.months}
+            income={cashFlow.income}
+            expenses={cashFlow.expenses}
+          />
+        </div>
+      {/if}
     {/if}
+
+    <!-- ── Bottom grid ─────────────────────────────────────────── -->
+    {#if (analytics && analytics.expense_breakdown.length > 0) || recent.length > 0}
+      <div class="bottom-grid">
+
+        {#if analytics && analytics.expense_breakdown.length > 0}
+          <div class="panel">
+            <h4 class="panel-title">Spending Breakdown <span class="panel-title-period">({selectedRange})</span></h4>
+            <div class="breakdown-list">
+              {#each analytics.expense_breakdown as item}
+                <div class="breakdown-row">
+                  <div class="breakdown-row-top">
+                    <span class="breakdown-cat">{item.category}</span>
+                    <div class="breakdown-right">
+                      <span class="breakdown-amount">{item.amount}</span>
+                      <span class="breakdown-pct">{item.percentage.toFixed(1)}%</span>
+                    </div>
+                  </div>
+                  <div class="breakdown-track">
+                    <div class="breakdown-fill" style="width:{item.percentage}%;background:{item.color}"></div>
+                  </div>
+                </div>
+              {/each}
+            </div>
+          </div>
+        {/if}
+
+        {#if recent.length > 0}
+          <div class="panel">
+            <h4 class="panel-title">Recent Activity</h4>
+            <div class="tx-list">
+              {#each recent as tx}
+                <div class="tx-row">
+                  <span class="tx-type-dot" class:expense={tx.is_expense}></span>
+                  <div class="tx-main">
+                    <span class="tx-desc">{tx.description || tx.category}</span>
+                    <div class="tx-meta">
+                      <span class="tx-cat-badge">{tx.category}</span>
+                      <span class="tx-date">{tx.date}</span>
+                    </div>
+                  </div>
+                  <span class="tx-amount" class:expense={tx.is_expense}>{tx.amount}</span>
+                </div>
+              {/each}
+            </div>
+          </div>
+        {/if}
+
+      </div>
+    {/if}
+
   {/if}
 </div>
 
 <style>
   .page {
-    padding: 24px 32px;
+    padding: 32px;
     max-width: 960px;
     width: 100%;
     margin: 0 auto;
   }
 
-  .loading, .error-state {
+  /* ── Loading / error ─────────────────────────────────────── */
+  .loading {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 14px;
+    padding: 80px 0;
+    color: var(--text-tertiary);
+    font-size: 0.875rem;
+  }
+  .loading-spinner {
+    width: 24px;
+    height: 24px;
+    animation: spin 1.4s linear infinite;
+    opacity: 0.5;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
     padding: 64px 0;
     color: var(--text-secondary);
+    font-size: 0.875rem;
   }
-
   .error-state button {
-    margin-top: 12px;
-    padding: 8px 16px;
+    padding: 8px 20px;
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-sm);
     background: var(--glass);
-    backdrop-filter: var(--glass-blur);
     color: var(--text-primary);
     cursor: pointer;
+    font-size: 0.85rem;
     transition: all 0.2s;
   }
-
   .error-state button:hover {
     background: var(--glass-hover);
     border-color: var(--glass-border-hover);
   }
 
+  /* ── Hero ─────────────────────────────────────────────────── */
   .hero {
     text-align: center;
-    padding: 24px 0 32px;
+    padding: 20px 0 32px;
   }
-
+  .hero-label {
+    font-size: 0.68rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin: 0 0 10px;
+  }
+  .hero-value-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
   .net-worth {
-    font-size: 2.4rem;
+    font-size: 3.4rem;
     font-weight: 700;
     color: var(--text-primary);
+    letter-spacing: -0.035em;
     margin: 0;
+    line-height: 1;
   }
-
   .net-worth.negative { color: var(--danger); }
 
-  .label {
+  .trend-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 10px 4px 7px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    margin-top: 6px;
+  }
+  .trend-badge svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .trend-badge.positive {
+    background: rgba(74, 222, 128, 0.12);
+    color: var(--success);
+    border: 1px solid rgba(74, 222, 128, 0.2);
+  }
+  .trend-badge.negative {
+    background: rgba(248, 113, 113, 0.12);
+    color: var(--danger);
+    border: 1px solid rgba(248, 113, 113, 0.2);
+  }
+  .trend-period {
+    font-size: 0.68rem;
+    font-weight: 400;
+    opacity: 0.65;
+    margin-left: 2px;
+  }
+
+  .net-worth-range {
+    font-size: 0.75rem;
     color: var(--text-tertiary);
-    font-size: 0.85rem;
-    margin-top: 4px;
-  }
-
-  .stat-cards {
+    margin: 0 0 26px;
     display: flex;
-    gap: 16px;
+    align-items: center;
     justify-content: center;
-    margin-top: 20px;
+    gap: 6px;
   }
+  .range-sep { opacity: 0.35; }
+  .range-period { opacity: 0.55; }
 
-  .stat-card {
+  .balance-strip {
+    display: inline-flex;
+    background: var(--glass);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--glass-shadow);
+  }
+  .balance-cell {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 14px 28px;
-    background: var(--glass);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-md);
-    min-width: 140px;
-    box-shadow: var(--glass-glow);
-    transition: all 0.2s;
+    padding: 14px 44px;
+    gap: 5px;
   }
-
-  .stat-card:hover {
-    background: var(--glass-hover);
-    border-color: var(--glass-border-hover);
+  .balance-divider {
+    width: 1px;
+    background: var(--glass-border);
+    margin: 10px 0;
   }
-
-  .stat-label {
-    font-size: 0.75rem;
+  .balance-cell-label {
+    font-size: 0.68rem;
     color: var(--text-tertiary);
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
   }
-
-  .stat-value {
+  .balance-cell-value {
     font-size: 1.2rem;
     font-weight: 600;
     color: var(--text-primary);
-    margin-top: 4px;
+    letter-spacing: -0.01em;
   }
+  .balance-cell-value.negative { color: var(--danger); }
 
-  .stat-value.negative { color: var(--danger); }
-
-  .controls {
+  /* ── Stats row ────────────────────────────────────────────── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .stat-card {
+    background: var(--glass);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: var(--glass-shadow);
+    border-left-width: 3px;
+  }
+  .stat-card.income  { border-left-color: var(--success); }
+  .stat-card.expenses { border-left-color: var(--danger); }
+  .stat-card.net     { border-left-color: var(--accent); }
+  .stat-card.net.negative { border-left-color: var(--danger); }
+
+  .stat-label {
+    font-size: 0.68rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .stat-value {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+  }
+  .stat-card.net .stat-value     { color: var(--success); }
+  .stat-card.net.negative .stat-value { color: var(--danger); }
+  .stat-period {
+    font-size: 0.67rem;
+    color: var(--text-tertiary);
+    opacity: 0.7;
   }
 
-  .chart-section {
+  /* ── Chart card ───────────────────────────────────────────── */
+  .chart-card {
     background: var(--glass);
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
-    padding: 16px;
-    margin-bottom: 24px;
+    padding: 20px 20px 6px;
+    margin-bottom: 16px;
     box-shadow: var(--glass-shadow);
   }
-
-  .chart-placeholder {
-    background: var(--glass);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-md);
-    padding: 48px;
-    text-align: center;
-    margin-bottom: 24px;
+  .chart-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
   }
-
-  .placeholder-text { color: var(--text-tertiary); font-size: 0.85rem; }
-
-  .breakdown {
-    margin-bottom: 24px;
-  }
-
-  .breakdown h3, .recent h3 {
-    font-size: 0.9rem;
-    color: var(--text-secondary);
+  .chart-card-header h4 {
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    margin-bottom: 12px;
+    margin: 0;
+  }
+  .chart-subtitle {
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    opacity: 0.6;
+  }
+  .range-picker {
+    display: flex;
+    gap: 2px;
+    background: var(--glass-active);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    padding: 2px;
+  }
+  .range-picker button {
+    padding: 4px 12px;
+    border: none;
+    border-radius: 6px;
+    background: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    font-size: 0.72rem;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .range-picker button:hover { color: var(--text-primary); }
+  .range-picker button.active {
+    background: var(--glass-elevated);
+    color: var(--text-primary);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  }
+  .chart-empty {
+    padding: 48px;
+    text-align: center;
+    color: var(--text-tertiary);
+    font-size: 0.85rem;
+    margin: 0;
   }
 
-  .breakdown-row {
+  /* ── Bottom grid ──────────────────────────────────────────── */
+  .bottom-grid {
     display: grid;
-    grid-template-columns: 1fr auto auto;
-    gap: 12px;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+  .bottom-grid .panel:only-child {
+    grid-column: 1 / -1;
+  }
+  .panel {
+    background: var(--glass);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    box-shadow: var(--glass-shadow);
+  }
+  .panel-title {
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0 0 16px;
+  }
+  .panel-title-period {
+    font-size: 0.65rem;
+    opacity: 0.6;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  /* ── Spending breakdown ───────────────────────────────────── */
+  .breakdown-list { display: flex; flex-direction: column; gap: 13px; }
+  .breakdown-row { display: flex; flex-direction: column; gap: 5px; }
+  .breakdown-row-top {
+    display: flex;
+    justify-content: space-between;
     align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--glass-border);
-    position: relative;
+  }
+  .breakdown-cat { font-size: 0.82rem; color: var(--text-secondary); }
+  .breakdown-right { display: flex; align-items: center; gap: 10px; }
+  .breakdown-amount { font-size: 0.82rem; font-weight: 500; color: var(--text-primary); }
+  .breakdown-pct { font-size: 0.7rem; color: var(--text-tertiary); min-width: 34px; text-align: right; }
+  .breakdown-track {
+    height: 4px;
+    background: var(--glass-active);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .breakdown-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.5s ease;
   }
 
-  .breakdown-bar {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    opacity: 0.1;
-    border-radius: 4px;
-  }
-
-  .breakdown-cat { color: var(--text-secondary); font-size: 0.85rem; }
-  .breakdown-amount { color: var(--text-primary); font-size: 0.85rem; font-weight: 500; }
-  .breakdown-pct { color: var(--text-tertiary); font-size: 0.8rem; min-width: 48px; text-align: right; }
-
-  .recent { margin-bottom: 24px; }
-
+  /* ── Recent transactions ──────────────────────────────────── */
+  .tx-list { display: flex; flex-direction: column; }
   .tx-row {
-    display: grid;
-    grid-template-columns: 80px 1fr auto auto;
-    gap: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
     padding: 10px 0;
     border-bottom: 1px solid var(--glass-border);
-    align-items: center;
   }
-
-  .tx-date { color: var(--text-tertiary); font-size: 0.8rem; }
-  .tx-desc { color: var(--text-secondary); font-size: 0.85rem; }
-  .tx-cat { color: var(--text-secondary); font-size: 0.8rem; }
-  .tx-amount { color: var(--success); font-size: 0.85rem; font-weight: 500; text-align: right; }
+  .tx-row:last-child { border-bottom: none; }
+  .tx-type-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--success);
+    flex-shrink: 0;
+  }
+  .tx-type-dot.expense { background: var(--danger); }
+  .tx-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .tx-desc {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tx-meta { display: flex; align-items: center; gap: 8px; }
+  .tx-cat-badge {
+    font-size: 0.67rem;
+    padding: 1px 6px;
+    border-radius: 20px;
+    background: var(--glass-active);
+    border: 1px solid var(--glass-border);
+    color: var(--text-tertiary);
+    white-space: nowrap;
+  }
+  .tx-date { font-size: 0.71rem; color: var(--text-tertiary); }
+  .tx-amount {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--success);
+    white-space: nowrap;
+    text-align: right;
+  }
   .tx-amount.expense { color: var(--danger); }
 </style>

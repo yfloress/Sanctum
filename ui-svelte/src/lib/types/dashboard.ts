@@ -43,12 +43,23 @@ export interface ExpenseBreakdownItem {
   color: string
 }
 
+export interface MonthlyCashFlowItem {
+  month: string
+  income: number
+  expenses: number
+}
+
 export interface AnalyticsData {
   net_worth: string
   net_worth_min: string
   net_worth_max: string
+  total_income: string
+  total_expenses: string
+  total_net: string
+  total_net_negative: boolean
   expense_breakdown: ExpenseBreakdownItem[]
   chart: NetWorthChartData
+  monthly_cash_flow: MonthlyCashFlowItem[]
 }
 
 export interface NetWorthChartData {

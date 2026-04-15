@@ -55,15 +55,32 @@ pub struct ExpenseBreakdownItem {
     pub color: String,
 }
 
+/// Monthly income vs expense entry for cash flow chart.
+#[derive(Debug, Clone, Serialize)]
+pub struct MonthlyCashFlowItem {
+    pub month: String,
+    pub income: f64,
+    pub expenses: f64,
+}
+
 /// Analytics data for a given time range.
 #[derive(Debug, Clone, Serialize)]
 pub struct AnalyticsData {
     pub net_worth: String,
     pub net_worth_min: String,
     pub net_worth_max: String,
+    /// Total income for the selected range (formatted, preferred currency).
+    pub total_income: String,
+    /// Total expenses for the selected range (formatted, preferred currency).
+    pub total_expenses: String,
+    /// Net for the selected range (income − expenses, formatted).
+    pub total_net: String,
+    pub total_net_negative: bool,
     pub expense_breakdown: Vec<ExpenseBreakdownItem>,
     /// Chart data as series for ECharts (replaces plotters PNG).
     pub chart: NetWorthChartData,
+    /// Last 6 months income/expense in preferred currency (for cash flow chart).
+    pub monthly_cash_flow: Vec<MonthlyCashFlowItem>,
 }
 
 /// Input for analytics time range selection.

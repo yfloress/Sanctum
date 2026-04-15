@@ -21,7 +21,8 @@
 
 use sanctum::controller::{AppController, SETTING_PREFERRED_CURRENCY};
 use sanctum::ui::dto::dashboard::{
-    AnalyticsData, BalanceOverview, ExpenseBreakdownItem, NetWorthChartData, RecentTransaction,
+    AnalyticsData, BalanceOverview, ExpenseBreakdownItem, MonthlyCashFlowItem, NetWorthChartData,
+    RecentTransaction,
 };
 use sanctum::ui::{format_category_label, format_money, format_preferred};
 use std::collections::HashMap;
@@ -239,18 +240,57 @@ pub fn fetch_analytics(
         })
         .collect();
 
-    // DashboardData does not include dates; generate index-based labels
     let chart = NetWorthChartData {
-        dates: (0..data.chart_values.len()).map(|i| i.to_string()).collect(),
+        dates: data.chart_dates,
         values: data.chart_values.iter().map(|v| *v as f64).collect(),
     };
+
+    let income_pref = convert_usd_to_preferred(
+        data.total_income_cents as f64 / 100.0,
+        &preferred_currency,
+        preferred_rate,
+    );
+    let expense_pref = convert_usd_to_preferred(
+        data.total_expense_cents as f64 / 100.0,
+        &preferred_currency,
+        preferred_rate,
+    );
+    let net_pref = income_pref - expense_pref;
+
+    let monthly_cash_flow: Vec<MonthlyCashFlowItem> = data
+        .monthly_labels
+        .iter()
+        .zip(data.monthly_income.iter().zip(data.monthly_expense.iter()))
+        .map(|(label, (inc, exp))| {
+            let inc_pref = convert_usd_to_preferred(
+                *inc as f64 / 100.0,
+                &preferred_currency,
+                preferred_rate,
+            );
+            let exp_pref = convert_usd_to_preferred(
+                *exp as f64 / 100.0,
+                &preferred_currency,
+                preferred_rate,
+            );
+            MonthlyCashFlowItem {
+                month: label.clone(),
+                income: inc_pref,
+                expenses: exp_pref,
+            }
+        })
+        .collect();
 
     Ok(AnalyticsData {
         net_worth: data.net_worth,
         net_worth_min: data.min_value,
         net_worth_max: data.max_value,
+        total_income: format_preferred(income_pref, &preferred_currency),
+        total_expenses: format_preferred(expense_pref, &preferred_currency),
+        total_net: format_preferred(net_pref.abs(), &preferred_currency),
+        total_net_negative: net_pref < 0.0,
         expense_breakdown: breakdown,
         chart,
+        monthly_cash_flow,
     })
 }
 
