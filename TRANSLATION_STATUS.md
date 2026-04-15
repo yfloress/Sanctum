@@ -57,8 +57,8 @@
 | `DashboardPage.svelte` | [x] | [x] | [x] | ~15 strings wired. Hero, stats, charts, loading. |
 | `FinancesPage.svelte` | [x] | [x] | [x] | ~80 strings wired. Tabs, stats, charts, modals, toasts. |
 | `HabitsPage.svelte` | [x] | [x] | [x] | ~65 strings wired. Tabs, grid, heatmap, stats, rewards, goals, history, 3 modals, month names. |
-| `CryptoPage.svelte` | [ ] | [ ] | [ ] | ~120 strings. Tax UI, modals, ticker config, portfolio. |
-| `Toast.svelte` | [ ] | [ ] | [ ] | ~2 strings. Minimal. |
+| `CryptoPage.svelte` | [x] | [x] | [x] | ~150 strings wired. Tax UI, modals, ticker config, portfolio, toasts. |
+| `Toast.svelte` | [x] | [x] | [x] | 1 string wired. |
 
 ---
 
