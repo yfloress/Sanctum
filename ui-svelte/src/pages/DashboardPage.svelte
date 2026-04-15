@@ -16,6 +16,7 @@
 
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte'
+  import { i18n } from '../lib/stores/i18n.svelte'
   import * as dashboardApi from '../lib/api/dashboard'
   import NetWorthChart from '../components/charts/NetWorthChart.svelte'
   import FinanceBarChart from '../components/charts/FinanceBarChart.svelte'
@@ -80,7 +81,7 @@
       <svg class="loading-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
       </svg>
-      Loading dashboard…
+      {i18n.t('dashboard-loading', 'Loading dashboard...')}
     </div>
 
   {:else if error}
@@ -89,14 +90,14 @@
         <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
       </svg>
       <p>{error}</p>
-      <button onclick={load}>Retry</button>
+      <button onclick={load}>{i18n.t('dashboard-retry', 'Retry')}</button>
     </div>
 
   {:else if balance}
 
     <!-- ── Hero ─────────────────────────────────────────────────── -->
     <section class="hero">
-      <p class="hero-label">Net Worth · {balance.currency}</p>
+      <p class="hero-label">{i18n.t('dashboard-net-worth', 'Net Worth')} · {balance.currency}</p>
       <div class="hero-value-row">
         <h1 class="net-worth" class:negative={balance.total_negative}>{balance.total}</h1>
         {#if pctChange !== null}
@@ -123,12 +124,12 @@
 
       <div class="balance-strip">
         <div class="balance-cell">
-          <span class="balance-cell-label">Fiat</span>
+          <span class="balance-cell-label">{i18n.t('dashboard-fiat', 'Fiat')}</span>
           <span class="balance-cell-value" class:negative={balance.fiat_negative}>{balance.fiat_total}</span>
         </div>
         <div class="balance-divider"></div>
         <div class="balance-cell">
-          <span class="balance-cell-label">Crypto</span>
+          <span class="balance-cell-label">{i18n.t('dashboard-crypto', 'Crypto')}</span>
           <span class="balance-cell-value" class:negative={balance.crypto_negative}>{balance.crypto_total}</span>
         </div>
       </div>
@@ -138,26 +139,26 @@
       <!-- ── Stats row ────────────────────────────────────────── -->
       <div class="stats-row">
         <div class="stat-card income">
-          <span class="stat-label">Income</span>
+          <span class="stat-label">{i18n.t('dashboard-income', 'Income')}</span>
           <span class="stat-value">{analytics.total_income}</span>
-          <span class="stat-period">last {selectedRange}</span>
+          <span class="stat-period">{i18n.t('dashboard-last', 'last')} {selectedRange}</span>
         </div>
         <div class="stat-card expenses">
-          <span class="stat-label">Expenses</span>
+          <span class="stat-label">{i18n.t('dashboard-expenses', 'Expenses')}</span>
           <span class="stat-value">{analytics.total_expenses}</span>
-          <span class="stat-period">last {selectedRange}</span>
+          <span class="stat-period">{i18n.t('dashboard-last', 'last')} {selectedRange}</span>
         </div>
         <div class="stat-card net" class:negative={analytics.total_net_negative}>
-          <span class="stat-label">Net</span>
+          <span class="stat-label">{i18n.t('dashboard-net', 'Net')}</span>
           <span class="stat-value">{analytics.total_net_negative ? '−' : '+'}{analytics.total_net}</span>
-          <span class="stat-period">last {selectedRange}</span>
+          <span class="stat-period">{i18n.t('dashboard-last', 'last')} {selectedRange}</span>
         </div>
       </div>
 
       <!-- ── Net Worth Chart ───────────────────────────────────── -->
       <div class="chart-card">
         <div class="chart-card-header">
-          <h4>Net Worth Trend</h4>
+          <h4>{i18n.t('dashboard-net-worth-trend', 'Net Worth Trend')}</h4>
           <div class="range-picker">
             {#each ['1M','6M','1Y','ALL'] as r}
               <button class:active={selectedRange === r} onclick={() => changeRange(r)}>{r}</button>
@@ -167,7 +168,7 @@
         {#if analytics.chart.dates.length > 0}
           <NetWorthChart data={analytics.chart} range={selectedRange} />
         {:else}
-          <p class="chart-empty">No data for this range</p>
+          <p class="chart-empty">{i18n.t('dashboard-no-data-range', 'No data for this range')}</p>
         {/if}
       </div>
 
@@ -175,8 +176,8 @@
       {#if cashFlow.months.length > 0}
         <div class="chart-card">
           <div class="chart-card-header">
-            <h4>Monthly Cash Flow</h4>
-            <span class="chart-subtitle">Last 6 months</span>
+            <h4>{i18n.t('dashboard-monthly-cash-flow', 'Monthly Cash Flow')}</h4>
+            <span class="chart-subtitle">{i18n.t('dashboard-last-6-months', 'Last 6 months')}</span>
           </div>
           <FinanceBarChart
             months={cashFlow.months}
@@ -193,7 +194,7 @@
 
         {#if analytics && analytics.expense_breakdown.length > 0}
           <div class="panel">
-            <h4 class="panel-title">Spending Breakdown <span class="panel-title-period">({selectedRange})</span></h4>
+            <h4 class="panel-title">{i18n.t('dashboard-spending-breakdown', 'Spending Breakdown')} <span class="panel-title-period">({selectedRange})</span></h4>
             <div class="breakdown-list">
               {#each analytics.expense_breakdown as item}
                 <div class="breakdown-row">
@@ -215,7 +216,7 @@
 
         {#if recent.length > 0}
           <div class="panel">
-            <h4 class="panel-title">Recent Activity</h4>
+            <h4 class="panel-title">{i18n.t('dashboard-recent-activity', 'Recent Activity')}</h4>
             <div class="tx-list">
               {#each recent as tx}
                 <div class="tx-row">

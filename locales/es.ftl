@@ -85,17 +85,21 @@ nav-collapse = Contraer
 
 # ==================== Dashboard ====================
 dashboard-title = Panel
-dashboard-welcome = Bienvenido de vuelta
+dashboard-loading = Cargando panel...
+dashboard-retry = Reintentar
 dashboard-net-worth = Patrimonio Neto
-dashboard-total-balance = Saldo Total
-dashboard-monthly-income = Ingresos del Mes
-dashboard-monthly-expenses = Gastos del Mes
-dashboard-recent-transactions = Transacciones Recientes
-dashboard-no-transactions = Sin transacciones recientes
-dashboard-view-all = Ver Todo
-dashboard-quick-actions = Acciones Rápidas
-dashboard-add-transaction = Agregar Transacción
-dashboard-add-account = Agregar Cuenta
+dashboard-fiat = Fiat
+dashboard-crypto = Crypto
+dashboard-income = Ingresos
+dashboard-expenses = Gastos
+dashboard-net = Neto
+dashboard-last = ultimo
+dashboard-net-worth-trend = Tendencia Patrimonial
+dashboard-monthly-cash-flow = Flujo de Caja Mensual
+dashboard-last-6-months = Ultimos 6 meses
+dashboard-no-data-range = Sin datos para este rango
+dashboard-spending-breakdown = Desglose de Gastos
+dashboard-recent-activity = Actividad Reciente
 
 # ==================== Finances ====================
 finances-title = FINANZAS

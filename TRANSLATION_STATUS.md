@@ -53,7 +53,7 @@
 |------------------|------|--------|-----------|-------|
 | `Sidebar.svelte` | [x] | [x] | [x] | 7 labels wired (`5ad1d16`) |
 | `LoginPage.svelte` | [x] | [x] | [x] | 8 strings wired (`5ad1d16`) |
-| `SettingsPage.svelte` | [ ] | [ ] | [ ] | ~40 strings. Section headers, labels, descriptions, buttons. |
+| `SettingsPage.svelte` | [x] | [x] | [x] | ~45 strings wired (`f986045`). Includes import flow, toasts. |
 | `DashboardPage.svelte` | [ ] | [ ] | [ ] | ~25 strings. Chart titles, stat labels, recent activity. |
 | `FinancesPage.svelte` | [ ] | [ ] | [ ] | ~80 strings. Largest page. Tabs, modals, forms, categories. |
 | `HabitsPage.svelte` | [ ] | [ ] | [ ] | ~60 strings. Heatmap, analytics, rewards, goals. |
