@@ -16,6 +16,7 @@
 
 <script lang="ts">
   import { app } from './lib/stores/app.svelte'
+  import { i18n } from './lib/stores/i18n.svelte'
   import { startSessionMonitor } from './lib/stores/session.svelte'
   import Sidebar from './components/Sidebar.svelte'
   import Toast from './components/Toast.svelte'
@@ -25,6 +26,9 @@
   import HabitsPage from './pages/HabitsPage.svelte'
   import CryptoPage from './pages/CryptoPage.svelte'
   import SettingsPage from './pages/SettingsPage.svelte'
+
+  // Load translations once at startup — must happen before any page renders
+  i18n.load()
 
   $effect(() => {
     if (app.isLoggedIn) {
