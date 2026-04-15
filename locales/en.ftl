@@ -209,48 +209,170 @@ finances-cat-added = Category added
 finances-cat-deleted = Category deleted
 
 # ==================== Crypto ====================
-crypto-title = Crypto
-crypto-portfolio = Portfolio
-crypto-wallets = WALLETS
-crypto-tax-tab = TAX
-crypto-assets = ASSETS
+# -- Tabs & Hero --
+crypto-tab-portfolio = Portfolio
+crypto-tab-wallets = Wallets
+crypto-tab-tax = Tax
+crypto-portfolio-value = Portfolio Value
+crypto-last-updated-label = Last updated: {$value}
+crypto-loading = Loading...
+
+# -- Ticker bar --
+crypto-no-tickers = No tickers configured
+crypto-sync-prices = Sync prices
+crypto-configure-ticker = Configure ticker
+
+# -- Portfolio tab --
+crypto-new-transaction = New Transaction
+crypto-unrealized-pnl = Unrealized P&L
+crypto-realized-ytd = Realized YTD
+crypto-roi = ROI
+crypto-portfolio-trend = Portfolio Trend
+crypto-distribution = Distribution
+crypto-no-assets-empty = No assets yet. Create a wallet and add transactions to get started.
+
+# -- Wallets tab --
+crypto-wallets-title = Wallets
 crypto-add-wallet = Add Wallet
-crypto-add-transaction = Add Transaction
-crypto-no-wallets = No wallets yet
-crypto-no-assets = No assets found
-crypto-total-value = Total Value
-crypto-price = Price
+crypto-no-wallets = No wallets yet.
+crypto-wallet-assets-one = asset
+crypto-wallet-assets-other = assets
+crypto-delete-wallet = Delete Wallet
+
+# -- Wallet detail panel --
+crypto-click-rename = Click to rename
 crypto-holdings = Holdings
-crypto-change-24h = 24h Change
-crypto-market-cap = Market Cap
-crypto-volume = Volume
+crypto-transactions = Transactions
+crypto-save = Save
+crypto-cancel = Cancel
 
-# Wallet types
-wallet-type-exchange = Exchange
-wallet-type-hardware = Hardware
-wallet-type-software = Software
-wallet-type-multi = Multi-Signature
+# -- Asset detail panel --
+crypto-amount = Amount
+crypto-value = Value
+crypto-allocation = Allocation
 
-# Transaction types
+# -- Tax tab --
+crypto-tax-period-id = Tax Period ID
+crypto-tax-period-placeholder = e.g., 2024
+crypto-tax-load-settings = Load Settings
+crypto-tax-configure = Configure
+crypto-tax-jurisdiction = Jurisdiction
+crypto-tax-method = Method
+crypto-tax-include-swaps = Include Swaps
+crypto-tax-include-fee-crypto = Include Fee Crypto
+crypto-tax-yes = Yes
+crypto-tax-no = No
+crypto-tax-generate-report = Generate Report
+crypto-tax-processing = Processing tax data...
+
+# -- Tax report --
+crypto-tax-report-summary = Report Summary
+crypto-tax-disposals = Disposals
+crypto-tax-total-proceeds = Total Proceeds
+crypto-tax-total-cost = Total Cost
+crypto-tax-total-gain = Total Gain
+crypto-tax-short-term = Short-term Gain
+crypto-tax-long-term = Long-term Gain
+crypto-tax-warnings = Warnings
+crypto-tax-readiness = Readiness
+crypto-tax-events = Events (showing first 50)
+crypto-tax-col-date = Date
+crypto-tax-col-coin = Coin
+crypto-tax-col-amount = Amount
+crypto-tax-col-proceeds = Proceeds
+crypto-tax-col-cost-basis = Cost Basis
+crypto-tax-col-gain = Gain
+crypto-tax-col-term = Term
+crypto-tax-export-events = Export Events CSV
+crypto-tax-export-history = Export History CSV
+
+# -- IPC import --
+crypto-ipc-label = IPC Price History
+crypto-ipc-records = {$count} records {$range}
+crypto-ipc-no-data = No IPC data imported
+crypto-ipc-import = Import IPC CSV
+
+# -- Tax settings modal --
+crypto-tax-settings-title = Tax Settings
+crypto-tax-jurisdiction-us = United States
+crypto-tax-jurisdiction-cl = Chile
+crypto-tax-jurisdiction-ca = Canada
+crypto-tax-jurisdiction-uk = United Kingdom
+crypto-tax-jurisdiction-au = Australia
+crypto-tax-jurisdiction-other = Other
+crypto-tax-method-fifo = FIFO
+crypto-tax-method-lifo = LIFO
+crypto-tax-method-hifo = HIFO
+crypto-tax-method-avg = Average Cost
+crypto-tax-cost-basis-method = Cost Basis Method
+crypto-tax-include-swaps-label = Include Swaps in Disposals
+crypto-tax-include-fee-label = Include Fee Crypto as Disposal
+crypto-tax-exclude-wallets = Exclude Wallets
+
+# -- Add wallet modal --
+crypto-new-wallet = New Wallet
+crypto-wallet-name = Name
+crypto-wallet-name-placeholder = Wallet name
+crypto-wallet-category = Category
+crypto-wallet-create = Create
+
+# -- Ticker config modal --
+crypto-ticker-tab = Ticker
+crypto-coins-tab = Coins
+crypto-ticker-active = Active — use arrows to reorder
+crypto-ticker-no-selected = No tickers selected yet.
+crypto-ticker-add-coins = Add coins
+crypto-ticker-search = Search coins...
+crypto-ticker-save = Save
+
+# -- Coin catalog --
+crypto-custom-coin = Add Custom Coin
+crypto-custom-id = ID
+crypto-custom-name = Name
+crypto-custom-symbol = Symbol
+crypto-custom-add = Add
+
+# -- Transaction modal --
+crypto-tx-title = New Transaction
 crypto-tx-buy = Buy
 crypto-tx-sell = Sell
-crypto-tx-transfer-in = Transfer In
-crypto-tx-transfer-out = Transfer Out
+crypto-tx-income = Income
+crypto-tx-fee = Fee
+crypto-tx-transfer = Transfer
 crypto-tx-swap = Swap
+crypto-tx-coin = Coin
+crypto-tx-search-coin = Search coin...
+crypto-tx-wallet = Wallet
+crypto-tx-from-wallet = From Wallet
+crypto-tx-to-wallet = To Wallet
+crypto-tx-amount = Amount
+crypto-tx-received-amount = Received Amount (optional)
+crypto-tx-received-placeholder = Same as sent if empty
+crypto-tx-from-coin = From Coin
+crypto-tx-from-amount = From Amount
+crypto-tx-to-coin = To Coin
+crypto-tx-to-amount = To Amount
+crypto-tx-price = Price (per coin)
+crypto-tx-fee-label = Fee
+crypto-tx-date = Date
+crypto-tx-notes = Notes (optional)
+crypto-tx-notes-placeholder = Notes...
+crypto-tx-add = Add
 
-# Transaction messages
-crypto-tx-added = Asset added successfully
-crypto-tx-transfer-added = Transfer added successfully
-crypto-tx-swap-added = Swap added successfully
-crypto-tx-deleted = Transaction deleted
-crypto-tx-wallet-required = Please create a wallet first
-crypto-tx-two-wallets-required = Create two wallets to move assets
-crypto-tx-amount-required = Amount is required
-crypto-tx-price-required = Price is required
-crypto-tx-coins-required = Add coins in settings first
-crypto-tx-different-wallets = Pick two different wallets
-crypto-tx-to-amount-required = To amount is required
-crypto-tx-swap-different-assets = Swap assets must be different
+# -- Toast messages --
+crypto-toast-ticker-saved = Ticker config saved
+crypto-toast-no-coins-sync = No coins to sync. Configure ticker first.
+crypto-toast-custom-added = Custom coin added
+crypto-toast-custom-deleted = Custom coin deleted
+crypto-toast-tx-added = Transaction added
+crypto-toast-tx-deleted = Transaction deleted
+crypto-toast-wallet-created = Wallet created
+crypto-toast-wallet-deleted = Wallet deleted
+crypto-toast-wallet-renamed = Wallet renamed
+crypto-toast-ipc-imported = IPC data imported
+crypto-toast-settings-saved = Settings saved
+crypto-toast-enter-period = Please enter a period ID
+crypto-toast-exported = Exported to {$path}
 
 # ==================== Habits ====================
 # Header & tabs
@@ -526,21 +648,13 @@ crypto-create-wallet-first = Create a wallet first, then add your crypto holding
 crypto-start-adding = Start by adding a wallet and your first asset
 crypto-import-csv = IMPORT CSV
 crypto-unrealized = UNREALIZED
-crypto-realized-ytd = REALIZED (YTD)
-crypto-roi = ROI
 crypto-tax-title = TAX & REPORTS
 crypto-tax-subtab-settings = SETTINGS
 crypto-tax-subtab-summary = SUMMARY
 crypto-tax-period-label = TAX PERIOD (YEAR)
-crypto-tax-period-placeholder = 2025
 crypto-tax-jurisdiction-label = JURISDICTION
-crypto-tax-jurisdiction-cl = Chile
-crypto-tax-jurisdiction-us = USA
-crypto-tax-jurisdiction-other = Other
 crypto-tax-method-label = COST BASIS METHOD
-crypto-tax-include-swaps = Include swaps as taxable
 crypto-tax-include-swaps-desc = Treat swaps as disposals for tax reports.
-crypto-tax-include-fee-crypto = Include fee paid in crypto
 crypto-tax-include-fee-crypto-desc = Treat fee coin as a taxable disposal.
 crypto-tax-save-settings = Save Tax Settings
 crypto-tax-report-title = REPORT GENERATION
@@ -549,7 +663,6 @@ crypto-tax-report-generate = Generate Report
 crypto-tax-report-export = Export CSV
 crypto-tax-report-summary-label = REPORT SUMMARY
 crypto-tax-report-summary-empty = No report generated yet
-crypto-tax-report-summary = Disposals: {$disposals} | Proceeds: {$proceeds} | Cost: {$cost} | Gain: {$gain}
 crypto-tax-report-summary-us = Disposals: {$disposals} | Proceeds: {$proceeds} | Cost: {$cost} | Gain: {$gain} | Short: {$short} | Long: {$long}
 crypto-tax-report-warnings-label = WARNINGS
 crypto-tax-report-warnings-empty = No warnings
@@ -651,11 +764,9 @@ modal-tax-override-proceeds = OVERRIDE PROCEEDS
 modal-tax-override-cost = OVERRIDE COST BASIS
 crypto-assets-across-wallets = { $assets } assets across { $wallets } wallets
 crypto-wallet = WALLET
-crypto-value = VALUE
 
 crypto-add-first-wallet = Add your first wallet to start tracking your crypto
 crypto-no-wallets-created = No wallets created
-crypto-delete-wallet = Delete Wallet?
 crypto-delete-wallet-confirm-prefix = This will permanently delete "
 crypto-delete-wallet-confirm-suffix = " and all its transaction history.
 crypto-delete-wallet-warning-title = Wallet Has Transactions
@@ -695,7 +806,6 @@ crypto-price-label = Price
 # Crypto Charts
 crypto-no-priced-assets = No priced assets yet
 crypto-sync-to-see = Sync prices to see the distribution
-crypto-portfolio-trend = PORTFOLIO TREND (180 DAYS)
 crypto-value-label = VALUE
 crypto-cost-label = COST
 crypto-no-trend = No trend data yet

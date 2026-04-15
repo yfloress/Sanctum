@@ -16,6 +16,7 @@
 
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte'
+  import { i18n } from '../lib/stores/i18n.svelte'
 </script>
 
 {#if app.toast}
@@ -25,7 +26,7 @@
     role="alert"
   >
     <span>{app.toast.message}</span>
-    <button class="close-btn" onclick={() => app.dismissToast()} aria-label="Close">
+    <button class="close-btn" onclick={() => app.dismissToast()} aria-label={i18n.t('action-close', 'Close')}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M6 18L18 6M6 6l12 12" />
       </svg>

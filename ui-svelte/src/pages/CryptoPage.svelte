@@ -16,6 +16,7 @@
 
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte'
+  import { i18n } from '../lib/stores/i18n.svelte'
   import * as cryptoApi from '../lib/api/crypto'
   import PortfolioTrendChart from '../components/charts/PortfolioTrendChart.svelte'
   import DistributionChart from '../components/charts/DistributionChart.svelte'
@@ -146,7 +147,7 @@
     try {
       await cryptoApi.saveActiveTickerIds(tickerIds)
       showTickerConfig = false
-      app.showToast('Ticker config saved')
+      app.showToast(i18n.t('crypto-toast-ticker-saved', 'Ticker config saved'))
       // Update bar immediately from current tickerIds without re-fetching them from DB
       await refreshTickerBar()
     } catch (e) { app.showToast(String(e), true) }
@@ -201,7 +202,7 @@
     try {
       const ids = await cryptoApi.getMonitoredCoinIds()
       if (ids.length === 0) {
-        app.showToast('No coins to sync. Configure ticker first.', true)
+        app.showToast(i18n.t('crypto-toast-no-coins-sync', 'No coins to sync. Configure ticker first.'), true)
         return
       }
       
@@ -223,7 +224,7 @@
       customCoinId = ''
       customCoinName = ''
       customCoinSymbol = ''
-      app.showToast('Custom coin added')
+      app.showToast(i18n.t('crypto-toast-custom-added', 'Custom coin added'))
     } catch (e) { app.showToast(String(e), true) }
   }
 
@@ -231,7 +232,7 @@
     try {
       await cryptoApi.deleteCustomCoin(id)
       coinCatalog = await cryptoApi.getCoinCatalog()
-      app.showToast('Custom coin deleted')
+      app.showToast(i18n.t('crypto-toast-custom-deleted', 'Custom coin deleted'))
     } catch (e) { app.showToast(String(e), true) }
   }
 
@@ -336,7 +337,7 @@
       showAddTransaction = false
       await load()
       if (activeTab === 'wallets') await loadWallets()
-      app.showToast('Transaction added')
+      app.showToast(i18n.t('crypto-toast-tx-added', 'Transaction added'))
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -352,7 +353,7 @@
         selectedWallet = await cryptoApi.fetchWalletDetail(selectedWallet.id)
       }
       await load()
-      app.showToast('Transaction deleted')
+      app.showToast(i18n.t('crypto-toast-tx-deleted', 'Transaction deleted'))
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -406,7 +407,7 @@
       showAddWallet = false
       walletName = ''
       await loadWallets()
-      app.showToast('Wallet created')
+      app.showToast(i18n.t('crypto-toast-wallet-created', 'Wallet created'))
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -417,7 +418,7 @@
       await cryptoApi.deleteWallet(id, false)
       selectedWallet = null
       await loadWallets()
-      app.showToast('Wallet deleted')
+      app.showToast(i18n.t('crypto-toast-wallet-deleted', 'Wallet deleted'))
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -443,7 +444,7 @@
       selectedWallet = await cryptoApi.fetchWalletDetail(selectedWallet.id)
       await loadWallets()
       showEditWalletName = false
-      app.showToast('Wallet renamed')
+      app.showToast(i18n.t('crypto-toast-wallet-renamed', 'Wallet renamed'))
     } catch (e) { app.showToast(String(e), true) }
   }
 
@@ -477,7 +478,7 @@
       })
       await cryptoApi.importIpcCsv(content)
       await loadIpcSummary()
-      app.showToast('IPC data imported')
+      app.showToast(i18n.t('crypto-toast-ipc-imported', 'IPC data imported'))
     } catch (e) {
       app.showToast(String(e), true)
     } finally {
@@ -487,7 +488,7 @@
 
   async function loadTaxSettings() {
     if (!taxPeriodId.trim()) {
-      app.showToast('Please enter a period ID', true)
+      app.showToast(i18n.t('crypto-toast-enter-period', 'Please enter a period ID'), true)
       return
     }
     taxLoading = true
@@ -508,7 +509,7 @@
 
   async function saveTaxSettings() {
     if (!taxPeriodId.trim()) {
-      app.showToast('Please enter a period ID', true)
+      app.showToast(i18n.t('crypto-toast-enter-period', 'Please enter a period ID'), true)
       return
     }
     taxLoading = true
@@ -522,7 +523,7 @@
         excluded_wallet_ids: taxExcludedWalletIds
       })
       showTaxSettings = false
-      app.showToast('Settings saved')
+      app.showToast(i18n.t('crypto-toast-settings-saved', 'Settings saved'))
     } catch (e) {
       app.showToast(String(e), true)
     } finally {
@@ -532,7 +533,7 @@
 
   async function generateTaxReport() {
     if (!taxPeriodId.trim()) {
-      app.showToast('Please enter a period ID', true)
+      app.showToast(i18n.t('crypto-toast-enter-period', 'Please enter a period ID'), true)
       return
     }
     taxLoading = true
@@ -557,7 +558,7 @@
       } else {
         await cryptoApi.exportTaxHistoryCsv(taxPeriodId, path)
       }
-      app.showToast(`Exported to ${path}`)
+      app.showToast(i18n.tArgs('crypto-toast-exported', { path }, `Exported to ${path}`))
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -596,17 +597,17 @@
         </div>
       {/each}
       {#if tickerPrices.length === 0}
-        <span class="ticker-empty">No tickers configured</span>
+        <span class="ticker-empty">{i18n.t('crypto-no-tickers', 'No tickers configured')}</span>
       {/if}
     </div>
     <div class="ticker-actions">
       {#if tickerPrices.length > 0 && tickerPrices[0].last_updated}
         <span class="ticker-updated" title={tickerPrices[0].last_updated}>{new Date(tickerPrices[0].last_updated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
       {/if}
-      <button class="ticker-sync-btn" onclick={syncTickerPrices} disabled={tickerSyncing} aria-label="Sync prices" title="Sync prices">
+      <button class="ticker-sync-btn" onclick={syncTickerPrices} disabled={tickerSyncing} aria-label={i18n.t('crypto-sync-prices', 'Sync prices')} title={i18n.t('crypto-sync-prices', 'Sync prices')}>
         <svg class:spinning={tickerSyncing} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m0 0a9 9 0 019-9m-9 9a9 9 0 009 9"/></svg>
       </button>
-      <button class="ticker-config-btn" onclick={() => openTickerConfig()} aria-label="Configure ticker" title="Configure ticker">
+      <button class="ticker-config-btn" onclick={() => openTickerConfig()} aria-label={i18n.t('crypto-configure-ticker', 'Configure ticker')} title={i18n.t('crypto-configure-ticker', 'Configure ticker')}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
       </button>
     </div>
@@ -615,48 +616,48 @@
   <!-- Hero -->
   <section class="hero">
     <h2 class="total">{portfolio?.total_value ?? '--'}</h2>
-    <p class="label">Portfolio Value</p>
+    <p class="label">{i18n.t('crypto-portfolio-value', 'Portfolio Value')}</p>
     {#if portfolio?.last_updated}
-      <p class="last-updated">Last updated: {portfolio.last_updated}</p>
+      <p class="last-updated">{i18n.tArgs('crypto-last-updated-label', { value: portfolio.last_updated }, `Last updated: ${portfolio.last_updated}`)}</p>
     {/if}
   </section>
 
   <!-- Tabs -->
   <div class="tab-row">
     <div class="tab-bar">
-      <button class:active={activeTab === 'portfolio'} onclick={() => activeTab = 'portfolio'}>Portfolio</button>
-      <button class:active={activeTab === 'wallets'} onclick={() => activeTab = 'wallets'}>Wallets</button>
-      <button class:active={activeTab === 'tax'} onclick={() => activeTab = 'tax'}>Tax</button>
+      <button class:active={activeTab === 'portfolio'} onclick={() => activeTab = 'portfolio'}>{i18n.t('crypto-tab-portfolio', 'Portfolio')}</button>
+      <button class:active={activeTab === 'wallets'} onclick={() => activeTab = 'wallets'}>{i18n.t('crypto-tab-wallets', 'Wallets')}</button>
+      <button class:active={activeTab === 'tax'} onclick={() => activeTab = 'tax'}>{i18n.t('crypto-tab-tax', 'Tax')}</button>
     </div>
   </div>
 
   {#if loading}
-    <div class="loading">Loading...</div>
+    <div class="loading">{i18n.t('crypto-loading', 'Loading...')}</div>
 
   <!-- PORTFOLIO TAB -->
   {:else if activeTab === 'portfolio' && portfolio}
     <div class="section-header">
       <span></span>
       <div class="header-actions">
-        <button class="glass-btn" onclick={openAddTransaction}>New Transaction</button>
+        <button class="glass-btn" onclick={openAddTransaction}>{i18n.t('crypto-new-transaction', 'New Transaction')}</button>
       </div>
     </div>
     <!-- Stats bar -->
     <div class="stats-bar">
       <div class="stat">
-        <span class="stat-lbl">Unrealized P&L</span>
+        <span class="stat-lbl">{i18n.t('crypto-unrealized-pnl', 'Unrealized P&L')}</span>
         <span class="stat-val" class:negative={portfolio.unrealized_pnl_negative} class:positive={!portfolio.unrealized_pnl_negative}>
           {portfolio.unrealized_pnl}
         </span>
       </div>
       <div class="stat">
-        <span class="stat-lbl">Realized YTD</span>
+        <span class="stat-lbl">{i18n.t('crypto-realized-ytd', 'Realized YTD')}</span>
         <span class="stat-val" class:negative={portfolio.realized_ytd_negative} class:positive={!portfolio.realized_ytd_negative}>
           {portfolio.realized_ytd}
         </span>
       </div>
       <div class="stat">
-        <span class="stat-lbl">ROI</span>
+        <span class="stat-lbl">{i18n.t('crypto-roi', 'ROI')}</span>
         <span class="stat-val" class:negative={portfolio.roi_negative} class:positive={!portfolio.roi_negative}>
           {portfolio.roi}
         </span>
@@ -665,7 +666,7 @@
 
     <!-- Holdings -->
     {#if portfolio.assets.length === 0}
-      <p class="empty">No assets yet. Create a wallet and add transactions to get started.</p>
+      <p class="empty">{i18n.t('crypto-no-assets-empty', 'No assets yet. Create a wallet and add transactions to get started.')}</p>
     {:else}
       <div class="holdings-grid">
         {#each portfolio.assets as asset}
@@ -694,7 +695,7 @@
       <!-- Portfolio Trend Chart -->
       {#if trend && trend.dates.length > 0}
         <div class="chart-section">
-          <h3>Portfolio Trend</h3>
+          <h3>{i18n.t('crypto-portfolio-trend', 'Portfolio Trend')}</h3>
           <PortfolioTrendChart data={trend} />
         </div>
       {/if}
@@ -702,7 +703,7 @@
       <!-- Distribution Chart -->
       {#if portfolio.distribution.length > 0}
         <div class="chart-section">
-          <h3>Distribution</h3>
+          <h3>{i18n.t('crypto-distribution', 'Distribution')}</h3>
           <DistributionChart data={portfolio.distribution} />
         </div>
       {/if}
@@ -711,15 +712,15 @@
   <!-- WALLETS TAB -->
   {:else if activeTab === 'wallets'}
     <div class="section-header">
-      <h3>Wallets</h3>
+      <h3>{i18n.t('crypto-wallets-title', 'Wallets')}</h3>
       <div class="header-actions">
-        <button class="glass-btn" onclick={openAddTransaction}>New Transaction</button>
-        <button class="glass-btn" onclick={() => { showAddWallet = true; walletName = '' }}>Add Wallet</button>
+        <button class="glass-btn" onclick={openAddTransaction}>{i18n.t('crypto-new-transaction', 'New Transaction')}</button>
+        <button class="glass-btn" onclick={() => { showAddWallet = true; walletName = '' }}>{i18n.t('crypto-add-wallet', 'Add Wallet')}</button>
       </div>
     </div>
 
     {#if (walletsData?.wallets ?? []).length === 0}
-      <p class="empty">No wallets yet.</p>
+      <p class="empty">{i18n.t('crypto-no-wallets', 'No wallets yet.')}</p>
     {:else}
       <div class="wallet-grid">
         {#each walletsData?.wallets ?? [] as w}
@@ -727,7 +728,7 @@
             <div class="wallet-name">{w.name}</div>
             <div class="wallet-cat">{w.category}</div>
             <div class="wallet-val">{w.total_value}</div>
-            <div class="wallet-count">{w.assets_count} asset{w.assets_count !== 1 ? 's' : ''}</div>
+            <div class="wallet-count">{w.assets_count} {w.assets_count !== 1 ? i18n.t('crypto-wallet-assets-other', 'assets') : i18n.t('crypto-wallet-assets-one', 'asset')}</div>
           </button>
         {/each}
       </div>
@@ -740,12 +741,12 @@
       <div class="period-selector">
         <label>
           Tax Period ID
-          <input type="text" bind:value={taxPeriodId} placeholder="e.g., 2024" />
+          <input type="text" bind:value={taxPeriodId} placeholder={i18n.t('crypto-tax-period-placeholder', 'e.g., 2024')} />
         </label>
         <div class="period-actions">
-          <button class="glass-btn" onclick={loadTaxSettings}>Load Settings</button>
+          <button class="glass-btn" onclick={loadTaxSettings}>{i18n.t('crypto-tax-load-settings', 'Load Settings')}</button>
           {#if taxSettings}
-            <button class="glass-btn" onclick={() => showTaxSettings = true}>Configure</button>
+            <button class="glass-btn" onclick={() => showTaxSettings = true}>{i18n.t('crypto-tax-configure', 'Configure')}</button>
           {/if}
         </div>
       </div>
@@ -754,42 +755,42 @@
         <!-- Settings info -->
         <div class="settings-info">
           <div class="info-item">
-            <span class="label">Jurisdiction</span>
+            <span class="label">{i18n.t('crypto-tax-jurisdiction', 'Jurisdiction')}</span>
             <span class="value">{taxSettings.jurisdiction}</span>
           </div>
           <div class="info-item">
-            <span class="label">Method</span>
+            <span class="label">{i18n.t('crypto-tax-method', 'Method')}</span>
             <span class="value">{taxSettings.method}</span>
           </div>
           <div class="info-item">
-            <span class="label">Include Swaps</span>
-            <span class="value">{taxSettings.include_swaps ? 'Yes' : 'No'}</span>
+            <span class="label">{i18n.t('crypto-tax-include-swaps', 'Include Swaps')}</span>
+            <span class="value">{taxSettings.include_swaps ? i18n.t('crypto-tax-yes', 'Yes') : i18n.t('crypto-tax-no', 'No')}</span>
           </div>
           <div class="info-item">
-            <span class="label">Include Fee Crypto</span>
-            <span class="value">{taxSettings.include_fee_crypto ? 'Yes' : 'No'}</span>
+            <span class="label">{i18n.t('crypto-tax-include-fee-crypto', 'Include Fee Crypto')}</span>
+            <span class="value">{taxSettings.include_fee_crypto ? i18n.t('crypto-tax-yes', 'Yes') : i18n.t('crypto-tax-no', 'No')}</span>
           </div>
         </div>
 
         <!-- Generate report button -->
         <div class="report-actions">
-          <button class="glass-btn" onclick={generateTaxReport}>Generate Report</button>
+          <button class="glass-btn" onclick={generateTaxReport}>{i18n.t('crypto-tax-generate-report', 'Generate Report')}</button>
         </div>
 
         <!-- IPC Import -->
         <div class="ipc-section">
           <div class="setting-row">
             <div>
-              <span class="ipc-label">IPC Price History</span>
+              <span class="ipc-label">{i18n.t('crypto-ipc-label', 'IPC Price History')}</span>
               {#if ipcSummary && ipcSummary.records_count > 0}
                 <span class="ipc-info">{ipcSummary.records_count} records {ipcSummary.date_range ? `(${ipcSummary.date_range})` : ''}</span>
               {:else}
-                <span class="ipc-info">No IPC data imported</span>
+                <span class="ipc-info">{i18n.t('crypto-ipc-no-data', 'No IPC data imported')}</span>
               {/if}
             </div>
             <div>
               <input type="file" accept=".csv" class="hidden-input" bind:this={ipcFileInput} onchange={handleIpcFile} />
-              <button class="glass-btn" onclick={() => ipcFileInput.click()}>Import IPC CSV</button>
+              <button class="glass-btn" onclick={() => ipcFileInput.click()}>{i18n.t('crypto-ipc-import', 'Import IPC CSV')}</button>
             </div>
           </div>
         </div>
@@ -798,33 +799,33 @@
       {#if taxReport}
         <!-- Report summary -->
         <div class="report-summary">
-          <h3>Report Summary</h3>
+          <h3>{i18n.t('crypto-tax-report-summary', 'Report Summary')}</h3>
           <div class="summary-grid">
             <div class="summary-item">
-              <span class="label">Disposals</span>
+              <span class="label">{i18n.t('crypto-tax-disposals', 'Disposals')}</span>
               <span class="value">{taxReport.disposals_count}</span>
             </div>
             <div class="summary-item">
-              <span class="label">Total Proceeds</span>
+              <span class="label">{i18n.t('crypto-tax-total-proceeds', 'Total Proceeds')}</span>
               <span class="value">{taxReport.total_proceeds}</span>
             </div>
             <div class="summary-item">
-              <span class="label">Total Cost</span>
+              <span class="label">{i18n.t('crypto-tax-total-cost', 'Total Cost')}</span>
               <span class="value">{taxReport.total_cost}</span>
             </div>
             <div class="summary-item">
-              <span class="label">Total Gain</span>
+              <span class="label">{i18n.t('crypto-tax-total-gain', 'Total Gain')}</span>
               <span class="value" class:negative={taxReport.total_gain_negative}>{taxReport.total_gain}</span>
             </div>
             {#if taxReport.short_term_gain}
               <div class="summary-item">
-                <span class="label">Short-term Gain</span>
+                <span class="label">{i18n.t('crypto-tax-short-term', 'Short-term Gain')}</span>
                 <span class="value">{taxReport.short_term_gain}</span>
               </div>
             {/if}
             {#if taxReport.long_term_gain}
               <div class="summary-item">
-                <span class="label">Long-term Gain</span>
+                <span class="label">{i18n.t('crypto-tax-long-term', 'Long-term Gain')}</span>
                 <span class="value">{taxReport.long_term_gain}</span>
               </div>
             {/if}
@@ -834,7 +835,7 @@
         <!-- Warnings -->
         {#if taxReport.warnings && taxReport.warnings.length > 0}
           <div class="warnings">
-            <h4>Warnings</h4>
+            <h4>{i18n.t('crypto-tax-warnings', 'Warnings')}</h4>
             {#each taxReport.warnings as w}
               <div class="warning-item">
                 <span class="warning-code">{w.code}</span>
@@ -847,7 +848,7 @@
         <!-- Readiness -->
         {#if taxReport.readiness && taxReport.readiness.length > 0}
           <div class="readiness">
-            <h4>Readiness</h4>
+            <h4>{i18n.t('crypto-tax-readiness', 'Readiness')}</h4>
             {#each taxReport.readiness as r}
               <div class="readiness-item" class:complete={r.status === 'complete'} class:incomplete={r.status === 'incomplete'}>
                 <span class="status-badge" class:complete={r.status === 'complete'}>{r.status}</span>
@@ -859,25 +860,25 @@
 
         <!-- Export -->
         <div class="export-actions">
-          <button onclick={() => exportTaxReport('csv')} class="export-btn">Export Events CSV</button>
-          <button onclick={() => exportTaxReport('history')} class="export-btn">Export History CSV</button>
+          <button onclick={() => exportTaxReport('csv')} class="export-btn">{i18n.t('crypto-tax-export-events', 'Export Events CSV')}</button>
+          <button onclick={() => exportTaxReport('history')} class="export-btn">{i18n.t('crypto-tax-export-history', 'Export History CSV')}</button>
         </div>
 
         <!-- Events table (first 50) -->
         {#if taxReport.events && taxReport.events.length > 0}
           <div class="events-table">
-            <h4>Events (showing first 50)</h4>
+            <h4>{i18n.t('crypto-tax-events', 'Events (showing first 50)')}</h4>
             <div class="table-wrapper">
               <table>
                 <thead>
                   <tr>
-                    <th>Date</th>
-                    <th>Coin</th>
-                    <th>Amount</th>
-                    <th>Proceeds</th>
-                    <th>Cost Basis</th>
-                    <th>Gain</th>
-                    <th>Term</th>
+                    <th>{i18n.t('crypto-tax-col-date', 'Date')}</th>
+                    <th>{i18n.t('crypto-tax-col-coin', 'Coin')}</th>
+                    <th>{i18n.t('crypto-tax-col-amount', 'Amount')}</th>
+                    <th>{i18n.t('crypto-tax-col-proceeds', 'Proceeds')}</th>
+                    <th>{i18n.t('crypto-tax-col-cost-basis', 'Cost Basis')}</th>
+                    <th>{i18n.t('crypto-tax-col-gain', 'Gain')}</th>
+                    <th>{i18n.t('crypto-tax-col-term', 'Term')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -900,7 +901,7 @@
       {/if}
 
       {#if taxLoading}
-        <div class="loading">Processing tax data...</div>
+        <div class="loading">{i18n.t('crypto-tax-processing', 'Processing tax data...')}</div>
       {/if}
     </div>
 
@@ -909,39 +910,39 @@
       <div class="modal-backdrop" role="presentation" onclick={() => showTaxSettings = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showTaxSettings = false }}></div>
       <div class="modal-wrapper">
         <div class="modal">
-          <h3>Tax Settings</h3>
+          <h3>{i18n.t('crypto-tax-settings-title', 'Tax Settings')}</h3>
           <div class="form-grid">
             <label>
-              Jurisdiction
+              {i18n.t('crypto-tax-jurisdiction', 'Jurisdiction')}
               <select bind:value={taxJurisdiction}>
-                <option value="US">United States</option>
-                <option value="CL">Chile</option>
-                <option value="CA">Canada</option>
-                <option value="UK">United Kingdom</option>
-                <option value="AU">Australia</option>
-                <option value="OTHER">Other</option>
+                <option value="US">{i18n.t('crypto-tax-jurisdiction-us', 'United States')}</option>
+                <option value="CL">{i18n.t('crypto-tax-jurisdiction-cl', 'Chile')}</option>
+                <option value="CA">{i18n.t('crypto-tax-jurisdiction-ca', 'Canada')}</option>
+                <option value="UK">{i18n.t('crypto-tax-jurisdiction-uk', 'United Kingdom')}</option>
+                <option value="AU">{i18n.t('crypto-tax-jurisdiction-au', 'Australia')}</option>
+                <option value="OTHER">{i18n.t('crypto-tax-jurisdiction-other', 'Other')}</option>
               </select>
             </label>
             <label>
-              Cost Basis Method
+              {i18n.t('crypto-tax-cost-basis-method', 'Cost Basis Method')}
               <select bind:value={taxMethod}>
-                <option value="fifo">FIFO</option>
-                <option value="lifo">LIFO</option>
-                <option value="hifo">HIFO</option>
-                <option value="average">Average Cost</option>
+                <option value="fifo">{i18n.t('crypto-tax-method-fifo', 'FIFO')}</option>
+                <option value="lifo">{i18n.t('crypto-tax-method-lifo', 'LIFO')}</option>
+                <option value="hifo">{i18n.t('crypto-tax-method-hifo', 'HIFO')}</option>
+                <option value="average">{i18n.t('crypto-tax-method-avg', 'Average Cost')}</option>
               </select>
             </label>
             <label>
               <input type="checkbox" bind:checked={taxIncludeSwaps} />
-              Include Swaps in Disposals
+              {i18n.t('crypto-tax-include-swaps-label', 'Include Swaps in Disposals')}
             </label>
             <label>
               <input type="checkbox" bind:checked={taxIncludeFeeCrypto} />
-              Include Fee Crypto as Disposal
+              {i18n.t('crypto-tax-include-fee-label', 'Include Fee Crypto as Disposal')}
             </label>
             {#if walletsData && walletsData.wallets.length > 0}
               <div class="exclusion-section">
-                <span class="exclusion-title">Exclude Wallets</span>
+                <span class="exclusion-title">{i18n.t('crypto-tax-exclude-wallets', 'Exclude Wallets')}</span>
                 {#each walletsData.wallets as w}
                   <label class="exclusion-row">
                     <input
@@ -962,8 +963,8 @@
             {/if}
           </div>
           <div class="modal-actions">
-            <button class="secondary-btn" onclick={() => showTaxSettings = false}>Cancel</button>
-            <button class="primary-btn" onclick={saveTaxSettings} disabled={taxLoading}>Save</button>
+            <button class="secondary-btn" onclick={() => showTaxSettings = false}>{i18n.t('crypto-cancel', 'Cancel')}</button>
+            <button class="primary-btn" onclick={saveTaxSettings} disabled={taxLoading}>{i18n.t('crypto-save', 'Save')}</button>
           </div>
         </div>
       </div>
@@ -979,11 +980,11 @@
       {#if showEditWalletName}
         <div class="inline-edit">
           <input type="text" bind:value={editingWalletName} class="edit-name-input" />
-          <button class="icon-btn-sm" onclick={submitWalletName}>Save</button>
-          <button class="icon-btn-sm" onclick={() => showEditWalletName = false}>Cancel</button>
+          <button class="icon-btn-sm" onclick={submitWalletName}>{i18n.t('crypto-save', 'Save')}</button>
+          <button class="icon-btn-sm" onclick={() => showEditWalletName = false}>{i18n.t('crypto-cancel', 'Cancel')}</button>
         </div>
       {:else}
-        <button class="clickable-name" onclick={startEditWalletName} title="Click to rename">{selectedWallet.name}</button>
+        <button class="clickable-name" onclick={startEditWalletName} title={i18n.t('crypto-click-rename', 'Click to rename')}>{selectedWallet.name}</button>
       {/if}
       <button class="close-panel" aria-label="Close panel" onclick={() => selectedWallet = null}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
@@ -995,7 +996,7 @@
     </div>
 
     {#if selectedWallet.holdings.length > 0}
-      <h4>Holdings</h4>
+      <h4>{i18n.t('crypto-holdings', 'Holdings')}</h4>
       {#each selectedWallet.holdings as h}
         <div class="holding-row">
           <span class="h-symbol">{h.symbol}</span>
@@ -1006,7 +1007,7 @@
     {/if}
 
     {#if selectedWallet.transactions.length > 0}
-      <h4>Transactions</h4>
+      <h4>{i18n.t('crypto-transactions', 'Transactions')}</h4>
       {#each selectedWallet.transactions.slice(0, 20) as tx}
         <div class="panel-tx">
           <span class="tx-date">{tx.date}</span>
@@ -1020,7 +1021,7 @@
     {/if}
 
     <div class="panel-actions">
-      <button class="danger-btn" onclick={() => deleteWallet(selectedWallet!.id)}>Delete Wallet</button>
+      <button class="danger-btn" onclick={() => deleteWallet(selectedWallet!.id)}>{i18n.t('crypto-delete-wallet', 'Delete Wallet')}</button>
     </div>
   </aside>
 {/if}
@@ -1040,13 +1041,13 @@
       <span class="change" class:negative={assetInView.price_change_24h_negative}>{assetInView.price_change_24h}</span>
     </div>
     <div class="asset-stats">
-      <div><span class="stat-lbl">Amount</span><span>{assetInView.amount}</span></div>
-      <div><span class="stat-lbl">Value</span><span>{assetInView.value}</span></div>
-      <div><span class="stat-lbl">Allocation</span><span>{assetInView.allocation_pct.toFixed(1)}%</span></div>
+      <div><span class="stat-lbl">{i18n.t('crypto-amount', 'Amount')}</span><span>{assetInView.amount}</span></div>
+      <div><span class="stat-lbl">{i18n.t('crypto-value', 'Value')}</span><span>{assetInView.value}</span></div>
+      <div><span class="stat-lbl">{i18n.t('crypto-allocation', 'Allocation')}</span><span>{assetInView.allocation_pct.toFixed(1)}%</span></div>
     </div>
 
     {#if assetTransactions.length > 0}
-      <h4>Transactions</h4>
+      <h4>{i18n.t('crypto-transactions', 'Transactions')}</h4>
       {#each assetTransactions as tx}
         <div class="panel-tx">
           <span class="tx-date">{tx.date}</span>
@@ -1066,14 +1067,14 @@
   <div class="modal-backdrop" role="presentation" onclick={() => showAddWallet = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddWallet = false }}></div>
   <div class="modal-wrapper">
     <div class="modal">
-      <h3>New Wallet</h3>
+      <h3>{i18n.t('crypto-new-wallet', 'New Wallet')}</h3>
     <div class="form-grid">
       <label>
-        Name
-        <input type="text" bind:value={walletName} placeholder="Wallet name" />
+        {i18n.t('crypto-wallet-name', 'Name')}
+        <input type="text" bind:value={walletName} placeholder={i18n.t('crypto-wallet-name-placeholder', 'Wallet name')} />
       </label>
       <label>
-        Category
+        {i18n.t('crypto-wallet-category', 'Category')}
         <div class="category-cards">
           {#each ['exchange', 'hardware', 'software'] as cat}
             <button class="cat-card" class:selected={walletCategory === cat} onclick={() => walletCategory = cat}>
@@ -1084,8 +1085,8 @@
       </label>
     </div>
       <div class="modal-actions">
-        <button class="secondary-btn" onclick={() => showAddWallet = false}>Cancel</button>
-        <button class="primary-btn" onclick={submitWallet} disabled={!walletName.trim()}>Create</button>
+        <button class="secondary-btn" onclick={() => showAddWallet = false}>{i18n.t('crypto-cancel', 'Cancel')}</button>
+        <button class="primary-btn" onclick={submitWallet} disabled={!walletName.trim()}>{i18n.t('crypto-wallet-create', 'Create')}</button>
       </div>
     </div>
   </div>
@@ -1098,15 +1099,15 @@
     <div class="modal wide">
       <!-- Tab bar -->
       <div class="cfg-tabs">
-        <button class="cfg-tab" class:active={tickerConfigTab === 'ticker'} onclick={() => tickerConfigTab = 'ticker'}>Ticker</button>
-        <button class="cfg-tab" class:active={tickerConfigTab === 'coins'} onclick={() => tickerConfigTab = 'coins'}>Coins</button>
+        <button class="cfg-tab" class:active={tickerConfigTab === 'ticker'} onclick={() => tickerConfigTab = 'ticker'}>{i18n.t('crypto-ticker-tab', 'Ticker')}</button>
+        <button class="cfg-tab" class:active={tickerConfigTab === 'coins'} onclick={() => tickerConfigTab = 'coins'}>{i18n.t('crypto-coins-tab', 'Coins')}</button>
       </div>
 
       {#if tickerConfigTab === 'ticker'}
         <!-- Active tickers (ordered) -->
-        <p class="tc-section-label">Active — use arrows to reorder</p>
+        <p class="tc-section-label">{i18n.t('crypto-ticker-active', 'Active — use arrows to reorder')}</p>
         {#if tickerConfigActive.length === 0}
-          <p class="tc-empty">No tickers selected yet.</p>
+          <p class="tc-empty">{i18n.t('crypto-ticker-no-selected', 'No tickers selected yet.')}</p>
         {:else}
           <div class="tc-active-list">
             {#each tickerConfigActive as coin, i}
@@ -1130,8 +1131,8 @@
           </div>
         {/if}
 
-        <p class="tc-section-label" style="margin-top: 16px;">Add coins</p>
-        <input type="text" class="catalog-search" bind:value={tickerConfigSearch} placeholder="Search coins..." />
+        <p class="tc-section-label" style="margin-top: 16px;">{i18n.t('crypto-ticker-add-coins', 'Add coins')}</p>
+        <input type="text" class="catalog-search" bind:value={tickerConfigSearch} placeholder={i18n.t('crypto-ticker-search', 'Search coins...')} />
         <div class="tc-available-list">
           {#each tickerConfigAvailable as coin}
             <button class="tc-available-item" onclick={() => addTicker(coin.id)}>
@@ -1144,13 +1145,13 @@
         </div>
 
         <div class="modal-actions">
-          <button class="secondary-btn" onclick={() => showTickerConfig = false}>Cancel</button>
-          <button class="primary-btn" onclick={saveTickerConfig}>Save</button>
+          <button class="secondary-btn" onclick={() => showTickerConfig = false}>{i18n.t('crypto-cancel', 'Cancel')}</button>
+          <button class="primary-btn" onclick={saveTickerConfig}>{i18n.t('crypto-ticker-save', 'Save')}</button>
         </div>
 
       {:else}
         <!-- Coins tab -->
-        <input type="text" class="catalog-search" bind:value={catalogSearch} placeholder="Search coins..." />
+        <input type="text" class="catalog-search" bind:value={catalogSearch} placeholder={i18n.t('crypto-ticker-search', 'Search coins...')} />
         <div class="catalog-list">
           {#each filteredCatalog as coin}
             <div class="catalog-item">
@@ -1167,14 +1168,14 @@
         </div>
 
         <div class="custom-coin-form">
-          <span class="form-label">Add Custom Coin</span>
+          <span class="form-label">{i18n.t('crypto-custom-coin', 'Add Custom Coin')}</span>
           <div class="custom-coin-row">
-            <input type="text" bind:value={customCoinId} placeholder="ID" />
-            <input type="text" bind:value={customCoinName} placeholder="Name" />
+            <input type="text" bind:value={customCoinId} placeholder={i18n.t('crypto-custom-id', 'ID')} />
+            <input type="text" bind:value={customCoinName} placeholder={i18n.t('crypto-custom-name', 'Name')} />
           </div>
           <div class="custom-coin-row-bottom">
-            <input type="text" bind:value={customCoinSymbol} placeholder="Symbol" />
-            <button class="primary-btn" onclick={addCustomCoinSubmit} disabled={!customCoinId.trim() || !customCoinSymbol.trim()}>Add</button>
+            <input type="text" bind:value={customCoinSymbol} placeholder={i18n.t('crypto-custom-symbol', 'Symbol')} />
+            <button class="primary-btn" onclick={addCustomCoinSubmit} disabled={!customCoinId.trim() || !customCoinSymbol.trim()}>{i18n.t('crypto-custom-add', 'Add')}</button>
           </div>
         </div>
 
@@ -1191,12 +1192,12 @@
   <div class="modal-backdrop" role="presentation" onclick={() => showAddTransaction = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddTransaction = false }}></div>
   <div class="modal-wrapper">
     <div class="modal wide">
-      <h3>New Transaction</h3>
+      <h3>{i18n.t('crypto-tx-title', 'New Transaction')}</h3>
       <!-- Transaction type selector -->
       <div class="tx-type-bar">
         {#each (['buy', 'sell', 'income', 'fee', 'transfer', 'swap'] as const) as t}
           <button class="tx-type-btn" class:active={txMode === t} onclick={() => txMode = t}>
-            {t.charAt(0).toUpperCase() + t.slice(1)}
+            {i18n.t(`crypto-tx-${t}`, t.charAt(0).toUpperCase() + t.slice(1))}
           </button>
         {/each}
       </div>
@@ -1205,14 +1206,14 @@
         {#if txMode === 'transfer'}
           <!-- Transfer form -->
           <label>
-            Coin
+            {i18n.t('crypto-tx-coin', 'Coin')}
             {#if txCoinId}
               <div class="coin-selected">
                 <span>{txSymbol}</span>
                 <button class="clear-coin" onclick={() => { txCoinId = ''; txSymbol = '' }}>x</button>
               </div>
             {:else}
-              <input type="text" bind:value={coinSearch} placeholder="Search coin..." />
+              <input type="text" bind:value={coinSearch} placeholder={i18n.t('crypto-tx-search-coin', 'Search coin...')} />
               {#if coinSearch.length >= 1}
                 <div class="coin-dropdown">
                   {#each filteredCoins as c}
@@ -1223,7 +1224,7 @@
             {/if}
           </label>
           <label>
-            From Wallet
+            {i18n.t('crypto-tx-from-wallet', 'From Wallet')}
             <select bind:value={txFromWalletId}>
               {#each walletsData?.simple_list ?? [] as w}
                 <option value={w.id}>{w.name}</option>
@@ -1231,7 +1232,7 @@
             </select>
           </label>
           <label>
-            To Wallet
+            {i18n.t('crypto-tx-to-wallet', 'To Wallet')}
             <select bind:value={txToWalletId}>
               {#each walletsData?.simple_list ?? [] as w}
                 <option value={w.id}>{w.name}</option>
@@ -1239,17 +1240,17 @@
             </select>
           </label>
           <label>
-            Amount
+            {i18n.t('crypto-tx-amount', 'Amount')}
             <input type="text" bind:value={txFromAmount} placeholder="0.00" />
           </label>
           <label>
-            Received Amount (optional)
-            <input type="text" bind:value={txToAmount} placeholder="Same as sent if empty" />
+            {i18n.t('crypto-tx-received-amount', 'Received Amount (optional)')}
+            <input type="text" bind:value={txToAmount} placeholder={i18n.t('crypto-tx-received-placeholder', 'Same as sent if empty')} />
           </label>
         {:else if txMode === 'swap'}
           <!-- Swap form -->
           <label>
-            Wallet
+            {i18n.t('crypto-tx-wallet', 'Wallet')}
             <select bind:value={txWalletId}>
               {#each walletsData?.simple_list ?? [] as w}
                 <option value={w.id}>{w.name}</option>
@@ -1257,14 +1258,14 @@
             </select>
           </label>
           <label>
-            From Coin
+            {i18n.t('crypto-tx-from-coin', 'From Coin')}
             {#if txFromCoinId}
               <div class="coin-selected">
                 <span>{txFromSymbol}</span>
                 <button class="clear-coin" onclick={() => { txFromCoinId = ''; txFromSymbol = '' }}>x</button>
               </div>
             {:else}
-              <input type="text" bind:value={coinSearch} placeholder="Search coin..." />
+              <input type="text" bind:value={coinSearch} placeholder={i18n.t('crypto-tx-search-coin', 'Search coin...')} />
               {#if coinSearch.length >= 1}
                 <div class="coin-dropdown">
                   {#each filteredCoins as c}
@@ -1275,18 +1276,18 @@
             {/if}
           </label>
           <label>
-            From Amount
+            {i18n.t('crypto-tx-from-amount', 'From Amount')}
             <input type="text" bind:value={txSwapFromAmount} placeholder="0.00" />
           </label>
           <label>
-            To Coin
+            {i18n.t('crypto-tx-to-coin', 'To Coin')}
             {#if txToCoinId}
               <div class="coin-selected">
                 <span>{txToSymbol}</span>
                 <button class="clear-coin" onclick={() => { txToCoinId = ''; txToSymbol = '' }}>x</button>
               </div>
             {:else}
-              <input type="text" bind:value={coinSearch} placeholder="Search coin..." />
+              <input type="text" bind:value={coinSearch} placeholder={i18n.t('crypto-tx-search-coin', 'Search coin...')} />
               {#if coinSearch.length >= 1}
                 <div class="coin-dropdown">
                   {#each filteredCoins as c}
@@ -1297,13 +1298,13 @@
             {/if}
           </label>
           <label>
-            To Amount
+            {i18n.t('crypto-tx-to-amount', 'To Amount')}
             <input type="text" bind:value={txSwapToAmount} placeholder="0.00" />
           </label>
         {:else}
           <!-- Buy/Sell/Income/Fee form -->
           <label>
-            Wallet
+            {i18n.t('crypto-tx-wallet', 'Wallet')}
             <select bind:value={txWalletId}>
               {#each walletsData?.simple_list ?? [] as w}
                 <option value={w.id}>{w.name}</option>
@@ -1311,14 +1312,14 @@
             </select>
           </label>
           <label>
-            Coin
+            {i18n.t('crypto-tx-coin', 'Coin')}
             {#if txCoinId}
               <div class="coin-selected">
                 <span>{txSymbol}</span>
                 <button class="clear-coin" onclick={() => { txCoinId = ''; txSymbol = '' }}>x</button>
               </div>
             {:else}
-              <input type="text" bind:value={coinSearch} placeholder="Search coin..." />
+              <input type="text" bind:value={coinSearch} placeholder={i18n.t('crypto-tx-search-coin', 'Search coin...')} />
               {#if coinSearch.length >= 1}
                 <div class="coin-dropdown">
                   {#each filteredCoins as c}
@@ -1329,33 +1330,33 @@
             {/if}
           </label>
           <label>
-            Amount
+            {i18n.t('crypto-tx-amount', 'Amount')}
             <input type="text" bind:value={txAmount} placeholder="0.00" />
           </label>
           <label>
-            Price (per coin)
+            {i18n.t('crypto-tx-price', 'Price (per coin)')}
             <input type="text" bind:value={txPrice} placeholder="0.00" />
           </label>
         {/if}
 
         <!-- Common fields -->
         <label>
-          Fee
+          {i18n.t('crypto-tx-fee-label', 'Fee')}
           <input type="text" bind:value={txFee} placeholder="0" />
         </label>
         <label>
-          Date
+          {i18n.t('crypto-tx-date', 'Date')}
           <input type="date" bind:value={txDate} />
         </label>
         <label>
-          Notes (optional)
-          <input type="text" bind:value={txNotes} placeholder="Notes..." />
+          {i18n.t('crypto-tx-notes', 'Notes (optional)')}
+          <input type="text" bind:value={txNotes} placeholder={i18n.t('crypto-tx-notes-placeholder', 'Notes...')} />
         </label>
       </div>
 
       <div class="modal-actions">
-        <button class="secondary-btn" onclick={() => showAddTransaction = false}>Cancel</button>
-        <button class="primary-btn" onclick={submitCryptoTransaction}>Add</button>
+        <button class="secondary-btn" onclick={() => showAddTransaction = false}>{i18n.t('crypto-cancel', 'Cancel')}</button>
+        <button class="primary-btn" onclick={submitCryptoTransaction}>{i18n.t('crypto-tx-add', 'Add')}</button>
       </div>
     </div>
   </div>

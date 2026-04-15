@@ -209,48 +209,170 @@ finances-cat-added = Categoria agregada
 finances-cat-deleted = Categoria eliminada
 
 # ==================== Crypto ====================
-crypto-title = Crypto
-crypto-portfolio = Portafolio
-crypto-wallets = BILLETERAS
-crypto-tax-tab = IMPUESTOS
-crypto-assets = ACTIVOS
+# -- Tabs & Hero --
+crypto-tab-portfolio = Portafolio
+crypto-tab-wallets = Billeteras
+crypto-tab-tax = Impuestos
+crypto-portfolio-value = Valor del Portafolio
+crypto-last-updated-label = Ultima actualizacion: {$value}
+crypto-loading = Cargando...
+
+# -- Ticker bar --
+crypto-no-tickers = Sin tickers configurados
+crypto-sync-prices = Sincronizar precios
+crypto-configure-ticker = Configurar ticker
+
+# -- Portfolio tab --
+crypto-new-transaction = Nueva Transaccion
+crypto-unrealized-pnl = Ganancias No Realizadas
+crypto-realized-ytd = Realizadas (Anual)
+crypto-roi = ROI
+crypto-portfolio-trend = Tendencia del Portafolio
+crypto-distribution = Distribucion
+crypto-no-assets-empty = Sin activos aun. Crea una billetera y agrega transacciones para comenzar.
+
+# -- Wallets tab --
+crypto-wallets-title = Billeteras
 crypto-add-wallet = Agregar Billetera
-crypto-add-transaction = Agregar Transacción
-crypto-no-wallets = Sin billeteras aún
-crypto-no-assets = Sin activos encontrados
-crypto-total-value = Valor Total
-crypto-price = Precio
+crypto-no-wallets = Sin billeteras aun.
+crypto-wallet-assets-one = activo
+crypto-wallet-assets-other = activos
+crypto-delete-wallet = Eliminar Billetera
+
+# -- Wallet detail panel --
+crypto-click-rename = Click para renombrar
 crypto-holdings = Tenencias
-crypto-change-24h = Cambio 24h
-crypto-market-cap = Cap. de Mercado
-crypto-volume = Volumen
+crypto-transactions = Transacciones
+crypto-save = Guardar
+crypto-cancel = Cancelar
 
-# Wallet types
-wallet-type-exchange = Exchange
-wallet-type-hardware = Hardware
-wallet-type-software = Software
-wallet-type-multi = Multi-Firma
+# -- Asset detail panel --
+crypto-amount = Cantidad
+crypto-value = Valor
+crypto-allocation = Asignacion
 
-# Transaction types
+# -- Tax tab --
+crypto-tax-period-id = Periodo Tributario
+crypto-tax-period-placeholder = ej., 2024
+crypto-tax-load-settings = Cargar Configuracion
+crypto-tax-configure = Configurar
+crypto-tax-jurisdiction = Jurisdiccion
+crypto-tax-method = Metodo
+crypto-tax-include-swaps = Incluir Intercambios
+crypto-tax-include-fee-crypto = Incluir Comision Crypto
+crypto-tax-yes = Si
+crypto-tax-no = No
+crypto-tax-generate-report = Generar Reporte
+crypto-tax-processing = Procesando datos tributarios...
+
+# -- Tax report --
+crypto-tax-report-summary = Resumen del Reporte
+crypto-tax-disposals = Enajenaciones
+crypto-tax-total-proceeds = Ingresos Totales
+crypto-tax-total-cost = Costo Total
+crypto-tax-total-gain = Ganancia Total
+crypto-tax-short-term = Ganancia Corto Plazo
+crypto-tax-long-term = Ganancia Largo Plazo
+crypto-tax-warnings = Advertencias
+crypto-tax-readiness = Preparacion
+crypto-tax-events = Eventos (mostrando primeros 50)
+crypto-tax-col-date = Fecha
+crypto-tax-col-coin = Moneda
+crypto-tax-col-amount = Cantidad
+crypto-tax-col-proceeds = Ingresos
+crypto-tax-col-cost-basis = Costo Base
+crypto-tax-col-gain = Ganancia
+crypto-tax-col-term = Plazo
+crypto-tax-export-events = Exportar Eventos CSV
+crypto-tax-export-history = Exportar Historial CSV
+
+# -- IPC import --
+crypto-ipc-label = Historial de Precios IPC
+crypto-ipc-records = {$count} registros {$range}
+crypto-ipc-no-data = Sin datos IPC importados
+crypto-ipc-import = Importar IPC CSV
+
+# -- Tax settings modal --
+crypto-tax-settings-title = Configuracion Tributaria
+crypto-tax-jurisdiction-us = Estados Unidos
+crypto-tax-jurisdiction-cl = Chile
+crypto-tax-jurisdiction-ca = Canada
+crypto-tax-jurisdiction-uk = Reino Unido
+crypto-tax-jurisdiction-au = Australia
+crypto-tax-jurisdiction-other = Otro
+crypto-tax-method-fifo = FIFO
+crypto-tax-method-lifo = LIFO
+crypto-tax-method-hifo = HIFO
+crypto-tax-method-avg = Costo Promedio
+crypto-tax-cost-basis-method = Metodo de Costo Base
+crypto-tax-include-swaps-label = Incluir Intercambios como Enajenacion
+crypto-tax-include-fee-label = Incluir Comision Crypto como Enajenacion
+crypto-tax-exclude-wallets = Excluir Billeteras
+
+# -- Add wallet modal --
+crypto-new-wallet = Nueva Billetera
+crypto-wallet-name = Nombre
+crypto-wallet-name-placeholder = Nombre de billetera
+crypto-wallet-category = Categoria
+crypto-wallet-create = Crear
+
+# -- Ticker config modal --
+crypto-ticker-tab = Ticker
+crypto-coins-tab = Monedas
+crypto-ticker-active = Activos — usa flechas para reordenar
+crypto-ticker-no-selected = Sin tickers seleccionados.
+crypto-ticker-add-coins = Agregar monedas
+crypto-ticker-search = Buscar monedas...
+crypto-ticker-save = Guardar
+
+# -- Coin catalog --
+crypto-custom-coin = Agregar Moneda Personalizada
+crypto-custom-id = ID
+crypto-custom-name = Nombre
+crypto-custom-symbol = Simbolo
+crypto-custom-add = Agregar
+
+# -- Transaction modal --
+crypto-tx-title = Nueva Transaccion
 crypto-tx-buy = Compra
 crypto-tx-sell = Venta
-crypto-tx-transfer-in = Entrada
-crypto-tx-transfer-out = Salida
+crypto-tx-income = Ingreso
+crypto-tx-fee = Comision
+crypto-tx-transfer = Transferencia
 crypto-tx-swap = Intercambio
+crypto-tx-coin = Moneda
+crypto-tx-search-coin = Buscar moneda...
+crypto-tx-wallet = Billetera
+crypto-tx-from-wallet = Billetera Origen
+crypto-tx-to-wallet = Billetera Destino
+crypto-tx-amount = Cantidad
+crypto-tx-received-amount = Cantidad Recibida (opcional)
+crypto-tx-received-placeholder = Igual al envio si vacio
+crypto-tx-from-coin = Moneda Origen
+crypto-tx-from-amount = Cantidad Origen
+crypto-tx-to-coin = Moneda Destino
+crypto-tx-to-amount = Cantidad Destino
+crypto-tx-price = Precio (por moneda)
+crypto-tx-fee-label = Comision
+crypto-tx-date = Fecha
+crypto-tx-notes = Notas (opcional)
+crypto-tx-notes-placeholder = Notas...
+crypto-tx-add = Agregar
 
-# Transaction messages
-crypto-tx-added = Activo agregado exitosamente
-crypto-tx-transfer-added = Transferencia agregada exitosamente
-crypto-tx-swap-added = Intercambio agregado exitosamente
-crypto-tx-deleted = Transacción eliminada
-crypto-tx-wallet-required = Primero crea una billetera
-crypto-tx-two-wallets-required = Crea dos billeteras para mover activos
-crypto-tx-amount-required = El monto es obligatorio
-crypto-tx-price-required = El precio es obligatorio
-crypto-tx-coins-required = Agrega monedas en configuración primero
-crypto-tx-different-wallets = Selecciona dos billeteras distintas
-crypto-tx-to-amount-required = El monto de destino es obligatorio
-crypto-tx-swap-different-assets = Los activos del intercambio deben ser distintos
+# -- Toast messages --
+crypto-toast-ticker-saved = Configuracion del ticker guardada
+crypto-toast-no-coins-sync = Sin monedas para sincronizar. Configura el ticker primero.
+crypto-toast-custom-added = Moneda personalizada agregada
+crypto-toast-custom-deleted = Moneda personalizada eliminada
+crypto-toast-tx-added = Transaccion agregada
+crypto-toast-tx-deleted = Transaccion eliminada
+crypto-toast-wallet-created = Billetera creada
+crypto-toast-wallet-deleted = Billetera eliminada
+crypto-toast-wallet-renamed = Billetera renombrada
+crypto-toast-ipc-imported = Datos IPC importados
+crypto-toast-settings-saved = Configuracion guardada
+crypto-toast-enter-period = Ingresa un periodo tributario
+crypto-toast-exported = Exportado a {$path}
 
 # ==================== Habits ====================
 # Header & tabs
@@ -526,21 +648,13 @@ crypto-create-wallet-first = Crea una billetera primero, luego agrega tus cripto
 crypto-start-adding = Comienza agregando una billetera y tu primer activo
 crypto-import-csv = IMPORTAR CSV
 crypto-unrealized = NO REALIZADO
-crypto-realized-ytd = REALIZADO (YTD)
-crypto-roi = ROI
 crypto-tax-title = IMPUESTOS Y REPORTES
 crypto-tax-subtab-settings = CONFIGURACIÓN
 crypto-tax-subtab-summary = RESUMEN
 crypto-tax-period-label = PERIODO TRIBUTARIO (AÑO)
-crypto-tax-period-placeholder = 2025
 crypto-tax-jurisdiction-label = JURISDICCIÓN
-crypto-tax-jurisdiction-cl = Chile
-crypto-tax-jurisdiction-us = EE.UU.
-crypto-tax-jurisdiction-other = Otro
 crypto-tax-method-label = MÉTODO DE COSTO
-crypto-tax-include-swaps = Incluir swaps como gravables
 crypto-tax-include-swaps-desc = Trata swaps como disposiciones para el reporte.
-crypto-tax-include-fee-crypto = Incluir comisión en cripto
 crypto-tax-include-fee-crypto-desc = Trata la comisión en cripto como disposición gravable.
 crypto-tax-save-settings = Guardar configuración tributaria
 crypto-tax-report-title = GENERAR REPORTE
@@ -549,7 +663,6 @@ crypto-tax-report-generate = Generar reporte
 crypto-tax-report-export = Exportar CSV
 crypto-tax-report-summary-label = RESUMEN DEL REPORTE
 crypto-tax-report-summary-empty = Aún no se ha generado un reporte
-crypto-tax-report-summary = Disposiciones: {$disposals} | Ingresos: {$proceeds} | Costo: {$cost} | Ganancia: {$gain}
 crypto-tax-report-summary-us = Disposiciones: {$disposals} | Ingresos: {$proceeds} | Costo: {$cost} | Ganancia: {$gain} | Corto: {$short} | Largo: {$long}
 crypto-tax-report-warnings-label = ADVERTENCIAS
 crypto-tax-report-warnings-empty = Sin advertencias
@@ -651,11 +764,9 @@ modal-tax-override-proceeds = SOBREESCRIBIR INGRESOS
 modal-tax-override-cost = SOBREESCRIBIR COSTO BASE
 crypto-assets-across-wallets = { $assets } activos en { $wallets } billeteras
 crypto-wallet = BILLETERA
-crypto-value = VALOR
 
 crypto-add-first-wallet = Agrega tu primera billetera para empezar a rastrear tus criptos
 crypto-no-wallets-created = No hay billeteras creadas
-crypto-delete-wallet = ¿Eliminar Billetera?
 crypto-delete-wallet-confirm-prefix = Esto eliminará permanentemente "
 crypto-delete-wallet-confirm-suffix = " y todo su historial de transacciones.
 crypto-delete-wallet-warning-title = La billetera tiene transacciones
@@ -695,7 +806,6 @@ crypto-price-label = Precio
 # Crypto Charts
 crypto-no-priced-assets = Sin activos con precio aún
 crypto-sync-to-see = Sincroniza precios para ver la distribución
-crypto-portfolio-trend = TENDENCIA DEL PORTAFOLIO (180 DÍAS)
 crypto-value-label = VALOR
 crypto-cost-label = COSTO
 crypto-no-trend = Sin datos de tendencia aún
