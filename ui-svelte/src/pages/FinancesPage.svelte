@@ -16,6 +16,7 @@
 
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte'
+  import { i18n } from '../lib/stores/i18n.svelte'
   import * as financeApi from '../lib/api/finance'
   import type {
     TransactionDto, CategoriesResponse, CategoryDto,
@@ -213,7 +214,7 @@
       }
       showAddTransaction = false
       await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()])
-      app.showToast(editingTransaction ? 'Transaction updated' : 'Transaction added')
+      app.showToast(editingTransaction ? i18n.t('finances-tx-updated', 'Transaction updated') : i18n.t('finances-tx-added', 'Transaction added'))
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -223,7 +224,7 @@
     try {
       await financeApi.deleteTransaction(id)
       await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()])
-      app.showToast('Transaction deleted')
+      app.showToast(i18n.t('finances-tx-deleted', 'Transaction deleted'))
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -273,7 +274,7 @@
       }
       showAddAccount = false
       editingAccount = null
-      app.showToast(isEditing ? 'Account updated' : 'Account created')
+      app.showToast(isEditing ? i18n.t('finances-acc-updated', 'Account updated') : i18n.t('finances-acc-created', 'Account created'))
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -284,7 +285,7 @@
       await financeApi.deleteAccount(id)
       selectedAccount = null
       await refreshAccounts()
-      app.showToast('Account deleted')
+      app.showToast(i18n.t('finances-acc-deleted', 'Account deleted'))
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -324,7 +325,7 @@
       showTransfer = false
       editingTransfer = null
       await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()])
-      app.showToast(isEditing ? 'Transfer updated' : 'Transfer completed')
+      app.showToast(isEditing ? i18n.t('finances-tf-updated', 'Transfer updated') : i18n.t('finances-tf-completed', 'Transfer completed'))
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -360,7 +361,7 @@
       await financeApi.addCategory(newCatName, newCatType)
       newCatName = ''
       categories = await financeApi.loadCategories()
-      app.showToast('Category added')
+      app.showToast(i18n.t('finances-cat-added', 'Category added'))
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -370,7 +371,7 @@
     try {
       await financeApi.deleteCategory(id)
       categories = await financeApi.loadCategories()
-      app.showToast('Category deleted')
+      app.showToast(i18n.t('finances-cat-deleted', 'Category deleted'))
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -480,19 +481,19 @@
     <h2 class="balance" class:negative={accountsData?.total_balance_negative}>
       {accountsData?.total_balance ?? '--'}
     </h2>
-    <p class="label">Total Balance</p>
+    <p class="label">{i18n.t('finances-total-balance', 'Total Balance')}</p>
   </section>
 
   <!-- Tab selector -->
   <div class="tab-bar">
-    <button class:active={activeTab === 'overview'} onclick={() => activeTab = 'overview'}>Overview</button>
-    <button class:active={activeTab === 'activity'} onclick={() => activeTab = 'activity'}>Activity</button>
-    <button class:active={activeTab === 'accounts'} onclick={() => activeTab = 'accounts'}>Accounts</button>
-    <button class:active={activeTab === 'settings'} onclick={() => activeTab = 'settings'}>Settings</button>
+    <button class:active={activeTab === 'overview'} onclick={() => activeTab = 'overview'}>{i18n.t('finances-tab-overview', 'Overview')}</button>
+    <button class:active={activeTab === 'activity'} onclick={() => activeTab = 'activity'}>{i18n.t('finances-tab-activity', 'Activity')}</button>
+    <button class:active={activeTab === 'accounts'} onclick={() => activeTab = 'accounts'}>{i18n.t('finances-tab-accounts', 'Accounts')}</button>
+    <button class:active={activeTab === 'settings'} onclick={() => activeTab = 'settings'}>{i18n.t('finances-tab-settings', 'Settings')}</button>
   </div>
 
   {#if loading}
-    <div class="loading">Loading...</div>
+    <div class="loading">{i18n.t('finances-loading', 'Loading...')}</div>
 
   <!-- OVERVIEW TAB -->
   {:else if activeTab === 'overview'}
@@ -501,15 +502,15 @@
       <!-- Monthly stat pills -->
       <div class="overview-stats">
         <div class="stat-pill income">
-          <span class="pill-label">Income this month</span>
+          <span class="pill-label">{i18n.t('finances-income-this-month', 'Income this month')}</span>
           <span class="pill-value">{fmtStat(monthIncome)}</span>
         </div>
         <div class="stat-pill expense">
-          <span class="pill-label">Expenses this month</span>
+          <span class="pill-label">{i18n.t('finances-expenses-this-month', 'Expenses this month')}</span>
           <span class="pill-value">{fmtStat(monthExpense)}</span>
         </div>
         <div class="stat-pill net" class:negative-net={netIsNegative}>
-          <span class="pill-label">Net this month</span>
+          <span class="pill-label">{i18n.t('finances-net-this-month', 'Net this month')}</span>
           <span class="pill-value">{monthNet >= 0 ? '+' : ''}{fmtStat(monthNet)}</span>
         </div>
       </div>
@@ -517,7 +518,7 @@
       <!-- Charts row -->
       <div class="charts-row">
         <div class="chart-card">
-          <h4>Monthly Overview</h4>
+          <h4>{i18n.t('finances-monthly-overview', 'Monthly Overview')}</h4>
           <FinanceBarChart
             months={barChartData.months}
             income={barChartData.income}
@@ -525,11 +526,11 @@
           />
         </div>
         <div class="chart-card">
-          <h4>Balance Distribution</h4>
+          <h4>{i18n.t('finances-balance-distribution', 'Balance Distribution')}</h4>
           {#if donutData.length > 0}
             <FinanceDonutChart data={donutData} />
           {:else}
-            <p class="empty-chart">No positive balances to display</p>
+            <p class="empty-chart">{i18n.t('finances-no-positive-balances', 'No positive balances to display')}</p>
           {/if}
         </div>
       </div>
@@ -537,7 +538,7 @@
       <!-- Expense by category chart -->
       {#if expenseByCategoryData.length > 0}
         <div class="chart-card chart-card--wide">
-          <h4>Expenses by Category</h4>
+          <h4>{i18n.t('finances-expenses-by-category', 'Expenses by Category')}</h4>
           <FinanceCategoryChart data={expenseByCategoryData} />
         </div>
       {/if}
@@ -545,14 +546,14 @@
       <!-- Accounts summary -->
       <div class="overview-section">
         <div class="section-header">
-          <h3>Accounts</h3>
+          <h3>{i18n.t('finances-accounts', 'Accounts')}</h3>
           <div class="header-actions">
-            <button class="glass-btn" onclick={openTransfer}>Transfer</button>
-            <button class="glass-btn" onclick={openAddAccount}>New Account</button>
+            <button class="glass-btn" onclick={openTransfer}>{i18n.t('finances-transfer', 'Transfer')}</button>
+            <button class="glass-btn" onclick={openAddAccount}>{i18n.t('finances-new-account', 'New Account')}</button>
           </div>
         </div>
         {#if (accountsData?.accounts ?? []).length === 0}
-          <p class="empty">No accounts yet.</p>
+          <p class="empty">{i18n.t('finances-no-accounts', 'No accounts yet.')}</p>
         {:else}
           <div class="account-strips">
             {#each accountsData?.accounts ?? [] as acc}
@@ -584,11 +585,11 @@
       <!-- Recent transactions -->
       <div class="overview-section">
         <div class="section-header">
-          <h3>Recent Transactions</h3>
-          <button class="glass-btn" onclick={() => activeTab = 'activity'}>View All</button>
+          <h3>{i18n.t('finances-recent-transactions', 'Recent Transactions')}</h3>
+          <button class="glass-btn" onclick={() => activeTab = 'activity'}>{i18n.t('finances-view-all', 'View All')}</button>
         </div>
         {#if chartTransactions.length === 0}
-          <p class="empty">No transactions yet.</p>
+          <p class="empty">{i18n.t('finances-no-transactions', 'No transactions yet.')}</p>
         {:else}
           <div class="tx-list">
             {#each chartTransactions.slice(0, 6) as tx}
@@ -624,19 +625,19 @@
             </svg>
             <input
               type="text"
-              placeholder="Search transactions…"
+              placeholder={i18n.t('finances-search-placeholder', 'Search transactions...')}
               bind:value={filterQuery}
               oninput={() => loadTransactions()}
             />
           </div>
           <select bind:value={filterAccountId} onchange={() => loadTransactions()}>
-            <option value="">All Accounts</option>
+            <option value="">{i18n.t('finances-all-accounts', 'All Accounts')}</option>
             {#each accountsData?.accounts ?? [] as acc}
               <option value={acc.id}>{acc.name}</option>
             {/each}
           </select>
           <select bind:value={filterCategory} onchange={() => loadTransactions()}>
-            <option value="">All Categories</option>
+            <option value="">{i18n.t('finances-all-categories', 'All Categories')}</option>
             {#each allCategories as cat}
               <option value={cat.name}>{cat.name}</option>
             {/each}
@@ -646,7 +647,7 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px">
                 <path d="M18 6L6 18M6 6l12 12"/>
               </svg>
-              Clear
+              {i18n.t('finances-clear', 'Clear')}
             </button>
           {/if}
         </div>
@@ -654,12 +655,12 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px">
             <path d="M12 5v14M5 12h14"/>
           </svg>
-          New Entry
+          {i18n.t('finances-new-entry', 'New Entry')}
         </button>
       </div>
 
       {#if transactions.length === 0}
-        <p class="empty">{filterQuery || filterAccountId || filterCategory ? 'No matching transactions' : 'No transactions yet'}</p>
+        <p class="empty">{filterQuery || filterAccountId || filterCategory ? i18n.t('finances-no-matching', 'No matching transactions') : i18n.t('finances-no-transactions-yet', 'No transactions yet')}</p>
       {:else}
         <div class="tx-list">
           {#each transactions as tx}
@@ -683,7 +684,7 @@
           {/each}
         </div>
         {#if hasMore}
-          <button class="load-more-btn" onclick={loadMoreTransactions}>Load More</button>
+          <button class="load-more-btn" onclick={loadMoreTransactions}>{i18n.t('finances-load-more', 'Load More')}</button>
         {/if}
       {/if}
     </section>
@@ -692,15 +693,15 @@
   {:else if activeTab === 'accounts'}
     <section class="tab-content">
       <div class="section-header">
-        <h3>My Accounts</h3>
+        <h3>{i18n.t('finances-my-accounts', 'My Accounts')}</h3>
         <div class="header-actions">
-          <button class="glass-btn" onclick={openTransfer}>Transfer</button>
-          <button class="glass-btn" onclick={openAddAccount}>New Account</button>
+          <button class="glass-btn" onclick={openTransfer}>{i18n.t('finances-transfer', 'Transfer')}</button>
+          <button class="glass-btn" onclick={openAddAccount}>{i18n.t('finances-new-account', 'New Account')}</button>
         </div>
       </div>
 
       {#if (accountsData?.accounts ?? []).length === 0}
-        <p class="empty">No accounts yet. Create your first account.</p>
+        <p class="empty">{i18n.t('finances-no-accounts-create', 'No accounts yet. Create your first account.')}</p>
       {:else}
         <div class="account-grid">
           {#each accountsData?.accounts ?? [] as acc}
@@ -726,20 +727,20 @@
 
       <!-- Add category card -->
       <div class="settings-card">
-        <span class="settings-card-label">New Category</span>
+        <span class="settings-card-label">{i18n.t('finances-new-category', 'New Category')}</span>
         <div class="cat-add-row">
           <input
             class="cat-name-input"
             type="text"
-            placeholder="Category name…"
+            placeholder={i18n.t('finances-category-placeholder', 'Category name...')}
             bind:value={newCatName}
             onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter' && newCatName.trim()) addCategory() }}
           />
           <div class="toggle-row cat-type-toggle">
-            <button class="toggle-btn" class:active={newCatType === 'expense'} onclick={() => newCatType = 'expense'}>Expense</button>
-            <button class="toggle-btn" class:active={newCatType === 'income'} onclick={() => newCatType = 'income'}>Income</button>
+            <button class="toggle-btn" class:active={newCatType === 'expense'} onclick={() => newCatType = 'expense'}>{i18n.t('finances-expense', 'Expense')}</button>
+            <button class="toggle-btn" class:active={newCatType === 'income'} onclick={() => newCatType = 'income'}>{i18n.t('finances-income', 'Income')}</button>
           </div>
-          <button class="primary-btn" onclick={addCategory} disabled={!newCatName.trim()}>Add</button>
+          <button class="primary-btn" onclick={addCategory} disabled={!newCatName.trim()}>{i18n.t('finances-add', 'Add')}</button>
         </div>
       </div>
 
@@ -750,7 +751,7 @@
           <div class="cat-col">
             <div class="cat-col-header">
               <span class="cat-col-dot cat-col-dot--expense"></span>
-              <h4>Expense</h4>
+              <h4>{i18n.t('finances-expense', 'Expense')}</h4>
               <span class="cat-count">{categories.expense.length}</span>
             </div>
             <div class="cat-chips">
@@ -777,7 +778,7 @@
           <div class="cat-col">
             <div class="cat-col-header">
               <span class="cat-col-dot cat-col-dot--income"></span>
-              <h4>Income</h4>
+              <h4>{i18n.t('finances-income', 'Income')}</h4>
               <span class="cat-count">{categories.income.length}</span>
             </div>
             <div class="cat-chips">
@@ -820,7 +821,7 @@
       <div class="info-row panel-icon-row">
         <img src={getAccountDisplayIcon(selectedAccount)} alt="" class="panel-acc-icon" class:themed-icon={isGenericIcon(selectedAccount.icon_path)} onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
         <button class="change-icon-btn" onclick={() => showIconPicker = !showIconPicker}>
-          {showIconPicker ? 'Close' : 'Change Icon'}
+          {showIconPicker ? i18n.t('finances-close', 'Close') : i18n.t('finances-change-icon', 'Change Icon')}
         </button>
       </div>
       {#if showIconPicker}
@@ -835,15 +836,15 @@
           </button>
         </div>
       {/if}
-      <div class="info-row"><span>Type</span><span>{selectedAccount.account_type}</span></div>
-      <div class="info-row"><span>Currency</span><span>{selectedAccount.currency}</span></div>
+      <div class="info-row"><span>{i18n.t('finances-type', 'Type')}</span><span>{selectedAccount.account_type}</span></div>
+      <div class="info-row"><span>{i18n.t('finances-currency', 'Currency')}</span><span>{selectedAccount.currency}</span></div>
       <div class="info-row">
-        <span>Balance</span>
+        <span>{i18n.t('finances-balance', 'Balance')}</span>
         <span class:negative={selectedAccount.balance_negative}>{selectedAccount.balance}</span>
       </div>
     </div>
     {#if selectedAccount.transactions.length > 0}
-      <h4>Recent Transactions</h4>
+      <h4>{i18n.t('finances-recent-transactions', 'Recent Transactions')}</h4>
       <div class="panel-tx-list">
         {#each selectedAccount.transactions as tx}
           <div class="panel-tx">
@@ -855,8 +856,8 @@
       </div>
     {/if}
     <div class="panel-actions">
-      <button class="primary-btn" onclick={() => openEditAccount(selectedAccount!)}>Edit Account</button>
-      <button class="danger-btn" onclick={() => deleteAccount(selectedAccount!.id)}>Delete Account</button>
+      <button class="primary-btn" onclick={() => openEditAccount(selectedAccount!)}>{i18n.t('finances-edit-account', 'Edit Account')}</button>
+      <button class="danger-btn" onclick={() => deleteAccount(selectedAccount!.id)}>{i18n.t('finances-delete-account', 'Delete Account')}</button>
     </div>
   </aside>
 {/if}
@@ -866,10 +867,10 @@
   <div class="modal-backdrop" role="presentation" onclick={() => showAddTransaction = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddTransaction = false }}></div>
   <div class="modal-wrapper">
     <div class="modal">
-    <h3>{editingTransaction ? 'Edit Transaction' : 'Add Transaction'}</h3>
+    <h3>{editingTransaction ? i18n.t('finances-edit-transaction', 'Edit Transaction') : i18n.t('finances-add-transaction', 'Add Transaction')}</h3>
     <div class="form-grid">
       <label>
-        Account
+        {i18n.t('finances-account', 'Account')}
         <select bind:value={txAccountId}>
           {#each accountsData?.accounts ?? [] as acc}
             <option value={acc.id}>{acc.name}</option>
@@ -877,38 +878,38 @@
         </select>
       </label>
       <label>
-        Amount
+        {i18n.t('finances-amount', 'Amount')}
         <input type="text" bind:value={txAmount} placeholder="0.00" />
       </label>
       <label>
-        Type
+        {i18n.t('finances-type', 'Type')}
         <div class="toggle-row">
-          <button class="toggle-btn" class:active={txIsExpense} onclick={() => txIsExpense = true}>Expense</button>
-          <button class="toggle-btn" class:active={!txIsExpense} onclick={() => txIsExpense = false}>Income</button>
+          <button class="toggle-btn" class:active={txIsExpense} onclick={() => txIsExpense = true}>{i18n.t('finances-expense', 'Expense')}</button>
+          <button class="toggle-btn" class:active={!txIsExpense} onclick={() => txIsExpense = false}>{i18n.t('finances-income', 'Income')}</button>
         </div>
       </label>
       <label>
-        Category
+        {i18n.t('finances-category', 'Category')}
         <select bind:value={txCategory}>
-          <option value="">Select...</option>
+          <option value="">{i18n.t('finances-select', 'Select...')}</option>
           {#each txCategoryOptions as cat}
             <option value={cat.name}>{cat.name}</option>
           {/each}
         </select>
       </label>
       <label>
-        Description
-        <input type="text" bind:value={txDescription} placeholder="Description" />
+        {i18n.t('finances-description', 'Description')}
+        <input type="text" bind:value={txDescription} placeholder={i18n.t('finances-description', 'Description')} />
       </label>
       <label>
-        Date
+        {i18n.t('finances-date', 'Date')}
         <input type="date" bind:value={txDate} />
       </label>
     </div>
     <div class="modal-actions">
-      <button class="secondary-btn" onclick={() => showAddTransaction = false}>Cancel</button>
+      <button class="secondary-btn" onclick={() => showAddTransaction = false}>{i18n.t('finances-cancel', 'Cancel')}</button>
       <button class="primary-btn" onclick={submitTransaction} disabled={!txAmount || !txAccountId}>
-        {editingTransaction ? 'Update' : 'Add'}
+        {editingTransaction ? i18n.t('finances-update', 'Update') : i18n.t('finances-add-btn', 'Add')}
       </button>
     </div>
     </div>
@@ -920,24 +921,24 @@
   <div class="modal-backdrop" role="presentation" onclick={() => showAddAccount = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddAccount = false }}></div>
   <div class="modal-wrapper">
     <div class="modal">
-        <h3>{editingAccount ? 'Edit Account' : 'New Account'}</h3>
+        <h3>{editingAccount ? i18n.t('finances-edit-account-modal', 'Edit Account') : i18n.t('finances-new-account-modal', 'New Account')}</h3>
     <div class="form-grid">
       <label>
-        Name
-        <input type="text" bind:value={accName} placeholder="Account name" />
+        {i18n.t('finances-name', 'Name')}
+        <input type="text" bind:value={accName} placeholder={i18n.t('finances-account-name-placeholder', 'Account name')} />
       </label>
       <label>
-        Type
+        {i18n.t('finances-type', 'Type')}
         <select bind:value={accType}>
-          <option value="bank">Bank</option>
-          <option value="savings">Savings</option>
-          <option value="credit">Credit Card</option>
-          <option value="cash">Cash</option>
-          <option value="other">Other</option>
+          <option value="bank">{i18n.t('finances-account-type-bank', 'Bank')}</option>
+          <option value="savings">{i18n.t('finances-account-type-savings', 'Savings')}</option>
+          <option value="credit">{i18n.t('finances-account-type-credit', 'Credit Card')}</option>
+          <option value="cash">{i18n.t('finances-account-type-cash', 'Cash')}</option>
+          <option value="other">{i18n.t('finances-account-type-other', 'Other')}</option>
         </select>
       </label>
       <label>
-        Currency
+        {i18n.t('finances-currency', 'Currency')}
         <select bind:value={accCurrency}>
           {#each ['USD', 'CLP', 'EUR', 'GBP', 'BRL', 'MXN', 'ARS', 'CAD', 'AUD', 'CHF', 'JPY'] as cur}
             <option value={cur}>{cur}</option>
@@ -945,12 +946,12 @@
         </select>
       </label>
       <label>
-        Initial Balance
+        {i18n.t('finances-initial-balance', 'Initial Balance')}
         <input type="text" bind:value={accInitialBalance} placeholder="0.00" />
       </label>
       {#if !editingAccount}
         <div class="icon-select-label">
-          <span>Icon</span>
+          <span>{i18n.t('finances-icon', 'Icon')}</span>
           <button class="change-icon-btn" onclick={() => showAccIconPicker = !showAccIconPicker}>
             <img
               src={pickedIconSrc || getDefaultIconPath(accType)}
@@ -958,7 +959,7 @@
               class="selected-icon-preview"
               class:themed-icon={pickedIconGeneric}
             />
-            {showAccIconPicker ? 'Close' : 'Change'}
+            {showAccIconPicker ? i18n.t('finances-close', 'Close') : i18n.t('finances-change', 'Change')}
           </button>
         </div>
         {#if showAccIconPicker}
@@ -973,9 +974,9 @@
       {/if}
     </div>
       <div class="modal-actions">
-        <button class="secondary-btn" onclick={() => showAddAccount = false}>Cancel</button>
+        <button class="secondary-btn" onclick={() => showAddAccount = false}>{i18n.t('finances-cancel', 'Cancel')}</button>
         <button class="primary-btn" onclick={submitAccount} disabled={!accName.trim()}>
-          {editingAccount ? 'Update' : 'Create'}
+          {editingAccount ? i18n.t('finances-update', 'Update') : i18n.t('finances-create', 'Create')}
         </button>
       </div>
     </div>
@@ -987,10 +988,10 @@
   <div class="modal-backdrop" role="presentation" onclick={() => { showTransfer = false; editingTransfer = null }} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') { showTransfer = false; editingTransfer = null } }}></div>
   <div class="modal-wrapper">
     <div class="modal">
-        <h3>{editingTransfer ? 'Edit Transfer' : 'Transfer Funds'}</h3>
+        <h3>{editingTransfer ? i18n.t('finances-edit-transfer', 'Edit Transfer') : i18n.t('finances-transfer-funds', 'Transfer Funds')}</h3>
     <div class="form-grid">
       <label>
-        From
+        {i18n.t('finances-from', 'From')}
         <select bind:value={tfFromId}>
           {#each accountsData?.accounts ?? [] as acc}
             <option value={acc.id}>{acc.name}</option>
@@ -998,7 +999,7 @@
         </select>
       </label>
       <label>
-        To
+        {i18n.t('finances-to', 'To')}
         <select bind:value={tfToId}>
           {#each accountsData?.accounts ?? [] as acc}
             <option value={acc.id}>{acc.name}</option>
@@ -1006,22 +1007,22 @@
         </select>
       </label>
       <label>
-        Amount
+        {i18n.t('finances-amount', 'Amount')}
         <input type="text" bind:value={tfAmount} placeholder="0.00" />
       </label>
       <label>
-        Description
-        <input type="text" bind:value={tfDescription} placeholder="Transfer note" />
+        {i18n.t('finances-description', 'Description')}
+        <input type="text" bind:value={tfDescription} placeholder={i18n.t('finances-transfer-note', 'Transfer note')} />
       </label>
       <label>
-        Date
+        {i18n.t('finances-date', 'Date')}
         <input type="date" bind:value={tfDate} />
       </label>
     </div>
       <div class="modal-actions">
-        <button class="secondary-btn" onclick={() => { showTransfer = false; editingTransfer = null }}>Cancel</button>
+        <button class="secondary-btn" onclick={() => { showTransfer = false; editingTransfer = null }}>{i18n.t('finances-cancel', 'Cancel')}</button>
         <button class="primary-btn" onclick={submitTransfer} disabled={!tfAmount || tfFromId === tfToId}>
-          {editingTransfer ? 'Update' : 'Transfer'}
+          {editingTransfer ? i18n.t('finances-update', 'Update') : i18n.t('finances-transfer-btn', 'Transfer')}
         </button>
       </div>
     </div>

@@ -102,34 +102,111 @@ dashboard-spending-breakdown = Desglose de Gastos
 dashboard-recent-activity = Actividad Reciente
 
 # ==================== Finances ====================
-finances-title = FINANZAS
-finances-accounts = CUENTAS
-finances-transactions = Transacciones
-finances-add-account = Agregar Cuenta
-finances-add-transaction = Agregar Transacción
-finances-no-accounts = Sin cuentas aún
-finances-no-transactions = Sin transacciones encontradas
+# Tabs & hero
+finances-total-balance = Saldo Total
+finances-tab-overview = Resumen
+finances-tab-activity = Actividad
+finances-tab-accounts = Cuentas
+finances-tab-settings = Configuracion
+finances-loading = Cargando...
+
+# Overview stats
+finances-income-this-month = Ingresos este mes
+finances-expenses-this-month = Gastos este mes
+finances-net-this-month = Neto este mes
+
+# Overview charts
+finances-monthly-overview = Resumen Mensual
+finances-balance-distribution = Distribucion de Saldos
+finances-no-positive-balances = Sin saldos positivos para mostrar
+finances-expenses-by-category = Gastos por Categoria
+
+# Overview accounts section
+finances-accounts = Cuentas
 finances-transfer = Transferir
-finances-income = Ingreso
+finances-new-account = Nueva Cuenta
+finances-no-accounts = Sin cuentas aun.
+finances-recent-transactions = Transacciones Recientes
+finances-view-all = Ver Todo
+finances-no-transactions = Sin transacciones aun.
+
+# Activity
+finances-search-placeholder = Buscar transacciones...
+finances-all-accounts = Todas las Cuentas
+finances-all-categories = Todas las Categorias
+finances-clear = Limpiar
+finances-new-entry = Nueva Entrada
+finances-no-matching = Sin transacciones que coincidan
+finances-no-transactions-yet = Sin transacciones aun
+finances-load-more = Cargar Mas
+
+# Accounts tab
+finances-my-accounts = Mis Cuentas
+finances-no-accounts-create = Sin cuentas aun. Crea tu primera cuenta.
+
+# Settings/Categories
+finances-new-category = Nueva Categoria
+finances-category-placeholder = Nombre de categoria...
 finances-expense = Gasto
+finances-income = Ingreso
+finances-add = Agregar
+
+# Detail panel
+finances-change-icon = Cambiar Icono
+finances-close = Cerrar
+finances-type = Tipo
+finances-currency = Moneda
+finances-balance = Saldo
+finances-edit-account = Editar Cuenta
+finances-delete-account = Eliminar Cuenta
+
+# Transaction modal
+finances-edit-transaction = Editar Transaccion
+finances-add-transaction = Agregar Transaccion
+finances-account = Cuenta
+finances-amount = Monto
+finances-category = Categoria
+finances-select = Seleccionar...
+finances-description = Descripcion
+finances-date = Fecha
+finances-cancel = Cancelar
+finances-update = Actualizar
+finances-add-btn = Agregar
+
+# Account modal
+finances-edit-account-modal = Editar Cuenta
+finances-new-account-modal = Nueva Cuenta
+finances-name = Nombre
+finances-account-name-placeholder = Nombre de cuenta
+finances-account-type-bank = Banco
+finances-account-type-savings = Ahorros
+finances-account-type-credit = Tarjeta de Credito
+finances-account-type-cash = Efectivo
+finances-account-type-other = Otro
+finances-initial-balance = Saldo Inicial
+finances-icon = Icono
+finances-change = Cambiar
+finances-create = Crear
+
+# Transfer modal
+finances-edit-transfer = Editar Transferencia
 finances-transfer-funds = Transferir Fondos
+finances-from = Desde
+finances-to = Hacia
+finances-transfer-note = Nota de transferencia
+finances-transfer-btn = Transferir
 
-# Account types
-account-type-bank = Banco
-account-type-cash = Efectivo
-account-type-savings = Ahorros
-account-type-credit = Tarjeta de Crédito
-account-type-other = Otro
-
-# Transaction filters
-filter-all-accounts = Todas las Cuentas
-filter-all-types = Todos los Tipos
-filter-all-categories = Todas las Categorías
-filter-date-range = Rango de Fechas
-filter-this-month = Este Mes
-filter-last-month = Mes Pasado
-filter-this-year = Este Año
-filter-custom = Personalizado
+# Toast messages
+finances-tx-added = Transaccion agregada
+finances-tx-updated = Transaccion actualizada
+finances-tx-deleted = Transaccion eliminada
+finances-acc-created = Cuenta creada
+finances-acc-updated = Cuenta actualizada
+finances-acc-deleted = Cuenta eliminada
+finances-tf-completed = Transferencia completada
+finances-tf-updated = Transferencia actualizada
+finances-cat-added = Categoria agregada
+finances-cat-deleted = Categoria eliminada
 
 # ==================== Crypto ====================
 crypto-title = Crypto

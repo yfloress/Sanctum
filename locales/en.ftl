@@ -102,34 +102,111 @@ dashboard-spending-breakdown = Spending Breakdown
 dashboard-recent-activity = Recent Activity
 
 # ==================== Finances ====================
-finances-title = FINANCES
-finances-accounts = ACCOUNTS
-finances-transactions = Transactions
-finances-add-account = Add Account
-finances-add-transaction = Add Transaction
-finances-no-accounts = No accounts yet
-finances-no-transactions = No transactions found
+# Tabs & hero
+finances-total-balance = Total Balance
+finances-tab-overview = Overview
+finances-tab-activity = Activity
+finances-tab-accounts = Accounts
+finances-tab-settings = Settings
+finances-loading = Loading...
+
+# Overview stats
+finances-income-this-month = Income this month
+finances-expenses-this-month = Expenses this month
+finances-net-this-month = Net this month
+
+# Overview charts
+finances-monthly-overview = Monthly Overview
+finances-balance-distribution = Balance Distribution
+finances-no-positive-balances = No positive balances to display
+finances-expenses-by-category = Expenses by Category
+
+# Overview accounts section
+finances-accounts = Accounts
 finances-transfer = Transfer
-finances-income = Income
+finances-new-account = New Account
+finances-no-accounts = No accounts yet.
+finances-recent-transactions = Recent Transactions
+finances-view-all = View All
+finances-no-transactions = No transactions yet.
+
+# Activity
+finances-search-placeholder = Search transactions...
+finances-all-accounts = All Accounts
+finances-all-categories = All Categories
+finances-clear = Clear
+finances-new-entry = New Entry
+finances-no-matching = No matching transactions
+finances-no-transactions-yet = No transactions yet
+finances-load-more = Load More
+
+# Accounts tab
+finances-my-accounts = My Accounts
+finances-no-accounts-create = No accounts yet. Create your first account.
+
+# Settings/Categories
+finances-new-category = New Category
+finances-category-placeholder = Category name...
 finances-expense = Expense
+finances-income = Income
+finances-add = Add
+
+# Detail panel
+finances-change-icon = Change Icon
+finances-close = Close
+finances-type = Type
+finances-currency = Currency
+finances-balance = Balance
+finances-edit-account = Edit Account
+finances-delete-account = Delete Account
+
+# Transaction modal
+finances-edit-transaction = Edit Transaction
+finances-add-transaction = Add Transaction
+finances-account = Account
+finances-amount = Amount
+finances-category = Category
+finances-select = Select...
+finances-description = Description
+finances-date = Date
+finances-cancel = Cancel
+finances-update = Update
+finances-add-btn = Add
+
+# Account modal
+finances-edit-account-modal = Edit Account
+finances-new-account-modal = New Account
+finances-name = Name
+finances-account-name-placeholder = Account name
+finances-account-type-bank = Bank
+finances-account-type-savings = Savings
+finances-account-type-credit = Credit Card
+finances-account-type-cash = Cash
+finances-account-type-other = Other
+finances-initial-balance = Initial Balance
+finances-icon = Icon
+finances-change = Change
+finances-create = Create
+
+# Transfer modal
+finances-edit-transfer = Edit Transfer
 finances-transfer-funds = Transfer Funds
+finances-from = From
+finances-to = To
+finances-transfer-note = Transfer note
+finances-transfer-btn = Transfer
 
-# Account types
-account-type-bank = Bank
-account-type-cash = Cash
-account-type-savings = Savings
-account-type-credit = Credit Card
-account-type-other = Other
-
-# Transaction filters
-filter-all-accounts = All Accounts
-filter-all-types = All Types
-filter-all-categories = All Categories
-filter-date-range = Date Range
-filter-this-month = This Month
-filter-last-month = Last Month
-filter-this-year = This Year
-filter-custom = Custom
+# Toast messages
+finances-tx-added = Transaction added
+finances-tx-updated = Transaction updated
+finances-tx-deleted = Transaction deleted
+finances-acc-created = Account created
+finances-acc-updated = Account updated
+finances-acc-deleted = Account deleted
+finances-tf-completed = Transfer completed
+finances-tf-updated = Transfer updated
+finances-cat-added = Category added
+finances-cat-deleted = Category deleted
 
 # ==================== Crypto ====================
 crypto-title = Crypto
