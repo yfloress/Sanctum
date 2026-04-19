@@ -82,6 +82,10 @@ nav-habits = Habits
 nav-settings = Settings
 nav-lock = Lock
 nav-collapse = Collapse
+nav-expand = Expand
+nav-group-overview = Overview
+nav-group-vault = Vault
+nav-group-system = System
 
 # ==================== Dashboard ====================
 dashboard-title = Dashboard

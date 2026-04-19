@@ -82,6 +82,10 @@ nav-habits = Hábitos
 nav-settings = Ajustes
 nav-lock = Bloquear
 nav-collapse = Contraer
+nav-expand = Expandir
+nav-group-overview = Resumen
+nav-group-vault = Bóveda
+nav-group-system = Sistema
 
 # ==================== Dashboard ====================
 dashboard-title = Panel
