@@ -24,6 +24,15 @@
 
   let { data }: Props = $props()
 
+  let bestIdx = $derived.by(() => {
+    let idx = -1
+    let max = 0
+    data.values.forEach((v, i) => {
+      if (v > max) { max = v; idx = i }
+    })
+    return idx
+  })
+
   let option = $derived({
     backgroundColor: 'transparent',
     grid: { left: 40, right: 20, top: 10, bottom: 30 },
@@ -53,9 +62,16 @@
     },
     series: [{
       type: 'bar',
-      data: data.values,
+      data: data.values.map((v, i) => ({
+        value: v,
+        itemStyle: {
+          color: i === bestIdx ? '#4ade80' : '#a855f7',
+          borderRadius: [4, 4, 0, 0],
+          shadowBlur: i === bestIdx ? 12 : 0,
+          shadowColor: i === bestIdx ? 'rgba(74, 222, 128, 0.5)' : 'transparent',
+        },
+      })),
       barWidth: '50%',
-      itemStyle: { color: '#a855f7', borderRadius: [4, 4, 0, 0] },
     }],
   })
 </script>
