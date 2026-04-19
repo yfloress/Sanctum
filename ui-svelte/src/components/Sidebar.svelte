@@ -144,7 +144,7 @@
     background: linear-gradient(170deg, #13111d 0%, #0f0d18 45%, #0c0b14 100%);
     border-right: 1px solid rgba(168, 85, 247, 0.08);
     box-shadow: inset -1px 0 0 rgba(168, 85, 247, 0.04), 4px 0 24px rgba(0, 0, 0, 0.3);
-    transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: width 0.45s cubic-bezier(0.16, 1, 0.3, 1);
     flex-shrink: 0;
     position: relative;
     z-index: 10;
@@ -269,7 +269,7 @@
     opacity: 1;
     max-width: 160px;
     transform: translateX(0);
-    transition: opacity 0.2s ease, max-width 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s ease;
+    transition: opacity 0.2s ease 0.2s, max-width 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s ease 0.2s;
   }
 
   .collapsed .logo-text {
@@ -277,6 +277,7 @@
     max-width: 0;
     transform: translateX(-6px);
     pointer-events: none;
+    transition: opacity 0.15s ease, max-width 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.15s ease;
   }
 
   /* ── Nav ─────────────────────────────────────────────── */
@@ -327,13 +328,14 @@
     height: 18px;
     line-height: 18px;
     display: block;
-    transition: opacity 0.2s ease, height 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: opacity 0.2s ease 0.2s, height 0.45s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .collapsed .nav-group-label {
     opacity: 0;
     height: 0;
     pointer-events: none;
+    transition: opacity 0.15s ease, height 0.45s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .nav-item {
@@ -365,7 +367,7 @@
     overflow: hidden;
     white-space: nowrap;
     letter-spacing: 0.01em;
-    transition: opacity 0.2s ease, max-width 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s ease;
+    transition: opacity 0.2s ease 0.2s, max-width 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s ease 0.2s;
     flex-shrink: 0;
   }
 
@@ -374,6 +376,7 @@
     max-width: 0;
     transform: translateX(-6px);
     pointer-events: none;
+    transition: opacity 0.15s ease, max-width 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.15s ease;
   }
 
   .collapsed .nav-item {
