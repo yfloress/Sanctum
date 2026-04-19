@@ -181,12 +181,10 @@ fn validate_uuid(id: &str) -> Result<String, ControllerError> {
 
 fn normalize_habit_category(category: &str) -> Option<String> {
     let normalized = category.trim().to_lowercase();
-    match normalized.as_str() {
-        "mind" => Some("mind".to_string()),
-        "body" => Some("body".to_string()),
-        "spirit" | "discipline" => Some("spirit".to_string()),
-        _ => None,
+    if normalized.is_empty() || normalized.len() > 50 {
+        return None;
     }
+    Some(normalized)
 }
 
 fn ensure_default_settings(db: &Database) -> Result<(), ControllerError> {

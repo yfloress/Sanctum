@@ -125,7 +125,14 @@
     const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     try {
       await habitsApi.toggleHabit(habitId, dateStr)
-      habitsData = await habitsApi.fetchHabits(month, year)
+      const [newHabits, newHeatmap, newAnalytics] = await Promise.all([
+        habitsApi.fetchHabits(month, year),
+        habitsApi.fetchHeatmap(heatmapYear),
+        habitsApi.fetchHabitAnalytics(),
+      ])
+      habitsData = newHabits
+      heatmap = newHeatmap
+      analytics = newAnalytics
       if (selectedHabit?.id === habitId) {
         summary = await habitsApi.fetchHabitSummary(habitId)
       }
