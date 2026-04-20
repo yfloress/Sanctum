@@ -351,6 +351,38 @@
     i18n.t('month-october','October'), i18n.t('month-november','November'), i18n.t('month-december','December'),
   ])
 
+  const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as const
+
+  const now = new Date()
+  const viewingCurrentMonth = $derived(now.getFullYear() === year && now.getMonth() + 1 === month)
+  const todayDay = $derived(viewingCurrentMonth ? now.getDate() : -1)
+
+  function weekdayOf(day: number): number {
+    return new Date(year, month - 1, day).getDay()
+  }
+
+  function trailingStreak(habit: HabitDto, daysInMonth: number): number {
+    const lastDay = viewingCurrentMonth ? todayDay : daysInMonth
+    let s = 0
+    for (let i = lastDay; i >= 1; i--) {
+      if (habit.days[i]) s++
+      else break
+    }
+    return s
+  }
+
+  function goalProgress(g: GoalDto): number {
+    if (g.checkpoints.length === 0) return g.is_completed ? 100 : 0
+    const done = g.checkpoints.filter(c => c.completed).length
+    return Math.round((done / g.checkpoints.length) * 100)
+  }
+
+  function rewardProgress(r: StreakRewardDto): number {
+    const target = r.target_days ?? r.target_total ?? 0
+    if (target <= 0) return 0
+    return Math.min(100, Math.round((r.current_progress / target) * 100))
+  }
+
   $effect(() => { load() })
   $effect(() => { if (activeTab === 'rewards') loadRewards() })
   $effect(() => { if (activeTab === 'history') loadHistory() })
@@ -391,25 +423,40 @@
     {#if habitsData && habitsData.habits.length > 0}
       <div class="habit-grid">
         <div class="grid-header">
+          <span class="habit-name-col weekday-spacer"></span>
+          {#each Array(habitsData.days_in_month) as _, i}
+            {@const wd = weekdayOf(i + 1)}
+            <span class="weekday" class:weekend={wd === 0 || wd === 6}>{WEEKDAYS[wd]}</span>
+          {/each}
+        </div>
+        <div class="grid-header">
           <span class="habit-name-col">{i18n.t('habits-habit-col', 'Habit')}</span>
           {#each Array(habitsData.days_in_month) as _, i}
-            <span class="day-num">{i + 1}</span>
+            <span class="day-num" class:is-today={i + 1 === todayDay}>{i + 1}</span>
           {/each}
         </div>
         {#each habitsData.habits as habit}
+          {@const streak = trailingStreak(habit, habitsData.days_in_month)}
           <div class="grid-row">
             <button
               class="habit-name-col clickable"
               onclick={() => selectHabit(habit)}
               style="border-left: 3px solid {habit.color}"
             >
-              {habit.name}
+              <span class="habit-name-text">{habit.name}</span>
+              {#if streak > 0}
+                <span class="streak-pill" style="color: {habit.color}; border-color: {habit.color}40">
+                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2s4 4 4 8a4 4 0 01-8 0c0-1 .3-2 .8-3C10 8 10 6 12 2zm0 11a3 3 0 110 6 3 3 0 010-6z"/></svg>
+                  {streak}
+                </span>
+              {/if}
             </button>
             {#each habit.days.slice(1, habitsData.days_in_month + 1) as done, i}
               <button
                 class="day-cell"
                 class:done
-                style={done ? `background: ${habit.color}` : ''}
+                class:is-today={i + 1 === todayDay}
+                style={done ? `background: ${habit.color}; border-color: ${habit.color}` : ''}
                 onclick={() => toggleDay(habit.id, i + 1)}
                 aria-label="Day {i + 1}"
               ></button>
@@ -461,10 +508,26 @@
             </div>
           </div>
           <div class="stats-grid">
-            <div class="stat"><span class="stat-val">{summary.current_streak}</span><span class="stat-lbl">{i18n.t('habits-current-streak', 'Current Streak')}</span></div>
-            <div class="stat"><span class="stat-val">{summary.best_streak}</span><span class="stat-lbl">{i18n.t('habits-best-streak', 'Best Streak')}</span></div>
-            <div class="stat"><span class="stat-val">{(summary.completion_rate * 100).toFixed(0)}%</span><span class="stat-lbl">{i18n.t('habits-completion', 'Completion')}</span></div>
-            <div class="stat"><span class="stat-val">{summary.last_30_days}</span><span class="stat-lbl">{i18n.t('habits-last-30-days', 'Last 30 Days')}</span></div>
+            <div class="stat">
+              <svg class="stat-icon flame" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2s4 4 4 8a4 4 0 01-8 0c0-1 .3-2 .8-3C10 8 10 6 12 2zm0 11a3 3 0 110 6 3 3 0 010-6z"/></svg>
+              <span class="stat-val">{summary.current_streak}</span>
+              <span class="stat-lbl">{i18n.t('habits-current-streak', 'Current Streak')}</span>
+            </div>
+            <div class="stat">
+              <svg class="stat-icon trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 3h12v4a6 6 0 01-12 0V3zM4 5h2M18 5h2M12 13v4M8 21h8M10 17h4"/></svg>
+              <span class="stat-val">{summary.best_streak}</span>
+              <span class="stat-lbl">{i18n.t('habits-best-streak', 'Best Streak')}</span>
+            </div>
+            <div class="stat">
+              <svg class="stat-icon pct" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 15l8-8M9 9h.01M15 15h.01"/></svg>
+              <span class="stat-val">{(summary.completion_rate * 100).toFixed(0)}%</span>
+              <span class="stat-lbl">{i18n.t('habits-completion', 'Completion')}</span>
+            </div>
+            <div class="stat">
+              <svg class="stat-icon cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+              <span class="stat-val">{summary.last_30_days}</span>
+              <span class="stat-lbl">{i18n.t('habits-last-30-days', 'Last 30 Days')}</span>
+            </div>
           </div>
         </div>
       {/if}
@@ -517,7 +580,13 @@
               </div>
             </div>
             <div class="reward-progress">
-              {i18n.t('habits-progress', 'Progress')}: {reward.current_progress} / {reward.target_days ?? reward.target_total ?? '?'} {i18n.t('habits-days-label', 'days')}
+              <div class="reward-progress-text">
+                <span>{i18n.t('habits-progress', 'Progress')}</span>
+                <span class="reward-progress-count">{reward.current_progress} / {reward.target_days ?? reward.target_total ?? '?'} {i18n.t('habits-days-label', 'days')}</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" style="width: {rewardProgress(reward)}%"></div>
+              </div>
             </div>
             {#each reward.milestones as ms}
               <div class="milestone" class:unlocked={ms.unlocked}>
@@ -557,6 +626,18 @@
             </div>
             {#if goal.description}
               <p class="goal-desc">{goal.description}</p>
+            {/if}
+            {#if goal.checkpoints.length > 0}
+              {@const pct = goalProgress(goal)}
+              <div class="goal-progress">
+                <div class="reward-progress-text">
+                  <span>{pct}%</span>
+                  <span class="reward-progress-count">{goal.checkpoints.filter(c => c.completed).length} / {goal.checkpoints.length}</span>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-fill" class:complete={pct === 100} style="width: {pct}%"></div>
+                </div>
+              </div>
             {/if}
             <div class="checkpoints">
               {#each goal.checkpoints as cp}
@@ -732,20 +813,66 @@
   .section-header h3 { font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; margin: 0; }
 
   /* Habit grid */
-  .habit-grid { overflow-x: auto; margin-bottom: 24px; }
-  .grid-header, .grid-row { display: flex; align-items: center; gap: 2px; min-width: max-content; }
-  .grid-header { margin-bottom: 4px; }
-  .habit-name-col { width: 120px; flex-shrink: 0; font-size: 0.8rem; color: var(--text-secondary); padding: 4px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .habit-name-col.clickable { background: none; border: none; cursor: pointer; color: var(--text-secondary); text-align: left; border-radius: 4px; transition: background 0.15s; }
-  .habit-name-col.clickable:hover { background: var(--glass-hover); color: var(--text-primary); }
-  .day-num { width: 24px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: var(--text-tertiary); }
-  .day-cell {
-    width: 24px; height: 24px; border-radius: 4px; border: 1px solid var(--glass-border);
-    background: var(--glass); cursor: pointer; padding: 0;
-    transition: all 0.15s;
+  .habit-grid {
+    overflow-x: auto; margin-bottom: 24px;
+    background: var(--glass); backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border); border-radius: var(--radius-md);
+    padding: 14px 16px; box-shadow: var(--glass-glow);
   }
-  .day-cell:hover { border-color: var(--glass-border-hover); background: var(--glass-hover); }
-  .day-cell.done { border-color: transparent; box-shadow: 0 0 6px var(--accent-glow); }
+  .grid-header, .grid-row { display: flex; align-items: center; gap: 2px; min-width: max-content; }
+  .grid-header { margin-bottom: 2px; }
+  .grid-row { padding: 2px 0; }
+  .habit-name-col {
+    width: 140px; flex-shrink: 0; font-size: 0.8rem; color: var(--text-secondary);
+    padding: 4px 8px; overflow: hidden; white-space: nowrap;
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  }
+  .habit-name-col.weekday-spacer { padding: 0; }
+  .habit-name-text { overflow: hidden; text-overflow: ellipsis; }
+  .habit-name-col.clickable {
+    background: none; border: none; cursor: pointer; color: var(--text-secondary);
+    text-align: left; border-radius: 4px; transition: background 0.15s, color 0.15s;
+  }
+  .habit-name-col.clickable:hover { background: var(--glass-hover); color: var(--text-primary); }
+
+  .streak-pill {
+    display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0;
+    padding: 1px 7px 1px 4px; border-radius: 999px;
+    border: 1px solid currentColor;
+    font-size: 0.68rem; font-weight: 600;
+    background: rgba(255, 255, 255, 0.03);
+  }
+  .streak-pill svg { width: 10px; height: 10px; }
+
+  .weekday {
+    width: 18px; height: 14px; display: flex; align-items: center; justify-content: center;
+    font-size: 0.55rem; font-weight: 600; color: var(--text-tertiary);
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .weekday.weekend { color: var(--accent); opacity: 0.55; }
+
+  .day-num {
+    width: 18px; height: 16px; display: flex; align-items: center; justify-content: center;
+    font-size: 0.6rem; color: var(--text-tertiary); position: relative;
+  }
+  .day-num.is-today { color: var(--accent); font-weight: 700; }
+  .day-num.is-today::after {
+    content: ''; position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%);
+    width: 3px; height: 3px; border-radius: 50%; background: var(--accent);
+  }
+
+  .day-cell {
+    width: 18px; height: 18px; border-radius: 3px; border: 1px solid var(--glass-border);
+    background: var(--glass); cursor: pointer; padding: 0;
+    transition: transform 0.12s ease, border-color 0.15s, background 0.15s;
+  }
+  .day-cell:hover {
+    border-color: var(--glass-border-hover); background: var(--glass-hover);
+    transform: scale(1.2); z-index: 1;
+  }
+  .day-cell.done { box-shadow: 0 0 6px rgba(255,255,255,0.08); }
+  .day-cell.done:hover { transform: scale(1.25); }
+  .day-cell.is-today:not(.done) { box-shadow: 0 0 0 1px var(--accent) inset; }
 
   /* Heatmap */
   .chart-section { margin-bottom: 24px; }
@@ -779,9 +906,21 @@
   .icon-btn.danger:hover { color: var(--danger); border-color: var(--danger-border); background: var(--danger-bg); }
 
   .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-  .stat { display: flex; flex-direction: column; align-items: center; }
-  .stat-val { font-size: 1.4rem; font-weight: 700; color: var(--text-primary); }
-  .stat-lbl { font-size: 0.7rem; color: var(--text-tertiary); margin-top: 2px; }
+  .stat {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 10px 8px; border-radius: var(--radius-sm);
+    background: var(--glass-elevated);
+    border: 1px solid var(--glass-border);
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .stat:hover { border-color: var(--glass-border-hover); box-shadow: var(--glass-shadow); }
+  .stat-icon { width: 16px; height: 16px; color: var(--text-tertiary); margin-bottom: 2px; }
+  .stat-icon.flame { color: #fb923c; }
+  .stat-icon.trophy { color: var(--warning); }
+  .stat-icon.pct { color: var(--accent); }
+  .stat-icon.cal { color: var(--success); }
+  .stat-val { font-size: 1.35rem; font-weight: 700; color: var(--text-primary); line-height: 1.1; }
+  .stat-lbl { font-size: 0.68rem; color: var(--text-tertiary); margin-top: 2px; text-align: center; }
 
   .analytics-section { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
   .chart-card {
@@ -808,7 +947,26 @@
   .reward-actions, .goal-actions { display: flex; gap: 4px; }
   .reward-habit { font-weight: 600; color: var(--text-primary); }
   .reward-type { font-size: 0.75rem; color: var(--text-tertiary); }
-  .reward-progress { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; }
+  .reward-progress { margin-bottom: 10px; }
+  .reward-progress-text {
+    display: flex; justify-content: space-between; font-size: 0.8rem;
+    color: var(--text-secondary); margin-bottom: 6px;
+  }
+  .reward-progress-count { color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+  .progress-track {
+    width: 100%; height: 6px; border-radius: 3px;
+    background: var(--glass-border); overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+    border-radius: 3px; transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 0 8px var(--accent-glow);
+  }
+  .progress-fill.complete {
+    background: linear-gradient(90deg, var(--success), #22c55e);
+    box-shadow: 0 0 8px rgba(74, 222, 128, 0.3);
+  }
+  .goal-progress { margin-bottom: 12px; }
   .milestone { display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.85rem; color: var(--text-secondary); border-bottom: 1px solid var(--glass-border); }
   .milestone.unlocked { color: var(--success); }
   .unlocked-badge { font-size: 0.7rem; color: var(--success); }
