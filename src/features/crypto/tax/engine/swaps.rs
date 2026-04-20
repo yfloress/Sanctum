@@ -485,6 +485,6 @@ mod tests {
         apply_swap_pair(&mut report, &mut lots, &cfg, &source, &target, true);
 
         assert!(report.warnings.iter().any(|w| w.code == "invalid_date"));
-        assert!(lots.get("eth").is_none());
+        assert!(!lots.contains_key("eth"));
     }
 }

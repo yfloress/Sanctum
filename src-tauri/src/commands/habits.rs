@@ -75,12 +75,12 @@ pub fn fetch_habits(
         .map(|h| {
             let mut days = vec![false; (days_in_month + 1) as usize];
             for log in &logs {
-                if log.habit_id == h.id {
-                    if let Ok(d) = NaiveDate::parse_from_str(&log.completed_date, "%Y-%m-%d") {
-                        let day = d.day() as usize;
-                        if day < days.len() {
-                            days[day] = true;
-                        }
+                if log.habit_id == h.id
+                    && let Ok(d) = NaiveDate::parse_from_str(&log.completed_date, "%Y-%m-%d")
+                {
+                    let day = d.day() as usize;
+                    if day < days.len() {
+                        days[day] = true;
                     }
                 }
             }

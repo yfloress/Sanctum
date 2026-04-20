@@ -305,6 +305,7 @@ fn all_statements_convert_same_symbol_is_skipped() {
 }
 
 #[test]
+#[allow(clippy::approx_constant)]
 fn all_statements_convert_with_internal_transfer() {
     // Binance logs an internal Funding->Spot transfer with the same
     // "Binance Convert" label and timestamp as the real conversion.
@@ -640,7 +641,7 @@ fn all_statements_mixed_p2p_convert_transfer() {
         .find(|(_, tx)| {
             tx.notes
                 .as_ref()
-                .map_or(false, |n| n.contains("P2P Trading"))
+                .is_some_and(|n| n.contains("P2P Trading"))
         })
         .map(|(_, tx)| tx)
         .expect("Should have a P2P transaction");
@@ -655,7 +656,7 @@ fn all_statements_mixed_p2p_convert_transfer() {
         .find(|(_, tx)| {
             tx.notes
                 .as_ref()
-                .map_or(false, |n| n.contains("Binance Convert"))
+                .is_some_and(|n| n.contains("Binance Convert"))
         })
         .map(|(_, tx)| tx)
         .expect("Should have a Convert transaction");

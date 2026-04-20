@@ -103,9 +103,7 @@ fn date_format_is_iso() {
 
 #[test]
 fn empty_content_produces_no_items() {
-    let csv = concat!(
-        "blockHeight,epoch,date,direction,amount,atomicAmount,fee,txid,label,subaddrAccount,paymentId,description\n",
-    );
+    let csv = "blockHeight,epoch,date,direction,amount,atomicAmount,fee,txid,label,subaddrAccount,paymentId,description\n";
 
     let parser = MoneroGuiParser;
     let result = parser.parse(csv, "Monero GUI").unwrap();

@@ -83,6 +83,7 @@ impl DashboardCharts {
     /// * `crypto_total_usd` - Current crypto portfolio value in USD
     /// * `crypto_snapshots` - Historical snapshots: Vec<(date_str, value_usd, cost_usd)>
     /// * `usd_rates` - Currency rates in `CURRENCY/USD` format (e.g. CLP per 1 USD)
+    #[allow(clippy::too_many_arguments)]
     pub fn calculate_dashboard_data(
         balances: &[AccountBalance],
         accounts: &[Account],
@@ -212,14 +213,15 @@ impl DashboardCharts {
         let mut total_income_cents: i64 = 0;
         let mut total_expense_cents: i64 = 0;
         for tx in transactions {
-            if let Ok(date) = NaiveDate::parse_from_str(&tx.date, DATE_FORMAT) {
-                if date >= start_date && date <= today {
-                    let amount = normalize(tx.amount, &tx.account_id);
-                    match tx.transaction_type.as_str() {
-                        "income" => total_income_cents += amount,
-                        "expense" => total_expense_cents += amount,
-                        _ => {}
-                    }
+            if let Ok(date) = NaiveDate::parse_from_str(&tx.date, DATE_FORMAT)
+                && date >= start_date
+                && date <= today
+            {
+                let amount = normalize(tx.amount, &tx.account_id);
+                match tx.transaction_type.as_str() {
+                    "income" => total_income_cents += amount,
+                    "expense" => total_expense_cents += amount,
+                    _ => {}
                 }
             }
         }
@@ -491,7 +493,7 @@ mod tests {
             "1M",
             "USD",
         );
-        assert_eq!(result.net_worth, "$ 100.00");
+        assert_eq!(result.net_worth, "USD 100.00");
     }
 
     #[test]
@@ -510,9 +512,10 @@ mod tests {
             &snapshots,
             &rates,
             "1M",
+            "USD",
         );
 
-        assert_eq!(result.net_worth, "$ 0.00");
+        assert_eq!(result.net_worth, "USD 0.00");
         assert!(!result.chart_values.is_empty());
     }
 
@@ -532,9 +535,10 @@ mod tests {
             &snapshots,
             &rates,
             "1M",
+            "USD",
         );
 
-        assert_eq!(result.net_worth, "$ 500.00");
+        assert_eq!(result.net_worth, "USD 500.00");
     }
 
     #[test]
@@ -560,9 +564,10 @@ mod tests {
             &snapshots,
             &rates,
             "1M",
+            "USD",
         );
 
-        assert_eq!(result.net_worth, "$ 300.00");
+        assert_eq!(result.net_worth, "USD 300.00");
     }
 
     #[test]

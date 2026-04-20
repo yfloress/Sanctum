@@ -113,9 +113,7 @@ fn date_format_is_iso() {
 
 #[test]
 fn empty_content_produces_no_items() {
-    let csv = concat!(
-        "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
-    );
+    let csv = "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n";
 
     let parser = FeatherParser;
     let result = parser.parse(csv, "Feather").unwrap();

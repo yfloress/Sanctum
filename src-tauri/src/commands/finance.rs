@@ -311,13 +311,12 @@ pub fn fetch_transactions(
                     tx.description, tx.category, tx.date, from_name
                 )
                 .to_lowercase();
-                if is_transfer {
-                    if let Some(ref tid) = tx.transfer_account_id {
-                        if let Some((_, tname)) = account_lookup.get(tid) {
-                            haystack.push(' ');
-                            haystack.push_str(&tname.to_lowercase());
-                        }
-                    }
+                if is_transfer
+                    && let Some(ref tid) = tx.transfer_account_id
+                    && let Some((_, tname)) = account_lookup.get(tid)
+                {
+                    haystack.push(' ');
+                    haystack.push_str(&tname.to_lowercase());
                 }
                 if !haystack.contains(&query_lower) {
                     return None;
@@ -362,6 +361,7 @@ pub fn add_transaction(
 
 /// Update an existing transaction.
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub fn update_transaction(
     controller: State<'_, Arc<AppController>>,
     id: String,

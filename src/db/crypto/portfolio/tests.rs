@@ -17,6 +17,7 @@
 
 use super::*;
 
+#[allow(clippy::too_many_arguments)]
 fn tx(
     id: &str,
     coin_id: &str,

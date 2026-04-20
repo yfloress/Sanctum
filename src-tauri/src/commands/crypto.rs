@@ -600,10 +600,10 @@ fn fmt_pref_override(v: f64, override_curr: Option<&str>, controller: &AppContro
     
     if pref != "USD" {
         let pair = format!("{}_USD", pref);
-        if let Ok(Some((rate, _))) = controller.load_exchange_rate_allow_stale(pair) {
-            if rate > 0.0 {
-                amount = n * rate;
-            }
+        if let Ok(Some((rate, _))) = controller.load_exchange_rate_allow_stale(pair)
+            && rate > 0.0
+        {
+            amount = n * rate;
         }
     }
     
@@ -650,7 +650,7 @@ fn map_crypto_transactions(
             .map(|f| fmt_pref(f, controller))
             .unwrap_or_else(|| fmt_pref(0.0, controller)),
         fee_coin_id: tx.fee_coin_id.clone(),
-        fee_amount: tx.fee_amount.map(|f| trim_amount(f)),
+        fee_amount: tx.fee_amount.map(trim_amount),
         value: fmt_pref(tx.amount * tx.price_per_coin.unwrap_or(0.0), controller),
         date: tx.date.clone(), notes: tx.notes.clone(),
         has_related_tx: tx.related_tx_id.is_some(),
