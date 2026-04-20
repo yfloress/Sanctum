@@ -472,7 +472,10 @@
     return getDefaultIconPath(acc.account_type_key ?? acc.account_type)
   }
 
-  $effect(() => { loadAll() })
+  $effect(() => {
+    app.settings?.preferred_currency
+    loadAll()
+  })
 </script>
 
 <div class="page" class:blurred={showAddTransaction || showAddAccount || showTransfer || !!selectedAccount}>

@@ -571,8 +571,15 @@
     return `/src/assets/crypto-icons/${normalized}.svg`
   }
 
-  $effect(() => { load(); loadTickerPrices() })
-  $effect(() => { if (activeTab === 'wallets') loadWallets() })
+  $effect(() => {
+    app.settings?.preferred_currency
+    load()
+    loadTickerPrices()
+  })
+  $effect(() => {
+    app.settings?.preferred_currency
+    if (activeTab === 'wallets') loadWallets()
+  })
   $effect(() => { if (activeTab === 'tax') loadIpcSummary() })
 </script>
 

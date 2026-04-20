@@ -212,7 +212,11 @@
 
   async function updateProxyUrl() {
     if (!app.settings) return
-    await settingsApi.setProxyUrl(app.settings.proxy_url)
+    try {
+      await settingsApi.setProxyUrl(app.settings.proxy_url)
+    } catch (e) {
+      app.showToast(String(e), true)
+    }
   }
 
   async function exportVault() {
@@ -293,7 +297,6 @@
           <option value={900}>{i18n.t('settings-timeout-15min', '15 minutes')}</option>
           <option value={1800}>{i18n.t('settings-timeout-30min', '30 minutes')}</option>
           <option value={3600}>{i18n.t('settings-timeout-1hour', '1 hour')}</option>
-          <option value={0}>{i18n.t('settings-timeout-never', 'Never')}</option>
         </select>
       </div>
     </section>

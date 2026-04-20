@@ -72,7 +72,10 @@
     expenses: analytics?.monthly_cash_flow.map(m => m.expenses) ?? [],
   })
 
-  $effect(() => { load() })
+  $effect(() => {
+    app.settings?.preferred_currency
+    load()
+  })
 </script>
 
 <div class="page">

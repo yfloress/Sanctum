@@ -137,13 +137,23 @@ pub fn set_proxy_enabled(
 }
 
 /// Set the crypto API proxy URL.
+///
+/// Non-empty URLs are validated before persisting so an enabled proxy never
+/// silently stores an unreachable / malformed value. Empty strings clear the
+/// setting and are allowed through without validation.
 #[tauri::command]
 pub fn set_proxy_url(
     controller: State<'_, Arc<AppController>>,
     url: String,
 ) -> Result<(), String> {
+    let trimmed = url.trim().to_string();
+    if !trimmed.is_empty() {
+        controller
+            .validate_crypto_proxy_url(trimmed.clone())
+            .map_err(|e| e.to_string())?;
+    }
     controller
-        .set_crypto_proxy_url(url)
+        .set_crypto_proxy_url(trimmed)
         .map_err(|e| e.to_string())
 }
 
