@@ -15,7 +15,7 @@
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 
 <script lang="ts">
-  import { app } from './lib/stores/app.svelte'
+  import { app, type Page } from './lib/stores/app.svelte'
   import { i18n } from './lib/stores/i18n.svelte'
   import { startSessionMonitor } from './lib/stores/session.svelte'
   import Sidebar from './components/Sidebar.svelte'
@@ -37,6 +37,37 @@
   $effect(() => {
     document.documentElement.classList.toggle('light-mode', !app.darkMode)
   })
+
+  let mainEl: HTMLElement | undefined = $state()
+  const scrollPositions: Record<Page, number> = {
+    dashboard: 0,
+    finances: 0,
+    habits: 0,
+    crypto: 0,
+    settings: 0,
+  }
+  let trackedPage: Page = app.activePage
+
+  $effect.pre(() => {
+    const next = app.activePage
+    if (mainEl && next !== trackedPage) {
+      scrollPositions[trackedPage] = mainEl.scrollTop
+      trackedPage = next
+    }
+  })
+
+  $effect(() => {
+    const page = app.activePage
+    if (!mainEl) return
+    const target = scrollPositions[page] ?? 0
+    requestAnimationFrame(() => {
+      if (mainEl) mainEl.scrollTop = target
+    })
+  })
+
+  function handleScroll() {
+    if (mainEl) scrollPositions[app.activePage] = mainEl.scrollTop
+  }
 </script>
 
 {#if !app.isLoggedIn}
@@ -44,7 +75,7 @@
 {:else}
   <div class="shell">
     <Sidebar />
-    <main class="content">
+    <main class="content" bind:this={mainEl} onscroll={handleScroll}>
       {#if app.activePage === 'dashboard'}
         <DashboardPage />
       {:else if app.activePage === 'finances'}
