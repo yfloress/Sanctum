@@ -10,6 +10,47 @@
 - Keep solutions simple and direct.
 - User instructions always override this file.
 
+## Search Tooling
+- **NEVER use `grep`.** Always use `ripgrep` (`rg`) via the Grep tool or direct shell invocation.
+  Ripgrep respects `.gitignore`, is orders of magnitude faster, and produces cleaner output.
+- Use `rg --type rust` / `rg --type svelte` / `rg -g '*.ts'` to scope by language.
+- For file discovery, prefer `rg --files | rg <pattern>` or the Glob tool over `find`.
+
+## Memory & Progress Tracking (basic-memory MCP)
+> **This entire section only applies when the `basic-memory` MCP server is active in the current session.**
+> If the `mcp__basic-memory__*` tools are not available, ignore everything in this section — do not attempt to invoke them, do not fabricate notes, do not mention them to the user.
+
+The `basic-memory` MCP server is the **authoritative knowledge store** for this project.
+Use it proactively to persist context across sessions — not just ad-hoc conversation memory.
+
+**Read `config/SOUL.md` at session start.** It defines the persona, tone, and interaction style the agent must adopt (the "Víctor" mentor profile — frío, técnico, cero paja, método de ingeniería inversa). Those behavioral rules take precedence over generic assistant defaults. Re-read it whenever the user's domain shifts significantly so the response register stays aligned.
+
+**When to write a note** (`mcp__basic-memory__write_note`):
+- After completing a non-trivial task: save what was done, why, and what remains.
+- When making an architectural or cross-cutting decision that future sessions need to respect.
+- When discovering a non-obvious bug, its root cause, or a workaround.
+- When finishing an audit, migration step, or feature — summarize findings and pending items.
+
+**When to read** (`mcp__basic-memory__read_note` / `mcp__basic-memory__search_notes` / `mcp__basic-memory__list_directory`):
+- At session start: read `config/SOUL.md` for behavioral calibration.
+- At the start of a non-trivial task: check `sanctum/` for prior context on the area you're touching.
+- Before making architectural decisions: check for prior decisions in existing notes.
+- When the user references something from a past session ("the thing we did with X").
+
+**Note conventions**:
+- Directory: `sanctum/` for project-specific knowledge. Personal config under `config/`, pages under `pages/`.
+- Title format: `Sanctum - <Topic>` (e.g. `Sanctum - Settings Audit`, `Sanctum - Work Log`).
+- Include frontmatter `tags` for grouping: `sanctum`, plus domain tags (`settings`, `crypto`, `habits`, etc.).
+- End notes with `## Observations` (structured `[type] fact #tag`) and `## Relations` (`relates_to [[Other Note]]`).
+- Update `Sanctum - Work Log` after each meaningful session so the next one has continuity.
+
+**Core notes to keep current**:
+- `config/SOUL.md` — persona & behavioral contract (read, not rewritten unless user asks)
+- `Sanctum - Overview` — project state, strategy, blockers
+- `Sanctum - Arquitectura Técnica` — stack, conventions, key decisions
+- `Sanctum - Frontend Migration Status` — what's done, what's pending in the Svelte migration
+- `Sanctum - Work Log` — running log of sessions with date + what changed
+
 ## Project Intent & Mindset
 Sanctum is a personal finance/crypto/habits app focused on **security and privacy first**.
 Default to safer behavior: minimize data exposure, avoid unnecessary network calls, and
