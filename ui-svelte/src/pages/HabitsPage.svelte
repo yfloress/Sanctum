@@ -814,10 +814,21 @@
 
   /* Habit grid */
   .habit-grid {
+    position: relative;
     overflow-x: auto; margin-bottom: 24px;
-    background: var(--glass); backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--glass-border); border-radius: var(--radius-md);
-    padding: 14px 16px; box-shadow: var(--glass-glow);
+    background: var(--card-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border); border-radius: var(--radius-lg);
+    padding: 14px 16px; box-shadow: var(--card-shadow);
+  }
+  .habit-grid::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: var(--card-accent-line);
+    opacity: 0.5;
   }
   .grid-header, .grid-row { display: flex; align-items: center; gap: 2px; min-width: max-content; }
   .grid-header { margin-bottom: 2px; }
@@ -889,10 +900,21 @@
 
   /* Summary card */
   .summary-card {
-    background: var(--glass); backdrop-filter: var(--glass-blur);
+    position: relative;
+    background: var(--card-bg);
+    backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--glass-border); border-radius: var(--radius-md);
-    padding: 20px; margin-bottom: 20px; box-shadow: var(--glass-glow);
+    border: 1px solid var(--glass-border); border-radius: var(--radius-lg);
+    padding: 20px; margin-bottom: 20px; box-shadow: var(--card-shadow);
+    overflow: hidden;
+  }
+  .summary-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: var(--card-accent-line);
+    opacity: 0.5;
   }
   .summary-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
   .summary-header h3 { margin: 0; font-size: 1rem; color: var(--text-primary); }
@@ -924,24 +946,52 @@
 
   .analytics-section { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
   .chart-card {
-    background: var(--glass); backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--glass-border); border-radius: var(--radius-md);
-    padding: 16px; box-shadow: var(--glass-glow);
+    position: relative;
+    background: var(--card-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border); border-radius: var(--radius-lg);
+    padding: 16px; box-shadow: var(--card-shadow);
+    overflow: hidden;
+  }
+  .chart-card::before, .analytics-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: var(--card-accent-line);
+    opacity: 0.5;
   }
   .chart-card h3 { font-size: 0.8rem; color: var(--text-tertiary); text-transform: uppercase; margin: 0 0 8px; }
   .analytics-card {
-    background: var(--glass); backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--glass-border); border-radius: var(--radius-md);
-    padding: 16px; grid-column: 1 / -1; box-shadow: var(--glass-glow);
+    position: relative;
+    background: var(--card-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border); border-radius: var(--radius-lg);
+    padding: 16px; grid-column: 1 / -1; box-shadow: var(--card-shadow);
+    overflow: hidden;
   }
   .insight { font-size: 0.85rem; color: var(--text-secondary); margin: 4px 0; }
 
   /* Rewards */
   .rewards-section h3 { font-size: 0.85rem; color: var(--text-tertiary); text-transform: uppercase; margin: 20px 0 12px; }
   .reward-card {
-    background: var(--glass); backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--glass-border); border-radius: var(--radius-md);
-    padding: 16px; margin-bottom: 12px; box-shadow: var(--glass-glow);
+    position: relative;
+    background: var(--card-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border); border-radius: var(--radius-lg);
+    padding: 16px; margin-bottom: 12px; box-shadow: var(--card-shadow);
+    overflow: hidden;
+  }
+  .reward-card::before, .goal-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: var(--card-accent-line);
+    opacity: 0.5;
   }
   .reward-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
   .reward-actions, .goal-actions { display: flex; gap: 4px; }
@@ -972,9 +1022,13 @@
   .unlocked-badge { font-size: 0.7rem; color: var(--success); }
 
   .goal-card {
-    background: var(--glass); backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--glass-border); border-radius: var(--radius-md);
-    padding: 16px; margin-bottom: 12px; box-shadow: var(--glass-glow);
+    position: relative;
+    background: var(--card-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border); border-radius: var(--radius-lg);
+    padding: 16px; margin-bottom: 12px; box-shadow: var(--card-shadow);
+    overflow: hidden;
   }
   .goal-card.completed { opacity: 0.6; }
   .goal-header { display: flex; justify-content: space-between; margin-bottom: 4px; }

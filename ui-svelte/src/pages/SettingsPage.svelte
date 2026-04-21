@@ -543,10 +543,10 @@
 
   .hidden-input { display: none; }
   .import-card {
-    background: var(--glass); backdrop-filter: var(--glass-blur);
+    background: var(--card-bg); backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    padding: 16px; margin-top: 8px; box-shadow: var(--glass-glow);
+    border: 1px solid var(--glass-border); border-radius: var(--radius-md);
+    padding: 16px; margin-top: 8px; box-shadow: var(--card-shadow);
   }
   .import-info { font-size: 0.85rem; color: var(--text-secondary); margin: 0 0 12px; }
   .import-info strong { color: var(--text-primary); }

@@ -1222,14 +1222,16 @@
     display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;
   }
   .account-card {
+    position: relative;
     display: flex; flex-direction: column; gap: 4px; padding: 16px;
-    background: var(--glass); backdrop-filter: var(--glass-blur);
+    background: var(--card-bg); backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
     cursor: pointer; text-align: left; color: inherit;
-    transition: all 0.2s; box-shadow: var(--glass-glow);
+    transition: all 0.2s; box-shadow: var(--card-shadow);
+    overflow: hidden;
   }
-  .account-card:hover { border-color: var(--glass-border-hover); background: var(--glass-hover); box-shadow: var(--glass-shadow); }
+  .account-card:hover { border-color: var(--glass-border-hover); box-shadow: var(--glass-shadow-lg); }
   .acc-name { font-weight: 600; color: var(--text-primary); font-size: 0.9rem; }
   .acc-type { font-size: 0.75rem; color: var(--text-tertiary); text-transform: capitalize; }
   .acc-balance { font-size: 1.1rem; font-weight: 600; color: var(--text-primary); margin-top: 8px; }
@@ -1238,20 +1240,43 @@
 
   /* Settings tab */
   .settings-card {
-    background: var(--glass);
+    position: relative;
+    background: var(--card-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
-    border-radius: var(--radius-md);
-    padding: 20px;
+    border-radius: var(--radius-lg);
+    padding: 22px;
     margin-bottom: 20px;
-    box-shadow: var(--glass-shadow);
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+  }
+  .settings-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: var(--card-accent-line);
+    opacity: 0.6;
   }
   .settings-card-label {
-    display: block;
-    font-size: 0.7rem;
-    color: var(--text-tertiary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.68rem;
+    color: var(--text-secondary);
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 12px;
+    letter-spacing: 0.12em;
+    font-weight: 600;
+    margin-bottom: 14px;
+  }
+  .settings-card-label::before {
+    content: '';
+    width: 3px;
+    height: 12px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, var(--accent) 0%, var(--accent-hover) 100%);
+    box-shadow: 0 0 6px var(--accent-glow);
   }
   .cat-add-row {
     display: flex;
@@ -1283,11 +1308,17 @@
     gap: 16px;
   }
   .cat-col {
-    background: var(--glass);
+    position: relative;
+    background: var(--card-bg);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
     padding: 18px;
-    box-shadow: var(--glass-shadow);
+    box-shadow: var(--card-shadow);
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .cat-col:hover {
+    border-color: var(--glass-border-hover);
+    box-shadow: var(--glass-shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
   .cat-col-header {
     display: flex;
@@ -1510,16 +1541,19 @@
     margin-bottom: 24px;
   }
   .stat-pill {
+    position: relative;
     padding: 18px 20px;
-    background: var(--glass);
+    background: var(--card-bg);
     backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
     border-left-width: 3px;
     border-radius: var(--radius-md);
     display: flex;
     flex-direction: column;
     gap: 6px;
-    box-shadow: var(--glass-shadow);
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
   }
   .stat-pill.income  { border-left-color: #4ade80; }
   .stat-pill.expense { border-left-color: #f87171; }
@@ -1549,14 +1583,21 @@
     margin-bottom: 14px;
   }
   .chart-card {
-    background: var(--glass);
+    position: relative;
+    background: var(--card-bg);
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     padding: 16px 16px 6px;
-    box-shadow: var(--glass-shadow);
+    box-shadow: var(--card-shadow);
     margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .chart-card::before {
+    content: ''; position: absolute;
+    top: 0; left: 0; right: 0; height: 1px;
+    background: var(--card-accent-line); opacity: 0.5;
   }
   .chart-card--wide { grid-column: unset; }
   .chart-card h4 {

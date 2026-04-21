@@ -1447,14 +1447,16 @@
     gap: 12px; margin-bottom: 24px;
   }
   .asset-card {
+    position: relative;
     display: flex; flex-direction: column; gap: 6px; padding: 14px;
-    background: var(--glass); backdrop-filter: var(--glass-blur);
+    background: var(--card-bg); backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
     cursor: pointer; text-align: left; color: inherit;
-    transition: all 0.2s; box-shadow: var(--glass-glow);
+    transition: all 0.2s; box-shadow: var(--card-shadow);
+    overflow: hidden;
   }
-  .asset-card:hover { border-color: var(--glass-border-hover); background: var(--glass-hover); box-shadow: var(--glass-shadow); }
+  .asset-card:hover { border-color: var(--glass-border-hover); box-shadow: var(--glass-shadow-lg); }
   .asset-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
   .asset-icon { width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%; }
   .asset-top { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
@@ -1470,11 +1472,18 @@
 
   /* Charts */
   .chart-section {
-    background: var(--glass); backdrop-filter: var(--glass-blur);
+    position: relative;
+    background: var(--card-bg); backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--glass-border); border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border); border-radius: var(--radius-lg);
     padding: 16px; margin-bottom: 24px;
-    box-shadow: var(--glass-shadow);
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+  }
+  .chart-section::before {
+    content: ''; position: absolute;
+    top: 0; left: 0; right: 0; height: 1px;
+    background: var(--card-accent-line); opacity: 0.5;
   }
   .chart-section h3 { font-size: 0.8rem; color: var(--text-tertiary); text-transform: uppercase; margin: 0 0 8px; }
 
@@ -1486,14 +1495,16 @@
     display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;
   }
   .wallet-card {
+    position: relative;
     display: flex; flex-direction: column; gap: 4px; padding: 16px;
-    background: var(--glass); backdrop-filter: var(--glass-blur);
+    background: var(--card-bg); backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
     cursor: pointer; text-align: left; color: inherit;
-    transition: all 0.2s; box-shadow: var(--glass-glow);
+    transition: all 0.2s; box-shadow: var(--card-shadow);
+    overflow: hidden;
   }
-  .wallet-card:hover { border-color: var(--glass-border-hover); background: var(--glass-hover); box-shadow: var(--glass-shadow); }
+  .wallet-card:hover { border-color: var(--glass-border-hover); box-shadow: var(--glass-shadow-lg); }
   .wallet-name { font-weight: 600; color: var(--text-primary); }
   .wallet-cat { font-size: 0.75rem; color: var(--text-tertiary); text-transform: capitalize; }
   .wallet-val { font-size: 1.1rem; font-weight: 600; color: var(--text-primary); margin-top: 6px; }
@@ -1606,10 +1617,10 @@
 
   .period-selector {
     display: flex; flex-direction: column; gap: 12px;
-    padding: 16px; background: var(--glass);
+    padding: 16px; background: var(--card-bg);
     backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
-    box-shadow: var(--glass-glow);
+    box-shadow: var(--card-shadow);
   }
   .period-selector label {
     display: flex; flex-direction: column; gap: 6px;
@@ -1629,9 +1640,10 @@
   .settings-info {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 12px; padding: 16px;
-    background: var(--glass); backdrop-filter: var(--glass-blur);
+    background: var(--card-bg); backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
-    box-shadow: var(--glass-glow);
+    box-shadow: var(--card-shadow);
   }
   .info-item { display: flex; flex-direction: column; gap: 4px; }
   .info-item .label { font-size: 0.7rem; color: var(--text-tertiary); text-transform: uppercase; }
@@ -1639,10 +1651,10 @@
 
   .report-actions { display: flex; gap: 8px; }
   .report-summary {
-    padding: 16px; background: var(--glass);
+    padding: 16px; background: var(--card-bg);
     backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
-    box-shadow: var(--glass-glow);
+    box-shadow: var(--card-shadow);
   }
   .report-summary h3 { margin: 0 0 16px; color: var(--text-primary); font-size: 0.9rem; }
   .summary-grid {
@@ -1654,10 +1666,10 @@
   .summary-item .value.negative { color: var(--danger); }
 
   .warnings {
-    padding: 16px; background: var(--glass);
+    padding: 16px; background: var(--card-bg);
     backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid rgba(248, 113, 113, 0.2); border-radius: var(--radius-md);
-    box-shadow: var(--glass-glow);
+    box-shadow: var(--card-shadow);
   }
   .warnings h4 { margin: 0 0 12px; color: var(--danger); font-size: 0.85rem; }
   .warning-item { display: flex; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(248, 113, 113, 0.1); font-size: 0.85rem; }
@@ -1665,10 +1677,10 @@
   .warning-msg { color: var(--text-secondary); }
 
   .readiness {
-    padding: 16px; background: var(--glass);
+    padding: 16px; background: var(--card-bg);
     backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
-    box-shadow: var(--glass-glow);
+    box-shadow: var(--card-shadow);
   }
   .readiness h4 { margin: 0 0 12px; color: var(--text-primary); font-size: 0.85rem; }
   .readiness-item {
@@ -1695,10 +1707,10 @@
   .export-btn:hover { border-color: var(--glass-border-hover); background: rgba(0, 0, 0, 0.3); }
 
   .events-table {
-    padding: 16px; background: var(--glass);
+    padding: 16px; background: var(--card-bg);
     backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
-    box-shadow: var(--glass-glow);
+    box-shadow: var(--card-shadow);
   }
   .events-table h4 { margin: 0 0 12px; color: var(--text-primary); font-size: 0.85rem; }
   .table-wrapper { overflow-x: auto; }
@@ -1804,9 +1816,10 @@
 
   /* IPC section */
   .ipc-section {
-    padding: 16px; background: var(--glass); backdrop-filter: var(--glass-blur);
+    padding: 16px; background: var(--card-bg);
+    backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
-    box-shadow: var(--glass-glow);
+    box-shadow: var(--card-shadow);
   }
   .setting-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
   .ipc-label { font-size: 0.85rem; color: var(--text-primary); font-weight: 500; }

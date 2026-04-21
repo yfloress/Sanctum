@@ -408,16 +408,19 @@
     margin-bottom: 16px;
   }
   .stat-card {
-    background: var(--glass);
+    position: relative;
+    background: var(--card-bg);
     backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
     padding: 16px 20px;
     display: flex;
     flex-direction: column;
     gap: 4px;
-    box-shadow: var(--glass-shadow);
+    box-shadow: var(--card-shadow);
     border-left-width: 3px;
+    overflow: hidden;
   }
   .stat-card.income  { border-left-color: var(--success); }
   .stat-card.expenses { border-left-color: var(--danger); }
@@ -446,14 +449,24 @@
 
   /* ── Chart card ───────────────────────────────────────────── */
   .chart-card {
-    background: var(--glass);
+    position: relative;
+    background: var(--card-bg);
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     padding: 20px 20px 6px;
     margin-bottom: 16px;
-    box-shadow: var(--glass-shadow);
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+  }
+  .chart-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: var(--card-accent-line);
+    opacity: 0.5;
   }
   .chart-card-header {
     display: flex;
@@ -517,13 +530,23 @@
     grid-column: 1 / -1;
   }
   .panel {
-    background: var(--glass);
+    position: relative;
+    background: var(--card-bg);
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     padding: 20px;
-    box-shadow: var(--glass-shadow);
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+  }
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: var(--card-accent-line);
+    opacity: 0.5;
   }
   .panel-title {
     font-size: 0.7rem;

@@ -138,6 +138,11 @@
     --accent-bg: rgba(168, 85, 247, 0.2);
     --accent-border: rgba(168, 85, 247, 0.3);
     --text-on-accent: #ffffff;
+    --card-bg:
+      radial-gradient(circle at 0% 0%, rgba(168, 85, 247, 0.06) 0%, transparent 55%),
+      linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+    --card-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    --card-accent-line: linear-gradient(90deg, transparent 0%, rgba(168, 85, 247, 0.35) 30%, rgba(168, 85, 247, 0.35) 70%, transparent 100%);
   }
 
   :global(.light-mode) {
@@ -178,6 +183,11 @@
     --accent-bg: rgba(139, 92, 246, 0.1);
     --accent-border: rgba(139, 92, 246, 0.2);
     --text-on-accent: #ffffff;
+    --card-bg:
+      radial-gradient(circle at 0% 0%, rgba(139, 92, 246, 0.06) 0%, transparent 55%),
+      linear-gradient(145deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.6) 100%);
+    --card-shadow: 0 4px 20px rgba(100, 60, 180, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    --card-accent-line: linear-gradient(90deg, transparent 0%, rgba(139, 92, 246, 0.4) 30%, rgba(139, 92, 246, 0.4) 70%, transparent 100%);
   }
 
   /* Make white logo visible in light mode */
@@ -284,34 +294,64 @@
 
   :global(.tab-bar) {
     display: flex;
-    gap: 4px;
-    padding: 4px;
-    border-radius: 12px;
-    background: var(--glass);
+    gap: 2px;
+    padding: 5px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.015) 100%);
     border: 1px solid var(--glass-border);
     width: fit-content;
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 2px 12px rgba(0,0,0,0.2);
+    position: relative;
+  }
+
+  :global(.light-mode .tab-bar) {
+    background: linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(147,51,234,0.04) 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 12px rgba(100,60,180,0.06);
   }
 
   :global(.tab-bar button) {
-    padding: 8px 18px;
+    padding: 8px 20px;
     border: 1px solid transparent;
-    border-radius: 8px;
+    border-radius: 10px;
     background: transparent;
     color: var(--text-secondary);
     font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: color 0.2s, background 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.25s, box-shadow 0.25s, transform 0.15s;
+    position: relative;
   }
 
-  :global(.tab-bar button:hover) {
+  :global(.tab-bar button:hover:not(.active)) {
     color: var(--text-primary);
     background: var(--glass-hover);
   }
 
+  :global(.tab-bar button:active) {
+    transform: scale(0.97);
+  }
+
   :global(.tab-bar button.active) {
     color: var(--text-primary);
-    background: var(--nav-active-bg);
-    border-color: var(--nav-active-border);
+    font-weight: 600;
+    background: linear-gradient(135deg, var(--accent-bg) 0%, rgba(168,85,247,0.08) 100%);
+    border-color: var(--accent-border);
+    box-shadow:
+      0 0 0 1px var(--accent-border) inset,
+      0 2px 10px var(--accent-glow),
+      inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+
+  :global(.light-mode .tab-bar button.active) {
+    background: linear-gradient(135deg, rgba(139,92,246,0.14) 0%, rgba(139,92,246,0.06) 100%);
+    box-shadow:
+      0 0 0 1px var(--accent-border) inset,
+      0 2px 10px var(--accent-glow),
+      inset 0 1px 0 rgba(255,255,255,0.5);
   }
 
   .shell {
