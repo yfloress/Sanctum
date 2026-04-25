@@ -80,11 +80,20 @@
 
 <div class="page">
   {#if loading}
-    <div class="loading">
-      <svg class="loading-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-      </svg>
-      {i18n.t('dashboard-loading', 'Loading dashboard...')}
+    <div class="skeleton-page">
+      <div class="skeleton" style="width:160px;height:14px;margin-bottom:10px"></div>
+      <div class="skeleton" style="width:220px;height:42px;margin-bottom:6px"></div>
+      <div class="skeleton" style="width:80px;height:20px;margin-bottom:32px"></div>
+      <div class="skeleton-row">
+        <div class="skeleton" style="flex:1;height:88px;border-radius:var(--radius-md)"></div>
+        <div class="skeleton" style="flex:1;height:88px;border-radius:var(--radius-md)"></div>
+        <div class="skeleton" style="flex:1;height:88px;border-radius:var(--radius-md)"></div>
+      </div>
+      <div class="skeleton" style="width:100%;height:260px;border-radius:var(--radius-lg);margin-bottom:16px"></div>
+      <div class="skeleton-row">
+        <div class="skeleton" style="flex:1;height:180px;border-radius:var(--radius-lg)"></div>
+        <div class="skeleton" style="flex:1;height:180px;border-radius:var(--radius-lg)"></div>
+      </div>
     </div>
 
   {:else if error}
@@ -253,24 +262,7 @@
   }
 
   /* ── Loading / error ─────────────────────────────────────── */
-  .loading {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 14px;
-    padding: 80px 0;
-    color: var(--text-tertiary);
-    font-size: 0.875rem;
-  }
-  .loading-spinner {
-    width: 24px;
-    height: 24px;
-    animation: spin 1.4s linear infinite;
-    opacity: 0.5;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
+  .skeleton-page { padding: 8px 0; }
   .error-state {
     display: flex;
     flex-direction: column;

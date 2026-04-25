@@ -270,6 +270,29 @@
     transition: filter 0.2s ease;
   }
 
+  /* Skeleton shimmer */
+  @keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  :global(.skeleton) {
+    background: linear-gradient(
+      90deg,
+      var(--glass) 25%,
+      var(--glass-hover) 50%,
+      var(--glass) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.8s ease-in-out infinite;
+    border-radius: var(--radius-sm);
+  }
+  :global(.skeleton-row) {
+    display: flex; gap: 12px; margin-bottom: 12px;
+  }
+  :global(.skeleton-grid) {
+    display: grid; gap: 12px; margin-bottom: 16px;
+  }
+
   :global(.glass-btn) {
     padding: 8px 16px;
     border: 1px solid var(--glass-border);

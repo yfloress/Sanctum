@@ -496,7 +496,21 @@
   </div>
 
   {#if loading}
-    <div class="loading">{i18n.t('finances-loading', 'Loading...')}</div>
+    <div class="skeleton-page">
+      <div class="skeleton-row">
+        <div class="skeleton" style="flex:1;height:80px;border-radius:var(--radius-md)"></div>
+        <div class="skeleton" style="flex:1;height:80px;border-radius:var(--radius-md)"></div>
+        <div class="skeleton" style="flex:1;height:80px;border-radius:var(--radius-md)"></div>
+      </div>
+      <div class="skeleton" style="width:100%;height:220px;border-radius:var(--radius-lg);margin-bottom:14px"></div>
+      <div class="skeleton-row">
+        <div class="skeleton" style="flex:3;height:160px;border-radius:var(--radius-lg)"></div>
+        <div class="skeleton" style="flex:2;height:160px;border-radius:var(--radius-lg)"></div>
+      </div>
+      <div class="skeleton" style="width:100%;height:40px;border-radius:var(--radius-sm);margin-bottom:8px"></div>
+      <div class="skeleton" style="width:100%;height:40px;border-radius:var(--radius-sm);margin-bottom:8px"></div>
+      <div class="skeleton" style="width:100%;height:40px;border-radius:var(--radius-sm)"></div>
+    </div>
 
   <!-- OVERVIEW TAB -->
   {:else if activeTab === 'overview'}
@@ -1043,7 +1057,7 @@
   .balance.negative { color: var(--danger); }
   .label { color: var(--text-tertiary); font-size: 0.78rem; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.08em; }
 
-  .loading { text-align: center; padding: 48px; color: var(--text-tertiary); }
+  .skeleton-page { padding: 8px 0; }
   .empty { text-align: center; padding: 48px; color: var(--text-tertiary); }
 
   .section-header {
