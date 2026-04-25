@@ -352,6 +352,8 @@
   ])
 
   const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as const
+  const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  const todayStr = new Date().toISOString().slice(0, 10)
 
   const now = new Date()
   const viewingCurrentMonth = $derived(now.getFullYear() === year && now.getMonth() + 1 === month)
@@ -376,6 +378,33 @@
     const done = g.checkpoints.filter(c => c.completed).length
     return Math.round((done / g.checkpoints.length) * 100)
   }
+
+  // Heatmap helpers — GitHub-style grid
+  interface HeatmapColumn { weekday: number; date: string; intensity: number }
+  const heatmapColumns = $derived.by(() => {
+    if (!heatmap) return { cols: [] as HeatmapColumn[][], monthLabels: [] as { label: string; col: number }[] }
+    const cols: HeatmapColumn[][] = []
+    let col: HeatmapColumn[] = []
+    heatmap.data.forEach(day => {
+      const wd = new Date(day.date).getDay()
+      if (wd === 0 && col.length > 0) { cols.push(col); col = [] }
+      col.push({ weekday: wd, date: day.date, intensity: day.intensity })
+    })
+    if (col.length > 0) cols.push(col)
+
+    const monthLabels: { label: string; col: number }[] = []
+    cols.forEach((c, i) => {
+      const firstDay = c[0]
+      if (firstDay) {
+        const m = new Date(firstDay.date).getMonth()
+        const lastLabel = monthLabels[monthLabels.length - 1]
+        if (!lastLabel || new Date(cols[lastLabel.col][0].date).getMonth() !== m) {
+          monthLabels.push({ label: MONTH_SHORT[m], col: i })
+        }
+      }
+    })
+    return { cols, monthLabels }
+  })
 
   function rewardProgress(r: StreakRewardDto): number {
     const target = r.target_days ?? r.target_total ?? 0
@@ -411,7 +440,14 @@
   </div>
 
   {#if loading}
-    <div class="loading">{i18n.t('habits-loading', 'Loading...')}</div>
+    <div class="skeleton-page">
+      <div class="skeleton" style="width:100%;height:110px;border-radius:var(--radius-lg);margin-bottom:16px"></div>
+      <div class="skeleton" style="width:100%;height:80px;border-radius:var(--radius-lg);margin-bottom:16px"></div>
+      <div class="skeleton-row">
+        <div class="skeleton" style="flex:1;height:160px;border-radius:var(--radius-lg)"></div>
+        <div class="skeleton" style="flex:1;height:160px;border-radius:var(--radius-lg)"></div>
+      </div>
+    </div>
 
   <!-- HABITS TAB -->
   {:else if activeTab === 'habits'}
@@ -465,9 +501,9 @@
         {/each}
       </div>
 
-      <!-- Heatmap placeholder -->
+      <!-- Activity Heatmap — GitHub style -->
       {#if heatmap}
-        <div class="chart-section">
+        <div class="chart-section heatmap-section">
           <div class="heatmap-header">
             <h3>{i18n.t('habits-activity-heatmap', 'Activity Heatmap')}</h3>
             <div class="heatmap-nav">
@@ -480,17 +516,56 @@
               </button>
             </div>
           </div>
-          <div class="heatmap">
-            {#each heatmap.data as day}
-              <div
-                class="heatmap-cell"
-                class:l1={day.intensity === 1}
-                class:l2={day.intensity === 2}
-                class:l3={day.intensity === 3}
-                class:l4={day.intensity === 4}
-                title="{day.date}: {day.intensity}"
-              ></div>
-            {/each}
+          <div class="heatmap-scroll">
+            <div class="heatmap-inner">
+              <!-- Month labels row -->
+              <div class="heatmap-month-row">
+                <span class="heatmap-day-spacer"></span>
+                <div class="heatmap-months">
+                  {#each heatmapColumns.monthLabels as ml}
+                    <span class="heatmap-month-label" style="grid-column: {ml.col + 1}">{ml.label}</span>
+                  {/each}
+                </div>
+              </div>
+              <!-- Grid rows -->
+              <div class="heatmap-body">
+                <!-- Day-of-week labels -->
+                <div class="heatmap-dow">
+                  {#each ['S','M','T','W','T','F','S'] as d, i}
+                    <span class="heatmap-dow-label" class:show={i % 2 === 1}>{i % 2 === 1 ? d : ''}</span>
+                  {/each}
+                </div>
+                <!-- Week columns -->
+                <div class="heatmap-grid">
+                  {#each heatmapColumns.cols as col}
+                    <div class="heatmap-col">
+                      {#each col as cell}
+                        <div
+                          class="heatmap-cell"
+                          class:l1={cell.intensity === 1}
+                          class:l2={cell.intensity === 2}
+                          class:l3={cell.intensity === 3}
+                          class:l4={cell.intensity === 4}
+                          class:today={cell.date === todayStr}
+                          style="grid-row: {cell.weekday + 1}"
+                          title="{cell.date} · {cell.intensity} {i18n.t('habits-completions', 'completions')}"
+                        ></div>
+                      {/each}
+                    </div>
+                  {/each}
+                </div>
+              </div>
+              <!-- Legend -->
+              <div class="heatmap-legend">
+                <span class="heatmap-legend-label">{i18n.t('habits-less', 'Less')}</span>
+                <div class="heatmap-cell"></div>
+                <div class="heatmap-cell l1"></div>
+                <div class="heatmap-cell l2"></div>
+                <div class="heatmap-cell l3"></div>
+                <div class="heatmap-cell l4"></div>
+                <span class="heatmap-legend-label">{i18n.t('habits-more', 'More')}</span>
+              </div>
+            </div>
           </div>
         </div>
       {/if}
@@ -806,7 +881,7 @@
   .nav-arrow svg { width: 18px; height: 18px; }
   .month-label { font-size: 0.9rem; color: var(--text-secondary); min-width: 140px; text-align: center; }
 
-  .loading { text-align: center; padding: 48px; color: var(--text-tertiary); }
+  .skeleton-page { padding: 8px 0; }
   .empty { text-align: center; padding: 48px; color: var(--text-tertiary); }
 
   .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
@@ -885,18 +960,76 @@
   .day-cell.done:hover { transform: scale(1.25); }
   .day-cell.is-today:not(.done) { box-shadow: 0 0 0 1px var(--accent) inset; }
 
-  /* Heatmap */
+  /* Heatmap — GitHub style */
   .chart-section { margin-bottom: 24px; }
+  .heatmap-section { padding: 16px 20px; }
   .chart-section h3 { font-size: 0.8rem; color: var(--text-tertiary); text-transform: uppercase; margin: 0; }
-  .heatmap-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .heatmap-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
   .heatmap-nav { display: flex; align-items: center; gap: 8px; }
   .heatmap-year { font-size: 0.85rem; color: var(--text-secondary); min-width: 40px; text-align: center; }
-  .heatmap { display: flex; flex-wrap: wrap; gap: 2px; }
-  .heatmap-cell { width: 12px; height: 12px; border-radius: 2px; background: var(--glass); }
-  .heatmap-cell.l1 { background: rgba(14, 68, 41, 0.4); }
-  .heatmap-cell.l2 { background: rgba(0, 109, 50, 0.6); }
-  .heatmap-cell.l3 { background: rgba(38, 166, 65, 0.8); }
-  .heatmap-cell.l4 { background: rgba(57, 211, 83, 1.0); box-shadow: 0 0 4px rgba(57, 211, 83, 0.3); }
+
+  .heatmap-scroll { overflow-x: auto; }
+  .heatmap-inner { display: flex; flex-direction: column; gap: 4px; min-width: max-content; }
+
+  /* Month labels */
+  .heatmap-month-row { display: flex; align-items: flex-end; gap: 0; margin-bottom: 2px; }
+  .heatmap-day-spacer { width: 20px; flex-shrink: 0; }
+  .heatmap-months {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 14px;
+    gap: 2px;
+    flex: 1;
+  }
+  .heatmap-month-label {
+    font-size: 0.6rem; color: var(--text-tertiary);
+    white-space: nowrap; line-height: 1;
+  }
+
+  /* Body: dow labels + grid */
+  .heatmap-body { display: flex; gap: 6px; align-items: flex-start; }
+  .heatmap-dow {
+    display: grid;
+    grid-template-rows: repeat(7, 12px);
+    gap: 2px; flex-shrink: 0; width: 14px;
+  }
+  .heatmap-dow-label {
+    font-size: 0.55rem; color: var(--text-tertiary);
+    display: flex; align-items: center; line-height: 1;
+  }
+
+  /* Grid */
+  .heatmap-grid {
+    display: flex;
+    gap: 2px;
+    align-items: flex-start;
+  }
+  .heatmap-col {
+    display: grid;
+    grid-template-rows: repeat(7, 12px);
+    gap: 2px;
+  }
+  .heatmap-cell {
+    width: 12px; height: 12px; border-radius: 2px;
+    background: var(--glass);
+    border: 1px solid transparent;
+    transition: transform 0.1s;
+    cursor: default;
+  }
+  .heatmap-cell:hover { transform: scale(1.3); z-index: 1; border-color: var(--glass-border-hover); }
+  .heatmap-cell.l1 { background: rgba(22, 101, 52, 0.5); }
+  .heatmap-cell.l2 { background: rgba(21, 128, 61, 0.7); }
+  .heatmap-cell.l3 { background: rgba(22, 163, 74, 0.85); }
+  .heatmap-cell.l4 { background: #22c55e; box-shadow: 0 0 6px rgba(34, 197, 94, 0.4); }
+  .heatmap-cell.today { box-shadow: 0 0 0 1.5px var(--accent) !important; }
+  .heatmap-cell.l4.today { box-shadow: 0 0 6px rgba(34,197,94,0.4), 0 0 0 1.5px var(--accent) !important; }
+
+  /* Legend */
+  .heatmap-legend {
+    display: flex; align-items: center; gap: 4px;
+    margin-top: 6px; justify-content: flex-end;
+  }
+  .heatmap-legend-label { font-size: 0.6rem; color: var(--text-tertiary); }
 
   /* Summary card */
   .summary-card {
