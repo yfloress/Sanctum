@@ -459,47 +459,49 @@
 
     {#if habitsData && habitsData.habits.length > 0}
       <div class="habit-grid">
-        <div class="grid-header">
-          <span class="habit-name-col weekday-spacer"></span>
-          {#each Array(habitsData.days_in_month) as _, i}
-            {@const wd = weekdayOf(i + 1)}
-            <span class="weekday" class:weekend={wd === 0 || wd === 6}>{WEEKDAYS[wd]}</span>
-          {/each}
-        </div>
-        <div class="grid-header">
-          <span class="habit-name-col">{i18n.t('habits-habit-col', 'Habit')}</span>
-          {#each Array(habitsData.days_in_month) as _, i}
-            <span class="day-num" class:is-today={i + 1 === todayDay}>{i + 1}</span>
-          {/each}
-        </div>
-        {#each habitsData.habits as habit}
-          {@const streak = trailingStreak(habit, habitsData.days_in_month)}
-          <div class="grid-row">
-            <button
-              class="habit-name-col clickable"
-              onclick={() => selectHabit(habit)}
-              style="border-left: 3px solid {habit.color}"
-            >
-              <span class="habit-name-text">{habit.name}</span>
-              {#if streak > 0}
-                <span class="streak-pill" style="color: {habit.color}; border-color: {habit.color}40">
-                  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2s4 4 4 8a4 4 0 01-8 0c0-1 .3-2 .8-3C10 8 10 6 12 2zm0 11a3 3 0 110 6 3 3 0 010-6z"/></svg>
-                  {streak}
-                </span>
-              {/if}
-            </button>
-            {#each habit.days.slice(1, habitsData.days_in_month + 1) as done, i}
-              <button
-                class="day-cell"
-                class:done
-                class:is-today={i + 1 === todayDay}
-                style={done ? `background: ${habit.color}; border-color: ${habit.color}` : ''}
-                onclick={() => toggleDay(habit.id, i + 1)}
-                aria-label="Day {i + 1}"
-              ></button>
+        <div class="habit-grid-scroll">
+          <div class="grid-header">
+            <span class="habit-name-col weekday-spacer"></span>
+            {#each Array(habitsData.days_in_month) as _, i}
+              {@const wd = weekdayOf(i + 1)}
+              <span class="weekday" class:weekend={wd === 0 || wd === 6}>{WEEKDAYS[wd]}</span>
             {/each}
           </div>
-        {/each}
+          <div class="grid-header">
+            <span class="habit-name-col">{i18n.t('habits-habit-col', 'Habit')}</span>
+            {#each Array(habitsData.days_in_month) as _, i}
+              <span class="day-num" class:is-today={i + 1 === todayDay}>{i + 1}</span>
+            {/each}
+          </div>
+          {#each habitsData.habits as habit}
+            {@const streak = trailingStreak(habit, habitsData.days_in_month)}
+            <div class="grid-row">
+              <button
+                class="habit-name-col clickable"
+                onclick={() => selectHabit(habit)}
+                style="border-left: 3px solid {habit.color}"
+              >
+                <span class="habit-name-text">{habit.name}</span>
+                {#if streak > 0}
+                  <span class="streak-pill" style="color: {habit.color}; border-color: {habit.color}40">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2s4 4 4 8a4 4 0 01-8 0c0-1 .3-2 .8-3C10 8 10 6 12 2zm0 11a3 3 0 110 6 3 3 0 010-6z"/></svg>
+                    {streak}
+                  </span>
+                {/if}
+              </button>
+              {#each habit.days.slice(1, habitsData.days_in_month + 1) as done, i}
+                <button
+                  class="day-cell"
+                  class:done
+                  class:is-today={i + 1 === todayDay}
+                  style={done ? `background: ${habit.color}; border-color: ${habit.color}` : ''}
+                  onclick={() => toggleDay(habit.id, i + 1)}
+                  aria-label="Day {i + 1}"
+                ></button>
+              {/each}
+            </div>
+          {/each}
+        </div>
       </div>
 
       <!-- Activity Heatmap — GitHub style -->
@@ -887,12 +889,12 @@
   /* Habit grid */
   .habit-grid {
     position: relative;
-    overflow-x: auto; margin-bottom: 24px;
+    overflow: hidden; margin-bottom: 24px;
     background: var(--card-bg);
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border); border-radius: var(--radius-lg);
-    padding: 14px 16px; box-shadow: var(--card-shadow);
+    box-shadow: var(--card-shadow);
   }
   .habit-grid::before {
     content: '';
@@ -901,7 +903,24 @@
     height: 1px;
     background: var(--card-accent-line);
     opacity: 0.5;
+    z-index: 2;
   }
+  .habit-grid::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 56px;
+    background: linear-gradient(to right, transparent, var(--card-bg-solid, var(--card-bg)));
+    pointer-events: none;
+    z-index: 1;
+    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+  }
+  .habit-grid-scroll {
+    overflow-x: auto;
+    padding: 14px 16px;
+    scrollbar-width: none;
+  }
+  .habit-grid-scroll::-webkit-scrollbar { display: none; }
   .grid-header, .grid-row { display: flex; align-items: center; gap: 2px; min-width: max-content; }
   .grid-header { margin-bottom: 2px; }
   .grid-row { padding: 2px 0; }
@@ -965,7 +984,25 @@
   .heatmap-nav { display: flex; align-items: center; gap: 8px; }
   .heatmap-year { font-size: 0.85rem; color: var(--text-secondary); min-width: 40px; text-align: center; }
 
-  .heatmap-scroll { overflow-x: auto; padding-bottom: 4px; }
+  .heatmap-scroll {
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .heatmap-scroll::-webkit-scrollbar { display: none; }
+  .heatmap-section {
+    position: relative;
+  }
+  .heatmap-section::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 48px;
+    background: linear-gradient(to right, transparent, var(--card-bg-solid, var(--card-bg)));
+    pointer-events: none;
+    z-index: 1;
+    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+  }
 
   .heatmap-grid {
     display: grid;

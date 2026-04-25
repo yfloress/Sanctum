@@ -121,8 +121,8 @@
     --radius-md: 12px;
     --radius-lg: 16px;
     --radius-xl: 20px;
-    --scrollbar-thumb: rgba(255, 255, 255, 0.1);
-    --scrollbar-thumb-hover: rgba(255, 255, 255, 0.18);
+    --scrollbar-thumb: rgba(255, 255, 255, 0.12);
+    --scrollbar-thumb-hover: rgba(255, 255, 255, 0.22);
     --select-bg: rgba(0, 0, 0, 0.25);
     --select-bg-hover: rgba(0, 0, 0, 0.35);
     --option-bg: #1a1a1a;
@@ -141,6 +141,7 @@
     --card-bg:
       radial-gradient(circle at 0% 0%, rgba(168, 85, 247, 0.06) 0%, transparent 55%),
       linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+    --card-bg-solid: #0e0c15;
     --card-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04);
     --card-accent-line: linear-gradient(90deg, transparent 0%, rgba(168, 85, 247, 0.35) 30%, rgba(168, 85, 247, 0.35) 70%, transparent 100%);
   }
@@ -166,8 +167,8 @@
     --text-primary: #1e1b2e;
     --text-secondary: #4c4665;
     --text-tertiary: #8882a0;
-    --scrollbar-thumb: rgba(139, 92, 246, 0.12);
-    --scrollbar-thumb-hover: rgba(139, 92, 246, 0.22);
+    --scrollbar-thumb: rgba(139, 92, 246, 0.2);
+    --scrollbar-thumb-hover: rgba(139, 92, 246, 0.38);
     --select-bg: rgba(255, 255, 255, 0.7);
     --select-bg-hover: rgba(255, 255, 255, 0.9);
     --option-bg: #ffffff;
@@ -186,6 +187,7 @@
     --card-bg:
       radial-gradient(circle at 0% 0%, rgba(139, 92, 246, 0.06) 0%, transparent 55%),
       linear-gradient(145deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.6) 100%);
+    --card-bg-solid: #f2f0fc;
     --card-shadow: 0 4px 20px rgba(100, 60, 180, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
     --card-accent-line: linear-gradient(90deg, transparent 0%, rgba(139, 92, 246, 0.4) 30%, rgba(139, 92, 246, 0.4) 70%, transparent 100%);
   }
@@ -215,7 +217,8 @@
   }
 
   :global(::-webkit-scrollbar) {
-    width: 6px;
+    width: 4px;
+    height: 4px;
   }
 
   :global(::-webkit-scrollbar-track) {
@@ -224,11 +227,20 @@
 
   :global(::-webkit-scrollbar-thumb) {
     background: var(--scrollbar-thumb);
-    border-radius: 3px;
+    border-radius: 99px;
   }
 
   :global(::-webkit-scrollbar-thumb:hover) {
     background: var(--scrollbar-thumb-hover);
+  }
+
+  :global(::-webkit-scrollbar-corner) {
+    background: transparent;
+  }
+
+  :global(*) {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
   }
 
   :global(select) {
