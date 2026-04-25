@@ -641,7 +641,23 @@
   </div>
 
   {#if loading}
-    <div class="loading">{i18n.t('crypto-loading', 'Loading...')}</div>
+    <div class="skeleton-page">
+      <div style="text-align:center;margin-bottom:24px">
+        <div class="skeleton" style="width:180px;height:42px;margin:0 auto 8px"></div>
+        <div class="skeleton" style="width:120px;height:18px;margin:0 auto"></div>
+      </div>
+      <div class="skeleton-row" style="justify-content:center;gap:24px;margin-bottom:24px">
+        <div class="skeleton" style="width:80px;height:48px;border-radius:var(--radius-sm)"></div>
+        <div class="skeleton" style="width:80px;height:48px;border-radius:var(--radius-sm)"></div>
+        <div class="skeleton" style="width:80px;height:48px;border-radius:var(--radius-sm)"></div>
+      </div>
+      <div class="skeleton-grid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr))">
+        {#each Array(6) as _}
+          <div class="skeleton" style="height:96px;border-radius:var(--radius-md)"></div>
+        {/each}
+      </div>
+      <div class="skeleton" style="width:100%;height:200px;border-radius:var(--radius-lg)"></div>
+    </div>
 
   <!-- PORTFOLIO TAB -->
   {:else if activeTab === 'portfolio' && portfolio}
@@ -914,72 +930,73 @@
       {/if}
     </div>
 
-    <!-- Tax Settings Modal -->
-    {#if showTaxSettings}
-      <div class="modal-backdrop" role="presentation" onclick={() => showTaxSettings = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showTaxSettings = false }}></div>
-      <div class="modal-wrapper">
-        <div class="modal">
-          <h3>{i18n.t('crypto-tax-settings-title', 'Tax Settings')}</h3>
-          <div class="form-grid">
-            <label>
-              {i18n.t('crypto-tax-jurisdiction', 'Jurisdiction')}
-              <select bind:value={taxJurisdiction}>
-                <option value="US">{i18n.t('crypto-tax-jurisdiction-us', 'United States')}</option>
-                <option value="CL">{i18n.t('crypto-tax-jurisdiction-cl', 'Chile')}</option>
-                <option value="CA">{i18n.t('crypto-tax-jurisdiction-ca', 'Canada')}</option>
-                <option value="UK">{i18n.t('crypto-tax-jurisdiction-uk', 'United Kingdom')}</option>
-                <option value="AU">{i18n.t('crypto-tax-jurisdiction-au', 'Australia')}</option>
-                <option value="OTHER">{i18n.t('crypto-tax-jurisdiction-other', 'Other')}</option>
-              </select>
-            </label>
-            <label>
-              {i18n.t('crypto-tax-cost-basis-method', 'Cost Basis Method')}
-              <select bind:value={taxMethod}>
-                <option value="fifo">{i18n.t('crypto-tax-method-fifo', 'FIFO')}</option>
-                <option value="lifo">{i18n.t('crypto-tax-method-lifo', 'LIFO')}</option>
-                <option value="hifo">{i18n.t('crypto-tax-method-hifo', 'HIFO')}</option>
-                <option value="average">{i18n.t('crypto-tax-method-avg', 'Average Cost')}</option>
-              </select>
-            </label>
-            <label>
-              <input type="checkbox" bind:checked={taxIncludeSwaps} />
-              {i18n.t('crypto-tax-include-swaps-label', 'Include Swaps in Disposals')}
-            </label>
-            <label>
-              <input type="checkbox" bind:checked={taxIncludeFeeCrypto} />
-              {i18n.t('crypto-tax-include-fee-label', 'Include Fee Crypto as Disposal')}
-            </label>
-            {#if walletsData && walletsData.wallets.length > 0}
-              <div class="exclusion-section">
-                <span class="exclusion-title">{i18n.t('crypto-tax-exclude-wallets', 'Exclude Wallets')}</span>
-                {#each walletsData.wallets as w}
-                  <label class="exclusion-row">
-                    <input
-                      type="checkbox"
-                      checked={taxExcludedWalletIds.includes(w.id)}
-                      onchange={() => {
-                        if (taxExcludedWalletIds.includes(w.id)) {
-                          taxExcludedWalletIds = taxExcludedWalletIds.filter(x => x !== w.id)
-                        } else {
-                          taxExcludedWalletIds = [...taxExcludedWalletIds, w.id]
-                        }
-                      }}
-                    />
-                    <span>{w.name}</span>
-                  </label>
-                {/each}
-              </div>
-            {/if}
-          </div>
-          <div class="modal-actions">
-            <button class="secondary-btn" onclick={() => showTaxSettings = false}>{i18n.t('crypto-cancel', 'Cancel')}</button>
-            <button class="primary-btn" onclick={saveTaxSettings} disabled={taxLoading}>{i18n.t('crypto-save', 'Save')}</button>
-          </div>
-        </div>
-      </div>
-    {/if}
   {/if}
 </div>
+
+<!-- Tax Settings Modal -->
+{#if showTaxSettings}
+  <div class="modal-backdrop" role="presentation" onclick={() => showTaxSettings = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showTaxSettings = false }}></div>
+  <div class="modal-wrapper">
+    <div class="modal">
+      <h3>{i18n.t('crypto-tax-settings-title', 'Tax Settings')}</h3>
+      <div class="form-grid">
+        <label>
+          {i18n.t('crypto-tax-jurisdiction', 'Jurisdiction')}
+          <select bind:value={taxJurisdiction}>
+            <option value="US">{i18n.t('crypto-tax-jurisdiction-us', 'United States')}</option>
+            <option value="CL">{i18n.t('crypto-tax-jurisdiction-cl', 'Chile')}</option>
+            <option value="CA">{i18n.t('crypto-tax-jurisdiction-ca', 'Canada')}</option>
+            <option value="UK">{i18n.t('crypto-tax-jurisdiction-uk', 'United Kingdom')}</option>
+            <option value="AU">{i18n.t('crypto-tax-jurisdiction-au', 'Australia')}</option>
+            <option value="OTHER">{i18n.t('crypto-tax-jurisdiction-other', 'Other')}</option>
+          </select>
+        </label>
+        <label>
+          {i18n.t('crypto-tax-cost-basis-method', 'Cost Basis Method')}
+          <select bind:value={taxMethod}>
+            <option value="fifo">{i18n.t('crypto-tax-method-fifo', 'FIFO')}</option>
+            <option value="lifo">{i18n.t('crypto-tax-method-lifo', 'LIFO')}</option>
+            <option value="hifo">{i18n.t('crypto-tax-method-hifo', 'HIFO')}</option>
+            <option value="average">{i18n.t('crypto-tax-method-avg', 'Average Cost')}</option>
+          </select>
+        </label>
+        <label>
+          <input type="checkbox" bind:checked={taxIncludeSwaps} />
+          {i18n.t('crypto-tax-include-swaps-label', 'Include Swaps in Disposals')}
+        </label>
+        <label>
+          <input type="checkbox" bind:checked={taxIncludeFeeCrypto} />
+          {i18n.t('crypto-tax-include-fee-label', 'Include Fee Crypto as Disposal')}
+        </label>
+        {#if walletsData && walletsData.wallets.length > 0}
+          <div class="exclusion-section">
+            <span class="exclusion-title">{i18n.t('crypto-tax-exclude-wallets', 'Exclude Wallets')}</span>
+            {#each walletsData.wallets as w}
+              <label class="exclusion-row">
+                <input
+                  type="checkbox"
+                  checked={taxExcludedWalletIds.includes(w.id)}
+                  onchange={() => {
+                    if (taxExcludedWalletIds.includes(w.id)) {
+                      taxExcludedWalletIds = taxExcludedWalletIds.filter(x => x !== w.id)
+                    } else {
+                      taxExcludedWalletIds = [...taxExcludedWalletIds, w.id]
+                    }
+                  }}
+                />
+                <span>{w.name}</span>
+              </label>
+            {/each}
+          </div>
+        {/if}
+      </div>
+      <div class="modal-actions">
+        <button class="secondary-btn" onclick={() => showTaxSettings = false}>{i18n.t('crypto-cancel', 'Cancel')}</button>
+        <button class="primary-btn" onclick={saveTaxSettings} disabled={taxLoading}>{i18n.t('crypto-save', 'Save')}</button>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <!-- Wallet Detail Panel -->
 {#if selectedWallet}
@@ -1430,6 +1447,7 @@
 
   .tab-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 
+  .skeleton-page { padding: 8px 0; }
   .loading { text-align: center; padding: 48px; color: var(--text-tertiary); }
   .empty { text-align: center; padding: 48px; color: var(--text-tertiary); }
 
