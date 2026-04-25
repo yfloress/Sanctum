@@ -379,31 +379,32 @@
     return Math.round((done / g.checkpoints.length) * 100)
   }
 
-  // Heatmap helpers — GitHub-style grid
-  interface HeatmapColumn { weekday: number; date: string; intensity: number }
-  const heatmapColumns = $derived.by(() => {
-    if (!heatmap) return { cols: [] as HeatmapColumn[][], monthLabels: [] as { label: string; col: number }[] }
-    const cols: HeatmapColumn[][] = []
-    let col: HeatmapColumn[] = []
-    heatmap.data.forEach(day => {
-      const wd = new Date(day.date).getDay()
-      if (wd === 0 && col.length > 0) { cols.push(col); col = [] }
-      col.push({ weekday: wd, date: day.date, intensity: day.intensity })
+  // Heatmap helpers — GitHub-style single grid
+  interface HeatmapCell { week: number; weekday: number; date: string; intensity: number }
+  const heatmapData = $derived.by(() => {
+    if (!heatmap) return { cells: [] as HeatmapCell[], monthLabels: [] as { label: string; col: number }[], totalWeeks: 0 }
+    const cells: HeatmapCell[] = []
+    let week = 0
+    heatmap.data.forEach((day, idx) => {
+      const wd = new Date(day.date + 'T00:00:00').getDay()
+      if (wd === 0 && idx > 0) week++
+      cells.push({ week, weekday: wd, date: day.date, intensity: day.intensity })
     })
-    if (col.length > 0) cols.push(col)
 
     const monthLabels: { label: string; col: number }[] = []
-    cols.forEach((c, i) => {
-      const firstDay = c[0]
-      if (firstDay) {
-        const m = new Date(firstDay.date).getMonth()
-        const lastLabel = monthLabels[monthLabels.length - 1]
-        if (!lastLabel || new Date(cols[lastLabel.col][0].date).getMonth() !== m) {
-          monthLabels.push({ label: MONTH_SHORT[m], col: i })
+    let lastMonth = -1
+    cells.forEach(c => {
+      const m = new Date(c.date + 'T00:00:00').getMonth()
+      if (m !== lastMonth) {
+        // Place label only if there's room (skip if previous label is in same column)
+        const prev = monthLabels[monthLabels.length - 1]
+        if (!prev || c.week - prev.col >= 2) {
+          monthLabels.push({ label: MONTH_SHORT[m], col: c.week })
         }
+        lastMonth = m
       }
     })
-    return { cols, monthLabels }
+    return { cells, monthLabels, totalWeeks: week + 1 }
   })
 
   function rewardProgress(r: StreakRewardDto): number {
@@ -517,54 +518,50 @@
             </div>
           </div>
           <div class="heatmap-scroll">
-            <div class="heatmap-inner">
-              <!-- Month labels row -->
-              <div class="heatmap-month-row">
-                <span class="heatmap-day-spacer"></span>
-                <div class="heatmap-months">
-                  {#each heatmapColumns.monthLabels as ml}
-                    <span class="heatmap-month-label" style="grid-column: {ml.col + 1}">{ml.label}</span>
-                  {/each}
-                </div>
-              </div>
-              <!-- Grid rows -->
-              <div class="heatmap-body">
-                <!-- Day-of-week labels -->
-                <div class="heatmap-dow">
-                  {#each ['S','M','T','W','T','F','S'] as d, i}
-                    <span class="heatmap-dow-label" class:show={i % 2 === 1}>{i % 2 === 1 ? d : ''}</span>
-                  {/each}
-                </div>
-                <!-- Week columns -->
-                <div class="heatmap-grid">
-                  {#each heatmapColumns.cols as col}
-                    <div class="heatmap-col">
-                      {#each col as cell}
-                        <div
-                          class="heatmap-cell"
-                          class:l1={cell.intensity === 1}
-                          class:l2={cell.intensity === 2}
-                          class:l3={cell.intensity === 3}
-                          class:l4={cell.intensity === 4}
-                          class:today={cell.date === todayStr}
-                          style="grid-row: {cell.weekday + 1}"
-                          title="{cell.date} · {cell.intensity} {i18n.t('habits-completions', 'completions')}"
-                        ></div>
-                      {/each}
-                    </div>
-                  {/each}
-                </div>
-              </div>
-              <!-- Legend -->
-              <div class="heatmap-legend">
-                <span class="heatmap-legend-label">{i18n.t('habits-less', 'Less')}</span>
-                <div class="heatmap-cell"></div>
-                <div class="heatmap-cell l1"></div>
-                <div class="heatmap-cell l2"></div>
-                <div class="heatmap-cell l3"></div>
-                <div class="heatmap-cell l4"></div>
-                <span class="heatmap-legend-label">{i18n.t('habits-more', 'More')}</span>
-              </div>
+            <div
+              class="heatmap-grid"
+              style="grid-template-columns: 28px repeat({heatmapData.totalWeeks}, 12px);"
+            >
+              <!-- Top-left empty corner -->
+              <div class="heatmap-corner"></div>
+              <!-- Month labels (row 1) -->
+              {#each heatmapData.monthLabels as ml}
+                <span
+                  class="heatmap-month-label"
+                  style="grid-column: {ml.col + 2}; grid-row: 1;"
+                >{ml.label}</span>
+              {/each}
+              <!-- Day-of-week labels (column 1) -->
+              {#each ['S','M','T','W','T','F','S'] as d, i}
+                {#if i === 1 || i === 3 || i === 5}
+                  <span
+                    class="heatmap-dow-label"
+                    style="grid-row: {i + 2}; grid-column: 1;"
+                  >{d}</span>
+                {/if}
+              {/each}
+              <!-- Cells -->
+              {#each heatmapData.cells as cell}
+                <div
+                  class="heatmap-cell"
+                  class:l1={cell.intensity === 1}
+                  class:l2={cell.intensity === 2}
+                  class:l3={cell.intensity === 3}
+                  class:l4={cell.intensity === 4}
+                  class:today={cell.date === todayStr}
+                  style="grid-column: {cell.week + 2}; grid-row: {cell.weekday + 2};"
+                  title="{cell.date} · {cell.intensity} {i18n.t('habits-completions', 'completions')}"
+                ></div>
+              {/each}
+            </div>
+            <div class="heatmap-legend">
+              <span class="heatmap-legend-label">{i18n.t('habits-less', 'Less')}</span>
+              <div class="heatmap-cell"></div>
+              <div class="heatmap-cell l1"></div>
+              <div class="heatmap-cell l2"></div>
+              <div class="heatmap-cell l3"></div>
+              <div class="heatmap-cell l4"></div>
+              <span class="heatmap-legend-label">{i18n.t('habits-more', 'More')}</span>
             </div>
           </div>
         </div>
@@ -968,46 +965,24 @@
   .heatmap-nav { display: flex; align-items: center; gap: 8px; }
   .heatmap-year { font-size: 0.85rem; color: var(--text-secondary); min-width: 40px; text-align: center; }
 
-  .heatmap-scroll { overflow-x: auto; }
-  .heatmap-inner { display: flex; flex-direction: column; gap: 4px; min-width: max-content; }
+  .heatmap-scroll { overflow-x: auto; padding-bottom: 4px; }
 
-  /* Month labels */
-  .heatmap-month-row { display: flex; align-items: flex-end; gap: 0; margin-bottom: 2px; }
-  .heatmap-day-spacer { width: 20px; flex-shrink: 0; }
-  .heatmap-months {
+  .heatmap-grid {
     display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: 14px;
-    gap: 2px;
-    flex: 1;
+    grid-template-rows: 14px repeat(7, 12px);
+    gap: 3px;
+    min-width: max-content;
   }
+  .heatmap-corner { grid-column: 1; grid-row: 1; }
   .heatmap-month-label {
-    font-size: 0.6rem; color: var(--text-tertiary);
+    font-size: 0.62rem; color: var(--text-tertiary);
     white-space: nowrap; line-height: 1;
-  }
-
-  /* Body: dow labels + grid */
-  .heatmap-body { display: flex; gap: 6px; align-items: flex-start; }
-  .heatmap-dow {
-    display: grid;
-    grid-template-rows: repeat(7, 12px);
-    gap: 2px; flex-shrink: 0; width: 14px;
+    align-self: end;
   }
   .heatmap-dow-label {
-    font-size: 0.55rem; color: var(--text-tertiary);
-    display: flex; align-items: center; line-height: 1;
-  }
-
-  /* Grid */
-  .heatmap-grid {
-    display: flex;
-    gap: 2px;
-    align-items: flex-start;
-  }
-  .heatmap-col {
-    display: grid;
-    grid-template-rows: repeat(7, 12px);
-    gap: 2px;
+    font-size: 0.6rem; color: var(--text-tertiary);
+    display: flex; align-items: center; justify-content: flex-end;
+    line-height: 1; padding-right: 4px;
   }
   .heatmap-cell {
     width: 12px; height: 12px; border-radius: 2px;
@@ -1016,11 +991,11 @@
     transition: transform 0.1s;
     cursor: default;
   }
-  .heatmap-cell:hover { transform: scale(1.3); z-index: 1; border-color: var(--glass-border-hover); }
-  .heatmap-cell.l1 { background: rgba(22, 101, 52, 0.5); }
-  .heatmap-cell.l2 { background: rgba(21, 128, 61, 0.7); }
-  .heatmap-cell.l3 { background: rgba(22, 163, 74, 0.85); }
-  .heatmap-cell.l4 { background: #22c55e; box-shadow: 0 0 6px rgba(34, 197, 94, 0.4); }
+  .heatmap-cell:hover { transform: scale(1.4); z-index: 1; border-color: var(--glass-border-hover); }
+  .heatmap-cell.l1 { background: rgba(139, 92, 246, 0.35); }
+  .heatmap-cell.l2 { background: rgba(139, 92, 246, 0.6); }
+  .heatmap-cell.l3 { background: rgba(168, 85, 247, 0.85); }
+  .heatmap-cell.l4 { background: #a855f7; box-shadow: 0 0 6px rgba(168, 85, 247, 0.5); }
   .heatmap-cell.today { box-shadow: 0 0 0 1.5px var(--accent) !important; }
   .heatmap-cell.l4.today { box-shadow: 0 0 6px rgba(34,197,94,0.4), 0 0 0 1.5px var(--accent) !important; }
 
