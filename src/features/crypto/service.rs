@@ -333,7 +333,7 @@ impl CryptoService {
                 ));
             }
 
-            let valid_categories = ["exchange", "wallet_single", "wallet_multi"];
+            let valid_categories = ["exchange", "hardware", "software"];
             if !valid_categories.contains(&category.as_str()) {
                 return Err(CryptoError::Validation(format!(
                     "Invalid category. Must be one of: {}",

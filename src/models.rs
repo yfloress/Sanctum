@@ -48,16 +48,16 @@ pub struct CryptoCatalogCoin {
 #[serde(rename_all = "snake_case")]
 pub enum WalletCategory {
     Exchange,
-    WalletSingle,
-    WalletMulti,
+    Hardware,
+    Software,
 }
 
 impl WalletCategory {
     pub fn as_str(&self) -> &'static str {
         match self {
             WalletCategory::Exchange => "exchange",
-            WalletCategory::WalletSingle => "wallet_single",
-            WalletCategory::WalletMulti => "wallet_multi",
+            WalletCategory::Hardware => "hardware",
+            WalletCategory::Software => "software",
         }
     }
 }
@@ -68,8 +68,8 @@ impl FromStr for WalletCategory {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "exchange" => Ok(WalletCategory::Exchange),
-            "wallet_single" => Ok(WalletCategory::WalletSingle),
-            "wallet_multi" => Ok(WalletCategory::WalletMulti),
+            "hardware" => Ok(WalletCategory::Hardware),
+            "software" => Ok(WalletCategory::Software),
             _ => Err(()),
         }
     }
@@ -80,7 +80,7 @@ impl FromStr for WalletCategory {
 pub struct CryptoWallet {
     pub id: String,
     pub name: String,
-    pub category: String, // "exchange", "wallet_single", "wallet_multi"
+    pub category: String, // "exchange", "hardware", "software"
     pub icon: Option<String>,
 }
 
