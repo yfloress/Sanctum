@@ -32,6 +32,37 @@
   let activeTab = $state<Tab>('portfolio')
   let loading = $state(true)
 
+  // Wallet icons catalog (mirrors FinancesPage ACCOUNT_ICONS)
+  const WALLET_ICONS: { value: string; src: string; generic: boolean }[] = [
+    ...['binance', 'bisq', 'bitmart', 'buda', 'bybit', 'kraken', 'mexc', 'retoswap', 'uniswap']
+      .map(n => ({ value: `${n}.svg`, src: `/src/assets/exchange-icons/${n}.svg`, generic: false })),
+    ...['landmark', 'wallet', 'shield', 'shield-check', 'link', 'lock']
+      .map(n => ({ value: `/src/assets/icons/${n}.svg`, src: `/src/assets/icons/${n}.svg`, generic: true })),
+  ]
+
+  function getDefaultWalletIconPath(category: string): string {
+    const iconMap: { [key: string]: string } = {
+      'exchange': 'landmark',
+      'hardware': 'shield',
+      'software': 'wallet',
+    }
+    const icon = iconMap[category.toLowerCase()] || 'wallet'
+    return `/src/assets/icons/${icon}.svg`
+  }
+
+  function getWalletDisplayIcon(w: { category: string; icon_path: string | null }): string {
+    if (w.icon_path) {
+      if (w.icon_path.startsWith('/') || w.icon_path.startsWith('http')) return w.icon_path
+      return `/src/assets/exchange-icons/${w.icon_path}`
+    }
+    return getDefaultWalletIconPath(w.category)
+  }
+
+  function isGenericWalletIcon(iconPath: string | null): boolean {
+    if (!iconPath) return true
+    return iconPath.startsWith('/src/assets/icons/')
+  }
+
   // Portfolio state
   let portfolio = $state<PortfolioResponse | null>(null)
   let trend = $state<PortfolioTrendData | null>(null)
@@ -405,9 +436,11 @@
 
   async function submitWallet() {
     try {
-      await cryptoApi.addWallet(walletName, walletCategory)
+      await cryptoApi.addWallet(walletName, walletCategory, walletIcon || undefined)
       showAddWallet = false
       walletName = ''
+      walletIcon = ''
+      showCreateWalletIconPicker = false
       await loadWallets()
       app.showToast(i18n.t('crypto-toast-wallet-created', 'Wallet created'))
     } catch (e) {
@@ -426,6 +459,19 @@
     }
   }
 
+  // Wallet icon state
+  let showWalletIconPicker = $state(false)
+  // Create-wallet icon state
+  let walletIcon = $state('')
+  let showCreateWalletIconPicker = $state(false)
+  let pickedWalletIconSrc = $state('')
+  let pickedWalletIconGeneric = $state(true)
+  $effect(() => {
+    const found = walletIcon ? WALLET_ICONS.find(i => i.value === walletIcon) : null
+    pickedWalletIconSrc = found ? found.src : getDefaultWalletIconPath(walletCategory)
+    pickedWalletIconGeneric = found ? found.generic : true
+  })
+
   let assetInView = $derived(
     portfolio?.assets.find(a => a.coin_id === assetCoinId)
   )
@@ -439,6 +485,16 @@
     showEditWalletName = true
   }
 
+  async function changeWalletIcon(icon: string) {
+    if (!selectedWallet) return
+    try {
+      await cryptoApi.updateWalletIcon(selectedWallet.id, icon || null)
+      selectedWallet = await cryptoApi.fetchWalletDetail(selectedWallet.id)
+      await loadWallets()
+      showWalletIconPicker = false
+    } catch (e) { app.showToast(String(e), true) }
+  }
+
   async function submitWalletName() {
     if (!selectedWallet || !editingWalletName.trim()) return
     try {
@@ -450,7 +506,6 @@
     } catch (e) { app.showToast(String(e), true) }
   }
 
-  // Tax state
   let taxPeriodId = $state('')
   let taxReport = $state<any>(null)
   let taxSettings = $state<any>(null)
@@ -750,6 +805,7 @@
       <div class="wallet-grid">
         {#each walletsData?.wallets ?? [] as w}
           <button class="wallet-card" onclick={() => openWalletDetail(w.id)}>
+            <img src={getWalletDisplayIcon(w)} alt="" class="wallet-icon" class:themed-icon={isGenericWalletIcon(w.icon_path)} onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
             <div class="wallet-name">{w.name}</div>
             <div class="wallet-cat">{w.category}</div>
             <div class="wallet-val">{w.total_value}</div>
@@ -1020,6 +1076,24 @@
       <span>{selectedWallet.category}</span>
       <span class="panel-total">{selectedWallet.total_value}</span>
     </div>
+    <div class="panel-icon-row">
+      <img src={getWalletDisplayIcon(selectedWallet)} alt="" class="panel-wallet-icon" class:themed-icon={isGenericWalletIcon(selectedWallet.icon_path)} onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
+      <button class="change-icon-btn" onclick={() => showWalletIconPicker = !showWalletIconPicker}>
+        {showWalletIconPicker ? i18n.t('crypto-close', 'Close') : i18n.t('crypto-change-icon', 'Change Icon')}
+      </button>
+    </div>
+    {#if showWalletIconPicker}
+      <div class="icon-picker">
+        {#each WALLET_ICONS as icon}
+          <button class="icon-option" onclick={() => changeWalletIcon(icon.value)} title={icon.value}>
+            <img src={icon.src} alt={icon.value} class:themed-icon={icon.generic} onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
+          </button>
+        {/each}
+        <button class="icon-option icon-reset" onclick={() => changeWalletIcon('')} title="Default">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12l9-9 9 9M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9"/></svg>
+        </button>
+      </div>
+    {/if}
 
     {#if selectedWallet.holdings.length > 0}
       <h4>{i18n.t('crypto-holdings', 'Holdings')}</h4>
@@ -1109,6 +1183,22 @@
           {/each}
         </div>
       </label>
+      <div class="icon-select-label">
+        <span>{i18n.t('crypto-wallet-icon', 'Icon')}</span>
+        <button class="change-icon-btn" onclick={() => showCreateWalletIconPicker = !showCreateWalletIconPicker}>
+          <img src={pickedWalletIconSrc || getDefaultWalletIconPath(walletCategory)} alt="" class="selected-icon-preview" class:themed-icon={pickedWalletIconGeneric} onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
+          {showCreateWalletIconPicker ? i18n.t('crypto-close', 'Close') : i18n.t('crypto-change', 'Change')}
+        </button>
+      </div>
+      {#if showCreateWalletIconPicker}
+        <div class="icon-picker">
+          {#each WALLET_ICONS as icon}
+            <button class="icon-option" class:selected={walletIcon === icon.value} onclick={() => { walletIcon = icon.value; showCreateWalletIconPicker = false }} title={icon.value}>
+              <img src={icon.src} alt={icon.value} class:themed-icon={icon.generic} onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
+            </button>
+          {/each}
+        </div>
+      {/if}
     </div>
       <div class="modal-actions">
         <button class="secondary-btn" onclick={() => showAddWallet = false}>{i18n.t('crypto-cancel', 'Cancel')}</button>
@@ -1523,10 +1613,43 @@
     overflow: hidden;
   }
   .wallet-card:hover { border-color: var(--glass-border-hover); box-shadow: var(--glass-shadow-lg); }
+  .wallet-icon { width: 32px; height: 32px; border-radius: 4px; margin-bottom: 6px; }
   .wallet-name { font-weight: 600; color: var(--text-primary); }
   .wallet-cat { font-size: 0.75rem; color: var(--text-tertiary); text-transform: capitalize; }
   .wallet-val { font-size: 1.1rem; font-weight: 600; color: var(--text-primary); margin-top: 6px; }
   .wallet-count { font-size: 0.75rem; color: var(--text-tertiary); }
+
+  .panel-icon-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .panel-wallet-icon { width: 36px; height: 36px; border-radius: 6px; }
+  .icon-picker {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px;
+    padding: 10px; background: var(--glass); border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm); margin-bottom: 12px;
+  }
+  .icon-option {
+    width: 36px; height: 36px; padding: 4px; border: 1px solid transparent; border-radius: var(--radius-sm);
+    background: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .icon-option:hover { border-color: var(--accent-border); background: var(--glass-active); }
+  .icon-option.selected { border-color: var(--accent-border); background: var(--glass-active); }
+  .icon-option img { width: 100%; height: 100%; object-fit: contain; border-radius: 3px; }
+  .icon-option.icon-reset svg { width: 18px; height: 18px; color: var(--text-tertiary); }
+  .change-icon-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 10px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+    background: none; color: var(--text-secondary); cursor: pointer; font-size: 0.8rem;
+    transition: all 0.15s;
+  }
+  .change-icon-btn:hover { border-color: var(--glass-border-hover); color: var(--text-primary); }
+  .selected-icon-preview { width: 20px; height: 20px; margin-right: 6px; vertical-align: middle; }
+  .icon-select-label {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 0.8rem; color: var(--text-secondary);
+  }
+
+  .themed-icon { filter: brightness(0) invert(1); }
+  :global(.light-mode) .themed-icon { filter: brightness(0); }
 
 
 

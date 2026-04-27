@@ -81,3 +81,4 @@ pnpm-debug.log*
 pnpm-store
 
 .claude/
+.opencode/
