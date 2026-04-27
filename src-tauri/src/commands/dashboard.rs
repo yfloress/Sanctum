@@ -127,11 +127,11 @@ pub fn fetch_balance(
         convert_usd_to_preferred(crypto_total_usd, &preferred_currency, preferred_rate);
 
     Ok(BalanceOverview {
-        total: format_preferred(net_worth, &preferred_currency),
+        total: format_preferred(net_worth.abs(), &preferred_currency),
         total_negative: net_worth < 0.0,
-        fiat_total: format_preferred(fiat_display, &preferred_currency),
+        fiat_total: format_preferred(fiat_display.abs(), &preferred_currency),
         fiat_negative: fiat_display < 0.0,
-        crypto_total: format_preferred(crypto_display, &preferred_currency),
+        crypto_total: format_preferred(crypto_display.abs(), &preferred_currency),
         crypto_negative: crypto_display < 0.0,
         currency: preferred_currency,
     })
