@@ -25,7 +25,8 @@
     PortfolioResponse, PortfolioTrendData,
     WalletsResponse, WalletDetailResponse,
     CryptoTransactionDto, CoinCatalogDto,
-    CryptoAssetPriceDto, IpcSummaryDto
+    CryptoAssetPriceDto, IpcSummaryDto,
+    TaxReportDto, TaxSettingsDto
   } from '../lib/types'
 
   type Tab = 'portfolio' | 'wallets' | 'tax'
@@ -507,12 +508,19 @@
   }
 
   let taxPeriodId = $state('')
-  let taxReport = $state<any>(null)
-  let taxSettings = $state<any>(null)
+  let taxReport = $state<TaxReportDto | null>(null)
+  let taxSettings = $state<TaxSettingsDto | null>(null)
   let showTaxSettings = $state(false)
   let taxLoading = $state(false)
-  let taxJurisdiction = $state('US')
+  let taxJurisdiction = $state('usa')
   let taxMethod = $state('fifo')
+
+  const JURISDICTION_LABELS: Record<string, string> = {
+    chile: 'Chile', usa: 'United States', other: 'Other',
+  }
+  const METHOD_LABELS: Record<string, string> = {
+    fifo: 'FIFO', lifo: 'LIFO', hifo: 'HIFO', cpp: 'Average Cost',
+  }
   let taxIncludeSwaps = $state(true)
   let taxIncludeFeeCrypto = $state(false)
   let taxExcludedWalletIds = $state<string[]>([])
@@ -837,11 +845,11 @@
         <div class="settings-info">
           <div class="info-item">
             <span class="label">{i18n.t('crypto-tax-jurisdiction', 'Jurisdiction')}</span>
-            <span class="value">{taxSettings.jurisdiction}</span>
+            <span class="value">{JURISDICTION_LABELS[taxSettings.jurisdiction] ?? taxSettings.jurisdiction}</span>
           </div>
           <div class="info-item">
             <span class="label">{i18n.t('crypto-tax-method', 'Method')}</span>
-            <span class="value">{taxSettings.method}</span>
+            <span class="value">{METHOD_LABELS[taxSettings.method] ?? taxSettings.method}</span>
           </div>
           <div class="info-item">
             <span class="label">{i18n.t('crypto-tax-include-swaps', 'Include Swaps')}</span>
@@ -1000,12 +1008,9 @@
         <label>
           {i18n.t('crypto-tax-jurisdiction', 'Jurisdiction')}
           <select bind:value={taxJurisdiction}>
-            <option value="US">{i18n.t('crypto-tax-jurisdiction-us', 'United States')}</option>
-            <option value="CL">{i18n.t('crypto-tax-jurisdiction-cl', 'Chile')}</option>
-            <option value="CA">{i18n.t('crypto-tax-jurisdiction-ca', 'Canada')}</option>
-            <option value="UK">{i18n.t('crypto-tax-jurisdiction-uk', 'United Kingdom')}</option>
-            <option value="AU">{i18n.t('crypto-tax-jurisdiction-au', 'Australia')}</option>
-            <option value="OTHER">{i18n.t('crypto-tax-jurisdiction-other', 'Other')}</option>
+            <option value="usa">{i18n.t('crypto-tax-jurisdiction-us', 'United States')}</option>
+            <option value="chile">{i18n.t('crypto-tax-jurisdiction-cl', 'Chile')}</option>
+            <option value="other">{i18n.t('crypto-tax-jurisdiction-other', 'Other')}</option>
           </select>
         </label>
         <label>
@@ -1014,7 +1019,7 @@
             <option value="fifo">{i18n.t('crypto-tax-method-fifo', 'FIFO')}</option>
             <option value="lifo">{i18n.t('crypto-tax-method-lifo', 'LIFO')}</option>
             <option value="hifo">{i18n.t('crypto-tax-method-hifo', 'HIFO')}</option>
-            <option value="average">{i18n.t('crypto-tax-method-avg', 'Average Cost')}</option>
+            <option value="cpp">{i18n.t('crypto-tax-method-avg', 'Average Cost')}</option>
           </select>
         </label>
         <label>
