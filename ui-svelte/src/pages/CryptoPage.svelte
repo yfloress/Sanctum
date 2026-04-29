@@ -82,6 +82,28 @@
   let assetCoinId = $state('')
   let assetTransactions = $state<CryptoTransactionDto[]>([])
 
+  // Edit transaction modal
+  let showEditTransaction = $state(false)
+  let editTxLoading = $state(false)
+  let editTxData = $state<import('../lib/types').CryptoTransactionEditData | null>(null)
+  let editTxAmount = $state('')
+  let editTxPrice = $state('')
+  let editTxFee = $state('')
+  let editTxFeeCoinId = $state('')
+  let editTxFeeCoinAmount = $state('')
+  let editTxDate = $state('')
+  let editTxNotes = $state('')
+  let editTxSubtype = $state('')
+  let editTxOverrideProceeds = $state('')
+  let editTxOverrideCostBasis = $state('')
+
+  const SUBTYPES_BY_TYPE: Record<string, string[]> = {
+    trade: ['buy', 'sell', 'swap', 'other'],
+    income: ['interest', 'reward', 'airdrop', 'gift', 'staking', 'mining', 'fork', 'payment', 'rebate', 'other'],
+    expense: ['payment', 'gift', 'fee', 'lost', 'stolen', 'donation', 'sell', 'other'],
+    transfer: ['deposit', 'withdrawal'],
+  }
+
   // Transaction form
   let showAddTransaction = $state(false)
   let txMode = $state<'buy' | 'sell' | 'income' | 'fee' | 'transfer' | 'swap'>('buy')
@@ -393,6 +415,60 @@
     }
   }
 
+  async function openEditTransaction(id: string) {
+    try {
+      const data = await cryptoApi.getCryptoTransaction(id)
+      editTxData = data
+      editTxAmount = data.amount
+      editTxPrice = data.price
+      editTxFee = data.fee
+      editTxFeeCoinId = data.fee_coin_id ?? ''
+      editTxFeeCoinAmount = data.fee_coin_amount ?? ''
+      editTxDate = data.date
+      editTxNotes = data.notes ?? ''
+      editTxSubtype = data.subtype ?? ''
+      editTxOverrideProceeds = data.override_proceeds ?? ''
+      editTxOverrideCostBasis = data.override_cost_basis ?? ''
+      showEditTransaction = true
+    } catch (e) {
+      app.showToast(String(e), true)
+    }
+  }
+
+  async function submitEditTransaction() {
+    if (!editTxData) return
+    editTxLoading = true
+    try {
+      await cryptoApi.updateCryptoTransaction({
+        id: editTxData.id,
+        amount: editTxAmount,
+        price: editTxPrice,
+        fee: editTxFee || '0',
+        fee_coin_id: editTxFeeCoinId || undefined,
+        fee_coin_amount: editTxFeeCoinAmount || undefined,
+        date: editTxDate,
+        notes: editTxNotes || undefined,
+        subtype: editTxSubtype || undefined,
+        override_proceeds: editTxOverrideProceeds || undefined,
+        override_cost_basis: editTxOverrideCostBasis || undefined,
+      })
+      showEditTransaction = false
+      editTxData = null
+      if (showAssetDetail) {
+        assetTransactions = await cryptoApi.getCryptoTransactionsByCoin(assetCoinId)
+      }
+      if (selectedWallet) {
+        selectedWallet = await cryptoApi.fetchWalletDetail(selectedWallet.id)
+      }
+      await load()
+      app.showToast(i18n.t('crypto-toast-tx-updated', 'Transaction updated'))
+    } catch (e) {
+      app.showToast(String(e), true)
+    } finally {
+      editTxLoading = false
+    }
+  }
+
   async function load() {
     loading = true
     try {
@@ -677,7 +753,7 @@
   $effect(() => { if (activeTab === 'tax') loadIpcSummary() })
 </script>
 
-<div class="page" class:blurred={showAddWallet || showTaxSettings || selectedWallet || showAssetDetail || showAddTransaction || showTickerConfig}>
+<div class="page" class:blurred={showAddWallet || showTaxSettings || selectedWallet || showAssetDetail || showAddTransaction || showEditTransaction || showTickerConfig}>
   <!-- Ticker Bar -->
   <div class="ticker-bar">
     <div class="ticker-fx">
@@ -1175,9 +1251,14 @@
           <span class="tx-date">{tx.date}</span>
           <span class="tx-type">{tx.transaction_type}</span>
           <span class="tx-amount">{tx.amount} {tx.symbol}</span>
-          <button class="delete-btn" onclick={() => deleteCryptoTx(tx.id)} aria-label="Delete">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-          </button>
+          <div class="panel-tx-actions">
+            <button class="icon-btn-mini" onclick={() => openEditTransaction(tx.id)} aria-label={i18n.t('crypto-edit', 'Edit')} title={i18n.t('crypto-edit', 'Edit')}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="delete-btn" onclick={() => deleteCryptoTx(tx.id)} aria-label={i18n.t('crypto-delete', 'Delete')} title={i18n.t('crypto-delete', 'Delete')}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
         </div>
       {/each}
     {/if}
@@ -1215,9 +1296,14 @@
           <span class="tx-date">{tx.date}</span>
           <span class="tx-type">{tx.transaction_type}</span>
           <span class="tx-amount">{tx.amount} {tx.symbol}</span>
-          <button class="delete-btn" onclick={() => deleteCryptoTx(tx.id)} aria-label="Delete">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-          </button>
+          <div class="panel-tx-actions">
+            <button class="icon-btn-mini" onclick={() => openEditTransaction(tx.id)} aria-label={i18n.t('crypto-edit', 'Edit')} title={i18n.t('crypto-edit', 'Edit')}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="delete-btn" onclick={() => deleteCryptoTx(tx.id)} aria-label={i18n.t('crypto-delete', 'Delete')} title={i18n.t('crypto-delete', 'Delete')}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
         </div>
       {/each}
     {/if}
@@ -1535,6 +1621,76 @@
       <div class="modal-actions">
         <button class="secondary-btn" onclick={() => showAddTransaction = false}>{i18n.t('crypto-cancel', 'Cancel')}</button>
         <button class="primary-btn" onclick={submitCryptoTransaction}>{i18n.t('crypto-tx-add', 'Add')}</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Edit Crypto Transaction Modal -->
+{#if showEditTransaction && editTxData}
+  <div class="modal-backdrop" role="presentation" onclick={() => showEditTransaction = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showEditTransaction = false }}></div>
+  <div class="modal-wrapper">
+    <div class="modal wide">
+      <h3>{i18n.t('crypto-tx-edit-title', 'Edit Transaction')}</h3>
+      <div class="edit-tx-meta">
+        <span class="etm-wallet">{editTxData.wallet_name}</span>
+        <span class="etm-coin">{editTxData.symbol}</span>
+        <span class="etm-type" class:etm-negative={/^(sell|expense|fee)$/.test(editTxData.transaction_type)}>{editTxData.transaction_type}</span>
+      </div>
+
+      <div class="form-grid">
+        <label>
+          {i18n.t('crypto-tx-subtype', 'Subtype')}
+          <select bind:value={editTxSubtype}>
+            <option value="">--</option>
+            {#each SUBTYPES_BY_TYPE[editTxData.transaction_type] ?? [] as st}
+              <option value={st}>{st}</option>
+            {/each}
+          </select>
+        </label>
+        <label>
+          {i18n.t('crypto-tx-amount', 'Amount')}
+          <input type="text" bind:value={editTxAmount} placeholder="0.00" />
+        </label>
+        <label>
+          {i18n.t('crypto-tx-price', 'Price (per coin)')}
+          <input type="text" bind:value={editTxPrice} placeholder="0.00" />
+        </label>
+        <label>
+          {i18n.t('crypto-tx-fee-label', 'Fee')}
+          <input type="text" bind:value={editTxFee} placeholder="0" />
+        </label>
+        <label>
+          {i18n.t('crypto-tx-fee-coin-id', 'Fee Coin (optional)')}
+          <input type="text" bind:value={editTxFeeCoinId} placeholder="" />
+        </label>
+        <label>
+          {i18n.t('crypto-tx-fee-coin-amount', 'Fee Coin Amount (optional)')}
+          <input type="text" bind:value={editTxFeeCoinAmount} placeholder="0.00" />
+        </label>
+        <label>
+          {i18n.t('crypto-tx-date', 'Date')}
+          <input type="date" bind:value={editTxDate} />
+        </label>
+        <label>
+          {i18n.t('crypto-tx-notes', 'Notes (optional)')}
+          <input type="text" bind:value={editTxNotes} placeholder={i18n.t('crypto-tx-notes-placeholder', 'Notes...')} />
+        </label>
+        <label>
+          {i18n.t('crypto-tx-override-proceeds', 'Override Proceeds (optional)')}
+          <input type="text" bind:value={editTxOverrideProceeds} placeholder="0.00" />
+        </label>
+        <label>
+          {i18n.t('crypto-tx-override-cost-basis', 'Override Cost Basis (optional)')}
+          <input type="text" bind:value={editTxOverrideCostBasis} placeholder="0.00" />
+        </label>
+      </div>
+
+      <div class="modal-actions">
+        <button class="secondary-btn" onclick={() => showEditTransaction = false}>{i18n.t('crypto-cancel', 'Cancel')}</button>
+        <button class="primary-btn" onclick={submitEditTransaction} disabled={editTxLoading}>
+          {editTxLoading ? i18n.t('crypto-saving', 'Saving...') : i18n.t('crypto-save', 'Save')}
+        </button>
       </div>
     </div>
   </div>
@@ -1994,6 +2150,33 @@
   }
   .coin-option:hover { background: var(--glass-hover); color: var(--text-primary); }
 
+  /* Edit transaction modal */
+  .edit-tx-meta {
+    display: flex; gap: 10px; align-items: center; margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .etm-wallet {
+    padding: 4px 10px; background: var(--glass); border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm); color: var(--text-secondary); font-size: 0.8rem;
+  }
+  .etm-coin {
+    padding: 4px 10px; background: rgba(0, 0, 0, 0.2); border-radius: var(--radius-sm);
+    color: var(--accent); font-size: 0.8rem; font-weight: 600;
+  }
+  .etm-type {
+    padding: 4px 10px; border-radius: var(--radius-sm);
+    font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+    background: rgba(255, 255, 255, 0.05); color: var(--text-secondary);
+  }
+  .etm-negative { background: rgba(255, 69, 58, 0.12); color: var(--danger); }
+
+  .panel-tx-actions { display: flex; gap: 4px; align-items: center; }
+  .icon-btn-mini {
+    background: transparent; border: none; color: var(--text-secondary);
+    cursor: pointer; padding: 2px; display: inline-flex; align-items: center;
+    transition: color 0.15s;
+  }
+  .icon-btn-mini:hover { color: var(--accent); }
+  .icon-btn-mini svg { width: 14px; height: 14px; }
   .delete-btn {
     background: none; border: none; color: var(--text-tertiary); cursor: pointer; padding: 2px;
     display: flex; align-items: center; transition: color 0.15s; flex-shrink: 0;

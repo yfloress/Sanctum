@@ -249,6 +249,9 @@ crypto-holdings = Tenencias
 crypto-transactions = Transacciones
 crypto-save = Guardar
 crypto-cancel = Cancelar
+crypto-saving = Guardando...
+crypto-edit = Editar
+crypto-delete = Eliminar
 
 # -- Asset detail panel --
 crypto-amount = Cantidad
@@ -362,6 +365,12 @@ crypto-tx-date = Fecha
 crypto-tx-notes = Notas (opcional)
 crypto-tx-notes-placeholder = Notas...
 crypto-tx-add = Agregar
+crypto-tx-edit-title = Editar Transaccion
+crypto-tx-subtype = Subtipo
+crypto-tx-fee-coin-id = Moneda Comision (opcional)
+crypto-tx-fee-coin-amount = Cantidad Comision (opcional)
+crypto-tx-override-proceeds = Forzar Ingresos (opcional)
+crypto-tx-override-cost-basis = Forzar Costo Base (opcional)
 
 # -- Toast messages --
 crypto-toast-ticker-saved = Configuracion del ticker guardada
@@ -369,6 +378,7 @@ crypto-toast-no-coins-sync = Sin monedas para sincronizar. Configura el ticker p
 crypto-toast-custom-added = Moneda personalizada agregada
 crypto-toast-custom-deleted = Moneda personalizada eliminada
 crypto-toast-tx-added = Transaccion agregada
+crypto-toast-tx-updated = Transaccion actualizada
 crypto-toast-tx-deleted = Transaccion eliminada
 crypto-toast-wallet-created = Billetera creada
 crypto-toast-wallet-deleted = Billetera eliminada

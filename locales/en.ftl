@@ -249,6 +249,9 @@ crypto-holdings = Holdings
 crypto-transactions = Transactions
 crypto-save = Save
 crypto-cancel = Cancel
+crypto-saving = Saving...
+crypto-edit = Edit
+crypto-delete = Delete
 
 # -- Asset detail panel --
 crypto-amount = Amount
@@ -362,6 +365,12 @@ crypto-tx-date = Date
 crypto-tx-notes = Notes (optional)
 crypto-tx-notes-placeholder = Notes...
 crypto-tx-add = Add
+crypto-tx-edit-title = Edit Transaction
+crypto-tx-subtype = Subtype
+crypto-tx-fee-coin-id = Fee Coin (optional)
+crypto-tx-fee-coin-amount = Fee Coin Amount (optional)
+crypto-tx-override-proceeds = Override Proceeds (optional)
+crypto-tx-override-cost-basis = Override Cost Basis (optional)
 
 # -- Toast messages --
 crypto-toast-ticker-saved = Ticker config saved
@@ -369,6 +378,7 @@ crypto-toast-no-coins-sync = No coins to sync. Configure ticker first.
 crypto-toast-custom-added = Custom coin added
 crypto-toast-custom-deleted = Custom coin deleted
 crypto-toast-tx-added = Transaction added
+crypto-toast-tx-updated = Transaction updated
 crypto-toast-tx-deleted = Transaction deleted
 crypto-toast-wallet-created = Wallet created
 crypto-toast-wallet-deleted = Wallet deleted
