@@ -479,10 +479,11 @@ pub fn save_tax_settings(
 pub fn generate_tax_report(
     controller: State<'_, Arc<AppController>>, period_id: String,
 ) -> Result<TaxReportDto, String> {
-    let r = controller.generate_tax_report(period_id.clone()).map_err(|e| e.to_string())?;
+    let summary = controller.generate_tax_summary(period_id.clone()).map_err(|e| e.to_string())?;
+    let r = summary.report;
     // Backend serializes jurisdiction via `TaxJurisdiction::as_str()` → "chile"/"usa"/"other".
     let override_curr = if r.jurisdiction == "chile" { Some("CLP") } else { None };
-    
+
     Ok(TaxReportDto {
         period_id, jurisdiction: r.jurisdiction, method: r.method,
         disposals_count: r.summary.disposals,
@@ -508,7 +509,11 @@ pub fn generate_tax_report(
                 code: w.code, message: w.message, tx_id: w.tx_id,
             }
         }).collect(),
-        readiness: Vec::new(),
+        readiness: summary.readiness.into_iter().map(|item| {
+            sanctum::ui::dto::crypto::TaxReadinessDto {
+                code: item.code, status: item.status, detail: item.detail,
+            }
+        }).collect(),
     })
 }
 

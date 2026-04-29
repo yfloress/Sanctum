@@ -931,8 +931,9 @@
           <div class="readiness">
             <h4>{i18n.t('crypto-tax-readiness', 'Readiness')}</h4>
             {#each taxReport.readiness as r}
-              <div class="readiness-item" class:complete={r.status === 'complete'} class:incomplete={r.status === 'incomplete'}>
-                <span class="status-badge" class:complete={r.status === 'complete'}>{r.status}</span>
+              <div class="readiness-item" class:ok={r.status === 'ok'} class:warn={r.status === 'warn'} class:error={r.status === 'error'} class:info={r.status === 'info'}>
+                <span class="status-badge" class:ok={r.status === 'ok'} class:warn={r.status === 'warn'} class:error={r.status === 'error'} class:info={r.status === 'info'}>{r.status}</span>
+                <span class="code">{r.code}</span>
                 <span class="detail">{r.detail}</span>
               </div>
             {/each}
@@ -1828,14 +1829,19 @@
     display: flex; align-items: center; gap: 8px; padding: 8px;
     border-radius: var(--radius-sm); margin-bottom: 6px;
   }
-  .readiness-item.complete { background: rgba(74, 222, 128, 0.05); }
-  .readiness-item.incomplete { background: rgba(248, 113, 113, 0.05); }
+  .readiness-item.ok { background: rgba(74, 222, 128, 0.05); }
+  .readiness-item.warn { background: rgba(251, 191, 36, 0.05); }
+  .readiness-item.error { background: rgba(248, 113, 113, 0.05); }
+  .readiness-item.info { background: rgba(96, 165, 250, 0.05); }
   .status-badge {
     font-size: 0.65rem; text-transform: uppercase; font-weight: 600;
     padding: 2px 6px; border-radius: 3px; color: #999;
   }
-  .status-badge.complete { background: rgba(74, 222, 128, 0.2); color: var(--success); }
-  .readiness-item.incomplete .status-badge { background: rgba(248, 113, 113, 0.2); color: var(--danger); }
+  .status-badge.ok { background: rgba(74, 222, 128, 0.2); color: var(--success); }
+  .status-badge.warn { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+  .status-badge.error { background: rgba(248, 113, 113, 0.2); color: var(--danger); }
+  .status-badge.info { background: rgba(96, 165, 250, 0.2); color: #60a5fa; }
+  .readiness-item .code { font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; min-width: 90px; }
   .readiness-item .detail { font-size: 0.85rem; color: var(--text-secondary); }
 
   .export-actions { display: flex; gap: 8px; }
