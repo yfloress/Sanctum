@@ -294,6 +294,16 @@ export interface TaxReadinessDto {
   detail: string
 }
 
+export interface TaxSummaryDto {
+  report: TaxReportDto
+  taxable_income_total: string
+  taxable_income_count: number
+  end_balance_value: string | null
+  end_balance_missing: number
+  transactions_in_period: number
+  volume_processed: string
+}
+
 export interface IpcSummaryDto {
   records_count: number
   date_range: string | null

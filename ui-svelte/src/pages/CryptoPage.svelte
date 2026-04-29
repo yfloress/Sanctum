@@ -26,7 +26,7 @@
     WalletsResponse, WalletDetailResponse,
     CryptoTransactionDto, CoinCatalogDto,
     CryptoAssetPriceDto, IpcSummaryDto,
-    TaxReportDto, TaxSettingsDto
+    TaxReportDto, TaxSettingsDto, TaxSummaryDto
   } from '../lib/types'
 
   type Tab = 'portfolio' | 'wallets' | 'tax'
@@ -509,7 +509,13 @@
 
   let taxPeriodId = $state('')
   let taxReport = $state<TaxReportDto | null>(null)
+  let taxSummary = $state<TaxSummaryDto | null>(null)
+  let taxFillingTxId = $state<string | null>(null)
   let taxSettings = $state<TaxSettingsDto | null>(null)
+
+  const RESOLVABLE_PRICE_CODES = new Set([
+    'missing_price', 'fee_missing_price', 'swap_missing_price', 'income_missing_price',
+  ])
   let showTaxSettings = $state(false)
   let taxLoading = $state(false)
   let taxJurisdiction = $state('usa')
@@ -603,11 +609,36 @@
     }
     taxLoading = true
     try {
-      taxReport = await cryptoApi.generateTaxReport(taxPeriodId)
+      taxSummary = await cryptoApi.generateTaxSummary(taxPeriodId)
+      taxReport = taxSummary.report
     } catch (e) {
       app.showToast(String(e), true)
     } finally {
       taxLoading = false
+    }
+  }
+
+  // Fetches a historical USD price for the warning's transaction and persists
+  // it via fill_missing_tax_prices, then regenerates the report so the warning
+  // disappears in place. Strips the ":fee" suffix some warnings carry.
+  async function fetchAndFillPrice(txId: string | null) {
+    if (!txId) return
+    const id = txId.endsWith(':fee') ? txId.slice(0, -4) : txId
+    taxFillingTxId = id
+    try {
+      const tx = await cryptoApi.getCryptoTransaction(id)
+      const price = await cryptoApi.getCryptoHistoricalPriceUsd(tx.coin_id, tx.date)
+      await cryptoApi.fillMissingTaxPrices(id, price)
+      await generateTaxReport()
+      app.showToast(i18n.tArgs(
+        'crypto-tax-toast-price-filled',
+        { price: price.toFixed(4) },
+        `Price filled: $${price.toFixed(4)}`
+      ))
+    } catch (e) {
+      app.showToast(String(e), true)
+    } finally {
+      taxFillingTxId = null
     }
   }
 
@@ -918,6 +949,24 @@
                 <span class="value">{taxReport.long_term_gain}</span>
               </div>
             {/if}
+            {#if taxSummary}
+              <div class="summary-item">
+                <span class="label">{i18n.t('crypto-tax-taxable-income', 'Taxable Income')}</span>
+                <span class="value">{taxSummary.taxable_income_total}</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">{i18n.t('crypto-tax-end-balance', 'End-of-period Balance')}</span>
+                <span class="value">{taxSummary.end_balance_value ?? '—'}</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">{i18n.t('crypto-tax-tx-in-period', 'Transactions in Period')}</span>
+                <span class="value">{taxSummary.transactions_in_period}</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">{i18n.t('crypto-tax-volume', 'Volume Processed')}</span>
+                <span class="value">{taxSummary.volume_processed}</span>
+              </div>
+            {/if}
           </div>
         </div>
 
@@ -929,6 +978,13 @@
               <div class="warning-item">
                 <span class="warning-code">{w.code}</span>
                 <span class="warning-msg">{w.message}</span>
+                {#if w.tx_id && RESOLVABLE_PRICE_CODES.has(w.code)}
+                  <button class="warning-action" onclick={() => fetchAndFillPrice(w.tx_id)} disabled={taxFillingTxId === w.tx_id}>
+                    {taxFillingTxId === w.tx_id
+                      ? i18n.t('crypto-tax-fetching', 'Fetching…')
+                      : i18n.t('crypto-tax-fetch-price', 'Fetch price')}
+                  </button>
+                {/if}
               </div>
             {/each}
           </div>
@@ -1819,9 +1875,17 @@
     box-shadow: var(--card-shadow);
   }
   .warnings h4 { margin: 0 0 12px; color: var(--danger); font-size: 0.85rem; }
-  .warning-item { display: flex; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(248, 113, 113, 0.1); font-size: 0.85rem; }
+  .warning-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid rgba(248, 113, 113, 0.1); font-size: 0.85rem; }
   .warning-code { color: var(--text-secondary); font-weight: 500; min-width: 80px; }
-  .warning-msg { color: var(--text-secondary); }
+  .warning-msg { color: var(--text-secondary); flex: 1; }
+  .warning-action {
+    padding: 4px 10px; border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm); background: rgba(0, 0, 0, 0.2);
+    color: var(--text-primary); cursor: pointer; font-size: 0.75rem;
+    transition: all 0.15s;
+  }
+  .warning-action:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .warning-action:disabled { opacity: 0.5; cursor: not-allowed; }
 
   .readiness {
     padding: 16px; background: var(--card-bg);

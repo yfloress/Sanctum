@@ -399,6 +399,18 @@ pub struct TaxReadinessDto {
     pub detail: String,
 }
 
+/// Full tax summary payload (report + extra readiness signals).
+#[derive(Debug, Clone, Serialize)]
+pub struct TaxSummaryDto {
+    pub report: TaxReportDto,
+    pub taxable_income_total: String,
+    pub taxable_income_count: usize,
+    pub end_balance_value: Option<String>,
+    pub end_balance_missing: usize,
+    pub transactions_in_period: usize,
+    pub volume_processed: String,
+}
+
 /// IPC (Chilean tax indicator) summary.
 #[derive(Debug, Clone, Serialize)]
 pub struct IpcSummaryDto {

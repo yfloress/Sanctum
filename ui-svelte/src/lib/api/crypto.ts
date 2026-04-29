@@ -23,7 +23,7 @@ import type {
   CryptoTransferInput, CryptoSwapInput,
   CryptoTransactionUpdateInput, CryptoTransactionEditData,
   CoinCatalogDto, CryptoAssetPriceDto,
-  TaxSettingsDto, TaxReportDto, IpcSummaryDto
+  TaxSettingsDto, TaxReportDto, TaxSummaryDto, IpcSummaryDto
 } from '../types'
 
 export async function fetchPortfolio(): Promise<PortfolioResponse> {
@@ -136,6 +136,14 @@ export async function saveTaxSettings(settings: TaxSettingsDto): Promise<void> {
 
 export async function generateTaxReport(period_id: string): Promise<TaxReportDto> {
   return invoke<TaxReportDto>('generate_tax_report', { periodId: period_id })
+}
+
+export async function generateTaxSummary(period_id: string): Promise<TaxSummaryDto> {
+  return invoke<TaxSummaryDto>('generate_tax_summary', { periodId: period_id })
+}
+
+export async function getCryptoHistoricalPriceUsd(coin_id: string, date: string): Promise<number> {
+  return invoke<number>('get_crypto_historical_price_usd', { coinId: coin_id, date })
 }
 
 export async function exportTaxReportCsv(period_id: string, path: string): Promise<void> {

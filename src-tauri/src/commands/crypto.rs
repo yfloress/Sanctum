@@ -24,7 +24,7 @@ use sanctum::ui::dto::crypto::{
     CryptoTransactionInput, CryptoTransferInput, CryptoSwapInput,
     CryptoAssetPriceDto, CryptoTransactionUpdateInput, DistributionItem, FxRateDto,
     IpcSummaryDto, PortfolioAssetDto, PortfolioResponse, PortfolioTrendData,
-    TaxReportDto, TaxSettingsDto, WalletDetailResponse, WalletDto,
+    TaxReportDto, TaxSettingsDto, TaxSummaryDto, WalletDetailResponse, WalletDto,
     WalletHoldingDto, WalletSimpleDto, WalletsResponse,
 };
 use std::collections::HashMap;
@@ -480,26 +480,64 @@ pub fn generate_tax_report(
     controller: State<'_, Arc<AppController>>, period_id: String,
 ) -> Result<TaxReportDto, String> {
     let summary = controller.generate_tax_summary(period_id.clone()).map_err(|e| e.to_string())?;
-    let r = summary.report;
+    Ok(map_tax_report_dto(period_id, summary.report, summary.readiness, &controller))
+}
+
+#[tauri::command]
+pub fn generate_tax_summary(
+    controller: State<'_, Arc<AppController>>, period_id: String,
+) -> Result<TaxSummaryDto, String> {
+    let payload = controller.generate_tax_summary(period_id.clone()).map_err(|e| e.to_string())?;
+    let override_curr = if payload.report.jurisdiction == "chile" { Some("CLP") } else { None };
+    let report = map_tax_report_dto(period_id, payload.report, payload.readiness, &controller);
+    let end_balance_value = payload.end_balance_value
+        .map(|v| fmt_pref_override(v, override_curr, &controller));
+
+    Ok(TaxSummaryDto {
+        report,
+        taxable_income_total: fmt_pref_override(payload.taxable_income_total, override_curr, &controller),
+        taxable_income_count: payload.taxable_income_count,
+        end_balance_value,
+        end_balance_missing: payload.end_balance_missing,
+        transactions_in_period: payload.transactions_in_period,
+        volume_processed: fmt_pref_override(payload.volume_processed, override_curr, &controller),
+    })
+}
+
+#[tauri::command]
+pub async fn get_crypto_historical_price_usd(
+    controller: State<'_, Arc<AppController>>,
+    coin_id: String,
+    date: String,
+) -> Result<f64, String> {
+    controller.get_crypto_historical_price_usd(coin_id, date).await.map_err(|e| e.to_string())
+}
+
+fn map_tax_report_dto(
+    period_id: String,
+    r: sanctum::features::crypto::TaxReport,
+    readiness: Vec<sanctum::features::crypto::TaxReadinessItem>,
+    controller: &AppController,
+) -> TaxReportDto {
     // Backend serializes jurisdiction via `TaxJurisdiction::as_str()` → "chile"/"usa"/"other".
     let override_curr = if r.jurisdiction == "chile" { Some("CLP") } else { None };
 
-    Ok(TaxReportDto {
+    TaxReportDto {
         period_id, jurisdiction: r.jurisdiction, method: r.method,
         disposals_count: r.summary.disposals,
-        total_proceeds: fmt_pref_override(r.summary.total_proceeds, override_curr, &controller),
-        total_cost: fmt_pref_override(r.summary.total_cost, override_curr, &controller),
-        total_gain: fmt_pref_override(r.summary.total_gain.abs(), override_curr, &controller),
+        total_proceeds: fmt_pref_override(r.summary.total_proceeds, override_curr, controller),
+        total_cost: fmt_pref_override(r.summary.total_cost, override_curr, controller),
+        total_gain: fmt_pref_override(r.summary.total_gain.abs(), override_curr, controller),
         total_gain_negative: r.summary.total_gain < 0.0,
-        short_term_gain: r.summary.short_term_gain.map(|v| fmt_pref_override(v, override_curr, &controller)),
-        long_term_gain: r.summary.long_term_gain.map(|v| fmt_pref_override(v, override_curr, &controller)),
+        short_term_gain: r.summary.short_term_gain.map(|v| fmt_pref_override(v, override_curr, controller)),
+        long_term_gain: r.summary.long_term_gain.map(|v| fmt_pref_override(v, override_curr, controller)),
         events: r.disposals.into_iter().map(|e| {
             sanctum::ui::dto::crypto::TaxEventDto {
                 tx_id: e.tx_id, date: e.date, coin_id: e.coin_id, symbol: e.symbol,
                 amount: e.amount.to_string(),
-                proceeds: fmt_pref_override(e.proceeds, override_curr, &controller),
-                cost_basis: fmt_pref_override(e.cost_basis, override_curr, &controller),
-                gain: fmt_pref_override(e.gain.abs(), override_curr, &controller),
+                proceeds: fmt_pref_override(e.proceeds, override_curr, controller),
+                cost_basis: fmt_pref_override(e.cost_basis, override_curr, controller),
+                gain: fmt_pref_override(e.gain.abs(), override_curr, controller),
                 gain_negative: e.gain < 0.0,
                 term: e.term, disposal_type: e.disposal_type,
             }
@@ -509,12 +547,12 @@ pub fn generate_tax_report(
                 code: w.code, message: w.message, tx_id: w.tx_id,
             }
         }).collect(),
-        readiness: summary.readiness.into_iter().map(|item| {
+        readiness: readiness.into_iter().map(|item| {
             sanctum::ui::dto::crypto::TaxReadinessDto {
                 code: item.code, status: item.status, detail: item.detail,
             }
         }).collect(),
-    })
+    }
 }
 
 #[tauri::command]
