@@ -294,12 +294,30 @@
 
 
   let coinSearch = $state('')
+  let fromCoinSearch = $state('')
+  let toCoinSearch = $state('')
   let filteredCoins = $derived(
     coinSearch.length < 1 ? coinCatalog.slice(0, 50) :
     coinCatalog.filter(c =>
       c.symbol.toLowerCase().includes(coinSearch.toLowerCase()) ||
       c.name.toLowerCase().includes(coinSearch.toLowerCase())
     ).slice(0, 50)
+  )
+  let filteredFromCoins = $derived(
+    fromCoinSearch.length < 1
+      ? coinCatalog.slice(0, 50)
+      : coinCatalog.filter(c =>
+          c.symbol.toLowerCase().includes(fromCoinSearch.toLowerCase()) ||
+          c.name.toLowerCase().includes(fromCoinSearch.toLowerCase())
+        ).slice(0, 50)
+  )
+  let filteredToCoins = $derived(
+    toCoinSearch.length < 1
+      ? coinCatalog.slice(0, 50)
+      : coinCatalog.filter(c =>
+          c.symbol.toLowerCase().includes(toCoinSearch.toLowerCase()) ||
+          c.name.toLowerCase().includes(toCoinSearch.toLowerCase())
+        ).slice(0, 50)
   )
 
   async function loadCoinCatalog() {
@@ -328,6 +346,8 @@
     txSwapFromAmount = ''
     txSwapToAmount = ''
     coinSearch = ''
+    fromCoinSearch = ''
+    toCoinSearch = ''
     loadCoinCatalog()
     showAddTransaction = true
   }
@@ -335,19 +355,19 @@
   function selectCoin(coin: CoinCatalogDto) {
     txCoinId = coin.id
     txSymbol = coin.symbol
-    coinSearch = ''
+    coinSearch = coin.symbol
   }
 
   function selectFromCoin(coin: CoinCatalogDto) {
     txFromCoinId = coin.id
     txFromSymbol = coin.symbol
-    coinSearch = ''
+    fromCoinSearch = coin.symbol
   }
 
   function selectToCoin(coin: CoinCatalogDto) {
     txToCoinId = coin.id
     txToSymbol = coin.symbol
-    coinSearch = ''
+    toCoinSearch = coin.symbol
   }
 
   async function submitCryptoTransaction() {
@@ -1471,20 +1491,18 @@
           <!-- Transfer form -->
           <label>
             {i18n.t('crypto-tx-coin', 'Coin')}
-            {#if txCoinId}
-              <div class="coin-selected">
-                <span>{txSymbol}</span>
-                <button class="clear-coin" onclick={() => { txCoinId = ''; txSymbol = '' }}>x</button>
-              </div>
-            {:else}
+            <div class="coin-search-wrap">
               <input type="text" bind:value={coinSearch} placeholder={i18n.t('crypto-tx-search-coin', 'Search coin...')} />
-              {#if coinSearch.length >= 1}
-                <div class="coin-dropdown">
-                  {#each filteredCoins as c}
-                    <button class="coin-option" onclick={() => selectCoin(c)}>{c.symbol} - {c.name}</button>
-                  {/each}
-                </div>
+              {#if txCoinId}
+                <button class="clear-coin" onclick={() => { txCoinId = ''; txSymbol = ''; coinSearch = '' }}>x</button>
               {/if}
+            </div>
+            {#if coinSearch.length >= 1 && coinSearch !== txSymbol}
+              <div class="coin-dropdown">
+                {#each filteredCoins as c}
+                  <button class="coin-option" onclick={() => selectCoin(c)}>{c.symbol} - {c.name}</button>
+                {/each}
+              </div>
             {/if}
           </label>
           <label>
@@ -1523,20 +1541,18 @@
           </label>
           <label>
             {i18n.t('crypto-tx-from-coin', 'From Coin')}
-            {#if txFromCoinId}
-              <div class="coin-selected">
-                <span>{txFromSymbol}</span>
-                <button class="clear-coin" onclick={() => { txFromCoinId = ''; txFromSymbol = '' }}>x</button>
-              </div>
-            {:else}
-              <input type="text" bind:value={coinSearch} placeholder={i18n.t('crypto-tx-search-coin', 'Search coin...')} />
-              {#if coinSearch.length >= 1}
-                <div class="coin-dropdown">
-                  {#each filteredCoins as c}
-                    <button class="coin-option" onclick={() => selectFromCoin(c)}>{c.symbol} - {c.name}</button>
-                  {/each}
-                </div>
+            <div class="coin-search-wrap">
+              <input type="text" bind:value={fromCoinSearch} placeholder={i18n.t('crypto-tx-search-coin', 'Search coin...')} />
+              {#if txFromCoinId}
+                <button class="clear-coin" onclick={() => { txFromCoinId = ''; txFromSymbol = ''; fromCoinSearch = '' }}>x</button>
               {/if}
+            </div>
+            {#if fromCoinSearch.length >= 1 && fromCoinSearch !== txFromSymbol}
+              <div class="coin-dropdown">
+                {#each filteredFromCoins as c}
+                  <button class="coin-option" onclick={() => selectFromCoin(c)}>{c.symbol} - {c.name}</button>
+                {/each}
+              </div>
             {/if}
           </label>
           <label>
@@ -1545,20 +1561,18 @@
           </label>
           <label>
             {i18n.t('crypto-tx-to-coin', 'To Coin')}
-            {#if txToCoinId}
-              <div class="coin-selected">
-                <span>{txToSymbol}</span>
-                <button class="clear-coin" onclick={() => { txToCoinId = ''; txToSymbol = '' }}>x</button>
-              </div>
-            {:else}
-              <input type="text" bind:value={coinSearch} placeholder={i18n.t('crypto-tx-search-coin', 'Search coin...')} />
-              {#if coinSearch.length >= 1}
-                <div class="coin-dropdown">
-                  {#each filteredCoins as c}
-                    <button class="coin-option" onclick={() => selectToCoin(c)}>{c.symbol} - {c.name}</button>
-                  {/each}
-                </div>
+            <div class="coin-search-wrap">
+              <input type="text" bind:value={toCoinSearch} placeholder={i18n.t('crypto-tx-search-coin', 'Search coin...')} />
+              {#if txToCoinId}
+                <button class="clear-coin" onclick={() => { txToCoinId = ''; txToSymbol = ''; toCoinSearch = '' }}>x</button>
               {/if}
+            </div>
+            {#if toCoinSearch.length >= 1 && toCoinSearch !== txToSymbol}
+              <div class="coin-dropdown">
+                {#each filteredToCoins as c}
+                  <button class="coin-option" onclick={() => selectToCoin(c)}>{c.symbol} - {c.name}</button>
+                {/each}
+              </div>
             {/if}
           </label>
           <label>
@@ -1577,20 +1591,18 @@
           </label>
           <label>
             {i18n.t('crypto-tx-coin', 'Coin')}
-            {#if txCoinId}
-              <div class="coin-selected">
-                <span>{txSymbol}</span>
-                <button class="clear-coin" onclick={() => { txCoinId = ''; txSymbol = '' }}>x</button>
-              </div>
-            {:else}
+            <div class="coin-search-wrap">
               <input type="text" bind:value={coinSearch} placeholder={i18n.t('crypto-tx-search-coin', 'Search coin...')} />
-              {#if coinSearch.length >= 1}
-                <div class="coin-dropdown">
-                  {#each filteredCoins as c}
-                    <button class="coin-option" onclick={() => selectCoin(c)}>{c.symbol} - {c.name}</button>
-                  {/each}
-                </div>
+              {#if txCoinId}
+                <button class="clear-coin" onclick={() => { txCoinId = ''; txSymbol = ''; coinSearch = '' }}>x</button>
               {/if}
+            </div>
+            {#if coinSearch.length >= 1 && coinSearch !== txSymbol}
+              <div class="coin-dropdown">
+                {#each filteredCoins as c}
+                  <button class="coin-option" onclick={() => selectCoin(c)}>{c.symbol} - {c.name}</button>
+                {/each}
+              </div>
             {/if}
           </label>
           <label>
@@ -2128,12 +2140,9 @@
     background: var(--glass-active); color: var(--text-primary);
     border-color: var(--accent-border); box-shadow: 0 0 0 1px var(--accent-glow) inset;
   }
-  .coin-selected {
-    display: flex; align-items: center; gap: 8px; padding: 8px 12px;
-    background: var(--select-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    color: var(--text-primary); font-size: 0.9rem;
-  }
-  .coin-selected span { font-weight: 500; }
+  .coin-search-wrap { position: relative; display: flex; align-items: center; }
+  .coin-search-wrap input { flex: 1; }
+  .coin-search-wrap .clear-coin { position: absolute; right: 8px; }
   .clear-coin {
     background: none; border: none; color: var(--text-tertiary); cursor: pointer; font-size: 0.9rem;
     margin-left: auto; padding: 0 4px; transition: color 0.15s;
@@ -2177,6 +2186,7 @@
   }
   .icon-btn-mini:hover { color: var(--accent); }
   .icon-btn-mini svg { width: 14px; height: 14px; }
+
   .delete-btn {
     background: none; border: none; color: var(--text-tertiary); cursor: pointer; padding: 2px;
     display: flex; align-items: center; transition: color 0.15s; flex-shrink: 0;
