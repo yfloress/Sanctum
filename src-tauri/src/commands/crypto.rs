@@ -480,7 +480,8 @@ pub fn generate_tax_report(
     controller: State<'_, Arc<AppController>>, period_id: String,
 ) -> Result<TaxReportDto, String> {
     let r = controller.generate_tax_report(period_id.clone()).map_err(|e| e.to_string())?;
-    let override_curr = if r.jurisdiction == "CL" { Some("CLP") } else { None };
+    // Backend serializes jurisdiction via `TaxJurisdiction::as_str()` → "chile"/"usa"/"other".
+    let override_curr = if r.jurisdiction == "chile" { Some("CLP") } else { None };
     
     Ok(TaxReportDto {
         period_id, jurisdiction: r.jurisdiction, method: r.method,
