@@ -41,6 +41,7 @@
 
 ## About
 
+> [!CAUTION]
 > **NOT READY FOR USE, IN DEVELOPMENT**
 
 **Sanctum** is a privacy-first desktop vault for money, crypto, and habits. It runs

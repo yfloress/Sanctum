@@ -41,6 +41,7 @@
 
 ## Acerca de
 
+> [!CAUTION]
 > **NO ESTA LISTO PARA USAR, EN DESARROLLO**
 
 **Sanctum** es una bóveda de escritorio orientada a privacidad para finanzas, crypto y hábitos.
