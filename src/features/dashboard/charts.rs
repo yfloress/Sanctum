@@ -306,7 +306,7 @@ impl DashboardCharts {
         }
 
         let mut result: Vec<(String, i64)> = map.into_iter().collect();
-        result.sort_by(|a, b| b.1.cmp(&a.1));
+        result.sort_by_key(|b| std::cmp::Reverse(b.1));
         result
     }
 
@@ -350,7 +350,7 @@ impl DashboardCharts {
 
         if total_expense > 0 {
             let mut by_amount: Vec<(String, i64)> = expenses.into_iter().collect();
-            by_amount.sort_by(|a, b| b.1.cmp(&a.1));
+            by_amount.sort_by_key(|b| std::cmp::Reverse(b.1));
 
             for (idx, (category, amount)) in by_amount.iter().enumerate() {
                 if *amount <= 0 {

@@ -393,7 +393,7 @@ impl AppController {
             .map(|(category, count)| CategoryDistributionPoint { category, count })
             .collect();
             
-        category_data.sort_by(|a, b| b.count.cmp(&a.count)); // Sort descending
+        category_data.sort_by_key(|b| std::cmp::Reverse(b.count)); // Sort descending
 
         Ok(HabitAnalytics {
             weekday_data,

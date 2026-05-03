@@ -465,7 +465,7 @@ impl ExchangeParser for MexcStatementParser {
         }
 
         for bucket in pending_convert.into_values() {
-            for leg in bucket.outflow.into_iter().chain(bucket.inflow.into_iter()) {
+            for leg in bucket.outflow.into_iter().chain(bucket.inflow) {
                 result.errors.push(RowError::new(
                     leg.line_number,
                     Some("Transaction Type"),
