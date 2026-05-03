@@ -21,6 +21,11 @@
   import * as cryptoApi from '../lib/api/crypto'
   import PortfolioTrendChart from '../components/charts/PortfolioTrendChart.svelte'
   import DistributionChart from '../components/charts/DistributionChart.svelte'
+  import CryptoTransactionModal from '../components/crypto/CryptoTransactionModal.svelte'
+  import CryptoEditModal from '../components/crypto/CryptoEditModal.svelte'
+  import CryptoWalletPanel from '../components/crypto/CryptoWalletPanel.svelte'
+  import CryptoAssetPanel from '../components/crypto/CryptoAssetPanel.svelte'
+  import CryptoTaxPanel from '../components/crypto/CryptoTaxPanel.svelte'
   import type {
     PortfolioResponse, PortfolioTrendData,
     WalletsResponse, WalletDetailResponse,
@@ -84,49 +89,10 @@
 
   // Edit transaction modal
   let showEditTransaction = $state(false)
-  let editTxLoading = $state(false)
-  let editTxData = $state<import('../lib/types').CryptoTransactionEditData | null>(null)
-  let editTxAmount = $state('')
-  let editTxPrice = $state('')
-  let editTxFee = $state('')
-  let editTxFeeCoinId = $state('')
-  let editTxFeeCoinAmount = $state('')
-  let editTxDate = $state('')
-  let editTxNotes = $state('')
-  let editTxSubtype = $state('')
-  let editTxOverrideProceeds = $state('')
-  let editTxOverrideCostBasis = $state('')
-
-  const SUBTYPES_BY_TYPE: Record<string, string[]> = {
-    trade: ['buy', 'sell', 'swap', 'other'],
-    income: ['interest', 'reward', 'airdrop', 'gift', 'staking', 'mining', 'fork', 'payment', 'rebate', 'other'],
-    expense: ['payment', 'gift', 'fee', 'lost', 'stolen', 'donation', 'sell', 'other'],
-    transfer: ['deposit', 'withdrawal'],
-  }
+  let editTxId = $state('')
 
   // Transaction form
   let showAddTransaction = $state(false)
-  let txMode = $state<'buy' | 'sell' | 'income' | 'fee' | 'transfer' | 'swap'>('buy')
-  let txWalletId = $state('')
-  let txCoinId = $state('')
-  let txSymbol = $state('')
-  let txAmount = $state('')
-  let txPrice = $state('')
-  let txFee = $state('0')
-  let txDate = $state(new Date().toISOString().slice(0, 10))
-  let txNotes = $state('')
-  // Transfer fields
-  let txFromWalletId = $state('')
-  let txToWalletId = $state('')
-  let txFromAmount = $state('')
-  let txToAmount = $state('')
-  // Swap fields
-  let txFromCoinId = $state('')
-  let txFromSymbol = $state('')
-  let txToCoinId = $state('')
-  let txToSymbol = $state('')
-  let txSwapFromAmount = $state('')
-  let txSwapToAmount = $state('')
 
   // Ticker bar
   let tickerPrices = $state<CryptoAssetPriceDto[]>([])
@@ -146,14 +112,6 @@
   // Coin catalog (shared between transaction form, catalog modal and ticker config)
   let coinCatalog = $state<CoinCatalogDto[]>([])
 
-  let tickerConfigAvailable = $derived(
-    coinCatalog.filter(c => !tickerIds.includes(c.id) && (
-      tickerConfigSearch.length < 1 ||
-      c.symbol.toLowerCase().includes(tickerConfigSearch.toLowerCase()) ||
-      c.name.toLowerCase().includes(tickerConfigSearch.toLowerCase())
-    )).slice(0, 60)
-  )
-
   let tickerConfigActive = $derived(
     tickerIds.map(id => coinCatalog.find(c => c.id === id)).filter(Boolean) as typeof coinCatalog
   )
@@ -164,6 +122,14 @@
       c.symbol.toLowerCase().includes(catalogSearch.toLowerCase()) ||
       c.name.toLowerCase().includes(catalogSearch.toLowerCase())
     ).slice(0, 100)
+  )
+
+  let tickerConfigAvailable = $derived(
+    coinCatalog.filter(c => !tickerIds.includes(c.id) && (
+      tickerConfigSearch.length < 1 ||
+      c.symbol.toLowerCase().includes(tickerConfigSearch.toLowerCase()) ||
+      c.name.toLowerCase().includes(tickerConfigSearch.toLowerCase())
+    )).slice(0, 60)
   )
 
   async function openTickerConfig(tab: 'ticker' | 'coins' = 'ticker') {
@@ -292,131 +258,19 @@
     } catch (e) { app.showToast(String(e), true) }
   }
 
-
-  let coinSearch = $state('')
-  let fromCoinSearch = $state('')
-  let toCoinSearch = $state('')
-  let filteredCoins = $derived(
-    coinSearch.length < 1 ? coinCatalog.slice(0, 50) :
-    coinCatalog.filter(c =>
-      c.symbol.toLowerCase().includes(coinSearch.toLowerCase()) ||
-      c.name.toLowerCase().includes(coinSearch.toLowerCase())
-    ).slice(0, 50)
-  )
-  let filteredFromCoins = $derived(
-    fromCoinSearch.length < 1
-      ? coinCatalog.slice(0, 50)
-      : coinCatalog.filter(c =>
-          c.symbol.toLowerCase().includes(fromCoinSearch.toLowerCase()) ||
-          c.name.toLowerCase().includes(fromCoinSearch.toLowerCase())
-        ).slice(0, 50)
-  )
-  let filteredToCoins = $derived(
-    toCoinSearch.length < 1
-      ? coinCatalog.slice(0, 50)
-      : coinCatalog.filter(c =>
-          c.symbol.toLowerCase().includes(toCoinSearch.toLowerCase()) ||
-          c.name.toLowerCase().includes(toCoinSearch.toLowerCase())
-        ).slice(0, 50)
-  )
-
   async function loadCoinCatalog() {
     if (coinCatalog.length > 0) return
     try { coinCatalog = await cryptoApi.getCoinCatalog() } catch (e) { app.showToast(String(e), true) }
   }
 
   function openAddTransaction() {
-    txMode = 'buy'
-    txWalletId = walletsData?.simple_list[0]?.id ?? ''
-    txCoinId = ''
-    txSymbol = ''
-    txAmount = ''
-    txPrice = ''
-    txFee = '0'
-    txDate = new Date().toISOString().slice(0, 10)
-    txNotes = ''
-    txFromWalletId = walletsData?.simple_list[0]?.id ?? ''
-    txToWalletId = walletsData?.simple_list[1]?.id ?? walletsData?.simple_list[0]?.id ?? ''
-    txFromAmount = ''
-    txToAmount = ''
-    txFromCoinId = ''
-    txFromSymbol = ''
-    txToCoinId = ''
-    txToSymbol = ''
-    txSwapFromAmount = ''
-    txSwapToAmount = ''
-    coinSearch = ''
-    fromCoinSearch = ''
-    toCoinSearch = ''
     loadCoinCatalog()
     showAddTransaction = true
   }
 
-  function selectCoin(coin: CoinCatalogDto) {
-    txCoinId = coin.id
-    txSymbol = coin.symbol
-    coinSearch = coin.symbol
-  }
-
-  function selectFromCoin(coin: CoinCatalogDto) {
-    txFromCoinId = coin.id
-    txFromSymbol = coin.symbol
-    fromCoinSearch = coin.symbol
-  }
-
-  function selectToCoin(coin: CoinCatalogDto) {
-    txToCoinId = coin.id
-    txToSymbol = coin.symbol
-    toCoinSearch = coin.symbol
-  }
-
-  async function submitCryptoTransaction() {
-    try {
-      if (txMode === 'transfer') {
-        await cryptoApi.addCryptoTransfer({
-          from_wallet_id: txFromWalletId,
-          to_wallet_id: txToWalletId,
-          coin_id: txCoinId,
-          symbol: txSymbol,
-          from_amount: txFromAmount,
-          to_amount: txToAmount || txFromAmount,
-          fee: txFee,
-          date: txDate,
-          notes: txNotes || undefined,
-        })
-      } else if (txMode === 'swap') {
-        await cryptoApi.addCryptoSwap({
-          wallet_id: txWalletId,
-          from_coin_id: txFromCoinId,
-          from_symbol: txFromSymbol,
-          from_amount: txSwapFromAmount,
-          to_coin_id: txToCoinId,
-          to_symbol: txToSymbol,
-          to_amount: txSwapToAmount,
-          fee: txFee,
-          date: txDate,
-          notes: txNotes || undefined,
-        })
-      } else {
-        await cryptoApi.addCryptoTransaction({
-          wallet_id: txWalletId,
-          coin_id: txCoinId,
-          symbol: txSymbol,
-          transaction_type: txMode,
-          amount: txAmount,
-          price: txPrice,
-          fee: txFee,
-          date: txDate,
-          notes: txNotes || undefined,
-        })
-      }
-      showAddTransaction = false
-      await load()
-      if (activeTab === 'wallets') await loadWallets()
-      app.showToast(i18n.t('crypto-toast-tx-added', 'Transaction added'))
-    } catch (e) {
-      app.showToast(String(e), true)
-    }
+  function openEditTransaction(id: string) {
+    editTxId = id
+    showEditTransaction = true
   }
 
   async function deleteCryptoTx(id: string) {
@@ -432,60 +286,6 @@
       app.showToast(i18n.t('crypto-toast-tx-deleted', 'Transaction deleted'))
     } catch (e) {
       app.showToast(String(e), true)
-    }
-  }
-
-  async function openEditTransaction(id: string) {
-    try {
-      const data = await cryptoApi.getCryptoTransaction(id)
-      editTxData = data
-      editTxAmount = data.amount
-      editTxPrice = data.price
-      editTxFee = data.fee
-      editTxFeeCoinId = data.fee_coin_id ?? ''
-      editTxFeeCoinAmount = data.fee_coin_amount ?? ''
-      editTxDate = data.date
-      editTxNotes = data.notes ?? ''
-      editTxSubtype = data.subtype ?? ''
-      editTxOverrideProceeds = data.override_proceeds ?? ''
-      editTxOverrideCostBasis = data.override_cost_basis ?? ''
-      showEditTransaction = true
-    } catch (e) {
-      app.showToast(String(e), true)
-    }
-  }
-
-  async function submitEditTransaction() {
-    if (!editTxData) return
-    editTxLoading = true
-    try {
-      await cryptoApi.updateCryptoTransaction({
-        id: editTxData.id,
-        amount: editTxAmount,
-        price: editTxPrice,
-        fee: editTxFee || '0',
-        fee_coin_id: editTxFeeCoinId || undefined,
-        fee_coin_amount: editTxFeeCoinAmount || undefined,
-        date: editTxDate,
-        notes: editTxNotes || undefined,
-        subtype: editTxSubtype || undefined,
-        override_proceeds: editTxOverrideProceeds || undefined,
-        override_cost_basis: editTxOverrideCostBasis || undefined,
-      })
-      showEditTransaction = false
-      editTxData = null
-      if (showAssetDetail) {
-        assetTransactions = await cryptoApi.getCryptoTransactionsByCoin(assetCoinId)
-      }
-      if (selectedWallet) {
-        selectedWallet = await cryptoApi.fetchWalletDetail(selectedWallet.id)
-      }
-      await load()
-      app.showToast(i18n.t('crypto-toast-tx-updated', 'Transaction updated'))
-    } catch (e) {
-      app.showToast(String(e), true)
-    } finally {
-      editTxLoading = false
     }
   }
 
@@ -556,8 +356,6 @@
     }
   }
 
-  // Wallet icon state
-  let showWalletIconPicker = $state(false)
   // Create-wallet icon state
   let walletIcon = $state('')
   let showCreateWalletIconPicker = $state(false)
@@ -572,36 +370,6 @@
   let assetInView = $derived(
     portfolio?.assets.find(a => a.coin_id === assetCoinId)
   )
-
-  // Wallet edit state
-  let editingWalletName = $state('')
-  let showEditWalletName = $state(false)
-
-  async function startEditWalletName() {
-    editingWalletName = selectedWallet?.name ?? ''
-    showEditWalletName = true
-  }
-
-  async function changeWalletIcon(icon: string) {
-    if (!selectedWallet) return
-    try {
-      await cryptoApi.updateWalletIcon(selectedWallet.id, icon || null)
-      selectedWallet = await cryptoApi.fetchWalletDetail(selectedWallet.id)
-      await loadWallets()
-      showWalletIconPicker = false
-    } catch (e) { app.showToast(String(e), true) }
-  }
-
-  async function submitWalletName() {
-    if (!selectedWallet || !editingWalletName.trim()) return
-    try {
-      await cryptoApi.updateWalletName(selectedWallet.id, editingWalletName)
-      selectedWallet = await cryptoApi.fetchWalletDetail(selectedWallet.id)
-      await loadWallets()
-      showEditWalletName = false
-      app.showToast(i18n.t('crypto-toast-wallet-renamed', 'Wallet renamed'))
-    } catch (e) { app.showToast(String(e), true) }
-  }
 
   let taxPeriodId = $state('')
   let taxReport = $state<TaxReportDto | null>(null)
@@ -1151,184 +919,39 @@
 </div>
 
 <!-- Tax Settings Modal -->
-{#if showTaxSettings}
-  <div class="modal-backdrop" role="presentation" onclick={() => showTaxSettings = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showTaxSettings = false }}></div>
-  <div class="modal-wrapper">
-    <div class="modal">
-      <h3>{i18n.t('crypto-tax-settings-title', 'Tax Settings')}</h3>
-      <div class="form-grid">
-        <label>
-          {i18n.t('crypto-tax-jurisdiction', 'Jurisdiction')}
-          <select bind:value={taxJurisdiction}>
-            <option value="usa">{i18n.t('crypto-tax-jurisdiction-us', 'United States')}</option>
-            <option value="chile">{i18n.t('crypto-tax-jurisdiction-cl', 'Chile')}</option>
-            <option value="other">{i18n.t('crypto-tax-jurisdiction-other', 'Other')}</option>
-          </select>
-        </label>
-        <label>
-          {i18n.t('crypto-tax-cost-basis-method', 'Cost Basis Method')}
-          <select bind:value={taxMethod}>
-            <option value="fifo">{i18n.t('crypto-tax-method-fifo', 'FIFO')}</option>
-            <option value="lifo">{i18n.t('crypto-tax-method-lifo', 'LIFO')}</option>
-            <option value="hifo">{i18n.t('crypto-tax-method-hifo', 'HIFO')}</option>
-            <option value="cpp">{i18n.t('crypto-tax-method-avg', 'Average Cost')}</option>
-          </select>
-        </label>
-        <label>
-          <input type="checkbox" bind:checked={taxIncludeSwaps} />
-          {i18n.t('crypto-tax-include-swaps-label', 'Include Swaps in Disposals')}
-        </label>
-        <label>
-          <input type="checkbox" bind:checked={taxIncludeFeeCrypto} />
-          {i18n.t('crypto-tax-include-fee-label', 'Include Fee Crypto as Disposal')}
-        </label>
-        {#if walletsData && walletsData.wallets.length > 0}
-          <div class="exclusion-section">
-            <span class="exclusion-title">{i18n.t('crypto-tax-exclude-wallets', 'Exclude Wallets')}</span>
-            {#each walletsData.wallets as w}
-              <label class="exclusion-row">
-                <input
-                  type="checkbox"
-                  checked={taxExcludedWalletIds.includes(w.id)}
-                  onchange={() => {
-                    if (taxExcludedWalletIds.includes(w.id)) {
-                      taxExcludedWalletIds = taxExcludedWalletIds.filter(x => x !== w.id)
-                    } else {
-                      taxExcludedWalletIds = [...taxExcludedWalletIds, w.id]
-                    }
-                  }}
-                />
-                <span>{w.name}</span>
-              </label>
-            {/each}
-          </div>
-        {/if}
-      </div>
-      <div class="modal-actions">
-        <button class="secondary-btn" onclick={() => showTaxSettings = false}>{i18n.t('crypto-cancel', 'Cancel')}</button>
-        <button class="primary-btn" onclick={saveTaxSettings} disabled={taxLoading}>{i18n.t('crypto-save', 'Save')}</button>
-      </div>
-    </div>
-  </div>
-{/if}
+<CryptoTaxPanel
+  bind:show={showTaxSettings}
+  bind:taxJurisdiction={taxJurisdiction}
+  bind:taxMethod={taxMethod}
+  bind:taxIncludeSwaps={taxIncludeSwaps}
+  bind:taxIncludeFeeCrypto={taxIncludeFeeCrypto}
+  bind:taxExcludedWalletIds={taxExcludedWalletIds}
+  taxLoading={taxLoading}
+  wallets={walletsData?.wallets ?? []}
+  onsave={saveTaxSettings}
+  onclose={() => showTaxSettings = false}
+/>
 
 <!-- Wallet Detail Panel -->
-{#if selectedWallet}
-  <div class="overlay-backdrop" role="presentation" onclick={() => selectedWallet = null} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') selectedWallet = null }}></div>
-  <aside class="detail-panel">
-    <div class="panel-header">
-      {#if showEditWalletName}
-        <div class="inline-edit">
-          <input type="text" bind:value={editingWalletName} class="edit-name-input" />
-          <button class="icon-btn-sm" onclick={submitWalletName}>{i18n.t('crypto-save', 'Save')}</button>
-          <button class="icon-btn-sm" onclick={() => showEditWalletName = false}>{i18n.t('crypto-cancel', 'Cancel')}</button>
-        </div>
-      {:else}
-        <button class="clickable-name" onclick={startEditWalletName} title={i18n.t('crypto-click-rename', 'Click to rename')}>{selectedWallet.name}</button>
-      {/if}
-      <button class="close-panel" aria-label="Close panel" onclick={() => selectedWallet = null}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
-    </div>
-    <div class="panel-meta">
-      <span>{selectedWallet.category}</span>
-      <span class="panel-total">{selectedWallet.total_value}</span>
-    </div>
-    <div class="panel-icon-row">
-      <img src={getWalletDisplayIcon(selectedWallet)} alt="" class="panel-wallet-icon" class:themed-icon={isGenericWalletIcon(selectedWallet.icon_path)} onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
-      <button class="change-icon-btn" onclick={() => showWalletIconPicker = !showWalletIconPicker}>
-        {showWalletIconPicker ? i18n.t('crypto-close', 'Close') : i18n.t('crypto-change-icon', 'Change Icon')}
-      </button>
-    </div>
-    {#if showWalletIconPicker}
-      <div class="icon-picker">
-        {#each WALLET_ICONS as icon}
-          <button class="icon-option" onclick={() => changeWalletIcon(icon.value)} title={icon.value}>
-            <img src={icon.src} alt={icon.value} class:themed-icon={icon.generic} onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
-          </button>
-        {/each}
-        <button class="icon-option icon-reset" onclick={() => changeWalletIcon('')} title="Default">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12l9-9 9 9M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9"/></svg>
-        </button>
-      </div>
-    {/if}
-
-    {#if selectedWallet.holdings.length > 0}
-      <h4>{i18n.t('crypto-holdings', 'Holdings')}</h4>
-      {#each selectedWallet.holdings as h}
-        <div class="holding-row">
-          <span class="h-symbol">{h.symbol}</span>
-          <span class="h-amount">{h.amount}</span>
-          <span class="h-value">{h.value}</span>
-        </div>
-      {/each}
-    {/if}
-
-    {#if selectedWallet.transactions.length > 0}
-      <h4>{i18n.t('crypto-transactions', 'Transactions')}</h4>
-      {#each selectedWallet.transactions.slice(0, 20) as tx}
-        <div class="panel-tx">
-          <span class="tx-date">{tx.date}</span>
-          <span class="tx-type">{tx.transaction_type}</span>
-          <span class="tx-amount">{tx.amount} {tx.symbol}</span>
-          <div class="panel-tx-actions">
-            <button class="icon-btn-mini" onclick={() => openEditTransaction(tx.id)} aria-label={i18n.t('crypto-edit', 'Edit')} title={i18n.t('crypto-edit', 'Edit')}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            </button>
-            <button class="delete-btn" onclick={() => deleteCryptoTx(tx.id)} aria-label={i18n.t('crypto-delete', 'Delete')} title={i18n.t('crypto-delete', 'Delete')}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-            </button>
-          </div>
-        </div>
-      {/each}
-    {/if}
-
-    <div class="panel-actions">
-      <button class="danger-btn" onclick={() => deleteWallet(selectedWallet!.id)}>{i18n.t('crypto-delete-wallet', 'Delete Wallet')}</button>
-    </div>
-  </aside>
-{/if}
+<CryptoWalletPanel
+  show={selectedWallet !== null}
+  wallet={selectedWallet}
+  ondelete={deleteWallet}
+  onedit={(id) => openEditTransaction(id)}
+  ondeleteTx={deleteCryptoTx}
+  onrefresh={async () => { const id = selectedWallet?.id; if (id) selectedWallet = await cryptoApi.fetchWalletDetail(id); await loadWallets() }}
+  onclose={() => selectedWallet = null}
+/>
 
 <!-- Asset Detail Overlay -->
-{#if showAssetDetail && assetInView}
-  <div class="overlay-backdrop" role="presentation" onclick={() => showAssetDetail = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAssetDetail = false }}></div>
-  <aside class="detail-panel">
-    <div class="panel-header">
-      <h3>{assetInView.symbol} - {assetInView.name}</h3>
-      <button class="close-panel" aria-label="Close panel" onclick={() => showAssetDetail = false}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
-    </div>
-    <div class="panel-meta">
-      <span>{assetInView.price}</span>
-      <span class="change" class:negative={assetInView.price_change_24h_negative}>{assetInView.price_change_24h}</span>
-    </div>
-    <div class="asset-stats">
-      <div><span class="stat-lbl">{i18n.t('crypto-amount', 'Amount')}</span><span>{assetInView.amount}</span></div>
-      <div><span class="stat-lbl">{i18n.t('crypto-value', 'Value')}</span><span>{assetInView.value}</span></div>
-      <div><span class="stat-lbl">{i18n.t('crypto-allocation', 'Allocation')}</span><span>{assetInView.allocation_pct.toFixed(1)}%</span></div>
-    </div>
-
-    {#if assetTransactions.length > 0}
-      <h4>{i18n.t('crypto-transactions', 'Transactions')}</h4>
-      {#each assetTransactions as tx}
-        <div class="panel-tx">
-          <span class="tx-date">{tx.date}</span>
-          <span class="tx-type">{tx.transaction_type}</span>
-          <span class="tx-amount">{tx.amount} {tx.symbol}</span>
-          <div class="panel-tx-actions">
-            <button class="icon-btn-mini" onclick={() => openEditTransaction(tx.id)} aria-label={i18n.t('crypto-edit', 'Edit')} title={i18n.t('crypto-edit', 'Edit')}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            </button>
-            <button class="delete-btn" onclick={() => deleteCryptoTx(tx.id)} aria-label={i18n.t('crypto-delete', 'Delete')} title={i18n.t('crypto-delete', 'Delete')}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-            </button>
-          </div>
-        </div>
-      {/each}
-    {/if}
-  </aside>
-{/if}
+<CryptoAssetPanel
+  show={showAssetDetail && assetInView !== undefined}
+  asset={assetInView ?? null}
+  transactions={assetTransactions}
+  onedit={(id) => openEditTransaction(id)}
+  ondeleteTx={deleteCryptoTx}
+  onclose={() => showAssetDetail = false}
+/>
 
 <!-- Add Wallet Modal -->
 {#if showAddWallet}
@@ -1472,241 +1095,25 @@
 {/if}
 
 <!-- Add Crypto Transaction Modal -->
-{#if showAddTransaction}
-  <div class="modal-backdrop" role="presentation" onclick={() => showAddTransaction = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddTransaction = false }}></div>
-  <div class="modal-wrapper">
-    <div class="modal wide">
-      <h3>{i18n.t('crypto-tx-title', 'New Transaction')}</h3>
-      <!-- Transaction type selector -->
-      <div class="tx-type-bar">
-        {#each (['buy', 'sell', 'income', 'fee', 'transfer', 'swap'] as const) as t}
-          <button class="tx-type-btn" class:active={txMode === t} onclick={() => txMode = t}>
-            {i18n.t(`crypto-tx-${t}`, t.charAt(0).toUpperCase() + t.slice(1))}
-          </button>
-        {/each}
-      </div>
-
-      <div class="form-grid">
-        {#if txMode === 'transfer'}
-          <!-- Transfer form -->
-          <label>
-            {i18n.t('crypto-tx-coin', 'Coin')}
-            <div class="coin-search-wrap">
-              <input type="text" bind:value={coinSearch} placeholder={i18n.t('crypto-tx-search-coin', 'Search coin...')} />
-              {#if txCoinId}
-                <button class="clear-coin" onclick={() => { txCoinId = ''; txSymbol = ''; coinSearch = '' }}>x</button>
-              {/if}
-            </div>
-            {#if coinSearch.length >= 1 && coinSearch !== txSymbol}
-              <div class="coin-dropdown">
-                {#each filteredCoins as c}
-                  <button class="coin-option" onclick={() => selectCoin(c)}>{c.symbol} - {c.name}</button>
-                {/each}
-              </div>
-            {/if}
-          </label>
-          <label>
-            {i18n.t('crypto-tx-from-wallet', 'From Wallet')}
-            <select bind:value={txFromWalletId}>
-              {#each walletsData?.simple_list ?? [] as w}
-                <option value={w.id}>{w.name}</option>
-              {/each}
-            </select>
-          </label>
-          <label>
-            {i18n.t('crypto-tx-to-wallet', 'To Wallet')}
-            <select bind:value={txToWalletId}>
-              {#each walletsData?.simple_list ?? [] as w}
-                <option value={w.id}>{w.name}</option>
-              {/each}
-            </select>
-          </label>
-          <label>
-            {i18n.t('crypto-tx-amount', 'Amount')}
-            <input type="text" bind:value={txFromAmount} placeholder="0.00" />
-          </label>
-          <label>
-            {i18n.t('crypto-tx-received-amount', 'Received Amount (optional)')}
-            <input type="text" bind:value={txToAmount} placeholder={i18n.t('crypto-tx-received-placeholder', 'Same as sent if empty')} />
-          </label>
-        {:else if txMode === 'swap'}
-          <!-- Swap form -->
-          <label>
-            {i18n.t('crypto-tx-wallet', 'Wallet')}
-            <select bind:value={txWalletId}>
-              {#each walletsData?.simple_list ?? [] as w}
-                <option value={w.id}>{w.name}</option>
-              {/each}
-            </select>
-          </label>
-          <label>
-            {i18n.t('crypto-tx-from-coin', 'From Coin')}
-            <div class="coin-search-wrap">
-              <input type="text" bind:value={fromCoinSearch} placeholder={i18n.t('crypto-tx-search-coin', 'Search coin...')} />
-              {#if txFromCoinId}
-                <button class="clear-coin" onclick={() => { txFromCoinId = ''; txFromSymbol = ''; fromCoinSearch = '' }}>x</button>
-              {/if}
-            </div>
-            {#if fromCoinSearch.length >= 1 && fromCoinSearch !== txFromSymbol}
-              <div class="coin-dropdown">
-                {#each filteredFromCoins as c}
-                  <button class="coin-option" onclick={() => selectFromCoin(c)}>{c.symbol} - {c.name}</button>
-                {/each}
-              </div>
-            {/if}
-          </label>
-          <label>
-            {i18n.t('crypto-tx-from-amount', 'From Amount')}
-            <input type="text" bind:value={txSwapFromAmount} placeholder="0.00" />
-          </label>
-          <label>
-            {i18n.t('crypto-tx-to-coin', 'To Coin')}
-            <div class="coin-search-wrap">
-              <input type="text" bind:value={toCoinSearch} placeholder={i18n.t('crypto-tx-search-coin', 'Search coin...')} />
-              {#if txToCoinId}
-                <button class="clear-coin" onclick={() => { txToCoinId = ''; txToSymbol = ''; toCoinSearch = '' }}>x</button>
-              {/if}
-            </div>
-            {#if toCoinSearch.length >= 1 && toCoinSearch !== txToSymbol}
-              <div class="coin-dropdown">
-                {#each filteredToCoins as c}
-                  <button class="coin-option" onclick={() => selectToCoin(c)}>{c.symbol} - {c.name}</button>
-                {/each}
-              </div>
-            {/if}
-          </label>
-          <label>
-            {i18n.t('crypto-tx-to-amount', 'To Amount')}
-            <input type="text" bind:value={txSwapToAmount} placeholder="0.00" />
-          </label>
-        {:else}
-          <!-- Buy/Sell/Income/Fee form -->
-          <label>
-            {i18n.t('crypto-tx-wallet', 'Wallet')}
-            <select bind:value={txWalletId}>
-              {#each walletsData?.simple_list ?? [] as w}
-                <option value={w.id}>{w.name}</option>
-              {/each}
-            </select>
-          </label>
-          <label>
-            {i18n.t('crypto-tx-coin', 'Coin')}
-            <div class="coin-search-wrap">
-              <input type="text" bind:value={coinSearch} placeholder={i18n.t('crypto-tx-search-coin', 'Search coin...')} />
-              {#if txCoinId}
-                <button class="clear-coin" onclick={() => { txCoinId = ''; txSymbol = ''; coinSearch = '' }}>x</button>
-              {/if}
-            </div>
-            {#if coinSearch.length >= 1 && coinSearch !== txSymbol}
-              <div class="coin-dropdown">
-                {#each filteredCoins as c}
-                  <button class="coin-option" onclick={() => selectCoin(c)}>{c.symbol} - {c.name}</button>
-                {/each}
-              </div>
-            {/if}
-          </label>
-          <label>
-            {i18n.t('crypto-tx-amount', 'Amount')}
-            <input type="text" bind:value={txAmount} placeholder="0.00" />
-          </label>
-          <label>
-            {i18n.t('crypto-tx-price', 'Price (per coin)')}
-            <input type="text" bind:value={txPrice} placeholder="0.00" />
-          </label>
-        {/if}
-
-        <!-- Common fields -->
-        <label>
-          {i18n.t('crypto-tx-fee-label', 'Fee')}
-          <input type="text" bind:value={txFee} placeholder="0" />
-        </label>
-        <label>
-          {i18n.t('crypto-tx-date', 'Date')}
-          <input type="date" bind:value={txDate} />
-        </label>
-        <label>
-          {i18n.t('crypto-tx-notes', 'Notes (optional)')}
-          <input type="text" bind:value={txNotes} placeholder={i18n.t('crypto-tx-notes-placeholder', 'Notes...')} />
-        </label>
-      </div>
-
-      <div class="modal-actions">
-        <button class="secondary-btn" onclick={() => showAddTransaction = false}>{i18n.t('crypto-cancel', 'Cancel')}</button>
-        <button class="primary-btn" onclick={submitCryptoTransaction}>{i18n.t('crypto-tx-add', 'Add')}</button>
-      </div>
-    </div>
-  </div>
-{/if}
+<CryptoTransactionModal
+  bind:show={showAddTransaction}
+  wallets={walletsData?.simple_list ?? []}
+  coinCatalog={coinCatalog}
+  onsubmit={async () => { await load(); if (activeTab === 'wallets') await loadWallets() }}
+  onclose={() => showAddTransaction = false}
+/>
 
 <!-- Edit Crypto Transaction Modal -->
-{#if showEditTransaction && editTxData}
-  <div class="modal-backdrop" role="presentation" onclick={() => showEditTransaction = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showEditTransaction = false }}></div>
-  <div class="modal-wrapper">
-    <div class="modal wide">
-      <h3>{i18n.t('crypto-tx-edit-title', 'Edit Transaction')}</h3>
-      <div class="edit-tx-meta">
-        <span class="etm-wallet">{editTxData.wallet_name}</span>
-        <span class="etm-coin">{editTxData.symbol}</span>
-        <span class="etm-type" class:etm-negative={/^(sell|expense|fee)$/.test(editTxData.transaction_type)}>{editTxData.transaction_type}</span>
-      </div>
-
-      <div class="form-grid">
-        <label>
-          {i18n.t('crypto-tx-subtype', 'Subtype')}
-          <select bind:value={editTxSubtype}>
-            <option value="">--</option>
-            {#each SUBTYPES_BY_TYPE[editTxData.transaction_type] ?? [] as st}
-              <option value={st}>{st}</option>
-            {/each}
-          </select>
-        </label>
-        <label>
-          {i18n.t('crypto-tx-amount', 'Amount')}
-          <input type="text" bind:value={editTxAmount} placeholder="0.00" />
-        </label>
-        <label>
-          {i18n.t('crypto-tx-price', 'Price (per coin)')}
-          <input type="text" bind:value={editTxPrice} placeholder="0.00" />
-        </label>
-        <label>
-          {i18n.t('crypto-tx-fee-label', 'Fee')}
-          <input type="text" bind:value={editTxFee} placeholder="0" />
-        </label>
-        <label>
-          {i18n.t('crypto-tx-fee-coin-id', 'Fee Coin (optional)')}
-          <input type="text" bind:value={editTxFeeCoinId} placeholder="" />
-        </label>
-        <label>
-          {i18n.t('crypto-tx-fee-coin-amount', 'Fee Coin Amount (optional)')}
-          <input type="text" bind:value={editTxFeeCoinAmount} placeholder="0.00" />
-        </label>
-        <label>
-          {i18n.t('crypto-tx-date', 'Date')}
-          <input type="date" bind:value={editTxDate} />
-        </label>
-        <label>
-          {i18n.t('crypto-tx-notes', 'Notes (optional)')}
-          <input type="text" bind:value={editTxNotes} placeholder={i18n.t('crypto-tx-notes-placeholder', 'Notes...')} />
-        </label>
-        <label>
-          {i18n.t('crypto-tx-override-proceeds', 'Override Proceeds (optional)')}
-          <input type="text" bind:value={editTxOverrideProceeds} placeholder="0.00" />
-        </label>
-        <label>
-          {i18n.t('crypto-tx-override-cost-basis', 'Override Cost Basis (optional)')}
-          <input type="text" bind:value={editTxOverrideCostBasis} placeholder="0.00" />
-        </label>
-      </div>
-
-      <div class="modal-actions">
-        <button class="secondary-btn" onclick={() => showEditTransaction = false}>{i18n.t('crypto-cancel', 'Cancel')}</button>
-        <button class="primary-btn" onclick={submitEditTransaction} disabled={editTxLoading}>
-          {editTxLoading ? i18n.t('crypto-saving', 'Saving...') : i18n.t('crypto-save', 'Save')}
-        </button>
-      </div>
-    </div>
-  </div>
-{/if}
+<CryptoEditModal
+  bind:show={showEditTransaction}
+  txId={editTxId}
+  onsubmit={async () => {
+    if (showAssetDetail) assetTransactions = await cryptoApi.getCryptoTransactionsByCoin(assetCoinId)
+    if (selectedWallet) selectedWallet = await cryptoApi.fetchWalletDetail(selectedWallet.id)
+    await load()
+  }}
+  onclose={() => showEditTransaction = false}
+/>
 
 <style>
   .page { padding: 24px 32px; max-width: 960px; width: 100%; margin: 0 auto; }
@@ -1849,8 +1256,7 @@
   .wallet-val { font-size: 1.1rem; font-weight: 600; color: var(--text-primary); margin-top: 6px; }
   .wallet-count { font-size: 0.75rem; color: var(--text-tertiary); }
 
-  .panel-icon-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-  .panel-wallet-icon { width: 36px; height: 36px; border-radius: 6px; }
+
   .icon-picker {
     display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px;
     padding: 10px; background: var(--glass); border: 1px solid var(--glass-border);
@@ -1864,7 +1270,6 @@
   .icon-option:hover { border-color: var(--accent-border); background: var(--glass-active); }
   .icon-option.selected { border-color: var(--accent-border); background: var(--glass-active); }
   .icon-option img { width: 100%; height: 100%; object-fit: contain; border-radius: 3px; }
-  .icon-option.icon-reset svg { width: 18px; height: 18px; color: var(--text-tertiary); }
   .change-icon-btn {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 6px 10px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
@@ -1880,46 +1285,6 @@
 
   .themed-icon { filter: brightness(0) invert(1); }
   :global(.light-mode) .themed-icon { filter: brightness(0); }
-
-
-
-  /* Detail panel */
-  .overlay-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 50; }
-  .detail-panel {
-    position: fixed; top: 0; right: 0; bottom: 0; width: 400px;
-    background: linear-gradient(180deg, rgba(22, 22, 28, 0.88) 0%, rgba(16, 16, 20, 0.85) 100%);
-    border-left: 1px solid rgba(255, 255, 255, 0.08); z-index: 51;
-    padding: 24px; overflow-y: auto;
-    box-shadow: var(--glass-shadow-lg);
-    animation: slideInRight 0.25s ease;
-  }
-  @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
-
-  .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-  .panel-header h3 { margin: 0; color: var(--text-primary); font-size: 1rem; }
-  .close-panel { background: none; border: none; color: var(--text-tertiary); cursor: pointer; padding: 4px; display: flex; transition: color 0.15s; }
-  .close-panel:hover { color: var(--text-primary); }
-  .close-panel svg { width: 20px; height: 20px; }
-
-  .panel-meta { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; font-size: 0.9rem; color: var(--text-secondary); }
-  .panel-total { font-weight: 600; font-size: 1.1rem; }
-
-  .detail-panel h4 { font-size: 0.8rem; color: var(--text-tertiary); text-transform: uppercase; margin: 16px 0 8px; }
-
-  .holding-row { display: grid; grid-template-columns: 60px 1fr auto; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--glass-border); font-size: 0.85rem; }
-  .h-symbol { color: var(--text-secondary); font-weight: 500; }
-  .h-amount { color: var(--text-secondary); }
-  .h-value { color: var(--text-primary); text-align: right; }
-
-  .panel-tx { display: grid; grid-template-columns: 70px auto 1fr; gap: 8px; font-size: 0.8rem; padding: 6px 0; border-bottom: 1px solid var(--glass-border); }
-  .tx-date { color: var(--text-tertiary); }
-  .tx-type { color: var(--text-secondary); text-transform: capitalize; }
-  .tx-amount { color: var(--text-secondary); text-align: right; }
-
-  .panel-actions { margin-top: 20px; }
-
-  .asset-stats { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-  .asset-stats div { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-secondary); }
 
   /* Modal */
   .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 100; }
@@ -1939,6 +1304,7 @@
     box-shadow: inset 0 0.125em 0.125em rgba(254, 254, 254, 0.05), inset 0 -0.125em 0.125em rgba(0, 0, 0, 0.5), 0 0.25em 0.125em -0.125em rgba(254, 254, 254, 0.2), 0 0 0.1em 0.25em inset rgba(0, 0, 0, 0.2);
   }
   .modal h3 { margin: 0 0 20px; color: var(--text-primary); position: relative; z-index: 10; }
+  .modal.wide { width: 480px; }
 
   .form-grid { display: flex; flex-direction: column; gap: 14px; position: relative; z-index: 10; }
   .form-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: var(--text-secondary); }
@@ -1976,12 +1342,6 @@
     transition: all 0.15s;
   }
   .secondary-btn:hover { border-color: var(--glass-border-hover); }
-  .danger-btn {
-    padding: 8px 18px; border: 1px solid rgba(248, 113, 113, 0.2); border-radius: var(--radius-sm);
-    background: rgba(248, 113, 113, 0.08); color: var(--danger); cursor: pointer; font-size: 0.85rem;
-    transition: all 0.15s;
-  }
-  .danger-btn:hover { background: rgba(248, 113, 113, 0.15); border-color: rgba(248, 113, 113, 0.3); }
 
   /* Tax Section */
   .tax-section { display: flex; flex-direction: column; gap: 24px; }
@@ -2115,77 +1475,7 @@
   .events-table tr:hover { background: rgba(0, 0, 0, 0.1); }
   .events-table td.negative { color: var(--danger); }
 
-  /* Form */
-  select {
-    padding: 8px 12px; border: 1px solid var(--glass-border);
-    border-radius: var(--radius-sm); background: var(--select-bg);
-    color: var(--text-primary); font-size: 0.9rem;
-    transition: border-color 0.2s;
-  }
-  select:focus { border-color: var(--accent); outline: none; }
-  select option { background: var(--option-bg); color: var(--text-primary); }
-
   .header-actions { display: flex; gap: 8px; }
-
-  /* Crypto transaction modal */
-  .modal.wide { width: 480px; }
-  .tx-type-bar { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
-  .tx-type-btn {
-    flex: 1; min-width: 60px; padding: 8px 4px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    background: none; color: var(--text-secondary); cursor: pointer; font-size: 0.8rem; text-align: center;
-    transition: all 0.15s;
-  }
-  .tx-type-btn:hover { border-color: var(--glass-border-hover); color: var(--text-primary); }
-  .tx-type-btn.active {
-    background: var(--glass-active); color: var(--text-primary);
-    border-color: var(--accent-border); box-shadow: 0 0 0 1px var(--accent-glow) inset;
-  }
-  .coin-search-wrap { position: relative; display: flex; align-items: center; }
-  .coin-search-wrap input { flex: 1; }
-  .coin-search-wrap .clear-coin { position: absolute; right: 8px; }
-  .clear-coin {
-    background: none; border: none; color: var(--text-tertiary); cursor: pointer; font-size: 0.9rem;
-    margin-left: auto; padding: 0 4px; transition: color 0.15s;
-  }
-  .clear-coin:hover { color: var(--text-primary); }
-  .coin-dropdown {
-    max-height: 150px; overflow-y: auto; border: 1px solid var(--glass-border);
-    border-radius: var(--radius-sm); background: rgba(20, 20, 24, 0.95); margin-top: 4px;
-  }
-  .coin-option {
-    display: block; width: 100%; padding: 8px 12px; background: none; border: none;
-    color: var(--text-secondary); cursor: pointer; font-size: 0.8rem; text-align: left;
-    transition: background 0.1s;
-  }
-  .coin-option:hover { background: var(--glass-hover); color: var(--text-primary); }
-
-  /* Edit transaction modal */
-  .edit-tx-meta {
-    display: flex; gap: 10px; align-items: center; margin-bottom: 16px; flex-wrap: wrap;
-  }
-  .etm-wallet {
-    padding: 4px 10px; background: var(--glass); border: 1px solid var(--glass-border);
-    border-radius: var(--radius-sm); color: var(--text-secondary); font-size: 0.8rem;
-  }
-  .etm-coin {
-    padding: 4px 10px; background: rgba(0, 0, 0, 0.2); border-radius: var(--radius-sm);
-    color: var(--accent); font-size: 0.8rem; font-weight: 600;
-  }
-  .etm-type {
-    padding: 4px 10px; border-radius: var(--radius-sm);
-    font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
-    background: rgba(255, 255, 255, 0.05); color: var(--text-secondary);
-  }
-  .etm-negative { background: rgba(255, 69, 58, 0.12); color: var(--danger); }
-
-  .panel-tx-actions { display: flex; gap: 4px; align-items: center; }
-  .icon-btn-mini {
-    background: transparent; border: none; color: var(--text-secondary);
-    cursor: pointer; padding: 2px; display: inline-flex; align-items: center;
-    transition: color 0.15s;
-  }
-  .icon-btn-mini:hover { color: var(--accent); }
-  .icon-btn-mini svg { width: 14px; height: 14px; }
 
   .delete-btn {
     background: none; border: none; color: var(--text-tertiary); cursor: pointer; padding: 2px;
@@ -2195,33 +1485,6 @@
   .delete-btn svg { width: 14px; height: 14px; }
 
   .last-updated { font-size: 0.7rem; color: var(--text-tertiary); margin-top: 4px; }
-
-  /* Wallet inline edit */
-  .inline-edit { display: flex; align-items: center; gap: 6px; flex: 1; }
-  .edit-name-input {
-    padding: 6px 10px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    background: var(--select-bg); color: var(--text-primary); font-size: 0.9rem; flex: 1;
-  }
-  .edit-name-input:focus { border-color: var(--accent); outline: none; }
-  .icon-btn-sm {
-    padding: 4px 10px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    background: none; color: var(--text-secondary); cursor: pointer; font-size: 0.75rem;
-    transition: all 0.15s;
-  }
-  .icon-btn-sm:hover { border-color: var(--glass-border-hover); color: var(--text-primary); }
-  .clickable-name {
-    cursor: pointer; margin: 0; color: var(--text-primary); background: none; border: none;
-    font-size: 1rem; font-weight: 600; text-align: left; padding: 0;
-  }
-  .clickable-name:hover { color: var(--accent); }
-
-  /* Tax wallet exclusion */
-  .exclusion-section { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
-  .exclusion-title { font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; }
-  .exclusion-row {
-    display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-secondary); cursor: pointer;
-  }
-  .exclusion-row input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
 
   /* IPC section */
   .ipc-section {

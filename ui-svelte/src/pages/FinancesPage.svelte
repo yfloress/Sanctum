@@ -25,6 +25,9 @@
   import FinanceBarChart from '../components/charts/FinanceBarChart.svelte'
   import FinanceDonutChart from '../components/charts/FinanceDonutChart.svelte'
   import FinanceCategoryChart from '../components/charts/FinanceCategoryChart.svelte'
+  import FinanceTransactionModal from '../components/finance/FinanceTransactionModal.svelte'
+  import FinanceAccountPanel from '../components/finance/FinanceAccountPanel.svelte'
+  import FinanceCategoryPanel from '../components/finance/FinanceCategoryPanel.svelte'
 
   type Tab = 'overview' | 'activity' | 'accounts' | 'settings'
 
@@ -54,7 +57,6 @@
   let editingTransaction = $state<TransactionDto | null>(null)
   let editingAccount = $state<AccountDetailResponse | null>(null)
   let editingTransfer = $state<string | null>(null)
-  let showIconPicker = $state(false)
 
   const ACCOUNT_ICONS: { value: string; src: string; generic: boolean }[] = [
     ...['banco-chile', 'banco-estado', 'bank-of-america', 'bci', 'citibank', 'jpmorgan', 'mercado_pago', 'santander', 'wf']
@@ -67,14 +69,6 @@
     if (!iconPath) return true  // fallback is always a generic icon now
     return iconPath.startsWith('/src/assets/icons/')
   }
-
-  // Transaction form
-  let txAccountId = $state('')
-  let txAmount = $state('')
-  let txCategory = $state('')
-  let txDescription = $state('')
-  let txDate = $state(new Date().toISOString().slice(0, 10))
-  let txIsExpense = $state(true)
 
   // Account form
   let accName = $state('')
@@ -167,12 +161,6 @@
 
   function openAddTransaction() {
     editingTransaction = null
-    txAccountId = accountsData?.accounts[0]?.id ?? ''
-    txAmount = ''
-    txCategory = ''
-    txDescription = ''
-    txDate = new Date().toISOString().slice(0, 10)
-    txIsExpense = true
     showAddTransaction = true
   }
 
@@ -182,12 +170,6 @@
       return
     }
     editingTransaction = tx
-    txAccountId = tx.account_id
-    txAmount = tx.amount_raw
-    txCategory = tx.category_raw
-    txDescription = tx.description
-    txDate = tx.date
-    txIsExpense = tx.is_expense
     showAddTransaction = true
   }
 
@@ -199,25 +181,6 @@
     tfDescription = ''
     tfDate = tx.date
     showTransfer = true
-  }
-
-  async function submitTransaction() {
-    try {
-      if (editingTransaction) {
-        await financeApi.updateTransaction(
-          editingTransaction.id, txAccountId, txAmount, txCategory, txDescription, txDate, txIsExpense
-        )
-      } else {
-        await financeApi.addTransaction(
-          txAccountId, txAmount, txCategory, txDescription, txDate, txIsExpense
-        )
-      }
-      showAddTransaction = false
-      await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()])
-      app.showToast(editingTransaction ? i18n.t('finances-tx-updated', 'Transaction updated') : i18n.t('finances-tx-added', 'Transaction added'))
-    } catch (e) {
-      app.showToast(String(e), true)
-    }
   }
 
   async function deleteTransaction(id: string) {
@@ -331,18 +294,6 @@
     }
   }
 
-  async function changeAccountIcon(icon: string) {
-    if (!selectedAccount) return
-    try {
-      await financeApi.updateAccountIcon(selectedAccount.id, icon)
-      selectedAccount = await financeApi.fetchAccountDetails(selectedAccount.id)
-      await refreshAccounts()
-      showIconPicker = false
-    } catch (e) {
-      app.showToast(String(e), true)
-    }
-  }
-
   async function refreshAccounts() {
     try {
       accountsData = await financeApi.fetchAccounts()
@@ -351,15 +302,9 @@
     }
   }
 
-  // Category management
-  let newCatName = $state('')
-  let newCatType = $state<'expense' | 'income'>('expense')
-
-  async function addCategory() {
-    if (!newCatName.trim()) return
+  async function handleAddCategory(name: string, type: 'expense' | 'income') {
     try {
-      await financeApi.addCategory(newCatName, newCatType)
-      newCatName = ''
+      await financeApi.addCategory(name, type)
       categories = await financeApi.loadCategories()
       app.showToast(i18n.t('finances-cat-added', 'Category added'))
     } catch (e) {
@@ -367,7 +312,7 @@
     }
   }
 
-  async function deleteCat(id: string) {
+  async function handleDeleteCat(id: string) {
     try {
       await financeApi.deleteCategory(id)
       categories = await financeApi.loadCategories()
@@ -377,14 +322,15 @@
     }
   }
 
+  async function handleAccountIconChange(icon: string) {
+    if (!selectedAccount) return
+    await financeApi.updateAccountIcon(selectedAccount.id, icon)
+  }
+
   let allCategories = $derived<CategoryDto[]>([
     ...(categories?.expense ?? []),
     ...(categories?.income ?? []),
   ])
-
-  let txCategoryOptions = $derived<CategoryDto[]>(
-    txIsExpense ? (categories?.expense ?? []) : (categories?.income ?? [])
-  )
 
   // ── Overview chart data ────────────────────────────────────────────────────
 
@@ -740,198 +686,34 @@
 
   <!-- SETTINGS TAB -->
   {:else if activeTab === 'settings'}
-    <section class="tab-content">
-
-      <!-- Add category card -->
-      <div class="settings-card">
-        <span class="settings-card-label">{i18n.t('finances-new-category', 'New Category')}</span>
-        <div class="cat-add-row">
-          <input
-            class="cat-name-input"
-            type="text"
-            placeholder={i18n.t('finances-category-placeholder', 'Category name...')}
-            bind:value={newCatName}
-            onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter' && newCatName.trim()) addCategory() }}
-          />
-          <div class="toggle-row cat-type-toggle">
-            <button class="toggle-btn" class:active={newCatType === 'expense'} onclick={() => newCatType = 'expense'}>{i18n.t('finances-expense', 'Expense')}</button>
-            <button class="toggle-btn" class:active={newCatType === 'income'} onclick={() => newCatType = 'income'}>{i18n.t('finances-income', 'Income')}</button>
-          </div>
-          <button class="primary-btn" onclick={addCategory} disabled={!newCatName.trim()}>{i18n.t('finances-add', 'Add')}</button>
-        </div>
-      </div>
-
-      {#if categories}
-        <div class="cat-columns">
-
-          <!-- Expense column -->
-          <div class="cat-col">
-            <div class="cat-col-header">
-              <span class="cat-col-dot cat-col-dot--expense"></span>
-              <h4>{i18n.t('finances-expense', 'Expense')}</h4>
-              <span class="cat-count">{categories.expense.length}</span>
-            </div>
-            <div class="cat-chips">
-              {#each categories.expense as cat}
-                <div class="cat-chip" class:cat-chip--default={cat.is_default}>
-                  <span class="cat-chip-name">{cat.name}</span>
-                  {#if cat.is_default}
-                    <svg class="cat-chip-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
-                    </svg>
-                  {:else}
-                    <button class="cat-chip-del" onclick={() => deleteCat(cat.id)} aria-label="Delete {cat.name}">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                        <path d="M18 6L6 18M6 6l12 12"/>
-                      </svg>
-                    </button>
-                  {/if}
-                </div>
-              {/each}
-            </div>
-          </div>
-
-          <!-- Income column -->
-          <div class="cat-col">
-            <div class="cat-col-header">
-              <span class="cat-col-dot cat-col-dot--income"></span>
-              <h4>{i18n.t('finances-income', 'Income')}</h4>
-              <span class="cat-count">{categories.income.length}</span>
-            </div>
-            <div class="cat-chips">
-              {#each categories.income as cat}
-                <div class="cat-chip" class:cat-chip--default={cat.is_default}>
-                  <span class="cat-chip-name">{cat.name}</span>
-                  {#if cat.is_default}
-                    <svg class="cat-chip-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
-                    </svg>
-                  {:else}
-                    <button class="cat-chip-del" onclick={() => deleteCat(cat.id)} aria-label="Delete {cat.name}">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                        <path d="M18 6L6 18M6 6l12 12"/>
-                      </svg>
-                    </button>
-                  {/if}
-                </div>
-              {/each}
-            </div>
-          </div>
-
-        </div>
-      {/if}
-    </section>
+    <FinanceCategoryPanel
+      categories={categories}
+      onadd={handleAddCategory}
+      ondelete={handleDeleteCat}
+    />
   {/if}
 </div>
 
 <!-- Account detail panel -->
-{#if selectedAccount}
-  <div class="overlay-backdrop" role="presentation" onclick={() => selectedAccount = null} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') selectedAccount = null }}></div>
-  <aside class="detail-panel">
-    <div class="panel-header">
-      <h3>{selectedAccount.name}</h3>
-      <button class="close-panel" aria-label="Close panel" onclick={() => selectedAccount = null}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
-    </div>
-    <div class="panel-info">
-      <div class="info-row panel-icon-row">
-        <img src={getAccountDisplayIcon(selectedAccount)} alt="" class="panel-acc-icon" class:themed-icon={isGenericIcon(selectedAccount.icon_path)} onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
-        <button class="change-icon-btn" onclick={() => showIconPicker = !showIconPicker}>
-          {showIconPicker ? i18n.t('finances-close', 'Close') : i18n.t('finances-change-icon', 'Change Icon')}
-        </button>
-      </div>
-      {#if showIconPicker}
-        <div class="icon-picker">
-          {#each ACCOUNT_ICONS as icon}
-            <button class="icon-option" onclick={() => changeAccountIcon(icon.value)} title={icon.value}>
-              <img src={icon.src} alt={icon.value} class:themed-icon={icon.generic} onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
-            </button>
-          {/each}
-          <button class="icon-option icon-reset" onclick={() => changeAccountIcon('')} title="Default">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12l9-9 9 9M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9"/></svg>
-          </button>
-        </div>
-      {/if}
-      <div class="info-row"><span>{i18n.t('finances-type', 'Type')}</span><span>{selectedAccount.account_type}</span></div>
-      <div class="info-row"><span>{i18n.t('finances-currency', 'Currency')}</span><span>{selectedAccount.currency}</span></div>
-      <div class="info-row">
-        <span>{i18n.t('finances-balance', 'Balance')}</span>
-        <span class:negative={selectedAccount.balance_negative}>{selectedAccount.balance}</span>
-      </div>
-    </div>
-    {#if selectedAccount.transactions.length > 0}
-      <h4>{i18n.t('finances-recent-transactions', 'Recent Transactions')}</h4>
-      <div class="panel-tx-list">
-        {#each selectedAccount.transactions as tx}
-          <div class="panel-tx">
-            <span class="tx-date">{tx.date}</span>
-            <span class="tx-desc">{tx.description}</span>
-            <span class="tx-amount" class:expense={tx.is_expense}>{tx.amount}</span>
-          </div>
-        {/each}
-      </div>
-    {/if}
-    <div class="panel-actions">
-      <button class="primary-btn" onclick={() => openEditAccount(selectedAccount!)}>{i18n.t('finances-edit-account', 'Edit Account')}</button>
-      <button class="danger-btn" onclick={() => deleteAccount(selectedAccount!.id)}>{i18n.t('finances-delete-account', 'Delete Account')}</button>
-    </div>
-  </aside>
-{/if}
+<FinanceAccountPanel
+  show={selectedAccount !== null}
+  account={selectedAccount}
+  ondelete={deleteAccount}
+  onedit={openEditAccount}
+  onrefresh={async () => { if (selectedAccount) selectedAccount = await financeApi.fetchAccountDetails(selectedAccount.id); await refreshAccounts() }}
+  oniconchange={handleAccountIconChange}
+  onclose={() => selectedAccount = null}
+/>
 
 <!-- Add/Edit Transaction Modal -->
-{#if showAddTransaction}
-  <div class="modal-backdrop" role="presentation" onclick={() => showAddTransaction = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddTransaction = false }}></div>
-  <div class="modal-wrapper">
-    <div class="modal">
-    <h3>{editingTransaction ? i18n.t('finances-edit-transaction', 'Edit Transaction') : i18n.t('finances-add-transaction', 'Add Transaction')}</h3>
-    <div class="form-grid">
-      <label>
-        {i18n.t('finances-account', 'Account')}
-        <select bind:value={txAccountId}>
-          {#each accountsData?.accounts ?? [] as acc}
-            <option value={acc.id}>{acc.name}</option>
-          {/each}
-        </select>
-      </label>
-      <label>
-        {i18n.t('finances-amount', 'Amount')}
-        <input type="text" bind:value={txAmount} placeholder="0.00" />
-      </label>
-      <label>
-        {i18n.t('finances-type', 'Type')}
-        <div class="toggle-row">
-          <button class="toggle-btn" class:active={txIsExpense} onclick={() => txIsExpense = true}>{i18n.t('finances-expense', 'Expense')}</button>
-          <button class="toggle-btn" class:active={!txIsExpense} onclick={() => txIsExpense = false}>{i18n.t('finances-income', 'Income')}</button>
-        </div>
-      </label>
-      <label>
-        {i18n.t('finances-category', 'Category')}
-        <select bind:value={txCategory}>
-          <option value="">{i18n.t('finances-select', 'Select...')}</option>
-          {#each txCategoryOptions as cat}
-            <option value={cat.name}>{cat.name}</option>
-          {/each}
-        </select>
-      </label>
-      <label>
-        {i18n.t('finances-description', 'Description')}
-        <input type="text" bind:value={txDescription} placeholder={i18n.t('finances-description', 'Description')} />
-      </label>
-      <label>
-        {i18n.t('finances-date', 'Date')}
-        <input type="date" bind:value={txDate} />
-      </label>
-    </div>
-    <div class="modal-actions">
-      <button class="secondary-btn" onclick={() => showAddTransaction = false}>{i18n.t('finances-cancel', 'Cancel')}</button>
-      <button class="primary-btn" onclick={submitTransaction} disabled={!txAmount || !txAccountId}>
-        {editingTransaction ? i18n.t('finances-update', 'Update') : i18n.t('finances-add-btn', 'Add')}
-      </button>
-    </div>
-    </div>
-  </div>
-{/if}
+<FinanceTransactionModal
+  bind:show={showAddTransaction}
+  editing={editingTransaction}
+  accounts={accountsData?.accounts ?? []}
+  categories={categories ?? { expense: [], income: [] }}
+  onsubmit={async () => { await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()]) }}
+  onclose={() => showAddTransaction = false}
+/>
 
 <!-- Add Account Modal -->
 {#if showAddAccount}
@@ -1251,184 +1033,6 @@
   .acc-balance { font-size: 1.1rem; font-weight: 600; color: var(--text-primary); margin-top: 8px; }
   .acc-balance.negative { color: var(--danger); }
   .acc-currency { font-size: 0.7rem; color: var(--text-tertiary); }
-
-  /* Settings tab */
-  .settings-card {
-    position: relative;
-    background: var(--card-bg);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-lg);
-    padding: 22px;
-    margin-bottom: 20px;
-    box-shadow: var(--card-shadow);
-    overflow: hidden;
-  }
-  .settings-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 1px;
-    background: var(--card-accent-line);
-    opacity: 0.6;
-  }
-  .settings-card-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.68rem;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    font-weight: 600;
-    margin-bottom: 14px;
-  }
-  .settings-card-label::before {
-    content: '';
-    width: 3px;
-    height: 12px;
-    border-radius: 2px;
-    background: linear-gradient(180deg, var(--accent) 0%, var(--accent-hover) 100%);
-    box-shadow: 0 0 6px var(--accent-glow);
-  }
-  .cat-add-row {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-  .cat-name-input {
-    flex: 1;
-    min-width: 140px;
-    padding: 9px 12px;
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-sm);
-    background: var(--glass-active);
-    color: var(--text-primary);
-    font-size: 0.875rem;
-    transition: border-color 0.2s;
-  }
-  .cat-name-input:focus {
-    border-color: var(--accent);
-    outline: none;
-    box-shadow: 0 0 0 3px var(--accent-glow);
-  }
-  .cat-type-toggle { flex-shrink: 0; }
-
-  .cat-columns {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-  }
-  .cat-col {
-    position: relative;
-    background: var(--card-bg);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-md);
-    padding: 18px;
-    box-shadow: var(--card-shadow);
-    transition: border-color 0.2s, box-shadow 0.2s;
-  }
-  .cat-col:hover {
-    border-color: var(--glass-border-hover);
-    box-shadow: var(--glass-shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  }
-  .cat-col-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 16px;
-  }
-  .cat-col-header h4 {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0;
-    flex: 1;
-  }
-  .cat-col-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .cat-col-dot--expense { background: var(--danger); }
-  .cat-col-dot--income  { background: var(--success); }
-  .cat-count {
-    font-size: 0.68rem;
-    color: var(--text-tertiary);
-    background: var(--glass-active);
-    border: 1px solid var(--glass-border);
-    border-radius: 20px;
-    padding: 1px 8px;
-  }
-  .cat-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  .cat-chip {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    padding: 5px 8px 5px 12px;
-    background: var(--glass-active);
-    border: 1px solid var(--glass-border);
-    border-radius: 20px;
-    transition: border-color 0.15s;
-  }
-  .cat-chip--default {
-    border-color: rgba(168, 85, 247, 0.2);
-    background: rgba(168, 85, 247, 0.06);
-    padding-right: 12px;
-  }
-  .cat-chip-name {
-    font-size: 0.8rem;
-    color: var(--text-primary);
-  }
-  .cat-chip-del {
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    display: flex;
-    color: var(--text-tertiary);
-    transition: color 0.15s;
-    line-height: 0;
-  }
-  .cat-chip-del:hover { color: var(--danger); }
-  .cat-chip-del svg { width: 11px; height: 11px; }
-  .cat-chip-lock { width: 11px; height: 11px; color: var(--accent); flex-shrink: 0; }
-
-  /* Overlay & detail panel */
-  .overlay-backdrop {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 50;
-  }
-  .detail-panel {
-    position: fixed; top: 0; right: 0; bottom: 0; width: 380px;
-    background: linear-gradient(180deg, rgba(22, 22, 28, 0.88) 0%, rgba(16, 16, 20, 0.85) 100%);
-    border-left: 1px solid rgba(255, 255, 255, 0.08); z-index: 51;
-    padding: 24px; overflow-y: auto;
-    box-shadow: var(--glass-shadow-lg);
-    animation: slideInRight 0.25s ease;
-  }
-  @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
-
-  .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-  .panel-header h3 { margin: 0; color: var(--text-primary); }
-  .close-panel { background: none; border: none; color: var(--text-tertiary); cursor: pointer; padding: 4px; display: flex; transition: color 0.15s; }
-  .close-panel:hover { color: var(--text-primary); }
-  .close-panel svg { width: 20px; height: 20px; }
-
-  .panel-info { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
-  .info-row { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-secondary); }
-  .info-row .negative { color: var(--danger); }
-
-  .detail-panel h4 { font-size: 0.8rem; color: var(--text-tertiary); text-transform: uppercase; margin-bottom: 8px; }
-  .panel-tx-list { display: flex; flex-direction: column; gap: 4px; }
-  .panel-tx { display: grid; grid-template-columns: 70px 1fr auto; gap: 8px; font-size: 0.8rem; padding: 6px 0; border-bottom: 1px solid var(--glass-border); }
-  .panel-actions { margin-top: 24px; display: flex; gap: 8px; }
-
   /* Modals */
   .modal-backdrop {
     position: fixed; inset: 0; background: rgba(0,0,0,0.5);
@@ -1462,18 +1066,6 @@
     border-color: var(--accent); outline: none;
     box-shadow: 0 0 0 3px var(--accent-glow);
   }
-
-  .toggle-row { display: flex; gap: 4px; }
-  .toggle-btn {
-    flex: 1; padding: 8px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    background: none; color: var(--text-secondary); cursor: pointer; font-size: 0.85rem;
-    transition: all 0.15s;
-  }
-  .toggle-btn.active {
-    background: var(--glass-active); color: var(--text-primary);
-    border-color: var(--accent-border); box-shadow: 0 0 0 1px var(--accent-glow) inset;
-  }
-
   .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; position: relative; z-index: 10; }
 
   .primary-btn {
@@ -1494,14 +1086,6 @@
     transition: all 0.15s;
   }
   .secondary-btn:hover { border-color: var(--glass-border-hover); }
-
-  .danger-btn {
-    padding: 8px 18px; border: 1px solid rgba(248, 113, 113, 0.2); border-radius: var(--radius-sm);
-    background: rgba(248, 113, 113, 0.08); color: var(--danger); cursor: pointer; font-size: 0.85rem;
-    transition: all 0.15s;
-  }
-  .danger-btn:hover { background: rgba(248, 113, 113, 0.15); border-color: rgba(248, 113, 113, 0.3); }
-
   /* Accounts */
   .account-grid {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px;
@@ -1525,8 +1109,6 @@
   .acc-currency { font-size: 0.75rem; color: var(--text-tertiary); }
 
   /* Icon picker */
-  .panel-icon-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-  .panel-acc-icon { width: 36px; height: 36px; border-radius: 6px; }
   .change-icon-btn {
     background: none; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
     color: var(--text-secondary); cursor: pointer; font-size: 0.75rem; padding: 4px 10px;
@@ -1545,8 +1127,6 @@
   }
   .icon-option:hover { border-color: var(--accent-border); background: var(--glass-active); }
   .icon-option img { width: 100%; height: 100%; object-fit: contain; border-radius: 3px; }
-  .icon-option.icon-reset svg { width: 18px; height: 18px; color: var(--text-tertiary); }
-
   /* Overview tab */
   .overview-stats {
     display: grid;

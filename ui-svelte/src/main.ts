@@ -17,6 +17,7 @@
 
 import App from "./App.svelte";
 import { mount } from "svelte";
+import "./lib/styles/shared.css";
 
 const target = document.getElementById("app")!;
 target.innerHTML = "";

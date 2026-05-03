@@ -20,6 +20,10 @@
   import * as habitsApi from '../lib/api/habits'
   import RadarChart from '../components/charts/RadarChart.svelte'
   import WeekdayChart from '../components/charts/WeekdayChart.svelte'
+  import HabitFormModal from '../components/habits/HabitFormModal.svelte'
+  import HabitHeatmap from '../components/habits/HabitHeatmap.svelte'
+  import HabitRewardsPanel from '../components/habits/HabitRewardsPanel.svelte'
+  import HabitGoalsPanel from '../components/habits/HabitGoalsPanel.svelte'
   import type {
     HabitDto, HabitsResponse, HabitSummary,
     HeatmapResponse, HabitAnalyticsResponse,
@@ -41,22 +45,6 @@
   // Rewards tab state
   let rewards = $state<StreakRewardDto[]>([])
   let goals = $state<GoalDto[]>([])
-  let showAddReward = $state(false)
-  let showAddGoal = $state(false)
-  let editingReward = $state<StreakRewardDto | null>(null)
-  let editingGoal = $state<GoalDto | null>(null)
-
-  // Reward form
-  let rewardHabitId = $state('')
-  let rewardConsecutive = $state(true)
-  let rewardTargetDays = $state('')
-  let rewardTargetTotal = $state('')
-
-  // Goal form
-  let goalName = $state('')
-  let goalDescription = $state('')
-  let goalRewardText = $state('')
-  let goalDeadline = $state('')
 
   // History tab state
   let achievements = $state<AchievementDto[]>([])
@@ -68,12 +56,6 @@
   // Modal state
   let showAddHabit = $state(false)
   let editingHabit = $state<HabitDto | null>(null)
-  let habitName = $state('')
-  let habitDescription = $state('')
-  let habitColor = $state('#a855f7')
-  let habitCategory = $state('general')
-
-  const colors = ['#a855f7', '#4ade80', '#f87171', '#fbbf24', '#a78bfa', '#f472b6', '#34d399', '#fb923c']
 
   async function load() {
     loading = true
@@ -152,36 +134,12 @@
 
   function openAddHabit() {
     editingHabit = null
-    habitName = ''
-    habitDescription = ''
-    habitColor = '#a855f7'
-    habitCategory = 'general'
     showAddHabit = true
   }
 
   function openEditHabit(h: HabitDto) {
     editingHabit = h
-    habitName = h.name
-    habitDescription = h.description ?? ''
-    habitColor = h.color
-    habitCategory = h.category
     showAddHabit = true
-  }
-
-  async function submitHabit() {
-    try {
-      const desc = habitDescription || null
-      if (editingHabit) {
-        await habitsApi.updateHabit(editingHabit.id, habitName, desc, habitColor, habitCategory)
-      } else {
-        await habitsApi.createHabit(habitName, desc, habitColor, habitCategory)
-      }
-      showAddHabit = false
-      await load()
-      app.showToast(editingHabit ? i18n.t('habits-toast-habit-updated', 'Habit updated') : i18n.t('habits-toast-habit-created', 'Habit created'))
-    } catch (e) {
-      app.showToast(String(e), true)
-    }
   }
 
   async function deleteHabit(id: string) {
@@ -195,155 +153,6 @@
     }
   }
 
-  function openAddReward() {
-    editingReward = null
-    rewardHabitId = habitsData?.habits[0]?.id ?? ''
-    rewardConsecutive = true
-    rewardTargetDays = ''
-    rewardTargetTotal = ''
-    showAddReward = true
-  }
-
-  function openEditReward(r: StreakRewardDto) {
-    editingReward = r
-    rewardHabitId = r.habit_id
-    rewardConsecutive = r.is_consecutive
-    rewardTargetDays = String(r.target_days ?? '')
-    rewardTargetTotal = String(r.target_total ?? '')
-    showAddReward = true
-  }
-
-  async function submitReward() {
-    if (!rewardHabitId || !rewardTargetDays) {
-      app.showToast(i18n.t('habits-toast-fill-required', 'Please fill required fields'), true)
-      return
-    }
-    try {
-      const isEditing = !!editingReward
-      if (editingReward) {
-        await habitsApi.updateStreakReward(
-          editingReward.id,
-          rewardHabitId,
-          rewardConsecutive,
-          parseInt(rewardTargetDays),
-          rewardTargetTotal ? parseInt(rewardTargetTotal) : 0,
-          editingReward.milestones.map(m => [m.target_days, m.reward_text] as [number, string])
-        )
-      } else {
-        await habitsApi.createStreakReward(
-          rewardHabitId,
-          rewardConsecutive,
-          parseInt(rewardTargetDays),
-          rewardTargetTotal ? parseInt(rewardTargetTotal) : 0
-        )
-      }
-      showAddReward = false
-      editingReward = null
-      await loadRewards()
-      app.showToast(isEditing ? i18n.t('habits-toast-reward-updated', 'Reward updated') : i18n.t('habits-toast-reward-created', 'Reward created'))
-    } catch (e) {
-      app.showToast(String(e), true)
-    }
-  }
-
-  async function deleteReward(id: string) {
-    try {
-      await habitsApi.deleteStreakReward(id)
-      await loadRewards()
-      app.showToast(i18n.t('habits-toast-reward-deleted', 'Reward deleted'))
-    } catch (e) {
-      app.showToast(String(e), true)
-    }
-  }
-
-  function openAddGoal() {
-    editingGoal = null
-    goalName = ''
-    goalDescription = ''
-    goalRewardText = ''
-    goalDeadline = ''
-    showAddGoal = true
-  }
-
-  function openEditGoal(g: GoalDto) {
-    editingGoal = g
-    goalName = g.name
-    goalDescription = g.description ?? ''
-    goalRewardText = g.reward_text ?? ''
-    goalDeadline = g.deadline ?? ''
-    showAddGoal = true
-  }
-
-  async function submitGoal() {
-    if (!goalName) {
-      app.showToast(i18n.t('habits-toast-enter-goal-name', 'Please enter a goal name'), true)
-      return
-    }
-    try {
-      const isEditing = !!editingGoal
-      if (editingGoal) {
-        await habitsApi.updateGoal(editingGoal.id, goalName, goalDescription, goalRewardText, goalDeadline)
-      } else {
-        await habitsApi.createGoal(goalName, goalDescription, goalRewardText, goalDeadline)
-      }
-      showAddGoal = false
-      editingGoal = null
-      await loadRewards()
-      app.showToast(isEditing ? i18n.t('habits-toast-goal-updated', 'Goal updated') : i18n.t('habits-toast-goal-created', 'Goal created'))
-    } catch (e) {
-      app.showToast(String(e), true)
-    }
-  }
-
-  async function deleteGoal(id: string) {
-    try {
-      await habitsApi.deleteGoal(id)
-      await loadRewards()
-      app.showToast(i18n.t('habits-toast-goal-deleted', 'Goal deleted'))
-    } catch (e) {
-      app.showToast(String(e), true)
-    }
-  }
-
-  async function toggleCheckpoint(goalId: string, checkpointId: string) {
-    try {
-      await habitsApi.toggleCheckpoint(goalId, checkpointId)
-      goals = await habitsApi.fetchGoals()
-    } catch (e) {
-      app.showToast(String(e), true)
-    }
-  }
-
-  async function completeGoal(id: string) {
-    try {
-      await habitsApi.completeGoal(id)
-      goals = await habitsApi.fetchGoals()
-      app.showToast(i18n.t('habits-toast-goal-completed', 'Goal completed!'))
-    } catch (e) {
-      app.showToast(String(e), true)
-    }
-  }
-
-  async function archiveGoal(id: string) {
-    try {
-      await habitsApi.archiveGoal(id)
-      await loadRewards()
-      app.showToast(i18n.t('habits-toast-goal-archived', 'Goal archived'))
-    } catch (e) {
-      app.showToast(String(e), true)
-    }
-  }
-
-  async function prevHeatmapYear() {
-    heatmapYear--
-    try { heatmap = await habitsApi.fetchHeatmap(heatmapYear) } catch (e) { app.showToast(String(e), true) }
-  }
-
-  async function nextHeatmapYear() {
-    heatmapYear++
-    try { heatmap = await habitsApi.fetchHeatmap(heatmapYear) } catch (e) { app.showToast(String(e), true) }
-  }
-
   const monthNames = $derived([
     i18n.t('month-january','January'), i18n.t('month-february','February'), i18n.t('month-march','March'),
     i18n.t('month-april','April'), i18n.t('month-may','May'), i18n.t('month-june','June'),
@@ -352,8 +161,6 @@
   ])
 
   const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as const
-  const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-  const todayStr = new Date().toISOString().slice(0, 10)
 
   const now = new Date()
   const viewingCurrentMonth = $derived(now.getFullYear() === year && now.getMonth() + 1 === month)
@@ -373,52 +180,12 @@
     return s
   }
 
-  function goalProgress(g: GoalDto): number {
-    if (g.checkpoints.length === 0) return g.is_completed ? 100 : 0
-    const done = g.checkpoints.filter(c => c.completed).length
-    return Math.round((done / g.checkpoints.length) * 100)
-  }
-
-  // Heatmap helpers — GitHub-style single grid
-  interface HeatmapCell { week: number; weekday: number; date: string; intensity: number }
-  const heatmapData = $derived.by(() => {
-    if (!heatmap) return { cells: [] as HeatmapCell[], monthLabels: [] as { label: string; col: number }[], totalWeeks: 0 }
-    const cells: HeatmapCell[] = []
-    let week = 0
-    heatmap.data.forEach((day, idx) => {
-      const wd = new Date(day.date + 'T00:00:00').getDay()
-      if (wd === 0 && idx > 0) week++
-      cells.push({ week, weekday: wd, date: day.date, intensity: day.intensity })
-    })
-
-    const monthLabels: { label: string; col: number }[] = []
-    let lastMonth = -1
-    cells.forEach(c => {
-      const m = new Date(c.date + 'T00:00:00').getMonth()
-      if (m !== lastMonth) {
-        // Place label only if there's room (skip if previous label is in same column)
-        const prev = monthLabels[monthLabels.length - 1]
-        if (!prev || c.week - prev.col >= 2) {
-          monthLabels.push({ label: MONTH_SHORT[m], col: c.week })
-        }
-        lastMonth = m
-      }
-    })
-    return { cells, monthLabels, totalWeeks: week + 1 }
-  })
-
-  function rewardProgress(r: StreakRewardDto): number {
-    const target = r.target_days ?? r.target_total ?? 0
-    if (target <= 0) return 0
-    return Math.min(100, Math.round((r.current_progress / target) * 100))
-  }
-
   $effect(() => { load() })
   $effect(() => { if (activeTab === 'rewards') loadRewards() })
   $effect(() => { if (activeTab === 'history') loadHistory() })
 </script>
 
-<div class="page" class:blurred={showAddHabit || showAddReward || showAddGoal}>
+<div class="page"   class:blurred={showAddHabit}>
   <div class="page-header">
     <h2>{i18n.t('habits-title', 'HABITS')}</h2>
     {#if activeTab === 'habits'}
@@ -504,69 +271,13 @@
         </div>
       </div>
 
-      <!-- Activity Heatmap — GitHub style -->
+      <!-- Activity Heatmap -->
       {#if heatmap}
-        <div class="chart-section heatmap-section">
-          <div class="heatmap-header">
-            <h3>{i18n.t('habits-activity-heatmap', 'Activity Heatmap')}</h3>
-            <div class="heatmap-nav">
-              <button class="nav-arrow" aria-label={i18n.t('habits-prev-year', 'Previous year')} onclick={prevHeatmapYear}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 19l-7-7 7-7"/></svg>
-              </button>
-              <span class="heatmap-year">{heatmapYear}</span>
-              <button class="nav-arrow" aria-label="Next year" onclick={nextHeatmapYear}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg>
-              </button>
-            </div>
-          </div>
-          <div class="heatmap-scroll">
-            <div
-              class="heatmap-grid"
-              style="grid-template-columns: 28px repeat({heatmapData.totalWeeks}, 12px);"
-            >
-              <!-- Top-left empty corner -->
-              <div class="heatmap-corner"></div>
-              <!-- Month labels (row 1) -->
-              {#each heatmapData.monthLabels as ml}
-                <span
-                  class="heatmap-month-label"
-                  style="grid-column: {ml.col + 2}; grid-row: 1;"
-                >{ml.label}</span>
-              {/each}
-              <!-- Day-of-week labels (column 1) -->
-              {#each ['S','M','T','W','T','F','S'] as d, i}
-                {#if i === 1 || i === 3 || i === 5}
-                  <span
-                    class="heatmap-dow-label"
-                    style="grid-row: {i + 2}; grid-column: 1;"
-                  >{d}</span>
-                {/if}
-              {/each}
-              <!-- Cells -->
-              {#each heatmapData.cells as cell}
-                <div
-                  class="heatmap-cell"
-                  class:l1={cell.intensity === 1}
-                  class:l2={cell.intensity === 2}
-                  class:l3={cell.intensity === 3}
-                  class:l4={cell.intensity === 4}
-                  class:today={cell.date === todayStr}
-                  style="grid-column: {cell.week + 2}; grid-row: {cell.weekday + 2};"
-                  title="{cell.date} · {cell.intensity} {i18n.t('habits-completions', 'completions')}"
-                ></div>
-              {/each}
-            </div>
-            <div class="heatmap-legend">
-              <span class="heatmap-legend-label">{i18n.t('habits-less', 'Less')}</span>
-              <div class="heatmap-cell"></div>
-              <div class="heatmap-cell l1"></div>
-              <div class="heatmap-cell l2"></div>
-              <div class="heatmap-cell l3"></div>
-              <div class="heatmap-cell l4"></div>
-              <span class="heatmap-legend-label">{i18n.t('habits-more', 'More')}</span>
-            </div>
-          </div>
-        </div>
+        <HabitHeatmap
+          bind:heatmapYear={heatmapYear}
+          heatmap={heatmap}
+          onyearchange={async (year) => { heatmapYear = year; try { heatmap = await habitsApi.fetchHeatmap(heatmapYear) } catch (e) { app.showToast(String(e), true) } }}
+        />
       {/if}
 
       <!-- Selected habit summary -->
@@ -634,99 +345,17 @@
   <!-- REWARDS TAB -->
   {:else if activeTab === 'rewards'}
     <div class="rewards-section">
-      <div class="section-header">
-        <h3>{i18n.t('habits-streak-rewards', 'Streak Rewards')}</h3>
-        <button class="glass-btn" onclick={openAddReward}>{i18n.t('habits-new-reward', 'New Reward')}</button>
-      </div>
-      {#if rewards.length === 0}
-        <p class="empty">{i18n.t('habits-no-rewards', 'No streak rewards configured.')}</p>
-      {:else}
-        {#each rewards as reward}
-          <div class="reward-card">
-            <div class="reward-header">
-              <div>
-                <span class="reward-habit">{reward.habit_name}</span>
-                <span class="reward-type">{reward.is_consecutive ? i18n.t('habits-consecutive', 'Consecutive') : i18n.t('habits-accumulative', 'Accumulative')}</span>
-              </div>
-              <div class="reward-actions">
-                <button class="icon-btn" onclick={() => openEditReward(reward)}>{i18n.t('habits-edit', 'Edit')}</button>
-                <button class="icon-btn danger" onclick={() => deleteReward(reward.id)}>{i18n.t('habits-delete', 'Delete')}</button>
-              </div>
-            </div>
-            <div class="reward-progress">
-              <div class="reward-progress-text">
-                <span>{i18n.t('habits-progress', 'Progress')}</span>
-                <span class="reward-progress-count">{reward.current_progress} / {reward.target_days ?? reward.target_total ?? '?'} {i18n.t('habits-days-label', 'days')}</span>
-              </div>
-              <div class="progress-track">
-                <div class="progress-fill" style="width: {rewardProgress(reward)}%"></div>
-              </div>
-            </div>
-            {#each reward.milestones as ms}
-              <div class="milestone" class:unlocked={ms.unlocked}>
-                <span>{ms.target_days}d: {ms.reward_text}</span>
-                {#if ms.unlocked}
-                  <span class="unlocked-badge">{i18n.t('habits-unlocked', 'Unlocked')}</span>
-                {/if}
-              </div>
-            {/each}
-          </div>
-        {/each}
-      {/if}
+      <HabitRewardsPanel
+        rewards={rewards}
+        habits={habitsData?.habits ?? []}
+        onrefresh={loadRewards}
+      />
 
-      <div class="section-header" style="margin-top: 24px">
-        <h3>{i18n.t('habits-goals', 'Goals')}</h3>
-        <button class="glass-btn" onclick={openAddGoal}>{i18n.t('habits-new-goal', 'New Goal')}</button>
-      </div>
-      {#if goals.length === 0}
-        <p class="empty">{i18n.t('habits-no-goals', 'No goals set.')}</p>
-      {:else}
-        {#each goals as goal}
-          <div class="goal-card" class:completed={goal.is_completed}>
-            <div class="goal-header">
-              <div>
-                <span class="goal-name">{goal.name}</span>
-                {#if goal.deadline}
-                  <span class="goal-deadline">{i18n.t('habits-due', 'Due:')} {goal.deadline}</span>
-                {/if}
-              </div>
-              <div class="goal-actions">
-                <button class="icon-btn" onclick={() => openEditGoal(goal)}>{i18n.t('habits-edit', 'Edit')}</button>
-                {#if goal.is_completed}
-                  <button class="icon-btn" onclick={() => archiveGoal(goal.id)}>{i18n.t('habits-archive', 'Archive')}</button>
-                {/if}
-                <button class="icon-btn danger" onclick={() => deleteGoal(goal.id)}>{i18n.t('habits-delete', 'Delete')}</button>
-              </div>
-            </div>
-            {#if goal.description}
-              <p class="goal-desc">{goal.description}</p>
-            {/if}
-            {#if goal.checkpoints.length > 0}
-              {@const pct = goalProgress(goal)}
-              <div class="goal-progress">
-                <div class="reward-progress-text">
-                  <span>{pct}%</span>
-                  <span class="reward-progress-count">{goal.checkpoints.filter(c => c.completed).length} / {goal.checkpoints.length}</span>
-                </div>
-                <div class="progress-track">
-                  <div class="progress-fill" class:complete={pct === 100} style="width: {pct}%"></div>
-                </div>
-              </div>
-            {/if}
-            <div class="checkpoints">
-              {#each goal.checkpoints as cp}
-                <label class="checkpoint">
-                  <input type="checkbox" checked={cp.completed} onchange={() => toggleCheckpoint(goal.id, cp.id)} />
-                  <span>{cp.description}</span>
-                </label>
-              {/each}
-            </div>
-            {#if !goal.is_completed}
-              <button class="secondary-btn small" onclick={() => completeGoal(goal.id)}>{i18n.t('habits-mark-complete', 'Mark Complete')}</button>
-            {/if}
-          </div>
-        {/each}
-      {/if}
+      <HabitGoalsPanel
+        goals={goals}
+        onrefresh={loadRewards}
+        ongoalsupdate={(updated) => goals = updated}
+      />
     </div>
 
   <!-- HISTORY TAB -->
@@ -751,122 +380,12 @@
 </div>
 
 <!-- Add/Edit Habit Modal -->
-{#if showAddHabit}
-  <div class="modal-backdrop" role="presentation" onclick={() => showAddHabit = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddHabit = false }}></div>
-  <div class="modal-wrapper">
-    <div class="modal">
-      <h3>{editingHabit ? i18n.t('habits-edit-habit', 'Edit Habit') : i18n.t('habits-new-habit-modal', 'New Habit')}</h3>
-    <div class="form-grid">
-      <label>
-        {i18n.t('habits-name', 'Name')}
-        <input type="text" bind:value={habitName} placeholder={i18n.t('habits-habit-name-placeholder', 'Habit name')} />
-      </label>
-      <label>
-        {i18n.t('habits-description', 'Description')}
-        <input type="text" bind:value={habitDescription} placeholder={i18n.t('habits-desc-placeholder', 'Optional description')} />
-      </label>
-      <label>
-        {i18n.t('habits-color', 'Color')}
-        <div class="color-palette">
-          {#each colors as c}
-            <button
-              class="color-swatch"
-              class:selected={habitColor === c}
-              style="background: {c}"
-              aria-label="Color {c}"
-              onclick={() => habitColor = c}
-            ></button>
-          {/each}
-        </div>
-      </label>
-      <label>
-        {i18n.t('habits-category', 'Category')}
-        <input type="text" bind:value={habitCategory} placeholder={i18n.t('habits-category-placeholder', 'e.g. health, learning')} />
-      </label>
-    </div>
-      <div class="modal-actions">
-        <button class="secondary-btn" onclick={() => showAddHabit = false}>{i18n.t('habits-cancel', 'Cancel')}</button>
-        <button class="primary-btn" onclick={submitHabit} disabled={!habitName.trim()}>
-          {editingHabit ? i18n.t('habits-update', 'Update') : i18n.t('habits-create', 'Create')}
-        </button>
-      </div>
-    </div>
-  </div>
-{/if}
-
-<!-- Add Reward Modal -->
-{#if showAddReward}
-  <div class="modal-backdrop" role="presentation" onclick={() => showAddReward = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddReward = false }}></div>
-  <div class="modal-wrapper">
-    <div class="modal">
-      <h3>{editingReward ? i18n.t('habits-edit-reward', 'Edit Streak Reward') : i18n.t('habits-new-reward-modal', 'New Streak Reward')}</h3>
-      <div class="form-grid">
-        <label>
-          {i18n.t('habits-habit', 'Habit')}
-          <select bind:value={rewardHabitId}>
-            {#if habitsData?.habits}
-              {#each habitsData.habits as habit}
-                <option value={habit.id}>{habit.name}</option>
-              {/each}
-            {/if}
-          </select>
-        </label>
-        <label>
-          <input type="checkbox" bind:checked={rewardConsecutive} />
-          <span>{i18n.t('habits-consecutive-days', 'Consecutive days (vs Accumulative)')}</span>
-        </label>
-        <label>
-          {i18n.t('habits-target-days', 'Target Days')}
-          <input type="number" bind:value={rewardTargetDays} placeholder={i18n.t('habits-target-days-placeholder', 'e.g., 7, 30, 100')} />
-        </label>
-        <label>
-          {i18n.t('habits-target-total', 'Target Total (optional)')}
-          <input type="number" bind:value={rewardTargetTotal} placeholder={i18n.t('habits-target-total-placeholder', 'Alternative count metric')} />
-        </label>
-      </div>
-      <div class="modal-actions">
-        <button class="secondary-btn" onclick={() => showAddReward = false}>{i18n.t('habits-cancel', 'Cancel')}</button>
-        <button class="primary-btn" onclick={submitReward} disabled={!rewardHabitId || !rewardTargetDays}>
-          {editingReward ? i18n.t('habits-update', 'Update') : i18n.t('habits-create', 'Create')}
-        </button>
-      </div>
-    </div>
-  </div>
-{/if}
-
-<!-- Add Goal Modal -->
-{#if showAddGoal}
-  <div class="modal-backdrop" role="presentation" onclick={() => showAddGoal = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddGoal = false }}></div>
-  <div class="modal-wrapper">
-    <div class="modal">
-      <h3>{editingGoal ? i18n.t('habits-edit-goal', 'Edit Goal') : i18n.t('habits-new-goal-modal', 'New Goal')}</h3>
-      <div class="form-grid">
-        <label>
-          {i18n.t('habits-goal-name', 'Goal Name')}
-          <input type="text" bind:value={goalName} placeholder={i18n.t('habits-goal-name-placeholder', 'e.g., Complete certification')} />
-        </label>
-        <label>
-          {i18n.t('habits-description', 'Description')}
-          <input type="text" bind:value={goalDescription} placeholder={i18n.t('habits-goal-desc-placeholder', 'Optional details')} />
-        </label>
-        <label>
-          {i18n.t('habits-reward-text', 'Reward Text')}
-          <input type="text" bind:value={goalRewardText} placeholder={i18n.t('habits-reward-text-placeholder', "What you'll reward yourself with")} />
-        </label>
-        <label>
-          {i18n.t('habits-deadline', 'Deadline (optional)')}
-          <input type="date" bind:value={goalDeadline} />
-        </label>
-      </div>
-      <div class="modal-actions">
-        <button class="secondary-btn" onclick={() => showAddGoal = false}>{i18n.t('habits-cancel', 'Cancel')}</button>
-        <button class="primary-btn" onclick={submitGoal} disabled={!goalName.trim()}>
-          {editingGoal ? i18n.t('habits-update', 'Update') : i18n.t('habits-create', 'Create')}
-        </button>
-      </div>
-    </div>
-  </div>
-{/if}
+<HabitFormModal
+  bind:show={showAddHabit}
+  editing={editingHabit}
+  onsubmit={load}
+  onclose={() => showAddHabit = false}
+/>
 
 <style>
   .page { padding: 24px 32px; max-width: 1000px; width: 100%; margin: 0 auto; }
@@ -976,73 +495,6 @@
   .day-cell.done:hover { transform: scale(1.25); }
   .day-cell.is-today:not(.done) { box-shadow: 0 0 0 1px var(--accent) inset; }
 
-  /* Heatmap — GitHub style */
-  .chart-section { margin-bottom: 24px; }
-  .heatmap-section { padding: 16px 20px; }
-  .chart-section h3 { font-size: 0.8rem; color: var(--text-tertiary); text-transform: uppercase; margin: 0; }
-  .heatmap-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-  .heatmap-nav { display: flex; align-items: center; gap: 8px; }
-  .heatmap-year { font-size: 0.85rem; color: var(--text-secondary); min-width: 40px; text-align: center; }
-
-  .heatmap-scroll {
-    overflow-x: auto;
-    padding-bottom: 4px;
-    scrollbar-width: none;
-  }
-  .heatmap-scroll::-webkit-scrollbar { display: none; }
-  .heatmap-section {
-    position: relative;
-  }
-  .heatmap-section::after {
-    content: '';
-    position: absolute;
-    top: 0; right: 0; bottom: 0;
-    width: 48px;
-    background: linear-gradient(to right, transparent, var(--card-bg-solid, var(--card-bg)));
-    pointer-events: none;
-    z-index: 1;
-    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
-  }
-
-  .heatmap-grid {
-    display: grid;
-    grid-template-rows: 14px repeat(7, 12px);
-    gap: 3px;
-    min-width: max-content;
-  }
-  .heatmap-corner { grid-column: 1; grid-row: 1; }
-  .heatmap-month-label {
-    font-size: 0.62rem; color: var(--text-tertiary);
-    white-space: nowrap; line-height: 1;
-    align-self: end;
-  }
-  .heatmap-dow-label {
-    font-size: 0.6rem; color: var(--text-tertiary);
-    display: flex; align-items: center; justify-content: flex-end;
-    line-height: 1; padding-right: 4px;
-  }
-  .heatmap-cell {
-    width: 12px; height: 12px; border-radius: 2px;
-    background: var(--glass);
-    border: 1px solid transparent;
-    transition: transform 0.1s;
-    cursor: default;
-  }
-  .heatmap-cell:hover { transform: scale(1.4); z-index: 1; border-color: var(--glass-border-hover); }
-  .heatmap-cell.l1 { background: rgba(139, 92, 246, 0.35); }
-  .heatmap-cell.l2 { background: rgba(139, 92, 246, 0.6); }
-  .heatmap-cell.l3 { background: rgba(168, 85, 247, 0.85); }
-  .heatmap-cell.l4 { background: #a855f7; box-shadow: 0 0 6px rgba(168, 85, 247, 0.5); }
-  .heatmap-cell.today { box-shadow: 0 0 0 1.5px var(--accent) !important; }
-  .heatmap-cell.l4.today { box-shadow: 0 0 6px rgba(34,197,94,0.4), 0 0 0 1.5px var(--accent) !important; }
-
-  /* Legend */
-  .heatmap-legend {
-    display: flex; align-items: center; gap: 4px;
-    margin-top: 6px; justify-content: flex-end;
-  }
-  .heatmap-legend-label { font-size: 0.6rem; color: var(--text-tertiary); }
-
   /* Summary card */
   .summary-card {
     position: relative;
@@ -1119,77 +571,6 @@
   }
   .insight { font-size: 0.85rem; color: var(--text-secondary); margin: 4px 0; }
 
-  /* Rewards */
-  .rewards-section h3 { font-size: 0.85rem; color: var(--text-tertiary); text-transform: uppercase; margin: 20px 0 12px; }
-  .reward-card {
-    position: relative;
-    background: var(--card-bg);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--glass-border); border-radius: var(--radius-lg);
-    padding: 16px; margin-bottom: 12px; box-shadow: var(--card-shadow);
-    overflow: hidden;
-  }
-  .reward-card::before, .goal-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 1px;
-    background: var(--card-accent-line);
-    opacity: 0.5;
-  }
-  .reward-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
-  .reward-actions, .goal-actions { display: flex; gap: 4px; }
-  .reward-habit { font-weight: 600; color: var(--text-primary); }
-  .reward-type { font-size: 0.75rem; color: var(--text-tertiary); }
-  .reward-progress { margin-bottom: 10px; }
-  .reward-progress-text {
-    display: flex; justify-content: space-between; font-size: 0.8rem;
-    color: var(--text-secondary); margin-bottom: 6px;
-  }
-  .reward-progress-count { color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
-  .progress-track {
-    width: 100%; height: 6px; border-radius: 3px;
-    background: var(--glass-border); overflow: hidden;
-  }
-  .progress-fill {
-    height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-hover));
-    border-radius: 3px; transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 0 0 8px var(--accent-glow);
-  }
-  .progress-fill.complete {
-    background: linear-gradient(90deg, var(--success), #22c55e);
-    box-shadow: 0 0 8px rgba(74, 222, 128, 0.3);
-  }
-  .goal-progress { margin-bottom: 12px; }
-  .milestone { display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.85rem; color: var(--text-secondary); border-bottom: 1px solid var(--glass-border); }
-  .milestone.unlocked { color: var(--success); }
-  .unlocked-badge { font-size: 0.7rem; color: var(--success); }
-
-  .goal-card {
-    position: relative;
-    background: var(--card-bg);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--glass-border); border-radius: var(--radius-lg);
-    padding: 16px; margin-bottom: 12px; box-shadow: var(--card-shadow);
-    overflow: hidden;
-  }
-  .goal-card.completed { opacity: 0.6; }
-  .goal-header { display: flex; justify-content: space-between; margin-bottom: 4px; }
-  .goal-name { font-weight: 600; color: var(--text-primary); }
-  .goal-deadline { font-size: 0.75rem; color: var(--text-secondary); }
-  .goal-desc { font-size: 0.85rem; color: var(--text-secondary); margin: 4px 0 8px; }
-  .checkpoints { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
-  .checkpoint { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); cursor: pointer; font-size: 0.85rem; transition: color 0.15s; }
-  .checkpoint input[type="checkbox"] {
-    width: 16px; height: 16px; cursor: pointer; accent-color: var(--success);
-  }
-  .checkpoint input[type="checkbox"]:checked ~ span {
-    color: var(--success);
-    text-decoration: line-through;
-  }
-
   /* Timeline */
   .timeline { display: flex; flex-direction: column; gap: 0; padding-left: 20px; }
   .timeline-item { display: flex; gap: 16px; padding: 12px 0; border-left: 2px solid var(--glass-border); padding-left: 16px; position: relative; }
@@ -1203,71 +584,4 @@
   .ach-desc { font-size: 0.8rem; color: var(--text-secondary); }
   .ach-date { font-size: 0.7rem; color: var(--text-tertiary); }
 
-  /* Modal */
-  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 100; }
-  .modal-wrapper {
-    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    z-index: 101; pointer-events: none;
-  }
-  .modal-wrapper .modal {
-    pointer-events: auto;
-  }
-  .modal {
-    position: relative;
-    background: var(--modal-bg);
-    border: 1px solid var(--modal-border); border-radius: var(--radius-lg);
-    padding: 28px; width: 400px; z-index: 101;
-    box-shadow: var(--modal-shadow);
-  }
-  .modal h3 { margin: 0 0 20px; color: var(--text-primary); position: relative; z-index: 10; }
-
-  .form-grid { display: flex; flex-direction: column; gap: 14px; position: relative; z-index: 10; }
-  .form-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: var(--text-secondary); }
-  .form-grid input[type="text"],
-  .form-grid input[type="number"],
-  .form-grid input[type="date"] {
-    padding: 10px 12px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    background: var(--select-bg); color: var(--text-primary); font-size: 0.9rem;
-    transition: border-color 0.2s, box-shadow 0.2s;
-  }
-  .form-grid input[type="text"]:focus,
-  .form-grid input[type="number"]:focus,
-  .form-grid input[type="date"]:focus {
-    border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-glow);
-  }
-  .form-grid input[type="checkbox"] {
-    width: 18px; height: 18px; cursor: pointer; margin: 0;
-  }
-  .form-grid label:has(input[type="checkbox"]) {
-    flex-direction: row; align-items: center; gap: 8px;
-  }
-  .form-grid label:has(input[type="checkbox"]) span {
-    font-size: 0.9rem; color: var(--text-primary);
-  }
-
-  .color-palette { display: flex; gap: 6px; padding: 4px 0; }
-  .color-swatch {
-    width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent;
-    cursor: pointer; padding: 0; transition: transform 0.15s, box-shadow 0.15s;
-  }
-  .color-swatch:hover { transform: scale(1.15); }
-  .color-swatch.selected { border-color: var(--text-primary); box-shadow: 0 0 10px var(--accent-glow); }
-
-  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; position: relative; z-index: 10; }
-
-  .primary-btn {
-    padding: 8px 18px; border: 1px solid var(--accent-border); border-radius: var(--radius-sm);
-    background: var(--accent-bg); backdrop-filter: blur(8px);
-    color: var(--text-on-accent); cursor: pointer; font-size: 0.85rem; font-weight: 500;
-    transition: all 0.2s;
-  }
-  .primary-btn:hover:not(:disabled) { background: var(--accent-border); box-shadow: 0 0 16px var(--accent-glow); }
-  .primary-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .secondary-btn {
-    padding: 8px 18px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    background: none; color: var(--text-secondary); cursor: pointer; font-size: 0.85rem;
-    transition: all 0.15s;
-  }
-  .secondary-btn:hover { border-color: var(--glass-border-hover); color: var(--text-primary); }
-  .secondary-btn.small { padding: 6px 14px; font-size: 0.8rem; }
 </style>
