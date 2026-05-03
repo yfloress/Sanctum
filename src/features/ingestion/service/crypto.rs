@@ -35,8 +35,9 @@ use crate::services::i18n::{t, t_args};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
-impl IngestionService {    /// Process and insert crypto transactions (with validation and deduplication)
-    fn process_crypto_transactions(
+impl IngestionService {
+    /// Process and insert crypto transactions (with validation and deduplication)
+    pub(super) fn process_crypto_transactions(
         &self,
         transactions: Vec<(usize, ImportCryptoTransaction)>,
         format_name: &str,
@@ -45,7 +46,7 @@ impl IngestionService {    /// Process and insert crypto transactions (with vali
     }
 
     /// Preview crypto transactions (validation and deduplication without inserts)
-    fn preview_crypto_transactions(
+    pub(super) fn preview_crypto_transactions(
         &self,
         transactions: Vec<(usize, ImportCryptoTransaction)>,
         format_name: &str,
@@ -55,7 +56,7 @@ impl IngestionService {    /// Process and insert crypto transactions (with vali
 
     /// Process crypto transactions, optionally skipping balance validation.
     /// Used by exchange imports where the wallet export is authoritative.
-    fn process_crypto_transactions_ext(
+    pub(super) fn process_crypto_transactions_ext(
         &self,
         transactions: Vec<(usize, ImportCryptoTransaction)>,
         format_name: &str,
@@ -70,7 +71,7 @@ impl IngestionService {    /// Process and insert crypto transactions (with vali
     }
 
     /// Preview crypto transactions, optionally skipping balance validation.
-    fn preview_crypto_transactions_ext(
+    pub(super) fn preview_crypto_transactions_ext(
         &self,
         transactions: Vec<(usize, ImportCryptoTransaction)>,
         format_name: &str,
@@ -84,7 +85,7 @@ impl IngestionService {    /// Process and insert crypto transactions (with vali
         )
     }
 
-    fn process_crypto_transactions_internal(
+    pub(super) fn process_crypto_transactions_internal(
         &self,
         transactions: Vec<(usize, ImportCryptoTransaction)>,
         format_name: &str,
@@ -114,7 +115,7 @@ impl IngestionService {    /// Process and insert crypto transactions (with vali
         }
     }
 
-    fn process_crypto_transactions_with_db(
+    pub(super) fn process_crypto_transactions_with_db(
         &self,
         db: &Database,
         transactions: Vec<(usize, ImportCryptoTransaction)>,
@@ -1130,5 +1131,4 @@ impl IngestionService {    /// Process and insert crypto transactions (with vali
 
         Ok(summary)
     }
-}
 }

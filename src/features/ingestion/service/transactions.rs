@@ -18,9 +18,9 @@
 //! Ingestion service — transaction processing.
 
 use super::format_currency_simple;
-use super::repository::IngestionRepository;
-use super::types::{ImportSummary, ImportTransaction, RowError, TransactionDedupKey};
-use super::validation::{validate_amount, validate_import_transaction};
+use crate::features::ingestion::repository::IngestionRepository;
+use crate::features::ingestion::types::{ImportSummary, ImportTransaction, RowError, TransactionDedupKey};
+use crate::features::ingestion::validation::{validate_amount, validate_import_transaction};
 use super::IngestionError;
 use super::IngestionService;
 use crate::db::Database;

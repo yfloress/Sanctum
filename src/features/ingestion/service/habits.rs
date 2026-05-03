@@ -17,9 +17,9 @@
 
 //! Ingestion service — habit log processing.
 
-use super::repository::IngestionRepository;
-use super::types::{ImportHabitLog, ImportSummary, RowError};
-use super::validation::validate_import_habit_log;
+use crate::features::ingestion::repository::IngestionRepository;
+use crate::features::ingestion::types::{ImportHabitLog, ImportSummary, RowError};
+use crate::features::ingestion::validation::validate_import_habit_log;
 use super::IngestionError;
 use super::IngestionService;
 use crate::db::Database;

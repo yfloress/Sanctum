@@ -20,13 +20,10 @@
 //! Orchestrates data import from various file formats.
 
 use crate::db::{Database, DbError};
-use crate::features::crypto::tax::types::{derive_mechanical_type, normalize_subtype};
-use crate::models::{CryptoTransaction, HabitLog, Transaction};
-use crate::services::i18n::{t, t_args};
+use crate::models::CryptoTransaction;
 use chrono::{NaiveDate, NaiveDateTime};
-use std::collections::{HashMap, HashSet};
+
 use std::sync::{Arc, Mutex};
-use uuid::Uuid;
 
 use super::parsers::{
     CsvParser, ExchangeSource, ImportParser, JsonParser, TextParser, detect_exchange_source,
