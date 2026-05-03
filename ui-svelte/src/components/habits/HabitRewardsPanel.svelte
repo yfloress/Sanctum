@@ -18,17 +18,18 @@
   import { app } from '../../lib/stores/app.svelte'
   import { i18n } from '../../lib/stores/i18n.svelte'
   import * as habitsApi from '../../lib/api/habits'
+  import { portal } from '../../lib/actions/portal'
   import type { StreakRewardDto, HabitDto } from '../../lib/types'
 
   interface Props {
     rewards: StreakRewardDto[]
     habits: HabitDto[]
     onrefresh: () => Promise<void>
+    showAddReward: boolean
   }
 
-  let { rewards, habits, onrefresh }: Props = $props()
+  let { rewards, habits, onrefresh, showAddReward = $bindable(false) }: Props = $props()
 
-  let showAddReward = $state(false)
   let editingReward = $state<StreakRewardDto | null>(null)
   let rewardHabitId = $state('')
   let rewardConsecutive = $state(true)
@@ -145,9 +146,10 @@
 
 <!-- Add Reward Modal -->
 {#if showAddReward}
-  <div class="modal-backdrop" role="presentation" onclick={() => showAddReward = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddReward = false }}></div>
-  <div class="modal-wrapper">
-    <div class="modal">
+  <div use:portal>
+    <div class="modal-backdrop" role="presentation" onclick={() => showAddReward = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddReward = false }}></div>
+    <div class="modal-wrapper">
+      <div class="modal">
       <h3>{editingReward ? i18n.t('habits-edit-reward', 'Edit Streak Reward') : i18n.t('habits-new-reward-modal', 'New Streak Reward')}</h3>
       <div class="form-grid">
         <label>
@@ -178,6 +180,7 @@
         </button>
       </div>
     </div>
+  </div>
   </div>
 {/if}
 

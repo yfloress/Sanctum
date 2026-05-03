@@ -18,17 +18,18 @@
   import { app } from '../../lib/stores/app.svelte'
   import { i18n } from '../../lib/stores/i18n.svelte'
   import * as habitsApi from '../../lib/api/habits'
+  import { portal } from '../../lib/actions/portal'
   import type { GoalDto } from '../../lib/types'
 
   interface Props {
     goals: GoalDto[]
     onrefresh: () => Promise<void>
     ongoalsupdate: (goals: GoalDto[]) => void
+    showAddGoal: boolean
   }
 
-  let { goals, onrefresh, ongoalsupdate }: Props = $props()
+  let { goals, onrefresh, ongoalsupdate, showAddGoal = $bindable(false) }: Props = $props()
 
-  let showAddGoal = $state(false)
   let editingGoal = $state<GoalDto | null>(null)
   let goalName = $state('')
   let goalDescription = $state('')
@@ -178,9 +179,10 @@
 
 <!-- Add Goal Modal -->
 {#if showAddGoal}
-  <div class="modal-backdrop" role="presentation" onclick={() => showAddGoal = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddGoal = false }}></div>
-  <div class="modal-wrapper">
-    <div class="modal">
+  <div use:portal>
+    <div class="modal-backdrop" role="presentation" onclick={() => showAddGoal = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddGoal = false }}></div>
+    <div class="modal-wrapper">
+      <div class="modal">
       <h3>{editingGoal ? i18n.t('habits-edit-goal', 'Edit Goal') : i18n.t('habits-new-goal-modal', 'New Goal')}</h3>
       <div class="form-grid">
         <label>
@@ -207,6 +209,7 @@
         </button>
       </div>
     </div>
+  </div>
   </div>
 {/if}
 

@@ -55,6 +55,8 @@
 
   // Modal state
   let showAddHabit = $state(false)
+  let showAddReward = $state(false)
+  let showAddGoal = $state(false)
   let editingHabit = $state<HabitDto | null>(null)
 
   async function load() {
@@ -185,7 +187,7 @@
   $effect(() => { if (activeTab === 'history') loadHistory() })
 </script>
 
-<div class="page"   class:blurred={showAddHabit}>
+<div class="page"   class:blurred={showAddHabit || showAddReward || showAddGoal}>
   <div class="page-header">
     <h2>{i18n.t('habits-title', 'HABITS')}</h2>
     {#if activeTab === 'habits'}
@@ -349,12 +351,14 @@
         rewards={rewards}
         habits={habitsData?.habits ?? []}
         onrefresh={loadRewards}
+        bind:showAddReward
       />
 
       <HabitGoalsPanel
         goals={goals}
         onrefresh={loadRewards}
         ongoalsupdate={(updated) => goals = updated}
+        bind:showAddGoal
       />
     </div>
 
