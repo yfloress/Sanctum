@@ -43,7 +43,7 @@
           wget
           pkg-config
           sqlite
-          nodePackages.pnpm
+          pnpm
           nodejs
           cargo-audit
           cargo-edit
