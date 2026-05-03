@@ -14,6 +14,9 @@
 # ===========================
 src-tauri/target/
 src-tauri/gen/schemas/
+# Generated multi-resolution icons (regenerated via `cargo tauri icon`)
+src-tauri/icons/*
+!src-tauri/icons/icon.png
 
 # ===========================
 # Database & Security
