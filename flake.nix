@@ -54,6 +54,16 @@
         ];
       in
       {
+        apps.default = {
+          type = "app";
+          program = let
+            script = pkgs.writeShellScriptBin "sanctum-dev" ''
+              exec ${pkgs.cargo-tauri}/bin/cargo-tauri dev "$@"
+            '';
+          in
+            "${script}/bin/sanctum-dev";
+        };
+
         devShells.default = pkgs.mkShell {
           buildInputs = packages ++ libraries ++ [
             (pkgs.rust-bin.stable.latest.default.override {
