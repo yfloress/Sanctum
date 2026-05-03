@@ -29,15 +29,8 @@ use super::parsers::{
     CsvParser, ExchangeSource, ImportParser, JsonParser, TextParser, detect_exchange_source,
     detect_format, parser_for,
 };
-use super::repository::IngestionRepository;
-use super::types::{
-    CryptoDedupKey, ImportCryptoTransaction, ImportFormat, ImportHabitLog, ImportSummary,
-    ImportTransaction, RowError, TransactionDedupKey,
-};
-use super::validation::{
-    validate_amount, validate_file_size, validate_import_crypto_transaction,
-    validate_import_habit_log, validate_import_transaction,
-};
+use super::types::{ImportFormat, ImportSummary};
+use super::validation::validate_file_size;
 
 mod crypto;
 mod habits;
@@ -758,8 +751,10 @@ impl IngestionService {
         Ok(summary)
     }
 }
-    #[allow(clippy::too_many_arguments)]
-    fn sample_crypto_tx(
+
+#[cfg(test)]
+#[allow(clippy::too_many_arguments)]
+fn sample_crypto_tx(
         date: &str,
         wallet_id: &str,
         coin_id: &str,

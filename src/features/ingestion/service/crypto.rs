@@ -23,11 +23,9 @@ use super::{
     note_is_exchange_overlap_prone, uses_price_agnostic_dedup, IngestionError, IngestionService,
     MexcTransferOverlapProbe,
 };
-use super::{
-    repository::IngestionRepository,
-    types::{CryptoDedupKey, ImportCryptoTransaction, ImportSummary, RowError},
-    validation::validate_import_crypto_transaction,
-};
+use crate::features::ingestion::repository::IngestionRepository;
+use crate::features::ingestion::types::{CryptoDedupKey, ImportCryptoTransaction, ImportSummary, RowError};
+use crate::features::ingestion::validation::validate_import_crypto_transaction;
 use crate::db::Database;
 use crate::features::crypto::tax::types::{derive_mechanical_type, normalize_subtype};
 use crate::models::CryptoTransaction;
