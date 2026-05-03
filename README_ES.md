@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./assets/sanctum.png" alt="Sanctum" width="120" height="120" />
+<img src="./assets/sanct-app.png" alt="Sanctum" width="120" height="120" />
 
 <h1>SANCTUM</h1>
 
