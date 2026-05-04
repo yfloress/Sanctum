@@ -30,6 +30,7 @@ use sanctum::ui::dto::crypto::{
 use std::collections::HashMap;
 use std::sync::Arc;
 use tauri::State;
+use chrono::Local;
 
 // ==================== Portfolio ====================
 
@@ -115,16 +116,71 @@ pub fn fetch_portfolio(
     })
 }
 
+/// Returns a sparse step-chart of historical portfolio value, anchored at the
+/// dates we genuinely have data for: existing snapshots in range + a
+/// carry-forward seed from the latest snapshot strictly before the range +
+/// today's spot. Days without an anchor are omitted; the frontend renders the
+/// gaps as horizontal "value held" segments via `step: 'end'`.
 #[tauri::command]
 pub fn fetch_portfolio_trend(
     controller: State<'_, Arc<AppController>>,
     days: i64,
 ) -> Result<PortfolioTrendData, String> {
-    let snaps = controller.get_crypto_portfolio_snapshots(days).map_err(|e| e.to_string())?;
-    Ok(PortfolioTrendData {
-        dates: snaps.iter().map(|(d, _, _)| d.clone()).collect(),
-        values: snaps.iter().map(|(_, v, _)| *v).collect(),
-    })
+    let today = Local::now().date_naive();
+    let start = today - chrono::Duration::days(days.max(1) - 1);
+    let start_str = start.format("%Y-%m-%d").to_string();
+    let today_str = today.format("%Y-%m-%d").to_string();
+
+    // Today's value from current spot prices (always the most fresh anchor).
+    let assets = controller.get_aggregated_portfolio().map_err(|e| e.to_string())?;
+    let prices = controller.load_crypto_prices().unwrap_or_default();
+    let price_map: HashMap<String, f64> = prices.iter()
+        .map(|p| (p.id.clone(), p.current_price))
+        .collect();
+    let today_value: f64 = assets.iter()
+        .map(|a| a.total_amount * price_map.get(&a.coin_id).copied().unwrap_or(0.0))
+        .sum();
+
+    // All snapshots ever (one row per day max — bounded by app lifetime).
+    // We need everything because we want the latest snapshot strictly before
+    // the range to seed a carry-forward starting value.
+    let all_snaps = controller
+        .get_crypto_portfolio_snapshots(36_500)
+        .unwrap_or_default();
+
+    // Anchor map keyed by date so duplicates collapse cleanly.
+    let mut anchors: HashMap<String, f64> = HashMap::new();
+
+    // Seed: latest snapshot before the range carries forward to start_date.
+    if let Some((_, v, _)) = all_snaps
+        .iter()
+        .filter(|(d, _, _)| d.as_str() < start_str.as_str())
+        .last()
+    {
+        anchors.insert(start_str.clone(), *v);
+    }
+
+    // Snapshots within [start, today].
+    for (d, v, _) in &all_snaps {
+        if d.as_str() >= start_str.as_str() && d.as_str() <= today_str.as_str() {
+            anchors.insert(d.clone(), *v);
+        }
+    }
+
+    // Today: always present, always uses fresh spot (overrides any stale snapshot).
+    if today_value > 0.0 || !anchors.is_empty() {
+        anchors.insert(today_str.clone(), today_value);
+    }
+
+    if anchors.is_empty() {
+        return Ok(PortfolioTrendData { dates: vec![], values: vec![] });
+    }
+
+    let mut sorted: Vec<(String, f64)> = anchors.into_iter().collect();
+    sorted.sort_by(|a, b| a.0.cmp(&b.0));
+
+    let (dates, values): (Vec<_>, Vec<_>) = sorted.into_iter().unzip();
+    Ok(PortfolioTrendData { dates, values })
 }
 
 // ==================== Wallets ====================

@@ -155,11 +155,17 @@
           notes: txNotes || undefined,
         })
       } else {
+        const backendType =
+          txMode === 'buy' ? 'trade' :
+          txMode === 'sell' ? 'trade' :
+          txMode === 'fee' ? 'expense' : txMode
+        const subtype = txMode === 'fee' ? 'fee' : (txMode === 'buy' || txMode === 'sell') ? txMode : undefined
         await cryptoApi.addCryptoTransaction({
           wallet_id: txWalletId,
           coin_id: txCoinId,
           symbol: txSymbol,
-          transaction_type: txMode,
+          transaction_type: backendType,
+          subtype,
           amount: txAmount,
           price: txPrice,
           fee: txFee,

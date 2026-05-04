@@ -275,6 +275,7 @@
 
   function openAddTransaction() {
     loadCoinCatalog()
+    loadWallets()
     showAddTransaction = true
   }
 
@@ -302,10 +303,8 @@
   async function load() {
     loading = true
     try {
-      const [p, t] = await Promise.all([
-        cryptoApi.fetchPortfolio(),
-        cryptoApi.fetchPortfolioTrend(trendDays),
-      ])
+      const p = await cryptoApi.fetchPortfolio()
+      const t = await cryptoApi.fetchPortfolioTrend(trendDays)
       portfolio = p
       trend = t
     } catch (e) {
@@ -543,6 +542,7 @@
     app.settings?.preferred_currency
     load()
     loadTickerPrices()
+    loadWallets()
   })
   $effect(() => {
     app.settings?.preferred_currency

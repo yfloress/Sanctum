@@ -64,8 +64,10 @@
     series: [{
       type: 'line',
       data: data.values,
-      smooth: true,
-      showSymbol: false,
+      step: 'end',
+      showSymbol: data.values.length <= 3,
+      symbolSize: 6,
+      itemStyle: { color: '#4ade80' },
       lineStyle: { color: '#4ade80', width: 2 },
       areaStyle: {
         color: {
