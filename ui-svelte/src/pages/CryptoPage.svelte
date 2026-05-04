@@ -785,6 +785,7 @@
               onclick={() => openEditTransaction(tx.id)}
               onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') openEditTransaction(tx.id) }}>
               <span class="tx-type-dot" class:buy={getCryptoTxClass(tx) === 'buy'} class:sell={getCryptoTxClass(tx) === 'sell'} class:transfer={getCryptoTxClass(tx) === 'transfer'}></span>
+              <img src={getCryptoIconPath(tx.symbol)} alt={tx.symbol} class="tx-crypto-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
               <div class="tx-main">
                 <span class="tx-desc">{getCryptoTxLabel(tx)}</span>
                 <div class="tx-meta">
@@ -851,6 +852,7 @@
               onclick={() => openEditTransaction(tx.id)}
               onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') openEditTransaction(tx.id) }}>
               <span class="tx-type-dot" class:buy={getCryptoTxClass(tx) === 'buy'} class:sell={getCryptoTxClass(tx) === 'sell'} class:transfer={getCryptoTxClass(tx) === 'transfer'}></span>
+              <img src={getCryptoIconPath(tx.symbol)} alt={tx.symbol} class="tx-crypto-icon" onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
               <div class="tx-main">
                 <span class="tx-desc">{getCryptoTxLabel(tx)}</span>
                 <div class="tx-meta">
@@ -1767,6 +1769,7 @@
   .tx-type-dot.buy { background: var(--success); }
   .tx-type-dot.sell { background: var(--danger); }
   .tx-type-dot.transfer { background: #60a5fa; }
+  .tx-crypto-icon { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; }
 
   .tx-main {
     flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;
