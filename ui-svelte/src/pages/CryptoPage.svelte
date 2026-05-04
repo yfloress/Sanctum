@@ -34,7 +34,7 @@
     TaxReportDto, TaxSettingsDto, TaxSummaryDto
   } from '../lib/types'
 
-  type Tab = 'portfolio' | 'wallets' | 'tax'
+  type Tab = 'portfolio' | 'wallets' | 'transactions' | 'tax'
   let activeTab = $state<Tab>('portfolio')
   let loading = $state(true)
 
@@ -73,6 +73,12 @@
   let portfolio = $state<PortfolioResponse | null>(null)
   let trend = $state<PortfolioTrendData | null>(null)
   let trendDays = $state(30)
+  let recentTxs = $state<CryptoTransactionDto[]>([])
+
+  // Transactions tab state
+  let txList = $state<CryptoTransactionDto[]>([])
+  let txListHasMore = $state(false)
+  let txListFilter = $state('')
 
   async function changeTrendDays(days: number) {
     trendDays = days
@@ -81,6 +87,38 @@
     } catch (e) {
       app.showToast(String(e), true)
     }
+  }
+
+  function getCryptoTxClass(tx: CryptoTransactionDto): string {
+    const t = tx.transaction_type
+    const s = tx.subtype
+    if (t === 'income') return 'buy'
+    if (t === 'expense') return 'sell'
+    if (t === 'transfer') return s === 'withdrawal' ? 'sell' : s === 'deposit' ? 'buy' : 'transfer'
+    if (t === 'trade') {
+      if (s === 'sell') return 'sell'
+      if (s === 'swap') return 'transfer'
+      return 'buy'
+    }
+    return 'buy'
+  }
+
+  function getCryptoTxLabel(tx: CryptoTransactionDto): string {
+    const t = tx.transaction_type
+    const s = tx.subtype
+    const detail = `${tx.amount} ${tx.symbol}`
+    const args = { detail }
+    if (t === 'income' || (t === 'transfer' && s === 'deposit'))
+      return i18n.tArgs('crypto-tx-received', args, `Received ${detail}`)
+    if (t === 'expense' || (t === 'transfer' && s === 'withdrawal'))
+      return i18n.tArgs('crypto-tx-sent', args, `Sent ${detail}`)
+    if (t === 'transfer')
+      return i18n.tArgs('crypto-tx-transferred', args, `Transferred ${detail}`)
+    if (s === 'sell')
+      return i18n.tArgs('crypto-tx-sold', args, `Sold ${detail}`)
+    if (s === 'swap')
+      return i18n.tArgs('crypto-tx-swapped', args, `Swapped ${detail}`)
+    return i18n.tArgs('crypto-tx-bought', args, `Bought ${detail}`)
   }
 
   // Wallets state
@@ -307,10 +345,31 @@
       const t = await cryptoApi.fetchPortfolioTrend(trendDays)
       portfolio = p
       trend = t
+      recentTxs = (await cryptoApi.fetchAllCryptoTransactions(0, 6)).transactions
     } catch (e) {
       app.showToast(String(e), true)
     } finally {
       loading = false
+    }
+  }
+
+  async function loadTransactionsList() {
+    try {
+      const res = await cryptoApi.fetchAllCryptoTransactions(0, 50)
+      txList = res.transactions
+      txListHasMore = res.has_more
+    } catch (e) {
+      app.showToast(String(e), true)
+    }
+  }
+
+  async function loadMoreTransactionsList() {
+    try {
+      const res = await cryptoApi.fetchAllCryptoTransactions(txList.length, 50)
+      txList = res.transactions
+      txListHasMore = res.has_more
+    } catch (e) {
+      app.showToast(String(e), true)
     }
   }
 
@@ -549,6 +608,7 @@
     if (activeTab === 'wallets') loadWallets()
   })
   $effect(() => { if (activeTab === 'tax') loadIpcSummary() })
+  $effect(() => { if (activeTab === 'transactions') loadTransactionsList() })
 </script>
 
 <div class="page" class:blurred={showAddWallet || showTaxSettings || selectedWallet || showAssetDetail || showAddTransaction || showEditTransaction || showTickerConfig}>
@@ -604,6 +664,7 @@
     <div class="tab-bar">
       <button class:active={activeTab === 'portfolio'} onclick={() => activeTab = 'portfolio'}>{i18n.t('crypto-tab-portfolio', 'Portfolio')}</button>
       <button class:active={activeTab === 'wallets'} onclick={() => activeTab = 'wallets'}>{i18n.t('crypto-tab-wallets', 'Wallets')}</button>
+      <button class:active={activeTab === 'transactions'} onclick={() => activeTab = 'transactions'}>{i18n.t('crypto-tab-transactions', 'Transactions')}</button>
       <button class:active={activeTab === 'tax'} onclick={() => activeTab = 'tax'}>{i18n.t('crypto-tab-tax', 'Tax')}</button>
     </div>
   </div>
@@ -709,6 +770,34 @@
       {/if}
     {/if}
 
+    <!-- Recent Transactions -->
+    <div class="chart-section">
+      <div class="chart-card-header">
+        <h3>{i18n.t('crypto-recent-transactions', 'Recent Transactions')}</h3>
+      </div>
+      {#if recentTxs.length === 0}
+        <p class="empty">{i18n.t('crypto-no-transactions', 'No transactions yet.')}</p>
+      {:else}
+        <div class="tx-list">
+          {#each recentTxs as tx}
+            <div class="tx-row" role="button" tabindex="0"
+              onclick={() => openEditTransaction(tx.id)}
+              onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') openEditTransaction(tx.id) }}>
+              <span class="tx-type-dot" class:buy={getCryptoTxClass(tx) === 'buy'} class:sell={getCryptoTxClass(tx) === 'sell'} class:transfer={getCryptoTxClass(tx) === 'transfer'}></span>
+              <div class="tx-main">
+                <span class="tx-desc">{getCryptoTxLabel(tx)}</span>
+                <div class="tx-meta">
+                  <span class="tx-acc">{tx.wallet_name || '?'}</span>
+                  <span class="tx-date">{tx.date}</span>
+                </div>
+              </div>
+              <span class="tx-amount" class:buy={getCryptoTxClass(tx) === 'buy'} class:sell={getCryptoTxClass(tx) === 'sell'} class:transfer={getCryptoTxClass(tx) === 'transfer'}>{tx.value}</span>
+            </div>
+          {/each}
+        </div>
+      {/if}
+    </div>
+
   <!-- WALLETS TAB -->
   {:else if activeTab === 'wallets'}
     <div class="section-header">
@@ -734,6 +823,52 @@
         {/each}
       </div>
     {/if}
+
+  <!-- TRANSACTIONS TAB -->
+  {:else if activeTab === 'transactions'}
+    <section class="tab-content">
+      <div class="activity-toolbar">
+        <div class="filter-search">
+          <svg class="filter-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input
+            type="text"
+            placeholder={i18n.t('crypto-search-transactions', 'Search transactions...')}
+            bind:value={txListFilter}
+          />
+        </div>
+        <button class="glass-btn" onclick={openAddTransaction}>{i18n.t('crypto-new-transaction', 'New Transaction')}</button>
+      </div>
+
+      {#if txList.length === 0}
+        <p class="empty">{txListFilter ? i18n.t('crypto-no-matching', 'No matching transactions') : i18n.t('crypto-no-transactions', 'No transactions yet.')}</p>
+      {:else}
+        <div class="tx-list">
+          {#each txList.filter(tx => !txListFilter || tx.symbol.toLowerCase().includes(txListFilter.toLowerCase()) || tx.wallet_name?.toLowerCase().includes(txListFilter.toLowerCase()) || tx.transaction_type.toLowerCase().includes(txListFilter.toLowerCase())) as tx (tx.id)}
+            <div class="tx-row" role="button" tabindex="0"
+              onclick={() => openEditTransaction(tx.id)}
+              onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter') openEditTransaction(tx.id) }}>
+              <span class="tx-type-dot" class:buy={getCryptoTxClass(tx) === 'buy'} class:sell={getCryptoTxClass(tx) === 'sell'} class:transfer={getCryptoTxClass(tx) === 'transfer'}></span>
+              <div class="tx-main">
+                <span class="tx-desc">{getCryptoTxLabel(tx)}</span>
+                <div class="tx-meta">
+                  <span class="tx-acc">{tx.wallet_name || '?'}</span>
+                  <span class="tx-date">{tx.date}</span>
+                </div>
+              </div>
+              <span class="tx-amount" class:buy={getCryptoTxClass(tx) === 'buy'} class:sell={getCryptoTxClass(tx) === 'sell'} class:transfer={getCryptoTxClass(tx) === 'transfer'}>{tx.value}</span>
+              <button class="delete-btn" onclick={(e: MouseEvent) => { e.stopPropagation(); deleteCryptoTx(tx.id) }} aria-label={i18n.t('crypto-delete', 'Delete')}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
+            </div>
+          {/each}
+        </div>
+        {#if txListHasMore}
+          <button class="load-more-btn" onclick={loadMoreTransactionsList}>{i18n.t('crypto-load-more', 'Load More')}</button>
+        {/if}
+      {/if}
+    </section>
 
   <!-- TAX TAB -->
   {:else if activeTab === 'tax'}
@@ -1116,7 +1251,7 @@
   bind:show={showAddTransaction}
   wallets={walletsData?.simple_list ?? []}
   coinCatalog={coinCatalog}
-  onsubmit={async () => { await load(); if (activeTab === 'wallets') await loadWallets() }}
+  onsubmit={async () => { await load(); if (activeTab === 'wallets') await loadWallets(); if (activeTab === 'transactions') await loadTransactionsList() }}
   onclose={() => showAddTransaction = false}
 />
 
@@ -1128,6 +1263,7 @@
     if (showAssetDetail) assetTransactions = await cryptoApi.getCryptoTransactionsByCoin(assetCoinId)
     if (selectedWallet) selectedWallet = await cryptoApi.fetchWalletDetail(selectedWallet.id)
     await load()
+    if (activeTab === 'transactions') await loadTransactionsList()
   }}
   onclose={() => showEditTransaction = false}
 />
@@ -1607,4 +1743,74 @@
     background: var(--select-bg); color: var(--text-primary); font-size: 0.8rem; box-sizing: border-box;
   }
   .custom-coin-row input:focus, .custom-coin-row-bottom input:focus { border-color: var(--accent); outline: none; }
+
+  /* Transaction list (Recent) */
+  .tx-list { display: flex; flex-direction: column; }
+  .tx-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 8px;
+    border-bottom: 1px solid var(--glass-border);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: background 0.15s;
+  }
+  .tx-row:last-child { border-bottom: none; }
+  .tx-row:hover { background: var(--glass-hover); }
+
+  .tx-type-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--text-tertiary); flex-shrink: 0;
+  }
+  .tx-type-dot.buy { background: var(--success); }
+  .tx-type-dot.sell { background: var(--danger); }
+  .tx-type-dot.transfer { background: #60a5fa; }
+
+  .tx-main {
+    flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;
+  }
+  .tx-desc {
+    font-size: 0.875rem; font-weight: 500; color: var(--text-primary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .tx-meta {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .tx-acc  { font-size: 0.71rem; color: var(--text-tertiary); }
+  .tx-date { font-size: 0.71rem; color: var(--text-tertiary); }
+  .tx-amount {
+    font-size: 0.9rem; font-weight: 600; color: var(--text-secondary);
+    white-space: nowrap; text-align: right; min-width: 80px;
+  }
+  .tx-amount.buy { color: var(--success); }
+  .tx-amount.sell { color: var(--danger); }
+  .tx-amount.transfer { color: #60a5fa; }
+
+  /* Transactions tab */
+  .tab-content { padding-top: 20px; }
+  .activity-toolbar {
+    display: flex; gap: 12px; align-items: flex-start; margin-bottom: 16px; flex-wrap: wrap;
+  }
+  .filter-search {
+    position: relative; flex: 1; min-width: 160px;
+  }
+  .filter-search-icon {
+    position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+    width: 14px; height: 14px; color: var(--text-tertiary); pointer-events: none;
+  }
+  .filter-search input {
+    width: 100%; padding: 8px 12px 8px 32px;
+    border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+    background: var(--glass); backdrop-filter: var(--glass-blur);
+    color: var(--text-primary); font-size: 0.85rem; box-sizing: border-box;
+    transition: border-color 0.2s;
+  }
+  .filter-search input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-glow); }
+  .load-more-btn {
+    display: block; margin: 16px auto; padding: 8px 24px;
+    border: 1px solid var(--glass-border); border-radius: var(--radius-sm); background: none;
+    color: var(--text-secondary); cursor: pointer; transition: all 0.15s;
+  }
+  .load-more-btn:hover { border-color: var(--glass-border-hover); color: var(--text-primary); }
 </style>

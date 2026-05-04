@@ -518,6 +518,17 @@ impl CryptoService {
         })
     }
 
+    pub fn get_all_crypto_transactions(
+        &self,
+        offset: i64,
+        limit: i64,
+    ) -> Result<Vec<CryptoTransaction>, CryptoError> {
+        self.with_db(|db| {
+            db.get_all_crypto_transactions(offset, limit)
+                .map_err(CryptoError::Database)
+        })
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn update_crypto_transaction(
         &self,

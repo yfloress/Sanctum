@@ -372,6 +372,17 @@ impl AppController {
             .map_err(ControllerError::from)
     }
 
+    /// Gets all crypto transactions across all wallets, paginated by offset/limit
+    pub fn get_all_crypto_transactions(
+        &self,
+        offset: i64,
+        limit: i64,
+    ) -> Result<Vec<CryptoTransaction>, ControllerError> {
+        self.crypto_service
+            .get_all_crypto_transactions(offset, limit)
+            .map_err(ControllerError::from)
+    }
+
     /// Updates a crypto transaction's editable fields
     #[allow(clippy::too_many_arguments)]
     pub fn update_crypto_transaction(

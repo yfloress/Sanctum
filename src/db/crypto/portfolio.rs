@@ -270,7 +270,7 @@ impl Database {
 
     /// Calculates aggregated portfolio from all transactions across all wallets
     pub fn get_aggregated_portfolio(&self) -> Result<Vec<AggregatedAsset>, DbError> {
-        let transactions = self.get_all_crypto_transactions()?;
+        let transactions = self.get_all_crypto_transactions(0, i64::MAX)?;
         Ok(Self::aggregate_crypto_transactions(transactions))
     }
 

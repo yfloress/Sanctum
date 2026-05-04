@@ -22,6 +22,7 @@ use sanctum::models::{CryptoTransaction, CryptoWallet};
 use sanctum::ui::dto::crypto::{
     CoinCatalogDto, CryptoTransactionDto, CryptoTransactionEditData,
     CryptoTransactionInput, CryptoTransferInput, CryptoSwapInput,
+    CryptoTransactionListResponse,
     CryptoAssetPriceDto, CryptoTransactionUpdateInput, DistributionItem, FxRateDto,
     IpcSummaryDto, PortfolioAssetDto, PortfolioResponse, PortfolioTrendData,
     TaxReportDto, TaxSettingsDto, TaxSummaryDto, WalletDetailResponse, WalletDto,
@@ -387,6 +388,20 @@ pub fn get_crypto_transactions_by_coin(
     let txs = controller.get_crypto_transactions_by_coin(coin_id).map_err(|e| e.to_string())?;
     let wallets = controller.get_wallets().map_err(|e| e.to_string())?;
     Ok(map_crypto_transactions(&txs, &wallets, &controller))
+}
+
+#[tauri::command]
+pub fn fetch_all_crypto_transactions(
+    controller: State<'_, Arc<AppController>>, offset: i64, limit: i64,
+) -> Result<CryptoTransactionListResponse, String> {
+    let txs = controller.get_all_crypto_transactions(offset, limit).map_err(|e| e.to_string())?;
+    let wallets = controller.get_wallets().map_err(|e| e.to_string())?;
+    let total = txs.len();
+    let effective = total.min(limit as usize);
+    let has_more = total > effective;
+    let mut dtos = map_crypto_transactions(&txs[..effective], &wallets, &controller);
+    dtos.sort_by(|a, b| b.date.cmp(&a.date));
+    Ok(CryptoTransactionListResponse { transactions: dtos, has_more })
 }
 
 // ==================== Catalog ====================

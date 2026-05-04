@@ -90,6 +90,12 @@ export async function getCryptoTransactionsByCoin(coin_id: string): Promise<Cryp
   return invoke<CryptoTransactionDto[]>('get_crypto_transactions_by_coin', { coinId: coin_id })
 }
 
+type CryptoTransactionListResponse = { transactions: CryptoTransactionDto[], has_more: boolean }
+
+export async function fetchAllCryptoTransactions(offset: number, limit: number): Promise<CryptoTransactionListResponse> {
+  return invoke<CryptoTransactionListResponse>('fetch_all_crypto_transactions', { offset, limit })
+}
+
 export async function getCoinCatalog(): Promise<CoinCatalogDto[]> {
   return invoke<CoinCatalogDto[]>('get_coin_catalog')
 }

@@ -146,6 +146,7 @@ pub fn run() {
             commands::crypto::delete_crypto_transaction,
             commands::crypto::get_crypto_transaction,
             commands::crypto::get_crypto_transactions_by_coin,
+            commands::crypto::fetch_all_crypto_transactions,
             commands::crypto::get_coin_catalog,
             commands::crypto::set_favorite_coin,
             commands::crypto::add_custom_coin,

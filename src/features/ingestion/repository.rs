@@ -172,7 +172,7 @@ impl IngestionRepository {
 
     /// Gets all existing crypto transactions for deduplication
     pub fn get_all_crypto_transactions(db: &Database) -> Result<Vec<CryptoTransaction>, DbError> {
-        db.get_all_crypto_transactions()
+        db.get_all_crypto_transactions(0, i64::MAX)
     }
 
     /// Creates a crypto transaction

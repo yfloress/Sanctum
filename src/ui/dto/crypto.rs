@@ -173,6 +173,13 @@ pub struct CryptoTransactionDto {
     pub has_related_tx: bool,
 }
 
+/// Paginated crypto transaction list.
+#[derive(Debug, Clone, Serialize)]
+pub struct CryptoTransactionListResponse {
+    pub transactions: Vec<CryptoTransactionDto>,
+    pub has_more: bool,
+}
+
 /// Input for adding a crypto transaction (buy/sell/income/expense).
 #[derive(Debug, Clone, Deserialize)]
 pub struct CryptoTransactionInput {

@@ -132,7 +132,7 @@ impl CryptoService {
 
         self.with_db(|db| {
             let transactions: Vec<CryptoTransaction> = db
-                .get_all_crypto_transactions()
+                .get_all_crypto_transactions(0, i64::MAX)
                 .map_err(CryptoError::Database)?
                 .into_iter()
                 .filter(|tx| !excluded.contains(&tx.wallet_id))
@@ -161,7 +161,7 @@ impl CryptoService {
 
         self.with_db(|db| {
             let all_transactions: Vec<CryptoTransaction> = db
-                .get_all_crypto_transactions()
+                .get_all_crypto_transactions(0, i64::MAX)
                 .map_err(CryptoError::Database)?;
             let transactions: Vec<CryptoTransaction> = all_transactions
                 .iter()
@@ -325,7 +325,7 @@ impl CryptoService {
 
         self.with_db(|db| {
             let transactions: Vec<CryptoTransaction> = db
-                .get_all_crypto_transactions()
+                .get_all_crypto_transactions(0, i64::MAX)
                 .map_err(CryptoError::Database)?
                 .into_iter()
                 .filter(|tx| !excluded.contains(&tx.wallet_id))

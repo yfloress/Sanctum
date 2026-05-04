@@ -140,16 +140,18 @@ impl Database {
         Ok(transactions)
     }
 
-    /// Gets all crypto transactions across all wallets
-    pub fn get_all_crypto_transactions(&self) -> Result<Vec<CryptoTransaction>, DbError> {
+    /// Gets all crypto transactions across all wallets, paginated by offset/limit.
+    /// Returns limit+1 rows so the caller can detect has_more.
+    pub fn get_all_crypto_transactions(&self, offset: i64, limit: i64) -> Result<Vec<CryptoTransaction>, DbError> {
+        let effective_limit = limit.saturating_add(1);
         let sql = format!(
-            "SELECT {} FROM crypto_transactions ORDER BY date DESC, rowid DESC",
+            "SELECT {} FROM crypto_transactions ORDER BY date DESC, rowid DESC LIMIT ?1 OFFSET ?2",
             CRYPTO_TX_COLUMNS
         );
         let mut stmt = self.conn.prepare(&sql)?;
 
         let transactions = stmt
-            .query_map([], row_to_crypto_transaction)?
+            .query_map(rusqlite::params![effective_limit, offset], row_to_crypto_transaction)?
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(transactions)
