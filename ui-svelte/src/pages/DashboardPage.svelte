@@ -14,6 +14,10 @@
      You should have received a copy of the GNU Affero General Public License
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 
+<script module lang="ts">
+  let savedRange = '1M'
+</script>
+
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte'
   import { i18n } from '../lib/stores/i18n.svelte'
@@ -26,7 +30,7 @@
   let balance = $state<BalanceOverview | null>(null)
   let recent = $state<RecentTransaction[]>([])
   let analytics = $state<AnalyticsData | null>(null)
-  let selectedRange = $state('1M')
+  let selectedRange = $state(savedRange)
   let loading = $state(true)
   let error = $state('')
 
@@ -51,6 +55,7 @@
   }
 
   async function changeRange(range: string) {
+    savedRange = range
     selectedRange = range
     try {
       analytics = await dashboardApi.fetchAnalytics(range)
