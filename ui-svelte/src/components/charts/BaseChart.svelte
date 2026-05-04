@@ -41,22 +41,24 @@
   let chart: echarts.ECharts | null = null
 
   $effect(() => {
-    if (!container) return
+    const el = container
+    if (!el) return
 
-    if (!chart) {
-      chart = echarts.init(container, 'dark')
-    }
+    const c = echarts.init(el, 'dark')
+    chart = c
 
-    chart.setOption(option, { notMerge: true })
-
-    const ro = new ResizeObserver(() => chart?.resize())
-    ro.observe(container)
+    const ro = new ResizeObserver(() => c.resize())
+    ro.observe(el)
 
     return () => {
       ro.disconnect()
-      chart?.dispose()
+      c.dispose()
       chart = null
     }
+  })
+
+  $effect(() => {
+    chart?.setOption(option)
   })
 </script>
 

@@ -122,11 +122,20 @@ impl DashboardCharts {
         let crypto_cents = (crypto_total_usd * 100.0) as i64;
         let total_balance = fiat_balance + crypto_cents;
 
-        // Build crypto snapshot lookup (date -> value in cents)
-        let crypto_by_date: HashMap<String, i64> = crypto_snapshots
+        // Build crypto snapshot lookup: sorted (date, value_cents)
+        let mut crypto_sorted: Vec<(String, i64)> = crypto_snapshots
             .iter()
             .map(|(date, value, _)| (date.clone(), (*value * 100.0) as i64))
             .collect();
+        crypto_sorted.sort_by(|a, b| a.0.cmp(&b.0));
+
+        let lookup_crypto_at = |date_str: &str| -> i64 {
+            match crypto_sorted.binary_search_by(|(d, _)| d.as_str().cmp(date_str)) {
+                Ok(i) => crypto_sorted[i].1,
+                Err(0) => 0,
+                Err(i) => crypto_sorted[i - 1].1,
+            }
+        };
 
         let today = Local::now().date_naive();
         let today_str = today.format("%Y-%m-%d").to_string();
@@ -162,14 +171,11 @@ impl DashboardCharts {
         loop {
             let date_str = cursor.format("%Y-%m-%d").to_string();
 
-            // Use historical crypto snapshot if available, else current value
+            // Use historical crypto snapshot nearest on/before date, else 0
             let crypto_at_date = if date_str == today_str {
-                crypto_cents // Always use current value for today
+                crypto_cents
             } else {
-                crypto_by_date
-                    .get(&date_str)
-                    .copied()
-                    .unwrap_or(crypto_cents)
+                lookup_crypto_at(&date_str)
             };
 
             let total_at_date = balance + crypto_at_date;

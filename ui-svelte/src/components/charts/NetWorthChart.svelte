@@ -36,20 +36,25 @@
     const d = Number(parts[2])
     const mon = MONTHS[(m - 1) % 12] ?? ''
     if (range === '1M') return `${mon} ${d}`
+    if (range === '3M') return mon
     if (range === '6M') return mon
     if (range === '1Y') return `${mon} '${String(y).slice(2)}`
     return String(y)
   }
 
-  function formatMoney(cents: number): string {
-    const dollars = cents / 100
-    if (Math.abs(dollars) >= 1_000_000) return `$${(dollars / 1_000_000).toFixed(1)}M`
-    if (Math.abs(dollars) >= 1_000) return `$${(dollars / 1_000).toFixed(0)}k`
-    return `$${dollars.toFixed(0)}`
+  function formatYAxis(value: number): string {
+    if (value === 0) return formatCurrency(0)
+    return formatCurrency(value, undefined, {
+      notation: 'compact',
+      compactDisplay: 'short',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 1,
+    })
   }
 
   function labelInterval(): number {
     if (range === '1M') return 5   // ~every 6 days → 5 labels
+    if (range === '3M') return 14  // ~every 2 weeks → 6 labels
     if (range === '6M') return 29  // ~monthly → 6 labels
     if (range === '1Y') return 59  // ~every 2 months → 6 labels
     return 364                      // ALL: ~yearly
@@ -66,8 +71,7 @@
       formatter: (params: { axisValue: string; value: number }[]) => {
         const pt = params[0]
         if (!pt) return ''
-        const dollars = pt.value / 100
-        return `<span style="color:#888;font-size:11px">${formatDate(pt.axisValue)}</span><br/><b>${formatCurrency(dollars)}</b>`
+        return `<span style="color:#888;font-size:11px">${formatDate(pt.axisValue)}</span><br/><b>${formatCurrency(pt.value)}</b>`
       },
     },
     xAxis: {
@@ -91,7 +95,7 @@
       axisLabel: {
         color: '#555',
         fontSize: 10,
-        formatter: (val: number) => formatMoney(val),
+        formatter: (val: number) => formatYAxis(val),
       },
     },
     series: [{

@@ -21,6 +21,7 @@
   import NetWorthChart from '../components/charts/NetWorthChart.svelte'
   import FinanceBarChart from '../components/charts/FinanceBarChart.svelte'
   import type { BalanceOverview, RecentTransaction, AnalyticsData } from '../lib/types'
+  import { untrack } from 'svelte'
 
   let balance = $state<BalanceOverview | null>(null)
   let recent = $state<RecentTransaction[]>([])
@@ -30,13 +31,14 @@
   let error = $state('')
 
   async function load() {
+    const range = untrack(() => selectedRange)
     loading = true
     error = ''
     try {
       const [b, r, a] = await Promise.all([
         dashboardApi.fetchBalance(),
         dashboardApi.fetchRecent(),
-        dashboardApi.fetchAnalytics(selectedRange),
+        dashboardApi.fetchAnalytics(range),
       ])
       balance = b
       recent = r
@@ -172,7 +174,7 @@
         <div class="chart-card-header">
           <h4>{i18n.t('dashboard-net-worth-trend', 'Net Worth Trend')}</h4>
           <div class="range-picker">
-            {#each ['1M','6M','1Y','ALL'] as r}
+            {#each ['1M','3M','6M','1Y','ALL'] as r}
               <button class:active={selectedRange === r} onclick={() => changeRange(r)}>{r}</button>
             {/each}
           </div>

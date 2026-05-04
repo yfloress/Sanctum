@@ -240,9 +240,25 @@ pub fn fetch_analytics(
         })
         .collect();
 
+    let converted_values: Vec<f64> = data
+        .chart_values
+        .iter()
+        .map(|v| convert_usd_to_preferred(*v as f64 / 100.0, &preferred_currency, preferred_rate))
+        .collect();
+
+    let chart_min = converted_values
+        .iter()
+        .cloned()
+        .fold(f64::INFINITY, f64::min);
+    let chart_max = converted_values
+        .iter()
+        .cloned()
+        .fold(f64::NEG_INFINITY, f64::max);
+    let net_worth_pref = converted_values.last().copied().unwrap_or(0.0);
+
     let chart = NetWorthChartData {
         dates: data.chart_dates,
-        values: data.chart_values.iter().map(|v| *v as f64).collect(),
+        values: converted_values,
     };
 
     let income_pref = convert_usd_to_preferred(
@@ -279,11 +295,10 @@ pub fn fetch_analytics(
             }
         })
         .collect();
-
     Ok(AnalyticsData {
-        net_worth: data.net_worth,
-        net_worth_min: data.min_value,
-        net_worth_max: data.max_value,
+        net_worth: format_preferred(net_worth_pref, &preferred_currency),
+        net_worth_min: format_preferred(chart_min, &preferred_currency),
+        net_worth_max: format_preferred(chart_max, &preferred_currency),
         total_income: format_preferred(income_pref, &preferred_currency),
         total_expenses: format_preferred(expense_pref, &preferred_currency),
         total_net: format_preferred(net_pref.abs(), &preferred_currency),
