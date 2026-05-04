@@ -217,6 +217,7 @@ finances-cat-deleted = Category deleted
 crypto-tab-portfolio = Portfolio
 crypto-tab-wallets = Wallets
 crypto-tab-tax = Tax
+crypto-tab-activity = Activity
 crypto-portfolio-value = Portfolio Value
 crypto-last-updated-label = Last updated: {$value}
 crypto-loading = Loading...
@@ -233,6 +234,11 @@ crypto-realized-ytd = Realized YTD
 crypto-roi = ROI
 crypto-portfolio-trend = Portfolio Trend
 crypto-distribution = Distribution
+crypto-recent-transactions = Recent Transactions
+crypto-no-transactions = No transactions yet.
+crypto-search-transactions = Search transactions...
+crypto-no-matching = No matching transactions
+crypto-load-more = Load More
 crypto-no-assets-empty = No assets yet. Create a wallet and add transactions to get started.
 
 # -- Wallets tab --
@@ -355,6 +361,13 @@ crypto-tx-to-wallet = To Wallet
 crypto-tx-amount = Amount
 crypto-tx-received-amount = Received Amount (optional)
 crypto-tx-received-placeholder = Same as sent if empty
+# Transaction action labels (in list rows)
+crypto-tx-received = Received {$detail}
+crypto-tx-sent = Sent {$detail}
+crypto-tx-transferred = Transferred {$detail}
+crypto-tx-sold = Sold {$detail}
+crypto-tx-swapped = Swapped {$detail}
+crypto-tx-bought = Bought {$detail}
 crypto-tx-from-coin = From Coin
 crypto-tx-from-amount = From Amount
 crypto-tx-to-coin = To Coin

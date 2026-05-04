@@ -34,7 +34,7 @@
     TaxReportDto, TaxSettingsDto, TaxSummaryDto
   } from '../lib/types'
 
-  type Tab = 'portfolio' | 'wallets' | 'transactions' | 'tax'
+  type Tab = 'portfolio' | 'wallets' | 'activity' | 'tax'
   let activeTab = $state<Tab>('portfolio')
   let loading = $state(true)
 
@@ -332,6 +332,7 @@
         selectedWallet = await cryptoApi.fetchWalletDetail(selectedWallet.id)
       }
       await load()
+      if (activeTab === 'activity') await loadTransactionsList()
       app.showToast(i18n.t('crypto-toast-tx-deleted', 'Transaction deleted'))
     } catch (e) {
       app.showToast(String(e), true)
@@ -608,7 +609,7 @@
     if (activeTab === 'wallets') loadWallets()
   })
   $effect(() => { if (activeTab === 'tax') loadIpcSummary() })
-  $effect(() => { if (activeTab === 'transactions') loadTransactionsList() })
+  $effect(() => { if (activeTab === 'activity') loadTransactionsList() })
 </script>
 
 <div class="page" class:blurred={showAddWallet || showTaxSettings || selectedWallet || showAssetDetail || showAddTransaction || showEditTransaction || showTickerConfig}>
@@ -664,7 +665,7 @@
     <div class="tab-bar">
       <button class:active={activeTab === 'portfolio'} onclick={() => activeTab = 'portfolio'}>{i18n.t('crypto-tab-portfolio', 'Portfolio')}</button>
       <button class:active={activeTab === 'wallets'} onclick={() => activeTab = 'wallets'}>{i18n.t('crypto-tab-wallets', 'Wallets')}</button>
-      <button class:active={activeTab === 'transactions'} onclick={() => activeTab = 'transactions'}>{i18n.t('crypto-tab-transactions', 'Transactions')}</button>
+      <button class:active={activeTab === 'activity'} onclick={() => activeTab = 'activity'}>{i18n.t('crypto-tab-activity', 'Activity')}</button>
       <button class:active={activeTab === 'tax'} onclick={() => activeTab = 'tax'}>{i18n.t('crypto-tab-tax', 'Tax')}</button>
     </div>
   </div>
@@ -825,7 +826,7 @@
     {/if}
 
   <!-- TRANSACTIONS TAB -->
-  {:else if activeTab === 'transactions'}
+  {:else if activeTab === 'activity'}
     <section class="tab-content">
       <div class="activity-toolbar">
         <div class="filter-search">
@@ -1251,7 +1252,7 @@
   bind:show={showAddTransaction}
   wallets={walletsData?.simple_list ?? []}
   coinCatalog={coinCatalog}
-  onsubmit={async () => { await load(); if (activeTab === 'wallets') await loadWallets(); if (activeTab === 'transactions') await loadTransactionsList() }}
+  onsubmit={async () => { await load(); if (activeTab === 'wallets') await loadWallets(); if (activeTab === 'activity') await loadTransactionsList() }}
   onclose={() => showAddTransaction = false}
 />
 
@@ -1263,7 +1264,7 @@
     if (showAssetDetail) assetTransactions = await cryptoApi.getCryptoTransactionsByCoin(assetCoinId)
     if (selectedWallet) selectedWallet = await cryptoApi.fetchWalletDetail(selectedWallet.id)
     await load()
-    if (activeTab === 'transactions') await loadTransactionsList()
+    if (activeTab === 'activity') await loadTransactionsList()
   }}
   onclose={() => showEditTransaction = false}
 />

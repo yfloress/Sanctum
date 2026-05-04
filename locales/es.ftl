@@ -217,6 +217,7 @@ finances-cat-deleted = Categoria eliminada
 crypto-tab-portfolio = Portafolio
 crypto-tab-wallets = Billeteras
 crypto-tab-tax = Impuestos
+crypto-tab-activity = Actividad
 crypto-portfolio-value = Valor del Portafolio
 crypto-last-updated-label = Ultima actualizacion: {$value}
 crypto-loading = Cargando...
@@ -233,6 +234,11 @@ crypto-realized-ytd = Realizadas (Anual)
 crypto-roi = ROI
 crypto-portfolio-trend = Tendencia del Portafolio
 crypto-distribution = Distribucion
+crypto-recent-transactions = Transacciones Recientes
+crypto-no-transactions = Sin transacciones aun.
+crypto-search-transactions = Buscar transacciones...
+crypto-no-matching = Sin transacciones coincidentes
+crypto-load-more = Cargar Mas
 crypto-no-assets-empty = Sin activos aun. Crea una billetera y agrega transacciones para comenzar.
 
 # -- Wallets tab --
@@ -355,6 +361,13 @@ crypto-tx-to-wallet = Billetera Destino
 crypto-tx-amount = Cantidad
 crypto-tx-received-amount = Cantidad Recibida (opcional)
 crypto-tx-received-placeholder = Igual al envio si vacio
+# Transaction action labels (in list rows)
+crypto-tx-received = Recibido {$detail}
+crypto-tx-sent = Enviado {$detail}
+crypto-tx-transferred = Transferido {$detail}
+crypto-tx-sold = Vendido {$detail}
+crypto-tx-swapped = Intercambiado {$detail}
+crypto-tx-bought = Comprado {$detail}
 crypto-tx-from-coin = Moneda Origen
 crypto-tx-from-amount = Cantidad Origen
 crypto-tx-to-coin = Moneda Destino
