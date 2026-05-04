@@ -35,6 +35,30 @@
     })
   }
 
+  // Soften step corners by inserting a "shoulder" point just before each anchor:
+  // same Y as previous anchor, X at 96% of the gap. With smooth enabled, plateaus
+  // stay flat (consecutive same-Y points) and only the rising/falling segment
+  // between shoulder and anchor gets bezier-rounded.
+  const seriesData = $derived.by(() => {
+    if (!data.dates.length) return [] as { value: [number, number]; symbol?: string }[]
+    const showAnchorDots = data.values.length <= 3
+    const out: { value: [number, number]; symbol?: string }[] = []
+    for (let i = 0; i < data.dates.length; i++) {
+      const t = new Date(data.dates[i] + 'T00:00:00').getTime()
+      const v = data.values[i]
+      if (i > 0) {
+        const prevT = new Date(data.dates[i - 1] + 'T00:00:00').getTime()
+        const prevV = data.values[i - 1]
+        const gap = t - prevT
+        if (gap > 0) {
+          out.push({ value: [t - gap * 0.04, prevV], symbol: 'none' })
+        }
+      }
+      out.push({ value: [t, v], symbol: showAnchorDots ? 'circle' : 'none' })
+    }
+    return out
+  })
+
   let option = $derived({
     backgroundColor: 'transparent',
     grid: { left: 60, right: 20, top: 20, bottom: 30 },
@@ -43,15 +67,15 @@
       backgroundColor: '#1a1a1a',
       borderColor: '#333',
       textStyle: { color: '#e0e0e0', fontSize: 12 },
-      formatter: (params: { value: number }[]) => {
+      formatter: (params: { value: [number, number] }[]) => {
         const pt = params[0]
         if (!pt) return ''
-        return `<b>${formatCurrency(pt.value)}</b>`
+        const v = Array.isArray(pt.value) ? pt.value[1] : pt.value
+        return `<b>${formatCurrency(v)}</b>`
       },
     },
     xAxis: {
-      type: 'category',
-      data: data.dates,
+      type: 'time',
       axisLine: { lineStyle: { color: '#333' } },
       axisLabel: { color: '#666', fontSize: 10 },
     },
@@ -63,12 +87,12 @@
     },
     series: [{
       type: 'line',
-      data: data.values,
-      step: 'end',
-      showSymbol: data.values.length <= 3,
+      data: seriesData,
+      smooth: 0.4,
+      showSymbol: true,
       symbolSize: 6,
       itemStyle: { color: '#4ade80' },
-      lineStyle: { color: '#4ade80', width: 2 },
+      lineStyle: { color: '#4ade80', width: 2.5, cap: 'round', join: 'round' },
       areaStyle: {
         color: {
           type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
