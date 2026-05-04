@@ -17,6 +17,7 @@
 <script lang="ts">
   import BaseChart from './BaseChart.svelte'
   import type { DistributionItem } from '../../lib/types'
+  import { formatCurrency } from '../../lib/currency'
 
   interface Props {
     data: DistributionItem[]
@@ -34,7 +35,7 @@
       borderColor: '#333',
       textStyle: { color: '#e0e0e0', fontSize: 12 },
       formatter: (p: { name: string, percent: number, value: number }) =>
-        `${p.name}: $${p.value.toFixed(2)} (${p.percent}%)`,
+        `${p.name}: ${formatCurrency(p.value)} (${p.percent}%)`,
     },
     series: [{
       type: 'pie',

@@ -72,6 +72,16 @@
   // Portfolio state
   let portfolio = $state<PortfolioResponse | null>(null)
   let trend = $state<PortfolioTrendData | null>(null)
+  let trendDays = $state(30)
+
+  async function changeTrendDays(days: number) {
+    trendDays = days
+    try {
+      trend = await cryptoApi.fetchPortfolioTrend(days)
+    } catch (e) {
+      app.showToast(String(e), true)
+    }
+  }
 
   // Wallets state
   let walletsData = $state<WalletsResponse | null>(null)
@@ -294,7 +304,7 @@
     try {
       const [p, t] = await Promise.all([
         cryptoApi.fetchPortfolio(),
-        cryptoApi.fetchPortfolioTrend(),
+        cryptoApi.fetchPortfolioTrend(trendDays),
       ])
       portfolio = p
       trend = t
@@ -678,7 +688,14 @@
       <!-- Portfolio Trend Chart -->
       {#if trend && trend.dates.length > 0}
         <div class="chart-section">
-          <h3>{i18n.t('crypto-portfolio-trend', 'Portfolio Trend')}</h3>
+          <div class="chart-card-header">
+            <h3>{i18n.t('crypto-portfolio-trend', 'Portfolio Trend')}</h3>
+            <div class="range-picker">
+              {#each [30, 90, 180, 365] as d}
+                <button class:active={trendDays === d} onclick={() => changeTrendDays(d)}>{d}d</button>
+              {/each}
+            </div>
+          </div>
           <PortfolioTrendChart data={trend} />
         </div>
       {/if}
@@ -1230,7 +1247,23 @@
     top: 0; left: 0; right: 0; height: 1px;
     background: var(--card-accent-line); opacity: 0.5;
   }
-  .chart-section h3 { font-size: 0.8rem; color: var(--text-tertiary); text-transform: uppercase; margin: 0 0 8px; }
+  .chart-section h3 { font-size: 0.7rem; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; margin: 0; }
+  .chart-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .range-picker {
+    display: flex; gap: 2px;
+    background: var(--glass-active); border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm); padding: 2px;
+  }
+  .range-picker button {
+    padding: 4px 12px; border: none; border-radius: 6px;
+    background: none; color: var(--text-tertiary); cursor: pointer;
+    font-size: 0.72rem; font-weight: 500; transition: all 0.15s;
+  }
+  .range-picker button:hover { color: var(--text-primary); }
+  .range-picker button.active {
+    background: var(--glass-elevated); color: var(--text-primary);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  }
 
   /* Wallets */
   .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }

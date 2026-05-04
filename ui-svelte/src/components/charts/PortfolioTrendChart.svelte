@@ -17,12 +17,23 @@
 <script lang="ts">
   import BaseChart from './BaseChart.svelte'
   import type { PortfolioTrendData } from '../../lib/types'
+  import { formatCurrency } from '../../lib/currency'
 
   interface Props {
     data: PortfolioTrendData
   }
 
   let { data }: Props = $props()
+
+  function formatYAxis(value: number): string {
+    if (value === 0) return formatCurrency(0)
+    return formatCurrency(value, undefined, {
+      notation: 'compact',
+      compactDisplay: 'short',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 1,
+    })
+  }
 
   let option = $derived({
     backgroundColor: 'transparent',
@@ -32,6 +43,11 @@
       backgroundColor: '#1a1a1a',
       borderColor: '#333',
       textStyle: { color: '#e0e0e0', fontSize: 12 },
+      formatter: (params: { value: number }[]) => {
+        const pt = params[0]
+        if (!pt) return ''
+        return `<b>${formatCurrency(pt.value)}</b>`
+      },
     },
     xAxis: {
       type: 'category',
@@ -43,7 +59,7 @@
       type: 'value',
       axisLine: { show: false },
       splitLine: { lineStyle: { color: '#1a1a1a' } },
-      axisLabel: { color: '#666', fontSize: 10 },
+      axisLabel: { color: '#666', fontSize: 10, formatter: (val: number) => formatYAxis(val) },
     },
     series: [{
       type: 'line',

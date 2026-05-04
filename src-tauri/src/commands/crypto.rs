@@ -98,6 +98,9 @@ pub fn fetch_portfolio(
         .map(|s| (s.report.summary.total_gain, s.report.summary.total_gain < 0.0))
         .unwrap_or((0.0, false));
 
+    // Save snapshot for portfolio trend chart
+    let _ = controller.save_crypto_portfolio_snapshot(total_usd, total_cost_basis);
+
     Ok(PortfolioResponse {
         total_value: fmt_pref(total_usd, &controller),
         unrealized_pnl: fmt_pref(unrealized_pnl.abs(), &controller),
