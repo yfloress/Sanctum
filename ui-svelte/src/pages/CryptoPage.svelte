@@ -440,11 +440,14 @@
     portfolio?.assets.find(a => a.coin_id === assetCoinId)
   )
 
-  let taxPeriodId = $state('')
+  let taxPeriodId = $state(new Date().getFullYear().toString())
   let taxReport = $state<TaxReportDto | null>(null)
   let taxSummary = $state<TaxSummaryDto | null>(null)
   let taxFillingTxId = $state<string | null>(null)
   let taxSettings = $state<TaxSettingsDto | null>(null)
+  let taxReportLoading = $state(false)
+
+  let taxCurrency = $derived(taxReport?.jurisdiction === 'chile' ? 'CLP' : app.settings?.preferred_currency ?? 'USD')
 
   const RESOLVABLE_PRICE_CODES = new Set([
     'missing_price', 'fee_missing_price', 'swap_missing_price', 'income_missing_price',
@@ -540,14 +543,14 @@
       app.showToast(i18n.t('crypto-toast-enter-period', 'Please enter a period ID'), true)
       return
     }
-    taxLoading = true
+    taxReportLoading = true
     try {
       taxSummary = await cryptoApi.generateTaxSummary(taxPeriodId)
       taxReport = taxSummary.report
     } catch (e) {
       app.showToast(String(e), true)
     } finally {
-      taxLoading = false
+      taxReportLoading = false
     }
   }
 
@@ -876,69 +879,160 @@
   <!-- TAX TAB -->
   {:else if activeTab === 'tax'}
     <div class="tax-section">
-      <!-- Period selector -->
-      <div class="period-selector">
-        <label>
-          Tax Period ID
-          <input type="text" bind:value={taxPeriodId} placeholder={i18n.t('crypto-tax-period-placeholder', 'e.g., 2024')} />
-        </label>
-        <div class="period-actions">
-          <button class="glass-btn" onclick={loadTaxSettings}>{i18n.t('crypto-tax-load-settings', 'Load Settings')}</button>
-          {#if taxSettings}
-            <button class="glass-btn" onclick={() => showTaxSettings = true}>{i18n.t('crypto-tax-configure', 'Configure')}</button>
-          {/if}
-        </div>
-      </div>
-
-      {#if taxSettings}
-        <!-- Settings info -->
-        <div class="settings-info">
-          <div class="info-item">
-            <span class="label">{i18n.t('crypto-tax-jurisdiction', 'Jurisdiction')}</span>
-            <span class="value">{JURISDICTION_LABELS[taxSettings.jurisdiction] ?? taxSettings.jurisdiction}</span>
+      {#if !taxSettings}
+        <!-- Empty state / onboarding -->
+        <div class="tax-onboarding">
+          <div class="tax-onboarding-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
           </div>
-          <div class="info-item">
-            <span class="label">{i18n.t('crypto-tax-method', 'Method')}</span>
-            <span class="value">{METHOD_LABELS[taxSettings.method] ?? taxSettings.method}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">{i18n.t('crypto-tax-include-swaps', 'Include Swaps')}</span>
-            <span class="value">{taxSettings.include_swaps ? i18n.t('crypto-tax-yes', 'Yes') : i18n.t('crypto-tax-no', 'No')}</span>
-          </div>
-          <div class="info-item">
-            <span class="label">{i18n.t('crypto-tax-include-fee-crypto', 'Include Fee Crypto')}</span>
-            <span class="value">{taxSettings.include_fee_crypto ? i18n.t('crypto-tax-yes', 'Yes') : i18n.t('crypto-tax-no', 'No')}</span>
-          </div>
-        </div>
-
-        <!-- Generate report button -->
-        <div class="report-actions">
-          <button class="glass-btn" onclick={generateTaxReport}>{i18n.t('crypto-tax-generate-report', 'Generate Report')}</button>
-        </div>
-
-        <!-- IPC Import -->
-        <div class="ipc-section">
-          <div class="setting-row">
-            <div>
-              <span class="ipc-label">{i18n.t('crypto-ipc-label', 'IPC Price History')}</span>
-              {#if ipcSummary && ipcSummary.records_count > 0}
-                <span class="ipc-info">{ipcSummary.records_count} records {ipcSummary.date_range ? `(${ipcSummary.date_range})` : ''}</span>
-              {:else}
-                <span class="ipc-info">{i18n.t('crypto-ipc-no-data', 'No IPC data imported')}</span>
-              {/if}
+          <h3>{i18n.t('crypto-tax-onboarding-title', 'Tax Reporting')}</h3>
+          <p class="tax-onboarding-desc">{i18n.t('crypto-tax-onboarding-desc', 'Generate a tax report for your crypto transactions. Follow the steps below to get started.')}</p>
+          <div class="tax-steps">
+            <div class="tax-step">
+              <span class="tax-step-num">1</span>
+              <div>
+                <strong>{i18n.t('crypto-tax-step1-title', 'Enter tax year')}</strong>
+                <p>{i18n.t('crypto-tax-step1-desc', 'Type the year to report (e.g. 2024) and load your settings.')}</p>
+              </div>
             </div>
-            <div>
-              <input type="file" accept=".csv" class="hidden-input" bind:this={ipcFileInput} onchange={handleIpcFile} />
-              <button class="glass-btn" onclick={() => ipcFileInput.click()}>{i18n.t('crypto-ipc-import', 'Import IPC CSV')}</button>
+            <div class="tax-step">
+              <span class="tax-step-num">2</span>
+              <div>
+                <strong>{i18n.t('crypto-tax-step2-title', 'Configure jurisdiction & method')}</strong>
+                <p>{i18n.t('crypto-tax-step2-desc', 'Select your tax jurisdiction, cost basis method, and optional settings. For Chile, import IPC data.')}</p>
+              </div>
+            </div>
+            <div class="tax-step">
+              <span class="tax-step-num">3</span>
+              <div>
+                <strong>{i18n.t('crypto-tax-step3-title', 'Generate & export')}</strong>
+                <p>{i18n.t('crypto-tax-step3-desc', 'Generate the report, review warnings, fix missing prices, and export CSV for your filing.')}</p>
+              </div>
             </div>
           </div>
         </div>
       {/if}
 
-      {#if taxReport}
+      <!-- Step 1: Period selector -->
+      <div class="period-selector">
+        <div class="period-input-group">
+          <label>
+            <span class="period-label">{i18n.t('crypto-tax-period-id', 'Tax Period')}</span>
+            <input type="text" bind:value={taxPeriodId} placeholder={i18n.t('crypto-tax-period-placeholder', 'e.g., 2024')} />
+          </label>
+          <div class="period-actions">
+            <button class="glass-btn" onclick={loadTaxSettings} disabled={taxLoading}>
+              {taxLoading ? i18n.t('crypto-tax-loading-settings', 'Loading…') : i18n.t('crypto-tax-load-settings', 'Load Settings')}
+            </button>
+            {#if taxSettings}
+              <button class="glass-btn" onclick={() => showTaxSettings = true}>{i18n.t('crypto-tax-configure', 'Configure')}</button>
+            {/if}
+          </div>
+        </div>
+      </div>
+
+      {#if taxSettings}
+        <!-- Configuration cards -->
+        <div class="tax-config-row">
+          <!-- Settings card -->
+          <div class="settings-info">
+            <h4 class="tax-card-title">{i18n.t('crypto-tax-settings-title', 'Tax Settings')}</h4>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="label">{i18n.t('crypto-tax-jurisdiction', 'Jurisdiction')}</span>
+                <span class="value">{JURISDICTION_LABELS[taxSettings.jurisdiction] ?? taxSettings.jurisdiction}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">{i18n.t('crypto-tax-method', 'Method')}</span>
+                <span class="value">{METHOD_LABELS[taxSettings.method] ?? taxSettings.method}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">{i18n.t('crypto-tax-include-swaps', 'Include Swaps')}</span>
+                <span class="value">{taxSettings.include_swaps ? i18n.t('crypto-tax-yes', 'Yes') : i18n.t('crypto-tax-no', 'No')}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">{i18n.t('crypto-tax-include-fee-crypto', 'Include Fee Crypto')}</span>
+                <span class="value">{taxSettings.include_fee_crypto ? i18n.t('crypto-tax-yes', 'Yes') : i18n.t('crypto-tax-no', 'No')}</span>
+              </div>
+              {#if taxSettings.excluded_wallet_ids.length > 0}
+                <div class="info-item wide">
+                  <span class="label">{i18n.t('crypto-tax-exclude-wallets', 'Excluded Wallets')}</span>
+                  <span class="value">{taxSettings.excluded_wallet_ids.length} {taxSettings.excluded_wallet_ids.length === 1 ? 'wallet' : 'wallets'}</span>
+                </div>
+              {/if}
+            </div>
+          </div>
+
+          <!-- IPC card (Chile only visually prominent, but always shown) -->
+          <div class="ipc-section">
+            <h4 class="tax-card-title">{i18n.t('crypto-ipc-label', 'IPC Price History')}</h4>
+            <p class="ipc-desc">{i18n.t('crypto-ipc-desc', 'Chile requires monthly IPC data for inflation adjustment. Import a CSV from INE.')}</p>
+            <div class="ipc-status-row">
+              {#if ipcSummary && ipcSummary.records_count > 0}
+                <span class="ipc-status ok">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ipc-status-icon"><path d="M20 6L9 17l-5-5"/></svg>
+                  {ipcSummary.records_count} records {ipcSummary.date_range ? `(${ipcSummary.date_range})` : ''}
+                </span>
+              {:else}
+                <span class="ipc-status warn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ipc-status-icon"><path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                  {i18n.t('crypto-ipc-no-data', 'No IPC data imported')}
+                </span>
+              {/if}
+              <input type="file" accept=".csv" class="hidden-input" bind:this={ipcFileInput} onchange={handleIpcFile} />
+              <button class="glass-btn" onclick={() => ipcFileInput.click()}>{i18n.t('crypto-ipc-import', 'Import IPC CSV')}</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chile-specific info -->
+        {#if taxSettings.jurisdiction === 'chile'}
+          <div class="chile-info">
+            <div class="chile-info-header">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="chile-info-icon"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+              <span>{i18n.t('crypto-tax-chile-info-title', 'Chile Tax Notes')}</span>
+            </div>
+            <ul class="chile-info-list">
+              <li>{i18n.t('crypto-tax-chile-ipc', 'IPC adjustments (correccion monetaria) are applied to cost basis and gains automatically.')}</li>
+              <li>{i18n.t('crypto-tax-chile-clp', 'All values in this report are shown in Chilean Pesos (CLP). For filing, use the Dolar Observado published by SII.')}</li>
+              <li>{i18n.t('crypto-tax-chile-f22', 'File under Formulario 22, Linea 7 (Mayor Valor). Verify current casilla codes with the SII suplemento tributario.')}</li>
+              <li>{i18n.t('crypto-tax-chile-exemption', 'Net annual income under 13.5 UTA (~$11.3M CLP in 2026) is exempt from IGC.')}</li>
+              <li>{i18n.t('crypto-tax-chile-fees', 'Fees and commissions treatment may vary. Consult a Chilean tax professional for your specific situation.')}</li>
+            </ul>
+          </div>
+        {/if}
+
+        <!-- Generate report -->
+        {#if !taxReportLoading}
+          <div class="report-actions">
+            <button class="primary-btn generate-report-btn" onclick={generateTaxReport}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+              {i18n.t('crypto-tax-generate-report', 'Generate Report')}
+            </button>
+            {#if taxReport}
+              <button class="glass-btn" onclick={generateTaxReport}>{i18n.t('crypto-tax-regenerate', 'Regenerate')}</button>
+            {/if}
+          </div>
+        {/if}
+      {/if}
+
+      <!-- Report loading skeleton -->
+      {#if taxReportLoading}
+        <div class="report-skeleton">
+          <div class="skeleton" style="width:60%;height:24px;margin-bottom:16px"></div>
+          <div class="skeleton" style="width:100%;height:120px;margin-bottom:16px;border-radius:var(--radius-md)"></div>
+          <div class="skeleton" style="width:100%;height:80px;margin-bottom:16px;border-radius:var(--radius-md)"></div>
+          <div class="skeleton" style="width:100%;height:200px;border-radius:var(--radius-md)"></div>
+        </div>
+      {/if}
+
+      {#if taxReport && !taxReportLoading}
         <!-- Report summary -->
         <div class="report-summary">
-          <h3>{i18n.t('crypto-tax-report-summary', 'Report Summary')}</h3>
+          <div class="tax-card-header">
+            <h3>{i18n.t('crypto-tax-report-summary', 'Report Summary')}</h3>
+            <span class="tax-currency-badge">({taxCurrency})</span>
+          </div>
           <div class="summary-grid">
             <div class="summary-item">
               <span class="label">{i18n.t('crypto-tax-disposals', 'Disposals')}</span>
@@ -952,21 +1046,23 @@
               <span class="label">{i18n.t('crypto-tax-total-cost', 'Total Cost')}</span>
               <span class="value">{taxReport.total_cost}</span>
             </div>
-            <div class="summary-item">
+            <div class="summary-item highlight">
               <span class="label">{i18n.t('crypto-tax-total-gain', 'Total Gain')}</span>
               <span class="value" class:negative={taxReport.total_gain_negative}>{taxReport.total_gain}</span>
             </div>
-            {#if taxReport.short_term_gain}
-              <div class="summary-item">
-                <span class="label">{i18n.t('crypto-tax-short-term', 'Short-term Gain')}</span>
-                <span class="value">{taxReport.short_term_gain}</span>
-              </div>
-            {/if}
-            {#if taxReport.long_term_gain}
-              <div class="summary-item">
-                <span class="label">{i18n.t('crypto-tax-long-term', 'Long-term Gain')}</span>
-                <span class="value">{taxReport.long_term_gain}</span>
-              </div>
+            {#if taxReport.jurisdiction !== 'chile'}
+              {#if taxReport.short_term_gain}
+                <div class="summary-item">
+                  <span class="label">{i18n.t('crypto-tax-short-term', 'Short-term Gain')}</span>
+                  <span class="value">{taxReport.short_term_gain}</span>
+                </div>
+              {/if}
+              {#if taxReport.long_term_gain}
+                <div class="summary-item">
+                  <span class="label">{i18n.t('crypto-tax-long-term', 'Long-term Gain')}</span>
+                  <span class="value">{taxReport.long_term_gain}</span>
+                </div>
+              {/if}
             {/if}
             {#if taxSummary}
               <div class="summary-item">
@@ -989,10 +1085,24 @@
           </div>
         </div>
 
+        <!-- Readiness checklist -->
+        {#if taxReport.readiness && taxReport.readiness.length > 0}
+          <div class="readiness">
+            <h4>{i18n.t('crypto-tax-readiness', 'Readiness')}</h4>
+            {#each taxReport.readiness as r}
+              <div class="readiness-item" class:ok={r.status === 'ok'} class:warn={r.status === 'warn'} class:error={r.status === 'error'} class:info={r.status === 'info'}>
+                <span class="status-badge" class:ok={r.status === 'ok'} class:warn={r.status === 'warn'} class:error={r.status === 'error'} class:info={r.status === 'info'}>{r.status}</span>
+                <span class="code">{r.code}</span>
+                <span class="detail">{r.detail}</span>
+              </div>
+            {/each}
+          </div>
+        {/if}
+
         <!-- Warnings -->
         {#if taxReport.warnings && taxReport.warnings.length > 0}
           <div class="warnings">
-            <h4>{i18n.t('crypto-tax-warnings', 'Warnings')}</h4>
+            <h4>{i18n.t('crypto-tax-warnings', 'Warnings')} ({taxReport.warnings.length})</h4>
             {#each taxReport.warnings as w}
               <div class="warning-item">
                 <span class="warning-code">{w.code}</span>
@@ -1009,30 +1119,22 @@
           </div>
         {/if}
 
-        <!-- Readiness -->
-        {#if taxReport.readiness && taxReport.readiness.length > 0}
-          <div class="readiness">
-            <h4>{i18n.t('crypto-tax-readiness', 'Readiness')}</h4>
-            {#each taxReport.readiness as r}
-              <div class="readiness-item" class:ok={r.status === 'ok'} class:warn={r.status === 'warn'} class:error={r.status === 'error'} class:info={r.status === 'info'}>
-                <span class="status-badge" class:ok={r.status === 'ok'} class:warn={r.status === 'warn'} class:error={r.status === 'error'} class:info={r.status === 'info'}>{r.status}</span>
-                <span class="code">{r.code}</span>
-                <span class="detail">{r.detail}</span>
-              </div>
-            {/each}
-          </div>
-        {/if}
-
         <!-- Export -->
         <div class="export-actions">
-          <button onclick={() => exportTaxReport('csv')} class="export-btn">{i18n.t('crypto-tax-export-events', 'Export Events CSV')}</button>
-          <button onclick={() => exportTaxReport('history')} class="export-btn">{i18n.t('crypto-tax-export-history', 'Export History CSV')}</button>
+          <button onclick={() => exportTaxReport('csv')} class="export-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            {i18n.t('crypto-tax-export-events', 'Export Events CSV')}
+          </button>
+          <button onclick={() => exportTaxReport('history')} class="export-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            {i18n.t('crypto-tax-export-history', 'Export History CSV')}
+          </button>
         </div>
 
-        <!-- Events table (first 50) -->
+        <!-- Events table -->
         {#if taxReport.events && taxReport.events.length > 0}
           <div class="events-table">
-            <h4>{i18n.t('crypto-tax-events', 'Events (showing first 50)')}</h4>
+            <h4>{i18n.t('crypto-tax-events', 'Events')} <span class="events-count">({Math.min(taxReport.events.length, 50)}{taxReport.events.length > 50 ? '/ ' + taxReport.events.length : ''})</span></h4>
             <div class="table-wrapper">
               <table>
                 <thead>
@@ -1063,10 +1165,6 @@
             </div>
           </div>
         {/if}
-      {/if}
-
-      {#if taxLoading}
-        <div class="loading">{i18n.t('crypto-tax-processing', 'Processing tax data...')}</div>
       {/if}
     </div>
 
@@ -1331,7 +1429,6 @@
   .tab-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 
   .skeleton-page { padding: 8px 0; }
-  .loading { text-align: center; padding: 48px; color: var(--text-tertiary); }
   .empty { text-align: center; padding: 48px; color: var(--text-tertiary); }
 
   /* Stats bar */
@@ -1518,6 +1615,27 @@
   /* Tax Section */
   .tax-section { display: flex; flex-direction: column; gap: 24px; }
 
+  /* Tax onboarding */
+  .tax-onboarding {
+    padding: 32px 24px; background: var(--card-bg);
+    backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border); border-radius: var(--radius-md);
+    box-shadow: var(--card-shadow); text-align: center;
+  }
+  .tax-onboarding-icon { width: 48px; height: 48px; margin: 0 auto 16px; color: var(--accent); }
+  .tax-onboarding h3 { margin: 0 0 8px; color: var(--text-primary); font-size: 1.1rem; }
+  .tax-onboarding-desc { margin: 0 0 24px; color: var(--text-secondary); font-size: 0.85rem; max-width: 420px; margin-left: auto; margin-right: auto; }
+  .tax-steps { text-align: left; display: flex; flex-direction: column; gap: 12px; max-width: 440px; margin: 0 auto; }
+  .tax-step { display: flex; gap: 12px; align-items: flex-start; }
+  .tax-step-num {
+    width: 24px; height: 24px; border-radius: 50%; background: var(--accent);
+    color: #fff; font-size: 0.75rem; font-weight: 700; display: flex;
+    align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;
+  }
+  .tax-step strong { font-size: 0.9rem; color: var(--text-primary); display: block; }
+  .tax-step p { margin: 4px 0 0; font-size: 0.8rem; color: var(--text-secondary); }
+
+  /* Period selector */
   .period-selector {
     display: flex; flex-direction: column; gap: 12px;
     padding: 16px; background: var(--card-bg);
@@ -1525,49 +1643,90 @@
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
     box-shadow: var(--card-shadow);
   }
-  .period-selector label {
-    display: flex; flex-direction: column; gap: 6px;
-    font-size: 0.8rem; color: var(--text-secondary);
-  }
-  .period-selector input {
+  .period-input-group { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+  .period-input-group label { flex: 1; min-width: 140px; display: flex; flex-direction: column; gap: 6px; }
+  .period-label { font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; }
+  .period-input-group input {
     padding: 8px 12px; border: 1px solid var(--glass-border);
     border-radius: var(--radius-sm); background: var(--select-bg);
-    color: var(--text-primary); font-size: 0.9rem;
-    transition: border-color 0.2s;
+    color: var(--text-primary); font-size: 0.9rem; transition: border-color 0.2s;
   }
-  .period-selector input:focus {
-    border-color: var(--accent); outline: none;
-  }
-  .period-actions { display: flex; gap: 8px; }
+  .period-input-group input:focus { border-color: var(--accent); outline: none; }
+  .period-actions { display: flex; gap: 8px; align-items: flex-end; }
+
+  /* Tax config grid */
+  .tax-config-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 640px) { .tax-config-row { grid-template-columns: 1fr; } }
 
   .settings-info {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px; padding: 16px;
-    background: var(--card-bg); backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--glass-border); border-radius: var(--radius-md);
-    box-shadow: var(--card-shadow);
+    padding: 16px; background: var(--card-bg); backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur); border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md); box-shadow: var(--card-shadow);
   }
+  .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
   .info-item { display: flex; flex-direction: column; gap: 4px; }
+  .info-item.wide { grid-column: 1 / -1; }
   .info-item .label { font-size: 0.7rem; color: var(--text-tertiary); text-transform: uppercase; }
   .info-item .value { font-size: 0.95rem; color: var(--text-primary); font-weight: 500; }
 
-  .report-actions { display: flex; gap: 8px; }
+  .tax-card-title { margin: 0 0 12px; color: var(--text-primary); font-size: 0.85rem; font-weight: 600; }
+  .tax-card-header { display: flex; align-items: baseline; gap: 6px; margin-bottom: 16px; }
+  .tax-card-header h3 { margin: 0; color: var(--text-primary); font-size: 0.9rem; }
+  .tax-currency-badge { font-size: 0.72rem; color: var(--text-tertiary); }
+
+  /* IPC section */
+  .ipc-section {
+    padding: 16px; background: var(--card-bg);
+    backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border); border-radius: var(--radius-md);
+    box-shadow: var(--card-shadow);
+  }
+  .ipc-desc { margin: 0 0 12px; font-size: 0.8rem; color: var(--text-secondary); }
+  .ipc-status-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .ipc-status { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; flex: 1; }
+  .ipc-status.ok { color: var(--success); }
+  .ipc-status.warn { color: #fbbf24; }
+  .ipc-status-icon { width: 14px; height: 14px; flex-shrink: 0; }
+  .hidden-input { display: none; }
+
+  /* Chile info */
+  .chile-info {
+    padding: 14px 16px; background: var(--card-bg);
+    backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid rgba(96, 165, 250, 0.2); border-radius: var(--radius-md);
+    box-shadow: var(--card-shadow);
+  }
+  .chile-info-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 0.85rem; font-weight: 600; color: #60a5fa; }
+  .chile-info-icon { width: 16px; height: 16px; flex-shrink: 0; }
+  .chile-info-list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+  .chile-info-list li { font-size: 0.8rem; color: var(--text-secondary); }
+
+  /* Generate report */
+  .report-actions { display: flex; gap: 8px; align-items: center; }
+  .generate-report-btn { display: flex; align-items: center; gap: 6px; padding: 10px 20px; }
+
+  /* Report skeleton */
+  .report-skeleton {
+    padding: 16px; background: var(--card-bg); backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur); border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md); box-shadow: var(--card-shadow);
+  }
+
+  /* Summary */
   .report-summary {
     padding: 16px; background: var(--card-bg);
     backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
     box-shadow: var(--card-shadow);
   }
-  .report-summary h3 { margin: 0 0 16px; color: var(--text-primary); font-size: 0.9rem; }
-  .summary-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;
-  }
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
   .summary-item { display: flex; flex-direction: column; gap: 4px; }
   .summary-item .label { font-size: 0.7rem; color: var(--text-tertiary); text-transform: uppercase; }
   .summary-item .value { font-size: 1rem; font-weight: 600; color: var(--text-primary); }
   .summary-item .value.negative { color: var(--danger); }
+  .summary-item.highlight { background: rgba(255, 255, 255, 0.04); border-radius: var(--radius-sm); padding: 8px; }
 
+  /* Warnings */
   .warnings {
     padding: 16px; background: var(--card-bg);
     backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
@@ -1587,6 +1746,7 @@
   .warning-action:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
   .warning-action:disabled { opacity: 0.5; cursor: not-allowed; }
 
+  /* Readiness */
   .readiness {
     padding: 16px; background: var(--card-bg);
     backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
@@ -1613,15 +1773,19 @@
   .readiness-item .code { font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; min-width: 90px; }
   .readiness-item .detail { font-size: 0.85rem; color: var(--text-secondary); }
 
+  /* Export */
   .export-actions { display: flex; gap: 8px; }
+  .header-actions { display: flex; gap: 8px; }
+  .last-updated { font-size: 0.7rem; color: var(--text-tertiary); margin-top: 4px; }
   .export-btn {
     padding: 8px 14px; border: 1px solid var(--glass-border);
     border-radius: var(--radius-sm); background: rgba(0, 0, 0, 0.2);
     color: var(--text-secondary); cursor: pointer; font-size: 0.85rem;
-    transition: all 0.15s;
+    transition: all 0.15s; display: flex; align-items: center; gap: 6px;
   }
   .export-btn:hover { border-color: var(--glass-border-hover); background: rgba(0, 0, 0, 0.3); }
 
+  /* Events table */
   .events-table {
     padding: 16px; background: var(--card-bg);
     backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
@@ -1630,45 +1794,18 @@
   }
   .events-table h4 { margin: 0 0 12px; color: var(--text-primary); font-size: 0.85rem; }
   .table-wrapper { overflow-x: auto; }
-  .events-table table {
-    width: 100%; border-collapse: collapse; font-size: 0.8rem;
-  }
-  .events-table thead {
-    background: rgba(0, 0, 0, 0.1); border-bottom: 1px solid var(--glass-border);
-  }
+  .events-table table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  .events-table thead { background: rgba(0, 0, 0, 0.1); border-bottom: 1px solid var(--glass-border); }
   .events-table th {
     padding: 8px; text-align: left; color: var(--text-tertiary);
     text-transform: uppercase; font-weight: 500;
   }
-  .events-table td {
-    padding: 8px; border-bottom: 1px solid var(--glass-border);
-    color: var(--text-secondary);
-  }
+  .events-table td { padding: 8px; border-bottom: 1px solid var(--glass-border); color: var(--text-secondary); }
   .events-table tr:hover { background: rgba(0, 0, 0, 0.1); }
   .events-table td.negative { color: var(--danger); }
-
-  .header-actions { display: flex; gap: 8px; }
-
-  .delete-btn {
-    background: none; border: none; color: var(--text-tertiary); cursor: pointer; padding: 2px;
-    display: flex; align-items: center; transition: color 0.15s; flex-shrink: 0;
-  }
-  .delete-btn:hover { color: var(--danger); }
-  .delete-btn svg { width: 14px; height: 14px; }
-
-  .last-updated { font-size: 0.7rem; color: var(--text-tertiary); margin-top: 4px; }
-
-  /* IPC section */
-  .ipc-section {
-    padding: 16px; background: var(--card-bg);
-    backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--glass-border); border-radius: var(--radius-md);
-    box-shadow: var(--card-shadow);
-  }
-  .setting-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-  .ipc-label { font-size: 0.85rem; color: var(--text-primary); font-weight: 500; }
-  .ipc-info { font-size: 0.75rem; color: var(--text-tertiary); display: block; margin-top: 2px; }
-  .hidden-input { display: none; }
+  .events-table tr.loss { background: rgba(248, 113, 113, 0.04); }
+  .events-table tr.loss:hover { background: rgba(248, 113, 113, 0.08); }
+  .events-count { font-size: 0.75rem; color: var(--text-tertiary); font-weight: 400; }
 
   /* Ticker config tabs */
   .cfg-tabs { display: flex; gap: 2px; margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); }
