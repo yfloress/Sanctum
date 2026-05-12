@@ -158,6 +158,46 @@ impl Database {
         Ok(())
     }
 
+    pub fn get_archived_accounts(&self) -> Result<Vec<Account>, DbError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, name, type, currency, initial_balance, color, icon, is_archived, created_at
+             FROM accounts
+             WHERE is_archived = 1
+             ORDER BY created_at ASC",
+        )?;
+
+        let accounts = stmt
+            .query_map([], |row| {
+                Ok(Account {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    account_type: row.get(2)?,
+                    currency: row.get(3)?,
+                    initial_balance: row.get(4)?,
+                    color: row.get(5)?,
+                    icon: row.get(6)?,
+                    is_archived: row.get(7)?,
+                    created_at: row.get(8)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(accounts)
+    }
+
+    pub fn unarchive_account(&self, id: &str) -> Result<(), DbError> {
+        let rows = self.conn.execute(
+            "UPDATE accounts SET is_archived = 0 WHERE id = ?1",
+            params![id],
+        )?;
+
+        if rows == 0 {
+            return Err(DbError::AccountNotFound);
+        }
+
+        Ok(())
+    }
+
     /// Gets the calculated balance for an account
     pub fn get_account_balance(&self, account_id: &str) -> Result<AccountBalance, DbError> {
         // First get the account to verify it exists and get initial balance

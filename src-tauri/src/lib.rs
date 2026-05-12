@@ -86,6 +86,8 @@ pub fn run() {
             commands::finance::transfer_funds,
             commands::finance::update_transfer,
             commands::finance::delete_account,
+            commands::finance::fetch_archived_accounts,
+            commands::finance::unarchive_account,
             commands::finance::update_account_icon,
             commands::finance::update_account_name,
             commands::finance::fetch_transactions,

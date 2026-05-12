@@ -20,7 +20,7 @@
   import * as financeApi from '../lib/api/finance'
   import type {
     TransactionDto, CategoriesResponse, CategoryDto,
-    AccountsResponse, AccountDetailResponse
+    AccountsResponse, AccountDetailResponse, AccountDto
   } from '../lib/types'
   import FinanceBarChart from '../components/charts/FinanceBarChart.svelte'
   import FinanceDonutChart from '../components/charts/FinanceDonutChart.svelte'
@@ -49,6 +49,9 @@
 
   // Categories state
   let categories = $state<CategoriesResponse | null>(null)
+
+  // Archived accounts state
+  let archivedAccounts = $state<AccountDto[]>([])
 
   // Modal state
   let showAddTransaction = $state(false)
@@ -254,6 +257,24 @@
     }
   }
 
+  async function loadArchivedAccounts() {
+    try {
+      archivedAccounts = await financeApi.fetchArchivedAccounts()
+    } catch (e) {
+      app.showToast(String(e), true)
+    }
+  }
+
+  async function unarchiveAccount(id: string) {
+    try {
+      await financeApi.unarchiveAccount(id)
+      await Promise.all([refreshAccounts(), loadArchivedAccounts()])
+      app.showToast(i18n.t('finances-acc-restored', 'Account restored'))
+    } catch (e) {
+      app.showToast(String(e), true)
+    }
+  }
+
   function openTransfer() {
     editingTransfer = null
     tfFromId = accountsData?.accounts[0]?.id ?? ''
@@ -421,6 +442,10 @@
   $effect(() => {
     app.settings?.preferred_currency
     loadAll()
+  })
+
+  $effect(() => {
+    if (activeTab === 'settings') loadArchivedAccounts()
   })
 </script>
 
@@ -691,6 +716,26 @@
       onadd={handleAddCategory}
       ondelete={handleDeleteCat}
     />
+
+    {#if archivedAccounts.length > 0}
+      <div class="settings-card archived-section">
+        <h3 class="settings-card-title">{i18n.t('finances-archived-accounts', 'Archived Accounts')}</h3>
+        {#each archivedAccounts as acc}
+          <div class="archived-row">
+            {#if acc.icon_path}
+              <img src={acc.icon_path} alt="" class="archived-icon" onerror={(e) => (e.currentTarget as HTMLImageElement).style.display='none'} />
+            {/if}
+            <div class="archived-info">
+              <span class="archived-name">{acc.name}</span>
+              <span class="archived-meta">{acc.account_type} · {acc.currency}</span>
+            </div>
+            <button class="glass-btn" onclick={() => unarchiveAccount(acc.id)}>
+              {i18n.t('finances-restore', 'Restore')}
+            </button>
+          </div>
+        {/each}
+      </div>
+    {/if}
   {/if}
 </div>
 
@@ -1294,4 +1339,15 @@
   }
   .selected-icon-preview { width: 20px; height: 20px; margin-right: 6px; vertical-align: middle; }
   .icon-option.selected { border-color: var(--accent-border); background: var(--glass-active); }
+
+  .archived-section { margin-top: 20px; }
+  .archived-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid var(--glass-border);
+  }
+  .archived-row:last-child { border-bottom: none; }
+  .archived-icon { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0; }
+  .archived-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .archived-name { font-size: 0.9rem; color: var(--text-primary); }
+  .archived-meta { font-size: 0.75rem; color: var(--text-tertiary); }
 </style>

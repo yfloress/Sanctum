@@ -207,6 +207,9 @@ finances-tx-deleted = Transaction deleted
 finances-acc-created = Account created
 finances-acc-updated = Account updated
 finances-acc-deleted = Account deleted
+finances-acc-restored = Account restored
+finances-archived-accounts = Archived Accounts
+finances-restore = Restore
 finances-tf-completed = Transfer completed
 finances-tf-updated = Transfer updated
 finances-cat-added = Category added
@@ -464,6 +467,13 @@ month-september = September
 month-october = October
 month-november = November
 month-december = December
+weekday-sun = S
+weekday-mon = M
+weekday-tue = T
+weekday-wed = W
+weekday-thu = T
+weekday-fri = F
+weekday-sat = S
 
 # Rewards tab
 habits-streak-rewards = Streak Rewards

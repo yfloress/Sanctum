@@ -255,6 +255,17 @@ impl FinanceService {
         })
     }
 
+    pub fn get_archived_accounts(&self) -> Result<Vec<Account>, FinanceError> {
+        self.with_db(|db| FinanceRepository::get_archived_accounts(db).map_err(FinanceError::Database))
+    }
+
+    pub fn unarchive_account(&self, id: String) -> Result<(), FinanceError> {
+        self.with_db(|db| {
+            let validated_id = validate_uuid(&id)?;
+            FinanceRepository::unarchive_account(db, &validated_id).map_err(FinanceError::Database)
+        })
+    }
+
     // ==================== Transaction Operations ====================
 
     pub fn add_transaction(

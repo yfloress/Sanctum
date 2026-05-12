@@ -207,6 +207,9 @@ finances-tx-deleted = Transaccion eliminada
 finances-acc-created = Cuenta creada
 finances-acc-updated = Cuenta actualizada
 finances-acc-deleted = Cuenta eliminada
+finances-acc-restored = Cuenta restaurada
+finances-archived-accounts = Cuentas Archivadas
+finances-restore = Restaurar
 finances-tf-completed = Transferencia completada
 finances-tf-updated = Transferencia actualizada
 finances-cat-added = Categoria agregada
@@ -464,6 +467,13 @@ month-september = Septiembre
 month-october = Octubre
 month-november = Noviembre
 month-december = Diciembre
+weekday-sun = D
+weekday-mon = L
+weekday-tue = M
+weekday-wed = X
+weekday-thu = J
+weekday-fri = V
+weekday-sat = S
 
 # Rewards tab
 habits-streak-rewards = Recompensas de Racha

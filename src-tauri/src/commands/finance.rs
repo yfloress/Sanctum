@@ -221,6 +221,44 @@ pub fn delete_account(
         .map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+pub fn fetch_archived_accounts(
+    controller: State<'_, Arc<AppController>>,
+) -> Result<Vec<AccountDto>, String> {
+    let accounts = controller.get_archived_accounts().map_err(|e| e.to_string())?;
+    Ok(accounts
+        .into_iter()
+        .map(|acc| AccountDto {
+            id: acc.id,
+            name: acc.name.clone(),
+            account_type: match acc.account_type.as_str() {
+                "bank" | "Bank" => "Bank".to_string(),
+                "cash" | "Cash" => "Cash".to_string(),
+                "savings" | "Savings" => "Savings".to_string(),
+                "credit_card" | "CreditCard" => "Credit Card".to_string(),
+                _ => acc.account_type.clone(),
+            },
+            account_type_key: acc.account_type.clone(),
+            icon_path: sanctum::ui::normalize_bank_icon_path(acc.icon),
+            currency: acc.currency,
+            balance: String::new(),
+            balance_negative: false,
+            initial_balance: format_decimal_from_cents(acc.initial_balance),
+            is_archived: true,
+        })
+        .collect())
+}
+
+#[tauri::command]
+pub fn unarchive_account(
+    controller: State<'_, Arc<AppController>>,
+    id: String,
+) -> Result<(), String> {
+    controller
+        .unarchive_account(id)
+        .map_err(|e| e.to_string())
+}
+
 /// Update an account's bank icon.
 #[tauri::command]
 pub fn update_account_icon(

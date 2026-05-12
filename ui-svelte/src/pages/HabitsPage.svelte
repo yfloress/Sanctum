@@ -162,7 +162,11 @@
     i18n.t('month-october','October'), i18n.t('month-november','November'), i18n.t('month-december','December'),
   ])
 
-  const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as const
+  const WEEKDAYS = $derived([
+    i18n.t('weekday-sun', 'S'), i18n.t('weekday-mon', 'M'), i18n.t('weekday-tue', 'T'),
+    i18n.t('weekday-wed', 'W'), i18n.t('weekday-thu', 'T'), i18n.t('weekday-fri', 'F'),
+    i18n.t('weekday-sat', 'S'),
+  ])
 
   const now = new Date()
   const viewingCurrentMonth = $derived(now.getFullYear() === year && now.getMonth() + 1 === month)

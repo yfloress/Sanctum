@@ -49,6 +49,14 @@ impl FinanceRepository {
         db.archive_account(id)
     }
 
+    pub fn get_archived_accounts(db: &Database) -> Result<Vec<Account>, DbError> {
+        db.get_archived_accounts()
+    }
+
+    pub fn unarchive_account(db: &Database, id: &str) -> Result<(), DbError> {
+        db.unarchive_account(id)
+    }
+
     pub fn get_account_balance(db: &Database, account_id: &str) -> Result<AccountBalance, DbError> {
         db.get_account_balance(account_id)
     }

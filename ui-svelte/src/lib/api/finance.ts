@@ -45,6 +45,14 @@ export async function deleteAccount(id: string): Promise<void> {
   return invoke('delete_account', { id })
 }
 
+export async function fetchArchivedAccounts(): Promise<import('../types').AccountDto[]> {
+  return invoke('fetch_archived_accounts')
+}
+
+export async function unarchiveAccount(id: string): Promise<void> {
+  return invoke('unarchive_account', { id })
+}
+
 export async function updateAccountIcon(id: string, icon: string): Promise<void> {
   return invoke('update_account_icon', { id, icon })
 }

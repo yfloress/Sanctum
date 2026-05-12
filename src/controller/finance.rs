@@ -104,6 +104,18 @@ impl AppController {
             .map_err(ControllerError::from)
     }
 
+    pub fn get_archived_accounts(&self) -> Result<Vec<crate::models::Account>, ControllerError> {
+        self.finance_service
+            .get_archived_accounts()
+            .map_err(ControllerError::from)
+    }
+
+    pub fn unarchive_account(&self, id: String) -> Result<(), ControllerError> {
+        self.finance_service
+            .unarchive_account(id)
+            .map_err(ControllerError::from)
+    }
+
     /// Transfers funds between accounts
     pub fn transfer_funds(
         &self,
