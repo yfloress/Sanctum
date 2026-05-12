@@ -67,12 +67,12 @@ login-placeholder-unlock = Ingresa tu contrasena maestra
 login-placeholder-create = Crea tu contrasena maestra
 login-unlock = Desbloquear
 login-create = Crear Boveda
-login-confirm-create = Confirmar Creacion
+login-confirm-create = Confirmar Creación
 login-authenticating = Autenticando...
 login-initializing = Inicializando...
 login-weak-hint = Presiona de nuevo para confirmar con contrasena debil
 login-restore = Restaurar desde respaldo
-login-version = Sanctum v0.1.0
+login-versión = Sanctum v0.1.0
 
 # ==================== Sidebar ====================
 nav-dashboard = Panel
@@ -111,7 +111,7 @@ finances-total-balance = Saldo Total
 finances-tab-overview = Resumen
 finances-tab-activity = Actividad
 finances-tab-accounts = Cuentas
-finances-tab-settings = Configuracion
+finances-tab-settings = Configuración
 finances-loading = Cargando...
 
 # Overview stats
@@ -121,9 +121,9 @@ finances-net-this-month = Neto este mes
 
 # Overview charts
 finances-monthly-overview = Resumen Mensual
-finances-balance-distribution = Distribucion de Saldos
+finances-balance-distribution = Distribución de Saldos
 finances-no-positive-balances = Sin saldos positivos para mostrar
-finances-expenses-by-category = Gastos por Categoria
+finances-expenses-by-category = Gastos por Categoría
 
 # Overview accounts section
 finances-accounts = Cuentas
@@ -137,7 +137,7 @@ finances-no-transactions = Sin transacciones aun.
 # Activity
 finances-search-placeholder = Buscar transacciones...
 finances-all-accounts = Todas las Cuentas
-finances-all-categories = Todas las Categorias
+finances-all-categories = Todas las Categorías
 finances-clear = Limpiar
 finances-new-entry = Nueva Entrada
 finances-no-matching = Sin transacciones que coincidan
@@ -149,8 +149,8 @@ finances-my-accounts = Mis Cuentas
 finances-no-accounts-create = Sin cuentas aun. Crea tu primera cuenta.
 
 # Settings/Categories
-finances-new-category = Nueva Categoria
-finances-category-placeholder = Nombre de categoria...
+finances-new-category = Nueva Categoría
+finances-category-placeholder = Nombre de categoría...
 finances-expense = Gasto
 finances-income = Ingreso
 finances-add = Agregar
@@ -165,13 +165,13 @@ finances-edit-account = Editar Cuenta
 finances-delete-account = Eliminar Cuenta
 
 # Transaction modal
-finances-edit-transaction = Editar Transaccion
-finances-add-transaction = Agregar Transaccion
+finances-edit-transaction = Editar Transacción
+finances-add-transaction = Agregar Transacción
 finances-account = Cuenta
 finances-amount = Monto
-finances-category = Categoria
+finances-category = Categoría
 finances-select = Seleccionar...
-finances-description = Descripcion
+finances-description = Descripción
 finances-date = Fecha
 finances-cancel = Cancelar
 finances-update = Actualizar
@@ -184,11 +184,11 @@ finances-name = Nombre
 finances-account-name-placeholder = Nombre de cuenta
 finances-account-type-bank = Banco
 finances-account-type-savings = Ahorros
-finances-account-type-credit = Tarjeta de Credito
+finances-account-type-credit = Tarjeta de Crédito
 finances-account-type-cash = Efectivo
 finances-account-type-other = Otro
 finances-initial-balance = Saldo Inicial
-finances-icon = Icono
+finances-icon = Ícono
 finances-change = Cambiar
 finances-create = Crear
 
@@ -201,9 +201,9 @@ finances-transfer-note = Nota de transferencia
 finances-transfer-btn = Transferir
 
 # Toast messages
-finances-tx-added = Transaccion agregada
-finances-tx-updated = Transaccion actualizada
-finances-tx-deleted = Transaccion eliminada
+finances-tx-added = Transacción agregada
+finances-tx-updated = Transacción actualizada
+finances-tx-deleted = Transacción eliminada
 finances-acc-created = Cuenta creada
 finances-acc-updated = Cuenta actualizada
 finances-acc-deleted = Cuenta eliminada
@@ -212,8 +212,8 @@ finances-archived-accounts = Cuentas Archivadas
 finances-restore = Restaurar
 finances-tf-completed = Transferencia completada
 finances-tf-updated = Transferencia actualizada
-finances-cat-added = Categoria agregada
-finances-cat-deleted = Categoria eliminada
+finances-cat-added = Categoría agregada
+finances-cat-deleted = Categoría eliminada
 
 # ==================== Crypto ====================
 # -- Tabs & Hero --
@@ -222,7 +222,7 @@ crypto-tab-wallets = Billeteras
 crypto-tab-tax = Impuestos
 crypto-tab-activity = Actividad
 crypto-portfolio-value = Valor del Portafolio
-crypto-last-updated-label = Ultima actualizacion: {$value}
+crypto-last-updated-label = Última actualización: {$value}
 crypto-loading = Cargando...
 
 # -- Ticker bar --
@@ -231,12 +231,12 @@ crypto-sync-prices = Sincronizar precios
 crypto-configure-ticker = Configurar ticker
 
 # -- Portfolio tab --
-crypto-new-transaction = Nueva Transaccion
+crypto-new-transaction = Nueva Transacción
 crypto-unrealized-pnl = Ganancias No Realizadas
 crypto-realized-ytd = Realizadas (Anual)
 crypto-roi = ROI
 crypto-portfolio-trend = Tendencia del Portafolio
-crypto-distribution = Distribucion
+crypto-distribution = Distribución
 crypto-recent-transactions = Transacciones Recientes
 crypto-no-transactions = Sin transacciones aun.
 crypto-search-transactions = Buscar transacciones...
@@ -265,14 +265,14 @@ crypto-delete = Eliminar
 # -- Asset detail panel --
 crypto-amount = Cantidad
 crypto-value = Valor
-crypto-allocation = Asignacion
+crypto-allocation = Asignación
 
 # -- Tax tab --
 crypto-tax-period-id = Periodo Tributario
 crypto-tax-period-placeholder = ej., 2024
-crypto-tax-load-settings = Cargar Configuracion
+crypto-tax-load-settings = Cargar Configuración
 crypto-tax-configure = Configurar
-crypto-tax-jurisdiction = Jurisdiccion
+crypto-tax-jurisdiction = Jurisdicción
 crypto-tax-method = Metodo
 crypto-tax-include-swaps = Incluir Intercambios
 crypto-tax-include-fee-crypto = Incluir Comision Crypto
@@ -290,7 +290,7 @@ crypto-tax-total-gain = Ganancia Total
 crypto-tax-short-term = Ganancia Corto Plazo
 crypto-tax-long-term = Ganancia Largo Plazo
 crypto-tax-warnings = Advertencias
-crypto-tax-readiness = Preparacion
+crypto-tax-readiness = Preparación
 crypto-tax-events = Eventos (mostrando primeros 50)
 crypto-tax-col-date = Fecha
 crypto-tax-col-coin = Moneda
@@ -309,7 +309,7 @@ crypto-ipc-no-data = Sin datos IPC importados
 crypto-ipc-import = Importar IPC CSV
 
 # -- Tax settings modal --
-crypto-tax-settings-title = Configuracion Tributaria
+crypto-tax-settings-title = Configuración Tributaria
 crypto-tax-jurisdiction-us = Estados Unidos
 crypto-tax-jurisdiction-cl = Chile
 crypto-tax-jurisdiction-ca = Canada
@@ -321,28 +321,28 @@ crypto-tax-method-lifo = LIFO
 crypto-tax-method-hifo = HIFO
 crypto-tax-method-avg = Costo Promedio
 crypto-tax-cost-basis-method = Metodo de Costo Base
-crypto-tax-include-swaps-label = Incluir Intercambios como Enajenacion
-crypto-tax-include-fee-label = Incluir Comision Crypto como Enajenacion
+crypto-tax-include-swaps-label = Incluir Intercambios como Enajenación
+crypto-tax-include-fee-label = Incluir Comisión Crypto como Enajenación
 crypto-tax-exclude-wallets = Excluir Billeteras
 crypto-tax-loading-settings = Cargando…
 crypto-tax-regenerate = Regenerar
-crypto-tax-onboarding-title = Declaracion Tributaria
-crypto-tax-onboarding-desc = Genera un reporte tributario de tus transacciones crypto. Sigue los pasos a continuacion para comenzar.
-crypto-tax-step1-title = Ingresa el ano tributario
-crypto-tax-step1-desc = Escribe el ano a declarar (ej. 2024) y carga la configuracion.
-crypto-tax-step2-title = Configura jurisdiccion y metodo
-crypto-tax-step2-desc = Selecciona tu jurisdiccion tributaria, metodo de costo base y opciones adicionales. Para Chile, importa los datos IPC.
+crypto-tax-onboarding-title = Declaración Tributaria
+crypto-tax-onboarding-desc = Genera un reporte tributario de tus transacciones crypto. Sigue los pasos a continuación para comenzar.
+crypto-tax-step1-title = Ingresa el año tributario
+crypto-tax-step1-desc = Escribe el año a declarar (ej. 2024) y carga la configuración.
+crypto-tax-step2-title = Configura jurisdicción y método
+crypto-tax-step2-desc = Selecciona tu jurisdicción tributaria, método de costo base y opciones adicionales. Para Chile, importa los datos IPC.
 crypto-tax-step3-title = Genera y exporta
-crypto-tax-step3-desc = Genera el reporte, revisa advertencias, completa precios faltantes y exporta el CSV para tu declaracion.
+crypto-tax-step3-desc = Genera el reporte, revisa advertencias, completa precios faltantes y exporta el CSV para tu declaración.
 crypto-tax-chile-info-title = Notas Tributarias Chile
-crypto-tax-chile-ipc = Los ajustes por IPC (correccion monetaria) se aplican automaticamente al costo base y las ganancias.
-crypto-tax-chile-clp = Todos los valores del reporte se muestran en Pesos Chilenos (CLP). Para la declaracion, usa el Dolar Observado publicado por el SII.
-crypto-tax-chile-f22 = Declara en Formulario 22, Linea 7 (Mayor Valor). Verifica los codigos de casilla vigentes en el suplemento tributario del SII.
-crypto-tax-chile-exemption = La renta anual neta inferior a 13,5 UTA (~$11,3M CLP en 2026) esta exenta de IGC.
-crypto-tax-chile-fees = El tratamiento de comisiones puede variar. Consulta a un asesor tributario chileno para tu situacion especifica.
+crypto-tax-chile-ipc = Los ajustes por IPC (corrección monetaria) se aplican automáticamente al costo base y las ganancias.
+crypto-tax-chile-clp = Todos los valores del reporte se muestran en Pesos Chilenos (CLP). Para la declaración, usa el Dólar Observado publicado por el SII.
+crypto-tax-chile-f22 = Declara en Formulario 22, Línea 7 (Mayor Valor). Verifica los códigos de casilla vigentes en el suplemento tributario del SII.
+crypto-tax-chile-exemption = La renta anual neta inferior a 13,5 UTA (~$11,3M CLP en 2026) está exenta de IGC.
+crypto-tax-chile-fees = El tratamiento de comisiones puede variar. Consulta a un asesor tributario chileno para tu situación específica.
 crypto-tax-taxable-income = Renta Gravable
-crypto-tax-end-balance = Saldo Fin de Periodo
-crypto-tax-tx-in-period = Transacciones en el Periodo
+crypto-tax-end-balance = Saldo Fin de Período
+crypto-tax-tx-in-period = Transacciones en el Período
 crypto-tax-volume = Volumen Procesado
 crypto-tax-fetch-price = Obtener precio
 crypto-tax-fetching = Obteniendo…
@@ -372,7 +372,7 @@ crypto-custom-symbol = Simbolo
 crypto-custom-add = Agregar
 
 # -- Transaction modal --
-crypto-tx-title = Nueva Transaccion
+crypto-tx-title = Nueva Transacción
 crypto-tx-buy = Compra
 crypto-tx-sell = Venta
 crypto-tx-income = Ingreso
@@ -404,7 +404,7 @@ crypto-tx-date = Fecha
 crypto-tx-notes = Notas (opcional)
 crypto-tx-notes-placeholder = Notas...
 crypto-tx-add = Agregar
-crypto-tx-edit-title = Editar Transaccion
+crypto-tx-edit-title = Editar Transacción
 crypto-tx-subtype = Subtipo
 crypto-tx-fee-coin-id = Moneda Comision (opcional)
 crypto-tx-fee-coin-amount = Cantidad Comision (opcional)
@@ -412,18 +412,18 @@ crypto-tx-override-proceeds = Forzar Ingresos (opcional)
 crypto-tx-override-cost-basis = Forzar Costo Base (opcional)
 
 # -- Toast messages --
-crypto-toast-ticker-saved = Configuracion del ticker guardada
+crypto-toast-ticker-saved = Configuración del ticker guardada
 crypto-toast-no-coins-sync = Sin monedas para sincronizar. Configura el ticker primero.
 crypto-toast-custom-added = Moneda personalizada agregada
 crypto-toast-custom-deleted = Moneda personalizada eliminada
-crypto-toast-tx-added = Transaccion agregada
-crypto-toast-tx-updated = Transaccion actualizada
-crypto-toast-tx-deleted = Transaccion eliminada
+crypto-toast-tx-added = Transacción agregada
+crypto-toast-tx-updated = Transacción actualizada
+crypto-toast-tx-deleted = Transacción eliminada
 crypto-toast-wallet-created = Billetera creada
 crypto-toast-wallet-deleted = Billetera eliminada
 crypto-toast-wallet-renamed = Billetera renombrada
 crypto-toast-ipc-imported = Datos IPC importados
-crypto-toast-settings-saved = Configuracion guardada
+crypto-toast-settings-saved = Configuración guardada
 crypto-toast-enter-period = Ingresa un periodo tributario
 crypto-toast-exported = Exportado a {$path}
 
@@ -499,8 +499,8 @@ habits-edit-habit = Editar Habito
 habits-new-habit-modal = Nuevo Habito
 habits-name = Nombre
 habits-habit-name-placeholder = Nombre del habito
-habits-description = Descripcion
-habits-desc-placeholder = Descripcion opcional
+habits-description = Descripción
+habits-desc-placeholder = Descripción opcional
 habits-color = Color
 habits-category = Categoria
 habits-category-placeholder = ej. salud, aprendizaje
@@ -522,7 +522,7 @@ habits-target-total-placeholder = Metrica de conteo alternativa
 habits-edit-goal = Editar Meta
 habits-new-goal-modal = Nueva Meta
 habits-goal-name = Nombre de la Meta
-habits-goal-name-placeholder = ej., Completar certificacion
+habits-goal-name-placeholder = ej., Completar certificación
 habits-goal-desc-placeholder = Detalles opcionales
 habits-reward-text = Texto de Recompensa
 habits-reward-text-placeholder = Con que te recompensaras
@@ -552,7 +552,7 @@ settings-regional = Regional
 settings-security = Seguridad
 settings-vault-backup = Respaldo de Boveda
 settings-data-import = Importar Datos
-settings-data-sync = Sincronizacion
+settings-data-sync = Sincronización
 settings-about = Acerca de
 settings-reset-section = Restablecer
 
@@ -597,7 +597,7 @@ settings-import-source = Origen:
 settings-import-to-add = por agregar
 settings-import-to-skip = por omitir
 settings-import-importing = Importando...
-settings-import-confirm = Confirmar Importacion
+settings-import-confirm = Confirmar Importación
 settings-import-processed = Procesados:
 settings-import-inserted = Insertados:
 settings-import-skipped = Omitidos:
@@ -614,7 +614,7 @@ settings-use-proxy-desc = Enrutar llamadas API a traves de un proxy
 settings-proxy-url = URL del Proxy
 
 # About
-settings-about-version = Version
+settings-about-versión = Version
 settings-about-encryption = Cifrado
 settings-about-storage = Almacenamiento
 
@@ -763,19 +763,19 @@ crypto-tax-wallet-excluded-label = excluida
 crypto-tax-filing-title = GUÍA DE DECLARACIÓN
 crypto-tax-save-generate = Guardar y generar
 crypto-tax-readiness-settings-suffix = transacciones en el período
-crypto-tax-readiness-settings-warn-detail = No se encontraron transacciones en el período comercial calculado. En Chile, el Ano Tributario usa transacciones del ano comercial anterior (ejemplo: AT 2026 usa transacciones 2025). Revisa el período, las billeteras excluidas y los archivos importados.
-crypto-tax-readiness-settings-excluded-warn-suffix = transacciones quedaron excluidas por filtros de billetera. Revisa Exclusiones de billeteras en Configuracion.
-crypto-tax-readiness-history-warn-suffix = enajenaciones tienen lotes insuficientes. Reimporta historial faltante o corrige la clasificacion tributaria.
+crypto-tax-readiness-settings-warn-detail = No se encontraron transacciones en el período comercial calculado. En Chile, el Año Tributario usa transacciones del año comercial anterior (ejemplo: AT 2026 usa transacciones 2025). Revisa el período, las billeteras excluidas y los archivos importados.
+crypto-tax-readiness-settings-excluded-warn-suffix = transacciones quedaron excluidas por filtros de billetera. Revisa Exclusiones de billeteras en Configuración.
+crypto-tax-readiness-history-warn-suffix = enajenaciones tienen lotes insuficientes. Reimporta historial faltante o corrige la clasificación tributaria.
 crypto-tax-readiness-prices-invalid-suffix = Fechas o tipos inválidos encontrados
 crypto-tax-readiness-prices-warn-suffix = elementos sin precio tributario. Usa Resolver precios faltantes y vuelve a generar.
-crypto-tax-readiness-prices-fx-warn-suffix = elementos usan cotizacion no-USD. Agrega referencias FX historicas para esas fechas.
-crypto-tax-readiness-transfers-warn-suffix = transferencias sin contrapartida. Vincula deposito/retiro correspondiente.
+crypto-tax-readiness-prices-fx-warn-suffix = elementos usan cotización no-USD. Agrega referencias FX históricas para esas fechas.
+crypto-tax-readiness-transfers-warn-suffix = transferencias sin contrapartida. Vincula depósito/retiro correspondiente.
 crypto-tax-readiness-balances-warn-suffix = activos del balance anual no tienen precio actual. Sincroniza precios y vuelve a generar.
-crypto-tax-readiness-sii-gain-detail = Ganancia -> F22 Linea 10, Casilla 1032. Aviso: Las casillas pueden cambiar cada ano.
-crypto-tax-readiness-sii-loss-detail = Perdida -> F22 Linea 17, Casilla 169 (tope). Aviso: Las casillas pueden cambiar cada ano.
-crypto-tax-readiness-sii-neutral-detail = Sin ganancia ni perdida neta. Aviso: Las casillas del F22 pueden cambiar cada ano.
+crypto-tax-readiness-sii-gain-detail = Ganancia -> F22 Línea 10, Casilla 1032. Aviso: Las casillas pueden cambiar cada año.
+crypto-tax-readiness-sii-loss-detail = Pérdida -> F22 Línea 17, Casilla 169 (tope). Aviso: Las casillas pueden cambiar cada año.
+crypto-tax-readiness-sii-neutral-detail = Sin ganancia ni pérdida neta. Aviso: Las casillas del F22 pueden cambiar cada año.
 crypto-tax-readiness-usa-filing-detail = Reportar en Form 8949 + Schedule D.
-crypto-tax-readiness-other-filing-detail = Aviso: Revisa la legislacion tributaria especifica de tu pais -- las reglas varian significativamente entre jurisdicciones. Este reporte usa reglas estandar internacionales (comisiones en costo base, FMV para ingresos, corto/largo plazo a 365 dias). Consulta a un asesor tributario local antes de declarar.
+crypto-tax-readiness-other-filing-detail = Aviso: Revisa la legislación tributaria específica de tu país -- las reglas varían significativamente entre jurisdicciones. Este reporte usa reglas estándar internacionales (comisiones en costo base, FMV para ingresos, corto/largo plazo a 365 días). Consulta a un asesor tributario local antes de declarar.
 crypto-tax-readiness-title = LISTA DE CONTROL
 crypto-tax-readiness-desc = Revisa los problemas antes de declarar
 crypto-tax-readiness-settings = Revisar configuración
@@ -797,11 +797,11 @@ crypto-tax-readiness-transfers = Revisar transferencias
 crypto-tax-readiness-transfers-warn = {$count} transferencias sin contrapartida
 crypto-tax-readiness-filing = Guía de declaración
 crypto-tax-readiness-sii-f22 = Formulario 22 SII
-crypto-tax-readiness-sii-gain = Ganancia -> F22 Linea 10, Casilla 1032. Aviso: Las casillas pueden cambiar cada ano.
-crypto-tax-readiness-sii-loss = Perdida -> F22 Linea 17, Casilla 169 (tope: casillas 105+155+152+1032+1891+1104). Aviso: Las casillas pueden cambiar cada ano.
+crypto-tax-readiness-sii-gain = Ganancia -> F22 Línea 10, Casilla 1032. Aviso: Las casillas pueden cambiar cada año.
+crypto-tax-readiness-sii-loss = Pérdida -> F22 Línea 17, Casilla 169 (tope: casillas 105+155+152+1032+1891+1104). Aviso: Las casillas pueden cambiar cada año.
 crypto-tax-readiness-sii-neutral = Sin ganancia ni perdida neta. Aviso: Las casillas del F22 pueden cambiar cada ano.
 crypto-tax-readiness-usa-filing = USA: Reportar en Form 8949 + Schedule D.
-crypto-tax-readiness-other-filing = Aviso: La legislacion de tu pais puede diferir. Consulta a un asesor tributario local antes de declarar.
+crypto-tax-readiness-other-filing = Aviso: La legislación de tu país puede diferir. Consulta a un asesor tributario local antes de declarar.
 crypto-tax-sii-casilla-warning = Los códigos de casilla del Formulario 22 pueden cambiar cada Año Tributario. Verifica siempre el suplemento tributario del SII vigente.
 crypto-tax-ipc-title = IPC (Chile)
 crypto-tax-ipc-desc = Descarga la serie oficial del IPC, conviértela a CSV e impórtala aquí. Por defecto no se realizan conexiones a Internet.
@@ -1041,7 +1041,7 @@ tx-scenario-gift = Regalo
 tx-scenario-reward = Recompensa
 tx-scenario-other = Otro
 tx-scenario-payment = Pago
-tx-scenario-donation = Donacion
+tx-scenario-donation = Donación
 tx-scenario-fee = Comision
 tx-scenario-lost = Perdido
 tx-scenario-stolen = Robado
