@@ -46,6 +46,45 @@
   let filterQuery = $state('')
   let filterAccountId = $state('')
   let filterCategory = $state('')
+  type DateRange = 'all' | 'this-month' | 'last-30' | 'last-90' | 'this-year' | 'custom'
+  let filterDateRange = $state<DateRange>('all')
+  let filterDateFrom = $state('')
+  let filterDateTo = $state('')
+
+  function computeDateBounds(): { from: string | undefined; to: string | undefined } {
+    const today = new Date()
+    const iso = (d: Date) => d.toISOString().slice(0, 10)
+    switch (filterDateRange) {
+      case 'this-month': {
+        const start = new Date(today.getFullYear(), today.getMonth(), 1)
+        return { from: iso(start), to: iso(today) }
+      }
+      case 'last-30': {
+        const start = new Date(today)
+        start.setDate(today.getDate() - 30)
+        return { from: iso(start), to: iso(today) }
+      }
+      case 'last-90': {
+        const start = new Date(today)
+        start.setDate(today.getDate() - 90)
+        return { from: iso(start), to: iso(today) }
+      }
+      case 'this-year': {
+        const start = new Date(today.getFullYear(), 0, 1)
+        return { from: iso(start), to: iso(today) }
+      }
+      case 'custom':
+        return { from: filterDateFrom || undefined, to: filterDateTo || undefined }
+      case 'all':
+      default:
+        return { from: undefined, to: undefined }
+    }
+  }
+
+  let hasActiveFilters = $derived(
+    !!filterQuery || !!filterAccountId || !!filterCategory ||
+    filterDateRange !== 'all'
+  )
 
   // Accounts state
   let accountsData = $state<AccountsResponse | null>(null)
@@ -85,7 +124,7 @@
 
   async function loadChartTransactions() {
     try {
-      const res = await financeApi.fetchTransactions(undefined, undefined, undefined, 1000)
+      const res = await financeApi.fetchTransactions(undefined, undefined, undefined, undefined, undefined, 1000)
       chartTransactions = res.transactions
     } catch (_) {
       // charts degrade gracefully
@@ -94,9 +133,10 @@
 
   async function loadTransactions() {
     try {
+      const { from, to } = computeDateBounds()
       const res = await financeApi.fetchTransactions(
         filterQuery || undefined, filterAccountId || undefined,
-        filterCategory || undefined, 100
+        filterCategory || undefined, from, to, 100
       )
       transactions = res.transactions
       hasMore = res.has_more
@@ -113,9 +153,10 @@
 
   async function loadMoreTransactions() {
     try {
+      const { from, to } = computeDateBounds()
       const res = await financeApi.fetchTransactions(
         filterQuery || undefined, filterAccountId || undefined,
-        filterCategory || undefined, transactions.length + 100
+        filterCategory || undefined, from, to, transactions.length + 100
       )
       transactions = res.transactions
       hasMore = res.has_more
@@ -128,6 +169,9 @@
     filterQuery = ''
     filterAccountId = ''
     filterCategory = ''
+    filterDateRange = 'all'
+    filterDateFrom = ''
+    filterDateTo = ''
     loadTransactions()
   }
 
@@ -514,7 +558,35 @@
               <option value={cat.name}>{cat.name}</option>
             {/each}
           </select>
-          {#if filterQuery || filterAccountId || filterCategory}
+          <select
+            bind:value={filterDateRange}
+            aria-label={i18n.t('finances-date-range', 'Date range')}
+            onchange={() => loadTransactions()}
+          >
+            <option value="all">{i18n.t('finances-date-all', 'All time')}</option>
+            <option value="this-month">{i18n.t('finances-date-this-month', 'This month')}</option>
+            <option value="last-30">{i18n.t('finances-date-last-30', 'Last 30 days')}</option>
+            <option value="last-90">{i18n.t('finances-date-last-90', 'Last 90 days')}</option>
+            <option value="this-year">{i18n.t('finances-date-this-year', 'This year')}</option>
+            <option value="custom">{i18n.t('finances-date-custom', 'Custom range')}</option>
+          </select>
+          {#if filterDateRange === 'custom'}
+            <input
+              type="date"
+              class="date-input"
+              aria-label={i18n.t('finances-date-from', 'From')}
+              bind:value={filterDateFrom}
+              onchange={() => loadTransactions()}
+            />
+            <input
+              type="date"
+              class="date-input"
+              aria-label={i18n.t('finances-date-to', 'To')}
+              bind:value={filterDateTo}
+              onchange={() => loadTransactions()}
+            />
+          {/if}
+          {#if hasActiveFilters}
             <button class="clear-btn" onclick={clearFilters}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px">
                 <path d="M18 6L6 18M6 6l12 12"/>
@@ -532,7 +604,7 @@
       </div>
 
       {#if transactions.length === 0}
-        <p class="empty">{filterQuery || filterAccountId || filterCategory ? i18n.t('finances-no-matching', 'No matching transactions') : i18n.t('finances-no-transactions-yet', 'No transactions yet')}</p>
+        <p class="empty">{hasActiveFilters ? i18n.t('finances-no-matching', 'No matching transactions') : i18n.t('finances-no-transactions-yet', 'No transactions yet')}</p>
       {:else}
         <div class="tx-list">
           {#each transactions as tx}
@@ -757,6 +829,20 @@
     transition: border-color 0.2s;
   }
   .activity-filters select:focus {
+    border-color: var(--accent);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+  .activity-filters .date-input {
+    padding: 7px 10px;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    background: var(--glass);
+    color: var(--text-primary);
+    font-size: 0.82rem;
+    transition: border-color 0.2s;
+  }
+  .activity-filters .date-input:focus {
     border-color: var(--accent);
     outline: none;
     box-shadow: 0 0 0 3px var(--accent-glow);

@@ -83,12 +83,15 @@ export async function updateTransfer(input: TransferInput): Promise<void> {
 }
 
 export async function fetchTransactions(
-  query?: string, account_id?: string, category?: string, limit?: number
+  query?: string, account_id?: string, category?: string,
+  date_from?: string, date_to?: string, limit?: number
 ): Promise<TransactionsResponse> {
   return invoke<TransactionsResponse>('fetch_transactions', {
     query: query ?? null,
     accountId: account_id ?? null,
     category: category ?? null,
+    dateFrom: date_from ?? null,
+    dateTo: date_to ?? null,
     limit: limit ?? null,
   })
 }

@@ -297,6 +297,8 @@ pub fn fetch_transactions(
     query: Option<String>,
     account_id: Option<String>,
     category: Option<String>,
+    date_from: Option<String>,
+    date_to: Option<String>,
     limit: Option<usize>,
 ) -> Result<TransactionsResponse, String> {
     let accounts = controller.get_accounts().map_err(|e| e.to_string())?;
@@ -311,6 +313,8 @@ pub fn fetch_transactions(
     let account_filter = account_id.unwrap_or_default();
     let category_filter = category.unwrap_or_default();
     let category_filter_upper = category_filter.to_uppercase();
+    let date_from_filter = date_from.unwrap_or_default();
+    let date_to_filter = date_to.unwrap_or_default();
     let display_limit = limit.unwrap_or(100);
 
     let mut matched_count: usize = 0;
@@ -335,6 +339,14 @@ pub fn fetch_transactions(
                         && (category_filter_upper == "TRANSFER"
                             || !tx.category.eq_ignore_ascii_case(&category_filter))))
             {
+                return None;
+            }
+
+            // Date range filter (ISO YYYY-MM-DD compares lexicographically)
+            if !date_from_filter.is_empty() && tx.date.as_str() < date_from_filter.as_str() {
+                return None;
+            }
+            if !date_to_filter.is_empty() && tx.date.as_str() > date_to_filter.as_str() {
                 return None;
             }
 
