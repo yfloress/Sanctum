@@ -51,6 +51,7 @@ export interface TransactionDto {
   account_name: string
   date: string
   description: string
+  description_raw: string
   category: string
   category_raw: string
   amount: string

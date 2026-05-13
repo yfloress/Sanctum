@@ -16,6 +16,7 @@
 
 <script lang="ts">
   import BaseChart from './BaseChart.svelte'
+  import { i18n } from '../../lib/stores/i18n.svelte'
 
   interface Props {
     months: string[]
@@ -24,6 +25,9 @@
   }
 
   let { months, income, expenses }: Props = $props()
+
+  let incomeLabel = $derived(i18n.t('finances-income', 'Income'))
+  let expensesLabel = $derived(i18n.t('finances-expenses', 'Expenses'))
 
   let option = $derived({
     backgroundColor: 'transparent',
@@ -35,7 +39,7 @@
       textStyle: { color: '#e0e0e0', fontSize: 12 },
     },
     legend: {
-      data: ['Income', 'Expenses'],
+      data: [incomeLabel, expensesLabel],
       bottom: 0,
       textStyle: { color: '#555', fontSize: 11 },
       icon: 'roundRect',
@@ -58,14 +62,14 @@
     },
     series: [
       {
-        name: 'Income',
+        name: incomeLabel,
         type: 'bar',
         data: income,
         barMaxWidth: 20,
         itemStyle: { color: '#4ade80', borderRadius: [4, 4, 0, 0] },
       },
       {
-        name: 'Expenses',
+        name: expensesLabel,
         type: 'bar',
         data: expenses,
         barMaxWidth: 20,

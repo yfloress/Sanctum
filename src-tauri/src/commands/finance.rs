@@ -542,6 +542,7 @@ fn build_transaction_dto(
         account_name: from_name,
         date: tx.date.clone(),
         description,
+        description_raw: tx.description.clone(),
         category: format_category_label(&category_raw),
         category_raw,
         amount: format_money(tx.amount.abs(), &currency),

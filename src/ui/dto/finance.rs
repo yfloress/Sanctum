@@ -93,6 +93,7 @@ pub struct TransactionDto {
     pub account_name: String,
     pub date: String,
     pub description: String,
+    pub description_raw: String,
     pub category: String,
     pub category_raw: String,
     pub amount: String,

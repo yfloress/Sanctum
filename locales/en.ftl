@@ -152,6 +152,7 @@ finances-no-accounts-create = No accounts yet. Create your first account.
 finances-new-category = New Category
 finances-category-placeholder = Category name...
 finances-expense = Expense
+finances-expenses = Expenses
 finances-income = Income
 finances-add = Add
 

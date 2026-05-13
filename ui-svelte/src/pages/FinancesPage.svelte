@@ -181,7 +181,7 @@
     tfFromId = tx.account_id
     tfToId = tx.transfer_account_id ?? ''
     tfAmount = tx.amount_raw
-    tfDescription = ''
+    tfDescription = tx.description_raw
     tfDate = tx.date
     showTransfer = true
   }
@@ -210,7 +210,7 @@
   function openEditAccount(detail: AccountDetailResponse) {
     editingAccount = detail
     accName = detail.name
-    accType = detail.account_type
+    accType = detail.account_type === 'credit_card' ? 'credit' : detail.account_type
     accCurrency = detail.currency
     const fullAcc = accountsData?.accounts.find(a => a.id === detail.id)
     accInitialBalance = fullAcc?.initial_balance ?? '0'
@@ -359,13 +359,14 @@
 
   let barChartData = $derived.by(() => {
     const now = new Date()
+    const locale = app.settings?.preferred_language || 'en'
     const months: string[] = []
     const income: number[] = []
     const expenses: number[] = []
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-      const label = d.toLocaleDateString('en', { month: 'short' })
+      const label = d.toLocaleDateString(locale, { month: 'short' })
       const relevant = chartTransactions.filter(tx => !tx.is_transfer && tx.date.startsWith(key))
       const inc = relevant.filter(tx => !tx.is_expense).reduce((s, tx) => s + (parseFloat(tx.amount_raw) || 0), 0)
       const exp = relevant.filter(tx => tx.is_expense).reduce((s, tx) => s + (parseFloat(tx.amount_raw) || 0), 0)
@@ -376,14 +377,21 @@
     return { months, income, expenses }
   })
 
-  function parseBalanceNum(s: string): number {
-    return parseFloat(s.replace(/[^0-9.]/g, '')) || 0
+  function parseBalanceNum(s: string, currency: string): number {
+    // Strip currency code, spaces, and any sign
+    const stripped = s.replace(/[^0-9.,]/g, '')
+    if (currency.toUpperCase() === 'CLP') {
+      // CLP: dot is thousand separator, no decimals
+      return parseFloat(stripped.replace(/\./g, '')) || 0
+    }
+    // Default: comma is thousand separator, dot is decimal
+    return parseFloat(stripped.replace(/,/g, '')) || 0
   }
 
   let donutData = $derived(
     (accountsData?.accounts ?? [])
       .filter(a => !a.balance_negative && !a.is_archived)
-      .map(a => ({ name: a.name, value: parseBalanceNum(a.balance) }))
+      .map(a => ({ name: a.name, value: parseBalanceNum(a.balance, a.currency) }))
       .filter(a => a.value > 0)
   )
 
@@ -437,6 +445,18 @@
       return `/src/assets/bank-icons/${acc.icon_path}`
     }
     return getDefaultIconPath(acc.account_type_key ?? acc.account_type)
+  }
+
+  function normalizeAccountTypeKey(value: string | null | undefined): string {
+    if (!value) return ''
+    const lower = value.toLowerCase().trim()
+    return lower === 'credit_card' ? 'credit' : lower
+  }
+
+  function accountTypeLabel(acc: { account_type: string; account_type_key?: string }): string {
+    const key = normalizeAccountTypeKey(acc.account_type_key ?? acc.account_type)
+    if (!key) return acc.account_type
+    return i18n.t(`finances-account-type-${key}`, acc.account_type)
   }
 
   $effect(() => {
@@ -555,7 +575,7 @@
                 />
                 <div class="strip-info">
                   <span class="strip-name">{acc.name}</span>
-                  <span class="strip-type">{acc.account_type}</span>
+                  <span class="strip-type">{accountTypeLabel(acc)}</span>
                 </div>
                 <div class="strip-balance">
                   <span class:negative={acc.balance_negative}>{acc.balance}</span>
@@ -697,7 +717,7 @@
               <img src={getAccountDisplayIcon(acc)} alt={acc.account_type} class="acc-icon" class:themed-icon={isGenericIcon(acc.icon_path)} onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
               <div class="acc-info">
                 <div class="acc-name">{acc.name}</div>
-                <div class="acc-type">{acc.account_type}</div>
+                <div class="acc-type">{accountTypeLabel(acc)}</div>
               </div>
               <div class="acc-footer">
                 <div class="acc-balance" class:negative={acc.balance_negative}>{acc.balance}</div>
@@ -727,7 +747,7 @@
             {/if}
             <div class="archived-info">
               <span class="archived-name">{acc.name}</span>
-              <span class="archived-meta">{acc.account_type} · {acc.currency}</span>
+              <span class="archived-meta">{accountTypeLabel(acc)} · {acc.currency}</span>
             </div>
             <button class="glass-btn" onclick={() => unarchiveAccount(acc.id)}>
               {i18n.t('finances-restore', 'Restore')}

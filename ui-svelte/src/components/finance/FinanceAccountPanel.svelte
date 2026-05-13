@@ -46,6 +46,13 @@
     return getDefaultIconPath(acc.account_type)
   }
 
+  function accountTypeLabel(rawType: string): string {
+    const lower = (rawType ?? '').toLowerCase().trim()
+    const key = lower === 'credit_card' ? 'credit' : lower
+    if (!key) return rawType
+    return i18n.t(`finances-account-type-${key}`, rawType)
+  }
+
   interface Props {
     show: boolean
     account: AccountDetailResponse | null
@@ -101,7 +108,7 @@
           </button>
         </div>
       {/if}
-      <div class="info-row"><span>{i18n.t('finances-type', 'Type')}</span><span>{account.account_type}</span></div>
+      <div class="info-row"><span>{i18n.t('finances-type', 'Type')}</span><span>{accountTypeLabel(account.account_type)}</span></div>
       <div class="info-row"><span>{i18n.t('finances-currency', 'Currency')}</span><span>{account.currency}</span></div>
       <div class="info-row">
         <span>{i18n.t('finances-balance', 'Balance')}</span>
