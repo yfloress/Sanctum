@@ -31,6 +31,7 @@
   import FinanceTransferModal from '../components/finance/FinanceTransferModal.svelte'
   import FinanceAccountPanel from '../components/finance/FinanceAccountPanel.svelte'
   import FinanceCategoryPanel from '../components/finance/FinanceCategoryPanel.svelte'
+  import ConfirmDialog from '../components/ConfirmDialog.svelte'
 
   type Tab = 'overview' | 'activity' | 'accounts' | 'settings'
 
@@ -63,6 +64,7 @@
   let editingTransaction = $state<TransactionDto | null>(null)
   let editingAccount = $state<AccountDetailResponse | null>(null)
   let editingTransfer = $state<TransactionDto | null>(null)
+  let pendingDeleteTx = $state<TransactionDto | null>(null)
 
   async function loadAll() {
     loading = true
@@ -547,7 +549,7 @@
                 </div>
               </div>
               <span class="tx-amount" class:expense={tx.is_expense} class:transfer={tx.is_transfer}>{tx.amount}</span>
-              <button class="delete-btn" onclick={(e: MouseEvent) => { e.stopPropagation(); deleteTransaction(tx.id) }} aria-label="Delete">
+              <button class="delete-btn" onclick={(e: MouseEvent) => { e.stopPropagation(); pendingDeleteTx = tx }} aria-label={i18n.t('confirm-delete-button', 'Delete')}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
               </button>
             </div>
@@ -663,6 +665,19 @@
   accounts={accountsData?.accounts ?? []}
   onsubmit={async () => { await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()]) }}
   onclose={() => { showTransfer = false; editingTransfer = null }}
+/>
+
+<!-- Delete Transaction Confirm -->
+<ConfirmDialog
+  show={pendingDeleteTx !== null}
+  message={i18n.t('confirm-delete-transaction', 'Are you sure you want to delete this transaction?')}
+  detail={pendingDeleteTx ? `${pendingDeleteTx.amount} · ${pendingDeleteTx.description || pendingDeleteTx.category}` : ''}
+  danger
+  onconfirm={async () => {
+    if (pendingDeleteTx) await deleteTransaction(pendingDeleteTx.id)
+    pendingDeleteTx = null
+  }}
+  onclose={() => pendingDeleteTx = null}
 />
 
 <style>

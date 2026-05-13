@@ -646,7 +646,10 @@ modal-edit-reward-title = Editar Recompensa
 # Confirmation dialogs
 confirm-delete-title = Confirmar Eliminación
 confirm-delete-message = Esta acción no se puede deshacer.
+confirm-delete-button = Eliminar
 confirm-delete-account = ¿Estás seguro de que quieres eliminar esta cuenta?
+confirm-delete-account-tx-count = Esto también eliminará {$count} transacción(es).
+confirm-delete-category = ¿Estás seguro de que quieres eliminar esta categoría?
 confirm-delete-transaction = ¿Estás seguro de que quieres eliminar esta transacción?
 confirm-delete-wallet = ¿Estás seguro de que quieres eliminar esta billetera?
 confirm-delete-habit = ¿Estás seguro de que quieres eliminar este hábito?

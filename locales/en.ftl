@@ -646,7 +646,10 @@ modal-edit-reward-title = Edit Streak Reward
 # Confirmation dialogs
 confirm-delete-title = Confirm Delete
 confirm-delete-message = This action cannot be undone.
+confirm-delete-button = Delete
 confirm-delete-account = Are you sure you want to delete this account?
+confirm-delete-account-tx-count = This will also remove {$count} transaction(s).
+confirm-delete-category = Are you sure you want to delete this category?
 confirm-delete-transaction = Are you sure you want to delete this transaction?
 confirm-delete-wallet = Are you sure you want to delete this wallet?
 confirm-delete-habit = Are you sure you want to delete this habit?

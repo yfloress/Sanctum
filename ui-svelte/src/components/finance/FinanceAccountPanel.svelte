@@ -18,6 +18,7 @@
   import { i18n } from '../../lib/stores/i18n.svelte'
   import { ACCOUNT_ICONS, accountTypeLabel, getAccountDisplayIcon, isGenericIcon } from '../../lib/accountDisplay'
   import type { AccountDetailResponse } from '../../lib/types'
+  import ConfirmDialog from '../ConfirmDialog.svelte'
 
   interface Props {
     show: boolean
@@ -32,6 +33,7 @@
   let { show = $bindable(false), account, ondelete, onedit, onrefresh, oniconchange, onclose }: Props = $props()
 
   let showIconPicker = $state(false)
+  let pendingDelete = $state(false)
 
   async function changeAccountIcon(icon: string) {
     if (!account) return
@@ -95,9 +97,23 @@
     {/if}
     <div class="panel-actions">
       <button class="primary-btn" onclick={() => onedit(account)}>{i18n.t('finances-edit-account', 'Edit Account')}</button>
-      <button class="danger-btn" onclick={() => ondelete(account.id)}>{i18n.t('finances-delete-account', 'Delete Account')}</button>
+      <button class="danger-btn" onclick={() => pendingDelete = true}>{i18n.t('finances-delete-account', 'Delete Account')}</button>
     </div>
   </aside>
+
+  <ConfirmDialog
+    show={pendingDelete}
+    message={i18n.t('confirm-delete-account', 'Are you sure you want to delete this account?')}
+    detail={account.transactions.length > 0
+      ? i18n.tArgs('confirm-delete-account-tx-count', { count: account.transactions.length }, `This will also remove ${account.transactions.length} transaction(s).`)
+      : i18n.t('confirm-delete-message', 'This action cannot be undone.')}
+    danger
+    onconfirm={async () => {
+      if (account) await ondelete(account.id)
+      pendingDelete = false
+    }}
+    onclose={() => pendingDelete = false}
+  />
 {/if}
 
 <style>

@@ -17,6 +17,7 @@
 <script lang="ts">
   import { i18n } from '../../lib/stores/i18n.svelte'
   import type { CategoriesResponse } from '../../lib/types'
+  import ConfirmDialog from '../ConfirmDialog.svelte'
 
   interface Props {
     categories: CategoriesResponse | null
@@ -28,6 +29,7 @@
 
   let newCatName = $state('')
   let newCatType = $state<'expense' | 'income'>('expense')
+  let pendingDeleteCat = $state<{ id: string; name: string } | null>(null)
 
   async function addCategory() {
     if (!newCatName.trim()) return
@@ -72,7 +74,7 @@
                   <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
                 </svg>
               {:else}
-                <button class="cat-chip-del" onclick={() => ondelete(cat.id)} aria-label="Delete {cat.name}">
+                <button class="cat-chip-del" onclick={() => pendingDeleteCat = { id: cat.id, name: cat.name }} aria-label="Delete {cat.name}">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                     <path d="M18 6L6 18M6 6l12 12"/>
                   </svg>
@@ -97,7 +99,7 @@
                   <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
                 </svg>
               {:else}
-                <button class="cat-chip-del" onclick={() => ondelete(cat.id)} aria-label="Delete {cat.name}">
+                <button class="cat-chip-del" onclick={() => pendingDeleteCat = { id: cat.id, name: cat.name }} aria-label="Delete {cat.name}">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                     <path d="M18 6L6 18M6 6l12 12"/>
                   </svg>
@@ -110,6 +112,18 @@
     </div>
   {/if}
 </section>
+
+<ConfirmDialog
+  show={pendingDeleteCat !== null}
+  message={i18n.t('confirm-delete-category', 'Are you sure you want to delete this category?')}
+  detail={pendingDeleteCat?.name ?? ''}
+  danger
+  onconfirm={async () => {
+    if (pendingDeleteCat) await ondelete(pendingDeleteCat.id)
+    pendingDeleteCat = null
+  }}
+  onclose={() => pendingDeleteCat = null}
+/>
 
 <style>
   .tab-content { display: flex; flex-direction: column; gap: 20px; padding-top: 20px; }
