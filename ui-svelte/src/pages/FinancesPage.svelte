@@ -22,10 +22,13 @@
     TransactionDto, CategoriesResponse, CategoryDto,
     AccountsResponse, AccountDetailResponse, AccountDto
   } from '../lib/types'
+  import { accountTypeLabel, getAccountDisplayIcon, isGenericIcon } from '../lib/accountDisplay'
   import FinanceBarChart from '../components/charts/FinanceBarChart.svelte'
   import FinanceDonutChart from '../components/charts/FinanceDonutChart.svelte'
   import FinanceCategoryChart from '../components/charts/FinanceCategoryChart.svelte'
   import FinanceTransactionModal from '../components/finance/FinanceTransactionModal.svelte'
+  import FinanceAccountModal from '../components/finance/FinanceAccountModal.svelte'
+  import FinanceTransferModal from '../components/finance/FinanceTransferModal.svelte'
   import FinanceAccountPanel from '../components/finance/FinanceAccountPanel.svelte'
   import FinanceCategoryPanel from '../components/finance/FinanceCategoryPanel.svelte'
 
@@ -59,41 +62,7 @@
   let showTransfer = $state(false)
   let editingTransaction = $state<TransactionDto | null>(null)
   let editingAccount = $state<AccountDetailResponse | null>(null)
-  let editingTransfer = $state<string | null>(null)
-
-  const ACCOUNT_ICONS: { value: string; src: string; generic: boolean }[] = [
-    ...['banco-chile', 'banco-estado', 'bank-of-america', 'bci', 'citibank', 'jpmorgan', 'mercado_pago', 'santander', 'wf']
-      .map(n => ({ value: `${n}.svg`, src: `/src/assets/bank-icons/${n}.svg`, generic: false })),
-    ...['landmark', 'wallet', 'credit-card', 'piggy-bank', 'briefcase', 'coins', 'banknote', 'building-2']
-      .map(n => ({ value: `/src/assets/icons/${n}.svg`, src: `/src/assets/icons/${n}.svg`, generic: true })),
-  ]
-
-  function isGenericIcon(iconPath: string | null): boolean {
-    if (!iconPath) return true  // fallback is always a generic icon now
-    return iconPath.startsWith('/src/assets/icons/')
-  }
-
-  // Account form
-  let accName = $state('')
-  let accType = $state('bank')
-  let accCurrency = $state('USD')
-  let accInitialBalance = $state('0')
-  let accIcon = $state('')
-  let showAccIconPicker = $state(false)
-  let pickedIconSrc = $state('')
-  let pickedIconGeneric = $state(true)
-  $effect(() => {
-    const found = accIcon ? ACCOUNT_ICONS.find(i => i.value === accIcon) : null
-    pickedIconSrc = found ? found.src : getDefaultIconPath(accType)
-    pickedIconGeneric = found ? found.generic : true
-  })
-
-  // Transfer form
-  let tfFromId = $state('')
-  let tfToId = $state('')
-  let tfAmount = $state('')
-  let tfDescription = $state('')
-  let tfDate = $state(new Date().toISOString().slice(0, 10))
+  let editingTransfer = $state<TransactionDto | null>(null)
 
   async function loadAll() {
     loading = true
@@ -183,12 +152,7 @@
   }
 
   function openEditTransfer(tx: TransactionDto) {
-    editingTransfer = tx.id
-    tfFromId = tx.account_id
-    tfToId = tx.transfer_account_id ?? ''
-    tfAmount = tx.amount_raw
-    tfDescription = tx.description_raw
-    tfDate = tx.date
+    editingTransfer = tx
     showTransfer = true
   }
 
@@ -204,52 +168,12 @@
 
   function openAddAccount() {
     editingAccount = null
-    accName = ''
-    accType = 'bank'
-    accCurrency = 'USD'
-    accInitialBalance = '0'
-    accIcon = ''
-    showAccIconPicker = false
     showAddAccount = true
   }
 
   function openEditAccount(detail: AccountDetailResponse) {
     editingAccount = detail
-    accName = detail.name
-    accType = detail.account_type === 'credit_card' ? 'credit' : detail.account_type
-    accCurrency = detail.currency
-    const fullAcc = accountsData?.accounts.find(a => a.id === detail.id)
-    accInitialBalance = fullAcc?.initial_balance ?? '0'
     showAddAccount = true
-  }
-
-  async function submitAccount() {
-    try {
-      const isEditing = !!editingAccount
-      if (isEditing) {
-        await financeApi.updateAccount(editingAccount!.id, accName, accType, accCurrency, accInitialBalance)
-        await refreshAccounts()
-        if (selectedAccount?.id === editingAccount!.id) {
-          selectedAccount = await financeApi.fetchAccountDetails(editingAccount!.id)
-        }
-      } else {
-        const before = new Set(accountsData?.accounts.map(a => a.id) ?? [])
-        await financeApi.createAccount(accName, accType, accCurrency, accInitialBalance)
-        await refreshAccounts()
-        if (accIcon) {
-          const newAcc = accountsData?.accounts.find(a => !before.has(a.id))
-          if (newAcc) {
-            await financeApi.updateAccountIcon(newAcc.id, accIcon)
-            await refreshAccounts()
-          }
-        }
-      }
-      showAddAccount = false
-      editingAccount = null
-      app.showToast(isEditing ? i18n.t('finances-acc-updated', 'Account updated') : i18n.t('finances-acc-created', 'Account created'))
-    } catch (e) {
-      app.showToast(String(e), true)
-    }
   }
 
   async function deleteAccount(id: string) {
@@ -283,42 +207,7 @@
 
   function openTransfer() {
     editingTransfer = null
-    tfFromId = accountsData?.accounts[0]?.id ?? ''
-    tfToId = accountsData?.accounts[1]?.id ?? ''
-    tfAmount = ''
-    tfDescription = ''
-    tfDate = new Date().toISOString().slice(0, 10)
     showTransfer = true
-  }
-
-  async function submitTransfer() {
-    const isEditing = !!editingTransfer
-    try {
-      if (isEditing) {
-        await financeApi.updateTransfer({
-          id: editingTransfer!,
-          from_account_id: tfFromId,
-          to_account_id: tfToId,
-          amount: tfAmount,
-          description: tfDescription,
-          date: tfDate,
-        })
-      } else {
-        await financeApi.transferFunds({
-          from_account_id: tfFromId,
-          to_account_id: tfToId,
-          amount: tfAmount,
-          description: tfDescription,
-          date: tfDate,
-        })
-      }
-      showTransfer = false
-      editingTransfer = null
-      await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()])
-      app.showToast(isEditing ? i18n.t('finances-tf-updated', 'Transfer updated') : i18n.t('finances-tf-completed', 'Transfer completed'))
-    } catch (e) {
-      app.showToast(String(e), true)
-    }
   }
 
   async function refreshAccounts() {
@@ -431,39 +320,6 @@
   }
 
   // ──────────────────────────────────────────────────────────────────────────
-
-  function getDefaultIconPath(accountType: string): string {
-    const iconMap: { [key: string]: string } = {
-      'savings': 'piggy-bank',
-      'credit': 'credit-card',
-      'credit_card': 'credit-card',
-      'cash': 'wallet',
-      'bank': 'landmark',
-      'other': 'coins',
-    }
-    const icon = iconMap[accountType.toLowerCase()] || 'landmark'
-    return `/src/assets/icons/${icon}.svg`
-  }
-
-  function getAccountDisplayIcon(acc: { account_type: string; account_type_key?: string; icon_path: string | null }): string {
-    if (acc.icon_path) {
-      if (acc.icon_path.startsWith('/') || acc.icon_path.startsWith('http')) return acc.icon_path
-      return `/src/assets/bank-icons/${acc.icon_path}`
-    }
-    return getDefaultIconPath(acc.account_type_key ?? acc.account_type)
-  }
-
-  function normalizeAccountTypeKey(value: string | null | undefined): string {
-    if (!value) return ''
-    const lower = value.toLowerCase().trim()
-    return lower === 'credit_card' ? 'credit' : lower
-  }
-
-  function accountTypeLabel(acc: { account_type: string; account_type_key?: string }): string {
-    const key = normalizeAccountTypeKey(acc.account_type_key ?? acc.account_type)
-    if (!key) return acc.account_type
-    return i18n.t(`finances-account-type-${key}`, acc.account_type)
-  }
 
   $effect(() => {
     app.settings?.preferred_currency
@@ -581,7 +437,7 @@
                 />
                 <div class="strip-info">
                   <span class="strip-name">{acc.name}</span>
-                  <span class="strip-type">{accountTypeLabel(acc)}</span>
+                  <span class="strip-type">{accountTypeLabel(acc.account_type_key ?? acc.account_type)}</span>
                 </div>
                 <div class="strip-balance">
                   <span class:negative={acc.balance_negative}>{acc.balance}</span>
@@ -723,7 +579,7 @@
               <img src={getAccountDisplayIcon(acc)} alt={acc.account_type} class="acc-icon" class:themed-icon={isGenericIcon(acc.icon_path)} onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
               <div class="acc-info">
                 <div class="acc-name">{acc.name}</div>
-                <div class="acc-type">{accountTypeLabel(acc)}</div>
+                <div class="acc-type">{accountTypeLabel(acc.account_type_key ?? acc.account_type)}</div>
               </div>
               <div class="acc-footer">
                 <div class="acc-balance" class:negative={acc.balance_negative}>{acc.balance}</div>
@@ -753,7 +609,7 @@
             {/if}
             <div class="archived-info">
               <span class="archived-name">{acc.name}</span>
-              <span class="archived-meta">{accountTypeLabel(acc)} · {acc.currency}</span>
+              <span class="archived-meta">{accountTypeLabel(acc.account_type_key ?? acc.account_type)} · {acc.currency}</span>
             </div>
             <button class="glass-btn" onclick={() => unarchiveAccount(acc.id)}>
               {i18n.t('finances-restore', 'Restore')}
@@ -786,118 +642,28 @@
   onclose={() => showAddTransaction = false}
 />
 
-<!-- Add Account Modal -->
-{#if showAddAccount}
-  <div class="modal-backdrop" role="presentation" onclick={() => showAddAccount = false} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') showAddAccount = false }}></div>
-  <div class="modal-wrapper">
-    <div class="modal">
-        <h3>{editingAccount ? i18n.t('finances-edit-account-modal', 'Edit Account') : i18n.t('finances-new-account-modal', 'New Account')}</h3>
-    <div class="form-grid">
-      <label>
-        {i18n.t('finances-name', 'Name')}
-        <input type="text" bind:value={accName} placeholder={i18n.t('finances-account-name-placeholder', 'Account name')} />
-      </label>
-      <label>
-        {i18n.t('finances-type', 'Type')}
-        <select bind:value={accType}>
-          <option value="bank">{i18n.t('finances-account-type-bank', 'Bank')}</option>
-          <option value="savings">{i18n.t('finances-account-type-savings', 'Savings')}</option>
-          <option value="credit">{i18n.t('finances-account-type-credit', 'Credit Card')}</option>
-          <option value="cash">{i18n.t('finances-account-type-cash', 'Cash')}</option>
-          <option value="other">{i18n.t('finances-account-type-other', 'Other')}</option>
-        </select>
-      </label>
-      <label>
-        {i18n.t('finances-currency', 'Currency')}
-        <select bind:value={accCurrency}>
-          {#each ['USD', 'CLP', 'EUR', 'GBP', 'BRL', 'MXN', 'ARS', 'CAD', 'AUD', 'CHF', 'JPY'] as cur}
-            <option value={cur}>{cur}</option>
-          {/each}
-        </select>
-      </label>
-      <label>
-        {i18n.t('finances-initial-balance', 'Initial Balance')}
-        <input type="text" inputmode="decimal" bind:value={accInitialBalance} placeholder="0.00" />
-      </label>
-      {#if !editingAccount}
-        <div class="icon-select-label">
-          <span>{i18n.t('finances-icon', 'Icon')}</span>
-          <button class="change-icon-btn" onclick={() => showAccIconPicker = !showAccIconPicker}>
-            <img
-              src={pickedIconSrc || getDefaultIconPath(accType)}
-              alt=""
-              class="selected-icon-preview"
-              class:themed-icon={pickedIconGeneric}
-            />
-            {showAccIconPicker ? i18n.t('finances-close', 'Close') : i18n.t('finances-change', 'Change')}
-          </button>
-        </div>
-        {#if showAccIconPicker}
-          <div class="icon-picker">
-            {#each ACCOUNT_ICONS as icon}
-              <button class="icon-option" class:selected={accIcon === icon.value} onclick={() => { accIcon = icon.value; showAccIconPicker = false }} title={icon.value}>
-                <img src={icon.src} alt={icon.value} class:themed-icon={icon.generic} onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
-              </button>
-            {/each}
-          </div>
-        {/if}
-      {/if}
-    </div>
-      <div class="modal-actions">
-        <button class="secondary-btn" onclick={() => showAddAccount = false}>{i18n.t('finances-cancel', 'Cancel')}</button>
-        <button class="primary-btn" onclick={submitAccount} disabled={!accName.trim()}>
-          {editingAccount ? i18n.t('finances-update', 'Update') : i18n.t('finances-create', 'Create')}
-        </button>
-      </div>
-    </div>
-  </div>
-{/if}
+<!-- Add/Edit Account Modal -->
+<FinanceAccountModal
+  bind:show={showAddAccount}
+  editing={editingAccount}
+  accountsData={accountsData}
+  onsubmit={async () => {
+    await refreshAccounts()
+    if (selectedAccount && editingAccount && selectedAccount.id === editingAccount.id) {
+      selectedAccount = await financeApi.fetchAccountDetails(editingAccount.id)
+    }
+  }}
+  onclose={() => { showAddAccount = false; editingAccount = null }}
+/>
 
 <!-- Transfer Modal -->
-{#if showTransfer}
-  <div class="modal-backdrop" role="presentation" onclick={() => { showTransfer = false; editingTransfer = null }} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') { showTransfer = false; editingTransfer = null } }}></div>
-  <div class="modal-wrapper">
-    <div class="modal">
-        <h3>{editingTransfer ? i18n.t('finances-edit-transfer', 'Edit Transfer') : i18n.t('finances-transfer-funds', 'Transfer Funds')}</h3>
-    <div class="form-grid">
-      <label>
-        {i18n.t('finances-from', 'From')}
-        <select bind:value={tfFromId}>
-          {#each accountsData?.accounts ?? [] as acc}
-            <option value={acc.id}>{acc.name}</option>
-          {/each}
-        </select>
-      </label>
-      <label>
-        {i18n.t('finances-to', 'To')}
-        <select bind:value={tfToId}>
-          {#each accountsData?.accounts ?? [] as acc}
-            <option value={acc.id}>{acc.name}</option>
-          {/each}
-        </select>
-      </label>
-      <label>
-        {i18n.t('finances-amount', 'Amount')}
-        <input type="text" inputmode="decimal" bind:value={tfAmount} placeholder="0.00" />
-      </label>
-      <label>
-        {i18n.t('finances-description', 'Description')}
-        <input type="text" bind:value={tfDescription} placeholder={i18n.t('finances-transfer-note', 'Transfer note')} />
-      </label>
-      <label>
-        {i18n.t('finances-date', 'Date')}
-        <input type="date" bind:value={tfDate} />
-      </label>
-    </div>
-      <div class="modal-actions">
-        <button class="secondary-btn" onclick={() => { showTransfer = false; editingTransfer = null }}>{i18n.t('finances-cancel', 'Cancel')}</button>
-        <button class="primary-btn" onclick={submitTransfer} disabled={!tfAmount || tfFromId === tfToId}>
-          {editingTransfer ? i18n.t('finances-update', 'Update') : i18n.t('finances-transfer-btn', 'Transfer')}
-        </button>
-      </div>
-    </div>
-  </div>
-{/if}
+<FinanceTransferModal
+  bind:show={showTransfer}
+  editing={editingTransfer}
+  accounts={accountsData?.accounts ?? []}
+  onsubmit={async () => { await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()]) }}
+  onclose={() => { showTransfer = false; editingTransfer = null }}
+/>
 
 <style>
   .page { padding: 24px 32px; max-width: 960px; width: 100%; margin: 0 auto; }
@@ -1104,59 +870,6 @@
   .acc-balance { font-size: 1.1rem; font-weight: 600; color: var(--text-primary); margin-top: 8px; }
   .acc-balance.negative { color: var(--danger); }
   .acc-currency { font-size: 0.7rem; color: var(--text-tertiary); }
-  /* Modals */
-  .modal-backdrop {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-    backdrop-filter: blur(4px); z-index: 100;
-  }
-  .modal {
-    position: relative;
-    background: linear-gradient(145deg, rgba(26, 26, 31, 0.75) 0%, rgba(20, 20, 24, 0.72) 50%, rgba(17, 17, 21, 0.7) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-lg);
-    padding: 28px; width: 420px; max-height: 85vh; overflow-y: auto; z-index: 101;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-    box-shadow: inset 0 0.125em 0.125em rgba(254, 254, 254, 0.05), inset 0 -0.125em 0.125em rgba(0, 0, 0, 0.5), 0 0.25em 0.125em -0.125em rgba(254, 254, 254, 0.2), 0 0 0.1em 0.25em inset rgba(0, 0, 0, 0.2);
-  }
-  .modal-wrapper {
-    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    z-index: 101; pointer-events: none;
-  }
-  .modal-wrapper .modal {
-    pointer-events: auto;
-  }
-  .modal h3 { margin: 0 0 20px; color: var(--text-primary); font-size: 1.1rem; position: relative; z-index: 10; }
-
-  .form-grid { display: flex; flex-direction: column; gap: 14px; position: relative; z-index: 10; }
-  .form-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: var(--text-secondary); }
-  .form-grid input, .form-grid select {
-    padding: 10px 12px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    background: var(--select-bg); color: var(--text-primary); font-size: 0.9rem;
-    transition: border-color 0.2s, box-shadow 0.2s;
-  }
-  .form-grid input:focus, .form-grid select:focus {
-    border-color: var(--accent); outline: none;
-    box-shadow: 0 0 0 3px var(--accent-glow);
-  }
-  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; position: relative; z-index: 10; }
-
-  .primary-btn {
-    padding: 8px 18px; border: 1px solid var(--accent-border); border-radius: var(--radius-sm);
-    background: var(--accent-bg); backdrop-filter: blur(8px);
-    color: var(--text-on-accent); cursor: pointer; font-size: 0.85rem; font-weight: 500;
-    transition: all 0.2s;
-  }
-  .primary-btn:hover:not(:disabled) {
-    background: var(--accent); border-color: var(--accent);
-    box-shadow: 0 0 16px var(--accent-glow);
-  }
-  .primary-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-  .secondary-btn {
-    padding: 8px 18px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    background: none; color: var(--text-secondary); cursor: pointer; font-size: 0.85rem;
-    transition: all 0.15s;
-  }
-  .secondary-btn:hover { border-color: var(--glass-border-hover); }
   /* Accounts */
   .account-grid {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px;
@@ -1179,25 +892,6 @@
   .acc-balance.negative { color: var(--danger); }
   .acc-currency { font-size: 0.75rem; color: var(--text-tertiary); }
 
-  /* Icon picker */
-  .change-icon-btn {
-    background: none; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    color: var(--text-secondary); cursor: pointer; font-size: 0.75rem; padding: 4px 10px;
-    transition: all 0.15s;
-  }
-  .change-icon-btn:hover { border-color: var(--glass-border-hover); color: var(--text-primary); }
-  .icon-picker {
-    display: flex; flex-wrap: wrap; gap: 6px; padding: 10px;
-    background: var(--glass); border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
-    margin-bottom: 8px;
-  }
-  .icon-option {
-    width: 36px; height: 36px; border-radius: 6px; border: 1px solid var(--glass-border);
-    background: var(--glass-hover); cursor: pointer; display: flex; align-items: center; justify-content: center;
-    padding: 4px; transition: all 0.15s;
-  }
-  .icon-option:hover { border-color: var(--accent-border); background: var(--glass-active); }
-  .icon-option img { width: 100%; height: 100%; object-fit: contain; border-radius: 3px; }
   /* Overview tab */
   .overview-stats {
     display: grid;
@@ -1357,14 +1051,6 @@
   /* Generic Lucide icons: invert to white in dark mode, keep dark in light mode */
   .themed-icon { filter: brightness(0) invert(1); }
   :global(.light-mode) .themed-icon { filter: brightness(0); }
-
-  /* Icon selector in New Account modal */
-  .icon-select-label {
-    display: flex; justify-content: space-between; align-items: center;
-    font-size: 0.8rem; color: var(--text-secondary);
-  }
-  .selected-icon-preview { width: 20px; height: 20px; margin-right: 6px; vertical-align: middle; }
-  .icon-option.selected { border-color: var(--accent-border); background: var(--glass-active); }
 
   .archived-section { margin-top: 20px; }
   .archived-row {

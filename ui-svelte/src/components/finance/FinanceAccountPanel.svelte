@@ -16,42 +16,8 @@
 
 <script lang="ts">
   import { i18n } from '../../lib/stores/i18n.svelte'
+  import { ACCOUNT_ICONS, accountTypeLabel, getAccountDisplayIcon, isGenericIcon } from '../../lib/accountDisplay'
   import type { AccountDetailResponse } from '../../lib/types'
-
-  const ACCOUNT_ICONS: { value: string; src: string; generic: boolean }[] = [
-    ...['banco-chile', 'banco-estado', 'bank-of-america', 'bci', 'citibank', 'jpmorgan', 'mercado_pago', 'santander', 'wf']
-      .map(n => ({ value: `${n}.svg`, src: `/src/assets/bank-icons/${n}.svg`, generic: false })),
-    ...['landmark', 'wallet', 'credit-card', 'piggy-bank', 'briefcase', 'coins', 'banknote', 'building-2']
-      .map(n => ({ value: `/src/assets/icons/${n}.svg`, src: `/src/assets/icons/${n}.svg`, generic: true })),
-  ]
-
-  function getDefaultIconPath(accountType: string): string {
-    const map: Record<string, string> = {
-      bank: 'landmark', savings: 'piggy-bank', credit: 'credit-card', cash: 'wallet',
-    }
-    const icon = map[accountType] || 'wallet'
-    return `/src/assets/icons/${icon}.svg`
-  }
-
-  function isGenericIcon(iconPath: string | null): boolean {
-    if (!iconPath) return true
-    return iconPath.startsWith('/src/assets/icons/')
-  }
-
-  function getAccountDisplayIcon(acc: { account_type: string; icon_path: string | null }): string {
-    if (acc.icon_path) {
-      if (acc.icon_path.startsWith('/') || acc.icon_path.startsWith('http')) return acc.icon_path
-      return `/src/assets/bank-icons/${acc.icon_path}`
-    }
-    return getDefaultIconPath(acc.account_type)
-  }
-
-  function accountTypeLabel(rawType: string): string {
-    const lower = (rawType ?? '').toLowerCase().trim()
-    const key = lower === 'credit_card' ? 'credit' : lower
-    if (!key) return rawType
-    return i18n.t(`finances-account-type-${key}`, rawType)
-  }
 
   interface Props {
     show: boolean
