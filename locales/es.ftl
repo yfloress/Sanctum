@@ -72,7 +72,7 @@ login-authenticating = Autenticando...
 login-initializing = Inicializando...
 login-weak-hint = Presiona de nuevo para confirmar con contrasena debil
 login-restore = Restaurar desde respaldo
-login-versión = Sanctum v0.1.0
+login-version = Sanctum v0.1.0
 
 # ==================== Sidebar ====================
 nav-dashboard = Panel
@@ -614,7 +614,7 @@ settings-use-proxy-desc = Enrutar llamadas API a traves de un proxy
 settings-proxy-url = URL del Proxy
 
 # About
-settings-about-versión = Version
+settings-about-version = Versión
 settings-about-encryption = Cifrado
 settings-about-storage = Almacenamiento
 
