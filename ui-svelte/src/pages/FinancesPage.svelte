@@ -134,6 +134,12 @@
     }
   }
 
+  let searchDebounce: ReturnType<typeof setTimeout> | undefined
+  function onSearchInput() {
+    if (searchDebounce) clearTimeout(searchDebounce)
+    searchDebounce = setTimeout(() => loadTransactions(), 200)
+  }
+
   async function loadMoreTransactions() {
     try {
       const res = await financeApi.fetchTransactions(
@@ -635,7 +641,7 @@
               type="text"
               placeholder={i18n.t('finances-search-placeholder', 'Search transactions...')}
               bind:value={filterQuery}
-              oninput={() => loadTransactions()}
+              oninput={onSearchInput}
             />
           </div>
           <select bind:value={filterAccountId} onchange={() => loadTransactions()}>
@@ -811,7 +817,7 @@
       </label>
       <label>
         {i18n.t('finances-initial-balance', 'Initial Balance')}
-        <input type="text" bind:value={accInitialBalance} placeholder="0.00" />
+        <input type="text" inputmode="decimal" bind:value={accInitialBalance} placeholder="0.00" />
       </label>
       {#if !editingAccount}
         <div class="icon-select-label">
@@ -872,7 +878,7 @@
       </label>
       <label>
         {i18n.t('finances-amount', 'Amount')}
-        <input type="text" bind:value={tfAmount} placeholder="0.00" />
+        <input type="text" inputmode="decimal" bind:value={tfAmount} placeholder="0.00" />
       </label>
       <label>
         {i18n.t('finances-description', 'Description')}

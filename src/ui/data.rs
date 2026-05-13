@@ -126,21 +126,12 @@ pub fn load_accounts_state(
                 .cloned()
                 .unwrap_or(acc.initial_balance);
 
-            let account_type = match acc.account_type.as_str() {
-                "bank" | "Bank" => "Bank",
-                "cash" | "Cash" => "Cash",
-                "savings" | "Savings" => "Savings",
-                "credit_card" | "CreditCard" => "Credit Card",
-                "other" | "Other" => "Other",
-                _ => acc.account_type.as_str(),
-            };
-
             let icon_path = normalize_bank_icon_path(acc.icon.clone());
 
             AccountDisplayData {
                 id: acc.id.clone(),
                 name: acc.name.clone(),
-                account_type: account_type.to_string(),
+                account_type: acc.account_type.clone(),
                 account_type_key: acc.account_type.clone(),
                 icon_path,
                 currency: acc.currency.clone(),

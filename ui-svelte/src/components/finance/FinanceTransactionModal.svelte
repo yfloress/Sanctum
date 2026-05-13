@@ -105,7 +105,7 @@
       </label>
       <label>
         {i18n.t('finances-amount', 'Amount')}
-        <input type="text" bind:value={txAmount} placeholder="0.00" />
+        <input type="text" inputmode="decimal" bind:value={txAmount} placeholder="0.00" />
       </label>
       <label>
         {i18n.t('finances-type', 'Type')}
