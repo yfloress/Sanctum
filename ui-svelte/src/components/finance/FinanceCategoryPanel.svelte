@@ -22,14 +22,14 @@
   interface Props {
     categories: CategoriesResponse | null
     onadd: (name: string, type: 'expense' | 'income') => Promise<void>
-    ondelete: (id: string) => Promise<void>
+    ondelete: (cat: { id: string; name: string; type: 'expense' | 'income' }) => Promise<void>
   }
 
   let { categories, onadd, ondelete }: Props = $props()
 
   let newCatName = $state('')
   let newCatType = $state<'expense' | 'income'>('expense')
-  let pendingDeleteCat = $state<{ id: string; name: string } | null>(null)
+  let pendingDeleteCat = $state<{ id: string; name: string; type: 'expense' | 'income' } | null>(null)
 
   async function addCategory() {
     if (!newCatName.trim()) return
@@ -74,7 +74,7 @@
                   <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
                 </svg>
               {:else}
-                <button class="cat-chip-del" onclick={() => pendingDeleteCat = { id: cat.id, name: cat.name }} aria-label="Delete {cat.name}">
+                <button class="cat-chip-del" onclick={() => pendingDeleteCat = { id: cat.id, name: cat.name, type: 'expense' }} aria-label="Delete {cat.name}">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                     <path d="M18 6L6 18M6 6l12 12"/>
                   </svg>
@@ -99,7 +99,7 @@
                   <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
                 </svg>
               {:else}
-                <button class="cat-chip-del" onclick={() => pendingDeleteCat = { id: cat.id, name: cat.name }} aria-label="Delete {cat.name}">
+                <button class="cat-chip-del" onclick={() => pendingDeleteCat = { id: cat.id, name: cat.name, type: 'income' }} aria-label="Delete {cat.name}">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                     <path d="M18 6L6 18M6 6l12 12"/>
                   </svg>
@@ -119,7 +119,7 @@
   detail={pendingDeleteCat?.name ?? ''}
   danger
   onconfirm={async () => {
-    if (pendingDeleteCat) await ondelete(pendingDeleteCat.id)
+    if (pendingDeleteCat) await ondelete(pendingDeleteCat)
     pendingDeleteCat = null
   }}
   onclose={() => pendingDeleteCat = null}

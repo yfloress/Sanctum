@@ -19,9 +19,15 @@ import type { AppSettings } from '../types'
 
 export type Page = 'dashboard' | 'finances' | 'habits' | 'crypto' | 'settings'
 
+interface ToastAction {
+  label: string
+  handler: () => void | Promise<void>
+}
+
 interface Toast {
   message: string
   isError: boolean
+  action: ToastAction | null
 }
 
 class AppState {
@@ -54,13 +60,20 @@ class AppState {
     this.activePage = page
   }
 
-  showToast(message: string, isError = false, durationMs = 3000) {
+  showToast(message: string, isError = false, durationMs = 3000, action: ToastAction | null = null) {
     if (this.toastTimeout) clearTimeout(this.toastTimeout)
-    this.toast = { message, isError }
+    this.toast = { message, isError, action }
     this.toastTimeout = setTimeout(() => {
       this.toast = null
       this.toastTimeout = null
     }, durationMs)
+  }
+
+  async runToastAction() {
+    const action = this.toast?.action
+    if (!action) return
+    this.dismissToast()
+    await action.handler()
   }
 
   dismissToast() {

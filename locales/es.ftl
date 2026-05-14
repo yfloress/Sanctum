@@ -17,6 +17,7 @@ action-edit = Editar
 action-create = Crear
 action-add = Agregar
 action-close = Cerrar
+action-undo = Deshacer
 action-confirm = Confirmar
 action-back = Atrás
 action-next = Siguiente
@@ -214,6 +215,7 @@ finances-transfer-btn = Transferir
 finances-tx-added = Transacción agregada
 finances-tx-updated = Transacción actualizada
 finances-tx-deleted = Transacción eliminada
+finances-tx-restored = Transacción restaurada
 finances-acc-created = Cuenta creada
 finances-acc-updated = Cuenta actualizada
 finances-acc-deleted = Cuenta eliminada
@@ -224,6 +226,7 @@ finances-tf-completed = Transferencia completada
 finances-tf-updated = Transferencia actualizada
 finances-cat-added = Categoría agregada
 finances-cat-deleted = Categoría eliminada
+finances-cat-restored = Categoría restaurada
 
 # ==================== Crypto ====================
 # -- Tabs & Hero --

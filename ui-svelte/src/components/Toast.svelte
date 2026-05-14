@@ -26,6 +26,11 @@
     role="alert"
   >
     <span>{app.toast.message}</span>
+    {#if app.toast.action}
+      <button class="undo-btn" onclick={() => app.runToastAction()}>
+        {app.toast.action.label}
+      </button>
+    {/if}
     <button class="close-btn" onclick={() => app.dismissToast()} aria-label={i18n.t('action-close', 'Close')}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M6 18L18 6M6 6l12 12" />
@@ -60,6 +65,34 @@
     color: var(--danger);
     border-color: rgba(248, 113, 113, 0.2);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(248, 113, 113, 0.05) inset;
+  }
+
+  .undo-btn {
+    background: rgba(74, 222, 128, 0.12);
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    color: inherit;
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    font: inherit;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  .undo-btn:hover {
+    background: rgba(74, 222, 128, 0.2);
+    border-color: rgba(74, 222, 128, 0.5);
+  }
+
+  .toast.error .undo-btn {
+    background: rgba(248, 113, 113, 0.12);
+    border-color: rgba(248, 113, 113, 0.3);
+  }
+
+  .toast.error .undo-btn:hover {
+    background: rgba(248, 113, 113, 0.2);
+    border-color: rgba(248, 113, 113, 0.5);
   }
 
   .close-btn {

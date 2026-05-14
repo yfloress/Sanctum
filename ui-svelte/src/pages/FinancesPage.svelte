@@ -202,11 +202,41 @@
     showTransfer = true
   }
 
-  async function deleteTransaction(id: string) {
+  async function deleteTransaction(tx: TransactionDto) {
     try {
-      await financeApi.deleteTransaction(id)
+      await financeApi.deleteTransaction(tx.id)
       await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()])
-      app.showToast(i18n.t('finances-tx-deleted', 'Transaction deleted'))
+      app.showToast(
+        i18n.t('finances-tx-deleted', 'Transaction deleted'),
+        false,
+        6000,
+        { label: i18n.t('action-undo', 'Undo'), handler: () => undoDeleteTransaction(tx) },
+      )
+    } catch (e) {
+      app.showToast(String(e), true)
+    }
+  }
+
+  async function undoDeleteTransaction(tx: TransactionDto) {
+    try {
+      if (tx.is_transfer && tx.transfer_account_id) {
+        const fromId = tx.is_expense ? tx.account_id : tx.transfer_account_id
+        const toId = tx.is_expense ? tx.transfer_account_id : tx.account_id
+        await financeApi.transferFunds({
+          from_account_id: fromId,
+          to_account_id: toId,
+          amount: tx.amount_raw,
+          description: tx.description_raw,
+          date: tx.date,
+        })
+      } else {
+        await financeApi.addTransaction(
+          tx.account_id, tx.amount_raw, tx.category_raw,
+          tx.description_raw, tx.date, tx.is_expense,
+        )
+      }
+      await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()])
+      app.showToast(i18n.t('finances-tx-restored', 'Transaction restored'))
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -227,7 +257,12 @@
       await financeApi.deleteAccount(id)
       selectedAccount = null
       await refreshAccounts()
-      app.showToast(i18n.t('finances-acc-deleted', 'Account deleted'))
+      app.showToast(
+        i18n.t('finances-acc-deleted', 'Account deleted'),
+        false,
+        6000,
+        { label: i18n.t('action-undo', 'Undo'), handler: () => unarchiveAccount(id) },
+      )
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -274,11 +309,26 @@
     }
   }
 
-  async function handleDeleteCat(id: string) {
+  async function handleDeleteCat(cat: { id: string; name: string; type: 'expense' | 'income' }) {
     try {
-      await financeApi.deleteCategory(id)
+      await financeApi.deleteCategory(cat.id)
       categories = await financeApi.loadCategories()
-      app.showToast(i18n.t('finances-cat-deleted', 'Category deleted'))
+      app.showToast(
+        i18n.t('finances-cat-deleted', 'Category deleted'),
+        false,
+        6000,
+        { label: i18n.t('action-undo', 'Undo'), handler: () => undoDeleteCategory(cat.name, cat.type) },
+      )
+    } catch (e) {
+      app.showToast(String(e), true)
+    }
+  }
+
+  async function undoDeleteCategory(name: string, type: 'expense' | 'income') {
+    try {
+      await financeApi.addCategory(name, type)
+      categories = await financeApi.loadCategories()
+      app.showToast(i18n.t('finances-cat-restored', 'Category restored'))
     } catch (e) {
       app.showToast(String(e), true)
     }
@@ -746,7 +796,7 @@
   detail={pendingDeleteTx ? `${pendingDeleteTx.amount} · ${pendingDeleteTx.description || pendingDeleteTx.category}` : ''}
   danger
   onconfirm={async () => {
-    if (pendingDeleteTx) await deleteTransaction(pendingDeleteTx.id)
+    if (pendingDeleteTx) await deleteTransaction(pendingDeleteTx)
     pendingDeleteTx = null
   }}
   onclose={() => pendingDeleteTx = null}
