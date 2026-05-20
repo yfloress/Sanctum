@@ -76,4 +76,4 @@
   })
 </script>
 
-<BaseChart {option} height="200px" />
+<BaseChart {option} height="200px" sensitive={false} />

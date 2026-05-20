@@ -34,9 +34,11 @@
   interface Props {
     option: echarts.EChartsCoreOption
     height?: string
+    /** Whether this chart shows personal money data and should blur when balances are hidden. */
+    sensitive?: boolean
   }
 
-  let { option, height = '280px' }: Props = $props()
+  let { option, height = '280px', sensitive = true }: Props = $props()
 
   let container: HTMLDivElement
   let chart: echarts.ECharts | null = null
@@ -66,7 +68,7 @@
 <div
   bind:this={container}
   class="chart-canvas"
-  class:balances-hidden={app.hideBalances}
+  class:balances-hidden={sensitive && app.hideBalances}
   style="width: 100%; height: {height}"
 ></div>
 
