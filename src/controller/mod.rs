@@ -128,9 +128,9 @@ impl From<CryptoError> for ControllerError {
 pub struct WeekdayEfficiency {
     pub day_name: String,
     pub day_short: String,
-    pub avg_count: f32,
+    /// Completion rate for this weekday (0.0 - 1.0): completions / habit-slots due.
+    pub completion_rate: f32,
     pub is_best: bool,
-    pub bar_height_percent: f32,
 }
 
 #[derive(Debug, Clone)]

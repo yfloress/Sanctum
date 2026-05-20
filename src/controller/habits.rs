@@ -185,48 +185,65 @@ impl AppController {
             today.format("%Y-%m-%d").to_string(),
         )?;
 
-        // ==================== Weekday Efficiency ====================
-        // Count completions per weekday
-        let mut weekday_counts: [i32; 7] = [0; 7]; // Mon=0, Tue=1, ..., Sun=6
-        let mut weekday_occurrences: [i32; 7] = [0; 7];
+        // Active habits (non-archived), reused for weekday efficiency and categories.
+        let habits = self.get_habits()?;
 
-        // Count how many times each weekday appears in the range
+        // ==================== Weekday Efficiency ====================
+        // True completion rate per weekday: completions / habit-slots due.
+        // A habit is "due" on a date once it exists (created_at <= date). Only
+        // active habits count, so numerator and denominator stay consistent.
+        let active_ids: std::collections::HashSet<&str> =
+            habits.iter().map(|h| h.id.as_str()).collect();
+
+        // Creation date (RFC3339 → date) of each active habit.
+        let habit_start_dates: Vec<NaiveDate> = habits
+            .iter()
+            .filter_map(|h| {
+                NaiveDate::parse_from_str(h.created_at.get(..10).unwrap_or(""), "%Y-%m-%d").ok()
+            })
+            .collect();
+
+        let mut weekday_completions: [i32; 7] = [0; 7]; // logs done per weekday
+        let mut weekday_available: [i32; 7] = [0; 7]; // habit-slots due per weekday
+
+        // Available slots: for each date in range, how many habits already existed.
         let mut cursor = start_date;
         while cursor <= today {
             let weekday_idx = cursor.weekday().num_days_from_monday() as usize;
-            weekday_occurrences[weekday_idx] += 1;
+            let available = habit_start_dates.iter().filter(|&&c| c <= cursor).count() as i32;
+            weekday_available[weekday_idx] += available;
             cursor = cursor.succ_opt().unwrap_or(cursor);
-            if cursor == today && cursor == start_date {
-                break; // Single day edge case
-            }
             if cursor > today {
                 break;
             }
         }
 
-        // Count habit completions per weekday
+        // Completions per weekday (only for active habits).
         for log in &logs {
+            if !active_ids.contains(log.habit_id.as_str()) {
+                continue;
+            }
             if let Ok(date) = NaiveDate::parse_from_str(&log.completed_date, "%Y-%m-%d") {
                 let weekday_idx = date.weekday().num_days_from_monday() as usize;
-                weekday_counts[weekday_idx] += 1;
+                weekday_completions[weekday_idx] += 1;
             }
         }
 
-        // Calculate averages
-        let weekday_avgs: Vec<(usize, f32)> = (0..7)
+        // Completion rate per weekday (0.0 - 1.0).
+        let weekday_rates: Vec<(usize, f32)> = (0..7)
             .map(|i| {
-                let avg = if weekday_occurrences[i] > 0 {
-                    weekday_counts[i] as f32 / weekday_occurrences[i] as f32
+                let rate = if weekday_available[i] > 0 {
+                    (weekday_completions[i] as f32 / weekday_available[i] as f32).min(1.0)
                 } else {
                     0.0
                 };
-                (i, avg)
+                (i, rate)
             })
             .collect();
 
-        let max_avg = weekday_avgs
+        let max_rate = weekday_rates
             .iter()
-            .map(|(_, avg)| *avg)
+            .map(|(_, rate)| *rate)
             .fold(0.0_f32, f32::max);
 
         let day_names = [
@@ -240,21 +257,13 @@ impl AppController {
         ];
         let day_shorts = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-        let weekday_data: Vec<WeekdayEfficiency> = weekday_avgs
+        let weekday_data: Vec<WeekdayEfficiency> = weekday_rates
             .iter()
-            .map(|(i, avg)| {
-                let bar_height = if max_avg > 0.0 {
-                    (*avg / max_avg) * 100.0
-                } else {
-                    0.0
-                };
-                WeekdayEfficiency {
-                    day_name: day_names[*i].to_string(),
-                    day_short: day_shorts[*i].to_string(),
-                    avg_count: *avg,
-                    is_best: (*avg - max_avg).abs() < 0.001 && max_avg > 0.0,
-                    bar_height_percent: bar_height,
-                }
+            .map(|(i, rate)| WeekdayEfficiency {
+                day_name: day_names[*i].to_string(),
+                day_short: day_shorts[*i].to_string(),
+                completion_rate: *rate,
+                is_best: (*rate - max_rate).abs() < 0.001 && max_rate > 0.0,
             })
             .collect();
 
@@ -376,15 +385,13 @@ impl AppController {
 
         // ==================== Category Distribution ====================
         let mut category_counts: std::collections::HashMap<String, i32> = std::collections::HashMap::new();
-        if let Ok(habits) = self.get_habits() {
-            let mut habit_categories: std::collections::HashMap<String, String> = std::collections::HashMap::new();
-            for habit in habits {
-                habit_categories.insert(habit.id, habit.category);
-            }
-            for log in &logs {
-                if let Some(cat) = habit_categories.get(&log.habit_id) {
-                    *category_counts.entry(cat.clone()).or_insert(0) += 1;
-                }
+        let habit_categories: std::collections::HashMap<&str, &str> = habits
+            .iter()
+            .map(|h| (h.id.as_str(), h.category.as_str()))
+            .collect();
+        for log in &logs {
+            if let Some(cat) = habit_categories.get(log.habit_id.as_str()) {
+                *category_counts.entry((*cat).to_string()).or_insert(0) += 1;
             }
         }
         

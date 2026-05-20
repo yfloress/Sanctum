@@ -298,7 +298,7 @@ pub fn fetch_habit_analytics(
 
     // Map weekday data to DTO
     let weekday_labels: Vec<String> = analytics.weekday_data.iter().map(|w| w.day_short.clone()).collect();
-    let weekday_values: Vec<f64> = analytics.weekday_data.iter().map(|w| w.avg_count as f64).collect();
+    let weekday_values: Vec<f64> = analytics.weekday_data.iter().map(|w| w.completion_rate as f64).collect();
 
     // Build radar from category data (categories = habit categories, values = completion counts)
     let radar_categories: Vec<String> = analytics.category_data.iter().map(|c| c.category.clone()).collect();
