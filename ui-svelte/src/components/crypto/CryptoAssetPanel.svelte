@@ -16,6 +16,7 @@
 
 <script lang="ts">
   import { i18n } from '../../lib/stores/i18n.svelte'
+  import { mask } from '../../lib/currency'
   import type { CryptoTransactionDto } from '../../lib/types'
 
   interface HoldingView {
@@ -60,8 +61,8 @@
       <span class="change" class:negative={asset.price_change_24h_negative}>{asset.price_change_24h}</span>
     </div>
     <div class="asset-stats">
-      <div><span class="stat-lbl">{i18n.t('crypto-amount', 'Amount')}</span><span>{asset.amount}</span></div>
-      <div><span class="stat-lbl">{i18n.t('crypto-value', 'Value')}</span><span>{asset.value}</span></div>
+      <div><span class="stat-lbl">{i18n.t('crypto-amount', 'Amount')}</span><span>{mask(asset.amount)}</span></div>
+      <div><span class="stat-lbl">{i18n.t('crypto-value', 'Value')}</span><span>{mask(asset.value)}</span></div>
       <div><span class="stat-lbl">{i18n.t('crypto-allocation', 'Allocation')}</span><span>{asset.allocation_pct.toFixed(1)}%</span></div>
     </div>
 
@@ -71,7 +72,7 @@
         <div class="panel-tx">
           <span class="tx-date">{tx.date}</span>
           <span class="tx-type">{tx.transaction_type}</span>
-          <span class="tx-amount">{tx.amount} {tx.symbol}</span>
+          <span class="tx-amount">{mask(tx.amount)} {tx.symbol}</span>
           <div class="panel-tx-actions">
             <button class="icon-btn-mini" onclick={() => onedit(tx.id)} aria-label={i18n.t('crypto-edit', 'Edit')} title={i18n.t('crypto-edit', 'Edit')}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>

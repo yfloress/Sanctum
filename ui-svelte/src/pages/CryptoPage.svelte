@@ -17,7 +17,7 @@
 <script lang="ts">
   import { app } from '../lib/stores/app.svelte'
   import { i18n } from '../lib/stores/i18n.svelte'
-  import { formatCurrency } from '../lib/currency'
+  import { formatCurrency, mask } from '../lib/currency'
   import * as cryptoApi from '../lib/api/crypto'
   import PortfolioTrendChart from '../components/charts/PortfolioTrendChart.svelte'
   import DistributionChart from '../components/charts/DistributionChart.svelte'
@@ -656,7 +656,7 @@
 
   <!-- Hero -->
   <section class="hero">
-    <h2 class="total">{portfolio?.total_value ?? '--'}</h2>
+    <h2 class="total">{mask(portfolio?.total_value ?? '--')}</h2>
     <p class="label">{i18n.t('crypto-portfolio-value', 'Portfolio Value')}</p>
     {#if portfolio?.last_updated}
       <p class="last-updated">{i18n.tArgs('crypto-last-updated-label', { value: portfolio.last_updated }, `Last updated: ${portfolio.last_updated}`)}</p>
@@ -705,13 +705,13 @@
       <div class="stat">
         <span class="stat-lbl">{i18n.t('crypto-unrealized-pnl', 'Unrealized P&L')}</span>
         <span class="stat-val" class:negative={portfolio.unrealized_pnl_negative} class:positive={!portfolio.unrealized_pnl_negative}>
-          {portfolio.unrealized_pnl}
+          {mask(portfolio.unrealized_pnl)}
         </span>
       </div>
       <div class="stat">
         <span class="stat-lbl">{i18n.t('crypto-realized-ytd', 'Realized YTD')}</span>
         <span class="stat-val" class:negative={portfolio.realized_ytd_negative} class:positive={!portfolio.realized_ytd_negative}>
-          {portfolio.realized_ytd}
+          {mask(portfolio.realized_ytd)}
         </span>
       </div>
       <div class="stat">
@@ -743,8 +743,8 @@
               </span>
             </div>
             <div class="asset-bottom">
-              <span class="asset-amount">{asset.amount}</span>
-              <span class="asset-value">{asset.value}</span>
+              <span class="asset-amount">{mask(asset.amount)}</span>
+              <span class="asset-value">{mask(asset.value)}</span>
             </div>
           </button>
         {/each}
@@ -796,7 +796,7 @@
                   <span class="tx-date">{tx.date}</span>
                 </div>
               </div>
-              <span class="tx-amount" class:buy={getCryptoTxClass(tx) === 'buy'} class:sell={getCryptoTxClass(tx) === 'sell'} class:transfer={getCryptoTxClass(tx) === 'transfer'}>{tx.value}</span>
+              <span class="tx-amount" class:buy={getCryptoTxClass(tx) === 'buy'} class:sell={getCryptoTxClass(tx) === 'sell'} class:transfer={getCryptoTxClass(tx) === 'transfer'}>{mask(tx.value)}</span>
             </div>
           {/each}
         </div>
@@ -822,7 +822,7 @@
             <img src={getWalletDisplayIcon(w)} alt="" class="wallet-icon" class:themed-icon={isGenericWalletIcon(w.icon_path)} onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
             <div class="wallet-name">{w.name}</div>
             <div class="wallet-cat">{w.category}</div>
-            <div class="wallet-val">{w.total_value}</div>
+            <div class="wallet-val">{mask(w.total_value)}</div>
             <div class="wallet-count">{w.assets_count} {w.assets_count !== 1 ? i18n.t('crypto-wallet-assets-other', 'assets') : i18n.t('crypto-wallet-assets-one', 'asset')}</div>
           </button>
         {/each}
@@ -863,7 +863,7 @@
                   <span class="tx-date">{tx.date}</span>
                 </div>
               </div>
-              <span class="tx-amount" class:buy={getCryptoTxClass(tx) === 'buy'} class:sell={getCryptoTxClass(tx) === 'sell'} class:transfer={getCryptoTxClass(tx) === 'transfer'}>{tx.value}</span>
+              <span class="tx-amount" class:buy={getCryptoTxClass(tx) === 'buy'} class:sell={getCryptoTxClass(tx) === 'sell'} class:transfer={getCryptoTxClass(tx) === 'transfer'}>{mask(tx.value)}</span>
               <button class="delete-btn" onclick={(e: MouseEvent) => { e.stopPropagation(); deleteCryptoTx(tx.id) }} aria-label={i18n.t('crypto-delete', 'Delete')}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
               </button>
@@ -1040,38 +1040,38 @@
             </div>
             <div class="summary-item">
               <span class="label">{i18n.t('crypto-tax-total-proceeds', 'Total Proceeds')}</span>
-              <span class="value">{taxReport.total_proceeds}</span>
+              <span class="value">{mask(taxReport.total_proceeds)}</span>
             </div>
             <div class="summary-item">
               <span class="label">{i18n.t('crypto-tax-total-cost', 'Total Cost')}</span>
-              <span class="value">{taxReport.total_cost}</span>
+              <span class="value">{mask(taxReport.total_cost)}</span>
             </div>
             <div class="summary-item highlight">
               <span class="label">{i18n.t('crypto-tax-total-gain', 'Total Gain')}</span>
-              <span class="value" class:negative={taxReport.total_gain_negative}>{taxReport.total_gain}</span>
+              <span class="value" class:negative={taxReport.total_gain_negative}>{mask(taxReport.total_gain)}</span>
             </div>
             {#if taxReport.jurisdiction !== 'chile'}
               {#if taxReport.short_term_gain}
                 <div class="summary-item">
                   <span class="label">{i18n.t('crypto-tax-short-term', 'Short-term Gain')}</span>
-                  <span class="value">{taxReport.short_term_gain}</span>
+                  <span class="value">{mask(taxReport.short_term_gain)}</span>
                 </div>
               {/if}
               {#if taxReport.long_term_gain}
                 <div class="summary-item">
                   <span class="label">{i18n.t('crypto-tax-long-term', 'Long-term Gain')}</span>
-                  <span class="value">{taxReport.long_term_gain}</span>
+                  <span class="value">{mask(taxReport.long_term_gain)}</span>
                 </div>
               {/if}
             {/if}
             {#if taxSummary}
               <div class="summary-item">
                 <span class="label">{i18n.t('crypto-tax-taxable-income', 'Taxable Income')}</span>
-                <span class="value">{taxSummary.taxable_income_total}</span>
+                <span class="value">{mask(taxSummary.taxable_income_total)}</span>
               </div>
               <div class="summary-item">
                 <span class="label">{i18n.t('crypto-tax-end-balance', 'End-of-period Balance')}</span>
-                <span class="value">{taxSummary.end_balance_value ?? '—'}</span>
+                <span class="value">{mask(taxSummary.end_balance_value ?? '—')}</span>
               </div>
               <div class="summary-item">
                 <span class="label">{i18n.t('crypto-tax-tx-in-period', 'Transactions in Period')}</span>
@@ -1153,10 +1153,10 @@
                     <tr class:loss={e.gain_negative}>
                       <td>{e.date}</td>
                       <td>{e.symbol}</td>
-                      <td>{e.amount}</td>
-                      <td>{e.proceeds}</td>
-                      <td>{e.cost_basis}</td>
-                      <td class:negative={e.gain_negative}>{e.gain}</td>
+                      <td>{mask(e.amount)}</td>
+                      <td>{mask(e.proceeds)}</td>
+                      <td>{mask(e.cost_basis)}</td>
+                      <td class:negative={e.gain_negative}>{mask(e.gain)}</td>
                       <td>{e.term ?? '-'}</td>
                     </tr>
                   {/each}

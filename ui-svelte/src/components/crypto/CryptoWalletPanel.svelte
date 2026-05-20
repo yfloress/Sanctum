@@ -18,6 +18,7 @@
   import { app } from '../../lib/stores/app.svelte'
   import { i18n } from '../../lib/stores/i18n.svelte'
   import * as cryptoApi from '../../lib/api/crypto'
+  import { mask } from '../../lib/currency'
   import type { WalletDetailResponse } from '../../lib/types'
 
   const WALLET_ICONS: { value: string; src: string; generic: boolean }[] = [
@@ -116,7 +117,7 @@
     </div>
     <div class="panel-meta">
       <span>{wallet.category}</span>
-      <span class="panel-total">{wallet.total_value}</span>
+      <span class="panel-total">{mask(wallet.total_value)}</span>
     </div>
     <div class="panel-icon-row">
       <img src={getWalletDisplayIcon(wallet)} alt="" class="panel-wallet-icon" class:themed-icon={isGenericWalletIcon(wallet.icon_path)} onerror={(e) => (e.target as HTMLImageElement).style.display='none'} />
@@ -142,8 +143,8 @@
       {#each wallet.holdings as h}
         <div class="holding-row">
           <span class="h-symbol">{h.symbol}</span>
-          <span class="h-amount">{h.amount}</span>
-          <span class="h-value">{h.value}</span>
+          <span class="h-amount">{mask(h.amount)}</span>
+          <span class="h-value">{mask(h.value)}</span>
         </div>
       {/each}
     {/if}
@@ -154,7 +155,7 @@
         <div class="panel-tx">
           <span class="tx-date">{tx.date}</span>
           <span class="tx-type">{tx.transaction_type}</span>
-          <span class="tx-amount">{tx.amount} {tx.symbol}</span>
+          <span class="tx-amount">{mask(tx.amount)} {tx.symbol}</span>
           <div class="panel-tx-actions">
             <button class="icon-btn-mini" onclick={() => onedit(tx.id)} aria-label={i18n.t('crypto-edit', 'Edit')} title={i18n.t('crypto-edit', 'Edit')}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>

@@ -23,6 +23,7 @@
     AccountsResponse, AccountDetailResponse, AccountDto
   } from '../lib/types'
   import { accountTypeLabel, getAccountDisplayIcon, isGenericIcon } from '../lib/accountDisplay'
+  import { mask } from '../lib/currency'
   import FinanceBarChart from '../components/charts/FinanceBarChart.svelte'
   import FinanceDonutChart from '../components/charts/FinanceDonutChart.svelte'
   import FinanceCategoryChart from '../components/charts/FinanceCategoryChart.svelte'
@@ -431,7 +432,7 @@
   <!-- Hero -->
   <section class="hero">
     <h2 class="balance" class:negative={accountsData?.total_balance_negative}>
-      {accountsData?.total_balance ?? '--'}
+      {mask(accountsData?.total_balance ?? '--')}
     </h2>
     <p class="label">{i18n.t('finances-total-balance', 'Total Balance')}</p>
   </section>
@@ -469,11 +470,11 @@
       <div class="overview-stats">
         <div class="stat-pill income">
           <span class="pill-label">{i18n.t('finances-income-this-month', 'Income this month')}</span>
-          <span class="pill-value">{fmtStat(monthIncome)}</span>
+          <span class="pill-value">{mask(fmtStat(monthIncome))}</span>
         </div>
         <div class="stat-pill expense">
           <span class="pill-label">{i18n.t('finances-expenses-this-month', 'Expenses this month')}</span>
-          <span class="pill-value">{fmtStat(monthExpense)}</span>
+          <span class="pill-value">{mask(fmtStat(monthExpense))}</span>
         </div>
         <div class="stat-pill net" class:negative-net={netIsNegative}>
           <span class="pill-label">{i18n.t('finances-net-this-month', 'Net this month')}</span>
@@ -536,7 +537,7 @@
                   <span class="strip-type">{accountTypeLabel(acc.account_type_key ?? acc.account_type)}</span>
                 </div>
                 <div class="strip-balance">
-                  <span class:negative={acc.balance_negative}>{acc.balance}</span>
+                  <span class:negative={acc.balance_negative}>{mask(acc.balance)}</span>
                   <span class="strip-currency">{acc.currency}</span>
                 </div>
                 <svg class="strip-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -571,7 +572,7 @@
                     <span class="tx-date">{tx.date}</span>
                   </div>
                 </div>
-                <span class="tx-amount" class:expense={tx.is_expense} class:transfer={tx.is_transfer}>{tx.amount}</span>
+                <span class="tx-amount" class:expense={tx.is_expense} class:transfer={tx.is_transfer}>{mask(tx.amount)}</span>
               </div>
             {/each}
           </div>
@@ -670,7 +671,7 @@
                   <span class="tx-date">{tx.date}</span>
                 </div>
               </div>
-              <span class="tx-amount" class:expense={tx.is_expense} class:transfer={tx.is_transfer}>{tx.amount}</span>
+              <span class="tx-amount" class:expense={tx.is_expense} class:transfer={tx.is_transfer}>{mask(tx.amount)}</span>
               <button class="delete-btn" onclick={(e: MouseEvent) => { e.stopPropagation(); pendingDeleteTx = tx }} aria-label={i18n.t('confirm-delete-button', 'Delete')}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
               </button>
@@ -706,7 +707,7 @@
                 <div class="acc-type">{accountTypeLabel(acc.account_type_key ?? acc.account_type)}</div>
               </div>
               <div class="acc-footer">
-                <div class="acc-balance" class:negative={acc.balance_negative}>{acc.balance}</div>
+                <div class="acc-balance" class:negative={acc.balance_negative}>{mask(acc.balance)}</div>
                 <div class="acc-currency">{acc.currency}</div>
               </div>
             </button>
@@ -793,7 +794,7 @@
 <ConfirmDialog
   show={pendingDeleteTx !== null}
   message={i18n.t('confirm-delete-transaction', 'Are you sure you want to delete this transaction?')}
-  detail={pendingDeleteTx ? `${pendingDeleteTx.amount} · ${pendingDeleteTx.description || pendingDeleteTx.category}` : ''}
+  detail={pendingDeleteTx ? `${mask(pendingDeleteTx.amount)} · ${pendingDeleteTx.description || pendingDeleteTx.category}` : ''}
   danger
   onconfirm={async () => {
     if (pendingDeleteTx) await deleteTransaction(pendingDeleteTx)

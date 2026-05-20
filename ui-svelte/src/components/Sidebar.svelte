@@ -119,6 +119,35 @@
   <!-- ── Footer ── -->
   <div class="sidebar-footer">
     <button
+      class="nav-item eye-btn"
+      class:active={app.hideBalances}
+      onclick={() => app.toggleHideBalances()}
+      id="toggle-hide-balances"
+      aria-pressed={app.hideBalances}
+      title={app.sidebarCollapsed
+        ? (app.hideBalances ? i18n.t('nav-show-balances', 'Show balances') : i18n.t('nav-hide-balances', 'Hide balances'))
+        : undefined}
+    >
+      <div class="nav-icon-wrap">
+        {#if app.hideBalances}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49" />
+            <path d="M14.084 14.158a3 3 0 0 1-4.242-4.242" />
+            <path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143" />
+            <path d="m2 2 20 20" />
+          </svg>
+        {:else}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        {/if}
+      </div>
+      <span class="nav-label">
+        {app.hideBalances ? i18n.t('nav-show-balances', 'Show balances') : i18n.t('nav-hide-balances', 'Hide balances')}
+      </span>
+    </button>
+    <button
       class="nav-item lock-btn"
       onclick={handleLock}
       id="lock-vault"
@@ -461,6 +490,15 @@
       rgba(168, 85, 247, 0.15) 70%,
       transparent 100%
     );
+  }
+
+  /* ── Eye / hide-balances button ──────────────────────── */
+  .eye-btn.active {
+    color: #c084fc;
+  }
+
+  .eye-btn.active .nav-icon-wrap {
+    color: #c084fc;
   }
 
   /* ── Lock button ─────────────────────────────────────── */

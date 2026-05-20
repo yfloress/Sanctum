@@ -22,6 +22,7 @@
   import { app } from '../lib/stores/app.svelte'
   import { i18n } from '../lib/stores/i18n.svelte'
   import * as dashboardApi from '../lib/api/dashboard'
+  import { mask } from '../lib/currency'
   import NetWorthChart from '../components/charts/NetWorthChart.svelte'
   import FinanceBarChart from '../components/charts/FinanceBarChart.svelte'
   import type { BalanceOverview, RecentTransaction, AnalyticsData } from '../lib/types'
@@ -118,7 +119,7 @@
     <section class="hero">
       <p class="hero-label">{i18n.t('dashboard-net-worth', 'Net Worth')} · {balance.currency}</p>
       <div class="hero-value-row">
-        <h1 class="net-worth" class:negative={balance.total_negative}>{balance.total}</h1>
+        <h1 class="net-worth" class:negative={balance.total_negative}>{mask(balance.total)}</h1>
         {#if pctChange !== null}
           <span class="trend-badge" class:positive={pctChange >= 0} class:negative={pctChange < 0}>
             {#if pctChange >= 0}
@@ -134,9 +135,9 @@
 
       {#if analytics && (analytics.net_worth_min || analytics.net_worth_max)}
         <p class="net-worth-range">
-          {analytics.net_worth_min}
+          {mask(analytics.net_worth_min)}
           <span class="range-sep">——</span>
-          {analytics.net_worth_max}
+          {mask(analytics.net_worth_max)}
           <span class="range-period">({selectedRange})</span>
         </p>
       {/if}
@@ -144,12 +145,12 @@
       <div class="balance-strip">
         <div class="balance-cell">
           <span class="balance-cell-label">{i18n.t('dashboard-fiat', 'Fiat')}</span>
-          <span class="balance-cell-value" class:negative={balance.fiat_negative}>{balance.fiat_total}</span>
+          <span class="balance-cell-value" class:negative={balance.fiat_negative}>{mask(balance.fiat_total)}</span>
         </div>
         <div class="balance-divider"></div>
         <div class="balance-cell">
           <span class="balance-cell-label">{i18n.t('dashboard-crypto', 'Crypto')}</span>
-          <span class="balance-cell-value" class:negative={balance.crypto_negative}>{balance.crypto_total}</span>
+          <span class="balance-cell-value" class:negative={balance.crypto_negative}>{mask(balance.crypto_total)}</span>
         </div>
       </div>
     </section>
@@ -159,17 +160,17 @@
       <div class="stats-row">
         <div class="stat-card income">
           <span class="stat-label">{i18n.t('dashboard-income', 'Income')}</span>
-          <span class="stat-value">{analytics.total_income}</span>
+          <span class="stat-value">{mask(analytics.total_income)}</span>
           <span class="stat-period">{i18n.t('dashboard-last', 'last')} {selectedRange}</span>
         </div>
         <div class="stat-card expenses">
           <span class="stat-label">{i18n.t('dashboard-expenses', 'Expenses')}</span>
-          <span class="stat-value">{analytics.total_expenses}</span>
+          <span class="stat-value">{mask(analytics.total_expenses)}</span>
           <span class="stat-period">{i18n.t('dashboard-last', 'last')} {selectedRange}</span>
         </div>
         <div class="stat-card net" class:negative={analytics.total_net_negative}>
           <span class="stat-label">{i18n.t('dashboard-net', 'Net')}</span>
-          <span class="stat-value">{analytics.total_net_negative ? '−' : '+'}{analytics.total_net}</span>
+          <span class="stat-value">{mask(`${analytics.total_net_negative ? '−' : '+'}${analytics.total_net}`)}</span>
           <span class="stat-period">{i18n.t('dashboard-last', 'last')} {selectedRange}</span>
         </div>
       </div>
@@ -220,7 +221,7 @@
                   <div class="breakdown-row-top">
                     <span class="breakdown-cat">{item.category}</span>
                     <div class="breakdown-right">
-                      <span class="breakdown-amount">{item.amount}</span>
+                      <span class="breakdown-amount">{mask(item.amount)}</span>
                       <span class="breakdown-pct">{item.percentage.toFixed(1)}%</span>
                     </div>
                   </div>
@@ -247,7 +248,7 @@
                       <span class="tx-date">{tx.date}</span>
                     </div>
                   </div>
-                  <span class="tx-amount" class:expense={tx.is_expense}>{tx.amount}</span>
+                  <span class="tx-amount" class:expense={tx.is_expense}>{mask(tx.amount)}</span>
                 </div>
               {/each}
             </div>

@@ -19,6 +19,16 @@ import type { AppSettings } from '../types'
 
 export type Page = 'dashboard' | 'finances' | 'habits' | 'crypto' | 'settings'
 
+const HIDE_BALANCES_KEY = 'sanctum:hideBalances'
+
+function readHideBalances(): boolean {
+  try {
+    return localStorage.getItem(HIDE_BALANCES_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
 interface ToastAction {
   label: string
   handler: () => void | Promise<void>
@@ -36,6 +46,7 @@ class AppState {
   isLoading = $state(false)
   settings = $state<AppSettings | null>(null)
   toast = $state<Toast | null>(null)
+  hideBalances = $state(readHideBalances())
 
   private toastTimeout: ReturnType<typeof setTimeout> | null = null
 
@@ -58,6 +69,15 @@ class AppState {
 
   navigate(page: Page) {
     this.activePage = page
+  }
+
+  toggleHideBalances() {
+    this.hideBalances = !this.hideBalances
+    try {
+      localStorage.setItem(HIDE_BALANCES_KEY, this.hideBalances ? '1' : '0')
+    } catch {
+      // localStorage unavailable — keep the in-memory toggle working anyway
+    }
   }
 
   showToast(message: string, isError = false, durationMs = 3000, action: ToastAction | null = null) {

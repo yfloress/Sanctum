@@ -17,6 +17,7 @@
 <script lang="ts">
   import { i18n } from '../../lib/stores/i18n.svelte'
   import { ACCOUNT_ICONS, accountTypeLabel, getAccountDisplayIcon, isGenericIcon } from '../../lib/accountDisplay'
+  import { mask } from '../../lib/currency'
   import type { AccountDetailResponse } from '../../lib/types'
   import ConfirmDialog from '../ConfirmDialog.svelte'
 
@@ -80,7 +81,7 @@
       <div class="info-row"><span>{i18n.t('finances-currency', 'Currency')}</span><span>{account.currency}</span></div>
       <div class="info-row">
         <span>{i18n.t('finances-balance', 'Balance')}</span>
-        <span class:negative={account.balance_negative}>{account.balance}</span>
+        <span class:negative={account.balance_negative}>{mask(account.balance)}</span>
       </div>
     </div>
     {#if account.transactions.length > 0}
@@ -90,7 +91,7 @@
           <div class="panel-tx">
             <span class="tx-date">{tx.date}</span>
             <span class="tx-desc">{tx.description}</span>
-            <span class="tx-amount" class:expense={tx.is_expense}>{tx.amount}</span>
+            <span class="tx-amount" class:expense={tx.is_expense}>{mask(tx.amount)}</span>
           </div>
         {/each}
       </div>

@@ -24,6 +24,7 @@
     GridComponent, TooltipComponent, LegendComponent,
     RadarComponent,
   } from 'echarts/components'
+  import { app } from '../../lib/stores/app.svelte'
 
   echarts.use([
     CanvasRenderer, LineChart, BarChart, PieChart, RadarChart,
@@ -62,4 +63,19 @@
   })
 </script>
 
-<div bind:this={container} style="width: 100%; height: {height}"></div>
+<div
+  bind:this={container}
+  class="chart-canvas"
+  class:balances-hidden={app.hideBalances}
+  style="width: 100%; height: {height}"
+></div>
+
+<style>
+  .chart-canvas {
+    transition: filter 0.2s ease;
+  }
+  .chart-canvas.balances-hidden {
+    filter: blur(10px);
+    pointer-events: none;
+  }
+</style>
