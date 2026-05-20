@@ -478,7 +478,7 @@
         </div>
         <div class="stat-pill net" class:negative-net={netIsNegative}>
           <span class="pill-label">{i18n.t('finances-net-this-month', 'Net this month')}</span>
-          <span class="pill-value">{monthNet >= 0 ? '+' : ''}{fmtStat(monthNet)}</span>
+          <span class="pill-value">{mask(`${monthNet >= 0 ? '+' : ''}${fmtStat(monthNet)}`)}</span>
         </div>
       </div>
 
