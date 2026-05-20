@@ -108,7 +108,7 @@
 
     <div class="logo-section">
       <div class="logo-ring">
-        <img src="/src/assets/logo/sanctum_logo.svg" alt="Sanctum" class="login-logo" />
+        <img src="/assets/logo/sanctum_logo.svg" alt="Sanctum" class="login-logo" />
       </div>
       <h1 class="title">SANCTUM</h1>
       <p class="subtitle">{i18n.t('login-subtitle', 'Privacy-first personal vault')}</p>

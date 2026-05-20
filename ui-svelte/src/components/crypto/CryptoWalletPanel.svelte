@@ -23,9 +23,9 @@
 
   const WALLET_ICONS: { value: string; src: string; generic: boolean }[] = [
     ...['binance', 'bisq', 'bitmart', 'buda', 'bybit', 'kraken', 'mexc', 'retoswap', 'uniswap']
-      .map(n => ({ value: `${n}.svg`, src: `/src/assets/exchange-icons/${n}.svg`, generic: false })),
+      .map(n => ({ value: `${n}.svg`, src: `/assets/exchange-icons/${n}.svg`, generic: false })),
     ...['landmark', 'wallet', 'shield', 'shield-check', 'link', 'lock']
-      .map(n => ({ value: `/src/assets/icons/${n}.svg`, src: `/src/assets/icons/${n}.svg`, generic: true })),
+      .map(n => ({ value: `/assets/icons/${n}.svg`, src: `/assets/icons/${n}.svg`, generic: true })),
   ]
 
   function getDefaultWalletIconPath(category: string): string {
@@ -35,7 +35,7 @@
       'software': 'wallet',
     }
     const icon = iconMap[category.toLowerCase()] || 'wallet'
-    return `/src/assets/icons/${icon}.svg`
+    return `/assets/icons/${icon}.svg`
   }
 
   interface Props {
@@ -57,14 +57,14 @@
   function getWalletDisplayIcon(w: { category: string; icon_path: string | null }): string {
     if (w.icon_path) {
       if (w.icon_path.startsWith('/') || w.icon_path.startsWith('http')) return w.icon_path
-      return `/src/assets/exchange-icons/${w.icon_path}`
+      return `/assets/exchange-icons/${w.icon_path}`
     }
     return getDefaultWalletIconPath(w.category)
   }
 
   function isGenericWalletIcon(iconPath: string | null): boolean {
     if (!iconPath) return true
-    return iconPath.startsWith('/src/assets/icons/')
+    return iconPath.startsWith('/assets/icons/')
   }
 
   function startEditWalletName() {

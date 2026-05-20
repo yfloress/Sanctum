@@ -25,9 +25,9 @@ export interface AccountIcon {
 
 export const ACCOUNT_ICONS: AccountIcon[] = [
   ...['banco-chile', 'banco-estado', 'bank-of-america', 'bci', 'citibank', 'jpmorgan', 'mercado_pago', 'santander', 'wf']
-    .map(n => ({ value: `${n}.svg`, src: `/src/assets/bank-icons/${n}.svg`, generic: false })),
+    .map(n => ({ value: `${n}.svg`, src: `/assets/bank-icons/${n}.svg`, generic: false })),
   ...['landmark', 'wallet', 'credit-card', 'piggy-bank', 'briefcase', 'coins', 'banknote', 'building-2']
-    .map(n => ({ value: `/src/assets/icons/${n}.svg`, src: `/src/assets/icons/${n}.svg`, generic: true })),
+    .map(n => ({ value: `/assets/icons/${n}.svg`, src: `/assets/icons/${n}.svg`, generic: true })),
 ]
 
 export function getDefaultIconPath(accountType: string): string {
@@ -40,18 +40,18 @@ export function getDefaultIconPath(accountType: string): string {
     other: 'coins',
   }
   const icon = iconMap[accountType.toLowerCase()] || 'landmark'
-  return `/src/assets/icons/${icon}.svg`
+  return `/assets/icons/${icon}.svg`
 }
 
 export function isGenericIcon(iconPath: string | null): boolean {
   if (!iconPath) return true
-  return iconPath.startsWith('/src/assets/icons/')
+  return iconPath.startsWith('/assets/icons/')
 }
 
 export function getAccountDisplayIcon(acc: { account_type: string; account_type_key?: string; icon_path: string | null }): string {
   if (acc.icon_path) {
     if (acc.icon_path.startsWith('/') || acc.icon_path.startsWith('http')) return acc.icon_path
-    return `/src/assets/bank-icons/${acc.icon_path}`
+    return `/assets/bank-icons/${acc.icon_path}`
   }
   return getDefaultIconPath(acc.account_type_key ?? acc.account_type)
 }

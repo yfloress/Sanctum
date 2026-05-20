@@ -82,7 +82,7 @@
   <div class="sidebar-header">
     <div class="logo-container">
       <div class="logo-icon-wrap">
-        <img src="/src/assets/logo/sanctum_logo.svg" alt="Sanctum" class="logo-icon" />
+        <img src="/assets/logo/sanctum_logo.svg" alt="Sanctum" class="logo-icon" />
       </div>
       <span class="logo-text">SANCTUM</span>
     </div>
