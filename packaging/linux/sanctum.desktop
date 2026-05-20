@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Sanctum
+GenericName=Finance Vault
+Comment=Privacy-first personal finance, crypto, and habits vault
+Exec=sanctum
+Icon=sanctum
+Terminal=false
+Categories=Office;Finance;
+Keywords=finance;budget;crypto;habits;vault;money;
+StartupNotify=true
+StartupWMClass=Sanctum
