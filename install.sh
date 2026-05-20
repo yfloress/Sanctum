@@ -40,6 +40,25 @@ need_root() {
     fi
 }
 
+# Refuse to run on non-Linux: this installer relies on Linux-only conventions
+# (XDG desktop entry, hicolor icon theme, update-desktop-database).
+require_linux() {
+    local os
+    os="$(uname -s 2>/dev/null || echo unknown)"
+    case "$os" in
+        Linux) ;;
+        Darwin)
+            die "macOS is not supported yet — this installer only targets Linux. To run Sanctum on macOS, build it manually with: cargo tauri build"
+            ;;
+        MINGW*|MSYS*|CYGWIN*|Windows_NT)
+            die "Windows is not supported yet — this installer only targets Linux. To run Sanctum on Windows, build it manually with: cargo tauri build"
+            ;;
+        *)
+            die "Unsupported OS '${os}' — this installer only targets Linux."
+            ;;
+    esac
+}
+
 # --- build ---
 
 build_app() {
@@ -148,6 +167,9 @@ for arg in "$@"; do
         *) die "Unknown option: $arg (try --help)" ;;
     esac
 done
+
+# Bail out early on unsupported platforms (after --help so usage still prints).
+require_linux
 
 # Resolve target prefix.
 if [ "$IS_USER" -eq 1 ]; then
