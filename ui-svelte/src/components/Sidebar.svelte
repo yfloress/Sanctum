@@ -511,4 +511,64 @@
     color: var(--danger);
     filter: drop-shadow(0 0 5px rgba(248, 113, 113, 0.3));
   }
+
+  /* ── Light mode ──────────────────────────────────────────
+     Dark mode is the default above; these overrides only apply
+     when the .light-mode class is present on <html>. */
+  :global(.light-mode) .sidebar {
+    background: linear-gradient(180deg, #faf8ff 0%, #f1ecfe 55%, #ece4fd 100%);
+    border-right: 1px solid rgba(139, 92, 246, 0.12);
+    box-shadow: inset -1px 0 0 rgba(139, 92, 246, 0.05), 4px 0 24px rgba(100, 60, 180, 0.06);
+  }
+
+  /* The white noise overlay reads as grain on dark; hide it on light. */
+  :global(.light-mode) .noise {
+    opacity: 0;
+  }
+
+  :global(.light-mode) .logo-text {
+    background: linear-gradient(135deg, #1e1b2e 0%, #7c3aed 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
+
+  :global(.light-mode) .edge-toggle {
+    background: #ffffff;
+    border-color: rgba(139, 92, 246, 0.3);
+    box-shadow: 0 2px 8px rgba(100, 60, 180, 0.15);
+  }
+
+  :global(.light-mode) .edge-toggle:hover {
+    background: #f3eefe;
+    border-color: rgba(139, 92, 246, 0.55);
+  }
+
+  :global(.light-mode) .nav-group-label {
+    color: rgba(108, 92, 150, 0.7);
+  }
+
+  :global(.light-mode) .nav-item:hover {
+    background: rgba(139, 92, 246, 0.08);
+  }
+
+  :global(.light-mode) .nav-item:hover .nav-icon-wrap {
+    color: #7c3aed;
+  }
+
+  :global(.light-mode) .nav-item.active {
+    background: linear-gradient(90deg, rgba(139, 92, 246, 0.16) 0%, rgba(139, 92, 246, 0.05) 100%);
+  }
+
+  :global(.light-mode) .nav-item.active .nav-icon-wrap {
+    color: #7c3aed;
+  }
+
+  :global(.light-mode) .nav-item.active .nav-label {
+    color: #2a2545;
+  }
+
+  :global(.light-mode) .eye-btn.active,
+  :global(.light-mode) .eye-btn.active .nav-icon-wrap {
+    color: #7c3aed;
+  }
 </style>

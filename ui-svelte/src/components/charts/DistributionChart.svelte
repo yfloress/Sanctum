@@ -16,6 +16,7 @@
 
 <script lang="ts">
   import BaseChart from './BaseChart.svelte'
+  import { chartLight as L, pick } from '../../lib/charts/theme'
   import type { DistributionItem } from '../../lib/types'
   import { formatCurrency } from '../../lib/currency'
 
@@ -31,9 +32,9 @@
     backgroundColor: 'transparent',
     tooltip: {
       trigger: 'item',
-      backgroundColor: '#1a1a1a',
-      borderColor: '#333',
-      textStyle: { color: '#e0e0e0', fontSize: 12 },
+      backgroundColor: pick('#1a1a1a', L.tooltipBg),
+      borderColor: pick('#333', L.tooltipBorder),
+      textStyle: { color: pick('#e0e0e0', L.tooltipText), fontSize: 12 },
       formatter: (p: { name: string, percent: number, value: number }) =>
         `${p.name}: ${formatCurrency(p.value)} (${p.percent}%)`,
     },
@@ -42,9 +43,9 @@
       radius: ['45%', '75%'],
       center: ['50%', '50%'],
       avoidLabelOverlap: true,
-      itemStyle: { borderColor: '#111', borderWidth: 2, borderRadius: 4 },
+      itemStyle: { borderColor: pick('#111', L.sliceBorder), borderWidth: 2, borderRadius: 4 },
       label: {
-        color: '#ccc',
+        color: pick('#ccc', L.label),
         fontSize: 11,
         formatter: '{b} {d}%',
       },

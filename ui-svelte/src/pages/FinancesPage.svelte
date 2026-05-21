@@ -1066,10 +1066,10 @@
     box-shadow: var(--card-shadow);
     overflow: hidden;
   }
-  .stat-pill.income  { border-left-color: #4ade80; }
-  .stat-pill.expense { border-left-color: #f87171; }
+  .stat-pill.income  { border-left-color: var(--success); }
+  .stat-pill.expense { border-left-color: var(--danger); }
   .stat-pill.net     { border-left-color: var(--accent); }
-  .stat-pill.net.negative-net { border-left-color: #f87171; }
+  .stat-pill.net.negative-net { border-left-color: var(--danger); }
   .pill-label {
     font-size: 0.7rem;
     color: var(--text-tertiary);
@@ -1082,10 +1082,10 @@
     letter-spacing: -0.02em;
     color: var(--text-primary);
   }
-  .stat-pill.income  .pill-value { color: #4ade80; }
-  .stat-pill.expense .pill-value { color: #f87171; }
+  .stat-pill.income  .pill-value { color: var(--success); }
+  .stat-pill.expense .pill-value { color: var(--danger); }
   .stat-pill.net     .pill-value { color: var(--accent); }
-  .stat-pill.net.negative-net .pill-value { color: #f87171; }
+  .stat-pill.net.negative-net .pill-value { color: var(--danger); }
 
   .charts-row {
     display: grid;

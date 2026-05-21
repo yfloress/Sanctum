@@ -16,6 +16,7 @@
 
 <script lang="ts">
   import BaseChart from './BaseChart.svelte'
+  import { chartLight as L, pick } from '../../lib/charts/theme'
   import type { RadarChartData } from '../../lib/types'
 
   interface Props {
@@ -29,18 +30,18 @@
     radar: {
       indicator: data.categories.map(c => ({ name: c, max: data.max_value })),
       shape: 'polygon',
-      axisName: { color: '#888', fontSize: 11 },
-      splitLine: { lineStyle: { color: '#222' } },
+      axisName: { color: pick('#888', L.label), fontSize: 11 },
+      splitLine: { lineStyle: { color: pick('#222', L.splitLine) } },
       splitArea: { areaStyle: { color: ['transparent'] } },
-      axisLine: { lineStyle: { color: '#333' } },
+      axisLine: { lineStyle: { color: pick('#333', L.axisLine) } },
     },
     series: [{
       type: 'radar',
       data: [{
         value: data.values,
-        areaStyle: { color: 'rgba(168, 85, 247, 0.2)' },
-        lineStyle: { color: '#a855f7', width: 2 },
-        itemStyle: { color: '#a855f7' },
+        areaStyle: { color: pick('rgba(168, 85, 247, 0.2)', 'rgba(139, 92, 246, 0.18)') },
+        lineStyle: { color: pick('#a855f7', L.accent), width: 2 },
+        itemStyle: { color: pick('#a855f7', L.accent) },
       }],
     }],
   })

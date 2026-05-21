@@ -16,6 +16,7 @@
 
 <script lang="ts">
   import BaseChart from './BaseChart.svelte'
+  import { chartLight as L, pick } from '../../lib/charts/theme'
   import type { PortfolioTrendData } from '../../lib/types'
   import { formatCurrency } from '../../lib/currency'
 
@@ -64,9 +65,9 @@
     grid: { left: 60, right: 20, top: 20, bottom: 30 },
     tooltip: {
       trigger: 'axis',
-      backgroundColor: '#1a1a1a',
-      borderColor: '#333',
-      textStyle: { color: '#e0e0e0', fontSize: 12 },
+      backgroundColor: pick('#1a1a1a', L.tooltipBg),
+      borderColor: pick('#333', L.tooltipBorder),
+      textStyle: { color: pick('#e0e0e0', L.tooltipText), fontSize: 12 },
       formatter: (params: { value: [number, number] }[]) => {
         const pt = params[0]
         if (!pt) return ''
@@ -76,14 +77,14 @@
     },
     xAxis: {
       type: 'time',
-      axisLine: { lineStyle: { color: '#333' } },
-      axisLabel: { color: '#666', fontSize: 10 },
+      axisLine: { lineStyle: { color: pick('#333', L.axisLine) } },
+      axisLabel: { color: pick('#666', L.labelDim), fontSize: 10 },
     },
     yAxis: {
       type: 'value',
       axisLine: { show: false },
-      splitLine: { lineStyle: { color: '#1a1a1a' } },
-      axisLabel: { color: '#666', fontSize: 10, formatter: (val: number) => formatYAxis(val) },
+      splitLine: { lineStyle: { color: pick('#1a1a1a', L.splitLine) } },
+      axisLabel: { color: pick('#666', L.labelDim), fontSize: 10, formatter: (val: number) => formatYAxis(val) },
     },
     series: [{
       type: 'line',
@@ -91,14 +92,14 @@
       smooth: 0.4,
       showSymbol: true,
       symbolSize: 6,
-      itemStyle: { color: '#4ade80' },
-      lineStyle: { color: '#4ade80', width: 2.5, cap: 'round', join: 'round' },
+      itemStyle: { color: pick('#4ade80', L.positive) },
+      lineStyle: { color: pick('#4ade80', L.positive), width: 2.5, cap: 'round', join: 'round' },
       areaStyle: {
         color: {
           type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
           colorStops: [
-            { offset: 0, color: 'rgba(74, 222, 128, 0.25)' },
-            { offset: 1, color: 'rgba(74, 222, 128, 0.02)' },
+            { offset: 0, color: pick('rgba(74, 222, 128, 0.25)', 'rgba(22, 163, 74, 0.2)') },
+            { offset: 1, color: pick('rgba(74, 222, 128, 0.02)', 'rgba(22, 163, 74, 0.02)') },
           ],
         },
       },

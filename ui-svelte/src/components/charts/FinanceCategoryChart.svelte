@@ -16,6 +16,7 @@
 
 <script lang="ts">
   import BaseChart from './BaseChart.svelte'
+  import { chartLight as L, pick } from '../../lib/charts/theme'
 
   interface Props {
     data: { name: string; value: number }[]
@@ -29,23 +30,23 @@
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
-      backgroundColor: '#1a1a1a',
-      borderColor: '#333',
-      textStyle: { color: '#e0e0e0', fontSize: 12 },
+      backgroundColor: pick('#1a1a1a', L.tooltipBg),
+      borderColor: pick('#333', L.tooltipBorder),
+      textStyle: { color: pick('#e0e0e0', L.tooltipText), fontSize: 12 },
     },
     xAxis: {
       type: 'value',
       axisLine: { show: false },
       axisTick: { show: false },
-      splitLine: { lineStyle: { color: '#1e1e1e' } },
-      axisLabel: { color: '#555', fontSize: 10 },
+      splitLine: { lineStyle: { color: pick('#1e1e1e', L.splitLine) } },
+      axisLabel: { color: pick('#555', L.labelDim), fontSize: 10 },
     },
     yAxis: {
       type: 'category',
       data: data.map(d => d.name),
-      axisLine: { lineStyle: { color: '#2a2a2a' } },
+      axisLine: { lineStyle: { color: pick('#2a2a2a', L.axisLine) } },
       axisTick: { show: false },
-      axisLabel: { color: '#888', fontSize: 11 },
+      axisLabel: { color: pick('#888', L.label), fontSize: 11 },
     },
     series: [{
       type: 'bar',
@@ -56,8 +57,8 @@
         color: {
           type: 'linear', x: 0, y: 0, x2: 1, y2: 0,
           colorStops: [
-            { offset: 0, color: '#f87171' },
-            { offset: 1, color: '#a855f7' },
+            { offset: 0, color: pick('#f87171', L.negative) },
+            { offset: 1, color: pick('#a855f7', L.accent) },
           ],
         },
       },

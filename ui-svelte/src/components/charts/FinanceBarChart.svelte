@@ -16,6 +16,7 @@
 
 <script lang="ts">
   import BaseChart from './BaseChart.svelte'
+  import { chartLight as L, pick } from '../../lib/charts/theme'
   import { i18n } from '../../lib/stores/i18n.svelte'
 
   interface Props {
@@ -34,14 +35,14 @@
     grid: { left: 52, right: 12, top: 16, bottom: 36 },
     tooltip: {
       trigger: 'axis',
-      backgroundColor: '#1a1a1a',
-      borderColor: '#333',
-      textStyle: { color: '#e0e0e0', fontSize: 12 },
+      backgroundColor: pick('#1a1a1a', L.tooltipBg),
+      borderColor: pick('#333', L.tooltipBorder),
+      textStyle: { color: pick('#e0e0e0', L.tooltipText), fontSize: 12 },
     },
     legend: {
       data: [incomeLabel, expensesLabel],
       bottom: 0,
-      textStyle: { color: '#555', fontSize: 11 },
+      textStyle: { color: pick('#555', L.labelDim), fontSize: 11 },
       icon: 'roundRect',
       itemWidth: 10,
       itemHeight: 10,
@@ -49,16 +50,16 @@
     xAxis: {
       type: 'category',
       data: months,
-      axisLine: { lineStyle: { color: '#2a2a2a' } },
+      axisLine: { lineStyle: { color: pick('#2a2a2a', L.axisLine) } },
       axisTick: { show: false },
-      axisLabel: { color: '#555', fontSize: 11 },
+      axisLabel: { color: pick('#555', L.labelDim), fontSize: 11 },
     },
     yAxis: {
       type: 'value',
       axisLine: { show: false },
       axisTick: { show: false },
-      splitLine: { lineStyle: { color: '#1e1e1e' } },
-      axisLabel: { color: '#555', fontSize: 10 },
+      splitLine: { lineStyle: { color: pick('#1e1e1e', L.splitLine) } },
+      axisLabel: { color: pick('#555', L.labelDim), fontSize: 10 },
     },
     series: [
       {
@@ -66,14 +67,14 @@
         type: 'bar',
         data: income,
         barMaxWidth: 20,
-        itemStyle: { color: '#4ade80', borderRadius: [4, 4, 0, 0] },
+        itemStyle: { color: pick('#4ade80', L.positive), borderRadius: [4, 4, 0, 0] },
       },
       {
         name: expensesLabel,
         type: 'bar',
         data: expenses,
         barMaxWidth: 20,
-        itemStyle: { color: '#f87171', borderRadius: [4, 4, 0, 0] },
+        itemStyle: { color: pick('#f87171', L.negative), borderRadius: [4, 4, 0, 0] },
       },
     ],
   })

@@ -16,6 +16,7 @@
 
 <script lang="ts">
   import BaseChart from './BaseChart.svelte'
+  import { chartLight as L, pick } from '../../lib/charts/theme'
 
   interface Props {
     data: { name: string; value: number }[]
@@ -32,9 +33,9 @@
     backgroundColor: 'transparent',
     tooltip: {
       trigger: 'item',
-      backgroundColor: '#1a1a1a',
-      borderColor: '#333',
-      textStyle: { color: '#e0e0e0', fontSize: 12 },
+      backgroundColor: pick('#1a1a1a', L.tooltipBg),
+      borderColor: pick('#333', L.tooltipBorder),
+      textStyle: { color: pick('#e0e0e0', L.tooltipText), fontSize: 12 },
       formatter: (p: { name: string; percent: number }) =>
         `${p.name}: ${p.percent.toFixed(1)}%`,
     },
@@ -42,7 +43,7 @@
       orient: 'vertical',
       right: 8,
       top: 'center',
-      textStyle: { color: '#555', fontSize: 11 },
+      textStyle: { color: pick('#555', L.labelDim), fontSize: 11 },
       icon: 'circle',
       itemWidth: 8,
       itemHeight: 8,
@@ -52,10 +53,10 @@
       radius: ['40%', '68%'],
       center: ['38%', '50%'],
       avoidLabelOverlap: true,
-      itemStyle: { borderColor: '#0d0d12', borderWidth: 2, borderRadius: 4 },
+      itemStyle: { borderColor: pick('#0d0d12', L.sliceBorder), borderWidth: 2, borderRadius: 4 },
       label: { show: false },
       emphasis: {
-        label: { show: true, fontSize: 12, fontWeight: 'bold', color: '#e8eaed' },
+        label: { show: true, fontSize: 12, fontWeight: 'bold', color: pick('#e8eaed', L.centerLabel) },
       },
       data: data.map((d, i) => ({
         name: d.name,

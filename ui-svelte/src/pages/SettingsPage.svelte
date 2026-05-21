@@ -562,6 +562,16 @@
   .primary-btn:hover:not(:disabled) { background: var(--accent-border); box-shadow: 0 0 16px var(--accent-glow); }  .primary-btn:disabled, .secondary-btn:disabled {
     opacity: 0.4; cursor: not-allowed;
   }
+  /* Light mode: dark text on a soft tonal button (white text would vanish). */
+  :global(.light-mode) .primary-btn {
+    background: rgba(139, 92, 246, 0.18);
+    border-color: rgba(139, 92, 246, 0.38);
+    color: var(--text-primary);
+  }
+  :global(.light-mode) .primary-btn:hover:not(:disabled) {
+    background: rgba(139, 92, 246, 0.3);
+    color: var(--text-primary);
+  }
   .import-changes {
     max-height: 200px; overflow-y: auto; margin-bottom: 8px;
     border: 1px solid var(--glass-border); border-radius: 4px;

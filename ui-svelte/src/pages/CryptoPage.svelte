@@ -1605,6 +1605,16 @@
   }
   .primary-btn:hover:not(:disabled) { background: var(--accent); box-shadow: 0 0 16px var(--accent-glow); }
   .primary-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  /* Light mode: dark text on a soft tonal button (white text would vanish). */
+  :global(.light-mode) .primary-btn {
+    background: rgba(139, 92, 246, 0.18);
+    border-color: rgba(139, 92, 246, 0.38);
+    color: var(--text-primary);
+  }
+  :global(.light-mode) .primary-btn:hover:not(:disabled) {
+    background: rgba(139, 92, 246, 0.3);
+    color: var(--text-primary);
+  }
   .secondary-btn {
     padding: 8px 18px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
     background: none; color: var(--text-secondary); cursor: pointer; font-size: 0.85rem;
@@ -1685,7 +1695,7 @@
   .ipc-status-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .ipc-status { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; flex: 1; }
   .ipc-status.ok { color: var(--success); }
-  .ipc-status.warn { color: #fbbf24; }
+  .ipc-status.warn { color: var(--warning); }
   .ipc-status-icon { width: 14px; height: 14px; flex-shrink: 0; }
   .hidden-input { display: none; }
 
@@ -1767,7 +1777,7 @@
     padding: 2px 6px; border-radius: 3px; color: #999;
   }
   .status-badge.ok { background: rgba(74, 222, 128, 0.2); color: var(--success); }
-  .status-badge.warn { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+  .status-badge.warn { background: rgba(251, 191, 36, 0.2); color: var(--warning); }
   .status-badge.error { background: rgba(248, 113, 113, 0.2); color: var(--danger); }
   .status-badge.info { background: rgba(96, 165, 250, 0.2); color: #60a5fa; }
   .readiness-item .code { font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; min-width: 90px; }

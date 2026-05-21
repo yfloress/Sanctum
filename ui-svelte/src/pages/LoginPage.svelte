@@ -584,6 +584,18 @@
     border: 1px solid rgba(248, 113, 113, 0.18);
   }
 
+  /* Light mode: the dark translucent banners read as out-of-place patches,
+     so swap them for soft tinted surfaces (text stays the themed accent). */
+  :global(.light-mode) .warning-banner {
+    background: rgba(251, 191, 36, 0.14);
+    border-color: rgba(217, 119, 6, 0.25);
+  }
+
+  :global(.light-mode) .error-banner {
+    background: rgba(220, 38, 38, 0.08);
+    border-color: rgba(220, 38, 38, 0.22);
+  }
+
   /* ===== Submit Button ===== */
   .submit-btn {
     display: flex;

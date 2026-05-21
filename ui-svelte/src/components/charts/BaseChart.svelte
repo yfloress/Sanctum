@@ -41,13 +41,14 @@
   let { option, height = '280px', sensitive = true }: Props = $props()
 
   let container: HTMLDivElement
-  let chart: echarts.ECharts | null = null
+  let chart = $state<echarts.ECharts | null>(null)
 
   $effect(() => {
     const el = container
     if (!el) return
 
-    const c = echarts.init(el, 'dark')
+    // Re-init when the theme flips so ECharts' built-in defaults match.
+    const c = echarts.init(el, app.darkMode ? 'dark' : undefined)
     chart = c
 
     const ro = new ResizeObserver(() => c.resize())
