@@ -27,6 +27,9 @@
   backdrop-filter: blur(4px); z-index: 100;
   animation: backdropIn 0.2s ease;
 }
+/* Light mode: a soft purple dim instead of heavy black keeps the frosted
+   modal reading light rather than grey. */
+.light-mode .modal-backdrop { background: rgba(46, 16, 101, 0.22); }
 
 .modal-wrapper {
   position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -57,7 +60,9 @@
 /* Light mode: the panel above is tuned for dark; swap to a light surface so
    the (now dark) text is readable. */
 .light-mode .modal {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 248, 255, 0.96) 50%, rgba(245, 243, 255, 0.94) 100%);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.72) 0%, rgba(250, 248, 255, 0.66) 50%, rgba(245, 243, 255, 0.60) 100%);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
   border: 1px solid rgba(139, 92, 246, 0.18);
   box-shadow: 0 12px 40px rgba(100, 60, 180, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
@@ -192,6 +197,7 @@ select option { background: var(--option-bg); color: var(--text-primary); }
   position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 50;
   animation: backdropIn 0.2s ease;
 }
+.light-mode .overlay-backdrop { background: rgba(46, 16, 101, 0.14); }
 
 .detail-panel {
   position: fixed; top: 0; right: 0; bottom: 0; width: 400px;
@@ -203,7 +209,9 @@ select option { background: var(--option-bg); color: var(--text-primary); }
 }
 /* Light mode: the detail drawer (e.g. account details) is tuned for dark. */
 .light-mode .detail-panel {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97) 0%, rgba(248, 246, 255, 0.95) 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(248, 246, 255, 0.66) 100%);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
   border-left: 1px solid rgba(139, 92, 246, 0.15);
 }
 @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
