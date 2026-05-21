@@ -185,14 +185,14 @@
   :global(.light-mode) {
     --bg-base: #f8f7fd;
     --bg-gradient: linear-gradient(135deg, #f8f7fd 0%, #f0edff 40%, #e8e3fc 100%);
-    --bg-dots: radial-gradient(circle, rgba(139, 92, 246, 0.10) 1px, transparent 1.6px);
-    --star-color: rgba(139, 92, 246, 0.85);
-    --star-glow: rgba(139, 92, 246, 0.45);
-    --diamond-color: rgba(139, 92, 246, 0.08);
-    --aurora-1: rgba(139, 92, 246, 0.28);
-    --aurora-2: rgba(99, 102, 241, 0.22);
-    --aurora-3: rgba(217, 70, 239, 0.20);
-    --aurora-opacity: 0.60;
+    --bg-dots: radial-gradient(circle, rgba(124, 58, 237, 0.28) 1px, transparent 1.6px);
+    --star-color: rgba(109, 40, 217, 0.95);
+    --star-glow: rgba(109, 40, 217, 0.55);
+    --diamond-color: rgba(124, 58, 237, 0.20);
+    --aurora-1: rgba(139, 92, 246, 0.45);
+    --aurora-2: rgba(99, 102, 241, 0.38);
+    --aurora-3: rgba(217, 70, 239, 0.32);
+    --aurora-opacity: 0.75;
     --glass: rgba(255, 255, 255, 0.65);
     --glass-hover: rgba(147, 51, 234, 0.06);
     --glass-active: rgba(147, 51, 234, 0.1);

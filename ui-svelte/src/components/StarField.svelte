@@ -18,7 +18,7 @@
   // Sparse, twinkling starfield. Built once on mount — positions, sizes and
   // twinkle timing are randomised but fixed for the session, so the only
   // per-frame work is GPU-composited opacity/transform on a handful of nodes.
-  const STAR_COUNT = 36
+  const STAR_COUNT = 90
 
   type Star = {
     x: number; y: number; size: number; delay: number; dur: number; bright: boolean
