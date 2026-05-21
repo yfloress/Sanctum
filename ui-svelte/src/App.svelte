@@ -34,8 +34,25 @@
     }
   })
 
+  let lastTheme = app.darkMode
+  let themeTimer = 0
+  const appMount = Date.now()
   $effect(() => {
-    document.documentElement.classList.toggle('light-mode', !app.darkMode)
+    const dark = app.darkMode
+    document.documentElement.classList.toggle('light-mode', !dark)
+
+    // Crossfade colours only for a genuine user toggle — not the async settings
+    // load right after mount (that first flip should be invisible, no startup
+    // flash), and not when the user asked the OS to reduce motion.
+    const changed = dark !== lastTheme
+    lastTheme = dark
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (changed && Date.now() - appMount > 800 && !reduce) {
+      const el = document.documentElement
+      el.classList.add('theme-transition')
+      clearTimeout(themeTimer)
+      themeTimer = window.setTimeout(() => el.classList.remove('theme-transition'), 450)
+    }
   })
 
   let mainEl: HTMLElement | undefined = $state()

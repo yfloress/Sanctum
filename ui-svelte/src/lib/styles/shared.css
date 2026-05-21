@@ -25,6 +25,7 @@
 .modal-backdrop {
   position: fixed; inset: 0; background: rgba(0,0,0,0.5);
   backdrop-filter: blur(4px); z-index: 100;
+  animation: backdropIn 0.2s ease;
 }
 
 .modal-wrapper {
@@ -33,6 +34,14 @@
 }
 .modal-wrapper .modal { pointer-events: auto; }
 
+/* Entry motion: the wrapper handles centering, so the modal itself is free to
+   pop in (fade + slight rise + scale) without fighting the centering transform. */
+@keyframes backdropIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
 .modal {
   position: relative;
   background: linear-gradient(145deg, rgba(26, 26, 31, 0.75) 0%, rgba(20, 20, 24, 0.72) 50%, rgba(17, 17, 21, 0.7) 100%);
@@ -40,6 +49,7 @@
   padding: 28px; width: 420px; max-height: 85vh; overflow-y: auto; z-index: 101;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   box-shadow: inset 0 0.125em 0.125em rgba(254, 254, 254, 0.05), inset 0 -0.125em 0.125em rgba(0, 0, 0, 0.5), 0 0.25em 0.125em -0.125em rgba(254, 254, 254, 0.2), 0 0 0.1em 0.25em inset rgba(0, 0, 0, 0.2);
+  animation: modalIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .modal h3 { margin: 0 0 20px; color: var(--text-primary); font-size: 1.1rem; position: relative; z-index: 10; }
 .modal.wide { width: 480px; }
@@ -167,6 +177,7 @@ select option { background: var(--option-bg); color: var(--text-primary); }
 
 .overlay-backdrop {
   position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 50;
+  animation: backdropIn 0.2s ease;
 }
 
 .detail-panel {
@@ -175,7 +186,7 @@ select option { background: var(--option-bg); color: var(--text-primary); }
   border-left: 1px solid rgba(255, 255, 255, 0.08); z-index: 51;
   padding: 24px; overflow-y: auto;
   box-shadow: var(--glass-shadow-lg);
-  animation: slideInRight 0.25s ease;
+  animation: slideInRight 0.32s cubic-bezier(0.16, 1, 0.3, 1);
 }
 /* Light mode: the detail drawer (e.g. account details) is tuned for dark. */
 .light-mode .detail-panel {
@@ -271,3 +282,31 @@ select option { background: var(--option-bg); color: var(--text-primary); }
   color: var(--text-secondary); margin-bottom: 6px;
 }
 .reward-progress-count { color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+
+/* ── Motion ──────────────────────────────────────────────────────── */
+
+/* Theme crossfade. Applied as a temporary class on <html> only during a
+   genuine dark↔light toggle (see App.svelte), so colours ease across instead
+   of snapping. It is never present at startup, which avoids the classic
+   first-paint flash, and it self-removes after the transition completes —
+   no steady-state cost. We transition discrete colour props only (a gradient
+   background-image can't interpolate, so we leave those to snap). */
+.theme-transition,
+.theme-transition *,
+.theme-transition *::before,
+.theme-transition *::after {
+  transition: background-color 0.4s ease, color 0.4s ease,
+              border-color 0.4s ease, fill 0.4s ease, stroke 0.4s ease,
+              box-shadow 0.4s ease !important;
+}
+
+/* Respect the OS "reduce motion" preference: collapse every animation and
+   transition to an instant change. Kept last so it wins the cascade. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
