@@ -19,6 +19,8 @@
   import { i18n } from './lib/stores/i18n.svelte'
   import { startSessionMonitor } from './lib/stores/session.svelte'
   import Sidebar from './components/Sidebar.svelte'
+  import StarField from './components/StarField.svelte'
+  import Aurora from './components/Aurora.svelte'
   import Toast from './components/Toast.svelte'
   import LoginPage from './pages/LoginPage.svelte'
   import DashboardPage from './pages/DashboardPage.svelte'
@@ -32,6 +34,10 @@
       i18n.load()
       return startSessionMonitor()
     }
+  })
+
+  $effect(() => {
+    document.documentElement.dataset.bg = app.backgroundFx
   })
 
   let lastTheme = app.darkMode
@@ -91,6 +97,11 @@
   <LoginPage />
 {:else}
   <div class="shell">
+    {#if app.backgroundFx === 'stars'}
+      <StarField />
+    {:else if app.backgroundFx === 'aurora'}
+      <Aurora />
+    {/if}
     <Sidebar />
     <main class="content" bind:this={mainEl} onscroll={handleScroll}>
       {#if app.activePage === 'dashboard'}
@@ -114,6 +125,14 @@
   :global(:root) {
     --bg-base: #09090f;
     --bg-gradient: linear-gradient(135deg, #09090f 0%, #0e0b14 40%, #12101a 100%);
+    --bg-dots: radial-gradient(circle, rgba(255, 255, 255, 0.05) 1px, transparent 1.6px);
+    --star-color: rgba(255, 255, 255, 0.9);
+    --star-glow: rgba(255, 255, 255, 0.5);
+    --diamond-color: rgba(255, 255, 255, 0.04);
+    --aurora-1: rgba(168, 85, 247, 0.50);
+    --aurora-2: rgba(99, 102, 241, 0.40);
+    --aurora-3: rgba(217, 70, 239, 0.35);
+    --aurora-opacity: 0.55;
     --glass: rgba(255, 255, 255, 0.035);
     --glass-hover: rgba(255, 255, 255, 0.06);
     --glass-active: rgba(255, 255, 255, 0.08);
@@ -166,6 +185,14 @@
   :global(.light-mode) {
     --bg-base: #f8f7fd;
     --bg-gradient: linear-gradient(135deg, #f8f7fd 0%, #f0edff 40%, #e8e3fc 100%);
+    --bg-dots: radial-gradient(circle, rgba(139, 92, 246, 0.10) 1px, transparent 1.6px);
+    --star-color: rgba(139, 92, 246, 0.85);
+    --star-glow: rgba(139, 92, 246, 0.45);
+    --diamond-color: rgba(139, 92, 246, 0.08);
+    --aurora-1: rgba(139, 92, 246, 0.28);
+    --aurora-2: rgba(99, 102, 241, 0.22);
+    --aurora-3: rgba(217, 70, 239, 0.20);
+    --aurora-opacity: 0.60;
     --glass: rgba(255, 255, 255, 0.65);
     --glass-hover: rgba(147, 51, 234, 0.06);
     --glass-active: rgba(147, 51, 234, 0.1);
@@ -227,6 +254,23 @@
     background-attachment: fixed;
     color: var(--text-primary);
     min-height: 100vh;
+  }
+
+  /* Background designs — chosen from Settings, persisted in localStorage and
+     applied via [data-bg] on <html>. 'dots' and 'diamonds' are static CSS
+     patterns (zero runtime cost); 'stars' and 'aurora' render as components
+     that only mount when selected. */
+  :global([data-bg='dots'] body) {
+    background-image: var(--bg-dots), var(--bg-gradient);
+    background-size: 24px 24px, cover;
+    background-position: center, center;
+    background-repeat: repeat, no-repeat;
+  }
+  :global([data-bg='diamonds'] body) {
+    background-image:
+      repeating-linear-gradient(45deg, var(--diamond-color) 0, var(--diamond-color) 1px, transparent 1px, transparent 22px),
+      repeating-linear-gradient(-45deg, var(--diamond-color) 0, var(--diamond-color) 1px, transparent 1px, transparent 22px),
+      var(--bg-gradient);
   }
 
   :global(*) {
@@ -411,6 +455,10 @@
     height: 100vh;
     width: 100vw;
     overflow: hidden;
+    /* Own stacking context so the z-index:-1 background layer (StarField /
+       Aurora) sits above the body's opaque background instead of being
+       painted behind it in the root context. */
+    isolation: isolate;
   }
 
   .content {

@@ -215,7 +215,13 @@
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    background: var(--bg-gradient);
+    /* Hardcoded dot-grid backdrop: the login screen can't read the user's
+       chosen background yet, so it always uses dots (themed via --bg-dots). */
+    background-color: var(--bg-base);
+    background-image: var(--bg-dots), var(--bg-gradient);
+    background-size: 24px 24px, cover;
+    background-position: center, center;
+    background-repeat: repeat, no-repeat;
     position: relative;
     overflow: hidden;
   }

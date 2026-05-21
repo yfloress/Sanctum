@@ -19,7 +19,10 @@ import type { AppSettings } from '../types'
 
 export type Page = 'dashboard' | 'finances' | 'habits' | 'crypto' | 'settings'
 
+export type BackgroundFx = 'dots' | 'stars' | 'aurora' | 'diamonds'
+
 const HIDE_BALANCES_KEY = 'sanctum:hideBalances'
+const BACKGROUND_FX_KEY = 'sanctum:backgroundFx'
 
 function readHideBalances(): boolean {
   try {
@@ -27,6 +30,16 @@ function readHideBalances(): boolean {
   } catch {
     return false
   }
+}
+
+function readBackgroundFx(): BackgroundFx {
+  try {
+    const v = localStorage.getItem(BACKGROUND_FX_KEY)
+    if (v === 'dots' || v === 'stars' || v === 'aurora' || v === 'diamonds') return v
+  } catch {
+    // localStorage unavailable — fall through to the default
+  }
+  return 'dots'
 }
 
 interface ToastAction {
@@ -47,6 +60,7 @@ class AppState {
   settings = $state<AppSettings | null>(null)
   toast = $state<Toast | null>(null)
   hideBalances = $state(readHideBalances())
+  backgroundFx = $state<BackgroundFx>(readBackgroundFx())
 
   private toastTimeout: ReturnType<typeof setTimeout> | null = null
 
@@ -77,6 +91,15 @@ class AppState {
       localStorage.setItem(HIDE_BALANCES_KEY, this.hideBalances ? '1' : '0')
     } catch {
       // localStorage unavailable — keep the in-memory toggle working anyway
+    }
+  }
+
+  setBackgroundFx(fx: BackgroundFx) {
+    this.backgroundFx = fx
+    try {
+      localStorage.setItem(BACKGROUND_FX_KEY, fx)
+    } catch {
+      // localStorage unavailable — keep the in-memory choice working anyway
     }
   }
 

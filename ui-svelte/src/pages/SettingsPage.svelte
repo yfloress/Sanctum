@@ -15,7 +15,7 @@
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 
 <script lang="ts">
-  import { app } from '../lib/stores/app.svelte'
+  import { app, type BackgroundFx } from '../lib/stores/app.svelte'
   import { i18n } from '../lib/stores/i18n.svelte'
   import * as settingsApi from '../lib/api/settings'
   import * as vaultApi from '../lib/api/vault'
@@ -169,6 +169,10 @@
     await settingsApi.setDarkMode(next).catch(e => app.showToast(String(e), true))
   }
 
+  function changeBackground(e: Event) {
+    app.setBackgroundFx((e.target as HTMLSelectElement).value as BackgroundFx)
+  }
+
   async function changeCurrency(e: Event) {
     const val = (e.target as HTMLSelectElement).value
     if (!app.settings) return
@@ -261,6 +265,18 @@
         <button class="toggle-switch" class:on={app.settings.dark_mode} onclick={toggleDarkMode} aria-label="Toggle dark mode">
           <span class="toggle-knob"></span>
         </button>
+      </div>
+      <div class="setting-row">
+        <div>
+          <span class="setting-label">{i18n.t('settings-background', 'Background')}</span>
+          <span class="setting-desc">{i18n.t('settings-background-desc', 'Choose the backdrop design')}</span>
+        </div>
+        <select value={app.backgroundFx} onchange={changeBackground}>
+          <option value="dots">{i18n.t('settings-bg-dots', 'Dots')}</option>
+          <option value="stars">{i18n.t('settings-bg-stars', 'Starfield')}</option>
+          <option value="aurora">{i18n.t('settings-bg-aurora', 'Aurora')}</option>
+          <option value="diamonds">{i18n.t('settings-bg-diamonds', 'Diamonds')}</option>
+        </select>
       </div>
     </section>
 
