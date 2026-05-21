@@ -136,6 +136,19 @@
 }
 .danger-btn:hover { background: rgba(248, 113, 113, 0.15); border-color: rgba(248, 113, 113, 0.3); }
 
+/* Tactile press feedback — transform-only, so it composites on the GPU with no
+   layout cost. The buttons above already transition `all`, so this just rides
+   along. (.glass-btn and the tab bar handle their own :active scale.) */
+.primary-btn:active:not(:disabled),
+.secondary-btn:active,
+.danger-btn:active,
+.icon-btn:active,
+.secondary-btn.small:active,
+.change-icon-btn:active,
+.toggle-btn:active {
+  transform: scale(0.97);
+}
+
 /* ── Glass action button ───────────────────────────────────────── */
 
 .glass-btn {
@@ -197,8 +210,8 @@ select option { background: var(--option-bg); color: var(--text-primary); }
 
 .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .panel-header h3 { margin: 0; color: var(--text-primary); font-size: 1rem; }
-.close-panel { background: none; border: none; color: var(--text-tertiary); cursor: pointer; padding: 4px; display: flex; transition: color 0.15s; }
-.close-panel:hover { color: var(--text-primary); }
+.close-panel { background: none; border: none; color: var(--text-tertiary); cursor: pointer; padding: 4px; display: flex; transition: color 0.15s, transform 0.2s ease; }
+.close-panel:hover { color: var(--text-primary); transform: rotate(90deg); }
 .close-panel svg { width: 20px; height: 20px; }
 
 .panel-meta { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; font-size: 0.9rem; color: var(--text-secondary); }
