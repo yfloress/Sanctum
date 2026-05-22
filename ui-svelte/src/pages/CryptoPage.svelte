@@ -573,6 +573,18 @@
     savedFlashTimer = setTimeout(() => { taxSavedFlash = false }, 1600)
   }
 
+  // Horizontal collapse for the Chile-only IPC card: as it mounts/unmounts the
+  // settings card (flex sibling) stretches to fill the row smoothly. Animates
+  // flex-grow so the flex layout drives the width. Respects reduced motion.
+  function collapseX(_node: HTMLElement, { duration = 300 }: { duration?: number } = {}) {
+    const reduce = typeof window !== 'undefined'
+      && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    return {
+      duration: reduce ? 0 : duration,
+      css: (t: number) => `flex-grow: ${t}; opacity: ${t}; overflow: hidden;`,
+    }
+  }
+
   // Chile (SII) accepts only FIFO + CPP; USA only FIFO + specific ID (LIFO/HIFO).
   // Keep the method valid when the jurisdiction changes, then persist.
   function onJurisdictionChange() {
@@ -1054,7 +1066,7 @@
 
           <!-- IPC card — only relevant for Chile (IPC / corrección monetaria) -->
           {#if taxJurisdiction === 'chile'}
-          <div class="ipc-section">
+          <div class="ipc-section" transition:collapseX>
             <h4 class="tax-card-title">{i18n.t('crypto-ipc-label', 'IPC Price History')}</h4>
             <p class="ipc-desc">{i18n.t('crypto-ipc-desc', 'Chile requires monthly IPC data for inflation adjustment. Import a CSV from INE.')}</p>
             <div class="ipc-status-row">
@@ -1831,8 +1843,10 @@
   .period-actions { display: flex; gap: 8px; align-items: flex-end; }
 
   /* Tax config grid */
-  .tax-config-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  @media (max-width: 640px) { .tax-config-row { grid-template-columns: 1fr; } }
+  .tax-config-row { display: flex; gap: 12px; align-items: stretch; }
+  .tax-config-row > .settings-info,
+  .tax-config-row > .ipc-section { flex: 1 1 0; min-width: 0; }
+  @media (max-width: 640px) { .tax-config-row { flex-direction: column; } }
 
   .settings-info {
     padding: 16px; background: var(--card-bg); backdrop-filter: var(--glass-blur);
