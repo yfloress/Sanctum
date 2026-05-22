@@ -24,8 +24,8 @@
           buildInputs = with pkgs; [
             nodejs_22
             pnpm
-            nodePackages.typescript
-            nodePackages.typescript-language-server
+            typescript
+            typescript-language-server
           ];
 
           shellHook = ''
