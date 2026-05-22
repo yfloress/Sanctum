@@ -235,7 +235,7 @@ mod tests {
             period_start: "2024-01-01".to_string(),
             period_end: "2024-12-31".to_string(),
             jurisdiction: "chile".to_string(),
-            method: "hifo".to_string(),
+            method: "fifo".to_string(),
             summary: TaxReportSummary {
                 disposals: 1,
                 total_proceeds: 10.0,

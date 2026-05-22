@@ -43,6 +43,18 @@
     onclose,
   }: Props = $props()
 
+  // Valid cost-basis methods differ by jurisdiction:
+  //   Chile (SII): FIFO + weighted-average (CPP) only — LIFO/HIFO not accepted.
+  //   USA (IRS):   FIFO + specific ID (LIFO/HIFO) — average cost not allowed for crypto.
+  // Reset to FIFO if the current selection becomes invalid for the jurisdiction.
+  $effect(() => {
+    if (taxJurisdiction === 'chile' && (taxMethod === 'lifo' || taxMethod === 'hifo')) {
+      taxMethod = 'fifo'
+    } else if (taxJurisdiction === 'usa' && taxMethod === 'cpp') {
+      taxMethod = 'fifo'
+    }
+  })
+
   async function handleSave() {
     await onsave()
   }
@@ -71,10 +83,19 @@
           {i18n.t('crypto-tax-cost-basis-method', 'Cost Basis Method')}
           <select bind:value={taxMethod}>
             <option value="fifo">{i18n.t('crypto-tax-method-fifo', 'FIFO')}</option>
-            <option value="lifo">{i18n.t('crypto-tax-method-lifo', 'LIFO')}</option>
-            <option value="hifo">{i18n.t('crypto-tax-method-hifo', 'HIFO')}</option>
-            <option value="cpp">{i18n.t('crypto-tax-method-avg', 'Average Cost')}</option>
+            {#if taxJurisdiction !== 'chile'}
+              <option value="lifo">{i18n.t('crypto-tax-method-lifo', 'LIFO')}</option>
+              <option value="hifo">{i18n.t('crypto-tax-method-hifo', 'HIFO')}</option>
+            {/if}
+            {#if taxJurisdiction !== 'usa'}
+              <option value="cpp">{i18n.t('crypto-tax-method-avg', 'Average Cost')}</option>
+            {/if}
           </select>
+          {#if taxJurisdiction === 'chile'}
+            <span class="field-hint">{i18n.t('crypto-tax-method-chile-hint', 'Chile (SII) only accepts FIFO and Average Cost.')}</span>
+          {:else if taxJurisdiction === 'usa'}
+            <span class="field-hint">{i18n.t('crypto-tax-method-usa-hint', 'USA accepts FIFO and Specific ID (LIFO/HIFO); average cost is not allowed for crypto.')}</span>
+          {/if}
         </label>
         <label>
           <input type="checkbox" bind:checked={taxIncludeSwaps} />
@@ -115,6 +136,7 @@
 {/if}
 
 <style>
+  .field-hint { display: block; font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px; }
   .exclusion-section { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
   .exclusion-title { font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; }
   .exclusion-row {

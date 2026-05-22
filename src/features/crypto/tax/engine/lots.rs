@@ -638,7 +638,6 @@ fn split_term_gain(
     let mut long_gain = 0.0;
 
     for alloc in allocations {
-        let holding_days = (sale_date - alloc.lot_date).num_days();
         let alloc_proceeds = proceeds_per_unit * alloc.allocation.quantity;
         let alloc_cost = alloc
             .allocation
@@ -646,7 +645,7 @@ fn split_term_gain(
             .unwrap_or(alloc.allocation.cost);
         let gain = alloc_proceeds - alloc_cost;
 
-        if holding_days >= 365 {
+        if is_long_term(alloc.lot_date, sale_date) {
             long_gain += gain;
         } else {
             short_gain += gain;
@@ -654,6 +653,18 @@ fn split_term_gain(
     }
 
     (short_gain, long_gain)
+}
+
+/// Long-term capital gain test (USA / generic): the asset must be held for
+/// **more than one year**, measured by calendar anniversary. The holding
+/// period begins the day after acquisition, so this uses the one-year
+/// anniversary date rather than a flat 365-day count — keeping leap years and
+/// the exact one-year boundary correct.
+fn is_long_term(acquired: chrono::NaiveDate, sale: chrono::NaiveDate) -> bool {
+    match acquired.checked_add_months(chrono::Months::new(12)) {
+        Some(anniversary) => sale > anniversary,
+        None => (sale - acquired).num_days() > 365,
+    }
 }
 
 pub(super) fn build_term(

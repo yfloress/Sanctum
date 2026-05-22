@@ -278,7 +278,9 @@ impl TaxPeriodSettings {
         Self {
             period_id: period_id.to_string(),
             jurisdiction: TaxJurisdiction::Chile,
-            method: TaxMethod::Hifo,
+            // FIFO is the SII-accepted default for Chile (LIFO/HIFO are not
+            // accepted; CPP is allowed when FIFO cannot be substantiated).
+            method: TaxMethod::Fifo,
             include_swaps: true,
             include_fee_crypto: true,
             excluded_wallet_ids: Vec::new(),

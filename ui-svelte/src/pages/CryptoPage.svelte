@@ -892,6 +892,10 @@
   <!-- TAX TAB -->
   {:else if activeTab === 'tax'}
     <div class="tax-section">
+      <div class="tax-disclaimer">
+        <span class="tax-beta-badge">{i18n.t('crypto-tax-beta-badge', 'BETA')}</span>
+        <p>{i18n.t('crypto-tax-disclaimer', 'Tax reporting is experimental. These figures are estimates, not tax advice — verify the results with a qualified tax professional before filing.')}</p>
+      </div>
       {#if !taxSettings}
         <!-- Empty state / onboarding -->
         <div class="tax-onboarding">
@@ -1008,7 +1012,7 @@
             <ul class="chile-info-list">
               <li>{i18n.t('crypto-tax-chile-ipc', 'IPC adjustments (correccion monetaria) are applied to cost basis and gains automatically.')}</li>
               <li>{i18n.t('crypto-tax-chile-clp', 'All values in this report are shown in Chilean Pesos (CLP). For filing, use the Dolar Observado published by SII.')}</li>
-              <li>{i18n.t('crypto-tax-chile-f22', 'File under Formulario 22, Linea 7 (Mayor Valor). Verify current casilla codes with the SII suplemento tributario.')}</li>
+              <li>{i18n.t('crypto-tax-chile-f22', 'File under Formulario 22, Línea 10, code 1032 (mayor valor, other income). Verify current codes in the SII suplemento tributario.')}</li>
               <li>{i18n.t('crypto-tax-chile-exemption', 'Net annual income under 13.5 UTA (~$11.3M CLP in 2026) is exempt from IGC.')}</li>
               <li>{i18n.t('crypto-tax-chile-fees', 'Fees and commissions treatment may vary. Consult a Chilean tax professional for your specific situation.')}</li>
             </ul>
@@ -1670,6 +1674,18 @@
 
   /* Tax Section */
   .tax-section { display: flex; flex-direction: column; gap: 24px; }
+  .tax-disclaimer {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 14px; border-radius: 10px;
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+  }
+  .tax-disclaimer p { margin: 0; font-size: 0.78rem; color: var(--text-secondary); line-height: 1.4; }
+  .tax-beta-badge {
+    flex-shrink: 0; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.05em;
+    padding: 2px 7px; border-radius: 6px; background: #f59e0b; color: #1a1205;
+    text-transform: uppercase;
+  }
 
   /* Tax onboarding */
   .tax-onboarding {
