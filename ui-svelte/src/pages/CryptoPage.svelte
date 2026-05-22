@@ -1025,7 +1025,8 @@
             </div>
           </div>
 
-          <!-- IPC card (Chile only visually prominent, but always shown) -->
+          <!-- IPC card — only relevant for Chile (IPC / corrección monetaria) -->
+          {#if taxJurisdiction === 'chile'}
           <div class="ipc-section">
             <h4 class="tax-card-title">{i18n.t('crypto-ipc-label', 'IPC Price History')}</h4>
             <p class="ipc-desc">{i18n.t('crypto-ipc-desc', 'Chile requires monthly IPC data for inflation adjustment. Import a CSV from INE.')}</p>
@@ -1045,6 +1046,7 @@
               <button class="glass-btn" onclick={() => ipcFileInput.click()}>{i18n.t('crypto-ipc-import', 'Import IPC CSV')}</button>
             </div>
           </div>
+          {/if}
         </div>
 
         <!-- Chile-specific info -->
