@@ -32,6 +32,7 @@
   let recent = $state<RecentTransaction[]>([])
   let analytics = $state<AnalyticsData | null>(null)
   let selectedRange = $state(savedRange)
+  let rangeLoading = $state(false)
   let loading = $state(true)
   let error = $state('')
 
@@ -58,10 +59,13 @@
   async function changeRange(range: string) {
     savedRange = range
     selectedRange = range
+    rangeLoading = true
     try {
       analytics = await dashboardApi.fetchAnalytics(range)
     } catch (e) {
       app.showToast(String(e), true)
+    } finally {
+      rangeLoading = false
     }
   }
 
@@ -187,6 +191,9 @@
         </div>
         {#if analytics.chart.dates.length > 0}
           <NetWorthChart data={analytics.chart} range={selectedRange} />
+          {#if rangeLoading}
+            <div class="chart-loading-overlay"><div class="mini-spinner"></div></div>
+          {/if}
         {:else}
           <p class="chart-empty">{i18n.t('dashboard-no-data-range', 'No data for this range')}</p>
         {/if}
@@ -258,6 +265,17 @@
       </div>
     {/if}
 
+  {:else}
+    <div class="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px;color:var(--accent);margin-bottom:16px">
+        <path d="M12 20V10"/>
+        <path d="M18 20V4"/>
+        <path d="M6 20v-4"/>
+      </svg>
+      <h3>{i18n.t('dashboard-welcome', 'Welcome to Sanctum')}</h3>
+      <p>{i18n.t('dashboard-welcome-desc', 'Add accounts and transactions in the Finances page to see your overview here.')}</p>
+    </div>
+
   {/if}
 </div>
 
@@ -293,6 +311,28 @@
   .error-state button:hover {
     background: var(--glass-hover);
     border-color: var(--glass-border-hover);
+  }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 0;
+    text-align: center;
+  }
+  .empty-state h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 8px;
+  }
+  .empty-state p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    max-width: 320px;
+    margin: 0;
+    line-height: 1.5;
   }
 
   /* ── Hero ─────────────────────────────────────────────────── */
@@ -518,6 +558,20 @@
     font-size: 0.85rem;
     margin: 0;
   }
+
+  .chart-card { position: relative; }
+  .chart-loading-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* cash-flow */
 
   /* ── Bottom grid ──────────────────────────────────────────── */
   .bottom-grid {

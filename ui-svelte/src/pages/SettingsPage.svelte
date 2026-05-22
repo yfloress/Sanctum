@@ -26,8 +26,12 @@
     ExchangeDetectionResult
   } from '../lib/types'
 
+  import ConfirmDialog from '../components/ConfirmDialog.svelte'
+
   let info = $state<AppInfo | null>(null)
   let maxFileSize = $state(0)
+  let settingsLoading = $state(true)
+  let showResetConfirm = $state(false)
 
   // Import state
   type ImportStep = 'idle' | 'preview' | 'results'
@@ -53,6 +57,8 @@
       maxFileSize = maxSize
     } catch (e) {
       app.showToast(String(e), true)
+    } finally {
+      settingsLoading = false
     }
   }
 
@@ -457,7 +463,7 @@
             type="text"
             bind:value={app.settings.proxy_url}
             onblur={updateProxyUrl}
-            placeholder="https://proxy.example.com"
+            placeholder={i18n.t('settings-proxy-placeholder', 'socks5://127.0.0.1:9050')}
           />
         </div>
       {/if}
@@ -473,6 +479,13 @@
           <span class="about-label">{i18n.t('settings-about-storage', 'Storage')}</span><span>{info.storage}</span>
         </div>
       </section>
+    {:else if settingsLoading}
+      <section class="section">
+        <h3>{i18n.t('settings-about', 'About')}</h3>
+        <div class="skeleton" style="width:140px;height:14px;margin-bottom:8px"></div>
+        <div class="skeleton" style="width:100px;height:14px;margin-bottom:8px"></div>
+        <div class="skeleton" style="width:160px;height:14px"></div>
+      </section>
     {/if}
 
     <!-- Danger Zone -->
@@ -483,11 +496,22 @@
           <span class="setting-label">{i18n.t('settings-reset-all', 'Reset All Settings')}</span>
           <span class="setting-desc">{i18n.t('settings-reset-all-desc', 'Restore default values for all settings')}</span>
         </div>
-        <button class="danger-btn" onclick={resetAllSettings}>{i18n.t('settings-reset-btn', 'Reset')}</button>
+        <button class="danger-btn" onclick={() => showResetConfirm = true}>{i18n.t('settings-reset-btn', 'Reset')}</button>
       </div>
     </section>
   {/if}
 </div>
+
+<ConfirmDialog
+  show={showResetConfirm}
+  message={i18n.t('confirm-reset-settings', 'Reset all settings to their default values? This will not affect your data.')}
+  danger
+  onconfirm={async () => {
+    await resetAllSettings()
+    showResetConfirm = false
+  }}
+  onclose={() => showResetConfirm = false}
+/>
 
 <style>
   .page { padding: 24px 32px; max-width: 640px; width: 100%; margin: 0 auto; }

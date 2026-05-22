@@ -23,6 +23,7 @@
   import DistributionChart from '../components/charts/DistributionChart.svelte'
   import CryptoTransactionModal from '../components/crypto/CryptoTransactionModal.svelte'
   import CryptoEditModal from '../components/crypto/CryptoEditModal.svelte'
+  import ConfirmDialog from '../components/ConfirmDialog.svelte'
   import CryptoWalletPanel from '../components/crypto/CryptoWalletPanel.svelte'
   import CryptoAssetPanel from '../components/crypto/CryptoAssetPanel.svelte'
   import CryptoTaxPanel from '../components/crypto/CryptoTaxPanel.svelte'
@@ -79,6 +80,7 @@
   let txList = $state<CryptoTransactionDto[]>([])
   let txListHasMore = $state(false)
   let txListFilter = $state('')
+  let pendingDeleteTxId = $state<string | null>(null)
 
   async function changeTrendDays(days: number) {
     trendDays = days
@@ -771,7 +773,7 @@
           <h3>{i18n.t('crypto-distribution', 'Distribution')}</h3>
           <DistributionChart data={portfolio.distribution} />
         </div>
-      {/if}
+    {/if}
     {/if}
 
     <!-- Recent Transactions -->
@@ -801,6 +803,17 @@
           {/each}
         </div>
       {/if}
+    </div>
+
+  <!-- Portfolio empty (no data loaded) -->
+  {:else if activeTab === 'portfolio' && !portfolio}
+    <div class="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:48px;height:48px;color:var(--accent);margin-bottom:16px">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M8 12h8M12 8v8"/>
+      </svg>
+      <h3>{i18n.t('crypto-welcome', 'Welcome to Crypto')}</h3>
+      <p>{i18n.t('crypto-welcome-desc', 'Add wallets and transactions in the Wallets tab to start tracking your portfolio.')}</p>
     </div>
 
   <!-- WALLETS TAB -->
@@ -864,7 +877,7 @@
                 </div>
               </div>
               <span class="tx-amount" class:buy={getCryptoTxClass(tx) === 'buy'} class:sell={getCryptoTxClass(tx) === 'sell'} class:transfer={getCryptoTxClass(tx) === 'transfer'}>{mask(tx.value)}</span>
-              <button class="delete-btn" onclick={(e: MouseEvent) => { e.stopPropagation(); deleteCryptoTx(tx.id) }} aria-label={i18n.t('crypto-delete', 'Delete')}>
+              <button class="delete-btn" onclick={(e: MouseEvent) => { e.stopPropagation(); pendingDeleteTxId = tx.id }} aria-label={i18n.t('crypto-delete', 'Delete')}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
               </button>
             </div>
@@ -1369,6 +1382,18 @@
   onclose={() => showEditTransaction = false}
 />
 
+<!-- Delete Transaction Confirm -->
+<ConfirmDialog
+  show={pendingDeleteTxId !== null}
+  message={i18n.t('confirm-delete-transaction', 'Are you sure you want to delete this transaction?')}
+  danger
+  onconfirm={async () => {
+    if (pendingDeleteTxId) await deleteCryptoTx(pendingDeleteTxId)
+    pendingDeleteTxId = null
+  }}
+  onclose={() => pendingDeleteTxId = null}
+/>
+
 <style>
   .page { padding: 24px 32px; max-width: 960px; width: 100%; margin: 0 auto; }
 
@@ -1430,6 +1455,27 @@
 
   .skeleton-page { padding: 8px 0; }
   .empty { text-align: center; padding: 48px; color: var(--text-tertiary); }
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 0;
+    text-align: center;
+  }
+  .empty-state h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 8px;
+  }
+  .empty-state p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    max-width: 320px;
+    margin: 0;
+    line-height: 1.5;
+  }
 
   /* Stats bar */
   .stats-bar { display: flex; gap: 24px; margin-bottom: 24px; }

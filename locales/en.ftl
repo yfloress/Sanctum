@@ -87,6 +87,8 @@ nav-expand = Expand
 nav-group-overview = Overview
 nav-group-vault = Vault
 nav-group-system = System
+nav-hide-balances = Hide Balances
+nav-show-balances = Show Balances
 
 # ==================== Dashboard ====================
 dashboard-title = Dashboard
@@ -274,6 +276,10 @@ crypto-cancel = Cancel
 crypto-saving = Saving...
 crypto-edit = Edit
 crypto-delete = Delete
+crypto-change = Change
+crypto-close = Close
+crypto-wallet-icon = Wallet Icon
+crypto-change-icon = Change Icon
 
 # -- Asset detail panel --
 crypto-amount = Amount
@@ -320,6 +326,7 @@ crypto-ipc-label = IPC Price History
 crypto-ipc-records = {$count} records {$range}
 crypto-ipc-no-data = No IPC data imported
 crypto-ipc-import = Import IPC CSV
+crypto-ipc-desc = Download the official IPC series, convert it to CSV, and import it here. No network requests are made by default.
 
 # -- Tax settings modal --
 crypto-tax-settings-title = Tax Settings
@@ -459,6 +466,7 @@ habits-activity-heatmap = Activity Heatmap
 habits-current-streak = Current Streak
 habits-best-streak = Best Streak
 habits-completion = Completion
+habits-completions = Completions
 habits-last-30-days = Last 30 Days
 habits-edit = Edit
 habits-delete = Delete
@@ -466,6 +474,9 @@ habits-delete = Delete
 # Analytics
 habits-habit-radar = Habit Radar
 habits-weekday-efficiency = Weekday Efficiency
+habits-less = Less
+habits-more = More
+habits-prev-year = Prev year
 
 # Month names
 month-january = January
@@ -572,6 +583,12 @@ settings-reset-section = Reset
 # Appearance
 settings-dark-mode = Dark Mode
 settings-dark-mode-desc = Toggle dark/light theme
+settings-background = Background
+settings-background-desc = Choose the app background style
+settings-bg-aurora = Aurora
+settings-bg-diamonds = Diamonds
+settings-bg-dots = Dots
+settings-bg-stars = Stars
 
 # Regional
 settings-preferred-currency = Preferred Currency

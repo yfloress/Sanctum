@@ -74,6 +74,7 @@ pub fn run() {
             commands::settings::get_app_info,
             commands::settings::get_session_remaining,
             commands::settings::get_translations,
+            commands::settings::set_login_wallpaper,
             // Dashboard domain
             commands::dashboard::fetch_balance,
             commands::dashboard::fetch_recent,

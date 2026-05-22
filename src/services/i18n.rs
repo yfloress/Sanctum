@@ -77,14 +77,19 @@ impl I18nState {
         let langid: LanguageIdentifier =
             lang_code.parse().unwrap_or_else(|_| "en".parse().unwrap());
 
-        let resource =
-            FluentResource::try_new(ftl_content.to_string()).expect("Failed to parse FTL resource");
+        let resource = match FluentResource::try_new(ftl_content.to_string()) {
+            Ok(r) => r,
+            Err(e) => {
+                log::error!("Failed to parse FTL resource for '{}': {:?}", lang_code, e);
+                FluentResource::try_new(String::new()).unwrap_or(FluentResource::try_new(" ".to_string()).unwrap())
+            }
+        };
 
         let mut bundle = FluentBundle::new_concurrent(vec![langid]);
-        bundle.set_use_isolating(false); // Disable Unicode isolation marks
-        bundle
-            .add_resource(resource)
-            .expect("Failed to add FTL resource");
+        bundle.set_use_isolating(false);
+        if let Err(e) = bundle.add_resource(resource) {
+            log::error!("Failed to add FTL resource for '{}': {:?}", lang_code, e);
+        }
 
         Self {
             bundle,

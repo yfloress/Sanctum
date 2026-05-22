@@ -69,3 +69,7 @@ export async function getSessionRemaining(): Promise<number> {
 export async function getTranslations(): Promise<Record<string, string>> {
   return invoke<Record<string, string>>('get_translations')
 }
+
+export async function setLoginWallpaper(path: string | null): Promise<void> {
+  return invoke('set_login_wallpaper', { path })
+}

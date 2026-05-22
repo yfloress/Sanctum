@@ -243,7 +243,7 @@ pub fn reset_settings(controller: State<'_, Arc<AppController>>) -> Result<(), S
 #[tauri::command]
 pub fn get_app_info() -> AppInfo {
     AppInfo {
-        version: "1.0.0".to_string(),
+        version: env!("CARGO_PKG_VERSION").to_string(),
         encryption: "SQLCipher (AES-256)".to_string(),
         storage: "SQLite (encrypted)".to_string(),
     }
@@ -265,4 +265,15 @@ pub fn get_session_remaining(
 #[tauri::command]
 pub fn get_translations() -> std::collections::HashMap<String, String> {
     sanctum::services::i18n::get_all_translations()
+}
+
+/// Set the login wallpaper image path.
+#[tauri::command]
+pub fn set_login_wallpaper(
+    controller: State<'_, Arc<AppController>>,
+    path: Option<String>,
+) -> Result<(), String> {
+    controller
+        .set_login_wallpaper_path(path.map(std::path::PathBuf::from))
+        .map_err(|e| e.to_string())
 }

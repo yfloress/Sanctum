@@ -205,7 +205,7 @@
     {/if}
   </div>
 
-  <div class="version-tag">{i18n.t('login-version', 'Sanctum v0.1.0')}</div>
+  <div class="version-tag">{i18n.t('login-version', 'Sanctum')}</div>
 </div>
 
 <style>

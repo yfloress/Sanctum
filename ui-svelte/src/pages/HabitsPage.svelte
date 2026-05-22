@@ -33,6 +33,7 @@
   type Tab = 'habits' | 'rewards' | 'history'
   let activeTab = $state<Tab>('habits')
   let loading = $state(true)
+  let monthLoading = $state(false)
 
   // Habits tab state
   let habitsData = $state<HabitsResponse | null>(null)
@@ -69,6 +70,7 @@
       app.showToast(String(e), true)
     } finally {
       loading = false
+      monthLoading = false
     }
   }
 
@@ -96,12 +98,14 @@
   function prevMonth() {
     if (month === 1) { month = 12; year-- }
     else { month-- }
+    monthLoading = true
     load()
   }
 
   function nextMonth() {
     if (month === 12) { month = 1; year++ }
     else { month++ }
+    monthLoading = true
     load()
   }
 
@@ -200,6 +204,9 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 19l-7-7 7-7"/></svg>
         </button>
         <span class="month-label">{monthNames[month - 1]} {year}</span>
+        {#if monthLoading}
+          <div class="mini-spinner"></div>
+        {/if}
         <button class="nav-arrow" aria-label="Next month" onclick={nextMonth}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg>
         </button>
