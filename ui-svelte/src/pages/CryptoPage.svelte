@@ -448,6 +448,9 @@
   let taxFillingTxId = $state<string | null>(null)
   let taxSettings = $state<TaxSettingsDto | null>(null)
   let taxReportLoading = $state(false)
+  let taxReportStale = $state(false)
+  let taxSavedFlash = $state(false)
+  let savedFlashTimer: ReturnType<typeof setTimeout> | null = null
 
   let taxCurrency = $derived(taxReport?.jurisdiction === 'chile' ? 'CLP' : app.settings?.preferred_currency ?? 'USD')
 
@@ -525,6 +528,7 @@
         excluded_wallet_ids: taxExcludedWalletIds
       })
       showTaxSettings = false
+      if (taxReport) taxReportStale = true
       app.showToast(i18n.t('crypto-toast-settings-saved', 'Settings saved'))
     } catch (e) {
       app.showToast(String(e), true)
@@ -554,9 +558,18 @@
         include_swaps: taxIncludeSwaps,
         include_fee_crypto: taxIncludeFeeCrypto,
       }
+      flashSaved()
+      if (taxReport) taxReportStale = true
     } catch (e) {
       app.showToast(String(e), true)
     }
+  }
+
+  // Brief inline "saved" confirmation for the auto-saving quick controls.
+  function flashSaved() {
+    taxSavedFlash = true
+    if (savedFlashTimer) clearTimeout(savedFlashTimer)
+    savedFlashTimer = setTimeout(() => { taxSavedFlash = false }, 1600)
   }
 
   // Chile (SII) accepts only FIFO + CPP; USA only FIFO + specific ID (LIFO/HIFO).
@@ -579,6 +592,7 @@
     try {
       taxSummary = await cryptoApi.generateTaxSummary(taxPeriodId)
       taxReport = taxSummary.report
+      taxReportStale = false
     } catch (e) {
       app.showToast(String(e), true)
     } finally {
@@ -983,7 +997,10 @@
         <div class="tax-config-row">
           <!-- Quick settings (inline editable) -->
           <div class="settings-info">
-            <h4 class="tax-card-title">{i18n.t('crypto-tax-settings-title', 'Tax Settings')}</h4>
+            <h4 class="tax-card-title">
+              {i18n.t('crypto-tax-settings-title', 'Tax Settings')}
+              {#if taxSavedFlash}<span class="saved-flash">✓ {i18n.t('crypto-tax-saved', 'Saved')}</span>{/if}
+            </h4>
             <div class="quick-settings">
               <label class="quick-field">
                 <span class="label">{i18n.t('crypto-tax-jurisdiction', 'Jurisdiction')}</span>
@@ -1091,6 +1108,12 @@
       {/if}
 
       {#if taxReport && !taxReportLoading}
+        {#if taxReportStale}
+          <div class="report-stale">
+            <span>{i18n.t('crypto-tax-report-stale', 'Settings changed since this report was generated. Regenerate to apply them.')}</span>
+            <button class="glass-btn" onclick={generateTaxReport}>{i18n.t('crypto-tax-regenerate', 'Regenerate')}</button>
+          </div>
+        {/if}
         <!-- Report summary -->
         <div class="report-summary">
           <div class="tax-card-header">
@@ -1148,6 +1171,10 @@
             {/if}
           </div>
         </div>
+
+        {#if taxReport.disposals_count === 0}
+          <div class="report-empty">{i18n.t('crypto-tax-no-disposals', 'No taxable disposals in this period. Income, transfers and unsold holdings do not produce a gain until sold or swapped.')}</div>
+        {/if}
 
         <!-- Readiness checklist -->
         {#if taxReport.readiness && taxReport.readiness.length > 0}
@@ -1741,6 +1768,18 @@
   .quick-toggle { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--text-secondary); cursor: pointer; }
   .quick-toggle input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; }
   .quick-hint { font-size: 0.72rem; color: var(--text-secondary); opacity: 0.85; }
+  .saved-flash { margin-left: 8px; font-size: 0.7rem; font-weight: 600; color: #34d399; }
+  .report-stale {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 14px; border-radius: 10px;
+    background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35);
+    font-size: 0.8rem; color: var(--text-secondary);
+  }
+  .report-empty {
+    padding: 16px; border-radius: 10px; text-align: center;
+    background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+    font-size: 0.85rem; color: var(--text-secondary);
+  }
 
   /* Tax onboarding */
   .tax-onboarding {
