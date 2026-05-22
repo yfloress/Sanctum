@@ -69,7 +69,8 @@
     --noise-opacity: 0.06;
     --noise-size: 160px;
     --noise-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
-    --dot-pattern: radial-gradient(circle, rgba(124, 58, 237, 0.16) 1px, transparent 1.6px);
+    --star-color: rgba(109, 40, 217, 0.75);
+    --star-glow: rgba(109, 40, 217, 0.40);
     color-scheme: light;
   }
 
@@ -111,7 +112,8 @@
     --hero-ink: rgba(255, 255, 255, 0.14);
     --section-ink: rgba(0, 0, 0, 0.8);
     --noise-opacity: 0.13;
-    --dot-pattern: radial-gradient(circle, rgba(255, 255, 255, 0.06) 1px, transparent 1.6px);
+    --star-color: rgba(255, 255, 255, 0.92);
+    --star-glow: rgba(192, 132, 252, 0.60);
     color-scheme: dark;
   }
 }
@@ -244,93 +246,117 @@
     transform: translateX(0);
   }
 
+  /* The page background lives in a single fixed, viewport-anchored layer
+     (.bg-fx) so glows stay put (no more drifting with the tall <main>) and the
+     animated starfield sits behind all content. Sections are transparent. */
   .bg-sanctum-section {
-    background-image:
-      var(--dot-pattern),
-      radial-gradient(circle at 20% 25%, color-mix(in srgb, var(--section-ink), transparent 20%), transparent 65%),
-      radial-gradient(circle at 85% 15%, color-mix(in srgb, var(--section-ink), transparent 28%), transparent 70%),
-      radial-gradient(circle at 60% 85%, color-mix(in srgb, var(--section-ink), transparent 35%), transparent 70%),
-      linear-gradient(90deg, color-mix(in srgb, var(--grad-primary-start), transparent 50%), color-mix(in srgb, var(--grad-primary-end), transparent 55%)),
-      radial-gradient(circle at 18% 6%, color-mix(in srgb, var(--glow-primary), transparent 24%), transparent 60%),
-      radial-gradient(circle at 82% 10%, color-mix(in srgb, var(--glow-secondary), transparent 26%), transparent 58%),
-      radial-gradient(circle at 50% 55%, color-mix(in srgb, var(--glow-primary), transparent 72%), transparent 70%),
-      radial-gradient(circle at 50% 100%, color-mix(in srgb, var(--glow-secondary), transparent 78%), transparent 75%),
-      linear-gradient(90deg, color-mix(in srgb, var(--glow-primary), transparent 90%), transparent 55%),
-      linear-gradient(
-        90deg,
-        var(--grad-section-start) 0%,
-        color-mix(in srgb, var(--grad-section-end), var(--accent) 22%) 100%
-      );
-    background-size:
-      22px 22px,
-      auto,
-      auto,
-      auto,
-      auto,
-      auto,
-      auto,
-      auto,
-      auto,
-      auto,
-      auto;
+    background: transparent;
   }
 
-  html:not(.dark) .bg-sanctum-section {
-    background-image:
-      var(--dot-pattern),
-      radial-gradient(circle at 20% 20%, rgba(107, 95, 232, 0.12), transparent 60%),
-      radial-gradient(circle at 80% 15%, rgba(180, 109, 255, 0.12), transparent 58%),
-      linear-gradient(90deg, #ffffff 0%, #b79bff 100%);
-    background-size:
-      22px 22px,
-      auto,
-      auto,
-      auto;
+  .bg-fx {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
   }
 
-  .dark .bg-sanctum-section {
-    background-image:
-      var(--dot-pattern),
-      linear-gradient(
-        90deg,
-        #09090f 0%,
-        #09090f 12%,
-        rgba(9, 9, 15, 0.6) 38%,
-        transparent 100%
-      ),
-      linear-gradient(
-        90deg,
-        #09090f 0%,
-        #09090f 25%,
-        #160a2a 55%,
-        #25104a 80%,
-        #34155f 100%
-      ),
-      radial-gradient(circle at 20% 25%, color-mix(in srgb, var(--section-ink), transparent 20%), transparent 65%),
-      radial-gradient(circle at 85% 15%, color-mix(in srgb, var(--section-ink), transparent 28%), transparent 70%),
-      radial-gradient(circle at 60% 85%, color-mix(in srgb, var(--section-ink), transparent 35%), transparent 70%),
-      linear-gradient(90deg, color-mix(in srgb, var(--grad-primary-start), transparent 52%), color-mix(in srgb, var(--grad-primary-end), transparent 58%)),
-      radial-gradient(circle at 18% 6%, color-mix(in srgb, var(--glow-primary), transparent 24%), transparent 60%),
-      radial-gradient(circle at 82% 10%, color-mix(in srgb, var(--glow-secondary), transparent 26%), transparent 58%),
-      radial-gradient(circle at 50% 55%, color-mix(in srgb, var(--glow-primary), transparent 72%), transparent 70%),
-      radial-gradient(circle at 50% 100%, color-mix(in srgb, var(--glow-secondary), transparent 78%), transparent 75%),
-      linear-gradient(90deg, color-mix(in srgb, var(--glow-primary), transparent 90%), transparent 55%);
-    background-color: #09090f;
-    background-size:
-      22px 22px,
-      100% 100%,
-      100% 100%,
-      auto,
-      auto,
-      auto,
-      auto,
-      auto,
-      auto,
-      auto,
-      auto,
-      auto,
-      auto;
+  /* Soft glow blobs — drift slowly and follow the cursor a little (depth). */
+  .bg-fx__glows {
+    position: absolute;
+    inset: -12%;
+    transform: translate3d(calc(var(--mx, 0px) * 0.35), calc(var(--my, 0px) * 0.35), 0);
+    transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
   }
+  .bg-fx__glow {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(72px);
+    opacity: 0.55;
+  }
+  .bg-fx__glow--1 {
+    width: 44vw; height: 44vw; left: -8vw; top: -10vh;
+    background: var(--glow-primary);
+    animation: bgFloat1 30s ease-in-out infinite alternate;
+  }
+  .bg-fx__glow--2 {
+    width: 38vw; height: 38vw; right: -8vw; top: 10vh;
+    background: var(--glow-secondary);
+    animation: bgFloat2 36s ease-in-out infinite alternate;
+  }
+  .bg-fx__glow--3 {
+    width: 40vw; height: 40vw; left: 28vw; bottom: -16vh;
+    background: var(--glow-primary);
+    animation: bgFloat3 42s ease-in-out infinite alternate;
+  }
+
+  /* Star layer — twinkles, and parallaxes with the cursor (full factor). */
+  .bg-fx__stars {
+    position: absolute;
+    inset: -6%;
+    transform: translate3d(var(--mx, 0px), var(--my, 0px), 0);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .bg-fx__star {
+    position: absolute;
+    border-radius: 50%;
+    background: var(--star-color, rgba(255, 255, 255, 0.9));
+    opacity: 0.12;
+    animation-name: bgTwinkle;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+    will-change: opacity;
+  }
+  .bg-fx__star--bright {
+    box-shadow: 0 0 5px 1px var(--star-glow, rgba(255, 255, 255, 0.5));
+  }
+
+  @keyframes bgTwinkle { 0%, 100% { opacity: 0.1; } 50% { opacity: 0.9; } }
+  @keyframes bgFloat1 { from { transform: translate(0, 0); } to { transform: translate(4vw, 5vh); } }
+  @keyframes bgFloat2 { from { transform: translate(0, 0); } to { transform: translate(-5vw, 4vh); } }
+  @keyframes bgFloat3 { from { transform: translate(0, 0); } to { transform: translate(3vw, -5vh); } }
+
+  /* Motion off — freeze stars/glows and drop parallax. */
+  [data-motion="off"] .bg-fx__star { animation: none; opacity: 0.55; }
+  [data-motion="off"] .bg-fx__glow { animation: none; }
+  [data-motion="off"] .bg-fx__stars,
+  [data-motion="off"] .bg-fx__glows { transform: none; transition: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bg-fx__star { animation: none; opacity: 0.5; }
+    .bg-fx__glow { animation: none; }
+    .bg-fx__stars,
+    .bg-fx__glows { transform: none; }
+  }
+
+  /* Subtle floating animation toggle. */
+  .motion-toggle {
+    position: fixed;
+    right: 1rem;
+    bottom: 1rem;
+    z-index: 40;
+    height: 2.5rem;
+    width: 2.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--border), transparent 20%);
+    background: color-mix(in srgb, var(--card), transparent 25%);
+    color: var(--muted-foreground);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 8px 20px rgba(12, 10, 28, 0.22);
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.2s ease, transform 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .motion-toggle:hover { opacity: 1; color: var(--foreground); transform: translateY(-2px); }
+  .motion-toggle:active { transform: translateY(0) scale(0.96); }
+  .motion-toggle svg { width: 1.1rem; height: 1.1rem; }
+  .motion-toggle .icon-static { display: none; }
+  [data-motion="off"] .motion-toggle .icon-animated { display: none; }
+  [data-motion="off"] .motion-toggle .icon-static { display: block; }
 
 
   .panel-gradient {
@@ -396,7 +422,7 @@
     opacity: 0;
     transform: translateY(6px);
     transition: opacity 0.3s ease, transform 0.3s ease;
-    box-shadow: 0 12px 30px color-mix(in srgb, var(--glow-primary), transparent 70%);
+    box-shadow: 0 8px 18px rgba(12, 10, 28, 0.22);
   }
 
   .sanctum-slider__btn span {
@@ -461,11 +487,11 @@
   }
 
   .shadow-glow {
-    box-shadow: 0 30px 80px var(--glow-shadow);
+    box-shadow: 0 16px 38px rgba(12, 10, 28, 0.22);
   }
 
   .shadow-strong {
-    box-shadow: 0 36px 120px var(--glow-strong);
+    box-shadow: 0 22px 55px rgba(12, 10, 28, 0.30);
   }
 
   .panel-hover {
@@ -474,7 +500,7 @@
 
   .panel-hover:hover {
     border-color: color-mix(in srgb, var(--glow-secondary), transparent 30%);
-    box-shadow: 0 24px 60px var(--glow-strong);
+    box-shadow: 0 16px 40px rgba(12, 10, 28, 0.26);
     transform: translateY(-2px);
   }
 
@@ -523,7 +549,7 @@
   .tab-button.is-active {
     color: var(--foreground);
     background: linear-gradient(135deg, var(--grad-primary-start), var(--grad-primary-end));
-    box-shadow: 0 12px 30px color-mix(in srgb, var(--glow-primary), transparent 70%);
+    box-shadow: 0 8px 18px rgba(12, 10, 28, 0.22);
   }
 
   .code-scroll {
@@ -553,7 +579,7 @@
   }
 
   .btn-glow {
-    box-shadow: 0 0 22px color-mix(in srgb, var(--glow-primary), transparent 35%);
+    box-shadow: none;
   }
 
   .btn-active {
@@ -574,7 +600,7 @@
     background-clip: padding-box, border-box;
     background-origin: border-box;
     color: var(--primary-foreground);
-    box-shadow: 0 0 28px color-mix(in srgb, var(--glow-primary), transparent 35%);
+    box-shadow: none;
   }
 
   .theme-toggle {
@@ -589,7 +615,7 @@
   .theme-toggle:hover {
     transform: translateY(-2px);
     filter: brightness(1.08);
-    box-shadow: 0 10px 30px color-mix(in srgb, var(--glow-primary), transparent 60%);
+    box-shadow: 0 12px 26px rgba(12, 10, 28, 0.25);
   }
 
   .theme-toggle:active {
@@ -621,7 +647,7 @@
     align-items: center;
     justify-content: center;
     background: linear-gradient(135deg, var(--grad-primary-start), var(--grad-primary-end));
-    box-shadow: 0 4px 12px color-mix(in srgb, var(--glow-primary), transparent 35%);
+    box-shadow: 0 3px 8px rgba(12, 10, 28, 0.28);
     transition: transform 0.25s ease;
     color: var(--foreground);
   }
@@ -722,7 +748,7 @@
     border-radius: 1rem;
     border: 1px solid color-mix(in srgb, var(--border), transparent 30%);
     background: linear-gradient(140deg, var(--grad-surface-start), var(--grad-surface-end));
-    box-shadow: 0 24px 60px color-mix(in srgb, var(--glow-primary), transparent 55%);
+    box-shadow: 0 8px 18px rgba(12, 10, 28, 0.20);
     z-index: 50;
     display: grid;
     gap: 0.35rem;
@@ -748,7 +774,7 @@
   .nav-mobile__link--primary {
     color: var(--foreground);
     background: linear-gradient(135deg, var(--grad-primary-start), var(--grad-primary-end));
-    box-shadow: 0 16px 40px color-mix(in srgb, var(--glow-primary), transparent 60%);
+    box-shadow: 0 16px 40px rgba(12, 10, 28, 0.28);
   }
 
   .nav-shell {
@@ -761,7 +787,7 @@
       color-mix(in srgb, var(--grad-surface-start), transparent 18%),
       color-mix(in srgb, var(--grad-surface-end), transparent 18%)
     );
-    box-shadow: 0 16px 40px color-mix(in srgb, var(--glow-primary), transparent 75%);
+    box-shadow: 0 12px 28px rgba(12, 10, 28, 0.20);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
   }

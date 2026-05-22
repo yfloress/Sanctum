@@ -63,7 +63,32 @@ const baseUrl = import.meta.env.BASE_URL;
     <!-- Global styles loaded via frontmatter import -->
   </head>
   <body class="min-h-screen bg-background text-foreground antialiased">
+    <div class="bg-fx" aria-hidden="true">
+      <div class="bg-fx__glows">
+        <span class="bg-fx__glow bg-fx__glow--1"></span>
+        <span class="bg-fx__glow bg-fx__glow--2"></span>
+        <span class="bg-fx__glow bg-fx__glow--3"></span>
+      </div>
+      <div class="bg-fx__stars" data-stars></div>
+    </div>
     <slot />
+    <button
+      type="button"
+      class="motion-toggle"
+      data-motion-toggle
+      aria-pressed="true"
+      aria-label="Toggle background animation"
+      title="Background animation"
+    >
+      <svg class="icon-animated" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="3.2"></circle>
+        <path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5.1 5.1l1.7 1.7M17.2 17.2l1.7 1.7M18.9 5.1l-1.7 1.7M6.8 17.2l-1.7 1.7"></path>
+      </svg>
+      <svg class="icon-static" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="6.5" y="5" width="3.5" height="14" rx="1.2"></rect>
+        <rect x="14" y="5" width="3.5" height="14" rx="1.2"></rect>
+      </svg>
+    </button>
     <script is:inline>
       const themeKey = "sanctum-theme";
       const langKey = "sanctum-lang";
@@ -168,7 +193,7 @@ const baseUrl = import.meta.env.BASE_URL;
               },
               crypto: {
                 title: "Crypto",
-                description: "Wallets, trades, swaps, and portfolio balance.",
+                description: "Wallets, trades, swaps, portfolio, and tax reports (FIFO / LIFO / HIFO).",
               },
               habits: {
                 title: "Habits",
@@ -177,7 +202,8 @@ const baseUrl = import.meta.env.BASE_URL;
             },
             highlights: {
               languages: "EN / ES",
-              currency: "USD / CLP",
+              currency: "Multi-currency FX",
+              tax: "Crypto Tax",
               themes: "Dark / Light",
               encryption: "Encrypted Vault",
             },
@@ -303,7 +329,7 @@ const baseUrl = import.meta.env.BASE_URL;
               },
               crypto: {
                 title: "Cripto",
-                description: "Wallets, trades, swaps y balance del portafolio.",
+                description: "Wallets, trades, swaps, portafolio e informes de impuestos (FIFO / LIFO / HIFO).",
               },
               habits: {
                 title: "Hábitos",
@@ -312,7 +338,8 @@ const baseUrl = import.meta.env.BASE_URL;
             },
             highlights: {
               languages: "ES / EN",
-              currency: "USD / CLP",
+              currency: "Multi-moneda FX",
+              tax: "Impuestos Cripto",
               themes: "Oscuro / Claro",
               encryption: "Bóveda cifrada",
             },
@@ -540,6 +567,98 @@ const baseUrl = import.meta.env.BASE_URL;
           applyLanguage(next);
         });
       });
+
+      // ── Background FX: starfield + cursor parallax + animation toggle ──
+      const motionKey = "sanctum-motion";
+      const motionToggles = Array.from(document.querySelectorAll("[data-motion-toggle]"));
+      const bgFx = document.querySelector(".bg-fx");
+      const bgStars = document.querySelector("[data-stars]");
+      const prefersReducedMotion = window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+      ).matches;
+
+      if (bgStars) {
+        const STAR_COUNT = 110;
+        const parts = [];
+        for (let i = 0; i < STAR_COUNT; i++) {
+          const size = (1 + Math.random() * 1.7).toFixed(2);
+          const x = (Math.random() * 100).toFixed(2);
+          const y = (Math.random() * 100).toFixed(2);
+          const delay = (Math.random() * 6).toFixed(2);
+          const dur = (2.8 + Math.random() * 3.6).toFixed(2);
+          const bright = Number(size) > 2.2 ? " bg-fx__star--bright" : "";
+          parts.push(
+            '<span class="bg-fx__star' +
+              bright +
+              '" style="left:' +
+              x +
+              "%;top:" +
+              y +
+              "%;width:" +
+              size +
+              "px;height:" +
+              size +
+              "px;animation-delay:" +
+              delay +
+              "s;animation-duration:" +
+              dur +
+              's"></span>'
+          );
+        }
+        bgStars.innerHTML = parts.join("");
+      }
+
+      let motionOn = true;
+      const updateMotionToggles = (on) => {
+        motionToggles.forEach((b) => {
+          b.setAttribute("aria-pressed", String(on));
+          b.setAttribute(
+            "aria-label",
+            on ? "Disable background animation" : "Enable background animation"
+          );
+        });
+      };
+      const applyMotion = (on, persist = true) => {
+        motionOn = on;
+        root.dataset.motion = on ? "on" : "off";
+        updateMotionToggles(on);
+        if (persist) {
+          try {
+            localStorage.setItem(motionKey, on ? "on" : "off");
+          } catch {}
+        }
+      };
+      let storedMotion = null;
+      try {
+        storedMotion = localStorage.getItem(motionKey);
+      } catch {}
+      applyMotion(storedMotion ? storedMotion === "on" : !prefersReducedMotion, false);
+
+      motionToggles.forEach((b) =>
+        b.addEventListener("click", () => applyMotion(!motionOn))
+      );
+
+      if (bgFx && !prefersReducedMotion) {
+        let rafId = 0;
+        let tx = 0;
+        let ty = 0;
+        window.addEventListener(
+          "mousemove",
+          (e) => {
+            if (!motionOn) return;
+            tx = (e.clientX / window.innerWidth - 0.5) * 2;
+            ty = (e.clientY / window.innerHeight - 0.5) * 2;
+            if (!rafId) {
+              rafId = requestAnimationFrame(() => {
+                bgFx.style.setProperty("--mx", (tx * 16).toFixed(1) + "px");
+                bgFx.style.setProperty("--my", (ty * 16).toFixed(1) + "px");
+                rafId = 0;
+              });
+            }
+          },
+          { passive: true }
+        );
+      }
     </script>
   </body>
 </html>
