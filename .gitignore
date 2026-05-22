@@ -39,3 +39,6 @@ result
 .direnv
 
 target
+
+**/.claude
+src-tauri/

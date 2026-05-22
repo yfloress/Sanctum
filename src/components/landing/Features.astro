@@ -7,7 +7,7 @@ import path from 'node:path';
 const base = import.meta.env.BASE_URL;
 const screenshotsDir = path.resolve(process.cwd(), 'public', 'screenshots');
 
-const preferredOrder = ['lock', 'dashboard', 'finances', 'crypto', 'habits'];
+const preferredOrder = ['lock', 'dashboard', 'finances', 'crypto', 'habits', 'settings'];
 
 const screenshotFiles = fs.existsSync(screenshotsDir)
   ? fs
