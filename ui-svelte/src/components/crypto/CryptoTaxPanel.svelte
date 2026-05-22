@@ -17,12 +17,10 @@
 <script lang="ts">
   import { i18n } from '../../lib/stores/i18n.svelte'
 
+  // Jurisdiction / method / toggles are edited inline on the tax tab; this modal
+  // is dedicated to the bulkier wallet-exclusion list.
   interface Props {
     show: boolean
-    taxJurisdiction: string
-    taxMethod: string
-    taxIncludeSwaps: boolean
-    taxIncludeFeeCrypto: boolean
     taxExcludedWalletIds: string[]
     taxLoading: boolean
     wallets: { id: string; name: string; category: string; total_value: string; assets_count: number; icon_path: string | null }[]
@@ -32,28 +30,12 @@
 
   let {
     show = $bindable(false),
-    taxJurisdiction = $bindable('usa'),
-    taxMethod = $bindable('fifo'),
-    taxIncludeSwaps = $bindable(true),
-    taxIncludeFeeCrypto = $bindable(false),
     taxExcludedWalletIds = $bindable([]),
     taxLoading,
     wallets,
     onsave,
     onclose,
   }: Props = $props()
-
-  // Valid cost-basis methods differ by jurisdiction:
-  //   Chile (SII): FIFO + weighted-average (CPP) only — LIFO/HIFO not accepted.
-  //   USA (IRS):   FIFO + specific ID (LIFO/HIFO) — average cost not allowed for crypto.
-  // Reset to FIFO if the current selection becomes invalid for the jurisdiction.
-  $effect(() => {
-    if (taxJurisdiction === 'chile' && (taxMethod === 'lifo' || taxMethod === 'hifo')) {
-      taxMethod = 'fifo'
-    } else if (taxJurisdiction === 'usa' && taxMethod === 'cpp') {
-      taxMethod = 'fifo'
-    }
-  })
 
   async function handleSave() {
     await onsave()
@@ -63,68 +45,38 @@
     show = false
     onclose()
   }
+
+  function toggleWallet(id: string) {
+    if (taxExcludedWalletIds.includes(id)) {
+      taxExcludedWalletIds = taxExcludedWalletIds.filter(x => x !== id)
+    } else {
+      taxExcludedWalletIds = [...taxExcludedWalletIds, id]
+    }
+  }
 </script>
 
 {#if show}
   <div class="modal-backdrop" role="presentation" onclick={close} onkeydown={(e: KeyboardEvent) => { if (e.key === 'Escape') close() }}></div>
   <div class="modal-wrapper">
     <div class="modal">
-      <h3>{i18n.t('crypto-tax-settings-title', 'Tax Settings')}</h3>
+      <h3>{i18n.t('crypto-tax-exclude-wallets', 'Exclude Wallets')}</h3>
+      <p class="modal-desc">{i18n.t('crypto-tax-exclude-wallets-desc', 'Wallets you exclude are left out of tax calculations (e.g. DeFi play wallets or donation-only wallets).')}</p>
       <div class="form-grid">
-        <label>
-          {i18n.t('crypto-tax-jurisdiction', 'Jurisdiction')}
-          <select bind:value={taxJurisdiction}>
-            <option value="usa">{i18n.t('crypto-tax-jurisdiction-us', 'United States')}</option>
-            <option value="chile">{i18n.t('crypto-tax-jurisdiction-cl', 'Chile')}</option>
-            <option value="other">{i18n.t('crypto-tax-jurisdiction-other', 'Other')}</option>
-          </select>
-        </label>
-        <label>
-          {i18n.t('crypto-tax-cost-basis-method', 'Cost Basis Method')}
-          <select bind:value={taxMethod}>
-            <option value="fifo">{i18n.t('crypto-tax-method-fifo', 'FIFO')}</option>
-            {#if taxJurisdiction !== 'chile'}
-              <option value="lifo">{i18n.t('crypto-tax-method-lifo', 'LIFO')}</option>
-              <option value="hifo">{i18n.t('crypto-tax-method-hifo', 'HIFO')}</option>
-            {/if}
-            {#if taxJurisdiction !== 'usa'}
-              <option value="cpp">{i18n.t('crypto-tax-method-avg', 'Average Cost')}</option>
-            {/if}
-          </select>
-          {#if taxJurisdiction === 'chile'}
-            <span class="field-hint">{i18n.t('crypto-tax-method-chile-hint', 'Chile (SII) only accepts FIFO and Average Cost.')}</span>
-          {:else if taxJurisdiction === 'usa'}
-            <span class="field-hint">{i18n.t('crypto-tax-method-usa-hint', 'USA accepts FIFO and Specific ID (LIFO/HIFO); average cost is not allowed for crypto.')}</span>
-          {/if}
-        </label>
-        <label>
-          <input type="checkbox" bind:checked={taxIncludeSwaps} />
-          {i18n.t('crypto-tax-include-swaps-label', 'Include Swaps in Disposals')}
-        </label>
-        <label>
-          <input type="checkbox" bind:checked={taxIncludeFeeCrypto} />
-          {i18n.t('crypto-tax-include-fee-label', 'Include Fee Crypto as Disposal')}
-        </label>
         {#if wallets.length > 0}
           <div class="exclusion-section">
-            <span class="exclusion-title">{i18n.t('crypto-tax-exclude-wallets', 'Exclude Wallets')}</span>
             {#each wallets as w}
               <label class="exclusion-row">
                 <input
                   type="checkbox"
                   checked={taxExcludedWalletIds.includes(w.id)}
-                  onchange={() => {
-                    if (taxExcludedWalletIds.includes(w.id)) {
-                      taxExcludedWalletIds = taxExcludedWalletIds.filter(x => x !== w.id)
-                    } else {
-                      taxExcludedWalletIds = [...taxExcludedWalletIds, w.id]
-                    }
-                  }}
+                  onchange={() => toggleWallet(w.id)}
                 />
                 <span>{w.name}</span>
               </label>
             {/each}
           </div>
+        {:else}
+          <p class="empty-note">{i18n.t('crypto-tax-no-wallets', 'No wallets to exclude.')}</p>
         {/if}
       </div>
       <div class="modal-actions">
@@ -136,9 +88,9 @@
 {/if}
 
 <style>
-  .field-hint { display: block; font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px; }
+  .modal-desc { margin: 0 0 12px; font-size: 0.8rem; color: var(--text-secondary); line-height: 1.4; }
+  .empty-note { font-size: 0.85rem; color: var(--text-secondary); }
   .exclusion-section { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
-  .exclusion-title { font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; }
   .exclusion-row {
     display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-secondary); cursor: pointer;
   }

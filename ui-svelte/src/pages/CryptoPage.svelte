@@ -458,13 +458,6 @@
   let taxLoading = $state(false)
   let taxJurisdiction = $state('usa')
   let taxMethod = $state('fifo')
-
-  const JURISDICTION_LABELS: Record<string, string> = {
-    chile: 'Chile', usa: 'United States', other: 'Other',
-  }
-  const METHOD_LABELS: Record<string, string> = {
-    fifo: 'FIFO', lifo: 'LIFO', hifo: 'HIFO', cpp: 'Average Cost',
-  }
   let taxIncludeSwaps = $state(true)
   let taxIncludeFeeCrypto = $state(false)
   let taxExcludedWalletIds = $state<string[]>([])
@@ -538,6 +531,43 @@
     } finally {
       taxLoading = false
     }
+  }
+
+  // Persists tax settings inline (no modal, no blocking spinner) so the quick
+  // controls on the tax tab save jurisdiction/method/toggles on change. Keeps the
+  // loaded snapshot in sync for jurisdiction-dependent UI.
+  async function persistTaxSettings() {
+    if (!taxPeriodId.trim() || !taxSettings) return
+    try {
+      await cryptoApi.saveTaxSettings({
+        period_id: taxPeriodId,
+        jurisdiction: taxJurisdiction,
+        method: taxMethod,
+        include_swaps: taxIncludeSwaps,
+        include_fee_crypto: taxIncludeFeeCrypto,
+        excluded_wallet_ids: taxExcludedWalletIds,
+      })
+      taxSettings = {
+        ...taxSettings,
+        jurisdiction: taxJurisdiction,
+        method: taxMethod,
+        include_swaps: taxIncludeSwaps,
+        include_fee_crypto: taxIncludeFeeCrypto,
+      }
+    } catch (e) {
+      app.showToast(String(e), true)
+    }
+  }
+
+  // Chile (SII) accepts only FIFO + CPP; USA only FIFO + specific ID (LIFO/HIFO).
+  // Keep the method valid when the jurisdiction changes, then persist.
+  function onJurisdictionChange() {
+    if (taxJurisdiction === 'chile' && (taxMethod === 'lifo' || taxMethod === 'hifo')) {
+      taxMethod = 'fifo'
+    } else if (taxJurisdiction === 'usa' && taxMethod === 'cpp') {
+      taxMethod = 'fifo'
+    }
+    persistTaxSettings()
   }
 
   async function generateTaxReport() {
@@ -941,8 +971,8 @@
             <button class="glass-btn" onclick={loadTaxSettings} disabled={taxLoading}>
               {taxLoading ? i18n.t('crypto-tax-loading-settings', 'Loading…') : i18n.t('crypto-tax-load-settings', 'Load Settings')}
             </button>
-            {#if taxSettings}
-              <button class="glass-btn" onclick={() => showTaxSettings = true}>{i18n.t('crypto-tax-configure', 'Configure')}</button>
+            {#if taxSettings && (walletsData?.wallets?.length ?? 0) > 0}
+              <button class="glass-btn" onclick={() => showTaxSettings = true}>{i18n.t('crypto-tax-exclude-wallets', 'Exclude Wallets')}</button>
             {/if}
           </div>
         </div>
@@ -951,31 +981,46 @@
       {#if taxSettings}
         <!-- Configuration cards -->
         <div class="tax-config-row">
-          <!-- Settings card -->
+          <!-- Quick settings (inline editable) -->
           <div class="settings-info">
             <h4 class="tax-card-title">{i18n.t('crypto-tax-settings-title', 'Tax Settings')}</h4>
-            <div class="info-grid">
-              <div class="info-item">
+            <div class="quick-settings">
+              <label class="quick-field">
                 <span class="label">{i18n.t('crypto-tax-jurisdiction', 'Jurisdiction')}</span>
-                <span class="value">{JURISDICTION_LABELS[taxSettings.jurisdiction] ?? taxSettings.jurisdiction}</span>
-              </div>
-              <div class="info-item">
+                <select bind:value={taxJurisdiction} onchange={onJurisdictionChange}>
+                  <option value="usa">{i18n.t('crypto-tax-jurisdiction-us', 'United States')}</option>
+                  <option value="chile">{i18n.t('crypto-tax-jurisdiction-cl', 'Chile')}</option>
+                  <option value="other">{i18n.t('crypto-tax-jurisdiction-other', 'Other')}</option>
+                </select>
+              </label>
+              <label class="quick-field">
                 <span class="label">{i18n.t('crypto-tax-method', 'Method')}</span>
-                <span class="value">{METHOD_LABELS[taxSettings.method] ?? taxSettings.method}</span>
-              </div>
-              <div class="info-item">
-                <span class="label">{i18n.t('crypto-tax-include-swaps', 'Include Swaps')}</span>
-                <span class="value">{taxSettings.include_swaps ? i18n.t('crypto-tax-yes', 'Yes') : i18n.t('crypto-tax-no', 'No')}</span>
-              </div>
-              <div class="info-item">
-                <span class="label">{i18n.t('crypto-tax-include-fee-crypto', 'Include Fee Crypto')}</span>
-                <span class="value">{taxSettings.include_fee_crypto ? i18n.t('crypto-tax-yes', 'Yes') : i18n.t('crypto-tax-no', 'No')}</span>
-              </div>
-              {#if taxSettings.excluded_wallet_ids.length > 0}
-                <div class="info-item wide">
-                  <span class="label">{i18n.t('crypto-tax-exclude-wallets', 'Excluded Wallets')}</span>
-                  <span class="value">{taxSettings.excluded_wallet_ids.length} {taxSettings.excluded_wallet_ids.length === 1 ? 'wallet' : 'wallets'}</span>
-                </div>
+                <select bind:value={taxMethod} onchange={persistTaxSettings}>
+                  <option value="fifo">{i18n.t('crypto-tax-method-fifo', 'FIFO')}</option>
+                  {#if taxJurisdiction !== 'chile'}
+                    <option value="lifo">{i18n.t('crypto-tax-method-lifo', 'LIFO')}</option>
+                    <option value="hifo">{i18n.t('crypto-tax-method-hifo', 'HIFO')}</option>
+                  {/if}
+                  {#if taxJurisdiction !== 'usa'}
+                    <option value="cpp">{i18n.t('crypto-tax-method-avg', 'Average Cost')}</option>
+                  {/if}
+                </select>
+              </label>
+              <label class="quick-toggle">
+                <input type="checkbox" bind:checked={taxIncludeSwaps} onchange={persistTaxSettings} />
+                <span>{i18n.t('crypto-tax-include-swaps-label', 'Include Swaps in Disposals')}</span>
+              </label>
+              <label class="quick-toggle">
+                <input type="checkbox" bind:checked={taxIncludeFeeCrypto} onchange={persistTaxSettings} />
+                <span>{i18n.t('crypto-tax-include-fee-label', 'Include Fee Crypto as Disposal')}</span>
+              </label>
+              {#if taxJurisdiction === 'chile'}
+                <span class="quick-hint">{i18n.t('crypto-tax-method-chile-hint', 'Chile (SII) only accepts FIFO and Average Cost.')}</span>
+              {:else if taxJurisdiction === 'usa'}
+                <span class="quick-hint">{i18n.t('crypto-tax-method-usa-hint', 'USA accepts FIFO and Specific ID (LIFO/HIFO); average cost is not allowed for crypto.')}</span>
+              {/if}
+              {#if taxExcludedWalletIds.length > 0}
+                <span class="quick-hint">{taxExcludedWalletIds.length} {i18n.t('crypto-tax-excluded-suffix', 'wallet(s) excluded')}</span>
               {/if}
             </div>
           </div>
@@ -1003,7 +1048,7 @@
         </div>
 
         <!-- Chile-specific info -->
-        {#if taxSettings.jurisdiction === 'chile'}
+        {#if taxJurisdiction === 'chile'}
           <div class="chile-info">
             <div class="chile-info-header">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="chile-info-icon"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
@@ -1191,10 +1236,6 @@
 <!-- Tax Settings Modal -->
 <CryptoTaxPanel
   bind:show={showTaxSettings}
-  bind:taxJurisdiction={taxJurisdiction}
-  bind:taxMethod={taxMethod}
-  bind:taxIncludeSwaps={taxIncludeSwaps}
-  bind:taxIncludeFeeCrypto={taxIncludeFeeCrypto}
   bind:taxExcludedWalletIds={taxExcludedWalletIds}
   taxLoading={taxLoading}
   wallets={walletsData?.wallets ?? []}
@@ -1686,6 +1727,18 @@
     padding: 2px 7px; border-radius: 6px; background: #f59e0b; color: #1a1205;
     text-transform: uppercase;
   }
+  .quick-settings { display: flex; flex-direction: column; gap: 12px; }
+  .quick-field { display: flex; flex-direction: column; gap: 4px; }
+  .quick-field .label { font-size: 0.78rem; color: var(--text-secondary); }
+  .quick-field select {
+    padding: 8px 10px; border-radius: 8px;
+    background: var(--input-bg, rgba(255, 255, 255, 0.04));
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+    color: var(--text-primary); font-size: 0.85rem; cursor: pointer;
+  }
+  .quick-toggle { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--text-secondary); cursor: pointer; }
+  .quick-toggle input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; }
+  .quick-hint { font-size: 0.72rem; color: var(--text-secondary); opacity: 0.85; }
 
   /* Tax onboarding */
   .tax-onboarding {
@@ -1735,11 +1788,6 @@
     -webkit-backdrop-filter: var(--glass-blur); border: 1px solid var(--glass-border);
     border-radius: var(--radius-md); box-shadow: var(--card-shadow);
   }
-  .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
-  .info-item { display: flex; flex-direction: column; gap: 4px; }
-  .info-item.wide { grid-column: 1 / -1; }
-  .info-item .label { font-size: 0.7rem; color: var(--text-tertiary); text-transform: uppercase; }
-  .info-item .value { font-size: 0.95rem; color: var(--text-primary); font-weight: 500; }
 
   .tax-card-title { margin: 0 0 12px; color: var(--text-primary); font-size: 0.85rem; font-weight: 600; }
   .tax-card-header { display: flex; align-items: baseline; gap: 6px; margin-bottom: 16px; }
