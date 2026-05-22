@@ -20,8 +20,8 @@ use super::*;
 fn sample_csv() -> &'static str {
     concat!(
         "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
-        "3050000,1705312245,2024-01-15 10:30:45,0,in,0.500000000000,0.500000000000,0.000000000000,abc123def456abc123def456abc123def456abc123def456abc123def456abcd,,,82.50,USD\n",
-        "3060000,1705398645,2024-01-16 10:30:45,0,out,-0.100030000000,0.100000000000,0.000030000000,def789abc012def789abc012def789abc012def789abc012def789abc012defg,Payment to Alice,,16.50,USD\n",
+        "3000000,1705312245,2024-01-15 10:30:45,0,in,0.500000000000,0.500000000000,0.000000000000,abc123def456abc123def456abc123def456abc123def456abc123def456abcd,,,80.00,USD\n",
+        "3000000,1705398645,2024-01-16 10:30:45,0,out,-0.100030000000,0.100000000000,0.000030000000,def789abc012def789abc012def789abc012def789abc012def789abc012defg,Payment to Alice,,16.50,USD\n",
     )
 }
 
@@ -66,7 +66,27 @@ fn notes_contain_description_and_truncated_txid() {
     assert!(notes.contains("Feather Wallet"));
     assert!(notes.contains("Desc: Payment to Alice"));
     assert!(notes.contains("TxID: def789ab...c012defg"));
-    assert!(notes.contains("Block: 3060000"));
+    assert!(notes.contains("Block: 3000000"));
+}
+
+#[test]
+fn incoming_with_nonzero_fee_does_not_record_fee() {
+    // Real Feather exports populate the network fee on incoming rows too, but the
+    // recipient does not pay it (the sender does). It must not be attributed here.
+    let csv = concat!(
+        "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
+        "3000000,1753321014,2025-07-23T21:36:54Z,0,in,0.015000,0.015000,0.000030,aaaa,,,5.00,USD\n",
+    );
+    let parser = FeatherParser;
+    let result = parser.parse(csv, "Feather").unwrap();
+
+    let tx = &result.items[0].1;
+    assert_eq!(tx.subtype.as_deref(), Some("deposit"));
+    assert!(
+        tx.fee_coin_symbol.is_none(),
+        "incoming tx must not record a fee"
+    );
+    assert!(tx.fee_amount.is_none());
 }
 
 #[test]
@@ -87,7 +107,7 @@ fn notes_contain_fiat_valuation() {
     let result = parser.parse(sample_csv(), "Feather").unwrap();
 
     let notes = result.items[0].1.notes.as_deref().unwrap();
-    assert!(notes.contains("Fiat: 82.50 USD"));
+    assert!(notes.contains("Fiat: 80.00 USD"));
 
     let notes = result.items[1].1.notes.as_deref().unwrap();
     assert!(notes.contains("Fiat: 16.50 USD"));
@@ -126,7 +146,7 @@ fn empty_content_produces_no_items() {
 fn invalid_direction_produces_error() {
     let csv = concat!(
         "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
-        "3050000,1705312245,2024-01-15 10:30:45,0,sideways,0.5,0.5,0,abc,,,,\n",
+        "3000000,1705312245,2024-01-15 10:30:45,0,sideways,0.5,0.5,0,abc,,,,\n",
     );
 
     let parser = FeatherParser;
@@ -141,7 +161,7 @@ fn invalid_direction_produces_error() {
 fn invalid_amount_produces_error() {
     let csv = concat!(
         "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
-        "3050000,1705312245,2024-01-15 10:30:45,0,in,INVALID,INVALID,0,abc,,,,\n",
+        "3000000,1705312245,2024-01-15 10:30:45,0,in,INVALID,INVALID,0,abc,,,,\n",
     );
 
     let parser = FeatherParser;
@@ -157,7 +177,7 @@ fn zero_amount_incoming_is_silently_skipped() {
     // It carries no value, so we skip it silently (no error, no item).
     let csv = concat!(
         "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
-        "3050000,1705312245,2024-01-15 10:30:45,0,in,0.0,0.0,0,abc,,,,\n",
+        "3000000,1705312245,2024-01-15 10:30:45,0,in,0.0,0.0,0,abc,,,,\n",
     );
 
     let parser = FeatherParser;
@@ -172,7 +192,7 @@ fn churn_transaction_zero_amount_out() {
     // Churn = self-send: direction "out", amount 0, fee > 0
     let csv = concat!(
         "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
-        "3050000,1705312245,2024-01-15 10:30:45,0,out,-0.000017740000,0.000000000000,0.000017740000,abc123,,,,\n",
+        "3000000,1705312245,2024-01-15 10:30:45,0,out,-0.000017740000,0.000000000000,0.000017740000,abc123,,,,\n",
     );
 
     let parser = FeatherParser;
@@ -182,10 +202,13 @@ fn churn_transaction_zero_amount_out() {
     assert!(result.errors.is_empty());
 
     let tx = &result.items[0].1;
-    assert_eq!(tx.transaction_type, "transfer");
-    assert_eq!(tx.subtype.as_deref(), Some("churn"));
-    assert!((tx.amount - 0.0).abs() < f64::EPSILON);
-    assert_eq!(tx.fee_coin_symbol.as_deref(), Some("XMR"));
+    // A churn is recorded as a fee expense whose amount is the consumed fee.
+    assert_eq!(tx.transaction_type, "expense");
+    assert_eq!(tx.subtype.as_deref(), Some("fee"));
+    assert!((tx.amount - 0.00001774).abs() < 1e-12);
+    // No separate fee field: the fee is the amount itself.
+    assert!(tx.fee_coin_symbol.is_none());
+    assert!(tx.fee_amount.is_none());
     let notes = tx.notes.as_deref().unwrap();
     assert!(notes.contains("Churn"));
 }
@@ -205,7 +228,7 @@ fn missing_required_column_is_fatal_error() {
 fn timestamp_fallback_when_date_invalid() {
     let csv = concat!(
         "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
-        "3050000,1705312245,INVALID_DATE,0,in,0.5,0.5,0,abc,,,,\n",
+        "3000000,1705312245,INVALID_DATE,0,in,0.5,0.5,0,abc,,,,\n",
     );
 
     let parser = FeatherParser;
@@ -220,7 +243,7 @@ fn timestamp_fallback_when_date_invalid() {
 fn negative_amount_is_handled() {
     let csv = concat!(
         "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
-        "3050000,1705312245,2024-01-15 10:30:45,0,out,-0.5,-0.5,0.00003,abc,,,,\n",
+        "3000000,1705312245,2024-01-15 10:30:45,0,out,-0.5,-0.5,0.00003,abc,,,,\n",
     );
 
     let parser = FeatherParser;
@@ -235,7 +258,7 @@ fn negative_amount_is_handled() {
 fn incoming_with_zero_fee_has_no_fee_fields() {
     let csv = concat!(
         "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
-        "3050000,1705312245,2024-01-15 10:30:45,0,in,1.0,1.0,0,abc,,,,\n",
+        "3000000,1705312245,2024-01-15 10:30:45,0,in,1.0,1.0,0,abc,,,,\n",
     );
 
     let parser = FeatherParser;
@@ -250,7 +273,7 @@ fn incoming_with_zero_fee_has_no_fee_fields() {
 fn multiple_transactions_parsed() {
     let csv = concat!(
         "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
-        "3050000,1705312245,2024-01-15 10:30:45,0,in,1.0,1.0,0,abc1,,,165.00,USD\n",
+        "3000000,1705312245,2024-01-15 10:30:45,0,in,1.0,1.0,0,abc1,,,165.00,USD\n",
         "3050001,1705312300,2024-01-15 10:31:40,0,out,-0.500030000000,0.5,0.00003,abc2,test,,82.50,USD\n",
         "3060000,1705398645,2024-01-16 10:30:45,0,in,2.5,2.5,0,abc3,mining,,412.50,EUR\n",
     );
@@ -275,7 +298,7 @@ fn legacy_header_still_works() {
     // Ensure backward compatibility with the old header format
     let csv = concat!(
         "blockheight,epoch,date,direction,amount,fee,txid,address,description,paymentid\n",
-        "3050000,1705312245,2024-01-15 10:30:45,in,0.5,0,abc,addr,,\n",
+        "3000000,1705312245,2024-01-15 10:30:45,in,0.5,0,abc,addr,,\n",
     );
 
     let parser = FeatherParser;
@@ -290,7 +313,7 @@ fn legacy_header_still_works() {
 fn fiat_without_currency_defaults_to_usd() {
     let csv = concat!(
         "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
-        "3050000,1705312245,2024-01-15 10:30:45,0,in,0.5,0.5,0,abc,,,100.00,\n",
+        "3000000,1705312245,2024-01-15 10:30:45,0,in,0.5,0.5,0,abc,,,100.00,\n",
     );
 
     let parser = FeatherParser;
@@ -304,7 +327,7 @@ fn fiat_without_currency_defaults_to_usd() {
 fn no_fiat_when_fiat_amount_empty() {
     let csv = concat!(
         "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
-        "3050000,1705312245,2024-01-15 10:30:45,0,in,0.5,0.5,0,abc,,,,\n",
+        "3000000,1705312245,2024-01-15 10:30:45,0,in,0.5,0.5,0,abc,,,,\n",
     );
 
     let parser = FeatherParser;
@@ -319,7 +342,7 @@ fn fiat_question_mark_is_skipped() {
     // Feather outputs "?" when fiat value cannot be calculated
     let csv = concat!(
         "blockHeight,timestamp,date,accountIndex,direction,balanceDelta,amount,fee,txid,description,paymentId,fiatAmount,fiatCurrency\n",
-        "3050000,1705312245,2024-01-15 10:30:45,0,in,0.5,0.5,0,abc,,,?,USD\n",
+        "3000000,1705312245,2024-01-15 10:30:45,0,in,0.5,0.5,0,abc,,,?,USD\n",
     );
 
     let parser = FeatherParser;
@@ -354,9 +377,10 @@ fn real_feather_export_with_quoted_iso8601z_dates() {
     assert_eq!(tx1.subtype.as_deref(), Some("deposit"));
     assert!((tx1.amount - 0.034450).abs() < 1e-6);
     assert_eq!(tx1.symbol, "XMR");
-    // Fee present (0.000000880000)
-    assert_eq!(tx1.fee_coin_symbol.as_deref(), Some("XMR"));
-    assert!((tx1.fee_amount.unwrap() - 0.00000088).abs() < 1e-12);
+    // Row 1 is incoming: the Monero network fee is paid by the sender, so it is
+    // not attributed to the recipient here.
+    assert!(tx1.fee_coin_symbol.is_none());
+    assert!(tx1.fee_amount.is_none());
     // Fiat valuation in notes
     let notes1 = tx1.notes.as_deref().unwrap();
     assert!(notes1.contains("Fiat: 10.68 USD"));

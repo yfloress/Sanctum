@@ -36,8 +36,10 @@
 //! - `paymentId` is the Monero payment ID (usually empty).
 //!
 //! All transactions are mapped to the `XMR` symbol. Incoming transactions
-//! become `transfer/deposit`, outgoing become `transfer/withdrawal`.
-//! The fee (when present) is recorded as `fee_coin_symbol = "XMR"`.
+//! become `transfer/deposit`; outgoing become `transfer/withdrawal` with the
+//! network fee on `fee_coin_symbol = "XMR"`. A churn (self-send: outgoing with
+//! zero amount) is recorded as an `expense/fee` for the consumed network fee,
+//! since a zero-amount transfer with an invalid `churn` subtype would be rejected.
 
 use std::collections::HashMap;
 
@@ -248,24 +250,40 @@ impl ExchangeParser for FeatherParser {
                 continue;
             }
 
-            let amount = match amount_parsed {
-                Some(v) if v > 0.0 => v,
-                Some(v) if v < 0.0 => v.abs(), // handle negative just in case
-                Some(_) if is_churn_out => 0.0, // churn tx: amount = 0 is valid
-                _ => {
-                    result.errors.push(RowError::new(
-                        line_number,
-                        Some("amount"),
-                        format!("Invalid or zero amount: '{}'", amount_raw),
-                    ));
-                    continue;
+            // Parse fee (XMR). The Monero network fee is paid by the sender, so
+            // it only applies to outgoing transactions.
+            let fee_value = parse_decimal(fee_raw).map(f64::abs).unwrap_or(0.0);
+            let has_fee = !is_incoming && fee_value > f64::EPSILON;
+
+            // A churn (self-send) with no fee has no effect on holdings → skip it.
+            if is_churn_out && !has_fee {
+                continue;
+            }
+
+            // For a churn the only XMR that actually leaves the wallet is the
+            // network fee, so the fee *is* the amount. Otherwise use the row
+            // amount (magnitude; real exports sign outgoing as negative).
+            let amount = if is_churn_out {
+                fee_value
+            } else {
+                match amount_parsed {
+                    Some(v) if v > 0.0 => v,
+                    Some(v) if v < 0.0 => v.abs(),
+                    _ => {
+                        result.errors.push(RowError::new(
+                            line_number,
+                            Some("amount"),
+                            format!("Invalid or zero amount: '{}'", amount_raw),
+                        ));
+                        continue;
+                    }
                 }
             };
 
-            // Parse fee (only relevant for outgoing; may be 0 or absent)
-            let fee_value = parse_decimal(fee_raw).unwrap_or(0.0);
-            let (fee_coin_symbol, fee_amount) = if fee_value.abs() > f64::EPSILON {
-                (Some(FEATHER_SYMBOL.to_string()), Some(fee_value.abs()))
+            // The separate fee field applies only to normal outgoing transfers;
+            // for a churn the fee is already the amount above (avoid double-count).
+            let (fee_coin_symbol, fee_amount) = if has_fee && !is_churn_out {
+                (Some(FEATHER_SYMBOL.to_string()), Some(fee_value))
             } else {
                 (None, None)
             };
@@ -304,9 +322,13 @@ impl ExchangeParser for FeatherParser {
 
             let notes = Some(notes_parts.join(" | "));
 
-            // Map to Sanctum type/subtype
+            // Map to Sanctum type/subtype. A churn is a self-send whose only
+            // economic effect is the consumed network fee, so it is recorded as a
+            // fee expense (a valid disposal) instead of a 0-amount transfer, which
+            // would be rejected (amount must be non-zero) and use an invalid
+            // `churn` subtype.
             let (tx_type, subtype) = if is_churn_out {
-                ("transfer".to_string(), Some("churn".to_string()))
+                ("expense".to_string(), Some("fee".to_string()))
             } else if is_incoming {
                 ("transfer".to_string(), Some("deposit".to_string()))
             } else {
