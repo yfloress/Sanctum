@@ -20,6 +20,7 @@
   import * as settingsApi from '../lib/api/settings'
   import * as vaultApi from '../lib/api/vault'
   import * as ingestionApi from '../lib/api/ingestion'
+  import * as cryptoApi from '../lib/api/crypto'
   import { save } from '@tauri-apps/plugin-dialog'
   import type {
     AppInfo, ImportResultsResponse,
@@ -46,6 +47,11 @@
   // Exchange detection
   let exchangeDetection = $state<ExchangeDetectionResult | null>(null)
   let exchangeWalletName = $state('')
+  // Inline "create target wallet" step when the entered wallet doesn't exist yet.
+  let walletNamesLower = $state<string[]>([])
+  let showWalletCreate = $state(false)
+  let newWalletCategory = $state('exchange')
+  let creatingWallet = $state(false)
 
   async function load() {
     try {
@@ -71,6 +77,7 @@
     importResults = null
     exchangeDetection = null
     exchangeWalletName = ''
+    showWalletCreate = false
   }
 
   let genericFileInput = $state<HTMLInputElement>(null!)
@@ -128,6 +135,14 @@
       }
       exchangeDetection = detection
       exchangeWalletName = detection.suggested_wallet
+      showWalletCreate = false
+      // Load existing wallet names so we can offer to create a missing target.
+      try {
+        const w = await cryptoApi.fetchWallets()
+        walletNamesLower = w.wallets.map((x) => x.name.trim().toLowerCase())
+      } catch {
+        walletNamesLower = []
+      }
     } catch (e) {
       app.showToast(String(e), true)
     } finally {
@@ -149,6 +164,36 @@
       app.showToast(String(e), true)
     } finally {
       importLoading = false
+    }
+  }
+
+  // Preview, but if the target wallet doesn't exist yet, surface the inline
+  // create step first instead of failing with "wallet not found" on every row.
+  async function previewOrCreate() {
+    if (!exchangeWalletName.trim()) {
+      app.showToast(i18n.t('settings-import-wallet-required', 'Wallet name is required'), true)
+      return
+    }
+    if (walletNamesLower.includes(exchangeWalletName.trim().toLowerCase())) {
+      showWalletCreate = false
+      await previewExchange()
+    } else {
+      showWalletCreate = true
+    }
+  }
+
+  async function createWalletAndPreview() {
+    if (!exchangeWalletName.trim()) return
+    creatingWallet = true
+    try {
+      await cryptoApi.addWallet(exchangeWalletName.trim(), newWalletCategory)
+      walletNamesLower = [...walletNamesLower, exchangeWalletName.trim().toLowerCase()]
+      showWalletCreate = false
+      await previewExchange()
+    } catch (e) {
+      app.showToast(String(e), true)
+    } finally {
+      creatingWallet = false
     }
   }
 
@@ -350,14 +395,34 @@
               <input
                 type="text"
                 bind:value={exchangeWalletName}
+                oninput={() => (showWalletCreate = false)}
                 placeholder={i18n.t('settings-import-wallet-placeholder', 'Wallet name')}
               />
             </div>
+            {#if showWalletCreate}
+              <div class="wallet-create">
+                <p class="wallet-create-note">{i18n.tArgs('settings-import-wallet-missing', { name: exchangeWalletName.trim() }, `Wallet "${exchangeWalletName.trim()}" doesn't exist yet. Create it?`)}</p>
+                <div class="setting-row">
+                  <span class="setting-label">{i18n.t('crypto-wallet-category', 'Category')}</span>
+                  <select bind:value={newWalletCategory}>
+                    <option value="exchange">Exchange</option>
+                    <option value="hardware">Hardware</option>
+                    <option value="software">Software</option>
+                  </select>
+                </div>
+              </div>
+            {/if}
             <div class="import-actions">
               <button class="secondary-btn" onclick={resetImport}>{i18n.t('settings-cancel', 'Cancel')}</button>
-              <button class="primary-btn" onclick={previewExchange} disabled={importLoading}>
-                {importLoading ? i18n.t('settings-import-loading', 'Loading...') : i18n.t('settings-import-preview-btn', 'Preview')}
-              </button>
+              {#if showWalletCreate}
+                <button class="primary-btn" onclick={createWalletAndPreview} disabled={creatingWallet || !exchangeWalletName.trim()}>
+                  {creatingWallet ? i18n.t('settings-import-loading', 'Loading...') : i18n.t('settings-import-create-wallet-preview', 'Create wallet & preview')}
+                </button>
+              {:else}
+                <button class="primary-btn" onclick={previewOrCreate} disabled={importLoading || !exchangeWalletName.trim()}>
+                  {importLoading ? i18n.t('settings-import-loading', 'Loading...') : i18n.t('settings-import-preview-btn', 'Preview')}
+                </button>
+              {/if}
             </div>
           </div>
         {:else}
@@ -374,15 +439,15 @@
           </div>
           <div class="setting-row">
             <div>
-              <span class="setting-label">{i18n.t('settings-import-exchange', 'Exchange CSV')}</span>
-              <span class="setting-desc">{i18n.t('settings-import-exchange-desc', 'Import from Kraken, Binance, MEXC, and more')}</span>
+              <span class="setting-label">{i18n.t('settings-import-exchange', 'Exchange / Wallet CSV')}</span>
+              <span class="setting-desc">{i18n.t('settings-import-exchange-desc', 'Import from Kraken, Binance, MEXC, Feather, Monero…')}</span>
             </div>
             <button class="secondary-btn" onclick={() => exchangeFileInput.click()} disabled={importLoading}>
               {importLoading ? i18n.t('settings-import-loading', 'Loading...') : i18n.t('settings-import-select-file', 'Select File')}
             </button>
           </div>
           <details class="exchange-help">
-            <summary>{i18n.t('settings-import-exchange-help', 'How to export from each exchange')}</summary>
+            <summary>{i18n.t('settings-import-exchange-help', 'How to export from each exchange or wallet')}</summary>
             <ul class="exchange-help-list">
               <li>{i18n.t('import-exchange-hint-kraken', 'Kraken: Documents > export Ledgers and Trades CSV files (you can upload both together).')}</li>
               <li>{i18n.t('import-exchange-hint-kraken-pro', 'Kraken Pro: History > Statements > export Ledgers and Trades CSV files (you can upload both together).')}</li>
@@ -396,21 +461,20 @@
         {/if}
 
       {:else if importStep === 'preview' && importPreview}
-        <!-- Preview results -->
+        <!-- Preview results (dry run) -->
         <div class="import-card">
           <p class="import-info">
-            {i18n.t('settings-import-source', 'Source:')} <strong>{importPreview.source}</strong> |
-            {importPreview.total_records} {i18n.t('settings-import-records', 'records')} |
-            {importPreview.to_add} {i18n.t('settings-import-to-add', 'to add')} |
-            {importPreview.to_skip} {i18n.t('settings-import-to-skip', 'to skip')}
+            {importPreview.total_processed} {i18n.t('settings-import-records', 'records')} |
+            {importPreview.inserted} {i18n.t('settings-import-to-add', 'to add')} |
+            {importPreview.skipped} {i18n.t('settings-import-to-skip', 'to skip')}
           </p>
-          {#if importPreview.changes && importPreview.changes.length > 0}
-            <div class="import-changes">
-              {#each importPreview.changes as change}
-                <div class="change-row">
-                  <span class="change-action">{change.action}</span>
-                  <span class="change-desc">{change.description}</span>
-                </div>
+          {#if importPreview.errors.length > 0}
+            <div class="import-errors">
+              <p class="error-heading">{i18n.t('settings-import-errors', 'Errors')} ({importPreview.errors.length}):</p>
+              {#each importPreview.errors as err}
+                <p class="error-line">
+                  {#if err.line}{i18n.t('settings-import-line', 'Line')} {err.line}: {/if}{err.message}
+                </p>
               {/each}
             </div>
           {/if}
@@ -628,21 +692,10 @@
     background: rgba(139, 92, 246, 0.3);
     color: var(--text-primary);
   }
-  .import-changes {
-    max-height: 200px; overflow-y: auto; margin-bottom: 8px;
-    border: 1px solid var(--glass-border); border-radius: 4px;
-  }
-  .change-row {
-    display: flex; gap: 10px; padding: 6px 10px;
-    font-size: 0.8rem; border-bottom: 1px solid var(--glass-border);
-  }
-  .change-row:last-child { border-bottom: none; }
-  .change-action {
-    color: var(--accent); font-weight: 600; min-width: 60px; text-transform: uppercase;
-    font-size: 0.7rem;
-  }
-  .change-desc { color: var(--text-secondary); }
   .import-errors { margin-top: 8px; }
   .error-heading { color: var(--danger); font-size: 0.85rem; margin: 0 0 6px; font-weight: 600; }
   .error-line { color: var(--text-secondary); font-size: 0.8rem; margin: 2px 0; padding-left: 8px; }
+  .wallet-create { margin: 8px 0; padding: 10px 12px; border-radius: 8px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); }
+  .wallet-create-note { margin: 0 0 8px; font-size: 0.82rem; color: var(--text-secondary); }
+  .wallet-create select { padding: 6px 8px; border-radius: 6px; background: var(--input-bg, rgba(255, 255, 255, 0.04)); border: 1px solid var(--glass-border); color: var(--text-primary); }
 </style>
