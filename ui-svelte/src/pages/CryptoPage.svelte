@@ -19,6 +19,7 @@
   import { i18n } from '../lib/stores/i18n.svelte'
   import { formatCurrency, mask } from '../lib/currency'
   import * as cryptoApi from '../lib/api/crypto'
+  import { save } from '@tauri-apps/plugin-dialog'
   import PortfolioTrendChart from '../components/charts/PortfolioTrendChart.svelte'
   import DistributionChart from '../components/charts/DistributionChart.svelte'
   import CryptoTransactionModal from '../components/crypto/CryptoTransactionModal.svelte'
@@ -626,11 +627,20 @@
 
   async function exportTaxReport(format: 'csv' | 'history') {
     if (!taxPeriodId.trim()) {
-      app.showToast('Please enter a period ID', true)
+      app.showToast(i18n.t('crypto-toast-enter-period', 'Please enter a period ID'), true)
       return
     }
     try {
-      const path = `tax_report_${taxPeriodId}_${new Date().getTime()}.csv`
+      const defaultName = format === 'csv'
+        ? `tax_report_${taxPeriodId}.csv`
+        : `tax_history_${taxPeriodId}.csv`
+      // Let the user choose where to save instead of writing to a fixed path.
+      const path = await save({
+        title: i18n.t('crypto-tax-export-title', 'Export Tax CSV'),
+        defaultPath: defaultName,
+        filters: [{ name: 'CSV', extensions: ['csv'] }],
+      })
+      if (!path) return
       if (format === 'csv') {
         await cryptoApi.exportTaxReportCsv(taxPeriodId, path)
       } else {
