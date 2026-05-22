@@ -381,6 +381,18 @@
               {importLoading ? i18n.t('settings-import-loading', 'Loading...') : i18n.t('settings-import-select-file', 'Select File')}
             </button>
           </div>
+          <details class="exchange-help">
+            <summary>{i18n.t('settings-import-exchange-help', 'How to export from each exchange')}</summary>
+            <ul class="exchange-help-list">
+              <li>{i18n.t('import-exchange-hint-kraken', 'Kraken: Documents > export Ledgers and Trades CSV files (you can upload both together).')}</li>
+              <li>{i18n.t('import-exchange-hint-kraken-pro', 'Kraken Pro: History > Statements > export Ledgers and Trades CSV files (you can upload both together).')}</li>
+              <li>{i18n.t('import-exchange-hint-binance', 'Export from Binance: Orders > Transaction History > Generate All Statements')}</li>
+              <li>{i18n.t('import-exchange-hint-mexc', 'MEXC: Help Center > Account Data Export > select required reports > convert to CSV. Supports 17 report CSV types; you can upload multiple files at once.')}</li>
+              <li>{i18n.t('import-exchange-hint-notbank', 'NotBank (CryptoMarket): Exchange Pro > Reports > Single Report > Transaction and Trade Activity (you can upload both together).')}</li>
+              <li>{i18n.t('import-exchange-hint-feather', 'Export from Feather Wallet: History > Export CSV')}</li>
+              <li>{i18n.t('import-exchange-hint-monero-gui', 'Export from Monero GUI: Wallet > History > Export CSV')}</li>
+            </ul>
+          </details>
         {/if}
 
       {:else if importStep === 'preview' && importPreview}
@@ -532,6 +544,10 @@
   }
   .setting-label { font-size: 0.9rem; color: var(--text-secondary); display: block; }
   .setting-desc { font-size: 0.75rem; color: var(--text-tertiary); display: block; margin-top: 2px; }
+  .exchange-help { margin-top: 4px; font-size: 0.8rem; }
+  .exchange-help summary { cursor: pointer; color: var(--text-secondary); user-select: none; padding: 4px 0; }
+  .exchange-help summary:hover { color: var(--text-primary); }
+  .exchange-help-list { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; color: var(--text-secondary); line-height: 1.45; }
 
   select, input[type="text"] {
     padding: 8px 12px; border: 1px solid var(--glass-border); border-radius: var(--radius-sm);

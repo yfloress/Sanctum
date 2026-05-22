@@ -1342,6 +1342,7 @@ import-exchange-hint-mexc = MEXC: Help Center > Account Data Export > select req
 import-exchange-hint-notbank = NotBank (CryptoMarket): Exchange Pro > Reports > Single Report > Transaction and Trade Activity (you can upload both together).
 import-exchange-hint-feather = Export from Feather Wallet: History > Export CSV
 import-exchange-hint-monero-gui = Export from Monero GUI: Wallet > History > Export CSV
+settings-import-exchange-help = How to export from each exchange
 import-exchange-coin-added = Coin {$symbol} added. Re-running exchange import...
 import-exchange-coin-add-failed = Could not add coin {$symbol}: {$reason}
 import-exchange-coin-invalid = Invalid symbol for automatic coin creation: {$symbol}

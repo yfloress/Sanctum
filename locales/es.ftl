@@ -1340,6 +1340,7 @@ import-exchange-hint-kraken-pro = Kraken Pro: History > Statements > exportar lo
 import-exchange-hint-binance = Exportar desde Binance: Órdenes > Historial de Transacciones > Generar Todos los Estados
 import-exchange-hint-feather = Exportar desde Feather Wallet: Historial > Exportar CSV
 import-exchange-hint-monero-gui = Exportar desde Monero GUI: Wallet > Historial > Exportar CSV
+settings-import-exchange-help = Cómo exportar desde cada exchange
 import-exchange-hint-notbank = NotBank (CryptoMarket): Exchange Pro > Reports > Single Report > Transaction y Trade Activity (puedes subir ambos juntos).
 import-exchange-coin-added = Moneda {$symbol} agregada. Reintentando importación del exchange...
 import-exchange-coin-add-failed = No se pudo agregar la moneda {$symbol}: {$reason}
