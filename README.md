@@ -123,8 +123,8 @@ Sanctum prioritizes performance, type safety, and auditability.
 This project uses **Nix Flakes** for a reproducible environment. You also need
 **Node.js** and **pnpm** for the Svelte frontend.
 
-> **Note:** For manual installation on Linux, macOS, or Windows, see the
-> complete [Building Guide](docs/BUILDING.md).
+> **Note:** For installation on Linux, macOS, or Windows, see the
+> complete [Installation Guide](docs/INSTALL.md).
 
 ### Quick Start (Nix)
 
@@ -157,7 +157,7 @@ All commands are run from the **repository root**.
    cargo tauri build
    ```
 
-For detailed setup on other platforms, see [docs/BUILDING.md](docs/BUILDING.md).
+For detailed setup on other platforms, see [docs/INSTALL.md](docs/INSTALL.md).
 
 ## Development Transparency
 
