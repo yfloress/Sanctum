@@ -1,195 +1,294 @@
-# Módulo de Impuestos Crypto
+# Cómo Sanctum calcula tus impuestos de criptomonedas
 
-Guía de referencia del motor tributario en `src/features/crypto/tax/`.
+Esta guía explica **la lógica y los fundamentos** del módulo tributario de Sanctum:
+en qué se basa, qué decisiones toma y por qué. Está pensada para que cualquier
+persona pueda entender el razonamiento **sin necesidad de leer el código**.
 
-## Arquitectura
+> ⚠️ **Esto es una estimación, no asesoría tributaria.** El módulo está en estado
+> **beta/experimental**. Te da un punto de partida bien fundamentado, pero la
+> responsabilidad final de tu declaración es tuya y de tu contador. Las leyes
+> cambian y tienen matices que ningún software reemplaza.
+
+> 🔒 **Todo ocurre en tu computador.** Sanctum no envía tus datos a ningún
+> servidor. El cálculo es 100% local y offline.
+
+---
+
+## La idea central: lotes, enajenaciones y ganancia
+
+Casi toda la tributación de criptomonedas en el mundo se basa en la misma idea
+sencilla, aunque cada país le cambie los detalles:
+
+1. **Cada vez que adquieres** cripto (la compras, la recibes, te la pagan) se
+   crea un **lote**: un paquete con *cuánto* recibiste, *cuándo*, y *cuánto te
+   costó* (su "costo base").
+2. **Cuando dispones** de esa cripto (la vendes, la cambias por otra, pagas con
+   ella) ocurre una **enajenación**: un evento que puede generar impuesto.
+3. La **ganancia** de esa enajenación es, en esencia:
+
+   ```
+   ganancia = lo que recibiste  −  lo que te había costado
+   ```
+
+   Si el resultado es positivo, hay ganancia (mayor valor); si es negativo, hay
+   pérdida.
+
+Toda la complejidad real está en responder dos preguntas:
+
+- **¿Cuánto te costó exactamente?** → de eso se encargan los *métodos de costo*
+  y los *ajustes* (como la inflación en Chile).
+- **¿Qué eventos cuentan como enajenación?** → de eso se encarga la
+  clasificación de transacciones.
+
+---
+
+## ¿Qué eventos tributan y cuáles no?
+
+| Evento | ¿Tributa? |
+|---|---|
+| Comprar cripto con dinero (fiat) | No (solo creas un lote) |
+| Mantener (HODL) | No |
+| Transferir entre tus propias billeteras | No (salvo la comisión de red) |
+| **Vender** cripto por dinero | **Sí** |
+| **Cambiar** una cripto por otra (swap) | **Sí**, en la mayoría de jurisdicciones |
+| **Pagar** con cripto un bien o servicio | **Sí** (es una disposición) |
+| Recibir un airdrop / recompensa / staking | Depende del país (ver abajo) |
+
+Un **swap** (ej. cambiar BTC por ETH) se trata como **dos cosas a la vez**:
+vendes el BTC (enajenación) y compras el ETH (nuevo lote). Por eso un swap puede
+generar impuesto aunque nunca hayas tocado dinero "real".
+
+---
+
+## Los métodos de costo: ¿cuál lote vendiste?
+
+Si compraste BTC tres veces a precios distintos y luego vendes una parte,
+¿de cuál de esas compras salió lo que vendiste? La respuesta cambia el impuesto.
+Existen cuatro métodos:
+
+| Método | Qué asume | Efecto típico |
+|---|---|---|
+| **FIFO** | Vendes primero lo más **antiguo** | El más aceptado por las autoridades |
+| **LIFO** | Vendes primero lo más **reciente** | — |
+| **HIFO** | Vendes primero lo de **mayor costo** | Tiende a minimizar la ganancia |
+| **CPP** | Usas el **costo promedio** de todo lo que tienes | Suaviza los resultados |
+
+**Importante:** no todos los países aceptan todos los métodos. Sanctum
+**solo te ofrece los métodos válidos** para la jurisdicción que elijas (ver
+cada país más abajo). El método por defecto es **FIFO**, porque es el aceptado
+de forma prácticamente universal.
+
+---
+
+## Chile (SII)
+
+En Chile, para una **persona natural**, el mayor valor por vender criptomonedas
+tributa con el **Impuesto Global Complementario (IGC)**. Sanctum implementa las
+reglas que el Servicio de Impuestos Internos ha fijado en sus oficios y guías.
+
+### El doble ajuste por inflación (IPC) — lo más particular de Chile
+
+Chile corrige los montos por inflación. Esto se hace en **dos pasos**, y es la
+parte donde más se equivocan otras herramientas:
+
+1. **Se reajusta el costo de compra.** Lo que pagaste se "trae a valor de hoy"
+   según la variación del IPC entre el **mes anterior a la compra** y el **mes
+   anterior a la venta**.
+   *(Fundamento: Art. 17 N°8 letra m) de la Ley de la Renta.)*
+
+2. **Se reajusta la ganancia ya calculada.** Una vez obtenida la ganancia, esta
+   se vuelve a reajustar por IPC desde el **mes anterior a la venta** hasta
+   **noviembre** (el último mes con IPC conocido al cierre del año tributario, el
+   31 de diciembre).
+   *(Fundamento: Art. 54 N°3, inciso penúltimo, de la Ley de la Renta, que rige
+   el reajuste de las rentas para incluirlas en la Renta Bruta Global del IGC.
+   El propio SII lo aplica en su guía "Economía Digital – Renta".)*
+
+**Ejemplo ilustrativo** (los porcentajes son inventados, solo para mostrar la
+mecánica):
 
 ```
-src/features/crypto/tax/
-├── engine/
-│   ├── mod.rs      # build_tax_report() — orquestador principal
-│   ├── lots.rs     # Gestión de lotes, enajenaciones, ajuste IPC
-│   ├── swaps.rs    # Resolución de pares swap y enajenación
-│   ├── period.rs   # Helpers de año calendario, prev_month_key
-│   └── types.rs    # Lot, TaxConfig, DisposalRequest, TaxPeriod
-├── ipc.rs          # Parser CSV de IPC (formato INE, meses en español, flexible)
-├── report.rs       # TaxReport, TaxDisposal, LotAllocation, exportación CSV
-├── summary.rs      # TaxSummaryPayload, TaxReadinessItem
-├── types.rs        # TaxJurisdiction, TaxMethod, TaxPeriodSettings, TaxTxType
-└── mod.rs          # Re-exportaciones y helpers resolve_type/resolve_subtype
+Compras 1 unidad en enero por           $10.000.000
+Reajuste del costo por IPC (+5%)    →    $10.500.000   (costo reajustado)
+Vendes en noviembre por                  $15.000.000
+
+Ganancia = 15.000.000 − 10.500.000  =     $4.500.000
+Segundo reajuste de la ganancia (+0,7%) = $4.531.500   ← este monto va al F22
 ```
 
-Capa de servicio: `src/features/crypto/service_tax.rs`
-Callbacks de UI: `src/ui/callbacks/crypto/tax.rs`
+> ⚠️ **Cuidado con el doble conteo al declarar.** El monto que Sanctum entrega
+> ya viene reajustado. Al traspasarlo al Formulario 22, no lo vuelvas a
+> reajustar a mano: el formulario, para este código, **no** lo reajusta
+> automáticamente, así que se declara el valor ya ajustado tal cual.
 
-## Jurisdicciones
+### Comisiones (fees)
 
-### Chile (SII)
+Para una persona natural sin contabilidad completa, las comisiones que cobra el
+exchange **no se pueden descontar**: ni se suman al costo de compra ni se restan
+del precio de venta.
+*(Fundamento: Oficio SII N°1474/2020 y FAQ SII 001.250.7830, vigente a oct-2025.)*
 
-**Impuesto aplicable:** Impuesto Global Complementario (IGC) para personas naturales.
+Algunas guías comerciales dicen lo contrario; según el SII, para persona natural,
+están equivocadas.
 
-**Fórmula de ganancia:**
+### Cripto recibida sin pagar
 
-```
-ganancia = beneficio − costo_de_adquisición_reajustado
-ganancia_final = ganancia × (IPC_noviembre / IPC_mes_anterior_venta)
-```
+| Cómo la recibiste | Costo que se le asigna |
+|---|---|
+| **Airdrop / Staking / Fork** | **$0** (toda la venta futura es ganancia) |
+| **Minería** | **Valor de mercado al momento de extraerla** |
 
-Hay **dos** ajustes IPC obligatorios:
+*(Fundamentos: Oficio SII N°979/2022 para airdrop/staking; criterio análogo para
+fork al no existir oficio específico; Oficio SII N°1803/2022 para minería.)*
 
-1. **Costo de adquisición**: se reajusta por IPC desde el mes anterior a la
-   compra hasta el mes anterior a la venta.
-2. **Ganancia resultante**: se reajusta por IPC desde el mes anterior a la venta
-   hasta noviembre (mes anterior al cierre del año tributario, 31 de diciembre).
+La lógica: si no pagaste nada por ella, su costo es cero. La minería es la
+excepción, porque se considera el valor de mercado del día en que la obtienes.
 
-**Comisiones (fees):** Las personas naturales sin contabilidad completa **no
-pueden** deducir comisiones como costo de adquisición ni como gasto. El fee en
-crypto sí genera una enajenación (evento tributable separado).
+### Métodos aceptados en Chile
 
-**Airdrops / Staking / Forks:** Se reconocen con costo **$0** al recibirlos
-(Oficio Ord. Nº979/2022). La ganancia completa se realiza al enajenar.
+**Solo FIFO y CPP.** LIFO y HIFO **no son aceptados** por el SII. Sanctum, cuando
+eliges Chile, **oculta** LIFO y HIFO para que no puedas elegir un método inválido
+por accidente. El CPP solo es admisible cuando no es posible acreditar los costos
+más antiguos. Una vez elegido, el método debería mantenerse por al menos 5 años.
+*(Fundamento: Oficio SII N°1474/2020, aplicando el Art. 30 de la Ley de la Renta.)*
 
-**Minería:** Se declara primero bajo Impuesto de Primera Categoría (IDPC) y
-luego la enajenación tributa bajo IGC.
+### Pérdidas
 
-**Métodos de valorización:** FIFO, LIFO, HIFO, CPP — libre elección para
-personas naturales bajo IGC. Para contribuyentes de 1ª Categoría debe ser FIFO
-o CPP, manteniendo consistencia al menos 5 años.
+Las pérdidas se pueden compensar **dentro del mismo año** contra ganancias del
+mismo tipo, pero **no se arrastran** a años siguientes (para persona natural sin
+contabilidad completa).
+*(Fundamento: Oficio SII N°979/2022 y Circular SII N°43/2021.)*
 
-**Tipo de cambio:** Dólar Observado del Banco Central / SII. En fines de semana
-o feriado se usa el día hábil inmediatamente siguiente.
+### Otros puntos
 
-**No tributa:** Comprar con fiat, HODL, transferir entre wallets propias
-(excepto la comisión).
+- **No hay IVA** en la compra/venta de criptomonedas (son bienes incorporales).
+- **No hay distinción** entre corto y largo plazo: toda ganancia tributa igual.
+- **No existe una exención específica para cripto.** El "tramo exento" que mucha
+  gente menciona es simplemente el **primer tramo del IGC (0%)**, que beneficia a
+  todas las rentas por igual (alrededor de 13,5 UTA al cierre del año). No es un
+  beneficio propio de las criptomonedas.
 
-**No hay IVA** en compra/venta de criptomonedas.
+### Cómo se declara (Formulario 22)
 
-### Declaración en el SII (Formulario 22)
+> Los códigos del formulario pueden cambiar cada año. Verifica siempre el
+> suplemento tributario del SII del Año Tributario vigente.
 
-> **Warning: Los códigos de casilla pueden cambiar año a año.** Siempre verificar en
-> el suplemento tributario del SII correspondiente al Año Tributario vigente.
+| Concepto | Línea | Código |
+|---|---|---|
+| Ganancia de **fuente chilena** | 10 | **1032** |
+| Ganancia de **fuente extranjera** (cripto en exchanges del exterior) | 11 | **1104** |
+| Pérdida | 17 | 169 |
+| Minería — ingresos / costos (1ª Categoría) | 5 | 955 / 954 |
 
-| Resultado | Línea | Casilla | Notas |
-|-----------|-------|---------|-------|
-| **Ganancia** (mayor valor) | 10 | **1032** | Monto total de ganancias reajustadas |
-| **Pérdida** | 17 | **169** | Solo hasta el monto declarado en casillas 105, 155, 152, 1032, 1891, 1104 |
-| Minería — ingresos (IDPC) | 5 | **955** | Valorización al recibir |
-| Minería — costos (IDPC) | 5 | **954** | Gastos deducibles (electricidad, equipos, etc.) |
+**Nuevas Declaraciones Juradas (desde 2026):** los exchanges con domicilio en
+Chile deben informar al SII las operaciones de sus usuarios mediante las
+**DJ 1963 y 1964** (creadas por las Resoluciones Exentas SII N°113 y N°114 de
+agosto de 2025). Las presenta el exchange, no tú — pero el SII las cruza con tu
+declaración. Es decir: el SII ya sabe; conviene declarar bien.
 
-**Exención:** No se paga impuesto si la renta neta global anual no supera
-13,5 UTA (aprox. $10.400.000 CLP, varía cada año).
+---
 
-**Período:** Año tributario base = 1 de enero al 31 de diciembre. Se declara en abril
-del año siguiente (Operación Renta).
+## Estados Unidos (IRS)
 
-### USA (IRS)
+En EE.UU. la cripto se trata como **propiedad**, y las enajenaciones generan
+ganancias o pérdidas de capital.
 
-- Crypto se clasifica como **propiedad**; las enajenaciones generan ganancias o pérdidas de capital.
-- Corto plazo: tenencia menor a 365 días. Largo plazo: 365 días o más.
-- Las comisiones se suman al costo base (en compra) o reducen el monto recibido (en venta).
-- Airdrops/Staking se reconocen como **ingreso** al valor justo de mercado (FMV) al recibirlos;
-  ese FMV pasa a ser el costo base.
-- No hay ajuste por inflación.
-- Reporte: Form 8949 + Schedule D.
+- **Comisiones:** sí se consideran — se suman al costo al comprar y reducen lo
+  recibido al vender.
+- **Cripto recibida (airdrop, staking, minería, fork):** se reconoce como
+  **ingreso** a su valor de mercado al recibirla; ese valor pasa a ser su costo
+  base. *(A diferencia de Chile, donde el fork va a $0.)*
+- **Plazo de tenencia:** importa. Si la tuviste **más de un año** (por fecha de
+  aniversario, no por "365 días" exactos), la ganancia es de **largo plazo** y
+  suele pagar menos.
+- **Métodos:** FIFO e Identificación Específica (que habilita LIFO y HIFO). El
+  **costo promedio (CPP) no es válido** para cripto en EE.UU., por lo que Sanctum
+  lo oculta cuando eliges esta jurisdicción.
+- **No hay ajuste por inflación.**
+- **Swaps** sí tributan (no hay intercambio "libre de impuesto" tipo §1031).
+- **Pérdidas:** se pueden usar contra ganancias y hasta US$3.000 contra otros
+  ingresos, con arrastre indefinido a años futuros.
+- **Reporte:** Form 8949 + Schedule D.
 
-### Other (Genérico / Internacional)
+> **Limitación conocida (regla 2025):** desde 2025 el IRS exige rastrear el costo
+> **por billetera/cuenta** y no de forma global (Rev. Proc. 2024-28). El motor
+> actual agrupa los lotes de forma global por activo. Mientras esto no se ajuste,
+> el resultado para EE.UU. puede no calzar exactamente con la nueva regla por
+> billetera. Está en la hoja de ruta posterior al alpha.
 
-Jurisdicción genérica para usuarios fuera de Chile y USA. Aplica reglas
-estándar internacionales sin ajustes específicos de ningún país. **No
-reemplaza la asesoría de un profesional tributario local.**
+---
 
-- Las comisiones se suman al costo base (en compra) o reducen el monto
-  recibido (en venta) — mismo comportamiento que USA.
-- Airdrops/Staking se reconocen como **ingreso** al FMV; ese FMV pasa a ser
-  el costo base.
-- Corto plazo: tenencia menor a 365 días. Largo plazo: 365 días o más.
-- No hay ajuste por inflación (sin IPC).
-- Todos los métodos de costo base disponibles (FIFO, LIFO, HIFO, CPP).
-- Sin guía de declaración específica — el reporte incluye un aviso para
-  consultar al asesor tributario local.
+## Internacional (genérico)
 
-> **Warning:** Cada país tiene reglas propias que pueden diferir
-> significativamente de estas reglas genéricas. Ejemplos: Alemania exime
-> ganancias si la tenencia supera 1 año; Francia no grava swaps
-> crypto-to-crypto; Países Bajos usa impuesto al patrimonio en vez de
-> ganancias de capital. Usa esta opción solo como punto de partida y valida
-> con un profesional.
+Para usuarios fuera de Chile y EE.UU., Sanctum ofrece un modo **internacional**
+con reglas estándar de "ganancia de capital realizada por lotes":
 
-## Métodos de Costo Base
+- Comisiones al costo (como EE.UU.).
+- Cripto recibida = ingreso a valor de mercado.
+- Distinción corto/largo plazo en torno a un año.
+- Todos los métodos disponibles (FIFO/LIFO/HIFO/CPP).
+- Sin ajuste por inflación.
 
-| Método | Descripción |
-|--------|-------------|
-| **FIFO** | Primero en entrar, primero en salir — lotes más antiguos primero |
-| **LIFO** | Último en entrar, primero en salir — lotes más recientes primero |
-| **HIFO** | Mayor costo primero — lotes de mayor costo primero. En Chile, este cálculo es **IPC-aware** (compara costos reajustados para la selección). |
-| **CPP** | Costo Promedio Ponderado — promedio móvil del costo |
+> ⚠️ **Esto es un punto de partida, no la ley de tu país.** La tributación de
+> cripto **no está armonizada** entre países y muchos se salen de este modelo.
+> Ejemplos reales: Alemania exime la ganancia si mantienes más de un año; Francia
+> no grava los cambios cripto-a-cripto, solo cuando pasas a euros; Países Bajos
+> usa un impuesto al patrimonio en vez de a la ganancia; Reino Unido usa un
+> sistema de "pooling" distinto a FIFO/HIFO. Si vives en uno de esos países, este
+> modo dará números equivocados. Úsalo solo como base y valida con un profesional
+> local.
 
-## IPC (Chile)
+La estrategia de Sanctum para la cobertura global no es programar las 200 leyes
+del mundo, sino: (1) un modo internacional honesto y bien etiquetado, (2) una
+**exportación impecable de enajenaciones** que cualquier contador pueda adaptar a
+su formulario local, y (3) **módulos por país aportados por la comunidad**.
 
-Datos del Índice de Precios al Consumidor. Se importan manualmente como CSV
-(offline-first, sin descargas automáticas).
+---
 
-Fuente recomendada: INE — Serie histórica empalmada IPC.
+## El IPC (solo Chile)
 
-El parser (`ipc.rs`) soporta:
-- Formatos: `YYYY-MM`, `YYYY/MM`, `MM/YYYY`, nombres de mes en español.
-- Headers: `Periodo`, `Año`, `Mes`, `Índice`, `IPC`, `Valor`, etc.
-- Separadores decimales: punto y coma (ej. `1.234,50`).
-- CSVs sin header (auto-detección).
+El cálculo chileno necesita los datos del **Índice de Precios al Consumidor**.
+Como Sanctum es offline-first, **no los descarga solo**: tú los importas una vez
+como un archivo CSV (por ejemplo, la serie histórica del INE). El sistema es
+flexible con el formato (acepta meses en español, distintos separadores y
+encabezados). Si faltan datos de IPC para el período, el reporte te avisa en vez
+de calcular mal en silencio.
 
-## Tipos de Transacción (Clasificación Tributaria)
+---
 
-| TaxTxType | Subtipos | Ejemplo |
-|-----------|----------|---------|
-| `trade` | buy, sell, swap, other | Compra/venta/permuta |
-| `income` | interest, reward, airdrop, gift, staking, mining, fork, payment, rebate, other | Ingresos |
-| `expense` | payment, gift, fee, lost, stolen, donation, sell, other | Gastos/pérdidas |
-| `transfer` | deposit, withdrawal | Movimiento entre wallets |
+## Honestidad del módulo: qué te avisa
 
-## Configuración
+El motor no calcula a ciegas: cuando algo no está claro, **lo marca** en vez de
+inventar un número. Por ejemplo, te avisa cuando una transacción no tiene precio,
+cuando faltan datos de IPC, cuando no hay suficientes lotes para cubrir una venta,
+cuando un swap quedó sin su contraparte, o cuando un código del Formulario 22
+podría haber cambiado de un año a otro. Esas advertencias aparecen junto al
+reporte para que sepas exactamente dónde mirar.
 
-Almacenados en `TaxPeriodSettings` (por año):
-- `jurisdiction`: Chile / USA / Other
-- `method`: FIFO / LIFO / HIFO / CPP
-- `include_swaps`: si los swaps generan enajenaciones
-- `include_fee_crypto`: si los fees en crypto generan enajenación
-- `excluded_wallet_ids`: lista de IDs de billeteras a omitir del reporte (ej. cuentas de test o donaciones).
+---
 
-Por defecto: Chile, HIFO, include_swaps=true, include_fee_crypto=true.
+## En qué se basa todo esto (fuentes)
 
-## Ajustes Manuales (Overrides)
+**Chile — SII:** Ley sobre Impuesto a la Renta (Art. 17 N°8 letra m), Art. 30,
+Art. 52, Art. 54); Oficios N°963/2018 (no IVA), N°1474/2020 (costo, comisiones,
+métodos), N°979/2022 (airdrop/staking $0), N°1803/2022 (minería), N°2208/2022;
+Circular N°43/2021 (pérdidas); guía SII "Economía Digital – Renta"; FAQ de
+criptomonedas del SII (actualizadas en octubre de 2025); Resoluciones Exentas
+N°113 y N°114 de 2025 (DJ 1963/1964).
 
-El motor respeta campos de anulación manual en las transacciones para casos complejos:
-- `override_proceeds`: ignora el cálculo automático de precio de venta y usa este valor.
-- `override_cost_basis`: ignora el costo de adquisición original y usa este valor (útil para herencias o errores de historial).
+**EE.UU. — IRS:** tratamiento como propiedad; Rev. Rul. 2019-24 y 2023-14
+(ingreso por airdrop/staking); Rev. Proc. 2024-28 (costo por billetera);
+Forms 8949 / Schedule D.
 
-## Resolutor de Swaps
+> Estas fuentes fueron contrastadas entre sí y contra el texto primario. Aun así,
+> **la palabra final la tiene un profesional tributario de tu país.** Sanctum te
+> ahorra el trabajo pesado de reconstruir el historial y aplicar las reglas, pero
+> no firma tu declaración por ti.
 
-Para pares de swap, el motor usa un sistema de puntaje para identificar la "pata de salida" (enajenación):
-1. Prioriza transacciones con `override_proceeds`.
-2. Prioriza transacciones con comisiones (`fees`) pagadas.
-3. Prioriza transacciones con precio de mercado explícito.
-4. Si hay empate, usa el orden alfabético de los IDs.
+---
 
-## Exportaciones
+## Para desarrolladores
 
-- **CSV de Reporte Tributario:** Resumen + enajenaciones + desglose de lotes + advertencias.
-- **CSV de Historial de Transacciones:** Todas las transacciones del período con
-  clasificación type/subtype.
-
-## Advertencias del Motor
-
-| Código | Significado |
-|--------|-------------|
-| `ipc_missing` | Datos IPC no cargados o incompletos para el período |
-| `missing_price` | Transacción sin precio; excluida del reporte |
-| `fee_missing_price` | Enajenación de fee sin precio para valorizar |
-| `swap_missing_price` | Swap sin precio en ninguna pata |
-| `swap_inferred` | Dirección del swap inferida (sin fee explícito) |
-| `swap_unpaired` | Swap sin transacción contraparte |
-| `insufficient_lots` | Lotes insuficientes para cubrir la venta |
-| `no_lots` | Sin lotes disponibles para el activo |
-| `invalid_date` | Fecha inválida en transacción |
-| `invalid_type` | Tipo de transacción no reconocido |
-| `income_missing_price` | Ingreso sin precio para calcular valor |
-| `sii_casilla_may_change` | Recordatorio: las casillas del F22 pueden variar por año |
+La referencia técnica del motor (archivos, estructuras, capa de servicio y
+callbacks de UI) vive junto al código en `src/features/crypto/tax/`. Este
+documento describe la lógica; el código describe la implementación.
