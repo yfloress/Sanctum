@@ -10,7 +10,7 @@ persona pueda entender el razonamiento **sin necesidad de leer el código**.
 > responsabilidad final de tu declaración es tuya y de tu contador. Las leyes
 > cambian y tienen matices que ningún software reemplaza.
 
-> [!TIP]
+> [!IMPORTANT]
 > **Todo ocurre en tu computador.** Sanctum no envía tus datos a ningún
 > servidor. El cálculo es 100% local y offline.
 
