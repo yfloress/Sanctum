@@ -4,12 +4,14 @@ Esta guía explica **la lógica y los fundamentos** del módulo tributario de Sa
 en qué se basa, qué decisiones toma y por qué. Está pensada para que cualquier
 persona pueda entender el razonamiento **sin necesidad de leer el código**.
 
-> ⚠️ **Esto es una estimación, no asesoría tributaria.** El módulo está en estado
+> [!CAUTION]
+>  **Esto es una estimación, no asesoría tributaria.** El módulo está en estado
 > **beta/experimental**. Te da un punto de partida bien fundamentado, pero la
 > responsabilidad final de tu declaración es tuya y de tu contador. Las leyes
 > cambian y tienen matices que ningún software reemplaza.
 
-> 🔒 **Todo ocurre en tu computador.** Sanctum no envía tus datos a ningún
+> [!TIP]
+> **Todo ocurre en tu computador.** Sanctum no envía tus datos a ningún
 > servidor. El cálculo es 100% local y offline.
 
 ---
@@ -115,8 +117,8 @@ Vendes en noviembre por                  $15.000.000
 Ganancia = 15.000.000 − 10.500.000  =     $4.500.000
 Segundo reajuste de la ganancia (+0,7%) = $4.531.500   ← este monto va al F22
 ```
-
-> ⚠️ **Cuidado con el doble conteo al declarar.** El monto que Sanctum entrega
+> [!WARNING]
+> **Cuidado con el doble conteo al declarar.** El monto que Sanctum entrega
 > ya viene reajustado. Al traspasarlo al Formulario 22, no lo vuelvas a
 > reajustar a mano: el formulario, para este código, **no** lo reajusta
 > automáticamente, así que se declara el valor ya ajustado tal cual.
@@ -170,6 +172,7 @@ contabilidad completa).
 
 ### Cómo se declara (Formulario 22)
 
+> [!IMPORTANT]
 > Los códigos del formulario pueden cambiar cada año. Verifica siempre el
 > suplemento tributario del SII del Año Tributario vigente.
 
@@ -210,6 +213,7 @@ ganancias o pérdidas de capital.
   ingresos, con arrastre indefinido a años futuros.
 - **Reporte:** Form 8949 + Schedule D.
 
+> [!IMPORTANT]
 > **Limitación conocida (regla 2025):** desde 2025 el IRS exige rastrear el costo
 > **por billetera/cuenta** y no de forma global (Rev. Proc. 2024-28). El motor
 > actual agrupa los lotes de forma global por activo. Mientras esto no se ajuste,
@@ -229,7 +233,8 @@ con reglas estándar de "ganancia de capital realizada por lotes":
 - Todos los métodos disponibles (FIFO/LIFO/HIFO/CPP).
 - Sin ajuste por inflación.
 
-> ⚠️ **Esto es un punto de partida, no la ley de tu país.** La tributación de
+> [!WARNING]
+>  **Esto es un punto de partida, no la ley de tu país.** La tributación de
 > cripto **no está armonizada** entre países y muchos se salen de este modelo.
 > Ejemplos reales: Alemania exime la ganancia si mantienes más de un año; Francia
 > no grava los cambios cripto-a-cripto, solo cuando pasas a euros; Países Bajos
@@ -280,6 +285,7 @@ N°113 y N°114 de 2025 (DJ 1963/1964).
 (ingreso por airdrop/staking); Rev. Proc. 2024-28 (costo por billetera);
 Forms 8949 / Schedule D.
 
+> [!CAUTION]
 > Estas fuentes fueron contrastadas entre sí y contra el texto primario. Aun así,
 > **la palabra final la tiene un profesional tributario de tu país.** Sanctum te
 > ahorra el trabajo pesado de reconstruir el historial y aplicar las reglas, pero
