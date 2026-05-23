@@ -2,8 +2,7 @@
 set -euo pipefail
 
 # Sanctum install script
-# Builds from source (frontend + release binary) and installs the binary,
-# desktop entry, and icons.
+# Builds from source (frontend + release binary) and installs Sanctum.
 #
 # Usage:
 #   ./install.sh --user               # user-local (~/.local), no sudo
@@ -13,9 +12,15 @@ set -euo pipefail
 #   ./install.sh --user --rebuild     # force a rebuild even if up to date
 #   ./install.sh --user --no-build    # install an already-built binary
 #   PREFIX=/usr sudo ./install.sh     # custom prefix
+#
+# Platforms:
+#   Linux  — installs the binary, desktop entry, and icon.
+#   macOS  — installs the binary only (no XDG desktop entry / icon theme).
 
 # Run from the repo root regardless of where the script is invoked.
-cd "$(dirname "$(realpath "$0")")"
+# Resolved without realpath so it stays portable on macOS (no coreutils).
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "${SCRIPT_DIR}"
 
 PREFIX="${PREFIX:-/usr/local}"
 DESTDIR="${DESTDIR:-}"
@@ -27,10 +32,17 @@ DESKTOP_FILE="packaging/linux/${APP_NAME}.desktop"
 ICON_FILE="packaging/linux/${APP_NAME}.png"     # committed 512x512 app icon
 ICON_SIZE="512x512"
 
+# --- pretty output ---
+
+log()  { printf '\n\033[1;32m[+] %s\033[0m\n' "$*"; }
+warn() { printf '\n\033[1;33m[!] %s\033[0m\n' "$*"; }
+err()  { printf '\n\033[1;31m[✗] %s\033[0m\n' "$*"; }
+info() { printf '     \033[1;37m%s\033[0m\n\n' "$*"; }
+
 # --- helpers ---
 
 die() {
-    echo "ERROR: $*" >&2
+    err "$*"
     exit 1
 }
 
@@ -40,21 +52,21 @@ need_root() {
     fi
 }
 
-# Refuse to run on non-Linux: this installer relies on Linux-only conventions
-# (XDG desktop entry, hicolor icon theme, update-desktop-database).
-require_linux() {
+# Detect the platform. Linux installs everything (binary + desktop entry +
+# icon); macOS installs the binary only, since it has no XDG desktop entries
+# or hicolor icon theme. Windows and anything else are unsupported.
+IS_MACOS=0
+detect_os() {
     local os
     os="$(uname -s 2>/dev/null || echo unknown)"
     case "$os" in
         Linux) ;;
-        Darwin)
-            die "macOS is not supported yet — this installer only targets Linux. To run Sanctum on macOS, build it manually with: cargo tauri build"
-            ;;
+        Darwin) IS_MACOS=1 ;;
         MINGW*|MSYS*|CYGWIN*|Windows_NT)
-            die "Windows is not supported yet — this installer only targets Linux. To run Sanctum on Windows, build it manually with: cargo tauri build"
+            die "Windows is not supported — this installer only targets Linux and macOS. Build manually with: cargo tauri build"
             ;;
         *)
-            die "Unsupported OS '${os}' — this installer only targets Linux."
+            die "Unsupported OS '${os}' — this installer only targets Linux and macOS."
             ;;
     esac
 }
@@ -77,14 +89,15 @@ build_app() {
     fi
 
     if [ "$need" -eq 0 ]; then
-        echo "Binary up to date (${BINARY}); skipping build (use --rebuild to force)."
+        info "Binary up to date (${BINARY}); skipping build (use --rebuild to force)."
         return
     fi
 
-    echo "Building Sanctum (frontend + release binary)..."
+    log "Building Sanctum (frontend + release binary)..."
     # cargo tauri build runs the frontend build (pnpm) via beforeBuildCommand,
     # then compiles the Rust binary with the frontend embedded. --no-bundle
-    # skips the .deb/.rpm/AppImage packaging we don't need for a local install.
+    # skips the platform packaging (.deb/.rpm/AppImage on Linux, .app/.dmg on
+    # macOS) we don't need for a local install.
     if command -v nix >/dev/null 2>&1 && [ -f flake.nix ]; then
         nix develop -c cargo tauri build --no-bundle
     elif command -v cargo-tauri >/dev/null 2>&1; then
@@ -98,10 +111,12 @@ build_app() {
 
 # --- install ---
 
+# Portable install: BSD install (macOS) has no -D, so create dirs separately.
 install_binary() {
     local bindir="${DESTDIR}${PREFIX}/bin"
-    install -Dm755 "${BINARY}" "${bindir}/${APP_NAME}"
-    echo "  -> ${bindir}/${APP_NAME}"
+    mkdir -p "${bindir}"
+    install -m755 "${BINARY}" "${bindir}/${APP_NAME}"
+    info "${bindir}/${APP_NAME}"
 }
 
 install_desktop() {
@@ -111,14 +126,15 @@ install_desktop() {
     sed "s|^Exec=.*|Exec=${PREFIX}/bin/${APP_NAME}|" "${DESKTOP_FILE}" \
         > "${appdir}/${APP_NAME}.desktop"
     chmod 644 "${appdir}/${APP_NAME}.desktop"
-    echo "  -> ${appdir}/${APP_NAME}.desktop"
+    info "${appdir}/${APP_NAME}.desktop"
 }
 
 install_icon() {
     [ -f "${ICON_FILE}" ] || die "Icon not found: ${ICON_FILE}"
-    local dest="${DESTDIR}${PREFIX}/share/icons/hicolor/${ICON_SIZE}/apps/${APP_NAME}.png"
-    install -Dm644 "${ICON_FILE}" "${dest}"
-    echo "  -> ${dest}"
+    local icondir="${DESTDIR}${PREFIX}/share/icons/hicolor/${ICON_SIZE}/apps"
+    mkdir -p "${icondir}"
+    install -m644 "${ICON_FILE}" "${icondir}/${APP_NAME}.png"
+    info "${icondir}/${APP_NAME}.png"
 }
 
 update_caches() {
@@ -136,15 +152,18 @@ update_caches() {
 
 uninstall_files() {
     local bindir="${DESTDIR}${PREFIX}/bin"
-    local appdir="${DESTDIR}${PREFIX}/share/applications"
-    local icondir="${DESTDIR}${PREFIX}/share/icons/hicolor"
-
     rm -f "${bindir}/${APP_NAME}"
-    rm -f "${appdir}/${APP_NAME}.desktop"
-    rm -f "${icondir}/${ICON_SIZE}/apps/${APP_NAME}.png"
-    echo "  Removed ${bindir}/${APP_NAME}"
-    echo "  Removed ${appdir}/${APP_NAME}.desktop"
-    echo "  Removed ${icondir}/${ICON_SIZE}/apps/${APP_NAME}.png"
+    info "Removed ${bindir}/${APP_NAME}"
+
+    # Desktop entry and icon only exist on Linux installs.
+    if [ "$IS_MACOS" -eq 0 ]; then
+        local appdir="${DESTDIR}${PREFIX}/share/applications"
+        local icondir="${DESTDIR}${PREFIX}/share/icons/hicolor"
+        rm -f "${appdir}/${APP_NAME}.desktop"
+        rm -f "${icondir}/${ICON_SIZE}/apps/${APP_NAME}.png"
+        info "Removed ${appdir}/${APP_NAME}.desktop"
+        info "Removed ${icondir}/${ICON_SIZE}/apps/${APP_NAME}.png"
+    fi
 }
 
 # --- main ---
@@ -161,7 +180,7 @@ for arg in "$@"; do
         --rebuild)   FORCE_BUILD=1 ;;
         --no-build)  NO_BUILD=1 ;;
         -h|--help)
-            sed -n '3,16p' "$0" | sed 's/^# \{0,1\}//'
+            sed -n '4,18p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
         *) die "Unknown option: $arg (try --help)" ;;
@@ -169,7 +188,7 @@ for arg in "$@"; do
 done
 
 # Bail out early on unsupported platforms (after --help so usage still prints).
-require_linux
+detect_os
 
 # Resolve target prefix.
 if [ "$IS_USER" -eq 1 ]; then
@@ -180,34 +199,44 @@ elif [ "$(id -u)" -ne 0 ]; then
 fi
 
 if [ "$DO_UNINSTALL" -eq 1 ]; then
-    echo "Uninstalling Sanctum from ${PREFIX}..."
+    log "Uninstalling Sanctum from ${PREFIX}..."
     uninstall_files
-    update_caches
-    echo "Done. User data (vault DB in your config dir) was left untouched."
+    [ "$IS_MACOS" -eq 0 ] && update_caches
+    info "User data (vault DB in your config dir) was left untouched."
     exit 0
 fi
 
 if [ "$IS_USER" -eq 1 ]; then
-    echo "Installing Sanctum for current user (${PREFIX})..."
+    log "Installing Sanctum for current user (${PREFIX})..."
 else
-    echo "Installing Sanctum system-wide (${PREFIX})..."
+    log "Installing Sanctum system-wide (${PREFIX})..."
+fi
+
+if [ "$IS_MACOS" -eq 1 ]; then
+    warn "macOS detected: only the binary will be installed (no desktop entry or icon)."
 fi
 
 build_app
 install_binary
-install_desktop
-install_icon
-update_caches
+if [ "$IS_MACOS" -eq 0 ]; then
+    install_desktop
+    install_icon
+    update_caches
+fi
 
-echo ""
-echo "Sanctum installed successfully."
-echo "Run 'sanctum' from your terminal, or find it in your application menu."
+log "Sanctum installed successfully."
+if [ "$IS_MACOS" -eq 1 ]; then
+    info "Run 'sanctum' from your terminal."
+else
+    info "Run 'sanctum' from your terminal, or find it in your application menu."
+fi
+
 if [ "$IS_USER" -eq 1 ]; then
     case ":${PATH}:" in
         *":${HOME}/.local/bin:"*) ;;
-        *) echo "NOTE: ${HOME}/.local/bin is not on your PATH; add it to use the 'sanctum' command." ;;
+        *) warn "${HOME}/.local/bin is not on your PATH; add it to use the 'sanctum' command." ;;
     esac
-    echo "Uninstall with: ./install.sh --user --uninstall"
+    info "Uninstall with: ./install.sh --user --uninstall"
 else
-    echo "Uninstall with: sudo $(realpath "$0") --uninstall"
+    info "Uninstall with: sudo ${SCRIPT_DIR}/$(basename "$0") --uninstall"
 fi
