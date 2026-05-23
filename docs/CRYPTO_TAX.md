@@ -75,10 +75,11 @@ Existen cuatro métodos:
 | **HIFO** | Vendes primero lo de **mayor costo** | Tiende a minimizar la ganancia |
 | **CPP** | Usas el **costo promedio** de todo lo que tienes | Suaviza los resultados |
 
-**Importante:** no todos los países aceptan todos los métodos. Sanctum
-**solo te ofrece los métodos válidos** para la jurisdicción que elijas (ver
-cada país más abajo). El método por defecto es **FIFO**, porque es el aceptado
-de forma prácticamente universal.
+> [!IMPORTANT]
+> No todos los países aceptan todos los métodos. Sanctum
+> **solo te ofrece los métodos válidos** para la jurisdicción que elijas (ver
+> cada país más abajo). El método por defecto es **FIFO**, porque es el aceptado
+> de forma prácticamente universal.
 
 ---
 
