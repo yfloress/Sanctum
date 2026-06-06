@@ -16,40 +16,57 @@
 - Use `rg --type rust` / `rg --type svelte` / `rg -g '*.ts'` to scope by language.
 - For file discovery, prefer `rg --files | rg <pattern>` or the Glob tool over `find`.
 
-## Memory & Progress Tracking (basic-memory MCP)
-> **This entire section only applies when the `basic-memory` MCP server is active in the current session.**
-> If the `mcp__basic-memory__*` tools are not available, ignore everything in this section — do not attempt to invoke them, do not fabricate notes, do not mention them to the user.
+## Memory & Progress Tracking (engram MCP)
+> **This entire section only applies when the `engram` MCP server is active in the current session.**
+> If the `mcp__engram__*` tools are not available, ignore everything in this section — do not attempt to invoke them, do not fabricate memories, do not mention them to the user.
 
-The `basic-memory` MCP server is the **authoritative knowledge store** for this project.
-Use it proactively to persist context across sessions — not just ad-hoc conversation memory.
+The `engram` MCP server is the **authoritative knowledge store** for this project. It provides
+persistent memory that survives across sessions *and* context compactions. Use it proactively to
+persist context — not just ad-hoc conversation memory.
 
-**Read `config/SOUL.md` at session start.** It defines the persona, tone, and interaction style the agent must adopt (the "Víctor" mentor profile — frío, técnico, cero paja, método de ingeniería inversa). Those behavioral rules take precedence over generic assistant defaults. Re-read it whenever the user's domain shifts significantly so the response register stays aligned.
+Memories are stored as **observations**, not files. Each observation has a `title`, a `type`, and a
+`content` body, and is automatically scoped to a **project** that engram detects from the git remote
+(this repo resolves to project `sanctum`). There is no directory layout to maintain — you search and
+recall by query.
 
-**When to write a note** (`mcp__basic-memory__write_note`):
-- After completing a non-trivial task: save what was done, why, and what remains.
-- When making an architectural or cross-cutting decision that future sessions need to respect.
-- When discovering a non-obvious bug, its root cause, or a workaround.
-- When finishing an audit, migration step, or feature — summarize findings and pending items.
+**Core tools** (always available, call directly — no `ToolSearch` needed):
+- `mcp__engram__mem_current_project` — detect the current project from the cwd. Good first call.
+- `mcp__engram__mem_context` — recent sessions and observations. Call at session start or right after a compaction to reload prior context.
+- `mcp__engram__mem_search` — find past decisions, bugs, patterns, or context by natural-language query.
+- `mcp__engram__mem_get_observation` — fetch the full, untruncated body of a result found via search.
+- `mcp__engram__mem_save` — persist an observation. Call this **proactively**, not only when asked.
+- `mcp__engram__mem_save_prompt` — record a notable user request/intent.
+- `mcp__engram__mem_session_summary` — write an end-of-session summary. Do this before declaring a session "done".
 
-**When to read** (`mcp__basic-memory__read_note` / `mcp__basic-memory__search_notes` / `mcp__basic-memory__list_directory`):
-- At session start: read `config/SOUL.md` for behavioral calibration.
-- At the start of a non-trivial task: check `sanctum/` for prior context on the area you're touching.
-- Before making architectural decisions: check for prior decisions in existing notes.
+**Deferred tools** (load via `ToolSearch` with `select:<name>` before calling): `mem_update`,
+`mem_delete`, `mem_judge`, `mem_compare`, `mem_timeline`, `mem_stats`, `mem_doctor`,
+`mem_session_start`, `mem_session_end`, `mem_suggest_topic_key`, `mem_capture_passive`,
+`mem_merge_projects`.
+
+**When to save** (`mem_save`) — proactively, immediately after any of these:
+- An architectural or cross-cutting decision future sessions must respect.
+- A non-obvious bug: what was wrong, the root cause, and the fix.
+- A new pattern, convention, or configuration/environment change.
+- A discovery or gotcha that would save a future session time.
+- Finishing an audit, migration step, or feature — what was done and what remains.
+
+**When to read** (`mem_context` / `mem_search`):
+- At session start or after a compaction: `mem_context` to reload what was happening.
+- At the start of a non-trivial task: `mem_search` for prior context on the area you're touching.
+- Before architectural decisions: `mem_search` for prior decisions so you don't contradict them.
 - When the user references something from a past session ("the thing we did with X").
 
-**Note conventions**:
-- Directory: `sanctum/` for project-specific knowledge. Personal config under `config/`, pages under `pages/`.
-- Title format: `Sanctum - <Topic>` (e.g. `Sanctum - Settings Audit`, `Sanctum - Work Log`).
-- Include frontmatter `tags` for grouping: `sanctum`, plus domain tags (`settings`, `crypto`, `habits`, etc.).
-- End notes with `## Observations` (structured `[type] fact #tag`) and `## Relations` (`relates_to [[Other Note]]`).
-- Update `Sanctum - Work Log` after each meaningful session so the next one has continuity.
+**Content conventions** for `mem_save`:
+- Keep `title` short and searchable (e.g. `Settings audit`, `Kraken refid pairing`, `Fixed N+1 in tax engine`).
+- Pick a `type`: `decision`, `architecture`, `bugfix`, `pattern`, `config`, `discovery`, or `learning`.
+- Structure `content` with the `**What**` / `**Why**` / `**Where**` / `**Learned**` fields (omit `Learned` if there's nothing notable).
+- For knowledge that evolves over time, pass a stable `topic_key` (e.g. `architecture/tax-engine`) so the entry is upserted instead of duplicated.
 
-**Core notes to keep current**:
-- `config/SOUL.md` — persona & behavioral contract (read, not rewritten unless user asks)
-- `Sanctum - Overview` — project state, strategy, blockers
-- `Sanctum - Arquitectura Técnica` — stack, conventions, key decisions
-- `Sanctum - Frontend Migration Status` — what's done, what's pending in the Svelte migration
-- `Sanctum - Work Log` — running log of sessions with date + what changed
+**Conflict surfacing**: after a `mem_save`, check the response for `judgment_required`. If true, iterate
+`candidates[]` and call `mem_judge` once per candidate (using that candidate's `judgment_id`). Resolve
+silently when confidence ≥ 0.7 and the relation is `related` / `compatible` / `scoped` / `not_conflict`;
+ask the user first when confidence < 0.7, or when the relation is `supersedes` / `conflicts_with` on an
+`architecture`/`decision` observation.
 
 ## Project Intent & Mindset
 Sanctum is a personal finance/crypto/habits app focused on **security and privacy first**.
