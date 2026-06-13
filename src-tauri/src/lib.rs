@@ -17,11 +17,15 @@
 
 mod commands;
 
-use directories::ProjectDirs;
 use sanctum::controller::AppController;
 use std::sync::Arc;
+use tauri::Manager;
 
-/// Returns the platform-appropriate application data directory.
+#[cfg(not(target_os = "android"))]
+use directories::ProjectDirs;
+
+/// Returns the platform-appropriate application data directory (desktop only).
+#[cfg(not(target_os = "android"))]
 fn get_app_data_dir() -> std::path::PathBuf {
     if let Some(proj_dirs) = ProjectDirs::from("", "", "Sanctum") {
         let data_dir = proj_dirs.data_dir().to_path_buf();
@@ -39,9 +43,6 @@ fn get_app_data_dir() -> std::path::PathBuf {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let app_data_dir = get_app_data_dir();
-    let controller = Arc::new(AppController::new(app_data_dir));
-
     // Initialize i18n with system-detected language (must happen before any t() call)
     let detected_lang = sanctum::services::i18n::detect_system_language();
     sanctum::services::i18n::init(&detected_lang);
@@ -49,7 +50,23 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
-        .manage(controller)
+        .setup(|app| {
+            // Desktop: keep the existing data dir so existing vaults are not
+            // relocated. Android: the desktop XDG path does not apply, so use
+            // Tauri's sandboxed per-app data dir.
+            #[cfg(not(target_os = "android"))]
+            let app_data_dir = get_app_data_dir();
+            #[cfg(target_os = "android")]
+            let app_data_dir = {
+                let dir = app.path().app_data_dir()?;
+                std::fs::create_dir_all(&dir).ok();
+                dir
+            };
+
+            let controller = Arc::new(AppController::new(app_data_dir));
+            app.manage(controller);
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             // Vault domain
             commands::vault::check_vault_exists,

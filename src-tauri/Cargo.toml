@@ -6,6 +6,13 @@ authors = ["Kyronix"]
 license = "AGPL-3.0-or-later"
 description = "Sanctum Tauri shell"
 
+# Requerido por Tauri móvil: el Rust de la app se carga como librería compartida
+# (libsanctum_tauri.so) desde la cáscara Android/iOS. `rlib` mantiene el binario
+# de escritorio (main.rs) enlazando contra esta misma lib.
+[lib]
+name = "sanctum_tauri"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
 [dependencies]
 chrono = "0.4"
 directories = "6"

@@ -19,6 +19,18 @@ src-tauri/icons/*
 !src-tauri/icons/icon.png
 
 # ===========================
+# Android (Tauri mobile)
+# ===========================
+# src-tauri/gen/android SÍ se commitea (conserva capabilities, manifest, firma).
+# Sus build artifacts y secretos ya los ignora gen/android/.gitignore.
+# Defensa en profundidad para material de firma y salidas de build:
+*.jks
+*.keystore
+key.properties
+*.apk
+*.aab
+
+# ===========================
 # Database & Security
 # ===========================
 *.db
