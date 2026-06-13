@@ -42,11 +42,11 @@
 <div align="center">
 
 [![License](https://img.shields.io/badge/License-GPLv3-8b5cf6?style=flat-square)](LICENSE) &nbsp;
-![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS-informational?style=flat-square) &nbsp;
+![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows%20%7C%20Android-informational?style=flat-square) &nbsp;
 ![Status](https://img.shields.io/badge/Status-Alpha-orange?style=flat-square) &nbsp;
 ![PRs](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)
 
-**[About](#about)** · **[Features](#features)** · **[Import](#import--exchange-support)** · **[Security](#security--privacy)** · **[Install](#installation)** · **[Docs](docs/INSTALL.md)**
+**[About](#about)** · **[Features](#features)** · **[Import](#import--exchange-support)** · **[Security](#security--privacy)** · **[Platforms](#platforms--self-hosting)** · **[Install](#installation)** · **[Docs](docs/INSTALL.md)**
 
 </div>
 
@@ -55,9 +55,14 @@
 > [!CAUTION]
 > **NOT READY FOR USE — UNDER ACTIVE DEVELOPMENT.**
 
-**Sanctum** is a privacy-first desktop vault for your money, crypto, and habits.
-Everything runs locally: encrypted storage, no telemetry, no accounts, no cloud.
-You hold the keys, the database, and the backups — nobody else.
+**Sanctum** is a privacy-first vault for your money, crypto, and habits — on
+**desktop and Android**. Everything runs on hardware you control: encrypted
+storage, no telemetry, no accounts, no corporate cloud. You hold the keys, the
+database, and the backups — nobody else.
+
+Use it fully offline with a local encrypted database, or run **your own Sanctum
+server** and share one private vault across all your devices — desktop, Android,
+and any browser (including iOS) — over your own network.
 
 It is built for people who want a single, auditable place to track their finances
 without handing their financial life to a third party.
@@ -95,7 +100,7 @@ workflows. All imports are best-effort, validated per row, deduplicated, and mak
 
 > [!IMPORTANT]
 > Every exchange/wallet file is processed **locally on your device**. Nothing is
-> ever uploaded to a Sanctum server — there are no Sanctum servers.
+> ever uploaded to a third party — the only server that exists is one you host yourself.
 
 **Supported formats:**
 
@@ -134,7 +139,7 @@ workflows. All imports are best-effort, validated per row, deduplicated, and mak
 
 Sanctum rests on three pillars:
 
-1. **Zero cloud.** No telemetry, no sync, no accounts. Your data never leaves your machine.
+1. **No corporate cloud.** No telemetry, no accounts, no third-party servers. Your data only ever lives on hardware you control — your device, or a server you host yourself.
 2. **Hardened storage.** SQLCipher (AES-256) encrypts the entire database with a master password you hold.
 3. **Mitigated external connections.** Price sync uses traffic padding to obfuscate your portfolio and supports user-configured proxies (SOCKS5/Tor, HTTP).
 
@@ -144,6 +149,24 @@ Sanctum rests on three pillars:
 > traffic through a proxy.
 
 Backups are encrypted at rest and ship with restore + rollback safety.
+
+## Platforms & Self-Hosting
+
+Sanctum runs as a native app on **desktop (Linux, macOS, Windows)** and
+**Android**, and as a **web app** for any other device — including **iOS** —
+served from a server you host yourself.
+
+Two ways to use it, chosen per device:
+
+- **Local** *(default)* — a fully offline, encrypted database that lives only on
+  that device. No server, no network required.
+- **Self-hosted** — run your own **Sanctum server** as the single source of truth
+  and share one vault across all your devices. Reach it privately over your LAN or
+  a mesh VPN like **Tailscale** — it never has to be exposed to the internet.
+
+> [!IMPORTANT]
+> There is still no Sanctum cloud. The only server that ever exists is one **you**
+> run, on hardware **you** control.
 
 ## Tech Stack
 
@@ -156,6 +179,9 @@ Sanctum prioritizes performance, type safety, and auditability.
 | **Frontend**    | **Svelte 5 + TS**    | Reactive UI with TypeScript and Vite.         |
 | **Database**    | **SQLite + SQLCipher** | Locally encrypted relational storage.       |
 | **Environment** | **Nix + Direnv**     | Reproducible, hermetic dev environment.       |
+
+The same Rust core powers every target — desktop, Android, and the optional
+self-hosted server — so the business logic lives in exactly one place.
 
 ## Installation
 
@@ -184,6 +210,15 @@ direnv allow                          # or: nix develop
 cd ui-svelte && pnpm install && cd ..  # first time only
 cargo tauri dev                       # run in development mode
 cargo tauri build                     # build a production binary
+```
+
+### Android
+
+With the Tauri mobile toolchain set up, build and run on a connected device:
+
+```bash
+cargo tauri android dev     # run on a connected device (USB or wireless ADB)
+cargo tauri android build   # build a release APK / AAB
 ```
 
 See **[docs/INSTALL.md](docs/INSTALL.md)** for the manual toolchain and

@@ -42,11 +42,11 @@
 <div align="center">
 
 [![Licencia](https://img.shields.io/badge/Licencia-GPLv3-8b5cf6?style=flat-square)](LICENSE) &nbsp;
-![Plataforma](https://img.shields.io/badge/Plataforma-Linux%20%7C%20macOS-informational?style=flat-square) &nbsp;
+![Plataforma](https://img.shields.io/badge/Plataforma-Linux%20%7C%20macOS%20%7C%20Windows%20%7C%20Android-informational?style=flat-square) &nbsp;
 ![Estado](https://img.shields.io/badge/Estado-Alpha-orange?style=flat-square) &nbsp;
 ![PRs](https://img.shields.io/badge/PRs-bienvenidos-brightgreen?style=flat-square)
 
-**[Acerca de](#acerca-de)** · **[Características](#características)** · **[Importación](#importación-e-integraciones)** · **[Seguridad](#seguridad-y-privacidad)** · **[Instalación](#instalación)** · **[Docs](docs/INSTALL_ES.md)**
+**[Acerca de](#acerca-de)** · **[Características](#características)** · **[Importación](#importación-e-integraciones)** · **[Seguridad](#seguridad-y-privacidad)** · **[Plataformas](#plataformas-y-autohospedaje)** · **[Instalación](#instalación)** · **[Docs](docs/INSTALL_ES.md)**
 
 </div>
 
@@ -55,10 +55,14 @@
 > [!CAUTION]
 > **NO ESTÁ LISTO PARA USAR — EN DESARROLLO ACTIVO.**
 
-**Sanctum** es una bóveda de escritorio orientada a la privacidad para tus
-finanzas, crypto y hábitos. Todo funciona localmente: almacenamiento cifrado, cero
-telemetría, sin cuentas, sin nube. Tú controlas las llaves, la base de datos y los
-respaldos — nadie más.
+**Sanctum** es una bóveda orientada a la privacidad para tus finanzas, crypto y
+hábitos — en **escritorio y Android**. Todo funciona sobre hardware que controlas
+tú: almacenamiento cifrado, cero telemetría, sin cuentas, sin nube corporativa. Tú
+controlas las llaves, la base de datos y los respaldos — nadie más.
+
+Úsalo totalmente offline con una base de datos local cifrada, o levanta **tu propio
+servidor Sanctum** y comparte una sola bóveda privada entre todos tus dispositivos
+— escritorio, Android y cualquier navegador (incluido iOS) — por tu propia red.
 
 Está pensado para quienes quieren un único lugar auditable donde llevar sus
 finanzas sin entregar su vida financiera a un tercero.
@@ -96,7 +100,7 @@ realizan llamadas de red** durante la ingesta.
 
 > [!IMPORTANT]
 > Cada archivo de exchange/wallet se procesa **localmente en tu dispositivo**.
-> Nada se sube a un servidor de Sanctum — no existen servidores de Sanctum.
+> Nada se sube a un tercero — el único servidor que existe es uno que hospedas tú.
 
 **Formatos soportados:**
 
@@ -135,7 +139,7 @@ realizan llamadas de red** durante la ingesta.
 
 Sanctum se apoya en tres pilares:
 
-1. **Cero nube.** Sin telemetría, sin sincronización, sin cuentas. Tus datos nunca salen de tu dispositivo.
+1. **Sin nube corporativa.** Sin telemetría, sin cuentas, sin servidores de terceros. Tus datos solo viven en hardware que controlas tú — tu dispositivo, o un servidor que hospedas tú.
 2. **Almacenamiento blindado.** SQLCipher (AES-256) cifra toda la base de datos con una contraseña maestra que controlas tú.
 3. **Conexiones externas mitigadas.** La sincronización de precios usa relleno de tráfico para ocultar tu portafolio y soporta proxies configurados por el usuario (SOCKS5/Tor, HTTP).
 
@@ -145,6 +149,25 @@ Sanctum se apoya en tres pilares:
 > tráfico por un proxy.
 
 Los respaldos están cifrados en reposo e incluyen seguridad de restauración y rollback.
+
+## Plataformas y Autohospedaje
+
+Sanctum funciona como app nativa en **escritorio (Linux, macOS, Windows)** y
+**Android**, y como **app web** para cualquier otro dispositivo — incluido
+**iOS** — servida desde un servidor que hospedas tú mismo.
+
+Dos formas de usarlo, elegibles por dispositivo:
+
+- **Local** *(por defecto)* — una base de datos cifrada totalmente offline que
+  vive solo en ese dispositivo. Sin servidor, sin red.
+- **Autohospedado** — levanta tu propio **servidor Sanctum** como única fuente de
+  verdad y comparte una sola bóveda entre todos tus dispositivos. Accedé a él de
+  forma privada por tu LAN o una VPN mesh como **Tailscale** — nunca tiene que
+  estar expuesto a internet.
+
+> [!IMPORTANT]
+> Sigue sin existir una nube de Sanctum. El único servidor que existe es uno que
+> **tú** levantas, sobre hardware que **tú** controlas.
 
 ## Tecnologías
 
@@ -157,6 +180,9 @@ Sanctum prioriza el rendimiento, la seguridad de tipos y la auditabilidad.
 | **Frontend**    | **Svelte 5 + TS**    | UI reactiva con TypeScript y Vite.            |
 | **Base de Datos** | **SQLite + SQLCipher** | Almacenamiento relacional cifrado localmente. |
 | **Entorno**     | **Nix + Direnv**     | Entorno de desarrollo reproducible y hermético. |
+
+El mismo núcleo Rust impulsa todos los destinos — escritorio, Android y el
+servidor autohospedado opcional — así que la lógica de negocio vive en un solo lugar.
 
 ## Instalación
 
@@ -185,6 +211,15 @@ direnv allow                          # o: nix develop
 cd ui-svelte && pnpm install && cd ..  # solo la primera vez
 cargo tauri dev                       # ejecutar en modo desarrollo
 cargo tauri build                     # compilar binario de producción
+```
+
+### Android
+
+Con el toolchain móvil de Tauri configurado, compila y ejecuta en un dispositivo conectado:
+
+```bash
+cargo tauri android dev     # ejecutar en un dispositivo conectado (USB o ADB inalámbrico)
+cargo tauri android build   # compilar un APK / AAB de release
 ```
 
 Consulta **[docs/INSTALL_ES.md](docs/INSTALL_ES.md)** para el toolchain manual y
