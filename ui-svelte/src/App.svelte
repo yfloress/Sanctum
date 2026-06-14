@@ -279,6 +279,20 @@
     box-sizing: border-box;
   }
 
+  /* Remove the grey tap flash on touch devices for a native feel. */
+  :global(html) {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Prevent iOS Safari from auto-zooming when focusing an input (font < 16px). */
+  @media (max-width: 720px) {
+    :global(input),
+    :global(select),
+    :global(textarea) {
+      font-size: 16px;
+    }
+  }
+
   :global(::-webkit-scrollbar) {
     width: 4px;
     height: 4px;
@@ -467,6 +481,7 @@
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
+    overscroll-behavior-y: contain;
     height: 100vh;
     display: flex;
     flex-direction: column;

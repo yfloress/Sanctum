@@ -44,6 +44,11 @@
   from { opacity: 0; transform: translateY(8px) scale(0.97); }
   to   { opacity: 1; transform: none; }
 }
+/* Mobile bottom-sheet entrance: slides up from the bottom edge. */
+@keyframes sheetIn {
+  from { opacity: 0; transform: translateY(100%); }
+  to   { opacity: 1; transform: none; }
+}
 
 .modal {
   position: relative;
@@ -344,13 +349,36 @@ select option { background: var(--option-bg); color: var(--text-primary); }
 }
 
 /* ── Mobile (phones): global primitives ──────────────────────────── */
-@media (max-width: 480px) {
-  /* Modals: fixed 420/480px would overflow a phone — fit the viewport. */
+@media (max-width: 640px) {
+  /* Modals become a bottom sheet: anchored to the bottom edge, full width,
+     rounded only on top, sliding up — thumb-friendly and native-feeling. */
+  .modal-wrapper {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    transform: none;
+  }
   .modal,
   .modal.wide {
-    width: calc(100vw - 24px);
-    max-width: 480px;
-    padding: 20px;
+    width: 100%;
+    max-width: 100%;
+    max-height: 88vh;
+    padding: 20px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    animation: sheetIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  /* Grab-handle hint at the top of the sheet. */
+  .modal::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 4px;
+    border-radius: 99px;
+    background: var(--glass-border-hover);
   }
   /* Side drawer becomes full-width on a phone. */
   .detail-panel {
