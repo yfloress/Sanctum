@@ -659,6 +659,11 @@
     display: grid; grid-template-columns: 100px 1fr; gap: 8px;
     font-size: 0.85rem; color: var(--text-secondary);
   }
+
+  /* ── Mobile ───────────────────────────────────────────────── */
+  @media (max-width: 640px) {
+    .page { padding: 20px 16px; }
+  }
   .about-label { color: var(--text-tertiary); }
 
   .hidden-input { display: none; }

@@ -1493,6 +1493,11 @@
 <style>
   .page { padding: 24px 32px; max-width: 960px; width: 100%; margin: 0 auto; }
 
+  /* ── Mobile ───────────────────────────────────────────────── */
+  @media (max-width: 640px) {
+    .page { padding: 20px 16px; }
+  }
+
   /* Ticker Bar */
   .ticker-bar {
     display: flex; align-items: center; gap: 0;

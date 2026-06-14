@@ -692,4 +692,15 @@
     text-align: right;
   }
   .tx-amount.expense { color: var(--danger); }
+
+  /* ── Mobile ───────────────────────────────────────────────── */
+  @media (max-width: 640px) {
+    .page { padding: 20px 16px; }
+    .hero { padding: 12px 0 24px; }
+    .net-worth { font-size: 2.3rem; }
+    .hero-value-row { gap: 8px; flex-wrap: wrap; }
+    .balance-cell { padding: 12px 22px; }
+    .stats-row { grid-template-columns: 1fr; }
+    .bottom-grid { grid-template-columns: 1fr; }
+  }
 </style>

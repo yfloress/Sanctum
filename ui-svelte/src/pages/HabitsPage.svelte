@@ -557,6 +557,13 @@
   .stat-lbl { font-size: 0.68rem; color: var(--text-tertiary); margin-top: 2px; text-align: center; }
 
   .analytics-section { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+
+  /* ── Mobile ───────────────────────────────────────────────── */
+  @media (max-width: 640px) {
+    .page { padding: 20px 16px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .analytics-section { grid-template-columns: 1fr; }
+  }
   .chart-card {
     position: relative;
     background: var(--card-bg);

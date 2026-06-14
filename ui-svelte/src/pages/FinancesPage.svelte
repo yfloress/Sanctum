@@ -1093,6 +1093,13 @@
     gap: 14px;
     margin-bottom: 14px;
   }
+
+  /* ── Mobile ───────────────────────────────────────────────── */
+  @media (max-width: 640px) {
+    .page { padding: 20px 16px; }
+    .overview-stats { grid-template-columns: 1fr; }
+    .charts-row { grid-template-columns: 1fr; }
+  }
   .chart-card {
     position: relative;
     background: var(--card-bg);
