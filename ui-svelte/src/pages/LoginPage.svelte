@@ -215,6 +215,8 @@
     align-items: center;
     justify-content: center;
     min-height: 100vh;
+    padding: 24px;
+    box-sizing: border-box;
     /* Hardcoded dot-grid backdrop: the login screen can't read the user's
        chosen background yet, so it always uses dots (themed via --bg-dots). */
     background-color: var(--bg-base);
@@ -285,7 +287,8 @@
     align-items: center;
     gap: 36px;
     padding: 52px 44px;
-    width: 420px;
+    width: 100%;
+    max-width: 420px;
     background: var(--glass);
     backdrop-filter: var(--glass-blur-heavy);
     -webkit-backdrop-filter: var(--glass-blur-heavy);
@@ -704,5 +707,25 @@
     opacity: 0.35;
     letter-spacing: 0.05em;
     z-index: 0;
+  }
+
+  /* ===== Mobile ===== */
+  @media (max-width: 480px) {
+    .login-card {
+      padding: 36px 24px;
+      gap: 28px;
+    }
+    .title {
+      font-size: 1.6rem;
+      letter-spacing: 0.3em;
+    }
+    .logo-ring {
+      width: 68px;
+      height: 68px;
+    }
+    .login-logo {
+      width: 48px;
+      height: 48px;
+    }
   }
 </style>

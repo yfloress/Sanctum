@@ -19,6 +19,7 @@
   import { i18n } from './lib/stores/i18n.svelte'
   import { startSessionMonitor } from './lib/stores/session.svelte'
   import Sidebar from './components/Sidebar.svelte'
+  import MobileTopBar from './components/MobileTopBar.svelte'
   import StarField from './components/StarField.svelte'
   import Aurora from './components/Aurora.svelte'
   import Toast from './components/Toast.svelte'
@@ -103,6 +104,7 @@
       <Aurora />
     {/if}
     <Sidebar />
+    <MobileTopBar />
     <main class="content" bind:this={mainEl} onscroll={handleScroll}>
       {#if app.activePage === 'dashboard'}
         <DashboardPage />
@@ -470,5 +472,30 @@
     flex-direction: column;
     align-items: center;
     width: 100%;
+  }
+
+  /* ── Mobile: leave room for the fixed bottom navigation bar ── */
+  @media (max-width: 720px) {
+    .content {
+      padding-top: calc(52px + env(safe-area-inset-top, 0px));
+      padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+    }
+  }
+
+  /* ── Mobile: tab bars span the width and scroll instead of overflowing ── */
+  @media (max-width: 480px) {
+    :global(.tab-bar) {
+      width: 100%;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    :global(.tab-bar)::-webkit-scrollbar {
+      display: none;
+    }
+    :global(.tab-bar button) {
+      padding: 8px 14px;
+      white-space: nowrap;
+      flex: 1 0 auto;
+    }
   }
 </style>

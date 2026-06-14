@@ -571,4 +571,95 @@
   :global(.light-mode) .eye-btn.active .nav-icon-wrap {
     color: #7c3aed;
   }
+
+  /* ── Mobile: sidebar becomes a bottom navigation bar ─────
+     The vertical groups/labels/header collapse; every nav item
+     (5 pages + hide-balances + lock) flattens into one even row. */
+  @media (max-width: 720px) {
+    .sidebar,
+    .sidebar.collapsed {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+      height: 60px;
+      flex-direction: row;
+      align-items: stretch;
+      background: rgba(14, 12, 20, 0.55);
+      backdrop-filter: blur(18px) saturate(1.3);
+      -webkit-backdrop-filter: blur(18px) saturate(1.3);
+      border-right: none;
+      border-top: 1px solid rgba(168, 85, 247, 0.12);
+      box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.35);
+      transition: none;
+      z-index: 100;
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    :global(.light-mode) .sidebar {
+      background: rgba(250, 248, 255, 0.6);
+    }
+
+    /* Desktop-only chrome and text labels disappear on the bar */
+    .drag-region,
+    .edge-toggle,
+    .sidebar-header,
+    .noise,
+    .nav-group-label,
+    .sidebar-footer::before,
+    .nav-label {
+      display: none;
+    }
+
+    /* Unwrap the page groups so each .nav-item is a direct flex child */
+    .nav-items,
+    .nav-group {
+      display: contents;
+    }
+
+    /* Settings, hide-balances and lock live in the mobile top bar instead,
+       leaving the bottom bar with the 4 primary destinations. */
+    .sidebar-footer,
+    #nav-settings {
+      display: none;
+    }
+
+    .nav-item {
+      flex: 1;
+      flex-direction: column;
+      height: 100%;
+      min-width: 44px;
+      gap: 0;
+      padding: 0;
+      border-radius: 0;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .collapsed .nav-item {
+      justify-content: center;
+      padding: 0;
+    }
+
+    .nav-item.active {
+      background: none;
+    }
+
+    .nav-item.active .nav-icon-wrap {
+      color: #c084fc;
+      transform: scale(1.06);
+    }
+
+    /* Active marker moves to a short underline at the top of the cell */
+    .active-indicator {
+      top: 0;
+      bottom: auto;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 24px;
+      height: 2px;
+      border-radius: 0 0 2px 2px;
+    }
+  }
 </style>

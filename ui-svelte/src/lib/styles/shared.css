@@ -342,3 +342,19 @@ select option { background: var(--option-bg); color: var(--text-primary); }
     flex-shrink: 0;
   }
 }
+
+/* ── Mobile (phones): global primitives ──────────────────────────── */
+@media (max-width: 480px) {
+  /* Modals: fixed 420/480px would overflow a phone — fit the viewport. */
+  .modal,
+  .modal.wide {
+    width: calc(100vw - 24px);
+    max-width: 480px;
+    padding: 20px;
+  }
+  /* Side drawer becomes full-width on a phone. */
+  .detail-panel {
+    width: 100%;
+    padding: 20px;
+  }
+}
