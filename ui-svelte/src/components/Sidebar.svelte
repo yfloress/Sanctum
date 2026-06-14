@@ -583,7 +583,7 @@
       left: 0;
       right: 0;
       width: 100%;
-      height: 60px;
+      height: calc(60px + env(safe-area-inset-bottom, 0px));
       flex-direction: row;
       align-items: stretch;
       background: rgba(14, 12, 20, 0.55);

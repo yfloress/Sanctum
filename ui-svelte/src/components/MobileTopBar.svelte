@@ -103,7 +103,7 @@
       top: 0;
       left: 0;
       right: 0;
-      height: 52px;
+      height: calc(52px + env(safe-area-inset-top, 0px));
       display: flex;
       align-items: center;
       justify-content: space-between;
