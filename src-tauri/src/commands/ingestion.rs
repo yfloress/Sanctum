@@ -18,9 +18,7 @@
 //! Ingestion domain Tauri commands.
 
 use sanctum::controller::AppController;
-use sanctum::ui::dto::ingestion::{
-    ExchangeDetectionResult, ImportErrorDto, ImportResultsResponse,
-};
+use sanctum::ui::dto::ingestion::{ExchangeDetectionResult, ImportErrorDto, ImportResultsResponse};
 use std::sync::Arc;
 use tauri::State;
 
@@ -30,7 +28,9 @@ pub fn preview_import(
     content: String,
     filename: String,
 ) -> Result<ImportResultsResponse, String> {
-    let summary = controller.preview_data(&content, &filename).map_err(|e| e.to_string())?;
+    let summary = controller
+        .preview_data(&content, &filename)
+        .map_err(|e| e.to_string())?;
     Ok(map_import_summary(summary))
 }
 
@@ -40,7 +40,9 @@ pub fn import_data(
     content: String,
     filename: String,
 ) -> Result<ImportResultsResponse, String> {
-    let summary = controller.import_data(content, filename).map_err(|e| e.to_string())?;
+    let summary = controller
+        .import_data(content, filename)
+        .map_err(|e| e.to_string())?;
     Ok(map_import_summary(summary))
 }
 
@@ -54,15 +56,15 @@ pub fn detect_exchange_source(
     controller: State<'_, Arc<AppController>>,
     content: String,
 ) -> Option<ExchangeDetectionResult> {
-    controller.detect_exchange_source(&content).map(|(id, label, wallet)| {
-        ExchangeDetectionResult {
+    controller
+        .detect_exchange_source(&content)
+        .map(|(id, label, wallet)| ExchangeDetectionResult {
             exchange_id: id,
             exchange: label,
             suggested_wallet: wallet,
             file_count: 1,
             total_records: content.lines().count().saturating_sub(1),
-        }
-    })
+        })
 }
 
 #[tauri::command]
@@ -71,7 +73,9 @@ pub fn preview_exchange_csv(
     content: String,
     wallet_name: String,
 ) -> Result<ImportResultsResponse, String> {
-    let summary = controller.preview_exchange_csv(&content, &wallet_name).map_err(|e| e.to_string())?;
+    let summary = controller
+        .preview_exchange_csv(&content, &wallet_name)
+        .map_err(|e| e.to_string())?;
     Ok(map_import_summary(summary))
 }
 
@@ -81,18 +85,26 @@ pub fn import_exchange_csv(
     content: String,
     wallet_name: String,
 ) -> Result<ImportResultsResponse, String> {
-    let summary = controller.import_exchange_csv(content, wallet_name).map_err(|e| e.to_string())?;
+    let summary = controller
+        .import_exchange_csv(content, wallet_name)
+        .map_err(|e| e.to_string())?;
     Ok(map_import_summary(summary))
 }
 
-fn map_import_summary(summary: sanctum::features::ingestion::ImportSummary) -> ImportResultsResponse {
+fn map_import_summary(
+    summary: sanctum::features::ingestion::ImportSummary,
+) -> ImportResultsResponse {
     ImportResultsResponse {
         total_processed: summary.total_processed,
         inserted: summary.inserted,
         skipped: summary.skipped,
-        errors: summary.error_details.into_iter().map(|e| ImportErrorDto {
-            line: Some(e.line_number),
-            message: e.message,
-        }).collect(),
+        errors: summary
+            .error_details
+            .into_iter()
+            .map(|e| ImportErrorDto {
+                line: Some(e.line_number),
+                message: e.message,
+            })
+            .collect(),
     }
 }

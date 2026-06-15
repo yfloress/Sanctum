@@ -61,9 +61,7 @@ fn convert_usd_to_preferred(amount_usd: f64, currency: &str, rate: f64) -> f64 {
 
 /// Fetch net worth balance overview (fiat + crypto totals).
 #[tauri::command]
-pub fn fetch_balance(
-    controller: State<'_, Arc<AppController>>,
-) -> Result<BalanceOverview, String> {
+pub fn fetch_balance(controller: State<'_, Arc<AppController>>) -> Result<BalanceOverview, String> {
     let preferred_currency = normalize_currency_code(
         &controller
             .get_app_setting(SETTING_PREFERRED_CURRENCY)
@@ -72,8 +70,12 @@ pub fn fetch_balance(
     let preferred_rate = load_cached_usd_rate(&controller, &preferred_currency);
 
     let accounts = controller.get_accounts().map_err(|e| e.to_string())?;
-    let balances = controller.get_account_balances().map_err(|e| e.to_string())?;
-    let assets = controller.get_aggregated_portfolio().map_err(|e| e.to_string())?;
+    let balances = controller
+        .get_account_balances()
+        .map_err(|e| e.to_string())?;
+    let assets = controller
+        .get_aggregated_portfolio()
+        .map_err(|e| e.to_string())?;
     let prices = controller.load_crypto_prices().unwrap_or_default();
 
     let currency_map: HashMap<String, String> = accounts
@@ -121,8 +123,7 @@ pub fn fetch_balance(
     let net_worth_usd = fiat_dollars + crypto_total_usd;
 
     let net_worth = convert_usd_to_preferred(net_worth_usd, &preferred_currency, preferred_rate);
-    let fiat_display =
-        convert_usd_to_preferred(fiat_dollars, &preferred_currency, preferred_rate);
+    let fiat_display = convert_usd_to_preferred(fiat_dollars, &preferred_currency, preferred_rate);
     let crypto_display =
         convert_usd_to_preferred(crypto_total_usd, &preferred_currency, preferred_rate);
 
@@ -278,16 +279,10 @@ pub fn fetch_analytics(
         .iter()
         .zip(data.monthly_income.iter().zip(data.monthly_expense.iter()))
         .map(|(label, (inc, exp))| {
-            let inc_pref = convert_usd_to_preferred(
-                *inc as f64 / 100.0,
-                &preferred_currency,
-                preferred_rate,
-            );
-            let exp_pref = convert_usd_to_preferred(
-                *exp as f64 / 100.0,
-                &preferred_currency,
-                preferred_rate,
-            );
+            let inc_pref =
+                convert_usd_to_preferred(*inc as f64 / 100.0, &preferred_currency, preferred_rate);
+            let exp_pref =
+                convert_usd_to_preferred(*exp as f64 / 100.0, &preferred_currency, preferred_rate);
             MonthlyCashFlowItem {
                 month: label.clone(),
                 income: inc_pref,

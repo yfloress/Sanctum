@@ -25,7 +25,9 @@ use sanctum::ui::dto::finance::{
     AccountDetailResponse, AccountDto, AccountsResponse, CategoriesResponse, CategoryDto,
     TransactionDto, TransactionsResponse,
 };
-use sanctum::ui::{format_category_label, format_decimal_from_cents, format_money, format_money_signed};
+use sanctum::ui::{
+    format_category_label, format_decimal_from_cents, format_money, format_money_signed,
+};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tauri::State;
@@ -80,7 +82,9 @@ pub fn fetch_account_details(
         .find(|a| a.id == account_id)
         .ok_or_else(|| "Account not found".to_string())?;
 
-    let balances = controller.get_account_balances().map_err(|e| e.to_string())?;
+    let balances = controller
+        .get_account_balances()
+        .map_err(|e| e.to_string())?;
     let balance_cents = balances
         .iter()
         .find(|b| b.account_id == account_id)
@@ -185,7 +189,13 @@ pub fn transfer_funds(
         .ok_or_else(|| "Amount must be greater than zero".to_string())?;
 
     controller
-        .transfer_funds(from_account_id, to_account_id, amount_cents, description, date)
+        .transfer_funds(
+            from_account_id,
+            to_account_id,
+            amount_cents,
+            description,
+            date,
+        )
         .map(|_| ())
         .map_err(|e| e.to_string())
 }
@@ -206,26 +216,30 @@ pub fn update_transfer(
         .ok_or_else(|| "Amount must be greater than zero".to_string())?;
 
     controller
-        .update_transfer(id, from_account_id, to_account_id, amount_cents, description, date)
+        .update_transfer(
+            id,
+            from_account_id,
+            to_account_id,
+            amount_cents,
+            description,
+            date,
+        )
         .map_err(|e| e.to_string())
 }
 
 /// Archive (soft-delete) an account.
 #[tauri::command]
-pub fn delete_account(
-    controller: State<'_, Arc<AppController>>,
-    id: String,
-) -> Result<(), String> {
-    controller
-        .archive_account(id)
-        .map_err(|e| e.to_string())
+pub fn delete_account(controller: State<'_, Arc<AppController>>, id: String) -> Result<(), String> {
+    controller.archive_account(id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn fetch_archived_accounts(
     controller: State<'_, Arc<AppController>>,
 ) -> Result<Vec<AccountDto>, String> {
-    let accounts = controller.get_archived_accounts().map_err(|e| e.to_string())?;
+    let accounts = controller
+        .get_archived_accounts()
+        .map_err(|e| e.to_string())?;
     Ok(accounts
         .into_iter()
         .map(|acc| AccountDto {
@@ -254,9 +268,7 @@ pub fn unarchive_account(
     controller: State<'_, Arc<AppController>>,
     id: String,
 ) -> Result<(), String> {
-    controller
-        .unarchive_account(id)
-        .map_err(|e| e.to_string())
+    controller.unarchive_account(id).map_err(|e| e.to_string())
 }
 
 /// Update an account's bank icon.
@@ -266,11 +278,8 @@ pub fn update_account_icon(
     id: String,
     icon: String,
 ) -> Result<(), String> {
-    let icon_path = sanctum::ui::normalize_bank_icon_path(if icon.is_empty() {
-        None
-    } else {
-        Some(icon)
-    });
+    let icon_path =
+        sanctum::ui::normalize_bank_icon_path(if icon.is_empty() { None } else { Some(icon) });
     controller
         .update_account_icon(id, icon_path)
         .map_err(|e| e.to_string())
@@ -404,7 +413,14 @@ pub fn add_transaction(
         .ok_or_else(|| "Amount must be greater than zero".to_string())?;
 
     controller
-        .add_transaction(account_id, amount_cents, category, description, date, is_expense)
+        .add_transaction(
+            account_id,
+            amount_cents,
+            category,
+            description,
+            date,
+            is_expense,
+        )
         .map(|_| ())
         .map_err(|e| e.to_string())
 }
@@ -427,7 +443,15 @@ pub fn update_transaction(
         .ok_or_else(|| "Amount must be greater than zero".to_string())?;
 
     controller
-        .update_transaction(id, account_id, amount_cents, category, description, date, is_expense)
+        .update_transaction(
+            id,
+            account_id,
+            amount_cents,
+            category,
+            description,
+            date,
+            is_expense,
+        )
         .map_err(|e| e.to_string())
 }
 
@@ -437,9 +461,7 @@ pub fn delete_transaction(
     controller: State<'_, Arc<AppController>>,
     id: String,
 ) -> Result<(), String> {
-    controller
-        .delete_transaction(id)
-        .map_err(|e| e.to_string())
+    controller.delete_transaction(id).map_err(|e| e.to_string())
 }
 
 // ==================== Categories ====================

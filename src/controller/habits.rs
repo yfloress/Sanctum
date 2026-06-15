@@ -20,7 +20,7 @@
 //! Habit CRUD, logs, and analytics.
 
 use super::{AppController, ControllerError, normalize_habit_category, validate_uuid};
-use super::{HabitAnalytics, MonthlyTrendPoint, WeekdayEfficiency, CategoryDistributionPoint};
+use super::{CategoryDistributionPoint, HabitAnalytics, MonthlyTrendPoint, WeekdayEfficiency};
 use crate::models::{Habit, HabitLog};
 use chrono::{Datelike, NaiveDate};
 use regex::Regex;
@@ -384,7 +384,8 @@ impl AppController {
         }
 
         // ==================== Category Distribution ====================
-        let mut category_counts: std::collections::HashMap<String, i32> = std::collections::HashMap::new();
+        let mut category_counts: std::collections::HashMap<String, i32> =
+            std::collections::HashMap::new();
         let habit_categories: std::collections::HashMap<&str, &str> = habits
             .iter()
             .map(|h| (h.id.as_str(), h.category.as_str()))
@@ -394,12 +395,12 @@ impl AppController {
                 *category_counts.entry((*cat).to_string()).or_insert(0) += 1;
             }
         }
-        
+
         let mut category_data: Vec<CategoryDistributionPoint> = category_counts
             .into_iter()
             .map(|(category, count)| CategoryDistributionPoint { category, count })
             .collect();
-            
+
         category_data.sort_by_key(|b| std::cmp::Reverse(b.count)); // Sort descending
 
         Ok(HabitAnalytics {

@@ -142,10 +142,7 @@ pub fn set_proxy_enabled(
 /// silently stores an unreachable / malformed value. Empty strings clear the
 /// setting and are allowed through without validation.
 #[tauri::command]
-pub fn set_proxy_url(
-    controller: State<'_, Arc<AppController>>,
-    url: String,
-) -> Result<(), String> {
+pub fn set_proxy_url(controller: State<'_, Arc<AppController>>, url: String) -> Result<(), String> {
     let trimmed = url.trim().to_string();
     if !trimmed.is_empty() {
         controller
@@ -251,9 +248,7 @@ pub fn get_app_info() -> AppInfo {
 
 /// Get remaining session time before auto-lock, in seconds.
 #[tauri::command]
-pub fn get_session_remaining(
-    controller: State<'_, Arc<AppController>>,
-) -> Result<i64, String> {
+pub fn get_session_remaining(controller: State<'_, Arc<AppController>>) -> Result<i64, String> {
     controller
         .get_session_remaining()
         .map_err(|e| e.to_string())

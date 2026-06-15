@@ -18,16 +18,18 @@
 //! Ingestion service — crypto transaction processing.
 
 use super::{
+    IngestionError, IngestionService, MexcTransferOverlapProbe,
     has_mexc_transfer_overlap_duplicate, kraken_trade_ref_key, matches_swap_rollup_duplicate,
     normalize_import_symbol_key, notbank_trade_ref_key, notbank_transaction_ref_key,
-    note_is_exchange_overlap_prone, uses_price_agnostic_dedup, IngestionError, IngestionService,
-    MexcTransferOverlapProbe,
+    note_is_exchange_overlap_prone, uses_price_agnostic_dedup,
 };
-use crate::features::ingestion::repository::IngestionRepository;
-use crate::features::ingestion::types::{CryptoDedupKey, ImportCryptoTransaction, ImportSummary, RowError};
-use crate::features::ingestion::validation::validate_import_crypto_transaction;
 use crate::db::Database;
 use crate::features::crypto::tax::types::{derive_mechanical_type, normalize_subtype};
+use crate::features::ingestion::repository::IngestionRepository;
+use crate::features::ingestion::types::{
+    CryptoDedupKey, ImportCryptoTransaction, ImportSummary, RowError,
+};
+use crate::features::ingestion::validation::validate_import_crypto_transaction;
 use crate::models::CryptoTransaction;
 use crate::services::i18n::{t, t_args};
 use std::collections::{HashMap, HashSet};

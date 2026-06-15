@@ -308,7 +308,12 @@ impl AppController {
             .get_app_setting(super::SETTING_PREFERRED_CURRENCY)
             .unwrap_or_else(|_| "USD".to_string());
         self.finance_service
-            .get_dashboard_data(crypto_total_usd, crypto_snapshots, range, preferred_currency)
+            .get_dashboard_data(
+                crypto_total_usd,
+                crypto_snapshots,
+                range,
+                preferred_currency,
+            )
             .map_err(ControllerError::from)
     }
 }

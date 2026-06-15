@@ -638,11 +638,7 @@ fn all_statements_mixed_p2p_convert_transfer() {
     let p2p = result
         .items
         .iter()
-        .find(|(_, tx)| {
-            tx.notes
-                .as_ref()
-                .is_some_and(|n| n.contains("P2P Trading"))
-        })
+        .find(|(_, tx)| tx.notes.as_ref().is_some_and(|n| n.contains("P2P Trading")))
         .map(|(_, tx)| tx)
         .expect("Should have a P2P transaction");
     assert_eq!(p2p.symbol, "USDT");

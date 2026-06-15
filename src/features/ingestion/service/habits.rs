@@ -17,12 +17,12 @@
 
 //! Ingestion service — habit log processing.
 
-use crate::features::ingestion::repository::IngestionRepository;
-use crate::features::ingestion::types::{ImportHabitLog, ImportSummary, RowError};
-use crate::features::ingestion::validation::validate_import_habit_log;
 use super::IngestionError;
 use super::IngestionService;
 use crate::db::Database;
+use crate::features::ingestion::repository::IngestionRepository;
+use crate::features::ingestion::types::{ImportHabitLog, ImportSummary, RowError};
+use crate::features::ingestion::validation::validate_import_habit_log;
 use crate::models::HabitLog;
 use crate::services::i18n::{t, t_args};
 use std::collections::HashSet;

@@ -24,8 +24,8 @@ use chrono::{Datelike, NaiveDate};
 use sanctum::controller::AppController;
 use sanctum::ui::dto::habits::{
     AchievementDto, CheckpointDto, GoalDto, HabitAnalyticsResponse, HabitDto, HabitSummary,
-    HabitsResponse, HeatmapDay, HeatmapResponse, MilestoneDto, RadarChartData,
-    StreakRewardDto, WeekdayChartData,
+    HabitsResponse, HeatmapDay, HeatmapResponse, MilestoneDto, RadarChartData, StreakRewardDto,
+    WeekdayChartData,
 };
 use std::sync::Arc;
 use tauri::State;
@@ -134,10 +134,7 @@ pub fn update_habit(
 
 /// Delete a habit.
 #[tauri::command]
-pub fn delete_habit(
-    controller: State<'_, Arc<AppController>>,
-    id: String,
-) -> Result<(), String> {
+pub fn delete_habit(controller: State<'_, Arc<AppController>>, id: String) -> Result<(), String> {
     controller.delete_habit(id).map_err(|e| e.to_string())
 }
 
@@ -265,15 +262,24 @@ pub fn fetch_heatmap(
             let count = day_counts.get(&date_str).copied().unwrap_or(0);
             let intensity = if habit_count > 0.0 {
                 let ratio = count as f64 / habit_count;
-                if ratio == 0.0 { 0 }
-                else if ratio <= 0.25 { 1 }
-                else if ratio <= 0.5 { 2 }
-                else if ratio <= 0.75 { 3 }
-                else { 4 }
+                if ratio == 0.0 {
+                    0
+                } else if ratio <= 0.25 {
+                    1
+                } else if ratio <= 0.5 {
+                    2
+                } else if ratio <= 0.75 {
+                    3
+                } else {
+                    4
+                }
             } else {
                 0
             };
-            days.push(HeatmapDay { date: date_str, intensity });
+            days.push(HeatmapDay {
+                date: date_str,
+                intensity,
+            });
             cursor = match cursor.succ_opt() {
                 Some(d) => d,
                 None => break,
@@ -297,16 +303,36 @@ pub fn fetch_habit_analytics(
         .map_err(|e| e.to_string())?;
 
     // Map weekday data to DTO
-    let weekday_labels: Vec<String> = analytics.weekday_data.iter().map(|w| w.day_short.clone()).collect();
-    let weekday_values: Vec<f64> = analytics.weekday_data.iter().map(|w| w.completion_rate as f64).collect();
+    let weekday_labels: Vec<String> = analytics
+        .weekday_data
+        .iter()
+        .map(|w| w.day_short.clone())
+        .collect();
+    let weekday_values: Vec<f64> = analytics
+        .weekday_data
+        .iter()
+        .map(|w| w.completion_rate as f64)
+        .collect();
 
     // Build radar from category data (categories = habit categories, values = completion counts)
-    let radar_categories: Vec<String> = analytics.category_data.iter().map(|c| c.category.clone()).collect();
-    let radar_values: Vec<f64> = analytics.category_data.iter().map(|c| c.count as f64).collect();
+    let radar_categories: Vec<String> = analytics
+        .category_data
+        .iter()
+        .map(|c| c.category.clone())
+        .collect();
+    let radar_values: Vec<f64> = analytics
+        .category_data
+        .iter()
+        .map(|c| c.count as f64)
+        .collect();
     let radar_max = radar_values.iter().cloned().fold(0.0_f64, f64::max);
 
     // Generate summary text
-    let best_day = analytics.weekday_data.iter().find(|w| w.is_best).map(|w| w.day_name.clone());
+    let best_day = analytics
+        .weekday_data
+        .iter()
+        .find(|w| w.is_best)
+        .map(|w| w.day_name.clone());
     let weekly_summary = match &best_day {
         Some(day) => format!("Your best day is {day}"),
         None => "No data yet".to_string(),
@@ -336,10 +362,8 @@ pub fn fetch_rewards(
 ) -> Result<Vec<StreakRewardDto>, String> {
     let rewards = controller.get_streak_rewards().map_err(|e| e.to_string())?;
     let habits = controller.get_habits().map_err(|e| e.to_string())?;
-    let habit_names: std::collections::HashMap<String, String> = habits
-        .into_iter()
-        .map(|h| (h.id.clone(), h.name))
-        .collect();
+    let habit_names: std::collections::HashMap<String, String> =
+        habits.into_iter().map(|h| (h.id.clone(), h.name)).collect();
 
     let dtos: Vec<StreakRewardDto> = rewards
         .into_iter()
@@ -402,7 +426,12 @@ pub fn update_streak_reward(
 ) -> Result<(), String> {
     controller
         .update_streak_reward_with_milestones(
-            id, habit_id, is_consecutive, target_days, target_total, milestones,
+            id,
+            habit_id,
+            is_consecutive,
+            target_days,
+            target_total,
+            milestones,
         )
         .map_err(|e| e.to_string())
 }
@@ -413,7 +442,9 @@ pub fn delete_streak_reward(
     controller: State<'_, Arc<AppController>>,
     id: String,
 ) -> Result<(), String> {
-    controller.delete_streak_reward(id).map_err(|e| e.to_string())
+    controller
+        .delete_streak_reward(id)
+        .map_err(|e| e.to_string())
 }
 
 /// Add a milestone to an existing streak reward.
@@ -433,9 +464,7 @@ pub fn add_milestone(
 
 /// Fetch all goals with checkpoints.
 #[tauri::command]
-pub fn fetch_goals(
-    controller: State<'_, Arc<AppController>>,
-) -> Result<Vec<GoalDto>, String> {
+pub fn fetch_goals(controller: State<'_, Arc<AppController>>) -> Result<Vec<GoalDto>, String> {
     let goals = controller.get_goals().map_err(|e| e.to_string())?;
 
     let dtos: Vec<GoalDto> = goals
@@ -521,7 +550,9 @@ pub fn update_goal_with_checkpoints(
 ) -> Result<(), String> {
     let count = checkpoints.len().min(4) as i32;
     let get = |i: usize| -> (String, String) {
-        checkpoints.get(i).map(|c| (c.id.clone(), c.text.clone()))
+        checkpoints
+            .get(i)
+            .map(|c| (c.id.clone(), c.text.clone()))
             .unwrap_or_default()
     };
     let (cp1_id, cp1_text) = get(0);
@@ -531,20 +562,27 @@ pub fn update_goal_with_checkpoints(
 
     controller
         .update_goal_with_checkpoints(
-            id, name, description, reward_text, deadline,
+            id,
+            name,
+            description,
+            reward_text,
+            deadline,
             count,
-            cp1_id, cp1_text, cp2_id, cp2_text,
-            cp3_id, cp3_text, cp4_id, cp4_text,
+            cp1_id,
+            cp1_text,
+            cp2_id,
+            cp2_text,
+            cp3_id,
+            cp3_text,
+            cp4_id,
+            cp4_text,
         )
         .map_err(|e| e.to_string())
 }
 
 /// Delete a goal.
 #[tauri::command]
-pub fn delete_goal(
-    controller: State<'_, Arc<AppController>>,
-    id: String,
-) -> Result<(), String> {
+pub fn delete_goal(controller: State<'_, Arc<AppController>>, id: String) -> Result<(), String> {
     controller.delete_goal(id).map_err(|e| e.to_string())
 }
 
@@ -559,10 +597,7 @@ pub fn complete_goal(
 
 /// Archive a goal.
 #[tauri::command]
-pub fn archive_goal(
-    controller: State<'_, Arc<AppController>>,
-    id: String,
-) -> Result<(), String> {
+pub fn archive_goal(controller: State<'_, Arc<AppController>>, id: String) -> Result<(), String> {
     controller.archive_goal(id).map_err(|e| e.to_string())
 }
 

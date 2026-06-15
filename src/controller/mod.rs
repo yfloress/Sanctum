@@ -771,7 +771,6 @@ impl AppController {
         Ok(())
     }
 
-
     // ==================== Vault Path Methods ====================
 
     /// Checks if a vault file exists

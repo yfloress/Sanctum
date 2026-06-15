@@ -17,13 +17,15 @@
 
 //! Ingestion service — transaction processing.
 
-use super::format_currency_simple;
-use crate::features::ingestion::repository::IngestionRepository;
-use crate::features::ingestion::types::{ImportSummary, ImportTransaction, RowError, TransactionDedupKey};
-use crate::features::ingestion::validation::{validate_amount, validate_import_transaction};
 use super::IngestionError;
 use super::IngestionService;
+use super::format_currency_simple;
 use crate::db::Database;
+use crate::features::ingestion::repository::IngestionRepository;
+use crate::features::ingestion::types::{
+    ImportSummary, ImportTransaction, RowError, TransactionDedupKey,
+};
+use crate::features::ingestion::validation::{validate_amount, validate_import_transaction};
 use crate::models::Transaction;
 use crate::services::i18n::{t, t_args};
 use std::collections::HashSet;

@@ -34,9 +34,7 @@ fn get_app_data_dir() -> std::path::PathBuf {
         }
         data_dir
     } else {
-        log::error!(
-            "Could not determine application data directory, using current directory"
-        );
+        log::error!("Could not determine application data directory, using current directory");
         std::path::PathBuf::from(".")
     }
 }

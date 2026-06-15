@@ -124,12 +124,11 @@ pub(super) fn apply_swap_pair(
             long_gain,
         );
     } else if taxable_swap && proceeds.is_none() {
-        let warning_code =
-            if has_non_usd_quote_marker(source) || has_non_usd_quote_marker(target) {
-                "swap_missing_price_non_usd_quote"
-            } else {
-                "swap_missing_price"
-            };
+        let warning_code = if has_non_usd_quote_marker(source) || has_non_usd_quote_marker(target) {
+            "swap_missing_price_non_usd_quote"
+        } else {
+            "swap_missing_price"
+        };
         report.warnings.push(TaxWarning {
             code: warning_code.to_string(),
             message: format!("Swap {} missing price; excluded from report", source.id),

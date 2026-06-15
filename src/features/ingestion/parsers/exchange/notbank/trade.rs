@@ -341,7 +341,6 @@ impl ExchangeParser for NotBankTradeParser {
 
         // Pass 2: parse rows into import transactions using the complete anchor map.
         for (line_number, record) in raw_records {
-
             let time_raw = get_field(&record, &cols, "time");
             let side_raw = get_field(&record, &cols, "side");
             let quantity_raw = get_field(&record, &cols, "quantity");
@@ -483,8 +482,11 @@ impl ExchangeParser for NotBankTradeParser {
                     spent_amount / received_amount,
                     &quote_to_usd,
                 );
-                let notes =
-                    annotate_missing_non_usd_quote(base_notes.clone(), &spent_symbol, price_per_coin);
+                let notes = annotate_missing_non_usd_quote(
+                    base_notes.clone(),
+                    &spent_symbol,
+                    price_per_coin,
+                );
                 let mut tx = ImportCryptoTransaction {
                     date: format_datetime(timestamp),
                     wallet: wallet_name.to_string(),

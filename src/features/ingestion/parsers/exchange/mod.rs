@@ -30,17 +30,17 @@
 
 pub mod binance;
 pub mod common;
+mod dispatch;
 pub mod feather;
 pub mod kraken;
 pub mod mexc;
 pub mod monero_gui;
 pub mod notbank;
-mod dispatch;
 mod validation;
 
 use super::ParseResult;
 
-pub use dispatch::{parser_for, ExchangeParser};
+pub use dispatch::{ExchangeParser, parser_for};
 pub use validation::detect_exchange_source;
 
 // ─── Exchange source identification ──────────────────────────────────────────

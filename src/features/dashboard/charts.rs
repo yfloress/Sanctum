@@ -21,8 +21,8 @@
 //! Aggregates financial and crypto data for dashboard visualization.
 //! Note: Actual chart rendering is done by services/charts.rs
 
-use crate::ui::currency::format_money;
 use crate::models::{Account, AccountBalance, Transaction};
+use crate::ui::currency::format_money;
 use chrono::{Datelike, Local, NaiveDate};
 use std::collections::HashMap;
 
@@ -233,8 +233,9 @@ impl DashboardCharts {
         }
 
         // Last 6 months cash flow (oldest → newest)
-        const MONTH_NAMES: [&str; 12] =
-            ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        const MONTH_NAMES: [&str; 12] = [
+            "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+        ];
         let mut monthly_income: Vec<i64> = Vec::with_capacity(6);
         let mut monthly_expense: Vec<i64> = Vec::with_capacity(6);
         let mut monthly_labels: Vec<String> = Vec::with_capacity(6);

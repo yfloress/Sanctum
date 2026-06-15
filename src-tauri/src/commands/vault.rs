@@ -56,13 +56,10 @@ pub fn unlock_vault(
     controller: State<'_, Arc<AppController>>,
     password: String,
 ) -> Result<(), String> {
-    controller
-        .open_db(password, None)
-        .map(|_| ())
-        .map_err(|e| {
-            log::error!("Vault unlock failed: {e}");
-            "Invalid password or vault not found".to_string()
-        })
+    controller.open_db(password, None).map(|_| ()).map_err(|e| {
+        log::error!("Vault unlock failed: {e}");
+        "Invalid password or vault not found".to_string()
+    })
 }
 
 /// Lock the currently open vault (close the DB connection).
@@ -87,10 +84,7 @@ pub fn check_password_strength(
 
 /// Export the current vault to a backup file at the given path.
 #[tauri::command]
-pub fn export_vault(
-    controller: State<'_, Arc<AppController>>,
-    path: String,
-) -> Result<(), String> {
+pub fn export_vault(controller: State<'_, Arc<AppController>>, path: String) -> Result<(), String> {
     controller.export_vault(path).map(|_| ()).map_err(|e| {
         log::error!("Vault export failed: {e}");
         "Vault export failed".to_string()

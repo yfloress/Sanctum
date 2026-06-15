@@ -81,7 +81,8 @@ impl I18nState {
             Ok(r) => r,
             Err(e) => {
                 log::error!("Failed to parse FTL resource for '{}': {:?}", lang_code, e);
-                FluentResource::try_new(String::new()).unwrap_or(FluentResource::try_new(" ".to_string()).unwrap())
+                FluentResource::try_new(String::new())
+                    .unwrap_or(FluentResource::try_new(" ".to_string()).unwrap())
             }
         };
 
@@ -208,7 +209,10 @@ pub fn get_all_translations() -> std::collections::HashMap<String, String> {
         }
         if let Some(eq_pos) = trimmed.find(" = ") {
             let key = &trimmed[..eq_pos];
-            if key.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') {
+            if key
+                .chars()
+                .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+            {
                 map.insert(key.to_string(), t(key));
             }
         }

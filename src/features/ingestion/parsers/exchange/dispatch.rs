@@ -15,7 +15,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
 //
 
-use super::{binance, feather, kraken, mexc, monero_gui, notbank, ExchangeSource, ParseResult};
+use super::{ExchangeSource, ParseResult, binance, feather, kraken, mexc, monero_gui, notbank};
 use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
 
 // ─── Parser trait ────────────────────────────────────────────────────────────

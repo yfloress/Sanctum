@@ -502,12 +502,7 @@ fn generate_tax_summary_marks_settings_excluded_when_all_period_txs_are_excluded
         .expect("settings_excluded readiness item");
     assert_eq!(settings_excluded.status, "warn");
     assert_eq!(settings_excluded.detail, "2");
-    assert!(
-        summary
-            .readiness
-            .iter()
-            .all(|item| item.code != "settings")
-    );
+    assert!(summary.readiness.iter().all(|item| item.code != "settings"));
 
     drop(harness);
 }

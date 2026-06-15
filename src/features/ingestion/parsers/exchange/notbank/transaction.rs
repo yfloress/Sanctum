@@ -226,11 +226,8 @@ impl ExchangeParser for NotBankTransactionParser {
 
             let (transaction_type, subtype) =
                 map_transaction_kind(signed_amount, posting_entry_type_raw, reference_type_raw);
-            let notes = build_transaction_notes(
-                posting_entry_id_raw,
-                reference_type_raw,
-                reference_id_raw,
-            );
+            let notes =
+                build_transaction_notes(posting_entry_id_raw, reference_type_raw, reference_id_raw);
 
             result.items.push((
                 line_number,

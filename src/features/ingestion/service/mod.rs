@@ -144,7 +144,10 @@ fn extract_kraken_trade_ref(note: &str) -> Option<String> {
     None
 }
 
-pub(super) fn kraken_trade_ref_key(wallet_id: &str, note: Option<&str>) -> Option<(String, String)> {
+pub(super) fn kraken_trade_ref_key(
+    wallet_id: &str,
+    note: Option<&str>,
+) -> Option<(String, String)> {
     let reference = note.and_then(extract_kraken_trade_ref)?;
     Some((wallet_id.to_string(), reference))
 }
@@ -175,7 +178,10 @@ fn extract_notbank_trade_ref(note: &str) -> Option<String> {
     None
 }
 
-pub(super) fn notbank_trade_ref_key(wallet_id: &str, note: Option<&str>) -> Option<(String, String)> {
+pub(super) fn notbank_trade_ref_key(
+    wallet_id: &str,
+    note: Option<&str>,
+) -> Option<(String, String)> {
     let reference = note.and_then(extract_notbank_trade_ref)?;
     Some((wallet_id.to_string(), reference))
 }
@@ -205,7 +211,10 @@ fn extract_notbank_transaction_entry_id(note: &str) -> Option<String> {
     None
 }
 
-pub(super) fn notbank_transaction_ref_key(wallet_id: &str, note: Option<&str>) -> Option<(String, String)> {
+pub(super) fn notbank_transaction_ref_key(
+    wallet_id: &str,
+    note: Option<&str>,
+) -> Option<(String, String)> {
     let reference = note.and_then(extract_notbank_transaction_entry_id)?;
     Some((wallet_id.to_string(), reference))
 }
@@ -755,283 +764,290 @@ impl IngestionService {
 #[cfg(test)]
 #[allow(clippy::too_many_arguments)]
 fn sample_crypto_tx(
-        date: &str,
-        wallet_id: &str,
-        coin_id: &str,
-        tx_type: &str,
-        subtype: Option<&str>,
-        amount: f64,
-        fee_amount: Option<f64>,
-        notes: Option<&str>,
-    ) -> CryptoTransaction {
-        CryptoTransaction {
-            id: "tx-1".to_string(),
-            wallet_id: wallet_id.to_string(),
-            coin_id: coin_id.to_string(),
-            symbol: "USDT".to_string(),
-            transaction_type: tx_type.to_string(),
-            amount,
-            price_per_coin: None,
-            fee: None,
-            fee_coin_id: fee_amount.map(|_| coin_id.to_string()),
-            fee_amount,
-            subtype: subtype.map(|s| s.to_string()),
-            override_proceeds: None,
-            override_cost_basis: None,
-            date: date.to_string(),
-            notes: notes.map(|n| n.to_string()),
-            related_tx_id: None,
-        }
+    date: &str,
+    wallet_id: &str,
+    coin_id: &str,
+    tx_type: &str,
+    subtype: Option<&str>,
+    amount: f64,
+    fee_amount: Option<f64>,
+    notes: Option<&str>,
+) -> CryptoTransaction {
+    CryptoTransaction {
+        id: "tx-1".to_string(),
+        wallet_id: wallet_id.to_string(),
+        coin_id: coin_id.to_string(),
+        symbol: "USDT".to_string(),
+        transaction_type: tx_type.to_string(),
+        amount,
+        price_per_coin: None,
+        fee: None,
+        fee_coin_id: fee_amount.map(|_| coin_id.to_string()),
+        fee_amount,
+        subtype: subtype.map(|s| s.to_string()),
+        override_proceeds: None,
+        override_cost_basis: None,
+        date: date.to_string(),
+        notes: notes.map(|n| n.to_string()),
+        related_tx_id: None,
     }
+}
 
-    #[test]
-    fn normalize_import_symbol_key_maps_common_aliases() {
-        assert_eq!(normalize_import_symbol_key("TETHER"), "usdt");
-        assert_eq!(normalize_import_symbol_key("USDT(TRC20)"), "usdt");
-        assert_eq!(normalize_import_symbol_key("Tether USDt"), "usdt");
-        assert_eq!(normalize_import_symbol_key("USD Coin"), "usdc");
-        assert_eq!(normalize_import_symbol_key("MXTOKEN"), "mx");
-        assert_eq!(normalize_import_symbol_key("xbt"), "btc");
-        assert_eq!(normalize_import_symbol_key("BCC"), "bch");
-        assert_eq!(normalize_import_symbol_key("MATIC"), "pol");
-    }
+#[test]
+fn normalize_import_symbol_key_maps_common_aliases() {
+    assert_eq!(normalize_import_symbol_key("TETHER"), "usdt");
+    assert_eq!(normalize_import_symbol_key("USDT(TRC20)"), "usdt");
+    assert_eq!(normalize_import_symbol_key("Tether USDt"), "usdt");
+    assert_eq!(normalize_import_symbol_key("USD Coin"), "usdc");
+    assert_eq!(normalize_import_symbol_key("MXTOKEN"), "mx");
+    assert_eq!(normalize_import_symbol_key("xbt"), "btc");
+    assert_eq!(normalize_import_symbol_key("BCC"), "bch");
+    assert_eq!(normalize_import_symbol_key("MATIC"), "pol");
+}
 
-    #[test]
-    fn normalize_import_symbol_key_keeps_regular_symbols() {
-        assert_eq!(normalize_import_symbol_key("USDT"), "usdt");
-        assert_eq!(normalize_import_symbol_key("MX"), "mx");
-        assert_eq!(normalize_import_symbol_key(" ICP "), "icp");
-    }
+#[test]
+fn normalize_import_symbol_key_keeps_regular_symbols() {
+    assert_eq!(normalize_import_symbol_key("USDT"), "usdt");
+    assert_eq!(normalize_import_symbol_key("MX"), "mx");
+    assert_eq!(normalize_import_symbol_key(" ICP "), "icp");
+}
 
-    #[test]
-    fn swap_rollup_duplicate_requires_multiple_existing_rows() {
-        assert!(!matches_swap_rollup_duplicate(&[12.0], 12.0));
-    }
+#[test]
+fn swap_rollup_duplicate_requires_multiple_existing_rows() {
+    assert!(!matches_swap_rollup_duplicate(&[12.0], 12.0));
+}
 
-    #[test]
-    fn swap_rollup_duplicate_matches_summed_split_fills() {
-        assert!(matches_swap_rollup_duplicate(&[1.2, 3.8], 5.0));
-        assert!(!matches_swap_rollup_duplicate(&[1.2, 3.8], 4.9));
-    }
+#[test]
+fn swap_rollup_duplicate_matches_summed_split_fills() {
+    assert!(matches_swap_rollup_duplicate(&[1.2, 3.8], 5.0));
+    assert!(!matches_swap_rollup_duplicate(&[1.2, 3.8], 4.9));
+}
 
-    #[test]
-    fn extract_kraken_trade_ref_accepts_ref_and_tx_markers() {
-        assert_eq!(
-            extract_kraken_trade_ref("Kraken trade | BTC/USD | Ref: TX-123"),
-            Some("TX-123".to_string())
-        );
-        assert_eq!(
-            extract_kraken_trade_ref("Kraken trade | ETH/USDT | Tx: TX-456 | Order: ORD-1"),
-            Some("TX-456".to_string())
-        );
-    }
+#[test]
+fn extract_kraken_trade_ref_accepts_ref_and_tx_markers() {
+    assert_eq!(
+        extract_kraken_trade_ref("Kraken trade | BTC/USD | Ref: TX-123"),
+        Some("TX-123".to_string())
+    );
+    assert_eq!(
+        extract_kraken_trade_ref("Kraken trade | ETH/USDT | Tx: TX-456 | Order: ORD-1"),
+        Some("TX-456".to_string())
+    );
+}
 
-    #[test]
-    fn extract_kraken_trade_ref_ignores_non_trade_notes() {
-        assert_eq!(
-            extract_kraken_trade_ref("Kraken deposit | Ref: TX-123"),
-            None
-        );
-        assert_eq!(extract_kraken_trade_ref("MEXC trade | Ref: TX-123"), None);
-    }
+#[test]
+fn extract_kraken_trade_ref_ignores_non_trade_notes() {
+    assert_eq!(
+        extract_kraken_trade_ref("Kraken deposit | Ref: TX-123"),
+        None
+    );
+    assert_eq!(extract_kraken_trade_ref("MEXC trade | Ref: TX-123"), None);
+}
 
-    #[test]
-    fn kraken_trade_ref_key_binds_reference_to_wallet() {
-        assert_eq!(
-            kraken_trade_ref_key("wallet-1", Some("Kraken trade | BTC/USD | Ref: TX-777")),
-            Some(("wallet-1".to_string(), "TX-777".to_string()))
-        );
-        assert_eq!(
-            kraken_trade_ref_key("wallet-1", Some("Kraken deposit | Ref: TX-777")),
-            None
-        );
-    }
+#[test]
+fn kraken_trade_ref_key_binds_reference_to_wallet() {
+    assert_eq!(
+        kraken_trade_ref_key("wallet-1", Some("Kraken trade | BTC/USD | Ref: TX-777")),
+        Some(("wallet-1".to_string(), "TX-777".to_string()))
+    );
+    assert_eq!(
+        kraken_trade_ref_key("wallet-1", Some("Kraken deposit | Ref: TX-777")),
+        None
+    );
+}
 
-    #[test]
-    fn extract_notbank_trade_ref_accepts_trade_id_marker() {
-        assert_eq!(
-            extract_notbank_trade_ref("NotBank trade | Buy BTCUSDT | trade_id=300001 | order_id=1"),
-            Some("300001".to_string())
-        );
-    }
+#[test]
+fn extract_notbank_trade_ref_accepts_trade_id_marker() {
+    assert_eq!(
+        extract_notbank_trade_ref("NotBank trade | Buy BTCUSDT | trade_id=300001 | order_id=1"),
+        Some("300001".to_string())
+    );
+}
 
-    #[test]
-    fn extract_notbank_trade_ref_falls_back_to_trans_report_id_marker() {
-        assert_eq!(
-            extract_notbank_trade_ref(
-                "NotBank trade | Buy BTCUSDT | trans_report_id=200001 | order_id=1",
-            ),
-            Some("200001".to_string())
-        );
-    }
+#[test]
+fn extract_notbank_trade_ref_falls_back_to_trans_report_id_marker() {
+    assert_eq!(
+        extract_notbank_trade_ref(
+            "NotBank trade | Buy BTCUSDT | trans_report_id=200001 | order_id=1",
+        ),
+        Some("200001".to_string())
+    );
+}
 
-    #[test]
-    fn extract_notbank_trade_ref_ignores_non_trade_notes() {
-        assert_eq!(
-            extract_notbank_trade_ref("NotBank transaction | type=Deposit | ref=A001"),
-            None
-        );
-        assert_eq!(
-            extract_notbank_trade_ref("Kraken trade | BTC/USD | Ref: TX-1"),
-            None
-        );
-    }
+#[test]
+fn extract_notbank_trade_ref_ignores_non_trade_notes() {
+    assert_eq!(
+        extract_notbank_trade_ref("NotBank transaction | type=Deposit | ref=A001"),
+        None
+    );
+    assert_eq!(
+        extract_notbank_trade_ref("Kraken trade | BTC/USD | Ref: TX-1"),
+        None
+    );
+}
 
-    #[test]
-    fn notbank_trade_ref_key_binds_reference_to_wallet() {
-        assert_eq!(
-            notbank_trade_ref_key("wallet-1", Some("NotBank trade | Buy BTCUSDT | trade_id=300001")),
-            Some(("wallet-1".to_string(), "300001".to_string()))
-        );
-        assert_eq!(
-            notbank_trade_ref_key(
-                "wallet-1",
-                Some("NotBank transaction | type=Deposit | ref=A001"),
-            ),
-            None
-        );
-    }
-
-    #[test]
-    fn extract_notbank_transaction_entry_id_accepts_entry_id_marker() {
-        assert_eq!(
-            extract_notbank_transaction_entry_id(
-                "NotBank transaction | entry_id=10000123 | type=Deposit | ref=A001",
-            ),
-            Some("10000123".to_string())
-        );
-    }
-
-    #[test]
-    fn extract_notbank_transaction_entry_id_ignores_non_transaction_notes() {
-        assert_eq!(
-            extract_notbank_transaction_entry_id("NotBank trade | trade_id=300001"),
-            None
-        );
-        assert_eq!(
-            extract_notbank_transaction_entry_id("Kraken ledger | Ref: TX-1"),
-            None
-        );
-    }
-
-    #[test]
-    fn notbank_transaction_ref_key_binds_entry_id_to_wallet() {
-        assert_eq!(
-            notbank_transaction_ref_key(
-                "wallet-1",
-                Some("NotBank transaction | entry_id=10000123 | type=Deposit"),
-            ),
-            Some(("wallet-1".to_string(), "10000123".to_string()))
-        );
-        assert_eq!(
-            notbank_transaction_ref_key("wallet-1", Some("NotBank trade | trade_id=300001")),
-            None
-        );
-    }
-
-    #[test]
-    fn uses_price_agnostic_dedup_for_overlap_prone_exchange_sources() {
-        assert!(uses_price_agnostic_dedup("Kraken Ledger"));
-        assert!(uses_price_agnostic_dedup("Kraken Trades"));
-        assert!(uses_price_agnostic_dedup("Binance All Statements"));
-        assert!(uses_price_agnostic_dedup("Binance Spot Trade History"));
-        assert!(uses_price_agnostic_dedup("MEXC Spot Trade History"));
-        assert!(uses_price_agnostic_dedup("MEXC Trade History"));
-        assert!(uses_price_agnostic_dedup("NotBank Trade Activity Report"));
-        assert!(!uses_price_agnostic_dedup("NotBank Transaction Report"));
-    }
-
-    #[test]
-    fn note_is_exchange_overlap_prone_matches_supported_prefixes() {
-        assert!(note_is_exchange_overlap_prone(Some("Kraken trade | Ref: TX-1")));
-        assert!(note_is_exchange_overlap_prone(Some("Binance Spot BUY | BTCUSDT")));
-        assert!(note_is_exchange_overlap_prone(Some(
-            "MEXC trade | BTC_USDT | Ref=123"
-        )));
-        assert!(note_is_exchange_overlap_prone(Some("NotBank trade | id=1")));
-        assert!(!note_is_exchange_overlap_prone(Some(
-            "NotBank transaction | type=Deposit"
-        )));
-        assert!(!note_is_exchange_overlap_prone(None));
-    }
-
-    #[test]
-    fn mexc_overlap_detects_statement_deposit_vs_dedicated_deposit() {
-        let existing = vec![sample_crypto_tx(
-            "2026-01-12 10:00:00",
+#[test]
+fn notbank_trade_ref_key_binds_reference_to_wallet() {
+    assert_eq!(
+        notbank_trade_ref_key(
             "wallet-1",
-            "tether",
-            "transfer",
-            Some("deposit"),
-            100.0,
-            None,
-            Some("MEXC deposit | network=Polygon"),
-        )];
-
-        assert!(has_mexc_transfer_overlap_duplicate(
-            &existing,
-            "MEXC Statement History",
-            &MexcTransferOverlapProbe {
-                wallet_id: "wallet-1",
-                coin_id: "tether",
-                mechanical_type: "transfer_in",
-                amount: 100.0,
-                fee_amount: None,
-                date: "2026-01-12 10:07:00",
-            },
-        ));
-    }
-
-    #[test]
-    fn mexc_overlap_rejects_rows_outside_time_window() {
-        let existing = vec![sample_crypto_tx(
-            "2026-01-12 10:00:00",
+            Some("NotBank trade | Buy BTCUSDT | trade_id=300001")
+        ),
+        Some(("wallet-1".to_string(), "300001".to_string()))
+    );
+    assert_eq!(
+        notbank_trade_ref_key(
             "wallet-1",
-            "tether",
-            "transfer",
-            Some("deposit"),
-            100.0,
-            None,
-            Some("MEXC deposit | network=Polygon"),
-        )];
+            Some("NotBank transaction | type=Deposit | ref=A001"),
+        ),
+        None
+    );
+}
 
-        assert!(!has_mexc_transfer_overlap_duplicate(
-            &existing,
-            "MEXC Statement History",
-            &MexcTransferOverlapProbe {
-                wallet_id: "wallet-1",
-                coin_id: "tether",
-                mechanical_type: "transfer_in",
-                amount: 100.0,
-                fee_amount: None,
-                date: "2026-01-12 10:30:01",
-            },
-        ));
-    }
+#[test]
+fn extract_notbank_transaction_entry_id_accepts_entry_id_marker() {
+    assert_eq!(
+        extract_notbank_transaction_entry_id(
+            "NotBank transaction | entry_id=10000123 | type=Deposit | ref=A001",
+        ),
+        Some("10000123".to_string())
+    );
+}
 
-    #[test]
-    fn mexc_overlap_detects_dedicated_withdrawal_vs_statement_with_fee() {
-        let existing = vec![sample_crypto_tx(
-            "2026-01-12 12:20:00",
+#[test]
+fn extract_notbank_transaction_entry_id_ignores_non_transaction_notes() {
+    assert_eq!(
+        extract_notbank_transaction_entry_id("NotBank trade | trade_id=300001"),
+        None
+    );
+    assert_eq!(
+        extract_notbank_transaction_entry_id("Kraken ledger | Ref: TX-1"),
+        None
+    );
+}
+
+#[test]
+fn notbank_transaction_ref_key_binds_entry_id_to_wallet() {
+    assert_eq!(
+        notbank_transaction_ref_key(
             "wallet-1",
-            "litecoin",
-            "transfer",
-            Some("withdrawal"),
-            0.5,
-            Some(0.0001),
-            Some("MEXC statement | type=Withdraw | direction=Outflow"),
-        )];
+            Some("NotBank transaction | entry_id=10000123 | type=Deposit"),
+        ),
+        Some(("wallet-1".to_string(), "10000123".to_string()))
+    );
+    assert_eq!(
+        notbank_transaction_ref_key("wallet-1", Some("NotBank trade | trade_id=300001")),
+        None
+    );
+}
 
-        assert!(has_mexc_transfer_overlap_duplicate(
-            &existing,
-            "MEXC Withdrawal History",
-            &MexcTransferOverlapProbe {
-                wallet_id: "wallet-1",
-                coin_id: "litecoin",
-                mechanical_type: "transfer_out",
-                amount: 0.5,
-                fee_amount: Some(0.0001),
-                date: "2026-01-12 12:12:30",
-            },
-        ));
-    }
+#[test]
+fn uses_price_agnostic_dedup_for_overlap_prone_exchange_sources() {
+    assert!(uses_price_agnostic_dedup("Kraken Ledger"));
+    assert!(uses_price_agnostic_dedup("Kraken Trades"));
+    assert!(uses_price_agnostic_dedup("Binance All Statements"));
+    assert!(uses_price_agnostic_dedup("Binance Spot Trade History"));
+    assert!(uses_price_agnostic_dedup("MEXC Spot Trade History"));
+    assert!(uses_price_agnostic_dedup("MEXC Trade History"));
+    assert!(uses_price_agnostic_dedup("NotBank Trade Activity Report"));
+    assert!(!uses_price_agnostic_dedup("NotBank Transaction Report"));
+}
+
+#[test]
+fn note_is_exchange_overlap_prone_matches_supported_prefixes() {
+    assert!(note_is_exchange_overlap_prone(Some(
+        "Kraken trade | Ref: TX-1"
+    )));
+    assert!(note_is_exchange_overlap_prone(Some(
+        "Binance Spot BUY | BTCUSDT"
+    )));
+    assert!(note_is_exchange_overlap_prone(Some(
+        "MEXC trade | BTC_USDT | Ref=123"
+    )));
+    assert!(note_is_exchange_overlap_prone(Some("NotBank trade | id=1")));
+    assert!(!note_is_exchange_overlap_prone(Some(
+        "NotBank transaction | type=Deposit"
+    )));
+    assert!(!note_is_exchange_overlap_prone(None));
+}
+
+#[test]
+fn mexc_overlap_detects_statement_deposit_vs_dedicated_deposit() {
+    let existing = vec![sample_crypto_tx(
+        "2026-01-12 10:00:00",
+        "wallet-1",
+        "tether",
+        "transfer",
+        Some("deposit"),
+        100.0,
+        None,
+        Some("MEXC deposit | network=Polygon"),
+    )];
+
+    assert!(has_mexc_transfer_overlap_duplicate(
+        &existing,
+        "MEXC Statement History",
+        &MexcTransferOverlapProbe {
+            wallet_id: "wallet-1",
+            coin_id: "tether",
+            mechanical_type: "transfer_in",
+            amount: 100.0,
+            fee_amount: None,
+            date: "2026-01-12 10:07:00",
+        },
+    ));
+}
+
+#[test]
+fn mexc_overlap_rejects_rows_outside_time_window() {
+    let existing = vec![sample_crypto_tx(
+        "2026-01-12 10:00:00",
+        "wallet-1",
+        "tether",
+        "transfer",
+        Some("deposit"),
+        100.0,
+        None,
+        Some("MEXC deposit | network=Polygon"),
+    )];
+
+    assert!(!has_mexc_transfer_overlap_duplicate(
+        &existing,
+        "MEXC Statement History",
+        &MexcTransferOverlapProbe {
+            wallet_id: "wallet-1",
+            coin_id: "tether",
+            mechanical_type: "transfer_in",
+            amount: 100.0,
+            fee_amount: None,
+            date: "2026-01-12 10:30:01",
+        },
+    ));
+}
+
+#[test]
+fn mexc_overlap_detects_dedicated_withdrawal_vs_statement_with_fee() {
+    let existing = vec![sample_crypto_tx(
+        "2026-01-12 12:20:00",
+        "wallet-1",
+        "litecoin",
+        "transfer",
+        Some("withdrawal"),
+        0.5,
+        Some(0.0001),
+        Some("MEXC statement | type=Withdraw | direction=Outflow"),
+    )];
+
+    assert!(has_mexc_transfer_overlap_duplicate(
+        &existing,
+        "MEXC Withdrawal History",
+        &MexcTransferOverlapProbe {
+            wallet_id: "wallet-1",
+            coin_id: "litecoin",
+            mechanical_type: "transfer_out",
+            amount: 0.5,
+            fee_amount: Some(0.0001),
+            date: "2026-01-12 12:12:30",
+        },
+    ));
+}

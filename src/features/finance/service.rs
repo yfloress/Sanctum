@@ -256,7 +256,9 @@ impl FinanceService {
     }
 
     pub fn get_archived_accounts(&self) -> Result<Vec<Account>, FinanceError> {
-        self.with_db(|db| FinanceRepository::get_archived_accounts(db).map_err(FinanceError::Database))
+        self.with_db(|db| {
+            FinanceRepository::get_archived_accounts(db).map_err(FinanceError::Database)
+        })
     }
 
     pub fn unarchive_account(&self, id: String) -> Result<(), FinanceError> {

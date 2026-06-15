@@ -338,11 +338,7 @@ impl ExchangeParser for MexcSpotParser {
             if quote_is_pricing && !base_is_pricing {
                 let quote_is_usd_valued = is_usd_valued_quote(&quote_symbol);
                 let price = if avg_price.is_some() {
-                    if quote_is_usd_valued {
-                        avg_price
-                    } else {
-                        None
-                    }
+                    if quote_is_usd_valued { avg_price } else { None }
                 } else if filled_qty > 0.0 && filled_value > 0.0 {
                     if quote_is_usd_valued {
                         Some(filled_value / filled_qty)

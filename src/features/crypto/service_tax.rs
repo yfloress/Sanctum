@@ -191,8 +191,8 @@ impl CryptoService {
                         .unwrap_or(false)
                 })
                 .count();
-            let excluded_transactions_in_period = transactions_total_in_period
-                .saturating_sub(transactions_in_period);
+            let excluded_transactions_in_period =
+                transactions_total_in_period.saturating_sub(transactions_in_period);
 
             let unpaired_transfers = count_unpaired_transfers(&transactions);
 

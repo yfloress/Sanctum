@@ -45,8 +45,7 @@ use csv::StringRecord;
 use super::common::{
     append_tax_non_usd_quote_reason, format_datetime, is_fiat, is_quote_currency,
     is_usd_valued_quote, normalize_binance_currency, parse_amount_with_unit, parse_decimal,
-    parse_timestamp,
-    should_rename_luna_to_lunc,
+    parse_timestamp, should_rename_luna_to_lunc,
 };
 use super::{ExchangeParser, ExchangeSource, ParseResult};
 use crate::features::ingestion::types::{ImportCryptoTransaction, RowError};
