@@ -34,6 +34,7 @@ pub const HABIT_COLOR_CHOICES: [&str; 16] = [
 
 /// Formats amount in cents to display string with thousand separators
 pub fn format_amount(amount_cents: i64) -> String {
+    let prefix = if amount_cents < 0 { "-" } else { "" };
     let abs = amount_cents.abs();
     let units = abs / 100;
     let cents = abs % 100;
@@ -46,7 +47,7 @@ pub fn format_amount(amount_cents: i64) -> String {
         }
         formatted_units.insert(0, c);
     }
-    format!("{formatted_units}.{cents:02}")
+    format!("{prefix}{formatted_units}.{cents:02}")
 }
 
 /// Formats value in cents to decimal string (without thousand separators)
@@ -384,4 +385,745 @@ pub fn color_from_hex(hex: &str) -> (u8, u8, u8) {
         return (r, g, b);
     }
     (139, 92, 246)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::NaiveDate;
+
+    // ==================== Amount Formatting ====================
+
+    #[test]
+    fn test_format_amount_zero() {
+        assert_eq!(format_amount(0), "0.00");
+    }
+
+    #[test]
+    fn test_format_amount_positive() {
+        assert_eq!(format_amount(100), "1.00");
+    }
+
+    #[test]
+    fn test_format_amount_large() {
+        assert_eq!(format_amount(1234567), "12,345.67");
+    }
+
+    #[test]
+    fn test_format_amount_negative() {
+        assert_eq!(format_amount(-5000), "-50.00");
+    }
+
+    #[test]
+    fn test_format_amount_cents_only() {
+        assert_eq!(format_amount(1), "0.01");
+    }
+
+    #[test]
+    fn test_format_amount_very_large() {
+        assert_eq!(format_amount(123456789), "1,234,567.89");
+    }
+
+    #[test]
+    fn test_format_decimal_from_cents_zero() {
+        assert_eq!(format_decimal_from_cents(0), "0.00");
+    }
+
+    #[test]
+    fn test_format_decimal_from_cents_positive() {
+        assert_eq!(format_decimal_from_cents(100), "1.00");
+    }
+
+    #[test]
+    fn test_format_decimal_from_cents_negative() {
+        assert_eq!(format_decimal_from_cents(-5000), "-50.00");
+    }
+
+    #[test]
+    fn test_format_decimal_from_cents_no_separator() {
+        assert_eq!(format_decimal_from_cents(1234567), "12345.67");
+    }
+
+    // ==================== FX Rate Formatting ====================
+
+    #[test]
+    fn test_format_fx_rate_clp() {
+        assert_eq!(format_fx_rate(850.75, "CLP"), "$ 851");
+    }
+
+    #[test]
+    fn test_format_fx_rate_clp_zero() {
+        assert_eq!(format_fx_rate(0.0, "CLP"), "$ 0");
+    }
+
+    #[test]
+    fn test_format_fx_rate_usd() {
+        assert_eq!(format_fx_rate(1.23456, "USD"), "1.2346");
+    }
+
+    #[test]
+    fn test_format_fx_rate_zero() {
+        assert_eq!(format_fx_rate(0.0, "USD"), "N/A");
+    }
+
+    #[test]
+    fn test_format_fx_rate_negative() {
+        assert_eq!(format_fx_rate(-1.0, "USD"), "N/A");
+    }
+
+    #[test]
+    fn test_format_fx_rate_nan() {
+        assert_eq!(format_fx_rate(f64::NAN, "USD"), "N/A");
+    }
+
+    #[test]
+    fn test_format_clp_rate_delegates() {
+        let result = format_clp_rate(1500.0);
+        assert_eq!(result, "$ 1,500");
+    }
+
+    // ==================== Crypto Amount ====================
+
+    #[test]
+    fn test_format_crypto_amount_whole() {
+        assert_eq!(format_crypto_amount(1.5), "1.5");
+    }
+
+    #[test]
+    fn test_format_crypto_amount_trailing_zeros() {
+        assert_eq!(format_crypto_amount(1.50000000), "1.5");
+    }
+
+    #[test]
+    fn test_format_crypto_amount_small() {
+        assert_eq!(format_crypto_amount(0.00000100), "0.000001");
+    }
+
+    #[test]
+    fn test_format_crypto_amount_integer() {
+        assert_eq!(format_crypto_amount(100.0), "100");
+    }
+
+    #[test]
+    fn test_format_crypto_amount_full_precision() {
+        assert_eq!(format_crypto_amount(1.23456789), "1.23456789");
+    }
+
+    #[test]
+    fn test_format_crypto_amount_zero() {
+        assert_eq!(format_crypto_amount(0.0), "0");
+    }
+
+    // ==================== Parse Input ====================
+
+    #[test]
+    fn test_parse_amount_input_normal() {
+        assert_eq!(parse_amount_input("100"), Some(10000));
+    }
+
+    #[test]
+    fn test_parse_amount_input_with_commas() {
+        assert_eq!(parse_amount_input("1,234.56"), Some(123456));
+    }
+
+    #[test]
+    fn test_parse_amount_input_decimal() {
+        assert_eq!(parse_amount_input("1.234"), Some(123));
+    }
+
+    #[test]
+    fn test_parse_amount_input_negative() {
+        assert_eq!(parse_amount_input("-50.00"), Some(-5000));
+    }
+
+    #[test]
+    fn test_parse_amount_input_empty() {
+        assert_eq!(parse_amount_input(""), None);
+    }
+
+    #[test]
+    fn test_parse_amount_input_whitespace() {
+        assert_eq!(parse_amount_input("  "), None);
+    }
+
+    #[test]
+    fn test_parse_amount_input_invalid() {
+        assert_eq!(parse_amount_input("abc"), None);
+    }
+
+    #[test]
+    fn test_parse_amount_input_trimmed() {
+        assert_eq!(parse_amount_input("  100  "), Some(10000));
+    }
+
+    // ==================== Account Helpers ====================
+
+    #[test]
+    fn test_normalize_account_type_bank() {
+        assert_eq!(normalize_account_type("bank"), "bank");
+    }
+
+    #[test]
+    fn test_normalize_account_type_credit_card() {
+        assert_eq!(normalize_account_type("credit card"), "credit_card");
+    }
+
+    #[test]
+    fn test_normalize_account_type_credit_card_underscore() {
+        assert_eq!(normalize_account_type("credit_card"), "credit_card");
+    }
+
+    #[test]
+    fn test_normalize_account_type_unknown_passthrough() {
+        assert_eq!(normalize_account_type("investment"), "investment");
+    }
+
+    #[test]
+    fn test_normalize_account_type_case_and_trim() {
+        assert_eq!(normalize_account_type("  Bank  "), "bank");
+    }
+
+    #[test]
+    fn test_normalize_bank_icon_path_none() {
+        assert_eq!(normalize_bank_icon_path(None), None);
+    }
+
+    #[test]
+    fn test_normalize_bank_icon_path_empty() {
+        assert_eq!(normalize_bank_icon_path(Some("".to_string())), None);
+    }
+
+    #[test]
+    fn test_normalize_bank_icon_path_generic() {
+        assert_eq!(
+            normalize_bank_icon_path(Some(GENERIC_BANK_ICON_PATH.to_string())),
+            None
+        );
+    }
+
+    #[test]
+    fn test_normalize_bank_icon_path_custom() {
+        assert_eq!(
+            normalize_bank_icon_path(Some("custom/path.svg".to_string())),
+            Some("custom/path.svg".to_string())
+        );
+    }
+
+    // ==================== Habit Helpers ====================
+
+    #[test]
+    fn test_habit_color_index_first() {
+        assert_eq!(habit_color_index("#8b5cf6"), 0);
+    }
+
+    #[test]
+    fn test_habit_color_index_case_insensitive() {
+        assert_eq!(habit_color_index("#8B5CF6"), 0);
+    }
+
+    #[test]
+    fn test_habit_color_index_last() {
+        assert_eq!(habit_color_index("#64748b"), 15);
+    }
+
+    #[test]
+    fn test_habit_color_index_not_found() {
+        assert_eq!(habit_color_index("#000000"), 0);
+    }
+
+    #[test]
+    fn test_normalize_habit_category_mind() {
+        assert_eq!(normalize_habit_category_value("mind"), "mind");
+    }
+
+    #[test]
+    fn test_normalize_habit_category_body() {
+        assert_eq!(normalize_habit_category_value("body"), "body");
+    }
+
+    #[test]
+    fn test_normalize_habit_category_spirit() {
+        assert_eq!(normalize_habit_category_value("spirit"), "spirit");
+    }
+
+    #[test]
+    fn test_normalize_habit_category_discipline() {
+        assert_eq!(normalize_habit_category_value("discipline"), "spirit");
+    }
+
+    #[test]
+    fn test_normalize_habit_category_default() {
+        assert_eq!(normalize_habit_category_value("unknown"), "mind");
+    }
+
+    #[test]
+    fn test_normalize_habit_category_trim_and_case() {
+        assert_eq!(normalize_habit_category_value("  Mind  "), "mind");
+    }
+
+    // ==================== Streak Calculation ====================
+
+    fn date(y: i32, m: u32, d: u32) -> NaiveDate {
+        NaiveDate::from_ymd_opt(y, m, d).unwrap()
+    }
+
+    #[test]
+    fn test_calculate_current_streak_empty() {
+        assert_eq!(calculate_current_streak(&[], date(2024, 6, 15)), 0);
+    }
+
+    #[test]
+    fn test_calculate_current_streak_consecutive_today() {
+        let dates = vec![date(2024, 6, 13), date(2024, 6, 14), date(2024, 6, 15)];
+        assert_eq!(calculate_current_streak(&dates, date(2024, 6, 15)), 3);
+    }
+
+    #[test]
+    fn test_calculate_current_streak_today_not_in_list() {
+        let dates = vec![date(2024, 6, 13), date(2024, 6, 14)];
+        assert_eq!(calculate_current_streak(&dates, date(2024, 6, 15)), 2);
+    }
+
+    #[test]
+    fn test_calculate_current_streak_gap_then_recent() {
+        let dates = vec![
+            date(2024, 6, 10),
+            date(2024, 6, 13),
+            date(2024, 6, 14),
+            date(2024, 6, 15),
+        ];
+        assert_eq!(calculate_current_streak(&dates, date(2024, 6, 15)), 3);
+    }
+
+    #[test]
+    fn test_calculate_current_streak_no_match() {
+        let dates = vec![date(2024, 6, 10)];
+        assert_eq!(calculate_current_streak(&dates, date(2024, 6, 15)), 0);
+    }
+
+    #[test]
+    fn test_calculate_current_streak_single_day() {
+        let dates = vec![date(2024, 6, 15)];
+        assert_eq!(calculate_current_streak(&dates, date(2024, 6, 15)), 1);
+    }
+
+    #[test]
+    fn test_calculate_best_streak_empty() {
+        assert_eq!(calculate_best_streak(&[]), 0);
+    }
+
+    #[test]
+    fn test_calculate_best_streak_all_consecutive() {
+        let dates = vec![
+            date(2024, 6, 1),
+            date(2024, 6, 2),
+            date(2024, 6, 3),
+            date(2024, 6, 4),
+            date(2024, 6, 5),
+        ];
+        assert_eq!(calculate_best_streak(&dates), 5);
+    }
+
+    #[test]
+    fn test_calculate_best_streak_with_gaps() {
+        let dates = vec![
+            date(2024, 6, 1),
+            date(2024, 6, 2),
+            date(2024, 6, 3),
+            date(2024, 6, 5),
+            date(2024, 6, 6),
+            date(2024, 6, 7),
+        ];
+        assert_eq!(calculate_best_streak(&dates), 3);
+    }
+
+    #[test]
+    fn test_calculate_best_streak_single() {
+        let dates = vec![date(2024, 6, 15)];
+        assert_eq!(calculate_best_streak(&dates), 1);
+    }
+
+    #[test]
+    fn test_calculate_best_streak_no_consecutive() {
+        let dates = vec![date(2024, 6, 1), date(2024, 6, 3), date(2024, 6, 5)];
+        assert_eq!(calculate_best_streak(&dates), 1);
+    }
+
+    // ==================== Category Label ====================
+
+    #[test]
+    fn test_format_category_label_all_caps() {
+        assert_eq!(format_category_label("FOOD"), "Food");
+    }
+
+    #[test]
+    fn test_format_category_label_multi_word() {
+        assert_eq!(format_category_label("GROCERY STORE"), "Grocery Store");
+    }
+
+    #[test]
+    fn test_format_category_label_already_mixed() {
+        assert_eq!(format_category_label("already mixed"), "already mixed");
+    }
+
+    #[test]
+    fn test_format_category_label_empty() {
+        assert_eq!(format_category_label(""), "");
+    }
+
+    #[test]
+    fn test_format_category_label_trimmed() {
+        assert_eq!(format_category_label("  SALARY  "), "Salary");
+    }
+
+    // ==================== Fee Display ====================
+
+    fn make_tx(
+        id: &str,
+        tx_type: &str,
+        subtype: Option<&str>,
+        amount: f64,
+        symbol: &str,
+        fee: Option<f64>,
+        fee_coin_id: Option<&str>,
+        fee_amount: Option<f64>,
+        price: Option<f64>,
+    ) -> CryptoTransaction {
+        CryptoTransaction {
+            id: id.to_string(),
+            wallet_id: "w1".to_string(),
+            coin_id: symbol.to_lowercase(),
+            symbol: symbol.to_string(),
+            transaction_type: tx_type.to_string(),
+            amount,
+            price_per_coin: price,
+            fee,
+            fee_coin_id: fee_coin_id.map(String::from),
+            fee_amount,
+            subtype: subtype.map(String::from),
+            override_proceeds: None,
+            override_cost_basis: None,
+            date: "2024-06-15".to_string(),
+            notes: None,
+            related_tx_id: None,
+        }
+    }
+
+    #[test]
+    fn test_format_fee_display_usd_only() {
+        let tx = make_tx(
+            "tx1",
+            "trade",
+            None,
+            1.0,
+            "BTC",
+            Some(1.50),
+            None,
+            None,
+            None,
+        );
+        let map = HashMap::new();
+        assert_eq!(format_fee_display(&tx, &map), "USD 1.50");
+    }
+
+    #[test]
+    fn test_format_fee_display_coin_only() {
+        let tx = make_tx(
+            "tx1",
+            "trade",
+            None,
+            1.0,
+            "BTC",
+            None,
+            Some("bitcoin"),
+            Some(0.01),
+            None,
+        );
+        let map = HashMap::from([("bitcoin".to_string(), "BTC".to_string())]);
+        assert_eq!(format_fee_display(&tx, &map), "0.01 BTC");
+    }
+
+    #[test]
+    fn test_format_fee_display_both() {
+        let tx = make_tx(
+            "tx1",
+            "trade",
+            None,
+            1.0,
+            "BTC",
+            Some(1.50),
+            Some("bitcoin"),
+            Some(0.01),
+            None,
+        );
+        let map = HashMap::from([("bitcoin".to_string(), "BTC".to_string())]);
+        assert_eq!(format_fee_display(&tx, &map), "USD 1.50 + 0.01 BTC");
+    }
+
+    #[test]
+    fn test_format_fee_display_none() {
+        let tx = make_tx("tx1", "trade", None, 1.0, "BTC", None, None, None, None);
+        let map = HashMap::new();
+        assert_eq!(format_fee_display(&tx, &map), "");
+    }
+
+    #[test]
+    fn test_format_fee_display_coin_no_symbol_map() {
+        let tx = make_tx(
+            "tx1",
+            "trade",
+            None,
+            1.0,
+            "BTC",
+            None,
+            Some("bitcoin"),
+            Some(0.01),
+            None,
+        );
+        let map = HashMap::new();
+        assert_eq!(format_fee_display(&tx, &map), "0.01 BITCOIN");
+    }
+
+    // ==================== Price Display ====================
+
+    #[test]
+    fn test_format_price_display_sub_dollar() {
+        assert_eq!(format_price_display(Some(0.5)), "$ 0.5000");
+    }
+
+    #[test]
+    fn test_format_price_display_over_dollar() {
+        assert_eq!(format_price_display(Some(100.0)), "USD 100.00");
+    }
+
+    #[test]
+    fn test_format_price_display_none() {
+        assert_eq!(format_price_display(None), "");
+    }
+
+    #[test]
+    fn test_format_price_display_zero() {
+        assert_eq!(format_price_display(Some(0.0)), "");
+    }
+
+    #[test]
+    fn test_format_price_display_exactly_one() {
+        let result = format_price_display(Some(1.0));
+        assert_eq!(result, "USD 1.00");
+    }
+
+    // ==================== Crypto TX Display ====================
+
+    #[test]
+    fn test_format_crypto_tx_display_buy() {
+        let tx = make_tx(
+            "tx1",
+            "trade",
+            None,
+            1.5,
+            "BTC",
+            Some(0.10),
+            None,
+            None,
+            Some(50000.0),
+        );
+        let (label, amount, price, is_swap) = format_crypto_tx_display(&tx, None);
+        assert_eq!(label, "BUY");
+        assert_eq!(amount, "1.5 BTC");
+        assert!(price.contains("USD"));
+        assert!(!is_swap);
+    }
+
+    #[test]
+    fn test_format_crypto_tx_display_sell() {
+        let tx = make_tx(
+            "tx1",
+            "trade",
+            Some("sell"),
+            1.5,
+            "BTC",
+            Some(0.10),
+            None,
+            None,
+            Some(50000.0),
+        );
+        let (label, amount, price, is_swap) = format_crypto_tx_display(&tx, None);
+        assert_eq!(label, "SELL");
+        assert_eq!(amount, "1.5 BTC");
+        assert!(price.contains("USD"));
+        assert!(!is_swap);
+    }
+
+    #[test]
+    fn test_format_crypto_tx_display_income() {
+        let tx = make_tx(
+            "tx1",
+            "income",
+            None,
+            0.5,
+            "ETH",
+            None,
+            None,
+            None,
+            Some(3000.0),
+        );
+        let (label, amount, _price, _is_swap) = format_crypto_tx_display(&tx, None);
+        assert_eq!(label, "BUY");
+        assert_eq!(amount, "0.5 ETH");
+    }
+
+    #[test]
+    fn test_format_crypto_tx_display_transfer_in() {
+        let tx = make_tx("tx1", "transfer", None, 2.0, "BTC", None, None, None, None);
+        let (label, amount, price, is_swap) = format_crypto_tx_display(&tx, None);
+        assert_eq!(label, "IN");
+        assert_eq!(amount, "2 BTC");
+        assert_eq!(price, "");
+        assert!(!is_swap);
+    }
+
+    #[test]
+    fn test_format_crypto_tx_display_transfer_out() {
+        let tx = make_tx(
+            "tx1",
+            "transfer",
+            Some("withdrawal"),
+            2.0,
+            "BTC",
+            None,
+            None,
+            None,
+            None,
+        );
+        let (label, amount, _price, is_swap) = format_crypto_tx_display(&tx, None);
+        assert_eq!(label, "OUT");
+        assert_eq!(amount, "2 BTC");
+        assert!(!is_swap);
+    }
+
+    #[test]
+    fn test_format_crypto_tx_display_swap_source() {
+        let source = make_tx(
+            "tx1",
+            "trade",
+            Some("swap"),
+            1.0,
+            "BTC",
+            Some(0.05),
+            None,
+            None,
+            None,
+        );
+        let dest = make_tx(
+            "tx2",
+            "trade",
+            Some("swap"),
+            100.0,
+            "ETH",
+            None,
+            None,
+            None,
+            None,
+        );
+        let (label, amount, _price, is_swap) = format_crypto_tx_display(&source, Some(&dest));
+        assert_eq!(label, "SWAP OUT");
+        assert_eq!(amount, "1 BTC \u{2192} 100 ETH");
+        assert!(is_swap);
+    }
+
+    #[test]
+    fn test_format_crypto_tx_display_swap_dest() {
+        let source = make_tx(
+            "tx1",
+            "trade",
+            Some("swap"),
+            1.0,
+            "BTC",
+            Some(0.05),
+            None,
+            None,
+            None,
+        );
+        let dest = make_tx(
+            "tx2",
+            "trade",
+            Some("swap"),
+            100.0,
+            "ETH",
+            None,
+            None,
+            None,
+            None,
+        );
+        let (label, amount, _price, _is_swap) = format_crypto_tx_display(&dest, Some(&source));
+        assert_eq!(label, "SWAP IN");
+        assert_eq!(amount, "100 ETH \u{2190} 1 BTC");
+    }
+
+    #[test]
+    fn test_format_crypto_tx_display_swap_id_fallback() {
+        let tx_a = make_tx(
+            "tx1",
+            "trade",
+            Some("swap"),
+            1.0,
+            "BTC",
+            None,
+            None,
+            None,
+            None,
+        );
+        let tx_b = make_tx(
+            "tx2",
+            "trade",
+            Some("swap"),
+            100.0,
+            "ETH",
+            None,
+            None,
+            None,
+            None,
+        );
+        let (label_a, _, _, _) = format_crypto_tx_display(&tx_a, Some(&tx_b));
+        let (label_b, _, _, _) = format_crypto_tx_display(&tx_b, Some(&tx_a));
+        // No fee on either — tiebreak by id (tx1 < tx2)
+        assert_eq!(label_a, "SWAP OUT");
+        assert_eq!(label_b, "SWAP IN");
+    }
+
+    // ==================== Color ====================
+
+    #[test]
+    fn test_color_from_hex_valid() {
+        assert_eq!(color_from_hex("#8b5cf6"), (139, 92, 246));
+    }
+
+    #[test]
+    fn test_color_from_hex_red() {
+        assert_eq!(color_from_hex("#ff0000"), (255, 0, 0));
+    }
+
+    #[test]
+    fn test_color_from_hex_invalid() {
+        let (r, g, b) = color_from_hex("invalid");
+        assert_eq!((r, g, b), (139, 92, 246));
+    }
+
+    #[test]
+    fn test_color_from_hex_short() {
+        let (r, g, b) = color_from_hex("#fff");
+        assert_eq!((r, g, b), (139, 92, 246));
+    }
+
+    #[test]
+    fn test_color_from_hex_empty() {
+        let (r, g, b) = color_from_hex("");
+        assert_eq!((r, g, b), (139, 92, 246));
+    }
+
+    #[test]
+    fn test_color_from_hex_no_hash() {
+        let (r, g, b) = color_from_hex("8b5cf6");
+        assert_eq!((r, g, b), (139, 92, 246));
+    }
 }
