@@ -586,7 +586,7 @@
       height: calc(60px + env(safe-area-inset-bottom, 0px));
       flex-direction: row;
       align-items: stretch;
-      background: rgba(14, 12, 20, 0.55);
+      background: rgba(14, 12, 20, 0.9);
       backdrop-filter: blur(18px) saturate(1.3);
       -webkit-backdrop-filter: blur(18px) saturate(1.3);
       border-right: none;
@@ -598,7 +598,7 @@
     }
 
     :global(.light-mode) .sidebar {
-      background: rgba(250, 248, 255, 0.6);
+      background: rgba(250, 248, 255, 0.92);
     }
 
     /* Desktop-only chrome and text labels disappear on the bar */

@@ -380,9 +380,12 @@ select option { background: var(--option-bg); color: var(--text-primary); }
     border-radius: 99px;
     background: var(--glass-border-hover);
   }
-  /* Side drawer becomes full-width on a phone. */
+  /* Side drawer becomes full-width on a phone, fitting between the fixed
+     top and bottom bars so its header and bottom buttons stay reachable. */
   .detail-panel {
     width: 100%;
+    top: calc(52px + env(safe-area-inset-top, 0px));
+    bottom: calc(60px + env(safe-area-inset-bottom, 0px));
     padding: 20px;
   }
 }
