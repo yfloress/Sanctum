@@ -133,6 +133,8 @@ locales/
 - Use `nix develop -c ...` for Rust commands (build/test).
 - Never run cargo run or cargo build.
 - Tax rule: for Chile jurisdiction, tax reports, tax history exports, and displayed tax totals must always use CLP.
+- Do NOT use npm, only pnpm (with `ignore-scripts=true` in `.npmrc`).
+- Never use emojis — use SVG icons from `ui/assets/icons/` instead.
 ### IPC rules
 - IPC types go in `src/ui/dto/` — one file per domain, `#[derive(Serialize, Deserialize)]`.
 - Tauri commands go in `src-tauri/src/commands/` — `#[tauri::command]` functions.
@@ -140,8 +142,9 @@ locales/
 - Frontend uses `@tauri-apps/api` `invoke()` to call Rust commands.
 - Tauri invoke parameter names must exactly match Rust function parameter names (snake_case).
 - No external CDN or runtime network resources in the frontend.
-- pnpm with `ignore-scripts=true` (`.npmrc`) for supply chain security.
-- Every source file (including tests) must start with this exact AGPL header:
+
+## AGPL Header
+Every source file (including tests) must start with this exact header:
 ```rust
 // Sanctum — a privacy-first personal finance, crypto, and habits vault.
 // Copyright (C) 2026  Kyronix
@@ -161,23 +164,16 @@ locales/
 //
 ```
 
-## Build, Test, and Development Commands
-Always ask the user if they want to run any of these commands:
-- `nix develop -c cargo check -j 2` (library crate)
-- `nix develop -c cargo check -j 2 --manifest-path src-tauri/Cargo.toml` (Tauri crate)
-- `nix develop -c cargo clippy -j 2`
-- `nix develop -c cargo test -j 2`
-- `cd ui-svelte && pnpm install` (frontend dependencies)
-- `cd ui-svelte && pnpm check` (svelte-check, alias: `cd ui-svelte && npx svelte-check --tsconfig ./tsconfig.json`)
+## Definition of Done
+All generated code must pass the following without exception before being considered complete:
+- `nix develop -c cargo fmt` (formatting applied)
+- `nix develop -c cargo clippy -- -D warnings` (zero warnings)
+- `nix develop -c cargo test -j 2` (all tests pass)
+- `nix develop -c cargo machete` (no new unused dependencies)
 
-## Coding Style and Naming Conventions
-- Rust: `rustfmt` defaults (4-space).
-- Svelte/TypeScript: 2-space indent, single quotes, no semicolons in TS.
-- Naming: snake_case (Rust + Tauri commands), PascalCase (types), kebab-case (files when adding new ones).
-
-## Testing Guidelines
-- Only when needed use `cargo test` for unit tests; keep them deterministic.
-- Avoid network calls in tests.
+Do not mark a task as done if any of these fail. If clippy or tests
+fail, fix them before continuing. Do not silence warnings with `#[allow]`
+without explicitly justifying it.
 
 ## Commit Guidelines
 - Do not create commits unless the user explicitly asks for a commit.
@@ -185,10 +181,11 @@ Always ask the user if they want to run any of these commands:
   Example: `feat(habits): add radar analytics`.
 
 ## Security Notes
-- DB uses SQLCipher; avoid logging sensitive values.
-- Crypto price fetching uses external APIs; respect privacy settings.
-
-## Extra
-- NEVER use emojis. Use SVG icons from `ui/assets/icons/` instead.
-- If you cannot find the icon you need, there is an older commit where many SVGs were imported from the Lucide repository. Find it and bring the icon back.
-- DO NOT USE NPM ONLY PNPM
+- **Database at rest**: SQLCipher encrypts the SQLite database. The vault password derives the encryption key — never log it, never store it.
+- **Secrets in memory**: use `secrecy::SecretString` / `Zeroize` for sensitive values (passwords, keys). Zero memory after use.
+- **No sensitive data in logs**: financial details, passwords, keys, and PII must never reach log output. Review `security_log.rs` usage.
+- **Supply chain**: `cargo audit` for Rust vulnerabilities, pnpm with `ignore-scripts=true` for JS deps.
+- **Tauri CSP**: keep `tauri.conf.json` CSP restrictive. No inline scripts, no external CDNs.
+- **Local-first**: all data stays on device. No network calls unless user-initiated (e.g., price fetch).
+- **Input validation**: use `core/validation.rs` for shared rules, domain validators in `features/*/validation.rs`. Never trust raw input.
+- **No secrets in git**: API keys, tokens, passwords → env vars or config files outside the repo. Semgrep/secrets rules in CI.
