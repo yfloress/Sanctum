@@ -306,6 +306,19 @@ fn create_secure_client(proxy: Option<&ProxyConfig>) -> Result<Client, String> {
         .https_only(true)
         .redirect(reqwest::redirect::Policy::none());
 
+    // Android's vendored OpenSSL ships no usable root certificates, so HTTPS
+    // verification fails. Add the bundled Mozilla roots there. Desktop keeps
+    // using the system trust store unchanged.
+    #[cfg(target_os = "android")]
+    {
+        let bundle = include_bytes!("cacert.pem");
+        for cert in reqwest::Certificate::from_pem_bundle(bundle)
+            .map_err(|_| "Failed to parse bundled CA certificates".to_string())?
+        {
+            builder = builder.add_root_certificate(cert);
+        }
+    }
+
     if let Some(proxy_cfg) = proxy {
         let proxy_url = validate_proxy_url(&proxy_cfg.url)?;
         let proxy = Proxy::all(proxy_url).map_err(|_| "Invalid proxy URL".to_string())?;
