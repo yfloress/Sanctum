@@ -68,6 +68,9 @@
           cargo-modules
           cargo-tauri
           cargo-ndk
+          cargo-llvm-cov
+          cargo-machete
+          cargo-deny
           android-tools
           jdk17
           perl
@@ -93,6 +96,7 @@
               extensions = [
                 "rust-src"
                 "rust-analyzer"
+                "llvm-tools-preview"
               ];
               targets = [
                 "aarch64-linux-android"

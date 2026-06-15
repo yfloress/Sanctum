@@ -22,13 +22,10 @@ exclude = [
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 csv = "1.4"
-directories = "6"
 env_logger = "0.11"
 fluent-bundle = "0.16"
-fluent-syntax = "0.12"
 futures = "0.3"
 log = "0.4"
-rand = "0.10"
 regex = "1.12"
 reqwest = { version = "0.13", features = ["json", "stream", "socks"] }
 rusqlite = { version = "0.39", features = ["bundled-sqlcipher"] }
