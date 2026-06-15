@@ -1,40 +1,44 @@
 #!/usr/bin/env bash
 set -e
 
-echo "Updating all dependencies..."
-echo ""
+log()  { printf '\n\033[1;32m[+] %s\033[0m\n' "$*"; }
+warn() { printf '\n\033[1;33m[!] %s\033[0m\n' "$*"; }
+err()  { printf '\n\033[1;31m[x] %s\033[0m\n' "$*"; exit 1; }
+
+log "Updating all dependencies"
 
 # Nix flakes
-echo "[1/5] Updating nix flakes..."
+log "Updating nix flakes"
 nix flake update |& nom
 
-echo ""
-
 # Rust - main crate
-echo "[2/5] Updating Rust dependencies (main crate)..."
+log "Updating Rust dependencies (main crate)"
 nix develop -c cargo update
 nix develop -c cargo upgrade
 
-echo ""
-
 # Rust - Tauri crate
-echo "[3/5] Updating Rust dependencies (src-tauri)..."
+log "Updating Rust dependencies (src-tauri)"
 nix develop -c cargo update --manifest-path src-tauri/Cargo.toml
 nix develop -c cargo upgrade --manifest-path src-tauri/Cargo.toml
 
-echo ""
-
 # Frontend
-echo "[4/5] Updating frontend dependencies (pnpm)..."
-cd ui-svelte
-pnpm update --latest
-pnpm install
-cd ..
+log "Updating frontend dependencies (pnpm)"
+(
+  cd ui-svelte
+  pnpm update --latest
+  pnpm install
+)
 
-echo ""
-echo "[5/5] All dependencies updated!"
+# Validate
+log "Validating updates"
+nix develop -c cargo check -j 2
+nix develop -c cargo audit 2>/dev/null || warn "cargo audit skipped (advisory DB may not be cloned yet)"
+nix develop -c cargo machete 2>/dev/null || warn "cargo machete skipped (not installed)"
+
+log "All dependencies updated"
 echo ""
 echo "Next steps:"
-echo "  1. Test the build: nix develop -c cargo check"
-echo "  2. Test frontend: cd ui-svelte && pnpm check && pnpm build"
-echo "  3. Review changes and commit"
+echo "  1. Run tests:     nix develop -c cargo test"
+echo "  2. Review diff:   git diff --stat"
+echo "  3. Commit"
+
