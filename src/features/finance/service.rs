@@ -563,3 +563,6 @@ impl FinanceService {
         rates
     }
 }
+
+#[cfg(test)]
+mod tests;
