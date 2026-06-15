@@ -1722,6 +1722,40 @@
   .modal h3 { margin: 0 0 20px; color: var(--text-primary); position: relative; z-index: 10; }
   .modal.wide { width: 480px; }
 
+  /* Mobile: modals become a bottom sheet. Placed AFTER the base .modal rules
+     above so it wins the cascade by source order (CryptoPage defines its own
+     .modal styles, so shared.css's global sheet doesn't apply here). */
+  @media (max-width: 640px) {
+    .modal-wrapper {
+      top: auto;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      transform: none;
+    }
+    .modal,
+    .modal.wide {
+      width: 100%;
+      max-width: 100%;
+      max-height: 88vh;
+      overflow-y: auto;
+      padding: 20px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      animation: sheetIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .modal::after {
+      content: '';
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 36px;
+      height: 4px;
+      border-radius: 99px;
+      background: var(--glass-border-hover);
+    }
+  }
+
   .form-grid { display: flex; flex-direction: column; gap: 14px; position: relative; z-index: 10; }
   .form-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: var(--text-secondary); }
   .form-grid input {
