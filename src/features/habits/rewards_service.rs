@@ -512,3 +512,6 @@ impl RewardsService {
         self.with_db(RewardsRepository::get_achievements)
     }
 }
+
+#[cfg(test)]
+mod tests;
