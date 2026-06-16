@@ -1058,8 +1058,8 @@ fn mexc_overlap_detects_dedicated_withdrawal_vs_statement_with_fee() {
 mod integration_tests {
     use super::*;
     use crate::db::Database as IngestionTestDb;
-    use crate::features::ingestion::types::{ImportHabitLog, ImportTransaction};
-    use crate::models::{Account, Habit, TransactionCategory};
+    use crate::features::ingestion::types::{ImportCryptoTransaction, ImportHabitLog, ImportTransaction};
+    use crate::models::{Account, CryptoWallet, Habit, TransactionCategory};
     use secrecy::SecretString;
     use std::path::PathBuf;
     use uuid::Uuid;
@@ -1633,6 +1633,258 @@ mod integration_tests {
                 .expect("get logs");
             assert!(logs.is_empty(), "preview should not persist data");
         }
+    }
+
+    // ==================== Crypto Transaction Ingestion Tests ====================
+
+    fn seed_wallet(db: &IngestionTestDb, name: &str) -> String {
+        let id = Uuid::new_v4().to_string();
+        let wallet = CryptoWallet::new(id.clone(), name.to_string(), "exchange".to_string(), None);
+        db.create_wallet(&wallet).expect("create wallet");
+        id
+    }
+
+    fn make_crypto_tx(
+        date: &str,
+        wallet: &str,
+        symbol: &str,
+        tx_type: &str,
+        subtype: Option<&str>,
+        amount: f64,
+        price: Option<f64>,
+        fee: Option<f64>,
+        swap_to_symbol: Option<&str>,
+        swap_to_amount: Option<f64>,
+    ) -> ImportCryptoTransaction {
+        ImportCryptoTransaction {
+            date: date.to_string(),
+            wallet: wallet.to_string(),
+            symbol: symbol.to_string(),
+            transaction_type: tx_type.to_string(),
+            amount,
+            subtype: subtype.map(String::from),
+            price_per_coin: price,
+            fee,
+            override_proceeds: None,
+            override_cost_basis: None,
+            swap_to_symbol: swap_to_symbol.map(String::from),
+            swap_to_amount,
+            fee_coin_symbol: None,
+            fee_amount: None,
+            notes: None,
+        }
+    }
+
+    #[test]
+    fn test_process_crypto_buy() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_wallet(db, "Exchange");
+        }
+        let tx = make_crypto_tx("2024-06-15", "Exchange", "BTC", "trade", Some("buy"), 1.5, Some(50000.0), Some(0.10), None, None);
+        let result = h.service.process_crypto_transactions_ext(
+            vec![(1, tx)], "Test Format", true,
+        ).expect("process");
+        assert_eq!(result.inserted, 1);
+        assert_eq!(result.errors, 0);
+    }
+
+    #[test]
+    fn test_process_crypto_buy_with_fee_coin() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_wallet(db, "Exchange");
+        }
+        let mut tx = make_crypto_tx("2024-06-15", "Exchange", "BTC", "trade", Some("buy"), 1.5, Some(50000.0), Some(0.10), None, None);
+        tx.fee_coin_symbol = Some("BTC".to_string());
+        tx.fee_amount = Some(0.001);
+        let result = h.service.process_crypto_transactions_ext(
+            vec![(1, tx)], "Test Format", true,
+        ).expect("process");
+        assert_eq!(result.inserted, 1);
+        assert_eq!(result.errors, 0);
+    }
+
+    #[test]
+    fn test_process_crypto_sell() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_wallet(db, "Exchange");
+        }
+        let tx = make_crypto_tx("2024-06-15", "Exchange", "BTC", "trade", Some("sell"), 0.5, Some(51000.0), Some(0.10), None, None);
+        let result = h.service.process_crypto_transactions_ext(
+            vec![(1, tx)], "Test Format", true,
+        ).expect("process");
+        assert_eq!(result.inserted, 1);
+    }
+
+    #[test]
+    fn test_process_crypto_transfer_in() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_wallet(db, "MyWallet");
+        }
+        let tx = make_crypto_tx("2024-06-15", "MyWallet", "ETH", "transfer", None, 2.0, None, None, None, None);
+        let result = h.service.process_crypto_transactions_ext(
+            vec![(1, tx)], "Test Format", true,
+        ).expect("process");
+        assert_eq!(result.inserted, 1);
+    }
+
+    #[test]
+    fn test_process_crypto_transfer_out() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_wallet(db, "MyWallet");
+        }
+        let tx = make_crypto_tx("2024-06-15", "MyWallet", "ETH", "transfer", Some("withdrawal"), 1.0, None, None, None, None);
+        let result = h.service.process_crypto_transactions_ext(
+            vec![(1, tx)], "Test Format", true,
+        ).expect("process");
+        assert_eq!(result.inserted, 1);
+    }
+
+    #[test]
+    fn test_process_crypto_swap_creates_two_transactions() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_wallet(db, "Exchange");
+        }
+        let tx = make_crypto_tx(
+            "2024-06-15", "Exchange", "BTC", "trade", Some("swap"), 1.0, None, Some(0.05),
+            Some("ETH"), Some(100.0),
+        );
+        let result = h.service.process_crypto_transactions_ext(
+            vec![(1, tx)], "Test Format", true,
+        ).expect("process");
+        assert_eq!(result.inserted, 1, "swap counts as one insertion in summary");
+
+        // Verify two transactions were actually created in DB
+        let guard = h.db.lock().expect("lock");
+        let db = guard.as_ref().expect("db");
+        let all = db.get_all_crypto_transactions(0, i64::MAX).expect("get all");
+        assert_eq!(all.len(), 2, "swap should create source + target tx");
+    }
+
+    #[test]
+    fn test_process_crypto_rejects_unknown_wallet() {
+        let h = new_ingestion_harness();
+        let tx = make_crypto_tx("2024-06-15", "Nonexistent", "BTC", "trade", Some("buy"), 1.0, None, None, None, None);
+        let result = h.service.process_crypto_transactions_ext(
+            vec![(1, tx)], "Test Format", true,
+        ).expect("process");
+        assert_eq!(result.inserted, 0);
+        assert_eq!(result.errors, 1);
+    }
+
+    #[test]
+    fn test_process_crypto_rejects_unknown_coin() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_wallet(db, "Exchange");
+        }
+        let tx = make_crypto_tx("2024-06-15", "Exchange", "UNKNOWNCOIN123", "trade", Some("buy"), 1.0, None, None, None, None);
+        let result = h.service.process_crypto_transactions_ext(
+            vec![(1, tx)], "Test Format", true,
+        ).expect("process");
+        // UNKNOWNCOIN123 is not in default_coin_catalog, should be skipped
+        assert!(
+            result.skipped > 0 || result.errors > 0,
+            "expected unknown coin to be rejected, got inserted={}, skipped={}, errors={}",
+            result.inserted, result.skipped, result.errors,
+        );
+        assert_eq!(result.inserted, 0);
+    }
+
+    #[test]
+    fn test_process_crypto_rejects_swap_with_unknown_target() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_wallet(db, "Exchange");
+        }
+        let tx = make_crypto_tx(
+            "2024-06-15", "Exchange", "BTC", "trade", Some("swap"), 1.0, None, None,
+            Some("UNKNOWN"), Some(100.0),
+        );
+        let result = h.service.process_crypto_transactions_ext(
+            vec![(1, tx)], "Test Format", true,
+        ).expect("process");
+        assert_eq!(result.inserted, 0);
+        assert_eq!(result.skipped, 1);
+    }
+
+    #[test]
+    fn test_process_crypto_deduplicates_exact_match() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_wallet(db, "Exchange");
+        }
+        let tx = make_crypto_tx("2024-06-15", "Exchange", "BTC", "trade", Some("buy"), 1.0, Some(50000.0), None, None, None);
+        h.service.process_crypto_transactions_ext(
+            vec![(1, tx.clone())], "Test Format", true,
+        ).expect("first");
+        let result = h.service.process_crypto_transactions_ext(
+            vec![(1, tx)], "Test Format", true,
+        ).expect("second");
+        assert_eq!(result.inserted, 0);
+        assert_eq!(result.skipped, 1);
+    }
+
+    #[test]
+    fn test_preview_crypto_does_not_insert() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_wallet(db, "Exchange");
+        }
+        let tx = make_crypto_tx("2024-06-15", "Exchange", "BTC", "trade", Some("buy"), 1.0, Some(50000.0), None, None, None);
+        let result = h.service.preview_crypto_transactions_ext(
+            vec![(1, tx)], "Test Format", true,
+        ).expect("preview");
+        assert!(result.preview_changes.len() > 0, "preview should show changes");
+        // Verify nothing persisted
+        let guard = h.db.lock().expect("lock");
+        let db = guard.as_ref().expect("db");
+        let all = db.get_all_crypto_transactions(0, i64::MAX).expect("get all");
+        assert!(all.is_empty(), "preview should not persist");
+    }
+
+    #[test]
+    fn test_process_crypto_handles_multiple_types() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_wallet(db, "Exchange");
+        }
+        let txs = vec![
+            (1, make_crypto_tx("2024-06-15", "Exchange", "BTC", "trade", Some("buy"), 1.0, Some(50000.0), Some(0.10), None, None)),
+            (2, make_crypto_tx("2024-06-16", "Exchange", "ETH", "trade", Some("buy"), 10.0, Some(3000.0), Some(0.50), None, None)),
+            (3, make_crypto_tx("2024-06-17", "Exchange", "BTC", "trade", Some("sell"), 0.5, Some(51000.0), Some(0.10), None, None)),
+        ];
+        let result = h.service.process_crypto_transactions_ext(txs, "Test Format", true)
+            .expect("process");
+        assert_eq!(result.inserted, 3);
+        assert_eq!(result.errors, 0);
     }
 
     fn seed_habit_named(db: &IngestionTestDb, name: &str) -> String {
