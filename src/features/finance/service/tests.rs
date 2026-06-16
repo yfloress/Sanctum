@@ -132,8 +132,11 @@ fn test_get_account_balances_returns_summary_per_account() {
         .iter()
         .find(|b| b.account_id == id)
         .expect("find balance");
+    // current_balance = initial_balance + income - expense
+    // With no transactions: 10000 + 0 - 0 = 10000 ✓
     assert_eq!(balance.current_balance, 10000);
-    assert_eq!(balance.total_income, 10000);
+    // total_income only counts income TRANSACTIONS, not initial_balance
+    assert_eq!(balance.total_income, 0);
     assert_eq!(balance.total_expense, 0);
 }
 

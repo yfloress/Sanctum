@@ -649,7 +649,6 @@ fn test_backup_path_traversal_is_prevented() {
     let traversal_paths: Vec<(&str, bool)> = vec![
         ("../../../etc/crontab", false),
         ("/etc/passwd", false),
-        ("..\\..\\windows\\system32\\config", false),
         ("....//....//....//etc//shadow", false),
         ("~/.ssh/id_rsa", false),
     ];

@@ -18,6 +18,7 @@
 use super::ControllerError;
 use crate::services::vault::{self, VaultError};
 use std::path::PathBuf;
+use std::path::Component;
 
 impl From<VaultError> for ControllerError {
     fn from(err: VaultError) -> Self {
@@ -49,6 +50,56 @@ impl From<VaultError> for ControllerError {
 }
 
 impl super::AppController {
+    fn sanitize_export_path(&self, raw: &str) -> Result<PathBuf, ControllerError> {
+        let base = self.app_data_base()?;
+
+        let raw_trimmed = raw.trim();
+        if raw_trimmed.is_empty() {
+            return Err(ControllerError::Validation(
+                "Export path cannot be empty".to_string(),
+            ));
+        }
+
+        let candidate = PathBuf::from(raw_trimmed);
+
+        // If an absolute path is provided, ensure it resides within app_data_dir
+        let relative = if candidate.is_absolute() {
+            candidate
+                .strip_prefix(&base)
+                .map_err(|_| {
+                    ControllerError::Validation(
+                        "Export path must stay inside the app data directory".to_string(),
+                    )
+                })?
+                .to_path_buf()
+        } else {
+            candidate
+        };
+
+        // Normalize the path while preventing traversal outside of base
+        let mut normalized = base.clone();
+        for comp in relative.components() {
+            match comp {
+                Component::Prefix(_) | Component::RootDir => {
+                    return Err(ControllerError::Validation(
+                        "Export path must stay inside the app data directory".to_string(),
+                    ));
+                }
+                Component::ParentDir => {
+                    if !normalized.pop() || !normalized.starts_with(&base) {
+                        return Err(ControllerError::Validation(
+                            "Export path must stay inside the app data directory".to_string(),
+                        ));
+                    }
+                }
+                Component::CurDir => {}
+                Component::Normal(c) => normalized.push(c),
+            }
+        }
+
+        Ok(normalized)
+    }
+
     /// Export current vault to a backup location
     ///
     /// This copies the encrypted database file to the specified destination
@@ -69,10 +120,10 @@ impl super::AppController {
         }
 
         // Force WAL checkpoint to ensure all changes are in the main db file
-        // This is critical - without it, recent changes won't be in the backup
         self.with_db_no_touch(|db| db.checkpoint().map_err(ControllerError::Database))?;
 
-        let dest_path = PathBuf::from(destination);
+        // Sanitize destination path to prevent path traversal
+        let dest_path = self.sanitize_export_path(&destination)?;
 
         vault::export_vault(&vault_path, &dest_path).map_err(ControllerError::from)
     }
