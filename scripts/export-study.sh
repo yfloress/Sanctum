@@ -84,6 +84,17 @@ else
 fi
 echo "  ✓ TREE.txt"
 
+# ─── Forzar extensión .txt en todo lo que no sea .md ────────────────
+# NotebookLM no entiende .rs, .ts, .toml, .nix, .json, etc.
+for f in "$OUTDIR"/*; do
+  [ -f "$f" ] || continue
+  case "$f" in
+    *.md|*.txt) ;;
+    *) mv "$f" "$f.txt" ;;
+  esac
+done
+echo "  ✓ Extensiones: $(find "$OUTDIR" -name '*.txt' | wc -l) .txt, $(find "$OUTDIR" -name '*.md' | wc -l) .md"
+
 # ─── Resumen ────────────────────────────────────────────────────────
 total=$(find "$OUTDIR" -type f | wc -l)
 echo ""
