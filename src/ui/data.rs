@@ -382,3 +382,235 @@ pub fn load_recent_transactions(
         })
         .collect())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::controller::AppController;
+    use std::path::PathBuf;
+    use uuid::Uuid;
+
+    struct TestHarness {
+        controller: Arc<AppController>,
+        test_dir: PathBuf,
+    }
+
+    impl Drop for TestHarness {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.test_dir);
+        }
+    }
+
+    fn new_harness() -> TestHarness {
+        let base_dir =
+            std::env::temp_dir().join(format!("sanctum-ui-data-test-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&base_dir).expect("create test dir");
+        let controller = Arc::new(AppController::new(base_dir.clone()));
+        let password = "test-password-123".to_string();
+        controller
+            .create_db(password, None)
+            .expect("create vault");
+        TestHarness {
+            controller,
+            test_dir: base_dir,
+        }
+    }
+
+    fn create_account(controller: &AppController, name: &str, currency: &str, balance: i64) {
+        controller
+            .create_account(
+                name.to_string(),
+                "bank".to_string(),
+                currency.to_string(),
+                balance,
+                "#8b5cf6".to_string(),
+                None,
+            )
+            .expect("create account");
+    }
+
+    fn add_transaction(
+        controller: &AppController,
+        account_id: &str,
+        amount: i64,
+        category: &str,
+        is_expense: bool,
+    ) {
+        controller
+            .add_transaction(
+                account_id.to_string(),
+                amount,
+                category.to_string(),
+                "test".to_string(),
+                "2024-06-15".to_string(),
+                is_expense,
+            )
+            .expect("add transaction");
+    }
+
+    #[test]
+    fn test_load_categories_for_expense() {
+        let h = new_harness();
+        let result = load_categories(&h.controller, "expense").expect("load categories");
+        assert!(!result.is_empty(), "default expense categories should exist");
+        assert!(result.iter().all(|c| c.category_type == "expense"));
+    }
+
+    #[test]
+    fn test_load_categories_for_income() {
+        let h = new_harness();
+        let result = load_categories(&h.controller, "income").expect("load categories");
+        assert!(!result.is_empty(), "default income categories should exist");
+        assert!(result.iter().all(|c| c.category_type == "income"));
+    }
+
+    #[test]
+    fn test_load_categories_rejects_invalid_type() {
+        let h = new_harness();
+        let result = load_categories(&h.controller, "invalid");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_load_balance_data_empty() {
+        let h = new_harness();
+        let result = load_balance_data(&h.controller).expect("load balance");
+        assert_eq!(result.current_balance, "USD 0.00");
+        assert_eq!(result.total_income, "USD 0.00");
+        assert_eq!(result.total_expenses, "USD 0.00");
+    }
+
+    #[test]
+    fn test_load_balance_data_with_transactions() {
+        let h = new_harness();
+        create_account(&h.controller, "Checking", "USD", 0);
+        let accounts = h.controller.get_accounts().expect("get accounts");
+        let acc_id = &accounts.iter().find(|a| a.name == "Checking").expect("find account").id;
+        add_transaction(&h.controller, acc_id, 20000, "Salary", false);
+        add_transaction(&h.controller, acc_id, 5000, "Food", true);
+        let result = load_balance_data(&h.controller).expect("load balance");
+        assert_eq!(result.total_income, "USD 200.00");
+        assert_eq!(result.total_expenses, "USD 50.00");
+    }
+
+    #[test]
+    fn test_load_accounts_state_empty() {
+        let h = new_harness();
+        let result = load_accounts_state(&h.controller, "USD").expect("load accounts state");
+        assert!(result.accounts.is_empty(), "new vault has no user accounts");
+        assert_eq!(result.total_balance, "USD 0.00");
+    }
+
+    #[test]
+    fn test_load_accounts_state_with_accounts() {
+        let h = new_harness();
+        create_account(&h.controller, "Checking", "USD", 0);
+        create_account(&h.controller, "Savings", "USD", 0);
+        let accounts = h.controller.get_accounts().expect("get accounts");
+        let checking = accounts.iter().find(|a| a.name == "Checking").expect("find checking");
+        let savings = accounts.iter().find(|a| a.name == "Savings").expect("find savings");
+        add_transaction(&h.controller, &checking.id, 50000, "Deposit", false);
+        add_transaction(&h.controller, &savings.id, 100000, "Deposit", false);
+        let result = load_accounts_state(&h.controller, "USD").expect("load accounts state");
+        assert_eq!(result.accounts.len(), 2);
+        assert_eq!(
+            result.total_balance, "USD 1,500.00",
+            "total should be sum of account balances"
+        );
+    }
+
+    #[test]
+    fn test_load_transactions_state_empty() {
+        let h = new_harness();
+        let filter = TransactionFilterParams {
+            query: "",
+            account_filter: "",
+            category_filter: "",
+            display_limit: 50,
+        };
+        let result = load_transactions_state(&h.controller, filter).expect("load transactions");
+        assert!(result.transactions.is_empty());
+        assert!(!result.has_more);
+    }
+
+    #[test]
+    fn test_load_transactions_state_filters_by_account() {
+        let h = new_harness();
+        create_account(&h.controller, "A", "USD", 0);
+        create_account(&h.controller, "B", "USD", 0);
+        let accounts = h.controller.get_accounts().expect("get accounts");
+        let acc_a = accounts.iter().find(|a| a.name == "A").expect("find A");
+        let acc_b = accounts.iter().find(|a| a.name == "B").expect("find B");
+        add_transaction(&h.controller, &acc_a.id, 1000, "Food", true);
+        add_transaction(&h.controller, &acc_b.id, 2000, "Food", true);
+        let filter = TransactionFilterParams {
+            query: "",
+            account_filter: &acc_a.id,
+            category_filter: "",
+            display_limit: 50,
+        };
+        let result = load_transactions_state(&h.controller, filter).expect("load transactions");
+        assert_eq!(result.transactions.len(), 1);
+        assert_eq!(result.transactions[0].account_id, acc_a.id);
+    }
+
+    #[test]
+    fn test_load_transactions_state_filters_by_query() {
+        let h = new_harness();
+        create_account(&h.controller, "Test", "USD", 0);
+        let accounts = h.controller.get_accounts().expect("get accounts");
+        let acc_id = &accounts[0].id;
+        add_transaction(&h.controller, acc_id, 1000, "Food", true);
+        add_transaction(&h.controller, acc_id, 2000, "Salary", false);
+        let filter = TransactionFilterParams {
+            query: "salary",
+            account_filter: "",
+            category_filter: "",
+            display_limit: 50,
+        };
+        let result = load_transactions_state(&h.controller, filter).expect("load transactions");
+        assert_eq!(result.transactions.len(), 1);
+        assert!(result.transactions[0].category.to_lowercase().contains("salary"));
+    }
+
+    #[test]
+    fn test_load_transactions_state_respects_limit() {
+        let h = new_harness();
+        create_account(&h.controller, "Test", "USD", 0);
+        let accounts = h.controller.get_accounts().expect("get accounts");
+        let acc_id = &accounts[0].id;
+        for i in 0..5 {
+            add_transaction(&h.controller, acc_id, 1000 + i, "Food", true);
+        }
+        let filter = TransactionFilterParams {
+            query: "",
+            account_filter: "",
+            category_filter: "",
+            display_limit: 3,
+        };
+        let result = load_transactions_state(&h.controller, filter).expect("load transactions");
+        assert_eq!(result.transactions.len(), 3);
+        assert!(result.has_more);
+    }
+
+    #[test]
+    fn test_load_recent_transactions_respects_limit() {
+        let h = new_harness();
+        create_account(&h.controller, "Test", "USD", 0);
+        let accounts = h.controller.get_accounts().expect("get accounts");
+        let acc_id = &accounts[0].id;
+        for i in 0..5 {
+            add_transaction(&h.controller, acc_id, 1000 + i, "Food", true);
+        }
+        let result =
+            load_recent_transactions(&h.controller, 2).expect("load recent transactions");
+        assert_eq!(result.len(), 2);
+    }
+
+    #[test]
+    fn test_load_recent_transactions_empty() {
+        let h = new_harness();
+        let result = load_recent_transactions(&h.controller, 10).expect("load recent");
+        assert!(result.is_empty());
+    }
+}
