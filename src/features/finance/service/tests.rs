@@ -81,11 +81,7 @@ fn create_test_transaction(
     .expect("create transaction")
 }
 
-fn create_test_category(
-    svc: &FinanceService,
-    name: &str,
-    category_type: &str,
-) -> String {
+fn create_test_category(svc: &FinanceService, name: &str, category_type: &str) -> String {
     svc.add_transaction_category(name.to_string(), category_type.to_string())
         .expect("create category")
 }
@@ -132,7 +128,10 @@ fn test_get_account_balances_returns_summary_per_account() {
     let h = new_test_service();
     let id = create_test_account(&h.service, "Test", "USD", 10000);
     let balances = h.service.get_account_balances().expect("get balances");
-    let balance = balances.iter().find(|b| b.account_id == id).expect("find balance");
+    let balance = balances
+        .iter()
+        .find(|b| b.account_id == id)
+        .expect("find balance");
     assert_eq!(balance.current_balance, 10000);
     assert_eq!(balance.total_income, 10000);
     assert_eq!(balance.total_expense, 0);
@@ -142,15 +141,17 @@ fn test_get_account_balances_returns_summary_per_account() {
 fn test_update_account_changes_fields() {
     let h = new_test_service();
     let id = create_test_account(&h.service, "Old Name", "USD", 0);
-    h.service.update_account(
-        id.clone(),
-        "New Name".to_string(),
-        "savings".to_string(),
-        "EUR".to_string(),
-        20000,
-        "#ec4899".to_string(),
-        Some("icon.svg".to_string()),
-    ).expect("update account");
+    h.service
+        .update_account(
+            id.clone(),
+            "New Name".to_string(),
+            "savings".to_string(),
+            "EUR".to_string(),
+            20000,
+            "#ec4899".to_string(),
+            Some("icon.svg".to_string()),
+        )
+        .expect("update account");
     let accounts = h.service.get_accounts().expect("get accounts");
     let account = accounts.iter().find(|a| a.id == id).expect("find account");
     assert_eq!(account.name, "New Name");
@@ -165,7 +166,9 @@ fn test_update_account_changes_fields() {
 fn test_update_account_icon_changes_only_icon() {
     let h = new_test_service();
     let id = create_test_account(&h.service, "Test", "USD", 0);
-    h.service.update_account_icon(id.clone(), Some("new-icon.svg".to_string())).expect("update icon");
+    h.service
+        .update_account_icon(id.clone(), Some("new-icon.svg".to_string()))
+        .expect("update icon");
     let accounts = h.service.get_accounts().expect("get accounts");
     let account = accounts.iter().find(|a| a.id == id).expect("find account");
     assert_eq!(account.icon.as_deref(), Some("new-icon.svg"));
@@ -176,8 +179,12 @@ fn test_update_account_icon_changes_only_icon() {
 fn test_update_account_icon_with_none_clears_icon() {
     let h = new_test_service();
     let id = create_test_account(&h.service, "Test", "USD", 0);
-    h.service.update_account_icon(id.clone(), Some("old.svg".to_string())).expect("set icon");
-    h.service.update_account_icon(id.clone(), None).expect("clear icon");
+    h.service
+        .update_account_icon(id.clone(), Some("old.svg".to_string()))
+        .expect("set icon");
+    h.service
+        .update_account_icon(id.clone(), None)
+        .expect("clear icon");
     let accounts = h.service.get_accounts().expect("get accounts");
     let account = accounts.iter().find(|a| a.id == id).expect("find account");
     assert_eq!(account.icon, None);
@@ -187,7 +194,9 @@ fn test_update_account_icon_with_none_clears_icon() {
 fn test_update_account_name_changes_only_name() {
     let h = new_test_service();
     let id = create_test_account(&h.service, "Original", "USD", 0);
-    h.service.update_account_name(id.clone(), "Renamed".to_string()).expect("update name");
+    h.service
+        .update_account_name(id.clone(), "Renamed".to_string())
+        .expect("update name");
     let accounts = h.service.get_accounts().expect("get accounts");
     let account = accounts.iter().find(|a| a.id == id).expect("find account");
     assert_eq!(account.name, "Renamed");
@@ -198,14 +207,21 @@ fn test_update_account_name_changes_only_name() {
 fn test_archive_and_unarchive_account() {
     let h = new_test_service();
     let id = create_test_account(&h.service, "Archivable", "USD", 0);
-    h.service.archive_account(id.clone()).expect("archive account");
+    h.service
+        .archive_account(id.clone())
+        .expect("archive account");
     let active = h.service.get_accounts().expect("get accounts");
     assert!(active.iter().all(|a| a.id != id));
     let archived = h.service.get_archived_accounts().expect("get archived");
     assert_eq!(archived.len(), 1);
     assert_eq!(archived[0].id, id);
-    h.service.unarchive_account(id.clone()).expect("unarchive account");
-    let active_again = h.service.get_accounts().expect("get accounts after unarchive");
+    h.service
+        .unarchive_account(id.clone())
+        .expect("unarchive account");
+    let active_again = h
+        .service
+        .get_accounts()
+        .expect("get accounts after unarchive");
     assert!(active_again.iter().any(|a| a.id == id));
 }
 
@@ -385,17 +401,22 @@ fn test_update_transaction_changes_fields() {
     let h = new_test_service();
     let account_id = create_test_account(&h.service, "Test", "USD", 0);
     let tx_id = create_test_transaction(&h.service, &account_id, 1000, "Old", false);
-    h.service.update_transaction(
-        tx_id.clone(),
-        account_id.clone(),
-        2000,
-        "Updated".to_string(),
-        "updated description".to_string(),
-        "2024-06-20".to_string(),
-        true,
-    ).expect("update transaction");
+    h.service
+        .update_transaction(
+            tx_id.clone(),
+            account_id.clone(),
+            2000,
+            "Updated".to_string(),
+            "updated description".to_string(),
+            "2024-06-20".to_string(),
+            true,
+        )
+        .expect("update transaction");
     let txs = h.service.get_transactions().expect("get transactions");
-    let tx = txs.iter().find(|t| t.id == tx_id).expect("find transaction");
+    let tx = txs
+        .iter()
+        .find(|t| t.id == tx_id)
+        .expect("find transaction");
     assert_eq!(tx.amount, 2000);
     assert_eq!(tx.category, "Updated");
     assert_eq!(tx.date, "2024-06-20");
@@ -407,7 +428,9 @@ fn test_delete_transaction_removes_it() {
     let h = new_test_service();
     let account_id = create_test_account(&h.service, "Test", "USD", 0);
     let tx_id = create_test_transaction(&h.service, &account_id, 5000, "Temp", false);
-    h.service.delete_transaction(tx_id.clone()).expect("delete transaction");
+    h.service
+        .delete_transaction(tx_id.clone())
+        .expect("delete transaction");
     let txs = h.service.get_transactions().expect("get transactions");
     assert!(txs.iter().all(|t| t.id != tx_id));
 }
@@ -430,17 +453,26 @@ fn test_transfer_funds_between_accounts() {
     let h = new_test_service();
     let from_id = create_test_account(&h.service, "Source", "USD", 100000);
     let to_id = create_test_account(&h.service, "Dest", "USD", 0);
-    let tx_id = h.service.transfer_funds(
-        from_id.clone(),
-        to_id.clone(),
-        30000,
-        "monthly transfer".to_string(),
-        "2024-06-15".to_string(),
-    ).expect("transfer funds");
+    let tx_id = h
+        .service
+        .transfer_funds(
+            from_id.clone(),
+            to_id.clone(),
+            30000,
+            "monthly transfer".to_string(),
+            "2024-06-15".to_string(),
+        )
+        .expect("transfer funds");
     assert!(!tx_id.is_empty());
     let balances = h.service.get_account_balances().expect("get balances");
-    let from_bal = balances.iter().find(|b| b.account_id == from_id).expect("find source");
-    let to_bal = balances.iter().find(|b| b.account_id == to_id).expect("find dest");
+    let from_bal = balances
+        .iter()
+        .find(|b| b.account_id == from_id)
+        .expect("find source");
+    let to_bal = balances
+        .iter()
+        .find(|b| b.account_id == to_id)
+        .expect("find dest");
     assert_eq!(from_bal.current_balance, 70000, "source should decrease");
     assert_eq!(to_bal.current_balance, 30000, "dest should increase");
 }
@@ -460,7 +492,10 @@ fn test_transfer_funds_rejects_different_currencies() {
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert!(matches!(err, FinanceError::Validation(_)));
-    assert!(err.to_string().contains("same currency"), "error should mention currency mismatch");
+    assert!(
+        err.to_string().contains("same currency"),
+        "error should mention currency mismatch"
+    );
 }
 
 #[test]
@@ -469,7 +504,9 @@ fn test_transfer_funds_rejects_zero_amount() {
     let from_id = create_test_account(&h.service, "A", "USD", 0);
     let to_id = create_test_account(&h.service, "B", "USD", 0);
     let result = h.service.transfer_funds(
-        from_id, to_id, 0,
+        from_id,
+        to_id,
+        0,
         "test".to_string(),
         "2024-06-15".to_string(),
     );
@@ -482,17 +519,35 @@ fn test_update_transfer_preserves_account_balances() {
     let h = new_test_service();
     let from_id = create_test_account(&h.service, "A", "USD", 100000);
     let to_id = create_test_account(&h.service, "B", "USD", 0);
-    let tx_id = h.service.transfer_funds(
-        from_id.clone(), to_id.clone(), 30000,
-        "first".to_string(), "2024-06-15".to_string(),
-    ).expect("transfer");
-    h.service.update_transfer(
-        tx_id, from_id.clone(), to_id.clone(), 50000,
-        "updated".to_string(), "2024-06-20".to_string(),
-    ).expect("update transfer");
+    let tx_id = h
+        .service
+        .transfer_funds(
+            from_id.clone(),
+            to_id.clone(),
+            30000,
+            "first".to_string(),
+            "2024-06-15".to_string(),
+        )
+        .expect("transfer");
+    h.service
+        .update_transfer(
+            tx_id,
+            from_id.clone(),
+            to_id.clone(),
+            50000,
+            "updated".to_string(),
+            "2024-06-20".to_string(),
+        )
+        .expect("update transfer");
     let balances = h.service.get_account_balances().expect("get balances");
-    let from_bal = balances.iter().find(|b| b.account_id == from_id).expect("find source");
-    let to_bal = balances.iter().find(|b| b.account_id == to_id).expect("find dest");
+    let from_bal = balances
+        .iter()
+        .find(|b| b.account_id == from_id)
+        .expect("find source");
+    let to_bal = balances
+        .iter()
+        .find(|b| b.account_id == to_id)
+        .expect("find dest");
     assert_eq!(from_bal.current_balance, 50000, "source after update");
     assert_eq!(to_bal.current_balance, 50000, "dest after update");
 }
@@ -504,7 +559,10 @@ fn test_create_and_retrieve_expense_category() {
     let h = new_test_service();
     let id = create_test_category(&h.service, "Groceries", "expense");
     assert!(!id.is_empty());
-    let cats = h.service.get_transaction_categories("expense".to_string()).expect("get categories");
+    let cats = h
+        .service
+        .get_transaction_categories("expense".to_string())
+        .expect("get categories");
     assert!(cats.iter().any(|c| c.name == "Groceries"));
 }
 
@@ -513,7 +571,10 @@ fn test_create_and_retrieve_income_category() {
     let h = new_test_service();
     let id = create_test_category(&h.service, "Freelance", "income");
     assert!(!id.is_empty());
-    let cats = h.service.get_transaction_categories("income".to_string()).expect("get categories");
+    let cats = h
+        .service
+        .get_transaction_categories("income".to_string())
+        .expect("get categories");
     assert!(cats.iter().any(|c| c.name == "Freelance"));
 }
 
@@ -522,8 +583,14 @@ fn test_get_transaction_categories_filters_by_type() {
     let h = new_test_service();
     create_test_category(&h.service, "Food", "expense");
     create_test_category(&h.service, "Salary", "income");
-    let expenses = h.service.get_transaction_categories("expense".to_string()).expect("get expenses");
-    let incomes = h.service.get_transaction_categories("income".to_string()).expect("get incomes");
+    let expenses = h
+        .service
+        .get_transaction_categories("expense".to_string())
+        .expect("get expenses");
+    let incomes = h
+        .service
+        .get_transaction_categories("income".to_string())
+        .expect("get incomes");
     assert!(expenses.iter().any(|c| c.name == "Food"));
     assert!(expenses.iter().all(|c| c.category_type == "expense"));
     assert!(incomes.iter().any(|c| c.name == "Salary"));
@@ -542,7 +609,9 @@ fn test_get_transaction_categories_rejects_invalid_type() {
 fn test_add_transaction_category_rejects_duplicate() {
     let h = new_test_service();
     create_test_category(&h.service, "Food", "expense");
-    let result = h.service.add_transaction_category("Food".to_string(), "expense".to_string());
+    let result = h
+        .service
+        .add_transaction_category("Food".to_string(), "expense".to_string());
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert!(err.to_string().contains("already exists"));
@@ -552,8 +621,13 @@ fn test_add_transaction_category_rejects_duplicate() {
 fn test_update_transaction_category_renames() {
     let h = new_test_service();
     let id = create_test_category(&h.service, "Old Name", "expense");
-    h.service.update_transaction_category(id.clone(), "New Name".to_string()).expect("rename");
-    let cats = h.service.get_transaction_categories("expense".to_string()).expect("get categories");
+    h.service
+        .update_transaction_category(id.clone(), "New Name".to_string())
+        .expect("rename");
+    let cats = h
+        .service
+        .get_transaction_categories("expense".to_string())
+        .expect("get categories");
     assert!(cats.iter().any(|c| c.name == "New Name"));
     assert!(cats.iter().all(|c| c.name != "Old Name"));
 }
@@ -562,8 +636,13 @@ fn test_update_transaction_category_renames() {
 fn test_delete_transaction_category_removes_it() {
     let h = new_test_service();
     let id = create_test_category(&h.service, "Temp", "expense");
-    h.service.delete_transaction_category(id.clone()).expect("delete");
-    let cats = h.service.get_transaction_categories("expense".to_string()).expect("get categories");
+    h.service
+        .delete_transaction_category(id.clone())
+        .expect("delete");
+    let cats = h
+        .service
+        .get_transaction_categories("expense".to_string())
+        .expect("get categories");
     assert!(cats.iter().all(|c| c.id != id));
 }
 
@@ -572,8 +651,12 @@ fn test_delete_transaction_category_removes_it() {
 #[test]
 fn test_save_and_load_exchange_rate() {
     let h = new_test_service();
-    h.service.save_exchange_rate("EUR_USD".to_string(), 1.05).expect("save rate");
-    let loaded = h.service.load_exchange_rate_allow_stale("EUR_USD".to_string())
+    h.service
+        .save_exchange_rate("EUR_USD".to_string(), 1.05)
+        .expect("save rate");
+    let loaded = h
+        .service
+        .load_exchange_rate_allow_stale("EUR_USD".to_string())
         .expect("load rate");
     assert!(loaded.is_some());
     let (rate, _) = loaded.unwrap();
@@ -583,7 +666,9 @@ fn test_save_and_load_exchange_rate() {
 #[test]
 fn test_load_exchange_rate_returns_none_for_missing_pair() {
     let h = new_test_service();
-    let loaded = h.service.load_exchange_rate_allow_stale("XXX_YYY".to_string())
+    let loaded = h
+        .service
+        .load_exchange_rate_allow_stale("XXX_YYY".to_string())
         .expect("load rate");
     assert!(loaded.is_none());
 }
@@ -591,8 +676,13 @@ fn test_load_exchange_rate_returns_none_for_missing_pair() {
 #[test]
 fn test_load_exchange_rate_returns_none_when_stale() {
     let h = new_test_service();
-    h.service.save_exchange_rate("GBP_USD".to_string(), 1.25).expect("save rate");
-    let loaded = h.service.load_exchange_rate("GBP_USD".to_string()).expect("load rate");
+    h.service
+        .save_exchange_rate("GBP_USD".to_string(), 1.25)
+        .expect("save rate");
+    let loaded = h
+        .service
+        .load_exchange_rate("GBP_USD".to_string())
+        .expect("load rate");
     // Rate was just saved, so it should be fresh
     assert!(loaded.is_some(), "recently saved rate should be fresh");
 }
@@ -627,7 +717,10 @@ fn test_get_expenses_by_category_excludes_income() {
     create_test_transaction(&h.service, &account_id, 10000, "Salary", false);
     create_test_transaction(&h.service, &account_id, 500, "Coffee", true);
     let result = h.service.get_expenses_by_category().expect("get expenses");
-    assert!(!result.iter().any(|(cat, _)| cat == "Salary"), "income should not appear");
+    assert!(
+        !result.iter().any(|(cat, _)| cat == "Salary"),
+        "income should not appear"
+    );
     assert!(result.iter().any(|(cat, _)| cat == "Coffee"));
 }
 
@@ -636,11 +729,9 @@ fn test_get_dashboard_data_returns_structure() {
     let h = new_test_service();
     let account_id = create_test_account(&h.service, "Test", "USD", 10000);
     create_test_transaction(&h.service, &account_id, 2000, "Food", true);
-    let data = h.service.get_dashboard_data(
-        0.0,
-        &[],
-        "1M".to_string(),
-        "USD".to_string(),
-    ).expect("get dashboard data");
+    let data = h
+        .service
+        .get_dashboard_data(0.0, &[], "1M".to_string(), "USD".to_string())
+        .expect("get dashboard data");
     assert!(data.net_worth.contains("USD"));
 }

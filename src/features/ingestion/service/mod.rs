@@ -1051,3 +1051,601 @@ fn mexc_overlap_detects_dedicated_withdrawal_vs_statement_with_fee() {
         },
     ));
 }
+
+// ── Integration tests for process_transactions and process_habit_logs ─────────
+
+#[cfg(test)]
+mod integration_tests {
+    use super::*;
+    use crate::db::Database as IngestionTestDb;
+    use crate::features::ingestion::types::{ImportHabitLog, ImportTransaction};
+    use crate::models::{Account, Habit, TransactionCategory};
+    use secrecy::SecretString;
+    use std::path::PathBuf;
+    use uuid::Uuid;
+
+    struct IngestionTestHarness {
+        service: IngestionService,
+        db: Arc<Mutex<Option<IngestionTestDb>>>,
+        test_dir: PathBuf,
+    }
+
+    #[cfg(test)]
+    impl Drop for IngestionTestHarness {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.test_dir);
+        }
+    }
+
+    #[cfg(test)]
+    fn new_ingestion_harness() -> IngestionTestHarness {
+        let base_dir =
+            std::env::temp_dir().join(format!("sanctum-ingestion-test-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&base_dir).expect("create test dir");
+        let db_path = base_dir.join("vault.db");
+        let password = SecretString::from("test-password-123".to_string());
+        let db = IngestionTestDb::init(db_path, &password).expect("init test database");
+        let db_arc = Arc::new(Mutex::new(Some(db)));
+        let service = IngestionService::new(db_arc.clone());
+        IngestionTestHarness {
+            service,
+            db: db_arc,
+            test_dir: base_dir,
+        }
+    }
+
+    fn seed_account(db: &IngestionTestDb) -> String {
+        let id = Uuid::new_v4().to_string();
+        let account = Account {
+            id: id.clone(),
+            name: "Checking".to_string(),
+            account_type: "bank".to_string(),
+            currency: "USD".to_string(),
+            initial_balance: 0,
+            color: "#8b5cf6".to_string(),
+            icon: None,
+            is_archived: false,
+            created_at: "2024-01-01T00:00:00Z".to_string(),
+        };
+        db.create_account(&account).expect("create account");
+        id
+    }
+
+    fn seed_account_named(db: &IngestionTestDb, name: &str, currency: &str) -> String {
+        let id = Uuid::new_v4().to_string();
+        let account = Account {
+            id: id.clone(),
+            name: name.to_string(),
+            account_type: "bank".to_string(),
+            currency: currency.to_string(),
+            initial_balance: 0,
+            color: "#8b5cf6".to_string(),
+            icon: None,
+            is_archived: false,
+            created_at: "2024-01-01T00:00:00Z".to_string(),
+        };
+        db.create_account(&account).expect("create account");
+        id
+    }
+
+    fn seed_category(db: &IngestionTestDb, name: &str, category_type: &str) {
+        let cat = TransactionCategory {
+            id: Uuid::new_v4().to_string(),
+            name: name.to_string(),
+            category_type: category_type.to_string(),
+            sort_order: 0,
+            is_default: false,
+            created_at: "2024-01-01T00:00:00Z".to_string(),
+        };
+        db.add_transaction_category(&cat.name, &cat.category_type)
+            .expect("create category");
+    }
+
+    fn seed_habit(db: &IngestionTestDb) -> String {
+        let id = Uuid::new_v4().to_string();
+        let habit = Habit::new(
+            id.clone(),
+            "Exercise".to_string(),
+            None,
+            "#8b5cf6".to_string(),
+            "body".to_string(),
+            "2024-01-01T00:00:00Z".to_string(),
+        );
+        db.create_habit(&habit).expect("create habit");
+        id
+    }
+
+    // ==================== Transaction Ingestion Tests ====================
+
+    #[test]
+    fn test_process_transactions_imports_income() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_account(db);
+            seed_category(db, "Salary", "income");
+        }
+        let tx = ImportTransaction {
+            date: "2024-06-15".to_string(),
+            account: "Checking".to_string(),
+            transaction_type: "income".to_string(),
+            amount: 5000.00,
+            currency: "USD".to_string(),
+            category: "Salary".to_string(),
+            description: "June salary".to_string(),
+            transfer_to_account: None,
+        };
+        let result = h
+            .service
+            .process_transactions(vec![(1, tx)], "Test Format")
+            .expect("process");
+        assert_eq!(result.inserted, 1);
+        assert_eq!(result.errors, 0);
+    }
+
+    #[test]
+    fn test_process_transactions_imports_expense() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_account(db);
+            seed_category(db, "Food", "expense");
+        }
+        let tx = ImportTransaction {
+            date: "2024-06-15".to_string(),
+            account: "Checking".to_string(),
+            transaction_type: "expense".to_string(),
+            amount: 25.50,
+            currency: "USD".to_string(),
+            category: "Food".to_string(),
+            description: "Lunch".to_string(),
+            transfer_to_account: None,
+        };
+        let result = h
+            .service
+            .process_transactions(vec![(1, tx)], "Test Format")
+            .expect("process");
+        assert_eq!(result.inserted, 1);
+    }
+
+    #[test]
+    fn test_process_transactions_imports_transfer() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_account_named(db, "Source", "USD");
+            seed_account_named(db, "Dest", "USD");
+        }
+        let tx = ImportTransaction {
+            date: "2024-06-15".to_string(),
+            account: "Source".to_string(),
+            transaction_type: "transfer".to_string(),
+            amount: 1000.00,
+            currency: "USD".to_string(),
+            category: "transfer".to_string(),
+            description: "Monthly transfer".to_string(),
+            transfer_to_account: Some("Dest".to_string()),
+        };
+        let result = h
+            .service
+            .process_transactions(vec![(1, tx)], "Test Format")
+            .expect("process");
+        assert_eq!(result.inserted, 1);
+    }
+
+    #[test]
+    fn test_process_transactions_rejects_unknown_account() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_category(db, "Test", "income");
+        }
+        let tx = ImportTransaction {
+            date: "2024-06-15".to_string(),
+            account: "Nonexistent".to_string(),
+            transaction_type: "income".to_string(),
+            amount: 100.0,
+            currency: "USD".to_string(),
+            category: "Test".to_string(),
+            description: "test".to_string(),
+            transfer_to_account: None,
+        };
+        let result = h
+            .service
+            .process_transactions(vec![(1, tx)], "Test Format")
+            .expect("process");
+        assert_eq!(result.inserted, 0);
+        assert_eq!(result.errors, 1);
+    }
+
+    #[test]
+    fn test_process_transactions_rejects_unknown_category() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_account(db);
+        }
+        let tx = ImportTransaction {
+            date: "2024-06-15".to_string(),
+            account: "Checking".to_string(),
+            transaction_type: "income".to_string(),
+            amount: 100.0,
+            currency: "USD".to_string(),
+            category: "Nonexistent".to_string(),
+            description: "test".to_string(),
+            transfer_to_account: None,
+        };
+        let result = h
+            .service
+            .process_transactions(vec![(1, tx)], "Test Format")
+            .expect("process");
+        assert_eq!(result.inserted, 0);
+        assert_eq!(result.errors, 1);
+    }
+
+    #[test]
+    fn test_process_transactions_rejects_currency_mismatch() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_account_named(db, "EUR Acc", "EUR");
+            seed_category(db, "Test", "income");
+        }
+        let tx = ImportTransaction {
+            date: "2024-06-15".to_string(),
+            account: "EUR Acc".to_string(),
+            transaction_type: "income".to_string(),
+            amount: 100.0,
+            currency: "USD".to_string(),
+            category: "Test".to_string(),
+            description: "test".to_string(),
+            transfer_to_account: None,
+        };
+        let result = h
+            .service
+            .process_transactions(vec![(1, tx)], "Test Format")
+            .expect("process");
+        assert_eq!(result.inserted, 0);
+        assert_eq!(result.errors, 1);
+    }
+
+    #[test]
+    fn test_process_transactions_rejects_self_transfer() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_account_named(db, "Acc", "USD");
+        }
+        let tx = ImportTransaction {
+            date: "2024-06-15".to_string(),
+            account: "Acc".to_string(),
+            transaction_type: "transfer".to_string(),
+            amount: 100.0,
+            currency: "USD".to_string(),
+            category: "transfer".to_string(),
+            description: "self".to_string(),
+            transfer_to_account: Some("Acc".to_string()),
+        };
+        let result = h
+            .service
+            .process_transactions(vec![(1, tx)], "Test Format")
+            .expect("process");
+        assert_eq!(result.inserted, 0);
+        assert_eq!(result.errors, 1);
+    }
+
+    #[test]
+    fn test_process_transactions_deduplicates_exact_match() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_account(db);
+            seed_category(db, "Salary", "income");
+        }
+        let tx = ImportTransaction {
+            date: "2024-06-15".to_string(),
+            account: "Checking".to_string(),
+            transaction_type: "income".to_string(),
+            amount: 5000.00,
+            currency: "USD".to_string(),
+            category: "Salary".to_string(),
+            description: "June salary".to_string(),
+            transfer_to_account: None,
+        };
+        // First import inserts
+        h.service
+            .process_transactions(vec![(1, tx.clone())], "Test Format")
+            .expect("first");
+        // Second import deduplicates
+        let result = h
+            .service
+            .process_transactions(vec![(1, tx)], "Test Format")
+            .expect("second");
+        assert_eq!(result.inserted, 0);
+        assert_eq!(result.skipped, 1);
+    }
+
+    #[test]
+    fn test_preview_transactions_does_not_insert() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_account(db);
+            seed_category(db, "Salary", "income");
+        }
+        let tx = ImportTransaction {
+            date: "2024-06-15".to_string(),
+            account: "Checking".to_string(),
+            transaction_type: "income".to_string(),
+            amount: 5000.00,
+            currency: "USD".to_string(),
+            category: "Salary".to_string(),
+            description: "June salary".to_string(),
+            transfer_to_account: None,
+        };
+        let result = h
+            .service
+            .preview_transactions(vec![(1, tx)], "Test Format")
+            .expect("preview");
+        assert_eq!(
+            result.preview_changes.len(),
+            1,
+            "preview should show 1 change"
+        );
+        assert_eq!(result.errors, 0, "preview should have no errors");
+        // Verify nothing was actually persisted
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            let txs = db.get_transactions().expect("get transactions");
+            assert!(txs.is_empty(), "preview should not persist data");
+        }
+    }
+
+    #[test]
+    fn test_process_transactions_rejects_transfer_without_destination() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_account_named(db, "Acc", "USD");
+        }
+        let tx = ImportTransaction {
+            date: "2024-06-15".to_string(),
+            account: "Acc".to_string(),
+            transaction_type: "transfer".to_string(),
+            amount: 100.0,
+            currency: "USD".to_string(),
+            category: "transfer".to_string(),
+            description: "missing dest".to_string(),
+            transfer_to_account: None,
+        };
+        let result = h
+            .service
+            .process_transactions(vec![(1, tx)], "Test Format")
+            .expect("process");
+        assert_eq!(result.inserted, 0);
+        assert_eq!(result.errors, 1);
+    }
+
+    #[test]
+    fn test_process_transactions_handles_mixed_income_and_expense() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_account(db);
+            seed_category(db, "Salary", "income");
+            seed_category(db, "Food", "expense");
+        }
+        let txs = vec![
+            (
+                1,
+                ImportTransaction {
+                    date: "2024-06-15".to_string(),
+                    account: "Checking".to_string(),
+                    transaction_type: "income".to_string(),
+                    amount: 5000.00,
+                    currency: "USD".to_string(),
+                    category: "Salary".to_string(),
+                    description: "Salary".to_string(),
+                    transfer_to_account: None,
+                },
+            ),
+            (
+                2,
+                ImportTransaction {
+                    date: "2024-06-15".to_string(),
+                    account: "Checking".to_string(),
+                    transaction_type: "expense".to_string(),
+                    amount: 50.00,
+                    currency: "USD".to_string(),
+                    category: "Food".to_string(),
+                    description: "Dinner".to_string(),
+                    transfer_to_account: None,
+                },
+            ),
+        ];
+        let result = h
+            .service
+            .process_transactions(txs, "Test Format")
+            .expect("process");
+        assert_eq!(result.inserted, 2);
+        assert_eq!(result.errors, 0);
+    }
+
+    // ==================== Habit Log Ingestion Tests ====================
+
+    #[test]
+    fn test_process_habit_logs_imports_completed_log() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_habit(db);
+        }
+        let log = ImportHabitLog {
+            habit: "Exercise".to_string(),
+            date: "2024-06-15".to_string(),
+            completed: true,
+        };
+        let result = h
+            .service
+            .process_habit_logs(vec![(1, log)], "Test Format")
+            .expect("process");
+        assert_eq!(result.inserted, 1);
+        assert_eq!(result.errors, 0);
+    }
+
+    #[test]
+    fn test_process_habit_logs_skips_not_completed() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_habit(db);
+        }
+        let log = ImportHabitLog {
+            habit: "Exercise".to_string(),
+            date: "2024-06-15".to_string(),
+            completed: false,
+        };
+        let result = h
+            .service
+            .process_habit_logs(vec![(1, log)], "Test Format")
+            .expect("process");
+        assert_eq!(result.inserted, 0);
+        assert_eq!(result.skipped, 1);
+    }
+
+    #[test]
+    fn test_process_habit_logs_rejects_unknown_habit() {
+        let h = new_ingestion_harness();
+        let log = ImportHabitLog {
+            habit: "Nonexistent".to_string(),
+            date: "2024-06-15".to_string(),
+            completed: true,
+        };
+        let result = h
+            .service
+            .process_habit_logs(vec![(1, log)], "Test Format")
+            .expect("process");
+        assert_eq!(result.inserted, 0);
+        assert_eq!(result.errors, 1);
+    }
+
+    #[test]
+    fn test_process_habit_logs_deduplicates_same_habit_date() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_habit(db);
+        }
+        let log = ImportHabitLog {
+            habit: "Exercise".to_string(),
+            date: "2024-06-15".to_string(),
+            completed: true,
+        };
+        h.service
+            .process_habit_logs(vec![(1, log.clone())], "Test Format")
+            .expect("first");
+        let result = h
+            .service
+            .process_habit_logs(vec![(1, log)], "Test Format")
+            .expect("second");
+        assert_eq!(result.inserted, 0);
+        assert_eq!(result.skipped, 1, "duplicate should be skipped");
+    }
+
+    #[test]
+    fn test_process_habit_logs_handles_multiple_habits() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_habit_named(db, "Exercise");
+            seed_habit_named(db, "Reading");
+        }
+        let logs = vec![
+            (
+                1,
+                ImportHabitLog {
+                    habit: "Exercise".to_string(),
+                    date: "2024-06-15".to_string(),
+                    completed: true,
+                },
+            ),
+            (
+                2,
+                ImportHabitLog {
+                    habit: "Reading".to_string(),
+                    date: "2024-06-15".to_string(),
+                    completed: true,
+                },
+            ),
+        ];
+        let result = h
+            .service
+            .process_habit_logs(logs, "Test Format")
+            .expect("process");
+        assert_eq!(result.inserted, 2);
+    }
+
+    #[test]
+    fn test_preview_habit_logs_does_not_insert() {
+        let h = new_ingestion_harness();
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            seed_habit(db);
+        }
+        let log = ImportHabitLog {
+            habit: "Exercise".to_string(),
+            date: "2024-06-15".to_string(),
+            completed: true,
+        };
+        let result = h
+            .service
+            .preview_habit_logs(vec![(1, log)], "Test Format")
+            .expect("preview");
+        assert_eq!(
+            result.preview_changes.len(),
+            1,
+            "preview should show 1 change"
+        );
+        assert_eq!(result.errors, 0, "preview should have no errors");
+        // Verify nothing was actually persisted
+        {
+            let guard = h.db.lock().expect("lock");
+            let db = guard.as_ref().expect("db");
+            let logs = db
+                .get_habit_logs("2024-01-01", "2024-12-31")
+                .expect("get logs");
+            assert!(logs.is_empty(), "preview should not persist data");
+        }
+    }
+
+    fn seed_habit_named(db: &IngestionTestDb, name: &str) -> String {
+        let id = Uuid::new_v4().to_string();
+        let habit = Habit::new(
+            id.clone(),
+            name.to_string(),
+            None,
+            "#8b5cf6".to_string(),
+            "body".to_string(),
+            "2024-01-01T00:00:00Z".to_string(),
+        );
+        db.create_habit(&habit).expect("create habit");
+        id
+    }
+}
