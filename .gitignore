@@ -97,3 +97,8 @@ pnpm-store
 
 .claude/
 .opencode/
+
+# ===========================
+# Study export (NotebookLM)
+# ===========================
+/study-export/
