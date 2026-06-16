@@ -160,7 +160,7 @@ pub fn is_loss_only_subtype(subtype: &str) -> bool {
 ///
 /// Returns one of: `"buy"`, `"sell"`, `"swap"`, `"transfer_in"`, `"transfer_out"`.
 ///
-/// This is the standalone version of [`CryptoTransaction::mechanical_type()`]
+/// This is the standalone version of `CryptoTransaction::mechanical_type()`
 /// for use in contexts where only the raw strings are available (e.g. DB
 /// balance queries that don't materialise a full struct).
 pub fn derive_mechanical_type(tx_type: &str, subtype: Option<&str>) -> &'static str {

@@ -18,7 +18,7 @@
 //! Exchange-specific CSV parsers
 //!
 //! Each submodule handles a specific exchange or wallet CSV format and converts
-//! rows into [`ImportCryptoTransaction`] instances that feed into the existing
+//! rows into \[ImportCryptoTransaction\] instances that feed into the existing
 //! ingestion pipeline.
 //!
 //! ## Adding a new exchange
