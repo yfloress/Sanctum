@@ -1,4 +1,4 @@
-// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Sanctum — a privacy-first personal finance and crypto vault.
 // Copyright (C) 2026  Kyronix
 //
 // This program is free software: you can redistribute it and/or modify
@@ -18,7 +18,7 @@
 //! Application-level settings constants.
 //!
 //! These keys are used across multiple feature modules and should not live
-//! inside any single domain (crypto, finance, habits, etc.).
+//! inside any single domain (crypto, finance, etc.).
 
 /// Whether dark mode is enabled (`"true"` / `"false"`).
 pub const SETTING_DARK_MODE: &str = "dark_mode";

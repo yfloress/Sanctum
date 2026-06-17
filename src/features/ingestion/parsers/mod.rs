@@ -1,4 +1,4 @@
-// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Sanctum — a privacy-first personal finance and crypto vault.
 // Copyright (C) 2026  Kyronix
 //
 // This program is free software: you can redistribute it and/or modify
@@ -22,14 +22,12 @@
 pub mod csv;
 pub mod exchange;
 pub mod json;
-pub mod text;
 
 pub use self::csv::CsvParser;
 pub use self::exchange::{ExchangeParser, ExchangeSource, detect_exchange_source, parser_for};
 pub use self::json::{JsonParseResult, JsonParser};
-pub use self::text::{TextMixedParseResult, TextParser};
 
-use super::types::{ImportFormat, ImportHabitLog, ImportTransaction, RowError};
+use super::types::{ImportFormat, ImportTransaction, RowError};
 
 #[derive(Debug)]
 pub struct ParseResult<T> {
@@ -53,10 +51,6 @@ pub trait ImportParser {
     fn parse_transactions(&self, content: &str)
     -> Result<ParseResult<ImportTransaction>, RowError>;
 
-    /// Parses habit logs from raw content
-    /// Returns parsed items plus row-level parse errors
-    fn parse_habit_logs(&self, content: &str) -> Result<ParseResult<ImportHabitLog>, RowError>;
-
     /// Returns the format name for reporting
     fn format_name(&self) -> &'static str;
 }
@@ -66,7 +60,7 @@ pub trait ImportParser {
 /// For `.csv` files, exchange-specific formats are checked first via header
 /// inspection. If a known exchange is detected the corresponding
 /// `ImportFormat::ExchangeCsv(source)` variant is returned. Otherwise the
-/// generic Sanctum CSV sub-formats (transactions, habits, crypto) are tried.
+/// generic Sanctum CSV sub-formats (transactions, crypto) are tried.
 pub fn detect_format(content: &str, filename: &str) -> Option<ImportFormat> {
     let trimmed = content.trim();
     if trimmed.is_empty() {
@@ -101,30 +95,10 @@ pub fn detect_format(content: &str, filename: &str) -> Option<ImportFormat> {
             if first_line.contains("wallet") && first_line.contains("symbol") {
                 return Some(ImportFormat::CsvCrypto);
             }
-            // Habit CSV
-            if first_line.contains("habit")
-                && first_line.contains("date")
-                && first_line.contains("completed")
-            {
-                return Some(ImportFormat::CsvHabitLogs);
-            }
             // Transaction CSV
             if first_line.contains("account") && first_line.contains("amount") {
                 return Some(ImportFormat::CsvTransactions);
             }
-        }
-    }
-
-    // Text detection (semicolon-separated with prefixes T;, H;, C;)
-    if ext == "txt" || trimmed.contains(';') {
-        // Check for prefix-based mixed format (T;, H;, C;)
-        let has_prefixes = trimmed.lines().any(|line| {
-            let t = line.trim().to_uppercase();
-            t.starts_with("T;") || t.starts_with("H;") || t.starts_with("C;")
-        });
-
-        if has_prefixes {
-            return Some(ImportFormat::TextMixed);
         }
     }
 
@@ -151,29 +125,11 @@ mod tests {
     }
 
     #[test]
-    fn test_detect_csv_habits() {
-        let csv = "habit,date,completed\n";
-        assert_eq!(
-            detect_format(csv, "habits.csv"),
-            Some(ImportFormat::CsvHabitLogs)
-        );
-    }
-
-    #[test]
     fn test_detect_csv_crypto() {
         let csv = "date,wallet,symbol,type,amount,price_per_coin,fee,notes\n";
         assert_eq!(
             detect_format(csv, "crypto.csv"),
             Some(ImportFormat::CsvCrypto)
-        );
-    }
-
-    #[test]
-    fn test_detect_text_mixed() {
-        let text = "T;2024-01-15;Account;expense;100;USD;Food;Groceries;\nH;Meditate;2024-01-15;true\nC;2024-01-15;Binance;BTC;trade;0.5;buy;45000;10;";
-        assert_eq!(
-            detect_format(text, "data.txt"),
-            Some(ImportFormat::TextMixed)
         );
     }
 

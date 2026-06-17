@@ -1,4 +1,4 @@
-// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Sanctum — a privacy-first personal finance and crypto vault.
 // Copyright (C) 2026  Kyronix
 //
 // This program is free software: you can redistribute it and/or modify
@@ -21,8 +21,7 @@
 
 use crate::db::{Database, DbError};
 use crate::models::{
-    Account, CryptoCatalogCoin, CryptoTransaction, CryptoWallet, Habit, Transaction,
-    TransactionCategory,
+    Account, CryptoCatalogCoin, CryptoTransaction, CryptoWallet, Transaction, TransactionCategory,
 };
 use std::collections::HashMap;
 
@@ -89,23 +88,9 @@ impl IngestionRepository {
         Ok(map)
     }
 
-    /// Builds a lookup map for habits (name_lowercase -> Habit)
-    pub fn build_habit_lookup(db: &Database) -> Result<HashMap<String, Habit>, DbError> {
-        let habits = db.get_habits()?;
-        Ok(habits
-            .into_iter()
-            .map(|h| (h.name.trim().to_lowercase(), h))
-            .collect())
-    }
-
     /// Gets all existing transactions for deduplication
     pub fn get_all_transactions(db: &Database) -> Result<Vec<Transaction>, DbError> {
         db.get_transactions()
-    }
-
-    /// Checks if a habit log already exists for habit+date
-    pub fn habit_log_exists(db: &Database, habit_id: &str, date: &str) -> Result<bool, DbError> {
-        db.habit_log_exists(habit_id, date)
     }
 
     /// Creates a transaction
@@ -123,11 +108,6 @@ impl IngestionRepository {
         date: &str,
     ) -> Result<String, DbError> {
         db.create_transfer(from_id, to_id, amount, description, date)
-    }
-
-    /// Creates a habit log
-    pub fn create_habit_log(db: &Database, log: &crate::models::HabitLog) -> Result<(), DbError> {
-        db.create_habit_log(log)
     }
 
     // ==================== Crypto Operations ====================

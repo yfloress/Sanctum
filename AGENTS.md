@@ -69,7 +69,7 @@ ask the user first when confidence < 0.7, or when the relation is `supersedes` /
 `architecture`/`decision` observation.
 
 ## Project Intent & Mindset
-Sanctum is a personal finance/crypto/habits app focused on **security and privacy first**.
+Sanctum is a personal finance/crypto app focused on **security and privacy first**.
 Default to safer behavior: minimize data exposure, avoid unnecessary network calls, and
 preserve user trust. When in doubt, prioritize privacy and data integrity over convenience.
 
@@ -81,9 +81,9 @@ This repo uses a **feature-sliced** layout with strict layer separation:
 ```
 src/
 ├── core/            # Shared validation, errors, DB wrappers
-├── features/        # finance/, crypto/, habits/, dashboard/, ingestion/ (service + repository + validation)
+├── features/        # finance/, crypto/, dashboard/, ingestion/ (service + repository + validation)
 ├── controller/      # Orchestration per domain + settings
-├── db/              # Domain SQL + migrations (finance, crypto, habits, rewards)
+├── db/              # Domain SQL + migrations (finance, crypto)
 ├── services/        # Cross-cutting services (charts, i18n)
 ├── ui/              # UI layer
 │   ├── dto/         # Tauri IPC DTOs (Serialize/Deserialize structs per domain)
@@ -146,7 +146,7 @@ locales/
 ## AGPL Header
 Every source file (including tests) must start with this exact header:
 ```rust
-// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Sanctum — a privacy-first personal finance and crypto vault.
 // Copyright (C) 2026  Kyronix
 //
 // This program is free software: you can redistribute it and/or modify
@@ -178,7 +178,7 @@ without explicitly justifying it.
 ## Commit Guidelines
 - Do not create commits unless the user explicitly asks for a commit.
 - Git-flow style: `feat:`, `fix:`, `docs:`, `chore:`, etc.
-  Example: `feat(habits): add radar analytics`.
+  Example: `feat(crypto): add tax report export`.
 
 ## Security Notes
 - **Database at rest**: SQLCipher encrypts the SQLite database. The vault password derives the encryption key — never log it, never store it.

@@ -1,4 +1,4 @@
-// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Sanctum — a privacy-first personal finance and crypto vault.
 // Copyright (C) 2026  Kyronix
 //
 // This program is free software: you can redistribute it and/or modify
@@ -28,9 +28,7 @@
 
 mod crypto;
 mod finance;
-mod habits;
 mod migrations;
-mod rewards;
 
 use crate::security_log::{SecurityEvent, log_security_event};
 use chrono::{DateTime, Duration, Utc};
@@ -95,9 +93,6 @@ pub enum DbError {
 
     #[error("Transaction not found")]
     TransactionNotFound,
-
-    #[error("Goal not found")]
-    GoalNotFound,
 
     #[error("Database mutex was poisoned")]
     MutexPoisoned,

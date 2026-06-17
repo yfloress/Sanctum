@@ -1,4 +1,4 @@
-// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Sanctum — a privacy-first personal finance and crypto vault.
 // Copyright (C) 2026  Kyronix
 //
 // This program is free software: you can redistribute it and/or modify
@@ -29,9 +29,7 @@ use super::parsers::exchange::ExchangeSource;
 pub enum ImportFormat {
     Json,
     CsvTransactions,
-    CsvHabitLogs,
     CsvCrypto,
-    TextMixed,                   // Mixed content with prefixes (T;, H;, C;)
     ExchangeCsv(ExchangeSource), // Exchange/wallet-specific CSV (Kraken, Binance, Feather, etc.)
 }
 
@@ -40,18 +38,15 @@ impl ImportFormat {
         match self {
             ImportFormat::Json => "JSON",
             ImportFormat::CsvTransactions => "CSV",
-            ImportFormat::CsvHabitLogs => "CSV",
             ImportFormat::CsvCrypto => "CSV",
-            ImportFormat::TextMixed => "Plain Text",
             ImportFormat::ExchangeCsv(source) => source.label(),
         }
     }
 
     pub fn data_type(&self) -> &'static str {
         match self {
-            ImportFormat::Json | ImportFormat::TextMixed => "Mixed",
+            ImportFormat::Json => "Mixed",
             ImportFormat::CsvTransactions => "Transactions",
-            ImportFormat::CsvHabitLogs => "Habit Logs",
             ImportFormat::CsvCrypto => "Crypto",
             ImportFormat::ExchangeCsv(_) => "Crypto",
         }
@@ -70,14 +65,6 @@ pub struct ImportTransaction {
     pub category: String,
     pub description: String,
     pub transfer_to_account: Option<String>,
-}
-
-/// Intermediate habit log representation
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImportHabitLog {
-    pub habit: String,
-    pub date: String,
-    pub completed: bool,
 }
 
 /// Intermediate crypto transaction representation.
@@ -173,7 +160,7 @@ impl RowError {
 /// Represents a proposed change during preview
 #[derive(Debug, Clone)]
 pub struct PreviewChange {
-    pub change_type: String, // e.g. "Transaction", "Crypto", "Habit"
+    pub change_type: String, // e.g. "Transaction", "Crypto"
     pub summary: String,     // e.g. "+ 1000 USD (Salary)"
     pub details: String,     // e.g. "Account: Bank -> Savings"
 }

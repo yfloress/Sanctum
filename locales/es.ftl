@@ -79,7 +79,6 @@ login-version = Sanctum v0.1.0
 nav-dashboard = Panel
 nav-finances = Finanzas
 nav-crypto = Crypto
-nav-habits = Hábitos
 nav-settings = Ajustes
 nav-lock = Bloquear
 nav-collapse = Contraer
@@ -459,126 +458,6 @@ crypto-toast-settings-saved = Configuración guardada
 crypto-toast-enter-period = Ingresa un periodo tributario
 crypto-toast-exported = Exportado a {$path}
 
-# ==================== Habits ====================
-# Header & tabs
-habits-title = HABITOS
-habits-tab-habits = Habitos
-habits-tab-rewards = Recompensas
-habits-tab-history = Historial
-habits-loading = Cargando...
-
-# Habits tab
-habits-daily-tracking = Seguimiento Diario
-habits-new-habit = Nuevo Habito
-habits-habit-col = Habito
-habits-no-habits = Sin habitos aun. Crea tu primer habito para comenzar.
-habits-activity-heatmap = Mapa de Calor de Actividad
-
-# Habit summary stats
-habits-current-streak = Racha Actual
-habits-best-streak = Mejor Racha
-habits-completion = Completado
-habits-completions = Completados
-habits-last-30-days = Ultimos 30 Dias
-habits-edit = Editar
-habits-delete = Eliminar
-
-# Analytics
-habits-habit-radar = Radar de Habitos
-habits-weekday-efficiency = Eficiencia por Dia
-habits-less = Menos
-habits-more = Más
-habits-prev-year = Año anterior
-
-# Month names
-month-january = Enero
-month-february = Febrero
-month-march = Marzo
-month-april = Abril
-month-may = Mayo
-month-june = Junio
-month-july = Julio
-month-august = Agosto
-month-september = Septiembre
-month-october = Octubre
-month-november = Noviembre
-month-december = Diciembre
-weekday-sun = D
-weekday-mon = L
-weekday-tue = M
-weekday-wed = X
-weekday-thu = J
-weekday-fri = V
-weekday-sat = S
-
-# Rewards tab
-habits-streak-rewards = Recompensas de Racha
-habits-new-reward = Nueva Recompensa
-habits-no-rewards = Sin recompensas de racha configuradas.
-habits-consecutive = Consecutivo
-habits-accumulative = Acumulativo
-habits-progress = Progreso
-habits-days-label = dias
-habits-unlocked = Desbloqueado
-habits-goals = Metas
-habits-new-goal = Nueva Meta
-habits-no-goals = Sin metas establecidas.
-habits-due = Vence:
-habits-mark-complete = Marcar Completo
-habits-archive = Archivar
-
-# History tab
-habits-no-achievements = Sin logros aun.
-
-# Habit modal
-habits-edit-habit = Editar Habito
-habits-new-habit-modal = Nuevo Habito
-habits-name = Nombre
-habits-habit-name-placeholder = Nombre del habito
-habits-description = Descripción
-habits-desc-placeholder = Descripción opcional
-habits-color = Color
-habits-category = Categoria
-habits-category-placeholder = ej. salud, aprendizaje
-habits-cancel = Cancelar
-habits-update = Actualizar
-habits-create = Crear
-
-# Reward modal
-habits-edit-reward = Editar Recompensa de Racha
-habits-new-reward-modal = Nueva Recompensa de Racha
-habits-habit = Habito
-habits-consecutive-days = Dias consecutivos (vs Acumulativo)
-habits-target-days = Dias Objetivo
-habits-target-days-placeholder = ej., 7, 30, 100
-habits-target-total = Total Objetivo (opcional)
-habits-target-total-placeholder = Metrica de conteo alternativa
-
-# Goal modal
-habits-edit-goal = Editar Meta
-habits-new-goal-modal = Nueva Meta
-habits-goal-name = Nombre de la Meta
-habits-goal-name-placeholder = ej., Completar certificación
-habits-goal-desc-placeholder = Detalles opcionales
-habits-reward-text = Texto de Recompensa
-habits-reward-text-placeholder = Con que te recompensaras
-habits-deadline = Fecha limite (opcional)
-
-# Toast messages
-habits-toast-habit-created = Habito creado
-habits-toast-habit-updated = Habito actualizado
-habits-toast-habit-deleted = Habito eliminado
-habits-toast-reward-created = Recompensa creada
-habits-toast-reward-updated = Recompensa actualizada
-habits-toast-reward-deleted = Recompensa eliminada
-habits-toast-goal-created = Meta creada
-habits-toast-goal-updated = Meta actualizada
-habits-toast-goal-deleted = Meta eliminada
-habits-toast-goal-completed = Meta completada!
-habits-toast-goal-archived = Meta archivada
-habits-toast-fill-required = Por favor completa los campos requeridos
-habits-toast-enter-goal-name = Por favor ingresa un nombre para la meta
-
 # ==================== Settings ====================
 settings-title = Ajustes
 
@@ -677,12 +556,6 @@ modal-edit-transaction-title = Editar Transacción
 modal-transfer-title = Transferir Fondos
 modal-add-wallet-title = Agregar Billetera
 modal-edit-wallet-title = Editar Billetera
-modal-add-habit-title = Agregar Hábito
-modal-edit-habit-title = Editar Hábito
-modal-add-goal-title = Agregar Meta
-modal-edit-goal-title = Editar Meta
-modal-add-reward-title = Agregar Recompensa
-modal-edit-reward-title = Editar Recompensa
 
 # Confirmation dialogs
 confirm-delete-title = Confirmar Eliminación
@@ -693,7 +566,6 @@ confirm-delete-account-tx-count = Esto también eliminará {$count} transacción
 confirm-delete-category = ¿Estás seguro de que quieres eliminar esta categoría?
 confirm-delete-transaction = ¿Estás seguro de que quieres eliminar esta transacción?
 confirm-delete-wallet = ¿Estás seguro de que quieres eliminar esta billetera?
-confirm-delete-habit = ¿Estás seguro de que quieres eliminar este hábito?
 
 # ==================== Notifications ====================
 notify-success = Éxito
@@ -882,10 +754,6 @@ crypto-loading-portfolio = Cargando portafolio...
 crypto-syncing-prices = Sincronizando precios...
 crypto-syncing-wait = Esto puede tomar unos segundos
 
-# ==================== Habits Extended ====================
-habits-rewards = RECOMPENSAS
-habits-history = HISTORIAL
-
 # ==================== Settings Extended ====================
 settings-configure-experience = Configura tu experiencia en Sanctum
 settings-proxy-tip = Tip: socks5h:// enruta el DNS a través del proxy para mayor privacidad.
@@ -916,21 +784,6 @@ crypto-cost-label = COSTO
 crypto-no-trend = Sin datos de tendencia aún
 crypto-sync-daily = Sincroniza precios diariamente para construir historial
 
-# Habit Heatmap
-heatmap-less = Menos
-heatmap-more = Más
-
-# Habits Tab
-habits-selected-hint = HÁBITO SELECCIONADO · Haz clic en un hábito arriba para ver estadísticas
-
-# History Tab
-history-total-achievements = LOGROS TOTALES
-
-# Streak Rewards
-rewards-ready-claim = Listo para reclamar
-rewards-next = Siguiente
-rewards-all-unlocked = ¡Todos los hitos desbloqueados!
-
 # Wallet Detail
 wallet-no-holdings = Sin tenencias en esta billetera
 
@@ -943,7 +796,6 @@ icon-wallet-icons = Íconos de Billetera
 form-search-coin = Buscar moneda...
 form-date-format = AAAA-MM-DD
 form-all = TODO
-form-habit = HÁBITO
 
 # ==================== Modals ====================
 # Add Account
@@ -969,11 +821,6 @@ modal-new-wallet = NUEVA BILLETERA
 modal-wallet-type = TIPO DE BILLETERA
 modal-create-wallet = CREAR BILLETERA
 
-# Add Habit
-modal-category = CATEGORÍA
-modal-color = COLOR
-modal-habit-name-placeholder = ej. Leer 10 páginas
-modal-habit-description-placeholder = Por qué este hábito es importante
 
 # Configure Categories
 modal-category-settings = CONFIGURACIÓN DE CATEGORÍAS
@@ -997,17 +844,6 @@ modal-account = CUENTA
 modal-expense = GASTO
 modal-income = INGRESO
 
-# Add Habit
-modal-checkpoints = PUNTOS DE CONTROL
-modal-checkpoint-desc = Descripción del punto de control...
-
-# Add Reward
-modal-consecutive = CONSECUTIVO
-modal-accumulative = ACUMULATIVO
-modal-type = TIPO
-modal-milestones = HITOS
-modal-reward-placeholder = Recompensa...
-
 # Configure Ticker
 modal-coin-catalog = CATÁLOGO DE MONEDAS
 modal-max-coins = Máximo 50 monedas activas para actualización de precios.
@@ -1025,10 +861,6 @@ sidebar-title = SANCTUM
 # Crypto Widgets
 crypto-holdings-small = Tenencias
 crypto-price-small = Precio
-
-# Streak Rewards (with arguments)
-rewards-ready-claim-with = Listo para reclamar: { $reward }
-rewards-next-with = Siguiente: { $reward }
 
 # ==================== Crypto Transaction Modal ====================
 modal-from-asset = ACTIVO ORIGEN
@@ -1105,28 +937,6 @@ tx-type-sell = VENTA
 tx-type-swap = SWAP
 tx-type-transfer-in = TRANSFERENCIA ENTRADA
 tx-type-transfer-out = TRANSFERENCIA SALIDA
-
-# ==================== Goal Modal ====================
-modal-new-goal = NUEVA META
-modal-edit-goal = EDITAR META
-modal-goal-name = NOMBRE DE META
-modal-goal-name-placeholder = ej. Correr un maratón
-modal-description-optional = DESCRIPCIÓN (OPCIONAL)
-modal-goal-description-placeholder = Por qué esta meta es importante...
-modal-reward = RECOMPENSA
-modal-reward-placeholder-goal = ej. Zapatillas nuevas
-modal-deadline-optional = FECHA LÍMITE (OPCIONAL)
-modal-create-goal = CREAR META
-
-# ==================== Reward Modal ====================
-modal-new-streak-reward = NUEVA RECOMPENSA DE RACHA
-modal-edit-reward = EDITAR RECOMPENSA
-modal-consecutive-desc = Los días deben ser consecutivos (se reinicia si fallas)
-modal-accumulative-desc = Acumula días a lo largo del tiempo
-modal-target-days = DÍAS OBJETIVO
-modal-of-total-days = DE DÍAS TOTALES
-modal-days-label = días
-modal-create-reward = CREAR RECOMPENSA
 
 # ==================== Configure Ticker Extended ====================
 modal-add-custom-coin = AGREGAR MONEDA PERSONALIZADA
@@ -1222,33 +1032,8 @@ finances-create-account = Crea una cuenta para administrar tus fondos
 # ==================== Crypto Extended (Buttons) ====================
 crypto-add-wallet-button = + BILLETERA
 
-# ==================== Habits Extended (Summary Labels) ====================
-habits-current-streak-label = RACHA ACTUAL
-habits-best-streak-label = MEJOR RACHA (365D)
-habits-completion-rate-label = TASA DE COMPLETADO
-habits-completions-label = COMPLETADOS (30D)
-
-# ==================== Rewards Extended (Sections/Buttons) ====================
-rewards-streak-rewards-section = RECOMPENSAS DE RACHA
-rewards-add-reward-button = + RECOMPENSA
-rewards-no-streak-rewards = Sin recompensas de racha aún
-rewards-link-habit-desc = Vincula un hábito y establece recompensas por hitos
-rewards-goals-section = METAS
-rewards-add-goal-button = + META
-rewards-no-goals-set = Sin metas establecidas
-rewards-create-goal-desc = Crea una meta con puntos de control para seguir tu progreso
-
-# ==================== Rewards Progress ====================
-rewards-days-to-go = días restantes
-
-# ==================== History Tab ====================
-history-achievements-section = LOGROS
-history-no-achievements = Sin logros aún
-history-complete-to-earn = Completa metas para ganar trofeos
-
 # ==================== Importación de Datos ====================
 import-title = Importar Datos
-import-description = Importar transacciones y registros de hábitos desde archivos externos
 import-select-file = SELECCIONAR ARCHIVO
 import-supported-formats = Formatos soportados: JSON, CSV, TXT
 import-max-size = Tamaño máximo de archivo: 10MB
@@ -1284,7 +1069,6 @@ import-error-unsupported-format = Formato de archivo no soportado. Use JSON, CSV
 import-error-invalid-json = Formato JSON inválido
 import-error-no-data = No se encontraron datos en el archivo
 import-error-account-not-found = Cuenta no encontrada: { $name }
-import-error-habit-not-found = Hábito no encontrado: { $name }
 import-error-category-not-found = Categoría no encontrada: { $name }
 import-error-currency-mismatch = Moneda no coincide para la cuenta { $account }
 import-error-duplicate = Entrada duplicada omitida
@@ -1296,8 +1080,6 @@ import-error-wallet-not-found = Wallet no encontrada: { $name }
 import-error-crypto-not-found = Activo crypto no encontrado en el catálogo: { $symbol }
 import-error-insufficient-crypto-balance = Balance insuficiente de { $symbol } en { $wallet }: tiene { $available }, necesita { $required }
 import-skipped-duplicate-transaction = Transacción duplicada (misma fecha/cuenta/monto/tipo/descripción)
-import-skipped-habit-not-completed = Hábito no completado (completed=false)
-import-skipped-habit-already-logged = Hábito ya registrado para esta fecha
 import-skipped-duplicate-crypto = Transacción crypto duplicada (misma fecha/wallet/moneda/tipo/monto)
 import-skipped-crypto-not-found = Activo crypto no encontrado en el catálogo (fila omitida)
 
@@ -1309,12 +1091,10 @@ import-preview-change-transaction = Transacción
 import-preview-change-income = Ingreso
 import-preview-change-expense = Gasto
 import-preview-change-transfer = Transferencia
-import-preview-change-habit = Registro de Hábito
 import-preview-change-crypto = Transacción Crypto
 import-preview-changes = CAMBIOS PREVISTOS
 
 settings-import = IMPORTAR DATOS
-settings-import-desc = Importar transacciones y hábitos desde archivos
 
 # ==================== Importación CSV de Exchanges ====================
 import-exchange-title = Importar Exchange

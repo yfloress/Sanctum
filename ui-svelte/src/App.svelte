@@ -1,4 +1,4 @@
-<!-- Sanctum — a privacy-first personal finance, crypto, and habits vault.
+<!-- Sanctum — a privacy-first personal finance and crypto vault.
      Copyright (C) 2026  Kyronix
 
      This program is free software: you can redistribute it and/or modify
@@ -26,7 +26,6 @@
   import LoginPage from './pages/LoginPage.svelte'
   import DashboardPage from './pages/DashboardPage.svelte'
   import FinancesPage from './pages/FinancesPage.svelte'
-  import HabitsPage from './pages/HabitsPage.svelte'
   import CryptoPage from './pages/CryptoPage.svelte'
   import SettingsPage from './pages/SettingsPage.svelte'
 
@@ -66,7 +65,6 @@
   const scrollPositions: Record<Page, number> = {
     dashboard: 0,
     finances: 0,
-    habits: 0,
     crypto: 0,
     settings: 0,
   }
@@ -110,8 +108,6 @@
         <DashboardPage />
       {:else if app.activePage === 'finances'}
         <FinancesPage />
-      {:else if app.activePage === 'habits'}
-        <HabitsPage />
       {:else if app.activePage === 'crypto'}
         <CryptoPage />
       {:else if app.activePage === 'settings'}

@@ -55,7 +55,7 @@
 > [!CAUTION]
 > **NOT READY FOR USE — UNDER ACTIVE DEVELOPMENT.**
 
-**Sanctum** is a privacy-first vault for your money, crypto, and habits — on
+**Sanctum** is a privacy-first vault for your money and crypto — on
 **desktop and Android**. Everything runs on hardware you control: encrypted
 storage, no telemetry, no accounts, no corporate cloud. You hold the keys, the
 database, and the backups — nobody else.
@@ -84,9 +84,6 @@ multi-currency support (USD, CLP, EUR, and more).
   (FIFO, CPP, and more). See **[CRYPTO_TAX.md](docs/CRYPTO_TAX.md)** for the
   logic and legal foundations behind it.
 
-### Habits
-Daily logs, heatmaps, streaks, and rewards/goals to keep momentum.
-
 ### Reliability
 - Encrypted backups (SQLCipher) with restore and rollback safety.
 - JSON/CSV/TXT import with per-row validation and duplicate detection.
@@ -105,7 +102,7 @@ workflows. All imports are best-effort, validated per row, deduplicated, and mak
 **Supported formats:**
 
 - **JSON** *(recommended)* — full-fidelity format used by the Sanctum Generator.
-- **CSV** — spreadsheet exports (separate files for transactions, habits, crypto).
+- **CSV** — spreadsheet exports (separate files for transactions, crypto).
 - **TXT** — prefixed, line-based notes for quick capture.
 
 **Exchange & wallet integrations:**

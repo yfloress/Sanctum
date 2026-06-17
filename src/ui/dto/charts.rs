@@ -1,4 +1,4 @@
-// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Sanctum — a privacy-first personal finance and crypto vault.
 // Copyright (C) 2026  Kyronix
 //
 // This program is free software: you can redistribute it and/or modify
@@ -57,13 +57,4 @@ pub struct PieChartItem {
     pub name: String,
     pub value: f64,
     pub color: Option<String>,
-}
-
-/// Heatmap chart data (e.g., habits calendar).
-#[derive(Debug, Clone, Serialize)]
-pub struct HeatmapChartData {
-    /// Each entry is [date_string, intensity_value].
-    pub data: Vec<(String, i32)>,
-    pub year: i32,
-    pub max_intensity: i32,
 }

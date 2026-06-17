@@ -1,4 +1,4 @@
-// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Sanctum — a privacy-first personal finance and crypto vault.
 // Copyright (C) 2026  Kyronix
 //
 // This program is free software: you can redistribute it and/or modify
@@ -114,32 +114,6 @@ pub fn run() {
             commands::finance::add_category,
             commands::finance::update_category,
             commands::finance::delete_category,
-            // Habits domain
-            commands::habits::fetch_habits,
-            commands::habits::create_habit,
-            commands::habits::update_habit,
-            commands::habits::delete_habit,
-            commands::habits::toggle_habit,
-            commands::habits::fetch_habit_summary,
-            commands::habits::fetch_heatmap,
-            commands::habits::fetch_habit_analytics,
-            commands::habits::fetch_rewards,
-            commands::habits::create_streak_reward,
-            commands::habits::update_streak_reward,
-            commands::habits::delete_streak_reward,
-            commands::habits::add_milestone,
-            commands::habits::fetch_goals,
-            commands::habits::create_goal,
-            commands::habits::update_goal,
-            commands::habits::update_goal_with_checkpoints,
-            commands::habits::delete_goal,
-            commands::habits::complete_goal,
-            commands::habits::archive_goal,
-            commands::habits::add_checkpoint,
-            commands::habits::update_checkpoint,
-            commands::habits::delete_checkpoint,
-            commands::habits::toggle_checkpoint,
-            commands::habits::fetch_achievements,
             // Ingestion domain
             commands::ingestion::preview_import,
             commands::ingestion::import_data,

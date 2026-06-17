@@ -1,4 +1,4 @@
-// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Sanctum — a privacy-first personal finance and crypto vault.
 // Copyright (C) 2026  Kyronix
 //
 // This program is free software: you can redistribute it and/or modify
@@ -17,9 +17,9 @@
 
 //! Validation helpers for ingestion data
 //!
-//! Provides field-level validation for imported transactions and habit logs.
+//! Provides field-level validation for imported transactions.
 
-use super::types::{ImportCryptoTransaction, ImportHabitLog, ImportTransaction, RowError};
+use super::types::{ImportCryptoTransaction, ImportTransaction, RowError};
 use crate::features::crypto::tax::types::normalize_subtype;
 use chrono::NaiveDate;
 
@@ -130,18 +130,6 @@ pub fn validate_account_name(name: &str) -> Result<String, String> {
     Ok(trimmed.to_string())
 }
 
-/// Validates habit name
-pub fn validate_habit_name(name: &str) -> Result<String, String> {
-    let trimmed = name.trim();
-    if trimmed.is_empty() {
-        return Err("Habit name is required".to_string());
-    }
-    if trimmed.len() > 128 {
-        return Err("Habit name too long (max 128 characters)".to_string());
-    }
-    Ok(trimmed.to_string())
-}
-
 /// Validates category name
 pub fn validate_category_name(name: &str) -> Result<String, String> {
     let trimmed = name.trim();
@@ -215,16 +203,6 @@ pub fn validate_import_transaction(
             ));
         }
     }
-
-    Ok(())
-}
-
-/// Validates an import habit log
-pub fn validate_import_habit_log(log: &ImportHabitLog, line_number: usize) -> Result<(), RowError> {
-    let make_error = |field: &str, msg: String| RowError::new(line_number, Some(field), msg);
-
-    validate_habit_name(&log.habit).map_err(|e| make_error("habit", e))?;
-    validate_date(&log.date).map_err(|e| make_error("date", e))?;
 
     Ok(())
 }

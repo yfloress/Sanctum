@@ -1,4 +1,4 @@
-// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Sanctum — a privacy-first personal finance and crypto vault.
 // Copyright (C) 2026  Kyronix
 //
 // This program is free software: you can redistribute it and/or modify
@@ -407,9 +407,7 @@ mod tests {
         std::fs::create_dir_all(&base_dir).expect("create test dir");
         let controller = Arc::new(AppController::new(base_dir.clone()));
         let password = "test-password-123".to_string();
-        controller
-            .create_db(password, None)
-            .expect("create vault");
+        controller.create_db(password, None).expect("create vault");
         TestHarness {
             controller,
             test_dir: base_dir,
@@ -452,7 +450,10 @@ mod tests {
     fn test_load_categories_for_expense() {
         let h = new_harness();
         let result = load_categories(&h.controller, "expense").expect("load categories");
-        assert!(!result.is_empty(), "default expense categories should exist");
+        assert!(
+            !result.is_empty(),
+            "default expense categories should exist"
+        );
         assert!(result.iter().all(|c| c.category_type == "expense"));
     }
 
@@ -485,7 +486,11 @@ mod tests {
         let h = new_harness();
         create_account(&h.controller, "Checking", "USD", 0);
         let accounts = h.controller.get_accounts().expect("get accounts");
-        let acc_id = &accounts.iter().find(|a| a.name == "Checking").expect("find account").id;
+        let acc_id = &accounts
+            .iter()
+            .find(|a| a.name == "Checking")
+            .expect("find account")
+            .id;
         add_transaction(&h.controller, acc_id, 20000, "Salary", false);
         add_transaction(&h.controller, acc_id, 5000, "Food", true);
         let result = load_balance_data(&h.controller).expect("load balance");
@@ -507,8 +512,14 @@ mod tests {
         create_account(&h.controller, "Checking", "USD", 0);
         create_account(&h.controller, "Savings", "USD", 0);
         let accounts = h.controller.get_accounts().expect("get accounts");
-        let checking = accounts.iter().find(|a| a.name == "Checking").expect("find checking");
-        let savings = accounts.iter().find(|a| a.name == "Savings").expect("find savings");
+        let checking = accounts
+            .iter()
+            .find(|a| a.name == "Checking")
+            .expect("find checking");
+        let savings = accounts
+            .iter()
+            .find(|a| a.name == "Savings")
+            .expect("find savings");
         add_transaction(&h.controller, &checking.id, 50000, "Deposit", false);
         add_transaction(&h.controller, &savings.id, 100000, "Deposit", false);
         let result = load_accounts_state(&h.controller, "USD").expect("load accounts state");
@@ -570,7 +581,12 @@ mod tests {
         };
         let result = load_transactions_state(&h.controller, filter).expect("load transactions");
         assert_eq!(result.transactions.len(), 1);
-        assert!(result.transactions[0].category.to_lowercase().contains("salary"));
+        assert!(
+            result.transactions[0]
+                .category
+                .to_lowercase()
+                .contains("salary")
+        );
     }
 
     #[test]
@@ -602,8 +618,7 @@ mod tests {
         for i in 0..5 {
             add_transaction(&h.controller, acc_id, 1000 + i, "Food", true);
         }
-        let result =
-            load_recent_transactions(&h.controller, 2).expect("load recent transactions");
+        let result = load_recent_transactions(&h.controller, 2).expect("load recent transactions");
         assert_eq!(result.len(), 2);
     }
 

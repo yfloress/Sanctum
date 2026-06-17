@@ -1,4 +1,4 @@
-// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Sanctum — a privacy-first personal finance and crypto vault.
 // Copyright (C) 2026  Kyronix
 //
 // This program is free software: you can redistribute it and/or modify
@@ -24,7 +24,7 @@
 //! The codebase is organized into feature-based modules:
 //!
 //! - `core/` - Shared infrastructure (database, errors, security)
-//! - `features/` - Domain modules (finance, crypto, habits)
+//! - `features/` - Domain modules (finance, crypto)
 //! - `services/` - Shared cross-cutting services
 //! - `ui/` - UI layer (DTOs, helpers, data)
 

@@ -1,4 +1,4 @@
-// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Sanctum — a privacy-first personal finance and crypto vault.
 // Copyright (C) 2026  Kyronix
 //
 // This program is free software: you can redistribute it and/or modify
@@ -26,14 +26,13 @@ use chrono::{NaiveDate, NaiveDateTime};
 use std::sync::{Arc, Mutex};
 
 use super::parsers::{
-    CsvParser, ExchangeSource, ImportParser, JsonParser, TextParser, detect_exchange_source,
-    detect_format, parser_for,
+    CsvParser, ExchangeSource, ImportParser, JsonParser, detect_exchange_source, detect_format,
+    parser_for,
 };
 use super::types::{ImportFormat, ImportSummary};
 use super::validation::validate_file_size;
 
 mod crypto;
-mod habits;
 mod transactions;
 
 pub(super) fn format_currency_simple(cents: i64, currency: &str) -> String {
@@ -387,9 +386,7 @@ impl IngestionService {
         match format {
             ImportFormat::Json => self.import_json(content),
             ImportFormat::CsvTransactions => self.import_csv_transactions(content),
-            ImportFormat::CsvHabitLogs => self.import_csv_habit_logs(content),
             ImportFormat::CsvCrypto => self.import_csv_crypto(content),
-            ImportFormat::TextMixed => self.import_text_mixed(content),
             ImportFormat::ExchangeCsv(source) => {
                 let wallet = source.default_wallet_name();
                 self.import_exchange_csv(content, wallet, source)
@@ -415,9 +412,7 @@ impl IngestionService {
         match format {
             ImportFormat::Json => self.preview_json(content),
             ImportFormat::CsvTransactions => self.preview_csv_transactions(content),
-            ImportFormat::CsvHabitLogs => self.preview_csv_habit_logs(content),
             ImportFormat::CsvCrypto => self.preview_csv_crypto(content),
-            ImportFormat::TextMixed => self.preview_text_mixed(content),
             ImportFormat::ExchangeCsv(source) => {
                 let wallet = source.default_wallet_name();
                 self.preview_exchange_csv(content, wallet, source)
@@ -425,7 +420,7 @@ impl IngestionService {
         }
     }
 
-    /// Import JSON format (can contain transactions, habit logs, and crypto)
+    /// Import JSON format (can contain transactions and crypto)
     fn import_json(&self, content: &str) -> Result<ImportSummary, IngestionError> {
         let parser = JsonParser;
         let mut summary = ImportSummary::new("JSON", "Mixed");
@@ -440,16 +435,6 @@ impl IngestionService {
                 self.process_transactions(file.transactions.items, parser.format_name())?;
             summary.merge(tx_summary);
             for error in file.transactions.errors {
-                summary.record_error(error);
-            }
-        }
-
-        // Import habit logs
-        if !file.habit_logs.items.is_empty() || !file.habit_logs.errors.is_empty() {
-            let log_summary =
-                self.process_habit_logs(file.habit_logs.items, parser.format_name())?;
-            summary.merge(log_summary);
-            for error in file.habit_logs.errors {
                 summary.record_error(error);
             }
         }
@@ -470,7 +455,7 @@ impl IngestionService {
         Ok(summary)
     }
 
-    /// Preview JSON format (can contain transactions, habit logs, and crypto)
+    /// Preview JSON format (can contain transactions and crypto)
     fn preview_json(&self, content: &str) -> Result<ImportSummary, IngestionError> {
         let parser = JsonParser;
         let mut summary = ImportSummary::new("JSON", "Mixed");
@@ -484,15 +469,6 @@ impl IngestionService {
                 self.preview_transactions(file.transactions.items, parser.format_name())?;
             summary.merge(tx_summary);
             for error in file.transactions.errors {
-                summary.record_error(error);
-            }
-        }
-
-        if !file.habit_logs.items.is_empty() || !file.habit_logs.errors.is_empty() {
-            let log_summary =
-                self.preview_habit_logs(file.habit_logs.items, parser.format_name())?;
-            summary.merge(log_summary);
-            for error in file.habit_logs.errors {
                 summary.record_error(error);
             }
         }
@@ -532,32 +508,6 @@ impl IngestionService {
             .parse_transactions(content)
             .map_err(|e| IngestionError::Parse(e.message))?;
         let mut summary = self.preview_transactions(parsed.items, parser.format_name())?;
-        for error in parsed.errors {
-            summary.record_error(error);
-        }
-        Ok(summary)
-    }
-
-    /// Import CSV habit logs
-    fn import_csv_habit_logs(&self, content: &str) -> Result<ImportSummary, IngestionError> {
-        let parser = CsvParser;
-        let parsed = parser
-            .parse_habit_logs(content)
-            .map_err(|e| IngestionError::Parse(e.message))?;
-        let mut summary = self.process_habit_logs(parsed.items, parser.format_name())?;
-        for error in parsed.errors {
-            summary.record_error(error);
-        }
-        Ok(summary)
-    }
-
-    /// Preview CSV habit logs
-    fn preview_csv_habit_logs(&self, content: &str) -> Result<ImportSummary, IngestionError> {
-        let parser = CsvParser;
-        let parsed = parser
-            .parse_habit_logs(content)
-            .map_err(|e| IngestionError::Parse(e.message))?;
-        let mut summary = self.preview_habit_logs(parsed.items, parser.format_name())?;
         for error in parsed.errors {
             summary.record_error(error);
         }
@@ -675,89 +625,6 @@ impl IngestionService {
             })?;
 
         self.preview_exchange_csv(content, wallet_name, source)
-    }
-
-    /// Import text mixed content (T;, H;, C; prefixes)
-    fn import_text_mixed(&self, content: &str) -> Result<ImportSummary, IngestionError> {
-        let parser = TextParser;
-        let mut summary = ImportSummary::new("Plain Text", "Mixed");
-        let parsed = parser.parse_mixed(content);
-
-        // Import transactions
-        if !parsed.transactions.items.is_empty() || !parsed.transactions.errors.is_empty() {
-            let tx_summary =
-                self.process_transactions(parsed.transactions.items, parser.format_name())?;
-            summary.merge(tx_summary);
-            for error in parsed.transactions.errors {
-                summary.record_error(error);
-            }
-        }
-
-        // Import habit logs
-        if !parsed.habit_logs.items.is_empty() || !parsed.habit_logs.errors.is_empty() {
-            let log_summary =
-                self.process_habit_logs(parsed.habit_logs.items, parser.format_name())?;
-            summary.merge(log_summary);
-            for error in parsed.habit_logs.errors {
-                summary.record_error(error);
-            }
-        }
-
-        // Import crypto transactions
-        if !parsed.crypto_transactions.items.is_empty()
-            || !parsed.crypto_transactions.errors.is_empty()
-        {
-            let crypto_summary = self.process_crypto_transactions(
-                parsed.crypto_transactions.items,
-                parser.format_name(),
-            )?;
-            summary.merge(crypto_summary);
-            for error in parsed.crypto_transactions.errors {
-                summary.record_error(error);
-            }
-        }
-
-        Ok(summary)
-    }
-
-    /// Preview text mixed content
-    fn preview_text_mixed(&self, content: &str) -> Result<ImportSummary, IngestionError> {
-        let parser = TextParser;
-        let mut summary = ImportSummary::new("Plain Text", "Mixed");
-        let parsed = parser.parse_mixed(content);
-
-        if !parsed.transactions.items.is_empty() || !parsed.transactions.errors.is_empty() {
-            let tx_summary =
-                self.preview_transactions(parsed.transactions.items, parser.format_name())?;
-            summary.merge(tx_summary);
-            for error in parsed.transactions.errors {
-                summary.record_error(error);
-            }
-        }
-
-        if !parsed.habit_logs.items.is_empty() || !parsed.habit_logs.errors.is_empty() {
-            let log_summary =
-                self.preview_habit_logs(parsed.habit_logs.items, parser.format_name())?;
-            summary.merge(log_summary);
-            for error in parsed.habit_logs.errors {
-                summary.record_error(error);
-            }
-        }
-
-        if !parsed.crypto_transactions.items.is_empty()
-            || !parsed.crypto_transactions.errors.is_empty()
-        {
-            let crypto_summary = self.preview_crypto_transactions(
-                parsed.crypto_transactions.items,
-                parser.format_name(),
-            )?;
-            summary.merge(crypto_summary);
-            for error in parsed.crypto_transactions.errors {
-                summary.record_error(error);
-            }
-        }
-
-        Ok(summary)
     }
 }
 
@@ -1052,14 +919,14 @@ fn mexc_overlap_detects_dedicated_withdrawal_vs_statement_with_fee() {
     ));
 }
 
-// ── Integration tests for process_transactions and process_habit_logs ─────────
+// ── Integration tests for process_transactions ────────────────────────────────
 
 #[cfg(test)]
 mod integration_tests {
     use super::*;
     use crate::db::Database as IngestionTestDb;
-    use crate::features::ingestion::types::{ImportCryptoTransaction, ImportHabitLog, ImportTransaction};
-    use crate::models::{Account, CryptoWallet, Habit, TransactionCategory};
+    use crate::features::ingestion::types::{ImportCryptoTransaction, ImportTransaction};
+    use crate::models::{Account, CryptoWallet, TransactionCategory};
     use secrecy::SecretString;
     use std::path::PathBuf;
     use uuid::Uuid;
@@ -1139,20 +1006,6 @@ mod integration_tests {
         };
         db.add_transaction_category(&cat.name, &cat.category_type)
             .expect("create category");
-    }
-
-    fn seed_habit(db: &IngestionTestDb) -> String {
-        let id = Uuid::new_v4().to_string();
-        let habit = Habit::new(
-            id.clone(),
-            "Exercise".to_string(),
-            None,
-            "#8b5cf6".to_string(),
-            "body".to_string(),
-            "2024-01-01T00:00:00Z".to_string(),
-        );
-        db.create_habit(&habit).expect("create habit");
-        id
     }
 
     // ==================== Transaction Ingestion Tests ====================
@@ -1483,158 +1336,6 @@ mod integration_tests {
         assert_eq!(result.errors, 0);
     }
 
-    // ==================== Habit Log Ingestion Tests ====================
-
-    #[test]
-    fn test_process_habit_logs_imports_completed_log() {
-        let h = new_ingestion_harness();
-        {
-            let guard = h.db.lock().expect("lock");
-            let db = guard.as_ref().expect("db");
-            seed_habit(db);
-        }
-        let log = ImportHabitLog {
-            habit: "Exercise".to_string(),
-            date: "2024-06-15".to_string(),
-            completed: true,
-        };
-        let result = h
-            .service
-            .process_habit_logs(vec![(1, log)], "Test Format")
-            .expect("process");
-        assert_eq!(result.inserted, 1);
-        assert_eq!(result.errors, 0);
-    }
-
-    #[test]
-    fn test_process_habit_logs_skips_not_completed() {
-        let h = new_ingestion_harness();
-        {
-            let guard = h.db.lock().expect("lock");
-            let db = guard.as_ref().expect("db");
-            seed_habit(db);
-        }
-        let log = ImportHabitLog {
-            habit: "Exercise".to_string(),
-            date: "2024-06-15".to_string(),
-            completed: false,
-        };
-        let result = h
-            .service
-            .process_habit_logs(vec![(1, log)], "Test Format")
-            .expect("process");
-        assert_eq!(result.inserted, 0);
-        assert_eq!(result.skipped, 1);
-    }
-
-    #[test]
-    fn test_process_habit_logs_rejects_unknown_habit() {
-        let h = new_ingestion_harness();
-        let log = ImportHabitLog {
-            habit: "Nonexistent".to_string(),
-            date: "2024-06-15".to_string(),
-            completed: true,
-        };
-        let result = h
-            .service
-            .process_habit_logs(vec![(1, log)], "Test Format")
-            .expect("process");
-        assert_eq!(result.inserted, 0);
-        assert_eq!(result.errors, 1);
-    }
-
-    #[test]
-    fn test_process_habit_logs_deduplicates_same_habit_date() {
-        let h = new_ingestion_harness();
-        {
-            let guard = h.db.lock().expect("lock");
-            let db = guard.as_ref().expect("db");
-            seed_habit(db);
-        }
-        let log = ImportHabitLog {
-            habit: "Exercise".to_string(),
-            date: "2024-06-15".to_string(),
-            completed: true,
-        };
-        h.service
-            .process_habit_logs(vec![(1, log.clone())], "Test Format")
-            .expect("first");
-        let result = h
-            .service
-            .process_habit_logs(vec![(1, log)], "Test Format")
-            .expect("second");
-        assert_eq!(result.inserted, 0);
-        assert_eq!(result.skipped, 1, "duplicate should be skipped");
-    }
-
-    #[test]
-    fn test_process_habit_logs_handles_multiple_habits() {
-        let h = new_ingestion_harness();
-        {
-            let guard = h.db.lock().expect("lock");
-            let db = guard.as_ref().expect("db");
-            seed_habit_named(db, "Exercise");
-            seed_habit_named(db, "Reading");
-        }
-        let logs = vec![
-            (
-                1,
-                ImportHabitLog {
-                    habit: "Exercise".to_string(),
-                    date: "2024-06-15".to_string(),
-                    completed: true,
-                },
-            ),
-            (
-                2,
-                ImportHabitLog {
-                    habit: "Reading".to_string(),
-                    date: "2024-06-15".to_string(),
-                    completed: true,
-                },
-            ),
-        ];
-        let result = h
-            .service
-            .process_habit_logs(logs, "Test Format")
-            .expect("process");
-        assert_eq!(result.inserted, 2);
-    }
-
-    #[test]
-    fn test_preview_habit_logs_does_not_insert() {
-        let h = new_ingestion_harness();
-        {
-            let guard = h.db.lock().expect("lock");
-            let db = guard.as_ref().expect("db");
-            seed_habit(db);
-        }
-        let log = ImportHabitLog {
-            habit: "Exercise".to_string(),
-            date: "2024-06-15".to_string(),
-            completed: true,
-        };
-        let result = h
-            .service
-            .preview_habit_logs(vec![(1, log)], "Test Format")
-            .expect("preview");
-        assert_eq!(
-            result.preview_changes.len(),
-            1,
-            "preview should show 1 change"
-        );
-        assert_eq!(result.errors, 0, "preview should have no errors");
-        // Verify nothing was actually persisted
-        {
-            let guard = h.db.lock().expect("lock");
-            let db = guard.as_ref().expect("db");
-            let logs = db
-                .get_habit_logs("2024-01-01", "2024-12-31")
-                .expect("get logs");
-            assert!(logs.is_empty(), "preview should not persist data");
-        }
-    }
-
     // ==================== Crypto Transaction Ingestion Tests ====================
 
     fn seed_wallet(db: &IngestionTestDb, name: &str) -> String {
@@ -1644,6 +1345,8 @@ mod integration_tests {
         id
     }
 
+    // Test fixture builder: cohesive args mirror the struct fields it constructs.
+    #[allow(clippy::too_many_arguments)]
     fn make_crypto_tx(
         date: &str,
         wallet: &str,
@@ -1683,10 +1386,22 @@ mod integration_tests {
             let db = guard.as_ref().expect("db");
             seed_wallet(db, "Exchange");
         }
-        let tx = make_crypto_tx("2024-06-15", "Exchange", "BTC", "trade", Some("buy"), 1.5, Some(50000.0), Some(0.10), None, None);
-        let result = h.service.process_crypto_transactions_ext(
-            vec![(1, tx)], "Test Format", true,
-        ).expect("process");
+        let tx = make_crypto_tx(
+            "2024-06-15",
+            "Exchange",
+            "BTC",
+            "trade",
+            Some("buy"),
+            1.5,
+            Some(50000.0),
+            Some(0.10),
+            None,
+            None,
+        );
+        let result = h
+            .service
+            .process_crypto_transactions_ext(vec![(1, tx)], "Test Format", true)
+            .expect("process");
         assert_eq!(result.inserted, 1);
         assert_eq!(result.errors, 0);
     }
@@ -1699,12 +1414,24 @@ mod integration_tests {
             let db = guard.as_ref().expect("db");
             seed_wallet(db, "Exchange");
         }
-        let mut tx = make_crypto_tx("2024-06-15", "Exchange", "BTC", "trade", Some("buy"), 1.5, Some(50000.0), Some(0.10), None, None);
+        let mut tx = make_crypto_tx(
+            "2024-06-15",
+            "Exchange",
+            "BTC",
+            "trade",
+            Some("buy"),
+            1.5,
+            Some(50000.0),
+            Some(0.10),
+            None,
+            None,
+        );
         tx.fee_coin_symbol = Some("BTC".to_string());
         tx.fee_amount = Some(0.001);
-        let result = h.service.process_crypto_transactions_ext(
-            vec![(1, tx)], "Test Format", true,
-        ).expect("process");
+        let result = h
+            .service
+            .process_crypto_transactions_ext(vec![(1, tx)], "Test Format", true)
+            .expect("process");
         assert_eq!(result.inserted, 1);
         assert_eq!(result.errors, 0);
     }
@@ -1717,10 +1444,22 @@ mod integration_tests {
             let db = guard.as_ref().expect("db");
             seed_wallet(db, "Exchange");
         }
-        let tx = make_crypto_tx("2024-06-15", "Exchange", "BTC", "trade", Some("sell"), 0.5, Some(51000.0), Some(0.10), None, None);
-        let result = h.service.process_crypto_transactions_ext(
-            vec![(1, tx)], "Test Format", true,
-        ).expect("process");
+        let tx = make_crypto_tx(
+            "2024-06-15",
+            "Exchange",
+            "BTC",
+            "trade",
+            Some("sell"),
+            0.5,
+            Some(51000.0),
+            Some(0.10),
+            None,
+            None,
+        );
+        let result = h
+            .service
+            .process_crypto_transactions_ext(vec![(1, tx)], "Test Format", true)
+            .expect("process");
         assert_eq!(result.inserted, 1);
     }
 
@@ -1732,10 +1471,22 @@ mod integration_tests {
             let db = guard.as_ref().expect("db");
             seed_wallet(db, "MyWallet");
         }
-        let tx = make_crypto_tx("2024-06-15", "MyWallet", "ETH", "transfer", None, 2.0, None, None, None, None);
-        let result = h.service.process_crypto_transactions_ext(
-            vec![(1, tx)], "Test Format", true,
-        ).expect("process");
+        let tx = make_crypto_tx(
+            "2024-06-15",
+            "MyWallet",
+            "ETH",
+            "transfer",
+            None,
+            2.0,
+            None,
+            None,
+            None,
+            None,
+        );
+        let result = h
+            .service
+            .process_crypto_transactions_ext(vec![(1, tx)], "Test Format", true)
+            .expect("process");
         assert_eq!(result.inserted, 1);
     }
 
@@ -1747,10 +1498,22 @@ mod integration_tests {
             let db = guard.as_ref().expect("db");
             seed_wallet(db, "MyWallet");
         }
-        let tx = make_crypto_tx("2024-06-15", "MyWallet", "ETH", "transfer", Some("withdrawal"), 1.0, None, None, None, None);
-        let result = h.service.process_crypto_transactions_ext(
-            vec![(1, tx)], "Test Format", true,
-        ).expect("process");
+        let tx = make_crypto_tx(
+            "2024-06-15",
+            "MyWallet",
+            "ETH",
+            "transfer",
+            Some("withdrawal"),
+            1.0,
+            None,
+            None,
+            None,
+            None,
+        );
+        let result = h
+            .service
+            .process_crypto_transactions_ext(vec![(1, tx)], "Test Format", true)
+            .expect("process");
         assert_eq!(result.inserted, 1);
     }
 
@@ -1763,28 +1526,54 @@ mod integration_tests {
             seed_wallet(db, "Exchange");
         }
         let tx = make_crypto_tx(
-            "2024-06-15", "Exchange", "BTC", "trade", Some("swap"), 1.0, None, Some(0.05),
-            Some("ETH"), Some(100.0),
+            "2024-06-15",
+            "Exchange",
+            "BTC",
+            "trade",
+            Some("swap"),
+            1.0,
+            None,
+            Some(0.05),
+            Some("ETH"),
+            Some(100.0),
         );
-        let result = h.service.process_crypto_transactions_ext(
-            vec![(1, tx)], "Test Format", true,
-        ).expect("process");
-        assert_eq!(result.inserted, 1, "swap counts as one insertion in summary");
+        let result = h
+            .service
+            .process_crypto_transactions_ext(vec![(1, tx)], "Test Format", true)
+            .expect("process");
+        assert_eq!(
+            result.inserted, 1,
+            "swap counts as one insertion in summary"
+        );
 
         // Verify two transactions were actually created in DB
         let guard = h.db.lock().expect("lock");
         let db = guard.as_ref().expect("db");
-        let all = db.get_all_crypto_transactions(0, i64::MAX).expect("get all");
+        let all = db
+            .get_all_crypto_transactions(0, i64::MAX)
+            .expect("get all");
         assert_eq!(all.len(), 2, "swap should create source + target tx");
     }
 
     #[test]
     fn test_process_crypto_rejects_unknown_wallet() {
         let h = new_ingestion_harness();
-        let tx = make_crypto_tx("2024-06-15", "Nonexistent", "BTC", "trade", Some("buy"), 1.0, None, None, None, None);
-        let result = h.service.process_crypto_transactions_ext(
-            vec![(1, tx)], "Test Format", true,
-        ).expect("process");
+        let tx = make_crypto_tx(
+            "2024-06-15",
+            "Nonexistent",
+            "BTC",
+            "trade",
+            Some("buy"),
+            1.0,
+            None,
+            None,
+            None,
+            None,
+        );
+        let result = h
+            .service
+            .process_crypto_transactions_ext(vec![(1, tx)], "Test Format", true)
+            .expect("process");
         assert_eq!(result.inserted, 0);
         assert_eq!(result.errors, 1);
     }
@@ -1797,15 +1586,29 @@ mod integration_tests {
             let db = guard.as_ref().expect("db");
             seed_wallet(db, "Exchange");
         }
-        let tx = make_crypto_tx("2024-06-15", "Exchange", "UNKNOWNCOIN123", "trade", Some("buy"), 1.0, None, None, None, None);
-        let result = h.service.process_crypto_transactions_ext(
-            vec![(1, tx)], "Test Format", true,
-        ).expect("process");
+        let tx = make_crypto_tx(
+            "2024-06-15",
+            "Exchange",
+            "UNKNOWNCOIN123",
+            "trade",
+            Some("buy"),
+            1.0,
+            None,
+            None,
+            None,
+            None,
+        );
+        let result = h
+            .service
+            .process_crypto_transactions_ext(vec![(1, tx)], "Test Format", true)
+            .expect("process");
         // UNKNOWNCOIN123 is not in default_coin_catalog, should be skipped
         assert!(
             result.skipped > 0 || result.errors > 0,
             "expected unknown coin to be rejected, got inserted={}, skipped={}, errors={}",
-            result.inserted, result.skipped, result.errors,
+            result.inserted,
+            result.skipped,
+            result.errors,
         );
         assert_eq!(result.inserted, 0);
     }
@@ -1819,12 +1622,21 @@ mod integration_tests {
             seed_wallet(db, "Exchange");
         }
         let tx = make_crypto_tx(
-            "2024-06-15", "Exchange", "BTC", "trade", Some("swap"), 1.0, None, None,
-            Some("UNKNOWN"), Some(100.0),
+            "2024-06-15",
+            "Exchange",
+            "BTC",
+            "trade",
+            Some("swap"),
+            1.0,
+            None,
+            None,
+            Some("UNKNOWN"),
+            Some(100.0),
         );
-        let result = h.service.process_crypto_transactions_ext(
-            vec![(1, tx)], "Test Format", true,
-        ).expect("process");
+        let result = h
+            .service
+            .process_crypto_transactions_ext(vec![(1, tx)], "Test Format", true)
+            .expect("process");
         assert_eq!(result.inserted, 0);
         assert_eq!(result.skipped, 1);
     }
@@ -1837,13 +1649,25 @@ mod integration_tests {
             let db = guard.as_ref().expect("db");
             seed_wallet(db, "Exchange");
         }
-        let tx = make_crypto_tx("2024-06-15", "Exchange", "BTC", "trade", Some("buy"), 1.0, Some(50000.0), None, None, None);
-        h.service.process_crypto_transactions_ext(
-            vec![(1, tx.clone())], "Test Format", true,
-        ).expect("first");
-        let result = h.service.process_crypto_transactions_ext(
-            vec![(1, tx)], "Test Format", true,
-        ).expect("second");
+        let tx = make_crypto_tx(
+            "2024-06-15",
+            "Exchange",
+            "BTC",
+            "trade",
+            Some("buy"),
+            1.0,
+            Some(50000.0),
+            None,
+            None,
+            None,
+        );
+        h.service
+            .process_crypto_transactions_ext(vec![(1, tx.clone())], "Test Format", true)
+            .expect("first");
+        let result = h
+            .service
+            .process_crypto_transactions_ext(vec![(1, tx)], "Test Format", true)
+            .expect("second");
         assert_eq!(result.inserted, 0);
         assert_eq!(result.skipped, 1);
     }
@@ -1856,15 +1680,32 @@ mod integration_tests {
             let db = guard.as_ref().expect("db");
             seed_wallet(db, "Exchange");
         }
-        let tx = make_crypto_tx("2024-06-15", "Exchange", "BTC", "trade", Some("buy"), 1.0, Some(50000.0), None, None, None);
-        let result = h.service.preview_crypto_transactions_ext(
-            vec![(1, tx)], "Test Format", true,
-        ).expect("preview");
-        assert!(result.preview_changes.len() > 0, "preview should show changes");
+        let tx = make_crypto_tx(
+            "2024-06-15",
+            "Exchange",
+            "BTC",
+            "trade",
+            Some("buy"),
+            1.0,
+            Some(50000.0),
+            None,
+            None,
+            None,
+        );
+        let result = h
+            .service
+            .preview_crypto_transactions_ext(vec![(1, tx)], "Test Format", true)
+            .expect("preview");
+        assert!(
+            !result.preview_changes.is_empty(),
+            "preview should show changes"
+        );
         // Verify nothing persisted
         let guard = h.db.lock().expect("lock");
         let db = guard.as_ref().expect("db");
-        let all = db.get_all_crypto_transactions(0, i64::MAX).expect("get all");
+        let all = db
+            .get_all_crypto_transactions(0, i64::MAX)
+            .expect("get all");
         assert!(all.is_empty(), "preview should not persist");
     }
 
@@ -1877,27 +1718,57 @@ mod integration_tests {
             seed_wallet(db, "Exchange");
         }
         let txs = vec![
-            (1, make_crypto_tx("2024-06-15", "Exchange", "BTC", "trade", Some("buy"), 1.0, Some(50000.0), Some(0.10), None, None)),
-            (2, make_crypto_tx("2024-06-16", "Exchange", "ETH", "trade", Some("buy"), 10.0, Some(3000.0), Some(0.50), None, None)),
-            (3, make_crypto_tx("2024-06-17", "Exchange", "BTC", "trade", Some("sell"), 0.5, Some(51000.0), Some(0.10), None, None)),
+            (
+                1,
+                make_crypto_tx(
+                    "2024-06-15",
+                    "Exchange",
+                    "BTC",
+                    "trade",
+                    Some("buy"),
+                    1.0,
+                    Some(50000.0),
+                    Some(0.10),
+                    None,
+                    None,
+                ),
+            ),
+            (
+                2,
+                make_crypto_tx(
+                    "2024-06-16",
+                    "Exchange",
+                    "ETH",
+                    "trade",
+                    Some("buy"),
+                    10.0,
+                    Some(3000.0),
+                    Some(0.50),
+                    None,
+                    None,
+                ),
+            ),
+            (
+                3,
+                make_crypto_tx(
+                    "2024-06-17",
+                    "Exchange",
+                    "BTC",
+                    "trade",
+                    Some("sell"),
+                    0.5,
+                    Some(51000.0),
+                    Some(0.10),
+                    None,
+                    None,
+                ),
+            ),
         ];
-        let result = h.service.process_crypto_transactions_ext(txs, "Test Format", true)
+        let result = h
+            .service
+            .process_crypto_transactions_ext(txs, "Test Format", true)
             .expect("process");
         assert_eq!(result.inserted, 3);
         assert_eq!(result.errors, 0);
-    }
-
-    fn seed_habit_named(db: &IngestionTestDb, name: &str) -> String {
-        let id = Uuid::new_v4().to_string();
-        let habit = Habit::new(
-            id.clone(),
-            name.to_string(),
-            None,
-            "#8b5cf6".to_string(),
-            "body".to_string(),
-            "2024-01-01T00:00:00Z".to_string(),
-        );
-        db.create_habit(&habit).expect("create habit");
-        id
     }
 }

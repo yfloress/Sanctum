@@ -1,4 +1,4 @@
-// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Sanctum — a privacy-first personal finance and crypto vault.
 // Copyright (C) 2026  Kyronix
 //
 // This program is free software: you can redistribute it and/or modify
@@ -24,11 +24,6 @@ use crate::ui::currency::format_money;
 use std::collections::HashMap;
 
 pub const GENERIC_BANK_ICON_PATH: &str = "../assets/icons/landmark.svg";
-
-pub const HABIT_COLOR_CHOICES: [&str; 16] = [
-    "#8b5cf6", "#ec4899", "#ef4444", "#f97316", "#f59e0b", "#eab308", "#84cc16", "#22c55e",
-    "#10b981", "#14b8a6", "#06b6d4", "#0ea5e9", "#3b82f6", "#6366f1", "#a16207", "#64748b",
-];
 
 // ==================== Amount Formatting ====================
 
@@ -136,103 +131,6 @@ pub fn normalize_bank_icon_path(icon_path: Option<String>) -> Option<String> {
     } else {
         Some(path)
     }
-}
-
-// ==================== Habit Helpers ====================
-
-/// Returns index of color in the HABIT_COLOR_CHOICES array
-pub fn habit_color_index(color_hex: &str) -> i32 {
-    let target = color_hex.trim();
-    HABIT_COLOR_CHOICES
-        .iter()
-        .position(|hex| hex.eq_ignore_ascii_case(target))
-        .map(|idx| idx as i32)
-        .unwrap_or(0)
-}
-
-/// Normalizes habit category to valid values
-pub fn normalize_habit_category_value(category: &str) -> String {
-    match category.trim().to_lowercase().as_str() {
-        "mind" => "mind".to_string(),
-        "body" => "body".to_string(),
-        "spirit" | "discipline" => "spirit".to_string(),
-        _ => "mind".to_string(),
-    }
-}
-
-/// Calculates current streak from a sorted list of dates.
-/// Returns the number of consecutive days ending at today (or yesterday if today not complete).
-///
-/// # Timezone Behavior
-/// The `today` parameter should use the user's local date (`chrono::Local::now().date_naive()`).
-/// This means streak calculations are based on the user's local calendar day.
-/// **Note**: Changing timezones mid-day may affect streak counts, as a day completed in one
-/// timezone might appear as a different calendar date in another.
-pub fn calculate_current_streak(dates: &[chrono::NaiveDate], today: chrono::NaiveDate) -> i32 {
-    if dates.is_empty() {
-        return 0;
-    }
-
-    let mut streak = 0;
-    let mut check_date = today;
-
-    // If today isn't completed, start checking from yesterday
-    if !dates.contains(&today) {
-        if let Some(prev) = today.pred_opt() {
-            check_date = prev;
-        } else {
-            return 0;
-        }
-    }
-
-    while dates.contains(&check_date) {
-        streak += 1;
-        if let Some(prev) = check_date.pred_opt() {
-            check_date = prev;
-        } else {
-            break;
-        }
-    }
-
-    streak
-}
-
-/// Calculates the best (longest) streak from a sorted list of dates.
-///
-/// # Note
-/// Limited to logs from the last 2 years for performance reasons.
-/// Best streak is calculated from available data within this window.
-pub fn calculate_best_streak(dates: &[chrono::NaiveDate]) -> i32 {
-    if dates.is_empty() {
-        return 0;
-    }
-
-    let mut best_streak = 0;
-    let mut current_streak = 0;
-    let mut prev_date: Option<chrono::NaiveDate> = None;
-
-    for date in dates {
-        if let Some(prev) = prev_date {
-            if let Some(next) = prev.succ_opt() {
-                if *date == next {
-                    current_streak += 1;
-                } else {
-                    current_streak = 1;
-                }
-            } else {
-                current_streak = 1;
-            }
-        } else {
-            current_streak = 1;
-        }
-
-        if current_streak > best_streak {
-            best_streak = current_streak;
-        }
-        prev_date = Some(*date);
-    }
-
-    best_streak
 }
 
 // ==================== Category Helpers ====================
@@ -390,7 +288,6 @@ pub fn color_from_hex(hex: &str) -> (u8, u8, u8) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::NaiveDate;
 
     // ==================== Amount Formatting ====================
 
@@ -609,146 +506,6 @@ mod tests {
         );
     }
 
-    // ==================== Habit Helpers ====================
-
-    #[test]
-    fn test_habit_color_index_first() {
-        assert_eq!(habit_color_index("#8b5cf6"), 0);
-    }
-
-    #[test]
-    fn test_habit_color_index_case_insensitive() {
-        assert_eq!(habit_color_index("#8B5CF6"), 0);
-    }
-
-    #[test]
-    fn test_habit_color_index_last() {
-        assert_eq!(habit_color_index("#64748b"), 15);
-    }
-
-    #[test]
-    fn test_habit_color_index_not_found() {
-        assert_eq!(habit_color_index("#000000"), 0);
-    }
-
-    #[test]
-    fn test_normalize_habit_category_mind() {
-        assert_eq!(normalize_habit_category_value("mind"), "mind");
-    }
-
-    #[test]
-    fn test_normalize_habit_category_body() {
-        assert_eq!(normalize_habit_category_value("body"), "body");
-    }
-
-    #[test]
-    fn test_normalize_habit_category_spirit() {
-        assert_eq!(normalize_habit_category_value("spirit"), "spirit");
-    }
-
-    #[test]
-    fn test_normalize_habit_category_discipline() {
-        assert_eq!(normalize_habit_category_value("discipline"), "spirit");
-    }
-
-    #[test]
-    fn test_normalize_habit_category_default() {
-        assert_eq!(normalize_habit_category_value("unknown"), "mind");
-    }
-
-    #[test]
-    fn test_normalize_habit_category_trim_and_case() {
-        assert_eq!(normalize_habit_category_value("  Mind  "), "mind");
-    }
-
-    // ==================== Streak Calculation ====================
-
-    fn date(y: i32, m: u32, d: u32) -> NaiveDate {
-        NaiveDate::from_ymd_opt(y, m, d).unwrap()
-    }
-
-    #[test]
-    fn test_calculate_current_streak_empty() {
-        assert_eq!(calculate_current_streak(&[], date(2024, 6, 15)), 0);
-    }
-
-    #[test]
-    fn test_calculate_current_streak_consecutive_today() {
-        let dates = vec![date(2024, 6, 13), date(2024, 6, 14), date(2024, 6, 15)];
-        assert_eq!(calculate_current_streak(&dates, date(2024, 6, 15)), 3);
-    }
-
-    #[test]
-    fn test_calculate_current_streak_today_not_in_list() {
-        let dates = vec![date(2024, 6, 13), date(2024, 6, 14)];
-        assert_eq!(calculate_current_streak(&dates, date(2024, 6, 15)), 2);
-    }
-
-    #[test]
-    fn test_calculate_current_streak_gap_then_recent() {
-        let dates = vec![
-            date(2024, 6, 10),
-            date(2024, 6, 13),
-            date(2024, 6, 14),
-            date(2024, 6, 15),
-        ];
-        assert_eq!(calculate_current_streak(&dates, date(2024, 6, 15)), 3);
-    }
-
-    #[test]
-    fn test_calculate_current_streak_no_match() {
-        let dates = vec![date(2024, 6, 10)];
-        assert_eq!(calculate_current_streak(&dates, date(2024, 6, 15)), 0);
-    }
-
-    #[test]
-    fn test_calculate_current_streak_single_day() {
-        let dates = vec![date(2024, 6, 15)];
-        assert_eq!(calculate_current_streak(&dates, date(2024, 6, 15)), 1);
-    }
-
-    #[test]
-    fn test_calculate_best_streak_empty() {
-        assert_eq!(calculate_best_streak(&[]), 0);
-    }
-
-    #[test]
-    fn test_calculate_best_streak_all_consecutive() {
-        let dates = vec![
-            date(2024, 6, 1),
-            date(2024, 6, 2),
-            date(2024, 6, 3),
-            date(2024, 6, 4),
-            date(2024, 6, 5),
-        ];
-        assert_eq!(calculate_best_streak(&dates), 5);
-    }
-
-    #[test]
-    fn test_calculate_best_streak_with_gaps() {
-        let dates = vec![
-            date(2024, 6, 1),
-            date(2024, 6, 2),
-            date(2024, 6, 3),
-            date(2024, 6, 5),
-            date(2024, 6, 6),
-            date(2024, 6, 7),
-        ];
-        assert_eq!(calculate_best_streak(&dates), 3);
-    }
-
-    #[test]
-    fn test_calculate_best_streak_single() {
-        let dates = vec![date(2024, 6, 15)];
-        assert_eq!(calculate_best_streak(&dates), 1);
-    }
-
-    #[test]
-    fn test_calculate_best_streak_no_consecutive() {
-        let dates = vec![date(2024, 6, 1), date(2024, 6, 3), date(2024, 6, 5)];
-        assert_eq!(calculate_best_streak(&dates), 1);
-    }
-
     // ==================== Category Label ====================
 
     #[test]
@@ -778,6 +535,8 @@ mod tests {
 
     // ==================== Fee Display ====================
 
+    // Test fixture builder: cohesive args mirror the struct fields it constructs.
+    #[allow(clippy::too_many_arguments)]
     fn make_tx(
         id: &str,
         tx_type: &str,

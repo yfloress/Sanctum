@@ -1,4 +1,4 @@
-// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Sanctum — a privacy-first personal finance and crypto vault.
 // Copyright (C) 2026  Kyronix
 //
 // This program is free software: you can redistribute it and/or modify
@@ -18,9 +18,7 @@
 //! JSON parser for Sanctum Web exports
 
 use super::{ImportParser, ParseResult};
-use crate::features::ingestion::types::{
-    ImportCryptoTransaction, ImportHabitLog, ImportTransaction, RowError,
-};
+use crate::features::ingestion::types::{ImportCryptoTransaction, ImportTransaction, RowError};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -28,15 +26,12 @@ struct JsonFileRaw {
     #[serde(default)]
     transactions: Vec<serde_json::Value>,
     #[serde(default)]
-    habit_logs: Vec<serde_json::Value>,
-    #[serde(default)]
     crypto_transactions: Vec<serde_json::Value>,
 }
 
 #[derive(Debug)]
 pub struct JsonParseResult {
     pub transactions: ParseResult<ImportTransaction>,
-    pub habit_logs: ParseResult<ImportHabitLog>,
     pub crypto_transactions: ParseResult<ImportCryptoTransaction>,
 }
 
@@ -51,23 +46,17 @@ impl ImportParser for JsonParser {
         Ok(parse_json_items(file.transactions, "transaction"))
     }
 
-    fn parse_habit_logs(&self, content: &str) -> Result<ParseResult<ImportHabitLog>, RowError> {
-        let file = self.parse_raw(content)?;
-        Ok(parse_json_items(file.habit_logs, "habit log"))
-    }
-
     fn format_name(&self) -> &'static str {
         "JSON"
     }
 }
 
 impl JsonParser {
-    /// Parses the full JSON file and returns transactions, habit logs, and crypto
+    /// Parses the full JSON file and returns transactions and crypto
     pub fn parse_full(&self, content: &str) -> Result<JsonParseResult, RowError> {
         let file = self.parse_raw(content)?;
         Ok(JsonParseResult {
             transactions: parse_json_items(file.transactions, "transaction"),
-            habit_logs: parse_json_items(file.habit_logs, "habit log"),
             crypto_transactions: parse_json_items(file.crypto_transactions, "crypto transaction"),
         })
     }
@@ -142,35 +131,6 @@ mod tests {
         assert_eq!(parsed.items[0].0, 1); // line number
         assert_eq!(parsed.items[0].1.amount, 45.50);
         assert_eq!(parsed.items[0].1.account, "Checking");
-    }
-
-    #[test]
-    fn test_parse_habit_logs() {
-        let json = r#"{
-            "version": "1.0",
-            "transactions": [],
-            "habit_logs": [
-                {
-                    "habit": "Meditate",
-                    "date": "2024-01-15",
-                    "completed": true
-                },
-                {
-                    "habit": "Exercise",
-                    "date": "2024-01-15",
-                    "completed": false
-                }
-            ]
-        }"#;
-
-        let parser = JsonParser;
-        let result = parser.parse_habit_logs(json);
-        assert!(result.is_ok());
-        let parsed = result.unwrap();
-        assert!(parsed.errors.is_empty());
-        assert_eq!(parsed.items.len(), 2);
-        assert!(parsed.items[0].1.completed);
-        assert!(!parsed.items[1].1.completed);
     }
 
     #[test]

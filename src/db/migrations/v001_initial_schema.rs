@@ -1,4 +1,4 @@
-// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Sanctum — a privacy-first personal finance and crypto vault.
 // Copyright (C) 2026  Kyronix
 //
 // This program is free software: you can redistribute it and/or modify
@@ -20,8 +20,6 @@
 //! Creates all tables for the Sanctum application:
 //! - Finance: accounts, transactions, transaction_categories
 //! - Crypto: wallets, transactions, price cache, portfolio snapshots
-//! - Habits: habits, habit_logs
-//! - Rewards: streak_rewards, milestones, goals, checkpoints, achievements
 //! - System: settings, auth_attempts, session_info
 
 use crate::db::DbError;
@@ -38,12 +36,6 @@ pub fn up(conn: &Connection) -> Result<(), DbError> {
     // === Crypto Ledger System ===
     create_crypto_tables(conn)?;
     create_price_cache_tables(conn)?;
-
-    // === Habits System ===
-    create_habits_tables(conn)?;
-
-    // === Rewards System ===
-    create_rewards_tables(conn)?;
 
     // === System Tables ===
     create_settings_table(conn)?;
@@ -277,156 +269,6 @@ fn create_price_cache_tables(conn: &Connection) -> Result<(), DbError> {
             total_cost_usd REAL NOT NULL,
             created_at TEXT NOT NULL
         )",
-        [],
-    )?;
-
-    Ok(())
-}
-
-// ==================== Habits Tables ====================
-
-fn create_habits_tables(conn: &Connection) -> Result<(), DbError> {
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS habits (
-            id TEXT PRIMARY KEY NOT NULL,
-            name TEXT NOT NULL,
-            description TEXT,
-            color TEXT NOT NULL DEFAULT '#8b5cf6',
-            category TEXT NOT NULL DEFAULT 'mind',
-            created_at TEXT NOT NULL,
-            archived INTEGER NOT NULL DEFAULT 0
-        )",
-        [],
-    )?;
-
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS habit_logs (
-            id TEXT PRIMARY KEY NOT NULL,
-            habit_id TEXT NOT NULL,
-            completed_date TEXT NOT NULL,
-            FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE CASCADE,
-            UNIQUE(habit_id, completed_date)
-        )",
-        [],
-    )?;
-
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_habits_archived ON habits(archived)",
-        [],
-    )?;
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_habit_logs_habit_id ON habit_logs(habit_id)",
-        [],
-    )?;
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_habit_logs_date ON habit_logs(completed_date)",
-        [],
-    )?;
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_habit_logs_habit_date ON habit_logs(habit_id, completed_date)",
-        [],
-    )?;
-
-    Ok(())
-}
-
-// ==================== Rewards Tables ====================
-
-fn create_rewards_tables(conn: &Connection) -> Result<(), DbError> {
-    // Streak Rewards
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS streak_rewards (
-            id TEXT PRIMARY KEY NOT NULL,
-            habit_id TEXT NOT NULL,
-            is_consecutive INTEGER NOT NULL DEFAULT 1,
-            target_days INTEGER,
-            target_total INTEGER,
-            created_at TEXT NOT NULL,
-            FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE CASCADE
-        )",
-        [],
-    )?;
-
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_streak_rewards_habit ON streak_rewards(habit_id)",
-        [],
-    )?;
-
-    // Milestones
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS milestones (
-            id TEXT PRIMARY KEY NOT NULL,
-            reward_id TEXT NOT NULL,
-            target_days INTEGER NOT NULL,
-            reward_text TEXT NOT NULL,
-            unlocked INTEGER NOT NULL DEFAULT 0,
-            unlocked_at TEXT,
-            FOREIGN KEY (reward_id) REFERENCES streak_rewards(id) ON DELETE CASCADE
-        )",
-        [],
-    )?;
-
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_milestones_reward ON milestones(reward_id)",
-        [],
-    )?;
-
-    // Goals
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS goals (
-            id TEXT PRIMARY KEY NOT NULL,
-            name TEXT NOT NULL,
-            description TEXT,
-            reward_text TEXT NOT NULL,
-            deadline TEXT,
-            is_completed INTEGER NOT NULL DEFAULT 0,
-            completed_at TEXT,
-            created_at TEXT NOT NULL,
-            archived INTEGER NOT NULL DEFAULT 0
-        )",
-        [],
-    )?;
-
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_goals_completed ON goals(is_completed)",
-        [],
-    )?;
-
-    // Checkpoints
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS checkpoints (
-            id TEXT PRIMARY KEY NOT NULL,
-            goal_id TEXT NOT NULL,
-            description TEXT NOT NULL,
-            completed INTEGER NOT NULL DEFAULT 0,
-            completed_at TEXT,
-            sort_order INTEGER NOT NULL DEFAULT 0,
-            FOREIGN KEY (goal_id) REFERENCES goals(id) ON DELETE CASCADE
-        )",
-        [],
-    )?;
-
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_checkpoints_goal ON checkpoints(goal_id)",
-        [],
-    )?;
-
-    // Achievements
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS achievements (
-            id TEXT PRIMARY KEY NOT NULL,
-            title TEXT NOT NULL,
-            description TEXT NOT NULL,
-            icon_path TEXT NOT NULL,
-            achievement_type TEXT NOT NULL CHECK(achievement_type IN ('streak', 'goal')),
-            source_id TEXT NOT NULL,
-            achieved_at TEXT NOT NULL
-        )",
-        [],
-    )?;
-
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_achievements_type ON achievements(achievement_type)",
         [],
     )?;
 

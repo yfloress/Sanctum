@@ -1,4 +1,4 @@
-// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Sanctum — a privacy-first personal finance and crypto vault.
 // Copyright (C) 2026  Kyronix
 //
 // This program is free software: you can redistribute it and/or modify
@@ -22,9 +22,7 @@
 
 mod crypto;
 mod finance;
-mod habits;
 mod ingestion;
-mod rewards;
 mod settings;
 mod vault;
 
@@ -39,7 +37,6 @@ pub use crate::features::crypto::{
 };
 pub use crate::features::finance::{DashboardData, ExpenseSlice};
 use crate::features::finance::{FinanceError, FinanceService};
-use crate::features::habits::{HabitService, RewardsService};
 use crate::features::ingestion::IngestionService;
 use crate::security_log::{SecurityEvent, log_auth_failure, log_security_event};
 use rusqlite::Connection;
@@ -50,7 +47,6 @@ use std::fs::{self, Permissions};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Component, Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use uuid::Uuid;
 
 // ==================== Error Types ====================
 
@@ -122,70 +118,12 @@ impl From<CryptoError> for ControllerError {
     }
 }
 
-// ==================== Habit Analytics Types ====================
-
-#[derive(Debug, Clone)]
-pub struct WeekdayEfficiency {
-    pub day_name: String,
-    pub day_short: String,
-    /// Completion rate for this weekday (0.0 - 1.0): completions / habit-slots due.
-    pub completion_rate: f32,
-    pub is_best: bool,
-}
-
-#[derive(Debug, Clone)]
-pub struct MonthlyTrendPoint {
-    pub month_name: String,
-    pub avg_per_day: f32,
-    pub x_percent: f32,
-    pub y_percent: f32,
-}
-
-#[derive(Debug, Clone)]
-pub struct CategoryDistributionPoint {
-    pub category: String,
-    pub count: i32,
-}
-
-#[derive(Debug, Clone)]
-pub struct HabitAnalytics {
-    pub weekday_data: Vec<WeekdayEfficiency>,
-    pub monthly_data: Vec<MonthlyTrendPoint>,
-    pub monthly_path: String,
-    pub category_data: Vec<CategoryDistributionPoint>,
-}
-
 // ==================== Security: Field Length Limits ====================
 const MAX_PASSWORD_LENGTH: usize = 128;
 const MIN_PASSWORD_LENGTH: usize = 8;
 const PASSWORD_PASSPHRASE_LENGTH: usize = 16;
 
 // ==================== Helper Functions ====================
-
-/// Validates a UUID string format
-fn validate_uuid(id: &str) -> Result<String, ControllerError> {
-    let trimmed = id.trim();
-    if trimmed.is_empty() {
-        return Err(ControllerError::Validation(
-            "ID cannot be empty".to_string(),
-        ));
-    }
-
-    // Check if it's a valid UUID
-    if Uuid::parse_str(trimmed).is_ok() {
-        return Ok(trimmed.to_string());
-    }
-
-    Err(ControllerError::Validation("Invalid ID format".to_string()))
-}
-
-fn normalize_habit_category(category: &str) -> Option<String> {
-    let normalized = category.trim().to_lowercase();
-    if normalized.is_empty() || normalized.len() > 50 {
-        return None;
-    }
-    Some(normalized)
-}
 
 fn ensure_default_settings(db: &Database) -> Result<(), ControllerError> {
     let defaults = [
@@ -309,8 +247,6 @@ pub struct AppController {
     db: Arc<Mutex<Option<Database>>>,
     pub finance_service: FinanceService,
     crypto_service: CryptoService,
-    pub habit_service: HabitService,
-    pub rewards_service: RewardsService,
     pub ingestion_service: IngestionService,
     app_data_dir: PathBuf,
 }
@@ -321,16 +257,12 @@ impl AppController {
         let db = Arc::new(Mutex::new(None));
         let finance_service = FinanceService::new(db.clone());
         let crypto_service = CryptoService::new(db.clone());
-        let habit_service = HabitService::new(db.clone());
-        let rewards_service = RewardsService::new(db.clone());
         let ingestion_service = IngestionService::new(db.clone());
 
         Self {
             db,
             finance_service,
             crypto_service,
-            habit_service,
-            rewards_service,
             ingestion_service,
             app_data_dir: data_dir,
         }
@@ -816,18 +748,6 @@ impl AppController {
 mod tests {
     use super::*;
     use secrecy::ExposeSecret;
-
-    #[test]
-    fn test_validate_uuid_valid() {
-        assert!(validate_uuid("550e8400-e29b-41d4-a716-446655440000").is_ok());
-    }
-
-    #[test]
-    fn test_validate_uuid_invalid() {
-        assert!(validate_uuid("").is_err());
-        assert!(validate_uuid("   ").is_err());
-        assert!(validate_uuid("not-a-uuid").is_err());
-    }
 
     #[test]
     fn test_validate_password_basic_empty() {

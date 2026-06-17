@@ -1,4 +1,4 @@
-// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Sanctum — a privacy-first personal finance and crypto vault.
 // Copyright (C) 2026  Kyronix
 //
 // This program is free software: you can redistribute it and/or modify
@@ -17,7 +17,7 @@
 
 //! Data ingestion controller methods
 //!
-//! Handles importing transactions and habit logs from various file formats.
+//! Handles importing transactions from various file formats.
 
 use super::{AppController, ControllerError};
 use crate::features::ingestion::{ImportSummary, IngestionError, MAX_FILE_SIZE};

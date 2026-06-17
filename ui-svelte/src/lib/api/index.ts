@@ -1,4 +1,4 @@
-// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Sanctum — a privacy-first personal finance and crypto vault.
 // Copyright (C) 2026  Kyronix
 //
 // This program is free software: you can redistribute it and/or modify
@@ -19,6 +19,5 @@ export * as vault from './vault'
 export * as settings from './settings'
 export * as dashboard from './dashboard'
 export * as finance from './finance'
-export * as habits from './habits'
 export * as crypto from './crypto'
 export * as ingestion from './ingestion'

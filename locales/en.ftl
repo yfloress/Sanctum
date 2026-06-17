@@ -79,7 +79,6 @@ login-version = Sanctum v0.1.0
 nav-dashboard = Dashboard
 nav-finances = Finances
 nav-crypto = Crypto
-nav-habits = Habits
 nav-settings = Settings
 nav-lock = Lock
 nav-collapse = Collapse
@@ -459,126 +458,6 @@ crypto-toast-settings-saved = Settings saved
 crypto-toast-enter-period = Please enter a period ID
 crypto-toast-exported = Exported to {$path}
 
-# ==================== Habits ====================
-# Header & tabs
-habits-title = HABITS
-habits-tab-habits = Habits
-habits-tab-rewards = Rewards
-habits-tab-history = History
-habits-loading = Loading...
-
-# Habits tab
-habits-daily-tracking = Daily Tracking
-habits-new-habit = New Habit
-habits-habit-col = Habit
-habits-no-habits = No habits yet. Create your first habit to start tracking.
-habits-activity-heatmap = Activity Heatmap
-
-# Habit summary stats
-habits-current-streak = Current Streak
-habits-best-streak = Best Streak
-habits-completion = Completion
-habits-completions = Completions
-habits-last-30-days = Last 30 Days
-habits-edit = Edit
-habits-delete = Delete
-
-# Analytics
-habits-habit-radar = Habit Radar
-habits-weekday-efficiency = Weekday Efficiency
-habits-less = Less
-habits-more = More
-habits-prev-year = Prev year
-
-# Month names
-month-january = January
-month-february = February
-month-march = March
-month-april = April
-month-may = May
-month-june = June
-month-july = July
-month-august = August
-month-september = September
-month-october = October
-month-november = November
-month-december = December
-weekday-sun = S
-weekday-mon = M
-weekday-tue = T
-weekday-wed = W
-weekday-thu = T
-weekday-fri = F
-weekday-sat = S
-
-# Rewards tab
-habits-streak-rewards = Streak Rewards
-habits-new-reward = New Reward
-habits-no-rewards = No streak rewards configured.
-habits-consecutive = Consecutive
-habits-accumulative = Accumulative
-habits-progress = Progress
-habits-days-label = days
-habits-unlocked = Unlocked
-habits-goals = Goals
-habits-new-goal = New Goal
-habits-no-goals = No goals set.
-habits-due = Due:
-habits-mark-complete = Mark Complete
-habits-archive = Archive
-
-# History tab
-habits-no-achievements = No achievements yet.
-
-# Habit modal
-habits-edit-habit = Edit Habit
-habits-new-habit-modal = New Habit
-habits-name = Name
-habits-habit-name-placeholder = Habit name
-habits-description = Description
-habits-desc-placeholder = Optional description
-habits-color = Color
-habits-category = Category
-habits-category-placeholder = e.g. health, learning
-habits-cancel = Cancel
-habits-update = Update
-habits-create = Create
-
-# Reward modal
-habits-edit-reward = Edit Streak Reward
-habits-new-reward-modal = New Streak Reward
-habits-habit = Habit
-habits-consecutive-days = Consecutive days (vs Accumulative)
-habits-target-days = Target Days
-habits-target-days-placeholder = e.g., 7, 30, 100
-habits-target-total = Target Total (optional)
-habits-target-total-placeholder = Alternative count metric
-
-# Goal modal
-habits-edit-goal = Edit Goal
-habits-new-goal-modal = New Goal
-habits-goal-name = Goal Name
-habits-goal-name-placeholder = e.g., Complete certification
-habits-goal-desc-placeholder = Optional details
-habits-reward-text = Reward Text
-habits-reward-text-placeholder = What you'll reward yourself with
-habits-deadline = Deadline (optional)
-
-# Toast messages
-habits-toast-habit-created = Habit created
-habits-toast-habit-updated = Habit updated
-habits-toast-habit-deleted = Habit deleted
-habits-toast-reward-created = Reward created
-habits-toast-reward-updated = Reward updated
-habits-toast-reward-deleted = Reward deleted
-habits-toast-goal-created = Goal created
-habits-toast-goal-updated = Goal updated
-habits-toast-goal-deleted = Goal deleted
-habits-toast-goal-completed = Goal completed!
-habits-toast-goal-archived = Goal archived
-habits-toast-fill-required = Please fill required fields
-habits-toast-enter-goal-name = Please enter a goal name
-
 # ==================== Settings ====================
 settings-title = Settings
 
@@ -677,12 +556,6 @@ modal-edit-transaction-title = Edit Transaction
 modal-transfer-title = Transfer Funds
 modal-add-wallet-title = Add Wallet
 modal-edit-wallet-title = Edit Wallet
-modal-add-habit-title = Add Habit
-modal-edit-habit-title = Edit Habit
-modal-add-goal-title = Add Goal
-modal-edit-goal-title = Edit Goal
-modal-add-reward-title = Add Streak Reward
-modal-edit-reward-title = Edit Streak Reward
 
 # Confirmation dialogs
 confirm-delete-title = Confirm Delete
@@ -693,7 +566,6 @@ confirm-delete-account-tx-count = This will also remove {$count} transaction(s).
 confirm-delete-category = Are you sure you want to delete this category?
 confirm-delete-transaction = Are you sure you want to delete this transaction?
 confirm-delete-wallet = Are you sure you want to delete this wallet?
-confirm-delete-habit = Are you sure you want to delete this habit?
 
 # ==================== Notifications ====================
 notify-success = Success
@@ -882,10 +754,6 @@ crypto-loading-portfolio = Loading portfolio...
 crypto-syncing-prices = Syncing prices...
 crypto-syncing-wait = This may take a few seconds
 
-# ==================== Habits Extended ====================
-habits-rewards = REWARDS
-habits-history = HISTORY
-
 # ==================== Settings Extended ====================
 settings-configure-experience = Configure your Sanctum experience
 settings-proxy-tip = Tip: socks5h:// routes DNS through the proxy for better privacy.
@@ -916,21 +784,6 @@ crypto-cost-label = COST
 crypto-no-trend = No trend data yet
 crypto-sync-daily = Sync prices daily to build history
 
-# Habit Heatmap
-heatmap-less = Less
-heatmap-more = More
-
-# Habits Tab
-habits-selected-hint = SELECTED HABIT · Click a habit above to view stats
-
-# History Tab
-history-total-achievements = TOTAL ACHIEVEMENTS
-
-# Streak Rewards
-rewards-ready-claim = Ready to claim
-rewards-next = Next
-rewards-all-unlocked = All milestones unlocked!
-
 # Wallet Detail
 wallet-no-holdings = No holdings in this wallet
 
@@ -943,7 +796,6 @@ icon-wallet-icons = Wallet Icons
 form-search-coin = Search coin...
 form-date-format = YYYY-MM-DD
 form-all = ALL
-form-habit = HABIT
 
 # ==================== Modals ====================
 # Add Account
@@ -969,11 +821,6 @@ modal-new-wallet = NEW WALLET
 modal-wallet-type = WALLET TYPE
 modal-create-wallet = CREATE WALLET
 
-# Add Habit
-modal-category = CATEGORY
-modal-color = COLOR
-modal-habit-name-placeholder = e.g. Read 10 pages
-modal-habit-description-placeholder = Why this habit matters
 
 # Configure Categories
 modal-category-settings = CATEGORY SETTINGS
@@ -997,17 +844,6 @@ modal-account = ACCOUNT
 modal-expense = EXPENSE
 modal-income = INCOME
 
-# Add Habit
-modal-checkpoints = CHECKPOINTS
-modal-checkpoint-desc = Checkpoint description...
-
-# Add Reward
-modal-consecutive = CONSECUTIVE
-modal-accumulative = ACCUMULATIVE
-modal-type = TYPE
-modal-milestones = MILESTONES
-modal-reward-placeholder = Reward...
-
 # Configure Ticker
 modal-coin-catalog = COIN CATALOG
 modal-max-coins = Max 50 active coins for price updates.
@@ -1025,10 +861,6 @@ sidebar-title = SANCTUM
 # Crypto Widgets
 crypto-holdings-small = Holdings
 crypto-price-small = Price
-
-# Streak Rewards (with arguments)
-rewards-ready-claim-with = Ready to claim: { $reward }
-rewards-next-with = Next: { $reward }
 
 # ==================== Crypto Transaction Modal ====================
 modal-from-asset = FROM ASSET
@@ -1105,28 +937,6 @@ tx-type-sell = SELL
 tx-type-swap = SWAP
 tx-type-transfer-in = TRANSFER IN
 tx-type-transfer-out = TRANSFER OUT
-
-# ==================== Goal Modal ====================
-modal-new-goal = NEW GOAL
-modal-edit-goal = EDIT GOAL
-modal-goal-name = GOAL NAME
-modal-goal-name-placeholder = e.g. Run a marathon
-modal-description-optional = DESCRIPTION (OPTIONAL)
-modal-goal-description-placeholder = Why this goal matters...
-modal-reward = REWARD
-modal-reward-placeholder-goal = e.g. New sneakers
-modal-deadline-optional = DEADLINE (OPTIONAL)
-modal-create-goal = CREATE GOAL
-
-# ==================== Reward Modal ====================
-modal-new-streak-reward = NEW STREAK REWARD
-modal-edit-reward = EDIT REWARD
-modal-consecutive-desc = Days must be consecutive (resets if missed)
-modal-accumulative-desc = Accumulate days over time
-modal-target-days = TARGET DAYS
-modal-of-total-days = OF TOTAL DAYS
-modal-days-label = days
-modal-create-reward = CREATE REWARD
 
 # ==================== Configure Ticker Extended ====================
 modal-add-custom-coin = ADD CUSTOM COIN
@@ -1222,33 +1032,8 @@ finances-create-account = Create an account to manage your funds
 # ==================== Crypto Extended (Buttons) ====================
 crypto-add-wallet-button = + NEW WALLET
 
-# ==================== Habits Extended (Summary Labels) ====================
-habits-current-streak-label = CURRENT STREAK
-habits-best-streak-label = BEST STREAK (365D)
-habits-completion-rate-label = COMPLETION RATE
-habits-completions-label = COMPLETIONS (30D)
-
-# ==================== Rewards Extended (Sections/Buttons) ====================
-rewards-streak-rewards-section = STREAK REWARDS
-rewards-add-reward-button = + REWARD
-rewards-no-streak-rewards = No streak rewards yet
-rewards-link-habit-desc = Link a habit and set milestone rewards to stay motivated
-rewards-goals-section = GOALS
-rewards-add-goal-button = + GOAL
-rewards-no-goals-set = No goals set
-rewards-create-goal-desc = Create a goal with checkpoints to track your progress
-
-# ==================== Rewards Progress ====================
-rewards-days-to-go = days to go
-
-# ==================== History Tab ====================
-history-achievements-section = ACHIEVEMENTS
-history-no-achievements = No achievements yet
-history-complete-to-earn = Complete goals to earn trophies
-
 # ==================== Data Import ====================
 import-title = Import Data
-import-description = Import transactions and habit logs from external files
 import-select-file = SELECT FILE
 import-supported-formats = Supported formats: JSON, CSV, TXT
 import-max-size = Maximum file size: 10MB
@@ -1284,7 +1069,6 @@ import-error-unsupported-format = Unsupported file format. Use JSON, CSV, or TXT
 import-error-invalid-json = Invalid JSON format
 import-error-no-data = No data found in file
 import-error-account-not-found = Account not found: { $name }
-import-error-habit-not-found = Habit not found: { $name }
 import-error-category-not-found = Category not found: { $name }
 import-error-currency-mismatch = Currency mismatch for account { $account }
 import-error-duplicate = Duplicate entry skipped
@@ -1296,8 +1080,6 @@ import-error-wallet-not-found = Wallet not found: { $name }
 import-error-crypto-not-found = Crypto asset not found in catalog: { $symbol }
 import-error-insufficient-crypto-balance = Insufficient { $symbol } balance in { $wallet }: have { $available }, need { $required }
 import-skipped-duplicate-transaction = Duplicate transaction (same date/account/amount/type/description)
-import-skipped-habit-not-completed = Habit not completed (completed=false)
-import-skipped-habit-already-logged = Habit already logged for this date
 import-skipped-duplicate-crypto = Duplicate crypto transaction (same date/wallet/coin/type/amount)
 import-skipped-crypto-not-found = Crypto asset not found in catalog (row ignored)
 
@@ -1309,12 +1091,10 @@ import-preview-change-transaction = Transaction
 import-preview-change-income = Income
 import-preview-change-expense = Expense
 import-preview-change-transfer = Transfer
-import-preview-change-habit = Habit Log
 import-preview-change-crypto = Crypto Transaction
 import-preview-changes = PREVIEW CHANGES
 
 settings-import = DATA IMPORT
-settings-import-desc = Import transactions and habits from files
 
 # ==================== Exchange CSV Import ====================
 import-exchange-title = Exchange Import

@@ -1,4 +1,4 @@
-// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Sanctum — a privacy-first personal finance and crypto vault.
 // Copyright (C) 2026  Kyronix
 //
 // This program is free software: you can redistribute it and/or modify
@@ -18,10 +18,7 @@
 //! CSV parser for spreadsheet imports
 
 use super::{ImportParser, ParseResult};
-use crate::features::ingestion::types::{
-    ImportCryptoTransaction, ImportHabitLog, ImportTransaction, RowError,
-};
-use crate::features::ingestion::validation::parse_bool;
+use crate::features::ingestion::types::{ImportCryptoTransaction, ImportTransaction, RowError};
 use csv::{ReaderBuilder, StringRecord, Trim};
 use std::collections::HashMap;
 
@@ -230,107 +227,6 @@ impl ImportParser for CsvParser {
                     category: category_value.to_string(),
                     description: description.to_string(),
                     transfer_to_account,
-                },
-            ));
-        }
-
-        Ok(result)
-    }
-
-    fn parse_habit_logs(&self, content: &str) -> Result<ParseResult<ImportHabitLog>, RowError> {
-        let mut reader = ReaderBuilder::new()
-            .trim(Trim::All)
-            .flexible(true)
-            .from_reader(content.as_bytes());
-        let headers = reader
-            .headers()
-            .map_err(|e| RowError::new(1, None, format!("Invalid CSV header: {}", e)))?
-            .clone();
-        let columns = Self::parse_header(&headers);
-
-        // Validate required columns exist
-        let required = ["habit", "date", "completed"];
-        for col in required {
-            if !columns.contains_key(col) {
-                return Err(RowError::new(
-                    1,
-                    None,
-                    format!(
-                        "Missing required column: '{}'. Expected: {}",
-                        col,
-                        required.join(", ")
-                    ),
-                ));
-            }
-        }
-
-        let mut result = ParseResult::default();
-
-        for (idx, record) in reader.records().enumerate() {
-            let record = match record {
-                Ok(record) => record,
-                Err(err) => {
-                    let line = err.position().map(|p| p.line()).unwrap_or((idx + 2) as u64);
-                    result.errors.push(RowError::new(
-                        line as usize,
-                        None,
-                        format!("Invalid CSV record: {}", err),
-                    ));
-                    continue;
-                }
-            };
-
-            let line_number = record
-                .position()
-                .map(|p| p.line())
-                .unwrap_or((idx + 2) as u64) as usize;
-            let raw_data = record.iter().collect::<Vec<_>>().join(",");
-
-            // Skip empty lines
-            if record.iter().all(|field| field.trim().is_empty()) {
-                continue;
-            }
-
-            let habit = match Self::get_field(&record, &columns, "habit") {
-                Some(value) if !value.is_empty() => value,
-                _ => {
-                    result.errors.push(
-                        RowError::new(line_number, Some("habit"), "Missing required field: habit")
-                            .with_raw_data(raw_data),
-                    );
-                    continue;
-                }
-            };
-
-            let date = match Self::get_field(&record, &columns, "date") {
-                Some(value) if !value.is_empty() => value,
-                _ => {
-                    result.errors.push(
-                        RowError::new(line_number, Some("date"), "Missing required field: date")
-                            .with_raw_data(raw_data),
-                    );
-                    continue;
-                }
-            };
-
-            let completed_str = Self::get_field(&record, &columns, "completed").unwrap_or("false");
-
-            let completed = match parse_bool(completed_str) {
-                Ok(value) => value,
-                Err(e) => {
-                    result.errors.push(
-                        RowError::new(line_number, Some("completed"), e).with_raw_data(raw_data),
-                    );
-                    continue;
-                }
-            };
-
-            result.items.push((
-                line_number,
-                ImportHabitLog {
-                    habit: habit.to_string(),
-                    date: date.to_string(),
-                    completed,
                 },
             ));
         }
@@ -583,23 +479,6 @@ mod tests {
             parsed.items[1].1.transfer_to_account,
             Some("Savings".to_string())
         );
-    }
-
-    #[test]
-    fn test_parse_csv_habit_logs() {
-        let csv = "habit,date,completed\n\
-                   Meditate,2024-01-15,true\n\
-                   Exercise,2024-01-15,false";
-
-        let parser = CsvParser;
-        let result = parser.parse_habit_logs(csv);
-        assert!(result.is_ok());
-
-        let parsed = result.unwrap();
-        assert!(parsed.errors.is_empty());
-        assert_eq!(parsed.items.len(), 2);
-        assert!(parsed.items[0].1.completed);
-        assert!(!parsed.items[1].1.completed);
     }
 
     #[test]

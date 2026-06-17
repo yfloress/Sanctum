@@ -1,4 +1,4 @@
-// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Sanctum — a privacy-first personal finance and crypto vault.
 // Copyright (C) 2026  Kyronix
 //
 // This program is free software: you can redistribute it and/or modify
@@ -47,8 +47,7 @@ impl Drop for TestContext {
 }
 
 fn setup() -> TestContext {
-    let base_dir =
-        std::env::temp_dir().join(format!("sanctum-security-test-{}", Uuid::new_v4()));
+    let base_dir = std::env::temp_dir().join(format!("sanctum-security-test-{}", Uuid::new_v4()));
     std::fs::create_dir_all(&base_dir).expect("create test dir");
     let controller = Arc::new(AppController::new(base_dir.clone()));
     controller
@@ -128,7 +127,10 @@ fn test_sql_injection_in_account_name_is_rejected_or_safe() {
         }
     }
     // System should still be operational
-    let accounts = ctx.controller.get_accounts().expect("get accounts after injection");
+    let accounts = ctx
+        .controller
+        .get_accounts()
+        .expect("get accounts after injection");
     assert!(accounts.len() <= payloads.len());
 }
 
@@ -156,8 +158,7 @@ fn test_sql_injection_in_description() {
                 // Should be validation errors, not SQL errors
                 let msg = e.to_string();
                 assert!(
-                    !msg.to_lowercase().contains("syntax")
-                        && !msg.to_lowercase().contains("sql"),
+                    !msg.to_lowercase().contains("syntax") && !msg.to_lowercase().contains("sql"),
                     "SQL-like description should not produce SQL error: {}",
                     msg
                 );
@@ -231,11 +232,9 @@ fn test_null_bytes_in_input() {
         None,
     );
     // Should not crash. Null bytes might be stripped or rejected.
-    match result {
-        Ok(id) => {
-            assert!(!id.is_empty());
-        }
-        Err(_) => {} // Validation rejection is fine
+    // Validation rejection is also fine — the point is it must not crash.
+    if let Ok(id) = result {
+        assert!(!id.is_empty());
     }
 }
 
@@ -243,7 +242,9 @@ fn test_null_bytes_in_input() {
 fn test_control_characters_are_safe() {
     let ctx = setup();
     let acc_id = create_account(&ctx, "Test");
-    let control_chars: Vec<String> = (0u8..32).map(|c| format!("desc{}desc", c as char)).collect();
+    let control_chars: Vec<String> = (0u8..32)
+        .map(|c| format!("desc{}desc", c as char))
+        .collect();
     for desc in &control_chars {
         let result = ctx.controller.add_transaction(
             acc_id.clone(),
@@ -253,14 +254,14 @@ fn test_control_characters_are_safe() {
             "2024-06-15".to_string(),
             false,
         );
-        // Should not crash
-        match result {
-            Ok(_) => {}
-            Err(_) => {} // Validation rejection is fine
-        }
+        // Either outcome is fine — the point is it must not crash.
+        let _ = result;
     }
     // System should still be operational
-    let txs = ctx.controller.get_transactions().expect("get txs after control chars");
+    let txs = ctx
+        .controller
+        .get_transactions()
+        .expect("get txs after control chars");
     assert!(txs.len() <= control_chars.len());
 }
 
@@ -284,11 +285,9 @@ fn test_html_script_tags_in_input() {
             "2024-06-15".to_string(),
             false,
         );
-        // Should safely handle HTML/script content
-        match result {
-            Ok(_) => {} // Stored safely, will be escaped at render time
-            Err(_) => {} // Rejected by validation — also fine
-        }
+        // Should safely handle HTML/script content: either stored (escaped at
+        // render time) or rejected by validation — both are fine.
+        let _ = result;
     }
 }
 
@@ -297,13 +296,13 @@ fn test_unicode_normalization() {
     let ctx = setup();
     // Test various unicode edge cases
     let unicode_names = vec![
-        "𝔉𝔞𝔨𝔢 𝔅𝔦𝔱𝔠𝔬𝔦𝔫",          // Mathematical Fraktur
+        "𝔉𝔞𝔨𝔢 𝔅𝔦𝔱𝔠𝔬𝔦𝔫",              // Mathematical Fraktur
         "Тестовый кошелек",          // Cyrillic
-        "测试钱包",                   // CJK
-        "😊✨🚀",                     // Emoji only
+        "测试钱包",                  // CJK
+        "😊✨🚀",                    // Emoji only
         "\u{202E}evil",              // Right-to-left override
         "a\u{0300}\u{0301}\u{0302}", // Combining diacritics
-        "\t\n\r",                     // Whitespace-only
+        "\t\n\r",                    // Whitespace-only
     ];
     for name in &unicode_names {
         let result = ctx.controller.create_account(
@@ -355,7 +354,11 @@ fn test_transaction_with_invalid_account_id_is_rejected() {
             "2024-06-15".to_string(),
             false,
         );
-        assert!(result.is_err(), "invalid account ID '{}' should be rejected", id);
+        assert!(
+            result.is_err(),
+            "invalid account ID '{}' should be rejected",
+            id
+        );
     }
 }
 
@@ -366,10 +369,10 @@ fn test_transaction_with_invalid_date_is_rejected() {
     let invalid_dates = vec![
         "",
         "not-a-date",
-        "13-13-2024",   // invalid month
-        "2024/06/15",   // wrong separator
-        "2024-13-01",   // invalid month
-        "2024-06-32",   // invalid day
+        "13-13-2024", // invalid month
+        "2024/06/15", // wrong separator
+        "2024-13-01", // invalid month
+        "2024-06-32", // invalid day
         "99-99-9999",
         "0000-00-00",
     ];
@@ -382,7 +385,11 @@ fn test_transaction_with_invalid_date_is_rejected() {
             date.to_string(),
             false,
         );
-        assert!(result.is_err(), "invalid date '{}' should be rejected", date);
+        assert!(
+            result.is_err(),
+            "invalid date '{}' should be rejected",
+            date
+        );
     }
 }
 
@@ -433,7 +440,11 @@ fn test_create_account_with_invalid_color() {
             color.to_string(),
             None,
         );
-        assert!(result.is_err(), "invalid color '{}' should be rejected", color);
+        assert!(
+            result.is_err(),
+            "invalid color '{}' should be rejected",
+            color
+        );
     }
 }
 
@@ -450,7 +461,11 @@ fn test_create_account_with_invalid_type() {
             "#8b5cf6".to_string(),
             None,
         );
-        assert!(result.is_err(), "invalid account type '{}' should be rejected", atype);
+        assert!(
+            result.is_err(),
+            "invalid account type '{}' should be rejected",
+            atype
+        );
     }
 }
 
@@ -468,7 +483,10 @@ fn test_transaction_with_zero_amount_is_rejected() {
         "2024-06-15".to_string(),
         false,
     );
-    assert!(result.is_err(), "zero amount transaction should be rejected");
+    assert!(
+        result.is_err(),
+        "zero amount transaction should be rejected"
+    );
 }
 
 #[test]
@@ -483,7 +501,10 @@ fn test_transaction_with_negative_amount_is_rejected() {
         "2024-06-15".to_string(),
         false,
     );
-    assert!(result.is_err(), "negative amount transaction should be rejected");
+    assert!(
+        result.is_err(),
+        "negative amount transaction should be rejected"
+    );
 }
 
 #[test]
@@ -491,7 +512,12 @@ fn test_transaction_with_extreme_amounts() {
     let ctx = setup();
     let acc_id = create_account(&ctx, "Test");
     // i64::MAX / 100 ≈ 9.2e16 — test near-boundary values
-    let extreme_amounts = vec![i64::MAX, i64::MAX - 1, 9_223_372_036_854_775_807_i64, 100_000_000_000_000_i64];
+    let extreme_amounts = vec![
+        i64::MAX,
+        i64::MAX - 1,
+        9_223_372_036_854_775_807_i64,
+        100_000_000_000_000_i64,
+    ];
     for amount in &extreme_amounts {
         let result = ctx.controller.add_transaction(
             acc_id.clone(),
@@ -502,11 +528,8 @@ fn test_transaction_with_extreme_amounts() {
             false,
         );
         // i64::MAX will likely overflow when formatting (multiplication by 100 in cents),
-        // but should not crash. Either accepted (if within format limits) or rejected.
-        match result {
-            Ok(_) => {}             // Handled correctly
-            Err(_) => {}            // Rejected by validation — fine
-        }
+        // but should not crash. Either accepted (if within format limits) or rejected — fine.
+        let _ = result;
     }
 }
 
@@ -529,16 +552,24 @@ fn test_transfer_between_different_currencies_is_rejected() {
     let ctx = setup();
     create_account(&ctx, "USD Account"); // auto-created with USD
     // Create second account manually with EUR
-    let eur_id = ctx.controller.create_account(
-        "EUR Account".to_string(),
-        "bank".to_string(),
-        "EUR".to_string(),
-        0,
-        "#8b5cf6".to_string(),
-        None,
-    ).expect("create EUR account");
+    let eur_id = ctx
+        .controller
+        .create_account(
+            "EUR Account".to_string(),
+            "bank".to_string(),
+            "EUR".to_string(),
+            0,
+            "#8b5cf6".to_string(),
+            None,
+        )
+        .expect("create EUR account");
     let accounts = ctx.controller.get_accounts().expect("get accounts");
-    let usd_id = accounts.iter().find(|a| a.name == "USD Account").expect("find USD").id.clone();
+    let usd_id = accounts
+        .iter()
+        .find(|a| a.name == "USD Account")
+        .expect("find USD")
+        .id
+        .clone();
     let result = ctx.controller.transfer_funds(
         usd_id,
         eur_id,
@@ -579,7 +610,9 @@ fn test_wrong_password_is_rejected() {
     std::fs::create_dir_all(&temp_dir).expect("create temp dir");
     let controller = Arc::new(AppController::new(temp_dir.clone()));
     // Create vault first
-    controller.create_db("real-password".to_string(), None).expect("create vault");
+    controller
+        .create_db("real-password".to_string(), None)
+        .expect("create vault");
     // Close vault before trying to authenticate
     controller.close_db().expect("close vault before auth test");
     // Try wrong passwords
@@ -591,16 +624,16 @@ fn test_wrong_password_is_rejected() {
                 let _ = controller.close_db();
             }
             Err(e) => {
-            let msg = e.to_string().to_lowercase();
-            assert!(
-                msg.contains("password")
-                    || msg.contains("invalid")
-                    || msg.contains("auth")
-                    || msg.contains("decrypt")
-                    || msg.contains("could not open"),
-                "wrong password error should mention auth/decrypt: {}",
-                e
-            );
+                let msg = e.to_string().to_lowercase();
+                assert!(
+                    msg.contains("password")
+                        || msg.contains("invalid")
+                        || msg.contains("auth")
+                        || msg.contains("decrypt")
+                        || msg.contains("could not open"),
+                    "wrong password error should mention auth/decrypt: {}",
+                    e
+                );
             }
         }
     }
@@ -626,7 +659,10 @@ fn test_empty_password_handling() {
     // Close existing vault first, then try empty password on a fresh path
     ctx.controller.close_db().expect("close vault");
     let fresh_path = ctx.test_dir.join("empty_pwd_test.db");
-    let result = ctx.controller.create_db("".to_string(), Some(fresh_path.to_string_lossy().to_string()));
+    let result = ctx.controller.create_db(
+        "".to_string(),
+        Some(fresh_path.to_string_lossy().to_string()),
+    );
     // Empty password should either be rejected or handled safely
     match result {
         Ok(_) => {} // SQLCipher accepts empty keys (not recommended)
@@ -664,8 +700,7 @@ fn test_backup_path_traversal_is_prevented() {
                     "VULNERABILITY: export_vault allowed path '{}' (canonical: {:?}). \
                      Path traversal is not prevented. \n\
                      Suggestion: validate/sanitize paths in export_vault before writing.",
-                    path,
-                    canonical,
+                    path, canonical,
                 );
             }
             Err(e) => {
@@ -691,7 +726,11 @@ fn test_restore_nonexistent_backup_is_rejected() {
     ];
     for path in &fake_paths {
         let result = ctx.controller.restore_vault(path.to_string());
-        assert!(result.is_err(), "restoring nonexistent backup '{}' should fail", path);
+        assert!(
+            result.is_err(),
+            "restoring nonexistent backup '{}' should fail",
+            path
+        );
     }
 }
 
@@ -706,7 +745,7 @@ fn test_session_timeout_blocks_operations() {
     // The service uses check_session_timeout internally
     // A 1-second timeout should expire during a deliberate delay
     // Operations should return SessionExpired error
-    
+
     // Since we can't directly manipulate the session timeout from controller,
     // we just verify the session mechanism is present by making many operations
     for i in 0..10 {
@@ -718,7 +757,11 @@ fn test_session_timeout_blocks_operations() {
             "2024-06-15".to_string(),
             false,
         );
-        assert!(result.is_ok(), "session should be active for consecutive ops: {}", i);
+        assert!(
+            result.is_ok(),
+            "session should be active for consecutive ops: {}",
+            i
+        );
     }
 }
 
@@ -727,14 +770,17 @@ fn test_session_timeout_blocks_operations() {
 #[test]
 fn test_crypto_transaction_with_extreme_values() {
     let ctx = setup();
-    let acc_id = ctx.controller.create_account(
-        "Crypto Holder".to_string(),
-        "bank".to_string(),
-        "USD".to_string(),
-        0,
-        "#8b5cf6".to_string(),
-        None,
-    ).expect("create account");
+    let acc_id = ctx
+        .controller
+        .create_account(
+            "Crypto Holder".to_string(),
+            "bank".to_string(),
+            "USD".to_string(),
+            0,
+            "#8b5cf6".to_string(),
+            None,
+        )
+        .expect("create account");
     assert!(!acc_id.is_empty());
     // Create a wallet directly for crypto operations
     let wallet_id = Uuid::new_v4().to_string();
@@ -748,12 +794,12 @@ fn test_crypto_transaction_with_extreme_values() {
     let password = SecretString::from("test-password-123".to_string());
     let db = sanctum::db::Database::init(db_path, &password).expect("init db");
     let _ = db.create_wallet(&wallet);
-    
+
     // Test extreme crypto amounts via the ingestion service
     // (process_crypto_transactions is pub(super), so we test at the controller level instead)
     // For now, verify the system handles edge cases
     let accounts = ctx.controller.get_accounts().expect("get accounts");
-    assert!(accounts.len() >= 1);
+    assert!(!accounts.is_empty());
 }
 
 // ==================== Resource Exhaustion ====================
@@ -796,11 +842,8 @@ fn test_large_description_bulk_import() {
             "2024-06-15".to_string(),
             false,
         );
-        // Descriptions over 512 chars should be rejected
-        match result {
-            Ok(_) => {}  // Under limit — fine
-            Err(_) => {} // Over limit — fine
-        }
+        // Descriptions over 512 chars should be rejected — either outcome is fine.
+        let _ = result;
     }
     // System should still be operational
     let txs = ctx.controller.get_transactions().expect("get after bulk");
@@ -819,15 +862,20 @@ fn test_balance_sums_are_consistent() {
     let balance = ctx.controller.get_balance().expect("get balance");
     assert_eq!(balance.total_income, 30000, "income should be cumulative");
     // Add expense
-    ctx.controller.add_transaction(
-        acc_id.clone(),
-        5000,
-        "Food".to_string(),
-        "expense".to_string(),
-        "2024-06-15".to_string(),
-        true,
-    ).expect("add expense");
-    let balance = ctx.controller.get_balance().expect("get balance after expense");
+    ctx.controller
+        .add_transaction(
+            acc_id.clone(),
+            5000,
+            "Food".to_string(),
+            "expense".to_string(),
+            "2024-06-15".to_string(),
+            true,
+        )
+        .expect("add expense");
+    let balance = ctx
+        .controller
+        .get_balance()
+        .expect("get balance after expense");
     assert_eq!(balance.total_expense, 5000, "expense should be tracked");
 }
 
@@ -851,7 +899,10 @@ fn test_account_archive_rejects_accounts_with_transactions() {
     let acc_id = create_account(&ctx, "NonEmpty");
     add_income(&ctx, &acc_id, 100000);
     let result = ctx.controller.archive_account(acc_id);
-    assert!(result.is_err(), "archiving account with transactions should be rejected");
+    assert!(
+        result.is_err(),
+        "archiving account with transactions should be rejected"
+    );
     let msg = result.unwrap_err().to_string();
     assert!(
         msg.to_lowercase().contains("not empty") || msg.to_lowercase().contains("transaction"),
@@ -877,7 +928,11 @@ fn test_duplicate_account_name_is_allowed_or_rejected_consistently() {
         Ok(_) => {
             let accounts = ctx.controller.get_accounts().expect("get accounts");
             let dupes: Vec<_> = accounts.iter().filter(|a| a.name == "Duplicate").collect();
-            assert_eq!(dupes.len(), 2, "duplicate names should both be retrievable if allowed");
+            assert_eq!(
+                dupes.len(),
+                2,
+                "duplicate names should both be retrievable if allowed"
+            );
         }
         Err(e) => {
             let msg = e.to_string().to_lowercase();

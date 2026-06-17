@@ -1,4 +1,4 @@
-// Sanctum — a privacy-first personal finance, crypto, and habits vault.
+// Sanctum — a privacy-first personal finance and crypto vault.
 // Copyright (C) 2026  Kyronix
 //
 // This program is free software: you can redistribute it and/or modify
@@ -25,7 +25,6 @@ pub mod charts;
 pub mod crypto;
 pub mod dashboard;
 pub mod finance;
-pub mod habits;
 pub mod ingestion;
 pub mod settings;
 pub mod vault;

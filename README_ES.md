@@ -55,8 +55,8 @@
 > [!CAUTION]
 > **NO ESTÁ LISTO PARA USAR — EN DESARROLLO ACTIVO.**
 
-**Sanctum** es una bóveda orientada a la privacidad para tus finanzas, crypto y
-hábitos — en **escritorio y Android**. Todo funciona sobre hardware que controlas
+**Sanctum** es una bóveda orientada a la privacidad para tus finanzas y crypto
+— en **escritorio y Android**. Todo funciona sobre hardware que controlas
 tú: almacenamiento cifrado, cero telemetría, sin cuentas, sin nube corporativa. Tú
 controlas las llaves, la base de datos y los respaldos — nadie más.
 
@@ -83,9 +83,6 @@ soporte multi-divisa (USD, CLP, EUR y más).
   internacionales, aplicando el método de costo correcto según las reglas locales
   (FIFO, CPP y más). Ver **[CRYPTO_TAX.md](docs/CRYPTO_TAX.md)** para entender la
   lógica y los fundamentos legales detrás.
-
-### Hábitos
-Registros diarios, heatmaps, rachas y recompensas/objetivos para mantener el ritmo.
 
 ### Confiabilidad
 - Respaldos cifrados (SQLCipher) con seguridad de restauración y rollback.
