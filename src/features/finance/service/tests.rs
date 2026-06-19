@@ -19,7 +19,7 @@ use super::*;
 use crate::db::Database;
 use secrecy::SecretString;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 
 struct TestServiceHarness {
@@ -39,7 +39,7 @@ fn new_test_service() -> TestServiceHarness {
     let db_path = base_dir.join("vault.db");
     let password = SecretString::from("test-password-123".to_string());
     let db = Database::init(db_path, &password).expect("init test database");
-    let service = FinanceService::new(Arc::new(Mutex::new(Some(db))));
+    let service = FinanceService::new(Arc::new(RwLock::new(Some(db))));
     TestServiceHarness {
         service,
         test_dir: base_dir,

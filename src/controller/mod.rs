@@ -46,7 +46,7 @@ use std::fs::{self, Permissions};
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Component, Path, PathBuf};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 
 // ==================== Error Types ====================
 
@@ -244,7 +244,7 @@ struct AppConfig {
 }
 
 pub struct AppController {
-    db: Arc<Mutex<Option<Database>>>,
+    db: Arc<RwLock<Option<Database>>>,
     pub finance_service: FinanceService,
     crypto_service: CryptoService,
     pub ingestion_service: IngestionService,
@@ -254,7 +254,7 @@ pub struct AppController {
 impl AppController {
     pub fn new(data_dir: PathBuf) -> Self {
         // Initialize with None as vault is locked
-        let db = Arc::new(Mutex::new(None));
+        let db = Arc::new(RwLock::new(None));
         let finance_service = FinanceService::new(db.clone());
         let crypto_service = CryptoService::new(db.clone());
         let ingestion_service = IngestionService::new(db.clone());
@@ -519,7 +519,7 @@ impl AppController {
 
     /// Helper to ensure no connection is currently open
     fn ensure_no_connection(&self) -> Result<(), ControllerError> {
-        let db_lock = self.db.lock().map_err(|_| ControllerError::Internal)?;
+        let db_lock = self.db.read().map_err(|_| ControllerError::Internal)?;
 
         if db_lock.is_some() {
             return Err(ControllerError::VaultAlreadyOpen);
@@ -533,7 +533,7 @@ impl AppController {
     where
         F: FnOnce(&Database) -> Result<T, ControllerError>,
     {
-        let db_lock = self.db.lock().map_err(|_| ControllerError::Internal)?;
+        let db_lock = self.db.read().map_err(|_| ControllerError::Internal)?;
         let db = db_lock.as_ref().ok_or(ControllerError::NoVaultOpen)?;
 
         // Only validate expiration; do not extend activity timestamp
@@ -549,7 +549,7 @@ impl AppController {
 
     /// Returns true if the database is initialized, false otherwise
     pub fn is_db_initialized(&self) -> bool {
-        self.db.lock().map(|guard| guard.is_some()).unwrap_or(false)
+        self.db.read().map(|guard| guard.is_some()).unwrap_or(false)
     }
 
     /// Creates a new vault at the specified path
@@ -591,7 +591,7 @@ impl AppController {
 
         // Store reference
         {
-            let mut db_lock = self.db.lock().map_err(|_| ControllerError::Internal)?;
+            let mut db_lock = self.db.write().map_err(|_| ControllerError::Internal)?;
             *db_lock = Some(db);
         }
 
@@ -653,7 +653,7 @@ impl AppController {
 
                 // Store reference
                 {
-                    let mut db_lock = self.db.lock().map_err(|_| ControllerError::Internal)?;
+                    let mut db_lock = self.db.write().map_err(|_| ControllerError::Internal)?;
                     *db_lock = Some(db);
                 }
 
@@ -675,7 +675,7 @@ impl AppController {
 
     /// Closes the current vault
     pub fn close_db(&self) -> Result<String, ControllerError> {
-        let mut db_lock = self.db.lock().map_err(|_| ControllerError::Internal)?;
+        let mut db_lock = self.db.write().map_err(|_| ControllerError::Internal)?;
 
         if db_lock.is_none() {
             return Err(ControllerError::NoVaultOpen);
@@ -724,7 +724,7 @@ impl AppController {
     pub fn get_db_path(&self) -> Result<String, ControllerError> {
         // If there's an active connection, use that path
         {
-            let db_lock = self.db.lock().map_err(|_| ControllerError::Internal)?;
+            let db_lock = self.db.read().map_err(|_| ControllerError::Internal)?;
             if let Some(db) = db_lock.as_ref() {
                 return Ok(db.path().to_string_lossy().to_string());
             }

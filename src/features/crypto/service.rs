@@ -25,7 +25,7 @@ use crate::models::{AggregatedAsset, CryptoAsset, CryptoWallet};
 use crate::security_log::{SecurityEvent, log_security_event};
 use chrono::Local;
 use std::collections::HashSet;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 
 use super::api::{
@@ -90,11 +90,11 @@ impl From<String> for CryptoError {
 // ==================== Crypto Service ====================
 
 pub struct CryptoService {
-    db: Arc<Mutex<Option<Database>>>,
+    db: Arc<RwLock<Option<Database>>>,
 }
 
 impl CryptoService {
-    pub fn new(db: Arc<Mutex<Option<Database>>>) -> Self {
+    pub fn new(db: Arc<RwLock<Option<Database>>>) -> Self {
         Self { db }
     }
 
@@ -102,7 +102,7 @@ impl CryptoService {
     where
         F: FnOnce(&Database) -> Result<T, CryptoError>,
     {
-        let db_lock = self.db.lock().map_err(|_| CryptoError::Internal)?;
+        let db_lock = self.db.read().map_err(|_| CryptoError::Internal)?;
         let db = db_lock.as_ref().ok_or(CryptoError::NoVaultOpen)?;
 
         db.check_session_timeout().map_err(|e| match e {

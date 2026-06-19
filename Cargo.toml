@@ -26,6 +26,8 @@ env_logger = "0.11"
 fluent-bundle = "0.16"
 futures = "0.3"
 log = "0.4"
+r2d2 = "0.8"
+r2d2_sqlite = { version = "0.34", default-features = false }
 reqwest = { version = "0.13", features = ["json", "stream", "socks"] }
 rusqlite = { version = "0.39", features = ["bundled-sqlcipher"] }
 secrecy = "0.10"

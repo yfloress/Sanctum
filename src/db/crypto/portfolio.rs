@@ -53,95 +53,97 @@ impl Database {
         date: &str,
         exclude_tx_id: Option<&str>,
     ) -> Result<f64, DbError> {
-        let mut balance = 0.0;
-        if let Some(exclude) = exclude_tx_id {
-            let mut stmt = self.conn.prepare(
-                "SELECT coin_id, type, amount, fee_coin_id, fee_amount, subtype
+        self.read(|conn| {
+            let mut balance = 0.0;
+            if let Some(exclude) = exclude_tx_id {
+                let mut stmt = conn.prepare(
+                    "SELECT coin_id, type, amount, fee_coin_id, fee_amount, subtype
                  FROM crypto_transactions
                  WHERE wallet_id = ?1
                    AND date <= ?2
                    AND id != ?3
                    AND (coin_id = ?4 OR fee_coin_id = ?4)",
-            )?;
-            let rows = stmt.query_map(params![wallet_id, date, exclude, coin_id], |row| {
-                Ok((
-                    row.get::<_, String>(0)?,
-                    row.get::<_, String>(1)?,
-                    row.get::<_, f64>(2)?,
-                    row.get::<_, Option<String>>(3)?,
-                    row.get::<_, Option<f64>>(4)?,
-                    row.get::<_, Option<String>>(5)?,
-                ))
-            })?;
-            for row in rows {
-                let (row_coin_id, tx_type, amount, fee_coin_id, fee_amount, subtype) = row?;
-                if row_coin_id == coin_id {
-                    let mech = derive_mechanical_type(&tx_type, subtype.as_deref());
-                    if let Ok(kind) = mech.parse::<CryptoTransactionType>() {
-                        match kind {
-                            CryptoTransactionType::Buy | CryptoTransactionType::TransferIn => {
-                                balance += amount
+                )?;
+                let rows = stmt.query_map(params![wallet_id, date, exclude, coin_id], |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, String>(1)?,
+                        row.get::<_, f64>(2)?,
+                        row.get::<_, Option<String>>(3)?,
+                        row.get::<_, Option<f64>>(4)?,
+                        row.get::<_, Option<String>>(5)?,
+                    ))
+                })?;
+                for row in rows {
+                    let (row_coin_id, tx_type, amount, fee_coin_id, fee_amount, subtype) = row?;
+                    if row_coin_id == coin_id {
+                        let mech = derive_mechanical_type(&tx_type, subtype.as_deref());
+                        if let Ok(kind) = mech.parse::<CryptoTransactionType>() {
+                            match kind {
+                                CryptoTransactionType::Buy | CryptoTransactionType::TransferIn => {
+                                    balance += amount
+                                }
+                                CryptoTransactionType::Sell
+                                | CryptoTransactionType::TransferOut
+                                | CryptoTransactionType::Swap => balance -= amount,
                             }
-                            CryptoTransactionType::Sell
-                            | CryptoTransactionType::TransferOut
-                            | CryptoTransactionType::Swap => balance -= amount,
                         }
                     }
-                }
 
-                if let Some(fee_coin_id) = fee_coin_id {
-                    if fee_coin_id == coin_id {
-                        if let Some(fee_amount) = fee_amount {
-                            balance -= fee_amount;
+                    if let Some(fee_coin_id) = fee_coin_id {
+                        if fee_coin_id == coin_id {
+                            if let Some(fee_amount) = fee_amount {
+                                balance -= fee_amount;
+                            }
                         }
                     }
                 }
-            }
-        } else {
-            let mut stmt = self.conn.prepare(
-                "SELECT coin_id, type, amount, fee_coin_id, fee_amount, subtype
+            } else {
+                let mut stmt = conn.prepare(
+                    "SELECT coin_id, type, amount, fee_coin_id, fee_amount, subtype
                  FROM crypto_transactions
                  WHERE wallet_id = ?1
                    AND date <= ?2
                    AND (coin_id = ?3 OR fee_coin_id = ?3)",
-            )?;
-            let rows = stmt.query_map(params![wallet_id, date, coin_id], |row| {
-                Ok((
-                    row.get::<_, String>(0)?,
-                    row.get::<_, String>(1)?,
-                    row.get::<_, f64>(2)?,
-                    row.get::<_, Option<String>>(3)?,
-                    row.get::<_, Option<f64>>(4)?,
-                    row.get::<_, Option<String>>(5)?,
-                ))
-            })?;
-            for row in rows {
-                let (row_coin_id, tx_type, amount, fee_coin_id, fee_amount, subtype) = row?;
-                if row_coin_id == coin_id {
-                    let mech = derive_mechanical_type(&tx_type, subtype.as_deref());
-                    if let Ok(kind) = mech.parse::<CryptoTransactionType>() {
-                        match kind {
-                            CryptoTransactionType::Buy | CryptoTransactionType::TransferIn => {
-                                balance += amount
+                )?;
+                let rows = stmt.query_map(params![wallet_id, date, coin_id], |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, String>(1)?,
+                        row.get::<_, f64>(2)?,
+                        row.get::<_, Option<String>>(3)?,
+                        row.get::<_, Option<f64>>(4)?,
+                        row.get::<_, Option<String>>(5)?,
+                    ))
+                })?;
+                for row in rows {
+                    let (row_coin_id, tx_type, amount, fee_coin_id, fee_amount, subtype) = row?;
+                    if row_coin_id == coin_id {
+                        let mech = derive_mechanical_type(&tx_type, subtype.as_deref());
+                        if let Ok(kind) = mech.parse::<CryptoTransactionType>() {
+                            match kind {
+                                CryptoTransactionType::Buy | CryptoTransactionType::TransferIn => {
+                                    balance += amount
+                                }
+                                CryptoTransactionType::Sell
+                                | CryptoTransactionType::TransferOut
+                                | CryptoTransactionType::Swap => balance -= amount,
                             }
-                            CryptoTransactionType::Sell
-                            | CryptoTransactionType::TransferOut
-                            | CryptoTransactionType::Swap => balance -= amount,
                         }
                     }
-                }
 
-                if let Some(fee_coin_id) = fee_coin_id {
-                    if fee_coin_id == coin_id {
-                        if let Some(fee_amount) = fee_amount {
-                            balance -= fee_amount;
+                    if let Some(fee_coin_id) = fee_coin_id {
+                        if fee_coin_id == coin_id {
+                            if let Some(fee_amount) = fee_amount {
+                                balance -= fee_amount;
+                            }
                         }
                     }
                 }
             }
-        }
 
-        Ok(balance)
+            Ok(balance)
+        })
     }
 
     /// Gets the wallet balance and cost basis for a coin at (or before) a given date.

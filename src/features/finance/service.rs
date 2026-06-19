@@ -25,7 +25,7 @@ use crate::models::{Account, AccountBalance, BalanceSummary, Transaction, Transa
 use crate::security_log::{SecurityEvent, log_security_event};
 use chrono::Utc;
 use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 
 use super::repository::FinanceRepository;
@@ -64,11 +64,11 @@ impl From<String> for FinanceError {
 pub use crate::features::dashboard::{DashboardData, ExpenseSlice};
 
 pub struct FinanceService {
-    db: Arc<Mutex<Option<Database>>>,
+    db: Arc<RwLock<Option<Database>>>,
 }
 
 impl FinanceService {
-    pub fn new(db: Arc<Mutex<Option<Database>>>) -> Self {
+    pub fn new(db: Arc<RwLock<Option<Database>>>) -> Self {
         Self { db }
     }
 
@@ -76,7 +76,7 @@ impl FinanceService {
     where
         F: FnOnce(&Database) -> Result<T, FinanceError>,
     {
-        let db_lock = self.db.lock().map_err(|_| FinanceError::Internal)?;
+        let db_lock = self.db.read().map_err(|_| FinanceError::Internal)?;
         let db = db_lock.as_ref().ok_or(FinanceError::NoVaultOpen)?;
 
         db.check_session_timeout().map_err(|e| match e {
@@ -282,7 +282,7 @@ impl FinanceService {
         let db_arc = self.db.clone();
         TransactionOps::add_transaction(
             |f| {
-                let db_lock = db_arc.lock().map_err(|_| FinanceError::Internal)?;
+                let db_lock = db_arc.read().map_err(|_| FinanceError::Internal)?;
                 let db = db_lock.as_ref().ok_or(FinanceError::NoVaultOpen)?;
                 db.check_session_timeout().map_err(|e| match e {
                     DbError::SessionExpired => FinanceError::SessionExpired,
@@ -315,7 +315,7 @@ impl FinanceService {
         let db_arc = self.db.clone();
         TransactionOps::update_transaction(
             |f| {
-                let db_lock = db_arc.lock().map_err(|_| FinanceError::Internal)?;
+                let db_lock = db_arc.read().map_err(|_| FinanceError::Internal)?;
                 let db = db_lock.as_ref().ok_or(FinanceError::NoVaultOpen)?;
                 db.check_session_timeout().map_err(|e| match e {
                     DbError::SessionExpired => FinanceError::SessionExpired,
@@ -349,7 +349,7 @@ impl FinanceService {
         let db_arc = self.db.clone();
         TransactionOps::delete_transaction(
             |f| {
-                let db_lock = db_arc.lock().map_err(|_| FinanceError::Internal)?;
+                let db_lock = db_arc.read().map_err(|_| FinanceError::Internal)?;
                 let db = db_lock.as_ref().ok_or(FinanceError::NoVaultOpen)?;
                 db.check_session_timeout().map_err(|e| match e {
                     DbError::SessionExpired => FinanceError::SessionExpired,
@@ -376,7 +376,7 @@ impl FinanceService {
         let db_arc = self.db.clone();
         TransactionOps::transfer_funds(
             |f| {
-                let db_lock = db_arc.lock().map_err(|_| FinanceError::Internal)?;
+                let db_lock = db_arc.read().map_err(|_| FinanceError::Internal)?;
                 let db = db_lock.as_ref().ok_or(FinanceError::NoVaultOpen)?;
                 db.check_session_timeout().map_err(|e| match e {
                     DbError::SessionExpired => FinanceError::SessionExpired,
@@ -406,7 +406,7 @@ impl FinanceService {
         let db_arc = self.db.clone();
         TransactionOps::update_transfer(
             |f| {
-                let db_lock = db_arc.lock().map_err(|_| FinanceError::Internal)?;
+                let db_lock = db_arc.read().map_err(|_| FinanceError::Internal)?;
                 let db = db_lock.as_ref().ok_or(FinanceError::NoVaultOpen)?;
                 db.check_session_timeout().map_err(|e| match e {
                     DbError::SessionExpired => FinanceError::SessionExpired,

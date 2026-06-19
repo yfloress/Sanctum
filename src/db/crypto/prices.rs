@@ -29,27 +29,31 @@ impl Database {
     /// Saves an exchange rate to cache (e.g., CLP_USD)
     pub fn save_exchange_rate(&self, pair: &str, rate: f64) -> Result<(), DbError> {
         let now = Utc::now().to_rfc3339();
-        self.conn.execute(
-            "INSERT OR REPLACE INTO exchange_rate_cache (currency_pair, rate, updated_at)
-             VALUES (?1, ?2, ?3)",
-            params![pair, rate, now],
-        )?;
-        Ok(())
+        self.write(|conn| {
+            conn.execute(
+                "INSERT OR REPLACE INTO exchange_rate_cache (currency_pair, rate, updated_at)
+                 VALUES (?1, ?2, ?3)",
+                params![pair, rate, now],
+            )?;
+            Ok(())
+        })
     }
 
     /// Loads a cached exchange rate
     pub fn load_exchange_rate(&self, pair: &str) -> Result<Option<(f64, String)>, DbError> {
-        let result = self.conn.query_row(
-            "SELECT rate, updated_at FROM exchange_rate_cache WHERE currency_pair = ?1",
-            params![pair],
-            |row| Ok((row.get::<_, f64>(0)?, row.get::<_, String>(1)?)),
-        );
+        self.read(|conn| {
+            let result = conn.query_row(
+                "SELECT rate, updated_at FROM exchange_rate_cache WHERE currency_pair = ?1",
+                params![pair],
+                |row| Ok((row.get::<_, f64>(0)?, row.get::<_, String>(1)?)),
+            );
 
-        match result {
-            Ok((rate, updated_at)) => Ok(Some((rate, updated_at))),
-            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-            Err(e) => Err(DbError::Sqlite(e)),
-        }
+            match result {
+                Ok((rate, updated_at)) => Ok(Some((rate, updated_at))),
+                Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+                Err(e) => Err(DbError::Sqlite(e)),
+            }
+        })
     }
 
     // ==================== Crypto Price Cache ====================
@@ -64,53 +68,59 @@ impl Database {
         price_change_24h: f64,
     ) -> Result<(), DbError> {
         let now = Utc::now().to_rfc3339();
-        self.conn.execute(
-            "INSERT OR REPLACE INTO crypto_price_cache
-             (coin_id, symbol, name, price_usd, price_change_24h, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-            params![coin_id, symbol, name, price_usd, price_change_24h, now],
-        )?;
-        Ok(())
+        self.write(|conn| {
+            conn.execute(
+                "INSERT OR REPLACE INTO crypto_price_cache
+                 (coin_id, symbol, name, price_usd, price_change_24h, updated_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                params![coin_id, symbol, name, price_usd, price_change_24h, now],
+            )?;
+            Ok(())
+        })
     }
 
     /// Loads all cached crypto prices
     pub fn load_crypto_prices(
         &self,
     ) -> Result<Vec<(String, String, String, f64, f64, String)>, DbError> {
-        let mut stmt = self.conn.prepare(
-            "SELECT coin_id, symbol, name, price_usd, price_change_24h, updated_at
-             FROM crypto_price_cache",
-        )?;
+        self.read(|conn| {
+            let mut stmt = conn.prepare(
+                "SELECT coin_id, symbol, name, price_usd, price_change_24h, updated_at
+                 FROM crypto_price_cache",
+            )?;
 
-        let prices = stmt.query_map([], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, String>(1)?,
-                row.get::<_, String>(2)?,
-                row.get::<_, f64>(3)?,
-                row.get::<_, f64>(4)?,
-                row.get::<_, String>(5)?,
-            ))
-        })?;
+            let prices = stmt.query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, f64>(3)?,
+                    row.get::<_, f64>(4)?,
+                    row.get::<_, String>(5)?,
+                ))
+            })?;
 
-        prices
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(DbError::Sqlite)
+            prices
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(DbError::Sqlite)
+        })
     }
 
     /// Loads a specific cached crypto price
     pub fn load_crypto_price(&self, coin_id: &str) -> Result<Option<(f64, String)>, DbError> {
-        let result = self.conn.query_row(
-            "SELECT price_usd, updated_at FROM crypto_price_cache WHERE coin_id = ?1",
-            params![coin_id],
-            |row| Ok((row.get::<_, f64>(0)?, row.get::<_, String>(1)?)),
-        );
+        self.read(|conn| {
+            let result = conn.query_row(
+                "SELECT price_usd, updated_at FROM crypto_price_cache WHERE coin_id = ?1",
+                params![coin_id],
+                |row| Ok((row.get::<_, f64>(0)?, row.get::<_, String>(1)?)),
+            );
 
-        match result {
-            Ok((price, updated_at)) => Ok(Some((price, updated_at))),
-            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-            Err(e) => Err(DbError::Sqlite(e)),
-        }
+            match result {
+                Ok((price, updated_at)) => Ok(Some((price, updated_at))),
+                Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+                Err(e) => Err(DbError::Sqlite(e)),
+            }
+        })
     }
 
     // ==================== Portfolio Snapshots ====================
@@ -123,17 +133,19 @@ impl Database {
         total_cost_usd: f64,
     ) -> Result<(), DbError> {
         let now = Utc::now().to_rfc3339();
-        self.conn.execute(
-            "INSERT INTO crypto_portfolio_snapshots
-             (snapshot_date, total_value_usd, total_cost_usd, created_at)
-             VALUES (?1, ?2, ?3, ?4)
-             ON CONFLICT(snapshot_date) DO UPDATE SET
-                total_value_usd = ?2,
-                total_cost_usd = ?3,
-                created_at = ?4",
-            params![snapshot_date, total_value_usd, total_cost_usd, now],
-        )?;
-        Ok(())
+        self.write(|conn| {
+            conn.execute(
+                "INSERT INTO crypto_portfolio_snapshots
+                 (snapshot_date, total_value_usd, total_cost_usd, created_at)
+                 VALUES (?1, ?2, ?3, ?4)
+                 ON CONFLICT(snapshot_date) DO UPDATE SET
+                    total_value_usd = ?2,
+                    total_cost_usd = ?3,
+                    created_at = ?4",
+                params![snapshot_date, total_value_usd, total_cost_usd, now],
+            )?;
+            Ok(())
+        })
     }
 
     /// Loads crypto portfolio snapshots from a starting date (inclusive)
@@ -141,23 +153,25 @@ impl Database {
         &self,
         start_date: &str,
     ) -> Result<Vec<(String, f64, f64)>, DbError> {
-        let mut stmt = self.conn.prepare(
-            "SELECT snapshot_date, total_value_usd, total_cost_usd
-             FROM crypto_portfolio_snapshots
-             WHERE snapshot_date >= ?1
-             ORDER BY snapshot_date ASC",
-        )?;
+        self.read(|conn| {
+            let mut stmt = conn.prepare(
+                "SELECT snapshot_date, total_value_usd, total_cost_usd
+                 FROM crypto_portfolio_snapshots
+                 WHERE snapshot_date >= ?1
+                 ORDER BY snapshot_date ASC",
+            )?;
 
-        let snapshots = stmt.query_map(params![start_date], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, f64>(1)?,
-                row.get::<_, f64>(2)?,
-            ))
-        })?;
+            let snapshots = stmt.query_map(params![start_date], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, f64>(1)?,
+                    row.get::<_, f64>(2)?,
+                ))
+            })?;
 
-        snapshots
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(DbError::Sqlite)
+            snapshots
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(DbError::Sqlite)
+        })
     }
 }

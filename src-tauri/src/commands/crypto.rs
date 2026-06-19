@@ -201,8 +201,7 @@ pub fn fetch_portfolio_trend(
     // Seed: latest snapshot before the range carries forward to start_date.
     if let Some((_, v, _)) = all_snaps
         .iter()
-        .filter(|(d, _, _)| d.as_str() < start_str.as_str())
-        .last()
+        .rfind(|(d, _, _)| d.as_str() < start_str.as_str())
     {
         anchors.insert(start_str.clone(), *v);
     }

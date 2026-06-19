@@ -61,46 +61,47 @@ impl Database {
             return Err(DbError::InvalidTransactionType);
         }
 
-        // Verify wallet exists
-        let wallet_exists: bool = self
-            .conn
-            .query_row(
-                "SELECT COUNT(*) FROM crypto_wallets WHERE id = ?1",
-                params![&tx.wallet_id],
-                |row| row.get(0),
-            )
-            .unwrap_or(0)
-            > 0;
+        self.write(|conn| {
+            // Verify wallet exists
+            let wallet_exists: bool = conn
+                .query_row(
+                    "SELECT COUNT(*) FROM crypto_wallets WHERE id = ?1",
+                    params![&tx.wallet_id],
+                    |row| row.get(0),
+                )
+                .unwrap_or(0)
+                > 0;
 
-        if !wallet_exists {
-            return Err(DbError::WalletNotFound);
-        }
+            if !wallet_exists {
+                return Err(DbError::WalletNotFound);
+            }
 
-        self.conn.execute(
-            "INSERT INTO crypto_transactions
-             (id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, fee_coin_id, fee_amount, subtype, override_proceeds, override_cost_basis, date, notes, related_tx_id)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)",
-            params![
-                &tx.id,
-                &tx.wallet_id,
-                &tx.coin_id,
-                &tx.symbol,
-                &tx.transaction_type,
-                &tx.amount,
-                &tx.price_per_coin,
-                &tx.fee,
-                &tx.fee_coin_id,
-                &tx.fee_amount,
-                &tx.subtype,
-                &tx.override_proceeds,
-                &tx.override_cost_basis,
-                &tx.date,
-                &tx.notes,
-                &tx.related_tx_id,
-            ],
-        )?;
+            conn.execute(
+                "INSERT INTO crypto_transactions
+                 (id, wallet_id, coin_id, symbol, type, amount, price_per_coin, fee, fee_coin_id, fee_amount, subtype, override_proceeds, override_cost_basis, date, notes, related_tx_id)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)",
+                params![
+                    &tx.id,
+                    &tx.wallet_id,
+                    &tx.coin_id,
+                    &tx.symbol,
+                    &tx.transaction_type,
+                    &tx.amount,
+                    &tx.price_per_coin,
+                    &tx.fee,
+                    &tx.fee_coin_id,
+                    &tx.fee_amount,
+                    &tx.subtype,
+                    &tx.override_proceeds,
+                    &tx.override_cost_basis,
+                    &tx.date,
+                    &tx.notes,
+                    &tx.related_tx_id,
+                ],
+            )?;
 
-        Ok(())
+            Ok(())
+        })
     }
 
     /// Gets all transactions for a specific wallet
@@ -112,13 +113,15 @@ impl Database {
             "SELECT {} FROM crypto_transactions WHERE wallet_id = ?1 ORDER BY date DESC, rowid DESC",
             CRYPTO_TX_COLUMNS
         );
-        let mut stmt = self.conn.prepare(&sql)?;
+        self.read(|conn| {
+            let mut stmt = conn.prepare(&sql)?;
 
-        let transactions = stmt
-            .query_map(params![wallet_id], row_to_crypto_transaction)?
-            .collect::<Result<Vec<_>, _>>()?;
+            let transactions = stmt
+                .query_map(params![wallet_id], row_to_crypto_transaction)?
+                .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(transactions)
+            Ok(transactions)
+        })
     }
 
     /// Gets wallet transactions up to a given date (inclusive), ordered ascending.
@@ -131,13 +134,15 @@ impl Database {
             "SELECT {} FROM crypto_transactions WHERE wallet_id = ?1 AND date <= ?2 ORDER BY date ASC, rowid ASC",
             CRYPTO_TX_COLUMNS
         );
-        let mut stmt = self.conn.prepare(&sql)?;
+        self.read(|conn| {
+            let mut stmt = conn.prepare(&sql)?;
 
-        let transactions = stmt
-            .query_map(params![wallet_id, date], row_to_crypto_transaction)?
-            .collect::<Result<Vec<_>, _>>()?;
+            let transactions = stmt
+                .query_map(params![wallet_id, date], row_to_crypto_transaction)?
+                .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(transactions)
+            Ok(transactions)
+        })
     }
 
     /// Gets all crypto transactions across all wallets, paginated by offset/limit.
@@ -152,16 +157,18 @@ impl Database {
             "SELECT {} FROM crypto_transactions ORDER BY date DESC, rowid DESC LIMIT ?1 OFFSET ?2",
             CRYPTO_TX_COLUMNS
         );
-        let mut stmt = self.conn.prepare(&sql)?;
+        self.read(|conn| {
+            let mut stmt = conn.prepare(&sql)?;
 
-        let transactions = stmt
-            .query_map(
-                rusqlite::params![effective_limit, offset],
-                row_to_crypto_transaction,
-            )?
-            .collect::<Result<Vec<_>, _>>()?;
+            let transactions = stmt
+                .query_map(
+                    rusqlite::params![effective_limit, offset],
+                    row_to_crypto_transaction,
+                )?
+                .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(transactions)
+            Ok(transactions)
+        })
     }
 
     /// Gets all crypto transactions for a specific coin across all wallets
@@ -173,20 +180,23 @@ impl Database {
             "SELECT {} FROM crypto_transactions WHERE coin_id = ?1 ORDER BY date DESC, rowid DESC",
             CRYPTO_TX_COLUMNS
         );
-        let mut stmt = self.conn.prepare(&sql)?;
+        self.read(|conn| {
+            let mut stmt = conn.prepare(&sql)?;
 
-        let transactions = stmt
-            .query_map(params![coin_id], row_to_crypto_transaction)?
-            .collect::<Result<Vec<_>, _>>()?;
+            let transactions = stmt
+                .query_map(params![coin_id], row_to_crypto_transaction)?
+                .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(transactions)
+            Ok(transactions)
+        })
     }
 
     /// Deletes a crypto transaction by ID
     pub fn delete_crypto_transaction(&self, id: &str) -> Result<(), DbError> {
-        self.conn
-            .execute("DELETE FROM crypto_transactions WHERE id = ?1", params![id])?;
-        Ok(())
+        self.write(|conn| {
+            conn.execute("DELETE FROM crypto_transactions WHERE id = ?1", params![id])?;
+            Ok(())
+        })
     }
 
     /// Gets a crypto transaction by ID
@@ -196,15 +206,15 @@ impl Database {
             CRYPTO_TX_COLUMNS
         );
 
-        let result = self
-            .conn
-            .query_row(&sql, params![id], row_to_crypto_transaction);
+        self.read(|conn| {
+            let result = conn.query_row(&sql, params![id], row_to_crypto_transaction);
 
-        match result {
-            Ok(tx) => Ok(Some(tx)),
-            Err(RusqliteError::QueryReturnedNoRows) => Ok(None),
-            Err(e) => Err(DbError::Sqlite(e)),
-        }
+            match result {
+                Ok(tx) => Ok(Some(tx)),
+                Err(RusqliteError::QueryReturnedNoRows) => Ok(None),
+                Err(e) => Err(DbError::Sqlite(e)),
+            }
+        })
     }
 
     /// Updates editable fields of a crypto transaction
@@ -223,33 +233,35 @@ impl Database {
         override_proceeds: Option<f64>,
         override_cost_basis: Option<f64>,
     ) -> Result<(), DbError> {
-        self.conn.execute(
-            "UPDATE crypto_transactions
-             SET amount = ?1,
-                 price_per_coin = ?2,
-                 fee = ?3,
-                 fee_coin_id = ?4,
-                 fee_amount = ?5,
-                 subtype = ?6,
-                 override_proceeds = ?7,
-                 override_cost_basis = ?8,
-                 date = ?9,
-                 notes = ?10
-             WHERE id = ?11",
-            params![
-                amount,
-                price_per_coin,
-                fee,
-                fee_coin_id,
-                fee_amount,
-                subtype,
-                override_proceeds,
-                override_cost_basis,
-                date,
-                notes,
-                id
-            ],
-        )?;
-        Ok(())
+        self.write(|conn| {
+            conn.execute(
+                "UPDATE crypto_transactions
+                 SET amount = ?1,
+                     price_per_coin = ?2,
+                     fee = ?3,
+                     fee_coin_id = ?4,
+                     fee_amount = ?5,
+                     subtype = ?6,
+                     override_proceeds = ?7,
+                     override_cost_basis = ?8,
+                     date = ?9,
+                     notes = ?10
+                 WHERE id = ?11",
+                params![
+                    amount,
+                    price_per_coin,
+                    fee,
+                    fee_coin_id,
+                    fee_amount,
+                    subtype,
+                    override_proceeds,
+                    override_cost_basis,
+                    date,
+                    notes,
+                    id
+                ],
+            )?;
+            Ok(())
+        })
     }
 }

@@ -18,10 +18,14 @@
 //! Finance database operations
 //!
 //! CRUD operations for FIAT accounts, transactions, categories, and balance summaries.
+//!
+//! Reads run on pooled read-only connections (`self.read`); writes run on the
+//! serialized writer connection (`self.write`). Composition within a single
+//! connection uses `*_on(conn, …)` helpers to avoid nesting pool checkouts.
 
 use super::{Database, DbError};
 use crate::models::{Account, AccountBalance, BalanceSummary, Transaction, TransactionCategory};
-use rusqlite::{Error as RusqliteError, params};
+use rusqlite::{Connection, Error as RusqliteError, params};
 
 impl Database {
     // ==================== FIAT Accounts CRUD ====================
@@ -32,28 +36,29 @@ impl Database {
             return Err(DbError::InvalidAccountType);
         }
 
-        self.conn.execute(
-            "INSERT INTO accounts (id, name, type, currency, initial_balance, color, icon, is_archived, created_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-            params![
-                &account.id,
-                &account.name,
-                &account.account_type,
-                &account.currency,
-                &account.initial_balance,
-                &account.color,
-                &account.icon,
-                account.is_archived,
-                &account.created_at,
-            ],
-        )?;
-
-        Ok(())
+        self.write(|conn| {
+            conn.execute(
+                "INSERT INTO accounts (id, name, type, currency, initial_balance, color, icon, is_archived, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                params![
+                    &account.id,
+                    &account.name,
+                    &account.account_type,
+                    &account.currency,
+                    &account.initial_balance,
+                    &account.color,
+                    &account.icon,
+                    account.is_archived,
+                    &account.created_at,
+                ],
+            )?;
+            Ok(())
+        })
     }
 
-    /// Gets all non-archived accounts
-    pub fn get_accounts(&self) -> Result<Vec<Account>, DbError> {
-        let mut stmt = self.conn.prepare(
+    /// Reads all non-archived accounts from a given connection.
+    fn get_accounts_on(conn: &Connection) -> Result<Vec<Account>, DbError> {
+        let mut stmt = conn.prepare(
             "SELECT id, name, type, currency, initial_balance, color, icon, is_archived, created_at
              FROM accounts
              WHERE is_archived = 0
@@ -79,95 +84,18 @@ impl Database {
         Ok(accounts)
     }
 
-    /// Gets a single account by ID
-    pub fn get_account(&self, id: &str) -> Result<Account, DbError> {
-        self.conn
-            .query_row(
-                "SELECT id, name, type, currency, initial_balance, color, icon, is_archived, created_at
-                 FROM accounts WHERE id = ?1",
-                params![id],
-                |row| {
-                    Ok(Account {
-                        id: row.get(0)?,
-                        name: row.get(1)?,
-                        account_type: row.get(2)?,
-                        currency: row.get(3)?,
-                        initial_balance: row.get(4)?,
-                        color: row.get(5)?,
-                        icon: row.get(6)?,
-                        is_archived: row.get(7)?,
-                        created_at: row.get(8)?,
-                    })
-                },
-            )
-            .map_err(|e| match e {
-                RusqliteError::QueryReturnedNoRows => DbError::AccountNotFound,
-                _ => DbError::Sqlite(e),
-            })
+    /// Gets all non-archived accounts
+    pub fn get_accounts(&self) -> Result<Vec<Account>, DbError> {
+        self.read(Self::get_accounts_on)
     }
 
-    /// Updates an account
-    pub fn update_account(&self, account: &Account) -> Result<(), DbError> {
-        if !account.validate() {
-            return Err(DbError::InvalidAccountType);
-        }
-
-        let rows = self.conn.execute(
-            "UPDATE accounts SET name = ?1, type = ?2, currency = ?3, initial_balance = ?4, color = ?5, icon = ?6
-             WHERE id = ?7 AND is_archived = 0",
-            params![
-                &account.name,
-                &account.account_type,
-                &account.currency,
-                &account.initial_balance,
-                &account.color,
-                &account.icon,
-                &account.id,
-            ],
-        )?;
-
-        if rows == 0 {
-            return Err(DbError::AccountNotFound);
-        }
-
-        Ok(())
-    }
-
-    /// Archives an account (soft delete) - only if it has no transactions
-    pub fn archive_account(&self, id: &str) -> Result<(), DbError> {
-        // Check if account has transactions
-        let tx_count: i32 = self.conn.query_row(
-            "SELECT COUNT(*) FROM transactions WHERE account_id = ?1 OR transfer_account_id = ?1",
-            params![id],
-            |row| row.get(0),
-        )?;
-
-        if tx_count > 0 {
-            return Err(DbError::AccountNotEmpty);
-        }
-
-        let rows = self.conn.execute(
-            "UPDATE accounts SET is_archived = 1 WHERE id = ?1",
-            params![id],
-        )?;
-
-        if rows == 0 {
-            return Err(DbError::AccountNotFound);
-        }
-
-        Ok(())
-    }
-
-    pub fn get_archived_accounts(&self) -> Result<Vec<Account>, DbError> {
-        let mut stmt = self.conn.prepare(
+    /// Reads a single account by ID from a given connection.
+    fn get_account_on(conn: &Connection, id: &str) -> Result<Account, DbError> {
+        conn.query_row(
             "SELECT id, name, type, currency, initial_balance, color, icon, is_archived, created_at
-             FROM accounts
-             WHERE is_archived = 1
-             ORDER BY created_at ASC",
-        )?;
-
-        let accounts = stmt
-            .query_map([], |row| {
+             FROM accounts WHERE id = ?1",
+            params![id],
+            |row| {
                 Ok(Account {
                     id: row.get(0)?,
                     name: row.get(1)?,
@@ -179,33 +107,126 @@ impl Database {
                     is_archived: row.get(7)?,
                     created_at: row.get(8)?,
                 })
-            })?
-            .collect::<Result<Vec<_>, _>>()?;
+            },
+        )
+        .map_err(|e| match e {
+            RusqliteError::QueryReturnedNoRows => DbError::AccountNotFound,
+            _ => DbError::Sqlite(e),
+        })
+    }
 
-        Ok(accounts)
+    /// Gets a single account by ID
+    pub fn get_account(&self, id: &str) -> Result<Account, DbError> {
+        self.read(|conn| Self::get_account_on(conn, id))
+    }
+
+    /// Updates an account
+    pub fn update_account(&self, account: &Account) -> Result<(), DbError> {
+        if !account.validate() {
+            return Err(DbError::InvalidAccountType);
+        }
+
+        self.write(|conn| {
+            let rows = conn.execute(
+                "UPDATE accounts SET name = ?1, type = ?2, currency = ?3, initial_balance = ?4, color = ?5, icon = ?6
+                 WHERE id = ?7 AND is_archived = 0",
+                params![
+                    &account.name,
+                    &account.account_type,
+                    &account.currency,
+                    &account.initial_balance,
+                    &account.color,
+                    &account.icon,
+                    &account.id,
+                ],
+            )?;
+
+            if rows == 0 {
+                return Err(DbError::AccountNotFound);
+            }
+
+            Ok(())
+        })
+    }
+
+    /// Archives an account (soft delete) - only if it has no transactions
+    pub fn archive_account(&self, id: &str) -> Result<(), DbError> {
+        self.write(|conn| {
+            // Check if account has transactions
+            let tx_count: i32 = conn.query_row(
+                "SELECT COUNT(*) FROM transactions WHERE account_id = ?1 OR transfer_account_id = ?1",
+                params![id],
+                |row| row.get(0),
+            )?;
+
+            if tx_count > 0 {
+                return Err(DbError::AccountNotEmpty);
+            }
+
+            let rows = conn.execute(
+                "UPDATE accounts SET is_archived = 1 WHERE id = ?1",
+                params![id],
+            )?;
+
+            if rows == 0 {
+                return Err(DbError::AccountNotFound);
+            }
+
+            Ok(())
+        })
+    }
+
+    pub fn get_archived_accounts(&self) -> Result<Vec<Account>, DbError> {
+        self.read(|conn| {
+            let mut stmt = conn.prepare(
+                "SELECT id, name, type, currency, initial_balance, color, icon, is_archived, created_at
+                 FROM accounts
+                 WHERE is_archived = 1
+                 ORDER BY created_at ASC",
+            )?;
+
+            let accounts = stmt
+                .query_map([], |row| {
+                    Ok(Account {
+                        id: row.get(0)?,
+                        name: row.get(1)?,
+                        account_type: row.get(2)?,
+                        currency: row.get(3)?,
+                        initial_balance: row.get(4)?,
+                        color: row.get(5)?,
+                        icon: row.get(6)?,
+                        is_archived: row.get(7)?,
+                        created_at: row.get(8)?,
+                    })
+                })?
+                .collect::<Result<Vec<_>, _>>()?;
+
+            Ok(accounts)
+        })
     }
 
     pub fn unarchive_account(&self, id: &str) -> Result<(), DbError> {
-        let rows = self.conn.execute(
-            "UPDATE accounts SET is_archived = 0 WHERE id = ?1",
-            params![id],
-        )?;
+        self.write(|conn| {
+            let rows = conn.execute(
+                "UPDATE accounts SET is_archived = 0 WHERE id = ?1",
+                params![id],
+            )?;
 
-        if rows == 0 {
-            return Err(DbError::AccountNotFound);
-        }
+            if rows == 0 {
+                return Err(DbError::AccountNotFound);
+            }
 
-        Ok(())
+            Ok(())
+        })
     }
 
-    /// Gets the calculated balance for an account
-    pub fn get_account_balance(&self, account_id: &str) -> Result<AccountBalance, DbError> {
+    /// Computes the balance for an account on a given connection.
+    fn account_balance_on(conn: &Connection, account_id: &str) -> Result<AccountBalance, DbError> {
         // First get the account to verify it exists and get initial balance
-        let account = self.get_account(account_id)?;
+        let account = Self::get_account_on(conn, account_id)?;
 
         // Calculate income (money coming IN to this account)
-        let total_income: i64 = self
-            .conn
+        let total_income: i64 = conn
             .query_row(
                 "SELECT COALESCE(SUM(amount), 0) FROM transactions
                  WHERE account_id = ?1 AND type = 'income'",
@@ -215,8 +236,7 @@ impl Database {
             .unwrap_or(0);
 
         // Add transfers IN (where this account is the destination)
-        let transfers_in: i64 = self
-            .conn
+        let transfers_in: i64 = conn
             .query_row(
                 "SELECT COALESCE(SUM(amount), 0) FROM transactions
                  WHERE transfer_account_id = ?1 AND type = 'transfer'",
@@ -226,8 +246,7 @@ impl Database {
             .unwrap_or(0);
 
         // Calculate expenses (money going OUT of this account)
-        let total_expense: i64 = self
-            .conn
+        let total_expense: i64 = conn
             .query_row(
                 "SELECT COALESCE(SUM(amount), 0) FROM transactions
                  WHERE account_id = ?1 AND type = 'expense'",
@@ -237,8 +256,7 @@ impl Database {
             .unwrap_or(0);
 
         // Add transfers OUT (where this account is the source)
-        let transfers_out: i64 = self
-            .conn
+        let transfers_out: i64 = conn
             .query_row(
                 "SELECT COALESCE(SUM(amount), 0) FROM transactions
                  WHERE account_id = ?1 AND type = 'transfer'",
@@ -259,17 +277,23 @@ impl Database {
         })
     }
 
+    /// Gets the calculated balance for an account
+    pub fn get_account_balance(&self, account_id: &str) -> Result<AccountBalance, DbError> {
+        self.read(|conn| Self::account_balance_on(conn, account_id))
+    }
+
     /// Gets balances for all non-archived accounts
     pub fn get_all_account_balances(&self) -> Result<Vec<AccountBalance>, DbError> {
-        let accounts = self.get_accounts()?;
-        let mut balances = Vec::with_capacity(accounts.len());
+        self.read(|conn| {
+            let accounts = Self::get_accounts_on(conn)?;
+            let mut balances = Vec::with_capacity(accounts.len());
 
-        for account in accounts {
-            let balance = self.get_account_balance(&account.id)?;
-            balances.push(balance);
-        }
+            for account in accounts {
+                balances.push(Self::account_balance_on(conn, &account.id)?);
+            }
 
-        Ok(balances)
+            Ok(balances)
+        })
     }
 
     // ==================== Financial Transactions CRUD ====================
@@ -281,33 +305,35 @@ impl Database {
             return Err(DbError::InvalidTransactionType);
         }
 
-        // Verify account exists
-        self.get_account(&transaction.account_id)?;
+        self.write(|conn| {
+            // Verify account exists
+            Self::get_account_on(conn, &transaction.account_id)?;
 
-        // For transfers, verify destination account exists and is different
-        if let Some(ref transfer_id) = transaction.transfer_account_id {
-            if transfer_id == &transaction.account_id {
-                return Err(DbError::SameAccountTransfer);
+            // For transfers, verify destination account exists and is different
+            if let Some(ref transfer_id) = transaction.transfer_account_id {
+                if transfer_id == &transaction.account_id {
+                    return Err(DbError::SameAccountTransfer);
+                }
+                Self::get_account_on(conn, transfer_id)?;
             }
-            self.get_account(transfer_id)?;
-        }
 
-        self.conn.execute(
-            "INSERT INTO transactions (id, account_id, amount, category, description, date, type, transfer_account_id)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-            params![
-                &transaction.id,
-                &transaction.account_id,
-                &transaction.amount,
-                &transaction.category,
-                &transaction.description,
-                &transaction.date,
-                &transaction.transaction_type,
-                &transaction.transfer_account_id,
-            ],
-        )?;
+            conn.execute(
+                "INSERT INTO transactions (id, account_id, amount, category, description, date, type, transfer_account_id)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                params![
+                    &transaction.id,
+                    &transaction.account_id,
+                    &transaction.amount,
+                    &transaction.category,
+                    &transaction.description,
+                    &transaction.date,
+                    &transaction.transaction_type,
+                    &transaction.transfer_account_id,
+                ],
+            )?;
 
-        Ok(())
+            Ok(())
+        })
     }
 
     /// Updates an existing transaction
@@ -316,32 +342,34 @@ impl Database {
             return Err(DbError::InvalidTransactionType);
         }
 
-        self.get_account(&transaction.account_id)?;
+        self.write(|conn| {
+            Self::get_account_on(conn, &transaction.account_id)?;
 
-        if let Some(ref transfer_id) = transaction.transfer_account_id {
-            if transfer_id == &transaction.account_id {
-                return Err(DbError::SameAccountTransfer);
+            if let Some(ref transfer_id) = transaction.transfer_account_id {
+                if transfer_id == &transaction.account_id {
+                    return Err(DbError::SameAccountTransfer);
+                }
+                Self::get_account_on(conn, transfer_id)?;
             }
-            self.get_account(transfer_id)?;
-        }
 
-        self.conn.execute(
-            "UPDATE transactions
-             SET account_id = ?2, amount = ?3, category = ?4, description = ?5, date = ?6, type = ?7, transfer_account_id = ?8
-             WHERE id = ?1",
-            params![
-                &transaction.id,
-                &transaction.account_id,
-                &transaction.amount,
-                &transaction.category,
-                &transaction.description,
-                &transaction.date,
-                &transaction.transaction_type,
-                &transaction.transfer_account_id,
-            ],
-        )?;
+            conn.execute(
+                "UPDATE transactions
+                 SET account_id = ?2, amount = ?3, category = ?4, description = ?5, date = ?6, type = ?7, transfer_account_id = ?8
+                 WHERE id = ?1",
+                params![
+                    &transaction.id,
+                    &transaction.account_id,
+                    &transaction.amount,
+                    &transaction.category,
+                    &transaction.description,
+                    &transaction.date,
+                    &transaction.transaction_type,
+                    &transaction.transfer_account_id,
+                ],
+            )?;
 
-        Ok(())
+            Ok(())
+        })
     }
 
     /// Creates a transfer between two accounts (atomic operation)
@@ -357,27 +385,29 @@ impl Database {
             return Err(DbError::SameAccountTransfer);
         }
 
-        // Verify both accounts exist
-        self.get_account(from_account_id)?;
-        self.get_account(to_account_id)?;
+        self.write(|conn| {
+            // Verify both accounts exist
+            Self::get_account_on(conn, from_account_id)?;
+            Self::get_account_on(conn, to_account_id)?;
 
-        let tx_id = uuid::Uuid::new_v4().to_string();
+            let tx_id = uuid::Uuid::new_v4().to_string();
 
-        // Create a single transfer transaction (from source to destination)
-        self.conn.execute(
-            "INSERT INTO transactions (id, account_id, amount, category, description, date, type, transfer_account_id)
-             VALUES (?1, ?2, ?3, 'Transfer', ?4, ?5, 'transfer', ?6)",
-            params![
-                &tx_id,
-                from_account_id,
-                amount,
-                description,
-                date,
-                to_account_id,
-            ],
-        )?;
+            // Create a single transfer transaction (from source to destination)
+            conn.execute(
+                "INSERT INTO transactions (id, account_id, amount, category, description, date, type, transfer_account_id)
+                 VALUES (?1, ?2, ?3, 'Transfer', ?4, ?5, 'transfer', ?6)",
+                params![
+                    &tx_id,
+                    from_account_id,
+                    amount,
+                    description,
+                    date,
+                    to_account_id,
+                ],
+            )?;
 
-        Ok(tx_id)
+            Ok(tx_id)
+        })
     }
 
     /// Updates an existing transfer transaction
@@ -394,54 +424,58 @@ impl Database {
             return Err(DbError::SameAccountTransfer);
         }
 
-        self.get_account(from_account_id)?;
-        self.get_account(to_account_id)?;
+        self.write(|conn| {
+            Self::get_account_on(conn, from_account_id)?;
+            Self::get_account_on(conn, to_account_id)?;
 
-        let changed = self.conn.execute(
-            "UPDATE transactions
-             SET account_id = ?2, amount = ?3, description = ?4, date = ?5, transfer_account_id = ?6
-             WHERE id = ?1 AND type = 'transfer'",
-            params![
-                id,
-                from_account_id,
-                amount,
-                description,
-                date,
-                to_account_id
-            ],
-        )?;
+            let changed = conn.execute(
+                "UPDATE transactions
+                 SET account_id = ?2, amount = ?3, description = ?4, date = ?5, transfer_account_id = ?6
+                 WHERE id = ?1 AND type = 'transfer'",
+                params![
+                    id,
+                    from_account_id,
+                    amount,
+                    description,
+                    date,
+                    to_account_id
+                ],
+            )?;
 
-        if changed == 0 {
-            return Err(DbError::TransactionNotFound);
-        }
+            if changed == 0 {
+                return Err(DbError::TransactionNotFound);
+            }
 
-        Ok(())
+            Ok(())
+        })
     }
 
     /// Gets all transactions ordered by descending date
     pub fn get_transactions(&self) -> Result<Vec<Transaction>, DbError> {
-        let mut stmt = self.conn.prepare(
-            "SELECT id, account_id, amount, category, description, date, type, transfer_account_id
-             FROM transactions
-             ORDER BY date DESC, rowid DESC",
-        )?;
+        self.read(|conn| {
+            let mut stmt = conn.prepare(
+                "SELECT id, account_id, amount, category, description, date, type, transfer_account_id
+                 FROM transactions
+                 ORDER BY date DESC, rowid DESC",
+            )?;
 
-        let transactions = stmt
-            .query_map([], |row| {
-                Ok(Transaction {
-                    id: row.get(0)?,
-                    account_id: row.get(1)?,
-                    amount: row.get(2)?,
-                    category: row.get(3)?,
-                    description: row.get(4)?,
-                    date: row.get(5)?,
-                    transaction_type: row.get(6)?,
-                    transfer_account_id: row.get(7)?,
-                })
-            })?
-            .collect::<Result<Vec<_>, _>>()?;
+            let transactions = stmt
+                .query_map([], |row| {
+                    Ok(Transaction {
+                        id: row.get(0)?,
+                        account_id: row.get(1)?,
+                        amount: row.get(2)?,
+                        category: row.get(3)?,
+                        description: row.get(4)?,
+                        date: row.get(5)?,
+                        transaction_type: row.get(6)?,
+                        transfer_account_id: row.get(7)?,
+                    })
+                })?
+                .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(transactions)
+            Ok(transactions)
+        })
     }
 
     /// Gets transactions for a specific account
@@ -449,36 +483,39 @@ impl Database {
         &self,
         account_id: &str,
     ) -> Result<Vec<Transaction>, DbError> {
-        let mut stmt = self.conn.prepare(
-            "SELECT id, account_id, amount, category, description, date, type, transfer_account_id
-             FROM transactions
-             WHERE account_id = ?1 OR transfer_account_id = ?1
-             ORDER BY date DESC, rowid DESC",
-        )?;
+        self.read(|conn| {
+            let mut stmt = conn.prepare(
+                "SELECT id, account_id, amount, category, description, date, type, transfer_account_id
+                 FROM transactions
+                 WHERE account_id = ?1 OR transfer_account_id = ?1
+                 ORDER BY date DESC, rowid DESC",
+            )?;
 
-        let transactions = stmt
-            .query_map(params![account_id], |row| {
-                Ok(Transaction {
-                    id: row.get(0)?,
-                    account_id: row.get(1)?,
-                    amount: row.get(2)?,
-                    category: row.get(3)?,
-                    description: row.get(4)?,
-                    date: row.get(5)?,
-                    transaction_type: row.get(6)?,
-                    transfer_account_id: row.get(7)?,
-                })
-            })?
-            .collect::<Result<Vec<_>, _>>()?;
+            let transactions = stmt
+                .query_map(params![account_id], |row| {
+                    Ok(Transaction {
+                        id: row.get(0)?,
+                        account_id: row.get(1)?,
+                        amount: row.get(2)?,
+                        category: row.get(3)?,
+                        description: row.get(4)?,
+                        date: row.get(5)?,
+                        transaction_type: row.get(6)?,
+                        transfer_account_id: row.get(7)?,
+                    })
+                })?
+                .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(transactions)
+            Ok(transactions)
+        })
     }
 
     /// Deletes a transaction by its ID
     pub fn delete_transaction(&self, id: &str) -> Result<(), DbError> {
-        self.conn
-            .execute("DELETE FROM transactions WHERE id = ?1", params![id])?;
-        Ok(())
+        self.write(|conn| {
+            conn.execute("DELETE FROM transactions WHERE id = ?1", params![id])?;
+            Ok(())
+        })
     }
 
     // ==================== Transaction Categories CRUD ====================
@@ -488,27 +525,29 @@ impl Database {
         &self,
         category_type: &str,
     ) -> Result<Vec<TransactionCategory>, DbError> {
-        let mut stmt = self.conn.prepare(
-            "SELECT id, name, category_type, sort_order, is_default, created_at
-             FROM transaction_categories
-             WHERE category_type = ?1
-             ORDER BY sort_order, name",
-        )?;
+        self.read(|conn| {
+            let mut stmt = conn.prepare(
+                "SELECT id, name, category_type, sort_order, is_default, created_at
+                 FROM transaction_categories
+                 WHERE category_type = ?1
+                 ORDER BY sort_order, name",
+            )?;
 
-        let categories = stmt
-            .query_map(params![category_type], |row| {
-                Ok(TransactionCategory {
-                    id: row.get(0)?,
-                    name: row.get(1)?,
-                    category_type: row.get(2)?,
-                    sort_order: row.get(3)?,
-                    is_default: row.get::<_, i32>(4)? != 0,
-                    created_at: row.get(5)?,
-                })
-            })?
-            .collect::<Result<Vec<_>, _>>()?;
+            let categories = stmt
+                .query_map(params![category_type], |row| {
+                    Ok(TransactionCategory {
+                        id: row.get(0)?,
+                        name: row.get(1)?,
+                        category_type: row.get(2)?,
+                        sort_order: row.get(3)?,
+                        is_default: row.get::<_, i32>(4)? != 0,
+                        created_at: row.get(5)?,
+                    })
+                })?
+                .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(categories)
+            Ok(categories)
+        })
     }
 
     /// Adds a new transaction category
@@ -522,108 +561,114 @@ impl Database {
             return Err(DbError::InvalidTransactionType);
         }
 
-        // Check for duplicate names within the same type
-        let exists: bool = self.conn.query_row(
-            "SELECT EXISTS(SELECT 1 FROM transaction_categories WHERE name = ?1 AND category_type = ?2)",
-            params![name, category_type],
-            |row| row.get(0),
-        )?;
+        self.write(|conn| {
+            // Check for duplicate names within the same type
+            let exists: bool = conn.query_row(
+                "SELECT EXISTS(SELECT 1 FROM transaction_categories WHERE name = ?1 AND category_type = ?2)",
+                params![name, category_type],
+                |row| row.get(0),
+            )?;
 
-        if exists {
-            return Err(DbError::Sqlite(RusqliteError::ExecuteReturnedResults));
-        }
+            if exists {
+                return Err(DbError::Sqlite(RusqliteError::ExecuteReturnedResults));
+            }
 
-        // Get max sort order for this type
-        let max_sort: i32 = self.conn.query_row(
-            "SELECT COALESCE(MAX(sort_order), -1) FROM transaction_categories WHERE category_type = ?1",
-            params![category_type],
-            |row| row.get(0),
-        )?;
+            // Get max sort order for this type
+            let max_sort: i32 = conn.query_row(
+                "SELECT COALESCE(MAX(sort_order), -1) FROM transaction_categories WHERE category_type = ?1",
+                params![category_type],
+                |row| row.get(0),
+            )?;
 
-        let id = uuid::Uuid::new_v4().to_string();
-        let now = chrono::Utc::now().to_rfc3339();
+            let id = uuid::Uuid::new_v4().to_string();
+            let now = chrono::Utc::now().to_rfc3339();
 
-        self.conn.execute(
-            "INSERT INTO transaction_categories (id, name, category_type, sort_order, is_default, created_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-            params![id, name, category_type, max_sort + 1, 0, now],
-        )?;
+            conn.execute(
+                "INSERT INTO transaction_categories (id, name, category_type, sort_order, is_default, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                params![id, name, category_type, max_sort + 1, 0, now],
+            )?;
 
-        Ok(id)
+            Ok(id)
+        })
     }
 
     /// Updates a category name
     pub fn update_transaction_category(&self, id: &str, new_name: &str) -> Result<(), DbError> {
-        // Check if category exists and get its type
-        let category_type: String = self.conn.query_row(
-            "SELECT category_type FROM transaction_categories WHERE id = ?1",
-            params![id],
-            |row| row.get(0),
-        )?;
+        self.write(|conn| {
+            // Check if category exists and get its type
+            let category_type: String = conn.query_row(
+                "SELECT category_type FROM transaction_categories WHERE id = ?1",
+                params![id],
+                |row| row.get(0),
+            )?;
 
-        // Check for duplicate names within the same type (excluding current category)
-        let exists: bool = self.conn.query_row(
-            "SELECT EXISTS(SELECT 1 FROM transaction_categories WHERE name = ?1 AND category_type = ?2 AND id != ?3)",
-            params![new_name, category_type, id],
-            |row| row.get(0),
-        )?;
+            // Check for duplicate names within the same type (excluding current category)
+            let exists: bool = conn.query_row(
+                "SELECT EXISTS(SELECT 1 FROM transaction_categories WHERE name = ?1 AND category_type = ?2 AND id != ?3)",
+                params![new_name, category_type, id],
+                |row| row.get(0),
+            )?;
 
-        if exists {
-            return Err(DbError::Sqlite(RusqliteError::ExecuteReturnedResults));
-        }
+            if exists {
+                return Err(DbError::Sqlite(RusqliteError::ExecuteReturnedResults));
+            }
 
-        self.conn.execute(
-            "UPDATE transaction_categories SET name = ?1 WHERE id = ?2",
-            params![new_name, id],
-        )?;
+            conn.execute(
+                "UPDATE transaction_categories SET name = ?1 WHERE id = ?2",
+                params![new_name, id],
+            )?;
 
-        Ok(())
+            Ok(())
+        })
     }
 
     /// Deletes a category
     pub fn delete_transaction_category(&self, id: &str) -> Result<(), DbError> {
-        self.conn.execute(
-            "DELETE FROM transaction_categories WHERE id = ?1",
-            params![id],
-        )?;
+        self.write(|conn| {
+            conn.execute(
+                "DELETE FROM transaction_categories WHERE id = ?1",
+                params![id],
+            )?;
 
-        Ok(())
+            Ok(())
+        })
     }
 
     // ==================== Balance Summary ====================
 
     /// Gets the balance summary (income, expenses and total) including account initial balances
     pub fn get_balance_summary(&self) -> Result<BalanceSummary, DbError> {
-        // Get sum of all initial balances from non-archived accounts
-        let initial_balances: i64 = self
-            .conn
-            .query_row(
-                "SELECT COALESCE(SUM(initial_balance), 0) FROM accounts WHERE is_archived = 0",
-                [],
-                |row| row.get(0),
-            )
-            .unwrap_or(0);
+        self.read(|conn| {
+            // Get sum of all initial balances from non-archived accounts
+            let initial_balances: i64 = conn
+                .query_row(
+                    "SELECT COALESCE(SUM(initial_balance), 0) FROM accounts WHERE is_archived = 0",
+                    [],
+                    |row| row.get(0),
+                )
+                .unwrap_or(0);
 
-        // Get income and expenses from transactions
-        let (total_income, total_expense): (i64, i64) = self
-            .conn
-            .query_row(
-                "SELECT
-                    COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0),
-                    COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0)
-                 FROM transactions",
-                [],
-                |row| Ok((row.get(0)?, row.get(1)?)),
-            )
-            .map_err(DbError::Sqlite)?;
+            // Get income and expenses from transactions
+            let (total_income, total_expense): (i64, i64) = conn
+                .query_row(
+                    "SELECT
+                        COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0),
+                        COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0)
+                     FROM transactions",
+                    [],
+                    |row| Ok((row.get(0)?, row.get(1)?)),
+                )
+                .map_err(DbError::Sqlite)?;
 
-        // Total balance = initial balances + income - expenses
-        let total_balance = initial_balances + total_income - total_expense;
+            // Total balance = initial balances + income - expenses
+            let total_balance = initial_balances + total_income - total_expense;
 
-        Ok(BalanceSummary {
-            total_balance,
-            total_income,
-            total_expense,
+            Ok(BalanceSummary {
+                total_balance,
+                total_income,
+                total_expense,
+            })
         })
     }
 }

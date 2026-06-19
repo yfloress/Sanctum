@@ -32,10 +32,13 @@ mod migrations;
 
 use crate::security_log::{SecurityEvent, log_security_event};
 use chrono::{DateTime, Duration, Utc};
+use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{Connection, Error as RusqliteError, ErrorCode, params};
 use secrecy::{ExposeSecret, SecretString};
 use std::fs;
 use std::path::PathBuf;
+use std::sync::Mutex;
+use std::sync::atomic::{AtomicI64, Ordering};
 use thiserror::Error;
 
 #[cfg(unix)]
@@ -99,6 +102,9 @@ pub enum DbError {
 
     #[error("Database not open - vault is locked")]
     DatabaseNotOpen,
+
+    #[error("Database pool error")]
+    Pool,
 }
 
 // ==================== Security Constants ====================
@@ -118,13 +124,48 @@ pub const SESSION_TIMEOUT_SECS: i64 = 900;
 /// KDF iterations for PBKDF2-HMAC-SHA512 (OWASP 2024 recommendation)
 pub const KDF_ITERATIONS: i64 = 600_000;
 
+/// Busy timeout (ms) applied to every connection so transient locks (e.g. WAL
+/// checkpoints) retry instead of failing immediately with SQLITE_BUSY.
+const BUSY_TIMEOUT_MS: u64 = 5_000;
+
+/// Minimum seconds between persisting `session_info` to disk. Activity is tracked
+/// in-memory (`last_activity`); the row is only rewritten this often to avoid a
+/// disk write on every read.
+const SESSION_PERSIST_INTERVAL_SECS: i64 = 30;
+
+/// Number of read-only connections in the pool. Mirrors WAL's "many readers, one
+/// writer" model, bounded so we never spawn an unreasonable number of connections.
+fn reader_pool_size() -> u32 {
+    std::thread::available_parallelism()
+        .map(|n| n.get() as u32)
+        .unwrap_or(4)
+        .clamp(2, 8)
+}
+
 // ==================== Database Struct ====================
 
-/// Main struct wrapping the database connection
+/// Connection pool of read-only connections to the encrypted vault.
+type ReaderPool = r2d2::Pool<SqliteConnectionManager>;
+
+/// Main struct wrapping the database connections.
+///
+/// Mirrors SQLite's WAL concurrency model at the application level: a single
+/// serialized writer connection plus a pool of read-only connections, so that
+/// reads run concurrently (with each other and with the writer) instead of being
+/// serialized behind one global lock.
 pub struct Database {
-    conn: Connection,
+    /// The single writer connection, serialized through a Mutex (SQLite only
+    /// allows one writer at a time anyway).
+    writer: Mutex<Connection>,
+    /// Pool of read-only (`query_only`) connections for concurrent reads.
+    readers: ReaderPool,
     path: PathBuf,
     session_timeout: i64, // Configurable session timeout in seconds
+    /// Last activity timestamp (epoch secs), tracked in memory so reads don't
+    /// trigger a disk write. Persisted to `session_info` periodically.
+    last_activity: AtomicI64,
+    /// Last time `session_info` was persisted to disk (epoch secs).
+    last_persist: AtomicI64,
 }
 
 impl Database {
@@ -147,51 +188,63 @@ impl Database {
 
         let is_new_db = !db_path.exists();
 
-        // Open database connection
-        let conn = Connection::open(&db_path)?;
+        // --- WRITER CONNECTION ---
+        // Open the single writer connection and apply key + SQLCipher hardening.
+        let writer = Connection::open(&db_path)?;
 
         // Ensure restrictive permissions on the vault file
         #[cfg(unix)]
         fs::set_permissions(&db_path, fs::Permissions::from_mode(0o600)).map_err(DbError::Io)?;
 
-        // Enforce foreign key constraints for the connection
-        conn.pragma_update(None, "foreign_keys", true)
-            .map_err(DbError::Sqlite)?;
-
-        // --- SECURITY AND CONFIGURATION ZONE ---
-        // 1. Set password (Encryption)
-        // Use pragma_update to avoid SQL Injection safely
-        // ExposeSecret allows controlled access to internal value
-        conn.pragma_update(None, "key", password.expose_secret())
+        // Apply key (encryption) + hardening pragmas. Algorithm parameters MUST be
+        // applied before attempting to decrypt, as they define how the key is
+        // interpreted. `query_only = false` since this is the writer.
+        Self::configure_connection(&writer, password, false)
             .map_err(|_| DbError::InvalidPassword)?;
 
-        // 1.0 Harden SQLCipher configuration once key is applied
-        Self::apply_sqlcipher_hardening(&conn, is_new_db)?;
-
-        // 1.1 Validate password with integrity check to fail fast on incorrect key
-        if !is_new_db {
-            Self::verify_key(&conn)?;
+        if is_new_db {
+            log_security_event(SecurityEvent::VaultCreated, Some("SQLCipher hardened"));
         }
 
-        // 2. Enable WAL mode (Performance)
-        // Use pragma_update because WAL returns string "wal" and execute would fail
-        conn.pragma_update(None, "journal_mode", "WAL")
+        // Validate password with an integrity check to fail fast on incorrect key.
+        if !is_new_db {
+            Self::verify_key(&writer)?;
+        }
+
+        // Enable WAL mode (set once on the writer; it is persisted in the DB header).
+        // Use pragma_update because WAL returns the string "wal" and execute would fail.
+        writer
+            .pragma_update(None, "journal_mode", "WAL")
             .map_err(DbError::Sqlite)?;
 
-        // -----------------------------------------
+        // --- READER POOL ---
+        // Build a pool of read-only connections. Each connection re-applies the
+        // SQLCipher key + hardening via `with_init`, then enables `query_only`.
+        // The key is moved into a fresh SecretString so it is zeroized when the
+        // pool (and its manager closure) are dropped on vault close.
+        let pool_key: SecretString = SecretString::from(password.expose_secret().to_owned());
+        let manager = SqliteConnectionManager::file(&db_path)
+            .with_init(move |conn| Self::configure_connection(conn, &pool_key, true));
+        let readers = r2d2::Pool::builder()
+            .max_size(reader_pool_size())
+            .build(manager)
+            .map_err(|_| DbError::Pool)?;
 
-        // Create Database instance
+        let now_ts = Utc::now().timestamp();
         let db = Database {
-            conn,
+            writer: Mutex::new(writer),
+            readers,
             path: db_path,
             session_timeout: SESSION_TIMEOUT_SECS, // Default 15 minutes
+            last_activity: AtomicI64::new(now_ts),
+            last_persist: AtomicI64::new(0),
         };
 
-        // Run migrations
+        // Run migrations (uses the writer connection).
         db.run_migrations()?;
 
-        // Refresh session info to start a new active session
-        db.touch_session()?;
+        // Seed session_info to start a new active session.
+        db.persist_session()?;
 
         // Verify and display security settings
         db.verify_encryption_settings()?;
@@ -199,46 +252,79 @@ impl Database {
         Ok(db)
     }
 
+    /// Runs a closure with a pooled read-only connection.
+    ///
+    /// IMPORTANT: never call `read`/`write` again from within `f` — that would hold
+    /// two pooled connections at once and can exhaust the pool under concurrency.
+    /// Use `*_on(conn, …)` helpers for composition within a single block instead.
+    fn read<T, F>(&self, f: F) -> Result<T, DbError>
+    where
+        F: FnOnce(&Connection) -> Result<T, DbError>,
+    {
+        let conn = self.readers.get().map_err(|_| DbError::Pool)?;
+        f(&conn)
+    }
+
+    /// Runs a closure with the serialized writer connection.
+    fn write<T, F>(&self, f: F) -> Result<T, DbError>
+    where
+        F: FnOnce(&Connection) -> Result<T, DbError>,
+    {
+        let conn = self.writer.lock().map_err(|_| DbError::MutexPoisoned)?;
+        f(&conn)
+    }
+
+    /// Runs a closure inside an IMMEDIATE write transaction on the writer connection.
+    ///
+    /// Use this when a sequence of reads-then-writes must be atomic.
     pub fn with_transaction<T, F>(&self, f: F) -> Result<T, DbError>
     where
-        F: FnOnce(&Database) -> Result<T, DbError>,
+        F: FnOnce(&Connection) -> Result<T, DbError>,
     {
-        self.conn.execute("BEGIN IMMEDIATE", [])?;
-        let result = f(self);
-        match result {
+        let conn = self.writer.lock().map_err(|_| DbError::MutexPoisoned)?;
+        conn.execute("BEGIN IMMEDIATE", [])?;
+        match f(&conn) {
             Ok(value) => {
-                self.conn.execute("COMMIT", [])?;
+                conn.execute("COMMIT", [])?;
                 Ok(value)
             }
             Err(err) => {
-                let _ = self.conn.execute("ROLLBACK", []);
+                let _ = conn.execute("ROLLBACK", []);
                 Err(err)
             }
         }
     }
 
-    /// Adjusts defensive SQLCipher PRAGMAs for the connection
-    /// IMPORTANT: Algorithm parameters must be applied BEFORE attempting to decrypt
-    /// for both new and existing DBs, as they define how to interpret the key.
-    fn apply_sqlcipher_hardening(conn: &Connection, is_new_db: bool) -> Result<(), DbError> {
-        // Ensure cleanup of sensitive buffers
-        conn.pragma_update(None, "cipher_memory_security", true)
-            .map_err(DbError::Sqlite)?;
+    /// Applies the SQLCipher key and hardening PRAGMAs to a connection.
+    ///
+    /// IMPORTANT: The key and algorithm parameters must be applied BEFORE any read,
+    /// for both new and existing DBs, as they define how the key is interpreted.
+    /// When `query_only` is true the connection is restricted to reads (reader pool).
+    fn configure_connection(
+        conn: &Connection,
+        password: &SecretString,
+        query_only: bool,
+    ) -> Result<(), RusqliteError> {
+        // 1. Key (encryption). ExposeSecret grants controlled access; pragma_update
+        //    binds the value safely (no SQL injection).
+        conn.pragma_update(None, "key", password.expose_secret())?;
 
-        // Encryption algorithms - MUST always match those used when creating the DB
-        // These parameters affect how the key is derived and HMAC is verified
-        conn.pragma_update(None, "cipher_hmac_algorithm", "HMAC_SHA512")
-            .map_err(DbError::Sqlite)?;
-        conn.pragma_update(None, "cipher_kdf_algorithm", "PBKDF2_HMAC_SHA512")
-            .map_err(DbError::Sqlite)?;
-        conn.pragma_update(None, "kdf_iter", KDF_ITERATIONS)
-            .map_err(DbError::Sqlite)?;
-        conn.pragma_update(None, "cipher_page_size", 4096i64)
-            .map_err(DbError::Sqlite)?;
+        // 2. SQLCipher hardening. These MUST match the values used when the DB was
+        //    created, as they affect key derivation and HMAC verification.
+        conn.pragma_update(None, "cipher_memory_security", true)?;
+        conn.pragma_update(None, "cipher_hmac_algorithm", "HMAC_SHA512")?;
+        conn.pragma_update(None, "cipher_kdf_algorithm", "PBKDF2_HMAC_SHA512")?;
+        conn.pragma_update(None, "kdf_iter", KDF_ITERATIONS)?;
+        conn.pragma_update(None, "cipher_page_size", 4096i64)?;
 
-        // Log only on new DB creation
-        if is_new_db {
-            log_security_event(SecurityEvent::VaultCreated, Some("SQLCipher hardened"));
+        // 3. Behavior: retry on transient locks, enforce FKs, WAL-friendly sync.
+        conn.busy_timeout(std::time::Duration::from_millis(BUSY_TIMEOUT_MS))?;
+        conn.pragma_update(None, "foreign_keys", true)?;
+        conn.pragma_update(None, "synchronous", "NORMAL")?;
+
+        // 4. Read-only enforcement for pooled reader connections.
+        if query_only {
+            conn.pragma_update(None, "query_only", true)?;
         }
 
         Ok(())
@@ -250,25 +336,24 @@ impl Database {
     pub fn verify_encryption_settings(&self) -> Result<(), DbError> {
         use log::debug;
 
-        let cipher = self
-            .conn
-            .pragma_query_value(None, "cipher", |row| row.get::<_, String>(0))
-            .unwrap_or_else(|_| "unknown".to_string());
-        let kdf = self
-            .conn
-            .pragma_query_value(None, "cipher_kdf_algorithm", |row| row.get::<_, String>(0))
-            .unwrap_or_else(|_| "unknown".to_string());
-        let iterations = self
-            .conn
-            .pragma_query_value(None, "kdf_iter", |row| row.get::<_, i64>(0))
-            .unwrap_or(0);
+        self.read(|conn| {
+            let cipher = conn
+                .pragma_query_value(None, "cipher", |row| row.get::<_, String>(0))
+                .unwrap_or_else(|_| "unknown".to_string());
+            let kdf = conn
+                .pragma_query_value(None, "cipher_kdf_algorithm", |row| row.get::<_, String>(0))
+                .unwrap_or_else(|_| "unknown".to_string());
+            let iterations = conn
+                .pragma_query_value(None, "kdf_iter", |row| row.get::<_, i64>(0))
+                .unwrap_or(0);
 
-        debug!(
-            "[CRYPTO] cipher={} kdf={} iterations={}",
-            cipher, kdf, iterations
-        );
+            debug!(
+                "[CRYPTO] cipher={} kdf={} iterations={}",
+                cipher, kdf, iterations
+            );
 
-        Ok(())
+            Ok(())
+        })
     }
 
     /// No-op en release builds
@@ -310,10 +395,11 @@ impl Database {
 
     /// Verifies that the database is correctly configured and accessible
     pub fn health_check(&self) -> Result<(), DbError> {
-        self.conn
-            .query_row("SELECT 1", [], |_| Ok(()))
-            .map_err(DbError::Sqlite)?;
-        Ok(())
+        self.read(|conn| {
+            conn.query_row("SELECT 1", [], |_| Ok(()))
+                .map_err(DbError::Sqlite)?;
+            Ok(())
+        })
     }
 
     /// Forces a WAL checkpoint to write all changes to the main database file
@@ -322,39 +408,45 @@ impl Database {
     /// changes in the WAL file are merged into the main database file.
     /// Uses TRUNCATE mode which writes all frames and resets the WAL file.
     pub fn checkpoint(&self) -> Result<(), DbError> {
+        // Checkpoint must run on the writer connection (it writes the main DB file).
         // Use query_row instead of pragma_update because wal_checkpoint
         // is a command that returns values, not a setting pragma
-        self.conn
-            .query_row("PRAGMA wal_checkpoint(TRUNCATE)", [], |_row| Ok(()))
-            .map_err(DbError::Sqlite)?;
-        Ok(())
+        self.write(|conn| {
+            conn.query_row("PRAGMA wal_checkpoint(TRUNCATE)", [], |_row| Ok(()))
+                .map_err(DbError::Sqlite)?;
+            Ok(())
+        })
     }
 
     // ==================== Settings Methods ====================
 
     /// Gets a setting value by key
     pub fn get_setting(&self, key: &str) -> Result<Option<String>, DbError> {
-        let result = self.conn.query_row(
-            "SELECT value FROM settings WHERE key = ?1",
-            params![key],
-            |row| row.get(0),
-        );
+        self.read(|conn| {
+            let result = conn.query_row(
+                "SELECT value FROM settings WHERE key = ?1",
+                params![key],
+                |row| row.get(0),
+            );
 
-        match result {
-            Ok(value) => Ok(Some(value)),
-            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
-            Err(e) => Err(DbError::Sqlite(e)),
-        }
+            match result {
+                Ok(value) => Ok(Some(value)),
+                Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+                Err(e) => Err(DbError::Sqlite(e)),
+            }
+        })
     }
 
     /// Sets a setting value (upsert)
     pub fn set_setting(&self, key: &str, value: &str) -> Result<(), DbError> {
-        self.conn.execute(
-            "INSERT INTO settings (key, value) VALUES (?1, ?2)
-             ON CONFLICT(key) DO UPDATE SET value = ?2",
-            params![key, value],
-        )?;
-        Ok(())
+        self.write(|conn| {
+            conn.execute(
+                "INSERT INTO settings (key, value) VALUES (?1, ?2)
+                 ON CONFLICT(key) DO UPDATE SET value = ?2",
+                params![key, value],
+            )?;
+            Ok(())
+        })
     }
 
     // ==================== Rate Limiting Functions ====================
@@ -494,105 +586,69 @@ impl Database {
 
     // ==================== Session Management Functions ====================
 
-    /// Updates the last activity timestamp
+    /// Updates the last activity timestamp (in memory) and persists it to disk at
+    /// most once per [`SESSION_PERSIST_INTERVAL_SECS`], so reads don't trigger a write.
     pub fn touch_session(&self) -> Result<(), DbError> {
+        let now_ts = Utc::now().timestamp();
+        self.last_activity.store(now_ts, Ordering::Relaxed);
+
+        // Throttle disk persistence so frequent activity doesn't write every time.
+        let last = self.last_persist.load(Ordering::Relaxed);
+        if now_ts - last >= SESSION_PERSIST_INTERVAL_SECS {
+            self.persist_session_at(now_ts)?;
+        }
+        Ok(())
+    }
+
+    /// Persists the current activity timestamp to `session_info` now.
+    fn persist_session(&self) -> Result<(), DbError> {
+        self.persist_session_at(Utc::now().timestamp())
+    }
+
+    /// Persists the given activity timestamp to `session_info`.
+    fn persist_session_at(&self, now_ts: i64) -> Result<(), DbError> {
         let now = Utc::now().to_rfc3339();
-        self.conn.execute(
-            "INSERT INTO session_info (id, last_activity, created_at)
-             VALUES (1, ?1, ?1)
-             ON CONFLICT(id) DO UPDATE SET last_activity = ?1",
-            params![&now],
-        )?;
+        self.write(|conn| {
+            conn.execute(
+                "INSERT INTO session_info (id, last_activity, created_at)
+                 VALUES (1, ?1, ?1)
+                 ON CONFLICT(id) DO UPDATE SET last_activity = ?1",
+                params![&now],
+            )?;
+            Ok(())
+        })?;
+        self.last_persist.store(now_ts, Ordering::Relaxed);
         Ok(())
     }
 
-    /// Checks if the session has expired due to inactivity
+    /// Checks if the session has expired due to inactivity (reads in-memory state).
     pub fn check_session_timeout(&self) -> Result<(), DbError> {
-        if self.session_timeout < 0 {
-            return Ok(());
-        }
-
-        let last_activity: String = match self.conn.query_row(
-            "SELECT last_activity FROM session_info WHERE id = 1",
-            [],
-            |row| row.get(0),
-        ) {
-            Ok(value) => value,
-            Err(RusqliteError::QueryReturnedNoRows) => {
-                self.touch_session()?;
-                return Ok(());
-            }
-            Err(e) => return Err(DbError::Sqlite(e)),
-        };
-
-        if let Ok(last) = DateTime::parse_from_rfc3339(&last_activity) {
-            let now = Utc::now();
-            if now.signed_duration_since(last.with_timezone(&Utc))
-                > Duration::seconds(self.session_timeout)
-            {
-                return Err(DbError::SessionExpired);
-            }
-        }
-        Ok(())
+        self.check_session_timeout_readonly()
     }
 
-    /// Checks session timeout without mutating session_info
+    /// Checks session timeout from the in-memory activity timestamp.
     pub fn check_session_timeout_readonly(&self) -> Result<(), DbError> {
         if self.session_timeout < 0 {
             return Ok(());
         }
 
-        let last_activity: String = match self.conn.query_row(
-            "SELECT last_activity FROM session_info WHERE id = 1",
-            [],
-            |row| row.get(0),
-        ) {
-            Ok(value) => value,
-            Err(RusqliteError::QueryReturnedNoRows) => {
-                return Ok(());
-            }
-            Err(e) => return Err(DbError::Sqlite(e)),
-        };
-
-        if let Ok(last) = DateTime::parse_from_rfc3339(&last_activity) {
-            let now = Utc::now();
-            if now.signed_duration_since(last.with_timezone(&Utc))
-                > Duration::seconds(self.session_timeout)
-            {
-                return Err(DbError::SessionExpired);
-            }
+        let last = self.last_activity.load(Ordering::Relaxed);
+        let now = Utc::now().timestamp();
+        if now - last > self.session_timeout {
+            return Err(DbError::SessionExpired);
         }
         Ok(())
     }
 
-    /// Gets seconds until session expires (for UI display)
+    /// Gets seconds until session expires (for UI display).
     pub fn get_session_remaining(&self) -> Result<i64, DbError> {
         if self.session_timeout < 0 {
             return Ok(i64::MAX);
         }
 
-        let last_activity: String = match self.conn.query_row(
-            "SELECT last_activity FROM session_info WHERE id = 1",
-            [],
-            |row| row.get(0),
-        ) {
-            Ok(value) => value,
-            Err(RusqliteError::QueryReturnedNoRows) => {
-                self.touch_session()?;
-                return Ok(self.session_timeout);
-            }
-            Err(e) => return Err(DbError::Sqlite(e)),
-        };
-
-        if let Ok(last) = DateTime::parse_from_rfc3339(&last_activity) {
-            let now = Utc::now();
-            let elapsed = now
-                .signed_duration_since(last.with_timezone(&Utc))
-                .num_seconds();
-            return Ok((self.session_timeout - elapsed).max(0));
-        }
-
-        Ok(self.session_timeout)
+        let last = self.last_activity.load(Ordering::Relaxed);
+        let now = Utc::now().timestamp();
+        Ok((self.session_timeout - (now - last)).max(0))
     }
 
     /// Sets the session timeout duration (in seconds)
@@ -604,13 +660,15 @@ impl Database {
 
     /// Executes pending database migrations
     fn run_migrations(&self) -> Result<(), DbError> {
-        let current_version = migrations::get_current_version(&self.conn)?;
+        self.write(|conn| {
+            let current_version = migrations::get_current_version(conn)?;
 
-        if current_version < migrations::SCHEMA_VERSION {
-            migrations::run_pending(&self.conn, current_version, migrations::SCHEMA_VERSION)?;
-        }
+            if current_version < migrations::SCHEMA_VERSION {
+                migrations::run_pending(conn, current_version, migrations::SCHEMA_VERSION)?;
+            }
 
-        Ok(())
+            Ok(())
+        })
     }
 }
 
@@ -642,5 +700,84 @@ mod tests {
             "Session expired due to inactivity"
         );
         assert_eq!(DbError::RateLimited.to_string(), "Too many failed attempts");
+    }
+
+    /// Exercises the writer + reader-pool design end to end: many concurrent
+    /// readers run alongside a continuous writer with no deadlock and no
+    /// unhandled `SQLITE_BUSY`. Validates the WAL "many readers, one writer"
+    /// model holds at the application level.
+    #[test]
+    fn test_concurrent_reads_with_writer() {
+        use crate::models::Account;
+        use secrecy::SecretString;
+        use std::sync::Arc;
+        use std::thread;
+
+        let dir =
+            std::env::temp_dir().join(format!("sanctum-concurrency-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).expect("create test dir");
+        let db_path = dir.join("vault.db");
+        let password = SecretString::from("concurrency-test-pw-123".to_string());
+
+        let db = Arc::new(Database::init(db_path, &password).expect("init db"));
+
+        // Seed an account so reads return data.
+        let account = Account {
+            id: uuid::Uuid::new_v4().to_string(),
+            name: "Checking".to_string(),
+            account_type: "bank".to_string(),
+            currency: "USD".to_string(),
+            initial_balance: 1000,
+            color: "#8b5cf6".to_string(),
+            icon: None,
+            is_archived: false,
+            created_at: "2024-01-01T00:00:00Z".to_string(),
+        };
+        db.create_account(&account).expect("seed account");
+
+        let mut handles = Vec::new();
+
+        // Writer thread: continuously inserts income transactions.
+        {
+            let db = Arc::clone(&db);
+            let account_id = account.id.clone();
+            handles.push(thread::spawn(move || {
+                for i in 0..50 {
+                    let tx = crate::models::Transaction {
+                        id: uuid::Uuid::new_v4().to_string(),
+                        account_id: account_id.clone(),
+                        amount: 10 + i,
+                        category: "Salary".to_string(),
+                        description: "concurrent".to_string(),
+                        date: "2024-06-15".to_string(),
+                        transaction_type: "income".to_string(),
+                        transfer_account_id: None,
+                    };
+                    db.create_transaction(&tx).expect("concurrent write");
+                }
+            }));
+        }
+
+        // Reader threads: hammer reads that pull pooled connections.
+        for _ in 0..8 {
+            let db = Arc::clone(&db);
+            handles.push(thread::spawn(move || {
+                for _ in 0..100 {
+                    db.get_accounts().expect("concurrent get_accounts");
+                    db.get_balance_summary().expect("concurrent balance");
+                    db.get_all_account_balances().expect("concurrent balances");
+                }
+            }));
+        }
+
+        for handle in handles {
+            handle.join().expect("thread panicked");
+        }
+
+        // All 50 writes landed and reads stayed consistent.
+        let txs = db.get_transactions().expect("final read");
+        assert_eq!(txs.len(), 50);
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

@@ -23,7 +23,7 @@ use crate::db::{Database, DbError};
 use crate::models::CryptoTransaction;
 use chrono::{NaiveDate, NaiveDateTime};
 
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 
 use super::parsers::{
     CsvParser, ExchangeSource, ImportParser, JsonParser, detect_exchange_source, detect_format,
@@ -317,11 +317,11 @@ pub enum IngestionError {
 }
 
 pub struct IngestionService {
-    db: Arc<Mutex<Option<Database>>>,
+    db: Arc<RwLock<Option<Database>>>,
 }
 
 impl IngestionService {
-    pub fn new(db: Arc<Mutex<Option<Database>>>) -> Self {
+    pub fn new(db: Arc<RwLock<Option<Database>>>) -> Self {
         Self { db }
     }
 
@@ -345,7 +345,7 @@ impl IngestionService {
     {
         let db_lock = self
             .db
-            .lock()
+            .read()
             .map_err(|_| IngestionError::Parse("Lock error".to_string()))?;
         let db = db_lock.as_ref().ok_or(IngestionError::NoVaultOpen)?;
 
@@ -933,7 +933,7 @@ mod integration_tests {
 
     struct IngestionTestHarness {
         service: IngestionService,
-        db: Arc<Mutex<Option<IngestionTestDb>>>,
+        db: Arc<RwLock<Option<IngestionTestDb>>>,
         test_dir: PathBuf,
     }
 
@@ -952,7 +952,7 @@ mod integration_tests {
         let db_path = base_dir.join("vault.db");
         let password = SecretString::from("test-password-123".to_string());
         let db = IngestionTestDb::init(db_path, &password).expect("init test database");
-        let db_arc = Arc::new(Mutex::new(Some(db)));
+        let db_arc = Arc::new(RwLock::new(Some(db)));
         let service = IngestionService::new(db_arc.clone());
         IngestionTestHarness {
             service,
@@ -1014,7 +1014,7 @@ mod integration_tests {
     fn test_process_transactions_imports_income() {
         let h = new_ingestion_harness();
         {
-            let guard = h.db.lock().expect("lock");
+            let guard = h.db.read().expect("lock");
             let db = guard.as_ref().expect("db");
             seed_account(db);
             seed_category(db, "Salary", "income");
@@ -1041,7 +1041,7 @@ mod integration_tests {
     fn test_process_transactions_imports_expense() {
         let h = new_ingestion_harness();
         {
-            let guard = h.db.lock().expect("lock");
+            let guard = h.db.read().expect("lock");
             let db = guard.as_ref().expect("db");
             seed_account(db);
             seed_category(db, "Food", "expense");
@@ -1067,7 +1067,7 @@ mod integration_tests {
     fn test_process_transactions_imports_transfer() {
         let h = new_ingestion_harness();
         {
-            let guard = h.db.lock().expect("lock");
+            let guard = h.db.read().expect("lock");
             let db = guard.as_ref().expect("db");
             seed_account_named(db, "Source", "USD");
             seed_account_named(db, "Dest", "USD");
@@ -1093,7 +1093,7 @@ mod integration_tests {
     fn test_process_transactions_rejects_unknown_account() {
         let h = new_ingestion_harness();
         {
-            let guard = h.db.lock().expect("lock");
+            let guard = h.db.read().expect("lock");
             let db = guard.as_ref().expect("db");
             seed_category(db, "Test", "income");
         }
@@ -1119,7 +1119,7 @@ mod integration_tests {
     fn test_process_transactions_rejects_unknown_category() {
         let h = new_ingestion_harness();
         {
-            let guard = h.db.lock().expect("lock");
+            let guard = h.db.read().expect("lock");
             let db = guard.as_ref().expect("db");
             seed_account(db);
         }
@@ -1145,7 +1145,7 @@ mod integration_tests {
     fn test_process_transactions_rejects_currency_mismatch() {
         let h = new_ingestion_harness();
         {
-            let guard = h.db.lock().expect("lock");
+            let guard = h.db.read().expect("lock");
             let db = guard.as_ref().expect("db");
             seed_account_named(db, "EUR Acc", "EUR");
             seed_category(db, "Test", "income");
@@ -1172,7 +1172,7 @@ mod integration_tests {
     fn test_process_transactions_rejects_self_transfer() {
         let h = new_ingestion_harness();
         {
-            let guard = h.db.lock().expect("lock");
+            let guard = h.db.read().expect("lock");
             let db = guard.as_ref().expect("db");
             seed_account_named(db, "Acc", "USD");
         }
@@ -1198,7 +1198,7 @@ mod integration_tests {
     fn test_process_transactions_deduplicates_exact_match() {
         let h = new_ingestion_harness();
         {
-            let guard = h.db.lock().expect("lock");
+            let guard = h.db.read().expect("lock");
             let db = guard.as_ref().expect("db");
             seed_account(db);
             seed_category(db, "Salary", "income");
@@ -1230,7 +1230,7 @@ mod integration_tests {
     fn test_preview_transactions_does_not_insert() {
         let h = new_ingestion_harness();
         {
-            let guard = h.db.lock().expect("lock");
+            let guard = h.db.read().expect("lock");
             let db = guard.as_ref().expect("db");
             seed_account(db);
             seed_category(db, "Salary", "income");
@@ -1257,7 +1257,7 @@ mod integration_tests {
         assert_eq!(result.errors, 0, "preview should have no errors");
         // Verify nothing was actually persisted
         {
-            let guard = h.db.lock().expect("lock");
+            let guard = h.db.read().expect("lock");
             let db = guard.as_ref().expect("db");
             let txs = db.get_transactions().expect("get transactions");
             assert!(txs.is_empty(), "preview should not persist data");
@@ -1268,7 +1268,7 @@ mod integration_tests {
     fn test_process_transactions_rejects_transfer_without_destination() {
         let h = new_ingestion_harness();
         {
-            let guard = h.db.lock().expect("lock");
+            let guard = h.db.read().expect("lock");
             let db = guard.as_ref().expect("db");
             seed_account_named(db, "Acc", "USD");
         }
@@ -1294,7 +1294,7 @@ mod integration_tests {
     fn test_process_transactions_handles_mixed_income_and_expense() {
         let h = new_ingestion_harness();
         {
-            let guard = h.db.lock().expect("lock");
+            let guard = h.db.read().expect("lock");
             let db = guard.as_ref().expect("db");
             seed_account(db);
             seed_category(db, "Salary", "income");
@@ -1382,7 +1382,7 @@ mod integration_tests {
     fn test_process_crypto_buy() {
         let h = new_ingestion_harness();
         {
-            let guard = h.db.lock().expect("lock");
+            let guard = h.db.read().expect("lock");
             let db = guard.as_ref().expect("db");
             seed_wallet(db, "Exchange");
         }
@@ -1410,7 +1410,7 @@ mod integration_tests {
     fn test_process_crypto_buy_with_fee_coin() {
         let h = new_ingestion_harness();
         {
-            let guard = h.db.lock().expect("lock");
+            let guard = h.db.read().expect("lock");
             let db = guard.as_ref().expect("db");
             seed_wallet(db, "Exchange");
         }
@@ -1440,7 +1440,7 @@ mod integration_tests {
     fn test_process_crypto_sell() {
         let h = new_ingestion_harness();
         {
-            let guard = h.db.lock().expect("lock");
+            let guard = h.db.read().expect("lock");
             let db = guard.as_ref().expect("db");
             seed_wallet(db, "Exchange");
         }
@@ -1467,7 +1467,7 @@ mod integration_tests {
     fn test_process_crypto_transfer_in() {
         let h = new_ingestion_harness();
         {
-            let guard = h.db.lock().expect("lock");
+            let guard = h.db.read().expect("lock");
             let db = guard.as_ref().expect("db");
             seed_wallet(db, "MyWallet");
         }
@@ -1494,7 +1494,7 @@ mod integration_tests {
     fn test_process_crypto_transfer_out() {
         let h = new_ingestion_harness();
         {
-            let guard = h.db.lock().expect("lock");
+            let guard = h.db.read().expect("lock");
             let db = guard.as_ref().expect("db");
             seed_wallet(db, "MyWallet");
         }
@@ -1521,7 +1521,7 @@ mod integration_tests {
     fn test_process_crypto_swap_creates_two_transactions() {
         let h = new_ingestion_harness();
         {
-            let guard = h.db.lock().expect("lock");
+            let guard = h.db.read().expect("lock");
             let db = guard.as_ref().expect("db");
             seed_wallet(db, "Exchange");
         }
@@ -1547,7 +1547,7 @@ mod integration_tests {
         );
 
         // Verify two transactions were actually created in DB
-        let guard = h.db.lock().expect("lock");
+        let guard = h.db.read().expect("lock");
         let db = guard.as_ref().expect("db");
         let all = db
             .get_all_crypto_transactions(0, i64::MAX)
@@ -1582,7 +1582,7 @@ mod integration_tests {
     fn test_process_crypto_rejects_unknown_coin() {
         let h = new_ingestion_harness();
         {
-            let guard = h.db.lock().expect("lock");
+            let guard = h.db.read().expect("lock");
             let db = guard.as_ref().expect("db");
             seed_wallet(db, "Exchange");
         }
@@ -1617,7 +1617,7 @@ mod integration_tests {
     fn test_process_crypto_rejects_swap_with_unknown_target() {
         let h = new_ingestion_harness();
         {
-            let guard = h.db.lock().expect("lock");
+            let guard = h.db.read().expect("lock");
             let db = guard.as_ref().expect("db");
             seed_wallet(db, "Exchange");
         }
@@ -1645,7 +1645,7 @@ mod integration_tests {
     fn test_process_crypto_deduplicates_exact_match() {
         let h = new_ingestion_harness();
         {
-            let guard = h.db.lock().expect("lock");
+            let guard = h.db.read().expect("lock");
             let db = guard.as_ref().expect("db");
             seed_wallet(db, "Exchange");
         }
@@ -1676,7 +1676,7 @@ mod integration_tests {
     fn test_preview_crypto_does_not_insert() {
         let h = new_ingestion_harness();
         {
-            let guard = h.db.lock().expect("lock");
+            let guard = h.db.read().expect("lock");
             let db = guard.as_ref().expect("db");
             seed_wallet(db, "Exchange");
         }
@@ -1701,7 +1701,7 @@ mod integration_tests {
             "preview should show changes"
         );
         // Verify nothing persisted
-        let guard = h.db.lock().expect("lock");
+        let guard = h.db.read().expect("lock");
         let db = guard.as_ref().expect("db");
         let all = db
             .get_all_crypto_transactions(0, i64::MAX)
@@ -1713,7 +1713,7 @@ mod integration_tests {
     fn test_process_crypto_handles_multiple_types() {
         let h = new_ingestion_harness();
         {
-            let guard = h.db.lock().expect("lock");
+            let guard = h.db.read().expect("lock");
             let db = guard.as_ref().expect("db");
             seed_wallet(db, "Exchange");
         }
