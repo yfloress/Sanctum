@@ -23,3 +23,4 @@ pub mod crypto;
 pub mod dashboard;
 pub mod finance;
 pub mod ingestion;
+pub mod settings;

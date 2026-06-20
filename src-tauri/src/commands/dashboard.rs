@@ -19,14 +19,15 @@
 //!
 //! Covers: net worth balance, recent transactions, analytics with chart data.
 
-use sanctum::controller::{AppController, SETTING_PREFERRED_CURRENCY};
+use sanctum::features::crypto::CryptoService;
+use sanctum::features::finance::FinanceService;
+use sanctum::features::settings::{SETTING_PREFERRED_CURRENCY, SettingsService};
 use sanctum::ui::dto::dashboard::{
     AnalyticsData, BalanceOverview, ExpenseBreakdownItem, MonthlyCashFlowItem, NetWorthChartData,
     RecentTransaction,
 };
 use sanctum::ui::{format_category_label, format_money, format_preferred};
 use std::collections::HashMap;
-use std::sync::Arc;
 use tauri::State;
 
 /// Maximum days for crypto portfolio snapshots (2 years).
@@ -36,13 +37,13 @@ fn normalize_currency_code(code: &str) -> String {
     code.trim().to_uppercase()
 }
 
-fn load_cached_usd_rate(controller: &AppController, currency: &str) -> f64 {
+fn load_cached_usd_rate(finance: &FinanceService, currency: &str) -> f64 {
     let target = normalize_currency_code(currency);
     if target == "USD" {
         return 1.0;
     }
     let pair = format!("{}_USD", target);
-    controller
+    finance
         .load_exchange_rate_allow_stale(pair)
         .ok()
         .and_then(|r| r.map(|(rate, _)| rate))
@@ -61,22 +62,24 @@ fn convert_usd_to_preferred(amount_usd: f64, currency: &str, rate: f64) -> f64 {
 
 /// Fetch net worth balance overview (fiat + crypto totals).
 #[tauri::command]
-pub fn fetch_balance(controller: State<'_, Arc<AppController>>) -> Result<BalanceOverview, String> {
+pub fn fetch_balance(
+    finance: State<'_, FinanceService>,
+    crypto: State<'_, CryptoService>,
+    settings: State<'_, SettingsService>,
+) -> Result<BalanceOverview, String> {
     let preferred_currency = normalize_currency_code(
-        &controller
+        &settings
             .get_app_setting(SETTING_PREFERRED_CURRENCY)
             .unwrap_or_else(|_| "USD".to_string()),
     );
-    let preferred_rate = load_cached_usd_rate(&controller, &preferred_currency);
+    let preferred_rate = load_cached_usd_rate(&finance, &preferred_currency);
 
-    let accounts = controller.get_accounts().map_err(|e| e.to_string())?;
-    let balances = controller
-        .get_account_balances()
-        .map_err(|e| e.to_string())?;
-    let assets = controller
+    let accounts = finance.get_accounts().map_err(|e| e.to_string())?;
+    let balances = finance.get_account_balances().map_err(|e| e.to_string())?;
+    let assets = crypto
         .get_aggregated_portfolio()
         .map_err(|e| e.to_string())?;
-    let prices = controller.load_crypto_prices().unwrap_or_default();
+    let prices = crypto.load_crypto_prices().unwrap_or_default();
 
     let currency_map: HashMap<String, String> = accounts
         .iter()
@@ -92,10 +95,7 @@ pub fn fetch_balance(controller: State<'_, Arc<AppController>>) -> Result<Balanc
     let mut usd_rates: HashMap<String, f64> = HashMap::from([("USD".to_string(), 1.0)]);
     for currency in currency_map.values() {
         if !usd_rates.contains_key(currency) {
-            usd_rates.insert(
-                currency.clone(),
-                load_cached_usd_rate(&controller, currency),
-            );
+            usd_rates.insert(currency.clone(), load_cached_usd_rate(&finance, currency));
         }
     }
 
@@ -140,16 +140,14 @@ pub fn fetch_balance(controller: State<'_, Arc<AppController>>) -> Result<Balanc
 
 /// Fetch recent transactions for the dashboard feed.
 #[tauri::command]
-pub fn fetch_recent(
-    controller: State<'_, Arc<AppController>>,
-) -> Result<Vec<RecentTransaction>, String> {
-    let accounts = controller.get_accounts().map_err(|e| e.to_string())?;
+pub fn fetch_recent(finance: State<'_, FinanceService>) -> Result<Vec<RecentTransaction>, String> {
+    let accounts = finance.get_accounts().map_err(|e| e.to_string())?;
     let account_lookup: HashMap<String, (String, String)> = accounts
         .iter()
         .map(|a| (a.id.clone(), (a.currency.clone(), a.name.clone())))
         .collect();
 
-    let mut transactions = controller.get_transactions().map_err(|e| e.to_string())?;
+    let mut transactions = finance.get_transactions().map_err(|e| e.to_string())?;
     transactions.sort_by(|a, b| b.date.cmp(&a.date));
 
     let recent: Vec<RecentTransaction> = transactions
@@ -206,23 +204,30 @@ pub fn fetch_recent(
 /// Fetch analytics data with chart series for a given time range.
 #[tauri::command]
 pub fn fetch_analytics(
-    controller: State<'_, Arc<AppController>>,
+    finance: State<'_, FinanceService>,
+    crypto: State<'_, CryptoService>,
+    settings: State<'_, SettingsService>,
     range: String,
 ) -> Result<AnalyticsData, String> {
     let preferred_currency = normalize_currency_code(
-        &controller
+        &settings
             .get_app_setting(SETTING_PREFERRED_CURRENCY)
             .unwrap_or_else(|_| "USD".to_string()),
     );
-    let preferred_rate = load_cached_usd_rate(&controller, &preferred_currency);
+    let preferred_rate = load_cached_usd_rate(&finance, &preferred_currency);
 
-    let crypto_total = calculate_crypto_total(&controller);
-    let crypto_snapshots = controller
+    let crypto_total = calculate_crypto_total(&crypto);
+    let crypto_snapshots = crypto
         .get_crypto_portfolio_snapshots(MAX_SNAPSHOT_DAYS)
         .unwrap_or_default();
 
-    let data = controller
-        .get_dashboard_data(crypto_total, &crypto_snapshots, range)
+    let data = finance
+        .get_dashboard_data(
+            crypto_total,
+            &crypto_snapshots,
+            range,
+            preferred_currency.clone(),
+        )
         .map_err(|e| e.to_string())?;
 
     let breakdown: Vec<ExpenseBreakdownItem> = data
@@ -304,12 +309,12 @@ pub fn fetch_analytics(
     })
 }
 
-fn calculate_crypto_total(controller: &AppController) -> f64 {
-    let assets = match controller.get_aggregated_portfolio() {
+fn calculate_crypto_total(crypto: &CryptoService) -> f64 {
+    let assets = match crypto.get_aggregated_portfolio() {
         Ok(a) => a,
         Err(_) => return 0.0,
     };
-    let prices = controller.load_crypto_prices().unwrap_or_default();
+    let prices = crypto.load_crypto_prices().unwrap_or_default();
     let price_map: HashMap<String, f64> = prices
         .into_iter()
         .map(|p| (p.id, p.current_price))

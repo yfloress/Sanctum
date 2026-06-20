@@ -15,30 +15,21 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
 //
 
-//! Sanctum - Personal Finance Manager
+//! Settings feature
 //!
-//! Core library modules for database, models, and business logic.
-//!
-//! # Architecture
-//!
-//! The codebase is organized into feature-based modules:
-//!
-//! - `core/` - Shared infrastructure (database, errors, security)
-//! - `features/` - Domain modules (finance, crypto)
-//! - `services/` - Shared cross-cutting services
-//! - `ui/` - UI layer (DTOs, helpers, data)
+//! Generic access to application-level settings (currency, language, theme,
+//! session timeout, …). Crypto-specific settings (catalog, proxy, tickers)
+//! stay in the crypto feature; this service is the shared, cross-domain
+//! settings façade so commands depend on settings instead of an unrelated
+//! domain service.
 
-// New modular architecture
-pub mod core;
-pub mod features;
-pub mod ui;
+mod service;
 
-// Application modules
-pub mod db;
-pub mod models;
-pub mod security_log;
-pub mod services;
-pub mod vault_manager;
+pub use service::{SettingsError, SettingsService};
 
-// Core re-exports
-pub use core::{Database, DbError, SecurityEvent, init_security_logger, log_security_event};
+// Re-export the application-level setting keys from their canonical home so
+// callers can reach them through the settings feature.
+pub use crate::core::settings::{
+    SETTING_DARK_MODE, SETTING_PREFERRED_CURRENCY, SETTING_PREFERRED_LANGUAGE,
+    SETTING_SESSION_TIMEOUT, SETTING_SIDEBAR_COLLAPSED,
+};

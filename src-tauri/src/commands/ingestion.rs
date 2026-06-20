@@ -17,76 +17,75 @@
 
 //! Ingestion domain Tauri commands.
 
-use sanctum::controller::AppController;
+use sanctum::features::ingestion::parsers::detect_exchange_source as parse_exchange_source;
+use sanctum::features::ingestion::{IngestionService, MAX_FILE_SIZE};
 use sanctum::ui::dto::ingestion::{ExchangeDetectionResult, ImportErrorDto, ImportResultsResponse};
-use std::sync::Arc;
 use tauri::State;
 
 #[tauri::command]
 pub fn preview_import(
-    controller: State<'_, Arc<AppController>>,
+    ingestion: State<'_, IngestionService>,
     content: String,
     filename: String,
 ) -> Result<ImportResultsResponse, String> {
-    let summary = controller
-        .preview_data(&content, &filename)
+    let summary = ingestion
+        .preview_from_content(&content, &filename)
         .map_err(|e| e.to_string())?;
     Ok(map_import_summary(summary))
 }
 
 #[tauri::command]
 pub fn import_data(
-    controller: State<'_, Arc<AppController>>,
+    ingestion: State<'_, IngestionService>,
     content: String,
     filename: String,
 ) -> Result<ImportResultsResponse, String> {
-    let summary = controller
-        .import_data(content, filename)
+    let summary = ingestion
+        .import_from_content(&content, &filename)
         .map_err(|e| e.to_string())?;
     Ok(map_import_summary(summary))
 }
 
 #[tauri::command]
-pub fn max_import_file_size(controller: State<'_, Arc<AppController>>) -> usize {
-    controller.max_import_file_size()
+pub fn max_import_file_size() -> usize {
+    MAX_FILE_SIZE
 }
 
 #[tauri::command]
-pub fn detect_exchange_source(
-    controller: State<'_, Arc<AppController>>,
-    content: String,
-) -> Option<ExchangeDetectionResult> {
-    controller
-        .detect_exchange_source(&content)
-        .map(|(id, label, wallet)| ExchangeDetectionResult {
-            exchange_id: id,
-            exchange: label,
-            suggested_wallet: wallet,
-            file_count: 1,
-            total_records: content.lines().count().saturating_sub(1),
-        })
+pub fn detect_exchange_source(content: String) -> Option<ExchangeDetectionResult> {
+    detect_exchange_source_inner(&content)
+}
+
+fn detect_exchange_source_inner(content: &str) -> Option<ExchangeDetectionResult> {
+    parse_exchange_source(content).map(|source| ExchangeDetectionResult {
+        exchange_id: source.id().to_string(),
+        exchange: source.label().to_string(),
+        suggested_wallet: source.default_wallet_name().to_string(),
+        file_count: 1,
+        total_records: content.lines().count().saturating_sub(1),
+    })
 }
 
 #[tauri::command]
 pub fn preview_exchange_csv(
-    controller: State<'_, Arc<AppController>>,
+    ingestion: State<'_, IngestionService>,
     content: String,
     wallet_name: String,
 ) -> Result<ImportResultsResponse, String> {
-    let summary = controller
-        .preview_exchange_csv(&content, &wallet_name)
+    let summary = ingestion
+        .preview_exchange_csv_auto(&content, &wallet_name)
         .map_err(|e| e.to_string())?;
     Ok(map_import_summary(summary))
 }
 
 #[tauri::command]
 pub fn import_exchange_csv(
-    controller: State<'_, Arc<AppController>>,
+    ingestion: State<'_, IngestionService>,
     content: String,
     wallet_name: String,
 ) -> Result<ImportResultsResponse, String> {
-    let summary = controller
-        .import_exchange_csv(content, wallet_name)
+    let summary = ingestion
+        .import_exchange_csv_auto(&content, &wallet_name)
         .map_err(|e| e.to_string())?;
     Ok(map_import_summary(summary))
 }

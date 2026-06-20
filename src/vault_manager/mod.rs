@@ -15,29 +15,24 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>.
 //
 
-//! Application Controller for Sanctum
+//! Vault manager for Sanctum
 //!
-//! This module provides the Rust API consumed by Tauri commands.
-//! Split into domain-specific submodules for maintainability.
+//! Owns the vault lifecycle (create/open/close), the persistent app
+//! configuration (`config.toml`), the rate-limit store, path sanitization and
+//! backup export/restore. It holds the shared `Arc<RwLock<Option<Database>>>`
+//! handle and is registered as one of several Tauri-managed states alongside
+//! the domain services (finance, crypto, ingestion, settings).
 
-mod crypto;
-mod finance;
-mod ingestion;
-mod settings;
-mod vault;
+mod backup;
 
-use crate::db::{Database, DbError};
-use crate::features::crypto::{CryptoError, CryptoService};
-pub use crate::features::crypto::{
-    SETTING_AUTO_FETCH, SETTING_CRYPTO_CUSTOM_COINS, SETTING_CRYPTO_FAVORITE_COINS,
-    SETTING_CRYPTO_HIDDEN_COINS, SETTING_CRYPTO_LAST_COIN_ID, SETTING_CRYPTO_LAST_UPDATED,
-    SETTING_CRYPTO_LAST_WALLET_ID, SETTING_CRYPTO_PROXY_ENABLED, SETTING_CRYPTO_PROXY_URL,
+use crate::core::settings::{
     SETTING_DARK_MODE, SETTING_PREFERRED_CURRENCY, SETTING_PREFERRED_LANGUAGE,
-    SETTING_SESSION_TIMEOUT, SETTING_SIDEBAR_COLLAPSED, SETTING_TICKER_COINS,
+    SETTING_SESSION_TIMEOUT, SETTING_SIDEBAR_COLLAPSED,
 };
-pub use crate::features::finance::{DashboardData, ExpenseSlice};
-use crate::features::finance::{FinanceError, FinanceService};
-use crate::features::ingestion::IngestionService;
+use crate::db::{Database, DbError};
+use crate::features::crypto::{
+    SETTING_AUTO_FETCH, SETTING_CRYPTO_PROXY_ENABLED, SETTING_CRYPTO_PROXY_URL,
+};
 use crate::security_log::{SecurityEvent, log_auth_failure, log_security_event};
 use rusqlite::Connection;
 use secrecy::SecretString;
@@ -50,7 +45,7 @@ use std::sync::{Arc, RwLock};
 
 // ==================== Error Types ====================
 
-/// Errors that can occur in the controller layer
+/// Errors that can occur in the vault manager layer
 #[derive(thiserror::Error, Debug)]
 pub enum ControllerError {
     #[error("Database error: {0}")]
@@ -82,39 +77,11 @@ pub enum ControllerError {
 
     #[error("Configuration error: {0}")]
     Config(String),
-
-    #[error("API error: {0}")]
-    Api(String),
 }
 
 impl From<String> for ControllerError {
     fn from(s: String) -> Self {
         ControllerError::Validation(s)
-    }
-}
-
-impl From<FinanceError> for ControllerError {
-    fn from(err: FinanceError) -> Self {
-        match err {
-            FinanceError::Database(e) => ControllerError::Database(e),
-            FinanceError::Validation(message) => ControllerError::Validation(message),
-            FinanceError::Internal => ControllerError::Internal,
-            FinanceError::NoVaultOpen => ControllerError::NoVaultOpen,
-            FinanceError::SessionExpired => ControllerError::SessionExpired,
-        }
-    }
-}
-
-impl From<CryptoError> for ControllerError {
-    fn from(err: CryptoError) -> Self {
-        match err {
-            CryptoError::Database(e) => ControllerError::Database(e),
-            CryptoError::Validation(message) => ControllerError::Validation(message),
-            CryptoError::Internal => ControllerError::Internal,
-            CryptoError::NoVaultOpen => ControllerError::NoVaultOpen,
-            CryptoError::SessionExpired => ControllerError::SessionExpired,
-            CryptoError::Api(message) => ControllerError::Api(message),
-        }
     }
 }
 
@@ -243,27 +210,19 @@ struct AppConfig {
     login_wallpaper_path: Option<String>,
 }
 
-pub struct AppController {
+pub struct VaultManager {
     db: Arc<RwLock<Option<Database>>>,
-    pub finance_service: FinanceService,
-    crypto_service: CryptoService,
-    pub ingestion_service: IngestionService,
     app_data_dir: PathBuf,
 }
 
-impl AppController {
-    pub fn new(data_dir: PathBuf) -> Self {
-        // Initialize with None as vault is locked
-        let db = Arc::new(RwLock::new(None));
-        let finance_service = FinanceService::new(db.clone());
-        let crypto_service = CryptoService::new(db.clone());
-        let ingestion_service = IngestionService::new(db.clone());
-
+impl VaultManager {
+    /// Creates a vault manager over a shared database handle.
+    ///
+    /// The same `db` handle is cloned into every domain service so they all
+    /// observe vault open/close transparently.
+    pub fn new(data_dir: PathBuf, db: Arc<RwLock<Option<Database>>>) -> Self {
         Self {
             db,
-            finance_service,
-            crypto_service,
-            ingestion_service,
             app_data_dir: data_dir,
         }
     }
@@ -694,13 +653,6 @@ impl AppController {
             db.get_session_remaining()
                 .map_err(ControllerError::Database)
         })
-    }
-
-    /// Sets the session timeout duration (in seconds)
-    pub fn set_session_timeout(&self, timeout_secs: i64) -> Result<(), ControllerError> {
-        // Save to settings (will be applied on next vault open or can be applied now if vault is open)
-        self.set_app_setting(SETTING_SESSION_TIMEOUT, &timeout_secs.to_string())?;
-        Ok(())
     }
 
     // ==================== Vault Path Methods ====================

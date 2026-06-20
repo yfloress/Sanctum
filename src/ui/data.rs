@@ -20,13 +20,12 @@
 //! Intermediate data structures for UI display.
 //! Used by DTOs and Tauri commands for data transformation.
 
-use crate::controller::AppController;
+use crate::features::finance::FinanceService;
 use crate::ui::{
     format_category_label, format_decimal_from_cents, format_money, format_money_signed,
     normalize_bank_icon_path,
 };
 use std::collections::HashMap;
-use std::sync::Arc;
 
 // ==================== Account Display Data ====================
 
@@ -52,15 +51,15 @@ pub struct AccountsState {
 }
 
 pub fn load_accounts_state(
-    controller: &Arc<AppController>,
+    finance: &FinanceService,
     preferred_currency: &str,
 ) -> Result<AccountsState, String> {
-    fn load_cached_usd_rate(controller: &AppController, currency: &str) -> f64 {
+    fn load_cached_usd_rate(finance: &FinanceService, currency: &str) -> f64 {
         let code = currency.trim().to_uppercase();
         if code == "USD" {
             return 1.0;
         }
-        controller
+        finance
             .load_exchange_rate_allow_stale(format!("{}_USD", code))
             .ok()
             .and_then(|rate| rate.map(|(r, _)| r))
@@ -69,10 +68,8 @@ pub fn load_accounts_state(
     }
 
     let preferred_currency = preferred_currency.trim().to_uppercase();
-    let accounts = controller.get_accounts().map_err(|e| e.to_string())?;
-    let balances = controller
-        .get_account_balances()
-        .map_err(|e| e.to_string())?;
+    let accounts = finance.get_accounts().map_err(|e| e.to_string())?;
+    let balances = finance.get_account_balances().map_err(|e| e.to_string())?;
 
     let mut balance_map: HashMap<String, i64> = HashMap::new();
     for bal in &balances {
@@ -87,7 +84,7 @@ pub fn load_accounts_state(
     let mut usd_rates: HashMap<String, f64> = HashMap::from([("USD".to_string(), 1.0)]);
     for currency in currency_map.values() {
         if !usd_rates.contains_key(currency) {
-            usd_rates.insert(currency.clone(), load_cached_usd_rate(controller, currency));
+            usd_rates.insert(currency.clone(), load_cached_usd_rate(finance, currency));
         }
     }
     let preferred_rate = if preferred_currency == "USD" {
@@ -96,7 +93,7 @@ pub fn load_accounts_state(
         usd_rates
             .get(&preferred_currency)
             .copied()
-            .unwrap_or_else(|| load_cached_usd_rate(controller, &preferred_currency))
+            .unwrap_or_else(|| load_cached_usd_rate(finance, &preferred_currency))
     };
 
     // Calculate total in preferred currency
@@ -181,10 +178,10 @@ pub struct TransactionFilterParams<'a> {
 }
 
 pub fn load_transactions_state(
-    controller: &Arc<AppController>,
+    finance: &FinanceService,
     filter: TransactionFilterParams<'_>,
 ) -> Result<TransactionsState, String> {
-    let accounts = controller.get_accounts().map_err(|e| e.to_string())?;
+    let accounts = finance.get_accounts().map_err(|e| e.to_string())?;
     let mut account_lookup: HashMap<String, (String, String)> = HashMap::new();
     let mut account_index_map: HashMap<String, i32> = HashMap::new();
     for (idx, account) in accounts.iter().enumerate() {
@@ -195,10 +192,10 @@ pub fn load_transactions_state(
         account_index_map.insert(account.id.clone(), idx as i32);
     }
 
-    let expense_categories = controller
+    let expense_categories = finance
         .get_transaction_categories("expense".to_string())
         .map_err(|e| e.to_string())?;
-    let income_categories = controller
+    let income_categories = finance
         .get_transaction_categories("income".to_string())
         .map_err(|e| e.to_string())?;
 
@@ -219,7 +216,7 @@ pub fn load_transactions_state(
     let category_filter_upper = category_filter.to_uppercase();
     let mut matched_count: usize = 0;
 
-    let transactions = controller.get_transactions().map_err(|e| e.to_string())?;
+    let transactions = finance.get_transactions().map_err(|e| e.to_string())?;
 
     let mapped: Vec<TransactionDisplayData> = transactions
         .into_iter()
@@ -301,10 +298,10 @@ pub struct CategoryDisplayData {
 }
 
 pub fn load_categories(
-    controller: &Arc<AppController>,
+    finance: &FinanceService,
     category_type: &str,
 ) -> Result<Vec<CategoryDisplayData>, String> {
-    let categories = controller
+    let categories = finance
         .get_transaction_categories(category_type.to_string())
         .map_err(|e| e.to_string())?;
 
@@ -328,8 +325,8 @@ pub struct BalanceDisplayData {
     pub total_expenses: String,
 }
 
-pub fn load_balance_data(controller: &Arc<AppController>) -> Result<BalanceDisplayData, String> {
-    let balance = controller.get_balance().map_err(|e| e.to_string())?;
+pub fn load_balance_data(finance: &FinanceService) -> Result<BalanceDisplayData, String> {
+    let balance = finance.get_balance().map_err(|e| e.to_string())?;
 
     Ok(BalanceDisplayData {
         current_balance: format_money(balance.total_balance, "USD"),
@@ -351,16 +348,16 @@ pub struct RecentTransactionData {
 }
 
 pub fn load_recent_transactions(
-    controller: &Arc<AppController>,
+    finance: &FinanceService,
     limit: usize,
 ) -> Result<Vec<RecentTransactionData>, String> {
-    let accounts = controller.get_accounts().map_err(|e| e.to_string())?;
+    let accounts = finance.get_accounts().map_err(|e| e.to_string())?;
     let currency_map: HashMap<String, String> = accounts
         .iter()
         .map(|acc| (acc.id.clone(), acc.currency.clone()))
         .collect();
 
-    let transactions = controller.get_transactions().map_err(|e| e.to_string())?;
+    let transactions = finance.get_transactions().map_err(|e| e.to_string())?;
 
     Ok(transactions
         .into_iter()
@@ -386,12 +383,14 @@ pub fn load_recent_transactions(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::controller::AppController;
+    use crate::db::Database;
+    use crate::vault_manager::VaultManager;
     use std::path::PathBuf;
+    use std::sync::{Arc, RwLock};
     use uuid::Uuid;
 
     struct TestHarness {
-        controller: Arc<AppController>,
+        finance: FinanceService,
         test_dir: PathBuf,
     }
 
@@ -405,17 +404,21 @@ mod tests {
         let base_dir =
             std::env::temp_dir().join(format!("sanctum-ui-data-test-{}", Uuid::new_v4()));
         std::fs::create_dir_all(&base_dir).expect("create test dir");
-        let controller = Arc::new(AppController::new(base_dir.clone()));
+        // Build the shared db handle, create the vault via the manager, then
+        // operate through a FinanceService that shares the same handle.
+        let db: Arc<RwLock<Option<Database>>> = Arc::new(RwLock::new(None));
+        let vault = VaultManager::new(base_dir.clone(), db.clone());
+        let finance = FinanceService::new(db);
         let password = "test-password-123".to_string();
-        controller.create_db(password, None).expect("create vault");
+        vault.create_db(password, None).expect("create vault");
         TestHarness {
-            controller,
+            finance,
             test_dir: base_dir,
         }
     }
 
-    fn create_account(controller: &AppController, name: &str, currency: &str, balance: i64) {
-        controller
+    fn create_account(finance: &FinanceService, name: &str, currency: &str, balance: i64) {
+        finance
             .create_account(
                 name.to_string(),
                 "bank".to_string(),
@@ -428,13 +431,13 @@ mod tests {
     }
 
     fn add_transaction(
-        controller: &AppController,
+        finance: &FinanceService,
         account_id: &str,
         amount: i64,
         category: &str,
         is_expense: bool,
     ) {
-        controller
+        finance
             .add_transaction(
                 account_id.to_string(),
                 amount,
@@ -449,7 +452,7 @@ mod tests {
     #[test]
     fn test_load_categories_for_expense() {
         let h = new_harness();
-        let result = load_categories(&h.controller, "expense").expect("load categories");
+        let result = load_categories(&h.finance, "expense").expect("load categories");
         assert!(
             !result.is_empty(),
             "default expense categories should exist"
@@ -460,7 +463,7 @@ mod tests {
     #[test]
     fn test_load_categories_for_income() {
         let h = new_harness();
-        let result = load_categories(&h.controller, "income").expect("load categories");
+        let result = load_categories(&h.finance, "income").expect("load categories");
         assert!(!result.is_empty(), "default income categories should exist");
         assert!(result.iter().all(|c| c.category_type == "income"));
     }
@@ -468,14 +471,14 @@ mod tests {
     #[test]
     fn test_load_categories_rejects_invalid_type() {
         let h = new_harness();
-        let result = load_categories(&h.controller, "invalid");
+        let result = load_categories(&h.finance, "invalid");
         assert!(result.is_err());
     }
 
     #[test]
     fn test_load_balance_data_empty() {
         let h = new_harness();
-        let result = load_balance_data(&h.controller).expect("load balance");
+        let result = load_balance_data(&h.finance).expect("load balance");
         assert_eq!(result.current_balance, "USD 0.00");
         assert_eq!(result.total_income, "USD 0.00");
         assert_eq!(result.total_expenses, "USD 0.00");
@@ -484,16 +487,16 @@ mod tests {
     #[test]
     fn test_load_balance_data_with_transactions() {
         let h = new_harness();
-        create_account(&h.controller, "Checking", "USD", 0);
-        let accounts = h.controller.get_accounts().expect("get accounts");
+        create_account(&h.finance, "Checking", "USD", 0);
+        let accounts = h.finance.get_accounts().expect("get accounts");
         let acc_id = &accounts
             .iter()
             .find(|a| a.name == "Checking")
             .expect("find account")
             .id;
-        add_transaction(&h.controller, acc_id, 20000, "Salary", false);
-        add_transaction(&h.controller, acc_id, 5000, "Food", true);
-        let result = load_balance_data(&h.controller).expect("load balance");
+        add_transaction(&h.finance, acc_id, 20000, "Salary", false);
+        add_transaction(&h.finance, acc_id, 5000, "Food", true);
+        let result = load_balance_data(&h.finance).expect("load balance");
         assert_eq!(result.total_income, "USD 200.00");
         assert_eq!(result.total_expenses, "USD 50.00");
     }
@@ -501,7 +504,7 @@ mod tests {
     #[test]
     fn test_load_accounts_state_empty() {
         let h = new_harness();
-        let result = load_accounts_state(&h.controller, "USD").expect("load accounts state");
+        let result = load_accounts_state(&h.finance, "USD").expect("load accounts state");
         assert!(result.accounts.is_empty(), "new vault has no user accounts");
         assert_eq!(result.total_balance, "USD 0.00");
     }
@@ -509,9 +512,9 @@ mod tests {
     #[test]
     fn test_load_accounts_state_with_accounts() {
         let h = new_harness();
-        create_account(&h.controller, "Checking", "USD", 0);
-        create_account(&h.controller, "Savings", "USD", 0);
-        let accounts = h.controller.get_accounts().expect("get accounts");
+        create_account(&h.finance, "Checking", "USD", 0);
+        create_account(&h.finance, "Savings", "USD", 0);
+        let accounts = h.finance.get_accounts().expect("get accounts");
         let checking = accounts
             .iter()
             .find(|a| a.name == "Checking")
@@ -520,9 +523,9 @@ mod tests {
             .iter()
             .find(|a| a.name == "Savings")
             .expect("find savings");
-        add_transaction(&h.controller, &checking.id, 50000, "Deposit", false);
-        add_transaction(&h.controller, &savings.id, 100000, "Deposit", false);
-        let result = load_accounts_state(&h.controller, "USD").expect("load accounts state");
+        add_transaction(&h.finance, &checking.id, 50000, "Deposit", false);
+        add_transaction(&h.finance, &savings.id, 100000, "Deposit", false);
+        let result = load_accounts_state(&h.finance, "USD").expect("load accounts state");
         assert_eq!(result.accounts.len(), 2);
         assert_eq!(
             result.total_balance, "USD 1,500.00",
@@ -539,7 +542,7 @@ mod tests {
             category_filter: "",
             display_limit: 50,
         };
-        let result = load_transactions_state(&h.controller, filter).expect("load transactions");
+        let result = load_transactions_state(&h.finance, filter).expect("load transactions");
         assert!(result.transactions.is_empty());
         assert!(!result.has_more);
     }
@@ -547,20 +550,20 @@ mod tests {
     #[test]
     fn test_load_transactions_state_filters_by_account() {
         let h = new_harness();
-        create_account(&h.controller, "A", "USD", 0);
-        create_account(&h.controller, "B", "USD", 0);
-        let accounts = h.controller.get_accounts().expect("get accounts");
+        create_account(&h.finance, "A", "USD", 0);
+        create_account(&h.finance, "B", "USD", 0);
+        let accounts = h.finance.get_accounts().expect("get accounts");
         let acc_a = accounts.iter().find(|a| a.name == "A").expect("find A");
         let acc_b = accounts.iter().find(|a| a.name == "B").expect("find B");
-        add_transaction(&h.controller, &acc_a.id, 1000, "Food", true);
-        add_transaction(&h.controller, &acc_b.id, 2000, "Food", true);
+        add_transaction(&h.finance, &acc_a.id, 1000, "Food", true);
+        add_transaction(&h.finance, &acc_b.id, 2000, "Food", true);
         let filter = TransactionFilterParams {
             query: "",
             account_filter: &acc_a.id,
             category_filter: "",
             display_limit: 50,
         };
-        let result = load_transactions_state(&h.controller, filter).expect("load transactions");
+        let result = load_transactions_state(&h.finance, filter).expect("load transactions");
         assert_eq!(result.transactions.len(), 1);
         assert_eq!(result.transactions[0].account_id, acc_a.id);
     }
@@ -568,18 +571,18 @@ mod tests {
     #[test]
     fn test_load_transactions_state_filters_by_query() {
         let h = new_harness();
-        create_account(&h.controller, "Test", "USD", 0);
-        let accounts = h.controller.get_accounts().expect("get accounts");
+        create_account(&h.finance, "Test", "USD", 0);
+        let accounts = h.finance.get_accounts().expect("get accounts");
         let acc_id = &accounts[0].id;
-        add_transaction(&h.controller, acc_id, 1000, "Food", true);
-        add_transaction(&h.controller, acc_id, 2000, "Salary", false);
+        add_transaction(&h.finance, acc_id, 1000, "Food", true);
+        add_transaction(&h.finance, acc_id, 2000, "Salary", false);
         let filter = TransactionFilterParams {
             query: "salary",
             account_filter: "",
             category_filter: "",
             display_limit: 50,
         };
-        let result = load_transactions_state(&h.controller, filter).expect("load transactions");
+        let result = load_transactions_state(&h.finance, filter).expect("load transactions");
         assert_eq!(result.transactions.len(), 1);
         assert!(
             result.transactions[0]
@@ -592,11 +595,11 @@ mod tests {
     #[test]
     fn test_load_transactions_state_respects_limit() {
         let h = new_harness();
-        create_account(&h.controller, "Test", "USD", 0);
-        let accounts = h.controller.get_accounts().expect("get accounts");
+        create_account(&h.finance, "Test", "USD", 0);
+        let accounts = h.finance.get_accounts().expect("get accounts");
         let acc_id = &accounts[0].id;
         for i in 0..5 {
-            add_transaction(&h.controller, acc_id, 1000 + i, "Food", true);
+            add_transaction(&h.finance, acc_id, 1000 + i, "Food", true);
         }
         let filter = TransactionFilterParams {
             query: "",
@@ -604,7 +607,7 @@ mod tests {
             category_filter: "",
             display_limit: 3,
         };
-        let result = load_transactions_state(&h.controller, filter).expect("load transactions");
+        let result = load_transactions_state(&h.finance, filter).expect("load transactions");
         assert_eq!(result.transactions.len(), 3);
         assert!(result.has_more);
     }
@@ -612,20 +615,20 @@ mod tests {
     #[test]
     fn test_load_recent_transactions_respects_limit() {
         let h = new_harness();
-        create_account(&h.controller, "Test", "USD", 0);
-        let accounts = h.controller.get_accounts().expect("get accounts");
+        create_account(&h.finance, "Test", "USD", 0);
+        let accounts = h.finance.get_accounts().expect("get accounts");
         let acc_id = &accounts[0].id;
         for i in 0..5 {
-            add_transaction(&h.controller, acc_id, 1000 + i, "Food", true);
+            add_transaction(&h.finance, acc_id, 1000 + i, "Food", true);
         }
-        let result = load_recent_transactions(&h.controller, 2).expect("load recent transactions");
+        let result = load_recent_transactions(&h.finance, 2).expect("load recent transactions");
         assert_eq!(result.len(), 2);
     }
 
     #[test]
     fn test_load_recent_transactions_empty() {
         let h = new_harness();
-        let result = load_recent_transactions(&h.controller, 10).expect("load recent");
+        let result = load_recent_transactions(&h.finance, 10).expect("load recent");
         assert!(result.is_empty());
     }
 }

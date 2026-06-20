@@ -22,41 +22,31 @@
 //!
 //! Error messages are sanitized to avoid leaking internal details to the frontend.
 
-use sanctum::controller::AppController;
 use sanctum::ui::dto::vault::{PasswordStrengthResult, VaultStatus};
-use std::sync::Arc;
+use sanctum::vault_manager::VaultManager;
 use tauri::State;
 
 /// Check whether a vault file exists on disk.
 #[tauri::command]
-pub fn check_vault_exists(controller: State<'_, Arc<AppController>>) -> VaultStatus {
+pub fn check_vault_exists(vault: State<'_, VaultManager>) -> VaultStatus {
     VaultStatus {
-        exists: controller.check_vault_exists(),
+        exists: vault.check_vault_exists(),
     }
 }
 
 /// Create a new vault with the given master password.
 #[tauri::command]
-pub fn create_vault(
-    controller: State<'_, Arc<AppController>>,
-    password: String,
-) -> Result<(), String> {
-    controller
-        .create_db(password, None)
-        .map(|_| ())
-        .map_err(|e| {
-            log::error!("Vault creation failed: {e}");
-            "Failed to create vault".to_string()
-        })
+pub fn create_vault(vault: State<'_, VaultManager>, password: String) -> Result<(), String> {
+    vault.create_db(password, None).map(|_| ()).map_err(|e| {
+        log::error!("Vault creation failed: {e}");
+        "Failed to create vault".to_string()
+    })
 }
 
 /// Unlock an existing vault with the given master password.
 #[tauri::command]
-pub fn unlock_vault(
-    controller: State<'_, Arc<AppController>>,
-    password: String,
-) -> Result<(), String> {
-    controller.open_db(password, None).map(|_| ()).map_err(|e| {
+pub fn unlock_vault(vault: State<'_, VaultManager>, password: String) -> Result<(), String> {
+    vault.open_db(password, None).map(|_| ()).map_err(|e| {
         log::error!("Vault unlock failed: {e}");
         "Invalid password or vault not found".to_string()
     })
@@ -64,8 +54,8 @@ pub fn unlock_vault(
 
 /// Lock the currently open vault (close the DB connection).
 #[tauri::command]
-pub fn lock_vault(controller: State<'_, Arc<AppController>>) -> Result<(), String> {
-    controller.close_db().map(|_| ()).map_err(|e| {
+pub fn lock_vault(vault: State<'_, VaultManager>) -> Result<(), String> {
+    vault.close_db().map(|_| ()).map_err(|e| {
         log::error!("Vault lock failed: {e}");
         "Failed to lock vault".to_string()
     })
@@ -74,18 +64,18 @@ pub fn lock_vault(controller: State<'_, Arc<AppController>>) -> Result<(), Strin
 /// Check password strength. Returns a warning message if weak, empty if strong.
 #[tauri::command]
 pub fn check_password_strength(
-    controller: State<'_, Arc<AppController>>,
+    vault: State<'_, VaultManager>,
     password: String,
 ) -> PasswordStrengthResult {
     PasswordStrengthResult {
-        warning: controller.check_password_strength(password),
+        warning: vault.check_password_strength(password),
     }
 }
 
 /// Export the current vault to a backup file at the given path.
 #[tauri::command]
-pub fn export_vault(controller: State<'_, Arc<AppController>>, path: String) -> Result<(), String> {
-    controller.export_vault(path).map(|_| ()).map_err(|e| {
+pub fn export_vault(vault: State<'_, VaultManager>, path: String) -> Result<(), String> {
+    vault.export_vault(path).map(|_| ()).map_err(|e| {
         log::error!("Vault export failed: {e}");
         "Vault export failed".to_string()
     })
@@ -93,11 +83,8 @@ pub fn export_vault(controller: State<'_, Arc<AppController>>, path: String) -> 
 
 /// Restore a vault from a backup file.
 #[tauri::command]
-pub fn restore_vault(
-    controller: State<'_, Arc<AppController>>,
-    backup_path: String,
-) -> Result<(), String> {
-    controller.restore_vault(backup_path).map_err(|e| {
+pub fn restore_vault(vault: State<'_, VaultManager>, backup_path: String) -> Result<(), String> {
+    vault.restore_vault(backup_path).map_err(|e| {
         log::error!("Vault restore failed: {e}");
         "Vault restore failed".to_string()
     })
@@ -105,8 +92,8 @@ pub fn restore_vault(
 
 /// Roll back the last vault restore operation.
 #[tauri::command]
-pub fn rollback_restore(controller: State<'_, Arc<AppController>>) -> Result<(), String> {
-    controller.rollback_restore().map_err(|e| {
+pub fn rollback_restore(vault: State<'_, VaultManager>) -> Result<(), String> {
+    vault.rollback_restore().map_err(|e| {
         log::error!("Vault rollback failed: {e}");
         "Rollback failed".to_string()
     })

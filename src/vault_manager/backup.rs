@@ -49,7 +49,7 @@ impl From<VaultError> for ControllerError {
     }
 }
 
-impl super::AppController {
+impl super::VaultManager {
     fn sanitize_export_path(&self, raw: &str) -> Result<PathBuf, ControllerError> {
         let base = self.app_data_base()?;
 

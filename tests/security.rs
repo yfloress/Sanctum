@@ -26,17 +26,20 @@
 //! - Authentication brute force / rate limiting
 //! - Concurrent access safety
 
-use sanctum::controller::AppController;
+use sanctum::db::Database;
+use sanctum::features::finance::FinanceService;
 use sanctum::models::CryptoWallet;
+use sanctum::vault_manager::VaultManager;
 use secrecy::SecretString;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 
 // ==================== Test Helpers ====================
 
 struct TestContext {
-    controller: Arc<AppController>,
+    vault: VaultManager,
+    finance: FinanceService,
     test_dir: PathBuf,
 }
 
@@ -49,18 +52,23 @@ impl Drop for TestContext {
 fn setup() -> TestContext {
     let base_dir = std::env::temp_dir().join(format!("sanctum-security-test-{}", Uuid::new_v4()));
     std::fs::create_dir_all(&base_dir).expect("create test dir");
-    let controller = Arc::new(AppController::new(base_dir.clone()));
-    controller
+    // Shared db handle: the vault manager creates the vault, finance operates
+    // through the same handle.
+    let db: Arc<RwLock<Option<Database>>> = Arc::new(RwLock::new(None));
+    let vault = VaultManager::new(base_dir.clone(), db.clone());
+    let finance = FinanceService::new(db);
+    vault
         .create_db("test-password-123".to_string(), None)
         .expect("create vault");
     TestContext {
-        controller,
+        vault,
+        finance,
         test_dir: base_dir,
     }
 }
 
 fn create_account(ctx: &TestContext, name: &str) -> String {
-    ctx.controller
+    ctx.finance
         .create_account(
             name.to_string(),
             "bank".to_string(),
@@ -73,7 +81,7 @@ fn create_account(ctx: &TestContext, name: &str) -> String {
 }
 
 fn add_income(ctx: &TestContext, account_id: &str, amount: i64) -> String {
-    ctx.controller
+    ctx.finance
         .add_transaction(
             account_id.to_string(),
             amount,
@@ -101,7 +109,7 @@ fn test_sql_injection_in_account_name_is_rejected_or_safe() {
         "' UNION SELECT * FROM accounts --",
     ];
     for payload in &payloads {
-        let result = ctx.controller.create_account(
+        let result = ctx.finance.create_account(
             payload.to_string(),
             "bank".to_string(),
             "USD".to_string(),
@@ -128,7 +136,7 @@ fn test_sql_injection_in_account_name_is_rejected_or_safe() {
     }
     // System should still be operational
     let accounts = ctx
-        .controller
+        .finance
         .get_accounts()
         .expect("get accounts after injection");
     assert!(accounts.len() <= payloads.len());
@@ -144,7 +152,7 @@ fn test_sql_injection_in_description() {
         "x'; UPDATE accounts SET currency='XXX'; --",
     ];
     for payload in &payloads {
-        let result = ctx.controller.add_transaction(
+        let result = ctx.finance.add_transaction(
             acc_id.clone(),
             1000,
             "Test".to_string(),
@@ -170,7 +178,7 @@ fn test_sql_injection_in_description() {
 #[test]
 fn test_sql_injection_in_category_name() {
     let ctx = setup();
-    let result = ctx.controller.add_transaction_category(
+    let result = ctx.finance.add_transaction_category(
         "'; DROP TABLE categories; --".to_string(),
         "expense".to_string(),
     );
@@ -192,7 +200,7 @@ fn test_very_long_account_name_is_rejected() {
     let ctx = setup();
     // MAX_ACCOUNT_NAME_LENGTH = 64
     let long_name = "A".repeat(100);
-    let result = ctx.controller.create_account(
+    let result = ctx.finance.create_account(
         long_name,
         "bank".to_string(),
         "USD".to_string(),
@@ -209,7 +217,7 @@ fn test_very_long_description_is_rejected() {
     let acc_id = create_account(&ctx, "Test");
     // MAX_DESCRIPTION_LENGTH = 512
     let long_desc = "X".repeat(1000);
-    let result = ctx.controller.add_transaction(
+    let result = ctx.finance.add_transaction(
         acc_id,
         1000,
         "Test".to_string(),
@@ -223,7 +231,7 @@ fn test_very_long_description_is_rejected() {
 #[test]
 fn test_null_bytes_in_input() {
     let ctx = setup();
-    let result = ctx.controller.create_account(
+    let result = ctx.finance.create_account(
         "Test\x00Account".to_string(),
         "bank".to_string(),
         "USD".to_string(),
@@ -246,7 +254,7 @@ fn test_control_characters_are_safe() {
         .map(|c| format!("desc{}desc", c as char))
         .collect();
     for desc in &control_chars {
-        let result = ctx.controller.add_transaction(
+        let result = ctx.finance.add_transaction(
             acc_id.clone(),
             1000,
             "Test".to_string(),
@@ -259,7 +267,7 @@ fn test_control_characters_are_safe() {
     }
     // System should still be operational
     let txs = ctx
-        .controller
+        .finance
         .get_transactions()
         .expect("get txs after control chars");
     assert!(txs.len() <= control_chars.len());
@@ -277,7 +285,7 @@ fn test_html_script_tags_in_input() {
         "{{constructor.constructor('alert(1)')()}}",
     ];
     for payload in &xss_payloads {
-        let result = ctx.controller.add_transaction(
+        let result = ctx.finance.add_transaction(
             acc_id.clone(),
             1000,
             "Test".to_string(),
@@ -305,7 +313,7 @@ fn test_unicode_normalization() {
         "\t\n\r",                    // Whitespace-only
     ];
     for name in &unicode_names {
-        let result = ctx.controller.create_account(
+        let result = ctx.finance.create_account(
             name.to_string(),
             "bank".to_string(),
             "USD".to_string(),
@@ -346,7 +354,7 @@ fn test_transaction_with_invalid_account_id_is_rejected() {
         "../../etc/passwd",
     ];
     for id in &invalid_ids {
-        let result = ctx.controller.add_transaction(
+        let result = ctx.finance.add_transaction(
             id.to_string(),
             1000,
             "Test".to_string(),
@@ -377,7 +385,7 @@ fn test_transaction_with_invalid_date_is_rejected() {
         "0000-00-00",
     ];
     for date in &invalid_dates {
-        let result = ctx.controller.add_transaction(
+        let result = ctx.finance.add_transaction(
             acc_id.clone(),
             1000,
             "Test".to_string(),
@@ -397,7 +405,7 @@ fn test_transaction_with_invalid_date_is_rejected() {
 fn test_delete_nonexistent_transaction() {
     let ctx = setup();
     let fake_id = Uuid::new_v4().to_string();
-    let result = ctx.controller.delete_transaction(fake_id);
+    let result = ctx.finance.delete_transaction(fake_id);
     // Should handle gracefully — either return error or be a no-op
     assert!(result.is_err() || result.is_ok());
 }
@@ -406,7 +414,7 @@ fn test_delete_nonexistent_transaction() {
 fn test_update_nonexistent_account() {
     let ctx = setup();
     let fake_id = Uuid::new_v4().to_string();
-    let result = ctx.controller.update_account(
+    let result = ctx.finance.update_account(
         fake_id,
         "New Name".to_string(),
         "bank".to_string(),
@@ -432,7 +440,7 @@ fn test_create_account_with_invalid_color() {
         "transparent",
     ];
     for color in &invalid_colors {
-        let result = ctx.controller.create_account(
+        let result = ctx.finance.create_account(
             "Test".to_string(),
             "bank".to_string(),
             "USD".to_string(),
@@ -453,7 +461,7 @@ fn test_create_account_with_invalid_type() {
     let ctx = setup();
     let invalid_types = vec!["", "invalid", "checking", "saving", "credit", "debit_card"];
     for atype in &invalid_types {
-        let result = ctx.controller.create_account(
+        let result = ctx.finance.create_account(
             "Test".to_string(),
             atype.to_string(),
             "USD".to_string(),
@@ -475,7 +483,7 @@ fn test_create_account_with_invalid_type() {
 fn test_transaction_with_zero_amount_is_rejected() {
     let ctx = setup();
     let acc_id = create_account(&ctx, "Test");
-    let result = ctx.controller.add_transaction(
+    let result = ctx.finance.add_transaction(
         acc_id,
         0,
         "Test".to_string(),
@@ -493,7 +501,7 @@ fn test_transaction_with_zero_amount_is_rejected() {
 fn test_transaction_with_negative_amount_is_rejected() {
     let ctx = setup();
     let acc_id = create_account(&ctx, "Test");
-    let result = ctx.controller.add_transaction(
+    let result = ctx.finance.add_transaction(
         acc_id,
         -1000,
         "Test".to_string(),
@@ -519,7 +527,7 @@ fn test_transaction_with_extreme_amounts() {
         100_000_000_000_000_i64,
     ];
     for amount in &extreme_amounts {
-        let result = ctx.controller.add_transaction(
+        let result = ctx.finance.add_transaction(
             acc_id.clone(),
             *amount,
             "Test".to_string(),
@@ -537,7 +545,7 @@ fn test_transaction_with_extreme_amounts() {
 fn test_transfer_to_self_is_rejected() {
     let ctx = setup();
     let acc_id = create_account(&ctx, "Self");
-    let result = ctx.controller.transfer_funds(
+    let result = ctx.finance.transfer_funds(
         acc_id.clone(),
         acc_id,
         1000,
@@ -553,7 +561,7 @@ fn test_transfer_between_different_currencies_is_rejected() {
     create_account(&ctx, "USD Account"); // auto-created with USD
     // Create second account manually with EUR
     let eur_id = ctx
-        .controller
+        .finance
         .create_account(
             "EUR Account".to_string(),
             "bank".to_string(),
@@ -563,14 +571,14 @@ fn test_transfer_between_different_currencies_is_rejected() {
             None,
         )
         .expect("create EUR account");
-    let accounts = ctx.controller.get_accounts().expect("get accounts");
+    let accounts = ctx.finance.get_accounts().expect("get accounts");
     let usd_id = accounts
         .iter()
         .find(|a| a.name == "USD Account")
         .expect("find USD")
         .id
         .clone();
-    let result = ctx.controller.transfer_funds(
+    let result = ctx.finance.transfer_funds(
         usd_id,
         eur_id,
         1000,
@@ -608,7 +616,8 @@ fn test_wrong_password_is_rejected() {
     // We need a fresh controller without an open vault to test password auth
     let temp_dir = std::env::temp_dir().join(format!("sanctum-auth-test-{}", Uuid::new_v4()));
     std::fs::create_dir_all(&temp_dir).expect("create temp dir");
-    let controller = Arc::new(AppController::new(temp_dir.clone()));
+    let db: Arc<RwLock<Option<Database>>> = Arc::new(RwLock::new(None));
+    let controller = VaultManager::new(temp_dir.clone(), db);
     // Create vault first
     controller
         .create_db("real-password".to_string(), None)
@@ -657,9 +666,9 @@ fn test_wrong_password_is_rejected() {
 fn test_empty_password_handling() {
     let ctx = setup();
     // Close existing vault first, then try empty password on a fresh path
-    ctx.controller.close_db().expect("close vault");
+    ctx.vault.close_db().expect("close vault");
     let fresh_path = ctx.test_dir.join("empty_pwd_test.db");
-    let result = ctx.controller.create_db(
+    let result = ctx.vault.create_db(
         "".to_string(),
         Some(fresh_path.to_string_lossy().to_string()),
     );
@@ -689,7 +698,7 @@ fn test_backup_path_traversal_is_prevented() {
         ("~/.ssh/id_rsa", false),
     ];
     for (path, _should_be_blocked) in &traversal_paths {
-        let result = ctx.controller.export_vault(path.to_string());
+        let result = ctx.vault.export_vault(path.to_string());
         match result {
             Ok(_) => {
                 // Path traversal succeeded — this is a security finding.
@@ -725,7 +734,7 @@ fn test_restore_nonexistent_backup_is_rejected() {
         "   ",
     ];
     for path in &fake_paths {
-        let result = ctx.controller.restore_vault(path.to_string());
+        let result = ctx.vault.restore_vault(path.to_string());
         assert!(
             result.is_err(),
             "restoring nonexistent backup '{}' should fail",
@@ -749,7 +758,7 @@ fn test_session_timeout_blocks_operations() {
     // Since we can't directly manipulate the session timeout from controller,
     // we just verify the session mechanism is present by making many operations
     for i in 0..10 {
-        let result = ctx.controller.add_transaction(
+        let result = ctx.finance.add_transaction(
             acc_id.clone(),
             1000 + i,
             "Test".to_string(),
@@ -771,7 +780,7 @@ fn test_session_timeout_blocks_operations() {
 fn test_crypto_transaction_with_extreme_values() {
     let ctx = setup();
     let acc_id = ctx
-        .controller
+        .finance
         .create_account(
             "Crypto Holder".to_string(),
             "bank".to_string(),
@@ -798,7 +807,7 @@ fn test_crypto_transaction_with_extreme_values() {
     // Test extreme crypto amounts via the ingestion service
     // (process_crypto_transactions is pub(super), so we test at the controller level instead)
     // For now, verify the system handles edge cases
-    let accounts = ctx.controller.get_accounts().expect("get accounts");
+    let accounts = ctx.finance.get_accounts().expect("get accounts");
     assert!(!accounts.is_empty());
 }
 
@@ -811,7 +820,7 @@ fn test_create_many_accounts_does_not_degrade() {
     let count = 50;
     for i in 0..count {
         let name = format!("Stress Account {}", i);
-        let result = ctx.controller.create_account(
+        let result = ctx.finance.create_account(
             name,
             "bank".to_string(),
             "USD".to_string(),
@@ -822,7 +831,7 @@ fn test_create_many_accounts_does_not_degrade() {
         assert!(result.is_ok(), "create account {} should succeed", i);
     }
     // Verify all accounts are retrievable
-    let accounts = ctx.controller.get_accounts().expect("get all accounts");
+    let accounts = ctx.finance.get_accounts().expect("get all accounts");
     assert_eq!(accounts.len(), count);
 }
 
@@ -834,7 +843,7 @@ fn test_large_description_bulk_import() {
     let max_desc = "X".repeat(512);
     let count = 100;
     for i in 0..count {
-        let result = ctx.controller.add_transaction(
+        let result = ctx.finance.add_transaction(
             acc_id.clone(),
             1000,
             "Test".to_string(),
@@ -846,7 +855,7 @@ fn test_large_description_bulk_import() {
         let _ = result;
     }
     // System should still be operational
-    let txs = ctx.controller.get_transactions().expect("get after bulk");
+    let txs = ctx.finance.get_transactions().expect("get after bulk");
     assert!(txs.len() <= count);
 }
 
@@ -859,10 +868,10 @@ fn test_balance_sums_are_consistent() {
     // Add income
     add_income(&ctx, &acc_id, 10000);
     add_income(&ctx, &acc_id, 20000);
-    let balance = ctx.controller.get_balance().expect("get balance");
+    let balance = ctx.finance.get_balance().expect("get balance");
     assert_eq!(balance.total_income, 30000, "income should be cumulative");
     // Add expense
-    ctx.controller
+    ctx.finance
         .add_transaction(
             acc_id.clone(),
             5000,
@@ -873,7 +882,7 @@ fn test_balance_sums_are_consistent() {
         )
         .expect("add expense");
     let balance = ctx
-        .controller
+        .finance
         .get_balance()
         .expect("get balance after expense");
     assert_eq!(balance.total_expense, 5000, "expense should be tracked");
@@ -884,9 +893,9 @@ fn test_delete_transaction_updates_balance() {
     let ctx = setup();
     let acc_id = create_account(&ctx, "Balance Delete");
     let tx_id = add_income(&ctx, &acc_id, 50000);
-    let balance_before = ctx.controller.get_balance().expect("balance before");
-    ctx.controller.delete_transaction(tx_id).expect("delete tx");
-    let balance_after = ctx.controller.get_balance().expect("balance after");
+    let balance_before = ctx.finance.get_balance().expect("balance before");
+    ctx.finance.delete_transaction(tx_id).expect("delete tx");
+    let balance_after = ctx.finance.get_balance().expect("balance after");
     assert!(
         balance_after.total_income < balance_before.total_income,
         "balance should decrease after delete"
@@ -898,7 +907,7 @@ fn test_account_archive_rejects_accounts_with_transactions() {
     let ctx = setup();
     let acc_id = create_account(&ctx, "NonEmpty");
     add_income(&ctx, &acc_id, 100000);
-    let result = ctx.controller.archive_account(acc_id);
+    let result = ctx.finance.archive_account(acc_id);
     assert!(
         result.is_err(),
         "archiving account with transactions should be rejected"
@@ -915,7 +924,7 @@ fn test_account_archive_rejects_accounts_with_transactions() {
 fn test_duplicate_account_name_is_allowed_or_rejected_consistently() {
     let ctx = setup();
     create_account(&ctx, "Duplicate");
-    let result = ctx.controller.create_account(
+    let result = ctx.finance.create_account(
         "Duplicate".to_string(),
         "bank".to_string(),
         "USD".to_string(),
@@ -926,7 +935,7 @@ fn test_duplicate_account_name_is_allowed_or_rejected_consistently() {
     // Either allowed (if names are not unique) or rejected with a clear error
     match result {
         Ok(_) => {
-            let accounts = ctx.controller.get_accounts().expect("get accounts");
+            let accounts = ctx.finance.get_accounts().expect("get accounts");
             let dupes: Vec<_> = accounts.iter().filter(|a| a.name == "Duplicate").collect();
             assert_eq!(
                 dupes.len(),

@@ -20,7 +20,8 @@
 //! Covers: accounts (CRUD, icon, detail), transactions (CRUD, filter),
 //! transfers, and categories.
 
-use sanctum::controller::{AppController, SETTING_PREFERRED_CURRENCY};
+use sanctum::features::finance::FinanceService;
+use sanctum::features::settings::{SETTING_PREFERRED_CURRENCY, SettingsService};
 use sanctum::ui::dto::finance::{
     AccountDetailResponse, AccountDto, AccountsResponse, CategoriesResponse, CategoryDto,
     TransactionDto, TransactionsResponse,
@@ -29,7 +30,6 @@ use sanctum::ui::{
     format_category_label, format_decimal_from_cents, format_money, format_money_signed,
 };
 use std::collections::HashMap;
-use std::sync::Arc;
 use tauri::State;
 
 // ==================== Accounts ====================
@@ -37,13 +37,14 @@ use tauri::State;
 /// Fetch all accounts with balances.
 #[tauri::command]
 pub fn fetch_accounts(
-    controller: State<'_, Arc<AppController>>,
+    finance: State<'_, FinanceService>,
+    settings: State<'_, SettingsService>,
 ) -> Result<AccountsResponse, String> {
-    let preferred_currency = controller
+    let preferred_currency = settings
         .get_app_setting(SETTING_PREFERRED_CURRENCY)
         .unwrap_or_else(|_| "USD".to_string());
 
-    let state = sanctum::ui::load_accounts_state(&controller, &preferred_currency)
+    let state = sanctum::ui::load_accounts_state(&finance, &preferred_currency)
         .map_err(|e| e.to_string())?;
 
     let accounts: Vec<AccountDto> = state
@@ -73,25 +74,23 @@ pub fn fetch_accounts(
 /// Fetch single account detail with transaction history.
 #[tauri::command]
 pub fn fetch_account_details(
-    controller: State<'_, Arc<AppController>>,
+    finance: State<'_, FinanceService>,
     account_id: String,
 ) -> Result<AccountDetailResponse, String> {
-    let accounts = controller.get_accounts().map_err(|e| e.to_string())?;
+    let accounts = finance.get_accounts().map_err(|e| e.to_string())?;
     let account = accounts
         .iter()
         .find(|a| a.id == account_id)
         .ok_or_else(|| "Account not found".to_string())?;
 
-    let balances = controller
-        .get_account_balances()
-        .map_err(|e| e.to_string())?;
+    let balances = finance.get_account_balances().map_err(|e| e.to_string())?;
     let balance_cents = balances
         .iter()
         .find(|b| b.account_id == account_id)
         .map(|b| b.current_balance)
         .unwrap_or(account.initial_balance);
 
-    let transactions = controller.get_transactions().map_err(|e| e.to_string())?;
+    let transactions = finance.get_transactions().map_err(|e| e.to_string())?;
 
     let account_lookup: HashMap<String, (String, String)> = accounts
         .iter()
@@ -122,7 +121,7 @@ pub fn fetch_account_details(
 /// Create a new financial account.
 #[tauri::command]
 pub fn create_account(
-    controller: State<'_, Arc<AppController>>,
+    finance: State<'_, FinanceService>,
     name: String,
     account_type: String,
     currency: String,
@@ -131,7 +130,7 @@ pub fn create_account(
     let amount_cents = sanctum::ui::parse_amount_input(&initial_balance).unwrap_or(0);
     let account_type_key = sanctum::ui::normalize_account_type(&account_type);
 
-    controller
+    finance
         .create_account(
             name,
             account_type_key,
@@ -146,7 +145,7 @@ pub fn create_account(
 /// Update an existing account.
 #[tauri::command]
 pub fn update_account(
-    controller: State<'_, Arc<AppController>>,
+    finance: State<'_, FinanceService>,
     id: String,
     name: String,
     account_type: String,
@@ -154,14 +153,14 @@ pub fn update_account(
     initial_balance: String,
 ) -> Result<(), String> {
     let amount_cents = sanctum::ui::parse_amount_input(&initial_balance).unwrap_or(0);
-    let existing_icon = controller
+    let existing_icon = finance
         .get_accounts()
         .map_err(|e| e.to_string())?
         .iter()
         .find(|a| a.id == id)
         .and_then(|a| a.icon.clone());
 
-    controller
+    finance
         .update_account(
             id,
             name,
@@ -177,7 +176,7 @@ pub fn update_account(
 /// Transfer funds between two accounts.
 #[tauri::command]
 pub fn transfer_funds(
-    controller: State<'_, Arc<AppController>>,
+    finance: State<'_, FinanceService>,
     from_account_id: String,
     to_account_id: String,
     amount: String,
@@ -188,7 +187,7 @@ pub fn transfer_funds(
         .filter(|v| *v > 0)
         .ok_or_else(|| "Amount must be greater than zero".to_string())?;
 
-    controller
+    finance
         .transfer_funds(
             from_account_id,
             to_account_id,
@@ -203,7 +202,7 @@ pub fn transfer_funds(
 /// Update an existing transfer.
 #[tauri::command]
 pub fn update_transfer(
-    controller: State<'_, Arc<AppController>>,
+    finance: State<'_, FinanceService>,
     id: String,
     from_account_id: String,
     to_account_id: String,
@@ -215,7 +214,7 @@ pub fn update_transfer(
         .filter(|v| *v > 0)
         .ok_or_else(|| "Amount must be greater than zero".to_string())?;
 
-    controller
+    finance
         .update_transfer(
             id,
             from_account_id,
@@ -229,17 +228,15 @@ pub fn update_transfer(
 
 /// Archive (soft-delete) an account.
 #[tauri::command]
-pub fn delete_account(controller: State<'_, Arc<AppController>>, id: String) -> Result<(), String> {
-    controller.archive_account(id).map_err(|e| e.to_string())
+pub fn delete_account(finance: State<'_, FinanceService>, id: String) -> Result<(), String> {
+    finance.archive_account(id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 pub fn fetch_archived_accounts(
-    controller: State<'_, Arc<AppController>>,
+    finance: State<'_, FinanceService>,
 ) -> Result<Vec<AccountDto>, String> {
-    let accounts = controller
-        .get_archived_accounts()
-        .map_err(|e| e.to_string())?;
+    let accounts = finance.get_archived_accounts().map_err(|e| e.to_string())?;
     Ok(accounts
         .into_iter()
         .map(|acc| AccountDto {
@@ -264,23 +261,20 @@ pub fn fetch_archived_accounts(
 }
 
 #[tauri::command]
-pub fn unarchive_account(
-    controller: State<'_, Arc<AppController>>,
-    id: String,
-) -> Result<(), String> {
-    controller.unarchive_account(id).map_err(|e| e.to_string())
+pub fn unarchive_account(finance: State<'_, FinanceService>, id: String) -> Result<(), String> {
+    finance.unarchive_account(id).map_err(|e| e.to_string())
 }
 
 /// Update an account's bank icon.
 #[tauri::command]
 pub fn update_account_icon(
-    controller: State<'_, Arc<AppController>>,
+    finance: State<'_, FinanceService>,
     id: String,
     icon: String,
 ) -> Result<(), String> {
     let icon_path =
         sanctum::ui::normalize_bank_icon_path(if icon.is_empty() { None } else { Some(icon) });
-    controller
+    finance
         .update_account_icon(id, icon_path)
         .map_err(|e| e.to_string())
 }
@@ -288,11 +282,11 @@ pub fn update_account_icon(
 /// Rename an account.
 #[tauri::command]
 pub fn update_account_name(
-    controller: State<'_, Arc<AppController>>,
+    finance: State<'_, FinanceService>,
     id: String,
     new_name: String,
 ) -> Result<(), String> {
-    controller
+    finance
         .update_account_name(id, new_name)
         .map_err(|e| e.to_string())
 }
@@ -302,7 +296,7 @@ pub fn update_account_name(
 /// Fetch transactions with optional filters.
 #[tauri::command]
 pub fn fetch_transactions(
-    controller: State<'_, Arc<AppController>>,
+    finance: State<'_, FinanceService>,
     query: Option<String>,
     account_id: Option<String>,
     category: Option<String>,
@@ -310,13 +304,13 @@ pub fn fetch_transactions(
     date_to: Option<String>,
     limit: Option<usize>,
 ) -> Result<TransactionsResponse, String> {
-    let accounts = controller.get_accounts().map_err(|e| e.to_string())?;
+    let accounts = finance.get_accounts().map_err(|e| e.to_string())?;
     let account_lookup: HashMap<String, (String, String)> = accounts
         .iter()
         .map(|a| (a.id.clone(), (a.currency.clone(), a.name.clone())))
         .collect();
 
-    let transactions = controller.get_transactions().map_err(|e| e.to_string())?;
+    let transactions = finance.get_transactions().map_err(|e| e.to_string())?;
 
     let query_lower = query.unwrap_or_default().trim().to_lowercase();
     let account_filter = account_id.unwrap_or_default();
@@ -400,7 +394,7 @@ pub fn fetch_transactions(
 /// Add a new transaction.
 #[tauri::command]
 pub fn add_transaction(
-    controller: State<'_, Arc<AppController>>,
+    finance: State<'_, FinanceService>,
     account_id: String,
     amount: String,
     category: String,
@@ -412,7 +406,7 @@ pub fn add_transaction(
         .filter(|v| *v > 0)
         .ok_or_else(|| "Amount must be greater than zero".to_string())?;
 
-    controller
+    finance
         .add_transaction(
             account_id,
             amount_cents,
@@ -429,7 +423,7 @@ pub fn add_transaction(
 #[tauri::command]
 #[allow(clippy::too_many_arguments)]
 pub fn update_transaction(
-    controller: State<'_, Arc<AppController>>,
+    finance: State<'_, FinanceService>,
     id: String,
     account_id: String,
     amount: String,
@@ -442,7 +436,7 @@ pub fn update_transaction(
         .filter(|v| *v > 0)
         .ok_or_else(|| "Amount must be greater than zero".to_string())?;
 
-    controller
+    finance
         .update_transaction(
             id,
             account_id,
@@ -457,21 +451,16 @@ pub fn update_transaction(
 
 /// Delete a transaction.
 #[tauri::command]
-pub fn delete_transaction(
-    controller: State<'_, Arc<AppController>>,
-    id: String,
-) -> Result<(), String> {
-    controller.delete_transaction(id).map_err(|e| e.to_string())
+pub fn delete_transaction(finance: State<'_, FinanceService>, id: String) -> Result<(), String> {
+    finance.delete_transaction(id).map_err(|e| e.to_string())
 }
 
 // ==================== Categories ====================
 
 /// Load all expense and income categories.
 #[tauri::command]
-pub fn load_categories(
-    controller: State<'_, Arc<AppController>>,
-) -> Result<CategoriesResponse, String> {
-    let expense = controller
+pub fn load_categories(finance: State<'_, FinanceService>) -> Result<CategoriesResponse, String> {
+    let expense = finance
         .get_transaction_categories("expense".to_string())
         .map_err(|e| e.to_string())?
         .into_iter()
@@ -482,7 +471,7 @@ pub fn load_categories(
         })
         .collect();
 
-    let income = controller
+    let income = finance
         .get_transaction_categories("income".to_string())
         .map_err(|e| e.to_string())?
         .into_iter()
@@ -499,11 +488,11 @@ pub fn load_categories(
 /// Add a new category.
 #[tauri::command]
 pub fn add_category(
-    controller: State<'_, Arc<AppController>>,
+    finance: State<'_, FinanceService>,
     name: String,
     category_type: String,
 ) -> Result<(), String> {
-    controller
+    finance
         .add_transaction_category(name, category_type)
         .map(|_| ())
         .map_err(|e| e.to_string())
@@ -512,22 +501,19 @@ pub fn add_category(
 /// Update a category name.
 #[tauri::command]
 pub fn update_category(
-    controller: State<'_, Arc<AppController>>,
+    finance: State<'_, FinanceService>,
     id: String,
     new_name: String,
 ) -> Result<(), String> {
-    controller
+    finance
         .update_transaction_category(id, new_name)
         .map_err(|e| e.to_string())
 }
 
 /// Delete a category.
 #[tauri::command]
-pub fn delete_category(
-    controller: State<'_, Arc<AppController>>,
-    id: String,
-) -> Result<(), String> {
-    controller
+pub fn delete_category(finance: State<'_, FinanceService>, id: String) -> Result<(), String> {
+    finance
         .delete_transaction_category(id)
         .map_err(|e| e.to_string())
 }

@@ -17,8 +17,13 @@
 
 mod commands;
 
-use sanctum::controller::AppController;
-use std::sync::Arc;
+use sanctum::db::Database;
+use sanctum::features::crypto::CryptoService;
+use sanctum::features::finance::FinanceService;
+use sanctum::features::ingestion::IngestionService;
+use sanctum::features::settings::SettingsService;
+use sanctum::vault_manager::VaultManager;
+use std::sync::{Arc, RwLock};
 use tauri::Manager;
 
 #[cfg(not(target_os = "android"))]
@@ -61,8 +66,16 @@ pub fn run() {
                 dir
             };
 
-            let controller = Arc::new(AppController::new(app_data_dir));
-            app.manage(controller);
+            // Single shared database handle: cloned into every domain service
+            // and the vault manager so they all observe vault open/close
+            // through the same lock. The vault manager owns the lifecycle that
+            // sets/clears the inner `Database`.
+            let db: Arc<RwLock<Option<Database>>> = Arc::new(RwLock::new(None));
+            app.manage(FinanceService::new(db.clone()));
+            app.manage(CryptoService::new(db.clone()));
+            app.manage(IngestionService::new(db.clone()));
+            app.manage(SettingsService::new(db.clone()));
+            app.manage(VaultManager::new(app_data_dir, db));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

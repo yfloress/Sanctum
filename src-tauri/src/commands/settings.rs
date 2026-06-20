@@ -20,63 +20,68 @@
 //! Covers: loading all settings, toggling individual settings,
 //! session timeout, currency, language, sidebar, and reset.
 
-use sanctum::controller::{
-    AppController, SETTING_AUTO_FETCH, SETTING_CRYPTO_PROXY_ENABLED, SETTING_CRYPTO_PROXY_URL,
+use sanctum::features::crypto::{
+    CryptoService, SETTING_AUTO_FETCH, SETTING_CRYPTO_PROXY_ENABLED, SETTING_CRYPTO_PROXY_URL,
+};
+use sanctum::features::settings::{
     SETTING_DARK_MODE, SETTING_PREFERRED_CURRENCY, SETTING_PREFERRED_LANGUAGE,
-    SETTING_SESSION_TIMEOUT, SETTING_SIDEBAR_COLLAPSED,
+    SETTING_SESSION_TIMEOUT, SETTING_SIDEBAR_COLLAPSED, SettingsService,
 };
 use sanctum::ui::dto::settings::{AppInfo, AppSettings};
-use std::sync::Arc;
+use sanctum::vault_manager::VaultManager;
 use tauri::State;
 
 /// Load all application settings at once.
 ///
 /// Returns the full settings bundle for the frontend to initialize its state.
 #[tauri::command]
-pub fn load_settings(controller: State<'_, Arc<AppController>>) -> Result<AppSettings, String> {
-    let dark_mode = controller
+pub fn load_settings(
+    settings: State<'_, SettingsService>,
+    vault: State<'_, VaultManager>,
+) -> Result<AppSettings, String> {
+    let dark_mode = settings
         .get_app_setting(SETTING_DARK_MODE)
         .map(|v| v != "false")
         .unwrap_or(true);
 
-    let auto_fetch = controller
+    let auto_fetch = settings
         .get_app_setting(SETTING_AUTO_FETCH)
         .map(|v| v == "true")
         .unwrap_or(false);
 
-    let proxy_enabled = controller
+    let proxy_enabled = settings
         .get_app_setting(SETTING_CRYPTO_PROXY_ENABLED)
         .map(|v| v == "true")
         .unwrap_or(false);
 
-    let proxy_url = controller
+    let proxy_url = settings
         .get_app_setting(SETTING_CRYPTO_PROXY_URL)
         .unwrap_or_default();
 
-    let session_timeout_secs = controller
+    let session_timeout_secs = settings
         .get_app_setting(SETTING_SESSION_TIMEOUT)
         .ok()
         .and_then(|s| s.parse::<i32>().ok())
         .map(|v| v.clamp(60, 3600))
         .unwrap_or(900);
 
-    let preferred_currency = controller
+    let preferred_currency = settings
         .get_app_setting(SETTING_PREFERRED_CURRENCY)
         .unwrap_or_else(|_| "USD".to_string());
 
-    let preferred_language = controller
+    let preferred_language = settings
         .get_app_setting(SETTING_PREFERRED_LANGUAGE)
         .unwrap_or_else(|_| "en".to_string());
 
     // Switch the i18n bundle to the user's saved preference
     sanctum::services::i18n::set_language(&preferred_language);
 
-    let sidebar_collapsed = controller
+    let sidebar_collapsed = settings
         .get_app_setting(SETTING_SIDEBAR_COLLAPSED)
         .map(|v| v == "true")
         .unwrap_or(false);
 
-    let login_wallpaper_path = controller
+    let login_wallpaper_path = vault
         .get_login_wallpaper_path()
         .map(|p| p.to_string_lossy().to_string());
 
@@ -95,24 +100,18 @@ pub fn load_settings(controller: State<'_, Arc<AppController>>) -> Result<AppSet
 
 /// Toggle dark mode on or off.
 #[tauri::command]
-pub fn set_dark_mode(
-    controller: State<'_, Arc<AppController>>,
-    enabled: bool,
-) -> Result<(), String> {
+pub fn set_dark_mode(settings: State<'_, SettingsService>, enabled: bool) -> Result<(), String> {
     let val = if enabled { "true" } else { "false" };
-    controller
+    settings
         .set_app_setting(SETTING_DARK_MODE, val)
         .map_err(|e| e.to_string())
 }
 
 /// Toggle automatic crypto price fetching.
 #[tauri::command]
-pub fn set_auto_fetch(
-    controller: State<'_, Arc<AppController>>,
-    enabled: bool,
-) -> Result<(), String> {
+pub fn set_auto_fetch(settings: State<'_, SettingsService>, enabled: bool) -> Result<(), String> {
     let val = if enabled { "true" } else { "false" };
-    controller
+    settings
         .set_app_setting(SETTING_AUTO_FETCH, val)
         .map_err(|e| e.to_string())
 }
@@ -122,18 +121,16 @@ pub fn set_auto_fetch(
 /// When enabling, validates the current proxy URL first.
 #[tauri::command]
 pub fn set_proxy_enabled(
-    controller: State<'_, Arc<AppController>>,
+    crypto: State<'_, CryptoService>,
     enabled: bool,
     current_url: String,
 ) -> Result<(), String> {
     if enabled {
-        controller
-            .validate_crypto_proxy_url(current_url)
+        crypto
+            .validate_proxy_url(&current_url)
             .map_err(|e| e.to_string())?;
     }
-    controller
-        .set_crypto_proxy_enabled(enabled)
-        .map_err(|e| e.to_string())
+    crypto.set_proxy_enabled(enabled).map_err(|e| e.to_string())
 }
 
 /// Set the crypto API proxy URL.
@@ -142,37 +139,35 @@ pub fn set_proxy_enabled(
 /// silently stores an unreachable / malformed value. Empty strings clear the
 /// setting and are allowed through without validation.
 #[tauri::command]
-pub fn set_proxy_url(controller: State<'_, Arc<AppController>>, url: String) -> Result<(), String> {
+pub fn set_proxy_url(crypto: State<'_, CryptoService>, url: String) -> Result<(), String> {
     let trimmed = url.trim().to_string();
     if !trimmed.is_empty() {
-        controller
-            .validate_crypto_proxy_url(trimmed.clone())
+        crypto
+            .validate_proxy_url(&trimmed)
             .map_err(|e| e.to_string())?;
     }
-    controller
-        .set_crypto_proxy_url(trimmed)
-        .map_err(|e| e.to_string())
+    crypto.set_proxy_url(trimmed).map_err(|e| e.to_string())
 }
 
 /// Set the vault auto-lock timeout in seconds (60–3600).
 #[tauri::command]
 pub fn set_session_timeout(
-    controller: State<'_, Arc<AppController>>,
+    settings: State<'_, SettingsService>,
     timeout_secs: i32,
 ) -> Result<(), String> {
     let clamped = timeout_secs.clamp(60, 3600);
-    controller
-        .set_session_timeout(clamped as i64)
+    settings
+        .set_app_setting(SETTING_SESSION_TIMEOUT, &clamped.to_string())
         .map_err(|e| e.to_string())
 }
 
 /// Change the preferred display currency.
 #[tauri::command]
 pub fn set_preferred_currency(
-    controller: State<'_, Arc<AppController>>,
+    settings: State<'_, SettingsService>,
     currency: String,
 ) -> Result<(), String> {
-    controller
+    settings
         .set_app_setting(SETTING_PREFERRED_CURRENCY, &currency)
         .map_err(|e| e.to_string())
 }
@@ -180,10 +175,10 @@ pub fn set_preferred_currency(
 /// Change the preferred UI language and switch the i18n bundle.
 #[tauri::command]
 pub fn set_preferred_language(
-    controller: State<'_, Arc<AppController>>,
+    settings: State<'_, SettingsService>,
     language: String,
 ) -> Result<(), String> {
-    controller
+    settings
         .set_app_setting(SETTING_PREFERRED_LANGUAGE, &language)
         .map_err(|e| e.to_string())?;
     sanctum::services::i18n::set_language(&language);
@@ -193,43 +188,37 @@ pub fn set_preferred_language(
 /// Persist sidebar collapsed/expanded state.
 #[tauri::command]
 pub fn set_sidebar_collapsed(
-    controller: State<'_, Arc<AppController>>,
+    settings: State<'_, SettingsService>,
     collapsed: bool,
 ) -> Result<(), String> {
     let val = if collapsed { "true" } else { "false" };
-    controller
+    settings
         .set_app_setting(SETTING_SIDEBAR_COLLAPSED, val)
         .map_err(|e| e.to_string())
 }
 
 /// Reset all settings to their default values.
 #[tauri::command]
-pub fn reset_settings(controller: State<'_, Arc<AppController>>) -> Result<(), String> {
-    controller
-        .set_app_setting(SETTING_DARK_MODE, "true")
-        .map_err(|e| e.to_string())?;
-    controller
-        .set_app_setting(SETTING_AUTO_FETCH, "false")
-        .map_err(|e| e.to_string())?;
-    controller
-        .set_app_setting(SETTING_CRYPTO_PROXY_ENABLED, "false")
-        .map_err(|e| e.to_string())?;
-    controller
-        .set_app_setting(SETTING_CRYPTO_PROXY_URL, "")
-        .map_err(|e| e.to_string())?;
-    controller
-        .set_app_setting(SETTING_SESSION_TIMEOUT, "900")
-        .map_err(|e| e.to_string())?;
-    controller
-        .set_app_setting(SETTING_PREFERRED_CURRENCY, "USD")
-        .map_err(|e| e.to_string())?;
-    controller
-        .set_app_setting(SETTING_PREFERRED_LANGUAGE, "en")
-        .map_err(|e| e.to_string())?;
-    controller
-        .set_app_setting(SETTING_SIDEBAR_COLLAPSED, "false")
-        .map_err(|e| e.to_string())?;
-    controller
+pub fn reset_settings(
+    settings: State<'_, SettingsService>,
+    vault: State<'_, VaultManager>,
+) -> Result<(), String> {
+    let defaults = [
+        (SETTING_DARK_MODE, "true"),
+        (SETTING_AUTO_FETCH, "false"),
+        (SETTING_CRYPTO_PROXY_ENABLED, "false"),
+        (SETTING_CRYPTO_PROXY_URL, ""),
+        (SETTING_SESSION_TIMEOUT, "900"),
+        (SETTING_PREFERRED_CURRENCY, "USD"),
+        (SETTING_PREFERRED_LANGUAGE, "en"),
+        (SETTING_SIDEBAR_COLLAPSED, "false"),
+    ];
+    for (key, value) in defaults {
+        settings
+            .set_app_setting(key, value)
+            .map_err(|e| e.to_string())?;
+    }
+    vault
         .set_login_wallpaper_path(None)
         .map_err(|e| e.to_string())?;
 
@@ -248,10 +237,8 @@ pub fn get_app_info() -> AppInfo {
 
 /// Get remaining session time before auto-lock, in seconds.
 #[tauri::command]
-pub fn get_session_remaining(controller: State<'_, Arc<AppController>>) -> Result<i64, String> {
-    controller
-        .get_session_remaining()
-        .map_err(|e| e.to_string())
+pub fn get_session_remaining(vault: State<'_, VaultManager>) -> Result<i64, String> {
+    vault.get_session_remaining().map_err(|e| e.to_string())
 }
 
 /// Returns all translation key-value pairs for the current language.
@@ -265,10 +252,10 @@ pub fn get_translations() -> std::collections::HashMap<String, String> {
 /// Set the login wallpaper image path.
 #[tauri::command]
 pub fn set_login_wallpaper(
-    controller: State<'_, Arc<AppController>>,
+    vault: State<'_, VaultManager>,
     path: Option<String>,
 ) -> Result<(), String> {
-    controller
+    vault
         .set_login_wallpaper_path(path.map(std::path::PathBuf::from))
         .map_err(|e| e.to_string())
 }
