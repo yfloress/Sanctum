@@ -19,6 +19,7 @@
 //!
 //! Covers: net worth balance, recent transactions, analytics with chart data.
 
+use sanctum::error::AppError;
 use sanctum::features::crypto::CryptoService;
 use sanctum::features::finance::FinanceService;
 use sanctum::features::settings::{SETTING_PREFERRED_CURRENCY, SettingsService};
@@ -66,7 +67,7 @@ pub fn fetch_balance(
     finance: State<'_, FinanceService>,
     crypto: State<'_, CryptoService>,
     settings: State<'_, SettingsService>,
-) -> Result<BalanceOverview, String> {
+) -> Result<BalanceOverview, AppError> {
     let preferred_currency = normalize_currency_code(
         &settings
             .get_app_setting(SETTING_PREFERRED_CURRENCY)
@@ -74,11 +75,9 @@ pub fn fetch_balance(
     );
     let preferred_rate = load_cached_usd_rate(&finance, &preferred_currency);
 
-    let accounts = finance.get_accounts().map_err(|e| e.to_string())?;
-    let balances = finance.get_account_balances().map_err(|e| e.to_string())?;
-    let assets = crypto
-        .get_aggregated_portfolio()
-        .map_err(|e| e.to_string())?;
+    let accounts = finance.get_accounts().map_err(AppError::from)?;
+    let balances = finance.get_account_balances().map_err(AppError::from)?;
+    let assets = crypto.get_aggregated_portfolio().map_err(AppError::from)?;
     let prices = crypto.load_crypto_prices().unwrap_or_default();
 
     let currency_map: HashMap<String, String> = accounts
@@ -140,14 +139,16 @@ pub fn fetch_balance(
 
 /// Fetch recent transactions for the dashboard feed.
 #[tauri::command]
-pub fn fetch_recent(finance: State<'_, FinanceService>) -> Result<Vec<RecentTransaction>, String> {
-    let accounts = finance.get_accounts().map_err(|e| e.to_string())?;
+pub fn fetch_recent(
+    finance: State<'_, FinanceService>,
+) -> Result<Vec<RecentTransaction>, AppError> {
+    let accounts = finance.get_accounts().map_err(AppError::from)?;
     let account_lookup: HashMap<String, (String, String)> = accounts
         .iter()
         .map(|a| (a.id.clone(), (a.currency.clone(), a.name.clone())))
         .collect();
 
-    let mut transactions = finance.get_transactions().map_err(|e| e.to_string())?;
+    let mut transactions = finance.get_transactions().map_err(AppError::from)?;
     transactions.sort_by(|a, b| b.date.cmp(&a.date));
 
     let recent: Vec<RecentTransaction> = transactions
@@ -208,7 +209,7 @@ pub fn fetch_analytics(
     crypto: State<'_, CryptoService>,
     settings: State<'_, SettingsService>,
     range: String,
-) -> Result<AnalyticsData, String> {
+) -> Result<AnalyticsData, AppError> {
     let preferred_currency = normalize_currency_code(
         &settings
             .get_app_setting(SETTING_PREFERRED_CURRENCY)
@@ -228,7 +229,7 @@ pub fn fetch_analytics(
             range,
             preferred_currency.clone(),
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(AppError::from)?;
 
     let breakdown: Vec<ExpenseBreakdownItem> = data
         .expense_slices

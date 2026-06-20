@@ -15,6 +15,7 @@
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 
 <script lang="ts">
+  import { errorMessage } from '../lib/errors'
   import { app } from '../lib/stores/app.svelte'
   import { i18n } from '../lib/stores/i18n.svelte'
   import * as vaultApi from '../lib/api/vault'
@@ -61,7 +62,7 @@
       await i18n.load()
       app.login()
     } catch (e) {
-      error = String(e)
+      error = errorMessage(e)
       confirmWeak = false
     } finally {
       loading = false
@@ -85,7 +86,7 @@
       error = ''
       password = ''
     } catch (e) {
-      error = String(e)
+      error = errorMessage(e)
     } finally {
       loading = false
     }

@@ -15,6 +15,7 @@
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 
 <script lang="ts">
+  import { errorMessage } from '../../lib/errors'
   import { app } from '../../lib/stores/app.svelte'
   import { i18n } from '../../lib/stores/i18n.svelte'
   import * as cryptoApi from '../../lib/api/crypto'
@@ -80,7 +81,7 @@
       showEditWalletName = false
       await onrefresh()
       app.showToast(i18n.t('crypto-toast-wallet-renamed', 'Wallet renamed'))
-    } catch (e) { app.showToast(String(e), true) }
+    } catch (e) { app.showToast(errorMessage(e), true) }
   }
 
   async function changeWalletIcon(icon: string) {
@@ -89,7 +90,7 @@
       await cryptoApi.updateWalletIcon(wallet.id, icon || null)
       showWalletIconPicker = false
       await onrefresh()
-    } catch (e) { app.showToast(String(e), true) }
+    } catch (e) { app.showToast(errorMessage(e), true) }
   }
 
   function close() {

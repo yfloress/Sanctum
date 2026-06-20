@@ -20,6 +20,7 @@
 //! Covers: accounts (CRUD, icon, detail), transactions (CRUD, filter),
 //! transfers, and categories.
 
+use sanctum::error::AppError;
 use sanctum::features::finance::FinanceService;
 use sanctum::features::settings::{SETTING_PREFERRED_CURRENCY, SettingsService};
 use sanctum::ui::dto::finance::{
@@ -39,13 +40,13 @@ use tauri::State;
 pub fn fetch_accounts(
     finance: State<'_, FinanceService>,
     settings: State<'_, SettingsService>,
-) -> Result<AccountsResponse, String> {
+) -> Result<AccountsResponse, AppError> {
     let preferred_currency = settings
         .get_app_setting(SETTING_PREFERRED_CURRENCY)
         .unwrap_or_else(|_| "USD".to_string());
 
-    let state = sanctum::ui::load_accounts_state(&finance, &preferred_currency)
-        .map_err(|e| e.to_string())?;
+    let state =
+        sanctum::ui::load_accounts_state(&finance, &preferred_currency).map_err(AppError::from)?;
 
     let accounts: Vec<AccountDto> = state
         .accounts
@@ -76,21 +77,21 @@ pub fn fetch_accounts(
 pub fn fetch_account_details(
     finance: State<'_, FinanceService>,
     account_id: String,
-) -> Result<AccountDetailResponse, String> {
-    let accounts = finance.get_accounts().map_err(|e| e.to_string())?;
+) -> Result<AccountDetailResponse, AppError> {
+    let accounts = finance.get_accounts().map_err(AppError::from)?;
     let account = accounts
         .iter()
         .find(|a| a.id == account_id)
-        .ok_or_else(|| "Account not found".to_string())?;
+        .ok_or_else(|| AppError::not_found("Account not found"))?;
 
-    let balances = finance.get_account_balances().map_err(|e| e.to_string())?;
+    let balances = finance.get_account_balances().map_err(AppError::from)?;
     let balance_cents = balances
         .iter()
         .find(|b| b.account_id == account_id)
         .map(|b| b.current_balance)
         .unwrap_or(account.initial_balance);
 
-    let transactions = finance.get_transactions().map_err(|e| e.to_string())?;
+    let transactions = finance.get_transactions().map_err(AppError::from)?;
 
     let account_lookup: HashMap<String, (String, String)> = accounts
         .iter()
@@ -126,7 +127,7 @@ pub fn create_account(
     account_type: String,
     currency: String,
     initial_balance: String,
-) -> Result<String, String> {
+) -> Result<String, AppError> {
     let amount_cents = sanctum::ui::parse_amount_input(&initial_balance).unwrap_or(0);
     let account_type_key = sanctum::ui::normalize_account_type(&account_type);
 
@@ -139,7 +140,7 @@ pub fn create_account(
             "#8b5cf6".to_string(),
             None,
         )
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 /// Update an existing account.
@@ -151,11 +152,11 @@ pub fn update_account(
     account_type: String,
     currency: String,
     initial_balance: String,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let amount_cents = sanctum::ui::parse_amount_input(&initial_balance).unwrap_or(0);
     let existing_icon = finance
         .get_accounts()
-        .map_err(|e| e.to_string())?
+        .map_err(AppError::from)?
         .iter()
         .find(|a| a.id == id)
         .and_then(|a| a.icon.clone());
@@ -170,7 +171,7 @@ pub fn update_account(
             "#8b5cf6".to_string(),
             existing_icon,
         )
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 /// Transfer funds between two accounts.
@@ -182,7 +183,7 @@ pub fn transfer_funds(
     amount: String,
     description: String,
     date: String,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let amount_cents = sanctum::ui::parse_amount_input(&amount)
         .filter(|v| *v > 0)
         .ok_or_else(|| "Amount must be greater than zero".to_string())?;
@@ -196,7 +197,7 @@ pub fn transfer_funds(
             date,
         )
         .map(|_| ())
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 /// Update an existing transfer.
@@ -209,7 +210,7 @@ pub fn update_transfer(
     amount: String,
     description: String,
     date: String,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let amount_cents = sanctum::ui::parse_amount_input(&amount)
         .filter(|v| *v > 0)
         .ok_or_else(|| "Amount must be greater than zero".to_string())?;
@@ -223,20 +224,20 @@ pub fn update_transfer(
             description,
             date,
         )
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 /// Archive (soft-delete) an account.
 #[tauri::command]
-pub fn delete_account(finance: State<'_, FinanceService>, id: String) -> Result<(), String> {
-    finance.archive_account(id).map_err(|e| e.to_string())
+pub fn delete_account(finance: State<'_, FinanceService>, id: String) -> Result<(), AppError> {
+    finance.archive_account(id).map_err(AppError::from)
 }
 
 #[tauri::command]
 pub fn fetch_archived_accounts(
     finance: State<'_, FinanceService>,
-) -> Result<Vec<AccountDto>, String> {
-    let accounts = finance.get_archived_accounts().map_err(|e| e.to_string())?;
+) -> Result<Vec<AccountDto>, AppError> {
+    let accounts = finance.get_archived_accounts().map_err(AppError::from)?;
     Ok(accounts
         .into_iter()
         .map(|acc| AccountDto {
@@ -261,8 +262,8 @@ pub fn fetch_archived_accounts(
 }
 
 #[tauri::command]
-pub fn unarchive_account(finance: State<'_, FinanceService>, id: String) -> Result<(), String> {
-    finance.unarchive_account(id).map_err(|e| e.to_string())
+pub fn unarchive_account(finance: State<'_, FinanceService>, id: String) -> Result<(), AppError> {
+    finance.unarchive_account(id).map_err(AppError::from)
 }
 
 /// Update an account's bank icon.
@@ -271,12 +272,12 @@ pub fn update_account_icon(
     finance: State<'_, FinanceService>,
     id: String,
     icon: String,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let icon_path =
         sanctum::ui::normalize_bank_icon_path(if icon.is_empty() { None } else { Some(icon) });
     finance
         .update_account_icon(id, icon_path)
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 /// Rename an account.
@@ -285,10 +286,10 @@ pub fn update_account_name(
     finance: State<'_, FinanceService>,
     id: String,
     new_name: String,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     finance
         .update_account_name(id, new_name)
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 // ==================== Transactions ====================
@@ -303,14 +304,14 @@ pub fn fetch_transactions(
     date_from: Option<String>,
     date_to: Option<String>,
     limit: Option<usize>,
-) -> Result<TransactionsResponse, String> {
-    let accounts = finance.get_accounts().map_err(|e| e.to_string())?;
+) -> Result<TransactionsResponse, AppError> {
+    let accounts = finance.get_accounts().map_err(AppError::from)?;
     let account_lookup: HashMap<String, (String, String)> = accounts
         .iter()
         .map(|a| (a.id.clone(), (a.currency.clone(), a.name.clone())))
         .collect();
 
-    let transactions = finance.get_transactions().map_err(|e| e.to_string())?;
+    let transactions = finance.get_transactions().map_err(AppError::from)?;
 
     let query_lower = query.unwrap_or_default().trim().to_lowercase();
     let account_filter = account_id.unwrap_or_default();
@@ -401,7 +402,7 @@ pub fn add_transaction(
     description: String,
     date: String,
     is_expense: bool,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let amount_cents = sanctum::ui::parse_amount_input(&amount)
         .filter(|v| *v > 0)
         .ok_or_else(|| "Amount must be greater than zero".to_string())?;
@@ -416,7 +417,7 @@ pub fn add_transaction(
             is_expense,
         )
         .map(|_| ())
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 /// Update an existing transaction.
@@ -431,7 +432,7 @@ pub fn update_transaction(
     description: String,
     date: String,
     is_expense: bool,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let amount_cents = sanctum::ui::parse_amount_input(&amount)
         .filter(|v| *v > 0)
         .ok_or_else(|| "Amount must be greater than zero".to_string())?;
@@ -446,23 +447,23 @@ pub fn update_transaction(
             date,
             is_expense,
         )
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 /// Delete a transaction.
 #[tauri::command]
-pub fn delete_transaction(finance: State<'_, FinanceService>, id: String) -> Result<(), String> {
-    finance.delete_transaction(id).map_err(|e| e.to_string())
+pub fn delete_transaction(finance: State<'_, FinanceService>, id: String) -> Result<(), AppError> {
+    finance.delete_transaction(id).map_err(AppError::from)
 }
 
 // ==================== Categories ====================
 
 /// Load all expense and income categories.
 #[tauri::command]
-pub fn load_categories(finance: State<'_, FinanceService>) -> Result<CategoriesResponse, String> {
+pub fn load_categories(finance: State<'_, FinanceService>) -> Result<CategoriesResponse, AppError> {
     let expense = finance
         .get_transaction_categories("expense".to_string())
-        .map_err(|e| e.to_string())?
+        .map_err(AppError::from)?
         .into_iter()
         .map(|c| CategoryDto {
             id: c.id,
@@ -473,7 +474,7 @@ pub fn load_categories(finance: State<'_, FinanceService>) -> Result<CategoriesR
 
     let income = finance
         .get_transaction_categories("income".to_string())
-        .map_err(|e| e.to_string())?
+        .map_err(AppError::from)?
         .into_iter()
         .map(|c| CategoryDto {
             id: c.id,
@@ -491,11 +492,11 @@ pub fn add_category(
     finance: State<'_, FinanceService>,
     name: String,
     category_type: String,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     finance
         .add_transaction_category(name, category_type)
         .map(|_| ())
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 /// Update a category name.
@@ -504,18 +505,18 @@ pub fn update_category(
     finance: State<'_, FinanceService>,
     id: String,
     new_name: String,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     finance
         .update_transaction_category(id, new_name)
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 /// Delete a category.
 #[tauri::command]
-pub fn delete_category(finance: State<'_, FinanceService>, id: String) -> Result<(), String> {
+pub fn delete_category(finance: State<'_, FinanceService>, id: String) -> Result<(), AppError> {
     finance
         .delete_transaction_category(id)
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 // ==================== Helpers ====================

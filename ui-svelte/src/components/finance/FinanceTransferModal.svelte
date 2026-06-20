@@ -15,6 +15,7 @@
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 
 <script lang="ts">
+  import { errorMessage } from '../../lib/errors'
   import { app } from '../../lib/stores/app.svelte'
   import { i18n } from '../../lib/stores/i18n.svelte'
   import * as financeApi from '../../lib/api/finance'
@@ -82,7 +83,7 @@
         ? i18n.t('finances-tf-updated', 'Transfer updated')
         : i18n.t('finances-tf-completed', 'Transfer completed'))
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 

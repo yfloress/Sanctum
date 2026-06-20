@@ -15,6 +15,7 @@
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 
 <script lang="ts">
+  import { errorMessage } from '../lib/errors'
   import { app } from '../lib/stores/app.svelte'
   import { i18n } from '../lib/stores/i18n.svelte'
   import * as financeApi from '../lib/api/finance'
@@ -117,7 +118,7 @@
       categories = cats
       await Promise.all([loadTransactions(), loadChartTransactions()])
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     } finally {
       loading = false
     }
@@ -142,7 +143,7 @@
       transactions = res.transactions
       hasMore = res.has_more
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 
@@ -162,7 +163,7 @@
       transactions = res.transactions
       hasMore = res.has_more
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 
@@ -180,7 +181,7 @@
     try {
       selectedAccount = await financeApi.fetchAccountDetails(id)
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 
@@ -214,7 +215,7 @@
         { label: i18n.t('action-undo', 'Undo'), handler: () => undoDeleteTransaction(tx) },
       )
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 
@@ -239,7 +240,7 @@
       await Promise.all([loadTransactions(), refreshAccounts(), loadChartTransactions()])
       app.showToast(i18n.t('finances-tx-restored', 'Transaction restored'))
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 
@@ -265,7 +266,7 @@
         { label: i18n.t('action-undo', 'Undo'), handler: () => unarchiveAccount(id) },
       )
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 
@@ -273,7 +274,7 @@
     try {
       archivedAccounts = await financeApi.fetchArchivedAccounts()
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 
@@ -283,7 +284,7 @@
       await Promise.all([refreshAccounts(), loadArchivedAccounts()])
       app.showToast(i18n.t('finances-acc-restored', 'Account restored'))
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 
@@ -296,7 +297,7 @@
     try {
       accountsData = await financeApi.fetchAccounts()
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 
@@ -306,7 +307,7 @@
       categories = await financeApi.loadCategories()
       app.showToast(i18n.t('finances-cat-added', 'Category added'))
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 
@@ -321,7 +322,7 @@
         { label: i18n.t('action-undo', 'Undo'), handler: () => undoDeleteCategory(cat.name, cat.type) },
       )
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 
@@ -331,7 +332,7 @@
       categories = await financeApi.loadCategories()
       app.showToast(i18n.t('finances-cat-restored', 'Category restored'))
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 

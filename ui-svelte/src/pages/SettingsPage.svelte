@@ -15,6 +15,7 @@
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 
 <script lang="ts">
+  import { errorMessage } from '../lib/errors'
   import { app, type BackgroundFx } from '../lib/stores/app.svelte'
   import { i18n } from '../lib/stores/i18n.svelte'
   import * as settingsApi from '../lib/api/settings'
@@ -62,7 +63,7 @@
       info = appInfo
       maxFileSize = maxSize
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     } finally {
       settingsLoading = false
     }
@@ -108,7 +109,7 @@
       importPreview = await ingestionApi.previewImport(content, file.name)
       importStep = 'preview'
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     } finally {
       importLoading = false
       genericFileInput.value = ''
@@ -144,7 +145,7 @@
         walletNamesLower = []
       }
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     } finally {
       importLoading = false
       exchangeFileInput.value = ''
@@ -161,7 +162,7 @@
       importPreview = await ingestionApi.previewExchangeCsv(importContent, exchangeWalletName.trim())
       importStep = 'preview'
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     } finally {
       importLoading = false
     }
@@ -191,7 +192,7 @@
       showWalletCreate = false
       await previewExchange()
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     } finally {
       creatingWallet = false
     }
@@ -207,7 +208,7 @@
       }
       importStep = 'results'
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     } finally {
       importLoading = false
     }
@@ -217,7 +218,7 @@
     if (!app.settings) return
     const next = !app.settings.dark_mode
     app.settings.dark_mode = next
-    await settingsApi.setDarkMode(next).catch(e => app.showToast(String(e), true))
+    await settingsApi.setDarkMode(next).catch(e => app.showToast(errorMessage(e), true))
   }
 
   function changeBackground(e: Event) {
@@ -270,7 +271,7 @@
     try {
       await settingsApi.setProxyUrl(app.settings.proxy_url)
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 
@@ -284,7 +285,7 @@
       await vaultApi.exportVault(path)
       app.showToast(i18n.t('settings-export-success', 'Backup saved successfully'))
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 
@@ -294,7 +295,7 @@
       app.settings = await settingsApi.loadSettings()
       app.showToast(i18n.t('settings-reset-success', 'Settings reset to defaults'))
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 

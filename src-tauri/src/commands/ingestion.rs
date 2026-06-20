@@ -17,6 +17,7 @@
 
 //! Ingestion domain Tauri commands.
 
+use sanctum::error::AppError;
 use sanctum::features::ingestion::parsers::detect_exchange_source as parse_exchange_source;
 use sanctum::features::ingestion::{IngestionService, MAX_FILE_SIZE};
 use sanctum::ui::dto::ingestion::{ExchangeDetectionResult, ImportErrorDto, ImportResultsResponse};
@@ -27,10 +28,10 @@ pub fn preview_import(
     ingestion: State<'_, IngestionService>,
     content: String,
     filename: String,
-) -> Result<ImportResultsResponse, String> {
+) -> Result<ImportResultsResponse, AppError> {
     let summary = ingestion
         .preview_from_content(&content, &filename)
-        .map_err(|e| e.to_string())?;
+        .map_err(AppError::from)?;
     Ok(map_import_summary(summary))
 }
 
@@ -39,10 +40,10 @@ pub fn import_data(
     ingestion: State<'_, IngestionService>,
     content: String,
     filename: String,
-) -> Result<ImportResultsResponse, String> {
+) -> Result<ImportResultsResponse, AppError> {
     let summary = ingestion
         .import_from_content(&content, &filename)
-        .map_err(|e| e.to_string())?;
+        .map_err(AppError::from)?;
     Ok(map_import_summary(summary))
 }
 
@@ -71,10 +72,10 @@ pub fn preview_exchange_csv(
     ingestion: State<'_, IngestionService>,
     content: String,
     wallet_name: String,
-) -> Result<ImportResultsResponse, String> {
+) -> Result<ImportResultsResponse, AppError> {
     let summary = ingestion
         .preview_exchange_csv_auto(&content, &wallet_name)
-        .map_err(|e| e.to_string())?;
+        .map_err(AppError::from)?;
     Ok(map_import_summary(summary))
 }
 
@@ -83,10 +84,10 @@ pub fn import_exchange_csv(
     ingestion: State<'_, IngestionService>,
     content: String,
     wallet_name: String,
-) -> Result<ImportResultsResponse, String> {
+) -> Result<ImportResultsResponse, AppError> {
     let summary = ingestion
         .import_exchange_csv_auto(&content, &wallet_name)
-        .map_err(|e| e.to_string())?;
+        .map_err(AppError::from)?;
     Ok(map_import_summary(summary))
 }
 

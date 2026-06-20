@@ -15,6 +15,7 @@
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 
 <script lang="ts">
+  import { errorMessage } from '../lib/errors'
   import { app } from '../lib/stores/app.svelte'
   import { i18n } from '../lib/stores/i18n.svelte'
   import { formatCurrency, mask } from '../lib/currency'
@@ -88,7 +89,7 @@
     try {
       trend = await cryptoApi.fetchPortfolioTrend(days)
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 
@@ -185,7 +186,7 @@
 
   async function openTickerConfig(tab: 'ticker' | 'coins' = 'ticker') {
     await loadCoinCatalog()
-    try { tickerIds = await cryptoApi.getActiveTickerIds() } catch (e) { app.showToast(String(e), true) }
+    try { tickerIds = await cryptoApi.getActiveTickerIds() } catch (e) { app.showToast(errorMessage(e), true) }
     tickerConfigSearch = ''
     catalogSearch = ''
     tickerConfigTab = tab
@@ -222,7 +223,7 @@
       app.showToast(i18n.t('crypto-toast-ticker-saved', 'Ticker config saved'))
       // Update bar immediately from current tickerIds without re-fetching them from DB
       await refreshTickerBar()
-    } catch (e) { app.showToast(String(e), true) }
+    } catch (e) { app.showToast(errorMessage(e), true) }
   }
 
   // Rebuild tickerPrices in the order of current tickerIds.
@@ -283,7 +284,7 @@
       await Promise.all([refreshTickerBar(), load()])
       app.showToast(msg)
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     } finally {
       tickerSyncing = false
     }
@@ -298,7 +299,7 @@
       customCoinName = ''
       customCoinSymbol = ''
       app.showToast(i18n.t('crypto-toast-custom-added', 'Custom coin added'))
-    } catch (e) { app.showToast(String(e), true) }
+    } catch (e) { app.showToast(errorMessage(e), true) }
   }
 
   async function deleteCustomCoinAction(id: string) {
@@ -306,12 +307,12 @@
       await cryptoApi.deleteCustomCoin(id)
       coinCatalog = await cryptoApi.getCoinCatalog()
       app.showToast(i18n.t('crypto-toast-custom-deleted', 'Custom coin deleted'))
-    } catch (e) { app.showToast(String(e), true) }
+    } catch (e) { app.showToast(errorMessage(e), true) }
   }
 
   async function loadCoinCatalog() {
     if (coinCatalog.length > 0) return
-    try { coinCatalog = await cryptoApi.getCoinCatalog() } catch (e) { app.showToast(String(e), true) }
+    try { coinCatalog = await cryptoApi.getCoinCatalog() } catch (e) { app.showToast(errorMessage(e), true) }
   }
 
   function openAddTransaction() {
@@ -338,7 +339,7 @@
       if (activeTab === 'activity') await loadTransactionsList()
       app.showToast(i18n.t('crypto-toast-tx-deleted', 'Transaction deleted'))
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 
@@ -351,7 +352,7 @@
       trend = t
       recentTxs = (await cryptoApi.fetchAllCryptoTransactions(0, 6)).transactions
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     } finally {
       loading = false
     }
@@ -363,7 +364,7 @@
       txList = res.transactions
       txListHasMore = res.has_more
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 
@@ -373,7 +374,7 @@
       txList = res.transactions
       txListHasMore = res.has_more
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 
@@ -381,7 +382,7 @@
     try {
       walletsData = await cryptoApi.fetchWallets()
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 
@@ -389,7 +390,7 @@
     try {
       selectedWallet = await cryptoApi.fetchWalletDetail(id)
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 
@@ -399,7 +400,7 @@
       assetTransactions = await cryptoApi.getCryptoTransactionsByCoin(coinId)
       showAssetDetail = true
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 
@@ -413,7 +414,7 @@
       await loadWallets()
       app.showToast(i18n.t('crypto-toast-wallet-created', 'Wallet created'))
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 
@@ -424,7 +425,7 @@
       await loadWallets()
       app.showToast(i18n.t('crypto-toast-wallet-deleted', 'Wallet deleted'))
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 
@@ -486,7 +487,7 @@
       await loadIpcSummary()
       app.showToast(i18n.t('crypto-toast-ipc-imported', 'IPC data imported'))
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     } finally {
       ipcFileInput.value = ''
     }
@@ -507,7 +508,7 @@
       taxExcludedWalletIds = taxSettings.excluded_wallet_ids ?? []
       if (!walletsData) await loadWallets()
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     } finally {
       taxLoading = false
     }
@@ -532,7 +533,7 @@
       if (taxReport) taxReportStale = true
       app.showToast(i18n.t('crypto-toast-settings-saved', 'Settings saved'))
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     } finally {
       taxLoading = false
     }
@@ -562,7 +563,7 @@
       flashSaved()
       if (taxReport) taxReportStale = true
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 
@@ -607,7 +608,7 @@
       taxReport = taxSummary.report
       taxReportStale = false
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     } finally {
       taxReportLoading = false
     }
@@ -631,7 +632,7 @@
         `Price filled: $${price.toFixed(4)}`
       ))
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     } finally {
       taxFillingTxId = null
     }
@@ -660,7 +661,7 @@
       }
       app.showToast(i18n.tArgs('crypto-toast-exported', { path }, `Exported to ${path}`))
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     }
   }
 

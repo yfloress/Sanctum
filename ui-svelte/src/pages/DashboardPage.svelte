@@ -15,6 +15,7 @@
      along with this program.  If not, see <https://www.gnu.org/licenses/agpl-3.0.html>. -->
 
 <script module lang="ts">
+  import { errorMessage } from '../lib/errors'
   let savedRange = '1M'
 </script>
 
@@ -50,7 +51,7 @@
       recent = r
       analytics = a
     } catch (e) {
-      error = String(e)
+      error = errorMessage(e)
     } finally {
       loading = false
     }
@@ -63,7 +64,7 @@
     try {
       analytics = await dashboardApi.fetchAnalytics(range)
     } catch (e) {
-      app.showToast(String(e), true)
+      app.showToast(errorMessage(e), true)
     } finally {
       rangeLoading = false
     }

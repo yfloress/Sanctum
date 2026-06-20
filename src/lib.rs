@@ -35,6 +35,7 @@ pub mod ui;
 
 // Application modules
 pub mod db;
+pub mod error;
 pub mod models;
 pub mod security_log;
 pub mod services;
@@ -42,3 +43,4 @@ pub mod vault_manager;
 
 // Core re-exports
 pub use core::{Database, DbError, SecurityEvent, init_security_logger, log_security_event};
+pub use error::{AppError, ErrorKind};

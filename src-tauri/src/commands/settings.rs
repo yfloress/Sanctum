@@ -20,6 +20,7 @@
 //! Covers: loading all settings, toggling individual settings,
 //! session timeout, currency, language, sidebar, and reset.
 
+use sanctum::error::AppError;
 use sanctum::features::crypto::{
     CryptoService, SETTING_AUTO_FETCH, SETTING_CRYPTO_PROXY_ENABLED, SETTING_CRYPTO_PROXY_URL,
 };
@@ -38,7 +39,7 @@ use tauri::State;
 pub fn load_settings(
     settings: State<'_, SettingsService>,
     vault: State<'_, VaultManager>,
-) -> Result<AppSettings, String> {
+) -> Result<AppSettings, AppError> {
     let dark_mode = settings
         .get_app_setting(SETTING_DARK_MODE)
         .map(|v| v != "false")
@@ -100,20 +101,16 @@ pub fn load_settings(
 
 /// Toggle dark mode on or off.
 #[tauri::command]
-pub fn set_dark_mode(settings: State<'_, SettingsService>, enabled: bool) -> Result<(), String> {
+pub fn set_dark_mode(settings: State<'_, SettingsService>, enabled: bool) -> Result<(), AppError> {
     let val = if enabled { "true" } else { "false" };
-    settings
-        .set_app_setting(SETTING_DARK_MODE, val)
-        .map_err(|e| e.to_string())
+    Ok(settings.set_app_setting(SETTING_DARK_MODE, val)?)
 }
 
 /// Toggle automatic crypto price fetching.
 #[tauri::command]
-pub fn set_auto_fetch(settings: State<'_, SettingsService>, enabled: bool) -> Result<(), String> {
+pub fn set_auto_fetch(settings: State<'_, SettingsService>, enabled: bool) -> Result<(), AppError> {
     let val = if enabled { "true" } else { "false" };
-    settings
-        .set_app_setting(SETTING_AUTO_FETCH, val)
-        .map_err(|e| e.to_string())
+    Ok(settings.set_app_setting(SETTING_AUTO_FETCH, val)?)
 }
 
 /// Toggle crypto API proxy usage.
@@ -124,13 +121,11 @@ pub fn set_proxy_enabled(
     crypto: State<'_, CryptoService>,
     enabled: bool,
     current_url: String,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     if enabled {
-        crypto
-            .validate_proxy_url(&current_url)
-            .map_err(|e| e.to_string())?;
+        crypto.validate_proxy_url(&current_url)?;
     }
-    crypto.set_proxy_enabled(enabled).map_err(|e| e.to_string())
+    Ok(crypto.set_proxy_enabled(enabled)?)
 }
 
 /// Set the crypto API proxy URL.
@@ -139,14 +134,12 @@ pub fn set_proxy_enabled(
 /// silently stores an unreachable / malformed value. Empty strings clear the
 /// setting and are allowed through without validation.
 #[tauri::command]
-pub fn set_proxy_url(crypto: State<'_, CryptoService>, url: String) -> Result<(), String> {
+pub fn set_proxy_url(crypto: State<'_, CryptoService>, url: String) -> Result<(), AppError> {
     let trimmed = url.trim().to_string();
     if !trimmed.is_empty() {
-        crypto
-            .validate_proxy_url(&trimmed)
-            .map_err(|e| e.to_string())?;
+        crypto.validate_proxy_url(&trimmed)?;
     }
-    crypto.set_proxy_url(trimmed).map_err(|e| e.to_string())
+    Ok(crypto.set_proxy_url(trimmed)?)
 }
 
 /// Set the vault auto-lock timeout in seconds (60–3600).
@@ -154,11 +147,9 @@ pub fn set_proxy_url(crypto: State<'_, CryptoService>, url: String) -> Result<()
 pub fn set_session_timeout(
     settings: State<'_, SettingsService>,
     timeout_secs: i32,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let clamped = timeout_secs.clamp(60, 3600);
-    settings
-        .set_app_setting(SETTING_SESSION_TIMEOUT, &clamped.to_string())
-        .map_err(|e| e.to_string())
+    Ok(settings.set_app_setting(SETTING_SESSION_TIMEOUT, &clamped.to_string())?)
 }
 
 /// Change the preferred display currency.
@@ -166,10 +157,8 @@ pub fn set_session_timeout(
 pub fn set_preferred_currency(
     settings: State<'_, SettingsService>,
     currency: String,
-) -> Result<(), String> {
-    settings
-        .set_app_setting(SETTING_PREFERRED_CURRENCY, &currency)
-        .map_err(|e| e.to_string())
+) -> Result<(), AppError> {
+    Ok(settings.set_app_setting(SETTING_PREFERRED_CURRENCY, &currency)?)
 }
 
 /// Change the preferred UI language and switch the i18n bundle.
@@ -177,10 +166,8 @@ pub fn set_preferred_currency(
 pub fn set_preferred_language(
     settings: State<'_, SettingsService>,
     language: String,
-) -> Result<(), String> {
-    settings
-        .set_app_setting(SETTING_PREFERRED_LANGUAGE, &language)
-        .map_err(|e| e.to_string())?;
+) -> Result<(), AppError> {
+    settings.set_app_setting(SETTING_PREFERRED_LANGUAGE, &language)?;
     sanctum::services::i18n::set_language(&language);
     Ok(())
 }
@@ -190,11 +177,9 @@ pub fn set_preferred_language(
 pub fn set_sidebar_collapsed(
     settings: State<'_, SettingsService>,
     collapsed: bool,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let val = if collapsed { "true" } else { "false" };
-    settings
-        .set_app_setting(SETTING_SIDEBAR_COLLAPSED, val)
-        .map_err(|e| e.to_string())
+    Ok(settings.set_app_setting(SETTING_SIDEBAR_COLLAPSED, val)?)
 }
 
 /// Reset all settings to their default values.
@@ -202,7 +187,7 @@ pub fn set_sidebar_collapsed(
 pub fn reset_settings(
     settings: State<'_, SettingsService>,
     vault: State<'_, VaultManager>,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let defaults = [
         (SETTING_DARK_MODE, "true"),
         (SETTING_AUTO_FETCH, "false"),
@@ -214,13 +199,9 @@ pub fn reset_settings(
         (SETTING_SIDEBAR_COLLAPSED, "false"),
     ];
     for (key, value) in defaults {
-        settings
-            .set_app_setting(key, value)
-            .map_err(|e| e.to_string())?;
+        settings.set_app_setting(key, value)?;
     }
-    vault
-        .set_login_wallpaper_path(None)
-        .map_err(|e| e.to_string())?;
+    vault.set_login_wallpaper_path(None)?;
 
     Ok(())
 }
@@ -237,8 +218,8 @@ pub fn get_app_info() -> AppInfo {
 
 /// Get remaining session time before auto-lock, in seconds.
 #[tauri::command]
-pub fn get_session_remaining(vault: State<'_, VaultManager>) -> Result<i64, String> {
-    vault.get_session_remaining().map_err(|e| e.to_string())
+pub fn get_session_remaining(vault: State<'_, VaultManager>) -> Result<i64, AppError> {
+    Ok(vault.get_session_remaining()?)
 }
 
 /// Returns all translation key-value pairs for the current language.
@@ -254,8 +235,6 @@ pub fn get_translations() -> std::collections::HashMap<String, String> {
 pub fn set_login_wallpaper(
     vault: State<'_, VaultManager>,
     path: Option<String>,
-) -> Result<(), String> {
-    vault
-        .set_login_wallpaper_path(path.map(std::path::PathBuf::from))
-        .map_err(|e| e.to_string())
+) -> Result<(), AppError> {
+    Ok(vault.set_login_wallpaper_path(path.map(std::path::PathBuf::from))?)
 }

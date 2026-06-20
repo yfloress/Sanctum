@@ -23,6 +23,7 @@
 //! those states. Exchange-rate persistence lives on [`FinanceService`].
 
 use chrono::Local;
+use sanctum::error::AppError;
 use sanctum::features::crypto::{CryptoService, default_coin_catalog};
 use sanctum::features::finance::FinanceService;
 use sanctum::features::settings::{SETTING_PREFERRED_CURRENCY, SettingsService};
@@ -45,10 +46,8 @@ pub fn fetch_portfolio(
     crypto: State<'_, CryptoService>,
     finance: State<'_, FinanceService>,
     settings: State<'_, SettingsService>,
-) -> Result<PortfolioResponse, String> {
-    let assets = crypto
-        .get_aggregated_portfolio()
-        .map_err(|e| e.to_string())?;
+) -> Result<PortfolioResponse, AppError> {
+    let assets = crypto.get_aggregated_portfolio().map_err(AppError::from)?;
     let prices = crypto.load_crypto_prices().unwrap_or_default();
     let catalog = crypto
         .get_coin_catalog()
@@ -178,16 +177,14 @@ pub fn fetch_portfolio(
 pub fn fetch_portfolio_trend(
     crypto: State<'_, CryptoService>,
     days: i64,
-) -> Result<PortfolioTrendData, String> {
+) -> Result<PortfolioTrendData, AppError> {
     let today = Local::now().date_naive();
     let start = today - chrono::Duration::days(days.max(1) - 1);
     let start_str = start.format("%Y-%m-%d").to_string();
     let today_str = today.format("%Y-%m-%d").to_string();
 
     // Today's value from current spot prices (always the most fresh anchor).
-    let assets = crypto
-        .get_aggregated_portfolio()
-        .map_err(|e| e.to_string())?;
+    let assets = crypto.get_aggregated_portfolio().map_err(AppError::from)?;
     let prices = crypto.load_crypto_prices().unwrap_or_default();
     let price_map: HashMap<String, f64> = prices
         .iter()
@@ -249,8 +246,8 @@ pub fn fetch_wallets(
     crypto: State<'_, CryptoService>,
     finance: State<'_, FinanceService>,
     settings: State<'_, SettingsService>,
-) -> Result<WalletsResponse, String> {
-    let wallets = crypto.get_wallets().map_err(|e| e.to_string())?;
+) -> Result<WalletsResponse, AppError> {
+    let wallets = crypto.get_wallets().map_err(AppError::from)?;
     let prices = crypto.load_crypto_prices().unwrap_or_default();
     let pm: HashMap<String, f64> = prices
         .into_iter()
@@ -295,15 +292,15 @@ pub fn fetch_wallet_detail(
     finance: State<'_, FinanceService>,
     settings: State<'_, SettingsService>,
     wallet_id: String,
-) -> Result<WalletDetailResponse, String> {
-    let wallets = crypto.get_wallets().map_err(|e| e.to_string())?;
+) -> Result<WalletDetailResponse, AppError> {
+    let wallets = crypto.get_wallets().map_err(AppError::from)?;
     let wallet = wallets
         .iter()
         .find(|w| w.id == wallet_id)
-        .ok_or_else(|| "Wallet not found".to_string())?;
+        .ok_or_else(|| AppError::not_found("Wallet not found"))?;
     let holdings = crypto
         .get_wallet_holdings(wallet_id.clone())
-        .map_err(|e| e.to_string())?;
+        .map_err(AppError::from)?;
     let prices = crypto.load_crypto_prices().unwrap_or_default();
     let pm: HashMap<String, f64> = prices
         .into_iter()
@@ -331,7 +328,7 @@ pub fn fetch_wallet_detail(
 
     let txs = crypto
         .get_wallet_transactions(wallet_id)
-        .map_err(|e| e.to_string())?;
+        .map_err(AppError::from)?;
     let tx_dtos = map_crypto_transactions(&txs, &wallets, &settings, &finance);
 
     Ok(WalletDetailResponse {
@@ -351,10 +348,10 @@ pub fn add_wallet(
     name: String,
     category: String,
     icon: Option<String>,
-) -> Result<String, String> {
+) -> Result<String, AppError> {
     crypto
         .add_wallet(name, category, icon)
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 #[tauri::command]
@@ -362,18 +359,18 @@ pub fn delete_wallet(
     crypto: State<'_, CryptoService>,
     id: String,
     force: bool,
-) -> Result<(), String> {
-    crypto.delete_wallet(id, force).map_err(|e| e.to_string())
+) -> Result<(), AppError> {
+    crypto.delete_wallet(id, force).map_err(AppError::from)
 }
 
 #[tauri::command]
 pub fn get_wallet_transaction_count(
     crypto: State<'_, CryptoService>,
     id: String,
-) -> Result<usize, String> {
+) -> Result<usize, AppError> {
     crypto
         .get_wallet_transaction_count(id)
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 #[tauri::command]
@@ -381,10 +378,10 @@ pub fn update_wallet_name(
     crypto: State<'_, CryptoService>,
     id: String,
     new_name: String,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     crypto
         .update_wallet_name(id, new_name)
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 #[tauri::command]
@@ -392,10 +389,8 @@ pub fn update_wallet_icon(
     crypto: State<'_, CryptoService>,
     id: String,
     icon: Option<String>,
-) -> Result<(), String> {
-    crypto
-        .update_wallet_icon(id, icon)
-        .map_err(|e| e.to_string())
+) -> Result<(), AppError> {
+    crypto.update_wallet_icon(id, icon).map_err(AppError::from)
 }
 
 // ==================== Transactions ====================
@@ -404,7 +399,7 @@ pub fn update_wallet_icon(
 pub fn add_crypto_transaction(
     crypto: State<'_, CryptoService>,
     input: CryptoTransactionInput,
-) -> Result<String, String> {
+) -> Result<String, AppError> {
     let amount: f64 = input.amount.parse().map_err(|_| "Invalid amount")?;
     let price: Option<f64> = Some(input.price.parse::<f64>().map_err(|_| "Invalid price")?);
     let fee: Option<f64> = input.fee.parse::<f64>().ok().filter(|v| *v != 0.0);
@@ -434,14 +429,14 @@ pub fn add_crypto_transaction(
             op,
             ocb,
         )
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 #[tauri::command]
 pub fn add_crypto_transfer(
     crypto: State<'_, CryptoService>,
     input: CryptoTransferInput,
-) -> Result<String, String> {
+) -> Result<String, AppError> {
     let from: f64 = input
         .from_amount
         .parse()
@@ -463,14 +458,14 @@ pub fn add_crypto_transfer(
             input.date,
             input.notes,
         )
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 #[tauri::command]
 pub fn add_crypto_swap(
     crypto: State<'_, CryptoService>,
     input: CryptoSwapInput,
-) -> Result<String, String> {
+) -> Result<String, AppError> {
     let from: f64 = input
         .from_amount
         .parse()
@@ -493,14 +488,14 @@ pub fn add_crypto_swap(
             input.date,
             input.notes,
         )
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 #[tauri::command]
 pub fn update_crypto_transaction(
     crypto: State<'_, CryptoService>,
     input: CryptoTransactionUpdateInput,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let amount: f64 = input.amount.parse().map_err(|_| "Invalid amount")?;
     let price: Option<f64> = Some(input.price.parse::<f64>().map_err(|_| "Invalid price")?);
     let fee: Option<f64> = input.fee.parse::<f64>().ok().filter(|v| *v != 0.0);
@@ -527,29 +522,27 @@ pub fn update_crypto_transaction(
             op,
             ocb,
         )
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 #[tauri::command]
 pub fn delete_crypto_transaction(
     crypto: State<'_, CryptoService>,
     id: String,
-) -> Result<(), String> {
-    crypto
-        .delete_crypto_transaction(id)
-        .map_err(|e| e.to_string())
+) -> Result<(), AppError> {
+    crypto.delete_crypto_transaction(id).map_err(AppError::from)
 }
 
 #[tauri::command]
 pub fn get_crypto_transaction(
     crypto: State<'_, CryptoService>,
     id: String,
-) -> Result<CryptoTransactionEditData, String> {
+) -> Result<CryptoTransactionEditData, AppError> {
     let tx = crypto
         .get_crypto_transaction(id)
-        .map_err(|e| e.to_string())?
-        .ok_or_else(|| "Transaction not found".to_string())?;
-    let wallets = crypto.get_wallets().map_err(|e| e.to_string())?;
+        .map_err(AppError::from)?
+        .ok_or_else(|| AppError::not_found("Transaction not found"))?;
+    let wallets = crypto.get_wallets().map_err(AppError::from)?;
     let wn = wallets
         .iter()
         .find(|w| w.id == tx.wallet_id)
@@ -581,11 +574,11 @@ pub fn get_crypto_transactions_by_coin(
     finance: State<'_, FinanceService>,
     settings: State<'_, SettingsService>,
     coin_id: String,
-) -> Result<Vec<CryptoTransactionDto>, String> {
+) -> Result<Vec<CryptoTransactionDto>, AppError> {
     let txs = crypto
         .get_crypto_transactions_by_coin(coin_id)
-        .map_err(|e| e.to_string())?;
-    let wallets = crypto.get_wallets().map_err(|e| e.to_string())?;
+        .map_err(AppError::from)?;
+    let wallets = crypto.get_wallets().map_err(AppError::from)?;
     Ok(map_crypto_transactions(&txs, &wallets, &settings, &finance))
 }
 
@@ -596,11 +589,11 @@ pub fn fetch_all_crypto_transactions(
     settings: State<'_, SettingsService>,
     offset: i64,
     limit: i64,
-) -> Result<CryptoTransactionListResponse, String> {
+) -> Result<CryptoTransactionListResponse, AppError> {
     let txs = crypto
         .get_all_crypto_transactions(offset, limit)
-        .map_err(|e| e.to_string())?;
-    let wallets = crypto.get_wallets().map_err(|e| e.to_string())?;
+        .map_err(AppError::from)?;
+    let wallets = crypto.get_wallets().map_err(AppError::from)?;
     let total = txs.len();
     let effective = total.min(limit as usize);
     let has_more = total > effective;
@@ -615,7 +608,7 @@ pub fn fetch_all_crypto_transactions(
 // ==================== Catalog ====================
 
 #[tauri::command]
-pub fn get_coin_catalog(crypto: State<'_, CryptoService>) -> Result<Vec<CoinCatalogDto>, String> {
+pub fn get_coin_catalog(crypto: State<'_, CryptoService>) -> Result<Vec<CoinCatalogDto>, AppError> {
     let catalog = crypto
         .get_coin_catalog()
         .unwrap_or_else(|_| default_coin_catalog());
@@ -639,10 +632,10 @@ pub fn set_favorite_coin(
     crypto: State<'_, CryptoService>,
     id: String,
     favorite: bool,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     crypto
         .set_favorite_coin(id, favorite)
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 #[tauri::command]
@@ -651,15 +644,15 @@ pub fn add_custom_coin(
     id: String,
     name: String,
     symbol: String,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     crypto
         .add_custom_coin(id, name, symbol)
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 #[tauri::command]
-pub fn delete_custom_coin(crypto: State<'_, CryptoService>, id: String) -> Result<(), String> {
-    crypto.delete_custom_coin(id).map_err(|e| e.to_string())
+pub fn delete_custom_coin(crypto: State<'_, CryptoService>, id: String) -> Result<(), AppError> {
+    crypto.delete_custom_coin(id).map_err(AppError::from)
 }
 
 #[tauri::command]
@@ -671,10 +664,8 @@ pub fn get_active_ticker_ids(crypto: State<'_, CryptoService>) -> Vec<String> {
 pub fn save_active_ticker_ids(
     crypto: State<'_, CryptoService>,
     ids: Vec<String>,
-) -> Result<(), String> {
-    crypto
-        .save_active_ticker_ids(ids)
-        .map_err(|e| e.to_string())
+) -> Result<(), AppError> {
+    crypto.save_active_ticker_ids(ids).map_err(AppError::from)
 }
 
 // ==================== Prices ====================
@@ -683,7 +674,7 @@ pub fn save_active_ticker_ids(
 pub fn save_crypto_prices(
     crypto: State<'_, CryptoService>,
     prices: Vec<CryptoAssetPriceDto>,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let internal: Vec<sanctum::models::CryptoAsset> = prices
         .into_iter()
         .map(|p| sanctum::models::CryptoAsset {
@@ -695,9 +686,7 @@ pub fn save_crypto_prices(
             last_updated: p.last_updated,
         })
         .collect();
-    crypto
-        .save_crypto_prices(internal)
-        .map_err(|e| e.to_string())
+    crypto.save_crypto_prices(internal).map_err(AppError::from)
 }
 
 #[tauri::command]
@@ -705,8 +694,8 @@ pub fn load_crypto_prices(
     crypto: State<'_, CryptoService>,
     finance: State<'_, FinanceService>,
     settings: State<'_, SettingsService>,
-) -> Result<Vec<CryptoAssetPriceDto>, String> {
-    let prices = crypto.load_crypto_prices().map_err(|e| e.to_string())?;
+) -> Result<Vec<CryptoAssetPriceDto>, AppError> {
+    let prices = crypto.load_crypto_prices().map_err(AppError::from)?;
     Ok(prices
         .into_iter()
         .map(|p| {
@@ -725,25 +714,23 @@ pub fn load_crypto_prices(
 }
 
 #[tauri::command]
-pub fn get_monitored_coin_ids(crypto: State<'_, CryptoService>) -> Result<Vec<String>, String> {
-    crypto.get_monitored_coin_ids().map_err(|e| e.to_string())
+pub fn get_monitored_coin_ids(crypto: State<'_, CryptoService>) -> Result<Vec<String>, AppError> {
+    crypto.get_monitored_coin_ids().map_err(AppError::from)
 }
 
 #[tauri::command]
 pub async fn sync_crypto_data(
     crypto: State<'_, CryptoService>,
     finance: State<'_, FinanceService>,
-) -> Result<String, String> {
+) -> Result<String, AppError> {
     // 1. Fetch and save crypto prices
-    let ids = crypto.get_monitored_coin_ids().map_err(|e| e.to_string())?;
+    let ids = crypto.get_monitored_coin_ids().map_err(AppError::from)?;
     if !ids.is_empty() {
         let prices = crypto
             .get_crypto_prices(ids)
             .await
-            .map_err(|e| e.to_string())?;
-        crypto
-            .save_crypto_prices(prices)
-            .map_err(|e| e.to_string())?;
+            .map_err(AppError::from)?;
+        crypto.save_crypto_prices(prices).map_err(AppError::from)?;
     }
 
     // 2. Fetch and save CLP rate using backend provider (Mindicador/USDT fallback)
@@ -765,10 +752,10 @@ pub async fn sync_crypto_data(
 pub fn load_tax_settings(
     crypto: State<'_, CryptoService>,
     period_id: String,
-) -> Result<TaxSettingsDto, String> {
+) -> Result<TaxSettingsDto, AppError> {
     let s = crypto
         .load_tax_settings(period_id)
-        .map_err(|e| e.to_string())?;
+        .map_err(AppError::from)?;
     Ok(TaxSettingsDto {
         period_id: s.period_id,
         jurisdiction: s.jurisdiction.as_str().to_string(),
@@ -783,7 +770,7 @@ pub fn load_tax_settings(
 pub fn save_tax_settings(
     crypto: State<'_, CryptoService>,
     settings: TaxSettingsDto,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     let internal = sanctum::features::crypto::TaxPeriodSettings {
         period_id: settings.period_id,
         jurisdiction: sanctum::features::crypto::TaxJurisdiction::parse_or_default(
@@ -794,9 +781,7 @@ pub fn save_tax_settings(
         include_fee_crypto: settings.include_fee_crypto,
         excluded_wallet_ids: settings.excluded_wallet_ids,
     };
-    crypto
-        .save_tax_settings(internal)
-        .map_err(|e| e.to_string())
+    crypto.save_tax_settings(internal).map_err(AppError::from)
 }
 
 #[tauri::command]
@@ -805,10 +790,10 @@ pub fn generate_tax_report(
     finance: State<'_, FinanceService>,
     settings: State<'_, SettingsService>,
     period_id: String,
-) -> Result<TaxReportDto, String> {
+) -> Result<TaxReportDto, AppError> {
     let summary = crypto
         .generate_tax_summary(period_id.clone())
-        .map_err(|e| e.to_string())?;
+        .map_err(AppError::from)?;
     Ok(map_tax_report_dto(
         period_id,
         summary.report,
@@ -824,10 +809,10 @@ pub fn generate_tax_summary(
     finance: State<'_, FinanceService>,
     settings: State<'_, SettingsService>,
     period_id: String,
-) -> Result<TaxSummaryDto, String> {
+) -> Result<TaxSummaryDto, AppError> {
     let payload = crypto
         .generate_tax_summary(period_id.clone())
-        .map_err(|e| e.to_string())?;
+        .map_err(AppError::from)?;
     let override_curr = if payload.report.jurisdiction == "chile" {
         Some("CLP")
     } else {
@@ -870,11 +855,11 @@ pub async fn get_crypto_historical_price_usd(
     crypto: State<'_, CryptoService>,
     coin_id: String,
     date: String,
-) -> Result<f64, String> {
+) -> Result<f64, AppError> {
     crypto
         .get_historical_price_usd(coin_id, date)
         .await
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 fn map_tax_report_dto(
@@ -955,10 +940,10 @@ pub fn export_tax_report_csv(
     crypto: State<'_, CryptoService>,
     period_id: String,
     path: String,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     crypto
         .export_tax_report_csv(period_id, &path)
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 #[tauri::command]
@@ -966,18 +951,18 @@ pub fn export_tax_history_csv(
     crypto: State<'_, CryptoService>,
     period_id: String,
     path: String,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     crypto
         .export_tax_history_csv(period_id, &path)
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 #[tauri::command]
 pub fn import_ipc_csv(
     crypto: State<'_, CryptoService>,
     content: String,
-) -> Result<IpcSummaryDto, String> {
-    let s = crypto.import_ipc_csv(&content).map_err(|e| e.to_string())?;
+) -> Result<IpcSummaryDto, AppError> {
+    let s = crypto.import_ipc_csv(&content).map_err(AppError::from)?;
     let range = match (&s.first_period, &s.last_period) {
         (Some(f), Some(l)) => Some(format!("{f} - {l}")),
         _ => None,
@@ -989,8 +974,10 @@ pub fn import_ipc_csv(
 }
 
 #[tauri::command]
-pub fn get_ipc_summary(crypto: State<'_, CryptoService>) -> Result<Option<IpcSummaryDto>, String> {
-    let s = crypto.get_ipc_summary().map_err(|e| e.to_string())?;
+pub fn get_ipc_summary(
+    crypto: State<'_, CryptoService>,
+) -> Result<Option<IpcSummaryDto>, AppError> {
+    let s = crypto.get_ipc_summary().map_err(AppError::from)?;
     Ok(s.map(|s| IpcSummaryDto {
         records_count: s.count,
         date_range: Some(format!("{} - {}", s.first_period, s.last_period)),
@@ -1004,10 +991,10 @@ pub fn fill_missing_tax_prices(
     price_per_coin: Option<f64>,
     fee_usd: Option<f64>,
     override_proceeds: Option<f64>,
-) -> Result<bool, String> {
+) -> Result<bool, AppError> {
     crypto
         .fill_missing_tax_price_fields(tx_id, price_per_coin, fee_usd, override_proceeds)
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 // ==================== Exchange Rates ====================
@@ -1017,20 +1004,20 @@ pub fn save_exchange_rate(
     finance: State<'_, FinanceService>,
     pair: String,
     rate: f64,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
     finance
         .save_exchange_rate(pair, rate)
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 #[tauri::command]
 pub fn load_exchange_rate(
     finance: State<'_, FinanceService>,
     pair: String,
-) -> Result<Option<(f64, String)>, String> {
+) -> Result<Option<(f64, String)>, AppError> {
     finance
         .load_exchange_rate_allow_stale(pair)
-        .map_err(|e| e.to_string())
+        .map_err(AppError::from)
 }
 
 // ==================== Helpers ====================

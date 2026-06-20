@@ -22,6 +22,7 @@
 //!
 //! Error messages are sanitized to avoid leaking internal details to the frontend.
 
+use sanctum::error::AppError;
 use sanctum::ui::dto::vault::{PasswordStrengthResult, VaultStatus};
 use sanctum::vault_manager::VaultManager;
 use tauri::State;
@@ -36,28 +37,32 @@ pub fn check_vault_exists(vault: State<'_, VaultManager>) -> VaultStatus {
 
 /// Create a new vault with the given master password.
 #[tauri::command]
-pub fn create_vault(vault: State<'_, VaultManager>, password: String) -> Result<(), String> {
+pub fn create_vault(vault: State<'_, VaultManager>, password: String) -> Result<(), AppError> {
     vault.create_db(password, None).map(|_| ()).map_err(|e| {
         log::error!("Vault creation failed: {e}");
-        "Failed to create vault".to_string()
+        // Sanitize the message but keep the kind so the frontend can react.
+        AppError::new(AppError::from(e).kind, "Failed to create vault")
     })
 }
 
 /// Unlock an existing vault with the given master password.
 #[tauri::command]
-pub fn unlock_vault(vault: State<'_, VaultManager>, password: String) -> Result<(), String> {
+pub fn unlock_vault(vault: State<'_, VaultManager>, password: String) -> Result<(), AppError> {
     vault.open_db(password, None).map(|_| ()).map_err(|e| {
         log::error!("Vault unlock failed: {e}");
-        "Invalid password or vault not found".to_string()
+        AppError::new(
+            AppError::from(e).kind,
+            "Invalid password or vault not found",
+        )
     })
 }
 
 /// Lock the currently open vault (close the DB connection).
 #[tauri::command]
-pub fn lock_vault(vault: State<'_, VaultManager>) -> Result<(), String> {
+pub fn lock_vault(vault: State<'_, VaultManager>) -> Result<(), AppError> {
     vault.close_db().map(|_| ()).map_err(|e| {
         log::error!("Vault lock failed: {e}");
-        "Failed to lock vault".to_string()
+        AppError::new(AppError::from(e).kind, "Failed to lock vault")
     })
 }
 
@@ -74,27 +79,27 @@ pub fn check_password_strength(
 
 /// Export the current vault to a backup file at the given path.
 #[tauri::command]
-pub fn export_vault(vault: State<'_, VaultManager>, path: String) -> Result<(), String> {
+pub fn export_vault(vault: State<'_, VaultManager>, path: String) -> Result<(), AppError> {
     vault.export_vault(path).map(|_| ()).map_err(|e| {
         log::error!("Vault export failed: {e}");
-        "Vault export failed".to_string()
+        AppError::new(AppError::from(e).kind, "Vault export failed")
     })
 }
 
 /// Restore a vault from a backup file.
 #[tauri::command]
-pub fn restore_vault(vault: State<'_, VaultManager>, backup_path: String) -> Result<(), String> {
+pub fn restore_vault(vault: State<'_, VaultManager>, backup_path: String) -> Result<(), AppError> {
     vault.restore_vault(backup_path).map_err(|e| {
         log::error!("Vault restore failed: {e}");
-        "Vault restore failed".to_string()
+        AppError::new(AppError::from(e).kind, "Vault restore failed")
     })
 }
 
 /// Roll back the last vault restore operation.
 #[tauri::command]
-pub fn rollback_restore(vault: State<'_, VaultManager>) -> Result<(), String> {
+pub fn rollback_restore(vault: State<'_, VaultManager>) -> Result<(), AppError> {
     vault.rollback_restore().map_err(|e| {
         log::error!("Vault rollback failed: {e}");
-        "Rollback failed".to_string()
+        AppError::new(AppError::from(e).kind, "Rollback failed")
     })
 }
