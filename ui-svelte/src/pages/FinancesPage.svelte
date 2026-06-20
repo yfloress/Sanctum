@@ -1028,14 +1028,16 @@
     display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px;
   }
   .account-card {
+    position: relative;
     display: flex; flex-direction: column; gap: 12px; padding: 16px;
-    background: var(--glass); backdrop-filter: var(--glass-blur);
+    background: var(--card-bg); backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border); border-radius: var(--radius-md);
     cursor: pointer; text-align: left; color: inherit; transition: all 0.2s;
-    box-shadow: var(--glass-glow);
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
   }
-  .account-card:hover { border-color: var(--glass-border-hover); background: var(--glass-hover); box-shadow: var(--glass-shadow); }
+  .account-card:hover { border-color: var(--glass-border-hover); box-shadow: var(--glass-shadow-lg); }
   .acc-icon { width: 32px; height: 32px; border-radius: 4px; }
   .acc-info { display: flex; flex-direction: column; gap: 4px; }
   .acc-name { font-weight: 600; color: var(--text-primary); font-size: 0.95rem; }

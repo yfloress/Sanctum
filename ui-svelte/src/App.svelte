@@ -173,8 +173,8 @@
     --accent-border: rgba(168, 85, 247, 0.3);
     --text-on-accent: #ffffff;
     --card-bg:
-      radial-gradient(circle at 0% 0%, rgba(168, 85, 247, 0.06) 0%, transparent 55%),
-      linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+      radial-gradient(circle at 0% 0%, rgba(168, 85, 247, 0.10) 0%, transparent 55%),
+      linear-gradient(145deg, rgba(18, 16, 24, 0.70) 0%, rgba(14, 12, 21, 0.70) 100%);
     --card-bg-solid: #0e0c15;
     --card-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04);
     --card-accent-line: linear-gradient(90deg, transparent 0%, rgba(168, 85, 247, 0.35) 30%, rgba(168, 85, 247, 0.35) 70%, transparent 100%);
@@ -227,8 +227,8 @@
     --accent-border: rgba(139, 92, 246, 0.2);
     --text-on-accent: #ffffff;
     --card-bg:
-      radial-gradient(circle at 0% 0%, rgba(139, 92, 246, 0.06) 0%, transparent 55%),
-      linear-gradient(145deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.6) 100%);
+      radial-gradient(circle at 0% 0%, rgba(139, 92, 246, 0.10) 0%, transparent 55%),
+      linear-gradient(145deg, rgba(248, 246, 255, 0.70) 0%, rgba(242, 240, 252, 0.70) 100%);
     --card-bg-solid: #f2f0fc;
     --card-shadow: 0 4px 20px rgba(100, 60, 180, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
     --card-accent-line: linear-gradient(90deg, transparent 0%, rgba(139, 92, 246, 0.4) 30%, rgba(139, 92, 246, 0.4) 70%, transparent 100%);
