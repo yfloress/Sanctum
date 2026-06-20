@@ -32,13 +32,17 @@ export async function fetchAccountDetails(account_id: string): Promise<AccountDe
 export async function createAccount(
   name: string, account_type: string, currency: string, initial_balance: string
 ): Promise<void> {
-  return invoke('create_account', { name, accountType: account_type, currency, initialBalance: initial_balance })
+  return invoke('create_account', {
+    input: { name, account_type, currency, initial_balance },
+  })
 }
 
 export async function updateAccount(
   id: string, name: string, account_type: string, currency: string, initial_balance: string
 ): Promise<void> {
-  return invoke('update_account', { id, name, accountType: account_type, currency, initialBalance: initial_balance })
+  return invoke('update_account', {
+    input: { id, name, account_type, currency, initial_balance },
+  })
 }
 
 export async function deleteAccount(id: string): Promise<void> {
@@ -62,24 +66,11 @@ export async function updateAccountName(id: string, new_name: string): Promise<v
 }
 
 export async function transferFunds(input: TransferInput): Promise<void> {
-  return invoke('transfer_funds', {
-    fromAccountId: input.from_account_id,
-    toAccountId: input.to_account_id,
-    amount: input.amount,
-    description: input.description,
-    date: input.date,
-  })
+  return invoke('transfer_funds', { input })
 }
 
 export async function updateTransfer(input: TransferInput): Promise<void> {
-  return invoke('update_transfer', {
-    id: input.id,
-    fromAccountId: input.from_account_id,
-    toAccountId: input.to_account_id,
-    amount: input.amount,
-    description: input.description,
-    date: input.date,
-  })
+  return invoke('update_transfer', { input })
 }
 
 export async function fetchTransactions(
@@ -100,14 +91,18 @@ export async function addTransaction(
   account_id: string, amount: string, category: string,
   description: string, date: string, is_expense: boolean
 ): Promise<void> {
-  return invoke('add_transaction', { accountId: account_id, amount, category, description, date, isExpense: is_expense })
+  return invoke('add_transaction', {
+    input: { account_id, amount, category, description, date, is_expense },
+  })
 }
 
 export async function updateTransaction(
   id: string, account_id: string, amount: string, category: string,
   description: string, date: string, is_expense: boolean
 ): Promise<void> {
-  return invoke('update_transaction', { id, accountId: account_id, amount, category, description, date, isExpense: is_expense })
+  return invoke('update_transaction', {
+    input: { id, account_id, amount, category, description, date, is_expense },
+  })
 }
 
 export async function deleteTransaction(id: string): Promise<void> {

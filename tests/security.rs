@@ -27,7 +27,9 @@
 //! - Concurrent access safety
 
 use sanctum::db::Database;
-use sanctum::features::finance::FinanceService;
+use sanctum::features::finance::{
+    FinanceService, NewAccount, NewTransaction, NewTransfer, UpdateAccount,
+};
 use sanctum::models::CryptoWallet;
 use sanctum::vault_manager::VaultManager;
 use secrecy::SecretString;
@@ -69,27 +71,27 @@ fn setup() -> TestContext {
 
 fn create_account(ctx: &TestContext, name: &str) -> String {
     ctx.finance
-        .create_account(
-            name.to_string(),
-            "bank".to_string(),
-            "USD".to_string(),
-            0,
-            "#8b5cf6".to_string(),
-            None,
-        )
+        .create_account(NewAccount {
+            name: name.to_string(),
+            account_type: "bank".to_string(),
+            currency: "USD".to_string(),
+            initial_balance_cents: 0,
+            color: "#8b5cf6".to_string(),
+            icon: None,
+        })
         .expect("create account")
 }
 
 fn add_income(ctx: &TestContext, account_id: &str, amount: i64) -> String {
     ctx.finance
-        .add_transaction(
-            account_id.to_string(),
-            amount,
-            "Salary".to_string(),
-            "test".to_string(),
-            "2024-06-15".to_string(),
-            false,
-        )
+        .add_transaction(NewTransaction {
+            account_id: account_id.to_string(),
+            amount_cents: amount,
+            category: "Salary".to_string(),
+            description: "test".to_string(),
+            date: "2024-06-15".to_string(),
+            is_expense: false,
+        })
         .expect("add income")
 }
 
@@ -109,14 +111,14 @@ fn test_sql_injection_in_account_name_is_rejected_or_safe() {
         "' UNION SELECT * FROM accounts --",
     ];
     for payload in &payloads {
-        let result = ctx.finance.create_account(
-            payload.to_string(),
-            "bank".to_string(),
-            "USD".to_string(),
-            0,
-            "#8b5cf6".to_string(),
-            None,
-        );
+        let result = ctx.finance.create_account(NewAccount {
+            name: payload.to_string(),
+            account_type: "bank".to_string(),
+            currency: "USD".to_string(),
+            initial_balance_cents: 0,
+            color: "#8b5cf6".to_string(),
+            icon: None,
+        });
         // Either the injection is rejected (validation) or handled safely (parameterized query)
         // The important thing is the system should not crash or produce unexpected results
         match result {
@@ -152,14 +154,14 @@ fn test_sql_injection_in_description() {
         "x'; UPDATE accounts SET currency='XXX'; --",
     ];
     for payload in &payloads {
-        let result = ctx.finance.add_transaction(
-            acc_id.clone(),
-            1000,
-            "Test".to_string(),
-            payload.to_string(),
-            "2024-06-15".to_string(),
-            false,
-        );
+        let result = ctx.finance.add_transaction(NewTransaction {
+            account_id: acc_id.clone(),
+            amount_cents: 1000,
+            category: "Test".to_string(),
+            description: payload.to_string(),
+            date: "2024-06-15".to_string(),
+            is_expense: false,
+        });
         match result {
             Ok(_) => {} // Safe — parameterized queries
             Err(e) => {
@@ -200,14 +202,14 @@ fn test_very_long_account_name_is_rejected() {
     let ctx = setup();
     // MAX_ACCOUNT_NAME_LENGTH = 64
     let long_name = "A".repeat(100);
-    let result = ctx.finance.create_account(
-        long_name,
-        "bank".to_string(),
-        "USD".to_string(),
-        0,
-        "#8b5cf6".to_string(),
-        None,
-    );
+    let result = ctx.finance.create_account(NewAccount {
+        name: long_name,
+        account_type: "bank".to_string(),
+        currency: "USD".to_string(),
+        initial_balance_cents: 0,
+        color: "#8b5cf6".to_string(),
+        icon: None,
+    });
     assert!(result.is_err(), "very long account name should be rejected");
 }
 
@@ -217,28 +219,28 @@ fn test_very_long_description_is_rejected() {
     let acc_id = create_account(&ctx, "Test");
     // MAX_DESCRIPTION_LENGTH = 512
     let long_desc = "X".repeat(1000);
-    let result = ctx.finance.add_transaction(
-        acc_id,
-        1000,
-        "Test".to_string(),
-        long_desc,
-        "2024-06-15".to_string(),
-        false,
-    );
+    let result = ctx.finance.add_transaction(NewTransaction {
+        account_id: acc_id,
+        amount_cents: 1000,
+        category: "Test".to_string(),
+        description: long_desc,
+        date: "2024-06-15".to_string(),
+        is_expense: false,
+    });
     assert!(result.is_err(), "very long description should be rejected");
 }
 
 #[test]
 fn test_null_bytes_in_input() {
     let ctx = setup();
-    let result = ctx.finance.create_account(
-        "Test\x00Account".to_string(),
-        "bank".to_string(),
-        "USD".to_string(),
-        0,
-        "#8b5cf6".to_string(),
-        None,
-    );
+    let result = ctx.finance.create_account(NewAccount {
+        name: "Test\x00Account".to_string(),
+        account_type: "bank".to_string(),
+        currency: "USD".to_string(),
+        initial_balance_cents: 0,
+        color: "#8b5cf6".to_string(),
+        icon: None,
+    });
     // Should not crash. Null bytes might be stripped or rejected.
     // Validation rejection is also fine — the point is it must not crash.
     if let Ok(id) = result {
@@ -254,14 +256,14 @@ fn test_control_characters_are_safe() {
         .map(|c| format!("desc{}desc", c as char))
         .collect();
     for desc in &control_chars {
-        let result = ctx.finance.add_transaction(
-            acc_id.clone(),
-            1000,
-            "Test".to_string(),
-            desc.to_string(),
-            "2024-06-15".to_string(),
-            false,
-        );
+        let result = ctx.finance.add_transaction(NewTransaction {
+            account_id: acc_id.clone(),
+            amount_cents: 1000,
+            category: "Test".to_string(),
+            description: desc.to_string(),
+            date: "2024-06-15".to_string(),
+            is_expense: false,
+        });
         // Either outcome is fine — the point is it must not crash.
         let _ = result;
     }
@@ -285,14 +287,14 @@ fn test_html_script_tags_in_input() {
         "{{constructor.constructor('alert(1)')()}}",
     ];
     for payload in &xss_payloads {
-        let result = ctx.finance.add_transaction(
-            acc_id.clone(),
-            1000,
-            "Test".to_string(),
-            payload.to_string(),
-            "2024-06-15".to_string(),
-            false,
-        );
+        let result = ctx.finance.add_transaction(NewTransaction {
+            account_id: acc_id.clone(),
+            amount_cents: 1000,
+            category: "Test".to_string(),
+            description: payload.to_string(),
+            date: "2024-06-15".to_string(),
+            is_expense: false,
+        });
         // Should safely handle HTML/script content: either stored (escaped at
         // render time) or rejected by validation — both are fine.
         let _ = result;
@@ -313,14 +315,14 @@ fn test_unicode_normalization() {
         "\t\n\r",                    // Whitespace-only
     ];
     for name in &unicode_names {
-        let result = ctx.finance.create_account(
-            name.to_string(),
-            "bank".to_string(),
-            "USD".to_string(),
-            0,
-            "#8b5cf6".to_string(),
-            None,
-        );
+        let result = ctx.finance.create_account(NewAccount {
+            name: name.to_string(),
+            account_type: "bank".to_string(),
+            currency: "USD".to_string(),
+            initial_balance_cents: 0,
+            color: "#8b5cf6".to_string(),
+            icon: None,
+        });
         // Should not crash. Non-ASCII may be stripped by sanitize_string.
         match result {
             Ok(id) => {
@@ -354,14 +356,14 @@ fn test_transaction_with_invalid_account_id_is_rejected() {
         "../../etc/passwd",
     ];
     for id in &invalid_ids {
-        let result = ctx.finance.add_transaction(
-            id.to_string(),
-            1000,
-            "Test".to_string(),
-            "desc".to_string(),
-            "2024-06-15".to_string(),
-            false,
-        );
+        let result = ctx.finance.add_transaction(NewTransaction {
+            account_id: id.to_string(),
+            amount_cents: 1000,
+            category: "Test".to_string(),
+            description: "desc".to_string(),
+            date: "2024-06-15".to_string(),
+            is_expense: false,
+        });
         assert!(
             result.is_err(),
             "invalid account ID '{}' should be rejected",
@@ -385,14 +387,14 @@ fn test_transaction_with_invalid_date_is_rejected() {
         "0000-00-00",
     ];
     for date in &invalid_dates {
-        let result = ctx.finance.add_transaction(
-            acc_id.clone(),
-            1000,
-            "Test".to_string(),
-            "desc".to_string(),
-            date.to_string(),
-            false,
-        );
+        let result = ctx.finance.add_transaction(NewTransaction {
+            account_id: acc_id.clone(),
+            amount_cents: 1000,
+            category: "Test".to_string(),
+            description: "desc".to_string(),
+            date: date.to_string(),
+            is_expense: false,
+        });
         assert!(
             result.is_err(),
             "invalid date '{}' should be rejected",
@@ -414,15 +416,15 @@ fn test_delete_nonexistent_transaction() {
 fn test_update_nonexistent_account() {
     let ctx = setup();
     let fake_id = Uuid::new_v4().to_string();
-    let result = ctx.finance.update_account(
-        fake_id,
-        "New Name".to_string(),
-        "bank".to_string(),
-        "USD".to_string(),
-        0,
-        "#8b5cf6".to_string(),
-        None,
-    );
+    let result = ctx.finance.update_account(UpdateAccount {
+        id: fake_id,
+        name: "New Name".to_string(),
+        account_type: "bank".to_string(),
+        currency: "USD".to_string(),
+        initial_balance_cents: 0,
+        color: "#8b5cf6".to_string(),
+        icon: None,
+    });
     assert!(result.is_err(), "updating nonexistent account should fail");
 }
 
@@ -440,14 +442,14 @@ fn test_create_account_with_invalid_color() {
         "transparent",
     ];
     for color in &invalid_colors {
-        let result = ctx.finance.create_account(
-            "Test".to_string(),
-            "bank".to_string(),
-            "USD".to_string(),
-            0,
-            color.to_string(),
-            None,
-        );
+        let result = ctx.finance.create_account(NewAccount {
+            name: "Test".to_string(),
+            account_type: "bank".to_string(),
+            currency: "USD".to_string(),
+            initial_balance_cents: 0,
+            color: color.to_string(),
+            icon: None,
+        });
         assert!(
             result.is_err(),
             "invalid color '{}' should be rejected",
@@ -461,14 +463,14 @@ fn test_create_account_with_invalid_type() {
     let ctx = setup();
     let invalid_types = vec!["", "invalid", "checking", "saving", "credit", "debit_card"];
     for atype in &invalid_types {
-        let result = ctx.finance.create_account(
-            "Test".to_string(),
-            atype.to_string(),
-            "USD".to_string(),
-            0,
-            "#8b5cf6".to_string(),
-            None,
-        );
+        let result = ctx.finance.create_account(NewAccount {
+            name: "Test".to_string(),
+            account_type: atype.to_string(),
+            currency: "USD".to_string(),
+            initial_balance_cents: 0,
+            color: "#8b5cf6".to_string(),
+            icon: None,
+        });
         assert!(
             result.is_err(),
             "invalid account type '{}' should be rejected",
@@ -483,14 +485,14 @@ fn test_create_account_with_invalid_type() {
 fn test_transaction_with_zero_amount_is_rejected() {
     let ctx = setup();
     let acc_id = create_account(&ctx, "Test");
-    let result = ctx.finance.add_transaction(
-        acc_id,
-        0,
-        "Test".to_string(),
-        "zero amount".to_string(),
-        "2024-06-15".to_string(),
-        false,
-    );
+    let result = ctx.finance.add_transaction(NewTransaction {
+        account_id: acc_id,
+        amount_cents: 0,
+        category: "Test".to_string(),
+        description: "zero amount".to_string(),
+        date: "2024-06-15".to_string(),
+        is_expense: false,
+    });
     assert!(
         result.is_err(),
         "zero amount transaction should be rejected"
@@ -501,14 +503,14 @@ fn test_transaction_with_zero_amount_is_rejected() {
 fn test_transaction_with_negative_amount_is_rejected() {
     let ctx = setup();
     let acc_id = create_account(&ctx, "Test");
-    let result = ctx.finance.add_transaction(
-        acc_id,
-        -1000,
-        "Test".to_string(),
-        "negative".to_string(),
-        "2024-06-15".to_string(),
-        false,
-    );
+    let result = ctx.finance.add_transaction(NewTransaction {
+        account_id: acc_id,
+        amount_cents: -1000,
+        category: "Test".to_string(),
+        description: "negative".to_string(),
+        date: "2024-06-15".to_string(),
+        is_expense: false,
+    });
     assert!(
         result.is_err(),
         "negative amount transaction should be rejected"
@@ -527,14 +529,14 @@ fn test_transaction_with_extreme_amounts() {
         100_000_000_000_000_i64,
     ];
     for amount in &extreme_amounts {
-        let result = ctx.finance.add_transaction(
-            acc_id.clone(),
-            *amount,
-            "Test".to_string(),
-            "extreme".to_string(),
-            "2024-06-15".to_string(),
-            false,
-        );
+        let result = ctx.finance.add_transaction(NewTransaction {
+            account_id: acc_id.clone(),
+            amount_cents: *amount,
+            category: "Test".to_string(),
+            description: "extreme".to_string(),
+            date: "2024-06-15".to_string(),
+            is_expense: false,
+        });
         // i64::MAX will likely overflow when formatting (multiplication by 100 in cents),
         // but should not crash. Either accepted (if within format limits) or rejected — fine.
         let _ = result;
@@ -545,13 +547,13 @@ fn test_transaction_with_extreme_amounts() {
 fn test_transfer_to_self_is_rejected() {
     let ctx = setup();
     let acc_id = create_account(&ctx, "Self");
-    let result = ctx.finance.transfer_funds(
-        acc_id.clone(),
-        acc_id,
-        1000,
-        "self transfer".to_string(),
-        "2024-06-15".to_string(),
-    );
+    let result = ctx.finance.transfer_funds(NewTransfer {
+        from_account_id: acc_id.clone(),
+        to_account_id: acc_id,
+        amount_cents: 1000,
+        description: "self transfer".to_string(),
+        date: "2024-06-15".to_string(),
+    });
     assert!(result.is_err(), "self-transfer should be rejected");
 }
 
@@ -562,14 +564,14 @@ fn test_transfer_between_different_currencies_is_rejected() {
     // Create second account manually with EUR
     let eur_id = ctx
         .finance
-        .create_account(
-            "EUR Account".to_string(),
-            "bank".to_string(),
-            "EUR".to_string(),
-            0,
-            "#8b5cf6".to_string(),
-            None,
-        )
+        .create_account(NewAccount {
+            name: "EUR Account".to_string(),
+            account_type: "bank".to_string(),
+            currency: "EUR".to_string(),
+            initial_balance_cents: 0,
+            color: "#8b5cf6".to_string(),
+            icon: None,
+        })
         .expect("create EUR account");
     let accounts = ctx.finance.get_accounts().expect("get accounts");
     let usd_id = accounts
@@ -578,13 +580,13 @@ fn test_transfer_between_different_currencies_is_rejected() {
         .expect("find USD")
         .id
         .clone();
-    let result = ctx.finance.transfer_funds(
-        usd_id,
-        eur_id,
-        1000,
-        "cross currency".to_string(),
-        "2024-06-15".to_string(),
-    );
+    let result = ctx.finance.transfer_funds(NewTransfer {
+        from_account_id: usd_id,
+        to_account_id: eur_id,
+        amount_cents: 1000,
+        description: "cross currency".to_string(),
+        date: "2024-06-15".to_string(),
+    });
     // The transfer_funds method creates accounts via create_account which defaults to USD
     // if currency is not specified. Let's check if the controller supports different currencies.
     match result {
@@ -758,14 +760,14 @@ fn test_session_timeout_blocks_operations() {
     // Since we can't directly manipulate the session timeout from controller,
     // we just verify the session mechanism is present by making many operations
     for i in 0..10 {
-        let result = ctx.finance.add_transaction(
-            acc_id.clone(),
-            1000 + i,
-            "Test".to_string(),
-            format!("operation {}", i),
-            "2024-06-15".to_string(),
-            false,
-        );
+        let result = ctx.finance.add_transaction(NewTransaction {
+            account_id: acc_id.clone(),
+            amount_cents: 1000 + i,
+            category: "Test".to_string(),
+            description: format!("operation {}", i),
+            date: "2024-06-15".to_string(),
+            is_expense: false,
+        });
         assert!(
             result.is_ok(),
             "session should be active for consecutive ops: {}",
@@ -781,14 +783,14 @@ fn test_crypto_transaction_with_extreme_values() {
     let ctx = setup();
     let acc_id = ctx
         .finance
-        .create_account(
-            "Crypto Holder".to_string(),
-            "bank".to_string(),
-            "USD".to_string(),
-            0,
-            "#8b5cf6".to_string(),
-            None,
-        )
+        .create_account(NewAccount {
+            name: "Crypto Holder".to_string(),
+            account_type: "bank".to_string(),
+            currency: "USD".to_string(),
+            initial_balance_cents: 0,
+            color: "#8b5cf6".to_string(),
+            icon: None,
+        })
         .expect("create account");
     assert!(!acc_id.is_empty());
     // Create a wallet directly for crypto operations
@@ -820,14 +822,14 @@ fn test_create_many_accounts_does_not_degrade() {
     let count = 50;
     for i in 0..count {
         let name = format!("Stress Account {}", i);
-        let result = ctx.finance.create_account(
+        let result = ctx.finance.create_account(NewAccount {
             name,
-            "bank".to_string(),
-            "USD".to_string(),
-            0,
-            "#8b5cf6".to_string(),
-            None,
-        );
+            account_type: "bank".to_string(),
+            currency: "USD".to_string(),
+            initial_balance_cents: 0,
+            color: "#8b5cf6".to_string(),
+            icon: None,
+        });
         assert!(result.is_ok(), "create account {} should succeed", i);
     }
     // Verify all accounts are retrievable
@@ -843,14 +845,14 @@ fn test_large_description_bulk_import() {
     let max_desc = "X".repeat(512);
     let count = 100;
     for i in 0..count {
-        let result = ctx.finance.add_transaction(
-            acc_id.clone(),
-            1000,
-            "Test".to_string(),
-            format!("{} {}", max_desc, i),
-            "2024-06-15".to_string(),
-            false,
-        );
+        let result = ctx.finance.add_transaction(NewTransaction {
+            account_id: acc_id.clone(),
+            amount_cents: 1000,
+            category: "Test".to_string(),
+            description: format!("{} {}", max_desc, i),
+            date: "2024-06-15".to_string(),
+            is_expense: false,
+        });
         // Descriptions over 512 chars should be rejected — either outcome is fine.
         let _ = result;
     }
@@ -872,14 +874,14 @@ fn test_balance_sums_are_consistent() {
     assert_eq!(balance.total_income, 30000, "income should be cumulative");
     // Add expense
     ctx.finance
-        .add_transaction(
-            acc_id.clone(),
-            5000,
-            "Food".to_string(),
-            "expense".to_string(),
-            "2024-06-15".to_string(),
-            true,
-        )
+        .add_transaction(NewTransaction {
+            account_id: acc_id.clone(),
+            amount_cents: 5000,
+            category: "Food".to_string(),
+            description: "expense".to_string(),
+            date: "2024-06-15".to_string(),
+            is_expense: true,
+        })
         .expect("add expense");
     let balance = ctx
         .finance
@@ -924,14 +926,14 @@ fn test_account_archive_rejects_accounts_with_transactions() {
 fn test_duplicate_account_name_is_allowed_or_rejected_consistently() {
     let ctx = setup();
     create_account(&ctx, "Duplicate");
-    let result = ctx.finance.create_account(
-        "Duplicate".to_string(),
-        "bank".to_string(),
-        "USD".to_string(),
-        0,
-        "#8b5cf6".to_string(),
-        None,
-    );
+    let result = ctx.finance.create_account(NewAccount {
+        name: "Duplicate".to_string(),
+        account_type: "bank".to_string(),
+        currency: "USD".to_string(),
+        initial_balance_cents: 0,
+        color: "#8b5cf6".to_string(),
+        icon: None,
+    });
     // Either allowed (if names are not unique) or rejected with a clear error
     match result {
         Ok(_) => {

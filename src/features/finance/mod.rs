@@ -27,11 +27,15 @@
 //!
 //! Note: Charts moved to `features/dashboard/` as it serves the dashboard view.
 
+pub mod commands;
 pub mod repository;
 pub mod service;
 pub mod transactions;
 pub mod validation;
 
+pub use commands::{
+    NewAccount, NewTransaction, NewTransfer, UpdateAccount, UpdateTransaction, UpdateTransfer,
+};
 pub use repository::FinanceRepository;
 pub use service::{FinanceError, FinanceService};
 

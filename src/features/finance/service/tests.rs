@@ -17,6 +17,9 @@
 
 use super::*;
 use crate::db::Database;
+use crate::features::finance::{
+    NewAccount, NewTransaction, NewTransfer, UpdateAccount, UpdateTransaction, UpdateTransfer,
+};
 use secrecy::SecretString;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
@@ -52,14 +55,14 @@ fn create_test_account(
     currency: &str,
     initial_balance: i64,
 ) -> String {
-    svc.create_account(
-        name.to_string(),
-        "bank".to_string(),
-        currency.to_string(),
-        initial_balance,
-        "#8b5cf6".to_string(),
-        None,
-    )
+    svc.create_account(NewAccount {
+        name: name.to_string(),
+        account_type: "bank".to_string(),
+        currency: currency.to_string(),
+        initial_balance_cents: initial_balance,
+        color: "#8b5cf6".to_string(),
+        icon: None,
+    })
     .expect("create account")
 }
 
@@ -70,14 +73,14 @@ fn create_test_transaction(
     category: &str,
     is_expense: bool,
 ) -> String {
-    svc.add_transaction(
-        account_id.to_string(),
-        amount,
-        category.to_string(),
-        "test transaction".to_string(),
-        "2024-06-15".to_string(),
+    svc.add_transaction(NewTransaction {
+        account_id: account_id.to_string(),
+        amount_cents: amount,
+        category: category.to_string(),
+        description: "test transaction".to_string(),
+        date: "2024-06-15".to_string(),
         is_expense,
-    )
+    })
     .expect("create transaction")
 }
 
@@ -145,15 +148,15 @@ fn test_update_account_changes_fields() {
     let h = new_test_service();
     let id = create_test_account(&h.service, "Old Name", "USD", 0);
     h.service
-        .update_account(
-            id.clone(),
-            "New Name".to_string(),
-            "savings".to_string(),
-            "EUR".to_string(),
-            20000,
-            "#ec4899".to_string(),
-            Some("icon.svg".to_string()),
-        )
+        .update_account(UpdateAccount {
+            id: id.clone(),
+            name: "New Name".to_string(),
+            account_type: "savings".to_string(),
+            currency: "EUR".to_string(),
+            initial_balance_cents: 20000,
+            color: "#ec4899".to_string(),
+            icon: Some("icon.svg".to_string()),
+        })
         .expect("update account");
     let accounts = h.service.get_accounts().expect("get accounts");
     let account = accounts.iter().find(|a| a.id == id).expect("find account");
@@ -233,14 +236,14 @@ fn test_archive_and_unarchive_account() {
 #[test]
 fn test_create_account_rejects_empty_name() {
     let h = new_test_service();
-    let result = h.service.create_account(
-        "".to_string(),
-        "bank".to_string(),
-        "USD".to_string(),
-        0,
-        "#8b5cf6".to_string(),
-        None,
-    );
+    let result = h.service.create_account(NewAccount {
+        name: "".to_string(),
+        account_type: "bank".to_string(),
+        currency: "USD".to_string(),
+        initial_balance_cents: 0,
+        color: "#8b5cf6".to_string(),
+        icon: None,
+    });
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert!(matches!(err, FinanceError::Validation(_)));
@@ -250,14 +253,14 @@ fn test_create_account_rejects_empty_name() {
 #[test]
 fn test_create_account_rejects_empty_currency() {
     let h = new_test_service();
-    let result = h.service.create_account(
-        "Test".to_string(),
-        "bank".to_string(),
-        "".to_string(),
-        0,
-        "#8b5cf6".to_string(),
-        None,
-    );
+    let result = h.service.create_account(NewAccount {
+        name: "Test".to_string(),
+        account_type: "bank".to_string(),
+        currency: "".to_string(),
+        initial_balance_cents: 0,
+        color: "#8b5cf6".to_string(),
+        icon: None,
+    });
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert!(matches!(err, FinanceError::Validation(_)));
@@ -266,14 +269,14 @@ fn test_create_account_rejects_empty_currency() {
 #[test]
 fn test_create_account_rejects_invalid_color() {
     let h = new_test_service();
-    let result = h.service.create_account(
-        "Test".to_string(),
-        "bank".to_string(),
-        "USD".to_string(),
-        0,
-        "not-a-color".to_string(),
-        None,
-    );
+    let result = h.service.create_account(NewAccount {
+        name: "Test".to_string(),
+        account_type: "bank".to_string(),
+        currency: "USD".to_string(),
+        initial_balance_cents: 0,
+        color: "not-a-color".to_string(),
+        icon: None,
+    });
     assert!(result.is_err());
     assert!(matches!(result.unwrap_err(), FinanceError::Validation(_)));
 }
@@ -282,14 +285,14 @@ fn test_create_account_rejects_invalid_color() {
 fn test_create_account_rejects_name_too_long() {
     let h = new_test_service();
     let long_name = "a".repeat(65);
-    let result = h.service.create_account(
-        long_name,
-        "bank".to_string(),
-        "USD".to_string(),
-        0,
-        "#8b5cf6".to_string(),
-        None,
-    );
+    let result = h.service.create_account(NewAccount {
+        name: long_name,
+        account_type: "bank".to_string(),
+        currency: "USD".to_string(),
+        initial_balance_cents: 0,
+        color: "#8b5cf6".to_string(),
+        icon: None,
+    });
     assert!(result.is_err());
     assert!(matches!(result.unwrap_err(), FinanceError::Validation(_)));
 }
@@ -297,15 +300,15 @@ fn test_create_account_rejects_name_too_long() {
 #[test]
 fn test_update_account_rejects_invalid_id() {
     let h = new_test_service();
-    let result = h.service.update_account(
-        "not-a-uuid".to_string(),
-        "Name".to_string(),
-        "bank".to_string(),
-        "USD".to_string(),
-        0,
-        "#8b5cf6".to_string(),
-        None,
-    );
+    let result = h.service.update_account(UpdateAccount {
+        id: "not-a-uuid".to_string(),
+        name: "Name".to_string(),
+        account_type: "bank".to_string(),
+        currency: "USD".to_string(),
+        initial_balance_cents: 0,
+        color: "#8b5cf6".to_string(),
+        icon: None,
+    });
     assert!(result.is_err());
     assert!(matches!(result.unwrap_err(), FinanceError::Validation(_)));
 }
@@ -357,14 +360,14 @@ fn test_add_transaction_expense() {
 fn test_add_transaction_rejects_zero_amount() {
     let h = new_test_service();
     let account_id = create_test_account(&h.service, "Test", "USD", 0);
-    let result = h.service.add_transaction(
+    let result = h.service.add_transaction(NewTransaction {
         account_id,
-        0,
-        "Test".to_string(),
-        "desc".to_string(),
-        "2024-06-15".to_string(),
-        false,
-    );
+        amount_cents: 0,
+        category: "Test".to_string(),
+        description: "desc".to_string(),
+        date: "2024-06-15".to_string(),
+        is_expense: false,
+    });
     assert!(result.is_err());
     assert!(matches!(result.unwrap_err(), FinanceError::Validation(_)));
 }
@@ -373,14 +376,14 @@ fn test_add_transaction_rejects_zero_amount() {
 fn test_add_transaction_rejects_negative_amount() {
     let h = new_test_service();
     let account_id = create_test_account(&h.service, "Test", "USD", 0);
-    let result = h.service.add_transaction(
+    let result = h.service.add_transaction(NewTransaction {
         account_id,
-        -100,
-        "Test".to_string(),
-        "desc".to_string(),
-        "2024-06-15".to_string(),
-        false,
-    );
+        amount_cents: -100,
+        category: "Test".to_string(),
+        description: "desc".to_string(),
+        date: "2024-06-15".to_string(),
+        is_expense: false,
+    });
     assert!(result.is_err());
     assert!(matches!(result.unwrap_err(), FinanceError::Validation(_)));
 }
@@ -388,14 +391,14 @@ fn test_add_transaction_rejects_negative_amount() {
 #[test]
 fn test_add_transaction_rejects_invalid_account() {
     let h = new_test_service();
-    let result = h.service.add_transaction(
-        "bad-uuid".to_string(),
-        1000,
-        "Test".to_string(),
-        "desc".to_string(),
-        "2024-06-15".to_string(),
-        false,
-    );
+    let result = h.service.add_transaction(NewTransaction {
+        account_id: "bad-uuid".to_string(),
+        amount_cents: 1000,
+        category: "Test".to_string(),
+        description: "desc".to_string(),
+        date: "2024-06-15".to_string(),
+        is_expense: false,
+    });
     assert!(result.is_err());
 }
 
@@ -405,15 +408,15 @@ fn test_update_transaction_changes_fields() {
     let account_id = create_test_account(&h.service, "Test", "USD", 0);
     let tx_id = create_test_transaction(&h.service, &account_id, 1000, "Old", false);
     h.service
-        .update_transaction(
-            tx_id.clone(),
-            account_id.clone(),
-            2000,
-            "Updated".to_string(),
-            "updated description".to_string(),
-            "2024-06-20".to_string(),
-            true,
-        )
+        .update_transaction(UpdateTransaction {
+            id: tx_id.clone(),
+            account_id: account_id.clone(),
+            amount_cents: 2000,
+            category: "Updated".to_string(),
+            description: "updated description".to_string(),
+            date: "2024-06-20".to_string(),
+            is_expense: true,
+        })
         .expect("update transaction");
     let txs = h.service.get_transactions().expect("get transactions");
     let tx = txs
@@ -458,13 +461,13 @@ fn test_transfer_funds_between_accounts() {
     let to_id = create_test_account(&h.service, "Dest", "USD", 0);
     let tx_id = h
         .service
-        .transfer_funds(
-            from_id.clone(),
-            to_id.clone(),
-            30000,
-            "monthly transfer".to_string(),
-            "2024-06-15".to_string(),
-        )
+        .transfer_funds(NewTransfer {
+            from_account_id: from_id.clone(),
+            to_account_id: to_id.clone(),
+            amount_cents: 30000,
+            description: "monthly transfer".to_string(),
+            date: "2024-06-15".to_string(),
+        })
         .expect("transfer funds");
     assert!(!tx_id.is_empty());
     let balances = h.service.get_account_balances().expect("get balances");
@@ -485,13 +488,13 @@ fn test_transfer_funds_rejects_different_currencies() {
     let h = new_test_service();
     let from_id = create_test_account(&h.service, "USD Acc", "USD", 0);
     let to_id = create_test_account(&h.service, "EUR Acc", "EUR", 0);
-    let result = h.service.transfer_funds(
-        from_id,
-        to_id,
-        1000,
-        "test".to_string(),
-        "2024-06-15".to_string(),
-    );
+    let result = h.service.transfer_funds(NewTransfer {
+        from_account_id: from_id,
+        to_account_id: to_id,
+        amount_cents: 1000,
+        description: "test".to_string(),
+        date: "2024-06-15".to_string(),
+    });
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert!(matches!(err, FinanceError::Validation(_)));
@@ -506,13 +509,13 @@ fn test_transfer_funds_rejects_zero_amount() {
     let h = new_test_service();
     let from_id = create_test_account(&h.service, "A", "USD", 0);
     let to_id = create_test_account(&h.service, "B", "USD", 0);
-    let result = h.service.transfer_funds(
-        from_id,
-        to_id,
-        0,
-        "test".to_string(),
-        "2024-06-15".to_string(),
-    );
+    let result = h.service.transfer_funds(NewTransfer {
+        from_account_id: from_id,
+        to_account_id: to_id,
+        amount_cents: 0,
+        description: "test".to_string(),
+        date: "2024-06-15".to_string(),
+    });
     assert!(result.is_err());
     assert!(matches!(result.unwrap_err(), FinanceError::Validation(_)));
 }
@@ -524,23 +527,23 @@ fn test_update_transfer_preserves_account_balances() {
     let to_id = create_test_account(&h.service, "B", "USD", 0);
     let tx_id = h
         .service
-        .transfer_funds(
-            from_id.clone(),
-            to_id.clone(),
-            30000,
-            "first".to_string(),
-            "2024-06-15".to_string(),
-        )
+        .transfer_funds(NewTransfer {
+            from_account_id: from_id.clone(),
+            to_account_id: to_id.clone(),
+            amount_cents: 30000,
+            description: "first".to_string(),
+            date: "2024-06-15".to_string(),
+        })
         .expect("transfer");
     h.service
-        .update_transfer(
-            tx_id,
-            from_id.clone(),
-            to_id.clone(),
-            50000,
-            "updated".to_string(),
-            "2024-06-20".to_string(),
-        )
+        .update_transfer(UpdateTransfer {
+            id: tx_id,
+            from_account_id: from_id.clone(),
+            to_account_id: to_id.clone(),
+            amount_cents: 50000,
+            description: "updated".to_string(),
+            date: "2024-06-20".to_string(),
+        })
         .expect("update transfer");
     let balances = h.service.get_account_balances().expect("get balances");
     let from_bal = balances

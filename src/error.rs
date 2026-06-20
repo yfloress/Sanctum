@@ -72,16 +72,18 @@ pub enum ErrorKind {
 
 /// The error type every Tauri command returns.
 ///
-/// Serializes to `{ "kind": "...", "message": "..." }`.
+/// Serializes to `{ "kind": "...", "message": "..." }`, plus an optional
+/// `"field"` when the error is tied to a specific input (validation).
 #[derive(Debug, Clone, Serialize)]
 pub struct AppError {
     /// Stable machine-readable classification.
     pub kind: ErrorKind,
     /// Human-readable message, safe to show to the user.
     pub message: String,
-    // Reserved for critique #4 (DTO/CQRS validation), kept non-breaking:
-    // #[serde(skip_serializing_if = "Option::is_none")]
-    // pub field: Option<String>,
+    /// The input field that triggered the error, when applicable. Populated by
+    /// DTO validation (see `ui::dto`); absent from the payload when `None`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub field: Option<String>,
 }
 
 impl AppError {
@@ -90,6 +92,7 @@ impl AppError {
         Self {
             kind,
             message: message.into(),
+            field: None,
         }
     }
 
@@ -106,6 +109,12 @@ impl AppError {
     /// A generic, non-leaking internal error.
     pub fn internal() -> Self {
         Self::new(ErrorKind::Internal, "Internal error")
+    }
+
+    /// Attach the input field this error is about (builder style).
+    pub fn with_field(mut self, field: impl Into<String>) -> Self {
+        self.field = Some(field.into());
+        self
     }
 }
 
@@ -242,7 +251,15 @@ mod tests {
         let v = serde_json::to_value(&err).unwrap();
         assert_eq!(v["kind"], "not_found");
         assert_eq!(v["message"], "missing");
-        // `field` is not present yet (reserved for #4).
+        // `field` is omitted from the payload when unset.
         assert!(v.get("field").is_none());
+    }
+
+    #[test]
+    fn with_field_is_serialized() {
+        let err = AppError::validation("Amount must be greater than zero").with_field("amount");
+        let v = serde_json::to_value(&err).unwrap();
+        assert_eq!(v["kind"], "validation");
+        assert_eq!(v["field"], "amount");
     }
 }

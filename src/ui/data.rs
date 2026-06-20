@@ -419,14 +419,14 @@ mod tests {
 
     fn create_account(finance: &FinanceService, name: &str, currency: &str, balance: i64) {
         finance
-            .create_account(
-                name.to_string(),
-                "bank".to_string(),
-                currency.to_string(),
-                balance,
-                "#8b5cf6".to_string(),
-                None,
-            )
+            .create_account(crate::features::finance::NewAccount {
+                name: name.to_string(),
+                account_type: "bank".to_string(),
+                currency: currency.to_string(),
+                initial_balance_cents: balance,
+                color: "#8b5cf6".to_string(),
+                icon: None,
+            })
             .expect("create account");
     }
 
@@ -438,14 +438,14 @@ mod tests {
         is_expense: bool,
     ) {
         finance
-            .add_transaction(
-                account_id.to_string(),
-                amount,
-                category.to_string(),
-                "test".to_string(),
-                "2024-06-15".to_string(),
+            .add_transaction(crate::features::finance::NewTransaction {
+                account_id: account_id.to_string(),
+                amount_cents: amount,
+                category: category.to_string(),
+                description: "test".to_string(),
+                date: "2024-06-15".to_string(),
                 is_expense,
-            )
+            })
             .expect("add transaction");
     }
 

@@ -28,6 +28,9 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 
+use super::commands::{
+    NewAccount, NewTransaction, NewTransfer, UpdateAccount, UpdateTransaction, UpdateTransfer,
+};
 use super::repository::FinanceRepository;
 use super::transactions::{CategoryOps, TransactionOps};
 use super::validation::{
@@ -91,16 +94,17 @@ impl FinanceService {
 
     // ==================== Account Operations ====================
 
-    pub fn create_account(
-        &self,
-        name: String,
-        account_type: String,
-        currency: String,
-        initial_balance: i64,
-        color: String,
-        icon: Option<String>,
-    ) -> Result<String, FinanceError> {
+    pub fn create_account(&self, cmd: NewAccount) -> Result<String, FinanceError> {
         self.with_db(|db| {
+            let NewAccount {
+                name,
+                account_type,
+                currency,
+                initial_balance_cents,
+                color,
+                icon,
+            } = cmd;
+
             let name = validate_field_length(&name, MAX_ACCOUNT_NAME_LENGTH, "Account name")?;
             let name = sanitize_string(&name);
 
@@ -136,7 +140,7 @@ impl FinanceService {
                 name,
                 account_type,
                 currency,
-                initial_balance,
+                initial_balance_cents,
                 color,
                 icon,
                 created_at,
@@ -158,18 +162,18 @@ impl FinanceService {
         })
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn update_account(
-        &self,
-        id: String,
-        name: String,
-        account_type: String,
-        currency: String,
-        initial_balance: i64,
-        color: String,
-        icon: Option<String>,
-    ) -> Result<(), FinanceError> {
+    pub fn update_account(&self, cmd: UpdateAccount) -> Result<(), FinanceError> {
         self.with_db(|db| {
+            let UpdateAccount {
+                id,
+                name,
+                account_type,
+                currency,
+                initial_balance_cents,
+                color,
+                icon,
+            } = cmd;
+
             let validated_id = validate_uuid(&id)?;
             let name = validate_field_length(&name, MAX_ACCOUNT_NAME_LENGTH, "Account name")?;
             let name = sanitize_string(&name);
@@ -197,7 +201,7 @@ impl FinanceService {
                 name,
                 account_type,
                 currency,
-                initial_balance,
+                initial_balance: initial_balance_cents,
                 color,
                 icon,
                 is_archived: existing.is_archived,
@@ -270,15 +274,15 @@ impl FinanceService {
 
     // ==================== Transaction Operations ====================
 
-    pub fn add_transaction(
-        &self,
-        account_id: String,
-        amount: i64,
-        category: String,
-        description: String,
-        date: String,
-        is_expense: bool,
-    ) -> Result<String, FinanceError> {
+    pub fn add_transaction(&self, cmd: NewTransaction) -> Result<String, FinanceError> {
+        let NewTransaction {
+            account_id,
+            amount_cents,
+            category,
+            description,
+            date,
+            is_expense,
+        } = cmd;
         let db_arc = self.db.clone();
         TransactionOps::add_transaction(
             |f| {
@@ -293,7 +297,7 @@ impl FinanceService {
                 Ok(result)
             },
             account_id,
-            amount,
+            amount_cents,
             category,
             description,
             date,
@@ -301,17 +305,16 @@ impl FinanceService {
         )
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub fn update_transaction(
-        &self,
-        id: String,
-        account_id: String,
-        amount: i64,
-        category: String,
-        description: String,
-        date: String,
-        is_expense: bool,
-    ) -> Result<(), FinanceError> {
+    pub fn update_transaction(&self, cmd: UpdateTransaction) -> Result<(), FinanceError> {
+        let UpdateTransaction {
+            id,
+            account_id,
+            amount_cents,
+            category,
+            description,
+            date,
+            is_expense,
+        } = cmd;
         let db_arc = self.db.clone();
         TransactionOps::update_transaction(
             |f| {
@@ -327,7 +330,7 @@ impl FinanceService {
             },
             id,
             account_id,
-            amount,
+            amount_cents,
             category,
             description,
             date,
@@ -365,14 +368,14 @@ impl FinanceService {
 
     // ==================== Transfer Operations ====================
 
-    pub fn transfer_funds(
-        &self,
-        from_account_id: String,
-        to_account_id: String,
-        amount: i64,
-        description: String,
-        date: String,
-    ) -> Result<String, FinanceError> {
+    pub fn transfer_funds(&self, cmd: NewTransfer) -> Result<String, FinanceError> {
+        let NewTransfer {
+            from_account_id,
+            to_account_id,
+            amount_cents,
+            description,
+            date,
+        } = cmd;
         let db_arc = self.db.clone();
         TransactionOps::transfer_funds(
             |f| {
@@ -388,21 +391,21 @@ impl FinanceService {
             },
             from_account_id,
             to_account_id,
-            amount,
+            amount_cents,
             description,
             date,
         )
     }
 
-    pub fn update_transfer(
-        &self,
-        id: String,
-        from_account_id: String,
-        to_account_id: String,
-        amount: i64,
-        description: String,
-        date: String,
-    ) -> Result<(), FinanceError> {
+    pub fn update_transfer(&self, cmd: UpdateTransfer) -> Result<(), FinanceError> {
+        let UpdateTransfer {
+            id,
+            from_account_id,
+            to_account_id,
+            amount_cents,
+            description,
+            date,
+        } = cmd;
         let db_arc = self.db.clone();
         TransactionOps::update_transfer(
             |f| {
@@ -419,7 +422,7 @@ impl FinanceService {
             id,
             from_account_id,
             to_account_id,
-            amount,
+            amount_cents,
             description,
             date,
         )

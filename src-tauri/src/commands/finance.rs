@@ -24,8 +24,8 @@ use sanctum::error::AppError;
 use sanctum::features::finance::FinanceService;
 use sanctum::features::settings::{SETTING_PREFERRED_CURRENCY, SettingsService};
 use sanctum::ui::dto::finance::{
-    AccountDetailResponse, AccountDto, AccountsResponse, CategoriesResponse, CategoryDto,
-    TransactionDto, TransactionsResponse,
+    AccountDetailResponse, AccountDto, AccountInput, AccountsResponse, CategoriesResponse,
+    CategoryDto, TransactionDto, TransactionInput, TransactionsResponse, TransferInput,
 };
 use sanctum::ui::{
     format_category_label, format_decimal_from_cents, format_money, format_money_signed,
@@ -123,108 +123,43 @@ pub fn fetch_account_details(
 #[tauri::command]
 pub fn create_account(
     finance: State<'_, FinanceService>,
-    name: String,
-    account_type: String,
-    currency: String,
-    initial_balance: String,
+    input: AccountInput,
 ) -> Result<String, AppError> {
-    let amount_cents = sanctum::ui::parse_amount_input(&initial_balance).unwrap_or(0);
-    let account_type_key = sanctum::ui::normalize_account_type(&account_type);
-
-    finance
-        .create_account(
-            name,
-            account_type_key,
-            currency.to_uppercase(),
-            amount_cents,
-            "#8b5cf6".to_string(),
-            None,
-        )
-        .map_err(AppError::from)
+    Ok(finance.create_account(input.into_new_account()?)?)
 }
 
 /// Update an existing account.
 #[tauri::command]
 pub fn update_account(
     finance: State<'_, FinanceService>,
-    id: String,
-    name: String,
-    account_type: String,
-    currency: String,
-    initial_balance: String,
+    input: AccountInput,
 ) -> Result<(), AppError> {
-    let amount_cents = sanctum::ui::parse_amount_input(&initial_balance).unwrap_or(0);
     let existing_icon = finance
-        .get_accounts()
-        .map_err(AppError::from)?
-        .iter()
-        .find(|a| a.id == id)
-        .and_then(|a| a.icon.clone());
+        .get_accounts()?
+        .into_iter()
+        .find(|a| Some(&a.id) == input.id.as_ref())
+        .and_then(|a| a.icon);
 
-    finance
-        .update_account(
-            id,
-            name,
-            sanctum::ui::normalize_account_type(&account_type),
-            currency.to_uppercase(),
-            amount_cents,
-            "#8b5cf6".to_string(),
-            existing_icon,
-        )
-        .map_err(AppError::from)
+    Ok(finance.update_account(input.into_update_account(existing_icon)?)?)
 }
 
 /// Transfer funds between two accounts.
 #[tauri::command]
 pub fn transfer_funds(
     finance: State<'_, FinanceService>,
-    from_account_id: String,
-    to_account_id: String,
-    amount: String,
-    description: String,
-    date: String,
+    input: TransferInput,
 ) -> Result<(), AppError> {
-    let amount_cents = sanctum::ui::parse_amount_input(&amount)
-        .filter(|v| *v > 0)
-        .ok_or_else(|| "Amount must be greater than zero".to_string())?;
-
-    finance
-        .transfer_funds(
-            from_account_id,
-            to_account_id,
-            amount_cents,
-            description,
-            date,
-        )
-        .map(|_| ())
-        .map_err(AppError::from)
+    finance.transfer_funds(input.into_new()?)?;
+    Ok(())
 }
 
 /// Update an existing transfer.
 #[tauri::command]
 pub fn update_transfer(
     finance: State<'_, FinanceService>,
-    id: String,
-    from_account_id: String,
-    to_account_id: String,
-    amount: String,
-    description: String,
-    date: String,
+    input: TransferInput,
 ) -> Result<(), AppError> {
-    let amount_cents = sanctum::ui::parse_amount_input(&amount)
-        .filter(|v| *v > 0)
-        .ok_or_else(|| "Amount must be greater than zero".to_string())?;
-
-    finance
-        .update_transfer(
-            id,
-            from_account_id,
-            to_account_id,
-            amount_cents,
-            description,
-            date,
-        )
-        .map_err(AppError::from)
+    Ok(finance.update_transfer(input.into_update()?)?)
 }
 
 /// Archive (soft-delete) an account.
@@ -396,58 +331,19 @@ pub fn fetch_transactions(
 #[tauri::command]
 pub fn add_transaction(
     finance: State<'_, FinanceService>,
-    account_id: String,
-    amount: String,
-    category: String,
-    description: String,
-    date: String,
-    is_expense: bool,
+    input: TransactionInput,
 ) -> Result<(), AppError> {
-    let amount_cents = sanctum::ui::parse_amount_input(&amount)
-        .filter(|v| *v > 0)
-        .ok_or_else(|| "Amount must be greater than zero".to_string())?;
-
-    finance
-        .add_transaction(
-            account_id,
-            amount_cents,
-            category,
-            description,
-            date,
-            is_expense,
-        )
-        .map(|_| ())
-        .map_err(AppError::from)
+    finance.add_transaction(input.into_new()?)?;
+    Ok(())
 }
 
 /// Update an existing transaction.
 #[tauri::command]
-#[allow(clippy::too_many_arguments)]
 pub fn update_transaction(
     finance: State<'_, FinanceService>,
-    id: String,
-    account_id: String,
-    amount: String,
-    category: String,
-    description: String,
-    date: String,
-    is_expense: bool,
+    input: TransactionInput,
 ) -> Result<(), AppError> {
-    let amount_cents = sanctum::ui::parse_amount_input(&amount)
-        .filter(|v| *v > 0)
-        .ok_or_else(|| "Amount must be greater than zero".to_string())?;
-
-    finance
-        .update_transaction(
-            id,
-            account_id,
-            amount_cents,
-            category,
-            description,
-            date,
-            is_expense,
-        )
-        .map_err(AppError::from)
+    Ok(finance.update_transaction(input.into_update()?)?)
 }
 
 /// Delete a transaction.
